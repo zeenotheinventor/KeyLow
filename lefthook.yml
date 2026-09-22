@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    format:
+      glob: "*.{js,jsx,ts,tsx,json,md,mdx,yml,yaml,css}"
+      run: pnpm exec prettier --write {staged_files} && git add {staged_files}
