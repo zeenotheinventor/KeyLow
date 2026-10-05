@@ -1,6 +1,7 @@
 import { render, screen, userEvent } from "@testing-library/react-native";
 
 import { resetRouterMock } from "./support/expoRouterMock";
+import { googleIdToken, resetGoogleSignInMock } from "./support/googleSignInMock";
 import { fakeSession, resetSupabaseMock, mockSupabaseClient } from "./support/supabaseMock";
 import SignUpRoute from "../app/(auth)/sign-up";
 
@@ -8,6 +9,10 @@ jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
 );
+jest.mock("@react-native-google-signin/google-signin", () => ({
+  GoogleSignin: jest.requireActual<{ mockGoogleSignin: unknown }>("./support/googleSignInMock")
+    .mockGoogleSignin,
+}));
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -27,6 +32,7 @@ describe("sign-up screen", () => {
   beforeEach(() => {
     resetRouterMock();
     resetSupabaseMock();
+    resetGoogleSignInMock();
   });
 
   it("should reject a malformed email and a short password without calling Supabase", async () => {
@@ -86,9 +92,16 @@ describe("sign-up screen", () => {
     expect(screen.getByRole("link", { name: "Sign in" })).toBeOnTheScreen();
   });
 
-  it("should show a disabled Google button", async () => {
+  it("should sign in with Google through the same button as the sign-in screen", async () => {
+    mockSupabaseClient.auth.signInWithIdToken.mockResolvedValue({ data: {}, error: null });
+    const user = userEvent.setup();
     await render(<SignUpRoute />);
 
-    expect(screen.getByRole("button", { name: "Continue with Google" })).toBeDisabled();
+    await user.press(screen.getByRole("button", { name: "Continue with Google" }));
+
+    expect(mockSupabaseClient.auth.signInWithIdToken).toHaveBeenCalledWith({
+      provider: "google",
+      token: googleIdToken,
+    });
   });
 });
