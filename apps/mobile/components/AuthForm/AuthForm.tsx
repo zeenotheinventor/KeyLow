@@ -9,10 +9,19 @@ import {
   View,
 } from "react-native";
 
+import { signInWithGoogle } from "../../lib/googleSignIn";
 import { validateCredentials } from "../../lib/validateCredentials";
 
 import type { AuthFormOutcome, AuthFormProps } from "./types";
+import type { GoogleSignInResult } from "../../lib/googleSignIn";
 import type { CredentialErrors } from "../../lib/validateCredentials";
+
+// A cancelled sheet is not an error, and the AuthGate navigates on the new session.
+function toOutcome(result: GoogleSignInResult): AuthFormOutcome {
+  return result.status === "error"
+    ? { status: "error", message: result.message }
+    : { status: "done" };
+}
 
 export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer }: AuthFormProps) {
   const [email, setEmail] = useState("");
@@ -21,6 +30,18 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
   const [outcome, setOutcome] = useState<AuthFormOutcome>({ status: "done" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  async function runSubmission(submit: () => Promise<AuthFormOutcome>) {
+    setIsSubmitting(true);
+    setOutcome({ status: "done" });
+    try {
+      setOutcome(await submit());
+    } catch {
+      setOutcome({ status: "error", message: "Something went wrong. Try again." });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleSubmit() {
     const errors = validateCredentials({ email, password }, passwordRule);
     setFieldErrors(errors);
@@ -28,15 +49,11 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
       return;
     }
 
-    setIsSubmitting(true);
-    setOutcome({ status: "done" });
-    try {
-      setOutcome(await onSubmit({ email: email.trim(), password }));
-    } catch {
-      setOutcome({ status: "error", message: "Something went wrong. Try again." });
-    } finally {
-      setIsSubmitting(false);
-    }
+    await runSubmission(() => onSubmit({ email: email.trim(), password }));
+  }
+
+  async function handleGoogleSignIn() {
+    await runSubmission(async () => toOutcome(await signInWithGoogle()));
   }
 
   return (
@@ -112,13 +129,12 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
 
         <Pressable
           accessibilityRole="button"
-          accessibilityState={{ disabled: true }}
-          disabled
-          className="h-12 items-center justify-center rounded-lg border border-neutral-300 opacity-50"
+          disabled={isSubmitting}
+          onPress={() => void handleGoogleSignIn()}
+          className="h-12 items-center justify-center rounded-lg border border-neutral-300 disabled:opacity-50"
         >
           <Text className="text-base font-semibold text-neutral-900">Continue with Google</Text>
         </Pressable>
-        <Text className="text-center text-sm text-neutral-500">Google sign-in is coming soon</Text>
 
         <View className="items-center gap-1">{footer}</View>
       </ScrollView>

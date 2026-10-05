@@ -1,0 +1,12 @@
+# Google round trip: pick an account in the native sheet and land in the tab shell.
+# Needs a development build on a device or emulator, the Google client ids in .env.local
+# and the Supabase Google provider configured (KEY-12, plus KEY-29 on Android).
+# The account picker is native, so run it with a Google account already on the device.
+# Run with: maestro test -e APP_ID=<bundle identifier> apps/mobile/.maestro/auth-google.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Sign in"
+- tapOn: "Continue with Google"
+- assertVisible: "Diary"

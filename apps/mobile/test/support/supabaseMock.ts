@@ -5,6 +5,7 @@ type AuthStateListener = (event: string, session: Session | null) => void;
 export const mockSupabaseClient = {
   auth: {
     signInWithPassword: jest.fn(),
+    signInWithIdToken: jest.fn(),
     signUp: jest.fn(),
     signOut: jest.fn(),
     getSession: jest.fn(),
