@@ -36,7 +36,7 @@ One `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalProp
 
 ### Expo + pnpm gotchas
 
-Belong in the M1 scaffold ticket: `.npmrc` with `node-linker=hoisted`; `pnpm.overrides` pinning one `react` / `react-dom` to the SDK's version; Metro config with `watchFolders = [workspaceRoot]`, `nodeModulesPaths` for both roots, `disableHierarchicalLookup: true`, wrapped in `withNativeWind`; workspace packages ship correct `exports` maps; `.easignore` excluding `apps/web`, e2e, docs, `packages/db/data`; jest-expo `transformIgnorePatterns` including `@keylow/.*`; `pnpm dedupe --check` and `expo-doctor` in CI; never put `react-native` or native modules in `packages/*`.
+Belong in the M1 scaffold ticket: `.npmrc` with `node-linker=hoisted`; `pnpm.overrides` pinning one `react` / `react-dom` to the SDK's version; Metro config with `watchFolders = [workspaceRoot]`, `nodeModulesPaths` for both roots, wrapped in `withNativeWind`; workspace packages ship correct `exports` maps; `.easignore` excluding `apps/web`, e2e, docs, `packages/db/data`; jest-expo `transformIgnorePatterns` including `@keylow/.*`; `pnpm dedupe --check` and `expo-doctor` in CI; never put `react-native` or native modules in `packages/*`. On Expo SDK 57 expo-doctor rejects `disableHierarchicalLookup: true`, so it is not set and duplicate-React protection comes from `node-linker=hoisted`, the root `pnpm.overrides` pin and `pnpm dedupe --check`.
 
 ### Next.js package consumption
 
