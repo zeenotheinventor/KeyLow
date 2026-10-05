@@ -18,6 +18,10 @@ apps/*/.expo-shared/
 apps/*/.next/
 apps/*/out/
 
+# playwright
+apps/*/test-results/
+apps/*/playwright-report/
+
 # supabase
 packages/db/supabase/.branches/
 packages/db/supabase/.temp/
