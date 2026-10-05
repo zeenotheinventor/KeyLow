@@ -1,0 +1,27 @@
+{
+  "name": "@keylow/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./dates": "./src/dates/index.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./nutrition": "./src/nutrition/index.ts",
+    "./engine": "./src/engine/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.src.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@keylow/config": "workspace:*",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
