@@ -49,3 +49,18 @@ test("signs in with the account that was created", async ({ page }) => {
   await expect(page).toHaveURL(/\/diary$/);
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
 });
+
+test("sends the browser to the Supabase Google authorize endpoint with the callback as the redirect", async ({
+  page,
+}) => {
+  await page.goto("/login");
+
+  await page.getByRole("button", { name: "Continue with Google" }).click();
+
+  // The local stack has Google disabled, so the authorize endpoint answers with a JSON error.
+  // Reaching it with the right query is the observable proof of the redirect.
+  await page.waitForURL(/\/auth\/v1\/authorize\?/);
+  const authorizeUrl = new URL(page.url());
+  expect(authorizeUrl.searchParams.get("provider")).toBe("google");
+  expect(authorizeUrl.searchParams.get("redirect_to")).toBe("http://localhost:3000/auth/callback");
+});
