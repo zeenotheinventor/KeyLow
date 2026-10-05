@@ -1,17 +1,19 @@
-import { render, screen } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 
 import IndexRoute from "../app/index";
+import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+
+jest.mock(
+  "expo-router",
+  () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
+);
 
 describe("index route", () => {
-  it("should render the KeyLow heading", async () => {
+  beforeEach(resetRouterMock);
+
+  it("should redirect to the diary tab", async () => {
     await render(<IndexRoute />);
 
-    expect(screen.getByRole("header", { name: "KeyLow" })).toBeOnTheScreen();
-  });
-
-  it("should render the brand colour read from the shared tokens", async () => {
-    await render(<IndexRoute />);
-
-    expect(screen.getByText("#3b82f6")).toBeOnTheScreen();
+    expect(routerMock.redirect).toHaveBeenCalledWith("/(tabs)/diary");
   });
 });
