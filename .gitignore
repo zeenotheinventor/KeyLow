@@ -1,0 +1,44 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# turbo
+.turbo/
+
+# expo
+apps/*/.expo/
+apps/*/.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# next.js
+apps/*/.next/
+apps/*/out/
+
+# supabase
+packages/db/supabase/.branches/
+packages/db/supabase/.temp/
+
+# build output
+dist/
+build/
+coverage/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/

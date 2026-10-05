@@ -1,0 +1,26 @@
+{
+  "name": "keylow",
+  "private": true,
+  "packageManager": "pnpm@10.34.5",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "prepare": "lefthook install",
+    "check": "turbo run format:check lint typecheck test",
+    "check:integration": "turbo run test:integration",
+    "dev:db": "pnpm --filter @keylow/db run dev:db",
+    "format:check": "prettier --check .",
+    "gen-types": "pnpm --filter @keylow/db run gen-types"
+  },
+  "devDependencies": {
+    "lefthook": "^2.1.14",
+    "prettier": "^3.9.8",
+    "turbo": "^2.11.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "lefthook"
+    ]
+  }
+}
