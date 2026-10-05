@@ -35,5 +35,5 @@ lands.
 
 ## Local development
 
-See [`docs/runbooks/local-dev.md`](docs/runbooks/local-dev.md) for the full setup and workflow. That
-runbook does not exist yet. It is filled in by a later ticket.
+See [`docs/runbooks/local-dev.md`](docs/runbooks/local-dev.md) for the full setup and workflow. It is
+the way to get both apps running against a local Supabase stack from a fresh clone.
