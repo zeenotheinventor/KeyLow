@@ -1,0 +1,11 @@
+{
+  "name": "@keylow/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:db": "supabase start",
+    "stop:db": "supabase stop",
+    "db:reset": "supabase db reset"
+  }
+}
