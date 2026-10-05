@@ -3,15 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/app/login/LoginForm";
 
-const { signInWithPassword, signUp, push, refresh } = vi.hoisted(() => ({
+const { signInWithPassword, signUp, signInWithOAuth, push, refresh } = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
   signUp: vi.fn(),
+  signInWithOAuth: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({ auth: { signInWithPassword, signUp } }),
+  createClient: () => ({ auth: { signInWithPassword, signUp, signInWithOAuth } }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -184,13 +185,72 @@ describe("LoginForm", () => {
   });
 
   describe("Google sign-in", () => {
-    it("should show a disabled Google button with a note that it arrives later", () => {
+    it("should show an enabled Google button", () => {
       render(<LoginForm />);
 
       const googleButton = screen.getByRole("button", { name: "Continue with Google" });
 
-      expect(googleButton.hasAttribute("disabled")).toBe(true);
-      expect(screen.getByText("Google sign-in is coming soon.")).toBeTruthy();
+      expect(googleButton.hasAttribute("disabled")).toBe(false);
+      expect(screen.queryByText("Google sign-in is coming soon.")).toBeNull();
+    });
+
+    it("should start the Google OAuth flow with the callback route as the redirect", async () => {
+      signInWithOAuth.mockResolvedValue({ data: {}, error: null });
+      render(<LoginForm />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+      await waitFor(() => {
+        expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+      });
+      expect(signInWithOAuth).toHaveBeenCalledWith({
+        provider: "google",
+        options: { redirectTo: "http://localhost:3000/auth/callback" },
+      });
+    });
+
+    it("should show the error message when Google sign-in fails", async () => {
+      signInWithOAuth.mockResolvedValue({
+        data: {},
+        error: { message: "Unsupported provider: provider is not enabled" },
+      });
+      render(<LoginForm />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "Unsupported provider: provider is not enabled",
+      );
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should disable all three buttons while the Google request runs", async () => {
+      signInWithOAuth.mockReturnValue(new Promise(() => undefined));
+      render(<LoginForm />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
+        ).toBe(true);
+      });
+      expect(screen.getByRole("button", { name: "Sign in" }).hasAttribute("disabled")).toBe(true);
+      expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
+        true,
+      );
+    });
+
+    it("should show an error and enable the buttons again when the request throws", async () => {
+      signInWithOAuth.mockRejectedValue(new Error("network down"));
+      render(<LoginForm />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+      expect(await screen.findByText("Something went wrong. Please try again.")).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
+      ).toBe(false);
     });
   });
 

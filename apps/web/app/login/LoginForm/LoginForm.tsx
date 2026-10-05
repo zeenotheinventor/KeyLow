@@ -49,6 +49,17 @@ export function LoginForm({ linkError }: LoginFormProps) {
     router.refresh();
   }
 
+  async function runPending(request: () => Promise<void>) {
+    setIsPending(true);
+    try {
+      await request();
+    } catch {
+      setFormError(UNEXPECTED_ERROR_MESSAGE);
+    } finally {
+      setIsPending(false);
+    }
+  }
+
   async function submit(action: Action) {
     const trimmedEmail = email.trim();
     const errors = validate(trimmedEmail, password, action);
@@ -60,8 +71,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
       return;
     }
 
-    setIsPending(true);
-    try {
+    await runPending(async () => {
       const supabase = createClient();
 
       if (action === "signIn") {
@@ -88,11 +98,23 @@ export function LoginForm({ linkError }: LoginFormProps) {
           setNotice(CONFIRM_EMAIL_NOTICE);
         }
       }
-    } catch {
-      setFormError(UNEXPECTED_ERROR_MESSAGE);
-    } finally {
-      setIsPending(false);
-    }
+    });
+  }
+
+  async function signInWithGoogle() {
+    setFormError(null);
+    setNotice(null);
+
+    await runPending(async () => {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth/callback` },
+      });
+      if (error) {
+        setFormError(error.message);
+      }
+    });
   }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -177,10 +199,17 @@ export function LoginForm({ linkError }: LoginFormProps) {
       </div>
 
       <div className="flex flex-col gap-1.5 border-t pt-4">
-        <Button type="button" variant="outline" disabled className="h-11 md:h-9">
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isPending}
+          onClick={() => {
+            void signInWithGoogle();
+          }}
+          className="h-11 md:h-9"
+        >
           Continue with Google
         </Button>
-        <p className="text-sm text-muted-foreground">Google sign-in is coming soon.</p>
       </div>
     </form>
   );
