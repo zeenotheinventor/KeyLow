@@ -14,6 +14,7 @@
     "gen-types": "pnpm --filter @keylow/db run gen-types"
   },
   "devDependencies": {
+    "@keylow/config": "workspace:*",
     "lefthook": "^2.1.14",
     "prettier": "^3.9.8",
     "turbo": "^2.11.2"
@@ -22,5 +23,6 @@
     "onlyBuiltDependencies": [
       "lefthook"
     ]
-  }
+  },
+  "prettier": "@keylow/config/prettier"
 }

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "lib": ["ES2022"],
+    "types": ["node"]
+  },
+  "include": ["*.ts", "test/**/*.ts"],
+  "exclude": ["test/fixtures"]
+}
