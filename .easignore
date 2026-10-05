@@ -1,0 +1,42 @@
+# EAS reads this file INSTEAD of every .gitignore, so the first block repeats the root and apps/mobile ignore rules.
+# EAS looks for it at the git root, not the app directory.
+
+# From the root .gitignore
+node_modules/
+.pnpm-store/
+.turbo/
+apps/*/.expo/
+apps/*/.expo-shared/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+apps/*/.next/
+apps/*/out/
+packages/db/supabase/.branches/
+packages/db/supabase/.temp/
+dist/
+build/
+coverage/
+.env
+.env.local
+.env.*.local
+*.log
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# From apps/mobile/.gitignore
+/apps/mobile/ios/
+/apps/mobile/android/
+
+# Not needed to build the app (ADR 0001)
+/apps/web/
+/docs/
+/packages/db/data/
+e2e/
+/.github/
