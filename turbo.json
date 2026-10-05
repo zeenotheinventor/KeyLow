@@ -7,6 +7,10 @@
     "//#format:check": {
       "outputs": []
     },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**"]
+    },
     "lint": {
       "dependsOn": ["^lint"],
       "outputs": []

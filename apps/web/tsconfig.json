@@ -1,0 +1,17 @@
+{
+  "extends": "@keylow/config/tsconfig/next.json",
+  "compilerOptions": {
+    "paths": { "@/*": ["./*"] }
+  },
+  "include": [
+    "next-env.d.ts",
+    "app/**/*",
+    "components/**/*",
+    "lib/**/*",
+    "test/**/*",
+    ".next/types/**/*.ts",
+    "*.ts",
+    "*.mjs",
+    "*.mts"
+  ]
+}
