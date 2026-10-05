@@ -33,7 +33,7 @@ The root `package.json` points Prettier at this config, so `prettier --check .` 
 
 ## TypeScript
 
-Each fragment extends the root `tsconfig.base.json`, which holds the strictness, and adds only what its app type needs.
+The strictness lives in `tsconfig/base.json`. Each fragment extends it and adds only what its app type needs. The root `tsconfig.base.json` is a pointer to `@keylow/config/tsconfig/base.json`, so ADR 0001's "one `tsconfig.base.json`" still holds.
 
 | Export                                      | Adds                                                   |
 | ------------------------------------------- | ------------------------------------------------------ |
@@ -48,6 +48,8 @@ Each fragment extends the root `tsconfig.base.json`, which holds the strictness,
   "include": ["src"]
 }
 ```
+
+Extend a fragment by package specifier, as above. A fragment itself must only extend files inside this package, and never a relative path that leaves it (such as `../../../tsconfig.base.json`). Consumers reach the package through the `node_modules/@keylow/config` workspace symlink. `tsc` realpaths that symlink, but Vite's tsconfig loader (used by Vitest) does not, so a relative `extends` that climbs out of the package lands in `node_modules/` and fails with `TSCONFIG_ERROR ... Tsconfig not found`. The `tsconfig-vitest` test runs Vitest over a fixture that extends a fragment by package specifier to catch a regression.
 
 For the mobile app, extend `expo/tsconfig.base` first and then a fragment or `tsconfig.base.json`, as ADR 0001 describes: `"extends": ["expo/tsconfig.base", "../../tsconfig.base.json"]`.
 

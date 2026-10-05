@@ -10,12 +10,28 @@ const resolveFragment = (name: string) => {
   return ts.parseJsonSourceFileConfigFileContent(sourceFile, ts.sys, dirname(fragmentPath)).options;
 };
 
-describe.each(["node", "react", "next", "react-native"])("tsconfig/%s.json", (name) => {
-  it("inherits the strictness of the root tsconfig.base.json", () => {
+describe.each(["base", "node", "react", "next", "react-native"])("tsconfig/%s.json", (name) => {
+  it("resolves the strictness options of ADR 0001", () => {
     const options = resolveFragment(name);
     expect(options.strict).toBe(true);
     expect(options.noUncheckedIndexedAccess).toBe(true);
+    expect(options.exactOptionalPropertyTypes).toBe(true);
     expect(options.verbatimModuleSyntax).toBe(true);
+    expect(options.moduleResolution).toBe(ts.ModuleResolutionKind.Bundler);
+    expect(options.noEmit).toBe(true);
+  });
+});
+
+describe("the root tsconfig.base.json", () => {
+  it("resolves the same options as tsconfig/base.json", () => {
+    const rootPath = fileURLToPath(new URL("../../../tsconfig.base.json", import.meta.url));
+    const sourceFile = ts.readJsonConfigFile(rootPath, (path) => ts.sys.readFile(path));
+    const rootOptions = ts.parseJsonSourceFileConfigFileContent(
+      sourceFile,
+      ts.sys,
+      dirname(rootPath),
+    ).options;
+    expect(rootOptions).toEqual(resolveFragment("base"));
   });
 });
 
@@ -51,7 +67,7 @@ describe.each([
   ["next", (options: ts.CompilerOptions) => options.jsx],
   ["react-native", (options: ts.CompilerOptions) => options.jsx],
 ])("a project extending @keylow/config/tsconfig/%s.json by package specifier", (name, pick) => {
-  it("resolves the fragment and the root base through the package exports", () => {
+  it("resolves the fragment and tsconfig/base.json through the package exports", () => {
     const consumerDirectory = fileURLToPath(new URL("./fixtures/base/", import.meta.url));
     const parsed = ts.parseJsonConfigFileContent(
       { extends: `@keylow/config/tsconfig/${name}.json` },
