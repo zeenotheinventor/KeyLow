@@ -12,12 +12,19 @@
     "test": "jest"
   },
   "dependencies": {
+    "@keylow/api-client": "workspace:*",
     "@keylow/tokens": "workspace:*",
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "@supabase/supabase-js": "^2.117.2",
+    "@tanstack/react-query": "^5.104.1",
+    "aes-js": "3.1.2",
     "expo": "~57.0.26",
     "expo-constants": "~57.0.20",
+    "expo-crypto": "~57.0.3",
     "expo-dev-client": "~57.0.19",
     "expo-linking": "~57.0.11",
     "expo-router": "~57.0.24",
+    "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "nativewind": "^4.2.7",
     "react": "19.2.3",
@@ -30,6 +37,7 @@
   "devDependencies": {
     "@keylow/config": "workspace:*",
     "@testing-library/react-native": "^14.0.1",
+    "@types/aes-js": "^3.1.4",
     "@types/jest": "29.5.14",
     "@types/react": "~19.2.18",
     "eslint": "^9.39.5",

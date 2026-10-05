@@ -1,0 +1,20 @@
+# Email round trip: create an account, land in the tab shell, sign out.
+# Needs a preview build and local Supabase with confirm-email off, so sign-up returns a session.
+# Run with: maestro test -e APP_ID=<bundle identifier> apps/mobile/.maestro/auth-email.yaml
+appId: ${APP_ID}
+---
+- launchApp:
+    clearState: true
+- evalScript: ${output.email = 'maestro+' + Date.now() + '@example.com'}
+- assertVisible: "Sign in"
+- tapOn: "Create account"
+- tapOn: "Email"
+- inputText: ${output.email}
+- tapOn: "Password"
+- inputText: "password123"
+- hideKeyboard
+- tapOn: "Create account"
+- assertVisible: "Diary"
+- tapOn: "Settings"
+- tapOn: "Sign out"
+- assertVisible: "Sign in"
