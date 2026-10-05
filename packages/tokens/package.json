@@ -1,0 +1,24 @@
+{
+  "name": "@keylow/tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "tailwindcss": ">=3.4"
+  },
+  "devDependencies": {
+    "@keylow/config": "workspace:*",
+    "eslint": "^9.39.5",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
