@@ -1,16 +1,1 @@
-{
-  "$schema": "https://json.schemastore.org/tsconfig",
-  "compilerOptions": {
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "verbatimModuleSyntax": true,
-    "moduleResolution": "Bundler",
-    "module": "ESNext",
-    "target": "ES2022",
-    "noEmit": true,
-    "isolatedModules": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true
-  }
-}
+{ "extends": "@keylow/config/tsconfig/base.json" }

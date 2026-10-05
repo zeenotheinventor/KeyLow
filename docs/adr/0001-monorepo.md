@@ -32,7 +32,7 @@ No shared UI package in v1. Share logic, hooks and tokens only. Mobile charts `v
 
 ### TS config strategy
 
-One `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `moduleResolution: Bundler`, `noEmit`); packages extend it; mobile uses `"extends": ["expo/tsconfig.base", "../../tsconfig.base.json"]`; no `paths` aliases across packages. Edge functions are excluded from Node tsconfigs and typed by Deno.
+One `tsconfig.base.json` (strict, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`, `moduleResolution: Bundler`, `noEmit`); packages extend it; mobile uses `"extends": ["expo/tsconfig.base", "../../tsconfig.base.json"]`; no `paths` aliases across packages. The base compiler options live in `packages/config/tsconfig/base.json` and the root `tsconfig.base.json` extends it, because tooling that resolves `extends` through the workspace symlink without realpathing it (Vite's tsconfig loader) cannot follow a relative path that leaves the package directory. Edge functions are excluded from Node tsconfigs and typed by Deno.
 
 ### Expo + pnpm gotchas
 
