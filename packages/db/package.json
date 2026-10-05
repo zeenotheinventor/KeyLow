@@ -3,9 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/types.gen.ts"
+  },
   "scripts": {
     "dev:db": "supabase start",
     "stop:db": "supabase stop",
-    "db:reset": "supabase db reset"
+    "db:reset": "supabase db reset",
+    "gen-types": "node --experimental-strip-types scripts/gen-types.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test:integration": "supabase test db"
+  },
+  "devDependencies": {
+    "@keylow/config": "workspace:*",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3"
   }
 }
