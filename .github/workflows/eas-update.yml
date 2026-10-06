@@ -19,9 +19,16 @@
 #      > Deployment branches). Otherwise a manual run from a feature branch,
 #      once approved, would deploy that branch.
 #
-# Prerequisites in the app itself (KEY-26). Until they land, the publish step
-# fails: expo-updates must be installed and app.json needs `extra.eas.projectId`
-# and `updates.url`.
+# Prerequisites in the app itself (KEY-26), now in place: expo-updates is
+# installed, and app.json carries `extra.eas.projectId` and `updates.url`.
+#
+# Build-time values: Metro inlines EXPO_PUBLIC_* values into the bundle when
+# `eas update` exports it, and the runner has no .env.local. The publish step
+# therefore sets the four EXPO_PUBLIC_* values as plain `env:` (Supabase URL and
+# publishable key, Google iOS and web client ids). They are public values that
+# ship in every app binary, so they are not secrets. Keep them in step with the
+# `base` profile in apps/mobile/eas.json, which feeds the same values to EAS
+# builds, so the embedded bundle and an OTA bundle never disagree.
 #
 # Scope: OTA carries JavaScript only. A native change (new native dependency,
 # config plugin or SDK bump) changes the fingerprint runtime version and needs
@@ -98,6 +105,14 @@ jobs:
       # which is what production builds listen to, and EAS creates and links
       # that branch if it is missing. `--branch` and `--channel` cannot be
       # combined. `--auto` takes the update message from the commit message.
+      # `--environment production` selects the EAS-side environment (expo.dev,
+      # not the GitHub one) whose variables the export may read. `eas update`
+      # requires the flag for Expo SDK 55 and later.
       - name: Publish the update
         working-directory: apps/mobile
-        run: eas update --channel production --auto --non-interactive
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: https://kixqmrugtcwqdmvzazik.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_VLA-EzM1x57JvajL11pqkg_jn7hPgMB
+          EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 127670518185-ni3pj7ngsfunqnqr5mmsd7bvmjp7ooi8.apps.googleusercontent.com
+          EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 127670518185-hp20gpd441vf5j74b1bt5u23vvsock8e.apps.googleusercontent.com
+        run: eas update --channel production --environment production --auto --non-interactive

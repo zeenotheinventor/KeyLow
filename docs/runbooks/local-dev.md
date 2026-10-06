@@ -183,14 +183,18 @@ Create the mobile env file:
 cp apps/mobile/.env.example apps/mobile/.env.local
 ```
 
-Edit `apps/mobile/.env.local` so it reads as below, using your LAN IP and the `PUBLISHABLE_KEY` value from section 3 (without its double quotes):
+Edit the two Supabase lines in `apps/mobile/.env.local`, using your LAN IP and the `PUBLISHABLE_KEY` value from section 3 (without its double quotes):
 
 ```sh
 EXPO_PUBLIC_SUPABASE_URL=http://<LAN-IP>:54321
 EXPO_PUBLIC_SUPABASE_ANON_KEY=<PUBLISHABLE_KEY value>
 ```
 
-These two names are the whole pattern. `apps/mobile/lib/supabase.ts` reads them and throws `EXPO_PUBLIC_SUPABASE_URL is not set` (or the same for `EXPO_PUBLIC_SUPABASE_ANON_KEY`) if either is empty. Metro loads `.env.local` itself and inlines `EXPO_PUBLIC_` values into the bundle when it builds it, so after any edit restart Metro with `--clear` (below).
+The file also holds `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` and `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`. They come pre-filled from `.env.example` with the real Google client ids (they are public values), so leave them as they are. Without them the Google button shows an error and email sign-in keeps working.
+
+`apps/mobile/lib/supabase.ts` reads the two Supabase names and throws `EXPO_PUBLIC_SUPABASE_URL is not set` (or the same for `EXPO_PUBLIC_SUPABASE_ANON_KEY`) if either is empty. Metro loads `.env.local` itself and inlines `EXPO_PUBLIC_` values into the bundle when it builds it, so after any edit restart Metro with `--clear` (below).
+
+`.env.local` is only for runs through Metro, which is what a development client on your phone does. It is ignored by git and never reaches EAS. Builds made by EAS get their values from the `env` block of the `base` profile in `apps/mobile/eas.json` (which `development` and `production` extend), and `.github/workflows/eas-update.yml` sets the same four values for the OTA publish. Those point at production Supabase, so a development client built by EAS still talks to your local stack because Metro serves a fresh bundle from your `.env.local`. If a Google client id changes, update `.env.example`, `eas.json` and the workflow together.
 
 Docker publishes the API on every interface, so the LAN IP reaches the same stack as `127.0.0.1`. Confirm it from your Mac. A healthy API answers `200` with a JSON body naming GoTrue:
 

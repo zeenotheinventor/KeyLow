@@ -10,6 +10,9 @@
     "runtimeVersion": {
       "policy": "fingerprint"
     },
+    "updates": {
+      "url": "https://u.expo.dev/cd8bec0b-6864-4b6f-97ef-e07d1a381b3a"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.sojisoft.keylow"
