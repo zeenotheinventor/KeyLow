@@ -4,7 +4,16 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://kixqmrugtcwqdmvzazik.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_VLA-EzM1x57JvajL11pqkg_jn7hPgMB",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "127670518185-ni3pj7ngsfunqnqr5mmsd7bvmjp7ooi8.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "127670518185-hp20gpd441vf5j74b1bt5u23vvsock8e.apps.googleusercontent.com"
+      }
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal",
       "channel": "development",
@@ -19,6 +28,7 @@
       }
     },
     "production": {
+      "extends": "base",
       "channel": "production",
       "autoIncrement": true
     }
