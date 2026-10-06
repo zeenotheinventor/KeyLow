@@ -1,0 +1,163 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A newer push to the same ref makes the older run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Every job repeats the same four setup steps because composite actions would need a second file.
+# The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
+# when no version input is given) and the Node version comes from .nvmrc.
+#
+# Installs use --ignore-scripts. LEFTHOOK=0 only disables running hooks, `lefthook install` still
+# writes them, so the flag is the way to skip the root "prepare" script. Nothing else needs install
+# scripts, since pnpm only allows lefthook (onlyBuiltDependencies) to run one.
+
+jobs:
+  # Mirrors the local gate. `pnpm check` is the first command so that what passes here is exactly
+  # what passes on a laptop. The extra checks come after it and are the ones the monorepo ADR lists.
+  static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Run the local gate
+        run: pnpm check
+      # Fails when the lockfile contains duplicates that a dedupe would remove.
+      # The flag keeps the install pass that dedupe runs from triggering the prepare script.
+      - name: Check the lockfile for duplicates
+        run: pnpm dedupe --check --ignore-scripts
+      # Some doctor checks call the Expo API. A run where every failure is a network error is
+      # downgraded to a warning, so an Expo outage does not block merges.
+      - name: Check the Expo project health
+        working-directory: apps/mobile
+        env:
+          EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
+        run: npx --yes expo-doctor
+
+  # Runs the pgTAP tests against a real local Supabase stack, then proves the committed
+  # packages/db/src/types.gen.ts is what the migrations generate.
+  db-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Pinned to the CLI version used locally. The action also accepts "latest".
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.106.0
+      # Keeps the services the tests and type generation need. That is the database, the API
+      # gateway (kong), rest and meta (gen types). Auth always starts and cannot be excluded.
+      # Excluded: analytics and vector (log pipeline), edge-runtime and functions, imgproxy,
+      # inbucket (mail catcher), realtime, storage and studio.
+      - name: Start the local Supabase stack
+        working-directory: packages/db
+        run: supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
+      - name: Run the pgTAP tests
+        run: pnpm check:integration
+      # gen-types rewrites the file in place, so any difference means it was not committed.
+      - name: Check the generated types are committed
+        run: |
+          pnpm gen-types
+          git diff --exit-code packages/db/src/types.gen.ts
+
+  # Warns on a pull request when it changes the native fingerprint of the mobile app, meaning an
+  # EAS Update cannot ship it and a new build is needed. The expo/expo-github-action/fingerprint
+  # action is not used. It posts no comment itself, it only reports a diff, and it compares
+  # against a database that has to be built up by runs on main. Instead this job fingerprints both
+  # sides with the @expo/fingerprint CLI that expo already installs, so the comparison does not
+  # depend on any earlier run.
+  mobile-fingerprint:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      # The checkout is the merge of the pull request into its base, so its first parent is the
+      # base tip. Depth 2 fetches both parents.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Fingerprint the merged pull request
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate > "$RUNNER_TEMP/head.json"
+      # Dependencies are installed again at the base because native modules are part of the
+      # fingerprint.
+      - name: Fingerprint the base
+        run: |
+          git checkout --detach HEAD^1
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate > "$RUNNER_TEMP/base.json"
+      # One comment per pull request, found by its marker and updated on every push. A comment that
+      # reported a change is rewritten when a later push brings the fingerprints back in line.
+      - name: Comment on the pull request
+        run: |
+          set -euo pipefail
+          base_hash=$(jq -r .hash "$RUNNER_TEMP/base.json")
+          head_hash=$(jq -r .hash "$RUNNER_TEMP/head.json")
+          comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/comments" \
+            --jq '.[] | select(.body | startswith("<!-- keylow-mobile-fingerprint -->")) | .id' | sed -n 1p)
+
+          if [ "$base_hash" = "$head_hash" ]; then
+            if [ -z "$comment_id" ]; then
+              echo "Fingerprint unchanged and no earlier comment to update."
+              exit 0
+            fi
+            {
+              echo "<!-- keylow-mobile-fingerprint -->"
+              echo "**Native fingerprint unchanged.** An earlier push changed it, this one does not. Hash: \`$head_hash\`."
+            } > "$RUNNER_TEMP/comment.md"
+          else
+            pnpm --filter @keylow/mobile exec fingerprint fingerprint:diff "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" > "$RUNNER_TEMP/diff.json"
+            changed_count=$(jq 'length' "$RUNNER_TEMP/diff.json")
+            {
+              echo "<!-- keylow-mobile-fingerprint -->"
+              echo "**Native fingerprint changed.** This pull request cannot ship as an EAS Update, a new native build is needed."
+              echo
+              echo "Base: \`$base_hash\`"
+              echo "Head: \`$head_hash\`"
+              echo
+              echo "Changed sources:"
+              jq -r '.[:30][] | "- \(.op): `\((.addedSource // .removedSource // .afterSource) | (.filePath // .id))`"' "$RUNNER_TEMP/diff.json"
+              if [ "$changed_count" -gt 30 ]; then
+                echo "- and $((changed_count - 30)) more"
+              fi
+            } > "$RUNNER_TEMP/comment.md"
+          fi
+
+          if [ -z "$comment_id" ]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/comments" -F body=@"$RUNNER_TEMP/comment.md"
+          else
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -F body=@"$RUNNER_TEMP/comment.md"
+          fi

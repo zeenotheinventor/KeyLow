@@ -38,8 +38,8 @@ describe("sign-up screen", () => {
   it("should reject a malformed email and a short password without calling Supabase", async () => {
     await fillAndSubmit("nope", "short");
 
-    expect(screen.getByText("Enter a valid email address")).toBeOnTheScreen();
-    expect(screen.getByText("Password must be at least 8 characters")).toBeOnTheScreen();
+    expect(await screen.findByText("Enter a valid email address")).toBeOnTheScreen();
+    expect(await screen.findByText("Password must be at least 8 characters")).toBeOnTheScreen();
     expect(mockSupabaseClient.auth.signUp).not.toHaveBeenCalled();
   });
 
