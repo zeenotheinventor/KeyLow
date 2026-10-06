@@ -1,14 +1,18 @@
 // Regenerates src/types.gen.ts from the local Supabase database. The stack must
 // be running (`pnpm dev:db`) with the migrations applied (`pnpm --filter @keylow/db db:reset`).
+// The database is addressed by URL because `--local` makes some CLI setups ask for an access
+// token, and a URL needs none. Set SUPABASE_DB_URL when the stack does not use the default port.
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 const packageDirectory = resolve(import.meta.dirname, "..");
 const outputFile = resolve(packageDirectory, "src/types.gen.ts");
+const databaseUrl =
+  process.env["SUPABASE_DB_URL"] ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres";
 
 function generateTypes(): string {
-  return execFileSync("supabase", ["gen", "types", "--lang=typescript", "--local"], {
+  return execFileSync("supabase", ["gen", "types", "--lang=typescript", "--db-url", databaseUrl], {
     cwd: packageDirectory,
     encoding: "utf8",
     stdio: ["ignore", "pipe", "inherit"],

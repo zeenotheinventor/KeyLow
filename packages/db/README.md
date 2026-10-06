@@ -27,7 +27,7 @@ Run these from the repo root with `pnpm --filter @keylow/db run <script>`. `gen-
 
 ## Types
 
-`pnpm gen-types` at the repo root runs `scripts/gen-types.ts`, which asks the Supabase CLI for the types, writes them to `src/types.gen.ts` and formats the file with Prettier. Never edit that file by hand. After a migration changes the schema, run `db:reset` and then `gen-types`, and commit the result. On a clean checkout against a freshly reset database, `gen-types` leaves no diff.
+`pnpm gen-types` at the repo root runs `scripts/gen-types.ts`, which asks the Supabase CLI for the types, writes them to `src/types.gen.ts` and formats the file with Prettier. It connects by database URL, `postgresql://postgres:postgres@127.0.0.1:54322/postgres` by default, so it needs no Supabase login or access token. Set `SUPABASE_DB_URL` if the local stack uses a different database port. Never edit that file by hand. After a migration changes the schema, run `db:reset` and then `gen-types`, and commit the result. On a clean checkout against a freshly reset database, `gen-types` leaves no diff.
 
 ## Tests
 
