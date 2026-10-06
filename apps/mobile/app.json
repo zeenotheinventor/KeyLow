@@ -27,8 +27,16 @@
       "expo-secure-store",
       [
         "@react-native-google-signin/google-signin",
-        { "iosUrlScheme": "com.googleusercontent.apps.REPLACE-WITH-IOS-CLIENT-ID" }
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REPLACE-WITH-IOS-CLIENT-ID"
+        }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "cd8bec0b-6864-4b6f-97ef-e07d1a381b3a"
+      }
+    },
+    "owner": "sojisoft"
   }
 }
