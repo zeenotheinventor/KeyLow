@@ -47,15 +47,15 @@ describe("sign-in screen", () => {
   it("should ask for an email and a password when the form is empty", async () => {
     await fillAndSubmit("", "");
 
-    expect(screen.getByText("Enter your email address")).toBeOnTheScreen();
-    expect(screen.getByText("Enter your password")).toBeOnTheScreen();
+    expect(await screen.findByText("Enter your email address")).toBeOnTheScreen();
+    expect(await screen.findByText("Enter your password")).toBeOnTheScreen();
     expect(mockSupabaseClient.auth.signInWithPassword).not.toHaveBeenCalled();
   });
 
   it("should reject a malformed email", async () => {
     await fillAndSubmit("not-an-email", "password123");
 
-    expect(screen.getByText("Enter a valid email address")).toBeOnTheScreen();
+    expect(await screen.findByText("Enter a valid email address")).toBeOnTheScreen();
     expect(mockSupabaseClient.auth.signInWithPassword).not.toHaveBeenCalled();
   });
 
