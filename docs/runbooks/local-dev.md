@@ -220,14 +220,13 @@ pnpm --filter @keylow/mobile start --clear
 npx eas-cli build --profile development-device
 ```
 
-This builds an internal-distribution development client in the EAS cloud (profile `development-device` in `apps/mobile/eas.json`). The `development` profile builds an iOS simulator app instead, which only runs in the iOS Simulator, so you need Xcode on your machine to run it. The EAS build itself does not need Xcode. Before the first build works you need these things, none of which are set up in the repo yet:
+This builds an internal-distribution development client in the EAS cloud (profile `development-device` in `apps/mobile/eas.json`). The `development` profile builds an iOS simulator app instead, which only runs in the iOS Simulator, so you need Xcode on your machine to run it. The EAS build itself does not need Xcode. Before the first build works you need these things:
 
-- An EAS login (`npx eas-cli login`) on an Expo account.
-- Bundle identifiers: `ios.bundleIdentifier` and `android.package` in `apps/mobile/app.json`.
-- An EAS `projectId` in `apps/mobile/app.json`, which `npx eas-cli init` creates.
+- An EAS login (`npx eas-cli login`) with access to the `sojisoft` Expo organisation. The account signs in through the browser; the CLI opens it.
+- Bundle identifiers and the EAS project are already in `apps/mobile/app.json` (`com.sojisoft.keylow` for both platforms, project `@sojisoft/keylow`).
 - For an iOS internal-distribution build, an Apple Developer account and the phone's UDID registered with `npx eas-cli device:create`. Android needs neither.
 
-These are tracked as the manual Expo and EAS setup tickets. Until they are done, nobody can install a dev client, but everything else in this section still works.
+The first build itself is tracked as a manual ticket. Until it is done, nobody can install a dev client, but everything else in this section still works.
 
 ### Connect the phone
 
