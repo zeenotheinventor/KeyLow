@@ -1,0 +1,87 @@
+# Deploy to the production Supabase project (keylow-prod, eu-west-2).
+#
+# What it does: on a push to main that touches packages/db/supabase, and on
+# manual dispatch, it links the CLI to production, applies pending migrations
+# with `supabase db push`, then deploys Edge Functions with
+# `supabase functions deploy` when any exist.
+#
+# One-time setup in GitHub (Settings of this repository, done by Zee):
+#
+#   1. Settings > Environments > New environment, named exactly `production`.
+#   2. On that environment, enable "Required reviewers" and add Zee. This is
+#      the manual approval gate. The job below declares `environment:
+#      production`, so every run pauses until a reviewer approves it. Without
+#      step 2 the workflow still runs but nothing waits for approval.
+#   3. On that same environment, add these three secrets under "Environment
+#      secrets" (not repository secrets, so that only approved runs can read
+#      them):
+#        SUPABASE_ACCESS_TOKEN  personal access token (KEY-11)
+#        SUPABASE_PROJECT_ID    project ref of keylow-prod (KEY-11)
+#        SUPABASE_DB_PASSWORD   database password of keylow-prod (KEY-11)
+#   4. On that same environment, set "Deployment branches" to "Selected
+#      branches" and allow only `main` (Settings > Environments > production
+#      > Deployment branches). Otherwise a manual run from a feature branch,
+#      once approved, would deploy that branch.
+#
+# Not verifiable before the secrets exist and a real push to main happens.
+# The Supabase CLI is pinned below. Bump it deliberately.
+
+name: Deploy Supabase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "packages/db/supabase/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two production deploys at once, and never cancel one mid-flight
+# (a half-applied migration run is worse than a queued one).
+concurrency:
+  group: deploy-supabase
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Push migrations and functions
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    # The Supabase project lives in packages/db/supabase, so the CLI runs from packages/db.
+    defaults:
+      run:
+        working-directory: packages/db
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: supabase/setup-cli@v3
+        with:
+          version: 2.106.0
+
+      - name: Link the production project
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+        run: supabase link --project-ref "$SUPABASE_PROJECT_ID"
+
+      - name: Push migrations
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push --yes
+
+      # packages/db/supabase/functions does not exist yet. Directories starting
+      # with an underscore (for example _shared) hold shared code, not functions.
+      - name: Deploy Edge Functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -n "$(find supabase/functions -mindepth 1 -maxdepth 1 -type d -not -name '_*' 2>/dev/null)" ]; then
+            supabase functions deploy --use-api
+          else
+            echo "No Edge Functions found under packages/db/supabase/functions, skipping."
+          fi

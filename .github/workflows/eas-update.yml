@@ -1,0 +1,103 @@
+# Publish an over-the-air (OTA) update to the production EAS channel.
+#
+# What it does: on a push to main that touches code bundled into the mobile
+# app, and on manual dispatch, it installs dependencies and runs
+# `eas update` for the `production` channel.
+#
+# One-time setup in GitHub (Settings of this repository, done by Zee):
+#
+#   1. Settings > Environments > New environment, named exactly `production`
+#      (shared with deploy-supabase.yml).
+#   2. On that environment, enable "Required reviewers" and add Zee. The job
+#      below declares `environment: production`, so every OTA publish pauses
+#      until a reviewer approves it, the same gate as the Supabase deploy.
+#   3. On that same environment, add this secret under "Environment secrets"
+#      (not a repository secret, so that only approved runs can read it):
+#        EXPO_TOKEN  Expo access token for the EAS account (KEY-13)
+#   4. On that same environment, set "Deployment branches" to "Selected
+#      branches" and allow only `main` (Settings > Environments > production
+#      > Deployment branches). Otherwise a manual run from a feature branch,
+#      once approved, would deploy that branch.
+#
+# Prerequisites in the app itself (KEY-26). Until they land, the publish step
+# fails: expo-updates must be installed and app.json needs `extra.eas.projectId`
+# and `updates.url`.
+#
+# Scope: OTA carries JavaScript only. A native change (new native dependency,
+# config plugin or SDK bump) changes the fingerprint runtime version and needs
+# a new store build. An update published under a runtime version that no
+# installed build has is simply never delivered.
+#
+# Not verifiable before the secret exists and a real push to main happens.
+
+name: EAS Update
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/core/**"
+      - "packages/api-client/**"
+      - "packages/tokens/**"
+      - "packages/db/src/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two merges must not publish OTA updates in parallel.
+concurrency:
+  group: eas-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Publish OTA update to production
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+
+      # No version input: the action reads `packageManager` from package.json.
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # LEFTHOOK=0 stops the root `prepare` script from installing git hooks in CI.
+      - name: Install dependencies
+        env:
+          LEFTHOOK: "0"
+        run: pnpm install --frozen-lockfile
+
+      # The action silently skips authentication when the token is empty, which
+      # would surface later as an obscure eas error. Fail here with the reason.
+      # Checked in the shell because a step's own env is not visible to its `if`.
+      - name: Check the EXPO_TOKEN secret is set
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error title=EXPO_TOKEN is not set::Add EXPO_TOKEN as a secret on the production environment (see the header of this workflow)."
+            exit 1
+          fi
+
+      # The packager only installs the EAS CLI. npm ships with Node, so the job
+      # does not depend on yarn (the action default) being present.
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          packager: npm
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # `--channel` publishes to the branch linked to the production channel,
+      # which is what production builds listen to, and EAS creates and links
+      # that branch if it is missing. `--branch` and `--channel` cannot be
+      # combined. `--auto` takes the update message from the commit message.
+      - name: Publish the update
+        working-directory: apps/mobile
+        run: eas update --channel production --auto --non-interactive
