@@ -49,8 +49,9 @@ jobs:
           EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
         run: npx --yes expo-doctor
 
-  # Runs the pgTAP tests against a real local Supabase stack, then proves the committed
-  # packages/db/src/types.gen.ts is what the migrations generate.
+  # Type-checks and lints the Edge Functions under Deno, runs the pgTAP tests against a real local
+  # Supabase stack, then proves the committed packages/db/src/types.gen.ts is what the migrations
+  # generate.
   db-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -73,7 +74,11 @@ jobs:
       - name: Start the local Supabase stack
         working-directory: packages/db
         run: supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
-      - name: Run the pgTAP tests
+      # check:integration includes check:functions. Turbo bundles @keylow/core for Deno first, then
+      # `deno check` and `deno lint` run from the pinned `deno` npm package, so no Deno setup step is
+      # needed. Deno downloads the supabase-js and zod packages itself, which is why this job and
+      # not the static one runs it.
+      - name: Check the Edge Functions and run the pgTAP tests
         run: pnpm check:integration
       # gen-types rewrites the file in place, so any difference means it was not committed.
       - name: Check the generated types are committed

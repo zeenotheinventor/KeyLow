@@ -16,6 +16,7 @@ apps/*/.next/
 apps/*/out/
 packages/db/supabase/.branches/
 packages/db/supabase/.temp/
+packages/db/supabase/functions/_shared/core/
 dist/
 build/
 coverage/

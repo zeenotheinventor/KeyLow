@@ -14,7 +14,7 @@ If Node 22 is not your default, run `source ~/.nvm/nvm.sh && nvm use 22` in each
 | [nvm](https://github.com/nvm-sh/nvm) with Node       | 22 (see note below) | The db scripts run TypeScript through Node's built-in type stripping                                         |
 | pnpm, through Corepack                               | 10.34.5 (pinned)    | `package.json` pins it with `packageManager`, Corepack resolves it                                           |
 | Docker Desktop, running                              | any current version | `supabase start` runs the whole local backend in containers                                                  |
-| [Supabase CLI](https://supabase.com/docs/guides/cli) | 2.106 or later      | Starts the stack, resets the database, generates types, runs the pgTAP tests                                 |
+| [Supabase CLI](https://supabase.com/docs/guides/cli) | 2.106 or later      | Starts the stack, applies migrations, generates types, runs the pgTAP tests                                  |
 
 The repo pins Node 22 in `.nvmrc`, and `package.json` requires `>=22`. Use 22.18 or later, because the db scripts run TypeScript through Node's built-in type stripping, which is on by default from that release.
 
@@ -71,13 +71,13 @@ When it finishes, the CLI prints the service URLs:
 | Studio (database UI)    | `http://127.0.0.1:54323`                                  |
 | Mailpit (local inbox)   | `http://127.0.0.1:54324`                                  |
 
-Load the migrations and the seed into a fresh database:
+The first `supabase start` creates the database, applies `packages/db/supabase/migrations/` and runs `packages/db/supabase/seed.sql`. After that, apply the migrations a pull or a new branch brought in without touching your data:
 
 ```sh
-pnpm --filter @keylow/db db:reset
+pnpm --filter @keylow/db migration:up
 ```
 
-This drops and recreates the local database, applies `packages/db/supabase/migrations/`, then runs `packages/db/supabase/seed.sql`. It also deletes any account you created by signing up, so use it deliberately. The local database is shared by every checkout of KeyLow on this machine (the project id is `keylow`), so a reset in one clone resets it for all. See the troubleshooting entry about `supabase start is already running`.
+This runs `supabase migration up --local` from `packages/db` and applies only the migrations the database does not have yet. It keeps every row and every account you created by signing up. The local database is shared by every checkout of KeyLow on this machine (the project id is `keylow`), so never reset it as a tidiness step. `pnpm --filter @keylow/db db:reset` drops and recreates the database, reapplies the migrations and reloads the seed, and it deletes your accounts in every checkout. It is for a genuinely broken local database only, and you announce it before you run it. See the troubleshooting entry about `supabase start is already running`.
 
 The seed currently holds one demo user and its profile row:
 
@@ -104,8 +104,8 @@ git diff --exit-code packages/db/src/types.gen.ts
 pnpm check:integration
 ```
 
-- `pnpm gen-types` rewrites `packages/db/src/types.gen.ts` from the running database. On a clean checkout after `db:reset` it leaves no diff, so `git diff --exit-code` exits 0.
-- `pnpm check:integration` runs the pgTAP tests in `packages/db/supabase/tests/` and ends with `Result: PASS`. It needs the stack running.
+- `pnpm gen-types` rewrites `packages/db/src/types.gen.ts` from the running database. On a clean checkout with every migration applied it leaves no diff, so `git diff --exit-code` exits 0.
+- `pnpm check:integration` first bundles core and checks the Edge Functions under Deno (see Edge Functions below), then runs the pgTAP tests in `packages/db/supabase/tests/` and ends with `Result: PASS`. The pgTAP part needs the stack running.
 
 Leave the stack running, because sections 4 and 5 need it. When you finish for the day, stop it:
 
@@ -113,7 +113,35 @@ Leave the stack running, because sections 4 and 5 need it. When you finish for t
 pnpm --filter @keylow/db stop:db
 ```
 
-Stopping keeps your data in a Docker volume, and the next `pnpm dev:db` picks it up. To start from nothing, run `db:reset`.
+Stopping keeps your data in a Docker volume, and the next `pnpm dev:db` picks it up.
+
+### Edge Functions
+
+Edge Functions live in `packages/db/supabase/functions/` and run under Deno. The Node tools (ESLint, `tsc`) ignore that folder, and Deno checks it instead. Shared helpers are in `_shared/`, and each function is a folder with an `index.ts`. A folder whose name starts with an underscore is never deployed as a function.
+
+Functions import `@keylow/core` through a generated bundle in `_shared/core/`. The bundle is not committed. Git, Prettier and EAS all ignore it, so a fresh clone does not have it. Write it, and write it again after any change in `packages/core`:
+
+```sh
+pnpm --filter @keylow/db bundle-core-for-deno
+```
+
+This writes `packages/db/supabase/functions/_shared/core/index.js` (zod included), `index.d.ts` (the rolled-up types Deno checks against) and `database.types.ts` (a copy of the generated database types, so the function clients are typed). It needs no network and no running stack.
+
+Type-check and lint the functions:
+
+```sh
+pnpm --filter @keylow/db check:functions
+```
+
+This runs `deno check` on every function entry and every `_shared` module, then `deno lint`, with the Deno that the `deno` npm package pins (`pnpm exec deno --version` prints it). The first run downloads supabase-js and zod into Deno's cache, so it needs the network. `check:functions` bundles core first, so it never runs against a stale or missing bundle. `pnpm check:integration` runs it too. `pnpm check` never runs Deno, so it stays offline.
+
+Serve the functions against the running stack, with the test environment:
+
+```sh
+(cd packages/db && supabase functions serve --env-file supabase/functions/.env.test)
+```
+
+A function is then at `http://127.0.0.1:54321/functions/v1/<name>`. The stack has one edge-runtime container for every checkout on this machine, so serve from one checkout at a time and stop it with Ctrl-C when you are done. `supabase/functions/.env.test` is committed and holds no secrets. It points the Open Food Facts calls at a mock server on the host (`http://host.docker.internal:54399`, because functions run in a container), sets a test User-Agent and sets small rate limits, so a test reaches a limit in a few calls. The CLI accepts the comments in that file.
 
 ## 4. Web app
 
@@ -265,15 +293,16 @@ Run from the repo root.
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm check`                             | `turbo run format:check lint typecheck test`. Run it before every push. The CI pipeline, once it is added, runs exactly this command as its static job. |
 | `pnpm check --force`                     | The same, ignoring the Turborepo cache                                                                                                                  |
-| `pnpm check:integration`                 | pgTAP tests in `packages/db/supabase/tests/`. Needs the stack running.                                                                                  |
+| `pnpm check:integration`                 | Deno check and lint of the Edge Functions, then the pgTAP tests in `packages/db/supabase/tests/`. The pgTAP part needs the stack running.               |
 | `pnpm dedupe --check`                    | Fails if the lockfile has duplicates that `pnpm dedupe` would remove                                                                                    |
 | `pnpm exec prettier --write <path>`      | Formats a file the way `format:check` expects. Markdown is checked too.                                                                                 |
 | `pnpm gen-types`                         | Regenerates `packages/db/src/types.gen.ts`. Run it after every migration, then commit the result.                                                       |
-| `pnpm --filter @keylow/db db:reset`      | Rebuilds the local database from the migrations and the seed                                                                                            |
+| `pnpm --filter @keylow/db migration:up`  | Applies the migrations the local database does not have yet, and keeps its data                                                                         |
+| `pnpm --filter @keylow/db db:reset`      | Rebuilds the local database from nothing. Only for a broken database, announce it first                                                                 |
 | `pnpm --filter @keylow/mobile typecheck` | Type-checks the mobile app with its own TypeScript                                                                                                      |
 | `cd apps/mobile && npx expo-doctor`      | The Expo project health check. The CI pipeline runs it too once it exists.                                                                              |
 
-After you change the schema, the sequence is: add a migration in `packages/db/supabase/migrations/`, run `db:reset`, run `pnpm gen-types`, add or update a pgTAP test in `packages/db/supabase/tests/`, run `pnpm check:integration`, then commit the migration, the test and the regenerated types together.
+After you change the schema, the sequence is: add a migration in `packages/db/supabase/migrations/`, run `pnpm --filter @keylow/db migration:up`, run `pnpm gen-types`, add or update a pgTAP test in `packages/db/supabase/tests/`, run `pnpm check:integration`, then commit the migration, the test and the regenerated types together.
 
 ## 7. Troubleshooting
 
@@ -299,7 +328,7 @@ DOCKER_CONFIG=$(mktemp -d) pnpm dev:db
 
 The same prefix works for `pnpm check:integration` (which pulls the pgTAP runner) and `pnpm gen-types` (which pulls postgres-meta). It affects only that one command.
 
-**`pnpm dev:db` says `supabase start is already running` but you did not start it.** Another checkout's stack is up. The project id in `config.toml` is fixed as `keylow`, so every clone shares the same container names and ports, and the running database holds that other checkout's migrations. Stop it with `pnpm --filter @keylow/db stop:db` (from either checkout), then start it again here and run `db:reset` so the database matches this checkout.
+**`pnpm dev:db` says `supabase start is already running` but you did not start it.** Another checkout's stack is up. The project id in `config.toml` is fixed as `keylow`, so every clone shares the same container names and ports, and the running database holds that other checkout's migrations. Stop it with `pnpm --filter @keylow/db stop:db` (from either checkout), then start it again here and run `pnpm --filter @keylow/db migration:up`. If it reports remote migrations that are missing from the local migrations directory, the database belongs to a branch with migrations this checkout does not have. Switch to that branch. For a genuinely divergent database, and only after announcing it in the team notes, run `db:reset`. Never run `supabase migration repair` against the shared database.
 
 **`pnpm --filter @keylow/web test:e2e` fails with `http://localhost:3000 is already used`.** Stop whatever listens on port 3000. Find it with `lsof -nP -iTCP:3000 -sTCP:LISTEN`.
 

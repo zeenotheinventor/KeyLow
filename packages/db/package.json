@@ -10,14 +10,21 @@
     "dev:db": "supabase start",
     "stop:db": "supabase stop",
     "db:reset": "supabase db reset",
+    "migration:up": "supabase migration up --local",
     "gen-types": "node --experimental-strip-types scripts/gen-types.ts",
+    "bundle-core-for-deno": "node --experimental-strip-types scripts/bundle-core-for-deno.ts",
+    "check:functions": "pnpm run bundle-core-for-deno && pnpm exec deno check --config supabase/functions/deno.json 'supabase/functions/*/index.ts' 'supabase/functions/_shared/*.ts' && pnpm exec deno lint --config supabase/functions/deno.json supabase/functions",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:integration": "supabase test db"
   },
   "devDependencies": {
     "@keylow/config": "workspace:*",
+    "@keylow/core": "workspace:*",
     "@types/node": "^22.20.5",
+    "deno": "~2.9.6",
+    "dts-bundle-generator": "^9.5.1",
+    "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
     "typescript": "^5.9.3"
   }
