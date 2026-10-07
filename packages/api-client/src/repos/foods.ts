@@ -1,4 +1,5 @@
 import { foodPortionSchema, foodRowSchema } from "@keylow/core/schemas";
+import { z } from "zod";
 
 import type { Database } from "../database.types";
 import type { CustomFoodInput, Food, FoodPortion } from "@keylow/core/schemas";
@@ -9,6 +10,17 @@ type FoodPortionInsert = Database["public"]["Tables"]["food_portions"]["Insert"]
 
 // The generated `search` column is a database-only tsvector, so it is never selected.
 const FOOD_COLUMNS = Object.keys(foodRowSchema.shape).join(",");
+
+// Every `search_foods` column is typed non-null in the generated types, which is wrong for barcode,
+// brand, deleted_at and others, so rows are parsed instead of trusted.
+const foodSearchHitSchema = foodRowSchema.extend({ score: z.number() });
+
+/** A food row with the relevance score the `search_foods` RPC ranked it by. */
+export type FoodSearchHit = z.infer<typeof foodSearchHitSchema>;
+
+const MIN_SEARCH_LENGTH = 2;
+const DEFAULT_SEARCH_LIMIT = 25;
+const MAX_SEARCH_LIMIT = 50;
 
 const repoError = (action: string, cause: PostgrestError) =>
   new Error(`Could not ${action}: ${cause.message}`, { cause });
@@ -228,4 +240,35 @@ export async function updateFood(
   }
 
   return food;
+}
+
+/**
+ * Searches the foods the caller can see through the `search_foods` RPC, best match first. A query
+ * shorter than 2 characters once trimmed returns [] without a request. `limit` is clamped to
+ * 1..50, as the RPC does too. A row that does not parse throws rather than being dropped.
+ */
+export async function searchFoods(
+  client: SupabaseClient<Database>,
+  query: string,
+  limit = DEFAULT_SEARCH_LIMIT,
+): Promise<FoodSearchHit[]> {
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery.length < MIN_SEARCH_LENGTH) {
+    return [];
+  }
+
+  const { data, error } = await client.rpc("search_foods", {
+    q: trimmedQuery,
+    lim: Math.min(MAX_SEARCH_LIMIT, Math.max(1, Math.trunc(limit))),
+  });
+
+  if (error) {
+    throw repoError("search the foods", error);
+  }
+
+  // The RPC already orders its rows. Sorting again is defensive, and stable for equal rows.
+  return data
+    .map((row) => foodSearchHitSchema.parse(row))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
 }

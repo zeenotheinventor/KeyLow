@@ -88,7 +88,7 @@ describe("useUpdateFood", () => {
     await act(() => result.current.mutateAsync({ id: FOOD_ID, input: validInput }));
 
     expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.foods.all });
+    expect(invalidate.mock.calls[0]?.[0]).toHaveProperty("queryKey", keys.foods.all);
   });
 
   it("should invalidate every foods query and name the food when only the portions were not saved", async () => {
@@ -109,7 +109,7 @@ describe("useUpdateFood", () => {
     expect(failure).toHaveProperty("message", expect.stringContaining(FOOD_ID));
     expect(requests).toEqual(["PATCH foods", "DELETE food_portions"]);
     expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.foods.all });
+    expect(invalidate.mock.calls[0]?.[0]).toHaveProperty("queryKey", keys.foods.all);
   });
 
   it("should not invalidate anything when the update fails", async () => {

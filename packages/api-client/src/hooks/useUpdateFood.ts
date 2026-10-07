@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { parseCustomFoodInput } from "../customFoodInput";
+import { invalidateFoodQueries } from "../invalidateFoodQueries";
 import { useSupabase } from "../KeyLowProvider";
-import { keys } from "../queryKeys";
 import { FoodsPartialWriteError, updateFood } from "../repos/foods";
 
 type UpdateFoodVariables = { id: string; input: unknown };
 
 /**
  * Edits a custom food and replaces its portions. The input is validated before any request is made.
- * Every foods query is invalidated after a success, and also after a partial write (the food was
+ * Every foods query except the Open Food Facts searches is invalidated after a success, and also after a partial write (the food was
  * updated but its portions were not replaced), because the database then differs from the cache.
  */
 export function useUpdateFood() {
@@ -25,9 +25,8 @@ export function useUpdateFood() {
         return;
       }
 
-      // The ticket lists the detail, portions and all keys. The root key is a prefix of the other
-      // two (see the nesting test in queryKeys.test.ts), so one invalidation covers all three.
-      await queryClient.invalidateQueries({ queryKey: keys.foods.all });
+      // One invalidation of the root key covers the detail, portions, search and barcode keys.
+      await invalidateFoodQueries(queryClient);
     },
   });
 }

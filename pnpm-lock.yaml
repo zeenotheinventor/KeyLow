@@ -236,6 +236,9 @@ importers:
       '@keylow/db':
         specifier: workspace:*
         version: link:../db
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@keylow/config':
         specifier: workspace:*

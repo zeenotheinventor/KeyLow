@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { parseCustomFoodInput } from "../customFoodInput";
+import { invalidateFoodQueries } from "../invalidateFoodQueries";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { FoodsPartialWriteError, createFood } from "../repos/foods";
@@ -8,7 +9,7 @@ import { FoodsPartialWriteError, createFood } from "../repos/foods";
 /**
  * Creates a custom food for the signed in user. The input is validated before any request is made.
  * Once the food exists in the database, whether or not its portions were saved, every foods query
- * is invalidated. A successful create also seeds the new food's detail and portions caches.
+ * is invalidated, except the Open Food Facts searches. A successful create also seeds the new food's detail and portions caches.
  */
 export function useCreateFood() {
   const client = useSupabase();
@@ -31,8 +32,8 @@ export function useCreateFood() {
         return;
       }
 
-      // A single invalidation of the root key covers the detail, portions, search and barcode keys.
-      await queryClient.invalidateQueries({ queryKey: keys.foods.all });
+      // One invalidation of the root key covers the detail, portions, search and barcode keys.
+      await invalidateFoodQueries(queryClient);
 
       if (created) {
         queryClient.setQueryData(keys.foods.detail(created.food.id), created.food);
