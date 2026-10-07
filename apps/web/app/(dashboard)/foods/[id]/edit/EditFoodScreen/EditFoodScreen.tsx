@@ -50,6 +50,17 @@ export function EditFoodScreen({ id }: { id: string }) {
     );
   }
 
+  if (food.data.source !== "user") {
+    return (
+      <Notice>
+        <p className="text-sm text-muted-foreground">
+          This food comes from a shared database and cannot be edited. Save a copy as your own food
+          instead.
+        </p>
+      </Notice>
+    );
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-2xl font-semibold">Edit food</h1>

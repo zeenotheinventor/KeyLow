@@ -93,6 +93,23 @@ describe("EditFoodScreen", () => {
     expect(screen.queryByLabelText("Name")).toBeNull();
   });
 
+  it("should say a food from a shared database cannot be edited and show no form", () => {
+    useFood.mockReturnValue(
+      loaded(makeFood({ source: "cofid", source_ref: "13-145", owner_id: null })),
+    );
+    useFoodPortions.mockReturnValue(loaded([]));
+
+    render(<EditFoodScreen id="food-1" />);
+
+    expect(
+      screen.getByText(
+        "This food comes from a shared database and cannot be edited. Save a copy as your own food instead.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByLabelText("Name")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Save food" })).toBeNull();
+  });
+
   it("should pre-fill the form once the food and portions have loaded", () => {
     useFood.mockReturnValue(loaded(makeFood({ name: "Porridge oats" })));
     useFoodPortions.mockReturnValue(loaded([makePortion({ label: "Bowl", grams: 40 })]));
