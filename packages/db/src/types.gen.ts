@@ -297,6 +297,35 @@ export type Database = {
           retry_after_seconds: number;
         }[];
       };
+      search_foods: {
+        Args: { lim?: number; q: string };
+        Returns: {
+          barcode: string;
+          basis: Database["public"]["Enums"]["nutrient_basis"];
+          brand: string;
+          carbs_g: number;
+          created_at: string;
+          deleted_at: string;
+          density_g_per_ml: number;
+          fat_g: number;
+          fetched_at: string;
+          fibre_g: number;
+          food_group: string;
+          id: string;
+          kcal: number;
+          micros: Json;
+          name: string;
+          owner_id: string;
+          protein_g: number;
+          quality: Json;
+          salt_g: number;
+          sat_fat_g: number;
+          score: number;
+          source: Database["public"]["Enums"]["food_source"];
+          source_ref: string;
+          sugars_g: number;
+        }[];
+      };
     };
     Enums: {
       food_source: "off" | "cofid" | "user";
