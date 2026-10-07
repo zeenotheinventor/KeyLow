@@ -1,6 +1,7 @@
 "use client";
 
 import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
+import { normaliseBarcode } from "@keylow/core/foods";
 import { customFoodInputSchema, nutrientBasisSchema } from "@keylow/core/schemas";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -44,7 +45,7 @@ const SELECT_CLASS_NAME =
 
 const SECTION_HEADING_CLASS_NAME = "font-semibold leading-none tracking-tight";
 
-const FIELD_ERRORS_SUMMARY = "Check the highlighted fields and try again.";
+const FIELD_ERRORS_SUMMARY = "Check the fields marked below and try again.";
 
 function describeSaveFailure(error: unknown, isEditing: boolean): SaveFailure {
   if (error instanceof FoodsPartialWriteError) {
@@ -80,7 +81,9 @@ export function FoodForm({ scannedBarcode, existing }: FoodFormProps) {
   const [status, setStatus] = useState<SaveStatus>("idle");
 
   const isEditing = existing !== undefined;
-  const isBarcodeLocked = !isEditing && scannedBarcode !== undefined;
+  // A scanned barcode that is not a valid code stays editable, or the user could not fix the error.
+  const isBarcodeLocked =
+    !isEditing && scannedBarcode !== undefined && normaliseBarcode(scannedBarcode).ok;
   // A create that wrote the food but not its portions must not be repeated, or the food is duplicated.
   const isLocked = status !== "idle" || saveFailure?.editFoodId !== undefined;
   const unit = amountUnit(values.basis);

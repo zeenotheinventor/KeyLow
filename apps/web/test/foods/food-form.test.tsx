@@ -139,7 +139,7 @@ describe("FoodForm", () => {
 
       save();
 
-      expect(screen.getByRole("alert").textContent).toContain("Check the highlighted fields");
+      expect(screen.getByRole("alert").textContent).toContain("Check the fields marked below");
     });
 
     it("should treat a blank required number as a required-field error rather than zero", () => {
@@ -333,6 +333,30 @@ describe("FoodForm", () => {
       expect(createFood).toHaveBeenCalledWith(
         expect.objectContaining({ barcode: "5000159484695" }),
       );
+    });
+
+    it("should leave a scanned barcode that is not valid editable so the user can fix it", () => {
+      renderForm({ scannedBarcode: "5000159484696" });
+
+      const barcode = screen.getByLabelText("Barcode (optional)");
+      expect(barcode).toHaveProperty("value", "5000159484696");
+      expect(barcode).toHaveProperty("readOnly", false);
+      expect(screen.queryByText(/came from the scan/)).toBeNull();
+    });
+
+    it("should show the barcode error on submit when the scanned barcode is not valid", () => {
+      renderForm({ scannedBarcode: "5000159484696" });
+      fillRequiredFields();
+
+      save();
+
+      expect(createFood).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("textbox", {
+          name: "Barcode (optional)",
+          description: "The check digit is wrong, so check the digits and try again",
+        }),
+      ).toBeTruthy();
     });
 
     it("should leave the barcode editable when nothing was scanned", () => {

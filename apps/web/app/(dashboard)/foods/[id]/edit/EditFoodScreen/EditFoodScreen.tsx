@@ -22,14 +22,16 @@ export function EditFoodScreen({ id }: { id: string }) {
   const food = useFood(id);
   const portions = useFoodPortions(id);
 
-  if (food.isError) {
+  // A failed background refetch must not replace a form the user may be editing, so an error only
+  // takes over the screen when there is no data to show.
+  if (food.data === undefined && food.isError) {
     return <LoadFailure message={food.error.message} />;
   }
-  if (portions.isError) {
+  if (portions.data === undefined && portions.isError) {
     return <LoadFailure message={portions.error.message} />;
   }
 
-  if (food.isPending || portions.isPending) {
+  if (food.data === undefined || portions.data === undefined) {
     return (
       <Notice>
         <p role="status" className="text-sm text-muted-foreground">
@@ -54,8 +56,7 @@ export function EditFoodScreen({ id }: { id: string }) {
     return (
       <Notice>
         <p className="text-sm text-muted-foreground">
-          This food comes from a shared database and cannot be edited. Save a copy as your own food
-          instead.
+          This food comes from a shared database and cannot be edited.
         </p>
       </Notice>
     );

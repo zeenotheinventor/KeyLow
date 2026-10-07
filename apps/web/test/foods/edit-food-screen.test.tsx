@@ -102,12 +102,31 @@ describe("EditFoodScreen", () => {
     render(<EditFoodScreen id="food-1" />);
 
     expect(
-      screen.getByText(
-        "This food comes from a shared database and cannot be edited. Save a copy as your own food instead.",
-      ),
+      screen.getByText("This food comes from a shared database and cannot be edited."),
     ).toBeTruthy();
     expect(screen.queryByLabelText("Name")).toBeNull();
     expect(screen.queryByRole("button", { name: "Save food" })).toBeNull();
+  });
+
+  it("should keep the form and its values when a background refetch fails after the data loaded", () => {
+    useFood.mockReturnValue({
+      data: makeFood({ name: "Porridge oats" }),
+      isPending: false,
+      isError: true,
+      error: new Error("Could not load the food: offline"),
+    });
+    useFoodPortions.mockReturnValue({
+      data: [makePortion({ label: "Bowl", grams: 40 })],
+      isPending: false,
+      isError: true,
+      error: new Error("Could not load the food's portions: offline"),
+    });
+
+    render(<EditFoodScreen id="food-1" />);
+
+    expect(screen.getByLabelText("Name")).toHaveProperty("value", "Porridge oats");
+    expect(screen.getByLabelText("Portion 1 label")).toHaveProperty("value", "Bowl");
+    expect(screen.queryByText(/offline/)).toBeNull();
   });
 
   it("should pre-fill the form once the food and portions have loaded", () => {
