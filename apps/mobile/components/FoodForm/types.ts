@@ -31,6 +31,10 @@ export type FoodFormProps = {
   initialValues?: FoodFormValues;
   /** Locks the barcode field, used when the barcode came from a scan. */
   isBarcodeLocked?: boolean;
+  /** Says where a locked barcode came from. Defaults to the wording for a scanned barcode. */
+  lockedBarcodeHint?: string;
+  /** A sentence shown above the nutrient fields, for something the user should know before filling them. */
+  nutrientNote?: string;
   /** Receives the validated input. A rejection is shown to the user as the reason the save failed. */
   onSubmit: (input: CustomFoodInput) => Promise<void>;
 };

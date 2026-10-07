@@ -7,6 +7,7 @@ const noSegments: string[] = [];
 const noSearchParams: Record<string, string | string[]> = {};
 
 export const routerMock = {
+  push: jest.fn<undefined, [string]>(),
   replace: jest.fn<undefined, [string]>(),
   redirect: jest.fn<undefined, [string]>(),
   segments: noSegments,
@@ -14,6 +15,7 @@ export const routerMock = {
 };
 
 export function resetRouterMock(): void {
+  routerMock.push.mockReset();
   routerMock.replace.mockReset();
   routerMock.redirect.mockReset();
   routerMock.segments = [];
@@ -21,7 +23,7 @@ export function resetRouterMock(): void {
 }
 
 export const mockExpoRouter = {
-  useRouter: () => ({ replace: routerMock.replace }),
+  useRouter: () => ({ push: routerMock.push, replace: routerMock.replace }),
   useSegments: () => routerMock.segments,
   useLocalSearchParams: () => routerMock.searchParams,
   Link: ({ children }: { children: ReactNode }) =>
