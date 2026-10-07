@@ -6,10 +6,12 @@
 -- rolled back, so nothing created here persists. Every fixture id starts with
 -- 41000001- and every source_ref with CF-KEY41- or OFF-KEY41-, and every
 -- assertion looks only at rows with that id prefix, so foods that other tests
--- or a real import put in the table cannot change a result. Searches ask for
--- the maximum of 50 rows so that a populated catalogue cannot push a fixture
--- off the page. Each actor is entered with `set local role` plus the JWT
--- claims that `auth.uid()` reads, and left with `reset role`.
+-- or a real import put in the table cannot change a result. The chicken and
+-- yogurt fixtures carry the made up word "Zorblax" in their names and every
+-- query for them starts with it, so a real catalogue with hundreds of chicken
+-- foods cannot push a fixture off the page, which is capped at 50 rows. Each
+-- actor is entered with `set local role` plus the JWT claims that `auth.uid()`
+-- reads, and left with `reset role`.
 
 begin;
 
@@ -22,12 +24,12 @@ insert into auth.users (instance_id, id, aud, role, email) values
 -- Fixture rows, inserted as postgres so row level security does not apply.
 -- The names echo real CoFID and Open Food Facts rows.
 insert into public.foods (id, source, source_ref, owner_id, name, brand, basis, fetched_at, deleted_at) values
-  ('41000001-0000-4000-8000-000000000101', 'cofid', 'CF-KEY41-1', null, 'Chicken, breast, raw', null, 'per_100g', null, null),
-  ('41000001-0000-4000-8000-000000000102', 'off', 'OFF-KEY41-1', null, 'Chicken breast fillets', 'Fixture Farm', 'per_100g', '2026-10-01 12:00:00+00', null),
-  ('41000001-0000-4000-8000-000000000103', 'cofid', 'CF-KEY41-2', null, 'Chickpeas, dried, boiled', null, 'per_100g', null, null),
-  ('41000001-0000-4000-8000-000000000104', 'cofid', 'CF-KEY41-3', null, 'Chicken, leg, roasted', null, 'per_100g', null, null),
+  ('41000001-0000-4000-8000-000000000101', 'cofid', 'CF-KEY41-1', null, 'Zorblax chicken, breast, raw', null, 'per_100g', null, null),
+  ('41000001-0000-4000-8000-000000000102', 'off', 'OFF-KEY41-1', null, 'Zorblax chicken breast fillets', 'Fixture Farm', 'per_100g', '2026-10-01 12:00:00+00', null),
+  ('41000001-0000-4000-8000-000000000103', 'cofid', 'CF-KEY41-2', null, 'Zorblax chickpeas, dried, boiled', null, 'per_100g', null, null),
+  ('41000001-0000-4000-8000-000000000104', 'cofid', 'CF-KEY41-3', null, 'Zorblax chicken, leg, roasted', null, 'per_100g', null, null),
   ('41000001-0000-4000-8000-000000000105', 'cofid', 'CF-KEY41-4', null, 'Porridge oats', null, 'per_100g', null, null),
-  ('41000001-0000-4000-8000-000000000106', 'cofid', 'CF-KEY41-5', null, 'Yogurt, Greek style, plain', null, 'per_100g', null, null),
+  ('41000001-0000-4000-8000-000000000106', 'cofid', 'CF-KEY41-5', null, 'Zorblax yogurt, Greek style, plain', null, 'per_100g', null, null),
   -- One global food and one of user A's with the same name, plus a deleted
   -- copy of each.
   ('41000001-0000-4000-8000-000000000201', 'cofid', 'CF-KEY41-6', null, 'Zanzibar lentil stew', null, 'per_100g', null, null),
@@ -108,38 +110,38 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"41000001-0000-4000-8000-00000000000a","role":"authenticated"}';
 
 select is(
-  (select array_agg(r.name order by r.name) from public.search_foods('chick', 50) r where r.id::text like '41000001-%'),
-  array['Chicken breast fillets', 'Chicken, breast, raw', 'Chicken, leg, roasted', 'Chickpeas, dried, boiled'],
+  (select array_agg(r.name order by r.name) from public.search_foods('zorblax chick', 50) r where r.id::text like '41000001-%'),
+  array['Zorblax chicken breast fillets', 'Zorblax chicken, breast, raw', 'Zorblax chicken, leg, roasted', 'Zorblax chickpeas, dried, boiled'],
   'a half typed word matches by prefix and leaves the unrelated fixtures out'
 );
 
 select is(
-  (select array_agg(r.name order by r.name) from public.search_foods('  chick  ', 50) r where r.id::text like '41000001-%'),
-  array['Chicken breast fillets', 'Chicken, breast, raw', 'Chicken, leg, roasted', 'Chickpeas, dried, boiled'],
+  (select array_agg(r.name order by r.name) from public.search_foods('  zorblax chick  ', 50) r where r.id::text like '41000001-%'),
+  array['Zorblax chicken breast fillets', 'Zorblax chicken, breast, raw', 'Zorblax chicken, leg, roasted', 'Zorblax chickpeas, dried, boiled'],
   'surrounding whitespace in the query is ignored'
 );
 
 select is(
   (
     select (array_agg(r.source_ref order by r.score desc, r.name))[1]
-    from public.search_foods('chicken breast', 50) r where r.id::text like '41000001-%'
+    from public.search_foods('zorblax chicken breast', 50) r where r.id::text like '41000001-%'
   ),
   'CF-KEY41-1',
   'the CoFID chicken breast ranks first for "chicken breast"'
 );
 
 select ok(
-  (select r.score from public.search_foods('chicken breast', 50) r where r.source_ref = 'CF-KEY41-1')
-    > (select r.score from public.search_foods('chicken breast', 50) r where r.source_ref = 'OFF-KEY41-1'),
+  (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.source_ref = 'CF-KEY41-1')
+    > (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.source_ref = 'OFF-KEY41-1'),
   'the CoFID chicken breast scores above the Open Food Facts chicken breast fillets'
 );
 
 select ok(
   not exists (
     select 1
-    from public.search_foods('chicken breast', 50) chickpeas
+    from public.search_foods('zorblax chicken breast', 50) chickpeas
     where chickpeas.source_ref = 'CF-KEY41-2'
-      and chickpeas.score >= (select r.score from public.search_foods('chicken breast', 50) r where r.source_ref = 'CF-KEY41-1')
+      and chickpeas.score >= (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.source_ref = 'CF-KEY41-1')
   ),
   'chickpeas never rank at or above the CoFID chicken breast'
 );
@@ -147,19 +149,19 @@ select ok(
 select is(
   (
     select (array_agg(r.source_ref order by r.score desc, r.name))[array_length(array_agg(r.source_ref), 1)]
-    from public.search_foods('chicken', 50) r where r.id::text like '41000001-%'
+    from public.search_foods('zorblax chicken', 50) r where r.id::text like '41000001-%'
   ),
   'CF-KEY41-2',
   'chickpeas rank last among the fixtures for "chicken"'
 );
 
 select ok(
-  exists (select 1 from public.search_foods('greek yoghurt', 50) r where r.source_ref = 'CF-KEY41-5'),
-  '"greek yoghurt" finds the CoFID "Yogurt, Greek style, plain"'
+  exists (select 1 from public.search_foods('zorblax greek yoghurt', 50) r where r.source_ref = 'CF-KEY41-5'),
+  '"greek yoghurt" finds the CoFID "yogurt, Greek style, plain"'
 );
 
 select ok(
-  not (select search @@ plainto_tsquery('english', 'greek yoghurt') from public.foods where source_ref = 'CF-KEY41-5'),
+  not (select search @@ plainto_tsquery('english', 'zorblax greek yoghurt') from public.foods where source_ref = 'CF-KEY41-5'),
   'full text search alone cannot match that spelling, so the trigram arm carried the result'
 );
 
@@ -233,13 +235,13 @@ select is(
 
 -- Hostile input. The punctuation is discarded, so what is left is "chicken".
 select lives_ok(
-  $$ select * from public.search_foods($q$chicken & | ! ( ) : * ' "$q$, 50) $$,
+  $$ select * from public.search_foods($q$zorblax chicken & | ! ( ) : * ' "$q$, 50) $$,
   'tsquery operators and quotes in the query do not raise an error'
 );
 
 select is(
-  (select array_agg(r.name order by r.name) from public.search_foods($q$chicken & | ! ( ) : * ' "$q$, 50) r where r.id::text like '41000001-%'),
-  array['Chicken breast fillets', 'Chicken, breast, raw', 'Chicken, leg, roasted', 'Chickpeas, dried, boiled'],
+  (select array_agg(r.name order by r.name) from public.search_foods($q$zorblax chicken & | ! ( ) : * ' "$q$, 50) r where r.id::text like '41000001-%'),
+  array['Zorblax chicken breast fillets', 'Zorblax chicken, breast, raw', 'Zorblax chicken, leg, roasted', 'Zorblax chickpeas, dried, boiled'],
   'a query full of operators still finds the chicken it contains'
 );
 
