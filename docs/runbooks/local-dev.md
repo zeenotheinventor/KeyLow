@@ -105,7 +105,7 @@ pnpm check:integration
 ```
 
 - `pnpm gen-types` rewrites `packages/db/src/types.gen.ts` from the running database. On a clean checkout with every migration applied it leaves no diff, so `git diff --exit-code` exits 0.
-- `pnpm check:integration` first bundles core and checks the Edge Functions under Deno (see Edge Functions below), then runs the pgTAP tests in `packages/db/supabase/tests/` and ends with `Result: PASS`. The pgTAP part needs the stack running.
+- `pnpm check:integration` first bundles core and checks the Edge Functions under Deno (see Edge Functions below), then runs the pgTAP tests in `packages/db/supabase/tests/` and ends with `Result: PASS`, then runs the Edge Function suites. The pgTAP part needs the stack running, and the function suites also need the functions served (see Running the Edge Function test suites below).
 
 Leave the stack running, because sections 4 and 5 need it. When you finish for the day, stop it:
 
@@ -138,10 +138,40 @@ This runs `deno check` on every function entry and every `_shared` module, then 
 Serve the functions against the running stack, with the test environment:
 
 ```sh
-(cd packages/db && supabase functions serve --env-file supabase/functions/.env.test)
+(cd packages/db && supabase functions serve --env-file supabase/functions/.env.test --no-verify-jwt)
 ```
 
-A function is then at `http://127.0.0.1:54321/functions/v1/<name>`. The stack has one edge-runtime container for every checkout on this machine, so serve from one checkout at a time and stop it with Ctrl-C when you are done. `supabase/functions/.env.test` is committed and holds no secrets. It points the Open Food Facts calls at a mock server on the host (`http://host.docker.internal:54399`, because functions run in a container), sets a test User-Agent and sets small rate limits, so a test reaches a limit in a few calls. The CLI accepts the comments in that file.
+A function is then at `http://127.0.0.1:54321/functions/v1/<name>`. The stack has one edge-runtime container for every checkout on this machine, so serve from one checkout at a time and stop it with Ctrl-C when you are done. `supabase/functions/.env.test` is committed and holds no secrets. It points the Open Food Facts calls at a mock server on the host (`http://host.docker.internal:54399`, because functions run in a container), sets a test User-Agent and sets small per-user rate limits, so a test reaches a limit in a few calls. The CLI accepts the comments in that file.
+
+### Running the Edge Function test suites
+
+The HTTP suites in `packages/db/test/integration/functions/` call the real functions through the local API gateway, with the JWT of a user the test creates. They need three things running: the stack, the functions served, and the Open Food Facts mock. The suite starts the mock itself, so you start the first two.
+
+1. Terminal one, from the repo root, with the stack up (`pnpm dev:db`). Write the core bundle, then serve:
+
+   ```sh
+   pnpm --filter @keylow/db bundle-core-for-deno
+   (cd packages/db && supabase functions serve --env-file supabase/functions/.env.test --no-verify-jwt)
+   ```
+
+   Wait for `Serving functions on http://127.0.0.1:54321/functions/v1/<function-name>`. The first start pulls the edge-runtime image. A change to a function's own files is picked up while it is served. After a change in `packages/core`, write the bundle again, and restart the serve if the function still behaves as before.
+
+2. Terminal two, from the repo root:
+
+   ```sh
+   pnpm --filter @keylow/db test:integration:functions
+   ```
+
+   `pnpm check:integration` runs the same suite after the pgTAP tests, so it needs the functions served too.
+
+If the stack or the served function is missing, the suite stops within a few seconds and says which one, with the command to start it. It never waits for a function to appear.
+
+What the suite starts and what it leaves behind:
+
+- The Open Food Facts mock is a small Node server on port 54399, bound to every interface because the function container reaches it through the host. It exists for the length of one run. A run that finds the port taken stops and says so, which usually means another run is still going. The mock answers `GET /api/v2/product/<code>` like Open Food Facts, and a test controls it through `POST /__mock/register` (what a barcode answers, from a fixture in `packages/core/test/fixtures/off`), `GET /__mock/calls?code=` (the requests it received, with their headers) and `POST /__mock/reset`.
+- Every test creates its own users (`k46-<random>@test.local`) and uses barcodes generated for that run, so runs and parallel files never share rows. The suite deletes its users and the food rows it created when it finishes. A run that is killed halfway can leave them behind. They are harmless and easy to find by that email prefix. The `rate_limits` rows for each user's bucket (`off-product:user:<uuid>`) also stay, because the service role has no write access to that table by design, and they expire on their own as windows pass.
+
+Stop the served functions with Ctrl-C in terminal one. The CLI may leave the `supabase_edge_runtime_keylow` container running after it exits. That is harmless, because the next serve replaces it, and `docker rm -f supabase_edge_runtime_keylow` clears it if you want the stack back to how `pnpm dev:db` left it.
 
 ## 4. Web app
 
@@ -289,18 +319,18 @@ cd ../..
 
 Run from the repo root.
 
-| Command                                  | What it does                                                                                                                                            |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`                             | `turbo run format:check lint typecheck test`. Run it before every push. The CI pipeline, once it is added, runs exactly this command as its static job. |
-| `pnpm check --force`                     | The same, ignoring the Turborepo cache                                                                                                                  |
-| `pnpm check:integration`                 | Deno check and lint of the Edge Functions, then the pgTAP tests in `packages/db/supabase/tests/`. The pgTAP part needs the stack running.               |
-| `pnpm dedupe --check`                    | Fails if the lockfile has duplicates that `pnpm dedupe` would remove                                                                                    |
-| `pnpm exec prettier --write <path>`      | Formats a file the way `format:check` expects. Markdown is checked too.                                                                                 |
-| `pnpm gen-types`                         | Regenerates `packages/db/src/types.gen.ts`. Run it after every migration, then commit the result.                                                       |
-| `pnpm --filter @keylow/db migration:up`  | Applies the migrations the local database does not have yet, and keeps its data                                                                         |
-| `pnpm --filter @keylow/db db:reset`      | Rebuilds the local database from nothing. Only for a broken database, announce it first                                                                 |
-| `pnpm --filter @keylow/mobile typecheck` | Type-checks the mobile app with its own TypeScript                                                                                                      |
-| `cd apps/mobile && npx expo-doctor`      | The Expo project health check. The CI pipeline runs it too once it exists.                                                                              |
+| Command                                  | What it does                                                                                                                                                                  |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`                             | `turbo run format:check lint typecheck test`. Run it before every push. The CI pipeline, once it is added, runs exactly this command as its static job.                       |
+| `pnpm check --force`                     | The same, ignoring the Turborepo cache                                                                                                                                        |
+| `pnpm check:integration`                 | Deno check and lint of the Edge Functions, the pgTAP tests in `packages/db/supabase/tests/`, then the Edge Function suites. Needs the stack running and the functions served. |
+| `pnpm dedupe --check`                    | Fails if the lockfile has duplicates that `pnpm dedupe` would remove                                                                                                          |
+| `pnpm exec prettier --write <path>`      | Formats a file the way `format:check` expects. Markdown is checked too.                                                                                                       |
+| `pnpm gen-types`                         | Regenerates `packages/db/src/types.gen.ts`. Run it after every migration, then commit the result.                                                                             |
+| `pnpm --filter @keylow/db migration:up`  | Applies the migrations the local database does not have yet, and keeps its data                                                                                               |
+| `pnpm --filter @keylow/db db:reset`      | Rebuilds the local database from nothing. Only for a broken database, announce it first                                                                                       |
+| `pnpm --filter @keylow/mobile typecheck` | Type-checks the mobile app with its own TypeScript                                                                                                                            |
+| `cd apps/mobile && npx expo-doctor`      | The Expo project health check. The CI pipeline runs it too once it exists.                                                                                                    |
 
 After you change the schema, the sequence is: add a migration in `packages/db/supabase/migrations/`, run `pnpm --filter @keylow/db migration:up`, run `pnpm gen-types`, add or update a pgTAP test in `packages/db/supabase/tests/`, run `pnpm check:integration`, then commit the migration, the test and the regenerated types together.
 

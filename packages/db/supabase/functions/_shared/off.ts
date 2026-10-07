@@ -14,6 +14,9 @@ type OffFetchOptions = {
   // The product fields to return. OFF sends whole documents unless asked for less.
   fields: readonly string[];
   timeoutMilliseconds?: number;
+  // Non-2xx statuses the caller reads itself, such as 404 for an unknown barcode. `offRequest` hands
+  // these back as `ok` responses instead of turning them into an `upstream_error`.
+  acceptedStatuses?: readonly number[];
 };
 
 export type OffResult = { ok: true; response: Response } | { ok: false; failure: Response };
@@ -57,7 +60,8 @@ function isTimeout(caught: unknown): boolean {
   return caught instanceof DOMException && caught.name === "TimeoutError";
 }
 
-// Returns the 2xx response, or the `upstream_error` response to send back.
+// Returns the 2xx response (or one of the `acceptedStatuses`), or the `upstream_error` response to
+// send back.
 export async function offRequest(path: string, options: OffFetchOptions): Promise<OffResult> {
   const { url, init } = buildRequest(path, options);
   let response: Response;
@@ -70,7 +74,7 @@ export async function offRequest(path: string, options: OffFetchOptions): Promis
       : "Open Food Facts could not be reached.";
     return { ok: false, failure: error("upstream_error", message) };
   }
-  if (!response.ok) {
+  if (!response.ok && !options.acceptedStatuses?.includes(response.status)) {
     console.error(`Open Food Facts answered ${response.status} for ${url.pathname}`);
     await response.body?.cancel();
     return {
