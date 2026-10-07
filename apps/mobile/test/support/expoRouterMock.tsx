@@ -4,7 +4,7 @@ import { Text } from "react-native";
 import type { ReactNode } from "react";
 
 const noSegments: string[] = [];
-const noSearchParams: Record<string, string> = {};
+const noSearchParams: Record<string, string | string[]> = {};
 
 export const routerMock = {
   replace: jest.fn<undefined, [string]>(),
