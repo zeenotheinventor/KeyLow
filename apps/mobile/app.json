@@ -35,6 +35,14 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.127670518185-ni3pj7ngsfunqnqr5mmsd7bvmjp7ooi8"
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "KeyLow uses the camera to scan food barcodes so you can look up a product without typing.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "extra": {
