@@ -25,6 +25,8 @@ apps/*/playwright-report/
 # supabase
 packages/db/supabase/.branches/
 packages/db/supabase/.temp/
+# written by `pnpm --filter @keylow/db bundle-core-for-deno`
+packages/db/supabase/functions/_shared/core/
 
 # build output
 dist/

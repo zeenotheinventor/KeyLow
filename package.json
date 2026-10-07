@@ -8,7 +8,7 @@
   "scripts": {
     "prepare": "lefthook install",
     "check": "turbo run format:check lint typecheck test",
-    "check:integration": "turbo run test:integration",
+    "check:integration": "turbo run check:functions test:integration",
     "dev:db": "pnpm --filter @keylow/db run dev:db",
     "format:check": "prettier --check .",
     "gen-types": "pnpm --filter @keylow/db run gen-types"

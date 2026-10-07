@@ -23,6 +23,15 @@
       "dependsOn": ["^typecheck"],
       "outputs": ["coverage/**"]
     },
+    "bundle-core-for-deno": {
+      "outputs": [],
+      "cache": false
+    },
+    "check:functions": {
+      "dependsOn": ["bundle-core-for-deno"],
+      "outputs": [],
+      "cache": false
+    },
     "test:integration": {
       "dependsOn": ["^typecheck"],
       "outputs": [],

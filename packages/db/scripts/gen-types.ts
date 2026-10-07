@@ -1,5 +1,5 @@
 // Regenerates src/types.gen.ts from the local Supabase database. The stack must
-// be running (`pnpm dev:db`) with the migrations applied (`pnpm --filter @keylow/db db:reset`).
+// be running (`pnpm dev:db`) with the migrations applied (`pnpm --filter @keylow/db migration:up`).
 // The database is addressed by URL so that a stack on a non-default port can be targeted. Set
 // SUPABASE_DB_URL for that.
 import { execFileSync } from "node:child_process";

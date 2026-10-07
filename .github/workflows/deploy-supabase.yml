@@ -1,9 +1,11 @@
 # Deploy to the production Supabase project (keylow-prod, eu-west-2).
 #
-# What it does: on a push to main that touches packages/db/supabase, and on
-# manual dispatch, it links the CLI to production, applies pending migrations
-# with `supabase db push`, then deploys Edge Functions with
-# `supabase functions deploy` when any exist.
+# What it does: on a push to main that touches packages/db/supabase or
+# packages/core/src, and on manual dispatch, it bundles @keylow/core for Deno,
+# links the CLI to production, applies pending migrations with
+# `supabase db push`, then deploys Edge Functions with
+# `supabase functions deploy` when any exist. A change in core redeploys the
+# functions because each one embeds its own copy of the core bundle.
 #
 # One-time setup in GitHub (Settings of this repository, done by Zee):
 #
@@ -33,6 +35,7 @@ on:
     branches: [main]
     paths:
       - "packages/db/supabase/**"
+      - "packages/core/src/**"
   workflow_dispatch:
 
 permissions:
@@ -57,6 +60,24 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # The bundle is built before anything touches production, so a broken bundle stops the run
+      # early. The pnpm version comes from "packageManager" in the root package.json and the Node
+      # version from .nvmrc, as in ci.yml. The install skips scripts for the same reason as there.
+      # The two pnpm steps run at the repo root, because the job default is packages/db.
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Install dependencies
+        working-directory: .
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      # Writes packages/db/supabase/functions/_shared/core/, which is gitignored, so a checkout
+      # never has it. The functions import it, so it must exist before `supabase functions deploy`.
+      - name: Bundle @keylow/core for the Edge Functions
+        working-directory: .
+        run: pnpm --filter @keylow/db bundle-core-for-deno
+
       - uses: supabase/setup-cli@v3
         with:
           version: 2.106.0
@@ -74,8 +95,8 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase db push --yes
 
-      # packages/db/supabase/functions does not exist yet. Directories starting
-      # with an underscore (for example _shared) hold shared code, not functions.
+      # Directories starting with an underscore (for example _shared) hold shared
+      # code, not functions.
       - name: Deploy Edge Functions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
