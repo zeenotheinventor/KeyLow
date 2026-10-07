@@ -1,9 +1,15 @@
-import { offSearchRequestSchema, offSearchResponseSchema } from "@keylow/core/schemas";
+import {
+  offProductRequestSchema,
+  offProductResponseSchema,
+  offSearchRequestSchema,
+  offSearchResponseSchema,
+} from "@keylow/core/schemas";
 
 import { invokeEdgeFunction } from "../edge";
+import { EdgeFunctionError } from "../errors";
 
 import type { Database } from "../database.types";
-import type { OffCandidate } from "@keylow/core/schemas";
+import type { OffCandidate, OffProductResponse } from "@keylow/core/schemas";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 // The longest query the contract accepts, and the cap `search_foods` applies to its own query.
@@ -23,4 +29,27 @@ export async function searchOff(
   const response = await invokeEdgeFunction<unknown>(client, "off-search", body);
 
   return offSearchResponseSchema.parse(response).candidates;
+}
+
+/**
+ * Looks a barcode up through the `off-product` Edge Function, which stores a product Open Food
+ * Facts knows as a shared food and returns it with its portions. Resolves to null when Open Food
+ * Facts has no such product. A rate limit throws a `RateLimitedError`, and any other typed refusal
+ * an `EdgeFunctionError`.
+ */
+export async function fetchOffProduct(
+  client: SupabaseClient<Database>,
+  code: string,
+): Promise<OffProductResponse | null> {
+  const body = offProductRequestSchema.parse({ code });
+
+  try {
+    const response = await invokeEdgeFunction<unknown>(client, "off-product", body);
+    return offProductResponseSchema.parse(response);
+  } catch (failure) {
+    if (failure instanceof EdgeFunctionError && failure.code === "not_found") {
+      return null;
+    }
+    throw failure;
+  }
 }

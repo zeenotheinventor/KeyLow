@@ -3,10 +3,11 @@ export {
   FoodsPartialWriteError,
   createFood,
   getFood,
+  getFoodByBarcode,
   listFoodPortions,
   replaceFoodPortions,
   searchFoods,
   updateFood,
 } from "./foods";
 export type { CreatedFood, FoodSearchHit } from "./foods";
-export { searchOff } from "./off";
+export { fetchOffProduct, searchOff } from "./off";

@@ -23,3 +23,14 @@ export class EdgeFunctionError extends Error {
     this.status = status;
   }
 }
+
+/** Open Food Facts has no product with this barcode, so there is nothing to turn into a food. */
+export class OffProductNotFoundError extends Error {
+  readonly code: string;
+
+  constructor(code: string) {
+    super(`Open Food Facts has no product with the barcode ${code}`);
+    this.name = "OffProductNotFoundError";
+    this.code = code;
+  }
+}
