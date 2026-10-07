@@ -49,9 +49,9 @@ jobs:
           EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
         run: npx --yes expo-doctor
 
-  # Type-checks and lints the Edge Functions under Deno, runs the pgTAP tests against a real local
-  # Supabase stack, then proves the committed packages/db/src/types.gen.ts is what the migrations
-  # generate.
+  # Type-checks and lints the Edge Functions under Deno, runs the pgTAP tests and the Edge Function
+  # HTTP suites against a real local Supabase stack with the functions served, then proves the
+  # committed packages/db/src/types.gen.ts is what the migrations generate.
   db-integration:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -67,6 +67,20 @@ jobs:
       - uses: supabase/setup-cli@v3
         with:
           version: 2.106.0
+      # The CLI pulls some of its images from public.ecr.aws, which refuses anonymous pulls with
+      # "toomanyrequests: Rate exceeded" once a runner's address has used its quota. The same images
+      # are on GitHub's registry, which does not share that quota. Pulling them from there and tagging
+      # them with the names the CLI looks for means it finds them locally and never calls ECR.
+      # postgres-meta v0.96.6 is what `supabase start` runs for the meta service and v0.96.1 is
+      # what `supabase gen types` runs (the failed log named it), so both are pulled.
+      # edge-runtime is what `supabase functions serve` runs and pg_prove is what `supabase test
+      # db` runs. Bump a tag here when the CLI pin above moves.
+      - name: Pre-pull the CLI images from GitHub's registry
+        run: |
+          for image in postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36; do
+            docker pull "ghcr.io/supabase/$image"
+            docker tag "ghcr.io/supabase/$image" "public.ecr.aws/supabase/$image"
+          done
       # Keeps the services the tests and type generation need. That is the database, the API
       # gateway (kong), rest and meta (gen types). Auth always starts and cannot be excluded.
       # Excluded: analytics and vector (log pipeline), edge-runtime and functions, imgproxy,
@@ -74,17 +88,47 @@ jobs:
       - name: Start the local Supabase stack
         working-directory: packages/db
         run: supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
+      # `functions serve` starts its own edge-runtime container, so edge-runtime stays in the -x list
+      # above. The functions import the @keylow/core bundle, so it is written first. The container
+      # reaches the OFF mock the tests start on the runner through the gateway address of the
+      # stack's Docker network. Docker Desktop resolves host.docker.internal, a Linux runner does
+      # not, so the env file the function reads gets the gateway address in its place. The loop is
+      # bounded. A function that never answers fails the step, and the last step of the job prints the
+      # serve log.
+      - name: Serve the Edge Functions
+        working-directory: packages/db
+        run: |
+          pnpm --filter @keylow/db bundle-core-for-deno
+          gateway=$(docker network inspect supabase_network_keylow --format '{{(index .IPAM.Config 0).Gateway}}')
+          sed "s/host.docker.internal/$gateway/" supabase/functions/.env.test > "$RUNNER_TEMP/functions.env"
+          nohup supabase functions serve --env-file "$RUNNER_TEMP/functions.env" --no-verify-jwt \
+            > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          for attempt in $(seq 1 45); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS http://127.0.0.1:54321/functions/v1/off-product || true)
+            if [ "$status" = "204" ] || [ "$status" = "401" ]; then
+              echo "The functions are being served."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The functions were not served within 90 seconds. The last status was $status."
+          exit 1
       # check:integration includes check:functions. Turbo bundles @keylow/core for Deno first, then
       # `deno check` and `deno lint` run from the pinned `deno` npm package, so no Deno setup step is
       # needed. Deno downloads the supabase-js and zod packages itself, which is why this job and
-      # not the static one runs it.
-      - name: Check the Edge Functions and run the pgTAP tests
+      # not the static one runs it. After the pgTAP tests, the Edge Function HTTP suites run against
+      # the served functions.
+      - name: Check the Edge Functions and run the pgTAP tests and the function suites
         run: pnpm check:integration
       # gen-types rewrites the file in place, so any difference means it was not committed.
       - name: Check the generated types are committed
         run: |
           pnpm gen-types
           git diff --exit-code packages/db/src/types.gen.ts
+      # Shows what the functions logged, which is where a 5xx from a suite is explained.
+      - name: Print the functions serve log
+        if: failure()
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
 
   # Warns on a pull request when it changes the native fingerprint of the mobile app, meaning an
   # EAS Update cannot ship it and a new build is needed. The expo/expo-github-action/fingerprint

@@ -16,16 +16,19 @@
     "check:functions": "pnpm run bundle-core-for-deno && pnpm exec deno check --config supabase/functions/deno.json 'supabase/functions/*/index.ts' 'supabase/functions/_shared/*.ts' && pnpm exec deno lint --config supabase/functions/deno.json supabase/functions",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:integration": "supabase test db"
+    "test:integration": "supabase test db && pnpm run test:integration:functions",
+    "test:integration:functions": "vitest run -c vitest.integration.config.ts"
   },
   "devDependencies": {
     "@keylow/config": "workspace:*",
     "@keylow/core": "workspace:*",
+    "@supabase/supabase-js": "^2.117.2",
     "@types/node": "^22.20.5",
     "deno": "~2.9.6",
     "dts-bundle-generator": "^9.5.1",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
   }
 }
