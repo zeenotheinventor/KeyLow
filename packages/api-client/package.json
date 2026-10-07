@@ -9,9 +9,11 @@
   "scripts": {
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:integration": "vitest run -c vitest.integration.config.ts"
   },
   "dependencies": {
+    "@keylow/core": "workspace:*",
     "@keylow/db": "workspace:*"
   },
   "peerDependencies": {
@@ -25,10 +27,12 @@
     "@tanstack/react-query": "^5.104.1",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
+    "@types/node": "^22.20.5",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "eslint": "^9.39.5",
     "jsdom": "^30.1.2",
+    "msw": "^3.0.2",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "typescript": "^5.9.3",
