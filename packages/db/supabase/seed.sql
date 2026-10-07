@@ -1,8 +1,9 @@
 -- Local development seed. Runs after the migrations on `supabase db reset`.
 -- Local test values only, never loaded into production.
 --
--- TODO: richer seed data (a CoFID subset, a few OFF rows, six weeks of diary
--- and weigh-ins) arrives with the milestones that add those tables (M2 and M5).
+-- The CoFID subset and the Open Food Facts samples live in seeds/*.sql, which
+-- load after this file. M5 adds its own file there (six weeks of diary and
+-- weigh-ins), so this file stays as it is.
 
 -- One demo user who can sign in with email and password. The password is the
 -- plain text literal passed to crypt() below.
