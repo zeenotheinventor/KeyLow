@@ -66,26 +66,35 @@ function describeSaveFailure(error: unknown, isEditing: boolean): SaveFailure {
   return { message: "The food could not be saved. Please try again." };
 }
 
-export function FoodForm({ scannedBarcode, existing }: FoodFormProps) {
+export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
   const router = useRouter();
   const createFood = useCreateFood();
   const updateFood = useUpdateFood();
   const idPrefix = useId();
   const nextPortionKey = useRef(0);
 
-  const [values, setValues] = useState<FoodFormValues>(() =>
-    foodFormValuesFrom(existing, scannedBarcode),
-  );
+  const startingFood = existing ?? copyOf;
+  // A US total carbohydrate includes fibre, so it is never copied. The user enters it without fibre.
+  const isCarbsIncludingFibre = copyOf?.food.quality.carbs_convention === "us_total";
+  const [values, setValues] = useState<FoodFormValues>(() => {
+    const startingValues = foodFormValuesFrom(startingFood, scannedBarcode);
+    return isCarbsIncludingFibre ? { ...startingValues, carbs: "" } : startingValues;
+  });
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [saveFailure, setSaveFailure] = useState<SaveFailure | null>(null);
   const [status, setStatus] = useState<SaveStatus>("idle");
 
   const isEditing = existing !== undefined;
-  // A scanned barcode that is not a valid code stays editable, or the user could not fix the error.
+  const givenBarcode = copyOf === undefined ? scannedBarcode : (copyOf.food.barcode ?? undefined);
+  // A barcode that is not a valid code stays editable, or the user could not fix the error.
   const isBarcodeLocked =
-    !isEditing && scannedBarcode !== undefined && normaliseBarcode(scannedBarcode).ok;
+    !isEditing && givenBarcode !== undefined && normaliseBarcode(givenBarcode).ok;
   // A create that wrote the food but not its portions must not be repeated, or the food is duplicated.
   const isLocked = status !== "idle" || saveFailure?.editFoodId !== undefined;
+  const lockedBarcodeHint =
+    copyOf === undefined
+      ? "This barcode came from the scan and cannot be changed here"
+      : "This barcode belongs to the food you are copying and cannot be changed here";
   const unit = amountUnit(values.basis);
   const hasFieldErrors = Object.keys(fieldErrors).length > 0;
 
@@ -134,7 +143,7 @@ export function FoodForm({ scannedBarcode, existing }: FoodFormProps) {
 
   async function save() {
     const result = customFoodInputSchema.safeParse(
-      foodInputFrom(values, existing?.food.density_g_per_ml ?? null),
+      foodInputFrom(values, startingFood?.food.density_g_per_ml ?? null),
     );
 
     setSaveFailure(null);
@@ -198,11 +207,7 @@ export function FoodForm({ scannedBarcode, existing }: FoodFormProps) {
           autoComplete="off"
           value={values.barcode}
           readOnly={isBarcodeLocked}
-          hint={
-            isBarcodeLocked
-              ? "This barcode came from the scan and cannot be changed here"
-              : undefined
-          }
+          hint={isBarcodeLocked ? lockedBarcodeHint : undefined}
           onChange={(event) => {
             setField("barcode", event.target.value);
           }}
@@ -212,6 +217,11 @@ export function FoodForm({ scannedBarcode, existing }: FoodFormProps) {
 
       <Card className="flex flex-col gap-4 p-4 md:p-6">
         <h2 className={SECTION_HEADING_CLASS_NAME}>Nutrition</h2>
+        {isCarbsIncludingFibre && (
+          <p className="text-sm text-muted-foreground">
+            This product&apos;s carbohydrate included fibre. Enter the carbohydrate without fibre.
+          </p>
+        )}
         <div className="flex flex-col gap-1.5">
           <label htmlFor={fieldId("basis")} className="text-sm font-medium">
             Basis

@@ -4,19 +4,14 @@ import type { FieldErrors, FormIssue } from "./types";
 import type { BarcodeInvalidReason } from "@keylow/core/foods";
 import type { NutrientBasis } from "@keylow/core/schemas";
 
+import { BARCODE_MESSAGES } from "@/components/foods/barcodeMessages";
+
 const REQUIRED_MESSAGES: Record<string, string> = {
   name: "Enter a name",
   kcal: "Enter the energy in kcal",
   protein_g: "Enter the protein in g",
   fat_g: "Enter the fat in g",
   carbs_g: "Enter the carbohydrate in g",
-};
-
-const BARCODE_MESSAGES: Record<BarcodeInvalidReason, string> = {
-  not_digits: "Use digits only",
-  bad_length: "Use 8, 12, 13 or 14 digits",
-  bad_check_digit: "The check digit is wrong, so check the digits and try again",
-  not_upc_e: "That is not a valid 8 digit barcode",
 };
 
 // The core schema words a rejected barcode as `Invalid barcode: <reason>`.

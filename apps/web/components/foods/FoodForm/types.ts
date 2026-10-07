@@ -8,6 +8,12 @@ export type FoodFormProps = {
   /** A barcode that came from a scan. It pre-fills the barcode field and cannot be changed. */
   scannedBarcode?: string | undefined;
   existing?: FoodFormExistingFood;
+  /**
+   * A food, usually a shared one, to start a new food from. Its details, nutrients and portions
+   * pre-fill the form, and saving creates a new food of the user's own. The original is never
+   * changed. Leave `existing` out when passing this.
+   */
+  copyOf?: FoodFormExistingFood;
 };
 
 /** One portion as the form holds it. The amount is text until the form is validated. */

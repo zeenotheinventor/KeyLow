@@ -1,4 +1,5 @@
-import type { Food, FoodPortion } from "@keylow/core/schemas";
+import type { FoodSearchHit } from "@keylow/api-client";
+import type { Food, FoodPortion, OffCandidate } from "@keylow/core/schemas";
 
 const FOOD_ID = "22222222-2222-4222-8222-222222222222";
 const OWNER_ID = "33333333-3333-4333-8333-333333333333";
@@ -43,6 +44,26 @@ export function makePortion(overrides: Partial<FoodPortion> = {}): FoodPortion {
     is_default: false,
     position: 0,
     created_at: "2026-10-07T10:00:00+00:00",
+    ...overrides,
+  };
+}
+
+export function makeSearchHit(overrides: Partial<FoodSearchHit> = {}): FoodSearchHit {
+  return { ...makeFood(), score: 1, ...overrides };
+}
+
+export function makeOffCandidate(overrides: Partial<OffCandidate> = {}): OffCandidate {
+  return {
+    code: "5000159484695",
+    name: "Chicken breast slices",
+    brand: "Tesco",
+    basis: "per_100g",
+    kcal: 105,
+    protein_g: 23,
+    fat_g: 1.2,
+    carbs_g: 0.5,
+    fibre_g: null,
+    quality: {},
     ...overrides,
   };
 }

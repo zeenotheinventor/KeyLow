@@ -1,0 +1,5 @@
+/** A valid barcode the user asked to look up. `attempt` counts the requests, from 1. */
+export type BarcodeLookupRequest = {
+  code: string;
+  attempt: number;
+};

@@ -2,10 +2,19 @@
 
 import { useSearchParams } from "next/navigation";
 
+import { CopyFoodScreen } from "../CopyFoodScreen";
+
 import { FoodForm } from "@/components/foods/FoodForm";
+import { isFoodId } from "@/components/foods/isFoodId";
 
 export function NewFoodScreen() {
-  const barcode = useSearchParams().get("barcode");
+  const searchParameters = useSearchParams();
+  const barcode = searchParameters.get("barcode");
+  const fromId = searchParameters.get("from");
+
+  if (fromId !== null && isFoodId(fromId)) {
+    return <CopyFoodScreen fromId={fromId} />;
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">

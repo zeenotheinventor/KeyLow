@@ -1,0 +1,1 @@
+export { LocalFoodList } from "./LocalFoodList";

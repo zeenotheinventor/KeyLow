@@ -366,6 +366,64 @@ describe("FoodForm", () => {
     });
   });
 
+  describe("copying a food", () => {
+    const copyOf = {
+      food: makeFood({
+        source: "off",
+        owner_id: null,
+        name: "Oat drink",
+        barcode: "5000159484695",
+        basis: "per_100ml",
+        density_g_per_ml: 1.03,
+        kcal: 45,
+        protein_g: null,
+        fat_g: 1.5,
+        carbs_g: 6.7,
+      }),
+      portions: [makePortion({ label: "Glass", grams: null, ml: 250 })],
+    };
+
+    it("should lock the barcode and say it belongs to the food being copied", () => {
+      renderForm({ copyOf });
+
+      const barcode = screen.getByRole("textbox", {
+        name: "Barcode (optional)",
+        description: "This barcode belongs to the food you are copying and cannot be changed here",
+      });
+      expect(barcode).toHaveProperty("value", "5000159484695");
+      expect(barcode).toHaveProperty("readOnly", true);
+    });
+
+    it("should leave a barcode that is not valid editable so the user can fix it", () => {
+      renderForm({ copyOf: { ...copyOf, food: makeFood({ barcode: "5000159484696" }) } });
+
+      expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("readOnly", false);
+    });
+
+    it("should leave the barcode empty and editable when the food has none", () => {
+      renderForm({ copyOf: { ...copyOf, food: makeFood({ barcode: null }) } });
+
+      const barcode = screen.getByLabelText("Barcode (optional)");
+      expect(barcode).toHaveProperty("value", "");
+      expect(barcode).toHaveProperty("readOnly", false);
+    });
+
+    it("should create a new food and carry the density through, never updating the original", async () => {
+      renderForm({ copyOf });
+      typeInto("Protein (g)", "1");
+
+      save();
+
+      await waitFor(() => {
+        expect(createFood).toHaveBeenCalledTimes(1);
+      });
+      expect(createFood).toHaveBeenCalledWith(
+        expect.objectContaining({ density_g_per_ml: 1.03, basis: "per_100ml" }),
+      );
+      expect(updateFood).not.toHaveBeenCalled();
+    });
+  });
+
   describe("portions", () => {
     it("should add a portion with its own labelled fields", () => {
       renderForm();

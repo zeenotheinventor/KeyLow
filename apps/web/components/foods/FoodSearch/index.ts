@@ -1,0 +1,1 @@
+export { FoodSearch } from "./FoodSearch";
