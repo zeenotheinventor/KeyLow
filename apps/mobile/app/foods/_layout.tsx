@@ -9,6 +9,7 @@ export default function FoodsLayout() {
       <Stack.Screen name="[id]/index" options={{ title: "Food" }} />
       <Stack.Screen name="new" options={{ title: "New food" }} />
       <Stack.Screen name="[id]/edit" options={{ title: "Edit food" }} />
+      <Stack.Screen name="scan" options={{ title: "Scan barcode" }} />
     </Stack>
   );
 }

@@ -51,6 +51,9 @@ export default function FoodSearchRoute() {
       onCreateFood={() => {
         router.push("/foods/new");
       }}
+      onScanBarcode={() => {
+        router.push("/foods/scan");
+      }}
     />
   );
 }

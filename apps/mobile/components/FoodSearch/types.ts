@@ -14,4 +14,5 @@ export type FoodSearchProps = {
   onSelectFood: (foodId: string) => void;
   onSelectCandidate: (code: string) => void;
   onCreateFood: () => void;
+  onScanBarcode: () => void;
 };
