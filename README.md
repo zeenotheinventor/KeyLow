@@ -1,4 +1,4 @@
-# KeyLow
+# Ki-Lo
 
 A MacroFactor-style nutrition app: recipe storage, calorie and macro tracking, weight trend, and an
 adaptive engine that estimates energy expenditure from logged intake and weigh-ins and adjusts
