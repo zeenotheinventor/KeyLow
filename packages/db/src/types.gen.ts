@@ -267,12 +267,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      rate_limits: {
+        Row: {
+          bucket: string;
+          hits: number;
+          window_start: string;
+        };
+        Insert: {
+          bucket: string;
+          hits?: number;
+          window_start: string;
+        };
+        Update: {
+          bucket?: string;
+          hits?: number;
+          window_start?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      consume_rate_limit: {
+        Args: { p_bucket: string; p_max: number; p_window_seconds: number };
+        Returns: {
+          allowed: boolean;
+          retry_after_seconds: number;
+        }[];
+      };
     };
     Enums: {
       food_source: "off" | "cofid" | "user";
