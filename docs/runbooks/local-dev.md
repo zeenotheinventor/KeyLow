@@ -71,7 +71,7 @@ When it finishes, the CLI prints the service URLs:
 | Studio (database UI)    | `http://127.0.0.1:54323`                                  |
 | Mailpit (local inbox)   | `http://127.0.0.1:54324`                                  |
 
-The first `supabase start` creates the database, applies `packages/db/supabase/migrations/` and runs `packages/db/supabase/seed.sql`. After that, apply the migrations a pull or a new branch brought in without touching your data:
+The first `supabase start` creates the database, applies `packages/db/supabase/migrations/` and runs `packages/db/supabase/seed.sql`, then the food seeds in `packages/db/supabase/seeds/` (see Food seeds below). After that, apply the migrations a pull or a new branch brought in without touching your data:
 
 ```sh
 pnpm --filter @keylow/db migration:up
@@ -79,14 +79,14 @@ pnpm --filter @keylow/db migration:up
 
 This runs `supabase migration up --local` from `packages/db` and applies only the migrations the database does not have yet. It keeps every row and every account you created by signing up. The local database is shared by every checkout of KeyLow on this machine (the project id is `keylow`), so never reset it as a tidiness step. `pnpm --filter @keylow/db db:reset` drops and recreates the database, reapplies the migrations and reloads the seed, and it deletes your accounts in every checkout. It is for a genuinely broken local database only, and you announce it before you run it. See the troubleshooting entry about `supabase start is already running`.
 
-The seed currently holds one demo user and its profile row:
+`seed.sql` holds one demo user and its profile row:
 
 | Field    | Value               |
 | -------- | ------------------- |
 | Email    | `demo@keylow.local` |
 | Password | `keylow-demo-local` |
 
-These are local test values and are never loaded into production. Richer seed data arrives with the milestones that add the tables.
+These are local test values and are never loaded into production.
 
 Both apps need the API's publishable key. `supabase status` reads the project from the `supabase/` folder it is run in, so run it from `packages/db` or pass `--workdir`. From the repo root with no flag it fails with `No such container: supabase_db_<folder name>`. Print the key with:
 
@@ -114,6 +114,34 @@ pnpm --filter @keylow/db stop:db
 ```
 
 Stopping keeps your data in a Docker volume, and the next `pnpm dev:db` picks it up.
+
+### Food seeds
+
+A fresh stack loads `seed.sql` first and then every file in `packages/db/supabase/seeds/` in name order. That covers `supabase start` on a new database, `pnpm --filter @keylow/db db:reset` and every CI run, so the seeded pgTAP test passes in CI without any step of its own.
+
+| File                  | What it holds                                                                                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `10_cofid_subset.sql` | 209 CoFID foods (chicken, chick peas, yogurt, milk, oil, bread, rice, cheese and the other staples, per 100 ml drinks and three suspect foods) with their source data. Generated, never edited.              |
+| `20_off_sample.sql`   | Five Open Food Facts products for the barcode path and the suspect review gate with no network. Hand written. Their barcodes start with 2, the range GS1 keeps for internal use, so no real product has one. |
+
+The seeds never reach production. `supabase db push` does not run seeds unless it is given `--include-seed`, and `deploy-supabase.yml` does not give it.
+
+To load the seeds into a stack that is already running, which is how a database that was started before the seeds existed gets them, run these from the repository root:
+
+```sh
+docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/10_cofid_subset.sql
+docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/20_off_sample.sql
+```
+
+Each file is one transaction and every statement is an upsert, so running them again is safe and changes nothing. On a database that already holds the full CoFID import, the subset foods keep their values. Only the source data rows of those 209 foods are pointed at the seed's import run, instead of the run that wrote them. `packages/db/supabase/tests/search_foods_seeded.test.sql` needs both files loaded and says so when it fails because they are not.
+
+To regenerate the subset seed after editing `packages/db/data/cofid/subset.txt` (one food code per line, `#` starts a comment) or the CoFID mapping, run this from the repository root:
+
+```sh
+pnpm --filter @keylow/db import:cofid import --csv data/cofid/cofid-2021.normalised.csv --label seed-subset --subset data/cofid/subset.txt --emit-sql supabase/seeds/10_cofid_subset.sql
+```
+
+It reads the committed CSV and writes the file without connecting to any database. Commit the result, and keep the code list in `search_foods_seeded.test.sql` the same as `subset.txt`. A unit test fails when either the seed or that list is out of step.
 
 ### Edge Functions
 

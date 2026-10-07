@@ -5,10 +5,12 @@
 //   import     Reads a normalised CSV and upserts its foods, their source data and one import run.
 //              The target is SUPABASE_URL with SUPABASE_SERVICE_ROLE_KEY, or the local stack when
 //              neither is set. --dry-run maps and checks every row and writes nothing. --subset
-//              limits the import to the codes in a file (one per line, # starts a comment).
+//              limits the import to the codes in a file (one per line, # starts a comment). --emit-sql
+//              writes the same foods as an idempotent SQL seed file at that path and connects to nothing.
 //
 //   pnpm --filter @keylow/db import:cofid normalise --xlsx data/cofid/cofid-2021.xlsx
 //   pnpm --filter @keylow/db import:cofid import --csv data/cofid/cofid-2021.normalised.csv --label local-full-2021
+//   pnpm --filter @keylow/db import:cofid import --csv data/cofid/cofid-2021.normalised.csv --label seed-subset --subset data/cofid/subset.txt --emit-sql supabase/seeds/10_cofid_subset.sql
 import { execFile } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join } from "node:path";
@@ -20,6 +22,7 @@ import { formatChecksumFile, parseChecksumFile, sha256Hex } from "./cofid/checks
 import { resolveConnection } from "./cofid/connection";
 import { importCofid } from "./cofid/importFoods";
 import { normaliseWorkbook } from "./cofid/normalise";
+import { createSqlSeedStore } from "./cofid/sqlSeedStore";
 import { parseSubsetFile } from "./cofid/subset";
 import { createSupabaseImportStore } from "./cofid/supabaseImportStore";
 
@@ -32,7 +35,8 @@ const BATCH_SIZE = 100;
 
 const usage = `Usage:
   import-cofid.ts normalise --xlsx <workbook> [--out <csv>]
-  import-cofid.ts import --csv <csv> --label <label> [--subset <codes file>] [--dry-run]`;
+  import-cofid.ts import --csv <csv> --label <label> [--subset <codes file>] [--dry-run]
+  import-cofid.ts import --csv <csv> --label <label> [--subset <codes file>] --emit-sql <seed file>`;
 
 async function runNormalise(xlsxPath: string, outputPath: string | undefined): Promise<void> {
   const csvPath =
@@ -91,15 +95,19 @@ async function runImport(options: {
   csvPath: string;
   label: string;
   subsetPath: string | undefined;
+  emitSqlPath: string | undefined;
   dryRun: boolean;
 }): Promise<void> {
-  const { csvPath, label, subsetPath, dryRun } = options;
+  const { csvPath, label, subsetPath, emitSqlPath, dryRun } = options;
   const { csv, sha256 } = readCsv(csvPath);
   const subsetCodes =
     subsetPath === undefined ? undefined : parseSubsetFile(readFileSync(subsetPath, "utf8"));
 
+  const seedStore = createSqlSeedStore();
   let store = storeThatMustNotBeUsed;
-  if (!dryRun) {
+  if (emitSqlPath !== undefined) {
+    store = seedStore;
+  } else if (!dryRun) {
     const { url, serviceRoleKey } = await resolveConnection(process.env, readLocalStatus);
     console.log(`Importing into ${url}`);
     store = createSupabaseImportStore(
@@ -121,6 +129,11 @@ async function runImport(options: {
   });
   const seconds = ((Date.now() - startedAt) / 1000).toFixed(1);
 
+  if (emitSqlPath !== undefined) {
+    writeFileSync(emitSqlPath, seedStore.render());
+    console.log(`Wrote ${emitSqlPath}: ${summary.rowCount} foods in ${seconds} s`);
+    return;
+  }
   console.log(
     `Done: ${summary.rowCount} foods in ${seconds} s${summary.runId === undefined ? "" : `, import run ${summary.runId}`}`,
   );
@@ -135,6 +148,7 @@ async function main(): Promise<void> {
       csv: { type: "string" },
       label: { type: "string" },
       subset: { type: "string" },
+      "emit-sql": { type: "string" },
       "dry-run": { type: "boolean", default: false },
     },
   });
@@ -142,11 +156,17 @@ async function main(): Promise<void> {
 
   if (command === "normalise" && values.xlsx !== undefined) {
     await runNormalise(values.xlsx, values.out);
-  } else if (command === "import" && values.csv !== undefined && values.label !== undefined) {
+  } else if (
+    command === "import" &&
+    values.csv !== undefined &&
+    values.label !== undefined &&
+    !(values["emit-sql"] !== undefined && values["dry-run"])
+  ) {
     await runImport({
       csvPath: values.csv,
       label: values.label,
       subsetPath: values.subset,
+      emitSqlPath: values["emit-sql"],
       dryRun: values["dry-run"],
     });
   } else {
