@@ -18,15 +18,16 @@ ESLint enforces the dependency rules for `src/` (`import-x/no-nodejs-modules` an
 
 ## Layout
 
-| Path             | Holds                                               | Status                     |
-| ---------------- | --------------------------------------------------- | -------------------------- |
-| `src/dates/`     | Date helpers (`toLocalDate`)                        | One helper                 |
-| `src/schemas/`   | Zod schemas                                         | Empty, filled in M2        |
-| `src/nutrition/` | Nutrient maths and unit conversion                  | Empty, filled in M2 and M5 |
-| `src/engine/`    | Trend, expenditure and targets                      | Empty, filled in M6        |
-| `test/`          | Vitest tests, mirroring the `src/` folder structure |                            |
+| Path             | Holds                                                   | Status                     |
+| ---------------- | ------------------------------------------------------- | -------------------------- |
+| `src/dates/`     | Date helpers (`toLocalDate`)                            | One helper                 |
+| `src/schemas/`   | Zod schemas (nutrients, foods, Edge Function contracts) | Foods and OFF contracts    |
+| `src/foods/`     | Barcode normalisation, quality rule, data attribution   | Added in M2                |
+| `src/nutrition/` | Nutrient maths and unit conversion                      | Empty, filled in M2 and M5 |
+| `src/engine/`    | Trend, expenditure and targets                          | Empty, filled in M6        |
+| `test/`          | Vitest tests, mirroring the `src/` folder structure     |                            |
 
-Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`), and `@keylow/core` re-exports the public surface.
+Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/foods`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`), and `@keylow/core` re-exports the public surface.
 
 ## Scripts
 
