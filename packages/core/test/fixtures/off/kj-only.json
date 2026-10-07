@@ -1,0 +1,16 @@
+{
+  "code": "5000000010028",
+  "product_name": "Kilojoule Bar",
+  "brands": "Northfield Mills",
+  "quantity": "200 g",
+  "nutrition_data_per": "100g",
+  "countries_tags": ["en:united-kingdom"],
+  "nutriments": {
+    "energy-kj_100g": 1046,
+    "energy_100g": 1046,
+    "proteins_100g": 10,
+    "fat_100g": 5,
+    "carbohydrates_100g": 20,
+    "fiber_100g": 3
+  }
+}

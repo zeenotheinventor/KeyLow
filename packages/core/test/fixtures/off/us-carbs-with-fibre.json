@@ -1,0 +1,17 @@
+{
+  "code": "5000000010080",
+  "product_name": "Trail Bar",
+  "brands": "Prairie Foods",
+  "quantity": "40 g",
+  "serving_size": "1 bar (40 g)",
+  "serving_quantity": 40,
+  "nutrition_data_per": "100g",
+  "countries_tags": ["en:united-states", "en:canada"],
+  "nutriments": {
+    "energy-kcal_100g": 400,
+    "proteins_100g": 10,
+    "fat_100g": 15,
+    "carbohydrates_100g": 60,
+    "fiber_100g": 10
+  }
+}
