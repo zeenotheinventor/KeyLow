@@ -14,7 +14,8 @@
   },
   "dependencies": {
     "@keylow/core": "workspace:*",
-    "@keylow/db": "workspace:*"
+    "@keylow/db": "workspace:*",
+    "zod": "^4.6.5"
   },
   "peerDependencies": {
     "@supabase/supabase-js": "^2",

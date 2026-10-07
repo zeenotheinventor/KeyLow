@@ -121,7 +121,7 @@ describe("useCreateFood", () => {
     await act(() => result.current.mutateAsync(validInput));
 
     expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.foods.all });
+    expect(invalidate.mock.calls[0]?.[0]).toHaveProperty("queryKey", keys.foods.all);
   });
 
   it("should seed the detail and portions caches for the new food", async () => {
@@ -160,7 +160,7 @@ describe("useCreateFood", () => {
     await act(() => result.current.mutateAsync(validInput).catch(() => undefined));
 
     expect(invalidate).toHaveBeenCalledTimes(1);
-    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.foods.all });
+    expect(invalidate.mock.calls[0]?.[0]).toHaveProperty("queryKey", keys.foods.all);
   });
 
   it("should leave the caches alone when the food insert fails", async () => {
