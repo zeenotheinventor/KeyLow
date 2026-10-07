@@ -1,0 +1,1 @@
+export { EditFoodScreen } from "./EditFoodScreen";

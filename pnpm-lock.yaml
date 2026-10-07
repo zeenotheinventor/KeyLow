@@ -142,6 +142,9 @@ importers:
       '@keylow/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@keylow/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@keylow/db':
         specifier: workspace:*
         version: link:../../packages/db

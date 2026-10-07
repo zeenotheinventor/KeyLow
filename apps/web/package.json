@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@keylow/api-client": "workspace:*",
+    "@keylow/core": "workspace:*",
     "@keylow/db": "workspace:*",
     "@keylow/tokens": "workspace:*",
     "@radix-ui/react-slot": "^1.3.3",
