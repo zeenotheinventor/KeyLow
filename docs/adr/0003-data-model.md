@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07.
 
 ## Context
 
@@ -37,3 +37,207 @@ OFF mapping: prefer `energy-kcal_100g`, else kJ / 4.184, else derive `4P + 9F + 
 - Per the M1 Foundations brief (KEY-1), M1 implements only `profiles`. Every other table, the `day_totals` view, RLS, and the CoFID/OFF mappings above are a forward contract: M2 onward migrations match these column lists exactly, they do not redesign them.
 - Any change to a frozen column list, the RLS rule, or a mapping paragraph is a schema decision and needs a new ADR or an explicit amendment to this one before the migration that implements it lands.
 - pgTAP is expected to assert every RLS policy named above, per the source document's testing conventions.
+
+## Amendment 1 (M2, 2026-10-07)
+
+### Status
+
+Recorded on 2026-10-07 by the M2 planning session. Implements decisions Q7 to Q10 on KEY-2 (Zee, 2026-10-07). The remaining details (among them the barcode rules, the `carbs_convention` semantics, the `micros` default, the `fetched_at` check, the fixed-uuid seed rule and the `delete` grant on portions) are interpretations made for implementation. Zee confirms them by approving the PR that carries this amendment. The frozen Decision text above is unchanged. This amendment fills in details the frozen text leaves open and overrides nothing in it. It also admits one new table, `rate_limits`.
+
+### Surrogate and audit columns
+
+Every new table carries these two columns, with these exact definitions:
+
+- `id uuid primary key default gen_random_uuid()`
+- `created_at timestamptz not null default now()`
+
+There are two exceptions:
+
+- `food_source_data` is keyed by `food_id` and has no `id`.
+- `rate_limits` has the composite primary key `(bucket, window_start)` and has neither `id` nor `created_at`.
+
+There is no `updated_at` on any table, matching `profiles`.
+
+### Enums
+
+- `food_source ('off', 'cofid', 'user')`
+- `nutrient_basis ('per_100g', 'per_100ml')`
+
+### `foods` columns
+
+| Column                                                                                | Definition                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `kcal`, `protein_g`, `fat_g`, `sat_fat_g`, `carbs_g`, `sugars_g`, `fibre_g`, `salt_g` | Nullable `numeric`, each with a `>= 0` check. Missing data is null, never 0.                                                                                                                                                                                                                            |
+| `name`                                                                                | `text not null`.                                                                                                                                                                                                                                                                                        |
+| `brand`                                                                               | `text`, nullable.                                                                                                                                                                                                                                                                                       |
+| `barcode`                                                                             | `text`, nullable, with check `barcode ~ '^[0-9]{8,14}$'`. Stored in canonical form (see below).                                                                                                                                                                                                         |
+| `basis`                                                                               | `nutrient_basis not null`.                                                                                                                                                                                                                                                                              |
+| `density_g_per_ml`                                                                    | `numeric`, nullable, `> 0` when present.                                                                                                                                                                                                                                                                |
+| `micros`                                                                              | `jsonb not null default '{}'`. An empty object means none recorded.                                                                                                                                                                                                                                     |
+| `quality`                                                                             | `jsonb not null default '{}'`. Semantics are in the `quality` section below.                                                                                                                                                                                                                            |
+| `food_group`                                                                          | `text`, nullable.                                                                                                                                                                                                                                                                                       |
+| `fetched_at`                                                                          | `timestamptz`, nullable, with check `((source = 'off') = (fetched_at is not null))`. Every OFF row has it and no other row does.                                                                                                                                                                        |
+| `search`                                                                              | `tsvector generated always as (setweight(to_tsvector('english', coalesce(name, '')), 'A') \|\| setweight(to_tsvector('english', coalesce(brand, '')), 'B')) stored`.                                                                                                                                    |
+| `deleted_at`                                                                          | `timestamptz`, nullable.                                                                                                                                                                                                                                                                                |
+| `owner_id`                                                                            | `uuid references auth.users (id) on delete cascade`, nullable, with no default. Null exactly when the row is global (`source` is `cofid` or `off`), which is the frozen check `(source = 'user') = (owner_id is not null)`. The client sends `auth.uid()` and the RLS with-check rejects anything else. |
+| `source`                                                                              | `food_source not null`.                                                                                                                                                                                                                                                                                 |
+| `source_ref`                                                                          | `text`, nullable. See the uniqueness section.                                                                                                                                                                                                                                                           |
+
+Indexes on `foods`:
+
+- `unique (source, source_ref)` (the constraint described below).
+- `gin (search)`.
+- `gin (name extensions.gin_trgm_ops)` (`pg_trgm` lives in the `extensions` schema).
+- Partial `(barcode) where barcode is not null and deleted_at is null`.
+- Partial `(owner_id) where owner_id is not null`.
+
+### Barcode canonical form
+
+Decision Q8 fixes the canonical form: digits only, UPC-A zero-padded to 13, UPC-E expanded to its UPC-A form and then padded, EAN-8 kept at 8, check digit validated by the application before storage. The following rules make that implementable. The 8-digit disambiguation and the GTIN-14 handling are an interpretation of decision Q8 by the planning session, 2026-10-07, and are additions for Zee to confirm.
+
+`normaliseBarcode(raw, symbology?)` strips spaces and hyphens and accepts an optional symbology hint (the camera reports one, manual entry has none). Then, by digit count:
+
+- 13 digits: EAN-13. The check digit is validated and the code is kept.
+- 12 digits: UPC-A. The check digit is validated and the code is zero-padded to 13.
+- 8 digits: with a hint, the hint decides and there is no fallback to the other reading (EAN-8 is validated as a GTIN-8 and kept at 8, UPC-E is expanded to UPC-A, validated and padded to 13). The hint only matters at 8 digits and is ignored for 12, 13 and 14. Its vocabulary is the camera's symbology names, fixed by KEY-37. Without a hint, the code is treated as EAN-8 when the GTIN-8 check digit validates. Otherwise it is treated as UPC-E when the first digit is 0 or 1 and its expansion to UPC-A has a valid check digit (then padded to 13). Otherwise it is invalid.
+- 14 digits: a GTIN-14 whose indicator digit is 0 is the same product as its 13-digit EAN, so its check digit is validated, the leading 0 is stripped and 13 digits are stored. Any other indicator digit is kept at 14 digits with its check digit validated.
+- Anything else is invalid and is never looked up.
+
+The database check `^[0-9]{8,14}$` is deliberately wider than the set of canonical lengths (8, 13 and 14). Canonical form and check digits are enforced by the application.
+
+### Uniqueness of `(source, source_ref)`
+
+The frozen "unique `(source, source_ref)` for non-user rows" is implemented as a plain `unique (source, source_ref)` constraint plus `check ((source = 'user') = (source_ref is null))`. Nulls are distinct in a unique constraint, so user rows (which always have a null `source_ref`) never collide. PostgREST `upsert(..., { onConflict: 'source,source_ref' })` can target a plain constraint but cannot target a partial unique index. A consequence is that non-user rows must carry a non-null `source_ref`.
+
+### Privileges and RLS
+
+Baseline for every one of the five tables (`foods`, `food_portions`, `food_source_data`, `import_runs`, `rate_limits`): `revoke all on <table> from anon, authenticated` comes first, then grants. `anon` gets nothing on any of the five tables.
+
+`foods`:
+
+- `authenticated` gets `select` on all columns, including `quality`, `source_ref` and `fetched_at`. RLS, not column grants, limits which rows are visible.
+- `authenticated` gets column-scoped `insert` and `update` on exactly these columns: `name`, `brand`, `barcode`, `basis`, `density_g_per_ml`, `kcal`, `protein_g`, `fat_g`, `sat_fat_g`, `carbs_g`, `sugars_g`, `fibre_g`, `salt_g`, `micros`, `food_group`, `deleted_at`. Insert additionally gets `owner_id` and `source`.
+- Not granted for write: `id`, `source_ref`, `quality`, `fetched_at`, `search`, `created_at`, and (on update) `owner_id` and `source`.
+- `authenticated` is never granted `delete` on `foods` (decision Q10). Removing a custom food sets `deleted_at`.
+
+`food_portions`:
+
+- `authenticated` gets `select` on all columns and `insert`, `update` and `delete` on all columns.
+- Decision Q10 is about `foods`: a custom food is removed with `deleted_at` so log entries can keep pointing at it. Portions are child rows with no `deleted_at`. The plan's KEY-36 and KEY-45 tickets (approved 2026-10-07) replace a food's portions by deleting the user's own portions and then inserting the new ones, so `delete` on portions is granted and RLS limits it to own rows.
+
+`food_source_data` and `import_runs`: no privileges for `anon` or `authenticated`. RLS is enabled with no policies.
+
+`rate_limits`: RLS is enabled with no policies. The revoke also covers `service_role`. The function is `security definer`, so `service_role` needs no DML on the table, and the CLI default ACL would otherwise leave it `TRUNCATE`, `REFERENCES` and `TRIGGER`.
+
+`service_role` gets explicit `select`, `insert`, `update` and `delete` on `foods`, `food_portions`, `food_source_data` and `import_runs`. The Supabase CLI default ACL grants the API roles no DML on tables created by a migration, and the privileges are set explicitly so nothing relies on a changing default (the same approach as `0001_init.sql`).
+
+Policies, as predicates (RLS is enabled on all five tables):
+
+- `foods_select`: using `owner_id is null or owner_id = (select auth.uid())`.
+- `foods_insert_own`: with check `source = 'user' and owner_id = (select auth.uid())`.
+- `foods_update_own`: using and with check `source = 'user' and owner_id = (select auth.uid())`.
+- `food_portions_select`: using `owner_id is null or owner_id = (select auth.uid())`.
+- `food_portions_write_own`: one `for all` policy (or three, with `using` omitted on insert) whose using and with check are `owner_id = (select auth.uid()) and exists (select 1 from public.foods f where f.id = food_id and f.owner_id = (select auth.uid()) and f.source = 'user')`.
+
+Soft-deleted rows stay selectable through RLS. Filtering on `deleted_at` is done by `search_foods` and the clients, not by policy.
+
+### `food_portions`
+
+| Column       | Definition                                                                                                                                                                                                                                            |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `food_id`    | `uuid not null references foods (id) on delete cascade`.                                                                                                                                                                                              |
+| `owner_id`   | `uuid references auth.users (id) on delete cascade`, nullable. A denormalised copy of the parent food's `owner_id`, null exactly when the parent is global. Supplied by the writer (the client for user foods, the service role for global portions). |
+| `label`      | `text not null`.                                                                                                                                                                                                                                      |
+| `grams`      | `numeric`, nullable, `> 0` when present.                                                                                                                                                                                                              |
+| `ml`         | `numeric`, nullable, `> 0` when present.                                                                                                                                                                                                              |
+| `is_default` | `boolean not null default false`.                                                                                                                                                                                                                     |
+| `position`   | `integer not null default 0`.                                                                                                                                                                                                                         |
+
+- `check (num_nonnulls(grams, ml) = 1)`: exactly one of `grams` and `ml` is set.
+- A partial unique index on `(food_id) where is_default` allows at most one default portion per food.
+- A plain index on `(food_id)`.
+- Invariant: a portion's `owner_id` equals its parent food's `owner_id`. The join to `foods` in the `food_portions_write_own` policy is what enforces the equality.
+
+### `food_source_data`
+
+- `food_id uuid primary key references foods (id) on delete cascade`: one row per food.
+- `import_run_id uuid references import_runs (id)`, nullable, because OFF raw payloads have no import run.
+- `raw jsonb not null`.
+
+### `import_runs`
+
+- `source food_source not null check (source <> 'user')`.
+- `label text not null`.
+- `file_sha256 text`, nullable.
+- `started_at timestamptz not null default now()`.
+- `finished_at timestamptz`, nullable.
+- `row_count integer`, nullable.
+
+### `foods.quality` key set
+
+| Key                     | Type                    | Origin                  |
+| ----------------------- | ----------------------- | ----------------------- |
+| `kcal_derived`          | boolean                 | Frozen list             |
+| `suspect`               | boolean                 | Frozen list             |
+| `fields_missing`        | text array              | Frozen list             |
+| `fibre_method`          | `'aoac'` or `'englyst'` | CoFID mapping paragraph |
+| `trace_fields`          | text array              | CoFID mapping paragraph |
+| `per_serving_converted` | boolean                 | OFF mapping paragraph   |
+| `carbs_convention`      | `'eu'` or `'us_total'`  | OFF mapping paragraph   |
+
+The zod schema in `@keylow/core` is the source of truth for this key set and its types.
+
+Semantics:
+
+- Keys are optional. An absent boolean reads as false and an absent array reads as empty, so `'{}'` is the neutral value.
+- `carbs_convention` describes the stored `carbs_g`. It is `'eu'` by default, including after a successful conversion from a US label by subtracting fibre. It is `'us_total'` only when the source label was US-style and fibre was missing, so the value could not be converted. In that case `suspect` is also true and `fields_missing` includes `fibre_g`.
+- A CoFID "Tr" is a recorded 0 listed in `quality.trace_fields`, not missing data. So "missing is null, never 0" and "Tr to 0" both hold.
+
+### `rate_limits` and `consume_rate_limit()`
+
+New table `public.rate_limits`:
+
+- `bucket text not null`.
+- `window_start timestamptz not null`.
+- `hits integer not null default 0`.
+- `primary key (bucket, window_start)`.
+- RLS is enabled with no policies, and all privileges are revoked from `anon`, `authenticated` and `service_role` (see the privileges section).
+
+Bucket names are `off-search:user:<uuid>`, `off-search:global`, `off-product:user:<uuid>` and `off-product:global`. The Edge Function derives the per-user bucket from the verified caller, never from the request body.
+
+New function `public.consume_rate_limit(p_bucket text, p_max integer, p_window_seconds integer)`:
+
+- Returns `table (allowed boolean, retry_after_seconds integer)`.
+- `language plpgsql volatile`, `security definer`, with `set search_path = ''`.
+- Upsert-increments `hits` for the current window, where `window_start` is the `date_bin` bucket of `now()` for `p_window_seconds`, anchored at the epoch.
+- Deletes that bucket's expired windows in the same call.
+- Returns `allowed = hits <= p_max`.
+- `retry_after_seconds` is the whole seconds left in the current window, rounded up, so it is between 1 and `p_window_seconds` whether the call was allowed or refused.
+- `execute` is revoked from `public`, `anon` and `authenticated`, and granted to `service_role` only. A caller able to execute it could burn the global bucket.
+
+Limits are not stored in the database. They live in Edge Function environment variables with defaults in code, so they can be retuned without a migration (decision Q7):
+
+| Environment variable           | Default per minute |
+| ------------------------------ | ------------------ |
+| `OFF_SEARCH_PER_USER_PER_MIN`  | 4                  |
+| `OFF_SEARCH_GLOBAL_PER_MIN`    | 8                  |
+| `OFF_PRODUCT_PER_USER_PER_MIN` | 30                 |
+| `OFF_PRODUCT_GLOBAL_PER_MIN`   | 80                 |
+
+### Migration file naming and the schema lane
+
+- New migrations are created with `supabase migration new <snake_name>` from `packages/db` and carry the CLI timestamp prefix (`YYYYMMDDHHMMSS_<snake_name>.sql`). `0001_init.sql` stays as it is. The CLI orders versions as strings, so `0001` sorts before every timestamp.
+- Out-of-order rule: if `origin/main` holds a migration with a later timestamp than yours, rename yours to a fresh timestamp before merging, because production `supabase db push` refuses a local migration older than the newest remote one.
+- Migrations are applied locally with `supabase migration up --local`, and never by `supabase db reset` on the shared database.
+- `packages/db/src/types.gen.ts` is generated from the shared database, so at most one migration-bearing ticket is in flight at a time across M2 and M5. Two branches with unmerged applied migrations would each generate types containing the other's tables, and the CI drift check would fail.
+
+### Seed files
+
+- Seeds live in `supabase/seeds/*.sql` and are loaded through `[db.seed] sql_paths`, after `seed.sql`, in file name order.
+- Every seed insert is idempotent, so a seed can be applied to a running database without a reset. Rows with a natural key (`foods`, via `(source, source_ref)`) use `on conflict (source, source_ref) do update`. Rows without one (`import_runs` and `food_portions`) use fixed literal uuids chosen by the seed generator and `on conflict (id) do nothing`. `food_source_data` is keyed by `food_id` and uses `on conflict (food_id) do update`.
+- The CoFID subset seed is generated by the import script and committed.
+- M5 adds its own numbered seed file.
+
+### Consequences of Amendment 1
+
+Migrations KEY-36, KEY-40 and KEY-41 implement exactly this amendment, and the core zod schemas in KEY-37 mirror it. Any further deviation from the frozen Decision or from this amendment needs an Amendment 2 before the migration that implements it lands.
