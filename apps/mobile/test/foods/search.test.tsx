@@ -477,5 +477,14 @@ describe("food search screen", () => {
       expect(routerMock.push).toHaveBeenCalledTimes(1);
       expect(routerMock.push).toHaveBeenCalledWith("/foods/new");
     });
+
+    it("should open the barcode scanner", async () => {
+      const user = await renderSearch("");
+
+      await user.press(screen.getByRole("button", { name: "Scan barcode" }));
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith("/foods/scan");
+    });
   });
 });

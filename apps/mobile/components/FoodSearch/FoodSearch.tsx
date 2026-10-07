@@ -27,6 +27,7 @@ export function FoodSearch({
   onSelectFood,
   onSelectCandidate,
   onCreateFood,
+  onScanBarcode,
 }: FoodSearchProps) {
   const { local, off, isLoadingLocal, isLoadingOff, offError, localError } = results;
   const isSearchable = searchedQuery.length >= MIN_QUERY_LENGTH;
@@ -52,7 +53,6 @@ export function FoodSearch({
           onChangeText={onQueryChange}
           className="h-12 rounded-lg border border-neutral-300 bg-neutral-50 px-4 text-base text-neutral-900"
         />
-        {/* Other actions for finding a food, such as scanning a barcode, sit in this row. */}
         <View className="flex-row gap-2">
           <Pressable
             accessibilityRole="button"
@@ -60,6 +60,13 @@ export function FoodSearch({
             className="h-12 items-center justify-center rounded-lg border border-neutral-300 px-4"
           >
             <Text className="text-base font-semibold text-neutral-900">Create a food</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onScanBarcode}
+            className="h-12 items-center justify-center rounded-lg border border-neutral-300 px-4"
+          >
+            <Text className="text-base font-semibold text-neutral-900">Scan barcode</Text>
           </Pressable>
         </View>
       </View>

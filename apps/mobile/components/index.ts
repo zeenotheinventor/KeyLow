@@ -18,3 +18,10 @@ export { CopyFoodForm } from "./CopyFoodForm";
 export type { CopyFoodFormProps } from "./CopyFoodForm";
 export { NewFoodForm } from "./NewFoodForm";
 export type { NewFoodFormProps } from "./NewFoodForm";
+export { BarcodeScanner, ScanResult, toScanOutcome, useBarcodeScan } from "./BarcodeScanner";
+export type {
+  BarcodeScannerProps,
+  ScanOutcome,
+  ScanResultProps,
+  ScannedBarcode,
+} from "./BarcodeScanner";
