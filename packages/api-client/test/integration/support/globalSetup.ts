@@ -2,6 +2,8 @@ import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
+import { requireServedFunction, startOffMockOrExplain } from "./functionsLane";
+
 import type { StackConfig } from "./stack";
 import type { TestProject } from "vitest/node";
 
@@ -43,10 +45,19 @@ function toStackConfig(status: unknown): StackConfig {
   };
 }
 
-export default async function setup(project: TestProject) {
+async function requireStack(): Promise<StackConfig> {
   try {
-    project.provide("stack", toStackConfig(await readStackStatus()));
+    return toStackConfig(await readStackStatus());
   } catch (cause) {
     throw new Error(`The local Supabase stack is not available. ${startHint}`, { cause });
   }
+}
+
+// Besides the stack, the barcode suite needs `off-product` served and the Open Food Facts mock
+// that the served function fetches from, so both are required for every run of this suite.
+export default async function setup(project: TestProject) {
+  const stack = await requireStack();
+  await requireServedFunction(stack, "off-product");
+  project.provide("stack", stack);
+  return await startOffMockOrExplain();
 }

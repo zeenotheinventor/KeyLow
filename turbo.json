@@ -33,7 +33,7 @@
       "cache": false
     },
     "test:integration": {
-      "dependsOn": ["^typecheck"],
+      "dependsOn": ["^typecheck", "^test:integration"],
       "outputs": [],
       "cache": false
     }

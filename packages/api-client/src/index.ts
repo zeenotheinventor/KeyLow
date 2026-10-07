@@ -3,13 +3,32 @@ export { invokeEdgeFunction } from "./edge";
 export { KeyLowProvider, useSupabase } from "./KeyLowProvider";
 export { keys } from "./queryKeys";
 export { CustomFoodValidationError } from "./customFoodInput";
-export { EdgeFunctionError, RateLimitedError } from "./errors";
-export { useCreateFood, useFood, useFoodPortions, useFoodSearch, useUpdateFood } from "./hooks";
-export type { FoodSearchOffError, FoodSearchResult, UseFoodSearchOptions } from "./hooks";
+export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./errors";
+export {
+  useCreateFood,
+  useFood,
+  useFoodByBarcode,
+  useFoodPortions,
+  useFoodSearch,
+  useMaterialiseOffProduct,
+  useUpdateFood,
+} from "./hooks";
+export type {
+  FoodByBarcodeError,
+  FoodByBarcodeLookup,
+  FoodByBarcodeResult,
+  FoodSearchOffError,
+  FoodSearchResult,
+  UseFoodByBarcodeOptions,
+  UseFoodByBarcodeReturn,
+  UseFoodSearchOptions,
+} from "./hooks";
 export {
   FoodsPartialWriteError,
   createFood,
+  fetchOffProduct,
   getFood,
+  getFoodByBarcode,
   listFoodPortions,
   replaceFoodPortions,
   searchFoods,

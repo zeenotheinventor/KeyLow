@@ -51,7 +51,7 @@ export type FoodSearchResult = {
   localError: { message: string } | null;
 };
 
-function toOffError(error: Error | null): FoodSearchOffError | null {
+export function toOffError(error: Error | null): FoodSearchOffError | null {
   if (error === null) {
     return null;
   }

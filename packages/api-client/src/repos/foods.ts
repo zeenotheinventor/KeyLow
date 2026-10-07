@@ -18,6 +18,10 @@ const foodSearchHitSchema = foodRowSchema.extend({ score: z.number() });
 /** A food row with the relevance score the `search_foods` RPC ranked it by. */
 export type FoodSearchHit = z.infer<typeof foodSearchHitSchema>;
 
+// A barcode can sit on a few rows (the caller's own food and the shared ones), so a few are fetched
+// and the caller's own is picked. More than this would mean the same code on a crowd of rows.
+const BARCODE_LOOKUP_LIMIT = 5;
+
 const MIN_SEARCH_LENGTH = 2;
 const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
@@ -91,6 +95,35 @@ export async function getFood(client: SupabaseClient<Database>, id: string): Pro
   }
 
   return data === null ? null : foodRowSchema.parse(data);
+}
+
+/**
+ * Finds the food the caller can see that has this barcode, which must already be in canonical form
+ * (see `normaliseBarcode`). Deleted foods are ignored. When the caller's own food and a shared one
+ * carry the same barcode, the caller's own wins. Resolves to null when no food has it.
+ */
+export async function getFoodByBarcode(
+  client: SupabaseClient<Database>,
+  code: string,
+): Promise<Food | null> {
+  const { data, error } = await client
+    .from("foods")
+    .select(FOOD_COLUMNS)
+    .eq("barcode", code)
+    .is("deleted_at", null)
+    // Row level security only shows the caller their own rows and the shared ones (no owner).
+    // So a row with an owner is the caller's own, and nulls last puts the shared rows behind it.
+    .order("owner_id", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true })
+    .limit(BARCODE_LOOKUP_LIMIT);
+
+  if (error) {
+    throw repoError("look up the food by barcode", error);
+  }
+
+  const foods = data.map((row) => foodRowSchema.parse(row));
+
+  return foods.find((food) => food.owner_id !== null) ?? foods[0] ?? null;
 }
 
 export async function listFoodPortions(
