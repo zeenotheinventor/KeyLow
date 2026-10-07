@@ -19,6 +19,15 @@ afterAll(async () => {
   await server.close();
 });
 
+async function getSearch(searchTerms: string, headers: Record<string, string> = {}) {
+  const response = await fetch(
+    `${baseUrl}/cgi/search.pl?search_terms=${encodeURIComponent(searchTerms)}&json=1&page_size=20`,
+    { headers },
+  );
+  const text = await response.text();
+  return { status: response.status, contentType: response.headers.get("content-type"), text };
+}
+
 async function getProduct(code: string, headers: Record<string, string> = {}) {
   const response = await fetch(`${baseUrl}/api/v2/product/${code}?fields=code,product_name`, {
     headers,
@@ -122,5 +131,102 @@ describe("the OFF mock server", () => {
 
     expect(await client.calls("2000000000089")).toEqual([]);
     expect((await getProduct("2000000000089")).status).toBe(404);
+  });
+
+  describe("search", () => {
+    it("serves the registered products from their fixtures, under their codes, in the search envelope", async () => {
+      await client.registerSearch({
+        searchTerms: "oat crunch",
+        products: [
+          { code: "2000000000102", fixture: "kcal-present" },
+          {
+            code: "2000000000119",
+            fixture: "kj-only",
+            productOverrides: { product_name: "Renamed Bar" },
+          },
+        ],
+      });
+
+      const { status, text } = await getSearch("oat crunch");
+
+      expect(status).toBe(200);
+      expect(JSON.parse(text)).toMatchObject({
+        count: 2,
+        page: 1,
+        products: [
+          { code: "2000000000102", product_name_en: "Test Oat Crunch" },
+          { code: "2000000000119", product_name: "Renamed Bar" },
+        ],
+      });
+    });
+
+    it("answers a search nobody registered with no products", async () => {
+      const { status, text } = await getSearch("nothing registered for this");
+
+      expect(status).toBe(200);
+      expect(JSON.parse(text)).toMatchObject({ count: 0, products: [] });
+    });
+
+    it("serves a raw body with its status, and a raw text body verbatim as HTML", async () => {
+      await client.registerSearch({ searchTerms: "broken", status: 500, body: { error: "down" } });
+      await client.registerSearch({ searchTerms: "unavailable", rawBody: "<html>busy</html>" });
+
+      const broken = await getSearch("broken");
+      const unavailable = await getSearch("unavailable");
+
+      expect(broken.status).toBe(500);
+      expect(JSON.parse(broken.text)).toEqual({ error: "down" });
+      expect(unavailable.status).toBe(200);
+      expect(unavailable.contentType).toContain("text/html");
+      expect(unavailable.text).toBe("<html>busy</html>");
+    });
+
+    it("holds a search response back for the registered delay, after recording the request", async () => {
+      await client.registerSearch({ searchTerms: "slow", products: [], delayMilliseconds: 300 });
+
+      const started = Date.now();
+      const pending = getSearch("slow");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      const callsWhileHeld = await client.searchCalls("slow");
+      await pending;
+
+      expect(callsWhileHeld).toHaveLength(1);
+      expect(Date.now() - started).toBeGreaterThanOrEqual(280);
+    });
+
+    it("records each search with its full URL and headers, per search terms", async () => {
+      await client.registerSearch({ searchTerms: "recorded", products: [] });
+      await getSearch("recorded", { "User-Agent": "mock-test/2.0" });
+      await getSearch("another");
+
+      const calls = await client.searchCalls("recorded");
+
+      expect(calls).toHaveLength(1);
+      expect(calls[0]?.url).toBe("/cgi/search.pl?search_terms=recorded&json=1&page_size=20");
+      expect(calls[0]?.query["page_size"]).toBe("20");
+      expect(calls[0]?.headers["user-agent"]).toBe("mock-test/2.0");
+      expect(await client.searchCalls("another")).toHaveLength(1);
+    });
+
+    it("keeps search calls out of the product calls, and forgets search registrations on reset", async () => {
+      await client.registerSearch({ searchTerms: "forgotten", products: [] });
+      await getSearch("forgotten");
+
+      expect(await client.calls("forgotten")).toEqual([]);
+
+      await client.reset();
+
+      expect(await client.searchCalls("forgotten")).toEqual([]);
+      expect(JSON.parse((await getSearch("forgotten")).text)).toMatchObject({ products: [] });
+    });
+
+    it("rejects a search registration whose product fixture is not a plain file name", async () => {
+      await expect(
+        client.registerSearch({
+          searchTerms: "bad fixture",
+          products: [{ code: "2000000000126", fixture: "../../../package" }],
+        }),
+      ).rejects.toThrow(/fixture/i);
+    });
   });
 });
