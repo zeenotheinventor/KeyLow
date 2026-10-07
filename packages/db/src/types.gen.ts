@@ -28,6 +28,200 @@ export type Database = {
   };
   public: {
     Tables: {
+      food_portions: {
+        Row: {
+          created_at: string;
+          food_id: string;
+          grams: number | null;
+          id: string;
+          is_default: boolean;
+          label: string;
+          ml: number | null;
+          owner_id: string | null;
+          position: number;
+        };
+        Insert: {
+          created_at?: string;
+          food_id: string;
+          grams?: number | null;
+          id?: string;
+          is_default?: boolean;
+          label: string;
+          ml?: number | null;
+          owner_id?: string | null;
+          position?: number;
+        };
+        Update: {
+          created_at?: string;
+          food_id?: string;
+          grams?: number | null;
+          id?: string;
+          is_default?: boolean;
+          label?: string;
+          ml?: number | null;
+          owner_id?: string | null;
+          position?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "food_portions_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      food_source_data: {
+        Row: {
+          created_at: string;
+          food_id: string;
+          import_run_id: string | null;
+          raw: Json;
+        };
+        Insert: {
+          created_at?: string;
+          food_id: string;
+          import_run_id?: string | null;
+          raw: Json;
+        };
+        Update: {
+          created_at?: string;
+          food_id?: string;
+          import_run_id?: string | null;
+          raw?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "food_source_data_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: true;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "food_source_data_import_run_id_fkey";
+            columns: ["import_run_id"];
+            isOneToOne: false;
+            referencedRelation: "import_runs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      foods: {
+        Row: {
+          barcode: string | null;
+          basis: Database["public"]["Enums"]["nutrient_basis"];
+          brand: string | null;
+          carbs_g: number | null;
+          created_at: string;
+          deleted_at: string | null;
+          density_g_per_ml: number | null;
+          fat_g: number | null;
+          fetched_at: string | null;
+          fibre_g: number | null;
+          food_group: string | null;
+          id: string;
+          kcal: number | null;
+          micros: Json;
+          name: string;
+          owner_id: string | null;
+          protein_g: number | null;
+          quality: Json;
+          salt_g: number | null;
+          sat_fat_g: number | null;
+          search: unknown;
+          source: Database["public"]["Enums"]["food_source"];
+          source_ref: string | null;
+          sugars_g: number | null;
+        };
+        Insert: {
+          barcode?: string | null;
+          basis: Database["public"]["Enums"]["nutrient_basis"];
+          brand?: string | null;
+          carbs_g?: number | null;
+          created_at?: string;
+          deleted_at?: string | null;
+          density_g_per_ml?: number | null;
+          fat_g?: number | null;
+          fetched_at?: string | null;
+          fibre_g?: number | null;
+          food_group?: string | null;
+          id?: string;
+          kcal?: number | null;
+          micros?: Json;
+          name: string;
+          owner_id?: string | null;
+          protein_g?: number | null;
+          quality?: Json;
+          salt_g?: number | null;
+          sat_fat_g?: number | null;
+          search?: unknown;
+          source: Database["public"]["Enums"]["food_source"];
+          source_ref?: string | null;
+          sugars_g?: number | null;
+        };
+        Update: {
+          barcode?: string | null;
+          basis?: Database["public"]["Enums"]["nutrient_basis"];
+          brand?: string | null;
+          carbs_g?: number | null;
+          created_at?: string;
+          deleted_at?: string | null;
+          density_g_per_ml?: number | null;
+          fat_g?: number | null;
+          fetched_at?: string | null;
+          fibre_g?: number | null;
+          food_group?: string | null;
+          id?: string;
+          kcal?: number | null;
+          micros?: Json;
+          name?: string;
+          owner_id?: string | null;
+          protein_g?: number | null;
+          quality?: Json;
+          salt_g?: number | null;
+          sat_fat_g?: number | null;
+          search?: unknown;
+          source?: Database["public"]["Enums"]["food_source"];
+          source_ref?: string | null;
+          sugars_g?: number | null;
+        };
+        Relationships: [];
+      };
+      import_runs: {
+        Row: {
+          created_at: string;
+          file_sha256: string | null;
+          finished_at: string | null;
+          id: string;
+          label: string;
+          row_count: number | null;
+          source: Database["public"]["Enums"]["food_source"];
+          started_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          file_sha256?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          label: string;
+          row_count?: number | null;
+          source: Database["public"]["Enums"]["food_source"];
+          started_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          file_sha256?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          label?: string;
+          row_count?: number | null;
+          source?: Database["public"]["Enums"]["food_source"];
+          started_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           activity: string | null;
@@ -81,7 +275,8 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      food_source: "off" | "cofid" | "user";
+      nutrient_basis: "per_100g" | "per_100ml";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -205,6 +400,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      food_source: ["off", "cofid", "user"],
+      nutrient_basis: ["per_100g", "per_100ml"],
+    },
   },
 } as const;
