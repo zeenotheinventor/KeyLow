@@ -54,7 +54,7 @@ function toStackConfig(status: unknown): StackConfig {
   };
 }
 
-async function requireStack(): Promise<StackConfig> {
+export async function requireStack(): Promise<StackConfig> {
   let stack: StackConfig;
   try {
     stack = toStackConfig(await readStackStatus());

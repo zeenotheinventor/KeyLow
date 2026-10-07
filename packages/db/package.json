@@ -14,9 +14,12 @@
     "gen-types": "node --experimental-strip-types scripts/gen-types.ts",
     "bundle-core-for-deno": "node --experimental-strip-types scripts/bundle-core-for-deno.ts",
     "check:functions": "pnpm run bundle-core-for-deno && pnpm exec deno check --config supabase/functions/deno.json 'supabase/functions/*/index.ts' 'supabase/functions/_shared/*.ts' && pnpm exec deno lint --config supabase/functions/deno.json supabase/functions",
+    "import:cofid": "node --experimental-strip-types scripts/run-typescript.ts scripts/import-cofid.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:integration": "supabase test db && pnpm run test:integration:functions",
+    "test": "vitest run",
+    "test:integration": "supabase test db && pnpm run test:integration:database && pnpm run test:integration:functions",
+    "test:integration:database": "vitest run -c vitest.database.config.ts",
     "test:integration:functions": "vitest run -c vitest.integration.config.ts"
   },
   "devDependencies": {
@@ -28,6 +31,7 @@
     "dts-bundle-generator": "^9.5.1",
     "esbuild": "^0.28.2",
     "eslint": "^9.39.5",
+    "exceljs": "^4.4.0",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
   }

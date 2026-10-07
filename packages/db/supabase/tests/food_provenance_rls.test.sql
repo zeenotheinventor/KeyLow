@@ -178,9 +178,15 @@ select throws_ok(
 
 reset role;
 
--- Fixture rows survive the denied statements above.
+-- Fixture rows survive the denied statements above. Only this file's own rows are
+-- counted, so a real import in the same database cannot change the result.
 select is(
-  (select count(*)::int from public.food_source_data) || '/' || (select count(*)::int from public.import_runs),
+  (select count(*)::int from public.food_source_data
+    where food_id = '36000003-0000-4000-8000-000000000101'
+      and import_run_id = '36000003-0000-4000-8000-000000000301'
+      and raw = '{"Food Code": "CF-PROVENANCE-1"}')
+  || '/' || (select count(*)::int from public.import_runs
+    where id = '36000003-0000-4000-8000-000000000301' and label = 'fixture CoFID run'),
   '1/1',
   'the rows in both tables are untouched after the denied statements'
 );

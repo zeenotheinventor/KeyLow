@@ -1,4 +1,11 @@
 {
   "extends": "@keylow/config/tsconfig/node.json",
-  "include": ["scripts", "src", "test", "vitest.integration.config.ts"]
+  "include": [
+    "scripts",
+    "src",
+    "test",
+    "vitest.config.ts",
+    "vitest.database.config.ts",
+    "vitest.integration.config.ts"
+  ]
 }
