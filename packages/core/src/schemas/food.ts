@@ -10,6 +10,8 @@ export const nutrientBasisSchema = z.enum(["per_100g", "per_100ml"]);
  * The `foods.quality` key set (ADR 0003, Amendment 1). Every key is optional: an absent
  * boolean reads as false and an absent array reads as empty, so `{}` is the neutral value.
  * `carbs_convention` describes the stored `carbs_g`, `us_total` only when it could not be converted.
+ * For OFF rows an explicit `eu` means the value was converted from a US-style label, absent means no
+ * conversion happened, and `us_total` means the label was US-style and could not be converted.
  */
 export const foodQualitySchema = z.object({
   kcal_derived: z.boolean().optional(),

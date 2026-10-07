@@ -1,0 +1,20 @@
+{
+  "code": "5000000010073",
+  "product_name": "Sparkling Apple Drink",
+  "brands": "Orchard Lane",
+  "quantity": "1 L",
+  "serving_size": "250 ml",
+  "serving_quantity": 250,
+  "nutrition_data_per": "100g",
+  "countries_tags": ["en:united-kingdom"],
+  "categories_tags": ["en:beverages", "en:fruit-juices"],
+  "nutriments": {
+    "energy-kcal_100g": 42,
+    "proteins_100g": 0.5,
+    "fat_100g": 0.1,
+    "carbohydrates_100g": 10,
+    "sugars_100g": 9.5,
+    "fiber_100g": 0.2,
+    "salt_100g": 0.01
+  }
+}

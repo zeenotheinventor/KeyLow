@@ -1,0 +1,21 @@
+{
+  "code": "5000000010042",
+  "product_name": "Serving Only Snack",
+  "brands": "Northfield Mills",
+  "quantity": "150 g",
+  "serving_size": "30 g",
+  "serving_quantity": "30",
+  "nutrition_data_per": "serving",
+  "countries_tags": ["en:united-kingdom"],
+  "nutriments": {
+    "energy-kcal_serving": 120,
+    "proteins_serving": 3,
+    "fat_serving": 6,
+    "saturated-fat_serving": 3,
+    "carbohydrates_serving": 15,
+    "sugars_serving": 6,
+    "fiber_serving": 1.5,
+    "salt_serving": 0.3,
+    "calcium_serving": 0.03
+  }
+}
