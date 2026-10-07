@@ -4,10 +4,14 @@
 export type { EdgeError, EdgeErrorCode } from "./core/index.js";
 export {
   normaliseBarcode,
+  normaliseOffCandidate,
   normaliseOffProduct,
   offFreshness,
   offProductPayloadSchema,
   offProductRequestSchema,
+  offCandidateSchema,
   offProductResponseSchema,
+  offSearchRequestSchema,
+  offSearchResponseSchema,
   toLocalDate,
 } from "./core/index.js";

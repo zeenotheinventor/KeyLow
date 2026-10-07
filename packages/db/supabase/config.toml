@@ -394,6 +394,12 @@ verify_jwt = false
 import_map = "./functions/deno.json"
 entrypoint = "./functions/off-product/index.ts"
 
+[functions.off-search]
+enabled = true
+verify_jwt = false
+import_map = "./functions/deno.json"
+entrypoint = "./functions/off-search/index.ts"
+
 [analytics]
 enabled = true
 port = 54327
