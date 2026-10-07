@@ -18,7 +18,11 @@ export default function EditFoodRoute() {
     router.replace(`/foods/${id}`);
   }
 
-  if (food.isError || portions.isError) {
+  // A refresh that fails while the form is on show must not replace it with an error.
+  if (
+    (food.isError && food.data === undefined) ||
+    (portions.isError && portions.data === undefined)
+  ) {
     return (
       <View className="flex-1 bg-neutral-50 px-6 py-6">
         <Text accessibilityRole="alert" className="text-base text-danger-600">

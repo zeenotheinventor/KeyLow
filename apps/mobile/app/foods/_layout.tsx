@@ -5,6 +5,8 @@ import { Stack } from "expo-router";
 export default function FoodsLayout() {
   return (
     <Stack screenOptions={{ headerTintColor: colors.brand["600"] }}>
+      <Stack.Screen name="index" options={{ title: "Find food" }} />
+      <Stack.Screen name="[id]/index" options={{ title: "Food" }} />
       <Stack.Screen name="new" options={{ title: "New food" }} />
       <Stack.Screen name="[id]/edit" options={{ title: "Edit food" }} />
     </Stack>

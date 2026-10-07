@@ -1,57 +1,33 @@
-import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 
-import { FoodForm, emptyFoodFormValues } from "../../components/FoodForm";
+import { CopyFoodForm } from "../../components/CopyFoodForm";
+import { emptyFoodFormValues } from "../../components/FoodForm";
+import { NewFoodForm } from "../../components/NewFoodForm";
 
-import type { CustomFoodInput } from "@keylow/core/schemas";
+// A repeated route parameter arrives as an array, so the first value is used. An empty one is none.
+function firstParameter(parameter: string | string[] | undefined): string | undefined {
+  const first = Array.isArray(parameter) ? parameter[0] : parameter;
+  return first === undefined || first === "" ? undefined : first;
+}
 
 export default function NewFoodRoute() {
-  const router = useRouter();
-  const { barcode } = useLocalSearchParams<{ barcode?: string | string[] }>();
-  const createFood = useCreateFood();
-  const updateFood = useUpdateFood();
-  // Set when a create saved the food but not its portions. Later saves then update that food, so
-  // the user cannot create it a second time.
-  const [partiallySavedFoodId, setPartiallySavedFoodId] = useState<string | undefined>(undefined);
-
+  const { barcode, from } = useLocalSearchParams<{
+    barcode?: string | string[];
+    from?: string | string[];
+  }>();
+  const sourceFoodId = firstParameter(from);
   // A scanned barcode arrives as a route parameter. The form's schema canonicalises it on save.
-  // A repeated parameter arrives as an array, so the first value is used.
-  const firstBarcode = Array.isArray(barcode) ? barcode[0] : barcode;
-  const scannedBarcode =
-    firstBarcode === undefined || firstBarcode === "" ? undefined : firstBarcode;
+  const scannedBarcode = firstParameter(barcode);
 
-  async function create(input: CustomFoodInput) {
-    try {
-      const created = await createFood.mutateAsync(input);
-      router.replace(`/foods/${created.food.id}`);
-    } catch (error) {
-      if (error instanceof FoodsPartialWriteError) {
-        setPartiallySavedFoodId(error.foodId);
-      }
-      throw error;
-    }
-  }
-
-  async function update(id: string, input: CustomFoodInput) {
-    await updateFood.mutateAsync({ id, input });
-    router.replace(`/foods/${id}`);
-  }
-
-  async function save(input: CustomFoodInput) {
-    if (partiallySavedFoodId === undefined) {
-      await create(input);
-    } else {
-      await update(partiallySavedFoodId, input);
-    }
+  if (sourceFoodId !== undefined) {
+    return <CopyFoodForm sourceFoodId={sourceFoodId} />;
   }
 
   return (
-    <FoodForm
-      submitLabel={partiallySavedFoodId === undefined ? "Create food" : "Save"}
+    <NewFoodForm
+      submitLabel="Create food"
       initialValues={{ ...emptyFoodFormValues, barcode: scannedBarcode ?? "" }}
       isBarcodeLocked={scannedBarcode !== undefined}
-      onSubmit={save}
     />
   );
 }

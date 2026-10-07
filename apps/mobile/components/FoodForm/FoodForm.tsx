@@ -21,7 +21,7 @@ const BASIS_HEADINGS: Record<NutrientBasis, string> = {
   per_100ml: "Nutrition per 100 ml",
 };
 
-const BARCODE_SCAN_HINT = "Filled in from the barcode you scanned";
+const SCANNED_BARCODE_HINT = "Filled in from the barcode you scanned";
 
 function withoutKeys(errors: FoodFormErrors, isRemoved: (key: string) => boolean): FoodFormErrors {
   return Object.fromEntries(Object.entries(errors).filter(([key]) => !isRemoved(key)));
@@ -33,6 +33,8 @@ export function FoodForm({
   submitLabel,
   initialValues = emptyFoodFormValues,
   isBarcodeLocked = false,
+  lockedBarcodeHint = SCANNED_BARCODE_HINT,
+  nutrientNote,
   onSubmit,
 }: FoodFormProps) {
   const lastPortionNumber = useRef(initialValues.portions.length);
@@ -148,7 +150,7 @@ export function FoodForm({
         <FormField
           label="Barcode"
           error={errors["barcode"]}
-          {...(isBarcodeLocked ? { hint: BARCODE_SCAN_HINT } : {})}
+          {...(isBarcodeLocked ? { hint: lockedBarcodeHint } : {})}
           editable={!isBarcodeLocked}
           value={values.barcode}
           onChangeText={(text) => {
@@ -167,6 +169,9 @@ export function FoodForm({
         <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900">
           {BASIS_HEADINGS[values.basis]}
         </Text>
+        {nutrientNote === undefined ? null : (
+          <Text className="text-sm text-neutral-600">{nutrientNote}</Text>
+        )}
         {NUTRIENT_FIELDS.map((field) => (
           <FormField
             key={field.name}

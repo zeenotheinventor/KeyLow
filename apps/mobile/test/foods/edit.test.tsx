@@ -66,6 +66,16 @@ describe("edit food screen", () => {
       expect(screen.getByText("Loading food")).toBeOnTheScreen();
     });
 
+    it("should keep the form when a later refresh of the food or portions fails", async () => {
+      Object.assign(foodQuery, { isError: true });
+      Object.assign(portionsQuery, { isError: true });
+
+      await renderEditor();
+
+      expect(screen.getByLabelText("Name")).toHaveDisplayValue("Oat bar");
+      expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+    });
+
     it("should say the food was not found when the user cannot see it", async () => {
       Object.assign(foodQuery, { data: null });
 
