@@ -1,0 +1,1 @@
+export { NewFoodScreen } from "./NewFoodScreen";
