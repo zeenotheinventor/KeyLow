@@ -1,4 +1,4 @@
-import { colors } from "@keylow/tokens";
+import { legacyColors } from "@keylow/tokens";
 import { Tabs } from "expo-router";
 
 export default function TabsLayout() {
@@ -6,7 +6,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.brand["600"],
+        tabBarActiveTintColor: legacyColors["legacy-brand"]["600"],
         tabBarIcon: () => null,
       }}
     >

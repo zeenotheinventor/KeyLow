@@ -13,9 +13,9 @@ export default function DiaryRoute() {
         onPress={() => {
           router.push("/foods");
         }}
-        className="h-12 items-center justify-center rounded-lg bg-brand-600 px-6"
+        className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600 px-6"
       >
-        <Text className="text-base font-semibold text-neutral-50">Find food</Text>
+        <Text className="text-base font-semibold text-legacy-neutral-50">Find food</Text>
       </Pressable>
     </PlaceholderScreen>
   );

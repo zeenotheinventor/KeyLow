@@ -1,0 +1,121 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`recorded contrast ratios > should record every text, accent, status and macro colour on each surface in the dark theme 1`] = `
+{
+  "accent": {
+    "background": 15.06,
+    "surface": 13.84,
+    "surface-raised": 12.56,
+  },
+  "calories": {
+    "background": 10.36,
+    "surface": 9.52,
+    "surface-raised": 8.64,
+  },
+  "carbs": {
+    "background": 11.52,
+    "surface": 10.58,
+    "surface-raised": 9.6,
+  },
+  "danger": {
+    "background": 6.39,
+    "surface": 5.87,
+    "surface-raised": 5.32,
+  },
+  "fat": {
+    "background": 7.53,
+    "surface": 6.92,
+    "surface-raised": 6.27,
+  },
+  "protein": {
+    "background": 7.18,
+    "surface": 6.59,
+    "surface-raised": 5.98,
+  },
+  "success": {
+    "background": 10.45,
+    "surface": 9.6,
+    "surface-raised": 8.71,
+  },
+  "text-muted": {
+    "background": 6.08,
+    "surface": 5.59,
+    "surface-raised": 5.07,
+  },
+  "text-primary": {
+    "background": 17.55,
+    "surface": 16.13,
+    "surface-raised": 14.63,
+  },
+  "text-secondary": {
+    "background": 9.06,
+    "surface": 8.33,
+    "surface-raised": 7.55,
+  },
+  "warning": {
+    "background": 9.47,
+    "surface": 8.7,
+    "surface-raised": 7.9,
+  },
+}
+`;
+
+exports[`recorded contrast ratios > should record every text, accent, status and macro colour on each surface in the light theme 1`] = `
+{
+  "accent": {
+    "background": 2.31,
+    "surface": 2.48,
+    "surface-raised": 2.64,
+  },
+  "calories": {
+    "background": 3.05,
+    "surface": 3.28,
+    "surface-raised": 3.48,
+  },
+  "carbs": {
+    "background": 2.99,
+    "surface": 3.21,
+    "surface-raised": 3.41,
+  },
+  "danger": {
+    "background": 4.17,
+    "surface": 4.48,
+    "surface-raised": 4.76,
+  },
+  "fat": {
+    "background": 4.24,
+    "surface": 4.55,
+    "surface-raised": 4.83,
+  },
+  "protein": {
+    "background": 4.17,
+    "surface": 4.48,
+    "surface-raised": 4.76,
+  },
+  "success": {
+    "background": 3.07,
+    "surface": 3.3,
+    "surface-raised": 3.51,
+  },
+  "text-muted": {
+    "background": 4.71,
+    "surface": 5.06,
+    "surface-raised": 5.37,
+  },
+  "text-primary": {
+    "background": 16.31,
+    "surface": 17.51,
+    "surface-raised": 18.61,
+  },
+  "text-secondary": {
+    "background": 6.68,
+    "surface": 7.17,
+    "surface-raised": 7.62,
+  },
+  "warning": {
+    "background": 3.35,
+    "surface": 3.6,
+    "surface-raised": 3.83,
+  },
+}
+`;

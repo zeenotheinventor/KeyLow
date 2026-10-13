@@ -22,17 +22,17 @@ export function FoodRow({
       accessibilityState={{ disabled: isDisabled, busy: statusText !== undefined }}
       disabled={isDisabled}
       onPress={onPress}
-      className="min-h-14 gap-1 rounded-lg border border-neutral-300 bg-neutral-50 px-4 py-3 disabled:opacity-50"
+      className="min-h-14 gap-1 rounded-lg border border-legacy-neutral-300 bg-legacy-neutral-50 px-4 py-3 disabled:opacity-50"
     >
-      <Text className="text-base font-semibold text-neutral-900">{name}</Text>
-      {brand === null ? null : <Text className="text-sm text-neutral-600">{brand}</Text>}
+      <Text className="text-base font-semibold text-legacy-neutral-900">{name}</Text>
+      {brand === null ? null : <Text className="text-sm text-legacy-neutral-600">{brand}</Text>}
       <View className="flex-row items-center gap-2">
         {sourceLabel === undefined ? null : (
-          <Text className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700">
+          <Text className="rounded-full bg-legacy-neutral-100 px-2 py-0.5 text-xs font-medium text-legacy-neutral-700">
             {sourceLabel}
           </Text>
         )}
-        <Text className="text-sm text-neutral-500">{statusText ?? energyText}</Text>
+        <Text className="text-sm text-legacy-neutral-500">{statusText ?? energyText}</Text>
       </View>
     </Pressable>
   );

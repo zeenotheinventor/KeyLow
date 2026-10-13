@@ -9,9 +9,9 @@ export default function SettingsRoute() {
       <Pressable
         accessibilityRole="button"
         onPress={() => void supabase.auth.signOut()}
-        className="h-12 items-center justify-center rounded-lg bg-brand-600 px-6"
+        className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600 px-6"
       >
-        <Text className="text-base font-semibold text-neutral-50">Sign out</Text>
+        <Text className="text-base font-semibold text-legacy-neutral-50">Sign out</Text>
       </Pressable>
     </PlaceholderScreen>
   );

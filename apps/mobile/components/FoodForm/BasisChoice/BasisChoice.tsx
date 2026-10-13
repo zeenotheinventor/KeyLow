@@ -14,7 +14,7 @@ export function BasisChoice({ value, onChange }: BasisChoiceProps) {
       <Text
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        className="text-sm font-medium text-neutral-700"
+        className="text-sm font-medium text-legacy-neutral-700"
       >
         Nutrition basis
       </Text>
@@ -36,15 +36,15 @@ export function BasisChoice({ value, onChange }: BasisChoiceProps) {
               }}
               className={
                 isSelected
-                  ? "h-12 flex-1 items-center justify-center rounded-lg border border-brand-600 bg-brand-600"
-                  : "h-12 flex-1 items-center justify-center rounded-lg border border-neutral-300 bg-neutral-50"
+                  ? "h-12 flex-1 items-center justify-center rounded-lg border border-legacy-brand-600 bg-legacy-brand-600"
+                  : "h-12 flex-1 items-center justify-center rounded-lg border border-legacy-neutral-300 bg-legacy-neutral-50"
               }
             >
               <Text
                 className={
                   isSelected
-                    ? "text-base font-semibold text-neutral-50"
-                    : "text-base font-semibold text-neutral-900"
+                    ? "text-base font-semibold text-legacy-neutral-50"
+                    : "text-base font-semibold text-legacy-neutral-900"
                 }
               >
                 {option.label}

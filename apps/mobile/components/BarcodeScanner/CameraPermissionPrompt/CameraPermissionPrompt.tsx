@@ -8,12 +8,12 @@ export function CameraPermissionPrompt({
   onOpenSettings,
 }: CameraPermissionPromptProps) {
   return (
-    <View className="flex-1 justify-center gap-4 bg-neutral-50 px-6">
+    <View className="flex-1 justify-center gap-4 bg-legacy-neutral-50 px-6">
       <View className="gap-2">
-        <Text accessibilityRole="header" className="text-2xl font-semibold text-neutral-900">
+        <Text accessibilityRole="header" className="text-2xl font-semibold text-legacy-neutral-900">
           {canAskAgain ? "Camera access" : "Camera access is off"}
         </Text>
-        <Text className="text-base text-neutral-500">
+        <Text className="text-base text-legacy-neutral-500">
           {canAskAgain
             ? "KeyLow uses the camera to scan food barcodes so you can look up a product without typing."
             : "KeyLow cannot scan barcodes without the camera. Open the settings, allow camera access for KeyLow, then come back to scan."}
@@ -22,9 +22,9 @@ export function CameraPermissionPrompt({
       <Pressable
         accessibilityRole="button"
         onPress={canAskAgain ? onAllowCamera : onOpenSettings}
-        className="h-12 items-center justify-center rounded-lg bg-brand-600"
+        className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600"
       >
-        <Text className="text-base font-semibold text-neutral-50">
+        <Text className="text-base font-semibold text-legacy-neutral-50">
           {canAskAgain ? "Allow camera" : "Open settings"}
         </Text>
       </Pressable>
