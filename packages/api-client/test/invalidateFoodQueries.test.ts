@@ -1,8 +1,8 @@
-import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 
 import { invalidateFoodQueries } from "../src/invalidateFoodQueries";
 import { keys } from "../src/queryKeys";
+import { createQueryClient } from "./support/queryClients";
 
 const seeded = {
   detail: keys.foods.detail("food-1"),
@@ -15,7 +15,7 @@ const seeded = {
 
 describe("invalidateFoodQueries", () => {
   it("should invalidate every foods query except the Open Food Facts searches", async () => {
-    const queryClient = new QueryClient();
+    const queryClient = createQueryClient();
     for (const key of Object.values(seeded)) {
       queryClient.setQueryData(key, []);
     }

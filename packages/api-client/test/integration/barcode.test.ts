@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 // The hook needs a DOM to render in. The rest of the integration suite runs in node.
 import { customFoodInputSchema } from "@keylow/core/schemas";
-import { renderHook, waitFor } from "@testing-library/react";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { drainGeneratedBarcodes, generateBarcode, offMock } from "./support/offProduct";
 import { adminClient } from "./support/stack";
@@ -54,6 +54,10 @@ async function deleteGeneratedOffFoods(codes: string[]) {
 
 beforeEach(() => {
   invoke.mockClear();
+});
+
+afterEach(() => {
+  cleanup();
 });
 
 afterAll(async () => {
