@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Web food detail and form</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/a1c55461938510f7678509d58bd52ada">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: {{w}}; height: 812px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); font-variant-numeric: tabular-nums; background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="WebTopBar (proposed)" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-6); padding: {{barPad}}; background: var(--surface); border-bottom: 1px solid var(--border)">
+<a href="#home" aria-label="Ki-Lo" style="display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary)"><img src="{{markUrl}}" alt="" style="width: 28px; height: 28px"><span style="font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Ki-Lo</span></a>
+<sc-if value="{{wide}}" hint-placeholder-val="{{ true }}">
+<nav data-kilo="WebNav (proposed)" aria-label="Main" style="display: flex; align-items: center; gap: var(--space-1)">
+<a href="#dashboard" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">Dashboard</a>
+<a href="#diary" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">Diary</a>
+<a href="#recipes" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">Recipes</a>
+<a href="#more" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">More</a>
+</nav>
+<div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="margin-left: auto; width: 320px; height: 36px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-muted); font-size: 14px; line-height: 20px">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<span style="flex: 1">Search for a food</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-primary)"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg>
+</div>
+</sc-if>
+<sc-if value="{{narrow}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button secondary icon" type="button" aria-label="Menu" style="margin-left: auto; width: var(--touch-target); height: var(--control-height-md); display: flex; align-items: center; justify-content: center; padding: 0; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg></button>
+</sc-if>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow: hidden; display: flex; justify-content: center; padding: {{mainPad}}">
+<div style="width: 100%; max-width: 672px; display: flex; flex-direction: column; gap: var(--space-4)">
+
+<a href="#foods" style="align-self: flex-start; min-height: 36px; display: inline-flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-2) 0 var(--space-1); margin-left: -4px; border-radius: var(--radius-small); text-decoration: none; color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+{{backLabel}}
+</a>
+
+<sc-if value="{{isLoading}}" hint-placeholder-val="{{ false }}">
+<div role="status" aria-label="Loading food" style="display: flex; flex-direction: column; gap: var(--space-4)">
+<div style="width: 70%; height: 28px; border-radius: var(--radius-small); background: var(--skeleton-base)"></div>
+<div style="width: 120px; height: 20px; border-radius: var(--radius-pill); background: var(--skeleton-base)"></div>
+<div style="height: 140px; border-radius: var(--radius-large); background: var(--skeleton-base)"></div>
+<div style="height: 220px; border-radius: var(--radius-large); background: var(--skeleton-base)"></div>
+<p style="margin: 0; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Loading food</p>
+</div>
+</sc-if>
+
+<sc-if value="{{hasState}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="EmptyState" role="{{stateRole}}" style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: 56px var(--space-6); text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: {{stateTileBg}}; color: {{stateTileFg}}">
+<sc-if value="{{stateIconAlert}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></sc-if>
+<sc-if value="{{stateIconSearch}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m13.5 8.5-5 5"></path><path d="m8.5 8.5 5 5"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></sc-if>
+<sc-if value="{{stateIconLock}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></sc-if>
+</span>
+<h1 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">{{stateTitle}}</h1>
+<p style="margin: 0; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">{{stateBody}}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{isDetail}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3)">
+<div style="display: flex; flex-direction: column; gap: var(--space-2); min-width: 0">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">{{f.name}}</h1>
+<div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap">
+<span data-kilo="Badge source" style="height: 20px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface-sheet); border: 1px solid var(--border); color: var(--text-secondary); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking)">{{f.source}}</span>
+<sc-if value="{{f.hasBrand}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">{{f.brand}}</span></sc-if>
+</div>
+</div>
+<sc-if value="{{f.canEdit}}" hint-placeholder-val="{{ false }}">
+<a data-kilo="Button secondary" href="#edit" style="flex-shrink: 0; height: var(--control-height-md); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); text-decoration: none; color: var(--text-primary); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>Edit</a>
+</sc-if>
+</div>
+
+<sc-if value="{{f.review}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner review" role="note" style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--warning-muted); border: 1px solid var(--warning); border-radius: var(--radius-medium)">
+<span style="display: flex; padding-top: 2px; color: var(--warning)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--warning-ink)">Needs review</span><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">{{f.reviewBody}}</span></span>
+<a href="#copy" style="flex-shrink: 0; min-height: 36px; display: flex; align-items: center; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--warning-ink)">Copy to your foods</a>
+</div>
+</sc-if>
+
+<section data-kilo="MacroHero (proposed)" aria-label="Energy and macros" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: baseline; gap: 6px">
+<sc-if value="{{f.hasKcal}}" hint-placeholder-val="{{ true }}"><span style="font-size: var(--type-display-numeral-size); line-height: var(--type-display-numeral-line); font-weight: var(--type-display-numeral-weight); letter-spacing: var(--type-display-numeral-tracking)">{{f.kcal}}</span><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--text-secondary)">kcal</span></sc-if>
+<sc-if value="{{f.noKcal}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking); color: var(--text-muted)">Energy not given</span></sc-if>
+<span style="margin-left: auto; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">{{f.basis}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2)">
+<sc-for list="{{f.macros}}" as="m" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: var(--space-1); padding: 10px var(--space-3); background: var(--surface-raised); border-radius: var(--radius-medium)">
+<span style="display: flex; align-items: center; gap: 6px; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: {{m.color}}"></span>{{m.label}}</span>
+<span style="font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking); color: {{m.fg}}">{{m.value}}</span>
+<sc-if value="{{m.hasShare}}" hint-placeholder-val="{{ true }}"><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">{{m.share}} of energy</span></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section aria-labelledby="ntab" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<table style="width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); overflow: hidden">
+<caption id="ntab" style="caption-side: top; text-align: left; padding: 0 var(--space-1) var(--space-2); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--text-primary)">Nutrition {{f.basisLower}}</caption>
+<tbody>
+<sc-for list="{{f.rows}}" as="r" hint-placeholder-count="5">
+<tr><th scope="row" style="text-align: left; padding: 10px var(--space-4); border-top: {{r.divider}}; font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: 400; color: var(--text-secondary)">{{r.label}}</th><td style="text-align: right; padding: 10px var(--space-4); border-top: {{r.divider}}; font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: {{r.weight}}; color: {{r.color}}">{{r.value}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+<sc-if value="{{f.us}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Carbohydrate includes fibre (US labelling convention).</p></sc-if>
+</section>
+
+<sc-if value="{{f.hasPortions}}" hint-placeholder-val="{{ false }}">
+<section style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Portions</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); overflow: hidden">
+<sc-for list="{{f.portions}}" as="p" hint-placeholder-count="1">
+<div style="min-height: 52px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-top: {{p.divider}}"><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">{{p.label}}</span><sc-if value="{{p.def}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge status" style="height: 20px; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface-sheet); color: var(--text-secondary); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking)">Default</span></sc-if><span style="margin-left: auto; font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking)">{{p.amount}}</span></div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{f.hasCredit}}" hint-placeholder-val="{{ true }}">
+<footer style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-1) 0; border-top: 1px solid var(--border)">
+<p style="margin: 0; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">{{f.credit}}</p>
+<a href="{{f.creditUrl}}" target="_blank" rel="noopener" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary); text-decoration: underline; word-break: break-all">{{f.creditUrl}}</a>
+</footer>
+</sc-if>
+</sc-if>
+
+<sc-if value="{{isForm}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">{{formTitle}}</h1>
+<sc-if value="{{isCopy}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">Check each value and fill in the ones that are blank. Saving adds a food of your own and leaves the original as it is.</p></sc-if>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: var(--space-4); margin-top: {{formOffset}}">
+<section data-kilo="Card" aria-labelledby="det-h" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<h2 id="det-h" style="margin: 0; font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Details</h2>
+<div style="display: grid; grid-template-columns: repeat({{cols}}, minmax(0, 1fr)); gap: var(--space-3)">
+<sc-for list="{{idFields}}" as="x" hint-placeholder-count="3">
+<div style="grid-column: span {{x.span}}; display: flex; flex-direction: column; gap: var(--space-1); min-width: 0">
+<div style="display: flex; justify-content: space-between; gap: var(--space-1)"><label for="{{x.id}}" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">{{x.label}}</label><sc-if value="{{x.required}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Required</span></sc-if></div>
+<div data-kilo="Input" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); background: {{x.bg}}; border: 1px solid {{x.border}}; border-radius: var(--radius-medium)"><input id="{{x.id}}" value="{{x.value}}" placeholder="{{x.placeholder}}" aria-invalid="{{x.invalid}}" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-primary)"><sc-if value="{{x.locked}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted)"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></sc-if></div>
+<sc-if value="{{x.hasError}}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--danger)">{{x.error}}</span></sc-if>
+<sc-if value="{{x.hasHelper}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">{{x.helper}}</span></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section data-kilo="Card" aria-labelledby="nf-h" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<div style="display: flex; flex-direction: column; gap: 2px"><h2 id="nf-h" style="margin: 0; font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Nutrition per 100 g</h2><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Energy, protein, carbohydrate and fat are required.</span>
+<sc-if value="{{usNote}}" hint-placeholder-val="{{ false }}"><span style="margin-top: var(--space-1); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">This product's carbohydrate included fibre. Enter the carbohydrate without fibre.</span></sc-if></div>
+<div data-kilo="SegmentedControl" role="radiogroup" aria-label="Basis" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); height: var(--control-height-md); max-width: 320px; box-sizing: border-box; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)"><span role="radio" aria-checked="true" style="display: flex; align-items: center; justify-content: center; border-radius: calc(var(--radius-medium) - 3px); background: var(--text-primary); color: var(--background); font-size: 14px; line-height: 20px; font-weight: 600">Per 100 g</span><span role="radio" aria-checked="false" style="display: flex; align-items: center; justify-content: center; border-radius: calc(var(--radius-medium) - 3px); color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">Per 100 ml</span></div>
+<div style="display: grid; grid-template-columns: repeat({{nutCols}}, minmax(0, 1fr)); gap: var(--space-3)">
+<sc-for list="{{nutFields}}" as="x" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: var(--space-1); min-width: 0">
+<label for="{{x.id}}" style="display: flex; align-items: center; gap: 6px; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)"><sc-if value="{{x.hasDot}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: {{x.dot}}"></span></sc-if>{{x.label}}</label>
+<div data-kilo="NumericInput" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 var(--space-3); background: var(--surface-raised); border: 1px solid {{x.border}}; border-radius: var(--radius-medium)"><input id="{{x.id}}" inputmode="decimal" value="{{x.value}}" placeholder="0" aria-invalid="{{x.invalid}}" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-primary); text-align: right"><span aria-hidden="true" style="color: var(--text-muted)">{{x.unit}}</span></div>
+<sc-if value="{{x.hasError}}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--danger)">{{x.error}}</span></sc-if>
+<sc-if value="{{x.gap}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--warning-ink)">Not given by the source</span></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section data-kilo="Card" aria-labelledby="pf-h" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<h2 id="pf-h" style="margin: 0; font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Portions</h2>
+<sc-for list="{{portions}}" as="p" hint-placeholder-count="2">
+<div style="display: grid; grid-template-columns: {{portionCols}}; gap: var(--space-2) var(--space-3); align-items: end; padding-bottom: var(--space-3); border-bottom: 1px solid var(--border)">
+<div style="display: flex; flex-direction: column; gap: var(--space-1)"><label style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Portion {{p.n}} label</label><div data-kilo="Input" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-3); background: var(--surface-raised); border: 1px solid {{p.labelBorder}}; border-radius: var(--radius-medium)"><input value="{{p.label}}" placeholder="e.g. 1 slice" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); color: var(--text-primary)"></div></div>
+<div style="display: flex; flex-direction: column; gap: var(--space-1)"><label style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Amount</label><div data-kilo="NumericInput" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 var(--space-3); background: var(--surface-raised); border: 1px solid {{p.amountBorder}}; border-radius: var(--radius-medium)"><input value="{{p.amount}}" inputmode="decimal" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); color: var(--text-primary); text-align: right"><span style="color: var(--text-muted)">g</span></div></div>
+<label style="height: var(--control-height-md); display: flex; align-items: center; gap: var(--space-2); font-size: 14px; line-height: 20px; font-weight: 600"><span data-kilo="Checkbox (proposed)" role="checkbox" aria-checked="{{p.defStr}}" style="width: 20px; height: 20px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); border: 1px solid {{p.boxBorder}}; background: {{p.boxBg}}; color: var(--accent-foreground)"><sc-if value="{{p.def}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if></span>Default</label>
+<button data-kilo="Button ghost" type="button" aria-label="Remove portion {{p.n}}" style="height: var(--control-height-md); display: flex; align-items: center; gap: 6px; padding: 0 var(--space-2); background: transparent; border: 0; border-radius: var(--radius-small); font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--text-secondary)"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>Remove</button>
+<sc-if value="{{p.hasErr}}" hint-placeholder-val="{{ false }}"><span role="alert" style="grid-column: 1 / -1; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--danger)">{{p.err}}</span></sc-if>
+</div>
+</sc-for>
+<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Each amount is in g, to match the basis.</span>
+<button data-kilo="Button ghost" type="button" style="align-self: flex-start; height: var(--control-height-md); display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); margin-left: -12px; background: transparent; border: 0; border-radius: var(--radius-medium); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--text-primary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>Add portion</button>
+</section>
+
+<sc-if value="{{hasSummary}}" hint-placeholder-val="{{ false }}">
+<div role="alert" style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: {{summaryBg}}; border: 1px solid {{summaryBorder}}; border-radius: var(--radius-medium)">
+<span style="display: flex; padding-top: 2px; color: {{summaryBorder}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: var(--space-1)"><span style="font-size: var(--type-body-size); line-height: var(--type-body-line)">{{summary}}</span><sc-if value="{{summaryLink}}" hint-placeholder-val="{{ false }}"><a href="#edit" style="font-size: 14px; line-height: 20px; font-weight: 600; color: var(--text-primary); text-decoration: underline">Edit the food</a></sc-if></span>
+</div>
+</sc-if>
+
+<div style="display: flex; gap: var(--space-3); align-items: center">
+<button data-kilo="Button primary" type="submit" aria-busy="{{saving}}" disabled="{{saveDisabled}}" style="position: relative; height: var(--control-height-lg); min-width: 200px; display: flex; align-items: center; justify-content: center; padding: 0 var(--space-6); background: var(--accent); border: 0; border-radius: var(--radius-medium); color: var(--accent-foreground); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); opacity: {{saveOpacity}}"><span style="visibility: {{saveLabelVis}}">{{saveLabel}}</span><sc-if value="{{saving}}" hint-placeholder-val="{{ false }}"><span aria-label="Saving" style="position: absolute; width: 18px; height: 18px; box-sizing: border-box; border-radius: var(--radius-pill); border: 2px solid currentColor; border-right-color: transparent"></span></sc-if></button>
+<a href="#back" style="min-height: var(--touch-target); display: flex; align-items: center; padding: 0 var(--space-2); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--text-secondary)">Cancel</a>
+</div>
+</div>
+</sc-if>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["detail-loading","detail-error","detail-not-found","detail-cofid","detail-off-product","detail-own-food","detail-missing-values-off","detail-missing-values-cofid","detail-missing-values-us-carbs","form-new-empty","form-new-from-barcode","form-new-filled","form-validation-errors","form-saving","form-save-error","form-save-partial","form-copy-off","form-copy-us-carbs","form-edit","form-edit-shared"],"default":"detail-cofid"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"width":{"editor":"enum","options":["1280","375"],"default":"1280"},"$preview":{"width":1280,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet (kilo-tokens.css); data-theme picks dark or light.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const s = this.props.screenState ?? 'detail-cofid';
+    const wide = String(this.props.width ?? '1280') !== '375';
+    const g = (x) => (x < 10 ? String(Math.round(x * 10) / 10) : String(Math.round(x)));
+    const CREDIT = {
+      cofid: ["Contains public sector information licensed under the Open Government Licence v3.0. Source: McCance and Widdowson's The Composition of Foods Integrated Dataset, Public Health England and the Office for Health Improvement and Disparities.", 'https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid'],
+      off: ['Data from Open Food Facts, available under the Open Database Licence.', 'https://world.openfoodfacts.org']
+    };
+    const SRC = { cofid: 'UK CoFID', off: 'Open Food Facts', user: 'Yours' };
+    const FOODS = {
+      cofid: { name: 'Chicken, breast, grilled without skin, meat only', src: 'cofid', kcal: 148, p: 32, c: 0, f: 2.2, fib: 0, portions: [] },
+      'off-product': { name: 'Test Oat Crunch', brand: 'Northfield Mills', src: 'off', kcal: 380, p: 9.5, c: 62, f: 7.5, fib: 8, portions: [['40 g', '40 g', true]] },
+      'own-food': { name: 'Chicken breast, meal prep', src: 'user', kcal: 165, p: 31, c: 0, f: 3.6, fib: null, portions: [['1 breast', '150 g', true], ['Half breast', '75 g', false]], own: true },
+      'missing-values-off': { name: 'Mystery Spread', brand: 'Northfield Mills', src: 'off', kcal: 200, p: null, c: 20, f: 10, fib: 2, portions: [], missing: 'Protein is not given. Fill it in to save your own copy of this food.' },
+      'missing-values-cofid': { name: 'Stock cubes, vegetable', src: 'cofid', kcal: null, p: 13.5, c: null, f: 17.3, fib: 1.8, portions: [], missing: 'Energy and carbohydrate are not given. Fill them in to save your own copy of this food.' },
+      'missing-values-us-carbs': { name: 'Honey Oat Rings', brand: 'Northfield Mills', src: 'off', kcal: 375, p: 8, c: 80, f: 4.5, fib: null, portions: [], missing: 'Fibre is not given, so carbohydrate still includes it. Fill it in to save your own copy of this food.', us: true }
+    };
+    const dkey = s.startsWith('detail-') ? s.slice(7) : '';
+    const x = FOODS[dkey];
+    let f = { macros: [], rows: [], portions: [] };
+    if (x) {
+      const share = (v, k) => (x.kcal && v !== null ? Math.round((v * k * 100) / x.kcal) + ' %' : '');
+      const mac = (label, v, color, k) => ({ label, color, value: v === null ? 'not given' : g(v) + ' g', fg: v === null ? 'var(--text-muted)' : 'var(--text-primary)', share: share(v, k), hasShare: !!x.kcal && v !== null });
+      const row = (label, v, i) => ({ label, value: v === null ? 'not given' : v, color: v === null ? 'var(--text-muted)' : 'var(--text-primary)', weight: v === null ? 400 : 600, divider: i ? '1px solid var(--border)' : '0' });
+      f = {
+        name: x.name, brand: x.brand ?? '', hasBrand: !!x.brand, source: SRC[x.src],
+        basis: 'per 100 g', basisLower: 'per 100 g',
+        hasKcal: x.kcal !== null, noKcal: x.kcal === null, kcal: x.kcal === null ? '' : Math.round(x.kcal).toLocaleString('en-GB'),
+        macros: [mac('Protein', x.p, 'var(--protein)', 4), mac('Carbs', x.c, 'var(--carbs)', 4), mac('Fat', x.f, 'var(--fat)', 9)],
+        rows: [row('Energy', x.kcal === null ? null : Math.round(x.kcal).toLocaleString('en-GB') + ' kcal', 0), row('Protein', x.p === null ? null : g(x.p) + ' g', 1), row('Carbohydrate', x.c === null ? null : g(x.c) + ' g', 2), row('Fat', x.f === null ? null : g(x.f) + ' g', 3), row('Fibre', x.fib === null ? null : g(x.fib) + ' g', 4)],
+        us: !!x.us, canEdit: !!x.own, review: !!x.missing, reviewBody: x.missing ?? '',
+        hasPortions: x.portions.length > 0,
+        portions: x.portions.map(([label, amount, def], i) => ({ label, amount, def, divider: i ? '1px solid var(--border)' : '0' })),
+        hasCredit: x.src !== 'user', credit: x.src === 'user' ? '' : CREDIT[x.src][0], creditUrl: x.src === 'user' ? '' : CREDIT[x.src][1]
+      };
+    }
+    // form
+    const fkey = s.startsWith('form-') ? s.slice(5) : '';
+    const filled = { name: 'Chicken breast, meal prep', brand: '', barcode: '', kcal: '165', p: '31', c: '0', f: '3.6', fib: '', portions: [['1 breast', '150', true], ['Half breast', '75', false]] };
+    const empty = { name: '', brand: '', barcode: '', kcal: '', p: '', c: '', f: '', fib: '', portions: [] };
+    const F = {
+      'new-empty': empty,
+      'new-from-barcode': { ...empty, barcode: '5000159484695', locked: true, helper: 'Filled in from the barcode you entered' },
+      'new-filled': filled,
+      'validation-errors': { ...filled, name: '', kcal: '', f: '-2', portions: [['', '0', true]], errors: { name: 'Name is required', kcal: 'Energy is required', f: 'Fat cannot be negative' }, pErr: 'Portion 1 needs a label and an amount above 0' },
+      saving: filled, 'save-error': filled, 'save-partial': filled,
+      'copy-off': { name: 'Mystery Spread', brand: 'Northfield Mills', barcode: '2000000000053', locked: true, helper: 'Kept from the product you are copying', kcal: '200', p: '', c: '20', f: '10', fib: '2', portions: [], gaps: ['p'] },
+      'copy-us-carbs': { name: 'Honey Oat Rings', brand: 'Northfield Mills', barcode: '2000000000060', locked: true, helper: 'Kept from the product you are copying', kcal: '375', p: '8', c: '', f: '4.5', fib: '', portions: [], gaps: ['c'], us: true },
+      edit: filled
+    };
+    const d = F[fkey] ?? empty;
+    const err = d.errors ?? {};
+    const gaps = d.gaps ?? [];
+    const idFields = [
+      ['f-name', 'name', 'Name', 'e.g. Greek yoghurt', true, wide ? 2 : 1],
+      ['f-brand', 'brand', 'Brand', 'Optional', false, 1],
+      ['f-barcode', 'barcode', 'Barcode', 'Optional', false, 1]
+    ].map(([id, key, label, placeholder, required, span]) => {
+      const locked = key === 'barcode' && !!d.locked;
+      return { id, label, placeholder, required, span, value: d[key], locked,
+        bg: locked ? 'var(--surface)' : 'var(--surface-raised)', border: err[key] ? 'var(--danger)' : 'var(--border)', invalid: err[key] ? 'true' : 'false',
+        hasError: !!err[key], error: err[key] ?? '', hasHelper: locked, helper: locked ? d.helper : '' };
+    });
+    const nutFields = [['kcal', 'Energy', 'kcal', ''], ['p', 'Protein', 'g', 'var(--protein)'], ['c', 'Carbohydrate', 'g', 'var(--carbs)'], ['f', 'Fat', 'g', 'var(--fat)'], ['fib', 'Fibre (optional)', 'g', '']].map(([key, label, unit, dot]) => ({
+      id: 'n-' + key, label, unit, dot, hasDot: !!dot, value: d[key], border: err[key] ? 'var(--danger)' : 'var(--border)', invalid: err[key] ? 'true' : 'false',
+      hasError: !!err[key], error: err[key] ?? '', gap: gaps.includes(key)
+    }));
+    const portions = d.portions.map(([label, amount, def], i) => ({
+      n: i + 1, label, amount, def, defStr: def ? 'true' : 'false',
+      boxBg: def ? 'var(--accent)' : 'var(--surface-raised)', boxBorder: def ? 'var(--accent)' : 'var(--border-strong)',
+      labelBorder: d.pErr && i === 0 ? 'var(--danger)' : 'var(--border)', amountBorder: d.pErr && i === 0 ? 'var(--danger)' : 'var(--border)',
+      hasErr: !!d.pErr && i === 0, err: d.pErr ?? ''
+    }));
+    const isForm = !!fkey && fkey !== 'edit-shared';
+    const isCopy = fkey.startsWith('copy');
+    const SUM = {
+      'validation-errors': ['Check the fields marked below and try again.', 'danger'],
+      'save-error': ['Your food could not be saved. Check your connection and try again.', 'danger'],
+      'save-partial': ['Your food was saved, but its portions were not. Edit the food to add them again.', 'warning']
+    }[fkey];
+    const STATES = {
+      'detail-error': ['alert', 'Food not loaded', 'The food could not be loaded. Try again later.', 'alert'],
+      'detail-not-found': ['', 'Food not found', 'This food does not exist, or you cannot see it.', 'search'],
+      'form-edit-shared': ['', 'Cannot edit this food', 'This food comes from a shared database and cannot be edited.', 'lock']
+    }[s];
+    const scrolledForms = ['new-filled', 'validation-errors', 'saving', 'save-error', 'save-partial', 'edit'];
+    return {
+      theme, noop: () => {},
+      w: wide ? '1280px' : '375px', wide, narrow: !wide,
+      markUrl: theme === 'light' ? '/_blob/d2f75bf70c7629f797c5d7f941462d40' : '/_blob/2813d66c30ea89aefd67a23cc03508e1',
+      barPad: wide ? '14px 32px' : '16px', mainPad: wide ? '24px 32px' : '16px',
+      backLabel: s.startsWith('detail') ? 'Back to foods' : 'Back',
+      isLoading: s === 'detail-loading',
+      hasState: !!STATES, stateRole: STATES ? STATES[0] : '', stateTitle: STATES ? STATES[1] : '', stateBody: STATES ? STATES[2] : '',
+      stateIconAlert: STATES && STATES[3] === 'alert', stateIconSearch: STATES && STATES[3] === 'search', stateIconLock: STATES && STATES[3] === 'lock',
+      stateTileBg: STATES && STATES[3] === 'alert' ? 'var(--danger-muted)' : 'var(--surface-raised)',
+      stateTileFg: STATES && STATES[3] === 'alert' ? 'var(--danger)' : 'var(--text-muted)',
+      isDetail: !!x, f,
+      isForm, isCopy,
+      formTitle: fkey === 'edit' ? 'Edit food' : isCopy ? 'Copy to your foods' : 'New food',
+      formOffset: scrolledForms.includes(fkey) ? (wide ? '-330px' : '-520px') : '0',
+      cols: wide ? 4 : 1, nutCols: wide ? 2 : 1,
+      portionCols: wide ? 'minmax(0, 2fr) minmax(0, 1fr) auto auto' : 'minmax(0, 1fr)',
+      idFields, nutFields, portions, usNote: !!d.us,
+      hasSummary: !!SUM, summary: SUM ? SUM[0] : '', summaryLink: fkey === 'save-partial',
+      summaryBg: SUM && SUM[1] === 'warning' ? 'var(--warning-muted)' : 'var(--danger-muted)',
+      summaryBorder: SUM && SUM[1] === 'warning' ? 'var(--warning)' : 'var(--danger)',
+      saving: fkey === 'saving', saveLabelVis: fkey === 'saving' ? 'hidden' : 'visible',
+      saveDisabled: fkey === 'saving' || fkey === 'save-partial', saveOpacity: fkey === 'save-partial' ? 0.4 : 1,
+      saveLabel: fkey === 'edit' ? 'Save changes' : isCopy ? 'Save to your foods' : 'Create food'
+    };
+  }
+}
+</script>
+</body>
+</html>

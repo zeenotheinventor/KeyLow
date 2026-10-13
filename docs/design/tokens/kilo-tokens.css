@@ -1,0 +1,237 @@
+/* Ki-Lo tokens for the design canvas: tokens/colors.css, typography.css, spacing.css and motion.css from design-source/ concatenated verbatim (fonts load separately). Then a short block of canvas-only proposals, marked below. */
+/* Ki-Lo colour tokens. Dark is the default (:root); light is an opt-in scope. Values are hex so they copy straight into a Tailwind preset. */
+:root{
+color-scheme:dark;
+/* surfaces — four distinct dark levels, never pure black */
+--background:#0B0E13;
+--surface:#141821;
+--surface-raised:#1C212C;
+--surface-sheet:#232A37;
+--border:#2A3142;
+--border-strong:#3A4355;
+/* text */
+--text-primary:#F2F4F8;
+--text-secondary:#A9B2C3;
+--text-muted:#8691A5;
+--text-on-accent:#0B0E13;
+--text-on-status:#0B0E13;
+/* accent — one colour, used sparingly */
+--accent:#CCF249;
+--accent-foreground:#0B0E13;
+--accent-muted:rgba(204,242,73,0.14);
+/* status */
+--success:#5CD67A;
+--warning:#FF9F43;
+--danger:#FF5C5C;
+--success-muted:rgba(92,214,122,0.14);
+--warning-muted:rgba(255,159,67,0.14);
+--danger-muted:rgba(255,92,92,0.14);
+/* macros — tuned to read on dark, always paired with a label */
+--protein:#6E9BFF;
+--carbs:#F2C14E;
+--fat:#E87EC0;
+--calories:#4FD1C5;
+--protein-muted:rgba(110,155,255,0.16);
+--carbs-muted:rgba(242,193,78,0.16);
+--fat-muted:rgba(232,126,192,0.16);
+--calories-muted:rgba(79,209,197,0.16);
+/* charts — the only colours a chart may use */
+--chart-axis:#3A4355;
+--chart-grid:#1F2531;
+--chart-point:#8691A5;
+--chart-trend:#F2F4F8;
+--chart-band:rgba(242,244,248,0.10);
+--chart-marker:#CCF249;
+/* interaction */
+--overlay:rgba(4,6,10,0.64);
+--hover-overlay:rgba(255,255,255,0.06);
+--press-overlay:rgba(255,255,255,0.10);
+--focus-ring:#CCF249;
+--focus-ring-offset:#0B0E13;
+--skeleton-base:#1C212C;
+--skeleton-shine:rgba(255,255,255,0.07);
+--status-bar-style:light-content;/* @kind other */
+}
+[data-theme="light"]{
+color-scheme:light;
+--background:#EEF0F4;
+--surface:#F7F8FA;
+--surface-raised:#FFFFFF;
+--surface-sheet:#FFFFFF;
+--border:#D9DDE5;
+--border-strong:#C3C9D4;
+--text-primary:#0F131A;
+--text-secondary:#4B5465;
+--text-muted:#626B7B;
+--text-on-accent:#0F131A;
+--text-on-status:#FFFFFF;
+--accent:#7FAE00;
+--accent-foreground:#0F131A;
+--accent-muted:rgba(127,174,0,0.16);
+--success:#1F9D4E;
+--warning:#C76A00;
+--danger:#D93030;
+--success-muted:rgba(31,157,78,0.12);
+--warning-muted:rgba(199,106,0,0.12);
+--danger-muted:rgba(217,48,48,0.12);
+--protein:#2F6BEA;
+--carbs:#B9800E;
+--fat:#C2399A;
+--calories:#0F9A8E;
+--protein-muted:rgba(47,107,234,0.12);
+--carbs-muted:rgba(185,128,14,0.12);
+--fat-muted:rgba(194,57,154,0.12);
+--calories-muted:rgba(15,154,142,0.12);
+--chart-axis:#C3C9D4;
+--chart-grid:#E4E7EC;
+--chart-point:#626B7B;
+--chart-trend:#0F131A;
+--chart-band:rgba(15,19,26,0.08);
+--chart-marker:#7FAE00;
+--overlay:rgba(15,19,26,0.45);
+--hover-overlay:rgba(15,19,26,0.05);
+--press-overlay:rgba(15,19,26,0.09);
+--focus-ring:#2F6BEA;
+--focus-ring-offset:#EEF0F4;
+--skeleton-base:#E4E7EC;
+--skeleton-shine:rgba(255,255,255,0.7);
+--status-bar-style:dark-content;/* @kind other */
+}
+/* One sans family. Tight tracking on large numerals; tabular figures on every number. Sizes in px; they scale with the platform text-size setting (readme › Larger text). */
+:root{
+--font-sans:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+--font-numeric:"tnum" 1;
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+/* display numeral — the hero numbers (calories remaining, expenditure) */
+--type-display-numeral-size:56px;
+--type-display-numeral-line:60px;
+--type-display-numeral-weight:600;
+--type-display-numeral-tracking:-0.03em;
+/* h1 — screen titles */
+--type-h1-size:28px;
+--type-h1-line:34px;
+--type-h1-weight:600;
+--type-h1-tracking:-0.02em;
+/* h2 — section titles, card titles */
+--type-h2-size:20px;
+--type-h2-line:26px;
+--type-h2-weight:600;
+--type-h2-tracking:-0.01em;
+/* body */
+--type-body-size:16px;
+--type-body-line:24px;
+--type-body-weight:400;
+--type-body-tracking:0;
+/* body-strong — row titles, button labels */
+--type-body-strong-size:16px;
+--type-body-strong-line:24px;
+--type-body-strong-weight:600;
+--type-body-strong-tracking:0;
+/* caption — labels, helper text, badges, tab labels */
+--type-caption-size:12px;
+--type-caption-line:16px;
+--type-caption-weight:500;
+--type-caption-tracking:0.01em;
+/* numeral-small — trailing values, macro grams */
+--type-numeral-small-size:20px;
+--type-numeral-small-line:24px;
+--type-numeral-small-weight:600;
+--type-numeral-small-tracking:-0.01em;
+}
+/* 4 pt base. Radius, elevation, icon sizes, touch targets, focus ring. */
+:root{
+--space-1:4px;
+--space-2:8px;
+--space-3:12px;
+--space-4:16px;
+--space-5:20px;
+--space-6:24px;
+--space-8:32px;
+--space-10:40px;
+--space-12:48px;
+--space-16:64px;
+--radius-small:6px;
+--radius-medium:12px;
+--radius-large:20px;
+--radius-pill:999px;
+--elevation-card:inset 0 1px 0 0 rgba(255,255,255,0.03),0 6px 20px -4px rgba(0,0,0,0.45);
+--elevation-sheet:inset 0 1px 0 0 rgba(255,255,255,0.05),0 -16px 48px -8px rgba(0,0,0,0.6);
+--elevation-toast:0 12px 32px -8px rgba(0,0,0,0.6);
+--icon-sm:16px;
+--icon-md:20px;
+--icon-lg:24px;
+--icon-xl:32px;
+--icon-stroke:1.75;/* @kind other */
+--touch-target:44px;
+--control-height-sm:36px;
+--control-height-md:44px;
+--control-height-lg:52px;
+--focus-ring-width:2px;
+--focus-ring-offset-width:2px;
+--tab-bar-height:49px;
+--sheet-handle-width:36px;
+--sheet-handle-height:4px;
+--safe-area-top:env(safe-area-inset-top,0px);
+--safe-area-bottom:env(safe-area-inset-bottom,0px);
+}
+[data-theme="light"]{
+--elevation-card:0 1px 2px rgba(15,19,26,0.06),0 6px 20px -6px rgba(15,19,26,0.12);
+--elevation-sheet:0 -8px 32px -8px rgba(15,19,26,0.22);
+--elevation-toast:0 12px 32px -8px rgba(15,19,26,0.25);
+}
+/* Motion and haptic tokens. Attack, short overshoot, fast settle. Nothing floats. Reduce-motion collapses movement to fades. */
+:root{
+--duration-instant:90ms;/* @kind other */
+--duration-quick:160ms;/* @kind other */
+--duration-standard:220ms;/* @kind other */
+--duration-flourish:400ms;/* @kind other */
+--duration-chart:600ms;/* @kind other */
+--stagger:36ms;/* @kind other */
+--ease-enter:cubic-bezier(0.18,1.25,0.3,1);/* @kind other */
+--ease-exit:cubic-bezier(0.6,0,0.9,0.2);/* @kind other */
+--ease-spring:cubic-bezier(0.3,1.45,0.5,1);/* @kind other */
+--ease-whip:cubic-bezier(0.05,0.9,0.15,1);/* @kind other */
+--motion-distance:1;/* @kind other */
+--motion-skew:1;/* @kind other */
+--press-scale:0.96;/* @kind other */
+--skeleton-delay:200ms;/* @kind other */
+--haptic-select:light;/* @kind other */
+--haptic-confirm:medium;/* @kind other */
+--haptic-complete:heavy-double;/* @kind other */
+--haptic-warning:notification-warning;/* @kind other */
+--haptic-error:notification-error;/* @kind other */
+}
+@media (prefers-reduced-motion:reduce){:root{--motion-distance:0;/* @kind other */--motion-skew:0;/* @kind other */--press-scale:1;/* @kind other */--ease-enter:ease-out;/* @kind other */--ease-spring:ease-out;/* @kind other */--ease-whip:ease-out;/* @kind other */}}
+/* panels, list rows, banners: cut in from the side, slightly skewed, straighten on settle */
+@keyframes kl-cut-in{from{opacity:0;transform:translateX(calc(28px * var(--motion-distance))) skewX(calc(-8deg * var(--motion-skew)))}65%{opacity:1;transform:translateX(calc(-3px * var(--motion-distance))) skewX(calc(2deg * var(--motion-skew)))}to{opacity:1;transform:translateX(0) skewX(0)}}
+@keyframes kl-cut-out{from{opacity:1;transform:translateX(0) skewX(0)}to{opacity:0;transform:translateX(calc(-24px * var(--motion-distance))) skewX(calc(6deg * var(--motion-skew)))}}
+/* toast: cuts in from the edge at an angle */
+@keyframes kl-toast-in{from{opacity:0;transform:translate(calc(40px * var(--motion-distance)),calc(12px * var(--motion-distance))) skewX(calc(-12deg * var(--motion-skew)))}60%{opacity:1;transform:translate(calc(-4px * var(--motion-distance)),0) skewX(calc(3deg * var(--motion-skew)))}to{opacity:1;transform:none}}
+/* bottom sheet: slams up, overshoots a touch, settles */
+@keyframes kl-sheet-up{from{opacity:0;transform:translateY(calc(100% * var(--motion-distance)))}70%{opacity:1;transform:translateY(calc(-6px * var(--motion-distance)))}to{opacity:1;transform:translateY(0)}}
+@keyframes kl-sheet-down{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(calc(100% * var(--motion-distance)))}}
+@keyframes kl-dim-in{from{opacity:0}to{opacity:1}}
+/* screen and tab transitions: an angled wipe reveals the next view */
+@keyframes kl-wipe-in{from{opacity:0;clip-path:polygon(0 0,0 0,calc(-30% * var(--motion-distance)) 100%,calc(-30% * var(--motion-distance)) 100%)}1%{opacity:1}to{opacity:1;clip-path:polygon(0 0,130% 0,100% 100%,-30% 100%)}}
+/* confirmation flourish: diagonal accent slash across the card, text punches in */
+@keyframes kl-slash{from{opacity:0.9;transform:translateX(-140%) skewX(-22deg)}to{opacity:0;transform:translateX(240%) skewX(-22deg)}}
+@keyframes kl-punch{from{opacity:0;transform:scale(calc(1 + 0.14 * var(--motion-distance)))}55%{opacity:1;transform:scale(calc(1 - 0.03 * var(--motion-distance)))}to{opacity:1;transform:scale(1)}}
+/* hero numeral: flash of accent on arrival (animates back to the element's own colour) */
+@keyframes kl-flash{from{color:var(--accent)}}
+/* segmented highlight: skew during slide, straighten on settle */
+@keyframes kl-skew-settle{from{transform:skewX(calc(-10deg * var(--motion-skew)))}to{transform:skewX(0)}}
+@keyframes kl-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes kl-spin{to{transform:rotate(360deg)}}
+@keyframes kl-fade-in{from{opacity:0}to{opacity:1}}
+/* chart trend line draws in (pathLength="1", stroke-dasharray 1) */
+@keyframes kl-draw{to{stroke-dashoffset:0}}
+/* ---- Proposed additions (not yet in the Ki-Lo design system; DC-09) ----
+   --accent-ink / --warning-ink: the colour for accent or warning used as TEXT or a thin glyph.
+   Dark keeps the colour; light uses --text-primary, because light lime and amber fail contrast as
+   small text (Q11, Q14: colours unchanged, treatment changed).
+   --camera: the viewfinder backdrop, dark in both themes. */
+:root{--accent-ink:var(--accent);--warning-ink:var(--warning);--camera:#0B0E13;}
+[data-theme="light"]{--accent-ink:var(--text-primary);--warning-ink:var(--text-primary);}
+[data-theme]{background:var(--background);color:var(--text-primary);font-family:var(--font-sans);}

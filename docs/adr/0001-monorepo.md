@@ -23,7 +23,8 @@ keylow/
 ├── packages/api-client  @keylow/api-client  KeyLowProvider, query-key factory, repos/ (plain async fns over SupabaseClient<Database>), hooks/ (TanStack Query), edge.ts. react / react-query / supabase-js as peerDependencies
 ├── packages/tokens      @keylow/tokens      colours, spacing, type scale as a Tailwind preset consumed by NativeWind and Tailwind
 ├── packages/config      @keylow/config      eslint flat configs, prettier, tsconfig fragments
-└── docs/adr, docs/runbooks
+├── tools/design-export  @keylow/design-export  developer tool that renders the approved design boards into docs/design (added by KEY-73). No app or package depends on it
+└── docs/adr, docs/runbooks, docs/design
 ```
 
 ### No shared UI package in v1
@@ -49,3 +50,7 @@ Next: `transpilePackages: ['@keylow/core','@keylow/api-client','@keylow/db','@ke
 - There is no shared UI package in v1. A future need for one is a new decision, not something to build ad hoc inside `packages/tokens` or an app.
 - The TS config strategy (one base config, no cross-package `paths` aliases, Deno typing the edge functions separately) is a convention engineers must not undo.
 - The Expo + pnpm gotchas list is the checklist the M1 scaffold ticket must implement. A regression against any item on it (for example, dropping `node-linker=hoisted` or letting a native module into `packages/*`) is a bug, not a style choice.
+
+## Amendments
+
+- 2026-10-13 (KEY-73): added the `tools/*` workspace glob and `tools/design-export`, a developer tool that renders the approved design boards into `docs/design/`. It is not a package: no app or package depends on it, and its dev dependencies (Playwright, pixelmatch, pngjs) never enter an app's dependency tree. `docs/design/` joins the docs folders.

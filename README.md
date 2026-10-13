@@ -24,8 +24,9 @@ keylow/
 └── docs/adr, docs/runbooks
 ```
 
-Only `apps/*` and `packages/*` are pnpm workspace globs. Nothing under those directories exists yet,
-each is added by its own ticket.
+The pnpm workspace globs are `apps/*`, `packages/*` and `tools/*`. `tools/*` holds developer tooling
+that no app depends on (today `tools/design-export`, which renders the approved designs into
+`docs/design/`).
 
 ## Tooling
 

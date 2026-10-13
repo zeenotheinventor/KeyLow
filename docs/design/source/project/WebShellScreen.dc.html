@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Web login and shell</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/a1c55461938510f7678509d58bd52ada">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: {{w}}; height: 812px; box-sizing: border-box; position: relative; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+
+<sc-if value="{{isLogin}}" hint-placeholder-val="{{ false }}">
+<main style="flex: 1; display: flex; align-items: center; justify-content: center; padding: var(--space-6) var(--space-4)">
+<form data-kilo="Card" style="width: 100%; max-width: 448px; box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-4); margin: 0; padding: {{cardPad}}; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-3); margin-bottom: var(--space-1)">
+<img src="{{markUrl}}" alt="" style="width: 48px; height: 48px">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">Sign in to Ki-Lo</h1>
+</div>
+<sc-for list="{{fields}}" as="x" hint-placeholder-count="2">
+<div style="display: flex; flex-direction: column; gap: var(--space-1)">
+<label for="{{x.id}}" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">{{x.label}}</label>
+<div data-kilo="Input" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-4); background: var(--surface-raised); border: 1px solid {{x.border}}; border-radius: var(--radius-medium)">
+<input id="{{x.id}}" type="{{x.type}}" value="{{x.value}}" aria-invalid="{{x.invalid}}" onChange="{{noop}}" style="flex: 1; min-width: 0; height: 40px; padding: 0; border: 0; outline: none; background: transparent; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-primary)">
+</div>
+<sc-if value="{{x.hasError}}" hint-placeholder-val="{{ false }}"><span role="alert" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--danger)">{{x.error}}</span></sc-if>
+</div>
+</sc-for>
+<sc-if value="{{hasFormError}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner error (proposed tone)" role="alert" style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--danger-muted); border: 1px solid var(--danger); border-radius: var(--radius-medium)">
+<span style="display: flex; padding-top: 2px; color: var(--danger)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<span style="flex: 1; font-size: var(--type-body-size); line-height: var(--type-body-line)">{{formError}}</span>
+</div>
+</sc-if>
+<sc-if value="{{checkEmail}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner info" role="status" style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<span style="display: flex; padding-top: 2px; color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Check your email</span><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Open the confirmation link sent to sam.taylor@example.com to finish creating your account.</span></span>
+</div>
+</sc-if>
+<div style="display: grid; grid-template-columns: repeat({{btnCols}}, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-1)">
+<button data-kilo="Button primary" type="submit" aria-busy="{{pending}}" style="position: relative; height: var(--control-height-md); display: flex; align-items: center; justify-content: center; background: var(--accent); border: 0; border-radius: var(--radius-medium); color: var(--accent-foreground); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">
+<span style="visibility: {{labelVisibility}}">Sign in</span>
+<sc-if value="{{pending}}" hint-placeholder-val="{{ false }}"><span aria-label="Signing in" style="position: absolute; width: 18px; height: 18px; box-sizing: border-box; border-radius: var(--radius-pill); border: 2px solid currentColor; border-right-color: transparent"></span></sc-if>
+</button>
+<button data-kilo="Button secondary" type="button" disabled="{{pending}}" style="height: var(--control-height-md); display: flex; align-items: center; justify-content: center; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); opacity: {{otherOpacity}}">Create account</button>
+</div>
+<div style="display: flex; align-items: center; gap: var(--space-3); color: var(--text-muted); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking)"><span style="flex: 1; height: 1px; background: var(--border)"></span>or<span style="flex: 1; height: 1px; background: var(--border)"></span></div>
+<button data-kilo="Button secondary" type="button" disabled="{{pending}}" style="height: var(--control-height-md); display: flex; align-items: center; justify-content: center; gap: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); opacity: {{otherOpacity}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 48 48" data-kilo="GoogleMark (brand asset, Q17 exception)"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path></svg>Continue with Google</button>
+</form>
+</main>
+</sc-if>
+
+<sc-if value="{{isShell}}" hint-placeholder-val="{{ true }}">
+<header data-kilo="WebTopBar (proposed)" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: {{barPad}}; background: var(--surface); border-bottom: 1px solid var(--border)">
+<div style="display: flex; align-items: center; gap: var(--space-6)">
+<a href="#home" aria-label="Ki-Lo" style="display: flex; align-items: center; gap: var(--space-2); text-decoration: none; color: var(--text-primary)"><img src="{{markUrl}}" alt="" style="width: 28px; height: 28px"><span style="font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Ki-Lo</span></a>
+<sc-if value="{{wide}}" hint-placeholder-val="{{ true }}">
+<nav data-kilo="WebNav (proposed)" aria-label="Main" style="display: flex; align-items: center; gap: var(--space-1)">
+<sc-for list="{{sections}}" as="n" hint-placeholder-count="4">
+<a href="#{{n.key}}" aria-current="{{n.current}}" style="height: 36px; display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-small); text-decoration: none; background: {{n.bg}}; color: {{n.fg}}; font-size: 14px; line-height: 20px; font-weight: 600">{{n.label}}</a>
+</sc-for>
+</nav>
+<div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="margin-left: auto; width: 320px; height: 36px; box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 var(--space-3); background: var(--surface-raised); border: 1px solid {{searchBorder}}; border-radius: var(--radius-medium); box-shadow: {{searchRing}}">
+<button data-kilo="Button ghost" type="button" style="flex: 1; height: 34px; display: flex; align-items: center; gap: var(--space-2); padding: 0; background: transparent; border: 0; font-family: var(--font-sans); font-size: 14px; line-height: 20px; color: var(--text-muted); text-align: left">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button>
+<button data-kilo="Button ghost icon" type="button" aria-label="Look up a barcode" style="width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; border-radius: var(--radius-small); color: var(--text-primary)">
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg>
+</button>
+</div>
+</sc-if>
+<sc-if value="{{narrow}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button secondary icon" type="button" aria-label="Menu" aria-expanded="{{menuOpen}}" style="margin-left: auto; width: var(--touch-target); height: var(--control-height-md); display: flex; align-items: center; justify-content: center; padding: 0; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"></line><line x1="4" x2="20" y1="6" y2="6"></line><line x1="4" x2="20" y1="18" y2="18"></line></svg>
+</button>
+</sc-if>
+</div>
+<sc-if value="{{narrow}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<button data-kilo="Button ghost" type="button" style="flex: 1; height: 42px; display: flex; align-items: center; gap: var(--space-2); padding: 0; background: transparent; border: 0; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted); text-align: left">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button>
+<button data-kilo="Button ghost icon" type="button" aria-label="Look up a barcode" style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; border-radius: var(--radius-small); color: var(--text-primary)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg>
+</button>
+</div>
+</sc-if>
+</header>
+
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+<nav data-kilo="WebNav (proposed)" aria-label="Main" style="position: absolute; top: 76px; left: 16px; right: 16px; z-index: 5; display: flex; flex-direction: column; padding: var(--space-2); background: var(--surface-sheet); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<sc-for list="{{sections}}" as="n" hint-placeholder-count="4">
+<a href="#{{n.key}}" aria-current="{{n.current}}" style="min-height: var(--touch-target); display: flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-medium); text-decoration: none; background: {{n.bg}}; color: {{n.fg}}; font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">{{n.label}}</a>
+</sc-for>
+</nav>
+</sc-if>
+
+<main style="flex: 1; min-height: 0; display: flex; justify-content: center; padding: {{mainPad}}">
+<div style="width: 100%; max-width: 672px; display: flex; flex-direction: column; gap: var(--space-4)">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">{{pageTitle}}</h1>
+
+<sc-if value="{{isPlaceholder}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="EmptyState" style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-16) var(--space-6); text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--surface-raised); color: var(--text-muted)">
+<sc-if value="{{isDash}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg></sc-if><sc-if value="{{isDiary}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg></sc-if>
+</span>
+<h2 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Coming soon</h2>
+<p style="margin: 0; max-width: 360px; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">{{placeholderBody}}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{isMore}}" hint-placeholder-val="{{ false }}">
+<sc-for list="{{moreGroups}}" as="g" hint-placeholder-count="4">
+<section style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">{{g.title}}</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card); overflow: hidden">
+<sc-for list="{{g.rows}}" as="r" hint-placeholder-count="1">
+<button data-kilo="ListRow" type="button" disabled="{{r.disabled}}" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary); opacity: {{r.opacity}}">
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">{{r.title}}</span><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">{{r.sub}}</span></span>
+<sc-if value="{{r.chevron}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg></sc-if>
+</button>
+</sc-for>
+<sc-if value="{{g.appearance}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3)">
+<span id="appearance-w" style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Appearance</span>
+<div data-kilo="SegmentedControl" role="radiogroup" aria-labelledby="appearance-w" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: var(--control-height-md); box-sizing: border-box; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<sc-for list="{{appearance}}" as="o" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{o.on}}" style="border: 0; border-radius: calc(var(--radius-medium) - 3px); background: {{o.bg}}; color: {{o.fg}}; font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600">{{o.label}}</button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+</div>
+</section>
+</sc-for>
+</sc-if>
+</div>
+</main>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["login-default","login-field-errors","login-pending","login-server-error","login-link-error","login-check-email","shell-dashboard","shell-diary","shell-more","shell-menu-open"],"default":"shell-dashboard"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"width":{"editor":"enum","options":["1280","375"],"default":"1280"},"$preview":{"width":1280,"height":812}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet (kilo-tokens.css); data-theme picks dark or light.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const s = this.props.screenState ?? 'shell-dashboard';
+    const wide = String(this.props.width ?? '1280') !== '375';
+    const login = s.startsWith('login');
+    const email = 'sam.taylor@example.com';
+    const L = {
+      'login-default': { email: '', pw: '' },
+      'login-field-errors': { email: 'sam.taylor@', pw: '', eErr: 'Enter a valid email address', pErr: 'Enter your password' },
+      'login-pending': { email, pw: 'correcthorse' },
+      'login-server-error': { email, pw: 'correcthorse', form: 'Email or password is not right. Check them and try again.' },
+      'login-link-error': { email: '', pw: '', form: 'That sign-in link could not be verified. Sign in again, or request a new link.' },
+      'login-check-email': { email, pw: 'correcthorse' }
+    };
+    const d = L[s] ?? L['login-default'];
+    const field = (id, label, type, value, err) => ({ id, label, type, value, border: err ? 'var(--danger)' : 'var(--border)', invalid: err ? 'true' : 'false', hasError: !!err, error: err ?? '' });
+    const current = { 'shell-dashboard': 'dashboard', 'shell-diary': 'diary', 'shell-more': 'more', 'shell-menu-open': 'dashboard' }[s] ?? 'dashboard';
+    const sections = [['dashboard', 'Dashboard'], ['diary', 'Diary'], ['recipes', 'Recipes'], ['more', 'More']].map(([key, label]) => {
+      const on = key === current;
+      return { key, label, current: on ? 'page' : 'false', bg: on ? 'var(--surface-raised)' : 'transparent', fg: on ? 'var(--text-primary)' : 'var(--text-secondary)' };
+    });
+    const appearance = ['Dark', 'Light', 'Match device'].map((label) => {
+      const on = label.toLowerCase() === theme;
+      return { label, on: on ? 'true' : 'false', bg: on ? 'var(--text-primary)' : 'transparent', fg: on ? 'var(--background)' : 'var(--text-secondary)' };
+    });
+    const row = (title, sub, live, chev = live) => ({ title, sub, disabled: !live, opacity: live ? 1 : 0.5, chevron: chev });
+    const pending = s === 'login-pending';
+    const focusSearch = s === 'shell-menu-open' && wide;
+    return {
+      theme, noop: () => {},
+      w: wide ? '1280px' : '375px', wide, narrow: !wide,
+      markUrl: theme === 'light' ? '/_blob/d2f75bf70c7629f797c5d7f941462d40' : '/_blob/2813d66c30ea89aefd67a23cc03508e1',
+      isLogin: login, isShell: !login,
+      cardPad: wide ? '32px' : '24px', btnCols: wide ? 2 : 1,
+      fields: [field('email', 'Email', 'email', d.email, d.eErr), field('password', 'Password', 'password', d.pw, d.pErr)],
+      hasFormError: !!d.form, formError: d.form ?? '',
+      checkEmail: s === 'login-check-email',
+      pending, labelVisibility: pending ? 'hidden' : 'visible', otherOpacity: pending ? 0.4 : 1,
+      barPad: wide ? '14px 32px' : '16px',
+      mainPad: wide ? '40px 32px' : '24px 16px',
+      sections,
+      menuOpen: s === 'shell-menu-open' && !wide,
+      searchBorder: focusSearch ? 'var(--accent)' : 'var(--border)',
+      searchRing: focusSearch ? '0 0 0 2px var(--background), 0 0 0 4px var(--focus-ring)' : 'none',
+      pageTitle: { dashboard: 'Dashboard', diary: 'Diary', more: 'More' }[current],
+      isPlaceholder: current === 'dashboard' || current === 'diary',
+      placeholderBody: current === 'diary' ? 'Your logged foods will appear here, day by day.' : 'Your weekly nutrition, weight trend and expenditure will appear here.',
+      isMore: current === 'more',
+      isDash: current === 'dashboard', isDiary: current === 'diary',
+      appearance,
+      moreGroups: [
+        { title: 'Food', rows: [row('Your foods', 'Foods you created or copied', true)], appearance: false },
+        { title: 'Body', rows: [row('Weight', 'Coming soon', false)], appearance: false },
+        { title: 'Settings', rows: [], appearance: true },
+        { title: 'Account', rows: [row('Sign out', 'sam.taylor@example.com', true, false)], appearance: false }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
