@@ -21,7 +21,7 @@ export function MissingValuesReview({ foodId, fieldsMissing }: MissingValuesRevi
   return (
     <section
       aria-labelledby={headingId}
-      className="flex flex-col gap-3 rounded-md border border-destructive p-4"
+      className="flex flex-col gap-3 rounded-md border border-danger p-4"
     >
       <h2 id={headingId} className="font-semibold">
         Some values are missing

@@ -10,9 +10,9 @@ export type TokenSourceTexts = {
 
 type FlatTokens = Record<string, string>;
 
-const darkSelector = ":root";
-const lightSelector = '[data-theme="light"]';
-const reducedMotionSelector = "@media (prefers-reduced-motion:reduce) :root";
+export const darkSelector = ":root";
+export const lightSelector = '[data-theme="light"]';
+export const reducedMotionSelector = "@media (prefers-reduced-motion:reduce) :root";
 const statusBarStyleName = "status-bar-style";
 
 const isFlatTokens = (value: unknown): value is FlatTokens =>
@@ -35,7 +35,7 @@ const readTokenJson = (text: string): { dark: FlatTokens; light: FlatTokens } =>
   throw new Error("The token JSON needs a dark and a light theme of string values");
 };
 
-const declarationsUnder = (
+export const declarationsUnder = (
   stylesheets: ReturnType<typeof parseCssScopes>[],
   selector: string,
 ): FlatTokens =>
@@ -53,6 +53,14 @@ const assertSameTokens = (label: string, fromJson: FlatTokens, fromCss: FlatToke
   const differing = [...names].filter((name) => fromJson[name] !== fromCss[name]);
   if (differing.length > 0) {
     throw new Error(`The JSON and the CSS disagree for ${label}: ${differing.join(", ")}`);
+  }
+};
+
+const assertSameNames = (label: string, dark: FlatTokens, light: FlatTokens): void => {
+  const names = new Set([...Object.keys(dark), ...Object.keys(light)]);
+  const missing = [...names].filter((name) => !(name in dark) || !(name in light));
+  if (missing.length > 0) {
+    throw new Error(`The dark and light themes name different ${label}: ${missing.join(", ")}`);
   }
 };
 
@@ -224,6 +232,7 @@ export const buildTokens = (sources: TokenSourceTexts): Record<string, unknown> 
   const statusBarStyleLight = lightLedger.take(statusBarStyleName);
   const elevationLight = takeElevation(lightLedger);
   lightLedger.assertEmpty();
+  assertSameNames("elevation shadows", elevationDark, elevationLight);
 
   const reducedMotionLedger = createLedger(
     "reduced-motion",

@@ -44,9 +44,9 @@ export function OffCandidateList({ candidates }: OffCandidateListProps) {
             >
               <span className="font-medium">{candidate.name}</span>
               {candidate.brand !== null && (
-                <span className="text-sm font-normal text-muted-foreground">{candidate.brand}</span>
+                <span className="text-sm font-normal text-text-muted">{candidate.brand}</span>
               )}
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className="text-sm font-normal text-text-muted">
                 {describeEnergy(candidate)}
               </span>
             </Button>
@@ -54,7 +54,7 @@ export function OffCandidateList({ candidates }: OffCandidateListProps) {
         ))}
       </ul>
       {materialise.error !== null && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {materialise.error.message}
         </p>
       )}

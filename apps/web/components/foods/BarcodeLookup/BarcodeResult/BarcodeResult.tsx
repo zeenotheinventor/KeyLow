@@ -29,7 +29,7 @@ export function BarcodeResult({ code }: BarcodeResultProps) {
 
   if (foundFoodId !== undefined) {
     return (
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-sm text-text-muted">
         Opening the food
       </p>
     );
@@ -37,7 +37,7 @@ export function BarcodeResult({ code }: BarcodeResultProps) {
 
   if (error !== null) {
     return (
-      <p role="alert" className="text-sm text-destructive">
+      <p role="alert" className="text-sm text-danger">
         {describeError(error)}
       </p>
     );
@@ -45,7 +45,7 @@ export function BarcodeResult({ code }: BarcodeResultProps) {
 
   if (isLoading) {
     return (
-      <p role="status" className="text-sm text-muted-foreground">
+      <p role="status" className="text-sm text-text-muted">
         Looking up the barcode
       </p>
     );

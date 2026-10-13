@@ -45,7 +45,7 @@ describe("preset as consumed by Tailwind", () => {
     });
   });
 
-  it("should let an app's own accent colours win key by key, as the web app's shadcn block does", () => {
+  it("should let an app's own accent colours win key by key, as an app's own colour block does", () => {
     const appTheme = resolveConfig({
       content: [],
       presets: [preset],

@@ -71,4 +71,21 @@ describe("buildTokens", () => {
       }),
     ).toThrow(/warning/);
   });
+
+  it("should refuse a light theme whose shadows are not the dark theme's set", () => {
+    const sources = readSourceTexts();
+    const json = readTokenJson();
+    delete json.light["elevation-toast"];
+
+    expect(() =>
+      buildTokens({
+        ...sources,
+        json: JSON.stringify(json),
+        spacingCss: sources.spacingCss.replace(
+          "--elevation-toast:0 12px 32px -8px rgba(15,19,26,0.25);",
+          "",
+        ),
+      }),
+    ).toThrow(/elevation/);
+  });
 });

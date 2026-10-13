@@ -11,7 +11,7 @@ function Notice({ children }: { children: React.ReactNode }) {
 function LoadFailure({ message }: { message: string }) {
   return (
     <Notice>
-      <p role="alert" className="text-sm text-destructive">
+      <p role="alert" className="text-sm text-danger">
         {message}
       </p>
     </Notice>
@@ -34,7 +34,7 @@ export function EditFoodScreen({ id }: { id: string }) {
   if (food.data === undefined || portions.data === undefined) {
     return (
       <Notice>
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-sm text-text-muted">
           Loading food
         </p>
       </Notice>
@@ -45,7 +45,7 @@ export function EditFoodScreen({ id }: { id: string }) {
     return (
       <Notice>
         <h1 className="text-2xl font-semibold">Food not found</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-text-muted">
           This food does not exist, or it is not one you can see.
         </p>
       </Notice>
@@ -55,7 +55,7 @@ export function EditFoodScreen({ id }: { id: string }) {
   if (food.data.source !== "user") {
     return (
       <Notice>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-text-muted">
           This food comes from a shared database and cannot be edited.
         </p>
       </Notice>
