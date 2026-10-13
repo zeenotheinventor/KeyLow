@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { listBoards, parseCanvas } from "../src/boards.ts";
 import { checkBoards } from "../src/checkBoards.ts";
+import { extractProposals } from "../src/proposals.ts";
 import { deviceScaleFactor } from "../src/renderBoard.ts";
 import { findPageProblems } from "../src/staticPage.ts";
 
@@ -70,6 +71,48 @@ describe("the committed design export", () => {
       expect(readme).toContain(`[${board.state}.html](${board.state}.html)`);
     },
   );
+
+  it("should link the packages/tokens stylesheet that exists, from every page", () => {
+    const stylesheet = join(repositoryRoot, "packages/tokens/css/kilo-tokens.css");
+    expect(existsSync(stylesheet)).toBe(true);
+    for (const board of boards) {
+      const folder = join(designDirectory, board.slug);
+      const html = readFileSync(join(folder, `${board.state}.html`), "utf8");
+      expect(html).toContain(
+        '<link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css">\n<link rel="stylesheet" href="../tokens/kilo-proposals.css">',
+      );
+      expect(resolve(folder, "../../../packages/tokens/css/kilo-tokens.css")).toBe(stylesheet);
+    }
+  });
+
+  it("should keep the proposals stylesheet equal to the marked block of the canvas token file", () => {
+    const canvasTokens = readFileSync(
+      join(designDirectory, "source/tokens/kilo-tokens.css"),
+      "utf8",
+    );
+    expect(readFileSync(join(designDirectory, "tokens/kilo-proposals.css"), "utf8")).toBe(
+      extractProposals(canvasTokens),
+    );
+  });
+
+  it("should propose no custom property that packages/tokens already defines", () => {
+    const proposals = readFileSync(join(designDirectory, "tokens/kilo-proposals.css"), "utf8");
+    const tokens = readFileSync(
+      join(repositoryRoot, "packages/tokens/css/kilo-tokens.css"),
+      "utf8",
+    );
+    const proposed = [...proposals.matchAll(/(?:^|[{;\s])(--[a-z0-9-]+):/g)].map(
+      (match) => match[1],
+    );
+    expect(proposed.length).toBeGreaterThan(0);
+    for (const name of proposed) {
+      expect(tokens).not.toContain(`${name}:`);
+    }
+  });
+
+  it("should no longer hold the retired docs/design copy of the token stylesheet", () => {
+    expect(existsSync(join(designDirectory, "tokens/kilo-tokens.css"))).toBe(false);
+  });
 
   it("should carry no claude.ai URL in any text file", () => {
     const textFiles = listFilesBelow(designDirectory).filter((path) =>

@@ -33,7 +33,7 @@ Every colour class reads a `--kl-<name>` CSS variable, so one class follows the 
 
 The design's keys are kept exactly, so the classes read as `text-text-primary`, `border-border` and `bg-surface-raised`. The kit hides that. In the preset, a colour whose name starts with another colour's name (`accent-foreground`, `accent-muted`, `surface-raised`, `border-strong`, `focus-ring-offset`) is nested under that colour, the way Tailwind writes `DEFAULT`. The class names are unchanged. The nesting is what lets an app's own `accent: { DEFAULT, foreground }` block win key by key. A flat `accent-foreground` would instead replace the app's `accent.foreground`.
 
-`themeVariables("dark")` and `themeVariables("light")` return the `--kl-*` values as plain data, for any consumer that cannot use the Tailwind plugin. `themePlugin` emits them on `:root` for dark and under `[data-theme="light"]` for light, together with `color-scheme`. How mobile consumes the same variables is decided in KEY-87.
+`themeVariables("dark")` and `themeVariables("light")` return the `--kl-*` values as plain data, for any consumer that cannot use the Tailwind plugin. `themePlugin` emits them on `:root` for dark and under `[data-theme="light"]` for light, together with `color-scheme`. Mobile does not use `themePlugin` or `[data-theme]`. Its `ThemeProvider` sets `themeVariables(scheme)` through nativewind `vars()` on its root view, for the scheme the app resolves from its own preference, and `apps/mobile/tailwind.config.js` emits only the dark set on `:root` as the fallback outside the provider.
 
 ## Plain CSS variables
 

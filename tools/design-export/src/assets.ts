@@ -1,5 +1,7 @@
 // The files the boards load through the canvas host, by the /_blob/ URL the canvas gave each one.
-// Each is committed under docs/design, and a static page links it by relative path instead.
+// Each is committed under docs/design, so the export can render the canvas from committed files.
+// A static page links the brand marks by relative path. It links the packages/tokens stylesheet
+// instead of the canvas copy of the tokens.
 
 export type CanvasAsset = {
   blob: string;
@@ -10,7 +12,7 @@ export type CanvasAsset = {
 export const canvasAssets: readonly CanvasAsset[] = [
   {
     blob: "/_blob/a1c55461938510f7678509d58bd52ada",
-    file: "tokens/kilo-tokens.css",
+    file: "source/tokens/kilo-tokens.css",
     contentType: "text/css",
   },
   {
@@ -25,7 +27,15 @@ export const canvasAssets: readonly CanvasAsset[] = [
   },
 ];
 
-// The page for a board lives one folder below docs/design, so the files are one level up.
+// A page for a board lives one folder below docs/design, so the packages/tokens CSS is three levels
+// up and the files kept under docs/design are one level up.
+export const tokensStylesheetHref = "../../../packages/tokens/css/kilo-tokens.css";
+export const proposalsStylesheetHref = "../tokens/kilo-proposals.css";
+
 export function relativeAssetUrls(): Record<string, string> {
-  return Object.fromEntries(canvasAssets.map((asset) => [asset.blob, `../${asset.file}`]));
+  return Object.fromEntries(
+    canvasAssets
+      .filter((asset) => asset.contentType !== "text/css")
+      .map((asset) => [asset.blob, `../${asset.file}`]),
+  );
 }

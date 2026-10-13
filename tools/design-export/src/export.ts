@@ -17,11 +17,12 @@ import { parseArgs } from "node:util";
 
 import { chromium } from "playwright";
 
-import { relativeAssetUrls } from "./assets.ts";
+import { proposalsStylesheetHref, relativeAssetUrls, tokensStylesheetHref } from "./assets.ts";
 import { listBoards, listScreens, parseCanvas, sectionsOf } from "./boards.ts";
 import { startBoardServer } from "./boardServer.ts";
 import { countFrames, readPageTitle } from "./boardSource.ts";
 import { checkBoards } from "./checkBoards.ts";
+import { extractProposals } from "./proposals.ts";
 import { renderBoard } from "./renderBoard.ts";
 import { mergeScreenReadme } from "./screenReadme.ts";
 import { buildStaticPage, findPageProblems, rewriteAssetUrls } from "./staticPage.ts";
@@ -58,11 +59,13 @@ const runtimePath = requireOption("runtime");
 const outputDirectory = resolve(values.out);
 const only = values.only;
 
-// The canvas files are copied byte for byte. Nothing in them is edited.
+// The canvas files are copied byte for byte. Nothing in them is edited. The proposals stylesheet is
+// the marked block cut from the end of the canvas token file.
 function copySource(): void {
   rmSync(join(outputDirectory, "source"), { recursive: true, force: true });
   mkdirSync(join(outputDirectory, "source/project"), { recursive: true });
   mkdirSync(join(outputDirectory, "source/brand"), { recursive: true });
+  mkdirSync(join(outputDirectory, "source/tokens"), { recursive: true });
   mkdirSync(join(outputDirectory, "tokens"), { recursive: true });
   for (const file of readdirSync(join(canvasDirectory, "project"))) {
     if (file.endsWith(".dc.html") || file === "canvas.json") {
@@ -76,7 +79,11 @@ function copySource(): void {
   }
   cpSync(
     join(canvasDirectory, "tokens/kilo-tokens.css"),
-    join(outputDirectory, "tokens/kilo-tokens.css"),
+    join(outputDirectory, "source/tokens/kilo-tokens.css"),
+  );
+  writeFileSync(
+    join(outputDirectory, "tokens/kilo-proposals.css"),
+    extractProposals(readFileSync(join(canvasDirectory, "tokens/kilo-tokens.css"), "utf8")),
   );
   rmSync(join(outputDirectory, "design-system"), { recursive: true, force: true });
   cpSync(designSourceDirectory, join(outputDirectory, "design-system"), { recursive: true });
@@ -97,7 +104,8 @@ async function renderAll(boards: readonly Board[], origin: string): Promise<void
         const page = buildStaticPage({
           lang: rendered.lang,
           title: readPageTitle(source),
-          tokensHref: "../tokens/kilo-tokens.css",
+          tokensHref: tokensStylesheetHref,
+          proposalsHref: proposalsStylesheetHref,
           fontsHref: rendered.fontsHref,
           styles: rendered.styles,
           boardHtml: rewriteAssetUrls(rendered.boardHtml, relativeAssetUrls()),

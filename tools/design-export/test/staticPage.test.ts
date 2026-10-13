@@ -20,7 +20,8 @@ describe("buildStaticPage", () => {
   const page = buildStaticPage({
     lang: "en-GB",
     title: "Find food, idle",
-    tokensHref: "../tokens/kilo-tokens.css",
+    tokensHref: "../../../packages/tokens/css/kilo-tokens.css",
+    proposalsHref: "../tokens/kilo-proposals.css",
     fontsHref: "https://fonts.googleapis.com/css2?family=Geist&display=swap",
     styles: ["body{margin:0}"],
     boardHtml: '<div data-theme="dark">board</div>',
@@ -30,8 +31,11 @@ describe("buildStaticPage", () => {
     expect(page.startsWith('<!doctype html>\n<html lang="en-GB">')).toBe(true);
   });
 
-  it("should link the token stylesheet by relative path", () => {
-    expect(page).toContain('<link rel="stylesheet" href="../tokens/kilo-tokens.css">');
+  it("should link the packages/tokens stylesheet, then the proposals, by relative path", () => {
+    const tokensLink =
+      '<link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css">';
+    const proposalsLink = '<link rel="stylesheet" href="../tokens/kilo-proposals.css">';
+    expect(page).toContain(`${tokensLink}\n${proposalsLink}\n`);
   });
 
   it("should link Google Fonts and carry the board styles", () => {
@@ -46,6 +50,7 @@ describe("buildStaticPage", () => {
       lang: "en-GB",
       title: "a < b & c",
       tokensHref: "t.css",
+      proposalsHref: "p.css",
       fontsHref: "f",
       styles: [],
       boardHtml: "",
@@ -60,7 +65,7 @@ describe("buildStaticPage", () => {
 
 describe("findPageProblems", () => {
   const clean =
-    '<html><link rel="stylesheet" href="../tokens/kilo-tokens.css"><div style="color: var(--text-primary)">x</div></html>';
+    '<html><link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css"><link rel="stylesheet" href="../tokens/kilo-proposals.css"><div style="color: var(--text-primary)">x</div></html>';
 
   it("should accept a page with no runtime, no blob URL and no network but Google Fonts", () => {
     expect(
@@ -108,15 +113,26 @@ describe("findPageProblems", () => {
     expect(findPageProblems("<html><div>x</div></html>")).toEqual(
       expect.arrayContaining([
         expect.stringContaining("var(--"),
-        expect.stringContaining("kilo-tokens.css"),
+        expect.stringContaining("packages/tokens/css/kilo-tokens.css"),
+        expect.stringContaining("kilo-proposals.css"),
       ]),
+    );
+  });
+
+  it("should flag a page that still links the retired docs/design copy of the tokens", () => {
+    const retired = clean.replace(
+      "../../../packages/tokens/css/kilo-tokens.css",
+      "../tokens/kilo-tokens.css",
+    );
+    expect(findPageProblems(retired)).toContainEqual(
+      expect.stringContaining("docs/design/tokens/kilo-tokens.css"),
     );
   });
 });
 
 describe("isAllowedRequestUrl", () => {
   it.each([
-    "file:///repo/docs/design/tokens/kilo-tokens.css",
+    "file:///repo/packages/tokens/css/kilo-tokens.css",
     "https://fonts.googleapis.com/css2?family=Geist",
     "https://fonts.gstatic.com/s/geist/v5/font.woff2",
   ])("should allow %s", (url) => {

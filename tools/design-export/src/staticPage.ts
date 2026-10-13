@@ -1,9 +1,11 @@
 // Builds the standalone page for one board and checks that no runtime or network trace is left in it.
+import { proposalsStylesheetHref, tokensStylesheetHref } from "./assets.ts";
 
 export type StaticPageInput = {
   lang: string;
   title: string;
   tokensHref: string;
+  proposalsHref: string;
   fontsHref: string;
   styles: readonly string[];
   boardHtml: string;
@@ -34,6 +36,7 @@ export function buildStaticPage(input: StaticPageInput): string {
     '<meta charset="utf-8">',
     `<title>${escapeText(input.title)}</title>`,
     `<link rel="stylesheet" href="${input.tokensHref}">`,
+    `<link rel="stylesheet" href="${input.proposalsHref}">`,
     `<link rel="stylesheet" href="${escapeText(input.fontsHref)}">`,
     ...styleBlocks,
     "</head>",
@@ -72,8 +75,14 @@ export function findPageProblems(html: string): string[] {
   if (!html.includes("var(--")) {
     problems.push("uses no design token (var(--...))");
   }
-  if (!html.includes("kilo-tokens.css")) {
-    problems.push("does not link kilo-tokens.css");
+  if (!html.includes(`href="${tokensStylesheetHref}"`)) {
+    problems.push(`does not link ${tokensStylesheetHref}`);
+  }
+  if (!html.includes(`href="${proposalsStylesheetHref}"`)) {
+    problems.push(`does not link ${proposalsStylesheetHref}`);
+  }
+  if (html.includes('href="../tokens/kilo-tokens.css"')) {
+    problems.push("links the retired docs/design/tokens/kilo-tokens.css");
   }
   return problems;
 }
