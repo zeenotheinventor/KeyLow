@@ -9,7 +9,10 @@
     "./foods": "./src/foods/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./nutrition": "./src/nutrition/index.ts",
-    "./engine": "./src/engine/index.ts"
+    "./engine": "./src/engine/index.ts",
+    "./copy": "./src/copy/index.ts",
+    "./format": "./src/format/index.ts",
+    "./search": "./src/search/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
