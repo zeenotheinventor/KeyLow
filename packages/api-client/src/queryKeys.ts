@@ -10,5 +10,6 @@ export const keys = {
     search: (q: string) => ["foods", "search", q] as const,
     offSearch: (q: string) => ["foods", "off-search", q] as const,
     barcode: (code: string) => ["foods", "barcode", code] as const,
+    own: ["foods", "own"] as const,
   },
 };

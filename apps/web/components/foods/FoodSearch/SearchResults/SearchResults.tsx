@@ -11,9 +11,9 @@ import type { FoodSearchOffError } from "@keylow/api-client";
 import { describeRateLimit } from "@/components/foods/foodDisplay";
 
 function describeOffError(error: FoodSearchOffError): string {
-  return error.kind === "failed"
-    ? `Open Food Facts could not be searched: ${error.message}`
-    : describeRateLimit(error.retryAfterSeconds);
+  return error.kind === "rate_limited"
+    ? describeRateLimit(error.retryAfterSeconds)
+    : `Open Food Facts could not be searched: ${error.message}`;
 }
 
 export function SearchResults({ query }: SearchResultsProps) {

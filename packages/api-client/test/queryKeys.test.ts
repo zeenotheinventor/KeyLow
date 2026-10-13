@@ -37,6 +37,10 @@ describe("keys.foods", () => {
     expect(keys.foods.barcode("0036000291452")).toEqual(["foods", "barcode", "0036000291452"]);
   });
 
+  it("should expose a key for the list of the user's own foods", () => {
+    expect(keys.foods.own).toEqual(["foods", "own"]);
+  });
+
   it("should nest every foods key under the foods root so one invalidation covers them all", () => {
     const rootLength = keys.foods.all.length;
 
@@ -46,6 +50,7 @@ describe("keys.foods", () => {
       keys.foods.search("chicken"),
       keys.foods.offSearch("chicken"),
       keys.foods.barcode("0036000291452"),
+      keys.foods.own,
     ]) {
       expect(key.slice(0, rootLength)).toEqual(keys.foods.all);
     }

@@ -4,21 +4,27 @@ export { KeyLowProvider, useSupabase } from "./KeyLowProvider";
 export { keys } from "./queryKeys";
 export { CustomFoodValidationError } from "./customFoodInput";
 export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./errors";
+export type { EdgeErrorKind } from "./errors";
 export {
   useCreateFood,
+  useDebouncedValue,
   useFood,
   useFoodByBarcode,
   useFoodPortions,
   useFoodSearch,
+  useFoodWithPortions,
   useMaterialiseOffProduct,
+  useOwnFoods,
   useUpdateFood,
 } from "./hooks";
 export type {
   FoodByBarcodeError,
   FoodByBarcodeLookup,
   FoodByBarcodeResult,
+  FoodSearchLocalError,
   FoodSearchOffError,
   FoodSearchResult,
+  FoodWithPortionsState,
   UseFoodByBarcodeOptions,
   UseFoodByBarcodeReturn,
   UseFoodSearchOptions,
@@ -30,6 +36,7 @@ export {
   getFood,
   getFoodByBarcode,
   listFoodPortions,
+  listOwnFoods,
   replaceFoodPortions,
   searchFoods,
   searchOff,

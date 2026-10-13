@@ -1,5 +1,6 @@
 // TanStack Query hooks over the repos land here from M2 onward.
 export { useCreateFood } from "./useCreateFood";
+export { useDebouncedValue } from "./useDebouncedValue";
 export { useFood } from "./useFood";
 export { useFoodByBarcode } from "./useFoodByBarcode";
 export type {
@@ -11,6 +12,14 @@ export type {
 } from "./useFoodByBarcode";
 export { useFoodPortions } from "./useFoodPortions";
 export { useFoodSearch } from "./useFoodSearch";
-export type { FoodSearchOffError, FoodSearchResult, UseFoodSearchOptions } from "./useFoodSearch";
+export type {
+  FoodSearchLocalError,
+  FoodSearchOffError,
+  FoodSearchResult,
+  UseFoodSearchOptions,
+} from "./useFoodSearch";
+export { useFoodWithPortions } from "./useFoodWithPortions";
+export type { FoodWithPortionsState } from "./useFoodWithPortions";
 export { useMaterialiseOffProduct } from "./useMaterialiseOffProduct";
+export { useOwnFoods } from "./useOwnFoods";
 export { useUpdateFood } from "./useUpdateFood";

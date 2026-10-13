@@ -1,4 +1,4 @@
-import { QueryClient, focusManager } from "@tanstack/react-query";
+import { QueryClient, focusManager, onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -325,7 +325,12 @@ describe("useFoodByBarcode", () => {
       const { result } = renderLookup(VALID_BARCODE);
 
       await waitFor(() => {
-        expect(result.current.error).toEqual({ kind: "rate_limited", retryAfterSeconds: 20 });
+        expect(result.current.error).toEqual({
+          kind: "rate_limited",
+          retryAfterSeconds: 20,
+          debugMessage: "Slow down",
+          message: "Slow down",
+        });
       });
       await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
       expect(result.current.result).toBeUndefined();
@@ -375,6 +380,23 @@ describe("useFoodByBarcode", () => {
       }
     });
 
+    it("should not look again after a failure when the network returns", async () => {
+      answerLocalLookup([]);
+      answerOffProduct(() => edgeErrorResponse(429, "rate_limited", "Slow down", 20));
+      const { result } = renderLookup(VALID_BARCODE);
+      await waitFor(() => {
+        expect(result.current.error).toMatchObject({ kind: "rate_limited" });
+      });
+
+      act(() => {
+        onlineManager.setOnline(false);
+        onlineManager.setOnline(true);
+      });
+      await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+
+      expect(offProductCalls).toBe(1);
+    });
+
     it("should keep the previous status when a later lookup is rate limited", async () => {
       answerLocalLookup([]);
       answerOffProduct(() => edgeErrorResponse(404, "not_found", "No such product"));
@@ -387,12 +409,17 @@ describe("useFoodByBarcode", () => {
       await act(() => invalidateFoodQueries(queryClient));
 
       await waitFor(() => {
-        expect(result.current.error).toEqual({ kind: "rate_limited", retryAfterSeconds: 20 });
+        expect(result.current.error).toEqual({
+          kind: "rate_limited",
+          retryAfterSeconds: 20,
+          debugMessage: "Slow down",
+          message: "Slow down",
+        });
       });
       expect(result.current.result).toEqual({ status: "not_found", code: VALID_BARCODE });
     });
 
-    it("should report any other failure of off-product as failed", async () => {
+    it("should report an edge error of off-product as its kind, keeping the raw text only as debugMessage", async () => {
       answerLocalLookup([]);
       answerOffProduct(() =>
         edgeErrorResponse(502, "upstream_error", "Open Food Facts is unavailable"),
@@ -402,7 +429,8 @@ describe("useFoodByBarcode", () => {
 
       await waitFor(() => {
         expect(result.current.error).toEqual({
-          kind: "failed",
+          kind: "upstream_error",
+          debugMessage: "Open Food Facts is unavailable",
           message: "Open Food Facts is unavailable",
         });
       });
