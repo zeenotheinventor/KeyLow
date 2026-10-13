@@ -6,14 +6,17 @@ import { StatusBar } from "expo-status-bar";
 
 import { AuthGate } from "../components/AuthGate";
 import { supabase } from "../lib/supabase";
+import { ThemeProvider } from "../lib/theme";
 
 export default function RootLayout() {
   return (
-    <KeyLowProvider client={supabase}>
-      <AuthGate>
-        <StatusBar style="dark" />
-        <Stack screenOptions={{ headerShown: false }} />
-      </AuthGate>
-    </KeyLowProvider>
+    <ThemeProvider>
+      <KeyLowProvider client={supabase}>
+        <AuthGate>
+          <StatusBar style="dark" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </AuthGate>
+      </KeyLowProvider>
+    </ThemeProvider>
   );
 }
