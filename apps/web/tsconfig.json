@@ -12,6 +12,7 @@
     "lib/**/*",
     "test/**/*",
     "e2e/**/*",
+    ".storybook/**/*",
     ".next/types/**/*.ts",
     "*.ts",
     "*.mjs",
