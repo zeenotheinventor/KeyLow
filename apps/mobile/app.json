@@ -6,7 +6,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "runtimeVersion": {
       "policy": "fingerprint"
     },
@@ -25,7 +25,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.sojisoft.keylow"
+      "package": "com.sojisoft.keylow",
+      "backgroundColor": "#0B0E13"
     },
     "plugins": [
       "expo-router",
@@ -43,7 +44,25 @@
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/Geist-Regular.ttf",
+            "./assets/fonts/Geist-Medium.ttf",
+            "./assets/fonts/Geist-SemiBold.ttf"
+          ]
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0E13",
+          "image": "./assets/splash-placeholder.png"
+        }
+      ],
+      "expo-system-ui"
     ],
     "extra": {
       "eas": {

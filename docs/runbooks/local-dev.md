@@ -318,6 +318,20 @@ This builds an internal-distribution development client in the EAS cloud (profil
 
 The first build itself is tracked as a manual ticket. Until it is done, nobody can install a dev client, but everything else in this section still works.
 
+### Rebuild the development client after the design foundation
+
+The design foundation (KEY-88) adds native modules and native configuration, so a development client built before it cannot run the code that uses them. Build a new one when it merges, and again whenever the CI fingerprint comment says the native fingerprint changed.
+
+What the new build contains that the old one does not:
+
+- `react-native-svg` and `lucide-react-native` (icons), `expo-haptics`, `expo-system-ui`, `expo-font` and `expo-splash-screen`.
+- `react-native-gesture-handler`, which Storybook for React Native needs (KEY-89).
+- Geist embedded in three weights (`Geist-Regular`, `Geist-Medium`, `Geist-SemiBold`). An old client does not fail on a missing font, it falls back to the system font without a warning, so text that is not Geist means the client is old.
+- `userInterfaceStyle: "automatic"`, so the keyboard and dialogs follow the scheme the app sets, and "Match device" follows the phone.
+- A dark window and splash background, so a cold start no longer flashes white.
+
+JavaScript-only work still runs on the old client through Metro until the first import of one of these modules. Build with `npx eas-cli build --profile development-device --platform android` from `apps/mobile`.
+
 ### Connect the phone
 
 **Device step, not run.** With a dev client installed:
