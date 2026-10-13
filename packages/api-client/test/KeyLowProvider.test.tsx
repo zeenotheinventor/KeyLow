@@ -1,14 +1,14 @@
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
-import { cleanup, render, renderHook, screen } from "@testing-library/react";
+import { render, renderHook, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createTestClient } from "./createTestClient";
+import { createQueryClient } from "./support/queryClients";
 import { KeyLowProvider, useSupabase } from "../src/KeyLowProvider";
 
 import type { ReactNode } from "react";
 
 afterEach(() => {
-  cleanup();
   vi.restoreAllMocks();
 });
 
@@ -39,7 +39,7 @@ describe("KeyLowProvider", () => {
   });
 
   it("should provide the query client it was given", () => {
-    const queryClient = new QueryClient();
+    const queryClient = createQueryClient();
     const wrapper = ({ children }: { children: ReactNode }) => (
       <KeyLowProvider client={createTestClient()} queryClient={queryClient}>
         {children}

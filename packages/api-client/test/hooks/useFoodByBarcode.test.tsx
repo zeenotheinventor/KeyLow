@@ -1,4 +1,4 @@
-import { QueryClient, focusManager, onlineManager } from "@tanstack/react-query";
+import { focusManager, onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -19,6 +19,7 @@ import {
   offProductResponse,
 } from "../support/barcode";
 import { REST_URL, foodRow, postgrestError, postgrestRows } from "../support/postgrest";
+import { createQueryClient } from "../support/queryClients";
 import { edgeErrorResponse } from "../support/search";
 import { createWrapper } from "../support/wrapper";
 
@@ -341,7 +342,7 @@ describe("useFoodByBarcode", () => {
     it("should not retry a rate limit even when the query client retries by default", async () => {
       answerLocalLookup([]);
       answerOffProduct(() => edgeErrorResponse(429, "rate_limited", "Slow down", 20));
-      const queryClient = new QueryClient({
+      const queryClient = createQueryClient({
         defaultOptions: { queries: { retry: 3, retryDelay: 1 } },
       });
       const wrapper = ({ children }: { children: ReactNode }) => (

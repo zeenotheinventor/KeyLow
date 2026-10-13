@@ -67,6 +67,14 @@ afterAll(() => {
 
 const DEBOUNCE_MS = 250;
 
+// shouldAdvanceTime lets real time seep into the fake clock, so a process that stalls for a few
+// milliseconds can carry a check at DEBOUNCE_MS - 1 past the boundary. A test that asserts the
+// state inside the gap calls this once its network waits are over, so only the test moves the
+// clock. It installs a fresh clock and drops the old one's timers, which are only query cache timers.
+const stopRealTimeAdvancingTheClock = () => {
+  vi.useFakeTimers({ shouldAdvanceTime: false });
+};
+
 const settleDebounce = () =>
   act(async () => {
     await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
@@ -226,6 +234,7 @@ describe("useFoodSearch", () => {
         expect(result.current.local).toHaveLength(5);
       });
 
+      stopRealTimeAdvancingTheClock();
       rerender({ query: "chicke" });
       expect(result.current.isDebouncing).toBe(true);
 
