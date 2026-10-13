@@ -23,11 +23,17 @@ function resolveScheme(
   return deviceScheme === "light" ? "light" : "dark";
 }
 
-export function ThemeProvider({ children }: ThemeProviderProps) {
-  const [preference, setPreference] = useState<ThemePreference>();
+export function ThemeProvider({ children, fixedPreference }: ThemeProviderProps) {
+  const [storedPreference, setPreference] = useState<ThemePreference>();
   const deviceScheme = useColorScheme();
+  const isFixed = fixedPreference !== undefined;
+  const preference = fixedPreference ?? storedPreference;
 
   useEffect(() => {
+    if (isFixed) {
+      return;
+    }
+
     let isCancelled = false;
 
     void readThemePreference().then((storedPreference) => {
@@ -40,14 +46,21 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     return () => {
       isCancelled = true;
     };
-  }, []);
+  }, [isFixed]);
 
-  const setScheme = useCallback((nextPreference: ThemePreference) => {
-    // Sets the native scheme as well, so system dialogs follow.
-    colorScheme.set(nextPreference);
-    setPreference(nextPreference);
-    void writeThemePreference(nextPreference);
-  }, []);
+  const setScheme = useCallback(
+    (nextPreference: ThemePreference) => {
+      if (isFixed) {
+        return;
+      }
+
+      // Sets the native scheme as well, so system dialogs follow.
+      colorScheme.set(nextPreference);
+      setPreference(nextPreference);
+      void writeThemePreference(nextPreference);
+    },
+    [isFixed],
+  );
 
   const scheme = resolveScheme(preference, deviceScheme);
   const theme = useMemo<Theme | undefined>(

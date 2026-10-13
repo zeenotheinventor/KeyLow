@@ -33,7 +33,7 @@ const geistWeightsPlugin = plugin((api) => {
 
 /** @type {import("tailwindcss").Config} */
 module.exports = {
-  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./.rnstorybook/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset"), preset],
   corePlugins: { fontWeight: false },
   theme: {

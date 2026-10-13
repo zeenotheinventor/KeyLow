@@ -357,6 +357,24 @@ JavaScript-only work still runs on the old client through Metro until the first 
 3. Open the KeyLow dev client. Its launcher lists the Metro server it finds on the network. Tap it, or choose to enter a URL and type `http://<LAN-IP>:8081`.
 4. The app opens on the sign-in screen. Sign in as `demo@keylow.local` or create an account. The app talks to Supabase at the `EXPO_PUBLIC_SUPABASE_URL` you set.
 
+### Open Storybook on the phone
+
+Storybook for React Native runs inside the dev client, on the real runtime, so a component is judged on the device it ships to. It is off by default, and a build made without the flag carries none of it. Stories sit next to their components as `*.stories.tsx` under `apps/mobile/components`.
+
+1. Start Metro with the flag on, from the repo root:
+
+   ```sh
+   EXPO_PUBLIC_STORYBOOK=true pnpm --filter @keylow/mobile start --clear
+   ```
+
+   `--clear` matters when you switch the flag, because Metro inlines it into the bundle. Metro turns Storybook telemetry off for you (`STORYBOOK_DISABLE_TELEMETRY=1`, set in `metro.config.js` when the flag is on). It also rewrites the story index, `apps/mobile/.rnstorybook/storybook.requires.ts`, on every start. Commit it when it changes. CI regenerates it and fails on a difference, and `pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook` does the same by hand. It is not a package script on purpose: a script name is part of the native fingerprint.
+
+2. Open the dev client and connect to Metro as in "Connect the phone".
+3. Open the deep link `keylow://storybook`. On Android, `adb shell am start -a android.intent.action.VIEW -d "keylow://storybook" com.sojisoft.keylow` does it, and on a phone you can type `keylow://storybook` into the browser. No sign-in is needed, because `AuthGate` lets the `storybook` route through while the flag is on.
+4. The bottom bar shows the story and opens the story list. The icon at its right opens the addons panel, whose **Theme** tab switches the story between **Dark** and **Light**. The on-device Storybook has no toolbar, so the switch is a panel. It runs through the app's own `ThemeProvider` with the scheme fixed, so a story takes the real theme path while your saved Appearance setting and the Storybook screens are left alone.
+
+Without `EXPO_PUBLIC_STORYBOOK=true`, `/storybook` redirects to the home route and `npx expo export` produces a bundle with no Storybook code. Check that with `npx expo export --platform android --no-bytecode --output-dir <dir>` and a search of the bundle for `SeedPressable` or `kilo/theme`, which only a Storybook build contains.
+
 ### Checks that need no device
 
 Run these from `apps/mobile`:

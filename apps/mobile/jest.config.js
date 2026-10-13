@@ -13,9 +13,10 @@ module.exports = {
   // lucide-react-native names its ES module build for the react-native condition, which Jest does not
   // transform. Node's own resolution picks the CommonJS build, which needs no transform.
   moduleNameMapper: { "^lucide-react-native$": require.resolve("lucide-react-native") },
-  // Workspace packages ship TypeScript source, so Jest must transform them like app code.
+  // Workspace packages ship TypeScript source, so Jest must transform them like app code. Storybook
+  // ships ES modules only, so it is transformed too.
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@keylow/.*)",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@keylow/.*|storybook|@storybook/.*)",
     // Already plain CommonJS, so Babel would only slow the cold start. These are the biggest files the
     // first render loads: the React Native renderer and the web streams polyfill from Expo.
     "node_modules/react-native/Libraries/Renderer/implementations/",

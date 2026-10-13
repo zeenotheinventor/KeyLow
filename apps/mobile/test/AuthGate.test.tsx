@@ -106,6 +106,47 @@ describe("AuthGate", () => {
     expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
   });
 
+  describe("the Storybook route", () => {
+    afterEach(() => {
+      delete process.env.EXPO_PUBLIC_STORYBOOK;
+    });
+
+    it("should leave a signed-out user on the Storybook route when the Storybook flag is on", async () => {
+      process.env.EXPO_PUBLIC_STORYBOOK = "true";
+      routerMock.segments = ["storybook"];
+
+      await renderGate();
+
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("should redirect a signed-out user off the Storybook route when the Storybook flag is not set", async () => {
+      routerMock.segments = ["storybook"];
+
+      await renderGate();
+
+      expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+    });
+
+    it("should redirect a signed-out user off the Storybook route when the Storybook flag is false", async () => {
+      process.env.EXPO_PUBLIC_STORYBOOK = "false";
+      routerMock.segments = ["storybook"];
+
+      await renderGate();
+
+      expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+    });
+
+    it("should still redirect a signed-out user in the tabs when the Storybook flag is on", async () => {
+      process.env.EXPO_PUBLIC_STORYBOOK = "true";
+      routerMock.segments = ["(tabs)", "diary"];
+
+      await renderGate();
+
+      expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+    });
+  });
+
   it("should render its children", async () => {
     await renderGate();
 

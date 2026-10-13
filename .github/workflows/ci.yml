@@ -55,6 +55,13 @@ jobs:
       # The flag keeps the install pass that dedupe runs from triggering the prepare script.
       - name: Check the lockfile for duplicates
         run: pnpm dedupe --check --ignore-scripts
+      # Mobile Storybook has no static build. Its stories are type-checked and rendered in both schemes by
+      # the gate above (tsc covers .rnstorybook, and the Jest smoke test renders every story). What is left
+      # is that the committed story index is the one the story files generate, which Metro rewrites on start.
+      - name: Check the mobile story index is committed
+        run: |
+          pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook
+          git diff --exit-code apps/mobile/.rnstorybook/storybook.requires.ts
       # Some doctor checks call the Expo API. A run where every failure is a network error is
       # downgraded to a warning, so an Expo outage does not block merges.
       - name: Check the Expo project health

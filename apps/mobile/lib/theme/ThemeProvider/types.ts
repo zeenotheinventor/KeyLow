@@ -4,6 +4,11 @@ import type { ReactNode } from "react";
 
 export type ThemeProviderProps = {
   children: ReactNode;
+  /**
+   * Fixes the preference. Nothing is read from or saved to storage, the native scheme is left alone and
+   * `setScheme` does nothing. For Storybook, which shows a story in a scheme without touching the app's setting.
+   */
+  fixedPreference?: ThemePreference;
 };
 
 export type Theme = {
