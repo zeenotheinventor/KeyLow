@@ -40,7 +40,7 @@ export function FoodSearch({
     off.length === 0;
 
   return (
-    <View className="flex-1 bg-neutral-50">
+    <View className="flex-1 bg-legacy-neutral-50">
       <View className="gap-3 px-6 pb-2 pt-4">
         <TextInput
           accessibilityLabel="Search foods"
@@ -51,33 +51,35 @@ export function FoodSearch({
           autoCorrect={false}
           value={query}
           onChangeText={onQueryChange}
-          className="h-12 rounded-lg border border-neutral-300 bg-neutral-50 px-4 text-base text-neutral-900"
+          className="h-12 rounded-lg border border-legacy-neutral-300 bg-legacy-neutral-50 px-4 text-base text-legacy-neutral-900"
         />
         <View className="flex-row gap-2">
           <Pressable
             accessibilityRole="button"
             onPress={onCreateFood}
-            className="h-12 items-center justify-center rounded-lg border border-neutral-300 px-4"
+            className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300 px-4"
           >
-            <Text className="text-base font-semibold text-neutral-900">Create a food</Text>
+            <Text className="text-base font-semibold text-legacy-neutral-900">Create a food</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
             onPress={onScanBarcode}
-            className="h-12 items-center justify-center rounded-lg border border-neutral-300 px-4"
+            className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300 px-4"
           >
-            <Text className="text-base font-semibold text-neutral-900">Scan barcode</Text>
+            <Text className="text-base font-semibold text-legacy-neutral-900">Scan barcode</Text>
           </Pressable>
         </View>
       </View>
 
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-4 px-6 py-4">
         {isSearchable ? null : (
-          <Text className="text-base text-neutral-500">Type at least 2 characters to search</Text>
+          <Text className="text-base text-legacy-neutral-500">
+            Type at least 2 characters to search
+          </Text>
         )}
 
         {isSearchable && localError !== null ? (
-          <Text accessibilityRole="alert" className="text-base text-danger-600">
+          <Text accessibilityRole="alert" className="text-base text-legacy-danger-600">
             Your foods could not be searched. Check your connection and try again.
           </Text>
         ) : null}
@@ -101,17 +103,20 @@ export function FoodSearch({
 
         {isSearchable && isLoadingOff ? <LoadingStatus label="Searching Open Food Facts" /> : null}
         {isSearchable && offError !== null ? (
-          <Text accessibilityRole="alert" className="text-base text-neutral-700">
+          <Text accessibilityRole="alert" className="text-base text-legacy-neutral-700">
             {describeOffError(offError)}
           </Text>
         ) : null}
         {isSearchable && off.length > 0 ? (
           <View className="gap-2">
-            <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900">
+            <Text
+              accessibilityRole="header"
+              className="text-lg font-semibold text-legacy-neutral-900"
+            >
               From Open Food Facts
             </Text>
             {candidateError === undefined ? null : (
-              <Text accessibilityRole="alert" className="text-sm text-danger-600">
+              <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
                 {candidateError}
               </Text>
             )}
@@ -141,8 +146,8 @@ export function FoodSearch({
 
         {isSearchable && isEmpty ? (
           <View className="gap-1">
-            <Text className="text-lg font-semibold text-neutral-900">No foods found</Text>
-            <Text className="text-base text-neutral-500">
+            <Text className="text-lg font-semibold text-legacy-neutral-900">No foods found</Text>
+            <Text className="text-base text-legacy-neutral-500">
               Try other words, or create the food yourself.
             </Text>
           </View>

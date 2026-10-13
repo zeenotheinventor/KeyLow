@@ -1,4 +1,4 @@
-import { colors } from "@keylow/tokens";
+import { legacyColors } from "@keylow/tokens";
 import { Pressable, Switch, Text, View } from "react-native";
 
 import { FormField } from "../FormField";
@@ -21,7 +21,7 @@ export function PortionRow({
   const portionName = label.trim() === "" ? String(position) : label.trim();
 
   return (
-    <View className="gap-3 rounded-lg border border-neutral-300 p-4">
+    <View className="gap-3 rounded-lg border border-legacy-neutral-300 p-4">
       <FormField
         label="Portion label"
         accessibilityLabel={`Portion ${position} label`}
@@ -42,7 +42,7 @@ export function PortionRow({
         <Text
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
-          className="text-base text-neutral-900"
+          className="text-base text-legacy-neutral-900"
         >
           Default portion
         </Text>
@@ -50,16 +50,19 @@ export function PortionRow({
           accessibilityLabel={`Portion ${position} default`}
           value={isDefault}
           onValueChange={onDefaultChange}
-          trackColor={{ false: colors.neutral["300"], true: colors.brand["600"] }}
+          trackColor={{
+            false: legacyColors["legacy-neutral"]["300"],
+            true: legacyColors["legacy-brand"]["600"],
+          }}
         />
       </View>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`Remove portion ${portionName}`}
         onPress={onRemove}
-        className="h-12 items-center justify-center rounded-lg border border-danger-600"
+        className="h-12 items-center justify-center rounded-lg border border-legacy-danger-600"
       >
-        <Text className="text-base font-semibold text-danger-600">Remove</Text>
+        <Text className="text-base font-semibold text-legacy-danger-600">Remove</Text>
       </Pressable>
     </View>
   );

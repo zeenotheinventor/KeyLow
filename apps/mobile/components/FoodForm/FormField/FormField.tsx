@@ -12,8 +12,10 @@ export function FormField({
 }: FormFieldProps) {
   const inputClassName = [
     "h-12 rounded-lg border px-4 text-base",
-    error === undefined ? "border-neutral-300" : "border-danger-600",
-    editable ? "bg-neutral-50 text-neutral-900" : "bg-neutral-100 text-neutral-500",
+    error === undefined ? "border-legacy-neutral-300" : "border-legacy-danger-600",
+    editable
+      ? "bg-legacy-neutral-50 text-legacy-neutral-900"
+      : "bg-legacy-neutral-100 text-legacy-neutral-500",
   ].join(" ");
 
   return (
@@ -22,7 +24,7 @@ export function FormField({
       <Text
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
-        className="text-sm font-medium text-neutral-700"
+        className="text-sm font-medium text-legacy-neutral-700"
       >
         {label}
       </Text>
@@ -35,12 +37,12 @@ export function FormField({
         {...inputProps}
       />
       {error === undefined ? null : (
-        <Text accessibilityRole="alert" className="text-sm text-danger-600">
+        <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
           {error}
         </Text>
       )}
       {error === undefined && hint !== undefined ? (
-        <Text className="text-sm text-neutral-500">{hint}</Text>
+        <Text className="text-sm text-legacy-neutral-500">{hint}</Text>
       ) : null}
     </View>
   );

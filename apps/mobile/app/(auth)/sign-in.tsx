@@ -22,8 +22,11 @@ export default function SignInRoute() {
       onSubmit={signIn}
       footer={
         <>
-          <Text className="text-sm text-neutral-500">New to KeyLow?</Text>
-          <Link href="/(auth)/sign-up" className="py-3 text-base font-semibold text-brand-600">
+          <Text className="text-sm text-legacy-neutral-500">New to KeyLow?</Text>
+          <Link
+            href="/(auth)/sign-up"
+            className="py-3 text-base font-semibold text-legacy-brand-600"
+          >
             Create account
           </Link>
         </>

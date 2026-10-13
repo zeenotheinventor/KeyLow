@@ -59,13 +59,13 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-neutral-50"
+      className="flex-1 bg-legacy-neutral-50"
     >
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerClassName="flex-grow justify-center gap-4 px-6 py-16"
       >
-        <Text accessibilityRole="header" className="text-3xl font-semibold text-neutral-900">
+        <Text accessibilityRole="header" className="text-3xl font-semibold text-legacy-neutral-900">
           {heading}
         </Text>
 
@@ -79,10 +79,10 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
             keyboardType="email-address"
             value={email}
             onChangeText={setEmail}
-            className="h-12 rounded-lg border border-neutral-300 bg-neutral-50 px-4 text-base text-neutral-900"
+            className="h-12 rounded-lg border border-legacy-neutral-300 bg-legacy-neutral-50 px-4 text-base text-legacy-neutral-900"
           />
           {fieldErrors.email === undefined ? null : (
-            <Text accessibilityRole="alert" className="text-sm text-danger-600">
+            <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
               {fieldErrors.email}
             </Text>
           )}
@@ -98,22 +98,22 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
             secureTextEntry
             value={password}
             onChangeText={setPassword}
-            className="h-12 rounded-lg border border-neutral-300 bg-neutral-50 px-4 text-base text-neutral-900"
+            className="h-12 rounded-lg border border-legacy-neutral-300 bg-legacy-neutral-50 px-4 text-base text-legacy-neutral-900"
           />
           {fieldErrors.password === undefined ? null : (
-            <Text accessibilityRole="alert" className="text-sm text-danger-600">
+            <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
               {fieldErrors.password}
             </Text>
           )}
         </View>
 
         {outcome.status === "error" ? (
-          <Text accessibilityRole="alert" className="text-sm text-danger-600">
+          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
             {outcome.message}
           </Text>
         ) : null}
         {outcome.status === "notice" ? (
-          <Text accessibilityLiveRegion="polite" className="text-sm text-success-700">
+          <Text accessibilityLiveRegion="polite" className="text-sm text-legacy-success-700">
             {outcome.message}
           </Text>
         ) : null}
@@ -122,18 +122,20 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
           accessibilityRole="button"
           disabled={isSubmitting}
           onPress={() => void handleSubmit()}
-          className="h-12 items-center justify-center rounded-lg bg-brand-600 disabled:opacity-50"
+          className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600 disabled:opacity-50"
         >
-          <Text className="text-base font-semibold text-neutral-50">{submitLabel}</Text>
+          <Text className="text-base font-semibold text-legacy-neutral-50">{submitLabel}</Text>
         </Pressable>
 
         <Pressable
           accessibilityRole="button"
           disabled={isSubmitting}
           onPress={() => void handleGoogleSignIn()}
-          className="h-12 items-center justify-center rounded-lg border border-neutral-300 disabled:opacity-50"
+          className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300 disabled:opacity-50"
         >
-          <Text className="text-base font-semibold text-neutral-900">Continue with Google</Text>
+          <Text className="text-base font-semibold text-legacy-neutral-900">
+            Continue with Google
+          </Text>
         </Pressable>
 
         <View className="items-center gap-1">{footer}</View>

@@ -1,8 +1,14 @@
 # @keylow/tokens
 
-The design tokens (colours, spacing and type scale) shared by the web and mobile apps, exported as a Tailwind 3 preset. NativeWind v4 on mobile and Tailwind on web both read it, so the two UIs share one visual system. It is consumed as source: there is no build step.
+The Ki-Lo design tokens, shared by the web and mobile apps. Dark is the default theme and light is the alternative. Both are exported as semantic names (`text-primary`, `surface-raised`, `border`) and as a Tailwind 3 preset that NativeWind v4 on mobile and Tailwind on web both read. It is consumed as source, so there is no build step.
 
-The values are placeholders. They are a neutral, brand-agnostic starting point (the colour scales are Tailwind's own neutral, blue, green, amber and red) and are expected to change when real UI work starts (KEY-21 and KEY-22 consume them).
+The values are the Ki-Lo design system's, copied verbatim and never retyped. See "Where the values come from" below.
+
+## Light-mode colour rule
+
+Light-mode colour treatment, accepted by Zee (Q14): the light tokens are not darkened, and light-mode small text is not coloured. The lime `accent` is a fill with `accent-foreground` text on it, never text. Warning, success, danger and macro colours appear as a dot, bar, border or `*-muted` fill, and the words and values stay in `text-primary` or `text-secondary`. So a warning notice's text is `text-primary` in light, and a macro value sits beside a colour dot rather than being coloured text. Keep this in every light story and screen. In dark, coloured text is fine because every pair passes 4.5:1. If an approved frame shows otherwise, the frame wins.
+
+`test/contrast.test.ts` records the WCAG ratio of every text, accent, status and macro colour on `background`, `surface` and `surface-raised` in both themes. It asserts no threshold. A design system edit that moves a ratio shows up as a snapshot diff. Regenerate the snapshot with `pnpm --filter @keylow/tokens exec vitest run -u test/contrast.test.ts` and note the change in the PR.
 
 ## Use
 
@@ -15,19 +21,61 @@ export default {
 };
 ```
 
-`colors`, `spacing` and `fontSize` are also exported for code that needs the raw values.
+The preset only sets `theme.extend`, so Tailwind's own theme (breakpoints, other utilities) is kept. It does not include the theme plugin. Add `themePlugin` to `plugins` where the CSS variables are wanted (web).
 
-## Values
+## Colours follow the theme through variables
 
-- Colours: `neutral`, `brand`, `success`, `warning` and `danger`, each with steps 50 to 950, as plain hex strings so NativeWind can read them.
-- Spacing: a 4px base on Tailwind's default step keys (`0`, `0.5`, `1` to `96`), written in px so the value is the same on web and native.
-- Font size: `xs` to `5xl`, each with a px size and a px line height.
+Every colour class reads a `--kl-<name>` CSS variable, so one class follows the theme.
 
-The preset only sets `theme.extend`, so Tailwind's own theme (breakpoints, other utilities) is kept.
+- A solid colour (`#RRGGBB`) resolves as `rgb(var(--kl-<name>) / <alpha-value>)`. The variable holds the space separated channels (`204 242 73`), so opacity modifiers work: `bg-accent/20`.
+- A translucent colour carries its own alpha, so it resolves as `var(--kl-<name>)` and the variable holds the whole `rgba()` value. This covers the `*-muted` fills, `chart-band`, the overlays and `skeleton-shine`. **An opacity modifier on these is not supported.** `bg-accent-muted/50` generates nothing.
+- Shadows follow the theme the same way, because the light shadows differ: `shadow-card` is `var(--kl-elevation-card)`.
+
+The design's keys are kept exactly, so the classes read as `text-text-primary`, `border-border` and `bg-surface-raised`. The kit hides that. In the preset, a colour whose name starts with another colour's name (`accent-foreground`, `accent-muted`, `surface-raised`, `border-strong`, `focus-ring-offset`) is nested under that colour, the way Tailwind writes `DEFAULT`. The class names are unchanged. The nesting is what lets the web app's shadcn `accent: { DEFAULT, foreground }` block keep winning key by key until KEY-86 removes it. A flat `accent-foreground` would have replaced shadcn's `hover:text-accent-foreground`.
+
+`themeVariables("dark")` and `themeVariables("light")` return the `--kl-*` values as plain data, for any consumer that cannot use the Tailwind plugin. `themePlugin` emits them on `:root` for dark and under `[data-theme="light"]` for light, together with `color-scheme`. How mobile consumes the same variables is decided in KEY-87.
+
+## Exports
+
+| Export                                                                                                           | What it is                                                                            |
+| ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `colors`, `lightColors`, `themes`                                                                                | Every colour, dark and light, with identical key sets. `themes` is `{ dark, light }`. |
+| `statusBarStyle`, `colorScheme`                                                                                  | Per theme: `light-content` or `dark-content`, and `dark` or `light`.                  |
+| `elevation`, `boxShadow`                                                                                         | The raw shadows per theme, and the `var()` references the preset uses.                |
+| `spacing`, `borderRadius`                                                                                        | The 4 pt scale and the radii, as px strings.                                          |
+| `fontFamily`, `fontNumeric`, `fontWeight`, `fontSize`                                                            | The type tokens. `fontSize` is the seven type styles in Tailwind's tuple form.        |
+| `iconSize`, `iconStroke`, `controlHeight`, `touchTarget`, `tabBarHeight`, `sheetHandle`, `focusRing`, `safeArea` | Sizes as numbers of px (`safeArea` is the CSS `env()` strings).                       |
+| `transitionDuration`, `transitionTimingFunction`                                                                 | The durations and easings as the CSS strings Tailwind wants.                          |
+| `motionDuration`, `stagger`, `skeletonDelay`, `pressScale`, `easingCurve`, `motionScale`, `reducedMotion`        | The same motion tokens as numbers, plus what reduce-motion collapses to.              |
+| `springs`, `timings`                                                                                             | The Reanimated spring and timing constants from the design system readme.             |
+| `haptic`                                                                                                         | The haptic token names: `select`, `confirm`, `complete`, `warning`, `error`.          |
+| `preset`, `themePlugin`, `themeVariables`                                                                        | The Tailwind preset, the plugin, and the variables as data.                           |
+| `legacyColors`, `legacySpacing`, `legacyFontSize`                                                                | The compatibility shim, below.                                                        |
+
+The `kl-*` keyframes in `motion.css` are CSS and are not exported.
+
+## Where the values come from
+
+`src/source/` holds the design system's `ki-lo.tokens.json`, `colors.css`, `spacing.css`, `typography.css` and `motion.css`, copied verbatim from the Ki-Lo Design System project. Do not edit them by hand. Prettier ignores the folder.
+
+`scripts/buildTokens.ts` reads them with a small CSS parser and builds the data. `src/source.generated.ts` is that data written out as TypeScript, so the apps never parse CSS at run time. The build throws when the JSON and the CSS disagree, when the light theme lacks a colour the dark one has, or when the design adds a token that has no export yet. `test/source.test.ts` fails when the generated file is out of date, and it rebuilds the design's flat JSON from the exports to prove every token is present with its value.
+
+When the design system changes, replace the five files in `src/source/` and run:
+
+```sh
+pnpm --filter @keylow/tokens generate
+```
+
+then commit the regenerated file with the new snapshot values.
+
+## Legacy shim
+
+`legacyColors` keeps the five placeholder scales as `legacy-neutral`, `legacy-brand`, `legacy-success`, `legacy-warning` and `legacy-danger` (steps 50 to 950), and the preset still serves them, so classes such as `bg-legacy-brand-600` work. `legacySpacing` and `legacyFontSize` keep the placeholder px spacing steps and `xs` to `5xl` text sizes, because the screens still use steps and sizes the design does not define (`min-h-14`, `text-sm`) and they must render the same on native, where Tailwind's rem defaults would differ. New code does not use any of these. KEY-113 removes `src/legacy.ts` once the screens have moved.
 
 ## Scripts
 
 ```sh
+pnpm --filter @keylow/tokens generate
 pnpm --filter @keylow/tokens lint
 pnpm --filter @keylow/tokens typecheck
 pnpm --filter @keylow/tokens test

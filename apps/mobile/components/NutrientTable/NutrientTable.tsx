@@ -14,7 +14,7 @@ const BASIS_HEADINGS: Record<NutrientBasis, string> = {
 export function NutrientTable({ food }: NutrientTableProps) {
   return (
     <View className="gap-2">
-      <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900">
+      <Text accessibilityRole="header" className="text-lg font-semibold text-legacy-neutral-900">
         {BASIS_HEADINGS[food.basis]}
       </Text>
       <View>
@@ -27,12 +27,14 @@ export function NutrientTable({ food }: NutrientTableProps) {
               key={row.field}
               accessible
               accessibilityLabel={`${row.label}: ${valueText}`}
-              className="min-h-11 flex-row items-center justify-between border-b border-neutral-200"
+              className="min-h-11 flex-row items-center justify-between border-b border-legacy-neutral-200"
             >
-              <Text className="text-base text-neutral-900">{row.label}</Text>
+              <Text className="text-base text-legacy-neutral-900">{row.label}</Text>
               <Text
                 className={
-                  amount === null ? "text-base text-neutral-500" : "text-base text-neutral-900"
+                  amount === null
+                    ? "text-base text-legacy-neutral-500"
+                    : "text-base text-legacy-neutral-900"
                 }
               >
                 {valueText}

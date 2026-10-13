@@ -54,7 +54,7 @@ export function AuthGate({ children }: AuthGateProps) {
   return (
     <>
       {children}
-      {isSessionLoaded ? null : <View className="absolute inset-0 bg-neutral-50" />}
+      {isSessionLoaded ? null : <View className="absolute inset-0 bg-legacy-neutral-50" />}
     </>
   );
 }

@@ -1,0 +1,43 @@
+/* One sans family. Tight tracking on large numerals; tabular figures on every number. Sizes in px; they scale with the platform text-size setting (readme › Larger text). */
+:root{
+--font-sans:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+--font-numeric:"tnum" 1;
+--weight-regular:400;
+--weight-medium:500;
+--weight-semibold:600;
+/* display numeral — the hero numbers (calories remaining, expenditure) */
+--type-display-numeral-size:56px;
+--type-display-numeral-line:60px;
+--type-display-numeral-weight:600;
+--type-display-numeral-tracking:-0.03em;
+/* h1 — screen titles */
+--type-h1-size:28px;
+--type-h1-line:34px;
+--type-h1-weight:600;
+--type-h1-tracking:-0.02em;
+/* h2 — section titles, card titles */
+--type-h2-size:20px;
+--type-h2-line:26px;
+--type-h2-weight:600;
+--type-h2-tracking:-0.01em;
+/* body */
+--type-body-size:16px;
+--type-body-line:24px;
+--type-body-weight:400;
+--type-body-tracking:0;
+/* body-strong — row titles, button labels */
+--type-body-strong-size:16px;
+--type-body-strong-line:24px;
+--type-body-strong-weight:600;
+--type-body-strong-tracking:0;
+/* caption — labels, helper text, badges, tab labels */
+--type-caption-size:12px;
+--type-caption-line:16px;
+--type-caption-weight:500;
+--type-caption-tracking:0.01em;
+/* numeral-small — trailing values, macro grams */
+--type-numeral-small-size:20px;
+--type-numeral-small-line:24px;
+--type-numeral-small-weight:600;
+--type-numeral-small-tracking:-0.01em;
+}

@@ -58,7 +58,7 @@ export default function ScanRoute() {
   }
 
   return (
-    <View className="flex-1 bg-neutral-50">
+    <View className="flex-1 bg-legacy-neutral-50">
       {scan === undefined ? null : (
         <ScanResult
           outcome={toScanOutcome(lookup)}

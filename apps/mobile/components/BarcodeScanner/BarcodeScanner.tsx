@@ -32,7 +32,7 @@ export function BarcodeScanner({ isActive, onBarcodeScanned, onCancel }: Barcode
 
   // The permission is unknown for the moment it takes to read it, which needs no screen of its own.
   if (permission === null) {
-    return <View className="flex-1 bg-neutral-50" />;
+    return <View className="flex-1 bg-legacy-neutral-50" />;
   }
 
   if (!permission.granted) {
@@ -46,7 +46,7 @@ export function BarcodeScanner({ isActive, onBarcodeScanned, onCancel }: Barcode
   }
 
   return (
-    <View className="flex-1 bg-neutral-900">
+    <View className="flex-1 bg-legacy-neutral-900">
       <View
         accessible
         accessibilityLabel="Barcode viewfinder"
@@ -58,18 +58,18 @@ export function BarcodeScanner({ isActive, onBarcodeScanned, onCancel }: Barcode
           barcodeScannerSettings={barcodeScannerSettings}
           onBarcodeScanned={onBarcodeScanned}
         />
-        <View className="pointer-events-none h-40 w-72 rounded-lg border-2 border-neutral-50" />
+        <View className="pointer-events-none h-40 w-72 rounded-lg border-2 border-legacy-neutral-50" />
       </View>
       <View className="gap-4 px-6 py-6">
-        <Text className="text-center text-base text-neutral-50">
+        <Text className="text-center text-base text-legacy-neutral-50">
           Point the camera at a food barcode
         </Text>
         <Pressable
           accessibilityRole="button"
           onPress={onCancel}
-          className="h-12 items-center justify-center rounded-lg border border-neutral-50"
+          className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-50"
         >
-          <Text className="text-base font-semibold text-neutral-50">Cancel</Text>
+          <Text className="text-base font-semibold text-legacy-neutral-50">Cancel</Text>
         </Pressable>
       </View>
     </View>

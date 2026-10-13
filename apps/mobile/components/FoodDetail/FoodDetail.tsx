@@ -26,50 +26,53 @@ export function FoodDetail({ food, portions, onEdit, onReview }: FoodDetailProps
   const missingFields = food.quality.fields_missing ?? [];
 
   return (
-    <ScrollView contentContainerClassName="gap-6 px-6 py-6" className="flex-1 bg-neutral-50">
+    <ScrollView contentContainerClassName="gap-6 px-6 py-6" className="flex-1 bg-legacy-neutral-50">
       <View className="gap-1">
-        <Text accessibilityRole="header" className="text-2xl font-semibold text-neutral-900">
+        <Text accessibilityRole="header" className="text-2xl font-semibold text-legacy-neutral-900">
           {food.name}
         </Text>
         {food.brand === null ? null : (
-          <Text className="text-base text-neutral-600">{food.brand}</Text>
+          <Text className="text-base text-legacy-neutral-600">{food.brand}</Text>
         )}
-        <Text className="text-sm text-neutral-500">{`Source: ${foodSourceLabel(source)}`}</Text>
+        <Text className="text-sm text-legacy-neutral-500">{`Source: ${foodSourceLabel(source)}`}</Text>
       </View>
 
       {source === "user" ? (
         <Pressable
           accessibilityRole="button"
           onPress={onEdit}
-          className="h-12 items-center justify-center rounded-lg border border-neutral-300"
+          className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300"
         >
-          <Text className="text-base font-semibold text-neutral-900">Edit</Text>
+          <Text className="text-base font-semibold text-legacy-neutral-900">Edit</Text>
         </Pressable>
       ) : null}
 
       {requiresConfirmation(food) ? (
-        <View className="gap-3 rounded-lg border border-warning-600 bg-warning-50 p-4">
-          <Text accessibilityRole="header" className="text-lg font-semibold text-warning-900">
+        <View className="gap-3 rounded-lg border border-legacy-warning-600 bg-legacy-warning-50 p-4">
+          <Text
+            accessibilityRole="header"
+            className="text-lg font-semibold text-legacy-warning-900"
+          >
             Some values are missing
           </Text>
           {missingFields.length === 0 ? null : (
             <View accessibilityRole="list" accessibilityLabel="Missing values" className="gap-1">
               {missingFields.map((field) => (
-                <Text key={field} className="text-base text-warning-900">
+                <Text key={field} className="text-base text-legacy-warning-900">
                   {describeNutrientField(field)}
                 </Text>
               ))}
             </View>
           )}
-          <Text className="text-base text-warning-900">
+          <Text className="text-base text-legacy-warning-900">
             Fill in the blank fields before you save your own copy of this food.
           </Text>
           <Pressable
             accessibilityRole="button"
             onPress={onReview}
-            className="h-12 items-center justify-center rounded-lg bg-brand-600"
+            className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600"
           >
-            <Text className="text-base font-semibold text-neutral-50">
+            <Text className="text-base font-semibold text-legacy-neutral-50">
               Review and save as my food
             </Text>
           </Pressable>
@@ -78,14 +81,17 @@ export function FoodDetail({ food, portions, onEdit, onReview }: FoodDetailProps
 
       <NutrientTable food={food} />
       {food.quality.carbs_convention === "us_total" ? (
-        <Text className="text-sm text-neutral-600">
+        <Text className="text-sm text-legacy-neutral-600">
           Carbohydrate includes fibre (US labelling convention).
         </Text>
       ) : null}
 
       {portions.length === 0 ? null : (
         <View className="gap-2">
-          <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900">
+          <Text
+            accessibilityRole="header"
+            className="text-lg font-semibold text-legacy-neutral-900"
+          >
             Portions
           </Text>
           <View accessibilityRole="list" accessibilityLabel="Portion sizes">
@@ -94,16 +100,16 @@ export function FoodDetail({ food, portions, onEdit, onReview }: FoodDetailProps
                 key={portion.id}
                 accessible
                 accessibilityLabel={describePortion(portion)}
-                className="min-h-11 flex-row items-center justify-between border-b border-neutral-200"
+                className="min-h-11 flex-row items-center justify-between border-b border-legacy-neutral-200"
               >
-                <Text className="text-base text-neutral-900">{portion.label}</Text>
+                <Text className="text-base text-legacy-neutral-900">{portion.label}</Text>
                 <View className="flex-row items-center gap-2">
                   {portion.is_default ? (
-                    <Text className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-700">
+                    <Text className="rounded-full bg-legacy-neutral-100 px-2 py-0.5 text-xs font-medium text-legacy-neutral-700">
                       Default
                     </Text>
                   ) : null}
-                  <Text className="text-base text-neutral-500">
+                  <Text className="text-base text-legacy-neutral-500">
                     {describePortionAmount(portion)}
                   </Text>
                 </View>
@@ -114,9 +120,13 @@ export function FoodDetail({ food, portions, onEdit, onReview }: FoodDetailProps
       )}
 
       {source === "user" ? null : (
-        <View className="gap-1 border-t border-neutral-200 pt-4">
-          <Text className="text-sm text-neutral-500">{DATA_SOURCE_ATTRIBUTION[source].text}</Text>
-          <Text className="text-sm text-neutral-500">{DATA_SOURCE_ATTRIBUTION[source].url}</Text>
+        <View className="gap-1 border-t border-legacy-neutral-200 pt-4">
+          <Text className="text-sm text-legacy-neutral-500">
+            {DATA_SOURCE_ATTRIBUTION[source].text}
+          </Text>
+          <Text className="text-sm text-legacy-neutral-500">
+            {DATA_SOURCE_ATTRIBUTION[source].url}
+          </Text>
         </View>
       )}
     </ScrollView>

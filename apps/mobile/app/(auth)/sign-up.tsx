@@ -35,8 +35,11 @@ export default function SignUpRoute() {
       onSubmit={signUp}
       footer={
         <>
-          <Text className="text-sm text-neutral-500">Already have an account?</Text>
-          <Link href="/(auth)/sign-in" className="py-3 text-base font-semibold text-brand-600">
+          <Text className="text-sm text-legacy-neutral-500">Already have an account?</Text>
+          <Link
+            href="/(auth)/sign-in"
+            className="py-3 text-base font-semibold text-legacy-brand-600"
+          >
             Sign in
           </Link>
         </>

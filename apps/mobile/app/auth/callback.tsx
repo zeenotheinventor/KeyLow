@@ -70,17 +70,20 @@ export default function AuthCallbackRoute() {
   }, [code, tokenHash, type, router]);
 
   return (
-    <View className="flex-1 items-center justify-center gap-4 bg-neutral-50 px-6">
+    <View className="flex-1 items-center justify-center gap-4 bg-legacy-neutral-50 px-6">
       {errorMessage === null ? (
-        <Text accessibilityLiveRegion="polite" className="text-base text-neutral-500">
+        <Text accessibilityLiveRegion="polite" className="text-base text-legacy-neutral-500">
           Signing you in
         </Text>
       ) : (
         <>
-          <Text accessibilityRole="alert" className="text-base text-danger-600">
+          <Text accessibilityRole="alert" className="text-base text-legacy-danger-600">
             {errorMessage}
           </Text>
-          <Link href="/(auth)/sign-in" className="py-3 text-base font-semibold text-brand-600">
+          <Link
+            href="/(auth)/sign-in"
+            className="py-3 text-base font-semibold text-legacy-brand-600"
+          >
             Back to sign in
           </Link>
         </>

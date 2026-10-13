@@ -1,110 +1,117 @@
 import resolveConfig from "tailwindcss/resolveConfig";
 import { describe, expect, it } from "vitest";
 
-import { colors, fontSize, preset, spacing } from "../src";
-
-const hexOrHslColour =
-  /^(#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})|hsla?\(\s*\d{1,3}(\.\d+)?\s*,\s*\d{1,3}(\.\d+)?%\s*,\s*\d{1,3}(\.\d+)?%(\s*,\s*(0|1|0?\.\d+))?\s*\))$/i;
-
-const scaleSteps = ["50", "100", "200", "300", "400", "500", "600", "700", "800", "900", "950"];
-
-const collectLeaves = (value: unknown): unknown[] =>
-  typeof value === "object" && value !== null
-    ? Object.values(value).flatMap(collectLeaves)
-    : [value];
+import { preset } from "../src";
+import { renderCss } from "./support/renderCss";
 
 describe("preset", () => {
-  it("extends the theme with exactly colors, spacing and fontSize", () => {
-    expect(Object.keys(preset.theme?.extend ?? {}).sort()).toEqual([
-      "colors",
-      "fontSize",
-      "spacing",
-    ]);
+  it("should extend the theme only, so Tailwind's own theme is kept", () => {
+    expect(Object.keys(preset)).toEqual(["theme"]);
+    expect(Object.keys(preset.theme ?? {})).toEqual(["extend"]);
   });
 
-  it("carries the exported colors, spacing and fontSize unchanged", () => {
-    expect(preset.theme?.extend?.colors).toBe(colors);
-    expect(preset.theme?.extend?.spacing).toBe(spacing);
-    expect(preset.theme?.extend?.fontSize).toBe(fontSize);
+  it("should extend exactly the design's scales", () => {
+    expect(Object.keys(preset.theme?.extend ?? {}).sort()).toEqual([
+      "borderRadius",
+      "boxShadow",
+      "colors",
+      "fontFamily",
+      "fontSize",
+      "spacing",
+      "transitionDuration",
+      "transitionTimingFunction",
+    ]);
   });
 });
 
 describe("preset as consumed by Tailwind", () => {
   const resolvedTheme = resolveConfig({ content: [], presets: [preset] }).theme;
+  const valueOf = (scale: object, name: string): unknown =>
+    Object.entries(scale).find(([key]) => key === name)?.[1];
 
-  it("is accepted as a Tailwind preset and resolves into the theme", () => {
-    expect(resolvedTheme.colors).toMatchObject({ brand: colors.brand });
-    expect(resolvedTheme.spacing["4"]).toBe("16px");
-    expect(resolvedTheme.fontSize.base).toEqual(["16px", { lineHeight: "24px" }]);
-  });
-
-  it("keeps Tailwind's own theme values alongside the extension", () => {
+  it("should keep Tailwind's own theme values alongside the extension", () => {
     expect(resolvedTheme.screens.md).toBe("768px");
   });
-});
 
-describe("colors", () => {
-  it("defines neutral, brand, success, warning and danger", () => {
-    expect(Object.keys(colors).sort()).toEqual([
-      "brand",
-      "danger",
-      "neutral",
-      "success",
-      "warning",
+  it("should resolve a solid colour through a theme variable that accepts an opacity", () => {
+    expect(resolvedTheme.colors).toMatchObject({
+      accent: { DEFAULT: "rgb(var(--kl-accent) / <alpha-value>)" },
+    });
+  });
+
+  it("should resolve a translucent colour through its whole variable", () => {
+    expect(resolvedTheme.colors).toMatchObject({
+      accent: { muted: "var(--kl-accent-muted)" },
+    });
+  });
+
+  it("should let an app's own accent colours win key by key, as the web app's shadcn block does", () => {
+    const appTheme = resolveConfig({
+      content: [],
+      presets: [preset],
+      theme: { extend: { colors: { accent: { DEFAULT: "red", foreground: "blue" } } } },
+    }).theme;
+
+    expect(appTheme.colors).toMatchObject({
+      accent: { DEFAULT: "red", foreground: "blue", muted: "var(--kl-accent-muted)" },
+    });
+  });
+
+  it("should resolve the design's spacing, radius, type and shadows", () => {
+    expect(resolvedTheme.spacing["4"]).toBe("16px");
+    expect(valueOf(resolvedTheme.borderRadius, "medium")).toBe("12px");
+    expect(valueOf(resolvedTheme.fontSize, "h1")).toEqual([
+      "28px",
+      { lineHeight: "34px", letterSpacing: "-0.02em", fontWeight: "600" },
     ]);
-  });
-
-  it.each(Object.entries(colors))("gives %s a scale from 50 to 950", (_name, scale) => {
-    expect(Object.keys(scale)).toEqual(scaleSteps);
-  });
-
-  it("uses only hex or HSL strings for every colour value", () => {
-    const leaves = collectLeaves(colors);
-    expect(leaves.length).toBeGreaterThan(0);
-    for (const leaf of leaves) {
-      expect(leaf).toMatch(hexOrHslColour);
-    }
-  });
-
-  it("rejects a colour name that is not hex or HSL", () => {
-    expect("blue").not.toMatch(hexOrHslColour);
+    expect(valueOf(resolvedTheme.boxShadow, "card")).toBe("var(--kl-elevation-card)");
+    expect(valueOf(resolvedTheme.transitionDuration, "quick")).toBe("160ms");
+    expect(valueOf(resolvedTheme.transitionTimingFunction, "whip")).toBe(
+      "cubic-bezier(0.05,0.9,0.15,1)",
+    );
   });
 });
 
-describe("spacing", () => {
-  it("starts at zero and includes the half step", () => {
-    expect(spacing["0"]).toBe("0px");
-    expect(spacing["0.5"]).toBe("2px");
+describe("the classes the design's screens are written with", () => {
+  const classNames = [
+    "bg-surface",
+    "text-text-muted",
+    "border-border",
+    "bg-accent",
+    "bg-accent/20",
+    "bg-accent-muted",
+    "rounded-medium",
+    "text-h1",
+    "shadow-card",
+    "bg-legacy-brand-600",
+  ];
+
+  it.each(classNames)("should generate %s", async (className) => {
+    const css = await renderCss({ presets: [preset] }, [className]);
+
+    expect(css).toContain(`.${className.replace("/", "\\/")}`);
   });
 
-  it("uses a 4px base: every key is a multiple of four pixels", () => {
-    for (const [step, value] of Object.entries(spacing)) {
-      expect(value).toBe(`${Number(step) * 4}px`);
-    }
+  it("should follow the theme and the opacity modifier through the variable", async () => {
+    const css = await renderCss({ presets: [preset] }, ["bg-accent/20", "bg-accent-muted"]);
+
+    expect(css).toContain("background-color: rgb(var(--kl-accent) / 0.2)");
+    expect(css).toContain("background-color: var(--kl-accent-muted)");
   });
 
-  it("ends at 96", () => {
-    expect(spacing["96"]).toBe("384px");
-  });
-});
+  it("should not support an opacity modifier on a translucent colour", async () => {
+    const css = await renderCss({ presets: [preset] }, ["bg-accent-muted/50"]);
 
-describe("fontSize", () => {
-  const sizeNames = ["xs", "sm", "base", "lg", "xl", "2xl", "3xl", "4xl", "5xl"];
-
-  it("defines xs to 5xl in order", () => {
-    expect(Object.keys(fontSize)).toEqual(sizeNames);
+    expect(css).not.toContain("accent-muted");
   });
 
-  it("pairs every size with a pixel line height", () => {
-    for (const [size, { lineHeight }] of Object.values(fontSize)) {
-      expect(size).toMatch(/^\d+px$/);
-      expect(lineHeight).toMatch(/^\d+px$/);
-    }
-  });
+  it("should read the legacy scales as plain colours so the old screens look the same", async () => {
+    const css = await renderCss({ presets: [preset] }, [
+      "bg-legacy-brand-600",
+      "text-legacy-neutral-900",
+    ]);
 
-  it("grows with every step", () => {
-    const pixelSizes = Object.values(fontSize).map(([size]) => parseInt(size, 10));
-    expect(pixelSizes).toEqual([...pixelSizes].sort((a, b) => a - b));
-    expect(new Set(pixelSizes).size).toBe(pixelSizes.length);
+    expect(css).toContain("background-color: rgb(37 99 235");
+    expect(css).toContain("color: rgb(23 23 23");
   });
 });

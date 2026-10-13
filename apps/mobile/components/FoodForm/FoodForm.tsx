@@ -126,7 +126,7 @@ export function FoodForm({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-neutral-50"
+      className="flex-1 bg-legacy-neutral-50"
     >
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-4 px-6 py-6">
         <FormField
@@ -166,11 +166,11 @@ export function FoodForm({
           }}
         />
 
-        <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900">
+        <Text accessibilityRole="header" className="text-lg font-semibold text-legacy-neutral-900">
           {BASIS_HEADINGS[values.basis]}
         </Text>
         {nutrientNote === undefined ? null : (
-          <Text className="text-sm text-neutral-600">{nutrientNote}</Text>
+          <Text className="text-sm text-legacy-neutral-600">{nutrientNote}</Text>
         )}
         {NUTRIENT_FIELDS.map((field) => (
           <FormField
@@ -185,7 +185,7 @@ export function FoodForm({
           />
         ))}
 
-        <Text accessibilityRole="header" className="text-lg font-semibold text-neutral-900">
+        <Text accessibilityRole="header" className="text-lg font-semibold text-legacy-neutral-900">
           Portions
         </Text>
         {values.portions.map((portion, index) => (
@@ -213,25 +213,25 @@ export function FoodForm({
           />
         ))}
         {errors["portions"] === undefined ? null : (
-          <Text accessibilityRole="alert" className="text-sm text-danger-600">
+          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
             {errors["portions"]}
           </Text>
         )}
         <Pressable
           accessibilityRole="button"
           onPress={addPortion}
-          className="h-12 items-center justify-center rounded-lg border border-neutral-300"
+          className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300"
         >
-          <Text className="text-base font-semibold text-neutral-900">Add portion</Text>
+          <Text className="text-base font-semibold text-legacy-neutral-900">Add portion</Text>
         </Pressable>
 
         {errors["form"] === undefined ? null : (
-          <Text accessibilityRole="alert" className="text-sm text-danger-600">
+          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
             {errors["form"]}
           </Text>
         )}
         {submitError === undefined ? null : (
-          <Text accessibilityRole="alert" className="text-sm text-danger-600">
+          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
             {submitError}
           </Text>
         )}
@@ -240,9 +240,9 @@ export function FoodForm({
           accessibilityRole="button"
           disabled={isSubmitting}
           onPress={() => void handleSubmit()}
-          className="h-12 items-center justify-center rounded-lg bg-brand-600 disabled:opacity-50"
+          className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600 disabled:opacity-50"
         >
-          <Text className="text-base font-semibold text-neutral-50">{submitLabel}</Text>
+          <Text className="text-base font-semibold text-legacy-neutral-50">{submitLabel}</Text>
         </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
