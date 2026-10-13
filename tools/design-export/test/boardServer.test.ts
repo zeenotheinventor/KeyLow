@@ -21,7 +21,7 @@ function write(relativePath: string, content: string): void {
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "design-export-server-"));
   write("source/project/Main.dc.html", "<x-dc>board</x-dc>");
-  write("tokens/kilo-tokens.css", ":root{}");
+  write("source/tokens/kilo-tokens.css", ":root{}");
   write("source/brand/mark.svg", "<svg/>");
   write("runtime.js", "window.runtime = true;");
   write("secret.txt", "secret");
@@ -68,9 +68,9 @@ describe("startBoardServer", () => {
     });
   });
 
-  it("should map the blob URL of the token stylesheet to the committed file", async () => {
+  it("should map the blob URL of the canvas token stylesheet to the committed canvas copy", async () => {
     await start();
-    const stylesheet = canvasAssets.find((asset) => asset.file === "tokens/kilo-tokens.css");
+    const stylesheet = canvasAssets.find((asset) => asset.file === "source/tokens/kilo-tokens.css");
     const response = await fetchText(stylesheet?.blob ?? "/missing");
     expect(response).toMatchObject({ status: 200, body: ":root{}" });
     expect(response.type).toContain("text/css");

@@ -1,0 +1,8 @@
+/* ---- Proposed additions (not yet in the Ki-Lo design system; DC-09) ----
+   --accent-ink / --warning-ink: the colour for accent or warning used as TEXT or a thin glyph.
+   Dark keeps the colour; light uses --text-primary, because light lime and amber fail contrast as
+   small text (Q11, Q14: colours unchanged, treatment changed).
+   --camera: the viewfinder backdrop, dark in both themes. */
+:root{--accent-ink:var(--accent);--warning-ink:var(--warning);--camera:#0B0E13;}
+[data-theme="light"]{--accent-ink:var(--text-primary);--warning-ink:var(--text-primary);}
+[data-theme]{background:var(--background);color:var(--text-primary);font-family:var(--font-sans);}

@@ -6,11 +6,12 @@ This is a development tool. Nothing in `apps/*` depends on it, and Playwright is
 
 ## What it does
 
-1. Copies the canvas source byte for byte into `docs/design/source/` (the `*.dc.html` boards, `canvas.json`, the brand SVGs), the token stylesheet into `docs/design/tokens/`, and the design system snapshot into `docs/design/design-system/`.
+1. Copies the canvas source byte for byte into `docs/design/source/` (the `*.dc.html` boards, `canvas.json`, the brand SVGs), the canvas token stylesheet into `docs/design/source/tokens/`, and the design system snapshot into `docs/design/design-system/`.
 2. Starts a local static server that stands in for the canvas host. It serves the boards from `docs/design/source/project/`, maps the three `/_blob/...` URLs the canvas uses to the committed files, and serves the runtime file you give it under the name the boards load (`support.js`).
 3. Opens each board in headless Chromium at the board's size and device pixel ratio 2. It waits until the runtime has rendered every frame and Geist has loaded, then screenshots the whole board and serialises its DOM.
-4. Strips the runtime's traces from the DOM (its `sc-*` classes and template markers), swaps the `/_blob/` URLs for relative paths, and writes a page that links `../tokens/kilo-tokens.css` and Google Fonts and nothing else. It refuses to write a page that contains a script, a `/_blob/` URL, a claude.ai URL, or a request to any other host.
-5. Writes each screen's README. The list of boards between the two marker comments is generated. Everything outside the markers is written by hand and kept.
+4. Strips the runtime's traces from the DOM (its `sc-*` classes and template markers), swaps the `/_blob/` URLs for relative paths, and writes a page that links the `packages/tokens` stylesheet (`../../../packages/tokens/css/kilo-tokens.css`), the proposals stylesheet (`../tokens/kilo-proposals.css`) and Google Fonts and nothing else. It refuses to write a page that contains a script, a `/_blob/` URL, a claude.ai URL, or a request to any other host.
+5. Cuts the marked block of canvas-only proposals from the end of the canvas token file and writes it to `docs/design/tokens/kilo-proposals.css`. The canvas copy of the tokens is only used to render the canvas. No page links it.
+6. Writes each screen's README. The list of boards between the two marker comments is generated. Everything outside the markers is written by hand and kept.
 
 The runtime is third-party code, so the tool reads it from the path you give and never copies it. It is not in this repository and must never be committed.
 
