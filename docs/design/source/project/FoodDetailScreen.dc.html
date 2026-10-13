@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Food detail</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/a1c55461938510f7678509d58bd52ada">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); font-variant-numeric: tabular-nums; background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="SheetHeader (proposed)" style="flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); padding: 56px var(--space-4) var(--space-2)">
+<button data-kilo="Button ghost icon" type="button" aria-label="Back" style="width: var(--touch-target); height: var(--control-height-md); display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; border-radius: var(--radius-medium); color: var(--text-primary)">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>
+</button>
+<span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Food</span>
+<button data-kilo="Button ghost icon" type="button" aria-label="Close" style="width: var(--touch-target); height: var(--control-height-md); display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; border-radius: var(--radius-medium); color: var(--text-primary)">
+<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+</button>
+</header>
+
+<sc-if value="{{isLoading}}" hint-placeholder-val="{{ false }}">
+<div role="status" aria-label="Loading food" style="flex: 1; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) var(--space-4)">
+<div style="width: 80%; height: 24px; border-radius: var(--radius-small); background: var(--skeleton-base)"></div>
+<div style="width: 45%; height: 24px; border-radius: var(--radius-small); background: var(--skeleton-base)"></div>
+<div style="width: 90px; height: 20px; border-radius: var(--radius-pill); background: var(--skeleton-base)"></div>
+<div style="height: 140px; border-radius: var(--radius-large); background: var(--skeleton-base)"></div>
+<div style="height: 236px; border-radius: var(--radius-large); background: var(--skeleton-base)"></div>
+<p style="margin: 0; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Loading food</p>
+</div>
+</sc-if>
+
+<sc-if value="{{isError}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="ErrorState" role="alert" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-8) 96px; text-align: center">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--danger-muted); color: var(--danger)"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+<h1 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Food not loaded</h1>
+<p style="margin: 0; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">The food could not be loaded. Try again later.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{isNotFound}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="EmptyState" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-8) 96px; text-align: center">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--surface-raised); color: var(--text-muted)"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m13.5 8.5-5 5"></path><path d="m8.5 8.5 5 5"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg></span>
+<h1 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Food not found</h1>
+<p style="margin: 0; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">This food does not exist, or you cannot see it.</p>
+</div>
+</sc-if>
+
+<sc-if value="{{hasFood}}" hint-placeholder-val="{{ true }}">
+<div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; justify-content: {{scrollAlign}}">
+<div style="display: flex; flex-direction: column; gap: var(--space-4); padding: 4px 16px {{bottomPad}}">
+
+<div style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">{{f.name}}</h1>
+<div style="display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap">
+<span data-kilo="Badge source" style="height: 20px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface-sheet); border: 1px solid var(--border); color: var(--text-secondary); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking)">{{f.source}}</span>
+<sc-if value="{{f.hasBrand}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">{{f.brand}}</span></sc-if>
+</div>
+</div>
+
+<section data-kilo="MacroHero (proposed)" aria-label="Energy and macros, {{f.basisLabel}}" style="display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: baseline; gap: 6px">
+<sc-if value="{{f.hasKcal}}" hint-placeholder-val="{{ true }}"><span style="font-size: var(--type-display-numeral-size); line-height: var(--type-display-numeral-line); font-weight: var(--type-display-numeral-weight); letter-spacing: var(--type-display-numeral-tracking)">{{f.kcal}}</span><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--text-secondary)">kcal</span></sc-if>
+<sc-if value="{{f.noKcal}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking); color: var(--text-muted)">Energy not given</span></sc-if>
+<span style="margin-left: auto; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">{{f.basisLabel}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2)">
+<sc-for list="{{f.macros}}" as="m" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: var(--space-1); padding: 10px var(--space-3); background: var(--surface-raised); border-radius: var(--radius-medium)">
+<span style="display: flex; align-items: center; gap: 6px; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: {{m.color}}"></span>{{m.label}}</span>
+<sc-if value="{{m.given}}" hint-placeholder-val="{{ true }}">
+<span style="font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking)">{{m.value}}<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)"> g</span></span>
+<sc-if value="{{m.hasShare}}" hint-placeholder-val="{{ true }}"><span data-kilo="Badge source" style="align-self: flex-start; height: 20px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface-sheet); border: 1px solid var(--border); color: var(--text-secondary); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking)">{{m.share}}</span></sc-if>
+</sc-if>
+<sc-if value="{{m.missing}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted)">not given</span></sc-if>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{f.hasShares}}" hint-placeholder-val="{{ true }}"><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Shares of energy are estimates</span></sc-if>
+</section>
+
+<sc-if value="{{f.canEdit}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button secondary" type="button" style="height: var(--control-height-md); display: flex; align-items: center; justify-content: center; gap: var(--space-2); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-primary); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>
+Edit
+</button>
+</sc-if>
+
+<sc-if value="{{f.review}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner review" role="note" style="display: flex; align-items: flex-start; gap: var(--space-3); padding: var(--space-3) var(--space-4); background: var(--warning-muted); border: 1px solid var(--warning); border-radius: var(--radius-medium)">
+<span style="display: flex; padding-top: 2px; color: var(--warning)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking); color: var(--warning-ink)">Needs review</span>
+<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">{{f.reviewBody}}</span>
+<button data-kilo="Button ghost" type="button" style="align-self: flex-start; min-height: var(--touch-target); margin: 0 -8px -10px; padding: 0 var(--space-2); background: transparent; border: 0; font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600; color: var(--warning-ink)">Copy to your foods</button>
+</span>
+</div>
+</sc-if>
+
+<section aria-labelledby="nut-h" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="nut-h" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Nutrition {{f.basisLabel}}</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card); overflow: hidden">
+<sc-for list="{{f.rows}}" as="r" hint-placeholder-count="5">
+<div style="min-height: var(--touch-target); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: 10px var(--space-4); border-top: {{r.divider}}">
+<span style="font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">{{r.label}}</span>
+<span style="font-size: var(--type-body-size); line-height: var(--type-body-line); font-weight: {{r.weight}}; color: {{r.color}}">{{r.value}}</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{f.usNote}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">Carbohydrate includes fibre (US labelling convention).</p></sc-if>
+</section>
+
+<sc-if value="{{f.hasPortions}}" hint-placeholder-val="{{ false }}">
+<section aria-labelledby="por-h" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="por-h" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Portions</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card); overflow: hidden">
+<sc-for list="{{f.portions}}" as="p" hint-placeholder-count="1">
+<div style="min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-4); border-top: {{p.divider}}">
+<span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">{{p.label}}</span>
+<sc-if value="{{p.isDefault}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge status" style="height: 20px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 var(--space-2); border-radius: var(--radius-pill); background: var(--surface-sheet); border: 1px solid transparent; color: var(--text-secondary); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking)">Default</span></sc-if>
+<span style="margin-left: auto; font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking)">{{p.amount}}<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)"> {{p.unit}}</span></span>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{f.hasCredit}}" hint-placeholder-val="{{ true }}">
+<footer style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-1) 0; border-top: 1px solid var(--border)">
+<p style="margin: 0; font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary)">{{f.credit}}</p>
+<a href="{{f.creditUrl}}" style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-secondary); text-decoration: underline; word-break: break-all">{{f.creditUrl}}</a>
+</footer>
+</sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{isProposal}}" hint-placeholder-val="{{ false }}">
+<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3) var(--space-4) 34px; background: var(--surface-sheet); border-top: 1px solid var(--border); border-radius: var(--radius-large) var(--radius-large) 0 0; box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: center; gap: var(--space-2)">
+<div style="flex: 1; height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--space-4); background: var(--surface-raised); border: 1px solid var(--accent); border-radius: var(--radius-medium)">
+<span style="font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking)">1</span>
+<span style="font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted)">serving (40 g)</span>
+</div>
+<span style="font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking); min-width: 64px; text-align: right">152<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)"> kcal</span></span>
+</div>
+<div style="display: flex; gap: var(--space-2)">
+<span data-kilo="Badge status" style="height: 32px; display: inline-flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--text-primary); color: var(--background); font-size: 14px; line-height: 20px; font-weight: 600">serving</span>
+<span data-kilo="Badge source" style="height: 32px; display: inline-flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">g</span>
+<span data-kilo="Badge source" style="height: 32px; display: inline-flex; align-items: center; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-secondary); font-size: 14px; line-height: 20px; font-weight: 600">oz</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px">
+<sc-for list="{{keys}}" as="k" hint-placeholder-count="12">
+<span style="height: var(--control-height-md); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--surface-raised); font-size: var(--type-numeral-small-size); line-height: var(--type-numeral-small-line); font-weight: var(--type-numeral-small-weight); letter-spacing: var(--type-numeral-small-tracking)">{{k}}</span>
+</sc-for>
+</div>
+<button data-kilo="Button primary" type="button" style="height: var(--control-height-lg); display: flex; align-items: center; justify-content: center; background: var(--accent); border: 0; border-radius: var(--radius-medium); color: var(--accent-foreground); font-family: var(--font-sans); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Add</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["loading","error","not-found","cofid","off-product","off-drink","own-food","missing-values-off","missing-values-cofid","missing-values-us-carbs","cofid-scrolled","quantity-proposal-m3"],"default":"cofid"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet (kilo-tokens.css); data-theme picks dark or light.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const s = this.props.screenState ?? 'cofid';
+
+    const g = (x) => (x < 10 ? String(Math.round(x * 10) / 10) : String(Math.round(x)));
+    const CREDITS = {
+      cofid: {
+        text: "Contains public sector information licensed under the Open Government Licence v3.0. Source: McCance and Widdowson's The Composition of Foods Integrated Dataset, Public Health England and the Office for Health Improvement and Disparities.",
+        url: 'https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid'
+      },
+      off: { text: 'Data from Open Food Facts, available under the Open Database Licence.', url: 'https://world.openfoodfacts.org' }
+    };
+    const SOURCE = { cofid: 'UK CoFID', off: 'Open Food Facts', user: 'Yours' };
+
+    // CoFID values match seed 10_cofid_subset.sql. Open Food Facts products, "Honey Oat Rings" and
+    // "Chicken breast, meal prep" are the brief's sample data (some illustrative).
+    const FOODS = {
+      chicken: { name: 'Chicken, breast, grilled without skin, meat only', brand: null, src: 'cofid', ml: false, kcal: 148, p: 32, c: 0, f: 2.2, fib: 0, portions: [] },
+      porridge: { name: 'Porridge oats, unfortified', brand: null, src: 'cofid', ml: false, kcal: 381, p: 11, c: 71, f: 8.1, fib: 7.8, portions: [] },
+      stock: { name: 'Stock cubes, vegetable', brand: null, src: 'cofid', ml: false, kcal: null, p: 13.5, c: null, f: 17.3, fib: 1.8, portions: [], missing: 'Energy and carbohydrate are not given. Fill them in to save your own copy of this food.' },
+      crunch: { name: 'Test Oat Crunch', brand: 'Northfield Mills', src: 'off', ml: false, kcal: 380, p: 9.5, c: 62, f: 7.5, fib: 8, portions: [{ label: '40 g', amount: '40', unit: 'g', def: true }] },
+      drink: { name: 'Sparkling Apple Drink', brand: 'Orchard Lane', src: 'off', ml: true, kcal: 42, p: 0.5, c: 10, f: 0.1, fib: 0.2, portions: [{ label: '250 ml', amount: '250', unit: 'ml', def: true }] },
+      spread: { name: 'Mystery Spread', brand: 'Northfield Mills', src: 'off', ml: false, kcal: 200, p: null, c: 20, f: 10, fib: 2, portions: [], missing: 'Protein is not given. Fill it in to save your own copy of this food.' },
+      rings: { name: 'Honey Oat Rings', brand: 'Northfield Mills', src: 'off', ml: false, kcal: 375, p: 8, c: 80, f: 4.5, fib: null, portions: [], missing: 'Fibre is not given, so carbohydrate still includes it. Fill it in to save your own copy of this food.', us: true },
+      prep: { name: 'Chicken breast, meal prep', brand: null, src: 'user', ml: false, kcal: 165, p: 31, c: 0, f: 3.6, fib: null, portions: [{ label: '1 breast', amount: '150', unit: 'g', def: true }, { label: 'Half breast', amount: '75', unit: 'g', def: false }], own: true }
+    };
+    const pick = {
+      cofid: 'chicken', 'off-product': 'crunch', 'off-drink': 'drink', 'own-food': 'prep',
+      'missing-values-off': 'spread', 'missing-values-cofid': 'stock', 'missing-values-us-carbs': 'rings',
+      'cofid-scrolled': 'porridge', 'quantity-proposal-m3': 'crunch'
+    }[s];
+    const x = pick ? FOODS[pick] : null;
+
+    let f = null;
+    if (x) {
+      const share = (grams, perG) => (x.kcal && grams !== null ? Math.round((grams * perG * 100) / x.kcal) + ' %' : '');
+      const macro = (label, val, color, perG) => ({
+        label, color, given: val !== null, missing: val === null,
+        value: val === null ? '' : g(val), share: share(val, perG), hasShare: !!x.kcal && val !== null
+      });
+      const unit = x.ml ? 'per 100 ml' : 'per 100 g';
+      const nRow = (label, v, suffix, i) => ({
+        label, value: v === null ? 'not given' : v + suffix,
+        color: v === null ? 'var(--text-muted)' : 'var(--text-primary)',
+        weight: v === null ? 400 : 600,
+        divider: i === 0 ? '0' : '1px solid var(--border)'
+      });
+      f = {
+        name: x.name, brand: x.brand ?? '', hasBrand: !!x.brand, source: SOURCE[x.src],
+        basisLabel: unit,
+        hasKcal: x.kcal !== null, noKcal: x.kcal === null,
+        kcal: x.kcal === null ? '' : Math.round(x.kcal).toLocaleString('en-GB'),
+        macros: [macro('Protein', x.p, 'var(--protein)', 4), macro('Carbs', x.c, 'var(--carbs)', 4), macro('Fat', x.f, 'var(--fat)', 9)],
+        hasShares: x.kcal !== null,
+        rows: [
+          nRow('Energy', x.kcal === null ? null : Math.round(x.kcal).toLocaleString('en-GB'), ' kcal', 0),
+          nRow('Protein', x.p === null ? null : g(x.p), ' g', 1),
+          nRow('Carbohydrate', x.c === null ? null : g(x.c), ' g', 2),
+          nRow('Fat', x.f === null ? null : g(x.f), ' g', 3),
+          nRow('Fibre', x.fib === null ? null : g(x.fib), ' g', 4)
+        ],
+        usNote: !!x.us,
+        canEdit: !!x.own,
+        review: !!x.missing, reviewBody: x.missing ?? '',
+        hasPortions: x.portions.length > 0,
+        portions: x.portions.map((p, i) => ({ label: p.label, amount: p.amount, unit: p.unit, isDefault: p.def, divider: i === 0 ? '0' : '1px solid var(--border)' })),
+        hasCredit: x.src !== 'user',
+        credit: x.src === 'user' ? '' : CREDITS[x.src].text,
+        creditUrl: x.src === 'user' ? '' : CREDITS[x.src].url
+      };
+    }
+    const proposal = s === 'quantity-proposal-m3';
+    return {
+      theme,
+      isLoading: s === 'loading', isError: s === 'error', isNotFound: s === 'not-found',
+      hasFood: !!f, f: f ?? { macros: [], rows: [], portions: [] },
+      scrollAlign: s === 'cofid-scrolled' ? 'flex-end' : 'flex-start',
+      bottomPad: proposal ? '16px' : '34px',
+      isProposal: proposal,
+      keys: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', '⌫']
+    };
+  }
+}
+</script>
+</body>
+</html>

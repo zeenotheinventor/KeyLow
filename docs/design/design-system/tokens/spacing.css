@@ -1,0 +1,41 @@
+/* 4 pt base. Radius, elevation, icon sizes, touch targets, focus ring. */
+:root{
+--space-1:4px;
+--space-2:8px;
+--space-3:12px;
+--space-4:16px;
+--space-5:20px;
+--space-6:24px;
+--space-8:32px;
+--space-10:40px;
+--space-12:48px;
+--space-16:64px;
+--radius-small:6px;
+--radius-medium:12px;
+--radius-large:20px;
+--radius-pill:999px;
+--elevation-card:inset 0 1px 0 0 rgba(255,255,255,0.03),0 6px 20px -4px rgba(0,0,0,0.45);
+--elevation-sheet:inset 0 1px 0 0 rgba(255,255,255,0.05),0 -16px 48px -8px rgba(0,0,0,0.6);
+--elevation-toast:0 12px 32px -8px rgba(0,0,0,0.6);
+--icon-sm:16px;
+--icon-md:20px;
+--icon-lg:24px;
+--icon-xl:32px;
+--icon-stroke:1.75;/* @kind other */
+--touch-target:44px;
+--control-height-sm:36px;
+--control-height-md:44px;
+--control-height-lg:52px;
+--focus-ring-width:2px;
+--focus-ring-offset-width:2px;
+--tab-bar-height:49px;
+--sheet-handle-width:36px;
+--sheet-handle-height:4px;
+--safe-area-top:env(safe-area-inset-top,0px);
+--safe-area-bottom:env(safe-area-inset-bottom,0px);
+}
+[data-theme="light"]{
+--elevation-card:0 1px 2px rgba(15,19,26,0.06),0 6px 20px -6px rgba(15,19,26,0.12);
+--elevation-sheet:0 -8px 32px -8px rgba(15,19,26,0.22);
+--elevation-toast:0 12px 32px -8px rgba(15,19,26,0.25);
+}

@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Tab shell</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/a1c55461938510f7678509d58bd52ada">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+
+<sc-if value="{{splash}}" hint-placeholder-val="{{ false }}">
+<div role="img" aria-label="Ki-Lo" style="flex: 1; display: flex; align-items: center; justify-content: center">
+<img src="{{markUrl}}" alt="" style="width: 112px; height: 112px">
+</div>
+</sc-if>
+
+<sc-if value="{{shell}}" hint-placeholder-val="{{ true }}">
+<header style="flex-shrink: 0; padding: 56px var(--space-4) var(--space-3)">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">{{title}}</h1>
+</header>
+
+<sc-if value="{{placeholder}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="EmptyState" style="flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-8) var(--space-12); text-align: center">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--surface-raised); color: var(--text-muted)">
+<sc-if value="{{isDashboard}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg></sc-if>
+<sc-if value="{{isDiary}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg></sc-if>
+<sc-if value="{{isRecipes}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"></path><path d="M6 17h12"></path></svg></sc-if>
+</span>
+<h2 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Coming soon</h2>
+<p style="margin: 0; max-width: 300px; font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-secondary)">{{body}}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{isMore}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-1) var(--space-4) var(--space-4)">
+
+<section aria-labelledby="g-food" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="g-food" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Food</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card); overflow: hidden">
+<button data-kilo="ListRow" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"></path><path d="M10 2c1 .5 2 2 2 5"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Your foods</span><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Foods you created or copied</span></span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</section>
+
+<section aria-labelledby="g-body" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="g-body" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Body</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card); overflow: hidden">
+<div data-kilo="ListRow" aria-disabled="true" style="min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); opacity: 0.5">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg></span>
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Weight</span><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: var(--type-caption-tracking); color: var(--text-muted)">Coming soon</span></span>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="g-settings" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="g-settings" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Settings</h2>
+<div data-kilo="Card" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: center; gap: var(--space-3)">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a2.83 2.83 0 0 0 4 4 4 4 0 1 1-4-4"></path><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.9 4.9 1.4 1.4"></path><path d="m17.7 17.7 1.4 1.4"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.3 17.7-1.4 1.4"></path><path d="m19.1 4.9-1.4 1.4"></path></svg></span>
+<span id="appearance-label" style="font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Appearance</span>
+</div>
+<div data-kilo="SegmentedControl" role="radiogroup" aria-labelledby="appearance-label" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); height: var(--control-height-md); box-sizing: border-box; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<sc-for list="{{appearance}}" as="o" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{o.on}}" style="border: 0; border-radius: calc(var(--radius-medium) - 3px); background: {{o.bg}}; color: {{o.fg}}; font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600">{{o.label}}</button>
+</sc-for>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="g-account" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="g-account" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Account</h2>
+<div data-kilo="Card" style="background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card); overflow: hidden">
+<button data-kilo="ListRow" type="button" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg></span>
+<span style="flex: 1; font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: var(--type-body-strong-weight); letter-spacing: var(--type-body-strong-tracking)">Sign out</span>
+</button>
+</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{searchBar}}" hint-placeholder-val="{{ true }}">
+<div style="flex-shrink: 0; padding: var(--space-2) var(--space-4)">
+<div data-kilo="SearchLauncher (proposed: SearchField used as a button)" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 0; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); box-shadow: var(--elevation-card)">
+<button data-kilo="Button ghost" type="button" style="flex: 1; height: 42px; display: flex; align-items: center; gap: var(--space-2); padding: 0 0 0 var(--space-4); background: transparent; border: 0; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); color: var(--text-muted); text-align: left">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button>
+<button data-kilo="Button ghost icon" type="button" aria-label="Scan barcode" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; border-radius: var(--radius-small); color: var(--text-primary)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg>
+</button>
+</div>
+</div>
+</sc-if>
+
+<nav data-kilo="TabBar (5 slots with centre +, proposed change)" aria-label="Main" style="flex-shrink: 0; position: relative; height: 83px; box-sizing: border-box; padding-bottom: 34px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border)">
+<span aria-hidden="true" style="position: absolute; top: -1px; left: {{underlineLeft}}; width: 20%; height: 2px; display: flex; justify-content: center"><span style="width: 28px; height: 2px; border-radius: 1px; background: var(--accent); transform: skewX(-20deg)"></span></span>
+<a href="#dashboard" aria-current="{{tabs.dashboard.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: {{tabs.dashboard.color}}; font-size: 10px; line-height: 12px; font-weight: {{tabs.dashboard.weight}}">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>
+Dashboard
+</a>
+<a href="#diary" aria-current="{{tabs.diary.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: {{tabs.diary.color}}; font-size: 10px; line-height: 12px; font-weight: {{tabs.diary.weight}}">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>
+Diary
+</a>
+<div style="display: flex; align-items: center; justify-content: center">
+<button data-kilo="Button primary" type="button" aria-label="Find food" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--accent); border: 0; border-radius: var(--radius-pill); color: var(--accent-foreground); box-shadow: var(--elevation-card)">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>
+</button>
+</div>
+<a href="#recipes" aria-current="{{tabs.recipes.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: {{tabs.recipes.color}}; font-size: 10px; line-height: 12px; font-weight: {{tabs.recipes.weight}}">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"></path><path d="M6 17h12"></path></svg>
+Recipes
+</a>
+<a href="#more" aria-current="{{tabs.more.current}}" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: {{tabs.more.color}}; font-size: 10px; line-height: 12px; font-weight: {{tabs.more.weight}}">
+<svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+More
+</a>
+</nav>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screen":{"editor":"enum","options":["dashboard","diary","recipes","more","session-loading"],"default":"dashboard"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Colours, type, spacing and radius come from the Ki-Lo token stylesheet (kilo-tokens.css); data-theme picks dark or light.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const screen = this.props.screen ?? 'dashboard';
+    const slot = { dashboard: 0, diary: 1, recipes: 3, more: 4 };
+    const tab = (key) => {
+      const on = key === screen;
+      return { current: on ? 'page' : 'false', color: on ? 'var(--accent-ink)' : 'var(--text-muted)', weight: on ? 600 : 500 };
+    };
+    const appearance = ['Dark', 'Light', 'Match device'].map((label) => {
+      const on = label.toLowerCase() === theme;
+      return { label, on: on ? 'true' : 'false', bg: on ? 'var(--text-primary)' : 'transparent', fg: on ? 'var(--background)' : 'var(--text-secondary)' };
+    });
+    const bodies = {
+      dashboard: 'Your weekly nutrition, weight trend and expenditure will appear here.',
+      diary: 'Your logged foods will appear here, day by day.',
+      recipes: 'Your recipes will appear here.'
+    };
+    const titles = { dashboard: 'Dashboard', diary: 'Diary', recipes: 'Recipes', more: 'More' };
+    return {
+      theme,
+      splash: screen === 'session-loading',
+      shell: screen !== 'session-loading',
+      markUrl: theme === 'light' ? '/_blob/d2f75bf70c7629f797c5d7f941462d40' : '/_blob/2813d66c30ea89aefd67a23cc03508e1',
+      title: titles[screen] ?? '',
+      placeholder: ['dashboard', 'diary', 'recipes'].includes(screen),
+      isDashboard: screen === 'dashboard',
+      isDiary: screen === 'diary',
+      isRecipes: screen === 'recipes',
+      isMore: screen === 'more',
+      body: bodies[screen] ?? '',
+      searchBar: screen === 'dashboard' || screen === 'diary',
+      appearance,
+      underlineLeft: (slot[screen] ?? 0) * 20 + '%',
+      tabs: { dashboard: tab('dashboard'), diary: tab('diary'), recipes: tab('recipes'), more: tab('more') }
+    };
+  }
+}
+</script>
+</body>
+</html>

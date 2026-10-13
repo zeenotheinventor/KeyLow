@@ -1,0 +1,46 @@
+/* Motion and haptic tokens. Attack, short overshoot, fast settle. Nothing floats. Reduce-motion collapses movement to fades. */
+:root{
+--duration-instant:90ms;/* @kind other */
+--duration-quick:160ms;/* @kind other */
+--duration-standard:220ms;/* @kind other */
+--duration-flourish:400ms;/* @kind other */
+--duration-chart:600ms;/* @kind other */
+--stagger:36ms;/* @kind other */
+--ease-enter:cubic-bezier(0.18,1.25,0.3,1);/* @kind other */
+--ease-exit:cubic-bezier(0.6,0,0.9,0.2);/* @kind other */
+--ease-spring:cubic-bezier(0.3,1.45,0.5,1);/* @kind other */
+--ease-whip:cubic-bezier(0.05,0.9,0.15,1);/* @kind other */
+--motion-distance:1;/* @kind other */
+--motion-skew:1;/* @kind other */
+--press-scale:0.96;/* @kind other */
+--skeleton-delay:200ms;/* @kind other */
+--haptic-select:light;/* @kind other */
+--haptic-confirm:medium;/* @kind other */
+--haptic-complete:heavy-double;/* @kind other */
+--haptic-warning:notification-warning;/* @kind other */
+--haptic-error:notification-error;/* @kind other */
+}
+@media (prefers-reduced-motion:reduce){:root{--motion-distance:0;/* @kind other */--motion-skew:0;/* @kind other */--press-scale:1;/* @kind other */--ease-enter:ease-out;/* @kind other */--ease-spring:ease-out;/* @kind other */--ease-whip:ease-out;/* @kind other */}}
+/* panels, list rows, banners: cut in from the side, slightly skewed, straighten on settle */
+@keyframes kl-cut-in{from{opacity:0;transform:translateX(calc(28px * var(--motion-distance))) skewX(calc(-8deg * var(--motion-skew)))}65%{opacity:1;transform:translateX(calc(-3px * var(--motion-distance))) skewX(calc(2deg * var(--motion-skew)))}to{opacity:1;transform:translateX(0) skewX(0)}}
+@keyframes kl-cut-out{from{opacity:1;transform:translateX(0) skewX(0)}to{opacity:0;transform:translateX(calc(-24px * var(--motion-distance))) skewX(calc(6deg * var(--motion-skew)))}}
+/* toast: cuts in from the edge at an angle */
+@keyframes kl-toast-in{from{opacity:0;transform:translate(calc(40px * var(--motion-distance)),calc(12px * var(--motion-distance))) skewX(calc(-12deg * var(--motion-skew)))}60%{opacity:1;transform:translate(calc(-4px * var(--motion-distance)),0) skewX(calc(3deg * var(--motion-skew)))}to{opacity:1;transform:none}}
+/* bottom sheet: slams up, overshoots a touch, settles */
+@keyframes kl-sheet-up{from{opacity:0;transform:translateY(calc(100% * var(--motion-distance)))}70%{opacity:1;transform:translateY(calc(-6px * var(--motion-distance)))}to{opacity:1;transform:translateY(0)}}
+@keyframes kl-sheet-down{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(calc(100% * var(--motion-distance)))}}
+@keyframes kl-dim-in{from{opacity:0}to{opacity:1}}
+/* screen and tab transitions: an angled wipe reveals the next view */
+@keyframes kl-wipe-in{from{opacity:0;clip-path:polygon(0 0,0 0,calc(-30% * var(--motion-distance)) 100%,calc(-30% * var(--motion-distance)) 100%)}1%{opacity:1}to{opacity:1;clip-path:polygon(0 0,130% 0,100% 100%,-30% 100%)}}
+/* confirmation flourish: diagonal accent slash across the card, text punches in */
+@keyframes kl-slash{from{opacity:0.9;transform:translateX(-140%) skewX(-22deg)}to{opacity:0;transform:translateX(240%) skewX(-22deg)}}
+@keyframes kl-punch{from{opacity:0;transform:scale(calc(1 + 0.14 * var(--motion-distance)))}55%{opacity:1;transform:scale(calc(1 - 0.03 * var(--motion-distance)))}to{opacity:1;transform:scale(1)}}
+/* hero numeral: flash of accent on arrival (animates back to the element's own colour) */
+@keyframes kl-flash{from{color:var(--accent)}}
+/* segmented highlight: skew during slide, straighten on settle */
+@keyframes kl-skew-settle{from{transform:skewX(calc(-10deg * var(--motion-skew)))}to{transform:skewX(0)}}
+@keyframes kl-shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes kl-spin{to{transform:rotate(360deg)}}
+@keyframes kl-fade-in{from{opacity:0}to{opacity:1}}
+/* chart trend line draws in (pathLength="1", stroke-dasharray 1) */
+@keyframes kl-draw{to{stroke-dashoffset:0}}

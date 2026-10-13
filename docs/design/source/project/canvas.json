@@ -1,0 +1,1098 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-13T14:20:00Z"
+  },
+  "title": "Ki-Lo M2 screens",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · idle"
+    },
+    "food-search.loading.dc.html": {
+      "x": 900,
+      "y": 0,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · loading"
+    },
+    "food-search.results-local.dc.html": {
+      "x": 1800,
+      "y": 0,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · results-local"
+    },
+    "food-search.refining.dc.html": {
+      "x": 2700,
+      "y": 0,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · refining"
+    },
+    "food-search.loading-off.dc.html": {
+      "x": 0,
+      "y": 964,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · loading-off"
+    },
+    "food-search.results-with-off.dc.html": {
+      "x": 900,
+      "y": 964,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · results-with-off"
+    },
+    "food-search.adding-product.dc.html": {
+      "x": 1800,
+      "y": 964,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · adding-product"
+    },
+    "food-search.add-product-error.dc.html": {
+      "x": 2700,
+      "y": 964,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · add-product-error"
+    },
+    "food-search.off-error.dc.html": {
+      "x": 0,
+      "y": 1928,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · off-error"
+    },
+    "food-search.empty.dc.html": {
+      "x": 900,
+      "y": 1928,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · empty"
+    },
+    "food-search.empty-off-error.dc.html": {
+      "x": 1800,
+      "y": 1928,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · empty-off-error"
+    },
+    "food-search.local-error.dc.html": {
+      "x": 2700,
+      "y": 1928,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · local-error"
+    },
+    "FoodSearchScreen.dc.html": {
+      "x": 3600,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Component · Find food sheet (state and theme tweaks)"
+    },
+    "food-search.history-proposal.dc.html": {
+      "x": 0,
+      "y": 2892,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · history-proposal (MacroFactor pattern, needs logging: M3)"
+    },
+    "tab-shell.dashboard.dc.html": {
+      "x": 0,
+      "y": 4200,
+      "w": 820,
+      "h": 844,
+      "title": "tab-shell · dashboard"
+    },
+    "tab-shell.diary.dc.html": {
+      "x": 900,
+      "y": 4200,
+      "w": 820,
+      "h": 844,
+      "title": "tab-shell · diary"
+    },
+    "tab-shell.more.dc.html": {
+      "x": 2700,
+      "y": 4200,
+      "w": 820,
+      "h": 844,
+      "title": "tab-shell · more"
+    },
+    "tab-shell.session-loading.dc.html": {
+      "x": 0,
+      "y": 5164,
+      "w": 820,
+      "h": 844,
+      "title": "tab-shell · session-loading"
+    },
+    "TabShellScreen.dc.html": {
+      "x": 3600,
+      "y": 4200,
+      "w": 390,
+      "h": 844,
+      "title": "Component · Tab shell (screen and theme tweaks)"
+    },
+    "tab-shell.recipes.dc.html": {
+      "x": 1800,
+      "y": 4200,
+      "w": 820,
+      "h": 844,
+      "title": "tab-shell · recipes (placeholder, to design together)"
+    },
+    "food-detail.loading.dc.html": {
+      "x": 0,
+      "y": 6550,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · loading"
+    },
+    "food-detail.error.dc.html": {
+      "x": 900,
+      "y": 6550,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · error"
+    },
+    "food-detail.not-found.dc.html": {
+      "x": 1800,
+      "y": 6550,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · not-found"
+    },
+    "food-detail.cofid.dc.html": {
+      "x": 2700,
+      "y": 6550,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · cofid"
+    },
+    "food-detail.off-product.dc.html": {
+      "x": 0,
+      "y": 7514,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · off-product"
+    },
+    "food-detail.off-drink.dc.html": {
+      "x": 900,
+      "y": 7514,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · off-drink"
+    },
+    "food-detail.own-food.dc.html": {
+      "x": 1800,
+      "y": 7514,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · own-food"
+    },
+    "food-detail.missing-values-off.dc.html": {
+      "x": 2700,
+      "y": 7514,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · missing-values-off"
+    },
+    "food-detail.missing-values-cofid.dc.html": {
+      "x": 0,
+      "y": 8478,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · missing-values-cofid"
+    },
+    "food-detail.missing-values-us-carbs.dc.html": {
+      "x": 900,
+      "y": 8478,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · missing-values-us-carbs"
+    },
+    "food-detail.cofid-scrolled.dc.html": {
+      "x": 1800,
+      "y": 8478,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · cofid-scrolled"
+    },
+    "food-detail.quantity-proposal-m3.dc.html": {
+      "x": 2700,
+      "y": 8478,
+      "w": 820,
+      "h": 844,
+      "title": "food-detail · quantity-proposal-m3 (MacroFactor pattern, needs logging: M3)"
+    },
+    "FoodDetailScreen.dc.html": {
+      "x": 3600,
+      "y": 6550,
+      "w": 390,
+      "h": 844,
+      "title": "Component · Food detail (state and theme tweaks)"
+    },
+    "food-form.new-empty.dc.html": {
+      "x": 0,
+      "y": 9742,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · new-empty"
+    },
+    "food-form.new-filled.dc.html": {
+      "x": 900,
+      "y": 9742,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · new-filled"
+    },
+    "food-form.new-per-100ml.dc.html": {
+      "x": 1800,
+      "y": 9742,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · new-per-100ml"
+    },
+    "food-form.new-from-scan.dc.html": {
+      "x": 2700,
+      "y": 9742,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · new-from-scan"
+    },
+    "food-form.validation-errors.dc.html": {
+      "x": 0,
+      "y": 10706,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · validation-errors"
+    },
+    "food-form.saving.dc.html": {
+      "x": 900,
+      "y": 10706,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · saving"
+    },
+    "food-form.save-error.dc.html": {
+      "x": 1800,
+      "y": 10706,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · save-error"
+    },
+    "food-form.save-partial.dc.html": {
+      "x": 2700,
+      "y": 10706,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · save-partial"
+    },
+    "food-form.copy-off.dc.html": {
+      "x": 0,
+      "y": 11670,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · copy-off"
+    },
+    "food-form.copy-off-error.dc.html": {
+      "x": 900,
+      "y": 11670,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · copy-off-error"
+    },
+    "food-form.copy-cofid.dc.html": {
+      "x": 1800,
+      "y": 11670,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · copy-cofid"
+    },
+    "food-form.copy-us-carbs.dc.html": {
+      "x": 2700,
+      "y": 11670,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · copy-us-carbs"
+    },
+    "food-form.edit.dc.html": {
+      "x": 0,
+      "y": 12634,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · edit"
+    },
+    "food-form.edit-shared.dc.html": {
+      "x": 900,
+      "y": 12634,
+      "w": 820,
+      "h": 844,
+      "title": "food-form · edit-shared"
+    },
+    "FoodFormScreen.dc.html": {
+      "x": 3600,
+      "y": 9742,
+      "w": 390,
+      "h": 844,
+      "title": "Component · Food form (state and theme tweaks)"
+    },
+    "food-search.your-foods.dc.html": {
+      "x": 900,
+      "y": 2892,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · your-foods (opened from More)"
+    },
+    "food-search.your-foods-empty.dc.html": {
+      "x": 1800,
+      "y": 2892,
+      "w": 820,
+      "h": 844,
+      "title": "food-search · your-foods-empty (opened from More)"
+    },
+    "barcode-scan.permission-ask.dc.html": {
+      "x": 0,
+      "y": 13900,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · permission-ask"
+    },
+    "barcode-scan.permission-denied.dc.html": {
+      "x": 900,
+      "y": 13900,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · permission-denied"
+    },
+    "barcode-scan.scanning.dc.html": {
+      "x": 1800,
+      "y": 13900,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · scanning"
+    },
+    "barcode-scan.looking-up.dc.html": {
+      "x": 2700,
+      "y": 13900,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · looking-up"
+    },
+    "barcode-scan.opening-food.dc.html": {
+      "x": 0,
+      "y": 14864,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · opening-food"
+    },
+    "barcode-scan.not-found.dc.html": {
+      "x": 900,
+      "y": 14864,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · not-found"
+    },
+    "barcode-scan.invalid.dc.html": {
+      "x": 1800,
+      "y": 14864,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · invalid"
+    },
+    "barcode-scan.rate-limited.dc.html": {
+      "x": 2700,
+      "y": 14864,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · rate-limited"
+    },
+    "barcode-scan.failed.dc.html": {
+      "x": 0,
+      "y": 15828,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · failed"
+    },
+    "barcode-scan.label-scan-proposal-m3.dc.html": {
+      "x": 900,
+      "y": 15828,
+      "w": 820,
+      "h": 844,
+      "title": "barcode-scan · label-scan-proposal-m3 (MacroFactor pattern, needs OCR: M3)"
+    },
+    "BarcodeScanScreen.dc.html": {
+      "x": 3600,
+      "y": 13900,
+      "w": 390,
+      "h": 844,
+      "title": "Component · Barcode scan (state and theme tweaks)"
+    },
+    "auth.sign-in.dc.html": {
+      "x": 0,
+      "y": 17100,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-in"
+    },
+    "auth.sign-in-field-errors.dc.html": {
+      "x": 900,
+      "y": 17100,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-in-field-errors"
+    },
+    "auth.sign-in-submitting.dc.html": {
+      "x": 1800,
+      "y": 17100,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-in-submitting"
+    },
+    "auth.sign-in-error.dc.html": {
+      "x": 2700,
+      "y": 17100,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-in-error"
+    },
+    "auth.sign-up.dc.html": {
+      "x": 0,
+      "y": 18064,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-up"
+    },
+    "auth.sign-up-field-errors.dc.html": {
+      "x": 900,
+      "y": 18064,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-up-field-errors"
+    },
+    "auth.sign-up-check-email.dc.html": {
+      "x": 1800,
+      "y": 18064,
+      "w": 820,
+      "h": 844,
+      "title": "auth · sign-up-check-email"
+    },
+    "auth.signing-in-link.dc.html": {
+      "x": 2700,
+      "y": 18064,
+      "w": 820,
+      "h": 844,
+      "title": "auth · signing-in-link"
+    },
+    "auth.signing-in-link-error.dc.html": {
+      "x": 0,
+      "y": 19028,
+      "w": 820,
+      "h": 844,
+      "title": "auth · signing-in-link-error"
+    },
+    "AuthScreen.dc.html": {
+      "x": 3600,
+      "y": 17100,
+      "w": 390,
+      "h": 844,
+      "title": "Component · Sign in and sign up (state and theme tweaks)"
+    },
+    "web.login-default.dc.html": {
+      "x": 0,
+      "y": 20292,
+      "w": 3430,
+      "h": 812,
+      "title": "web · login-default · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.login-field-errors.dc.html": {
+      "x": 0,
+      "y": 21224,
+      "w": 3430,
+      "h": 812,
+      "title": "web · login-field-errors · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.login-pending.dc.html": {
+      "x": 0,
+      "y": 22156,
+      "w": 3430,
+      "h": 812,
+      "title": "web · login-pending · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.login-server-error.dc.html": {
+      "x": 0,
+      "y": 23088,
+      "w": 3430,
+      "h": 812,
+      "title": "web · login-server-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.login-link-error.dc.html": {
+      "x": 0,
+      "y": 24020,
+      "w": 3430,
+      "h": 812,
+      "title": "web · login-link-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.login-check-email.dc.html": {
+      "x": 0,
+      "y": 24952,
+      "w": 3430,
+      "h": 812,
+      "title": "web · login-check-email · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.shell-dashboard.dc.html": {
+      "x": 0,
+      "y": 25884,
+      "w": 3430,
+      "h": 812,
+      "title": "web · shell-dashboard · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.shell-diary.dc.html": {
+      "x": 0,
+      "y": 26816,
+      "w": 3430,
+      "h": 812,
+      "title": "web · shell-diary · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.shell-more.dc.html": {
+      "x": 0,
+      "y": 27748,
+      "w": 3430,
+      "h": 812,
+      "title": "web · shell-more · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web.shell-menu-open.dc.html": {
+      "x": 0,
+      "y": 28680,
+      "w": 3430,
+      "h": 812,
+      "title": "web · shell-menu-open · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "WebShellScreen.dc.html": {
+      "x": 3600,
+      "y": 20292,
+      "w": 1280,
+      "h": 812,
+      "title": "Component · Web login and shell (state, theme, width tweaks)"
+    },
+    "web-foods.idle.dc.html": {
+      "x": 0,
+      "y": 30100,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · idle · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-loading.dc.html": {
+      "x": 0,
+      "y": 31032,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-loading · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-results-local.dc.html": {
+      "x": 0,
+      "y": 31964,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-results-local · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-refining.dc.html": {
+      "x": 0,
+      "y": 32896,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-refining · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-loading-off.dc.html": {
+      "x": 0,
+      "y": 33828,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-loading-off · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-results-with-off.dc.html": {
+      "x": 0,
+      "y": 34760,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-results-with-off · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-adding-product.dc.html": {
+      "x": 0,
+      "y": 35692,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-adding-product · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-add-error.dc.html": {
+      "x": 0,
+      "y": 36624,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-add-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-off-error.dc.html": {
+      "x": 0,
+      "y": 37556,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-off-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-empty.dc.html": {
+      "x": 0,
+      "y": 38488,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-empty · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-empty-off-error.dc.html": {
+      "x": 0,
+      "y": 39420,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-empty-off-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.search-local-error.dc.html": {
+      "x": 0,
+      "y": 40352,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · search-local-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.barcode-open.dc.html": {
+      "x": 0,
+      "y": 41284,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · barcode-open · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.barcode-invalid.dc.html": {
+      "x": 0,
+      "y": 42216,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · barcode-invalid · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.barcode-looking-up.dc.html": {
+      "x": 0,
+      "y": 43148,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · barcode-looking-up · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.barcode-opening.dc.html": {
+      "x": 0,
+      "y": 44080,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · barcode-opening · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.barcode-not-found.dc.html": {
+      "x": 0,
+      "y": 45012,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · barcode-not-found · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.barcode-error.dc.html": {
+      "x": 0,
+      "y": 45944,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · barcode-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.your-foods.dc.html": {
+      "x": 0,
+      "y": 46876,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · your-foods · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-foods.your-foods-empty.dc.html": {
+      "x": 0,
+      "y": 47808,
+      "w": 3430,
+      "h": 812,
+      "title": "web-foods · your-foods-empty · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "WebFoodsScreen.dc.html": {
+      "x": 3600,
+      "y": 30100,
+      "w": 1280,
+      "h": 812,
+      "title": "Component · Web foods (state, theme, width tweaks)"
+    },
+    "web-food.detail-loading.dc.html": {
+      "x": 0,
+      "y": 49280,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-loading · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-error.dc.html": {
+      "x": 0,
+      "y": 50212,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-not-found.dc.html": {
+      "x": 0,
+      "y": 51144,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-not-found · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-cofid.dc.html": {
+      "x": 0,
+      "y": 52076,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-cofid · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-off-product.dc.html": {
+      "x": 0,
+      "y": 53008,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-off-product · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-own-food.dc.html": {
+      "x": 0,
+      "y": 53940,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-own-food · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-missing-values-off.dc.html": {
+      "x": 0,
+      "y": 54872,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-missing-values-off · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-missing-values-cofid.dc.html": {
+      "x": 0,
+      "y": 55804,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-missing-values-cofid · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.detail-missing-values-us-carbs.dc.html": {
+      "x": 0,
+      "y": 56736,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · detail-missing-values-us-carbs · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-new-empty.dc.html": {
+      "x": 0,
+      "y": 57668,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-new-empty · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-new-from-barcode.dc.html": {
+      "x": 0,
+      "y": 58600,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-new-from-barcode · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-new-filled.dc.html": {
+      "x": 0,
+      "y": 59532,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-new-filled · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-validation-errors.dc.html": {
+      "x": 0,
+      "y": 60464,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-validation-errors · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-saving.dc.html": {
+      "x": 0,
+      "y": 61396,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-saving · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-save-error.dc.html": {
+      "x": 0,
+      "y": 62328,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-save-error · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-save-partial.dc.html": {
+      "x": 0,
+      "y": 63260,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-save-partial · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-copy-off.dc.html": {
+      "x": 0,
+      "y": 64192,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-copy-off · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-copy-us-carbs.dc.html": {
+      "x": 0,
+      "y": 65124,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-copy-us-carbs · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-edit.dc.html": {
+      "x": 0,
+      "y": 66056,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-edit · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "web-food.form-edit-shared.dc.html": {
+      "x": 0,
+      "y": 66988,
+      "w": 3430,
+      "h": 812,
+      "title": "web-food · form-edit-shared · 1280 dark, 1280 light, 375 dark, 375 light"
+    },
+    "WebFoodPageScreen.dc.html": {
+      "x": 3600,
+      "y": 49280,
+      "w": 1280,
+      "h": 812,
+      "title": "Component · Web food detail and form (state, theme, width tweaks)"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "food-search.loading.dc.html",
+    "food-search.results-local.dc.html",
+    "food-search.refining.dc.html",
+    "food-search.loading-off.dc.html",
+    "food-search.results-with-off.dc.html",
+    "food-search.adding-product.dc.html",
+    "food-search.add-product-error.dc.html",
+    "food-search.off-error.dc.html",
+    "food-search.empty.dc.html",
+    "food-search.empty-off-error.dc.html",
+    "food-search.local-error.dc.html",
+    "food-search.your-foods.dc.html",
+    "food-search.your-foods-empty.dc.html",
+    "food-search.history-proposal.dc.html",
+    "FoodSearchScreen.dc.html",
+    "tab-shell.dashboard.dc.html",
+    "tab-shell.diary.dc.html",
+    "tab-shell.recipes.dc.html",
+    "tab-shell.more.dc.html",
+    "tab-shell.session-loading.dc.html",
+    "TabShellScreen.dc.html",
+    "food-detail.loading.dc.html",
+    "food-detail.error.dc.html",
+    "food-detail.not-found.dc.html",
+    "food-detail.cofid.dc.html",
+    "food-detail.off-product.dc.html",
+    "food-detail.off-drink.dc.html",
+    "food-detail.own-food.dc.html",
+    "food-detail.missing-values-off.dc.html",
+    "food-detail.missing-values-cofid.dc.html",
+    "food-detail.missing-values-us-carbs.dc.html",
+    "food-detail.cofid-scrolled.dc.html",
+    "food-detail.quantity-proposal-m3.dc.html",
+    "FoodDetailScreen.dc.html",
+    "food-form.new-empty.dc.html",
+    "food-form.new-filled.dc.html",
+    "food-form.new-per-100ml.dc.html",
+    "food-form.new-from-scan.dc.html",
+    "food-form.validation-errors.dc.html",
+    "food-form.saving.dc.html",
+    "food-form.save-error.dc.html",
+    "food-form.save-partial.dc.html",
+    "food-form.copy-off.dc.html",
+    "food-form.copy-off-error.dc.html",
+    "food-form.copy-cofid.dc.html",
+    "food-form.copy-us-carbs.dc.html",
+    "food-form.edit.dc.html",
+    "food-form.edit-shared.dc.html",
+    "FoodFormScreen.dc.html",
+    "barcode-scan.permission-ask.dc.html",
+    "barcode-scan.permission-denied.dc.html",
+    "barcode-scan.scanning.dc.html",
+    "barcode-scan.looking-up.dc.html",
+    "barcode-scan.opening-food.dc.html",
+    "barcode-scan.not-found.dc.html",
+    "barcode-scan.invalid.dc.html",
+    "barcode-scan.rate-limited.dc.html",
+    "barcode-scan.failed.dc.html",
+    "barcode-scan.label-scan-proposal-m3.dc.html",
+    "BarcodeScanScreen.dc.html",
+    "auth.sign-in.dc.html",
+    "auth.sign-in-field-errors.dc.html",
+    "auth.sign-in-submitting.dc.html",
+    "auth.sign-in-error.dc.html",
+    "auth.sign-up.dc.html",
+    "auth.sign-up-field-errors.dc.html",
+    "auth.sign-up-check-email.dc.html",
+    "auth.signing-in-link.dc.html",
+    "auth.signing-in-link-error.dc.html",
+    "AuthScreen.dc.html",
+    "web.login-default.dc.html",
+    "web.login-field-errors.dc.html",
+    "web.login-pending.dc.html",
+    "web.login-server-error.dc.html",
+    "web.login-link-error.dc.html",
+    "web.login-check-email.dc.html",
+    "web.shell-dashboard.dc.html",
+    "web.shell-diary.dc.html",
+    "web.shell-more.dc.html",
+    "web.shell-menu-open.dc.html",
+    "WebShellScreen.dc.html",
+    "web-foods.idle.dc.html",
+    "web-foods.search-loading.dc.html",
+    "web-foods.search-results-local.dc.html",
+    "web-foods.search-refining.dc.html",
+    "web-foods.search-loading-off.dc.html",
+    "web-foods.search-results-with-off.dc.html",
+    "web-foods.search-adding-product.dc.html",
+    "web-foods.search-add-error.dc.html",
+    "web-foods.search-off-error.dc.html",
+    "web-foods.search-empty.dc.html",
+    "web-foods.search-empty-off-error.dc.html",
+    "web-foods.search-local-error.dc.html",
+    "web-foods.barcode-open.dc.html",
+    "web-foods.barcode-invalid.dc.html",
+    "web-foods.barcode-looking-up.dc.html",
+    "web-foods.barcode-opening.dc.html",
+    "web-foods.barcode-not-found.dc.html",
+    "web-foods.barcode-error.dc.html",
+    "web-foods.your-foods.dc.html",
+    "web-foods.your-foods-empty.dc.html",
+    "WebFoodsScreen.dc.html",
+    "web-food.detail-loading.dc.html",
+    "web-food.detail-error.dc.html",
+    "web-food.detail-not-found.dc.html",
+    "web-food.detail-cofid.dc.html",
+    "web-food.detail-off-product.dc.html",
+    "web-food.detail-own-food.dc.html",
+    "web-food.detail-missing-values-off.dc.html",
+    "web-food.detail-missing-values-cofid.dc.html",
+    "web-food.detail-missing-values-us-carbs.dc.html",
+    "web-food.form-new-empty.dc.html",
+    "web-food.form-new-from-barcode.dc.html",
+    "web-food.form-new-filled.dc.html",
+    "web-food.form-validation-errors.dc.html",
+    "web-food.form-saving.dc.html",
+    "web-food.form-save-error.dc.html",
+    "web-food.form-save-partial.dc.html",
+    "web-food.form-copy-off.dc.html",
+    "web-food.form-copy-us-carbs.dc.html",
+    "web-food.form-edit.dc.html",
+    "web-food.form-edit-shared.dc.html",
+    "WebFoodPageScreen.dc.html"
+  ],
+  "notes": {
+    "foodsearchtitle": {
+      "x": 0,
+      "y": -300,
+      "text": "Find food sheet · mobile 390 pt · dark and light · MacroFactor layout, Ki-Lo styling",
+      "kind": "title1",
+      "maxW": 3990
+    },
+    "addcopy": {
+      "x": 2700,
+      "y": 2892,
+      "w": 420,
+      "text": "add-product-error, other copy:\n• Open Food Facts is busy. Try again in 30 seconds. (\"1 second\" when singular; \"Try again in a moment.\" when no time is known)\n• Open Food Facts no longer has this product.",
+      "fill": "gray",
+      "maxH": 300
+    },
+    "offcopy": {
+      "x": 3150,
+      "y": 2892,
+      "w": 420,
+      "text": "off-error, rate-limited variant: title \"Open Food Facts is busy. Try again in 30 seconds.\" Same quiet neutral banner, not red: your own results still work. No retry button; the search runs again when the query changes.",
+      "fill": "gray",
+      "maxH": 300
+    },
+    "proposal": {
+      "x": 2700,
+      "y": 3232,
+      "w": 420,
+      "text": "history-proposal is NOT M2 scope. MacroFactor opens search on Favourites and Recent (foods usually eaten at this hour) with a round + to log in one tap. It needs food logging, so it is drawn as a proposal for M3 only.",
+      "fill": "orange",
+      "maxH": 420
+    },
+    "tabshelltitle": {
+      "x": 0,
+      "y": 3900,
+      "text": "Tab shell · Dashboard, Diary, +, Recipes, More · MacroFactor-style",
+      "kind": "title1",
+      "maxW": 3990
+    },
+    "fooddetailtitle": {
+      "x": 0,
+      "y": 6250,
+      "text": "Food detail · inside the search sheet · MacroFactor layout, Ki-Lo styling",
+      "kind": "title1",
+      "maxW": 3990
+    },
+    "foodformtitle": {
+      "x": 0,
+      "y": 9442,
+      "text": "Food form · new, copy, edit · inside the search sheet",
+      "kind": "title1",
+      "maxW": 3990
+    },
+    "scantitle": {
+      "x": 0,
+      "y": 13600,
+      "text": "Barcode scan · inside the search sheet",
+      "kind": "title1",
+      "maxW": 3990
+    },
+    "authtitle": {
+      "x": 0,
+      "y": 16800,
+      "text": "Sign in and sign up · mobile",
+      "kind": "title1",
+      "maxW": 3990
+    },
+    "webshelltitle": {
+      "x": 0,
+      "y": 19992,
+      "text": "Web · login and app shell · Dashboard, Diary, Recipes, More",
+      "kind": "title1",
+      "maxW": 3430
+    },
+    "webfoodstitle": {
+      "x": 0,
+      "y": 29800,
+      "text": "Web · Foods page · search, barcode lookup, your foods",
+      "kind": "title1",
+      "maxW": 3430
+    },
+    "webfoodtitle": {
+      "x": 0,
+      "y": 48980,
+      "text": "Web · food detail and food form",
+      "kind": "title1",
+      "maxW": 3430
+    }
+  },
+  "designSystems": []
+}
