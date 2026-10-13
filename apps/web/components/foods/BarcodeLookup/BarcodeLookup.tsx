@@ -57,7 +57,7 @@ export function BarcodeLookup() {
             aria-describedby={errorMessage === null ? undefined : errorId}
           />
           {errorMessage !== null && (
-            <p id={errorId} className="text-sm text-destructive">
+            <p id={errorId} className="text-sm text-danger">
               {errorMessage}
             </p>
           )}

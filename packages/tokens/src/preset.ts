@@ -15,12 +15,11 @@ import type { Config } from "tailwindcss";
 // A solid colour reads its channels from the theme variable, so one class follows the theme and an
 // opacity modifier works (`bg-accent/20`). A translucent colour carries its own alpha, so it is the
 // whole variable and takes no modifier (`bg-accent-muted/50` is not supported).
-const themeColorValue = (name: keyof typeof colors): string =>
-  isSolidColor(colors[name]) ? `rgb(var(--kl-${name}) / <alpha-value>)` : `var(--kl-${name})`;
+const themeColorValue = (name: string, value: string): string =>
+  isSolidColor(value) ? `rgb(var(--kl-${name}) / <alpha-value>)` : `var(--kl-${name})`;
 
-const colorNames = Object.keys(colors).filter(
-  (name): name is keyof typeof colors => name in colors,
-);
+const colorEntries = Object.entries(colors);
+const colorNames = colorEntries.map(([name]) => name);
 
 const baseColorName = (name: string): string | undefined =>
   colorNames
@@ -28,29 +27,29 @@ const baseColorName = (name: string): string | undefined =>
     .sort((first, second) => second.length - first.length)[0];
 
 const shadesByBase = new Map<string, Record<string, string>>();
-for (const name of colorNames) {
+for (const [name, value] of colorEntries) {
   const base = baseColorName(name);
   if (base !== undefined) {
     shadesByBase.set(base, {
       ...shadesByBase.get(base),
-      [name.slice(base.length + 1)]: themeColorValue(name),
+      [name.slice(base.length + 1)]: themeColorValue(name, value),
     });
   }
 }
 
 // A colour such as `accent-foreground` is nested under `accent`, the way Tailwind writes `DEFAULT`.
 // The class names are the same, but Tailwind then merges an app's own `accent` object key by key.
-// A flat `accent-foreground` would instead beat the web app's shadcn `accent.foreground`.
+// A flat `accent-foreground` would instead beat an app's own `accent.foreground`.
 const themeColors = Object.fromEntries(
-  colorNames
-    .filter((name) => baseColorName(name) === undefined)
-    .map((name) => {
+  colorEntries
+    .filter(([name]) => baseColorName(name) === undefined)
+    .map(([name, value]) => {
       const shades = shadesByBase.get(name);
       return [
         name,
         shades === undefined
-          ? themeColorValue(name)
-          : { DEFAULT: themeColorValue(name), ...shades },
+          ? themeColorValue(name, value)
+          : { DEFAULT: themeColorValue(name, value), ...shades },
       ];
     }),
 );

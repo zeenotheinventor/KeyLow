@@ -11,13 +11,11 @@ export function LocalFoodList({ foods }: LocalFoodListProps) {
         <li key={food.id}>
           <Link
             href={`/foods/${food.id}`}
-            className="flex min-h-11 flex-col gap-1 rounded-md border p-3 hover:bg-accent hover:text-accent-foreground"
+            className="flex min-h-11 flex-col gap-1 rounded-md border p-3 hover:bg-hover-overlay"
           >
             <span className="font-medium">{food.name}</span>
-            {food.brand !== null && (
-              <span className="text-sm text-muted-foreground">{food.brand}</span>
-            )}
-            <span className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            {food.brand !== null && <span className="text-sm text-text-muted">{food.brand}</span>}
+            <span className="flex flex-wrap items-center gap-2 text-sm text-text-muted">
               <span className="rounded-full border px-2 py-0.5 text-xs">
                 {SOURCE_LABELS[food.source]}
               </span>

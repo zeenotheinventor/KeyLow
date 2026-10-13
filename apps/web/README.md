@@ -14,7 +14,15 @@ pnpm --filter @keylow/web test
 
 ## Styling
 
-Use Tailwind utilities bound to the token preset (`bg-brand-500`, `text-neutral-50`). The HSL variables in `app/globals.css` are the shadcn theme and the only place raw colour values live. shadcn is pinned to the Tailwind 3 CLI (`npx shadcn@2.3.0 add <component>`), because the current `shadcn@latest` generates Tailwind 4 only output.
+Use Tailwind utilities bound to the Ki-Lo tokens (`bg-surface`, `text-text-primary`, `border-border`). Never write a raw colour.
+
+`tailwind.config.ts` loads the `@keylow/tokens` preset and its `themePlugin`, which emits the `--kl-*` colour variables on `:root` (dark, the default) and under `[data-theme="light"]`. So one class follows the theme. The plugin is used rather than the generated `kilo-tokens.css`, because the preset's colour classes read the `--kl-*` variables and the plain CSS file defines different names.
+
+The server sets `data-theme` on `<html>` from the `kl-theme` cookie (`light` or anything else for dark), so there is no flash. `lib/theme/setTheme.ts` switches the open page and has the `writeThemeCookie` server action remember the choice. There is no visible control yet.
+
+Geist is loaded by `next/font/google` in `app/layout.tsx`, self-hosted at build time. It reaches the `font-sans` class through `--font-geist`, ahead of the design's own font stack. Icons are Lucide (`lucide-react`).
+
+shadcn is pinned to the Tailwind 3 CLI (`npx shadcn@2.3.0 add <component>`), because the current `shadcn@latest` generates Tailwind 4 only output. A generated component uses shadcn's colour names (`bg-primary`, `text-muted-foreground`), which no longer exist here, so retarget them to the Ki-Lo names.
 
 ## Vercel
 

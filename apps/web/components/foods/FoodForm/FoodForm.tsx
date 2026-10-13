@@ -41,7 +41,7 @@ const NUTRIENT_FIELDS: NutrientField[] = [
 ];
 
 const SELECT_CLASS_NAME =
-  "flex h-11 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:h-9 md:text-sm";
+  "flex h-11 w-full rounded-md border border-border bg-transparent px-3 py-1 text-base shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus-ring md:h-9 md:text-sm";
 
 const SECTION_HEADING_CLASS_NAME = "font-semibold leading-none tracking-tight";
 
@@ -218,7 +218,7 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
       <Card className="flex flex-col gap-4 p-4 md:p-6">
         <h2 className={SECTION_HEADING_CLASS_NAME}>Nutrition</h2>
         {isCarbsIncludingFibre && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-text-muted">
             This product&apos;s carbohydrate included fibre. Enter the carbohydrate without fibre.
           </p>
         )}
@@ -294,9 +294,9 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
           </ul>
         )}
         {fieldErrors["portions"] !== undefined && (
-          <p className="text-sm text-destructive">{fieldErrors["portions"]}</p>
+          <p className="text-sm text-danger">{fieldErrors["portions"]}</p>
         )}
-        <p className="text-sm text-muted-foreground">{`Each amount is in ${unit}, to match the basis.`}</p>
+        <p className="text-sm text-text-muted">{`Each amount is in ${unit}, to match the basis.`}</p>
         <Button
           type="button"
           variant="outline"
@@ -310,7 +310,7 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
       {(hasFieldErrors || saveFailure !== null) && (
         <div
           role="alert"
-          className="flex flex-col gap-2 rounded-md border border-destructive p-3 text-sm text-destructive"
+          className="flex flex-col gap-2 rounded-md border border-danger p-3 text-sm text-danger"
         >
           {hasFieldErrors && <p>{FIELD_ERRORS_SUMMARY}</p>}
           {saveFailure !== null && <p>{saveFailure.message}</p>}

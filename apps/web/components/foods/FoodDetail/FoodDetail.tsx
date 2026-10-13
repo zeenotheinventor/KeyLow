@@ -36,7 +36,7 @@ export function FoodDetail({ id }: FoodDetailProps) {
 
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold">{food.name}</h1>
-        {food.brand !== null && <p className="text-muted-foreground">{food.brand}</p>}
+        {food.brand !== null && <p className="text-text-muted">{food.brand}</p>}
       </div>
 
       {requiresConfirmation(food) && (
@@ -44,9 +44,9 @@ export function FoodDetail({ id }: FoodDetailProps) {
       )}
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        <dt className="text-muted-foreground">Source</dt>
+        <dt className="text-text-muted">Source</dt>
         <dd>{SOURCE_LABELS[food.source]}</dd>
-        <dt className="text-muted-foreground">Basis</dt>
+        <dt className="text-text-muted">Basis</dt>
         <dd>{BASIS_LABELS[food.basis]}</dd>
       </dl>
 
@@ -54,7 +54,7 @@ export function FoodDetail({ id }: FoodDetailProps) {
         <NutrientTable food={food} />
       </Card>
       {food.quality.carbs_convention === "us_total" && (
-        <p className="text-sm text-muted-foreground">{US_CARBS_NOTE}</p>
+        <p className="text-sm text-text-muted">{US_CARBS_NOTE}</p>
       )}
 
       {portions.length > 0 && (
@@ -65,7 +65,7 @@ export function FoodDetail({ id }: FoodDetailProps) {
       )}
 
       {attribution !== null && (
-        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-1 text-sm text-text-muted">
           <p>{attribution.text}</p>
           <a
             href={attribution.url}

@@ -1,12 +1,15 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { format, resolveConfig } from "prettier";
 
+import { buildTokenCss } from "./buildTokenCss.ts";
 import { buildTokens } from "./buildTokens.ts";
 
 const sourceDirectory = fileURLToPath(new URL("../src/source/", import.meta.url));
 const outputPath = fileURLToPath(new URL("../src/source.generated.ts", import.meta.url));
+const cssOutputPath = fileURLToPath(new URL("../css/kilo-tokens.css", import.meta.url));
 
 const readSource = (fileName: string): string =>
   readFileSync(`${sourceDirectory}${fileName}`, "utf8");
@@ -18,13 +21,16 @@ const typeChecks: Record<string, string> = {
   easingCurve: "Record<string, [number, number, number, number]>",
 };
 
-const tokens = buildTokens({
+const sources = {
   json: readSource("ki-lo.tokens.json"),
   colorsCss: readSource("colors.css"),
   spacingCss: readSource("spacing.css"),
   typographyCss: readSource("typography.css"),
   motionCss: readSource("motion.css"),
-});
+};
+
+// Runs first so the stylesheet is only written for sources the build accepts.
+const tokens = buildTokens(sources);
 
 const declarations = Object.entries(tokens).map(([name, value]) => {
   const typeCheck = typeChecks[name];
@@ -44,3 +50,7 @@ const formatted = await format(`${header}\n\n${declarations.join("\n\n")}\n`, {
 });
 
 writeFileSync(outputPath, formatted);
+
+// Prettier ignores this file, so it is written exactly as built.
+mkdirSync(dirname(cssOutputPath), { recursive: true });
+writeFileSync(cssOutputPath, buildTokenCss(sources));

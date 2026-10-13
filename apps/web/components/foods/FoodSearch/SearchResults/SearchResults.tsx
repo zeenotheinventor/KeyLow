@@ -31,28 +31,28 @@ export function SearchResults({ query }: SearchResultsProps) {
   return (
     <div className="flex flex-col gap-4">
       {isLoadingLocal && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-sm text-text-muted">
           Searching foods
         </p>
       )}
       {localError !== null && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {localError.message}
         </p>
       )}
       {local.length > 0 && <LocalFoodList foods={local} />}
       {isLoadingOff && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-sm text-text-muted">
           Searching Open Food Facts
         </p>
       )}
       {offError !== null && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {describeOffError(offError)}
         </p>
       )}
       {off.length > 0 && <OffCandidateList candidates={off} />}
-      {hasFoundNothing && <p className="text-sm text-muted-foreground">No foods found</p>}
+      {hasFoundNothing && <p className="text-sm text-text-muted">No foods found</p>}
     </div>
   );
 }

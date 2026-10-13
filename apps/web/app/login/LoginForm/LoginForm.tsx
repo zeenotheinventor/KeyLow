@@ -141,7 +141,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
           aria-describedby={fieldErrors.email === undefined ? undefined : "email-error"}
         />
         {fieldErrors.email !== undefined && (
-          <p id="email-error" className="text-sm text-destructive">
+          <p id="email-error" className="text-sm text-danger">
             {fieldErrors.email}
           </p>
         )}
@@ -164,19 +164,19 @@ export function LoginForm({ linkError }: LoginFormProps) {
           aria-describedby={fieldErrors.password === undefined ? undefined : "password-error"}
         />
         {fieldErrors.password !== undefined && (
-          <p id="password-error" className="text-sm text-destructive">
+          <p id="password-error" className="text-sm text-danger">
             {fieldErrors.password}
           </p>
         )}
       </div>
 
       {formError !== null && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-sm text-danger">
           {formError}
         </p>
       )}
       {notice !== null && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-sm text-text-muted">
           {notice}
         </p>
       )}

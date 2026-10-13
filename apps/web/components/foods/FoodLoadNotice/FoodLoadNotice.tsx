@@ -5,7 +5,7 @@ export function FoodLoadNotice({ state }: FoodLoadNoticeProps) {
     case "loading":
       return (
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
-          <p role="status" className="text-sm text-muted-foreground">
+          <p role="status" className="text-sm text-text-muted">
             Loading food
           </p>
         </div>
@@ -13,7 +13,7 @@ export function FoodLoadNotice({ state }: FoodLoadNoticeProps) {
     case "failed":
       return (
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-sm text-danger">
             {state.message}
           </p>
         </div>
@@ -22,7 +22,7 @@ export function FoodLoadNotice({ state }: FoodLoadNoticeProps) {
       return (
         <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">
           <h1 className="text-2xl font-semibold">Food not found</h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-text-muted">
             This food does not exist, or it is not one you can see.
           </p>
         </div>

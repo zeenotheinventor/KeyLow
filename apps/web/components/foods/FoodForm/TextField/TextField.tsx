@@ -23,12 +23,12 @@ export function TextField({ id, label, hint, error, className, ...inputProps }: 
         {...inputProps}
       />
       {hint !== undefined && (
-        <p id={hintId} className="text-sm text-muted-foreground">
+        <p id={hintId} className="text-sm text-text-muted">
           {hint}
         </p>
       )}
       {error !== undefined && (
-        <p id={errorId} className="text-sm text-destructive">
+        <p id={errorId} className="text-sm text-danger">
           {error}
         </p>
       )}

@@ -17,7 +17,7 @@ export function PortionList({ portions }: PortionListProps) {
       {portions.map((portion) => (
         <li key={portion.id} className="flex flex-wrap items-center gap-2 rounded-md border p-3">
           <span className="font-medium">{portion.label}</span>
-          <span className="text-muted-foreground">{describeAmount(portion)}</span>
+          <span className="text-text-muted">{describeAmount(portion)}</span>
           {portion.is_default && (
             <span className="rounded-full border px-2 py-0.5 text-xs">Default</span>
           )}
