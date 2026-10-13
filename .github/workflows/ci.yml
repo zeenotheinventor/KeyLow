@@ -35,6 +35,16 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # On a cold start the mobile food search suite alone has Jest transform about 300 React Native
+      # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
+      # transformer config, so restoring one from a near miss is safe: stale entries are never read.
+      # The path is the cacheDirectory in apps/mobile/jest.config.js.
+      - name: Restore the mobile Jest cache
+        uses: actions/cache@v6
+        with:
+          path: apps/mobile/node_modules/.cache/jest
+          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
+          restore-keys: jest-${{ runner.os }}-
       - name: Run the local gate
         run: pnpm check
       # Fails when the lockfile contains duplicates that a dedupe would remove.
