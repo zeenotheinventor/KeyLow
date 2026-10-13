@@ -42,8 +42,11 @@ export function AuthGate({ children }: AuthGateProps) {
 
     const isInAuthGroup = firstSegment === "(auth)";
     const isAuthCallback = firstSegment === "auth";
+    // Storybook needs no sign-in, and only a build made with the flag has anything on that route.
+    const isStorybookRoute =
+      firstSegment === "storybook" && process.env.EXPO_PUBLIC_STORYBOOK === "true";
 
-    if (session === null && !isInAuthGroup && !isAuthCallback) {
+    if (session === null && !isInAuthGroup && !isAuthCallback && !isStorybookRoute) {
       router.replace("/(auth)/sign-in");
     } else if (session !== null && isInAuthGroup) {
       router.replace("/(tabs)/diary");
@@ -54,7 +57,7 @@ export function AuthGate({ children }: AuthGateProps) {
   return (
     <>
       {children}
-      {isSessionLoaded ? null : <View className="absolute inset-0 bg-legacy-neutral-50" />}
+      {isSessionLoaded ? null : <View className="absolute inset-0 bg-background" />}
     </>
   );
 }

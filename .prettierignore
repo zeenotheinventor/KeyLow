@@ -12,3 +12,6 @@ packages/tokens/css/kilo-tokens.css
 
 # built by `pnpm --filter @keylow/web build-storybook`
 apps/*/storybook-static/
+
+# written by Metro and by `sb-rn-get-stories`, as Storybook builds it
+apps/mobile/.rnstorybook/storybook.requires.ts

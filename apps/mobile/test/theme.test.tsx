@@ -213,6 +213,75 @@ describe("ThemeProvider", () => {
   });
 });
 
+describe("ThemeProvider with a fixed preference", () => {
+  let setColorScheme: jest.SpiedFunction<typeof Appearance.setColorScheme>;
+
+  beforeEach(() => {
+    mockStorageItems.clear();
+    mockStorageItems.set(storageKey, "dark");
+    mockGetItem.mockClear();
+    mockSetItem.mockClear();
+    setColorScheme = jest.spyOn(Appearance, "setColorScheme");
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  async function renderFixedProbe() {
+    await render(
+      <ThemeProvider fixedPreference="light">
+        <ThemeProbe onTheme={noop} />
+      </ThemeProvider>,
+    );
+  }
+
+  it("should use the fixed preference on the first render, without waiting for storage", async () => {
+    await renderFixedProbe();
+
+    expect(screen.getByText("scheme:light")).toBeOnTheScreen();
+    expect(screen.getByText("preference:light")).toBeOnTheScreen();
+  });
+
+  it("should not read the stored preference", async () => {
+    await renderFixedProbe();
+
+    expect(mockGetItem).not.toHaveBeenCalled();
+  });
+
+  it("should ignore a request to change the preference", async () => {
+    const user = userEvent.setup();
+    await renderFixedProbe();
+
+    await user.press(screen.getByRole("button", { name: "Use dark" }));
+
+    expect(screen.getByText("scheme:light")).toBeOnTheScreen();
+    expect(mockSetItem).not.toHaveBeenCalled();
+    expect(mockStorageItems.get(storageKey)).toBe("dark");
+  });
+
+  it("should leave the native colour scheme alone", async () => {
+    const user = userEvent.setup();
+    await renderFixedProbe();
+
+    await user.press(screen.getByRole("button", { name: "Use dark" }));
+
+    expect(setColorScheme).not.toHaveBeenCalled();
+  });
+
+  it("should follow the device when the fixed preference is match-device", async () => {
+    deviceScheme.current = "light";
+
+    await render(
+      <ThemeProvider fixedPreference="system">
+        <ThemeProbe onTheme={noop} />
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("scheme:light")).toBeOnTheScreen();
+  });
+});
+
 describe("useTheme", () => {
   it("should throw when used outside the ThemeProvider", async () => {
     jest.spyOn(console, "error").mockImplementation(() => undefined);

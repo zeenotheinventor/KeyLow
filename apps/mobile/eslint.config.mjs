@@ -7,5 +7,5 @@ export default [
     files: ["*.config.js"],
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
-  { ignores: [".expo/", "node_modules/", "dist/"] },
+  { ignores: [".expo/", "node_modules/", "dist/", ".rnstorybook/storybook.requires.ts"] },
 ];

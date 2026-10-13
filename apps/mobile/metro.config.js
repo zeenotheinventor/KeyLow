@@ -1,5 +1,6 @@
 const path = require("node:path");
 
+const { withStorybook } = require("@storybook/react-native/metro/withStorybook");
 const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
 
@@ -15,4 +16,17 @@ config.resolver.nodeModulesPaths = [
 ];
 // disableHierarchicalLookup is left unset because expo-doctor on SDK 57 rejects it. The hoisted linker, the root react override and `pnpm dedupe --check` guard against duplicate React instead.
 
-module.exports = withNativeWind(config, { input: "./global.css" });
+const isStorybookEnabled = process.env.EXPO_PUBLIC_STORYBOOK === "true";
+
+// Storybook sends usage telemetry when it starts under Metro. This turns it off unless the shell already says otherwise.
+if (isStorybookEnabled) {
+  process.env.STORYBOOK_DISABLE_TELEMETRY ??= "1";
+}
+
+// Without EXPO_PUBLIC_STORYBOOK=true, Storybook is left out of the bundle: its imports resolve to empty modules
+// and app/storybook.tsx gets a stub in place of the Storybook screen. With it, Metro writes the story index
+// (.rnstorybook/storybook.requires.ts) on every start.
+module.exports = withStorybook(withNativeWind(config, { input: "./global.css" }), {
+  enabled: isStorybookEnabled,
+  configPath: path.resolve(projectRoot, ".rnstorybook"),
+});
