@@ -5,6 +5,7 @@ export {
   getFood,
   getFoodByBarcode,
   listFoodPortions,
+  listOwnFoods,
   replaceFoodPortions,
   searchFoods,
   updateFood,

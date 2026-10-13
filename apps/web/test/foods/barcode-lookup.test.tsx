@@ -236,5 +236,24 @@ describe("BarcodeLookup", () => {
       expect(screen.getByRole("alert").textContent).toContain("Could not reach the server");
       expect(screen.queryByRole("link", { name: "Create food with this barcode" })).toBeNull();
     });
+
+    it("should not claim a rate limit when Open Food Facts answered with another error kind", () => {
+      useFoodByBarcode.mockReturnValue({
+        result: undefined,
+        isLoading: false,
+        error: {
+          kind: "upstream_error",
+          debugMessage: "Open Food Facts is unavailable",
+          message: "Open Food Facts is unavailable",
+        },
+      });
+      render(<BarcodeLookup />);
+
+      lookUp(VALID_EAN_13);
+
+      const alert = screen.getByRole("alert");
+      expect(alert.textContent).not.toContain("busy");
+      expect(alert.textContent).toContain("Open Food Facts is unavailable");
+    });
   });
 });

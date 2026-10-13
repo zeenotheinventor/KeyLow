@@ -77,7 +77,7 @@ async function lookUpFoodByBarcode(
  * local foods (the user's own first) and only when that finds nothing is Open Food Facts asked,
  * through `off-product`, which stores the product. Open Food Facts not knowing it resolves to
  * `not_found`. A food found is also seeded into its detail cache. A failed lookup is not retried
- * and not repeated when the window regains focus, since a rate limit will not pass by trying again.
+ * and not repeated when the window regains focus or the network returns, since a rate limit will not pass by trying again.
  */
 export function useFoodByBarcode(
   rawCode: string,
@@ -98,6 +98,7 @@ export function useFoodByBarcode(
     staleTime: STALE_TIME_MS,
     retry: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   if (!normalised.ok) {

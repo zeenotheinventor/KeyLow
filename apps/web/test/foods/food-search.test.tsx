@@ -339,6 +339,25 @@ describe("FoodSearch", () => {
       expect(screen.getByRole("alert").textContent).toContain("Upstream is down");
     });
 
+    it("should not claim a rate limit when Open Food Facts answered with another error kind", () => {
+      useFoodSearch.mockReturnValue(
+        resultWith({
+          offError: {
+            kind: "upstream_error",
+            debugMessage: "Upstream is down",
+            message: "Upstream is down",
+          },
+        }),
+      );
+      render(<FoodSearch />);
+
+      search("oat");
+
+      const alert = screen.getByRole("alert");
+      expect(alert.textContent).not.toContain("busy");
+      expect(alert.textContent).toContain("Upstream is down");
+    });
+
     it("should show a local failure in an alert and not claim there are no results", () => {
       useFoodSearch.mockReturnValue(
         resultWith({ localError: { message: "Could not search the foods: offline" } }),

@@ -11,9 +11,9 @@ import type { FoodByBarcodeError } from "@keylow/api-client";
 import { describeRateLimit } from "@/components/foods/foodDisplay";
 
 function describeError(error: FoodByBarcodeError): string {
-  return error.kind === "failed"
-    ? `The barcode could not be looked up: ${error.message}`
-    : describeRateLimit(error.retryAfterSeconds);
+  return error.kind === "rate_limited"
+    ? describeRateLimit(error.retryAfterSeconds)
+    : `The barcode could not be looked up: ${error.message}`;
 }
 
 export function BarcodeResult({ code }: BarcodeResultProps) {

@@ -119,6 +119,7 @@ describe("useFoodSearch", () => {
         off: [],
         isLoadingLocal: false,
         isLoadingOff: false,
+        isDebouncing: false,
         offError: null,
         localError: null,
       });
@@ -207,6 +208,110 @@ describe("useFoodSearch", () => {
 
       expect(result.current.local).toEqual([]);
       expect(result.current.isLoadingLocal).toBe(false);
+    });
+  });
+
+  describe("the debounce signal", () => {
+    it("should be false on the first render, since the first query is searched at once", () => {
+      answerRpc(() => searchHitRows(5));
+      const { result } = renderSearch("chicken");
+
+      expect(result.current.isDebouncing).toBe(false);
+    });
+
+    it("should be true for the whole gap after a keystroke and false once the gap has passed", async () => {
+      answerRpc(() => searchHitRows(5));
+      const { result, rerender } = renderSearch("chick");
+      await waitFor(() => {
+        expect(result.current.local).toHaveLength(5);
+      });
+
+      rerender({ query: "chicke" });
+      expect(result.current.isDebouncing).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(DEBOUNCE_MS - 1);
+      });
+      expect(result.current.isDebouncing).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1);
+      });
+      expect(result.current.isDebouncing).toBe(false);
+    });
+
+    it("should keep the previous results in view while it is true", async () => {
+      const hits = searchHitRows(5);
+      answerRpc(() => hits);
+      const { result, rerender } = renderSearch("chick");
+      await waitFor(() => {
+        expect(result.current.local).toEqual(hits);
+      });
+
+      rerender({ query: "chicke" });
+
+      expect(result.current.isDebouncing).toBe(true);
+      expect(result.current.local).toEqual(hits);
+    });
+
+    it("should be true while a query too short to search waits to be searched", async () => {
+      answerRpc(() => searchHitRows(5));
+      const { result, rerender } = renderSearch("");
+
+      rerender({ query: "ch" });
+
+      expect(result.current.isDebouncing).toBe(true);
+      expect(result.current.local).toEqual([]);
+      expect(result.current.isLoadingLocal).toBe(false);
+
+      await settleDebounce();
+      expect(result.current.isDebouncing).toBe(false);
+    });
+
+    it("should stay false when only the whitespace around the query changes", () => {
+      answerRpc(() => searchHitRows(5));
+      const { result, rerender } = renderSearch("chicken");
+
+      rerender({ query: " chicken " });
+
+      expect(result.current.isDebouncing).toBe(false);
+    });
+
+    it("should stay false when disabled, since nothing will be searched", () => {
+      const { result, rerender } = renderSearch("chick", { enabled: false });
+
+      rerender({ query: "chicken" });
+
+      expect(result.current.isDebouncing).toBe(false);
+    });
+
+    it("should be true for a single tick with debounceMs 0, and false after it", async () => {
+      answerRpc(() => searchHitRows(5));
+      const { result, rerender } = renderSearch("chick", { debounceMs: 0 });
+
+      rerender({ query: "chicken" });
+      expect(result.current.isDebouncing).toBe(true);
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.isDebouncing).toBe(false);
+    });
+
+    it("should not search before the default 250 ms have passed", async () => {
+      answerRpc(() => searchHitRows(5));
+      const { rerender } = renderSearch("chick");
+      await vi.advanceTimersByTimeAsync(0);
+      searchFoodsBodies = [];
+
+      rerender({ query: "chicken" });
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS - 1);
+      expect(searchFoodsBodies).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1);
+      await waitFor(() => {
+        expect(searchFoodsBodies).toEqual([{ q: "chicken", lim: 25 }]);
+      });
     });
   });
 
@@ -433,7 +538,12 @@ describe("useFoodSearch", () => {
         queryClient.setDefaultOptions({ queries: { retry: 3, retryDelay: 1 } });
 
         await waitFor(() => {
-          expect(result.current.offError).toEqual({ kind: "rate_limited", retryAfterSeconds: 20 });
+          expect(result.current.offError).toEqual({
+            kind: "rate_limited",
+            retryAfterSeconds: 20,
+            debugMessage: "Slow down",
+            message: "Slow down",
+          });
         });
         await vi.advanceTimersByTimeAsync(500);
 
@@ -475,28 +585,40 @@ describe("useFoodSearch", () => {
         const { result } = renderSearch("chicken");
 
         await waitFor(() => {
-          expect(result.current.offError).toEqual({ kind: "rate_limited" });
-        });
-      });
-
-      it("should report any other failure as failed with its message", async () => {
-        const hits = searchHitRows(2);
-        answerRpc(() => hits);
-        server.use(
-          http.post(OFF_SEARCH_URL, () =>
-            edgeErrorResponse(502, "upstream_error", "Open Food Facts is unavailable"),
-          ),
-        );
-        const { result } = renderSearch("chicken");
-
-        await waitFor(() => {
           expect(result.current.offError).toEqual({
-            kind: "failed",
-            message: "Open Food Facts is unavailable",
+            kind: "rate_limited",
+            debugMessage: 'Edge function "off-search" was rate limited',
+            message: 'Edge function "off-search" was rate limited',
           });
         });
-        expect(result.current.local).toEqual(hits);
       });
+
+      it.each([
+        [404, "not_found"],
+        [502, "upstream_error"],
+        [400, "invalid_request"],
+        [401, "unauthorized"],
+        [500, "internal_error"],
+      ] as const)(
+        "should report an edge answer of %i as the kind %s, keeping the raw text only as debugMessage",
+        async (status, code) => {
+          const hits = searchHitRows(2);
+          answerRpc(() => hits);
+          server.use(
+            http.post(OFF_SEARCH_URL, () => edgeErrorResponse(status, code, "Raw upstream text")),
+          );
+          const { result } = renderSearch("chicken");
+
+          await waitFor(() => {
+            expect(result.current.offError).toEqual({
+              kind: code,
+              debugMessage: "Raw upstream text",
+              message: "Raw upstream text",
+            });
+          });
+          expect(result.current.local).toEqual(hits);
+        },
+      );
 
       it("should report a server error as failed", async () => {
         answerRpc(() => searchHitRows(2));
@@ -504,7 +626,11 @@ describe("useFoodSearch", () => {
         const { result } = renderSearch("chicken");
 
         await waitFor(() => {
-          expect(result.current.offError).toMatchObject({ kind: "failed" });
+          expect(result.current.offError).toEqual({
+            kind: "failed",
+            debugMessage: 'Edge function "off-search" failed',
+            message: 'Edge function "off-search" failed',
+          });
         });
       });
     });
@@ -523,6 +649,8 @@ describe("useFoodSearch", () => {
       });
       await vi.advanceTimersByTimeAsync(500);
 
+      expect(result.current.localError).toMatchObject({ kind: "failed" });
+      expect(result.current.localError?.debugMessage).toContain("database unavailable");
       expect(result.current.localError?.message).toContain("database unavailable");
       expect(result.current.local).toEqual([]);
       expect(result.current.off).toEqual([]);

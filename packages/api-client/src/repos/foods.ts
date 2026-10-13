@@ -22,6 +22,9 @@ export type FoodSearchHit = z.infer<typeof foodSearchHitSchema>;
 // and the caller's own is picked. More than this would mean the same code on a crowd of rows.
 const BARCODE_LOOKUP_LIMIT = 5;
 
+// The "Your foods" list is bounded so a user with a great many foods cannot make one huge request.
+const DEFAULT_OWN_FOODS_LIMIT = 200;
+
 const MIN_SEARCH_LENGTH = 2;
 const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
@@ -124,6 +127,33 @@ export async function getFoodByBarcode(
   const foods = data.map((row) => foodRowSchema.parse(row));
 
   return foods.find((food) => food.owner_id !== null) ?? foods[0] ?? null;
+}
+
+/**
+ * Lists the caller's own foods by name, without a query, for the "Your foods" screen. Deleted foods
+ * are left out. At most `limit` foods are returned, 200 unless told otherwise. `search_foods` cannot
+ * do this because it answers nothing for a query under 2 characters.
+ */
+export async function listOwnFoods(
+  client: SupabaseClient<Database>,
+  { limit = DEFAULT_OWN_FOODS_LIMIT }: { limit?: number } = {},
+): Promise<Food[]> {
+  const { data, error } = await client
+    .from("foods")
+    .select(FOOD_COLUMNS)
+    // Row level security only shows the caller their own rows and the shared ones (no owner).
+    // So a row with an owner is the caller's own, the same reasoning `getFoodByBarcode` relies on.
+    .not("owner_id", "is", null)
+    .is("deleted_at", null)
+    .order("name", { ascending: true })
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    throw repoError("list your foods", error);
+  }
+
+  return data.map((row) => foodRowSchema.parse(row));
 }
 
 export async function listFoodPortions(

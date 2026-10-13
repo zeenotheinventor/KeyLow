@@ -34,3 +34,18 @@ export class OffProductNotFoundError extends Error {
     this.code = code;
   }
 }
+
+/**
+ * What went wrong with an Edge Function call, with no sentence in it: one of the six codes an Edge
+ * Function answers with, or `failed` when the failure was not a typed answer (no network, or a
+ * body that was not an edge error). A screen turns a kind into words with `describeEdgeError`.
+ */
+export type EdgeErrorKind = EdgeErrorCode | "failed";
+
+export function toEdgeErrorKind(error: Error): EdgeErrorKind {
+  if (error instanceof RateLimitedError) {
+    return "rate_limited";
+  }
+
+  return error instanceof EdgeFunctionError ? error.code : "failed";
+}
