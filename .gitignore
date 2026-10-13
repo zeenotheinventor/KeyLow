@@ -51,3 +51,6 @@ pnpm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# storybook
+apps/*/storybook-static/

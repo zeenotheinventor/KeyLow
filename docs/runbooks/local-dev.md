@@ -243,6 +243,22 @@ pnpm --filter @keylow/web test:e2e
 - `playwright install chromium` downloads the browser Playwright drives. It is a one-time step per Playwright version and does nothing once the browser is present.
 - `test:e2e` starts its own `next dev`, so the stack must be running, `apps/web/.env.local` must exist and **port 3000 must be free**. Stop your own dev server first. Playwright refuses to run when something already listens on 3000. Expect every test to pass. The tests create throwaway accounts in your local database.
 
+### Storybook
+
+Storybook (`@storybook/nextjs`, the webpack framework) shows the web components in every state. It uses the app's PostCSS and Tailwind setup, so a story is styled exactly like the app. It needs no Supabase stack and no `.env.local`.
+
+```sh
+pnpm --filter @keylow/web storybook
+pnpm --filter @keylow/web build-storybook
+```
+
+- `storybook` serves on <http://localhost:6006>. Add `-p <port>` to use another port. `build-storybook` writes the static site to `apps/web/storybook-static/`, which git, Prettier and ESLint ignore. CI runs the build in the `static` job.
+- The **Theme** toolbar item flips `data-theme` on `html` between Dark (the default) and Light, the same attribute the app's layout sets from the cookie. The **Viewport** item has Desktop 1280 and Mobile 375.
+- Stories live next to the components, as `components/**/*.stories.tsx`. Vitest only runs `test/**`, so stories are never run as unit tests.
+- The **Accessibility** panel runs axe on the open story. Fix a violation before you merge a story.
+- Storybook's `next/font` mock loads Geist from Google's font servers when the page opens, so a story shows the fallback font offline.
+- The root `package.json` pins `postcss-loader` to 8.1.1, the lowest version `@storybook/nextjs` accepts. Version 8.2 depends on `jiti` 2 while Tailwind 3 needs `jiti` 1, and with both in the lockfile `pnpm dedupe --check` flips between two answers from one run to the next. Drop the pin once Tailwind moves to version 4.
+
 ## 5. Mobile app
 
 The mobile app runs on a development client, not Expo Go. Expo Go is not supported.

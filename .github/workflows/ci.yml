@@ -47,6 +47,10 @@ jobs:
           restore-keys: jest-${{ runner.os }}-
       - name: Run the local gate
         run: pnpm check
+      # Builds the web Storybook, so a broken story or a Storybook config that no longer matches Next
+      # fails the pull request. Turbo restores the output from its cache when nothing changed.
+      - name: Build the web Storybook
+        run: pnpm turbo run build-storybook --filter=@keylow/web
       # Fails when the lockfile contains duplicates that a dedupe would remove.
       # The flag keeps the install pass that dedupe runs from triggering the prepare script.
       - name: Check the lockfile for duplicates
