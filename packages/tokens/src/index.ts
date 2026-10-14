@@ -1,5 +1,4 @@
 export * from "./source.generated";
-export { legacyColors, legacyFontSize, legacySpacing } from "./legacy";
 export { springs, timings } from "./motion";
 export { controlSizes, preset, scaleSteps } from "./preset";
 export { boxShadow, themePlugin, themes, themeVariables } from "./theme";

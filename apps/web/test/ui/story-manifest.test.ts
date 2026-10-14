@@ -5,14 +5,14 @@ import { describe, expect, it } from "vitest";
 
 import * as badgeStories from "@/components/ui/Badge/Badge.stories";
 import * as bannerStories from "@/components/ui/Banner/Banner.stories";
-import * as buttonStories from "@/components/ui/button.stories";
+import * as buttonStories from "@/components/ui/Button/Button.stories";
 import * as cardStories from "@/components/ui/card.stories";
 import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
 import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
 import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
 import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
 import * as groupedListStories from "@/components/ui/GroupedList/GroupedList.stories";
-import * as inputStories from "@/components/ui/input.stories";
+import * as inputStories from "@/components/ui/Input/Input.stories";
 import * as kiLoMarkStories from "@/components/ui/KiLoMark/KiLoMark.stories";
 import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
 import * as numericInputStories from "@/components/ui/NumericInput/NumericInput.stories";
@@ -36,9 +36,9 @@ const storyModules: Record<string, object> = {
   "SegmentedControl/SegmentedControl.stories.tsx": segmentedControlStories,
   "Skeleton/Skeleton.stories.tsx": skeletonStories,
   "Badge/Badge.stories.tsx": badgeStories,
-  "button.stories.tsx": buttonStories,
+  "Button/Button.stories.tsx": buttonStories,
   "card.stories.tsx": cardStories,
-  "input.stories.tsx": inputStories,
+  "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
 };
 

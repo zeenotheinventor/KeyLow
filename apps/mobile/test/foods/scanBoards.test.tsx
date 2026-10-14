@@ -384,7 +384,9 @@ describe("barcode scan boards", () => {
 
     describe("rate-limited", () => {
       it("should be a quiet info notice titled Open Food Facts is busy, with the time to wait", async () => {
-        setLookupOutcome({ error: { kind: "rate_limited", retryAfterSeconds: 30 } });
+        setLookupOutcome({
+          error: { kind: "rate_limited", retryAfterSeconds: 30, debugMessage: "Slow down" },
+        });
         await renderScanned(scheme);
 
         expect(
@@ -397,7 +399,7 @@ describe("barcode scan boards", () => {
       });
 
       it("should say a moment when no time is known", async () => {
-        setLookupOutcome({ error: { kind: "rate_limited" } });
+        setLookupOutcome({ error: { kind: "rate_limited", debugMessage: "Slow down" } });
         await renderScanned(scheme);
 
         expect(screen.getByText("Open Food Facts is busy")).toBeOnTheScreen();
@@ -411,7 +413,9 @@ describe("barcode scan boards", () => {
         [0.4, "Too many lookups just now. Try again in a moment."],
         [29.2, "Too many lookups just now. Try again in 30 seconds."],
       ])("should never say 1 seconds: %p reads %j", async (retryAfterSeconds, sentence) => {
-        setLookupOutcome({ error: { kind: "rate_limited", retryAfterSeconds } });
+        setLookupOutcome({
+          error: { kind: "rate_limited", retryAfterSeconds, debugMessage: "Slow down" },
+        });
         await renderScanned(scheme);
 
         expect(screen.getByText(sentence)).toBeOnTheScreen();
@@ -420,7 +424,7 @@ describe("barcode scan boards", () => {
 
     describe("failed", () => {
       beforeEach(() => {
-        setLookupOutcome({ error: { kind: "failed", message: "socket hang up" } });
+        setLookupOutcome({ error: { kind: "failed", debugMessage: "socket hang up" } });
       });
 
       it("should say the lookup failed, as an alert, and offer to scan again", async () => {
@@ -453,7 +457,7 @@ describe("barcode scan boards", () => {
   });
 
   it("should press scan again to bring the camera back, in either theme", async () => {
-    setLookupOutcome({ error: { kind: "failed", message: "x" } });
+    setLookupOutcome({ error: { kind: "failed", debugMessage: "x" } });
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     await renderScanned("light");
 

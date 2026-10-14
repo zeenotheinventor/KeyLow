@@ -1,6 +1,6 @@
 import type { NumericInputMacro, NumericInputProps } from "./types";
 
-import { Field } from "@/components/ui/input";
+import { Field } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
 const macroMarks = {

@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { FoodHeaderProps } from "./types";
 
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 
 /** The name of the food with where it came from, and Edit beside it for a food the user made. */
 export function FoodHeader({ food }: FoodHeaderProps) {

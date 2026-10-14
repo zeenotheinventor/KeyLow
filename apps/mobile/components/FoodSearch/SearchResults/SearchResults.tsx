@@ -51,7 +51,7 @@ export function SearchResults({ query, onOpenFood, onCreateFood }: SearchResults
     return <ErrorState body={SEARCH_FAILED_MOBILE.body} title={SEARCH_FAILED_MOBILE.title} />;
   }
 
-  const isSearching = isDebouncing === true || isLoadingLocal;
+  const isSearching = isDebouncing || isLoadingLocal;
   const hasRows = local.length > 0 || off.length > 0;
   const expanded = expansion.query === trimmedQuery ? expansion.groups : [];
   const groups = groupFoodSearchResults(local, { limit: limitsFor(expanded, local.length) });

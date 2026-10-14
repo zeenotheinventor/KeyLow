@@ -8,9 +8,10 @@ import type { FoodLoadStateProps } from "./types";
 
 function LoadStateBody({ state }: FoodLoadStateProps) {
   if (state === "error") {
-    // The boards lift the words 96 off the bottom, so they sit above the middle of the screen.
+    // The boards lift the words 96 points off the bottom, so they sit above the middle of the screen. 96 is
+    // a board measure and not a step of the spacing scale, so it is written as it is drawn.
     return (
-      <View className="flex-1 pb-24">
+      <View className="flex-1 pb-[96px]">
         <ErrorState body={FOOD_NOT_LOADED.body} inset="wide" title={FOOD_NOT_LOADED.title} />
       </View>
     );
@@ -18,7 +19,7 @@ function LoadStateBody({ state }: FoodLoadStateProps) {
 
   if (state === "notFound") {
     return (
-      <View className="flex-1 pb-24">
+      <View className="flex-1 pb-[96px]">
         <EmptyState
           body={FOOD_NOT_FOUND.body}
           icon="SearchX"

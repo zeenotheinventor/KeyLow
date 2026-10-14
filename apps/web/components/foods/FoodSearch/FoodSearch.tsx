@@ -13,7 +13,7 @@ import { SearchResults } from "./SearchResults";
 import type { FoodSearchProps } from "./types";
 
 import { BarcodeLookup } from "@/components/foods/BarcodeLookup";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { SearchField } from "@/components/ui/SearchField";
 
 const WORDING = {

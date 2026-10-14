@@ -551,7 +551,6 @@ describe("useFoodSearch", () => {
             kind: "rate_limited",
             retryAfterSeconds: 20,
             debugMessage: "Slow down",
-            message: "Slow down",
           });
         });
         await vi.advanceTimersByTimeAsync(500);
@@ -597,7 +596,6 @@ describe("useFoodSearch", () => {
           expect(result.current.offError).toEqual({
             kind: "rate_limited",
             debugMessage: 'Edge function "off-search" was rate limited',
-            message: 'Edge function "off-search" was rate limited',
           });
         });
       });
@@ -622,7 +620,6 @@ describe("useFoodSearch", () => {
             expect(result.current.offError).toEqual({
               kind: code,
               debugMessage: "Raw upstream text",
-              message: "Raw upstream text",
             });
           });
           expect(result.current.local).toEqual(hits);
@@ -638,7 +635,6 @@ describe("useFoodSearch", () => {
           expect(result.current.offError).toEqual({
             kind: "failed",
             debugMessage: 'Edge function "off-search" failed',
-            message: 'Edge function "off-search" failed',
           });
         });
       });
@@ -660,7 +656,6 @@ describe("useFoodSearch", () => {
 
       expect(result.current.localError).toMatchObject({ kind: "failed" });
       expect(result.current.localError?.debugMessage).toContain("database unavailable");
-      expect(result.current.localError?.message).toContain("database unavailable");
       expect(result.current.local).toEqual([]);
       expect(result.current.off).toEqual([]);
       expect(result.current.isLoadingLocal).toBe(false);

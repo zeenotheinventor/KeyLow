@@ -1,4 +1,3 @@
-import { legacyColors, legacyFontSize, legacySpacing } from "./legacy";
 import {
   borderRadius,
   colors,
@@ -72,11 +71,11 @@ export const scaleSteps = { press: String(pressScale) };
 export const preset: Partial<Config> = {
   theme: {
     extend: {
-      colors: { ...themeColors, ...legacyColors },
-      spacing: { ...legacySpacing, ...spacing },
+      colors: themeColors,
+      spacing,
       borderRadius,
       fontFamily,
-      fontSize: { ...legacyFontSize, ...fontSize },
+      fontSize,
       boxShadow,
       width: controlSizes,
       height: controlSizes,

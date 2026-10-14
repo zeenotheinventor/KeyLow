@@ -14,7 +14,6 @@ describe("the kit's source", () => {
 
     expect(source).not.toMatch(/\sstyle=/);
     expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
-    expect(source).not.toMatch(/legacy-/);
     expect(source).not.toContain("—");
   });
 });

@@ -330,7 +330,6 @@ describe("useFoodByBarcode", () => {
           kind: "rate_limited",
           retryAfterSeconds: 20,
           debugMessage: "Slow down",
-          message: "Slow down",
         });
       });
       await act(() => new Promise((resolve) => setTimeout(resolve, 100)));
@@ -414,7 +413,6 @@ describe("useFoodByBarcode", () => {
           kind: "rate_limited",
           retryAfterSeconds: 20,
           debugMessage: "Slow down",
-          message: "Slow down",
         });
       });
       expect(result.current.result).toEqual({ status: "not_found", code: VALID_BARCODE });
@@ -432,7 +430,6 @@ describe("useFoodByBarcode", () => {
         expect(result.current.error).toEqual({
           kind: "upstream_error",
           debugMessage: "Open Food Facts is unavailable",
-          message: "Open Food Facts is unavailable",
         });
       });
       expect(result.current.result).toBeUndefined();

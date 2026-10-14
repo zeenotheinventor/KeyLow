@@ -16,8 +16,8 @@ import { useState, type SubmitEvent } from "react";
 import type { FieldErrors, LoginFormProps, PendingAction } from "./types";
 
 import { Banner } from "@/components/ui/Banner";
-import { Button } from "@/components/ui/button";
-import { TextField } from "@/components/ui/input";
+import { Button } from "@/components/ui/Button";
+import { TextField } from "@/components/ui/Input";
 import { createClient } from "@/lib/supabase/client";
 
 const PASSWORD_MIN_LENGTH = 8;

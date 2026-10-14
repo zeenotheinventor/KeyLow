@@ -792,7 +792,7 @@ describe("food search sheet", () => {
     });
 
     it("should keep the local results and say so in a quiet notice that is not an alert", async () => {
-      Object.assign(searchResult, { offError: { kind: "failed", message: "boom" } });
+      Object.assign(searchResult, { offError: { kind: "failed", debugMessage: "boom" } });
 
       await renderSearch();
 
@@ -807,7 +807,7 @@ describe("food search sheet", () => {
 
     it("should never show the raw text of the failure", async () => {
       Object.assign(searchResult, {
-        offError: { kind: "failed", message: "boom", debugMessage: "boom" },
+        offError: { kind: "failed", debugMessage: "boom" },
       });
 
       await renderSearch();
@@ -897,7 +897,7 @@ describe("food search sheet", () => {
 
   describe("when the local search fails", () => {
     beforeEach(() => {
-      Object.assign(searchResult, { localError: { message: "rpc failed" } });
+      Object.assign(searchResult, { localError: { kind: "failed", debugMessage: "rpc failed" } });
     });
 
     it("should say so in an alert, with no retry button", async () => {

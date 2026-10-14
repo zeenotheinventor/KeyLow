@@ -1,14 +1,19 @@
+import { BARCODE_NOT_FOUND, FOOD_DETAIL, FOOD_FORM } from "@keylow/core/copy";
 import { controlHeight, pressScale, touchTarget } from "@keylow/tokens";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities } from "./compileUtilities";
 
+import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
+import { BarcodeResult } from "@/components/foods/BarcodeLookup/BarcodeResult";
+import { BackToFoodsLink } from "@/components/foods/FoodDetail/BackToFoodsLink";
+import { FormActions } from "@/components/foods/FoodForm/FormActions";
 import { Banner } from "@/components/ui/Banner";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { GroupedList } from "@/components/ui/GroupedList";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { SearchField, SearchLauncher } from "@/components/ui/SearchField";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -17,6 +22,11 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 // `active:scale-press`) instead of a literal. These tests compile the classes an element carries
 // with the app's own Tailwind config and read the declaration each one becomes, so they prove the
 // sizes on screen are still the design's numbers and that the shared classes reach the app.
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/diary",
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 const escapeForPattern = (text: string): string => text.replace(/[.*+?^${}()|[\]\\:]/g, "\\$&");
 
@@ -196,4 +206,69 @@ describe("GroupedList", () => {
       `min-height: ${touchTarget}px`,
     );
   });
+});
+
+describe("the links and navigation outside the kit", () => {
+  it("should keep a navigation link at least a touch target high", async () => {
+    render(<DashboardNav />);
+    const { className } = screen.getByRole("link", { name: "Diary" });
+
+    expect(await declarationsOf(className, "min-h-touch-target")).toBe(
+      `min-height: ${touchTarget}px`,
+    );
+  });
+
+  it("should keep the link to create a food from a barcode at least a touch target high", async () => {
+    render(
+      <BarcodeResult
+        result={{ status: "not_found", code: "5000159484695" }}
+        isLoading={false}
+        error={null}
+      />,
+    );
+    const { className } = screen.getByRole("link", { name: BARCODE_NOT_FOUND.action });
+
+    expect(await declarationsOf(className, "min-h-touch-target")).toBe(
+      `min-height: ${touchTarget}px`,
+    );
+  });
+
+  it("should keep Cancel on a food form at least a touch target high", async () => {
+    render(
+      <FormActions
+        submitLabel="Create food"
+        cancelHref="/foods"
+        isSaving={false}
+        isSaveDisabled={false}
+      />,
+    );
+    const { className } = screen.getByRole("link", { name: FOOD_FORM.cancel });
+
+    expect(await declarationsOf(className, "min-h-touch-target")).toBe(
+      `min-height: ${touchTarget}px`,
+    );
+  });
+
+  it("should keep the way back from a food at least the small control height", async () => {
+    render(<BackToFoodsLink />);
+    const { className } = screen.getByRole("link", { name: FOOD_DETAIL.back });
+
+    expect(await declarationsOf(className, "min-h-control-sm")).toBe(
+      `min-height: ${controlHeight.sm}px`,
+    );
+  });
+
+  it.each([
+    ["min-h-touch-target", "min-h-[44px]"],
+    ["min-h-control-sm", "min-h-[36px]"],
+  ])(
+    "should compile %s to the same height as the literal %s it replaced",
+    async (named, literal) => {
+      const minHeightOf = async (className: string) =>
+        /min-height:\s*([^;}\s]+)/.exec(await compileUtilities(className))?.[1];
+
+      expect(await minHeightOf(named)).toBeDefined();
+      expect(await minHeightOf(named)).toBe(await minHeightOf(literal));
+    },
+  );
 });
