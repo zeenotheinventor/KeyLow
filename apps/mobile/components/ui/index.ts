@@ -21,7 +21,7 @@ export type { IconButtonProps, IconButtonSize, IconButtonVariant } from "./IconB
 export { FieldError, Input } from "./Input";
 export type { FieldErrorProps, InputDensity, InputProps } from "./Input";
 export { ListRow } from "./ListRow";
-export type { ListRowProps } from "./ListRow";
+export type { ListRowProps, ListRowToPressProps, ListRowWithControlProps } from "./ListRow";
 export { SearchField } from "./SearchField";
 export { SearchLauncher } from "./SearchLauncher";
 export type { SearchLauncherProps } from "./SearchLauncher";

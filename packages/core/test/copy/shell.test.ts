@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   ADD_FOOD_BUTTON_LABEL,
   COMING_SOON_TITLE,
+  MORE_SCREEN,
   PLACEHOLDER_BODIES,
   SEARCH_LAUNCHER,
   TAB_BAR_LABEL,
@@ -32,6 +33,24 @@ describe("the tab shell copy", () => {
       dashboard: "Your weekly nutrition, weight trend and expenditure will appear here.",
       diary: "Your logged foods will appear here, day by day.",
       recipes: "Your recipes will appear here.",
+    });
+  });
+
+  it("should pin the More screen's sections and rows as the board draws them", () => {
+    expect(MORE_SCREEN).toEqual({
+      food: {
+        title: "Food",
+        yourFoods: { title: "Your foods", subtitle: "Foods you created or copied" },
+      },
+      body: { title: "Body", weight: { title: "Weight", subtitle: "Coming soon" } },
+      settings: {
+        title: "Settings",
+        appearance: {
+          title: "Appearance",
+          options: { dark: "Dark", light: "Light", system: "Match device" },
+        },
+      },
+      account: { title: "Account", signOut: "Sign out" },
     });
   });
 });

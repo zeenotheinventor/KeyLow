@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Pressable, Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { ListRow } from "../../components/ui";
@@ -9,7 +9,11 @@ import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
 
-import type { ListRowProps } from "../../components/ui";
+import type {
+  ListRowProps,
+  ListRowToPressProps,
+  ListRowWithControlProps,
+} from "../../components/ui";
 import type { ThemeScheme } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -19,19 +23,32 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 setUpTests();
 
-const defaultProps: ListRowProps = {
+const rowContents: Pick<ListRowToPressProps, "icon" | "title" | "subtitle" | "value" | "unit"> = {
   icon: "Utensils",
   title: "Greek yoghurt",
   subtitle: "170 g, Fage",
   value: "165",
   unit: "kcal",
-  onPress: () => undefined,
 };
 
-function renderRow(props: Partial<ListRowProps> = {}, scheme: ThemeScheme = "dark") {
+const defaultProps: ListRowToPressProps = { ...rowContents, onPress: () => undefined };
+
+function renderRow(props: Partial<ListRowToPressProps> = {}, scheme: ThemeScheme = "dark") {
   return render(
     <ThemeProvider fixedPreference={scheme}>
       <ListRow {...defaultProps} {...props} />
+    </ThemeProvider>,
+  );
+}
+
+// A row with a control under it goes nowhere, so it is not given a press, which its type would refuse.
+function renderRowWithControlProps(
+  props: Partial<ListRowWithControlProps> = {},
+  scheme: ThemeScheme = "dark",
+) {
+  return render(
+    <ThemeProvider fixedPreference={scheme}>
+      <ListRow {...rowContents} {...props} />
     </ThemeProvider>,
   );
 }
@@ -120,6 +137,82 @@ describe("ListRow", () => {
       await renderRow({ onPress: undefined });
 
       expect(drawings()).toHaveLength(1);
+    });
+  });
+
+  describe("with a control under it", () => {
+    function renderRowWithControl() {
+      return renderRowWithControlProps({
+        icon: "SunMoon",
+        title: "Appearance",
+        subtitle: undefined,
+        value: undefined,
+        unit: undefined,
+        children: (
+          <Pressable accessibilityRole="button" accessibilityLabel="Control">
+            <Text>Control</Text>
+          </Pressable>
+        ),
+      });
+    }
+
+    it("should show what it is given under its title", async () => {
+      await renderRowWithControl();
+
+      expect(screen.getByText("Control")).toBeOnTheScreen();
+    });
+
+    it("should leave the control reachable on its own, not folded into the row's name", async () => {
+      await renderRowWithControl();
+
+      expect(screen.getByRole("button", { name: "Control" })).toBeOnTheScreen();
+      expect(screen.getByLabelText("Appearance")).toBeOnTheScreen();
+    });
+
+    it("should pad its title row 12 across and above, with no minimum height, so the card is 116 tall around a 44 control", async () => {
+      await renderRowWithControl();
+
+      expect(screen.getByLabelText("Appearance")).toHaveStyle({
+        flexDirection: "row",
+        alignItems: "center",
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 12,
+        columnGap: 12,
+      });
+      expect(screen.getByLabelText("Appearance")).not.toHaveStyle({ minHeight: 56 });
+    });
+
+    it.each([
+      ["null", null],
+      ["false", false],
+      ["undefined", undefined],
+    ])(
+      "should stay a plain row when its control is %s, as a conditional control is",
+      async (_name, control) => {
+        await renderRowWithControlProps({ children: control });
+
+        expect(screen.getByLabelText(rowName)).toHaveStyle({ minHeight: 56, paddingTop: 8 });
+      },
+    );
+
+    it("should not take a press together with a control", () => {
+      // @ts-expect-error a row with a control under it goes nowhere, so the type refuses onPress beside it
+      const props: ListRowProps = {
+        title: "Appearance",
+        onPress: () => undefined,
+        children: <Text>Control</Text>,
+      };
+
+      expect(props.title).toBe("Appearance");
+    });
+
+    it("should pad the control 12 on every side", async () => {
+      await renderRowWithControl();
+
+      expect(screen.getByRole("button", { name: "Control" }).parent).toHaveStyle({
+        padding: 12,
+      });
     });
   });
 

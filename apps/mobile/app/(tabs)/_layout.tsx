@@ -6,9 +6,8 @@ import { useTabTransitionOptions } from "../../components/ui";
 import { useTheme } from "../../lib/theme";
 
 // The tab bar draws four destinations, which are the screens named here. The centre plus is not a screen:
-// the bar opens the search sheet for it, so it never becomes the open tab. `weight` and `settings` are
-// reached from More and have no place in the bar until More is built. A back press returns through the
-// tabs the user came from.
+// the bar opens the search sheet for it, so it never becomes the open tab. What More holds, Your foods,
+// Appearance and Sign out, has no screen of its own. A back press returns through the tabs the user came from.
 export default function TabsLayout() {
   const { colors } = useTheme();
   const transition = useTabTransitionOptions();

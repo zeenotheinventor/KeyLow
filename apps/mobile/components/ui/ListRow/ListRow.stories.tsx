@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { View } from "react-native";
 
 import { Card } from "../Card";
+import { SegmentedControl } from "../SegmentedControl";
 import { ListRow } from "./ListRow";
 
+import type { ListRowToPressProps, ListRowWithControlProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -19,7 +22,7 @@ const meta = {
     ),
   ],
   args: { icon: "Utensils", title: "Your foods" },
-} satisfies Meta<typeof ListRow>;
+} satisfies Meta<ListRowToPressProps>;
 
 export default meta;
 
@@ -49,4 +52,31 @@ export const TitleOnly: Story = {
 // The More screen's Weight row: it is not there yet, so it is dimmed and does nothing.
 export const Disabled: Story = {
   args: { icon: "ScanBarcode", title: "Weight", subtitle: "Coming soon", disabled: true },
+};
+
+type Appearance = "dark" | "light" | "system";
+
+// A choice is kept by the screen that holds it, so the story keeps it too and a press moves it.
+function AppearanceChoice() {
+  const [value, setValue] = useState<Appearance>("dark");
+
+  return (
+    <SegmentedControl
+      label="Appearance"
+      options={[
+        { value: "dark", label: "Dark" },
+        { value: "light", label: "Light" },
+        { value: "system", label: "Match device" },
+      ]}
+      value={value}
+      onChange={setValue}
+    />
+  );
+}
+
+// The More screen's Appearance setting: a row that goes nowhere, with its control under the title. The card
+// is 116 points tall, with 12 points of padding around the 44 point control.
+// Its props are the row with a control, which takes no press, so it has a story type of its own.
+export const WithControl: StoryObj<Meta<ListRowWithControlProps>> = {
+  args: { icon: "SunMoon", title: "Appearance", children: <AppearanceChoice /> },
 };

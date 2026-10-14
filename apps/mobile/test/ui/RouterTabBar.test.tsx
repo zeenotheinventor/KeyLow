@@ -120,10 +120,10 @@ describe("RouterTabBar in the real Expo Router Tabs", () => {
   });
 
   it("should leave out a screen that has no place in the bar", async () => {
-    await renderTabs({ settings: () => <Text>Settings screen</Text> });
+    await renderTabs({ unlisted: () => <Text>Unlisted screen</Text> });
 
     expect(screen.getAllByRole("tab")).toHaveLength(4);
-    expect(screen.queryByRole("tab", { name: /settings/i })).not.toBeOnTheScreen();
+    expect(screen.queryByRole("tab", { name: /unlisted/i })).not.toBeOnTheScreen();
   });
 
   it("should give every screen the quick fade for a tab change", async () => {
