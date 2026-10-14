@@ -2,7 +2,9 @@ import resolveConfig from "tailwindcss/resolveConfig";
 import { describe, expect, it } from "vitest";
 
 import { preset } from "../src";
-import { renderCss } from "./support/renderCss";
+import { renderCss, warmUpTailwindBeforeAll } from "./support/renderCss";
+
+warmUpTailwindBeforeAll();
 
 describe("preset", () => {
   it("should extend the theme only, so Tailwind's own theme is kept", () => {

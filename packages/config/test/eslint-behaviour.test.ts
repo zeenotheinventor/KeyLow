@@ -3,6 +3,9 @@ import { fileURLToPath } from "node:url";
 import { ESLint } from "eslint";
 import { describe, expect, it } from "vitest";
 
+// Type-aware linting took 16s on an idle CI runner and at least 91s on the loaded run 38607649667, past the 60s default.
+const TYPE_AWARE_LINT_TIMEOUT_MILLISECONDS = 180_000;
+
 const lintFixture = async (fixtureName: string, fileName: string) => {
   const fixtureDirectory = fileURLToPath(new URL(`./fixtures/${fixtureName}/`, import.meta.url));
   const eslint = new ESLint({
@@ -22,10 +25,14 @@ const ruleIdsOf = (messages: { ruleId: string | null }[]) =>
 describe.each(["base", "react", "react-native"])(
   "a project consuming @keylow/config/eslint/%s",
   (name) => {
-    it("reports nothing on a valid file", async () => {
-      const result = await lintFixture(name, "valid.ts");
-      expect(result.messages).toEqual([]);
-    });
+    it(
+      "reports nothing on a valid file",
+      async () => {
+        const result = await lintFixture(name, "valid.ts");
+        expect(result.messages).toEqual([]);
+      },
+      TYPE_AWARE_LINT_TIMEOUT_MILLISECONDS,
+    );
   },
 );
 
