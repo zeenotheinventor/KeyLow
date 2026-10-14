@@ -1,4 +1,5 @@
 import base from "@keylow/config/eslint/base";
+import hermes from "@keylow/config/eslint/hermes";
 
 // The leading slash is deliberate so the patterns match package names only, not relative paths.
 const platformPackagePatterns = [
@@ -12,6 +13,7 @@ const platformPackagePatterns = [
 
 export default [
   ...base,
+  ...hermes,
   {
     // Core runs in React Native and Deno, so shipped code may use neither Node built-ins nor platform packages.
     files: ["src/**/*.ts"],

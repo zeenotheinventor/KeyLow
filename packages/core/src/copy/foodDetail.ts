@@ -53,7 +53,12 @@ const MISSING_NUTRIENT_NAMES = [
   ["fibre_g", "fibre"],
 ] as const;
 
-const listFormat = new Intl.ListFormat("en-GB", { style: "long", type: "conjunction" });
+// Written out because Hermes, which the mobile app runs on, has no `Intl.ListFormat`, and a missing
+// constructor stops the whole copy module from loading. British English joins as "a, b and c".
+const joinWithAnd = (names: readonly string[]): string =>
+  names.length < 3
+    ? names.join(" and ")
+    : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 
 const capitalise = (text: string): string => `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 
@@ -81,5 +86,5 @@ export const describeMissingValues = (
   const reason = isOnlyFibreOfAUsLabel ? ", so carbohydrate still includes it" : "";
   const pronoun = names.length === 1 ? "it" : "them";
 
-  return `${capitalise(listFormat.format(names))} ${verb} not given${reason}. Fill ${pronoun} in to save your own copy of this food.`;
+  return `${capitalise(joinWithAnd(names))} ${verb} not given${reason}. Fill ${pronoun} in to save your own copy of this food.`;
 };

@@ -90,6 +90,31 @@ describe("eslint/react-native", () => {
   });
 });
 
+describe("eslint/hermes", () => {
+  it("reports each Intl API that Hermes lacks", async () => {
+    const result = await lintFixture("hermes", "invalid.ts");
+    const restricted = result.messages.filter(
+      (message) => message.ruleId === "no-restricted-properties",
+    );
+    expect(restricted.map((message) => message.message)).toEqual([
+      expect.stringContaining("Intl.ListFormat"),
+      expect.stringContaining("Intl.RelativeTimeFormat"),
+      expect.stringContaining("Intl.Segmenter"),
+      expect.stringContaining("Intl.DisplayNames"),
+    ]);
+  });
+
+  it("allows Intl.DateTimeFormat, which Hermes supports", async () => {
+    const result = await lintFixture("hermes", "valid.ts");
+    expect(result.messages).toEqual([]);
+  });
+
+  it("is part of eslint/react-native", async () => {
+    const result = await lintFixture("react-native", "invalid.ts");
+    expect(ruleIdsOf(result.messages)).toContain("no-restricted-properties");
+  });
+});
+
 describe.each(["react", "react-native"])("eslint/%s", (name) => {
   it("catches a conditional hook call", async () => {
     const result = await lintFixture(name, "invalid.ts");
