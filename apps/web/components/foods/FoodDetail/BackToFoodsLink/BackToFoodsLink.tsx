@@ -10,7 +10,7 @@ export function BackToFoodsLink({ label = FOOD_DETAIL.back }: BackToFoodsLinkPro
   return (
     <Link
       href="/foods"
-      className="-ml-1 inline-flex min-h-[36px] items-center gap-1 self-start rounded-small pl-1 pr-2 text-[14px] font-semibold leading-5 text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+      className="-ml-1 inline-flex min-h-control-sm items-center gap-1 self-start rounded-small pl-1 pr-2 text-[14px] font-semibold leading-5 text-text-secondary outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
       <ChevronLeft aria-hidden className="size-4" strokeWidth={iconStroke} />
       {label}

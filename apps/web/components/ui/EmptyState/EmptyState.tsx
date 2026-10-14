@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import type { EmptyStateAction, EmptyStateProps, EmptyStateSize } from "./types";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 const sizeClasses = {

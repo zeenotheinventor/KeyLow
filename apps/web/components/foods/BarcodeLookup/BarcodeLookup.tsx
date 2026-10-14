@@ -13,9 +13,9 @@ import { BarcodeResult } from "./BarcodeResult";
 import type { BarcodeLookupProps, BarcodeLookupRequest } from "./types";
 import type { BarcodeInvalidReason } from "@keylow/core/foods";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 
 /**
  * The panel behind the search field's barcode button. There is no camera on the web, so the

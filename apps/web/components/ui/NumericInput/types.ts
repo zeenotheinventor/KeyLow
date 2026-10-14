@@ -1,4 +1,4 @@
-import type { TextFieldProps } from "@/components/ui/input";
+import type { TextFieldProps } from "@/components/ui/Input";
 
 export type NumericInputMacro = "protein" | "carbs" | "fat";
 

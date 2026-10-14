@@ -1,7 +1,7 @@
 import { Menu, Plus } from "lucide-react";
 import { userEvent } from "storybook/test";
 
-import { Button } from "./button";
+import { Button } from "./Button";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import type { ReactNode } from "react";

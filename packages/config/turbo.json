@@ -1,0 +1,22 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "test": {
+      // The source guard reads every file under apps and packages, so a change there must rerun this
+      // package's tests and a cached pass must never stand in for one.
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "$TURBO_ROOT$/apps/**",
+        "$TURBO_ROOT$/packages/**",
+        "!$TURBO_ROOT$/**/node_modules/**",
+        "!$TURBO_ROOT$/**/.next/**",
+        "!$TURBO_ROOT$/**/.turbo/**",
+        "!$TURBO_ROOT$/**/.expo/**",
+        "!$TURBO_ROOT$/**/next-env.d.ts",
+        "!$TURBO_ROOT$/**/storybook-static/**",
+        "!$TURBO_ROOT$/**/coverage/**"
+      ]
+    }
+  }
+}

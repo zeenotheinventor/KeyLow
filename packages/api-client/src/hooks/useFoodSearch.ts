@@ -32,9 +32,6 @@ export type UseFoodSearchOptions = {
 /**
  * Why a call to an Edge Function gave nothing, which is what Open Food Facts searches and barcode
  * lookups are. The screen shows words for `kind` (through `describeEdgeError`) and never the raw text.
- *
- * The hooks always set `debugMessage` and `message`. They are optional in the type only so that the
- * fixtures the apps wrote before `debugMessage` existed still typecheck, and KEY-113 tightens them.
  */
 export type FoodSearchOffError = {
   kind: EdgeErrorKind;
@@ -44,25 +41,16 @@ export type FoodSearchOffError = {
    * The raw text of the failure, for logs and bug reports only. It can carry upstream or database
    * wording that means nothing to the user, so the UI must never render it.
    */
-  debugMessage?: string;
-  /**
-   * The same text as `debugMessage`, so it is not for the UI either. It stays only until the
-   * screens stop reading it, and KEY-113 removes it. It is not marked deprecated because that
-   * would fail the lint of the apps that still read it.
-   */
-  message?: string;
+  debugMessage: string;
 };
 
 /**
- * Why the local search failed. Like `FoodSearchOffError`, its text is for logs and never for the UI,
- * and the hooks always set `kind` and `debugMessage`, which are optional in the type for the same reason.
+ * Why the local search failed. Like `FoodSearchOffError`, its text is for logs and never for the UI.
  */
 export type FoodSearchLocalError = {
-  kind?: "failed";
+  kind: "failed";
   /** The raw text of the failure, for logs and bug reports only. The UI must never render it. */
-  debugMessage?: string;
-  /** The same text as `debugMessage`, so it is not for the UI either. KEY-113 removes it. */
-  message: string;
+  debugMessage: string;
 };
 
 export type FoodSearchResult = {
@@ -84,10 +72,8 @@ export type FoodSearchResult = {
    * screen should not read an empty list as "no matches yet": the user has typed and the search is
    * waiting. With `debounceMs: 0` the gap lasts a single render. Always false when `enabled` is
    * false, and when only the whitespace around the query changed, since neither starts a search.
-   * The hook always sets it. It is optional in the type only so that the results the apps mock
-   * before this field existed still typecheck, and KEY-113 makes it required.
    */
-  isDebouncing?: boolean;
+  isDebouncing: boolean;
   offError: FoodSearchOffError | null;
   /** Set when the local search failed, so the screen can tell a failure from "no matches". */
   localError: FoodSearchLocalError | null;
@@ -99,7 +85,7 @@ export function toOffError(error: Error | null): FoodSearchOffError | null {
   }
 
   const kind = toEdgeErrorKind(error);
-  const base = { kind, debugMessage: error.message, message: error.message };
+  const base = { kind, debugMessage: error.message };
 
   return error instanceof RateLimitedError && error.retryAfterSeconds !== undefined
     ? { ...base, retryAfterSeconds: error.retryAfterSeconds }
@@ -179,12 +165,6 @@ export function useFoodSearch(query: string, options: UseFoodSearchOptions = {})
     isDebouncing,
     offError: isOffSearchNeeded ? toOffError(offQuery.error) : null,
     localError:
-      localQuery.error === null
-        ? null
-        : {
-            kind: "failed",
-            debugMessage: localQuery.error.message,
-            message: localQuery.error.message,
-          },
+      localQuery.error === null ? null : { kind: "failed", debugMessage: localQuery.error.message },
   };
 }

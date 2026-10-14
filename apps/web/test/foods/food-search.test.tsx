@@ -537,7 +537,6 @@ describe("FoodSearch", () => {
           local: chickenHits,
           offError: {
             kind: "failed",
-            message: "Upstream is down",
             debugMessage: "Upstream is down",
           },
         }),
@@ -559,7 +558,7 @@ describe("FoodSearch", () => {
       useFoodSearch.mockReturnValue(
         resultWith({
           local: chickenHits,
-          offError: { kind: "rate_limited", retryAfterSeconds: 45 },
+          offError: { kind: "rate_limited", retryAfterSeconds: 45, debugMessage: "Slow down" },
         }),
       );
       render(<FoodSearch />);
@@ -571,7 +570,9 @@ describe("FoodSearch", () => {
     });
 
     it("should say to try again in a moment when no delay is known", () => {
-      useFoodSearch.mockReturnValue(resultWith({ offError: { kind: "rate_limited" } }));
+      useFoodSearch.mockReturnValue(
+        resultWith({ offError: { kind: "rate_limited", debugMessage: "Slow down" } }),
+      );
       render(<FoodSearch />);
 
       search("chicken");
@@ -581,7 +582,7 @@ describe("FoodSearch", () => {
 
     it("should not claim a rate limit for another kind of failure", () => {
       useFoodSearch.mockReturnValue(
-        resultWith({ offError: { kind: "upstream_error", message: "Upstream is down" } }),
+        resultWith({ offError: { kind: "upstream_error", debugMessage: "Upstream is down" } }),
       );
       render(<FoodSearch />);
 
@@ -608,7 +609,9 @@ describe("FoodSearch", () => {
     });
 
     it("should show the Open Food Facts notice above the empty state", () => {
-      useFoodSearch.mockReturnValue(resultWith({ offError: { kind: "failed" } }));
+      useFoodSearch.mockReturnValue(
+        resultWith({ offError: { kind: "failed", debugMessage: "Upstream is down" } }),
+      );
       render(<FoodSearch />);
 
       search("zzqx");
@@ -642,7 +645,7 @@ describe("FoodSearch", () => {
 
     it("should say the search failed in an alert, without the raw text, and not claim no results", () => {
       useFoodSearch.mockReturnValue(
-        resultWith({ localError: { kind: "failed", message: "Could not search: offline" } }),
+        resultWith({ localError: { kind: "failed", debugMessage: "Could not search: offline" } }),
       );
       render(<FoodSearch />);
 

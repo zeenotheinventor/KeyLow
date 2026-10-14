@@ -247,7 +247,7 @@ describe("BarcodeLookup", () => {
       useFoodByBarcode.mockReturnValue({
         result: undefined,
         isLoading: false,
-        error: { kind: "failed", message: "Could not reach the server" },
+        error: { kind: "failed", debugMessage: "Could not reach the server" },
       });
       renderPanel();
 
@@ -266,7 +266,7 @@ describe("BarcodeLookup", () => {
       useFoodByBarcode.mockReturnValue({
         result: undefined,
         isLoading: false,
-        error: { kind: "rate_limited", retryAfterSeconds: 30 },
+        error: { kind: "rate_limited", retryAfterSeconds: 30, debugMessage: "Slow down" },
       });
       renderPanel();
 
@@ -282,7 +282,7 @@ describe("BarcodeLookup", () => {
       useFoodByBarcode.mockReturnValue({
         result: undefined,
         isLoading: false,
-        error: { kind: "rate_limited" },
+        error: { kind: "rate_limited", debugMessage: "Slow down" },
       });
       renderPanel();
 
@@ -298,7 +298,6 @@ describe("BarcodeLookup", () => {
         error: {
           kind: "upstream_error",
           debugMessage: "Open Food Facts is unavailable",
-          message: "Open Food Facts is unavailable",
         },
       });
       renderPanel();

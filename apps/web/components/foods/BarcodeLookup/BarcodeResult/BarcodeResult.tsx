@@ -43,7 +43,7 @@ export function BarcodeResult({ result, isLoading, error }: BarcodeResultProps) 
         </span>
         <Link
           href={`/foods/new?barcode=${result.code}`}
-          className="inline-flex min-h-[44px] items-center gap-1.5 self-start rounded-small text-body-strong text-text-primary underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          className="inline-flex min-h-touch-target items-center gap-1.5 self-start rounded-small text-body-strong text-text-primary underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
           {BARCODE_NOT_FOUND.action}
         </Link>

@@ -1,14 +1,10 @@
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
-import * as React from "react";
-
-import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
 
 // Heights are the design's control heights (36 dense web only, 44, 52). A leading icon is 20 px as
 // the boards draw it, and 16 px in the dense size. The overlay is a pseudo
 // element so hover and press tint the variant's own fill. The press scale and the spinner both
 // have a prefers-reduced-motion fallback.
-const buttonVariants = cva(
+export const buttonVariants = cva(
   "relative inline-flex min-w-touch-target shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-press active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
@@ -45,71 +41,3 @@ const buttonVariants = cva(
     },
   },
 );
-
-type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants> & {
-    /** Renders the button's styles on a single child such as a link. It has no label to hide, so `loading` does nothing. */
-    asChild?: boolean;
-    /** Keeps the label's width, hides it and shows a spinner. The button is inert until it ends. */
-    loading?: boolean;
-    /** What a screen reader hears while loading, such as "Signing in". */
-    loadingLabel?: string;
-  };
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      iconOnly,
-      asChild = false,
-      loading = false,
-      loadingLabel = "Loading",
-      disabled,
-      children,
-      ...props
-    },
-    ref,
-  ) => {
-    // Only a button that was disabled on purpose is dimmed. A loading one is inert too, but it
-    // stays at full strength, as the login-pending board draws it.
-    const classes = cn(
-      buttonVariants({ variant, size, iconOnly, className }),
-      disabled === true && "opacity-40",
-    );
-
-    if (asChild) {
-      return (
-        <Slot className={classes} ref={ref} {...props}>
-          {children}
-        </Slot>
-      );
-    }
-
-    return (
-      <button
-        className={classes}
-        ref={ref}
-        disabled={disabled === true || loading}
-        aria-busy={loading || undefined}
-        {...props}
-      >
-        <span aria-hidden={loading || undefined} className={cn("contents", loading && "invisible")}>
-          {children}
-        </span>
-        {loading && (
-          <span
-            role="img"
-            aria-label={loadingLabel}
-            className="absolute size-[18px] animate-spin rounded-pill border-2 border-current border-r-transparent motion-reduce:animate-pulse"
-          />
-        )}
-      </button>
-    );
-  },
-);
-Button.displayName = "Button";
-
-export { Button, buttonVariants };
-export type { ButtonProps };

@@ -427,7 +427,9 @@ describe("scan screen", () => {
     });
 
     it("should say when to try again after a rate limit", async () => {
-      setLookupOutcome({ error: { kind: "rate_limited", retryAfterSeconds: 30 } });
+      setLookupOutcome({
+        error: { kind: "rate_limited", retryAfterSeconds: 30, debugMessage: "Slow down" },
+      });
       await renderScanner();
 
       await scan("ean13", cola);
@@ -441,7 +443,7 @@ describe("scan screen", () => {
     });
 
     it("should say to try again in a moment after a rate limit with no delay given", async () => {
-      setLookupOutcome({ error: { kind: "rate_limited" } });
+      setLookupOutcome({ error: { kind: "rate_limited", debugMessage: "Slow down" } });
       await renderScanner();
 
       await scan("ean13", cola);
@@ -452,7 +454,7 @@ describe("scan screen", () => {
     });
 
     it("should give a generic retry message when the lookup failed", async () => {
-      setLookupOutcome({ error: { kind: "failed", message: "socket hang up" } });
+      setLookupOutcome({ error: { kind: "failed", debugMessage: "socket hang up" } });
       await renderScanner();
 
       await scan("ean13", cola);
@@ -469,7 +471,7 @@ describe("scan screen", () => {
     it("should say the lookup failed, and not open a food, when a failure follows an earlier find", async () => {
       setLookupOutcome({
         result: { status: "found", food: foodFixture },
-        error: { kind: "failed", message: "socket hang up" },
+        error: { kind: "failed", debugMessage: "socket hang up" },
       });
       await renderScanner();
 

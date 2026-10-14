@@ -17,7 +17,7 @@ export const storyManifest = {
     "Calories",
     "WithDot",
   ],
-  "button.stories.tsx": [
+  "Button/Button.stories.tsx": [
     "Primary",
     "Secondary",
     "Destructive",
@@ -35,7 +35,7 @@ export const storyManifest = {
     "AsLink",
   ],
   "card.stories.tsx": ["Surface", "Raised", "WithTitle", "Unpadded"],
-  "input.stories.tsx": [
+  "Input/Input.stories.tsx": [
     "Default",
     "Filled",
     "WithHelper",

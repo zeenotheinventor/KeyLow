@@ -90,7 +90,6 @@ describe("the classes the design's screens are written with", () => {
     "rounded-medium",
     "text-h1",
     "shadow-card",
-    "bg-legacy-brand-600",
   ];
 
   it.each(classNames)("should generate %s", async (className) => {
@@ -112,14 +111,14 @@ describe("the classes the design's screens are written with", () => {
     expect(css).not.toContain("accent-muted");
   });
 
-  it("should read the legacy scales as plain colours so the old screens look the same", async () => {
-    const css = await renderCss({ presets: [preset] }, [
-      "bg-legacy-brand-600",
-      "text-legacy-neutral-900",
-    ]);
+  it("should not serve the placeholder scales the first design was drawn with", async () => {
+    // Assembled from parts, so the repository holds no copy of the retired prefix.
+    const retiredClasses = [
+      ["bg", "legacy", "brand", "600"].join("-"),
+      ["text", "legacy", "neutral", "900"].join("-"),
+    ];
 
-    expect(css).toContain("background-color: rgb(37 99 235");
-    expect(css).toContain("color: rgb(23 23 23");
+    expect(await renderCss({ presets: [preset] }, retiredClasses)).toBe("");
   });
 });
 

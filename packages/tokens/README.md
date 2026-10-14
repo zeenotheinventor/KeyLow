@@ -71,7 +71,6 @@ The Tailwind classes do not read this file. They read the `--kl-*` variables fro
 | `haptic`                                                                                                         | The haptic token names: `select`, `confirm`, `complete`, `warning`, `error`.          |
 | `preset`, `themePlugin`, `themeVariables`                                                                        | The Tailwind preset, the plugin, and the variables as data.                           |
 | `controlSizes`, `scaleSteps`                                                                                     | The class names the preset adds for the control sizes and the press scale, as data.   |
-| `legacyColors`, `legacySpacing`, `legacyFontSize`                                                                | The compatibility shim, below.                                                        |
 
 The `kl-*` keyframes in `motion.css` are CSS and are not exported.
 
@@ -89,9 +88,36 @@ pnpm --filter @keylow/tokens generate
 
 then commit the regenerated files with the new snapshot values.
 
-## Legacy shim
+## Spacing and type are the design's steps
 
-`legacyColors` keeps the five placeholder scales as `legacy-neutral`, `legacy-brand`, `legacy-success`, `legacy-warning` and `legacy-danger` (steps 50 to 950), and the preset still serves them, so classes such as `bg-legacy-brand-600` work. `legacySpacing` and `legacyFontSize` keep the placeholder px spacing steps and `xs` to `5xl` text sizes, because the screens still use steps and sizes the design does not define (`min-h-14`, `text-sm`) and they must render the same on native, where Tailwind's rem defaults would differ. New code does not use any of these. KEY-113 removes `src/legacy.ts` once the screens have moved.
+The preset's spacing is the design's 4 pt scale, as px: steps `1`, `2`, `3`, `4`, `5`, `6`, `8`, `10`, `12` and `16` (4 px to 64 px). Its type sizes are the seven type styles (`text-display-numeral`, `text-h1`, `text-h2`, `text-body`, `text-body-strong`, `text-caption`, `text-numeral-small`). The preset adds them to Tailwind's theme and does not replace it, so a step the design does not define (`size-14`, `gap-1.5`, `text-sm`) still exists, but it is Tailwind's own default and that default is in `rem`.
+
+That matters on mobile. NativeWind turns `1rem` into 14 px on a device, so `pb-24` is 84 px there and not the 96 px a web page gets. A size the boards draw that is not a step of the scale is therefore written as the board draws it, in px, with an arbitrary value: `pb-[96px]`. The kit's own control sizes have names for this (`h-control-md`, `min-h-touch-target`, see above), so a button, a field or a row never uses a literal.
+
+## Guards
+
+`packages/config/test/source-guard` reads the source of `apps/` and `packages/` as part of `pnpm check` and fails when the repository stops having one visual language. It fails on:
+
+- a raw hex colour outside this package (the one exception is the Google "G" in `apps/mobile/components/GoogleMark`, approved as Q17);
+- an inline `style`, or any prop named `...Style` (`contentContainerStyle`), that is not a CSS custom property (`vars({...})`), a Reanimated animated style on an `Animated.*` view, the status bar's `style`, or a navigation style read from `useTheme().colors`;
+- a class from a retired placeholder scale, a shadcn colour name (`bg-primary`, `text-muted-foreground`, `border-input`) or Tailwind's default palette (a numbered step of grey, red or blue, and `text-white`);
+- `error.message` or `debugMessage` rendered in JSX;
+- a function declared in an app or a package under the name of a core format, copy, search or food helper;
+- coloured small text in light mode (the Q14 rule above): `text-danger`, `text-warning`, `text-success`, `text-accent` or a macro colour (`text-protein`, `text-carbs`, `text-fat`, `text-calories`) that nothing scopes to dark. On web only a `light-theme:text-text-primary` override in the same class string scopes it. The `dark:` variant is not accepted there, because Tailwind compiles it to `prefers-color-scheme`, so a person who picks Light on a dark system would still see coloured text. On mobile `dark:` is accepted (NativeWind follows the app's scheme), and so are a branch that only runs in dark (`scheme === "light" ? ... : "text-accent"`) and a `dark...` property name. On both, a field error caption (danger text, `text-caption`, `role="alert"`) is scoped.
+
+Each exception is in `source-guard/allowlist.ts` with its reason. An entry covers one finding, or the `count` it names, so a second hex colour or a second `text-danger` in the same place fails until it is excused, and an entry that covers fewer than its count fails too.
+
+### What the guard does not see
+
+The guard reads strings and syntax, not what the code does at run time. These are known blind spots, written down and not closed:
+
+- class strings assembled from parts (`` `text-${tone}` ``, `["text", "danger"].join("-")`);
+- `rgb()` and `hsl()` strings, and palette classes on a border side (`border-t-red-500`);
+- `.message` read through a variable (`const text = error.message`) before it reaches JSX, on a receiver whose name does not end in error, err, exception, failure or cause (`e.message`), by index (`error['message']`), destructured, or through `String(error)`;
+- helper names declared through `useCallback` or as object methods;
+- folders named `build` or `dist`, which are skipped as build output wherever they are;
+- an SVG `url(#id)` reference, which reads as a hex colour when the id is three, four, six or eight hex characters;
+- a style passed by spreading props (`{...{ style }}`).
 
 ## Scripts
 

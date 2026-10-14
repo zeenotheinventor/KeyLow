@@ -8,7 +8,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import type { DashboardSection } from "./types";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 import { SearchLauncher } from "@/components/ui/SearchField";
 import { cn } from "@/lib/utils";
@@ -132,7 +132,7 @@ export function DashboardNav() {
                         setIsMenuOpen(false);
                       }}
                       className={cn(
-                        "flex min-h-[44px] items-center rounded-medium px-3 text-body-strong transition-colors duration-quick hover:bg-hover-overlay lg:h-9 lg:min-h-0 lg:rounded-small lg:text-[14px] lg:leading-5",
+                        "flex min-h-touch-target items-center rounded-medium px-3 text-body-strong transition-colors duration-quick hover:bg-hover-overlay lg:h-9 lg:min-h-0 lg:rounded-small lg:text-[14px] lg:leading-5",
                         focusRing,
                         isCurrent ? "bg-surface-raised text-text-primary" : "text-text-secondary",
                       )}

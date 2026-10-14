@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { compileUtilities } from "./compileUtilities";
 
-import { Input, TextField } from "@/components/ui/input";
+import { Input, TextField } from "@/components/ui/Input";
 
 function describedText(element: HTMLElement): string {
   const identifiers = element.getAttribute("aria-describedby")?.split(" ") ?? [];

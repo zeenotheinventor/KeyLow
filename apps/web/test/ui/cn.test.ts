@@ -1,6 +1,14 @@
+import { controlSizes, preset, scaleSteps } from "@keylow/tokens";
 import { describe, expect, it } from "vitest";
 
 import { cn } from "@/lib/utils";
+
+/** The theme keys of the preset that hold exactly this scale, such as `height` for the control sizes. */
+const presetKeysHolding = (scale: object): string[] =>
+  Object.entries(preset.theme?.extend ?? {})
+    .filter(([, value]) => value === scale)
+    .map(([key]) => key)
+    .sort();
 
 describe("cn", () => {
   it("should keep a type style next to a text colour", () => {
@@ -58,6 +66,19 @@ describe("cn", () => {
       expect(cn("active:scale-press", "motion-reduce:active:scale-100")).toBe(
         "active:scale-press motion-reduce:active:scale-100",
       );
+    });
+  });
+
+  // `cn` tells tailwind-merge about the scales the preset adds, one class group for each theme key.
+  // These fail when the preset gives the control sizes or the press scale to a new key (a `max-h`,
+  // a `size`), which `cn` would not yet merge: add the class group in lib/utils.ts, then this list.
+  describe("the preset's scales", () => {
+    it("should give the control sizes to the keys cn merges", () => {
+      expect(presetKeysHolding(controlSizes)).toEqual(["height", "minHeight", "minWidth", "width"]);
+    });
+
+    it("should give the press scale to the key cn merges", () => {
+      expect(presetKeysHolding(scaleSteps)).toEqual(["scale"]);
     });
   });
 });

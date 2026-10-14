@@ -1,7 +1,7 @@
 import { Lock } from "lucide-react";
 import { userEvent } from "storybook/test";
 
-import { Input, TextField } from "./input";
+import { Input, TextField } from "./Input";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 

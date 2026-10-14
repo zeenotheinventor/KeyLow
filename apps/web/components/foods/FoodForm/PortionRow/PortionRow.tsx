@@ -7,9 +7,9 @@ import { amountUnit } from "../formValues";
 
 import type { PortionRowProps } from "./types";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
-import { TextField } from "@/components/ui/input";
+import { TextField } from "@/components/ui/Input";
 import { NumericInput } from "@/components/ui/NumericInput";
 
 /**

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities, reducedMotionRules } from "./compileUtilities";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/Button";
 
 describe("Button", () => {
   afterEach(() => {

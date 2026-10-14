@@ -7,7 +7,7 @@ import { DENSE_INPUT_CLASS_NAME } from "../denseField";
 import type { DetailsCardProps } from "./types";
 
 import { Card } from "@/components/ui/card";
-import { TextField } from "@/components/ui/input";
+import { TextField } from "@/components/ui/Input";
 import { cn } from "@/lib/utils";
 
 /** The name, brand and barcode. Name takes two of the four columns when there is room. */
