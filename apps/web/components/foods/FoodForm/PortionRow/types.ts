@@ -1,4 +1,4 @@
-import type { PortionFormValues } from "../types";
+import type { PortionError, PortionFormValues } from "../types";
 import type { NutrientBasis } from "@keylow/core/schemas";
 
 export type PortionRowProps = {
@@ -7,8 +7,8 @@ export type PortionRowProps = {
   index: number;
   portion: PortionFormValues;
   basis: NutrientBasis;
-  labelError?: string | undefined;
-  amountError?: string | undefined;
+  /** What is wrong with the row. One sentence covers both fields. */
+  error?: PortionError | undefined;
   onLabelChange: (label: string) => void;
   onAmountChange: (amount: string) => void;
   onDefaultChange: (isDefault: boolean) => void;

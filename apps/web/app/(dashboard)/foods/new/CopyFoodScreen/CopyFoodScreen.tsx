@@ -1,27 +1,32 @@
 "use client";
 
 import { useFoodWithPortions } from "@keylow/api-client";
+import { FOOD_DETAIL, FOOD_FORM } from "@keylow/core/copy";
 
 import type { CopyFoodScreenProps } from "./types";
 
 import { FoodForm } from "@/components/foods/FoodForm";
+import { FoodFormPage } from "@/components/foods/FoodFormPage";
 import { FoodLoadNotice } from "@/components/foods/FoodLoadNotice";
 
 export function CopyFoodScreen({ fromId }: CopyFoodScreenProps) {
   const state = useFoodWithPortions(fromId);
 
   if (state.status !== "ready") {
-    return <FoodLoadNotice state={state} />;
+    return (
+      <FoodFormPage backLabel={FOOD_DETAIL.back}>
+        <FoodLoadNotice state={state} />
+      </FoodFormPage>
+    );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Review and save as my food</h1>
-      <p className="text-sm text-text-muted">
-        Check each value and fill in the ones that are blank. Saving adds a food of your own and
-        leaves the original as it is.
-      </p>
+    <FoodFormPage
+      backLabel={FOOD_FORM.back}
+      title={FOOD_FORM.titles.copy}
+      intro={FOOD_FORM.copyIntro}
+    >
       <FoodForm copyOf={{ food: state.food, portions: state.portions }} />
-    </div>
+    </FoodFormPage>
   );
 }

@@ -28,20 +28,41 @@ vi.mock("next/navigation", () => ({
 
 const CREATED_FOOD_ID = "11111111-1111-4111-8111-111111111111";
 
-function typeInto(label: string, value: string) {
-  fireEvent.change(screen.getByLabelText(label), { target: { value } });
+// A numeric field is named by its label and then its unit. The space between them is optional
+// because the test library drops a space that sits next to a hidden-from-sight element.
+const numeric = (label: string, unit: string) =>
+  new RegExp(`^${label.replaceAll(/[()]/g, "\\$&")}\\s*\\(${unit}\\)$`);
+
+const energy = numeric("Energy", "kcal");
+const protein = numeric("Protein", "g");
+const carbohydrate = numeric("Carbohydrate", "g");
+const fat = numeric("Fat", "g");
+const fibre = numeric("Fibre (optional)", "g");
+const portionAmount = (position: number, unit = "g") =>
+  numeric(`Amount for portion ${String(position)}`, unit);
+
+function typeInto(name: string | RegExp, value: string) {
+  fireEvent.change(screen.getByRole("textbox", { name }), { target: { value } });
 }
 
 function fillRequiredFields() {
   typeInto("Name", "Oat cakes");
-  typeInto("Energy (kcal)", "430");
-  typeInto("Protein (g)", "10");
-  typeInto("Fat (g)", "18");
-  typeInto("Carbohydrate (g)", "56");
+  typeInto(energy, "430");
+  typeInto(protein, "10");
+  typeInto(carbohydrate, "56");
+  typeInto(fat, "18");
 }
 
-function save() {
-  fireEvent.click(screen.getByRole("button", { name: "Save food" }));
+function save(buttonName = "Create food") {
+  fireEvent.click(screen.getByRole("button", { name: buttonName }));
+}
+
+function addPortion() {
+  fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+}
+
+function chooseBasis(name: "Per 100 g" | "Per 100 ml") {
+  fireEvent.click(screen.getByRole("radio", { name }));
 }
 
 function renderForm(props: FoodFormProps = {}) {
@@ -63,19 +84,72 @@ describe("FoodForm", () => {
     it("should label every food field so each can be found by name", () => {
       renderForm();
 
-      for (const name of ["Name", "Brand (optional)", "Barcode (optional)"]) {
+      for (const name of ["Name", "Brand", "Barcode"]) {
         expect(screen.getByRole("textbox", { name })).toBeTruthy();
       }
-      for (const name of [
-        "Energy (kcal)",
-        "Protein (g)",
-        "Fat (g)",
-        "Carbohydrate (g)",
-        "Fibre (g, optional)",
-      ]) {
-        expect(screen.getByRole("spinbutton", { name })).toBeTruthy();
+      for (const name of [energy, protein, carbohydrate, fat, fibre]) {
+        expect(screen.getByRole("textbox", { name })).toBeTruthy();
       }
-      expect(screen.getByRole("combobox", { name: "Basis" })).toBeTruthy();
+    });
+
+    it("should group the fields under a Details, a Nutrition and a Portions section", () => {
+      renderForm();
+
+      expect(screen.getByRole("region", { name: "Details" })).toBeTruthy();
+      expect(screen.getByRole("region", { name: "Nutrition per 100 g" })).toBeTruthy();
+      expect(screen.getByRole("region", { name: "Portions" })).toBeTruthy();
+    });
+
+    it("should say the name is required and the brand and barcode are optional", () => {
+      renderForm();
+
+      expect(screen.getByRole("textbox", { name: "Name", description: "Required" })).toBeTruthy();
+      expect(screen.getByRole("textbox", { name: "Brand" }).getAttribute("placeholder")).toBe(
+        "Optional",
+      );
+      expect(screen.getByRole("textbox", { name: "Barcode" }).getAttribute("placeholder")).toBe(
+        "Optional",
+      );
+    });
+
+    it("should say which nutrients are required", () => {
+      renderForm();
+
+      expect(screen.getByText("Energy, protein, carbohydrate and fat are required.")).toBeTruthy();
+    });
+
+    it("should mark the fields the schema requires with aria-required", () => {
+      renderForm();
+
+      for (const name of ["Name", energy, protein, carbohydrate, fat]) {
+        expect(screen.getByRole("textbox", { name }).getAttribute("aria-required")).toBe("true");
+      }
+      for (const name of ["Brand", "Barcode", fibre]) {
+        expect(screen.getByRole("textbox", { name }).hasAttribute("aria-required")).toBe(false);
+      }
+    });
+
+    it("should offer the basis as a choice of per 100 g or per 100 ml, per 100 g first", () => {
+      renderForm();
+
+      const basis = screen.getByRole("radiogroup", { name: "Basis" });
+
+      expect(within(basis).getByRole("radio", { name: "Per 100 g" })).toHaveProperty(
+        "checked",
+        true,
+      );
+      expect(within(basis).getByRole("radio", { name: "Per 100 ml" })).toHaveProperty(
+        "checked",
+        false,
+      );
+    });
+
+    it("should follow the basis in the Nutrition heading", () => {
+      renderForm();
+
+      chooseBasis("Per 100 ml");
+
+      expect(screen.getByRole("region", { name: "Nutrition per 100 ml" })).toBeTruthy();
     });
 
     it("should not offer a density field", () => {
@@ -87,40 +161,68 @@ describe("FoodForm", () => {
     it("should start with no portions", () => {
       renderForm();
 
-      expect(screen.queryByLabelText(/Portion 1/)).toBeNull();
+      expect(screen.queryByRole("textbox", { name: /^Portion 1/ })).toBeNull();
+      expect(screen.getByText("Each amount is in g, to match the basis.")).toBeTruthy();
+    });
+  });
+
+  describe("actions", () => {
+    it("should offer Create food and a Cancel link back to the foods page for a new food", () => {
+      renderForm();
+
+      expect(screen.getByRole("button", { name: "Create food" }).getAttribute("type")).toBe(
+        "submit",
+      );
+      expect(screen.getByRole("link", { name: "Cancel" }).getAttribute("href")).toBe("/foods");
+    });
+
+    it("should offer Save changes and a Cancel link back to the food when editing", () => {
+      const existing = { food: makeFood(), portions: [] };
+
+      renderForm({ existing });
+
+      expect(screen.getByRole("button", { name: "Save changes" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Cancel" }).getAttribute("href")).toBe(
+        `/foods/${existing.food.id}`,
+      );
+    });
+
+    it("should offer Save to your foods and a Cancel link back to the food when copying", () => {
+      const copyOf = { food: makeFood({ source: "off", owner_id: null }), portions: [] };
+
+      renderForm({ copyOf });
+
+      expect(screen.getByRole("button", { name: "Save to your foods" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Cancel" }).getAttribute("href")).toBe(
+        `/foods/${copyOf.food.id}`,
+      );
     });
   });
 
   describe("validation", () => {
-    it("should not save and should explain every missing required field when the form is empty", () => {
+    it("should not save and should say what is wrong with every missing required field", () => {
       renderForm();
 
       save();
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("textbox", { name: "Name", description: "Enter a name" }),
+        screen.getByRole("textbox", { name: "Name", description: "Required Name is required" }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("spinbutton", {
-          name: "Energy (kcal)",
-          description: "Enter the energy in kcal",
+        screen.getByRole("textbox", { name: energy, description: "Energy is required" }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: protein, description: "Protein is required" }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", {
+          name: carbohydrate,
+          description: "Carbohydrate is required",
         }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("spinbutton", {
-          name: "Protein (g)",
-          description: "Enter the protein in g",
-        }),
-      ).toBeTruthy();
-      expect(
-        screen.getByRole("spinbutton", { name: "Fat (g)", description: "Enter the fat in g" }),
-      ).toBeTruthy();
-      expect(
-        screen.getByRole("spinbutton", {
-          name: "Carbohydrate (g)",
-          description: "Enter the carbohydrate in g",
-        }),
+        screen.getByRole("textbox", { name: fat, description: "Fat is required" }),
       ).toBeTruthy();
     });
 
@@ -130,8 +232,12 @@ describe("FoodForm", () => {
 
       save();
 
-      expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBe("false");
-      expect(screen.getByLabelText("Energy (kcal)").getAttribute("aria-invalid")).toBe("true");
+      expect(screen.getByRole("textbox", { name: "Name" }).getAttribute("aria-invalid")).toBe(
+        "false",
+      );
+      expect(screen.getByRole("textbox", { name: energy }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
     });
 
     it("should summarise the problem in an alert", () => {
@@ -139,32 +245,49 @@ describe("FoodForm", () => {
 
       save();
 
-      expect(screen.getByRole("alert").textContent).toContain("Check the fields marked below");
+      expect(
+        screen
+          .getAllByRole("alert")
+          .some((alert) => alert.textContent === "Check the fields marked below and try again."),
+      ).toBe(true);
     });
 
     it("should treat a blank required number as a required-field error rather than zero", () => {
       renderForm();
       fillRequiredFields();
-      typeInto("Fat (g)", "");
+      typeInto(fat, "");
 
       save();
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("spinbutton", { name: "Fat (g)", description: "Enter the fat in g" }),
+        screen.getByRole("textbox", { name: fat, description: "Fat is required" }),
       ).toBeTruthy();
     });
 
-    it("should reject a negative amount", () => {
+    it("should reject a negative amount in the words the mobile form uses", () => {
       renderForm();
       fillRequiredFields();
-      typeInto("Protein (g)", "-1");
+      typeInto(fat, "-2");
 
       save();
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("spinbutton", { name: "Protein (g)", description: "Must be 0 or more" }),
+        screen.getByRole("textbox", { name: fat, description: "Fat cannot be negative" }),
+      ).toBeTruthy();
+    });
+
+    it("should reject an amount that is not a number", () => {
+      renderForm();
+      fillRequiredFields();
+      typeInto(protein, "lots");
+
+      save();
+
+      expect(createFood).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("textbox", { name: protein, description: "Protein must be a number" }),
       ).toBeTruthy();
     });
 
@@ -177,7 +300,7 @@ describe("FoodForm", () => {
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("textbox", { name: "Name", description: "Enter a name" }),
+        screen.getByRole("textbox", { name: "Name", description: "Required Name is required" }),
       ).toBeTruthy();
     });
 
@@ -189,22 +312,25 @@ describe("FoodForm", () => {
       save();
 
       expect(
-        screen.getByRole("textbox", { name: "Name", description: "Use 200 characters or fewer" }),
+        screen.getByRole("textbox", {
+          name: "Name",
+          description: "Required Name must be 200 characters or fewer",
+        }),
       ).toBeTruthy();
     });
 
     it("should explain a barcode whose check digit is wrong", () => {
       renderForm();
       fillRequiredFields();
-      typeInto("Barcode (optional)", "5000159484696");
+      typeInto("Barcode", "5000159484696");
 
       save();
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
         screen.getByRole("textbox", {
-          name: "Barcode (optional)",
-          description: "The check digit is wrong, so check the digits and try again",
+          name: "Barcode",
+          description: "Barcode check digit is wrong",
         }),
       ).toBeTruthy();
     });
@@ -220,7 +346,9 @@ describe("FoodForm", () => {
         expect(createFood).toHaveBeenCalledTimes(1);
       });
       expect(screen.queryByRole("alert")).toBeNull();
-      expect(screen.getByLabelText("Name").getAttribute("aria-invalid")).toBe("false");
+      expect(screen.getByRole("textbox", { name: "Name" }).getAttribute("aria-invalid")).toBe(
+        "false",
+      );
     });
   });
 
@@ -265,9 +393,9 @@ describe("FoodForm", () => {
     it("should send the optional fields when they are filled in", async () => {
       renderForm();
       fillRequiredFields();
-      typeInto("Brand (optional)", "  Nairn's ");
-      typeInto("Barcode (optional)", "5000159484695");
-      typeInto("Fibre (g, optional)", "7.5");
+      typeInto("Brand", "  Nairn's ");
+      typeInto("Barcode", "5000159484695");
+      typeInto(fibre, "7.5");
 
       save();
 
@@ -282,9 +410,7 @@ describe("FoodForm", () => {
     it("should send a basis of per 100 ml when it is chosen", async () => {
       renderForm();
       fillRequiredFields();
-      fireEvent.change(screen.getByRole("combobox", { name: "Basis" }), {
-        target: { value: "per_100ml" },
-      });
+      chooseBasis("Per 100 ml");
 
       save();
 
@@ -294,18 +420,19 @@ describe("FoodForm", () => {
       expect(createFood).toHaveBeenCalledWith(expect.objectContaining({ basis: "per_100ml" }));
     });
 
-    it("should not save a second time while the first save is running", async () => {
+    it("should show the button as busy and not save a second time while the first save runs", async () => {
       createFood.mockReturnValue(new Promise(() => undefined));
       renderForm();
       fillRequiredFields();
 
       save();
 
-      await waitFor(() => {
-        expect(screen.getByRole("button", { name: "Saving" }).hasAttribute("disabled")).toBe(true);
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Saving" }));
+      const saving = await screen.findByRole("button", { name: "Saving" });
+      expect(saving.hasAttribute("disabled")).toBe(true);
+      expect(saving.getAttribute("aria-busy")).toBe("true");
+      fireEvent.click(saving);
       expect(createFood).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("link", { name: "Cancel" })).toBeTruthy();
     });
   });
 
@@ -314,8 +441,8 @@ describe("FoodForm", () => {
       renderForm({ scannedBarcode: "5000159484695" });
 
       const barcode = screen.getByRole("textbox", {
-        name: "Barcode (optional)",
-        description: "This barcode came from the scan and cannot be changed here",
+        name: "Barcode",
+        description: "Filled in from the barcode you entered",
       });
       expect(barcode).toHaveProperty("value", "5000159484695");
       expect(barcode).toHaveProperty("readOnly", true);
@@ -338,10 +465,10 @@ describe("FoodForm", () => {
     it("should leave a scanned barcode that is not valid editable so the user can fix it", () => {
       renderForm({ scannedBarcode: "5000159484696" });
 
-      const barcode = screen.getByLabelText("Barcode (optional)");
+      const barcode = screen.getByRole("textbox", { name: "Barcode" });
       expect(barcode).toHaveProperty("value", "5000159484696");
       expect(barcode).toHaveProperty("readOnly", false);
-      expect(screen.queryByText(/came from the scan/)).toBeNull();
+      expect(screen.queryByText("Filled in from the barcode you entered")).toBeNull();
     });
 
     it("should show the barcode error on submit when the scanned barcode is not valid", () => {
@@ -353,8 +480,8 @@ describe("FoodForm", () => {
       expect(createFood).not.toHaveBeenCalled();
       expect(
         screen.getByRole("textbox", {
-          name: "Barcode (optional)",
-          description: "The check digit is wrong, so check the digits and try again",
+          name: "Barcode",
+          description: "Barcode check digit is wrong",
         }),
       ).toBeTruthy();
     });
@@ -362,7 +489,7 @@ describe("FoodForm", () => {
     it("should leave the barcode editable when nothing was scanned", () => {
       renderForm();
 
-      expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("readOnly", false);
+      expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", false);
     });
   });
 
@@ -387,8 +514,8 @@ describe("FoodForm", () => {
       renderForm({ copyOf });
 
       const barcode = screen.getByRole("textbox", {
-        name: "Barcode (optional)",
-        description: "This barcode belongs to the food you are copying and cannot be changed here",
+        name: "Barcode",
+        description: "Kept from the product you are copying",
       });
       expect(barcode).toHaveProperty("value", "5000159484695");
       expect(barcode).toHaveProperty("readOnly", true);
@@ -397,22 +524,55 @@ describe("FoodForm", () => {
     it("should leave a barcode that is not valid editable so the user can fix it", () => {
       renderForm({ copyOf: { ...copyOf, food: makeFood({ barcode: "5000159484696" }) } });
 
-      expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("readOnly", false);
+      expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", false);
     });
 
     it("should leave the barcode empty and editable when the food has none", () => {
       renderForm({ copyOf: { ...copyOf, food: makeFood({ barcode: null }) } });
 
-      const barcode = screen.getByLabelText("Barcode (optional)");
+      const barcode = screen.getByRole("textbox", { name: "Barcode" });
       expect(barcode).toHaveProperty("value", "");
       expect(barcode).toHaveProperty("readOnly", false);
     });
 
+    it("should say a nutrient the source did not give is not given, and only while it is blank", () => {
+      renderForm({ copyOf });
+
+      expect(
+        screen.getByRole("textbox", {
+          name: protein,
+          description: "Not given by the source",
+        }),
+      ).toBeTruthy();
+      expect(screen.getAllByText("Not given by the source")).toHaveLength(1);
+
+      typeInto(protein, "1");
+
+      expect(screen.queryByText("Not given by the source")).toBeNull();
+    });
+
+    it("should show the error rather than the note when a blank nutrient is saved", () => {
+      renderForm({ copyOf });
+
+      save("Save to your foods");
+
+      expect(
+        screen.getByRole("textbox", { name: protein, description: "Protein is required" }),
+      ).toBeTruthy();
+      expect(screen.queryByText("Not given by the source")).toBeNull();
+    });
+
+    it("should say nothing is not given when the source gave every nutrient", () => {
+      renderForm({ copyOf: { ...copyOf, food: { ...copyOf.food, protein_g: 3 } } });
+
+      expect(screen.queryByText("Not given by the source")).toBeNull();
+    });
+
     it("should create a new food and carry the density through, never updating the original", async () => {
       renderForm({ copyOf });
-      typeInto("Protein (g)", "1");
+      typeInto(protein, "1");
 
-      save();
+      save("Save to your foods");
 
       await waitFor(() => {
         expect(createFood).toHaveBeenCalledTimes(1);
@@ -422,41 +582,122 @@ describe("FoodForm", () => {
       );
       expect(updateFood).not.toHaveBeenCalled();
     });
+
+    describe("when the carbohydrate of the food included fibre", () => {
+      const usCopyOf = {
+        food: makeFood({
+          source: "off",
+          owner_id: null,
+          kcal: 375,
+          protein_g: 8,
+          fat_g: 4.5,
+          carbs_g: 62,
+          fibre_g: null,
+          quality: { carbs_convention: "us_total" },
+        }),
+        portions: [],
+      };
+
+      it("should leave the carbohydrate blank, explain why and say it is not given", () => {
+        renderForm({ copyOf: usCopyOf });
+
+        expect(
+          screen.getByText(
+            "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.",
+          ),
+        ).toBeTruthy();
+        expect(
+          screen.getByRole("textbox", {
+            name: carbohydrate,
+            description: "Not given by the source",
+          }),
+        ).toHaveProperty("value", "");
+        expect(screen.getByRole("textbox", { name: fibre }).hasAttribute("aria-describedby")).toBe(
+          false,
+        );
+        expect(screen.getAllByText("Not given by the source")).toHaveLength(1);
+      });
+
+      it("should keep the fibre note off a food whose carbohydrate was not a US total", () => {
+        renderForm({ copyOf });
+
+        expect(screen.queryByText(/included fibre/)).toBeNull();
+      });
+    });
   });
 
   describe("portions", () => {
     it("should add a portion with its own labelled fields", () => {
       renderForm();
 
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
 
-      expect(screen.getByRole("textbox", { name: "Portion 1 label" })).toBeTruthy();
-      expect(screen.getByRole("spinbutton", { name: "Portion 1 amount (g)" })).toBeTruthy();
-      expect(screen.getByRole("checkbox", { name: "Portion 1 is the default" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Remove portion 1" })).toBeTruthy();
+      const portions = screen.getByRole("region", { name: "Portions" });
+      expect(within(portions).getByRole("textbox", { name: "Portion 1 label" })).toBeTruthy();
+      expect(within(portions).getByRole("textbox", { name: portionAmount(1) })).toBeTruthy();
+      expect(
+        within(portions).getByRole("checkbox", { name: "Portion 1 is the default" }),
+      ).toBeTruthy();
+      expect(within(portions).getByRole("button", { name: "Remove portion 1" })).toBeTruthy();
+    });
+
+    it("should show the visible labels the board draws for a portion", () => {
+      renderForm();
+
+      addPortion();
+
+      expect(screen.getByText("Portion 1 label")).toBeTruthy();
+      expect(screen.getByText("Amount")).toBeTruthy();
+      expect(screen.getByText("Default")).toBeTruthy();
+      expect(screen.getByText("Remove")).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: "Portion 1 label" }).getAttribute("placeholder"),
+      ).toBe("e.g. 1 slice");
+    });
+
+    it("should start the Remove button's content at the left when it fills the row", () => {
+      renderForm();
+
+      addPortion();
+
+      expect(screen.getByRole("button", { name: "Remove portion 1" }).className).toContain(
+        "justify-start",
+      );
+    });
+
+    it("should mark a portion's label and amount as required", () => {
+      renderForm();
+
+      addPortion();
+
+      expect(
+        screen.getByRole("textbox", { name: "Portion 1 label" }).getAttribute("aria-required"),
+      ).toBe("true");
+      expect(
+        screen.getByRole("textbox", { name: portionAmount(1) }).getAttribute("aria-required"),
+      ).toBe("true");
     });
 
     it("should follow the basis for the amount unit", () => {
       renderForm();
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
 
-      fireEvent.change(screen.getByRole("combobox", { name: "Basis" }), {
-        target: { value: "per_100ml" },
-      });
+      chooseBasis("Per 100 ml");
 
-      expect(screen.getByRole("spinbutton", { name: "Portion 1 amount (ml)" })).toBeTruthy();
-      expect(screen.queryByRole("spinbutton", { name: "Portion 1 amount (g)" })).toBeNull();
+      expect(screen.getByRole("textbox", { name: portionAmount(1, "ml") })).toBeTruthy();
+      expect(screen.queryByRole("textbox", { name: portionAmount(1, "g") })).toBeNull();
+      expect(screen.getByText("Each amount is in ml, to match the basis.")).toBeTruthy();
     });
 
     it("should send portions in grams under a per 100 g basis", async () => {
       renderForm();
       fillRequiredFields();
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
       typeInto("Portion 1 label", "1 biscuit");
-      typeInto("Portion 1 amount (g)", "13");
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      typeInto(portionAmount(1), "13");
+      addPortion();
       typeInto("Portion 2 label", "Pack");
-      typeInto("Portion 2 amount (g)", "200");
+      typeInto(portionAmount(2), "200");
       fireEvent.click(screen.getByRole("checkbox", { name: "Portion 2 is the default" }));
 
       save();
@@ -477,12 +718,10 @@ describe("FoodForm", () => {
     it("should send portions in millilitres under a per 100 ml basis", async () => {
       renderForm();
       fillRequiredFields();
-      fireEvent.change(screen.getByRole("combobox", { name: "Basis" }), {
-        target: { value: "per_100ml" },
-      });
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      chooseBasis("Per 100 ml");
+      addPortion();
       typeInto("Portion 1 label", "Glass");
-      typeInto("Portion 1 amount (ml)", "250");
+      typeInto(portionAmount(1, "ml"), "250");
 
       save();
 
@@ -496,8 +735,8 @@ describe("FoodForm", () => {
 
     it("should let only one portion be the default by clearing the others", () => {
       renderForm();
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
+      addPortion();
 
       fireEvent.click(screen.getByRole("checkbox", { name: "Portion 1 is the default" }));
       fireEvent.click(screen.getByRole("checkbox", { name: "Portion 2 is the default" }));
@@ -514,8 +753,8 @@ describe("FoodForm", () => {
 
     it("should remove a portion and renumber the rest", () => {
       renderForm();
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
+      addPortion();
       typeInto("Portion 1 label", "First");
       typeInto("Portion 2 label", "Second");
 
@@ -528,62 +767,86 @@ describe("FoodForm", () => {
       expect(screen.queryByRole("textbox", { name: "Portion 2 label" })).toBeNull();
     });
 
-    it("should explain a portion with no label and no amount, and not save", () => {
+    it("should say a portion with no label and no amount needs both, flag both and not save", () => {
       renderForm();
       fillRequiredFields();
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
 
       save();
 
       expect(createFood).not.toHaveBeenCalled();
-      expect(
-        screen.getByRole("textbox", { name: "Portion 1 label", description: "Enter a label" }),
-      ).toBeTruthy();
-      expect(
-        screen.getByRole("spinbutton", {
-          name: "Portion 1 amount (g)",
-          description: "Enter an amount in g",
-        }),
-      ).toBeTruthy();
+      const message = "Portion 1 needs a label and an amount above 0";
+      expect(screen.getAllByRole("alert").map((alert) => alert.textContent)).toContain(message);
+      const label = screen.getByRole("textbox", {
+        name: "Portion 1 label",
+        description: message,
+      });
+      const amount = screen.getByRole("textbox", { name: portionAmount(1), description: message });
+      expect(label.getAttribute("aria-invalid")).toBe("true");
+      expect(amount.getAttribute("aria-invalid")).toBe("true");
     });
 
-    it("should reject a portion amount of zero", () => {
+    it("should say only the label is missing and leave the amount unflagged", () => {
       renderForm();
       fillRequiredFields();
-      fireEvent.click(screen.getByRole("button", { name: "Add portion" }));
+      addPortion();
+      typeInto(portionAmount(1), "30");
+
+      save();
+
+      expect(
+        screen.getByRole("textbox", {
+          name: "Portion 1 label",
+          description: "Portion 1 needs a label",
+        }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: portionAmount(1) }).getAttribute("aria-invalid"),
+      ).toBe("false");
+    });
+
+    it("should reject a portion amount of zero and say it needs an amount above 0", () => {
+      renderForm();
+      fillRequiredFields();
+      addPortion();
       typeInto("Portion 1 label", "Slice");
-      typeInto("Portion 1 amount (g)", "0");
+      typeInto(portionAmount(1), "0");
 
       save();
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("spinbutton", {
-          name: "Portion 1 amount (g)",
-          description: "Must be more than 0",
+        screen.getByRole("textbox", {
+          name: portionAmount(1),
+          description: "Portion 1 needs an amount above 0",
         }),
       ).toBeTruthy();
+      expect(
+        screen.getByRole("textbox", { name: "Portion 1 label" }).getAttribute("aria-invalid"),
+      ).toBe("false");
     });
   });
 
   describe("when saving fails", () => {
-    it("should show the error in the alert and let the user try again", async () => {
+    it("should say the food could not be saved, never show the raw error, and let the user try again", async () => {
       createFood.mockRejectedValueOnce(new Error("Could not create the food: network down"));
       renderForm();
       fillRequiredFields();
 
       save();
 
-      expect((await screen.findByRole("alert")).textContent).toContain(
-        "Could not create the food: network down",
+      const alert = await screen.findByRole("alert");
+      expect(alert.textContent).toBe(
+        "Your food could not be saved. Check your connection and try again.",
       );
+      expect(screen.queryByText(/network down/)).toBeNull();
       expect(replace).not.toHaveBeenCalled();
-      expect(screen.getByRole("button", { name: "Save food" }).hasAttribute("disabled")).toBe(
+      expect(screen.getByRole("button", { name: "Create food" }).hasAttribute("disabled")).toBe(
         false,
       );
     });
 
-    it("should say the food was saved but its portions were not, and stop a duplicate create", async () => {
+    it("should say the food was saved but its portions were not, offer the edit link and stop a duplicate create", async () => {
       createFood.mockRejectedValueOnce(
         new FoodsPartialWriteError(CREATED_FOOD_ID, "portions failed", new Error("boom")),
       );
@@ -593,12 +856,20 @@ describe("FoodForm", () => {
       save();
 
       const alert = await screen.findByRole("alert");
-      expect(alert.textContent).toContain("Your food was saved, but its portions were not");
+      expect(alert.textContent).toContain(
+        "Your food was saved, but its portions were not. Edit the food to add them again.",
+      );
       expect(within(alert).getByRole("link", { name: "Edit the food" }).getAttribute("href")).toBe(
         `/foods/${CREATED_FOOD_ID}/edit`,
       );
-      expect(screen.getByRole("button", { name: "Save food" }).hasAttribute("disabled")).toBe(true);
+      const create = screen.getByRole("button", { name: "Create food" });
+      expect(create.hasAttribute("disabled")).toBe(true);
+      expect(create.hasAttribute("aria-busy")).toBe(false);
+      expect(screen.queryByText(/boom/)).toBeNull();
       expect(replace).not.toHaveBeenCalled();
+
+      fireEvent.click(create);
+      expect(createFood).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -625,32 +896,53 @@ describe("FoodForm", () => {
     it("should pre-fill every field from the food and its portions", () => {
       renderForm({ existing });
 
-      expect(screen.getByLabelText("Name")).toHaveProperty("value", "Porridge oats");
-      expect(screen.getByLabelText("Brand (optional)")).toHaveProperty("value", "Scott's");
-      expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("value", "5000159484695");
-      expect(screen.getByLabelText("Basis")).toHaveProperty("value", "per_100ml");
-      expect(screen.getByLabelText("Energy (kcal)")).toHaveProperty("value", "120");
-      expect(screen.getByLabelText("Fibre (g, optional)")).toHaveProperty("value", "3");
-      expect(screen.getByLabelText("Portion 1 label")).toHaveProperty("value", "Bowl");
-      expect(screen.getByLabelText("Portion 1 amount (ml)")).toHaveProperty("value", "250");
+      expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty(
+        "value",
+        "Porridge oats",
+      );
+      expect(screen.getByRole("textbox", { name: "Brand" })).toHaveProperty("value", "Scott's");
+      expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty(
+        "value",
+        "5000159484695",
+      );
+      expect(screen.getByRole("radio", { name: "Per 100 ml" })).toHaveProperty("checked", true);
+      expect(screen.getByRole("textbox", { name: energy })).toHaveProperty("value", "120");
+      expect(screen.getByRole("textbox", { name: fibre })).toHaveProperty("value", "3");
+      expect(screen.getByRole("textbox", { name: "Portion 1 label" })).toHaveProperty(
+        "value",
+        "Bowl",
+      );
+      expect(screen.getByRole("textbox", { name: portionAmount(1, "ml") })).toHaveProperty(
+        "value",
+        "250",
+      );
       expect(screen.getByRole("checkbox", { name: "Portion 1 is the default" })).toHaveProperty(
         "checked",
         true,
       );
-      expect(screen.getByLabelText("Portion 2 amount (ml)")).toHaveProperty("value", "150");
+      expect(screen.getByRole("textbox", { name: portionAmount(2, "ml") })).toHaveProperty(
+        "value",
+        "150",
+      );
     });
 
     it("should keep an edit-mode barcode editable because it did not come from a scan", () => {
       renderForm({ existing });
 
-      expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("readOnly", false);
+      expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", false);
+    });
+
+    it("should not say any nutrient is not given", () => {
+      renderForm({ existing });
+
+      expect(screen.queryByText("Not given by the source")).toBeNull();
     });
 
     it("should call the update mutation once with the food id and go back to the food", async () => {
       renderForm({ existing });
       typeInto("Name", "Jumbo porridge oats");
 
-      save();
+      save("Save changes");
 
       await waitFor(() => {
         expect(replace).toHaveBeenCalledWith(`/foods/${existing.food.id}`);
@@ -674,7 +966,7 @@ describe("FoodForm", () => {
     it("should carry the stored density through unchanged because the form does not show it", async () => {
       renderForm({ existing });
 
-      save();
+      save("Save changes");
 
       await waitFor(() => {
         expect(updateFood).toHaveBeenCalledTimes(1);
@@ -687,10 +979,10 @@ describe("FoodForm", () => {
 
     it("should let the user clear an optional field", async () => {
       renderForm({ existing });
-      typeInto("Brand (optional)", "");
-      typeInto("Fibre (g, optional)", "");
+      typeInto("Brand", "");
+      typeInto(fibre, "");
 
-      save();
+      save("Save changes");
 
       await waitFor(() => {
         expect(updateFood).toHaveBeenCalledTimes(1);
@@ -706,13 +998,14 @@ describe("FoodForm", () => {
       );
       renderForm({ existing });
 
-      save();
+      save("Save changes");
 
       const alert = await screen.findByRole("alert");
-      expect(alert.textContent).toContain(
-        "Your changes to the food were saved, but its portions were not",
+      expect(alert.textContent).toBe(
+        "Your changes to the food were saved, but its portions were not. Try saving again.",
       );
-      expect(screen.getByRole("button", { name: "Save food" }).hasAttribute("disabled")).toBe(
+      expect(within(alert).queryByRole("link")).toBeNull();
+      expect(screen.getByRole("button", { name: "Save changes" }).hasAttribute("disabled")).toBe(
         false,
       );
       expect(replace).not.toHaveBeenCalled();

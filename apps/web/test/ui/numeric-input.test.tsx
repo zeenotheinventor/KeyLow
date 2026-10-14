@@ -142,6 +142,45 @@ describe("NumericInput", () => {
     });
   });
 
+  describe("invalid without a message", () => {
+    it("should flag the input invalid without showing a message or an alert", () => {
+      render(<NumericInput label="Amount" unit="g" invalid />);
+
+      expect(screen.getByRole("textbox", { name: /^Amount/ }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+  });
+
+  describe("described by", () => {
+    it("should describe the input with the element it is pointed at", () => {
+      render(
+        <>
+          <NumericInput label="Protein" unit="g" describedBy="source-note" />
+          <span id="source-note">Not given by the source</span>
+        </>,
+      );
+
+      expect(describedText(screen.getByRole("textbox", { name: /^Protein/ }))).toBe(
+        "Not given by the source",
+      );
+    });
+  });
+
+  describe("frame class name", () => {
+    it("should let a screen set the frame's padding and gap without touching the input", () => {
+      render(<NumericInput label="Energy" unit="kcal" frameClassName="gap-1.5 px-3" />);
+
+      const input = screen.getByRole("textbox", { name: energyName });
+
+      expect(input.parentElement?.className).toContain("px-3");
+      expect(input.parentElement?.className).toContain("gap-1.5");
+      expect(input.parentElement?.className).not.toContain("px-4");
+      expect(input.className).not.toContain("px-3");
+    });
+  });
+
   describe("macro", () => {
     it("should mark the label with the macro's colour as a decoration", () => {
       render(<NumericInput label="Protein" unit="g" macro="protein" />);

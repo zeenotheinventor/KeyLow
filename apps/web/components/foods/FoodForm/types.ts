@@ -1,4 +1,5 @@
 import type { CustomFoodValidationError } from "@keylow/api-client";
+import type { FoodFormNutrient } from "@keylow/core/copy";
 import type { Food, FoodPortion, NutrientBasis } from "@keylow/core/schemas";
 
 /** A food already saved by the user, with its portions, which the form edits instead of creating. */
@@ -38,7 +39,16 @@ export type FoodFormValues = {
   portions: PortionFormValues[];
 };
 
-/** Error messages by field, keyed by the dotted path of the field in the validated input. */
-export type FieldErrors = Partial<Record<string, string>>;
+/** What is wrong with one portion row: one sentence for the row, and which of its two fields to flag. */
+export type PortionError = { sentence: string; isLabelInvalid: boolean; isAmountInvalid: boolean };
+
+/** The sentence for each field that failed validation, in the words the mobile form uses. */
+export type FormErrors = {
+  name?: string;
+  barcode?: string;
+  nutrients: Partial<Record<FoodFormNutrient, string>>;
+  /** By the portion's position in the list, from 0. */
+  portions: Partial<Record<number, PortionError>>;
+};
 
 export type FormIssue = CustomFoodValidationError["issues"][number];

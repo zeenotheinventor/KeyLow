@@ -1,3 +1,4 @@
+import { Lock } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { Input, TextField } from "./input";
@@ -42,6 +43,22 @@ export const WithError: Story = {
 };
 
 export const Disabled: Story = { args: { disabled: true, helper: "As it appears on the pack" } };
+
+// A message elsewhere on the page says why, so the field is flagged without one of its own.
+export const InvalidWithoutMessage: Story = {
+  args: { label: "Portion 1 label", invalid: true, placeholder: "e.g. 1 slice" },
+};
+
+export const ReadOnlyWithIcon: Story = {
+  args: {
+    label: "Barcode",
+    defaultValue: "5000159484695",
+    readOnly: true,
+    trailingIcon: Lock,
+    helper: "Filled in from the barcode you entered",
+    className: "read-only:bg-surface",
+  },
+};
 
 export const BareInput: Story = {
   render: () => <Input aria-label="Barcode number" placeholder="e.g. 5000159484695" />,

@@ -22,10 +22,13 @@ export function NumericInput({
   helper,
   error,
   labelHint,
+  invalid,
+  describedBy,
   unit,
   macro,
   disabled,
   className,
+  frameClassName,
   placeholder = "0",
   ...inputProps
 }: NumericInputProps) {
@@ -50,6 +53,8 @@ export function NumericInput({
       helper={helper}
       error={error}
       labelHint={labelHint}
+      invalid={invalid}
+      describedBy={describedBy}
       disabled={disabled}
     >
       {(control) => (
@@ -59,6 +64,7 @@ export function NumericInput({
             control["aria-invalid"]
               ? "border-danger"
               : "border-border has-[:focus-visible]:border-accent",
+            frameClassName,
           )}
         >
           <input

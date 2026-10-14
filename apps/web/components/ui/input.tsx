@@ -1,4 +1,7 @@
+import { iconStroke } from "@keylow/tokens";
 import * as React from "react";
+
+import type { LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -30,6 +33,12 @@ type TextFieldProps = Omit<React.ComponentProps<"input">, "aria-invalid" | "aria
   error?: string | undefined;
   /** A short note beside the label, such as "Required". It also describes the field. */
   labelHint?: string | undefined;
+  /** Flags the field invalid when something else on the page says why, such as a message that covers a whole row. */
+  invalid?: boolean | undefined;
+  /** The id of an element that also describes the field. It is read after the hint and the message. */
+  describedBy?: string | undefined;
+  /** A decorative icon at the end of the box, such as a lock on a field that cannot be changed. */
+  trailingIcon?: LucideIcon | undefined;
 };
 
 /** What the control inside a `Field` needs to be named, flagged and described. */
@@ -45,6 +54,8 @@ type FieldProps = {
   helper?: string | undefined;
   error?: string | undefined;
   labelHint?: string | undefined;
+  invalid?: boolean | undefined;
+  describedBy?: string | undefined;
   disabled?: boolean | undefined;
   /** Draws the control from the props that tie it to the label and the message. */
   children: (control: FieldControlProps) => React.ReactNode;
@@ -52,7 +63,17 @@ type FieldProps = {
 
 // A label, a control, and a helper or an error. The control is named by the label and described by
 // whichever message is showing. `TextField` and `NumericInput` both draw their control inside it.
-function Field({ id, label, helper, error, labelHint, disabled, children }: FieldProps) {
+function Field({
+  id,
+  label,
+  helper,
+  error,
+  labelHint,
+  invalid,
+  describedBy: extraDescribedBy,
+  disabled,
+  children,
+}: FieldProps) {
   const generatedId = React.useId();
   const fieldId = id ?? generatedId;
   const messageId = `${fieldId}-message`;
@@ -63,10 +84,11 @@ function Field({ id, label, helper, error, labelHint, disabled, children }: Fiel
   // An empty hint is no hint, as an empty error is no error.
   const hint = labelHint?.trim() === "" ? undefined : labelHint;
   const mutedWhenDisabled = disabled === true && "opacity-50";
-  // The hint is read first, then whichever message is showing.
+  // The hint is read first, then whichever message is showing, then anything the screen points at.
   const describedBy = [
     hint === undefined ? undefined : hintId,
     message === undefined ? undefined : messageId,
+    extraDescribedBy,
   ]
     .filter((identifier) => identifier !== undefined)
     .join(" ");
@@ -97,7 +119,7 @@ function Field({ id, label, helper, error, labelHint, disabled, children }: Fiel
       )}
       {children({
         id: fieldId,
-        "aria-invalid": errorText !== undefined,
+        "aria-invalid": errorText !== undefined || invalid === true,
         "aria-describedby": describedBy === "" ? undefined : describedBy,
       })}
       {message !== undefined && (
@@ -125,6 +147,9 @@ function TextField({
   helper,
   error,
   labelHint,
+  invalid,
+  describedBy,
+  trailingIcon: TrailingIcon,
   disabled,
   className,
   ...inputProps
@@ -136,11 +161,29 @@ function TextField({
       helper={helper}
       error={error}
       labelHint={labelHint}
+      invalid={invalid}
+      describedBy={describedBy}
       disabled={disabled}
     >
-      {(control) => (
-        <Input disabled={disabled} className={className} {...control} {...inputProps} />
-      )}
+      {(control) =>
+        TrailingIcon === undefined ? (
+          <Input disabled={disabled} className={className} {...control} {...inputProps} />
+        ) : (
+          <div className="relative">
+            <Input
+              disabled={disabled}
+              className={cn(className, "pr-9")}
+              {...control}
+              {...inputProps}
+            />
+            <TrailingIcon
+              aria-hidden
+              strokeWidth={iconStroke}
+              className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-muted"
+            />
+          </div>
+        )
+      }
     </Field>
   );
 }

@@ -43,6 +43,8 @@ export const storyManifest = {
     "Focused",
     "WithError",
     "Disabled",
+    "InvalidWithoutMessage",
+    "ReadOnlyWithIcon",
     "BareInput",
   ],
   "SearchField/SearchField.stories.tsx": [
@@ -125,6 +127,7 @@ export const storyManifest = {
     "Disabled",
     "Macro",
     "WithoutUnit",
+    "DenseFrame",
   ],
   "NutrientTable/NutrientTable.stories.tsx": ["Default", "MissingValues"],
   "SegmentedControl/SegmentedControl.stories.tsx": [

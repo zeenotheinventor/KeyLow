@@ -1,10 +1,12 @@
 "use client";
 
+import { FOOD_FORM } from "@keylow/core/copy";
 import { useSearchParams } from "next/navigation";
 
 import { CopyFoodScreen } from "../CopyFoodScreen";
 
 import { FoodForm } from "@/components/foods/FoodForm";
+import { FoodFormPage } from "@/components/foods/FoodFormPage";
 import { isFoodId } from "@/components/foods/isFoodId";
 
 export function NewFoodScreen() {
@@ -17,9 +19,8 @@ export function NewFoodScreen() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">New food</h1>
+    <FoodFormPage backLabel={FOOD_FORM.back} title={FOOD_FORM.titles.create}>
       <FoodForm scannedBarcode={barcode === null || barcode === "" ? undefined : barcode} />
-    </div>
+    </FoodFormPage>
   );
 }

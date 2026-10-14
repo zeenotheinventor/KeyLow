@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
 
@@ -23,6 +23,10 @@ vi.mock("next/navigation", () => ({
 const ids = (id: string) => ({ params: Promise.resolve({ id }) });
 
 describe("FoodPage", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
     useFoodWithPortions.mockReturnValue({ status: "notFound" });

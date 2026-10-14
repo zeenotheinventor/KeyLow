@@ -30,6 +30,14 @@ vi.mock("next/navigation", () => ({
 }));
 
 const SOURCE_FOOD_ID = "55555555-5555-4555-8555-555555555555";
+
+const energy = /^Energy\s*\(kcal\)$/;
+const protein = /^Protein\s*\(g\)$/;
+const carbohydrate = /^Carbohydrate\s*\(g\)$/;
+const fat = /^Fat\s*\(g\)$/;
+const fibre = /^Fibre \(optional\)\s*\(g\)$/;
+const portionAmount = (position: number) =>
+  new RegExp(`^Amount for portion ${String(position)}\\s*\\(g\\)$`);
 const CREATED_FOOD_ID = "66666666-6666-4666-8666-666666666666";
 
 describe("NewFoodScreen", () => {
@@ -45,9 +53,27 @@ describe("NewFoodScreen", () => {
   it("should show an empty create form under a heading", () => {
     render(<NewFoodScreen />);
 
-    expect(screen.getByRole("heading", { name: "New food" })).toBeTruthy();
-    expect(screen.getByLabelText("Name")).toHaveProperty("value", "");
-    expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("readOnly", false);
+    expect(screen.getByRole("heading", { level: 1, name: "New food" })).toBeTruthy();
+    expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty("value", "");
+    expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", false);
+  });
+
+  it("should offer a Back link to the foods page above the heading", () => {
+    render(<NewFoodScreen />);
+
+    const back = screen.getByRole("link", { name: "Back" });
+    expect(back.getAttribute("href")).toBe("/foods");
+    expect(
+      back.compareDocumentPosition(screen.getByRole("heading", { level: 1 })) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("should offer Create food and Cancel", () => {
+    render(<NewFoodScreen />);
+
+    expect(screen.getByRole("button", { name: "Create food" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Cancel" }).getAttribute("href")).toBe("/foods");
   });
 
   it("should pre-fill the barcode from the barcode query parameter and lock it", () => {
@@ -55,7 +81,10 @@ describe("NewFoodScreen", () => {
 
     render(<NewFoodScreen />);
 
-    const barcode = screen.getByLabelText("Barcode (optional)");
+    const barcode = screen.getByRole("textbox", {
+      name: "Barcode",
+      description: "Filled in from the barcode you entered",
+    });
     expect(barcode).toHaveProperty("value", "5000159484695");
     expect(barcode).toHaveProperty("readOnly", true);
   });
@@ -65,7 +94,7 @@ describe("NewFoodScreen", () => {
 
     render(<NewFoodScreen />);
 
-    expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("readOnly", false);
+    expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", false);
   });
 
   describe("starting from an existing food", () => {
@@ -118,7 +147,10 @@ describe("NewFoodScreen", () => {
       render(<NewFoodScreen />);
 
       expect(screen.getByRole("status", { name: "Loading food" })).toBeTruthy();
-      expect(screen.queryByLabelText("Name")).toBeNull();
+      expect(screen.getByRole("link", { name: "Back to foods" }).getAttribute("href")).toBe(
+        "/foods",
+      );
+      expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
     });
 
     it("should say the food was not found and show no form", () => {
@@ -128,7 +160,8 @@ describe("NewFoodScreen", () => {
       render(<NewFoodScreen />);
 
       expect(screen.getByRole("heading", { name: "Food not found" })).toBeTruthy();
-      expect(screen.queryByLabelText("Name")).toBeNull();
+      expect(screen.getByRole("link", { name: "Back to foods" })).toBeTruthy();
+      expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
     });
 
     it("should show a failure to load the food in an alert, without the raw text of the failure", () => {
@@ -141,54 +174,99 @@ describe("NewFoodScreen", () => {
       render(<NewFoodScreen />);
 
       expect(screen.getByRole("heading", { name: "Food not loaded" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Back to foods" })).toBeTruthy();
       expect(screen.queryByText(/offline/)).toBeNull();
-      expect(screen.queryByLabelText("Name")).toBeNull();
+      expect(screen.queryByRole("textbox", { name: "Name" })).toBeNull();
+    });
+
+    it("should head the screen Copy to your foods and say what saving does", () => {
+      copyFromSuspectFood();
+
+      expect(screen.getByRole("heading", { level: 1, name: "Copy to your foods" })).toBeTruthy();
+      expect(
+        screen.getByText(
+          "Check each value and fill in the ones that are blank. Saving adds a food of your own and leaves the original as it is.",
+        ),
+      ).toBeTruthy();
+    });
+
+    it("should offer a Back link to the foods page, Save to your foods and a Cancel link to the food", () => {
+      copyFromSuspectFood();
+
+      expect(screen.getByRole("link", { name: "Back" }).getAttribute("href")).toBe("/foods");
+      expect(screen.getByRole("button", { name: "Save to your foods" })).toBeTruthy();
+      expect(screen.getByRole("link", { name: "Cancel" }).getAttribute("href")).toBe(
+        `/foods/${SOURCE_FOOD_ID}`,
+      );
     });
 
     it("should pre-fill the details, every nutrient that is present and the portions", () => {
       copyFromSuspectFood();
 
-      expect(screen.getByRole("heading", { name: "Review and save as my food" })).toBeTruthy();
-      expect(screen.getByLabelText("Name")).toHaveProperty("value", "Chicken slices");
-      expect(screen.getByLabelText("Brand (optional)")).toHaveProperty("value", "Tesco");
-      expect(screen.getByLabelText("Basis")).toHaveProperty("value", "per_100g");
-      expect(screen.getByLabelText("Energy (kcal)")).toHaveProperty("value", "105");
-      expect(screen.getByLabelText("Fat (g)")).toHaveProperty("value", "1.2");
-      expect(screen.getByLabelText("Carbohydrate (g)")).toHaveProperty("value", "0.5");
-      expect(screen.getByLabelText("Fibre (g, optional)")).toHaveProperty("value", "0.3");
-      expect(screen.getByLabelText("Portion 1 label")).toHaveProperty("value", "Slice");
-      expect(screen.getByLabelText("Portion 1 amount (g)")).toHaveProperty("value", "30");
-      expect(screen.getByLabelText("Portion 2 label")).toHaveProperty("value", "Pack");
+      expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty(
+        "value",
+        "Chicken slices",
+      );
+      expect(screen.getByRole("textbox", { name: "Brand" })).toHaveProperty("value", "Tesco");
+      expect(screen.getByRole("radio", { name: "Per 100 g" })).toHaveProperty("checked", true);
+      expect(screen.getByRole("textbox", { name: energy })).toHaveProperty("value", "105");
+      expect(screen.getByRole("textbox", { name: fat })).toHaveProperty("value", "1.2");
+      expect(screen.getByRole("textbox", { name: carbohydrate })).toHaveProperty("value", "0.5");
+      expect(screen.getByRole("textbox", { name: fibre })).toHaveProperty("value", "0.3");
+      expect(screen.getByRole("textbox", { name: "Portion 1 label" })).toHaveProperty(
+        "value",
+        "Slice",
+      );
+      expect(screen.getByRole("textbox", { name: portionAmount(1) })).toHaveProperty("value", "30");
+      expect(screen.getByRole("textbox", { name: "Portion 2 label" })).toHaveProperty(
+        "value",
+        "Pack",
+      );
+    });
+
+    it("should mark every required field of the copy form with aria-required", () => {
+      copyFromSuspectFood();
+
+      for (const name of ["Name", energy, protein, carbohydrate, fat]) {
+        expect(screen.getByRole("textbox", { name }).getAttribute("aria-required")).toBe("true");
+      }
     });
 
     it("should keep the barcode and lock it because it is valid", () => {
       copyFromSuspectFood();
 
-      const barcode = screen.getByLabelText("Barcode (optional)");
+      const barcode = screen.getByRole("textbox", {
+        name: "Barcode",
+        description: "Kept from the product you are copying",
+      });
       expect(barcode).toHaveProperty("value", "5000159484695");
       expect(barcode).toHaveProperty("readOnly", true);
     });
 
-    it("should leave a missing nutrient blank and ask for it before saving", () => {
+    it("should leave a missing nutrient blank, say it is not given and ask for it before saving", () => {
       copyFromSuspectFood();
-      expect(screen.getByLabelText("Protein (g)")).toHaveProperty("value", "");
+      expect(
+        screen.getByRole("textbox", { name: protein, description: "Not given by the source" }),
+      ).toHaveProperty("value", "");
 
-      fireEvent.click(screen.getByRole("button", { name: "Save food" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save to your foods" }));
 
       expect(createFood).not.toHaveBeenCalled();
       expect(
-        screen.getByRole("spinbutton", {
-          name: "Protein (g)",
-          description: "Enter the protein in g",
-        }),
+        screen.getByRole("textbox", { name: protein, description: "Protein is required" }),
       ).toBeTruthy();
+      expect(screen.getByRole("textbox", { name: protein }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
     });
 
     it("should create a new food once with the kept barcode and open it, never updating the original", async () => {
       copyFromSuspectFood();
-      fireEvent.change(screen.getByLabelText("Protein (g)"), { target: { value: "23" } });
+      fireEvent.change(screen.getByRole("textbox", { name: protein }), {
+        target: { value: "23" },
+      });
 
-      fireEvent.click(screen.getByRole("button", { name: "Save food" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save to your foods" }));
 
       await waitFor(() => {
         expect(replace).toHaveBeenCalledWith(`/foods/${CREATED_FOOD_ID}`);
@@ -230,9 +308,9 @@ describe("NewFoodScreen", () => {
       });
 
       it("should leave the carbohydrate blank and keep the fibre", () => {
-        expect(screen.getByLabelText("Carbohydrate (g)")).toHaveProperty("value", "");
-        expect(screen.getByLabelText("Fibre (g, optional)")).toHaveProperty("value", "6");
-        expect(screen.getByLabelText("Energy (kcal)")).toHaveProperty("value", "400");
+        expect(screen.getByRole("textbox", { name: carbohydrate })).toHaveProperty("value", "");
+        expect(screen.getByRole("textbox", { name: fibre })).toHaveProperty("value", "6");
+        expect(screen.getByRole("textbox", { name: energy })).toHaveProperty("value", "400");
       });
 
       it("should tell the user to enter the carbohydrate without fibre", () => {
@@ -244,13 +322,13 @@ describe("NewFoodScreen", () => {
       });
 
       it("should require the carbohydrate before saving rather than converting it", () => {
-        fireEvent.click(screen.getByRole("button", { name: "Save food" }));
+        fireEvent.click(screen.getByRole("button", { name: "Save to your foods" }));
 
         expect(createFood).not.toHaveBeenCalled();
         expect(
-          screen.getByRole("spinbutton", {
-            name: "Carbohydrate (g)",
-            description: "Enter the carbohydrate in g",
+          screen.getByRole("textbox", {
+            name: carbohydrate,
+            description: "Carbohydrate is required",
           }),
         ).toBeTruthy();
       });
@@ -265,7 +343,10 @@ describe("NewFoodScreen", () => {
     it("should use the food to copy and ignore a barcode parameter beside it", () => {
       copyFromSuspectFood({ barcode: "5000159484701" });
 
-      expect(screen.getByLabelText("Barcode (optional)")).toHaveProperty("value", "5000159484695");
+      expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty(
+        "value",
+        "5000159484695",
+      );
     });
 
     it("should show the plain new food form when the from parameter is not a food id", () => {

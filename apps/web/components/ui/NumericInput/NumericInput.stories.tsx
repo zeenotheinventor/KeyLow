@@ -48,3 +48,8 @@ export const Macro: Story = {
 export const WithoutUnit: Story = {
   render: () => <NumericInput label="Amount" defaultValue="150" />,
 };
+
+// The food form's boards draw a tighter box than the design system card: 12 px padding and a 6 px gap.
+export const DenseFrame: Story = {
+  args: { defaultValue: "165", frameClassName: "gap-1.5 px-3" },
+};
