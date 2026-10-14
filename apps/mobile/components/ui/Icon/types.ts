@@ -24,6 +24,11 @@ export type IconProps = {
   size?: IconSizeName | number;
   /** Defaults to `primary`. */
   tone?: IconTone;
+  /**
+   * The stroke weight, for a glyph the frames draw heavier than the design's 1.75, such as the tab bar's
+   * plus at 2.25. Defaults to `iconStroke`.
+   */
+  strokeWidth?: number;
   /** The accessible name. An icon without one is decoration and is hidden from screen readers. */
   label?: string;
 };

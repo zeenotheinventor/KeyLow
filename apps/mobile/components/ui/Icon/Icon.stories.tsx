@@ -26,12 +26,16 @@ const sizes: IconSizeName[] = ["sm", "md", "lg", "xl"];
 const tones: IconTone[] = ["primary", "secondary", "muted"];
 const names: IconName[] = [
   "Apple",
+  "BookOpen",
+  "ChefHat",
   "ChevronLeft",
   "ChevronRight",
   "CircleAlert",
   "Clock",
   "CloudOff",
+  "Ellipsis",
   "Info",
+  "LayoutDashboard",
   "LoaderCircle",
   "Plus",
   "RotateCw",

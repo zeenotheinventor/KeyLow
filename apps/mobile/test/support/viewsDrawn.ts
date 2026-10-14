@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react-native";
+import { StyleSheet } from "react-native";
 
 // A host node's style is loosely typed, so a property is read with a descriptor, as in animatedStyle.
 function styleValue(style: unknown, property: string): unknown {
@@ -18,7 +19,8 @@ export function viewsDrawn(style: Record<string, unknown>) {
       (node) =>
         typeof node.type === "string" &&
         Object.entries(style).every(
-          ([property, value]) => styleValue(node.props.style, property) === value,
+          ([property, value]) =>
+            styleValue(StyleSheet.flatten(node.props.style), property) === value,
         ),
     ) ?? []
   );

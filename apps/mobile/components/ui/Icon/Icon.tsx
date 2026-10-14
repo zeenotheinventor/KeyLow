@@ -24,7 +24,13 @@ function toneColor(tone: IconTone, theme: Theme): string {
     : theme.colors[toneColorName[tone]];
 }
 
-export function Icon({ name, size = "md", tone = "primary", label }: IconProps) {
+export function Icon({
+  name,
+  size = "md",
+  tone = "primary",
+  strokeWidth = iconStroke,
+  label,
+}: IconProps) {
   const theme = useTheme();
   const LucideIcon = iconMap[name];
 
@@ -39,7 +45,7 @@ export function Icon({ name, size = "md", tone = "primary", label }: IconProps) 
     <LucideIcon
       color={color}
       size={typeof size === "number" ? size : iconSize[size]}
-      strokeWidth={iconStroke}
+      strokeWidth={strokeWidth}
       {...accessibility}
     />
   );

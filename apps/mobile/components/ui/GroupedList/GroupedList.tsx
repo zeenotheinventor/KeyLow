@@ -2,6 +2,7 @@ import { describeSeeMore } from "@keylow/core/copy";
 import { Children, Fragment, isValidElement } from "react";
 import { View } from "react-native";
 
+import { Card } from "../Card";
 import { Text } from "../Text";
 import { GroupedRowPositionContext } from "./rowPosition";
 import { SeeMoreButton } from "./SeeMoreButton";
@@ -29,8 +30,7 @@ function flattenRows(children: ReactNode, parentKey = ""): Row[] {
 /**
  * A titled group of rows on a card, with the group's source beside the title and, when the group has
  * more rows than it shows, a "See N more" button. A notice about the group, such as a failed add, sits
- * between the heading and the card. The card is the design system's `Card`, drawn here
- * because the mobile kit has none yet.
+ * between the heading and the card, which is the kit's `Card`.
  */
 export function GroupedList({ title, source, seeMore, notice, children }: GroupedListProps) {
   const rows = flattenRows(children);
@@ -56,17 +56,14 @@ export function GroupedList({ title, source, seeMore, notice, children }: Groupe
         )}
       </View>
       {notice}
-      <View
-        aria-label={title}
-        className="overflow-hidden rounded-large border border-border bg-surface elevation-card"
-        role="list"
-      >
+      {/* The rows bring their own padding, so the card has none. */}
+      <Card aria-label={title} padding={0} role="list">
         {rows.map((row, index) => (
           <GroupedRowPositionContext key={row.key} value={index === 0 ? firstRow : followingRow}>
             {row.node}
           </GroupedRowPositionContext>
         ))}
-      </View>
+      </Card>
     </View>
   );
 }

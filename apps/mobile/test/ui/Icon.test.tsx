@@ -37,12 +37,16 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
 
 const names: IconName[] = [
   "Apple",
+  "BookOpen",
+  "ChefHat",
   "ChevronLeft",
   "ChevronRight",
   "CircleAlert",
   "Clock",
   "CloudOff",
+  "Ellipsis",
   "Info",
+  "LayoutDashboard",
   "LoaderCircle",
   "Plus",
   "RotateCw",
@@ -98,6 +102,12 @@ describe("Icon", () => {
     await render(inScheme("dark", <Icon label="Search" name="Search" size="xl" />));
 
     expect(screen.getByRole("img", { name: "Search" })).toHaveProp("strokeWidth", iconStroke);
+  });
+
+  it("should draw a bolder stroke when the frame does, as the tab bar's plus is", async () => {
+    await render(inScheme("dark", <Icon label="Add" name="Plus" strokeWidth={2.25} />));
+
+    expect(screen.getByRole("img", { name: "Add" })).toHaveProp("strokeWidth", 2.25);
   });
 
   it("should render each name in the map", async () => {

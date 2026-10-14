@@ -61,6 +61,19 @@ describe("PressableSurface", () => {
       expect(screen.getByRole("button", { name: "Savoury Stock Cube" })).toBeOnTheScreen();
     });
 
+    it("should be a tab that says whether it is selected, when it is told to be one", async () => {
+      await renderSurface({ role: "tab", selected: true });
+
+      expect(screen.getByRole("tab", { name: "Open food", selected: true })).toBeOnTheScreen();
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should say a tab is not selected when it is not", async () => {
+      await renderSurface({ role: "tab", selected: false });
+
+      expect(screen.getByRole("tab", { name: "Open food", selected: false })).toBeOnTheScreen();
+    });
+
     it("should call onPress when pressed", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       const onPress = jest.fn();
