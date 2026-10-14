@@ -114,7 +114,7 @@ describe("Input", () => {
     const { className } = screen.getByRole("textbox", { name: "Name" });
 
     expect(className).toContain("h-11");
-    expect(className).not.toContain("h-[44px]");
+    expect(className).not.toContain("h-control-md");
   });
 });
 

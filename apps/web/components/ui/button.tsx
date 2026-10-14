@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 // element so hover and press tint the variant's own fill. The press scale and the spinner both
 // have a prefers-reduced-motion fallback.
 const buttonVariants = cva(
-  "relative inline-flex min-w-[44px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-[0.96] active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "relative inline-flex min-w-touch-target shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-press active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -23,10 +23,10 @@ const buttonVariants = cva(
         outline: "border-border bg-surface-raised text-text-primary",
       },
       size: {
-        sm: "h-[36px] px-3 [&_svg]:size-4",
-        md: "h-[44px] px-4 [&_svg]:size-5",
-        lg: "h-[52px] px-5 [&_svg]:size-5",
-        default: "h-[44px] px-4 [&_svg]:size-5",
+        sm: "h-control-sm px-3 [&_svg]:size-4",
+        md: "h-control-md px-4 [&_svg]:size-5",
+        lg: "h-control-lg px-5 [&_svg]:size-5",
+        default: "h-control-md px-4 [&_svg]:size-5",
       },
       iconOnly: {
         true: "px-0",
@@ -34,9 +34,9 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
-      { iconOnly: true, size: "sm", className: "w-[36px]" },
-      { iconOnly: true, size: ["md", "default"], className: "w-[44px]" },
-      { iconOnly: true, size: "lg", className: "w-[52px]" },
+      { iconOnly: true, size: "sm", className: "w-control-sm" },
+      { iconOnly: true, size: ["md", "default"], className: "w-control-md" },
+      { iconOnly: true, size: "lg", className: "w-control-lg" },
     ],
     defaultVariants: {
       variant: "primary",

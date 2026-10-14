@@ -30,4 +30,34 @@ describe("cn", () => {
   it("should keep a radius next to a border colour", () => {
     expect(cn("rounded-large", "border-border")).toBe("rounded-large border-border");
   });
+
+  describe("control sizes", () => {
+    it.each(["h", "w", "min-h", "min-w"])(
+      "should let a later %s step replace an earlier control size",
+      (prefix) => {
+        expect(cn(`${prefix}-control-md`, `${prefix}-11`)).toBe(`${prefix}-11`);
+        expect(cn(`${prefix}-11`, `${prefix}-control-md`)).toBe(`${prefix}-control-md`);
+        expect(cn(`${prefix}-control-sm`, `${prefix}-touch-target`)).toBe(`${prefix}-touch-target`);
+      },
+    );
+
+    it("should keep a height next to a width and a minimum height", () => {
+      expect(cn("h-control-md", "w-control-md", "min-h-touch-target")).toBe(
+        "h-control-md w-control-md min-h-touch-target",
+      );
+    });
+  });
+
+  describe("press scale", () => {
+    it("should let a later scale replace the press scale", () => {
+      expect(cn("active:scale-press", "active:scale-95")).toBe("active:scale-95");
+      expect(cn("active:scale-95", "active:scale-press")).toBe("active:scale-press");
+    });
+
+    it("should keep the press scale next to its reduced motion override", () => {
+      expect(cn("active:scale-press", "motion-reduce:active:scale-100")).toBe(
+        "active:scale-press motion-reduce:active:scale-100",
+      );
+    });
+  });
 });

@@ -99,7 +99,7 @@ export function Banner({
       {action !== undefined && actionPlacement === "trailing" && (
         <ActionControl
           action={action}
-          className={cn(actionText, "flex min-h-[36px] shrink-0 items-center", style.ink)}
+          className={cn(actionText, "flex min-h-control-sm shrink-0 items-center", style.ink)}
         />
       )}
     </div>

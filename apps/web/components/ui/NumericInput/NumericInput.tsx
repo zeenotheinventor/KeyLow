@@ -14,7 +14,7 @@ const macroMarks = {
 // focus, so it keeps the ring in both themes. The input sits inside it with the unit after it, so
 // the box takes the focus from the input through `has`.
 const frameClasses =
-  "flex h-[44px] items-center gap-2 rounded-medium border bg-surface-raised px-4 transition-[border-color,box-shadow] duration-quick light-theme:has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring light-theme:has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:bg-surface has-[:disabled]:opacity-50";
+  "flex h-control-md items-center gap-2 rounded-medium border bg-surface-raised px-4 transition-[border-color,box-shadow] duration-quick light-theme:has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring light-theme:has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:bg-surface has-[:disabled]:opacity-50";
 
 /** A number with its unit after it, such as 165 kcal. It is a `TextField` whose digits are right aligned and tabular. */
 export function NumericInput({

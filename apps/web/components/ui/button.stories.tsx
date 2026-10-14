@@ -98,7 +98,7 @@ export const Pressed: Story = {
   render: () => (
     <EveryVariant>
       {(variant) => (
-        <Button variant={variant} className="scale-[0.96] before:bg-press-overlay">
+        <Button variant={variant} className="scale-press before:bg-press-overlay">
           {variant}
         </Button>
       )}

@@ -22,9 +22,9 @@ const searchFrame = cva(
   {
     variants: {
       size: {
-        md: "h-[44px] gap-2 pl-4 pr-1",
-        sm: "h-[36px] gap-2 pl-3 pr-1",
-        adaptive: "h-[44px] gap-2 pl-4 pr-1 lg:h-[36px] lg:pl-3",
+        md: "h-control-md gap-2 pl-4 pr-1",
+        sm: "h-control-sm gap-2 pl-3 pr-1",
+        adaptive: "h-control-md gap-2 pl-4 pr-1 lg:h-control-sm lg:pl-3",
       },
       focusRing: {
         lightOnly:

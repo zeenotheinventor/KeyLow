@@ -23,7 +23,7 @@ export function SegmentedControl<Value extends string>({
       aria-label={label}
       aria-labelledby={labelledBy}
       className={cn(
-        "grid h-[44px] auto-cols-fr grid-flow-col rounded-medium border border-border bg-surface-raised p-[3px]",
+        "grid h-control-md auto-cols-fr grid-flow-col rounded-medium border border-border bg-surface-raised p-[3px]",
         className,
       )}
     >

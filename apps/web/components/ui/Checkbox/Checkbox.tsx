@@ -12,7 +12,7 @@ export function Checkbox({ label, className, ...inputProps }: CheckboxProps) {
   return (
     <label
       className={cn(
-        "relative inline-flex min-h-[44px] cursor-pointer items-center gap-2 text-[14px] font-semibold leading-5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
+        "relative inline-flex min-h-touch-target cursor-pointer items-center gap-2 text-[14px] font-semibold leading-5 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50",
         className,
       )}
     >

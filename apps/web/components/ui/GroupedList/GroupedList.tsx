@@ -37,7 +37,7 @@ export function GroupedList({
           <button
             type="button"
             onClick={seeMore.onClick}
-            className="-mx-1 -my-1.5 min-h-[44px] rounded-small px-1 text-[14px] font-semibold leading-5 text-text-secondary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay focus-visible:ring-2 focus-visible:ring-focus-ring"
+            className="-mx-1 -my-1.5 min-h-touch-target rounded-small px-1 text-[14px] font-semibold leading-5 text-text-secondary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay focus-visible:ring-2 focus-visible:ring-focus-ring"
           >
             See {seeMore.hiddenCount} more <span className="sr-only">in {title}</span>
           </button>
