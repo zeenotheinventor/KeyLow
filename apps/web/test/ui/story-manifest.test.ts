@@ -13,6 +13,7 @@ import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.storie
 import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
 import * as groupedListStories from "@/components/ui/GroupedList/GroupedList.stories";
 import * as inputStories from "@/components/ui/input.stories";
+import * as kiLoMarkStories from "@/components/ui/KiLoMark/KiLoMark.stories";
 import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
 import * as numericInputStories from "@/components/ui/NumericInput/NumericInput.stories";
 import * as nutrientTableStories from "@/components/ui/NutrientTable/NutrientTable.stories";
@@ -28,6 +29,7 @@ const storyModules: Record<string, object> = {
   "ErrorState/ErrorState.stories.tsx": errorStateStories,
   "FoodRow/FoodRow.stories.tsx": foodRowStories,
   "GroupedList/GroupedList.stories.tsx": groupedListStories,
+  "KiLoMark/KiLoMark.stories.tsx": kiLoMarkStories,
   "ListRow/ListRow.stories.tsx": listRowStories,
   "NumericInput/NumericInput.stories.tsx": numericInputStories,
   "NutrientTable/NutrientTable.stories.tsx": nutrientTableStories,

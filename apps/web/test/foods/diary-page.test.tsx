@@ -11,13 +11,19 @@ describe("DiaryPage", () => {
   it("should still show the diary placeholder", () => {
     render(<DiaryPage />);
 
-    expect(screen.getByRole("heading", { name: "Diary" })).toBeTruthy();
-    expect(screen.getByText("Coming soon")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Diary" })).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 2, name: "Coming soon" })).toBeTruthy();
   });
 
-  it("should link to the food search", () => {
+  it("should say what will appear here", () => {
     render(<DiaryPage />);
 
-    expect(screen.getByRole("link", { name: "Find food" }).getAttribute("href")).toBe("/foods");
+    expect(screen.getByText("Your logged foods will appear here, day by day.")).toBeTruthy();
+  });
+
+  it("should leave the food search to the top bar", () => {
+    render(<DiaryPage />);
+
+    expect(screen.queryByRole("link", { name: "Find food" })).toBeNull();
   });
 });

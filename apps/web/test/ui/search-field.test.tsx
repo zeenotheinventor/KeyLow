@@ -169,4 +169,32 @@ describe("SearchLauncher", () => {
 
     expect(onClick).toHaveBeenCalledOnce();
   });
+
+  describe("size", () => {
+    it("should be 44 high by default", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} />);
+
+      expect(
+        screen.getByRole("button", { name: "Search for a food" }).parentElement?.className,
+      ).toContain("h-[44px]");
+    });
+
+    it("should be 36 high when small", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} size="sm" />);
+
+      expect(
+        screen.getByRole("button", { name: "Search for a food" }).parentElement?.className,
+      ).toContain("h-[36px]");
+    });
+
+    it("should be 44 high and drop to 36 from the large breakpoint when adaptive", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} size="adaptive" />);
+
+      const frameClasses = screen.getByRole("button", { name: "Search for a food" }).parentElement
+        ?.className;
+
+      expect(frameClasses).toContain("h-[44px]");
+      expect(frameClasses).toContain("lg:h-[36px]");
+    });
+  });
 });

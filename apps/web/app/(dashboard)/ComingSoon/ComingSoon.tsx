@@ -1,14 +1,14 @@
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Hourglass } from "lucide-react";
 
-export function ComingSoon({ title }: { title: string }) {
+import type { ComingSoonProps } from "./types";
+
+import { EmptyState } from "@/components/ui/EmptyState";
+
+export function ComingSoon({ title, icon = Hourglass, body }: ComingSoonProps) {
   return (
-    <Card>
-      <CardHeader>
-        <h1 className="text-2xl font-semibold">{title}</h1>
-      </CardHeader>
-      <CardContent>
-        <p className="text-text-muted">Coming soon</p>
-      </CardContent>
-    </Card>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <h1 className="text-h1">{title}</h1>
+      <EmptyState icon={icon} title="Coming soon" body={body} size="placeholder" />
+    </div>
   );
 }

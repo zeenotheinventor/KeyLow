@@ -5,6 +5,12 @@ const password = `throwaway-${String(Date.now())}`;
 
 test.describe.configure({ mode: "serial" });
 
+test("sends a signed-out visitor from the home page to the login page", async ({ page }) => {
+  await page.goto("/");
+
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test("redirects a signed-out visitor from the dashboard to the login page", async ({ page }) => {
   await page.goto("/diary");
 
@@ -19,10 +25,12 @@ test("creates an account and lands on the diary", async ({ page }) => {
   await page.getByRole("button", { name: "Create account" }).click();
 
   await expect(page).toHaveURL(/\/diary$/);
+  await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Recipes" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Weight" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "More" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Weight" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);
 });
 
 test("signs out and protects the dashboard again", async ({ page }) => {
@@ -32,6 +40,8 @@ test("signs out and protects the dashboard again", async ({ page }) => {
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page).toHaveURL(/\/diary$/);
 
+  await page.getByRole("link", { name: "More" }).click();
+  await expect(page).toHaveURL(/\/more$/);
   await page.getByRole("button", { name: "Sign out" }).click();
 
   await expect(page).toHaveURL(/\/login$/);

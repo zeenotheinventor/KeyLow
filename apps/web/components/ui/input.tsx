@@ -25,11 +25,11 @@ Input.displayName = "Input";
 type TextFieldProps = Omit<React.ComponentProps<"input">, "aria-invalid" | "aria-describedby"> & {
   label: string;
   /** One short sentence under the field. An error replaces it. */
-  helper?: string;
+  helper?: string | undefined;
   /** Says what to do. Turns the border danger and is announced as an alert. */
-  error?: string;
+  error?: string | undefined;
   /** A short note beside the label, such as "Required". It also describes the field. */
-  labelHint?: string;
+  labelHint?: string | undefined;
 };
 
 /** What the control inside a `Field` needs to be named, flagged and described. */

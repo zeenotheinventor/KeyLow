@@ -2,7 +2,12 @@ import { iconStroke } from "@keylow/tokens";
 import { cva } from "class-variance-authority";
 import { ScanBarcode, Search } from "lucide-react";
 
-import type { BarcodeButton, SearchFieldProps, SearchLauncherProps, SearchSize } from "./types";
+import type {
+  BarcodeButton,
+  SearchFieldProps,
+  SearchLauncherProps,
+  SearchLauncherSize,
+} from "./types";
 
 import { cn } from "@/lib/utils";
 
@@ -17,6 +22,7 @@ const searchFrame = cva(
       size: {
         md: "h-[44px] gap-2 pl-4 pr-1",
         sm: "h-[36px] gap-2 pl-3 pr-1",
+        adaptive: "h-[44px] gap-2 pl-4 pr-1 lg:h-[36px] lg:pl-3",
       },
     },
     defaultVariants: { size: "md" },
@@ -25,7 +31,11 @@ const searchFrame = cva(
 
 const fieldText = cva("", {
   variants: {
-    size: { md: "text-body", sm: "text-[14px] leading-5" },
+    size: {
+      md: "text-body",
+      sm: "text-[14px] leading-5",
+      adaptive: "text-body lg:text-[14px] lg:leading-5",
+    },
   },
   defaultVariants: { size: "md" },
 });
@@ -33,14 +43,14 @@ const fieldText = cva("", {
 const barcodeButtonSize = cva(
   "flex shrink-0 items-center justify-center rounded-small text-text-primary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay aria-expanded:bg-surface-sheet focus-visible:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring",
   {
-    variants: { size: { md: "size-9", sm: "size-7" } },
+    variants: { size: { md: "size-9", sm: "size-7", adaptive: "size-9 lg:size-7" } },
     defaultVariants: { size: "md" },
   },
 );
 
-const iconSize = { md: "size-5", sm: "size-4" } as const;
+const iconSize = { md: "size-5", sm: "size-4", adaptive: "size-5 lg:size-4" } as const;
 
-function BarcodeIconButton({ button, size }: { button: BarcodeButton; size: SearchSize }) {
+function BarcodeIconButton({ button, size }: { button: BarcodeButton; size: SearchLauncherSize }) {
   return (
     <button
       type="button"
