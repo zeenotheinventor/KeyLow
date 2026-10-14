@@ -10,3 +10,5 @@ export function useMaybeCounter(enabled: boolean): number {
 export const { EXPO_PUBLIC_URL } = process.env;
 export const icon: unknown = require("./icon.png");
 export const other: unknown = require("./other");
+
+export const listFormat = new Intl.ListFormat("en-GB");

@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./eslint/base": "./eslint/base.js",
+    "./eslint/hermes": "./eslint/hermes.js",
     "./eslint/react": "./eslint/react.js",
     "./eslint/react-native": "./eslint/react-native.js",
     "./prettier": "./prettier.config.js",

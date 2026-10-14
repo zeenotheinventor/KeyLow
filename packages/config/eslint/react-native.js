@@ -1,12 +1,14 @@
 import expo from "eslint-plugin-expo";
 
 import base from "./base.js";
+import hermes from "./hermes.js";
 import reactRules from "./react-rules.js";
 
 /** @type {import("eslint").Linter.Config[]} */
 const reactNative = [
   ...base,
   ...reactRules,
+  ...hermes,
   {
     plugins: { expo },
     languageOptions: {

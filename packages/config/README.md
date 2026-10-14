@@ -8,11 +8,12 @@ Add it to a package with `"@keylow/config": "workspace:*"` in `devDependencies`.
 
 Each export is a flat config array. Use one per package, in that package's `eslint.config.mjs`. A package without `"type": "module"` should use the `.mjs` extension, otherwise Node reparses the config as ESM and prints a warning on every run.
 
-| Export                               | Use for                                                    |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `@keylow/config/eslint/base`         | Plain TypeScript packages (core, db, api-client, tokens)   |
-| `@keylow/config/eslint/react`        | Next.js and web code: base, React, React Hooks, jsx-a11y   |
-| `@keylow/config/eslint/react-native` | Expo and mobile code: base, React, React Hooks, Expo rules |
+| Export                               | Use for                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `@keylow/config/eslint/base`         | Plain TypeScript packages (core, db, api-client, tokens)                                    |
+| `@keylow/config/eslint/react`        | Next.js and web code: base, React, React Hooks, jsx-a11y                                    |
+| `@keylow/config/eslint/react-native` | Expo and mobile code: base, React, React Hooks, Expo rules                                  |
+| `@keylow/config/eslint/hermes`       | Bans the `Intl` APIs Hermes lacks. Already in `react-native`; add it to core and api-client |
 
 ```js
 // eslint.config.mjs

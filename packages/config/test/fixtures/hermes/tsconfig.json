@@ -1,0 +1,4 @@
+{
+  "extends": "@keylow/config/tsconfig/node.json",
+  "include": ["*.ts"]
+}
