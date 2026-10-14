@@ -27,7 +27,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
   FoodRow: {
     states: ["Default", "WithBrand", "LongName", "PerBasis", "NoEnergy", "Pending", "Disabled"],
   },
-  GroupedList: { states: ["Default", "WithSeeMore", "TitleOnly"] },
+  GroupedList: { states: ["Default", "WithSeeMore", "TitleOnly", "WithNotice"] },
   Icon: { states: ["Sizes", "Tones", "Labelled", "Names"] },
   IconButton: { states: ["Secondary", "Ghost", "Disabled"] },
   ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled"] },

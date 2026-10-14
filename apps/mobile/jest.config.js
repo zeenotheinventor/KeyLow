@@ -17,7 +17,7 @@ module.exports = {
   // Workspace packages ship TypeScript source, so Jest must transform them like app code. Storybook
   // ships ES modules only, so it is transformed too.
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@keylow/.*|storybook|@storybook/.*)",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@keylow/.*|storybook|@storybook/.*|standard-navigation)",
     // Already plain CommonJS, so Babel would only slow the cold start. These are the biggest files the
     // first render loads: the React Native renderer and the web streams polyfill from Expo.
     "node_modules/react-native/Libraries/Renderer/implementations/",

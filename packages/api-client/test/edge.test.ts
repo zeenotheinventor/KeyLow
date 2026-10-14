@@ -115,4 +115,70 @@ describe("invokeEdgeFunction", () => {
       await expect(rejection).rejects.toHaveProperty("cause", failure);
     });
   });
+  describe("when the response is not a global Response, as React Native's fetch returns", () => {
+    // Expo's fetch answers with its own class, so `instanceof Response` is false. Only what the code reads is given.
+    class FetchResponseLike {
+      constructor(
+        readonly status: number,
+        private readonly body: unknown,
+        private readonly headerValues: Record<string, string> = {},
+      ) {}
+
+      readonly headers = { get: (name: string) => this.headerValues[name] ?? null };
+
+      clone() {
+        return new FetchResponseLike(this.status, this.body, this.headerValues);
+      }
+
+      json() {
+        return Promise.resolve(this.body);
+      }
+    }
+
+    const failWith = (response: FetchResponseLike) => {
+      const client = createTestClient();
+      spyOnInvoke(client).mockResolvedValue({
+        data: null,
+        error: new FunctionsHttpError(response),
+      });
+      return client;
+    };
+
+    it("should throw a RateLimitedError with the retry delay on a 429", async () => {
+      expect(new FetchResponseLike(429, {})).not.toBeInstanceOf(Response);
+      const client = failWith(
+        new FetchResponseLike(
+          429,
+          { error: { code: "rate_limited", message: "Slow down" } },
+          { "Retry-After": "30" },
+        ),
+      );
+
+      const rejection = invokeEdgeFunction(client, "off-search");
+
+      await expect(rejection).rejects.toBeInstanceOf(RateLimitedError);
+      await expect(rejection).rejects.toHaveProperty("retryAfterSeconds", 30);
+    });
+
+    it("should throw an EdgeFunctionError with the code of the body on a 404", async () => {
+      const client = failWith(
+        new FetchResponseLike(404, {
+          error: { code: "not_found", message: "No such product" },
+        }),
+      );
+
+      const rejection = invokeEdgeFunction(client, "off-product");
+
+      await expect(rejection).rejects.toBeInstanceOf(EdgeFunctionError);
+      await expect(rejection).rejects.toMatchObject({ status: 404, code: "not_found" });
+    });
+
+    it("should throw a plain error when the context has no status", async () => {
+      const client = failWith(Object.assign(new FetchResponseLike(0, {}), { status: undefined }));
+
+      await expect(invokeEdgeFunction(client, "off-search")).rejects.not.toBeInstanceOf(
+        RateLimitedError,
+      );
+    });
+  });
 });

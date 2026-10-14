@@ -8,6 +8,7 @@ export const idleSearch: FoodSearchResult = {
   off: [],
   isLoadingLocal: false,
   isLoadingOff: false,
+  isDebouncing: false,
   offError: null,
   localError: null,
 };
@@ -25,16 +26,30 @@ export const offCandidateFixture: OffCandidate = {
   quality: {},
 };
 
+type OwnFoodsState =
+  | { isPending: true; isError: false; data: undefined }
+  | { isPending: false; isError: true; data: Food[] | undefined }
+  | { isPending: false; isError: false; data: Food[] };
+
 export const mockMaterialiseOffProduct = jest.fn<Promise<Food>, [{ code: string }]>();
 export const mockUseFoodSearch = jest.fn<FoodSearchResult, [string]>();
+export const mockUseOwnFoods = jest.fn<OwnFoodsState, []>();
 
 // The test sets the whole search result for a case, and a reset puts back the idle one.
 export const searchResult: FoodSearchResult = { ...idleSearch };
 
+// The user's own foods, which a test sets the same way.
+export const ownFoodsResult: { current: OwnFoodsState } = {
+  current: { isPending: false, isError: false, data: [] },
+};
+
 export function resetSearchApiClientMock(): void {
   Object.assign(searchResult, idleSearch);
+  ownFoodsResult.current = { isPending: false, isError: false, data: [] };
   mockUseFoodSearch.mockReset();
   mockUseFoodSearch.mockImplementation(() => searchResult);
+  mockUseOwnFoods.mockReset();
+  mockUseOwnFoods.mockImplementation(() => ownFoodsResult.current);
   mockMaterialiseOffProduct.mockReset();
 }
 
@@ -42,5 +57,6 @@ export function resetSearchApiClientMock(): void {
 export const mockSearchApiClient = {
   ...mockApiClient,
   useFoodSearch: mockUseFoodSearch,
+  useOwnFoods: mockUseOwnFoods,
   useMaterialiseOffProduct: () => ({ mutateAsync: mockMaterialiseOffProduct }),
 };

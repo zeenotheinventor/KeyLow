@@ -16,6 +16,10 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 function MockStack() {
   return <Text>{`Screens in ${useTheme().scheme}`}</Text>;
 }
+// The layout declares the options of a screen with `Stack.Screen`, which draws nothing.
+MockStack.Screen = function MockScreen() {
+  return null;
+};
 
 jest.mock("expo-router", () => ({
   ...jest.requireActual<{ mockExpoRouter: object }>("./support/expoRouterMock").mockExpoRouter,

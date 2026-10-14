@@ -14,6 +14,8 @@ export type GroupedListProps = {
   source?: string | undefined;
   /** Offers the rows that are not shown. */
   seeMore?: GroupedListSeeMore | undefined;
+  /** A notice about this group, drawn between the heading and the card: a `Banner`, as the add failure board draws one. */
+  notice?: ReactNode;
   /** The rows: `ListRow` or `FoodRow`. */
   children: ReactNode;
 };

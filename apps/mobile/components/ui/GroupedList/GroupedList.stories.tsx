@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 
+import { Banner } from "../Banner";
 import { FoodRow } from "../FoodRow";
 import { ListRow } from "../ListRow";
 import { GroupedList } from "./GroupedList";
@@ -120,6 +121,24 @@ export const TitleOnly: Story = {
         title="Your foods"
         onPress={() => undefined}
       />
+    </GroupedList>
+  ),
+};
+
+// A notice about the group sits between its heading and its card, as the add failure board draws one.
+export const WithNotice: Story = {
+  render: (args) => (
+    <GroupedList
+      {...args}
+      notice={
+        <Banner
+          body="Check your connection and try again."
+          title="This product could not be added"
+          variant="error"
+        />
+      }
+    >
+      {foodRows(3)}
     </GroupedList>
   ),
 };

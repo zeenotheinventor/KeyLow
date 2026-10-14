@@ -1,18 +1,11 @@
-import type { FoodSearchResult } from "@keylow/api-client";
+/** `own` is the sheet titled "Your foods", which lists and filters only the user's own foods. */
+export type FoodSearchScope = "all" | "own";
 
 export type FoodSearchProps = {
-  /** What the user has typed. */
-  query: string;
-  /** The trimmed query the results are for, which trails `query` while the typing settles. */
-  searchedQuery: string;
-  onQueryChange: (query: string) => void;
-  results: FoodSearchResult;
-  /** The code of the Open Food Facts product being added, while it is being added. */
-  pendingCandidateCode: string | undefined;
-  /** Why adding an Open Food Facts product failed, shown in that section. */
-  candidateError: string | undefined;
-  onSelectFood: (foodId: string) => void;
-  onSelectCandidate: (code: string) => void;
+  /** Defaults to `all`. */
+  scope?: FoodSearchScope;
+  onClose: () => void;
   onCreateFood: () => void;
   onScanBarcode: () => void;
+  onOpenFood: (foodId: string) => void;
 };

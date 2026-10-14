@@ -14,7 +14,13 @@ export default function RootLayout() {
       <KeyLowProvider client={supabase}>
         <AuthGate>
           <StatusBar style="dark" />
-          <Stack screenOptions={{ headerShown: false }} />
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* The food search sheet covers the tabs and slides up from the bottom. */}
+            <Stack.Screen
+              name="foods"
+              options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+            />
+          </Stack>
         </AuthGate>
       </KeyLowProvider>
     </ThemeProvider>
