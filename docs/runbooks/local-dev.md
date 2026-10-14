@@ -296,7 +296,7 @@ The file also holds `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` and `EXPO_PUBLIC_GOOGLE_W
 
 `apps/mobile/lib/supabase.ts` reads the two Supabase names and throws `EXPO_PUBLIC_SUPABASE_URL is not set` (or the same for `EXPO_PUBLIC_SUPABASE_ANON_KEY`) if either is empty. Metro loads `.env.local` itself and inlines `EXPO_PUBLIC_` values into the bundle when it builds it, so after any edit restart Metro with `--clear` (below).
 
-`.env.local` is only for runs through Metro, which is what a development client on your phone does. It is ignored by git and never reaches EAS. Builds made by EAS get their values from the `env` block of the `base` profile in `apps/mobile/eas.json` (which `development` and `production` extend), and `.github/workflows/eas-update.yml` sets the same four values for the OTA publish. Those point at production Supabase, so a development client built by EAS still talks to your local stack because Metro serves a fresh bundle from your `.env.local`. If a Google client id changes, update `.env.example`, `eas.json` and the workflow together. Any edit to `eas.json` changes the native fingerprint (the file is hashed whole), so expect the CI fingerprint comment. OTA publishes belong to CI only: a local `eas update` would bundle your `.env.local` values, including the LAN Supabase URL, into the production channel.
+`.env.local` is only for runs through Metro, which is what a development client on your phone does. It is ignored by git and never reaches EAS. Builds made by EAS get their values from the `env` block of the `base` profile in `apps/mobile/eas.json` (which `development` and `production` extend, and `production-apk` extends `production`), and `.github/workflows/eas-update.yml` sets the same four values for the OTA publish. Those point at production Supabase, so a development client built by EAS still talks to your local stack because Metro serves a fresh bundle from your `.env.local`. If a Google client id changes, update `.env.example`, `eas.json` and the workflow together. Any edit to `eas.json` changes the native fingerprint (the file is hashed whole), so expect the CI fingerprint comment. OTA publishes belong to CI only: a local `eas update` would bundle your `.env.local` values, including the LAN Supabase URL, into the production channel.
 
 Docker publishes the API on every interface, so the LAN IP reaches the same stack as `127.0.0.1`. Confirm it from your Mac. A healthy API answers `200` with a JSON body naming GoTrue:
 
@@ -326,6 +326,48 @@ pnpm mobile:dev
 
 It pulls the current branch, runs `pnpm install`, and starts Metro with a clean cache. It stops before starting Metro if the pull cannot fast-forward (your branch has diverged) or would overwrite a file you have edited and not committed. pnpm runs under whichever Node your shell found, so run `source ~/.nvm/nvm.sh && nvm alias default 22` once if new terminals do not start on Node 22.
 
+### Two Ki-Lo apps on one phone
+
+The phone can hold two Ki-Lo apps side by side. They are different Android apps, because each has its own package id.
+
+| App         | Package id                | Name      | Built with profile   | Loads its JavaScript from                                |
+| ----------- | ------------------------- | --------- | -------------------- | -------------------------------------------------------- |
+| Development | `com.sojisoft.keylow.dev` | Ki-Lo Dev | `development-device` | Metro on your Mac                                        |
+| Main        | `com.sojisoft.keylow`     | Ki-Lo     | `production-apk`     | EAS Update, the `production` channel (what main shipped) |
+
+- **Ki-Lo Dev** is the development client in the next sections. Use it for work in progress: it needs Metro running and shows what is on your Mac.
+- **Ki-Lo** is the main app. It is a release build (no Metro, no launcher) that runs the JavaScript bundled in the APK and, on each launch, downloads the newest update that `.github/workflows/eas-update.yml` published to the `production` channel. A downloaded update runs from the next launch, so close the app fully and open it again to see a fresh merge. Every qualifying merge to `main` publishes one automatically, because the `production` GitHub environment has only a branch policy and no approval step. Use it to see what main looks like on a real phone. It talks to production Supabase.
+
+The profile `development` sets `APP_VARIANT=development` in its `env`, and `apps/mobile/app.config.ts` reads that to give the build its own Android package and name. Everything else comes from `app.json`. iOS keeps `com.sojisoft.keylow` (a second iOS bundle id would need a second iOS Google client, and there are no iOS builds yet), so only the display name changes there.
+
+Build the main app with:
+
+```sh
+npx eas-cli build --profile production-apk --platform android
+```
+
+It extends `production`, with internal distribution so EAS produces an installable APK and a link or QR code instead of a store bundle, and `buildType: apk`. Do not use `production` for this: it builds the store AAB, which cannot be sideloaded.
+
+When each app needs a rebuild:
+
+- Both apps run on a native build plus JavaScript. A change that only touches JavaScript (screens, hooks, copy, styles) needs no rebuild: Ki-Lo Dev gets it from Metro, and Ki-Lo gets it from the next EAS Update after the merge.
+- A native change (a new native dependency, a config plugin, an Expo SDK bump, any edit to `eas.json`, or an edit to `app.json` or `app.config.ts` that changes the resolved native config) changes the native fingerprint, which is the runtime version. CI then comments on the pull request. An update published after such a merge is never delivered to an old build, so rebuild **Ki-Lo** with `production-apk`. Rebuild **Ki-Lo Dev** with `development-device` only if the code you are running in Metro needs the new native code.
+- The two apps get their runtime version from different configs (the development variant changes the package and name, which are part of the fingerprint), so their fingerprints differ on purpose. The main app's matches what CI computes, which is why it receives updates. Check with `npx fingerprint fingerprint:generate --platform android` from `apps/mobile`, run without `APP_VARIANT`: that hash must be the one the `production-apk` build uses (`npx eas-cli fingerprint:generate --build-profile production-apk --platform android`).
+- Metro needs no extra setting for Ki-Lo Dev. The dev client accepts what Metro serves whatever package, name or runtime version it carries. To make Metro serve the development variant anyway (the dev menu then shows "Ki-Lo Dev"), start it with `APP_VARIANT=development pnpm mobile:dev`.
+
+Never set `APP_VARIANT` in an EAS environment (expo.dev, Environment variables). The `production-apk` build and the CI `eas update` both read the EAS `production` environment, so a value there would turn the main app into the development variant.
+
+Both apps register the link scheme `keylow://`, so when you tap a `keylow://auth/callback` link (the email confirmation) Android asks which app should open it. Pick the one you signed up in.
+
+#### Google sign-in for each package id
+
+Email sign-in needs nothing. Google sign-in on Android needs an OAuth client of type Android in the Google Cloud project `KeyLow`, one for each package id and signing key. The app and Supabase need no change: the app asks Google for a token for the existing web client, and Android clients are only matched by package id and SHA-1. EAS keeps one keystore per package id, so the first Android build of `com.sojisoft.keylow.dev` generates a new keystore (EAS asks, or generates without asking under `--non-interactive`; accept it), and its SHA-1 is new. The SHA-1 is a public certificate fingerprint, not a secret, but never download or share the keystore itself.
+
+1. Build once: `npx eas-cli build --profile development-device --platform android`. The build creates the keystore.
+2. Read the SHA-1. Either run `npx eas-cli credentials --platform android` from `apps/mobile`, pick the `development-device` profile, then "Keystore: Manage everything needed to build your project", and copy the `SHA1 Fingerprint` line (only look, do not choose a remove or upload option), or open expo.dev, the `sojisoft/keylow` project, Credentials, Android, `com.sojisoft.keylow.dev`, and copy the SHA-1 from the keystore.
+3. In Google Cloud console, project `KeyLow`: APIs & Services, Credentials, Create credentials, OAuth client ID. Application type "Android", name "KeyLow Android dev", package name `com.sojisoft.keylow.dev`, the SHA-1 from step 2. Create it. Google can take some minutes (occasionally a few hours) to start honouring a new client.
+4. The main app `com.sojisoft.keylow` needs the same, with the SHA-1 of the keystore that signs the `production-apk` build. EAS keys keystores by package id, not by profile, so it reuses the keystore of the build you already have for `com.sojisoft.keylow` if there is one. Check whether an Android client with that SHA-1 already exists and create one if not (name "KeyLow Android"). Repeat step 2 for `com.sojisoft.keylow` to get it.
+
 ### Get a development client onto the phone
 
 **Device step, not run by the author of this runbook.** The repo is not ready for it yet, so read this part as the plan:
@@ -337,7 +379,8 @@ npx eas-cli build --profile development-device
 This builds an internal-distribution development client in the EAS cloud (profile `development-device` in `apps/mobile/eas.json`). The `development` profile builds an iOS simulator app instead, which only runs in the iOS Simulator, so you need Xcode on your machine to run it. The EAS build itself does not need Xcode. Before the first build works you need these things:
 
 - An EAS login (`npx eas-cli login`) with access to the `sojisoft` Expo organisation. The account signs in through the browser; the CLI opens it.
-- Bundle identifiers and the EAS project are already in `apps/mobile/app.json` (`com.sojisoft.keylow` for both platforms, project `@sojisoft/keylow`).
+- Bundle identifiers and the EAS project are already in `apps/mobile/app.json` (`com.sojisoft.keylow` for both platforms, project `@sojisoft/keylow`). The development build overrides the Android package to `com.sojisoft.keylow.dev` (see "Two Ki-Lo apps on one phone").
+- The first Android build for a package id has no signing keystore yet. EAS asks whether to generate one, and `--non-interactive` generates one without asking. Let it generate: the keystore lives in your EAS account, and the Google sign-in client for that package needs its SHA-1 (see "Google sign-in for each package id" above).
 - For an iOS internal-distribution build, an Apple Developer account and the phone's UDID registered with `npx eas-cli device:create`. Android needs neither.
 
 The first build itself is tracked as a manual ticket. Until it is done, nobody can install a dev client, but everything else in this section still works.
@@ -362,7 +405,7 @@ JavaScript-only work still runs on the old client through Metro until the first 
 
 1. Put the phone and the Mac on the same Wi-Fi network.
 2. Keep the stack running (section 3) and Metro running (above).
-3. Open the KeyLow dev client. Its launcher lists the Metro server it finds on the network. Tap it, or choose to enter a URL and type `http://<LAN-IP>:8081`.
+3. Open the Ki-Lo Dev app. Its launcher lists the Metro server it finds on the network. Tap it, or choose to enter a URL and type `http://<LAN-IP>:8081`.
 4. The app opens on the sign-in screen. Sign in as `demo@keylow.local` or create an account. The app talks to Supabase at the `EXPO_PUBLIC_SUPABASE_URL` you set.
 
 ### Open Storybook on the phone
@@ -378,7 +421,7 @@ Storybook for React Native runs inside the dev client, on the real runtime, so a
    `--clear` matters when you switch the flag, because Metro inlines it into the bundle. Metro turns Storybook telemetry off for you (`STORYBOOK_DISABLE_TELEMETRY=1`, set in `metro.config.js` when the flag is on). It also rewrites the story index, `apps/mobile/.rnstorybook/storybook.requires.ts`, on every start. Commit it when it changes. CI regenerates it and fails on a difference, and `pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook` does the same by hand. It is not a package script on purpose: a script name is part of the native fingerprint.
 
 2. Open the dev client and connect to Metro as in "Connect the phone".
-3. Open the deep link `keylow://storybook`. On Android, `adb shell am start -a android.intent.action.VIEW -d "keylow://storybook" com.sojisoft.keylow` does it, and on a phone you can type `keylow://storybook` into the browser. No sign-in is needed, because `AuthGate` lets the `storybook` route through while the flag is on.
+3. Open the deep link `keylow://storybook`. On Android, `adb shell am start -a android.intent.action.VIEW -d "keylow://storybook" com.sojisoft.keylow.dev` does it, and on a phone you can type `keylow://storybook` into the browser. No sign-in is needed, because `AuthGate` lets the `storybook` route through while the flag is on.
 4. The bottom bar shows the story and opens the story list. The icon at its right opens the addons panel, whose **Theme** tab switches the story between **Dark** and **Light**. The on-device Storybook has no toolbar, so the switch is a panel. It runs through the app's own `ThemeProvider` with the scheme fixed, so a story takes the real theme path while your saved Appearance setting and the Storybook screens are left alone.
 
 Without `EXPO_PUBLIC_STORYBOOK=true`, `/storybook` redirects to the home route and `npx expo export` produces a bundle with no Storybook code. Check that with `npx expo export --platform android --no-bytecode --output-dir <dir>` and a search of the bundle for `UI/Button` or `kilo/theme`, which only a Storybook build contains.

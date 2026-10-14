@@ -7,23 +7,27 @@
 # `supabase functions deploy` when any exist. A change in core redeploys the
 # functions because each one embeds its own copy of the core bundle.
 #
+# Release policy: continuous deployment with no approval gate. Every qualifying push to main
+# deploys straight away. Releases are meant to be gated later with feature flags, not with a
+# manual approval step, so the `production` environment deliberately has no required reviewers.
+#
 # One-time setup in GitHub (Settings of this repository, done by Zee):
 #
 #   1. Settings > Environments > New environment, named exactly `production`.
-#   2. On that environment, enable "Required reviewers" and add Zee. This is
-#      the manual approval gate. The job below declares `environment:
-#      production`, so every run pauses until a reviewer approves it. Without
-#      step 2 the workflow still runs but nothing waits for approval.
-#   3. On that same environment, add these three secrets under "Environment
-#      secrets" (not repository secrets, so that only approved runs can read
-#      them):
+#      Leave "Required reviewers" off. The job below declares `environment:
+#      production` only to read the environment's secrets and to apply its
+#      branch policy, so a run starts as soon as it is triggered.
+#   2. On that environment, add these three secrets under "Environment
+#      secrets" (not repository secrets, so that only runs on an allowed
+#      branch can read them):
 #        SUPABASE_ACCESS_TOKEN  personal access token (KEY-11)
 #        SUPABASE_PROJECT_ID    project ref of keylow-prod (KEY-11)
 #        SUPABASE_DB_PASSWORD   database password of keylow-prod (KEY-11)
-#   4. On that same environment, set "Deployment branches" to "Selected
+#   3. On that same environment, set "Deployment branches" to "Selected
 #      branches" and allow only `main` (Settings > Environments > production
-#      > Deployment branches). Otherwise a manual run from a feature branch,
-#      once approved, would deploy that branch.
+#      > Deployment branches). This branch policy is the only restriction on
+#      the environment: it stops a manual run from a feature branch from
+#      reading the secrets and deploying that branch.
 #
 # Not verifiable before the secrets exist and a real push to main happens.
 # The Supabase CLI is pinned below. Bump it deliberately.
