@@ -21,6 +21,8 @@ const SECTIONS: readonly DashboardSection[] = [
 ];
 
 const FOODS_HREF = "/foods";
+const FOOD_PAGE_PREFIX = "/foods/";
+const FOODS_BARCODE_HREF = "/foods?panel=barcode";
 
 const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset";
@@ -39,6 +41,10 @@ export function DashboardNav() {
     setMenuPathname(pathname);
     setIsMenuOpen(false);
   }
+  // The boards leave the launcher out of the foods page, which has a search field of its own, and
+  // out of the food detail and form pages below the large breakpoint.
+  const isFoodsPage = pathname === FOODS_HREF;
+  const isFoodPage = pathname.startsWith(FOOD_PAGE_PREFIX);
   const menuButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   const panelId = useId();
@@ -139,13 +145,20 @@ export function DashboardNav() {
             </ul>
           </nav>
         </div>
-        <SearchLauncher
-          size="adaptive"
-          label="Search for a food"
-          onSearch={goToFoods}
-          barcodeButton={{ label: "Look up a barcode", onClick: goToFoods }}
-          className="lg:ml-auto lg:w-[320px]"
-        />
+        {!isFoodsPage && (
+          <SearchLauncher
+            size="adaptive"
+            label="Search for a food"
+            onSearch={goToFoods}
+            barcodeButton={{
+              label: "Look up a barcode",
+              onClick: () => {
+                router.push(FOODS_BARCODE_HREF);
+              },
+            }}
+            className={cn("lg:ml-auto lg:w-[320px]", isFoodPage && "max-lg:hidden")}
+          />
+        )}
       </div>
     </header>
   );

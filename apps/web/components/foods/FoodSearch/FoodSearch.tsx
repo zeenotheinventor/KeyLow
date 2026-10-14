@@ -1,52 +1,92 @@
 "use client";
 
+import { MIN_SEARCH_LENGTH } from "@keylow/api-client";
+import { SEARCH_IDLE } from "@keylow/core/copy";
+import { iconStroke } from "@keylow/tokens";
+import { Plus } from "lucide-react";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
+import { OwnFoodResults } from "./OwnFoodResults";
 import { SearchResults } from "./SearchResults";
-import { useDebouncedText } from "./useDebouncedText";
 
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import type { FoodSearchProps } from "./types";
 
-const MIN_QUERY_LENGTH = 2;
-const TYPING_PAUSE_MS = 250;
+import { BarcodeLookup } from "@/components/foods/BarcodeLookup";
+import { Button } from "@/components/ui/button";
+import { SearchField } from "@/components/ui/SearchField";
+
+const WORDING = {
+  all: { title: "Foods", fieldLabel: "Search foods" },
+  own: { title: "Your foods", fieldLabel: "Search your foods" },
+} as const;
 
 /**
- * The results are only mounted once the typing has paused on a searchable query. A search mounted
- * with its query starts loading at once, so "No foods found" is never shown for a query whose
- * search has not begun, which the search hook cannot tell apart from one that found nothing.
+ * The foods page: a search over the user's foods, UK CoFID and Open Food Facts, or, for
+ * `scope="own"`, the user's own foods. The barcode button in the search field opens a typed
+ * barcode lookup. The search opens with the cursor in the field, except on Your foods, where the
+ * list is what the user came for.
  */
-export function FoodSearch() {
-  const inputId = useId();
+export function FoodSearch({ scope = "all", startWithBarcodePanel = false }: FoodSearchProps) {
+  const { title, fieldLabel } = WORDING[scope];
+  const isOwnFoods = scope === "own";
+  const fieldId = useId();
+  const field = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
-  const settledQuery = useDebouncedText(query, TYPING_PAUSE_MS).trim();
+  const [isBarcodePanelOpen, setIsBarcodePanelOpen] = useState(startWithBarcodePanel);
+
+  useEffect(() => {
+    if (!isOwnFoods && !startWithBarcodePanel) {
+      field.current?.focus();
+    }
+  }, [isOwnFoods, startWithBarcodePanel]);
+
+  const showsHint = !isOwnFoods && !isBarcodePanelOpen && query.trim().length < MIN_SEARCH_LENGTH;
 
   return (
-    <Card className="flex flex-col gap-4 p-4 md:p-6">
-      <h2 className="font-semibold leading-none tracking-tight">Search</h2>
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={inputId} className="text-sm font-medium">
-          Search foods
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-h1">{title}</h1>
+        <Button asChild variant="secondary" className="px-0 sm:px-4">
+          <Link href="/foods/new" aria-label="Create a food">
+            <Plus aria-hidden strokeWidth={iconStroke} />
+            <span className="hidden sm:inline">Create a food</span>
+          </Link>
+        </Button>
+      </div>
+      <div className="flex flex-col gap-1">
+        <label htmlFor={fieldId} className="text-caption text-text-secondary">
+          {fieldLabel}
         </label>
-        <Input
-          id={inputId}
-          type="search"
-          className="h-11 md:h-9"
+        <SearchField
+          id={fieldId}
+          ref={field}
+          label={fieldLabel}
+          placeholder="Name or brand"
           autoComplete="off"
           value={query}
           onChange={(event) => {
             setQuery(event.target.value);
           }}
+          barcodeButton={{
+            label: "Look up a barcode",
+            expanded: isBarcodePanelOpen,
+            onClick: () => {
+              setIsBarcodePanelOpen(!isBarcodePanelOpen);
+            },
+          }}
         />
+        {showsHint && <span className="text-caption text-text-muted">{SEARCH_IDLE.hint}</span>}
       </div>
-      {settledQuery.length >= MIN_QUERY_LENGTH && <SearchResults query={settledQuery} />}
-      <Link
-        href="/foods/new"
-        className="inline-flex min-h-11 items-center self-start text-sm font-medium underline underline-offset-4 md:min-h-0"
-      >
-        Create a food
-      </Link>
-    </Card>
+      {isBarcodePanelOpen && (
+        <BarcodeLookup
+          onClose={() => {
+            setIsBarcodePanelOpen(false);
+            field.current?.focus();
+          }}
+        />
+      )}
+      {isOwnFoods ? <OwnFoodResults query={query} /> : <SearchResults query={query} />}
+    </div>
   );
 }

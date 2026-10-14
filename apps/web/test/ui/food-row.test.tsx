@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderWithRouter } from "./appRouter";
 import { compileUtilities, reducedMotionRules } from "./compileUtilities";
 
 import type { FoodRowContent } from "@/components/ui/FoodRow";
@@ -55,6 +56,21 @@ describe("FoodRow", () => {
 
     expect(link.getAttribute("href")).toBe("/foods/chicken");
     expect(screen.getByRole("listitem")).toBeTruthy();
+  });
+
+  it("should open the page through the router, so the app is not loaded again", () => {
+    const { push } = renderWithRouter(
+      <ul>
+        <FoodRow nameSegments={chickenBreast} href="/foods/chicken" />
+      </ul>,
+    );
+
+    const notCancelled = fireEvent.click(
+      screen.getByRole("link", { name: new RegExp(chickenBreastName) }),
+    );
+
+    expect(notCancelled).toBe(false);
+    expect(push).toHaveBeenCalledExactlyOnceWith("/foods/chicken", expect.anything());
   });
 
   it("should write the matched parts of the name in bold", () => {

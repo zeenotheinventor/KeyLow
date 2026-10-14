@@ -2,6 +2,7 @@ import { GroupedList } from "./GroupedList";
 
 import type { Meta, StoryObj } from "@storybook/nextjs";
 
+import { Banner } from "@/components/ui/Banner";
 import { ListRow } from "@/components/ui/ListRow";
 
 const meta = {
@@ -55,6 +56,18 @@ export const WithSeeMore: Story = {
     title: "Common foods",
     source: "UK CoFID",
     seeMore: { hiddenCount: 2, onClick: () => undefined },
+  },
+};
+
+export const WithNotice: Story = {
+  args: {
+    title: "From Open Food Facts",
+    source: "Live results",
+    notice: (
+      <Banner tone="error" title="This product could not be added">
+        Check your connection and try again.
+      </Banner>
+    ),
   },
 };
 

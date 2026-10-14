@@ -6,7 +6,14 @@ import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /** A titled section holding a card of rows. The rows are separated by a hairline. */
-export function GroupedList({ title, source, seeMore, children, className }: GroupedListProps) {
+export function GroupedList({
+  title,
+  source,
+  seeMore,
+  notice,
+  children,
+  className,
+}: GroupedListProps) {
   const titleId = useId();
 
   return (
@@ -30,6 +37,7 @@ export function GroupedList({ title, source, seeMore, children, className }: Gro
           </button>
         )}
       </div>
+      {notice}
       <Card asChild padding="none">
         <ul className="divide-y divide-border">{children}</ul>
       </Card>

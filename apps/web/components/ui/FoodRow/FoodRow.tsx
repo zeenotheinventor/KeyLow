@@ -1,5 +1,6 @@
 import { iconStroke } from "@keylow/tokens";
 import { ChevronRight, LoaderCircle, Utensils } from "lucide-react";
+import Link from "next/link";
 
 import type { FoodRowMacros, FoodRowProps } from "./types";
 
@@ -125,19 +126,19 @@ export function FoodRow({
   );
 
   if (href !== undefined) {
-    // A link that is off has no destination, which is how a disabled link is written.
     return (
       <li>
-        {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-        <a
-          className={classes}
-          href={unavailable ? undefined : href}
-          role={unavailable ? "link" : undefined}
-          aria-disabled={unavailable || undefined}
-          aria-busy={busy || undefined}
-        >
-          {content}
-        </a>
+        {unavailable ? (
+          // A link that is off has no destination, which is how a disabled link is written.
+          // eslint-disable-next-line jsx-a11y/anchor-is-valid
+          <a className={classes} role="link" aria-disabled aria-busy={busy || undefined}>
+            {content}
+          </a>
+        ) : (
+          <Link href={href} className={classes}>
+            {content}
+          </Link>
+        )}
       </li>
     );
   }

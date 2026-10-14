@@ -1,12 +1,20 @@
-import { BarcodeLookup } from "@/components/foods/BarcodeLookup";
 import { FoodSearch } from "@/components/foods/FoodSearch";
 
-export default function FoodsPage() {
+type FoodsPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function FoodsPage({ searchParams }: FoodsPageProps) {
+  const { scope, panel } = await searchParams;
+  const resolvedScope = scope === "own" ? "own" : "all";
+  const startWithBarcodePanel = panel === "barcode";
+
+  // A change of either parameter is a new page, so the search starts again from its start state.
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Foods</h1>
-      <FoodSearch />
-      <BarcodeLookup />
-    </div>
+    <FoodSearch
+      key={`${resolvedScope}-${String(startWithBarcodePanel)}`}
+      scope={resolvedScope}
+      startWithBarcodePanel={startWithBarcodePanel}
+    />
   );
 }

@@ -1,5 +1,6 @@
 import { iconStroke } from "@keylow/tokens";
 import { CircleAlert, Info } from "lucide-react";
+import Link from "next/link";
 
 import type { BannerAction, BannerProps, BannerTone } from "./types";
 
@@ -38,9 +39,9 @@ const actionText =
 function ActionControl({ action, className }: { action: BannerAction; className: string }) {
   if (action.href !== undefined) {
     return (
-      <a href={action.href} className={className}>
+      <Link href={action.href} className={className}>
         {action.label}
-      </a>
+      </Link>
     );
   }
 

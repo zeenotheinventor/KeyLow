@@ -25,7 +25,8 @@ const BARCODE_LOOKUP_LIMIT = 5;
 // The "Your foods" list is bounded so a user with a great many foods cannot make one huge request.
 const DEFAULT_OWN_FOODS_LIMIT = 200;
 
-const MIN_SEARCH_LENGTH = 2;
+/** The shortest text, once trimmed, that the food search looks for. Anything shorter is answered with no results. */
+export const MIN_SEARCH_LENGTH = 2;
 const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
 

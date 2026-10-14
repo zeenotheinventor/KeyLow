@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Mail } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderWithRouter } from "./appRouter";
+
 import { Banner } from "@/components/ui/Banner";
 
 const lightTextRule = "[[data-theme=light]_&]:text-text-primary";
@@ -123,6 +125,19 @@ describe("Banner", () => {
       expect(screen.getByRole("link", { name: "Edit the food" }).getAttribute("href")).toBe(
         "/foods/1/edit",
       );
+    });
+
+    it("should open the page through the router, so the app is not loaded again", () => {
+      const { push } = renderWithRouter(
+        <Banner tone="review" action={{ label: "Edit the food", href: "/foods/1/edit" }}>
+          Your food was saved, but its portions were not.
+        </Banner>,
+      );
+
+      const notCancelled = fireEvent.click(screen.getByRole("link", { name: "Edit the food" }));
+
+      expect(notCancelled).toBe(false);
+      expect(push).toHaveBeenCalledExactlyOnceWith("/foods/1/edit", expect.anything());
     });
 
     it("should have no action unless given one", () => {

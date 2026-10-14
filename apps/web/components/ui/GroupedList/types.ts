@@ -7,6 +7,8 @@ export type GroupedListProps = {
   source?: string;
   /** Offers the rows that are not shown. Nothing is offered when `hiddenCount` is 0. */
   seeMore?: { hiddenCount: number; onClick: () => void };
+  /** A notice about the group, such as a `Banner`, drawn between the heading and the rows. */
+  notice?: React.ReactNode;
   /** The rows, such as `ListRow` or `FoodRow`. */
   children: React.ReactNode;
   className?: string;

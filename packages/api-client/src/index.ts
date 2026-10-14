@@ -31,6 +31,7 @@ export type {
 } from "./hooks";
 export {
   FoodsPartialWriteError,
+  MIN_SEARCH_LENGTH,
   createFood,
   fetchOffProduct,
   getFood,

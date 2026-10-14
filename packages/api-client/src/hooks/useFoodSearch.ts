@@ -5,14 +5,13 @@ import { useDebouncedValue } from "./useDebouncedValue";
 import { RateLimitedError, toEdgeErrorKind } from "../errors";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
-import { searchFoods } from "../repos/foods";
+import { MIN_SEARCH_LENGTH, searchFoods } from "../repos/foods";
 import { searchOff } from "../repos/off";
 
 import type { EdgeErrorKind } from "../errors";
 import type { FoodSearchHit } from "../repos/foods";
 import type { OffCandidate } from "@keylow/core/schemas";
 
-const MIN_QUERY_LENGTH = 2;
 const LOCAL_STALE_TIME_MS = 30 * 1000;
 // Open Food Facts allows few searches a minute, so a repeated query is served from the cache for
 // this long. The cache entry must outlive its stale time, or it would be dropped before it counts.
@@ -119,7 +118,7 @@ export function useFoodSearch(query: string, options: UseFoodSearchOptions = {})
   const trimmedQuery = query.trim();
   const debouncedQuery = useDebouncedValue(trimmedQuery, debounceMs);
   const isDebouncing = enabled && trimmedQuery !== debouncedQuery;
-  const isSearchable = enabled && debouncedQuery.length >= MIN_QUERY_LENGTH;
+  const isSearchable = enabled && debouncedQuery.length >= MIN_SEARCH_LENGTH;
 
   const localQuery = useQuery({
     queryKey: keys.foods.search(debouncedQuery),

@@ -90,12 +90,60 @@ describe("DashboardNav", () => {
       expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
     });
 
-    it("should go to the foods page from the barcode button", () => {
+    it("should go to the foods page with the barcode panel open from the barcode button", () => {
       render(<DashboardNav />);
 
       fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
 
-      expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
+      expect(push).toHaveBeenCalledExactlyOnceWith("/foods?panel=barcode");
+    });
+  });
+
+  describe("the search launcher on the foods pages", () => {
+    // The boards draw the launcher on every page of the shell, except the foods page (which has its
+    // own search field, at every width) and the food detail and form pages (below the large
+    // breakpoint only).
+    it.each(["/diary", "/dashboard", "/recipes", "/more"])("should show it on %s", (path) => {
+      pathname.mockReturnValue(path);
+      render(<DashboardNav />);
+
+      expect(screen.getByRole("button", { name: "Search for a food" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Look up a barcode" })).toBeTruthy();
+    });
+
+    it("should leave it out of the foods page, which has a search field of its own", () => {
+      pathname.mockReturnValue("/foods");
+      render(<DashboardNav />);
+
+      expect(screen.queryByRole("button", { name: "Search for a food" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Look up a barcode" })).toBeNull();
+    });
+
+    it.each(["/foods/new", "/foods/22222222-2222-4222-8222-222222222222", "/foods/abc/edit"])(
+      "should show it on %s from the large breakpoint and not below it",
+      (path) => {
+        pathname.mockReturnValue(path);
+        render(<DashboardNav />);
+
+        // The test library cannot apply a media query, so the class that hides it below the
+        // breakpoint is what is checked.
+        const launcher = screen.getByRole("button", { name: "Search for a food" }).parentElement;
+        expect(launcher?.className).toContain("max-lg:hidden");
+      },
+    );
+
+    it("should not hide it below the large breakpoint on the other pages", () => {
+      render(<DashboardNav />);
+
+      const launcher = screen.getByRole("button", { name: "Search for a food" }).parentElement;
+      expect(launcher?.className).not.toContain("max-lg:hidden");
+    });
+
+    it("should not treat a path that only starts with the same letters as a foods page", () => {
+      pathname.mockReturnValue("/foodstuffs");
+      render(<DashboardNav />);
+
+      expect(screen.getByRole("button", { name: "Search for a food" })).toBeTruthy();
     });
   });
 

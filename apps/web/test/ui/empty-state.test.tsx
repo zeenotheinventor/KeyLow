@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { Plus, SearchX } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderWithRouter } from "./appRouter";
+
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 
@@ -75,6 +77,21 @@ describe("EmptyState", () => {
       expect(screen.getByRole("link", { name: "Create a food" }).getAttribute("href")).toBe(
         "/foods/new",
       );
+    });
+
+    it("should open the page through the router, so the app is not loaded again", () => {
+      const { push } = renderWithRouter(
+        <EmptyState
+          icon={SearchX}
+          title="No foods found"
+          action={{ label: "Create a food", href: "/foods/new" }}
+        />,
+      );
+
+      const notCancelled = fireEvent.click(screen.getByRole("link", { name: "Create a food" }));
+
+      expect(notCancelled).toBe(false);
+      expect(push).toHaveBeenCalledExactlyOnceWith("/foods/new", expect.anything());
     });
   });
 

@@ -1,4 +1,5 @@
 import { iconStroke } from "@keylow/tokens";
+import Link from "next/link";
 
 import type { EmptyStateAction, EmptyStateProps, EmptyStateSize } from "./types";
 
@@ -24,7 +25,7 @@ function ActionButton({ action }: { action: EmptyStateAction }) {
   if (action.href !== undefined) {
     return (
       <Button asChild variant="secondary" className="mt-3">
-        <a href={action.href}>{content}</a>
+        <Link href={action.href}>{content}</Link>
       </Button>
     );
   }

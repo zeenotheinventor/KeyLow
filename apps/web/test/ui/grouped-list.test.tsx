@@ -101,4 +101,34 @@ describe("GroupedList", () => {
       expect(screen.queryByRole("button")).toBeNull();
     });
   });
+
+  describe("notice", () => {
+    it("should sit inside the section, between the heading and the rows", () => {
+      render(
+        <GroupedList title="From Open Food Facts" notice={<p>This product could not be added</p>}>
+          <ListRow title="Apples" />
+        </GroupedList>,
+      );
+
+      const section = screen.getByRole("region", { name: "From Open Food Facts" });
+      const notice = within(section).getByText("This product could not be added");
+      const heading = within(section).getByRole("heading", { level: 2 });
+      const list = within(section).getByRole("list");
+      expect(
+        heading.compareDocumentPosition(notice) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(notice.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should add nothing unless asked", () => {
+      render(
+        <GroupedList title="Common foods">
+          <ListRow title="Apples" />
+        </GroupedList>,
+      );
+
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+  });
 });
