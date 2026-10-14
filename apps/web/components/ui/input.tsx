@@ -16,7 +16,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
       <input
         type={type}
         className={cn(
-          "flex h-[44px] w-full rounded-medium border border-border bg-surface-raised px-4 text-body text-text-primary outline-none transition-[border-color,box-shadow] duration-quick placeholder:text-text-muted light-theme:focus-visible:ring-2 focus-visible:ring-focus-ring light-theme:focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset focus-visible:[&:not([aria-invalid=true])]:border-accent aria-[invalid=true]:border-danger aria-[invalid=true]:focus-visible:ring-2 aria-[invalid=true]:focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-50",
+          "flex h-control-md w-full rounded-medium border border-border bg-surface-raised px-4 text-body text-text-primary outline-none transition-[border-color,box-shadow] duration-quick placeholder:text-text-muted light-theme:focus-visible:ring-2 focus-visible:ring-focus-ring light-theme:focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset focus-visible:[&:not([aria-invalid=true])]:border-accent aria-[invalid=true]:border-danger aria-[invalid=true]:focus-visible:ring-2 aria-[invalid=true]:focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-50",
           className,
         )}
         ref={ref}

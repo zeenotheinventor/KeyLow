@@ -2,10 +2,13 @@ import { legacyColors, legacyFontSize, legacySpacing } from "./legacy";
 import {
   borderRadius,
   colors,
+  controlHeight,
   fontFamily,
   fontSize,
+  pressScale,
   spacing,
   transitionDuration,
+  touchTarget,
   transitionTimingFunction,
 } from "./source.generated";
 import { boxShadow, isSolidColor } from "./theme";
@@ -54,6 +57,18 @@ const themeColors = Object.fromEntries(
     }),
 );
 
+// The sizes a button, a field or a row is built to. They get names so a class reads `h-control-md`
+// and `min-h-touch-target` and a change to the design's number reaches every screen, on web and mobile.
+export const controlSizes = {
+  "control-sm": `${controlHeight.sm}px`,
+  "control-md": `${controlHeight.md}px`,
+  "control-lg": `${controlHeight.lg}px`,
+  "touch-target": `${touchTarget}px`,
+};
+
+/** The design's `--press-scale`, as the one step the preset adds to Tailwind's scale: `scale-press`. */
+export const scaleSteps = { press: String(pressScale) };
+
 export const preset: Partial<Config> = {
   theme: {
     extend: {
@@ -63,6 +78,12 @@ export const preset: Partial<Config> = {
       fontFamily,
       fontSize: { ...legacyFontSize, ...fontSize },
       boxShadow,
+      width: controlSizes,
+      height: controlSizes,
+      minWidth: controlSizes,
+      minHeight: controlSizes,
+      // A button compresses to `scale-press` under `active:`.
+      scale: scaleSteps,
       transitionDuration,
       transitionTimingFunction,
     },

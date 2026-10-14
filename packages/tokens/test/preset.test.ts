@@ -1,7 +1,7 @@
 import resolveConfig from "tailwindcss/resolveConfig";
 import { describe, expect, it } from "vitest";
 
-import { preset } from "../src";
+import { controlHeight, preset, pressScale, touchTarget } from "../src";
 import { renderCss, warmUpTailwindBeforeAll } from "./support/renderCss";
 
 warmUpTailwindBeforeAll();
@@ -19,9 +19,14 @@ describe("preset", () => {
       "colors",
       "fontFamily",
       "fontSize",
+      "height",
+      "minHeight",
+      "minWidth",
+      "scale",
       "spacing",
       "transitionDuration",
       "transitionTimingFunction",
+      "width",
     ]);
   });
 });
@@ -115,5 +120,60 @@ describe("the classes the design's screens are written with", () => {
 
     expect(css).toContain("background-color: rgb(37 99 235");
     expect(css).toContain("color: rgb(23 23 23");
+  });
+});
+
+describe("the control sizes and the press scale", () => {
+  const resolvedTheme = resolveConfig({ content: [], presets: [preset] }).theme;
+  const valueOf = (scale: object, name: string): unknown =>
+    Object.entries(scale).find(([key]) => key === name)?.[1];
+
+  const controlSizeClasses = [
+    { name: "control-sm", pixels: controlHeight.sm },
+    { name: "control-md", pixels: controlHeight.md },
+    { name: "control-lg", pixels: controlHeight.lg },
+    { name: "touch-target", pixels: touchTarget },
+  ];
+
+  it("should resolve each size from the tokens on height, width, min-height and min-width", () => {
+    for (const { name, pixels } of controlSizeClasses) {
+      expect(valueOf(resolvedTheme.height, name)).toBe(`${pixels}px`);
+      expect(valueOf(resolvedTheme.width, name)).toBe(`${pixels}px`);
+      expect(valueOf(resolvedTheme.minHeight, name)).toBe(`${pixels}px`);
+      expect(valueOf(resolvedTheme.minWidth, name)).toBe(`${pixels}px`);
+    }
+  });
+
+  it("should resolve the press scale from the token", () => {
+    expect(valueOf(resolvedTheme.scale, "press")).toBe(String(pressScale));
+  });
+
+  it("should keep Tailwind's own height, width and scale values", () => {
+    expect(valueOf(resolvedTheme.height, "full")).toBe("100%");
+    expect(valueOf(resolvedTheme.minWidth, "0")).toBe("0px");
+    expect(valueOf(resolvedTheme.scale, "95")).toBe(".95");
+  });
+
+  describe.each(controlSizeClasses)("$name", ({ name, pixels }) => {
+    it.each([
+      ["h", "height"],
+      ["w", "width"],
+      ["min-h", "min-height"],
+      ["min-w", "min-width"],
+    ])("should generate %s-%s as the token's size", async (prefix, property) => {
+      const css = await renderCss({ presets: [preset] }, [`${prefix}-${name}`]);
+
+      expect(css).toContain(`.${prefix}-${name}`);
+      expect(css).toContain(`${property}: ${pixels}px`);
+    });
+  });
+
+  it("should generate the press scale as a utility that works under a state variant", async () => {
+    const css = await renderCss({ presets: [preset] }, ["scale-press", "active:scale-press"]);
+
+    expect(css).toContain(".scale-press");
+    expect(css).toContain(".active\\:scale-press:active");
+    expect(css).toContain(`--tw-scale-x: ${pressScale}`);
+    expect(css).toContain(`--tw-scale-y: ${pressScale}`);
   });
 });

@@ -145,13 +145,13 @@ describe("SearchField", () => {
     it("should be 44 high by default", () => {
       render(<SearchField label="Search foods" />);
 
-      expect(screen.getByRole("search").className).toContain("h-[44px]");
+      expect(screen.getByRole("search").className).toContain("h-control-md");
     });
 
     it("should be 36 high when small", () => {
       render(<SearchField label="Search foods" size="sm" />);
 
-      expect(screen.getByRole("search").className).toContain("h-[36px]");
+      expect(screen.getByRole("search").className).toContain("h-control-sm");
     });
   });
 });
@@ -210,7 +210,7 @@ describe("SearchLauncher", () => {
 
       expect(
         screen.getByRole("button", { name: "Search for a food" }).parentElement?.className,
-      ).toContain("h-[44px]");
+      ).toContain("h-control-md");
     });
 
     it("should be 36 high when small", () => {
@@ -218,7 +218,7 @@ describe("SearchLauncher", () => {
 
       expect(
         screen.getByRole("button", { name: "Search for a food" }).parentElement?.className,
-      ).toContain("h-[36px]");
+      ).toContain("h-control-sm");
     });
 
     it("should be 44 high and drop to 36 from the large breakpoint when adaptive", () => {
@@ -227,8 +227,8 @@ describe("SearchLauncher", () => {
       const frameClasses = screen.getByRole("button", { name: "Search for a food" }).parentElement
         ?.className;
 
-      expect(frameClasses).toContain("h-[44px]");
-      expect(frameClasses).toContain("lg:h-[36px]");
+      expect(frameClasses).toContain("h-control-md");
+      expect(frameClasses).toContain("lg:h-control-sm");
     });
   });
 });

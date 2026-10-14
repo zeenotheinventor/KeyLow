@@ -1,11 +1,4 @@
-const {
-  controlHeight,
-  elevation,
-  preset,
-  themes,
-  themeVariables,
-  touchTarget,
-} = require("@keylow/tokens");
+const { elevation, preset, themes, themeVariables } = require("@keylow/tokens");
 const plugin = require("tailwindcss/plugin");
 
 // The classes read `--kl-*` variables. The app's ThemeProvider sets them on its root view for the
@@ -47,16 +40,6 @@ const geistWeightsPlugin = plugin((api) => {
     ),
   );
 });
-
-// The design's control heights and touch target are not in the Tailwind preset, which only carries the
-// spacing scale. They are the sizes a button, a field or a row is built to, so they get names here,
-// read from the tokens package, for `h-control-md`, `w-touch-target` and the like.
-const controlSizes = {
-  "control-sm": `${controlHeight.sm}px`,
-  "control-md": `${controlHeight.md}px`,
-  "control-lg": `${controlHeight.lg}px`,
-  "touch-target": `${touchTarget}px`,
-};
 
 // NativeWind 4.2.7 drops `font-variant-numeric`, so Tailwind's own `tabular-nums` compiles to nothing.
 // `-rn-` is react-native-css-interop's escape hatch for a native style prop it has no CSS mapping for:
@@ -116,10 +99,6 @@ module.exports = {
       // shows: the dark background in both themes, which `@keylow/tokens` does not have as a token yet.
       colors: { "warning-ink": "var(--kl-warning-ink)", camera: themes.dark.background },
       fontFamily: { sans: [geistWeights.normal.fontFamily] },
-      width: controlSizes,
-      height: controlSizes,
-      minWidth: controlSizes,
-      minHeight: controlSizes,
     },
   },
   plugins: [
