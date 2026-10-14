@@ -4,45 +4,111 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+// Heights are the design's control heights (36 dense web only, 44, 52). The overlay is a pseudo
+// element so hover and press tint the variant's own fill. The press scale and the spinner both
+// have a prefers-reduced-motion fallback.
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-focus-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "relative inline-flex min-w-[44px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-[0.96] active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-accent text-accent-foreground shadow hover:bg-accent/90",
-        destructive: "bg-danger text-text-on-status shadow-sm hover:bg-danger/90",
-        outline: "border border-border bg-background shadow-sm hover:bg-hover-overlay",
-        secondary: "bg-surface-raised text-text-primary shadow-sm hover:bg-surface-raised/80",
-        ghost: "hover:bg-hover-overlay",
-        link: "text-text-primary underline-offset-4 hover:underline",
+        primary: "border-transparent bg-accent text-accent-foreground",
+        secondary: "border-border bg-surface-raised text-text-primary",
+        destructive: "border-transparent bg-danger text-text-on-status",
+        ghost: "border-transparent bg-transparent text-text-primary",
+        // Names the screens use today. They resolve to the design's variants until the screen
+        // tickets move over.
+        default: "border-transparent bg-accent text-accent-foreground",
+        outline: "border-border bg-surface-raised text-text-primary",
       },
       size: {
-        default: "h-9 px-4 py-2",
-        sm: "h-8 rounded-md px-3 text-xs",
-        lg: "h-10 rounded-md px-8",
-        icon: "h-9 w-9",
+        sm: "h-[36px] px-3",
+        md: "h-[44px] px-4",
+        lg: "h-[52px] px-5",
+        default: "h-[44px] px-4",
+      },
+      iconOnly: {
+        true: "px-0",
+        false: "",
       },
     },
+    compoundVariants: [
+      { iconOnly: true, size: "sm", className: "w-[36px]" },
+      { iconOnly: true, size: ["md", "default"], className: "w-[44px]" },
+      { iconOnly: true, size: "lg", className: "w-[52px]" },
+    ],
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: "primary",
+      size: "md",
+      iconOnly: false,
     },
   },
 );
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
-  asChild?: boolean;
-}
+type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    /** Renders the button's styles on a single child such as a link. It has no label to hide, so `loading` does nothing. */
+    asChild?: boolean;
+    /** Keeps the label's width, hides it and shows a spinner. The button is inert until it ends. */
+    loading?: boolean;
+    /** What a screen reader hears while loading, such as "Signing in". */
+    loadingLabel?: string;
+  };
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button";
+  (
+    {
+      className,
+      variant,
+      size,
+      iconOnly,
+      asChild = false,
+      loading = false,
+      loadingLabel = "Loading",
+      disabled,
+      children,
+      ...props
+    },
+    ref,
+  ) => {
+    // Only a button that was disabled on purpose is dimmed. A loading one is inert too, but it
+    // stays at full strength, as the login-pending board draws it.
+    const classes = cn(
+      buttonVariants({ variant, size, iconOnly, className }),
+      disabled === true && "opacity-40",
+    );
+
+    if (asChild) {
+      return (
+        <Slot className={classes} ref={ref} {...props}>
+          {children}
+        </Slot>
+      );
+    }
+
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <button
+        className={classes}
+        ref={ref}
+        disabled={disabled === true || loading}
+        aria-busy={loading || undefined}
+        {...props}
+      >
+        <span aria-hidden={loading || undefined} className={cn("contents", loading && "invisible")}>
+          {children}
+        </span>
+        {loading && (
+          <span
+            role="img"
+            aria-label={loadingLabel}
+            className="absolute size-[18px] animate-spin rounded-pill border-2 border-current border-r-transparent motion-reduce:animate-pulse"
+          />
+        )}
+      </button>
     );
   },
 );
 Button.displayName = "Button";
 
 export { Button, buttonVariants };
+export type { ButtonProps };
