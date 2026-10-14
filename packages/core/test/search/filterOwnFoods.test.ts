@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 
-import { makeFood } from "./support";
+import { filterOwnFoods } from "../../src/search";
 
-import { filterOwnFoods } from "@/components/foods/FoodSearch/filterOwnFoods";
+type NamedFood = { id: string; name: string; brand: string | null };
 
-const foods = [
-  makeFood({ id: "a", name: "Chicken breast, meal prep", brand: null }),
-  makeFood({ id: "b", name: "Mystery Spread", brand: "Northfield Mills" }),
-  makeFood({ id: "c", name: "Overnight oats", brand: null }),
+const foods: NamedFood[] = [
+  { id: "a", name: "Chicken breast, meal prep", brand: null },
+  { id: "b", name: "Mystery Spread", brand: "Northfield Mills" },
+  { id: "c", name: "Overnight oats", brand: null },
 ];
 
-const idsFor = (query: string) => filterOwnFoods(foods, query).map((food) => food.id);
+const idsFor = (query: string) => filterOwnFoods(foods, query).map((found) => found.id);
 
 describe("filterOwnFoods", () => {
   it("should keep every food when nothing is typed", () => {
@@ -42,5 +42,9 @@ describe("filterOwnFoods", () => {
   it("should treat characters that mean something in a pattern as plain text", () => {
     expect(idsFor("(")).toEqual([]);
     expect(idsFor(".*")).toEqual([]);
+  });
+
+  it("should return the foods themselves, whatever else they carry", () => {
+    expect(filterOwnFoods(foods, "oats")[0]).toBe(foods[2]);
   });
 });

@@ -20,13 +20,16 @@ const { useFoodSearch, useMaterialiseOffProduct, useFoodByBarcode, materialise, 
     useFoodSearch: vi.fn<(query: string) => FoodSearchResult>(),
     useMaterialiseOffProduct: vi.fn(),
     useFoodByBarcode: vi.fn<(code: string) => UseFoodByBarcodeReturn>(),
-    materialise:
-      vi.fn<
-        (
-          variables: { code: string },
-          options: { onSuccess: (food: Food) => void; onSettled: () => void },
-        ) => void
-      >(),
+    materialise: vi.fn<
+      (
+        variables: { code: string },
+        options: {
+          onSuccess: (food: Food) => void;
+          onError: () => void;
+          onSettled?: () => void;
+        },
+      ) => void
+    >(),
     push: vi.fn<(href: string) => void>(),
   }),
 );
@@ -500,7 +503,8 @@ describe("FoodSearch", () => {
 
     it("should let a new choice through once the first save has failed", () => {
       materialise.mockImplementationOnce((_variables, options) => {
-        options.onSettled();
+        options.onError();
+        options.onSettled?.();
       });
       showCandidates();
 
@@ -510,17 +514,19 @@ describe("FoodSearch", () => {
       expect(materialise).toHaveBeenCalledTimes(2);
     });
 
-    it("should let a new choice through once the first save has succeeded", () => {
+    it("should do nothing on a further choice once the first save has succeeded, while the food opens", () => {
       materialise.mockImplementationOnce((_variables, options) => {
         options.onSuccess(makeFood({ id: "saved-food" }));
-        options.onSettled();
+        options.onSettled?.();
       });
       showCandidates();
 
       fireEvent.click(screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ }));
       fireEvent.click(screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ }));
 
-      expect(materialise).toHaveBeenCalledTimes(2);
+      expect(materialise).toHaveBeenCalledTimes(1);
+      expect(push).toHaveBeenCalledTimes(1);
     });
   });
 

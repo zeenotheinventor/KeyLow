@@ -10,6 +10,7 @@ import { FoodSearch } from "@/components/foods/FoodSearch";
 type OwnFoodsState =
   | { isPending: true; isError: false; data: undefined }
   | { isPending: false; isError: true; data: undefined }
+  | { isPending: false; isError: true; data: Food[] }
   | { isPending: false; isError: false; data: Food[] };
 
 const { useOwnFoods, useFoodSearch } = vi.hoisted(() => ({
@@ -177,6 +178,14 @@ describe("FoodSearch for your own foods", () => {
     const alert = screen.getByRole("alert");
     expect(within(alert).getByRole("heading", { name: "Search failed" })).toBeTruthy();
     expect(screen.queryByText("No foods yet")).toBeNull();
+  });
+
+  it("should keep the loaded list when a later refetch fails", () => {
+    useOwnFoods.mockReturnValue({ isPending: false, isError: true, data: ownFoods });
+    render(<FoodSearch scope="own" />);
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(listedNames()).toHaveLength(4);
   });
 
   it("should still offer the barcode lookup", () => {

@@ -7,10 +7,9 @@ import {
   VALUES_PER_100_G_NOTE,
   YOUR_FOODS_EMPTY,
 } from "@keylow/core/copy";
-import { groupFoodSearchResults } from "@keylow/core/search";
+import { filterOwnFoods, groupFoodSearchResults } from "@keylow/core/search";
 import { Plus, SearchX } from "lucide-react";
 
-import { filterOwnFoods } from "../filterOwnFoods";
 import { LocalFoodList } from "../LocalFoodList";
 
 import type { OwnFoodResultsProps } from "./types";
@@ -29,13 +28,12 @@ export function OwnFoodResults({ query }: OwnFoodResultsProps) {
   const ownFoods = useOwnFoods();
   const trimmedQuery = query.trim();
 
-  if (ownFoods.isPending) {
-    return <Skeleton variant="rows" label="Loading your foods" />;
-  }
-
-  if (ownFoods.isError) {
-    return (
+  // A failed refetch keeps the list that was loaded, so only a list that never loaded is an error.
+  if (ownFoods.data === undefined) {
+    return ownFoods.isError ? (
       <ErrorState size="section" title={SEARCH_FAILED_WEB.title} body={SEARCH_FAILED_WEB.body} />
+    ) : (
+      <Skeleton variant="rows" label="Loading your foods" />
     );
   }
 

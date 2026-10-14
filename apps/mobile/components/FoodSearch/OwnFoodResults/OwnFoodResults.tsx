@@ -6,10 +6,9 @@ import {
   VALUES_PER_100_G_NOTE,
   YOUR_FOODS_EMPTY,
 } from "@keylow/core/copy";
+import { describeFoodRow, filterOwnFoods } from "@keylow/core/search";
 
 import { EmptyState, ErrorState, FoodRow, GroupedList, Skeleton, Text } from "../../ui";
-import { filterOwnFoods } from "../filterOwnFoods";
-import { toFoodRowProps } from "../toFoodRowProps";
 
 import type { OwnFoodResultsProps } from "./types";
 
@@ -64,7 +63,7 @@ export function OwnFoodResults({ query, onOpenFood, onCreateFood }: OwnFoodResul
         {foods.map((food) => (
           <FoodRow
             key={food.id}
-            {...toFoodRowProps(food, trimmedQuery)}
+            {...describeFoodRow(food, trimmedQuery)}
             onPress={() => {
               onOpenFood(food.id);
             }}
