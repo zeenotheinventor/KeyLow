@@ -17,4 +17,6 @@ export type EmptyStateProps = {
   body?: string | undefined;
   /** The one thing to do about it, drawn as a secondary button. */
   action?: EmptyStateAction | undefined;
+  /** How far the words are from the sides: 24 points by default, 32 when wide, as the food not found board draws it. */
+  inset?: "default" | "wide" | undefined;
 };

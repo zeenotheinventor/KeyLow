@@ -4,8 +4,8 @@ import { isFoodId } from "@keylow/core/foods";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { FoodForm, foodToFormValues } from "../../../components/FoodForm";
-import { FoodFormLoadState } from "../../../components/FoodFormLoadState";
 import { FoodFormScreen } from "../../../components/FoodFormScreen";
+import { FoodLoadState } from "../../../components/FoodLoadState";
 import { EmptyState } from "../../../components/ui";
 
 import type { CustomFoodInput } from "@keylow/core/schemas";
@@ -24,11 +24,11 @@ export default function EditFoodRoute() {
   }
 
   if (!isValidId) {
-    return <FoodFormLoadState state="notFound" />;
+    return <FoodLoadState state="notFound" />;
   }
 
   if (state.status !== "ready") {
-    return <FoodFormLoadState state={state.status} />;
+    return <FoodLoadState state={state.status} />;
   }
 
   if (state.food.source !== "user") {

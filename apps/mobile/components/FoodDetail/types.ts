@@ -5,6 +5,6 @@ export type FoodDetailProps = {
   portions: FoodPortion[];
   /** Opens the editor. Only offered for the user's own foods. */
   onEdit: () => void;
-  /** Starts saving a copy of a food with missing values as the user's own. Only offered for those foods. */
-  onReview: () => void;
+  /** Opens the copy form, to save a copy of a food with missing values as the user's own. Only offered for those foods. */
+  onCopy: () => void;
 };

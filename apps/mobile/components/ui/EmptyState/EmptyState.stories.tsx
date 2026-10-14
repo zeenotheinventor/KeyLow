@@ -1,4 +1,4 @@
-import { SEARCH_EMPTY, YOUR_FOODS_EMPTY } from "@keylow/core/copy";
+import { FOOD_NOT_FOUND, SEARCH_EMPTY, YOUR_FOODS_EMPTY } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { EmptyState } from "./EmptyState";
@@ -45,4 +45,9 @@ export const YourFoodsEmpty: Story = {
 // A view with nothing to do about it has no action.
 export const WithoutAction: Story = {
   args: { icon: "SearchX", title: SEARCH_EMPTY.title, body: SEARCH_EMPTY.body },
+};
+
+// The food detail's not-found board: the words are 32 points from the sides.
+export const Wide: Story = {
+  args: { icon: "SearchX", title: FOOD_NOT_FOUND.title, body: FOOD_NOT_FOUND.body, inset: "wide" },
 };

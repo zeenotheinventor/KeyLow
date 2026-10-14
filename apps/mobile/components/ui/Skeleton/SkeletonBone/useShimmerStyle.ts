@@ -35,6 +35,8 @@ export function useShimmerStyle() {
   }, [progress]);
 
   return useAnimatedStyle(() => ({
+    // Fills the bone's height, which a class cannot say here, so a band of the full height has one to take.
+    flexGrow: 1,
     transform: [{ translateX: `${startShift + (endShift - startShift) * progress.get()}%` }],
   }));
 }

@@ -183,6 +183,21 @@ describe("Badge", () => {
       expect(screen.getByText("Default")).toHaveStyle({ color: colorOf("text-secondary") });
     });
 
+    it("should draw a hairline border on a neutral status when it is asked to be outlined", async () => {
+      await renderBadge({ children: "86 %", outlined: true }, scheme);
+      await screen.findByText("86 %");
+
+      expect(
+        viewsDrawn({
+          height: 20,
+          backgroundColor: colorOf("surface-sheet"),
+          borderColor: colorOf("border"),
+          borderWidth: 1,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("86 %")).toHaveStyle({ color: colorOf("text-secondary") });
+    });
+
     it.each(coloredTones)("should draw the %s status on its muted fill", async (tone) => {
       await renderBadge({ children: "Status", tone }, scheme);
       await screen.findByText("Status");

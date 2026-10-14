@@ -7,16 +7,16 @@ import { useReducedMotion } from "../../../../lib/motion";
 import type { SkeletonBoneProps } from "./types";
 
 // A class and an animated style cannot share an element: NativeWind merges the two and loses the
-// classes. So the animated element carries no class, and the shine it sweeps is its child. The band is
-// taller than any bone and the bone clips it, because a percentage height of an element with no
-// height of its own is nothing.
+// classes. So the animated element carries no class, and the shine it sweeps is its child. The animated
+// element grows to the bone's height (in its style, which has no class to put it in), so the band can
+// take all of it, and a tall card is shone from top to bottom.
 function SkeletonShine() {
   const animatedStyle = useShimmerStyle();
 
   return (
-    <View className="absolute inset-0 justify-center">
+    <View className="absolute inset-0">
       <Animated.View style={animatedStyle} testID="skeleton-shine-sweep">
-        <View className="skeleton-shine h-[64px] w-[80%]" testID="skeleton-shine-band" />
+        <View className="skeleton-shine h-full w-[80%]" testID="skeleton-shine-band" />
       </Animated.View>
     </View>
   );

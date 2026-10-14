@@ -18,6 +18,7 @@ export type SourceBadgeProps = {
   source: FoodSource;
   tone?: never;
   dot?: never;
+  outlined?: never;
   children?: never;
 };
 
@@ -28,6 +29,8 @@ export type StatusBadgeProps = {
   tone?: BadgeTone;
   /** A decoration. The text carries the meaning. */
   dot?: boolean;
+  /** Draws the hairline border a source badge has, for a neutral figure that sits on a raised surface, such as a macro's share of energy. */
+  outlined?: boolean;
   source?: never;
   /** One short phrase from `@keylow/core/copy`, such as "Default". */
   children: string;

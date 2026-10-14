@@ -44,6 +44,9 @@ export const SourceYours: Story = { render: () => <Badge kind="source" source="u
 // The food detail's portion rows mark the default portion with a neutral status.
 export const Neutral: Story = { render: () => <Badge>Default</Badge> };
 
+// The food detail's macro tiles show each share of energy as a neutral pill with a hairline border.
+export const Outlined: Story = { render: () => <Badge outlined>86 %</Badge> };
+
 // Every tone of the design system card. In light the words stay in the primary text colour and the
 // tone is the fill, and the dot where there is one (Q14).
 export const Tones: Story = {

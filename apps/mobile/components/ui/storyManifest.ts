@@ -9,7 +9,15 @@
  */
 export const storyManifest: Record<string, { states: string[] }> = {
   Badge: {
-    states: ["SourceOpenFoodFacts", "SourceCoFid", "SourceYours", "Neutral", "Tones", "WithDot"],
+    states: [
+      "SourceOpenFoodFacts",
+      "SourceCoFid",
+      "SourceYours",
+      "Neutral",
+      "Outlined",
+      "Tones",
+      "WithDot",
+    ],
   },
   Banner: {
     states: [
@@ -39,7 +47,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
     ],
   },
   Card: { states: ["Surface", "Raised", "Compact", "Rows"] },
-  EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction"] },
+  EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction", "Wide"] },
   ErrorState: { states: ["SearchFailed", "WithRetry", "WithAction"] },
   FoodRow: {
     states: ["Default", "WithBrand", "LongName", "PerBasis", "NoEnergy", "Pending", "Disabled"],

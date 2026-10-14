@@ -1,134 +1,77 @@
+import { FOOD_DETAIL, FOOD_REVIEW_BANNER, describeMissingValues } from "@keylow/core/copy";
 import { DATA_SOURCE_ATTRIBUTION, requiresConfirmation } from "@keylow/core/foods";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { vars } from "nativewind";
+import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { foodSourceLabel } from "../../lib/foodSourceLabel";
-import { formatAmount } from "../../lib/formatAmount";
-import { NutrientTable, describeNutrientField } from "../NutrientTable";
+import { FoodAttribution } from "./FoodAttribution";
+import { FoodHeader } from "./FoodHeader";
+import { MacroHero } from "./MacroHero";
+import { PortionList } from "./PortionList";
+import { FoodFormScreen } from "../FoodFormScreen";
+import { NutrientTable } from "../NutrientTable";
+import { Banner, Button } from "../ui";
 
 import type { FoodDetailProps } from "./types";
-import type { FoodPortion } from "@keylow/core/schemas";
 
-// A portion has exactly one of grams and ml, so the last case is only there for the type.
-function describePortionAmount(portion: FoodPortion): string {
-  if (portion.grams !== null) {
-    return `${formatAmount(portion.grams)} g`;
-  }
-  return portion.ml === null ? "" : `${formatAmount(portion.ml)} ml`;
-}
+// The boards leave 34 below the last block, which is the bottom inset of an iPhone. A taller navigation bar takes its own height instead.
+const MINIMUM_BOTTOM_PADDING = 34;
 
-function describePortion(portion: FoodPortion): string {
-  const parts = [portion.label, describePortionAmount(portion)];
-  return (portion.is_default ? [...parts, "default"] : parts).join(", ");
-}
-
-export function FoodDetail({ food, portions, onEdit, onReview }: FoodDetailProps) {
+/**
+ * A food as the food detail boards draw it, under the sheet's "Food" header: its name and source, the
+ * energy card, an Edit action for the user's own food or the review notice for a shared one with values
+ * missing, then the nutrition, the portions and the source's credit. Values are per 100 g or 100 ml.
+ */
+export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) {
   const { source } = food;
-  const missingFields = food.quality.fields_missing ?? [];
+  const insets = useSafeAreaInsets();
 
   return (
-    <ScrollView contentContainerClassName="gap-6 px-6 py-6" className="flex-1 bg-legacy-neutral-50">
-      <View className="gap-1">
-        <Text accessibilityRole="header" className="text-2xl font-semibold text-legacy-neutral-900">
-          {food.name}
-        </Text>
-        {food.brand === null ? null : (
-          <Text className="text-base text-legacy-neutral-600">{food.brand}</Text>
-        )}
-        <Text className="text-sm text-legacy-neutral-500">{`Source: ${foodSourceLabel(source)}`}</Text>
-      </View>
-
-      {source === "user" ? (
-        <Pressable
-          accessibilityRole="button"
-          onPress={onEdit}
-          className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300"
+    <FoodFormScreen isTitleHeading={false} title={FOOD_DETAIL.title}>
+      {/* The padding is a runtime value no class can name, so it goes through a variable. */}
+      <View
+        className="flex-1"
+        style={vars({ "--content-bottom": Math.max(insets.bottom, MINIMUM_BOTTOM_PADDING) })}
+      >
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-4 px-4 pb-[var(--content-bottom)] pt-1"
         >
-          <Text className="text-base font-semibold text-legacy-neutral-900">Edit</Text>
-        </Pressable>
-      ) : null}
+          <FoodHeader food={food} />
+          <MacroHero food={food} />
 
-      {requiresConfirmation(food) ? (
-        <View className="gap-3 rounded-lg border border-legacy-warning-600 bg-legacy-warning-50 p-4">
-          <Text
-            accessibilityRole="header"
-            className="text-lg font-semibold text-legacy-warning-900"
-          >
-            Some values are missing
-          </Text>
-          {missingFields.length === 0 ? null : (
-            <View accessibilityRole="list" accessibilityLabel="Missing values" className="gap-1">
-              {missingFields.map((field) => (
-                <Text key={field} className="text-base text-legacy-warning-900">
-                  {describeNutrientField(field)}
-                </Text>
-              ))}
-            </View>
+          {source === "user" ? (
+            <Button fullWidth icon="Pencil" variant="secondary" onPress={onEdit}>
+              {FOOD_DETAIL.edit}
+            </Button>
+          ) : null}
+
+          {requiresConfirmation(food) ? (
+            <Banner
+              action={{ label: FOOD_REVIEW_BANNER.action, onPress: onCopy }}
+              body={describeMissingValues(
+                food.quality.fields_missing ?? [],
+                food.quality.carbs_convention,
+              )}
+              title={FOOD_REVIEW_BANNER.title}
+              variant="review"
+            />
+          ) : null}
+
+          <NutrientTable
+            food={food}
+            note={
+              food.quality.carbs_convention === "us_total" ? FOOD_DETAIL.usCarbsNote : undefined
+            }
+          />
+
+          {portions.length === 0 ? null : <PortionList portions={portions} />}
+
+          {source === "user" ? null : (
+            <FoodAttribution attribution={DATA_SOURCE_ATTRIBUTION[source]} />
           )}
-          <Text className="text-base text-legacy-warning-900">
-            Fill in the blank fields before you save your own copy of this food.
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onReview}
-            className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600"
-          >
-            <Text className="text-base font-semibold text-legacy-neutral-50">
-              Review and save as my food
-            </Text>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <NutrientTable food={food} />
-      {food.quality.carbs_convention === "us_total" ? (
-        <Text className="text-sm text-legacy-neutral-600">
-          Carbohydrate includes fibre (US labelling convention).
-        </Text>
-      ) : null}
-
-      {portions.length === 0 ? null : (
-        <View className="gap-2">
-          <Text
-            accessibilityRole="header"
-            className="text-lg font-semibold text-legacy-neutral-900"
-          >
-            Portions
-          </Text>
-          <View accessibilityRole="list" accessibilityLabel="Portion sizes">
-            {portions.map((portion) => (
-              <View
-                key={portion.id}
-                accessible
-                accessibilityLabel={describePortion(portion)}
-                className="min-h-11 flex-row items-center justify-between border-b border-legacy-neutral-200"
-              >
-                <Text className="text-base text-legacy-neutral-900">{portion.label}</Text>
-                <View className="flex-row items-center gap-2">
-                  {portion.is_default ? (
-                    <Text className="rounded-full bg-legacy-neutral-100 px-2 py-0.5 text-xs font-medium text-legacy-neutral-700">
-                      Default
-                    </Text>
-                  ) : null}
-                  <Text className="text-base text-legacy-neutral-500">
-                    {describePortionAmount(portion)}
-                  </Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      {source === "user" ? null : (
-        <View className="gap-1 border-t border-legacy-neutral-200 pt-4">
-          <Text className="text-sm text-legacy-neutral-500">
-            {DATA_SOURCE_ATTRIBUTION[source].text}
-          </Text>
-          <Text className="text-sm text-legacy-neutral-500">
-            {DATA_SOURCE_ATTRIBUTION[source].url}
-          </Text>
-        </View>
-      )}
-    </ScrollView>
+        </ScrollView>
+      </View>
+    </FoodFormScreen>
   );
 }

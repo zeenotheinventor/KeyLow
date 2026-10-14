@@ -4,7 +4,7 @@ import { useLocalSearchParams } from "expo-router";
 
 import { CopyFoodForm } from "../../components/CopyFoodForm";
 import { emptyFoodFormValues } from "../../components/FoodForm";
-import { FoodFormLoadState } from "../../components/FoodFormLoadState";
+import { FoodLoadState } from "../../components/FoodLoadState";
 import { NewFoodForm } from "../../components/NewFoodForm";
 
 // A repeated route parameter arrives as an array, so the first value is used. An empty one is none.
@@ -25,7 +25,7 @@ export default function NewFoodRoute() {
   if (sourceFoodId !== undefined) {
     // A value that is not a food id is a food that is not there, so it is never asked for.
     if (!isFoodId(sourceFoodId)) {
-      return <FoodFormLoadState state="notFound" />;
+      return <FoodLoadState state="notFound" />;
     }
 
     return <CopyFoodForm sourceFoodId={sourceFoodId} />;

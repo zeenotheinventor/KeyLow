@@ -1,4 +1,3 @@
-import { themes } from "@keylow/tokens";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { ExpoRoot, router } from "expo-router";
 import { getMockContext } from "expo-router/testing-library";
@@ -179,14 +178,10 @@ describe("the food search sheet as a route", () => {
       expect(screen.queryByText("Status bar light")).not.toBeOnTheScreen();
     });
 
-    it("should theme the native header of the screens the sheet opens that still have one", async () => {
+    it("should draw no native header on the food either, which draws its own", async () => {
       await openSheetFrom("/diary", "/foods/11111111-1111-4111-8111-111111111111");
 
-      const header = headerConfigs().find((config) => config.props.hidden === false);
-      expect(header?.props.backgroundColor).toBe(themes.dark.background);
-      // The tint is the back arrow and the title, which `color` and `titleColor` carry to the native header.
-      expect(header?.props.color).toBe(themes.dark["text-primary"]);
-      expect(header?.props.titleColor).toBe(themes.dark["text-primary"]);
+      expect(headerConfigs().every((config) => config.props.hidden === true)).toBe(true);
     });
   });
 
