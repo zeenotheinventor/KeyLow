@@ -1,0 +1,19 @@
+Running 21 checks on your project...
+[31m20/21 checks passed. 1 checks failed. Possible issues detected:[39m
+Use the --verbose flag to see more details about passed checks.
+
+[31m✖ Check that packages match versions required by installed Expo SDK[39m
+[33m[39m
+[33m[1m[33m🔧 Patch version mismatches[39m[33m[22m[39m
+[33mpackage       expected  found   [39m
+[33mexpo-haptics  [32m~57.0.3   [39m[33m[31m57.0.2  [39m[33m[39m
+[33m[39m
+[33m[1mChangelogs:[22m[39m
+[33m[1m[22m[2m[34m- expo-haptics → https://github.com/expo/expo/blob/sdk-57/packages/expo-haptics/CHANGELOG.md[39m[33m[22m[39m
+[33m[1m[22m[39m
+[33m[1m1 package out of date.[22m[39m
+[32mAdvice:[39m
+[32mUse 'npx expo install --check' to review and upgrade your dependencies.[39m
+[32mTo ignore specific packages, add them to "expo.install.exclude" in package.json. Learn more: [4mhttps://expo.fyi/dependency-validation[24m[39m
+
+[31m1 check failed, indicating possible issues with the project.[39m
