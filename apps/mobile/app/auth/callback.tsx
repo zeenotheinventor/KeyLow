@@ -62,7 +62,7 @@ export default function AuthCallbackRoute() {
 
     void completeSignIn(code, tokenHash, type).then((message) => {
       if (message === null) {
-        router.replace("/(tabs)/diary");
+        router.replace("/(tabs)/dashboard");
       } else {
         setErrorMessage(message);
       }

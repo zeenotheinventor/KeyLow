@@ -1,8 +1,8 @@
 import { useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
-import { View } from "react-native";
 
 import { supabase } from "../../lib/supabase";
+import { SessionCover } from "../SessionCover";
 
 import type { AuthGateProps } from "./types";
 import type { Session } from "@supabase/supabase-js";
@@ -49,7 +49,7 @@ export function AuthGate({ children }: AuthGateProps) {
     if (session === null && !isInAuthGroup && !isAuthCallback && !isStorybookRoute) {
       router.replace("/(auth)/sign-in");
     } else if (session !== null && isInAuthGroup) {
-      router.replace("/(tabs)/diary");
+      router.replace("/(tabs)/dashboard");
     }
   }, [isSessionLoaded, session, firstSegment, router]);
 
@@ -57,7 +57,7 @@ export function AuthGate({ children }: AuthGateProps) {
   return (
     <>
       {children}
-      {isSessionLoaded ? null : <View className="absolute inset-0 bg-background" />}
+      {isSessionLoaded ? null : <SessionCover />}
     </>
   );
 }

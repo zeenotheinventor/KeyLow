@@ -1,29 +1,37 @@
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { render, screen } from "@testing-library/react-native";
 
-import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import DiaryRoute from "../app/(tabs)/diary";
+import { ThemeProvider } from "../lib/theme";
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
 jest.mock(
-  "expo-router",
-  () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 
 describe("diary route", () => {
-  beforeEach(resetRouterMock);
-
-  it("should keep the diary heading", async () => {
-    await render(<DiaryRoute />);
-
-    expect(screen.getByRole("header", { name: "Diary" })).toBeOnTheScreen();
+  beforeEach(async () => {
+    await render(
+      <ThemeProvider fixedPreference="dark">
+        <DiaryRoute />
+      </ThemeProvider>,
+    );
   });
 
-  it("should open the food search from the Find food button", async () => {
-    const user = userEvent.setup();
-    await render(<DiaryRoute />);
+  it("should keep the diary heading", () => {
+    expect(screen.getByRole("heading", { name: "Diary" })).toBeOnTheScreen();
+  });
 
-    await user.press(screen.getByRole("button", { name: "Find food" }));
+  it("should say what the diary will show, under Coming soon", () => {
+    expect(screen.getByRole("heading", { name: "Coming soon" })).toBeOnTheScreen();
+    expect(screen.getByText("Your logged foods will appear here, day by day.")).toBeOnTheScreen();
+  });
 
-    expect(routerMock.push).toHaveBeenCalledTimes(1);
-    expect(routerMock.push).toHaveBeenCalledWith("/foods");
+  it("should have no Find food button, because the search launcher in the tab bar replaces it", () => {
+    expect(screen.queryByRole("button")).not.toBeOnTheScreen();
   });
 });

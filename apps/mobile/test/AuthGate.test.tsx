@@ -2,6 +2,7 @@ import { act, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
+import { ThemeProvider } from "../lib/theme";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import {
   emitAuthStateChange,
@@ -15,6 +16,10 @@ jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
 );
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -22,9 +27,11 @@ jest.mock("../lib/supabase", () => ({
 
 async function renderGate() {
   await render(
-    <AuthGate>
-      <Text>Protected content</Text>
-    </AuthGate>,
+    <ThemeProvider fixedPreference="dark">
+      <AuthGate>
+        <Text>Protected content</Text>
+      </AuthGate>
+    </ThemeProvider>,
   );
 }
 
@@ -42,7 +49,7 @@ describe("AuthGate", () => {
     expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
   });
 
-  it("should redirect to the diary when a session exists and the route is in the auth group", async () => {
+  it("should redirect to the dashboard when a session exists and the route is in the auth group", async () => {
     mockSupabaseClient.auth.getSession.mockResolvedValue({
       data: { session: fakeSession },
       error: null,
@@ -51,7 +58,7 @@ describe("AuthGate", () => {
 
     await renderGate();
 
-    expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/diary");
+    expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
   });
 
   it("should not redirect while the session is still loading", async () => {
@@ -145,6 +152,20 @@ describe("AuthGate", () => {
 
       expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
     });
+  });
+
+  it("should cover its children with the Ki-Lo mark until the stored session is read", async () => {
+    mockSupabaseClient.auth.getSession.mockReturnValue(new Promise(() => undefined));
+
+    await renderGate();
+
+    expect(screen.getByRole("img", { name: "Ki-Lo" })).toBeOnTheScreen();
+  });
+
+  it("should take the cover away once the stored session is read", async () => {
+    await renderGate();
+
+    expect(screen.queryByRole("img", { name: "Ki-Lo" })).not.toBeOnTheScreen();
   });
 
   it("should render its children", async () => {

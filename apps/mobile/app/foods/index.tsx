@@ -18,7 +18,7 @@ export default function FoodSearchRoute() {
         if (router.canGoBack()) {
           router.back();
         } else {
-          router.replace("/(tabs)/diary");
+          router.replace("/(tabs)/dashboard");
         }
       }}
       onCreateFood={() => {

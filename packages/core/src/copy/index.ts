@@ -69,3 +69,11 @@ export {
   describeSeeMore,
 } from "./search";
 export type { SearchGroupKey } from "./search";
+export {
+  ADD_FOOD_BUTTON_LABEL,
+  COMING_SOON_TITLE,
+  PLACEHOLDER_BODIES,
+  SEARCH_LAUNCHER,
+  TAB_BAR_LABEL,
+  TAB_TITLES,
+} from "./shell";
