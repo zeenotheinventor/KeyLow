@@ -1,27 +1,41 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { RateLimitedError } from "@keylow/api-client";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makeOffCandidate, makeSearchHit } from "./support";
 
-import type { FoodSearchResult } from "@keylow/api-client";
+import type { FoodSearchResult, UseFoodByBarcodeReturn } from "@keylow/api-client";
 import type { Food } from "@keylow/core/schemas";
 
 import { FoodSearch } from "@/components/foods/FoodSearch";
 
-type MaterialiseState = { isPending: boolean; error: Error | null };
+type MaterialiseState = {
+  isPending: boolean;
+  error: Error | null;
+  variables: { code: string } | undefined;
+};
 
-const { useFoodSearch, useMaterialiseOffProduct, materialise, push } = vi.hoisted(() => ({
-  useFoodSearch: vi.fn<(query: string) => FoodSearchResult>(),
-  useMaterialiseOffProduct: vi.fn(),
-  materialise:
-    vi.fn<(variables: { code: string }, options: { onSuccess: (food: Food) => void }) => void>(),
-  push: vi.fn<(href: string) => void>(),
-}));
+const { useFoodSearch, useMaterialiseOffProduct, useFoodByBarcode, materialise, push } = vi.hoisted(
+  () => ({
+    useFoodSearch: vi.fn<(query: string) => FoodSearchResult>(),
+    useMaterialiseOffProduct: vi.fn(),
+    useFoodByBarcode: vi.fn<(code: string) => UseFoodByBarcodeReturn>(),
+    materialise:
+      vi.fn<
+        (
+          variables: { code: string },
+          options: { onSuccess: (food: Food) => void; onSettled: () => void },
+        ) => void
+      >(),
+    push: vi.fn<(href: string) => void>(),
+  }),
+);
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useFoodSearch,
   useMaterialiseOffProduct,
+  useFoodByBarcode,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -33,6 +47,7 @@ const settled: FoodSearchResult = {
   off: [],
   isLoadingLocal: false,
   isLoadingOff: false,
+  isDebouncing: false,
   offError: null,
   localError: null,
 };
@@ -41,98 +56,199 @@ function resultWith(changes: Partial<FoodSearchResult>): FoodSearchResult {
   return { ...settled, ...changes };
 }
 
-function materialiseState({ isPending = false, error = null }: Partial<MaterialiseState> = {}) {
-  useMaterialiseOffProduct.mockReturnValue({ mutate: materialise, isPending, error });
+function materialiseState({
+  isPending = false,
+  error = null,
+  variables,
+}: Partial<MaterialiseState> = {}) {
+  useMaterialiseOffProduct.mockReturnValue({ mutate: materialise, isPending, error, variables });
 }
 
-function typeQuery(text: string) {
-  fireEvent.change(screen.getByLabelText("Search foods"), { target: { value: text } });
+function searchField() {
+  return screen.getByRole("searchbox", { name: "Search foods" });
 }
 
 function search(text: string) {
-  typeQuery(text);
-  act(() => {
-    vi.advanceTimersByTime(250);
-  });
+  fireEvent.change(searchField(), { target: { value: text } });
 }
+
+function rowsOf(groupName: string) {
+  return within(screen.getByRole("region", { name: groupName })).getAllByRole("link");
+}
+
+const chickenHits = [
+  makeSearchHit({ id: "own-1", name: "Chicken breast, meal prep", source: "user", kcal: 165 }),
+  makeSearchHit({ id: "cofid-1", name: "Chicken, breast, grilled", source: "cofid", kcal: 148 }),
+  makeSearchHit({ id: "cofid-2", name: "Chicken, breast, roast", source: "cofid", kcal: 147 }),
+];
 
 describe("FoodSearch", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.useFakeTimers();
     useFoodSearch.mockReturnValue(settled);
+    useFoodByBarcode.mockReturnValue({ result: undefined, isLoading: false, error: null });
     materialiseState();
   });
 
   afterEach(() => {
     cleanup();
-    vi.useRealTimers();
   });
 
-  describe("the search field", () => {
-    it("should offer a labelled search field and a link to create a food before anything is typed", () => {
+  describe("the page before anything is typed", () => {
+    it("should title the page and offer to create a food", () => {
       render(<FoodSearch />);
 
-      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeTruthy();
+      expect(screen.getByRole("heading", { level: 1, name: "Foods" })).toBeTruthy();
       expect(screen.getByRole("link", { name: "Create a food" }).getAttribute("href")).toBe(
         "/foods/new",
       );
-      expect(useFoodSearch).not.toHaveBeenCalled();
-      expect(screen.queryByText("No foods found")).toBeNull();
     });
 
-    it("should wait for the typing to pause before searching", () => {
+    it("should offer a labelled search field with a hint, focused so typing can start", () => {
       render(<FoodSearch />);
 
-      typeQuery("chicken breast");
-
-      expect(useFoodSearch).not.toHaveBeenCalled();
-      expect(screen.queryByText("No foods found")).toBeNull();
+      const field = searchField();
+      expect(field.getAttribute("placeholder")).toBe("Name or brand");
+      expect(screen.getByText("Type at least 2 characters to search")).toBeTruthy();
+      expect(screen.getByText("Search foods", { selector: "label" })).toBeTruthy();
+      expect(document.activeElement).toBe(field);
     });
 
-    it("should search for the trimmed text once the typing has paused", () => {
+    it("should show no results, no status and no empty state", () => {
       render(<FoodSearch />);
 
-      search("  chicken breast ");
-
-      expect(useFoodSearch).toHaveBeenLastCalledWith(
-        "chicken breast",
-        expect.objectContaining({ debounceMs: 0 }),
-      );
+      expect(screen.queryByText("No foods found")).toBeNull();
+      expect(screen.queryByText("Values per 100 g unless marked")).toBeNull();
+      expect(screen.queryByText("Searching your foods")).toBeNull();
     });
 
-    it("should not search for fewer than two characters", () => {
+    it("should keep the hint and show nothing for a single character", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits }));
       render(<FoodSearch />);
 
       search("c");
 
-      expect(useFoodSearch).not.toHaveBeenCalled();
+      expect(screen.getByText("Type at least 2 characters to search")).toBeTruthy();
+      expect(screen.queryByText("Chicken breast, meal prep")).toBeNull();
       expect(screen.queryByText("No foods found")).toBeNull();
     });
 
-    it("should stop showing results once the field is cleared", () => {
-      useFoodSearch.mockReturnValue(resultWith({ local: [makeSearchHit({ name: "Oat cakes" })] }));
+    it("should drop the hint once the text is long enough to search", () => {
       render(<FoodSearch />);
-      search("oat");
-      expect(screen.getByText("Oat cakes")).toBeTruthy();
+
+      search("ch");
+
+      expect(screen.queryByText("Type at least 2 characters to search")).toBeNull();
+    });
+
+    it("should search for the trimmed text and leave the waiting to the search hook", () => {
+      render(<FoodSearch />);
+
+      search("  chicken breast ");
+
+      expect(useFoodSearch).toHaveBeenLastCalledWith("chicken breast");
+    });
+
+    it("should stop showing results once the field is cleared", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits }));
+      render(<FoodSearch />);
+      search("chicken");
+      expect(screen.getByText(/meal prep/)).toBeTruthy();
 
       search("");
 
-      expect(screen.queryByText("Oat cakes")).toBeNull();
+      expect(screen.queryByText(/meal prep/)).toBeNull();
     });
+  });
 
-    it("should keep the link to create a food when there are results", () => {
-      useFoodSearch.mockReturnValue(resultWith({ local: [makeSearchHit()] }));
+  describe("waiting for the search", () => {
+    it("should say the foods are being searched while the typing has not yet started a search", () => {
+      useFoodSearch.mockReturnValue(resultWith({ isDebouncing: true }));
       render(<FoodSearch />);
 
-      search("oat");
+      search("chicken");
 
-      expect(screen.getByRole("link", { name: "Create a food" })).toBeTruthy();
+      expect(screen.getByText("Searching your foods").getAttribute("role")).toBe("status");
+      expect(screen.queryByText("No foods found")).toBeNull();
+    });
+
+    it("should say the foods are being searched while the first results load", () => {
+      useFoodSearch.mockReturnValue(resultWith({ isLoadingLocal: true }));
+      render(<FoodSearch />);
+
+      search("chicken");
+
+      expect(screen.getByText("Searching your foods").getAttribute("role")).toBe("status");
+      expect(screen.queryByText("No foods found")).toBeNull();
+      expect(screen.queryByText("Values per 100 g unless marked")).toBeNull();
+    });
+
+    it("should keep the earlier results in view, marked busy, while the next search runs", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits, isDebouncing: true }));
+      render(<FoodSearch />);
+
+      search("chicken b");
+
+      expect(screen.getByText("Searching your foods")).toBeTruthy();
+      expect(screen.getByText("Values per 100 g unless marked")).toBeTruthy();
+      expect(screen.getByRole("group", { name: "Search results" }).getAttribute("aria-busy")).toBe(
+        "true",
+      );
+      expect(rowsOf("Your foods")).toHaveLength(1);
+    });
+
+    it("should not mark the results busy once they have settled", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits }));
+      render(<FoodSearch />);
+
+      search("chicken");
+
+      expect(
+        screen.getByRole("group", { name: "Search results" }).getAttribute("aria-busy"),
+      ).toBeNull();
+      expect(screen.queryByText("Searching your foods")).toBeNull();
+    });
+
+    it("should say Open Food Facts is being searched after the local results", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits, isLoadingOff: true }));
+      render(<FoodSearch />);
+
+      search("chicken");
+
+      const status = screen.getByText("Searching Open Food Facts");
+      expect(status.getAttribute("role")).toBe("status");
+      expect(screen.getByText(/meal prep/)).toBeTruthy();
+      expect(screen.queryByText("No foods found")).toBeNull();
     });
   });
 
   describe("local results", () => {
-    it("should list each food with its brand, source and energy, linking to its page", () => {
+    it("should group the foods as Your foods, Common foods and Branded foods, each with its source", () => {
+      useFoodSearch.mockReturnValue(
+        resultWith({
+          local: [
+            makeSearchHit({ id: "b", name: "Savoury Stock Cube", source: "off" }),
+            makeSearchHit({ id: "c", name: "Stock cubes, vegetable", source: "cofid" }),
+            makeSearchHit({ id: "u", name: "Stock", source: "user" }),
+          ],
+        }),
+      );
+      render(<FoodSearch />);
+
+      search("stock");
+
+      const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+      expect(headings).toEqual([
+        "Your foods · Yours",
+        "Common foods · UK CoFID",
+        "Branded foods · Open Food Facts",
+      ]);
+      expect(screen.getByText("Values per 100 g unless marked")).toBeTruthy();
+    });
+
+    // The test library drops the space at the start of an inline element when it computes a name, so
+    // a name written in several bold and plain parts is matched with any space between its words.
+    it("should link each food to its page and show its energy and macros", () => {
       useFoodSearch.mockReturnValue(
         resultWith({
           local: [
@@ -142,6 +258,9 @@ describe("FoodSearch", () => {
               brand: "Tesco",
               source: "cofid",
               kcal: 106,
+              protein_g: 23,
+              carbs_g: 0,
+              fat_g: 1.2,
             }),
           ],
         }),
@@ -150,33 +269,26 @@ describe("FoodSearch", () => {
 
       search("chicken");
 
-      const link = screen.getByRole("link", { name: /Chicken breast, raw/ });
+      const link = screen.getByRole("link", { name: /Chicken\s*breast, raw/ });
       expect(link.getAttribute("href")).toBe("/foods/food-1");
-      expect(within(link).getByText("Tesco")).toBeTruthy();
-      expect(within(link).getByText("CoFID")).toBeTruthy();
-      expect(within(link).getByText("106 kcal per 100 g")).toBeTruthy();
+      expect(within(link).getByText("106")).toBeTruthy();
+      expect(within(link).getByText(/Tesco/)).toBeTruthy();
+      expect(link.textContent).toContain("protein 23 grams, fat 1.2 grams, carbohydrate 0 grams");
     });
 
-    it("should label own foods and Open Food Facts foods by source", () => {
-      useFoodSearch.mockReturnValue(
-        resultWith({
-          local: [
-            makeSearchHit({ id: "a", name: "Mine", source: "user" }),
-            makeSearchHit({ id: "b", name: "Theirs", source: "off" }),
-          ],
-        }),
-      );
+    it("should write the words that match the query in bold", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits.slice(1, 2) }));
       render(<FoodSearch />);
 
-      search("food");
+      search("chicken breast");
 
-      expect(within(screen.getByRole("link", { name: /Mine/ })).getByText("Own food")).toBeTruthy();
-      expect(
-        within(screen.getByRole("link", { name: /Theirs/ })).getByText("Open Food Facts"),
-      ).toBeTruthy();
+      const link = screen.getByRole("link", { name: /Chicken,\s*breast, grilled/ });
+      expect(within(link).getByText("Chicken").className).toContain("font-semibold");
+      expect(within(link).getByText("breast").className).toContain("font-semibold");
+      expect(within(link).getByText(", grilled").className).toContain("font-normal");
     });
 
-    it("should give the energy per 100 ml for a drink and say so when it is not given", () => {
+    it("should name a per 100 ml basis and say when the energy is not given", () => {
       useFoodSearch.mockReturnValue(
         resultWith({
           local: [
@@ -189,46 +301,109 @@ describe("FoodSearch", () => {
 
       search("food");
 
-      expect(screen.getByText("45 kcal per 100 ml")).toBeTruthy();
+      expect(screen.getByText("per 100 ml")).toBeTruthy();
       expect(screen.getByText("Energy not given")).toBeTruthy();
     });
-  });
 
-  describe("Open Food Facts candidates", () => {
-    it("should show no Open Food Facts section when there are no candidates", () => {
-      useFoodSearch.mockReturnValue(resultWith({ local: [makeSearchHit()] }));
-      render(<FoodSearch />);
-
-      search("oat");
-
-      expect(screen.queryByRole("heading", { name: "From Open Food Facts" })).toBeNull();
-    });
-
-    it("should show the section under its own heading when there are candidates", () => {
-      useFoodSearch.mockReturnValue(
-        resultWith({ local: [makeSearchHit()], off: [makeOffCandidate()] }),
-      );
+    it("should carry no per row source badge", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits }));
       render(<FoodSearch />);
 
       search("chicken");
 
-      expect(screen.getByRole("heading", { name: "From Open Food Facts" })).toBeTruthy();
-      const candidate = screen.getByRole("button", { name: /Chicken breast slices/ });
-      expect(within(candidate).getByText("Tesco")).toBeTruthy();
-      expect(within(candidate).getByText("105 kcal per 100 g")).toBeTruthy();
+      expect(screen.queryByText("Own food")).toBeNull();
+      expect(screen.queryByText("CoFID")).toBeNull();
+    });
+
+    it("should show three of Your foods and five of each shared group, offering the rest", () => {
+      const many = (source: "user" | "cofid" | "off", count: number) =>
+        Array.from({ length: count }, (_, index) =>
+          makeSearchHit({ id: `${source}-${index}`, name: `${source} food ${index}`, source }),
+        );
+      useFoodSearch.mockReturnValue(
+        resultWith({ local: [...many("user", 5), ...many("cofid", 7), ...many("off", 5)] }),
+      );
+      render(<FoodSearch />);
+
+      search("food");
+
+      expect(rowsOf("Your foods")).toHaveLength(3);
+      expect(rowsOf("Common foods")).toHaveLength(5);
+      expect(rowsOf("Branded foods")).toHaveLength(5);
+      expect(screen.getByRole("button", { name: "See 2 more in Your foods" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "See 2 more in Common foods" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /in Branded foods/ })).toBeNull();
+    });
+
+    it("should show the rest of a group when See more is pressed, and nothing else changes", () => {
+      const many = Array.from({ length: 7 }, (_, index) =>
+        makeSearchHit({ id: `c-${index}`, name: `Common food ${index}`, source: "cofid" }),
+      );
+      useFoodSearch.mockReturnValue(
+        resultWith({ local: [...many, makeSearchHit({ id: "u", name: "Mine", source: "user" })] }),
+      );
+      render(<FoodSearch />);
+      search("food");
+
+      fireEvent.click(screen.getByRole("button", { name: "See 2 more in Common foods" }));
+
+      expect(rowsOf("Common foods")).toHaveLength(7);
+      expect(rowsOf("Your foods")).toHaveLength(1);
+      expect(screen.queryByRole("button", { name: /See \d+ more/ })).toBeNull();
+    });
+
+    it("should fold the group again when the query changes", () => {
+      const many = Array.from({ length: 7 }, (_, index) =>
+        makeSearchHit({ id: `c-${index}`, name: `Common food ${index}`, source: "cofid" }),
+      );
+      useFoodSearch.mockReturnValue(resultWith({ local: many }));
+      render(<FoodSearch />);
+      search("food");
+      fireEvent.click(screen.getByRole("button", { name: /See 2 more/ }));
+
+      search("food 1");
+
+      expect(rowsOf("Common foods")).toHaveLength(5);
+    });
+  });
+
+  describe("Open Food Facts candidates", () => {
+    const candidates = [
+      makeOffCandidate({ code: "5000159484695", name: "Chicken Stock Cubes", brand: "Northfield" }),
+      makeOffCandidate({ code: "5000159484701", name: "Beef Stock Cubes", brand: "Northfield" }),
+    ];
+
+    it("should list them last, as From Open Food Facts with live results", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits, off: candidates }));
+      render(<FoodSearch />);
+
+      search("stock cubes");
+
+      const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+      expect(headings.at(-1)).toBe("From Open Food Facts · Live results");
+      const region = screen.getByRole("region", { name: "From Open Food Facts" });
+      expect(within(region).getAllByRole("button")).toHaveLength(2);
+      expect(within(region).getAllByText(/Northfield/)).toHaveLength(2);
+    });
+
+    it("should show no such section when there are no candidates", () => {
+      useFoodSearch.mockReturnValue(resultWith({ local: chickenHits }));
+      render(<FoodSearch />);
+
+      search("chicken");
+
+      expect(screen.queryByRole("region", { name: "From Open Food Facts" })).toBeNull();
     });
 
     it("should save the candidate once and open its food when it is chosen", () => {
       materialise.mockImplementation((_variables, options) => {
         options.onSuccess(makeFood({ id: "saved-food" }));
       });
-      useFoodSearch.mockReturnValue(
-        resultWith({ off: [makeOffCandidate({ code: "5000159484695" })] }),
-      );
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
       render(<FoodSearch />);
-      search("chicken");
+      search("stock cubes");
 
-      fireEvent.click(screen.getByRole("button", { name: /Chicken breast slices/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ }));
 
       expect(materialise).toHaveBeenCalledTimes(1);
       expect(materialise).toHaveBeenCalledWith({ code: "5000159484695" }, expect.anything());
@@ -236,151 +411,208 @@ describe("FoodSearch", () => {
       expect(push).toHaveBeenCalledWith("/foods/saved-food");
     });
 
-    it("should disable the candidates while one is being saved", () => {
-      materialiseState({ isPending: true });
-      useFoodSearch.mockReturnValue(
-        resultWith({
-          off: [makeOffCandidate(), makeOffCandidate({ code: "5000159484701", name: "Other" })],
-        }),
-      );
+    it("should mark the chosen candidate as being added and hold the others still", () => {
+      materialiseState({ isPending: true, variables: { code: "5000159484695" } });
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
       render(<FoodSearch />);
-      search("chicken");
+      search("stock cubes");
 
-      const buttons = within(
-        screen.getByRole("region", { name: "From Open Food Facts" }),
-      ).getAllByRole("button");
-      expect(buttons).toHaveLength(2);
-      for (const button of buttons) {
-        expect(button).toHaveProperty("disabled", true);
-      }
+      const chosen = screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ });
+      const other = screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ });
+      expect(chosen.getAttribute("aria-busy")).toBe("true");
+      expect(within(chosen).getByText("Adding to your foods")).toBeTruthy();
+      expect(other.getAttribute("aria-disabled")).toBe("true");
+
+      fireEvent.click(other);
+      fireEvent.click(chosen);
+      expect(materialise).not.toHaveBeenCalled();
     });
 
-    it("should explain in an alert why a candidate could not be saved and stay on the page", () => {
+    it("should say in an alert that the product could not be added, and stay on the page", () => {
       materialiseState({ error: new Error("Open Food Facts has no product with that barcode") });
-      useFoodSearch.mockReturnValue(resultWith({ off: [makeOffCandidate()] }));
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
       render(<FoodSearch />);
 
-      search("chicken");
+      search("stock cubes");
 
-      expect(screen.getByRole("alert").textContent).toContain(
-        "Open Food Facts has no product with that barcode",
-      );
+      const alert = screen.getByRole("alert");
+      expect(alert.textContent).toContain("This product could not be added");
+      expect(alert.textContent).toContain("Check your connection and try again.");
+      expect(alert.textContent).not.toContain("no product with that barcode");
       expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should say when to try again when adding was rate limited", () => {
+      materialiseState({ error: new RateLimitedError("slow down", 30, undefined) });
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
+      render(<FoodSearch />);
+
+      search("stock cubes");
+
+      const alert = screen.getByRole("alert");
+      expect(alert.textContent).toContain("Open Food Facts is busy");
+      expect(alert.textContent).toContain("Try again in 30 seconds.");
+    });
+
+    it("should keep the candidates chooseable after a failure so the user can try again", () => {
+      materialiseState({ error: new Error("offline") });
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
+      render(<FoodSearch />);
+      search("stock cubes");
+
+      fireEvent.click(screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ }));
+
+      expect(materialise).toHaveBeenCalledWith({ code: "5000159484701" }, expect.anything());
     });
   });
 
-  describe("loading, failures and empty results", () => {
-    it("should say the local search is under way", () => {
-      useFoodSearch.mockReturnValue(resultWith({ isLoadingLocal: true }));
+  describe("choosing a candidate twice in a row", () => {
+    const candidates = [
+      makeOffCandidate({ code: "5000159484695", name: "Chicken Stock Cubes" }),
+      makeOffCandidate({ code: "5000159484701", name: "Beef Stock Cubes" }),
+    ];
+
+    function showCandidates() {
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
       render(<FoodSearch />);
+      search("stock cubes");
+    }
 
-      search("chicken");
+    it("should save once when the same candidate is activated twice before anything re-renders", () => {
+      showCandidates();
+      const row = screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ });
 
-      expect(screen.getByRole("status").textContent).toBe("Searching foods");
-      expect(screen.queryByText("No foods found")).toBeNull();
+      fireEvent.click(row);
+      fireEvent.click(row);
+
+      expect(materialise).toHaveBeenCalledTimes(1);
     });
 
-    it("should say Open Food Facts is being searched without hiding the local results", () => {
-      useFoodSearch.mockReturnValue(
-        resultWith({ local: [makeSearchHit({ name: "Oat cakes" })], isLoadingOff: true }),
-      );
-      render(<FoodSearch />);
+    it("should save only the first when two different candidates are activated at once", () => {
+      showCandidates();
 
-      search("oat");
+      fireEvent.click(screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ }));
 
-      expect(screen.getByRole("status").textContent).toBe("Searching Open Food Facts");
-      expect(screen.getByText("Oat cakes")).toBeTruthy();
+      expect(materialise).toHaveBeenCalledTimes(1);
+      expect(materialise).toHaveBeenCalledWith({ code: "5000159484695" }, expect.anything());
     });
 
-    it("should show both indicators when both searches are under way", () => {
-      useFoodSearch.mockReturnValue(resultWith({ isLoadingLocal: true, isLoadingOff: true }));
-      render(<FoodSearch />);
+    it("should let a new choice through once the first save has failed", () => {
+      materialise.mockImplementationOnce((_variables, options) => {
+        options.onSettled();
+      });
+      showCandidates();
 
-      search("chicken");
+      fireEvent.click(screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Chicken\s*Stock\s*Cubes/ }));
 
-      expect(screen.getAllByRole("status").map((status) => status.textContent)).toEqual([
-        "Searching foods",
-        "Searching Open Food Facts",
-      ]);
+      expect(materialise).toHaveBeenCalledTimes(2);
     });
 
-    it("should keep the local list and say when to retry when Open Food Facts is rate limited", () => {
-      useFoodSearch.mockReturnValue(
-        resultWith({
-          local: [makeSearchHit({ name: "Oat cakes" })],
-          offError: { kind: "rate_limited", retryAfterSeconds: 45 },
-        }),
-      );
-      render(<FoodSearch />);
+    it("should let a new choice through once the first save has succeeded", () => {
+      materialise.mockImplementationOnce((_variables, options) => {
+        options.onSuccess(makeFood({ id: "saved-food" }));
+        options.onSettled();
+      });
+      showCandidates();
 
-      search("oat");
+      fireEvent.click(screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Beef\s*Stock\s*Cubes/ }));
 
-      expect(screen.getByRole("alert").textContent).toContain("Try again in 45 seconds");
-      expect(screen.getByText("Oat cakes")).toBeTruthy();
+      expect(materialise).toHaveBeenCalledTimes(2);
     });
+  });
 
-    it("should say when to retry in general terms when no delay is known", () => {
-      useFoodSearch.mockReturnValue(resultWith({ offError: { kind: "rate_limited" } }));
-      render(<FoodSearch />);
-
-      search("oat");
-
-      expect(screen.getByRole("alert").textContent).toContain("Try again in a little while");
-    });
-
-    it("should show why Open Food Facts could not be searched when it failed", () => {
-      useFoodSearch.mockReturnValue(
-        resultWith({ offError: { kind: "failed", message: "Upstream is down" } }),
-      );
-      render(<FoodSearch />);
-
-      search("oat");
-
-      expect(screen.getByRole("alert").textContent).toContain("Upstream is down");
-    });
-
-    it("should not claim a rate limit when Open Food Facts answered with another error kind", () => {
+  describe("when Open Food Facts cannot be searched", () => {
+    it("should tell the user, and keep the local results, when it failed", () => {
       useFoodSearch.mockReturnValue(
         resultWith({
+          local: chickenHits,
           offError: {
-            kind: "upstream_error",
-            debugMessage: "Upstream is down",
+            kind: "failed",
             message: "Upstream is down",
+            debugMessage: "Upstream is down",
           },
         }),
       );
       render(<FoodSearch />);
 
-      search("oat");
+      search("chicken");
 
-      const alert = screen.getByRole("alert");
-      expect(alert.textContent).not.toContain("busy");
-      expect(alert.textContent).toContain("Upstream is down");
+      const notice = screen.getByText("Open Food Facts could not be searched right now");
+      expect(notice.closest("[role=status]")).toBeTruthy();
+      expect(
+        screen.getByText("Your own results still work. Change your search to try again."),
+      ).toBeTruthy();
+      expect(screen.getByText(/meal prep/)).toBeTruthy();
+      expect(screen.queryByText(/Upstream is down/)).toBeNull();
     });
 
-    it("should show a local failure in an alert and not claim there are no results", () => {
+    it("should say when to try again when it is rate limited", () => {
       useFoodSearch.mockReturnValue(
-        resultWith({ localError: { message: "Could not search the foods: offline" } }),
+        resultWith({
+          local: chickenHits,
+          offError: { kind: "rate_limited", retryAfterSeconds: 45 },
+        }),
       );
       render(<FoodSearch />);
 
-      search("oat");
+      search("chicken");
 
-      expect(screen.getByRole("alert").textContent).toContain(
-        "Could not search the foods: offline",
-      );
-      expect(screen.queryByText("No foods found")).toBeNull();
+      expect(screen.getByText("Open Food Facts is busy")).toBeTruthy();
+      expect(screen.getByText("Try again in 45 seconds.")).toBeTruthy();
     });
 
-    it("should say no foods were found when both searches are empty", () => {
+    it("should say to try again in a moment when no delay is known", () => {
+      useFoodSearch.mockReturnValue(resultWith({ offError: { kind: "rate_limited" } }));
       render(<FoodSearch />);
 
-      search("zzzz");
+      search("chicken");
 
-      expect(screen.getByText("No foods found")).toBeTruthy();
+      expect(screen.getByText("Try again in a moment.")).toBeTruthy();
     });
 
-    it("should not say no foods were found while candidates from Open Food Facts are listed", () => {
+    it("should not claim a rate limit for another kind of failure", () => {
+      useFoodSearch.mockReturnValue(
+        resultWith({ offError: { kind: "upstream_error", message: "Upstream is down" } }),
+      );
+      render(<FoodSearch />);
+
+      search("chicken");
+
+      expect(screen.queryByText(/busy/)).toBeNull();
+    });
+  });
+
+  describe("no results and failures", () => {
+    it("should say no foods were found when both searches came back empty, and offer to create one", () => {
+      render(<FoodSearch />);
+
+      search("zzqx");
+
+      expect(screen.getByRole("heading", { level: 2, name: "No foods found" })).toBeTruthy();
+      expect(screen.getByText("Try other words, or create the food yourself.")).toBeTruthy();
+      expect(
+        screen
+          .getAllByRole("link", { name: "Create a food" })
+          .map((link) => link.getAttribute("href")),
+      ).toEqual(["/foods/new", "/foods/new"]);
+      expect(screen.queryByText("Values per 100 g unless marked")).toBeNull();
+    });
+
+    it("should show the Open Food Facts notice above the empty state", () => {
+      useFoodSearch.mockReturnValue(resultWith({ offError: { kind: "failed" } }));
+      render(<FoodSearch />);
+
+      search("zzqx");
+
+      const notice = screen.getByText("Open Food Facts could not be searched right now");
+      const empty = screen.getByText("No foods found");
+      expect(notice.compareDocumentPosition(empty) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should not say no foods were found while candidates are listed", () => {
       useFoodSearch.mockReturnValue(resultWith({ off: [makeOffCandidate()] }));
       render(<FoodSearch />);
 
@@ -389,13 +621,87 @@ describe("FoodSearch", () => {
       expect(screen.queryByText("No foods found")).toBeNull();
     });
 
-    it("should not say no foods were found while Open Food Facts is still being searched", () => {
-      useFoodSearch.mockReturnValue(resultWith({ isLoadingOff: true }));
+    it.each([
+      ["the typing has not started a search", { isDebouncing: true }],
+      ["the local search is loading", { isLoadingLocal: true }],
+      ["Open Food Facts is being searched", { isLoadingOff: true }],
+    ])("should not say no foods were found while %s", (_when, changes) => {
+      useFoodSearch.mockReturnValue(resultWith(changes));
+      render(<FoodSearch />);
+
+      search("zzqx");
+
+      expect(screen.queryByText("No foods found")).toBeNull();
+    });
+
+    it("should say the search failed in an alert, without the raw text, and not claim no results", () => {
+      useFoodSearch.mockReturnValue(
+        resultWith({ localError: { kind: "failed", message: "Could not search: offline" } }),
+      );
       render(<FoodSearch />);
 
       search("chicken");
 
+      const alert = screen.getByRole("alert");
+      expect(within(alert).getByRole("heading", { name: "Search failed" })).toBeTruthy();
+      expect(alert.textContent).toContain(
+        "Your foods could not be searched. Check your connection and try again.",
+      );
+      expect(screen.queryByText(/offline/)).toBeNull();
       expect(screen.queryByText("No foods found")).toBeNull();
+    });
+  });
+
+  describe("the barcode panel", () => {
+    it("should be closed until the barcode button in the search field is pressed", () => {
+      render(<FoodSearch />);
+
+      const button = screen.getByRole("button", { name: "Look up a barcode" });
+      expect(button.getAttribute("aria-expanded")).toBe("false");
+      expect(screen.queryByRole("region", { name: "Barcode lookup" })).toBeNull();
+
+      fireEvent.click(button);
+
+      expect(button.getAttribute("aria-expanded")).toBe("true");
+      expect(screen.getByRole("region", { name: "Barcode lookup" })).toBeTruthy();
+    });
+
+    it("should hide the search hint while it is open", () => {
+      render(<FoodSearch />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
+
+      expect(screen.queryByText("Type at least 2 characters to search")).toBeNull();
+    });
+
+    it("should close from its close button and give the focus back to the search field", () => {
+      render(<FoodSearch />);
+      fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
+
+      fireEvent.click(screen.getByRole("button", { name: "Close barcode lookup" }));
+
+      expect(screen.queryByRole("region", { name: "Barcode lookup" })).toBeNull();
+      expect(document.activeElement).toBe(searchField());
+    });
+
+    it("should close when the barcode button is pressed again", () => {
+      render(<FoodSearch />);
+      const button = screen.getByRole("button", { name: "Look up a barcode" });
+      fireEvent.click(button);
+
+      fireEvent.click(button);
+
+      expect(screen.queryByRole("region", { name: "Barcode lookup" })).toBeNull();
+    });
+
+    it("should start open, with the barcode field focused, when asked to", () => {
+      render(<FoodSearch startWithBarcodePanel />);
+
+      expect(screen.getByRole("region", { name: "Barcode lookup" })).toBeTruthy();
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "Barcode number" }));
+      expect(
+        screen.getByRole("button", { name: "Look up a barcode" }).getAttribute("aria-expanded"),
+      ).toBe("true");
     });
   });
 });

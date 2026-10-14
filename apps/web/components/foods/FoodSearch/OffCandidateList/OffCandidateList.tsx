@@ -1,63 +1,85 @@
 "use client";
 
-import { useMaterialiseOffProduct } from "@keylow/api-client";
+import { RateLimitedError, useMaterialiseOffProduct } from "@keylow/api-client";
+import {
+  ADD_PRODUCT_FAILED,
+  OPEN_FOOD_FACTS_BUSY,
+  SEARCH_GROUP_HEADINGS,
+  SEARCH_STATUS,
+  describeRateLimit,
+} from "@keylow/core/copy";
 import { useRouter } from "next/navigation";
-import { useId } from "react";
+import { useRef } from "react";
 
 import type { OffCandidateListProps } from "./types";
 
-import { describeEnergy } from "@/components/foods/foodDisplay";
-import { Button } from "@/components/ui/button";
+import { toFoodRowContent } from "@/components/foods/FoodSearch/foodRowContent";
+import { Banner } from "@/components/ui/Banner";
+import { FoodRow } from "@/components/ui/FoodRow";
+import { GroupedList } from "@/components/ui/GroupedList";
 
-export function OffCandidateList({ candidates }: OffCandidateListProps) {
+/**
+ * The live Open Food Facts results. Choosing one saves it as a food, once, and opens the food.
+ * While it is saved its row is busy and the others wait. A failure is said above the rows.
+ */
+export function OffCandidateList({ candidates, query }: OffCandidateListProps) {
   const router = useRouter();
-  const headingId = useId();
   const materialise = useMaterialiseOffProduct();
+  const { title, caption } = SEARCH_GROUP_HEADINGS.live;
+  const addingCode = materialise.isPending ? materialise.variables.code : undefined;
+
+  // `isPending` only reaches the rows on the next render, so a second activation that lands before
+  // it (a double tap, a repeated Enter) is held back here. Each save costs the user a rate limit.
+  const isSaving = useRef(false);
 
   function choose(code: string) {
+    if (isSaving.current) {
+      return;
+    }
+
+    isSaving.current = true;
     materialise.mutate(
       { code },
       {
         onSuccess: (food) => {
           router.push(`/foods/${food.id}`);
         },
+        onSettled: () => {
+          isSaving.current = false;
+        },
       },
     );
   }
 
+  const failure = materialise.error;
+
   return (
-    <section aria-labelledby={headingId} className="flex flex-col gap-2">
-      <h3 id={headingId} className="font-semibold">
-        From Open Food Facts
-      </h3>
-      <ul className="flex flex-col gap-2">
-        {candidates.map((candidate) => (
-          <li key={candidate.code}>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={materialise.isPending}
-              className="h-auto min-h-11 w-full flex-col items-start justify-start gap-1 whitespace-normal p-3 text-left"
-              onClick={() => {
-                choose(candidate.code);
-              }}
-            >
-              <span className="font-medium">{candidate.name}</span>
-              {candidate.brand !== null && (
-                <span className="text-sm font-normal text-text-muted">{candidate.brand}</span>
-              )}
-              <span className="text-sm font-normal text-text-muted">
-                {describeEnergy(candidate)}
-              </span>
-            </Button>
-          </li>
-        ))}
-      </ul>
-      {materialise.error !== null && (
-        <p role="alert" className="text-sm text-danger">
-          {materialise.error.message}
-        </p>
-      )}
-    </section>
+    <GroupedList
+      title={title}
+      source={caption}
+      notice={
+        failure === null ? undefined : failure instanceof RateLimitedError ? (
+          <Banner tone="error" title={OPEN_FOOD_FACTS_BUSY}>
+            {describeRateLimit(failure.retryAfterSeconds)}
+          </Banner>
+        ) : (
+          <Banner tone="error" title={ADD_PRODUCT_FAILED.title}>
+            {ADD_PRODUCT_FAILED.body}
+          </Banner>
+        )
+      }
+    >
+      {candidates.map((candidate) => (
+        <FoodRow
+          key={candidate.code}
+          {...toFoodRowContent(candidate, query)}
+          {...(candidate.code === addingCode ? { busyLabel: SEARCH_STATUS.addingProduct } : {})}
+          disabled={addingCode !== undefined && candidate.code !== addingCode}
+          onClick={() => {
+            choose(candidate.code);
+          }}
+        />
+      ))}
+    </GroupedList>
   );
 }

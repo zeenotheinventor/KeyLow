@@ -97,7 +97,13 @@ export const storyManifest = {
     "Pressed",
     "Focused",
   ],
-  "GroupedList/GroupedList.stories.tsx": ["Default", "WithSource", "WithSeeMore", "SingleRow"],
+  "GroupedList/GroupedList.stories.tsx": [
+    "Default",
+    "WithSource",
+    "WithSeeMore",
+    "WithNotice",
+    "SingleRow",
+  ],
   "KiLoMark/KiLoMark.stories.tsx": ["Default", "Large", "WithTitle"],
   "ListRow/ListRow.stories.tsx": [
     "Default",

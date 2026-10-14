@@ -1,4 +1,4 @@
-export type BarcodeResultProps = {
-  /** A barcode in its canonical form, as `normaliseBarcode` returns it. */
-  code: string;
-};
+import type { UseFoodByBarcodeReturn } from "@keylow/api-client";
+
+/** What the lookup of a valid barcode has come to so far, as `useFoodByBarcode` reports it. */
+export type BarcodeResultProps = UseFoodByBarcodeReturn;

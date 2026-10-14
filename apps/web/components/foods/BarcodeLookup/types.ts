@@ -3,3 +3,8 @@ export type BarcodeLookupRequest = {
   code: string;
   attempt: number;
 };
+
+export type BarcodeLookupProps = {
+  /** Called when the user closes the panel. */
+  onClose: () => void;
+};

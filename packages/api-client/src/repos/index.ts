@@ -1,6 +1,7 @@
 // Plain async functions over SupabaseClient<Database> land here from M2 onward.
 export {
   FoodsPartialWriteError,
+  MIN_SEARCH_LENGTH,
   createFood,
   getFood,
   getFoodByBarcode,

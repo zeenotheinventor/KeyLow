@@ -3,10 +3,17 @@ import { describe, expect, it } from "vitest";
 import * as apiClient from "../src";
 
 describe("the package index", () => {
-  it.each(["listOwnFoods", "useDebouncedValue", "useFoodWithPortions", "useOwnFoods"])(
-    "should export %s",
-    (name) => {
-      expect(apiClient).toHaveProperty(name);
-    },
-  );
+  it.each([
+    "MIN_SEARCH_LENGTH",
+    "listOwnFoods",
+    "useDebouncedValue",
+    "useFoodWithPortions",
+    "useOwnFoods",
+  ])("should export %s", (name) => {
+    expect(apiClient).toHaveProperty(name);
+  });
+
+  it("should export the shortest searchable text as 2 characters, the length the search applies", () => {
+    expect(apiClient.MIN_SEARCH_LENGTH).toBe(2);
+  });
 });

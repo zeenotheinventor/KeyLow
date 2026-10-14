@@ -1,5 +1,6 @@
 import { iconStroke } from "@keylow/tokens";
 import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 
 import type { ListRowProps } from "./types";
 
@@ -48,19 +49,20 @@ export function ListRow({
   );
 
   if (href !== undefined) {
-    // A link that is off has no destination. The role keeps it announced as a link, and
-    // aria-disabled says it is not available.
     return (
       <li>
-        {/* eslint-disable-next-line jsx-a11y/anchor-is-valid */}
-        <a
-          className={classes}
-          href={disabled ? undefined : href}
-          role={disabled ? "link" : undefined}
-          aria-disabled={disabled || undefined}
-        >
-          {content}
-        </a>
+        {disabled ? (
+          // A link that is off has no destination. The role keeps it announced as a link, and
+          // aria-disabled says it is not available.
+          // eslint-disable-next-line jsx-a11y/anchor-is-valid
+          <a className={classes} role="link" aria-disabled>
+            {content}
+          </a>
+        ) : (
+          <Link href={href} className={classes}>
+            {content}
+          </Link>
+        )}
       </li>
     );
   }

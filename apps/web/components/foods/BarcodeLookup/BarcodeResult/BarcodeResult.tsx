@@ -1,65 +1,51 @@
-"use client";
-
-import { useFoodByBarcode } from "@keylow/api-client";
+import {
+  BARCODE_LOOKUP_FAILED,
+  BARCODE_LOOKUP_PROGRESS,
+  BARCODE_NOT_FOUND,
+  OPEN_FOOD_FACTS_BUSY,
+  describeBarcodeRateLimit,
+} from "@keylow/core/copy";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
 
 import type { BarcodeResultProps } from "./types";
-import type { FoodByBarcodeError } from "@keylow/api-client";
 
-import { describeRateLimit } from "@/components/foods/foodDisplay";
+import { InlineStatus } from "@/components/foods/InlineStatus";
+import { Banner } from "@/components/ui/Banner";
 
-function describeError(error: FoodByBarcodeError): string {
-  return error.kind === "rate_limited"
-    ? describeRateLimit(error.retryAfterSeconds)
-    : `The barcode could not be looked up: ${error.message}`;
-}
-
-export function BarcodeResult({ code }: BarcodeResultProps) {
-  const router = useRouter();
-  const { result, isLoading, error } = useFoodByBarcode(code);
-  const foundFoodId = result?.status === "found" ? result.food.id : undefined;
-
-  useEffect(() => {
-    if (foundFoodId !== undefined) {
-      router.push(`/foods/${foundFoodId}`);
-    }
-  }, [foundFoodId, router]);
-
-  if (foundFoodId !== undefined) {
-    return (
-      <p role="status" className="text-sm text-text-muted">
-        Opening the food
-      </p>
-    );
+/** What to show under the barcode field once a code has been looked up. Finding the food is shown here as "Opening the food" and the panel does the opening. */
+export function BarcodeResult({ result, isLoading, error }: BarcodeResultProps) {
+  if (result?.status === "found") {
+    return <InlineStatus size="small">{BARCODE_LOOKUP_PROGRESS.openingFood}</InlineStatus>;
   }
 
   if (error !== null) {
-    return (
-      <p role="alert" className="text-sm text-danger">
-        {describeError(error)}
-      </p>
+    return error.kind === "rate_limited" ? (
+      <Banner tone="error" title={OPEN_FOOD_FACTS_BUSY}>
+        {describeBarcodeRateLimit(error.retryAfterSeconds)}
+      </Banner>
+    ) : (
+      <Banner tone="error" title={BARCODE_LOOKUP_FAILED.title}>
+        {BARCODE_LOOKUP_FAILED.body}
+      </Banner>
     );
   }
 
   if (isLoading) {
-    return (
-      <p role="status" className="text-sm text-text-muted">
-        Looking up the barcode
-      </p>
-    );
+    return <InlineStatus size="small">{BARCODE_LOOKUP_PROGRESS.lookingUp}</InlineStatus>;
   }
 
   if (result?.status === "not_found") {
     return (
-      <div className="flex flex-col gap-2">
-        <p className="text-sm">Not in the database</p>
+      <div className="flex flex-col gap-2 border-t border-border pt-1">
+        <span className="pt-2 text-body-strong">{BARCODE_NOT_FOUND.title}</span>
+        <span className="text-[14px] leading-5 text-text-secondary">
+          {BARCODE_NOT_FOUND.typedBody}
+        </span>
         <Link
           href={`/foods/new?barcode=${result.code}`}
-          className="inline-flex min-h-11 items-center self-start text-sm font-medium underline underline-offset-4 md:min-h-0"
+          className="inline-flex min-h-[44px] items-center gap-1.5 self-start rounded-small text-body-strong text-text-primary underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
-          Create food with this barcode
+          {BARCODE_NOT_FOUND.action}
         </Link>
       </div>
     );

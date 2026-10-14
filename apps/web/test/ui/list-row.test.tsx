@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { renderWithRouter } from "./appRouter";
 import { compileUtilities, reducedMotionRules } from "./compileUtilities";
 
 import { ListRow } from "@/components/ui/ListRow";
@@ -58,6 +59,19 @@ describe("ListRow", () => {
       const link = screen.getByRole("link", { name: /Your foods/ });
 
       expect(link.getAttribute("href")).toBe("/foods");
+    });
+
+    it("should open the page through the router, so the app is not loaded again", () => {
+      const { push } = renderWithRouter(
+        <ul>
+          <ListRow title="Your foods" href="/foods?scope=own" />
+        </ul>,
+      );
+
+      const notCancelled = fireEvent.click(screen.getByRole("link", { name: "Your foods" }));
+
+      expect(notCancelled).toBe(false);
+      expect(push).toHaveBeenCalledExactlyOnceWith("/foods?scope=own", expect.anything());
     });
 
     it("should not be reachable when disabled", () => {
