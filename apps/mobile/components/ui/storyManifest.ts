@@ -8,7 +8,12 @@
  * tests and photographed on a device by holding the button down.
  */
 export const storyManifest: Record<string, { states: string[] }> = {
-  Banner: { states: ["Review", "Offline", "Info", "InfoBusy", "InfoWithAction", "AddFailed"] },
+  Badge: {
+    states: ["SourceOpenFoodFacts", "SourceCoFid", "SourceYours", "Neutral", "Tones", "WithDot"],
+  },
+  Banner: {
+    states: ["Review", "Offline", "Info", "InfoBusy", "InfoWithAction", "AddFailed", "PartialSave"],
+  },
   Button: {
     states: [
       "Primary",
@@ -31,12 +36,49 @@ export const storyManifest: Record<string, { states: string[] }> = {
   GroupedList: { states: ["Default", "WithSeeMore", "TitleOnly", "WithNotice"] },
   Icon: { states: ["Sizes", "Tones", "Labelled", "Names"] },
   IconButton: { states: ["Secondary", "Ghost", "Disabled"] },
+  Input: {
+    states: [
+      "Empty",
+      "Compact",
+      "Filled",
+      "WithHelper",
+      "WithLabelHint",
+      "Focused",
+      "WithError",
+      "Disabled",
+      "Locked",
+      "Password",
+    ],
+  },
   ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled"] },
+  NumericInput: {
+    states: [
+      "Empty",
+      "Filled",
+      "Comfortable",
+      "Macros",
+      "WithHelper",
+      "Focused",
+      "WithError",
+      "WithMissingNote",
+      "Disabled",
+    ],
+  },
   PressableSurface: { states: ["Default", "Disabled", "Busy"] },
+  SegmentedControl: {
+    states: [
+      "PerHundredGrams",
+      "PerHundredMillilitres",
+      "AppearanceDark",
+      "AppearanceLight",
+      "AppearanceMatchDevice",
+    ],
+  },
   SearchField: { states: ["Empty", "Filled", "WithClear", "Focused"] },
   SearchLauncher: { states: ["Default", "AboveTabBar"] },
   SheetHeader: { states: ["Search", "Detail", "Form", "Scanner"] },
   Skeleton: { states: ["Row", "Group"] },
+  Switch: { states: ["Off", "On"] },
   TabBar: {
     states: [
       "IosDashboard",

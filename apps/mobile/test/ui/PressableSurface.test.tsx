@@ -74,6 +74,21 @@ describe("PressableSurface", () => {
       expect(screen.getByRole("tab", { name: "Open food", selected: false })).toBeOnTheScreen();
     });
 
+    it.each(["radio", "switch"] as const)(
+      "should be a %s that says whether it is checked, when it is told to be one",
+      async (role) => {
+        await renderSurface({ role, checked: true });
+
+        expect(screen.getByRole(role, { name: "Open food" })).toBeChecked();
+      },
+    );
+
+    it("should say a switch is not checked when it is not", async () => {
+      await renderSurface({ role: "switch", checked: false });
+
+      expect(screen.getByRole("switch", { name: "Open food" })).not.toBeChecked();
+    });
+
     it("should call onPress when pressed", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       const onPress = jest.fn();

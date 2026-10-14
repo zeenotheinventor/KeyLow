@@ -85,3 +85,14 @@ export const AddFailed: Story = {
     body: ADD_PRODUCT_FAILED.body,
   },
 };
+
+// The save-partial board: the food saved and its portions did not, so the warning notice is announced as
+// an alert, because the person is waiting on the result.
+export const PartialSave: Story = {
+  args: {
+    variant: "review",
+    announce: true,
+    title: "Portions not saved",
+    body: "Your food was saved but its portions were not. Save again to add them.",
+  },
+};

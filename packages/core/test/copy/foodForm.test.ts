@@ -93,6 +93,7 @@ describe("barcode problems on the food form", () => {
 describe("the web food form copy", () => {
   it("should pin the headings, the back and cancel links and the copy introduction", () => {
     expect(FOOD_FORM.back).toBe("Back");
+    expect(FOOD_FORM.readOnly).toBe("Read only");
     expect(FOOD_FORM.cancel).toBe("Cancel");
     expect(FOOD_FORM.titles).toEqual({
       create: "New food",
