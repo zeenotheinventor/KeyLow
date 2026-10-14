@@ -4,7 +4,7 @@ import type { AuthError, EmailOtpType } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 
-const DEFAULT_NEXT_PATH = "/diary";
+const DEFAULT_NEXT_PATH = "/dashboard";
 const EMAIL_OTP_TYPES: readonly EmailOtpType[] = [
   "signup",
   "invite",

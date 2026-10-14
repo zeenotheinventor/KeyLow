@@ -1,6 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { pagePaddingOf } from "../pagePadding";
+
 import FoodsPage from "@/app/(dashboard)/foods/page";
 
 vi.mock("@/components/foods/FoodSearch", () => ({
@@ -48,4 +50,13 @@ describe("FoodsPage", () => {
       expect(screen.getByText("scope all, barcode panel closed")).toBeTruthy();
     },
   );
+
+  it("should pad top and bottom as the foods boards draw it", async () => {
+    const { container } = render(await FoodsPage(query({})));
+
+    expect(await pagePaddingOf(container.firstElementChild)).toEqual({
+      phone: [20, 20],
+      desktop: [32, 32],
+    });
+  });
 });

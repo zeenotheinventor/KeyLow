@@ -62,6 +62,15 @@ describe("proxy", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it("should send a signed in request for the login page to the dashboard", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/login"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+  });
+
   it("should let a signed out request for the login page through", async () => {
     const response = await proxy(requestFor("/login"));
 

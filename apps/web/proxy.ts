@@ -48,7 +48,11 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const redirectPath =
-    !user && isDashboardPath(pathname) ? "/login" : user && pathname === "/login" ? "/diary" : null;
+    !user && isDashboardPath(pathname)
+      ? "/login"
+      : user && pathname === "/login"
+        ? "/dashboard"
+        : null;
 
   if (redirectPath === null) {
     return response;

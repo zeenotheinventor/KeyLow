@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import { PageFrame } from "@/app/(dashboard)/PageFrame";
 import { FoodDetail } from "@/components/foods/FoodDetail";
 import { isFoodId } from "@/components/foods/isFoodId";
 
@@ -10,5 +11,9 @@ export default async function FoodPage({ params }: { params: Promise<{ id: strin
     notFound();
   }
 
-  return <FoodDetail id={id} />;
+  return (
+    <PageFrame variant="foodRecord">
+      <FoodDetail id={id} />
+    </PageFrame>
+  );
 }

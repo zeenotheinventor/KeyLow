@@ -58,8 +58,8 @@ export function LoginForm({ linkError }: LoginFormProps) {
   const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
-  function openDiary() {
-    router.push("/diary");
+  function openDashboard() {
+    router.push("/dashboard");
     router.refresh();
   }
 
@@ -96,7 +96,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
         if (error) {
           setFormError(describeFailure(error));
         } else {
-          openDiary();
+          openDashboard();
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -107,7 +107,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
         if (error) {
           setFormError(describeFailure(error));
         } else if (data.session) {
-          openDiary();
+          openDashboard();
         } else {
           setConfirmationEmail(trimmedEmail);
         }
