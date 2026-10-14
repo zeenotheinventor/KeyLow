@@ -30,6 +30,15 @@ export {
   describePortionLabelProblem,
 } from "./foodForm";
 export type { FoodFormNutrient, NutrientProblem } from "./foodForm";
+export {
+  FOOD_DETAIL,
+  FOOD_MACRO_LABELS,
+  FOOD_NOT_FOUND,
+  FOOD_NOT_LOADED,
+  FOOD_NUTRIENT_LABELS,
+  describeMissingValues,
+  describeNutritionHeading,
+} from "./foodDetail";
 export { describeFoodSource } from "./foodSources";
 export {
   ENERGY_NOT_GIVEN,

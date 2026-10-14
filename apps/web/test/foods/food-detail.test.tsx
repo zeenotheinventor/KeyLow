@@ -1,30 +1,35 @@
 import { DATA_SOURCE_ATTRIBUTION } from "@keylow/core/foods";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
 
+import type { FoodWithPortionsState } from "@keylow/api-client";
+
 import { FoodDetail } from "@/components/foods/FoodDetail";
 
-const { useFood, useFoodPortions } = vi.hoisted(() => ({
-  useFood: vi.fn(),
-  useFoodPortions: vi.fn(),
+const { useFoodWithPortions } = vi.hoisted(() => ({
+  useFoodWithPortions: vi.fn<(id: string) => FoodWithPortionsState>(),
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
-  useFood,
-  useFoodPortions,
+  useFoodWithPortions,
 }));
 
-const loaded = <Data,>(data: Data) => ({ data, isPending: false, isError: false, error: null });
-const pending = { data: undefined, isPending: true, isError: false, error: null };
+const RAW_FAILURE = "Could not load the food: JWT expired for role authenticated";
 
 function showFood(food = makeFood(), portions = [makePortion()]) {
-  useFood.mockReturnValue(loaded(food));
-  useFoodPortions.mockReturnValue(loaded(portions));
+  useFoodWithPortions.mockReturnValue({ status: "ready", food, portions });
   render(<FoodDetail id={food.id} />);
 }
+
+function showState(state: FoodWithPortionsState) {
+  useFoodWithPortions.mockReturnValue(state);
+  render(<FoodDetail id="food-1" />);
+}
+
+const hero = () => screen.getByRole("region", { name: "Energy and macros" });
 
 describe("FoodDetail", () => {
   beforeEach(() => {
@@ -33,86 +38,93 @@ describe("FoodDetail", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   describe("loading", () => {
     it("should load the food and its portions by the id it is given", () => {
-      useFood.mockReturnValue(pending);
-      useFoodPortions.mockReturnValue(pending);
+      showState({ status: "loading" });
 
-      render(<FoodDetail id="food-1" />);
-
-      expect(useFood).toHaveBeenCalledWith("food-1");
-      expect(useFoodPortions).toHaveBeenCalledWith("food-1");
+      expect(useFoodWithPortions).toHaveBeenCalledWith("food-1");
     });
 
-    it("should say it is loading while either query is pending", () => {
-      useFood.mockReturnValue(loaded(makeFood()));
-      useFoodPortions.mockReturnValue(pending);
+    it("should announce that the food is loading and show no heading", () => {
+      showState({ status: "loading" });
 
-      render(<FoodDetail id="food-1" />);
-
-      expect(screen.getByRole("status").textContent).toBe("Loading food");
-      expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeTruthy();
+      expect(screen.queryByRole("heading")).toBeNull();
     });
 
-    it("should say the food was not found when it is not visible to the user", () => {
-      useFood.mockReturnValue(loaded(null));
-      useFoodPortions.mockReturnValue(loaded([]));
+    it("should write Loading food under the placeholders once they show", () => {
+      vi.useFakeTimers();
+      showState({ status: "loading" });
 
-      render(<FoodDetail id="food-1" />);
-
-      expect(screen.getByRole("heading", { name: "Food not found" })).toBeTruthy();
-    });
-
-    it("should show a failure to load the food in an alert", () => {
-      useFood.mockReturnValue({
-        data: undefined,
-        isPending: false,
-        isError: true,
-        error: new Error("Could not load the food: offline"),
-      });
-      useFoodPortions.mockReturnValue(loaded([]));
-
-      render(<FoodDetail id="food-1" />);
-
-      expect(screen.getByRole("alert").textContent).toContain("Could not load the food: offline");
-    });
-
-    it("should show a failure to load the portions in an alert", () => {
-      useFood.mockReturnValue(loaded(makeFood()));
-      useFoodPortions.mockReturnValue({
-        data: undefined,
-        isPending: false,
-        isError: true,
-        error: new Error("Could not load the portions: offline"),
+      act(() => {
+        vi.advanceTimersByTime(200);
       });
 
-      render(<FoodDetail id="food-1" />);
+      expect(screen.getByRole("status", { name: "Loading food" }).textContent).toBe("Loading food");
+    });
 
-      expect(screen.getByRole("alert").textContent).toContain(
-        "Could not load the portions: offline",
+    it("should keep the way back to the foods page", () => {
+      showState({ status: "loading" });
+
+      expect(screen.getByRole("link", { name: "Back to foods" }).getAttribute("href")).toBe(
+        "/foods",
       );
     });
+  });
 
-    it("should keep showing the food when a background refresh fails", () => {
-      useFood.mockReturnValue({
-        data: makeFood({ name: "Oat cakes" }),
-        isPending: false,
-        isError: true,
-        error: new Error("Could not load the food: offline"),
-      });
-      useFoodPortions.mockReturnValue(loaded([]));
+  describe("not found", () => {
+    it("should say the food was not found when it is not visible to the user", () => {
+      showState({ status: "notFound" });
 
-      render(<FoodDetail id="food-1" />);
+      expect(screen.getByRole("heading", { level: 1, name: "Food not found" })).toBeTruthy();
+      expect(screen.getByText("This food does not exist, or you cannot see it.")).toBeTruthy();
+    });
 
-      expect(screen.getByRole("heading", { name: "Oat cakes" })).toBeTruthy();
-      expect(screen.queryByRole("alert")).toBeNull();
+    it("should keep the way back to the foods page", () => {
+      showState({ status: "notFound" });
+
+      expect(screen.getByRole("link", { name: "Back to foods" })).toBeTruthy();
+    });
+  });
+
+  describe("a failure to load", () => {
+    it("should say the food was not loaded in an alert", () => {
+      showState({ status: "error", debugMessage: RAW_FAILURE });
+
+      const alert = screen.getByRole("alert");
+      expect(
+        within(alert).getByRole("heading", { level: 1, name: "Food not loaded" }),
+      ).toBeTruthy();
+      expect(
+        within(alert).getByText("The food could not be loaded. Try again later."),
+      ).toBeTruthy();
+    });
+
+    it("should never show the raw text of the failure", () => {
+      showState({ status: "error", debugMessage: RAW_FAILURE });
+
+      expect(screen.queryByText(/JWT/)).toBeNull();
+      expect(screen.queryByText(/Could not load the food:/)).toBeNull();
+    });
+
+    it("should offer no retry, because the design draws none", () => {
+      showState({ status: "error", debugMessage: RAW_FAILURE });
+
+      expect(screen.queryByRole("button")).toBeNull();
+    });
+
+    it("should keep the way back to the foods page", () => {
+      showState({ status: "error", debugMessage: RAW_FAILURE });
+
+      expect(screen.getByRole("link", { name: "Back to foods" })).toBeTruthy();
     });
   });
 
   describe("going back", () => {
-    it("should link back to the food search above the heading", () => {
+    it("should link back to the foods page above the heading", () => {
       showFood();
 
       const back = screen.getByRole("link", { name: "Back to foods" });
@@ -123,42 +135,127 @@ describe("FoodDetail", () => {
   });
 
   describe("what the food is", () => {
-    it("should show the name as the page heading with the brand, source and basis", () => {
+    it("should show the name as the page heading with the brand beside the source", () => {
       showFood(makeFood({ name: "Chicken breast", brand: "Tesco", source: "off" }));
 
       expect(screen.getByRole("heading", { level: 1, name: "Chicken breast" })).toBeTruthy();
       expect(screen.getByText("Tesco")).toBeTruthy();
       expect(screen.getByText("Open Food Facts")).toBeTruthy();
-      expect(screen.getByText("Per 100 g")).toBeTruthy();
+    });
+
+    it("should show no brand for a food without one", () => {
+      showFood(makeFood({ name: "Oat cakes", brand: null }));
+
+      expect(screen.getByRole("heading", { level: 1 }).parentElement?.textContent).toBe(
+        "Oat cakesYours",
+      );
     });
 
     it("should name each kind of source in plain words", () => {
       showFood(makeFood({ source: "cofid" }));
-      expect(screen.getByText("CoFID")).toBeTruthy();
+      expect(screen.getByText("UK CoFID")).toBeTruthy();
       cleanup();
 
       showFood(makeFood({ source: "user" }));
-      expect(screen.getByText("Own food")).toBeTruthy();
+      expect(screen.getByText("Yours")).toBeTruthy();
+    });
+  });
+
+  describe("the energy and macros card", () => {
+    it("should lead with the energy as a large number, then the basis", () => {
+      showFood(makeFood({ kcal: 148 }));
+
+      expect(within(hero()).getByText("148")).toBeTruthy();
+      expect(within(hero()).getByText("kcal")).toBeTruthy();
+      expect(within(hero()).getByText("per 100 g")).toBeTruthy();
+    });
+
+    it("should group a thousand calories with a comma", () => {
+      showFood(makeFood({ kcal: 2480 }));
+
+      expect(within(hero()).getByText("2,480")).toBeTruthy();
     });
 
     it("should give a drink's basis per 100 ml", () => {
       showFood(makeFood({ basis: "per_100ml" }));
 
-      expect(screen.getByText("Per 100 ml")).toBeTruthy();
+      expect(within(hero()).getByText("per 100 ml")).toBeTruthy();
+    });
+
+    it("should show Protein, Carbs and Fat tiles in that order", () => {
+      showFood(makeFood());
+
+      expect(
+        within(hero())
+          .getAllByRole("term")
+          .map((term) => term.textContent),
+      ).toEqual(["Protein", "Carbs", "Fat"]);
+    });
+
+    it("should show each macro in grams with its share of the energy", () => {
+      showFood(
+        makeFood({
+          kcal: 148,
+          protein_g: 32,
+          carbs_g: 0,
+          fat_g: 2.2,
+          quality: {},
+          source: "cofid",
+        }),
+      );
+
+      expect(
+        within(hero())
+          .getAllByRole("definition")
+          .map((definition) => definition.textContent),
+      ).toEqual(["32 g", "86 % of energy", "0 g", "0 % of energy", "2.2 g", "13 % of energy"]);
+    });
+
+    it("should say not given for a macro the source does not state, with no share", () => {
+      showFood(makeFood({ kcal: 200, protein_g: null, carbs_g: 20, fat_g: 10 }));
+
+      expect(
+        within(hero())
+          .getAllByRole("definition")
+          .map((definition) => definition.textContent),
+      ).toEqual(["not given", "20 g", "40 % of energy", "10 g", "45 % of energy"]);
+    });
+
+    it("should say the energy is not given, without a unit, and show no shares", () => {
+      showFood(makeFood({ kcal: null, protein_g: 14, carbs_g: null, fat_g: 17 }));
+
+      expect(within(hero()).getByText("Energy not given")).toBeTruthy();
+      expect(within(hero()).queryByText("kcal")).toBeNull();
+      expect(
+        within(hero())
+          .getAllByRole("definition")
+          .map((definition) => definition.textContent),
+      ).toEqual(["14 g", "not given", "17 g"]);
     });
   });
 
-  describe("the nutrient table", () => {
-    it("should show energy, protein, fat, carbohydrate and fibre with their units", () => {
-      showFood(makeFood({ kcal: 430, protein_g: 10, fat_g: 18.25, carbs_g: 56, fibre_g: 7.5 }));
+  describe("the nutrition table", () => {
+    it("should list energy, protein, carbohydrate, fat and fibre in that order", () => {
+      showFood(makeFood());
 
-      const table = screen.getByRole("table", { name: "Nutrients per 100 g" });
+      const table = screen.getByRole("table", { name: "Nutrition per 100 g" });
+      expect(
+        within(table)
+          .getAllByRole("rowheader")
+          .map((header) => header.textContent),
+      ).toEqual(["Energy", "Protein", "Carbohydrate", "Fat", "Fibre"]);
+    });
+
+    it("should write each value with its unit through the shared number format", () => {
+      showFood(makeFood({ kcal: 2480, protein_g: 9.5, carbs_g: 62, fat_g: 18.25, fibre_g: 8 }));
+
+      const table = screen.getByRole("table", { name: "Nutrition per 100 g" });
       const expected = {
-        Energy: "430 kcal",
-        Protein: "10 g",
-        Fat: "18.3 g",
-        Carbohydrate: "56 g",
-        Fibre: "7.5 g",
+        Energy: "2,480 kcal",
+        Protein: "9.5 g",
+        Carbohydrate: "62 g",
+        Fat: "18 g",
+        Fibre: "8 g",
       };
       for (const [nutrient, amount] of Object.entries(expected)) {
         const row = within(table).getByRole("row", { name: new RegExp(nutrient) });
@@ -167,9 +264,9 @@ describe("FoodDetail", () => {
     });
 
     it("should say a nutrient is not given, never zero, when it is null", () => {
-      showFood(makeFood({ fibre_g: null, protein_g: null }));
+      showFood(makeFood({ fibre_g: null, protein_g: null, kcal: null }));
 
-      for (const nutrient of ["Fibre", "Protein"]) {
+      for (const nutrient of ["Energy", "Fibre", "Protein"]) {
         const row = screen.getByRole("row", { name: new RegExp(nutrient) });
         expect(within(row).getByRole("cell").textContent).toBe("not given");
       }
@@ -185,36 +282,35 @@ describe("FoodDetail", () => {
     it("should head the table per 100 ml for a drink", () => {
       showFood(makeFood({ basis: "per_100ml" }));
 
-      expect(screen.getByRole("table", { name: "Nutrients per 100 ml" })).toBeTruthy();
+      expect(screen.getByRole("table", { name: "Nutrition per 100 ml" })).toBeTruthy();
     });
 
-    it("should note that carbohydrate is the US total when it could not be converted", () => {
+    it("should note that carbohydrate includes fibre when it could not be converted", () => {
       showFood(makeFood({ quality: { carbs_convention: "us_total" } }));
 
-      expect(screen.getByText(/US total/)).toBeTruthy();
+      expect(
+        screen.getByText("Carbohydrate includes fibre (US labelling convention)."),
+      ).toBeTruthy();
     });
 
     it("should add no US note otherwise", () => {
       showFood(makeFood({ quality: { carbs_convention: "eu" } }));
 
-      expect(screen.queryByText(/US total/)).toBeNull();
+      expect(screen.queryByText(/US labelling convention/)).toBeNull();
     });
   });
 
   describe("portions", () => {
     it("should list each portion with its amount and mark the default", () => {
       showFood(makeFood(), [
-        makePortion({ id: "p1", label: "Slice", grams: 30, is_default: true }),
-        makePortion({ id: "p2", label: "Handful", grams: 12.5, is_default: false }),
+        makePortion({ id: "p1", label: "1 breast", grams: 150, is_default: true }),
+        makePortion({ id: "p2", label: "Half breast", grams: 75, is_default: false }),
       ]);
 
-      expect(screen.getByRole("heading", { name: "Portions" })).toBeTruthy();
-      const [slice, handful] = screen.getAllByRole("listitem");
-      expect(slice?.textContent).toContain("Slice");
-      expect(slice?.textContent).toContain("30 g");
-      expect(slice?.textContent).toContain("Default");
-      expect(handful?.textContent).toContain("12.5 g");
-      expect(handful?.textContent).not.toContain("Default");
+      expect(screen.getByRole("heading", { level: 2, name: "Portions" })).toBeTruthy();
+      const [breast, half] = screen.getAllByRole("listitem");
+      expect(breast?.textContent).toBe("1 breastDefault150 g");
+      expect(half?.textContent).toBe("Half breast75 g");
     });
 
     it("should give the amount in ml for a drink's portion", () => {
@@ -222,13 +318,14 @@ describe("FoodDetail", () => {
         makePortion({ label: "Glass", grams: null, ml: 250 }),
       ]);
 
-      expect(screen.getByRole("listitem").textContent).toContain("250 ml");
+      expect(screen.getByRole("listitem").textContent).toBe("Glass250 ml");
     });
 
     it("should show no portions section when the food has none", () => {
       showFood(makeFood(), []);
 
       expect(screen.queryByRole("heading", { name: "Portions" })).toBeNull();
+      expect(screen.queryByRole("list")).toBeNull();
     });
   });
 
@@ -244,10 +341,10 @@ describe("FoodDetail", () => {
     it("should credit the CoFID dataset under the Open Government Licence", () => {
       showFood(makeFood({ source: "cofid" }));
 
-      expect(screen.getByText(/Open Government Licence v3.0/)).toBeTruthy();
+      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.cofid.text)).toBeTruthy();
     });
 
-    it("should link to Open Food Facts under the credit", () => {
+    it("should link to Open Food Facts under the credit, in a new tab", () => {
       showFood(makeFood({ source: "off" }));
 
       const link = screen.getByRole("link", { name: "https://world.openfoodfacts.org" });
@@ -264,16 +361,11 @@ describe("FoodDetail", () => {
       ).toBe(DATA_SOURCE_ATTRIBUTION.cofid.url);
     });
 
-    it("should link to no source for a food the user made", () => {
-      showFood(makeFood({ source: "user" }));
-
-      expect(screen.queryByRole("link", { name: /^https?:/ })).toBeNull();
-    });
-
-    it("should credit nobody for a food the user made", () => {
+    it("should credit nobody and link to no source for a food the user made", () => {
       showFood(makeFood({ source: "user" }));
 
       expect(screen.queryByText(/licen[cs]ed|Licence/)).toBeNull();
+      expect(screen.queryByRole("link", { name: /^https?:/ })).toBeNull();
     });
   });
 
@@ -286,6 +378,16 @@ describe("FoodDetail", () => {
       );
     });
 
+    it("should put Edit beside the title, not at the bottom", () => {
+      showFood(makeFood({ source: "user" }));
+
+      const heading = screen.getByRole("heading", { level: 1 });
+      const edit = screen.getByRole("link", { name: "Edit" });
+      const header = heading.parentElement?.parentElement;
+      expect(header?.contains(edit)).toBe(true);
+      expect(edit.compareDocumentPosition(hero()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
     it("should not offer to edit a shared food", () => {
       showFood(makeFood({ source: "off" }));
 
@@ -293,50 +395,66 @@ describe("FoodDetail", () => {
     });
   });
 
-  describe("the suspect gate", () => {
-    const suspect = { suspect: true, fields_missing: ["protein_g", "fibre_g"] };
+  describe("the review block", () => {
+    const suspect = { suspect: true, fields_missing: ["protein_g"] };
 
-    it("should list the missing values in plain words under a heading", () => {
-      showFood(makeFood({ source: "off", protein_g: null, fibre_g: null, quality: suspect }));
+    it("should be a note titled Needs review that names the missing nutrient", () => {
+      showFood(makeFood({ source: "off", protein_g: null, quality: suspect }));
 
-      expect(screen.getByRole("heading", { name: "Some values are missing" })).toBeTruthy();
-      expect(screen.getByText("Not given by the source: protein and fibre.")).toBeTruthy();
+      const note = screen.getByRole("note");
+      expect(within(note).getByText("Needs review")).toBeTruthy();
+      expect(
+        within(note).getByText(
+          "Protein is not given. Fill it in to save your own copy of this food.",
+        ),
+      ).toBeTruthy();
     });
 
-    it("should name every kind of value in words", () => {
+    it("should offer one action, to copy the food to the user's own foods", () => {
+      showFood(makeFood({ id: "suspect-food", source: "off", quality: suspect }));
+
+      const note = screen.getByRole("note");
+      const action = within(note).getByRole("link", { name: "Copy to your foods" });
+      expect(action.getAttribute("href")).toBe("/foods/new?from=suspect-food");
+      expect(within(note).getAllByRole("link")).toHaveLength(1);
+      expect(within(note).queryByRole("button")).toBeNull();
+    });
+
+    it("should sit between the title and the energy card", () => {
+      showFood(makeFood({ source: "off", quality: suspect }));
+
+      const note = screen.getByRole("note");
+      const heading = screen.getByRole("heading", { level: 1 });
+      expect(heading.compareDocumentPosition(note) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(note.compareDocumentPosition(hero()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should say that carbohydrate still includes fibre when a US label has no fibre", () => {
       showFood(
         makeFood({
           source: "off",
-          quality: {
-            suspect: true,
-            fields_missing: ["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g"],
-          },
+          fibre_g: null,
+          quality: { suspect: true, fields_missing: ["fibre_g"], carbs_convention: "us_total" },
         }),
       );
 
       expect(
-        screen.getByText("Not given by the source: energy, protein, fat, carbohydrate and fibre."),
+        within(screen.getByRole("note")).getByText(
+          "Fibre is not given, so carbohydrate still includes it. Fill it in to save your own copy of this food.",
+        ),
       ).toBeTruthy();
-    });
-
-    it("should offer one action, to review and save it as the user's own food", () => {
-      showFood(makeFood({ id: "suspect-food", source: "off", quality: suspect }));
-
-      const review = screen.getByRole("link", { name: "Review and save as my food" });
-      expect(review.getAttribute("href")).toBe("/foods/new?from=suspect-food");
-      expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
-        "Back to foods",
-        "Review and save as my food",
-        "https://world.openfoodfacts.org",
-      ]);
-      expect(screen.queryByRole("button")).toBeNull();
     });
 
     it("should show no review block for a food that is not suspect", () => {
       showFood(makeFood({ source: "off", quality: { suspect: false } }));
 
-      expect(screen.queryByRole("heading", { name: "Some values are missing" })).toBeNull();
-      expect(screen.queryByRole("link", { name: "Review and save as my food" })).toBeNull();
+      expect(screen.queryByRole("note")).toBeNull();
+      expect(screen.queryByRole("link", { name: "Copy to your foods" })).toBeNull();
+    });
+
+    it("should leave only the way back and the source as links for a food that is not suspect", () => {
+      showFood(makeFood({ source: "off", quality: {} }));
+
       expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
         "Back to foods",
         "https://world.openfoodfacts.org",

@@ -1,15 +1,16 @@
 "use client";
 
+import { useFoodWithPortions } from "@keylow/api-client";
+
 import type { CopyFoodScreenProps } from "./types";
 
 import { FoodForm } from "@/components/foods/FoodForm";
 import { FoodLoadNotice } from "@/components/foods/FoodLoadNotice";
-import { useFoodWithPortions } from "@/components/foods/useFoodWithPortions";
 
 export function CopyFoodScreen({ fromId }: CopyFoodScreenProps) {
   const state = useFoodWithPortions(fromId);
 
-  if (state.kind !== "ready") {
+  if (state.status !== "ready") {
     return <FoodLoadNotice state={state} />;
   }
 
