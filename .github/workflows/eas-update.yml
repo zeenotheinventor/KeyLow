@@ -4,20 +4,27 @@
 # app, and on manual dispatch, it installs dependencies and runs
 # `eas update` for the `production` channel.
 #
+# Release policy: continuous deployment with no approval gate. Every qualifying push to main
+# publishes straight away, and the installed production build picks the update up on its next
+# launch. Releases are meant to be gated later with feature flags, not with a manual approval
+# step, so the `production` environment deliberately has no required reviewers.
+#
 # One-time setup in GitHub (Settings of this repository, done by Zee):
 #
 #   1. Settings > Environments > New environment, named exactly `production`
-#      (shared with deploy-supabase.yml).
-#   2. On that environment, enable "Required reviewers" and add Zee. The job
-#      below declares `environment: production`, so every OTA publish pauses
-#      until a reviewer approves it, the same gate as the Supabase deploy.
-#   3. On that same environment, add this secret under "Environment secrets"
-#      (not a repository secret, so that only approved runs can read it):
+#      (shared with deploy-supabase.yml). Leave "Required reviewers" off. The
+#      job below declares `environment: production` only to read the
+#      environment's secret and to apply its branch policy, so a run starts as
+#      soon as it is triggered.
+#   2. On that environment, add this secret under "Environment secrets"
+#      (not a repository secret, so that only runs on an allowed branch can
+#      read it):
 #        EXPO_TOKEN  Expo access token for the EAS account (KEY-13)
-#   4. On that same environment, set "Deployment branches" to "Selected
+#   3. On that same environment, set "Deployment branches" to "Selected
 #      branches" and allow only `main` (Settings > Environments > production
-#      > Deployment branches). Otherwise a manual run from a feature branch,
-#      once approved, would deploy that branch.
+#      > Deployment branches). This branch policy is the only restriction on
+#      the environment: it stops a manual run from a feature branch from
+#      reading the secret and publishing that branch.
 #
 # Prerequisites in the app itself (KEY-26), now in place: expo-updates is
 # installed, and app.json carries `extra.eas.projectId` and `updates.url`.
@@ -34,6 +41,12 @@
 # config plugin or SDK bump) changes the fingerprint runtime version and needs
 # a new store build. An update published under a runtime version that no
 # installed build has is simply never delivered.
+#
+# Who receives it: the main Ki-Lo app, built with the `production-apk` profile in
+# apps/mobile/eas.json (package com.sojisoft.keylow, channel `production`). This job
+# runs without APP_VARIANT, as does that build, so both compute the same fingerprint
+# runtime version. The development build sets APP_VARIANT=development, gets a different
+# package and fingerprint, and never receives these updates.
 #
 # Not verifiable before the secret exists and a real push to main happens.
 

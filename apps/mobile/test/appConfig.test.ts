@@ -90,6 +90,47 @@ describe("app.json", () => {
     });
   });
 
+  describe("health data (M5)", () => {
+    it("should ask Health Connect for the weight read permission and nothing else from it", () => {
+      const healthPermissions = expo.android.permissions.filter((permission) =>
+        permission.startsWith("android.permission.health."),
+      );
+
+      expect(healthPermissions).toEqual(["android.permission.health.READ_WEIGHT"]);
+    });
+
+    it("should list the Health Connect plugin so the permission rationale activity reaches the manifest", () => {
+      expect(plugins.map(pluginName)).toContain("react-native-health-connect");
+    });
+
+    it("should set the Android minimum SDK that Health Connect requires", () => {
+      const options = pluginOptions("expo-build-properties");
+      const android = isRecord(options?.android) ? options.android : {};
+
+      expect(android.minSdkVersion).toBeGreaterThanOrEqual(26);
+    });
+
+    it("should explain in plain words why the app reads Apple Health, in the app's own name", () => {
+      const reason = String(
+        pluginOptions("@kingstinct/react-native-healthkit")?.NSHealthShareUsageDescription,
+      );
+
+      expect(reason).toContain("Ki-Lo");
+      expect(reason).toContain("weight");
+      expect(reason).not.toContain("KeyLow");
+    });
+
+    it("should not claim the HealthKit background delivery entitlement, which the app has no use for yet", () => {
+      expect(pluginOptions("@kingstinct/react-native-healthkit")?.background).toBe(false);
+    });
+
+    it("should not ask for permission to write to Apple Health, because the app only reads weight", () => {
+      expect(
+        pluginOptions("@kingstinct/react-native-healthkit")?.NSHealthUpdateUsageDescription,
+      ).toBe(false);
+    });
+  });
+
   describe("icons", () => {
     it("should ship an opaque square 1024 pixel iOS icon, because the App Store rejects an alpha channel", () => {
       expect(readPngHeader(expo.icon)).toEqual({
