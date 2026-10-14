@@ -25,6 +25,7 @@ describe("food form buttons and review banner", () => {
       create: "Create food",
       copy: "Save to your foods",
       edit: "Save changes",
+      save: "Save",
     });
   });
 
@@ -136,9 +137,15 @@ describe("the web food form copy", () => {
     expect(FOOD_FORM.barcodeFromEntry).toBe("Filled in from the barcode you entered");
     expect(FOOD_FORM.barcodeFromCopy).toBe("Kept from the product you are copying");
     expect(FOOD_FORM.notGivenBySource).toBe("Not given by the source");
+    expect(FOOD_FORM.nutrientNotGiven).toBe("Not given");
     expect(FOOD_FORM.usCarbsNote).toBe(
       "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.",
     );
+  });
+
+  it("should pin the names of the header controls", () => {
+    expect(FOOD_FORM.back).toBe("Back");
+    expect(FOOD_FORM.close).toBe("Close");
   });
 
   it("should pin the portion row labels", () => {

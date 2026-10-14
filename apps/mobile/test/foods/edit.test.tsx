@@ -4,9 +4,9 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import {
   foodFixture,
   foodQuery,
+  mockCreateFood,
   mockUpdateFood,
-  mockUseFood,
-  mockUseFoodPortions,
+  mockUseFoodWithPortions,
   portionFixtures,
   portionsQuery,
   resetApiClientMock,
@@ -58,26 +58,67 @@ describe("edit food screen", () => {
   it("should load the food and its portions by the id in the route", async () => {
     await renderEditor();
 
-    expect(mockUseFood).toHaveBeenCalledWith(savedFoodId);
-    expect(mockUseFoodPortions).toHaveBeenCalledWith(savedFoodId);
+    expect(mockUseFoodWithPortions).toHaveBeenCalledWith(savedFoodId);
+  });
+
+  describe("header", () => {
+    it("should be headed Edit food, with Back and Close", async () => {
+      await renderEditor();
+
+      expect(screen.getByRole("heading", { name: "Edit food" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    });
+
+    it("should go back on Back without saving, whatever has been changed", async () => {
+      const user = await renderEditor();
+      await user.type(screen.getByLabelText("Name"), " extra");
+
+      await user.press(screen.getByRole("button", { name: "Back" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+      expect(mockUpdateFood).not.toHaveBeenCalled();
+    });
+
+    it("should close the whole sheet on Close without saving, whatever has been changed", async () => {
+      const user = await renderEditor();
+      await user.type(screen.getByLabelText("Name"), " extra");
+
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(mockUpdateFood).not.toHaveBeenCalled();
+      expect(mockCreateFood).not.toHaveBeenCalled();
+    });
   });
 
   describe("states", () => {
-    it("should show a loading message while the food loads", async () => {
+    // The food boards draw the loading, failed and not found states of a food, under their own header.
+    function expectFoodHeader() {
+      expect(screen.getByText("Food")).toBeOnTheScreen();
+      expect(screen.queryByRole("heading", { name: "Food" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    }
+
+    it("should show the loading board while the food loads", async () => {
       Object.assign(foodQuery, { data: undefined, isPending: true });
 
       await renderEditor();
 
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
       expect(screen.getByText("Loading food")).toBeOnTheScreen();
+      expectFoodHeader();
       expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
     });
 
-    it("should show a loading message while the portions load", async () => {
+    it("should show the loading board while the portions load", async () => {
       Object.assign(portionsQuery, { data: undefined, isPending: true });
 
       await renderEditor();
 
-      expect(screen.getByText("Loading food")).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
     });
 
     it("should keep the form when a later refresh of the food or portions fails", async () => {
@@ -90,46 +131,68 @@ describe("edit food screen", () => {
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
     });
 
-    it("should say the food was not found when the user cannot see it", async () => {
+    it("should show the not found board when the user cannot see the food", async () => {
       Object.assign(foodQuery, { data: null });
 
       await renderEditor();
 
-      expect(screen.getByRole("header", { name: "Food not found" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Food not found" })).toBeOnTheScreen();
+      expect(screen.getByText("This food does not exist, or you cannot see it.")).toBeOnTheScreen();
+      expectFoodHeader();
       expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
     });
 
-    it("should say a shared food cannot be edited and show no form", async () => {
+    it("should show the not found board for an id that is not a food id, without asking for it", async () => {
+      routerMock.searchParams = { id: "not-a-food-id" };
+
+      await renderEditor();
+
+      expect(screen.getByRole("heading", { name: "Food not found" })).toBeOnTheScreen();
+      expectFoodHeader();
+      expect(mockUseFoodWithPortions).not.toHaveBeenCalledWith("not-a-food-id");
+    });
+
+    it("should say a shared food cannot be edited, under the Edit food header, and show no form", async () => {
       Object.assign(foodQuery, {
         data: { ...foodFixture, source: "cofid", source_ref: "13-123", owner_id: null },
       });
 
       await renderEditor();
 
+      expect(screen.getByRole("heading", { name: "Edit food" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Cannot edit this food" })).toBeOnTheScreen();
       expect(
         screen.getByText("This food comes from a shared database and cannot be edited."),
       ).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
       expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Save changes" })).not.toBeOnTheScreen();
     });
 
-    it("should announce a failure to load the food", async () => {
+    it("should show the failed board when the food fails to load, with a fixed sentence", async () => {
       Object.assign(foodQuery, { data: undefined, isPending: false, isError: true });
 
       await renderEditor();
 
       expect(
-        screen.getByRole("alert", { name: "The food could not be loaded. Try again later." }),
+        screen.getByRole("alert", {
+          name: "Food not loaded The food could not be loaded. Try again later.",
+        }),
       ).toBeOnTheScreen();
+      expectFoodHeader();
+      expect(screen.queryByText(/The food query failed/)).not.toBeOnTheScreen();
     });
 
-    it("should announce a failure to load the portions", async () => {
+    it("should show the failed board when the portions fail to load", async () => {
       Object.assign(portionsQuery, { data: undefined, isPending: false, isError: true });
 
       await renderEditor();
 
       expect(
-        screen.getByRole("alert", { name: "The food could not be loaded. Try again later." }),
+        screen.getByRole("alert", {
+          name: "Food not loaded The food could not be loaded. Try again later.",
+        }),
       ).toBeOnTheScreen();
     });
   });

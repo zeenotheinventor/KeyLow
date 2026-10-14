@@ -6,8 +6,7 @@ import {
   foodQuery,
   mockCreateFood,
   mockUpdateFood,
-  mockUseFood,
-  mockUseFoodPortions,
+  mockUseFoodWithPortions,
   portionFixtures,
   portionsQuery,
   resetApiClientMock,
@@ -68,7 +67,7 @@ async function fillMissingValues(user: Awaited<ReturnType<typeof renderCopy>>) {
 }
 
 async function save(user: Awaited<ReturnType<typeof renderCopy>>) {
-  await user.press(screen.getByRole("button", { name: "Save as my food" }));
+  await user.press(screen.getByRole("button", { name: "Save to your foods" }));
 }
 
 describe("new food screen, copying a food with the from parameter", () => {
@@ -83,37 +82,72 @@ describe("new food screen, copying a food with the from parameter", () => {
   it("should load the food to copy and its portions by the id in the parameter", async () => {
     await renderCopy();
 
-    expect(mockUseFood).toHaveBeenCalledWith(savedFoodId);
-    expect(mockUseFoodPortions).toHaveBeenCalledWith(savedFoodId);
+    expect(mockUseFoodWithPortions).toHaveBeenCalledWith(savedFoodId);
+  });
+
+  describe("header", () => {
+    it("should be headed New food, with Back and Close, once the food has loaded", async () => {
+      await renderCopy();
+
+      expect(screen.getByRole("heading", { name: "New food" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    });
+
+    it("should go back on Back and close the sheet on Close, saving nothing", async () => {
+      const user = await renderCopy();
+
+      await user.press(screen.getByRole("button", { name: "Back" }));
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(mockCreateFood).not.toHaveBeenCalled();
+      expect(mockUpdateFood).not.toHaveBeenCalled();
+    });
   });
 
   describe("states", () => {
-    it("should show a loading message while the food loads", async () => {
+    // The food boards draw the loading, failed and not found states of a food, under their own header.
+    function expectFoodHeader() {
+      expect(screen.getByText("Food")).toBeOnTheScreen();
+      expect(screen.queryByRole("heading", { name: "Food" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    }
+
+    it("should show the loading board while the food loads", async () => {
       Object.assign(foodQuery, { data: undefined, isPending: true });
 
       await renderCopy();
 
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
       expect(screen.getByText("Loading food")).toBeOnTheScreen();
+      expectFoodHeader();
       expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
     });
 
-    it("should show a loading message while the portions load", async () => {
+    it("should show the loading board while the portions load", async () => {
       Object.assign(portionsQuery, { data: undefined, isPending: true });
 
       await renderCopy();
 
-      expect(screen.getByText("Loading food")).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
     });
 
-    it("should show an alert when the food cannot be loaded", async () => {
+    it("should show the failed board when the food cannot be loaded, with a fixed sentence", async () => {
       Object.assign(foodQuery, { data: undefined, isPending: false, isError: true });
 
       await renderCopy();
 
       expect(
-        screen.getByRole("alert", { name: "The food could not be loaded. Try again later." }),
+        screen.getByRole("alert", {
+          name: "Food not loaded The food could not be loaded. Try again later.",
+        }),
       ).toBeOnTheScreen();
+      expectFoodHeader();
       expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
+      expect(screen.queryByText(/The food query failed/)).not.toBeOnTheScreen();
     });
 
     it("should keep the form the user is filling in when a later refresh of the food fails", async () => {
@@ -139,12 +173,14 @@ describe("new food screen, copying a food with the from parameter", () => {
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
     });
 
-    it("should say the food was not found when it is not visible", async () => {
+    it("should show the not found board when the food is not visible", async () => {
       Object.assign(foodQuery, { data: null });
 
       await renderCopy();
 
-      expect(screen.getByRole("header", { name: "Food not found" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Food not found" })).toBeOnTheScreen();
+      expect(screen.getByText("This food does not exist, or you cannot see it.")).toBeOnTheScreen();
+      expectFoodHeader();
       expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
     });
   });
@@ -199,6 +235,84 @@ describe("new food screen, copying a food with the from parameter", () => {
     });
   });
 
+  describe("the values the source does not give", () => {
+    it("should cue each required nutrient left blank as not given", async () => {
+      await renderCopy();
+
+      expect(screen.getAllByText("Not given")).toHaveLength(2);
+    });
+
+    it("should not cue a nutrient the food gives, or fibre, which is optional", async () => {
+      Object.assign(foodQuery, { data: { ...suspectFood, fibre_g: null } });
+
+      await renderCopy();
+
+      expect(screen.getAllByText("Not given")).toHaveLength(2);
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveDisplayValue("");
+    });
+
+    it("should cue the energy as well, for a food that gives no energy", async () => {
+      Object.assign(foodQuery, {
+        data: {
+          ...suspectFood,
+          source: "cofid",
+          source_ref: "13-123",
+          kcal: null,
+          protein_g: 13.5,
+          fat_g: 17.3,
+          fibre_g: 1.8,
+          brand: null,
+          barcode: null,
+          quality: { suspect: true, fields_missing: ["kcal", "carbs_g"] },
+        },
+      });
+
+      await renderCopy();
+
+      expect(screen.getAllByText("Not given")).toHaveLength(2);
+      expect(screen.getByLabelText("Energy (kcal)")).toHaveDisplayValue("");
+      expect(screen.getByLabelText("Protein (g)")).toHaveDisplayValue("13.5");
+      expect(screen.getByLabelText("Barcode")).toHaveProp("editable", true);
+    });
+
+    it("should cue nothing when the food gives every required nutrient", async () => {
+      Object.assign(foodQuery, { data: { ...suspectFood, protein_g: 9, carbs_g: 60 } });
+
+      await renderCopy();
+
+      expect(screen.queryByText("Not given")).not.toBeOnTheScreen();
+    });
+
+    it("should take a cue away once the user fills the nutrient in", async () => {
+      const user = await renderCopy();
+
+      await user.type(screen.getByLabelText("Protein (g)"), "9");
+
+      expect(screen.getAllByText("Not given")).toHaveLength(1);
+    });
+
+    it("should swap a cue for the error when the user saves with the nutrient still blank", async () => {
+      const user = await renderCopy();
+
+      await save(user);
+
+      expect(await screen.findByRole("alert", { name: "Protein is required" })).toBeOnTheScreen();
+      expect(screen.queryByText("Not given")).not.toBeOnTheScreen();
+    });
+
+    it("should show no cue on a new food, where nothing has been left out by a source", async () => {
+      routerMock.searchParams = {};
+
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <NewFoodRoute />
+        </ThemeProvider>,
+      );
+
+      expect(screen.queryByText("Not given")).not.toBeOnTheScreen();
+    });
+  });
+
   describe("a food whose carbohydrate includes fibre", () => {
     const usTotalNote =
       "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.";
@@ -229,6 +343,12 @@ describe("new food screen, copying a food with the from parameter", () => {
       await renderCopy();
 
       expect(screen.getByText(usTotalNote)).toBeOnTheScreen();
+    });
+
+    it("should cue the blank carbohydrate as not given, as the board draws it", async () => {
+      await renderCopy();
+
+      expect(screen.getAllByText("Not given")).toHaveLength(1);
     });
 
     it("should not save until the carbohydrate is entered", async () => {
@@ -390,8 +510,19 @@ describe("new food screen, copying a food with the from parameter", () => {
 
       await renderCopy();
 
-      expect(mockUseFood).toHaveBeenCalledWith(savedFoodId);
+      expect(mockUseFoodWithPortions).toHaveBeenCalledWith(savedFoodId);
       expect(screen.getByLabelText("Name")).toHaveDisplayValue("Crunchy granola");
+    });
+
+    it("should show the not found board for a value that is not a food id, without asking for it", async () => {
+      routerMock.searchParams = { from: "not-a-food-id" };
+
+      await renderCopy();
+
+      expect(screen.getByRole("heading", { name: "Food not found" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
+      expect(mockUseFoodWithPortions).not.toHaveBeenCalledWith("not-a-food-id");
     });
 
     it("should open a blank form when it is empty", async () => {
@@ -405,7 +536,7 @@ describe("new food screen, copying a food with the from parameter", () => {
 
       expect(screen.getByLabelText("Name")).toHaveDisplayValue("");
       expect(screen.getByRole("button", { name: "Create food" })).toBeOnTheScreen();
-      expect(screen.queryByText("Loading food")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("status", { name: "Loading food" })).not.toBeOnTheScreen();
     });
   });
 });

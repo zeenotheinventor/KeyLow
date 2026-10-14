@@ -4,6 +4,8 @@ import type { Food, NutrientBasis } from "../schemas/food";
 
 /** The labels of the food detail screen, as the boards draw them. */
 export const FOOD_DETAIL = {
+  /** The title of a food's screen while it loads, fails to load or is not found. */
+  title: "Food",
   back: "Back to foods",
   edit: "Edit",
   loading: "Loading food",

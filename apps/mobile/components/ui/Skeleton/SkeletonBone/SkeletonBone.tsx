@@ -22,14 +22,19 @@ function SkeletonShine() {
   );
 }
 
-/** One bone of a skeleton: a rounded block in the skeleton base colour with the shine sweeping over it. */
+/**
+ * One bone of a skeleton: a rounded block in the skeleton base colour with the shine sweeping over it. Its
+ * corners are the small radius unless the bone's classes give another, because two radius classes on
+ * one element do not resolve by the order they are written in.
+ */
 export function SkeletonBone({ className }: SkeletonBoneProps) {
   const isReducedMotion = useReducedMotion();
+  const radiusClassName = /(^|\s)rounded-/.test(className) ? "" : "rounded-small";
 
   // The design's reduce-motion path is the bones with no shine: nothing sweeps.
   return (
     <View
-      className={`overflow-hidden rounded-small bg-skeleton-base ${className}`}
+      className={`overflow-hidden ${radiusClassName} bg-skeleton-base ${className}`}
       testID="skeleton-bone"
     >
       {isReducedMotion ? null : <SkeletonShine />}

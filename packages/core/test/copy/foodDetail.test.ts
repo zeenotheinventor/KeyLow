@@ -13,6 +13,7 @@ import {
 describe("food detail wording", () => {
   it("should pin the drawn labels", () => {
     expect(FOOD_DETAIL).toEqual({
+      title: "Food",
       back: "Back to foods",
       edit: "Edit",
       loading: "Loading food",

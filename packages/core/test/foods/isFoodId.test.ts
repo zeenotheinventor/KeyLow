@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isFoodId } from "@/components/foods/isFoodId";
+import { isFoodId } from "../../src/foods";
 
 describe("isFoodId", () => {
   it("should accept a v4 uuid", () => {

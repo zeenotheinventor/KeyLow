@@ -163,6 +163,44 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like a food's page", () => {
+    it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      expect(bones()).toHaveLength(5);
+    });
+
+    it("should draw the name as an 80 percent and a 45 percent line, each 24 points tall", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      const [firstLine, secondLine] = bones();
+      expect(firstLine).toHaveStyle({ width: "80%", height: 24, borderRadius: 6 });
+      expect(secondLine).toHaveStyle({ width: "45%", height: 24, borderRadius: 6 });
+    });
+
+    it("should draw the source as a pill 90 points wide and 20 tall", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      expect(bones()[2]).toHaveStyle({ width: 90, height: 20, borderRadius: 999 });
+    });
+
+    it("should draw the two cards 140 and 236 points tall with the large radius", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      expect(bones()[3]).toHaveStyle({ height: 140, borderRadius: 20 });
+      expect(bones()[4]).toHaveStyle({ height: 236, borderRadius: 20 });
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe.each(schemes)("in the %s scheme", (scheme) => {
     it("should draw every bone in the skeleton base colour", async () => {
       await renderSkeleton({ variant: "row" }, scheme);

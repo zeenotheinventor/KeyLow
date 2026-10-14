@@ -1,6 +1,7 @@
 export { DATA_SOURCE_ATTRIBUTION } from "./attribution";
 export { normaliseBarcode } from "./barcode";
 export type { BarcodeInvalidReason, BarcodeSymbology, NormaliseBarcodeResult } from "./barcode";
+export { isFoodId } from "./isFoodId";
 export { OFF_FRESHNESS_MS, offFreshness } from "./freshness";
 export type { OffFreshness } from "./freshness";
 export { normaliseOffCandidate, normaliseOffProduct, offProductPayloadSchema } from "./off";

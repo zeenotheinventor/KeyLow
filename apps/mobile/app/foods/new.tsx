@@ -1,7 +1,10 @@
+import { FOOD_FORM_BUTTONS } from "@keylow/core/copy";
+import { isFoodId, normaliseBarcode } from "@keylow/core/foods";
 import { useLocalSearchParams } from "expo-router";
 
 import { CopyFoodForm } from "../../components/CopyFoodForm";
 import { emptyFoodFormValues } from "../../components/FoodForm";
+import { FoodFormLoadState } from "../../components/FoodFormLoadState";
 import { NewFoodForm } from "../../components/NewFoodForm";
 
 // A repeated route parameter arrives as an array, so the first value is used. An empty one is none.
@@ -20,14 +23,20 @@ export default function NewFoodRoute() {
   const scannedBarcode = firstParameter(barcode);
 
   if (sourceFoodId !== undefined) {
+    // A value that is not a food id is a food that is not there, so it is never asked for.
+    if (!isFoodId(sourceFoodId)) {
+      return <FoodFormLoadState state="notFound" />;
+    }
+
     return <CopyFoodForm sourceFoodId={sourceFoodId} />;
   }
 
   return (
     <NewFoodForm
-      submitLabel="Create food"
+      submitLabel={FOOD_FORM_BUTTONS.create}
       initialValues={{ ...emptyFoodFormValues, barcode: scannedBarcode ?? "" }}
-      isBarcodeLocked={scannedBarcode !== undefined}
+      // A code that is not valid stays editable, or the user could not fix it.
+      isBarcodeLocked={scannedBarcode !== undefined && normaliseBarcode(scannedBarcode).ok}
     />
   );
 }

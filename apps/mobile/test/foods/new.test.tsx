@@ -379,6 +379,87 @@ describe("new food screen", () => {
 
       expect(screen.getByLabelText("Barcode")).toHaveProp("editable", true);
     });
+
+    it("should leave the barcode editable, and say nothing about a scan, when the code is not a valid one", async () => {
+      // The check digit of 5012345678900 is 0, so this one is wrong.
+      routerMock.searchParams = { barcode: "5012345678901" };
+
+      await renderForm();
+
+      expect(screen.getByLabelText("Barcode")).toHaveDisplayValue("5012345678901");
+      expect(screen.getByLabelText("Barcode")).toHaveProp("editable", true);
+      expect(screen.queryByText("Filled in from the barcode you scanned")).not.toBeOnTheScreen();
+    });
+
+    it("should let the user fix an invalid scanned code and save it", async () => {
+      routerMock.searchParams = { barcode: "5012345678901" };
+      const user = await renderForm();
+      await fillRequiredFields(user);
+      await user.clear(screen.getByLabelText("Barcode"));
+      await user.type(screen.getByLabelText("Barcode"), "5012345678900");
+
+      await save(user);
+
+      expect(mockCreateFood).toHaveBeenCalledWith(
+        expect.objectContaining({ barcode: "5012345678900" }),
+      );
+    });
+  });
+
+  describe("header", () => {
+    it("should be headed New food, with Back and Close", async () => {
+      await renderForm();
+
+      expect(screen.getByRole("heading", { name: "New food" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    });
+
+    it("should go back one screen on Back without saving, whatever is typed", async () => {
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await user.press(screen.getByRole("button", { name: "Back" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+      expect(mockCreateFood).not.toHaveBeenCalled();
+      expect(mockUpdateFood).not.toHaveBeenCalled();
+    });
+
+    it("should go to the search when there is no screen to go back to", async () => {
+      routerMock.canGoBack.mockReturnValue(false);
+      const user = await renderForm();
+
+      await user.press(screen.getByRole("button", { name: "Back" }));
+
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.replace).toHaveBeenCalledWith("/foods");
+    });
+
+    it("should close the whole sheet on Close without saving, whatever is typed", async () => {
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(mockCreateFood).not.toHaveBeenCalled();
+      expect(mockUpdateFood).not.toHaveBeenCalled();
+    });
+
+    it("should keep the header after a partial write, when the next save updates the food", async () => {
+      mockCreateFood.mockRejectedValue(
+        new FoodsPartialWriteError(savedFoodId, "portions failed", new Error("insert failed")),
+      );
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(await screen.findByRole("button", { name: "Save" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "New food" })).toBeOnTheScreen();
+    });
   });
 
   describe("basis", () => {

@@ -1,13 +1,13 @@
 "use client";
 
 import { FOOD_FORM } from "@keylow/core/copy";
+import { isFoodId } from "@keylow/core/foods";
 import { useSearchParams } from "next/navigation";
 
 import { CopyFoodScreen } from "../CopyFoodScreen";
 
 import { FoodForm } from "@/components/foods/FoodForm";
 import { FoodFormPage } from "@/components/foods/FoodFormPage";
-import { isFoodId } from "@/components/foods/isFoodId";
 
 export function NewFoodScreen() {
   const searchParameters = useSearchParams();

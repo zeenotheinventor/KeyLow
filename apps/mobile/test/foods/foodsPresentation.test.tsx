@@ -181,8 +181,8 @@ describe("the food search sheet as a route", () => {
       expect(screen.queryByText("Status bar light")).not.toBeOnTheScreen();
     });
 
-    it("should theme the native header of the screens the sheet opens", async () => {
-      await openSheetFrom("/diary", "/foods/new");
+    it("should theme the native header of the screens the sheet opens that still have one", async () => {
+      await openSheetFrom("/diary", "/foods/11111111-1111-4111-8111-111111111111");
 
       const header = headerConfigs().find((config) => config.props.hidden === false);
       expect(header?.props.backgroundColor).toBe(themes.dark.background);
