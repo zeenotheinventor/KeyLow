@@ -1,5 +1,6 @@
 import { View } from "react-native";
 
+import { Card } from "../Card";
 import { ListRow } from "./ListRow";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
@@ -9,11 +10,11 @@ const meta = {
   component: ListRow,
   decorators: [
     (Story) => (
-      // The design system's Card, which the mobile kit does not have yet: the surface a row sits on.
+      // The rows bring their own padding, so the card has none.
       <View className="flex-1 justify-center p-4">
-        <View className="overflow-hidden rounded-large border border-border bg-surface elevation-card">
+        <Card padding={0}>
           <Story />
-        </View>
+        </Card>
       </View>
     ),
   ],

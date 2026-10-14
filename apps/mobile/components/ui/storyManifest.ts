@@ -22,6 +22,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "Loading",
     ],
   },
+  Card: { states: ["Surface", "Raised", "Compact", "Rows"] },
   EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction"] },
   ErrorState: { states: ["SearchFailed", "WithRetry"] },
   FoodRow: {
@@ -33,8 +34,21 @@ export const storyManifest: Record<string, { states: string[] }> = {
   ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled"] },
   PressableSurface: { states: ["Default", "Disabled", "Busy"] },
   SearchField: { states: ["Empty", "Filled", "WithClear", "Focused"] },
+  SearchLauncher: { states: ["Default", "AboveTabBar"] },
   SheetHeader: { states: ["Search", "Detail", "Form", "Scanner"] },
   Skeleton: { states: ["Row", "Group"] },
+  TabBar: {
+    states: [
+      "IosDashboard",
+      "IosDiary",
+      "IosRecipes",
+      "IosMore",
+      "AndroidDashboard",
+      "AndroidMore",
+      "Interactive",
+      "AndroidInteractive",
+    ],
+  },
   Text: {
     states: [
       "DisplayNumeral",

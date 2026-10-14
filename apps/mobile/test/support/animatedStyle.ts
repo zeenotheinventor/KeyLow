@@ -37,3 +37,15 @@ export function animatedTranslateX(element: AnimatedElement): string | undefined
   const value = transformValue(element, "translateX");
   return typeof value === "string" ? value : undefined;
 }
+
+/** The horizontal shift in points in an element's animated style, or undefined when it has none. */
+export function animatedTranslateXPoints(element: AnimatedElement): number | undefined {
+  const value = transformValue(element, "translateX");
+  return typeof value === "number" ? value : undefined;
+}
+
+/** The opacity in an element's animated style, or undefined when it has none. */
+export function animatedOpacity(element: AnimatedElement): number | undefined {
+  const { opacity }: { opacity?: unknown } = getAnimatedStyle(element);
+  return typeof opacity === "number" ? opacity : undefined;
+}

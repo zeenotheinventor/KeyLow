@@ -15,6 +15,8 @@ import type { PressableSurfaceProps } from "./types";
 export function PressableSurface({
   children,
   label,
+  role = "button",
+  selected,
   busy,
   disabled = false,
   hitSlop,
@@ -49,10 +51,11 @@ export function PressableSurface({
         aria-busy={busy}
         aria-disabled={isInert}
         aria-label={label}
+        aria-selected={selected}
         className={className}
         disabled={isInert}
         hitSlop={hitSlop}
-        role="button"
+        role={role}
         onPress={handlePress}
         {...pressHandlers}
       >
