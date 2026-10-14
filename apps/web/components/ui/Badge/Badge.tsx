@@ -14,35 +14,35 @@ const sourceNames = {
 const tones = {
   neutral: { surface: "bg-surface-sheet text-text-secondary", dot: "bg-text-secondary" },
   accent: {
-    surface: "bg-accent-muted text-accent [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-accent-muted text-accent light-theme:text-text-primary",
     dot: "bg-accent",
   },
   success: {
-    surface: "bg-success-muted text-success [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-success-muted text-success light-theme:text-text-primary",
     dot: "bg-success",
   },
   warning: {
-    surface: "bg-warning-muted text-warning [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-warning-muted text-warning light-theme:text-text-primary",
     dot: "bg-warning",
   },
   danger: {
-    surface: "bg-danger-muted text-danger [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-danger-muted text-danger light-theme:text-text-primary",
     dot: "bg-danger",
   },
   protein: {
-    surface: "bg-protein-muted text-protein [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-protein-muted text-protein light-theme:text-text-primary",
     dot: "bg-protein",
   },
   carbs: {
-    surface: "bg-carbs-muted text-carbs [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-carbs-muted text-carbs light-theme:text-text-primary",
     dot: "bg-carbs",
   },
   fat: {
-    surface: "bg-fat-muted text-fat [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-fat-muted text-fat light-theme:text-text-primary",
     dot: "bg-fat",
   },
   calories: {
-    surface: "bg-calories-muted text-calories [[data-theme=light]_&]:text-text-primary",
+    surface: "bg-calories-muted text-calories light-theme:text-text-primary",
     dot: "bg-calories",
   },
 } as const satisfies Record<BadgeTone, { surface: string; dot: string }>;

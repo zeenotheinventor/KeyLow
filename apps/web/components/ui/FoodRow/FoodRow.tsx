@@ -104,7 +104,7 @@ export function FoodRow({
       {busy ? (
         <LoaderCircle
           aria-hidden
-          className="size-5 shrink-0 animate-spin text-accent motion-reduce:animate-pulse [[data-theme=light]_&]:text-text-primary"
+          className="size-5 shrink-0 animate-spin text-accent motion-reduce:animate-pulse light-theme:text-text-primary"
           strokeWidth={iconStroke}
         />
       ) : (

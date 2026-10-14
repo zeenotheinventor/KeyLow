@@ -1,11 +1,13 @@
 import { fontFamily, preset, themePlugin } from "@keylow/tokens";
 
+import { matchDeviceTheme } from "./lib/theme/matchDeviceTheme";
+
 import type { Config } from "tailwindcss";
 
 const config: Config = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
   presets: [preset],
-  plugins: [themePlugin],
+  plugins: [themePlugin, matchDeviceTheme],
   theme: {
     extend: {
       // next/font names the loaded Geist behind --font-geist, so it goes first. The design's own

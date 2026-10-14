@@ -59,6 +59,8 @@ export const WithSeeMore: Story = {
   },
 };
 
+export const CompactHeader: Story = { args: { title: "Food", headerSize: "compact" } };
+
 export const WithNotice: Story = {
   args: {
     title: "From Open Food Facts",

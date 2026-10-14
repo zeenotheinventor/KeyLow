@@ -57,6 +57,33 @@ describe("GroupedList", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
   });
 
+  describe("header size", () => {
+    // The header is the heading's wrapper. Its 32 px minimum is the room the See more button needs.
+    function headerOf(title: string) {
+      return screen.getByRole("heading", { level: 2, name: title }).parentElement;
+    }
+
+    it("should hold the header at 32 px by default", () => {
+      render(
+        <GroupedList title="Common foods">
+          <ListRow title="Apples" />
+        </GroupedList>,
+      );
+
+      expect(headerOf("Common foods")?.className).toContain("min-h-[32px]");
+    });
+
+    it("should let a compact header fall to the height of its heading", () => {
+      render(
+        <GroupedList title="Food" headerSize="compact">
+          <ListRow title="Apples" />
+        </GroupedList>,
+      );
+
+      expect(headerOf("Food")?.className).not.toContain("min-h-[32px]");
+    });
+  });
+
   describe("see more", () => {
     it("should offer to show the rows that are hidden", () => {
       const onClick = vi.fn();

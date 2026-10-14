@@ -6,7 +6,7 @@ import { renderWithRouter } from "./appRouter";
 
 import { Banner } from "@/components/ui/Banner";
 
-const lightTextRule = "[[data-theme=light]_&]:text-text-primary";
+const lightTextRule = "light-theme:text-text-primary";
 
 describe("Banner", () => {
   afterEach(() => {

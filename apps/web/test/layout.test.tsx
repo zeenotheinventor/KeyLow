@@ -43,6 +43,14 @@ describe("RootLayout", () => {
     expect(page.documentElement.dataset["theme"]).toBe("light");
   });
 
+  it("should render device, on the server, when the cookie says to match the device", async () => {
+    cookieValue.mockReturnValue("device");
+
+    const page = await renderedPage();
+
+    expect(page.documentElement.dataset["theme"]).toBe("device");
+  });
+
   it("should render dark when the cookie holds a value it does not know", async () => {
     cookieValue.mockReturnValue("sepia");
 

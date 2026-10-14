@@ -101,6 +101,7 @@ export const storyManifest = {
     "Default",
     "WithSource",
     "WithSeeMore",
+    "CompactHeader",
     "WithNotice",
     "SingleRow",
   ],
