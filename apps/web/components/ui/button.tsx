@@ -4,11 +4,12 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-// Heights are the design's control heights (36 dense web only, 44, 52). The overlay is a pseudo
+// Heights are the design's control heights (36 dense web only, 44, 52). A leading icon is 20 px as
+// the boards draw it, and 16 px in the dense size. The overlay is a pseudo
 // element so hover and press tint the variant's own fill. The press scale and the spinner both
 // have a prefers-reduced-motion fallback.
 const buttonVariants = cva(
-  "relative inline-flex min-w-[44px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-[0.96] active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "relative inline-flex min-w-[44px] shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-[0.96] active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -22,10 +23,10 @@ const buttonVariants = cva(
         outline: "border-border bg-surface-raised text-text-primary",
       },
       size: {
-        sm: "h-[36px] px-3",
-        md: "h-[44px] px-4",
-        lg: "h-[52px] px-5",
-        default: "h-[44px] px-4",
+        sm: "h-[36px] px-3 [&_svg]:size-4",
+        md: "h-[44px] px-4 [&_svg]:size-5",
+        lg: "h-[52px] px-5 [&_svg]:size-5",
+        default: "h-[44px] px-4 [&_svg]:size-5",
       },
       iconOnly: {
         true: "px-0",

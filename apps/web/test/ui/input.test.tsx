@@ -160,4 +160,48 @@ describe("TextField", () => {
 
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty("value", "Greek yoghurt");
   });
+
+  describe("label hint", () => {
+    it("should show the hint beside the label", () => {
+      render(<TextField label="Name" labelHint="Required" />);
+
+      expect(screen.getByText("Required")).toBeTruthy();
+    });
+
+    it("should leave the hint out of the label's name", () => {
+      render(<TextField label="Name" labelHint="Required" />);
+
+      expect(screen.getByRole("textbox", { name: "Name" })).toBeTruthy();
+    });
+
+    it("should describe the input with the hint", () => {
+      render(<TextField label="Name" labelHint="Required" />);
+
+      expect(describedText(screen.getByRole("textbox", { name: "Name" }))).toBe("Required");
+    });
+
+    it("should describe the input with the hint and then the helper", () => {
+      render(<TextField label="Name" labelHint="Required" helper="As it appears on the pack" />);
+
+      expect(describedText(screen.getByRole("textbox", { name: "Name" }))).toBe(
+        "Required As it appears on the pack",
+      );
+    });
+
+    it("should describe the input with the hint and then the error", () => {
+      render(<TextField label="Name" labelHint="Required" error="Name is required" />);
+
+      expect(describedText(screen.getByRole("textbox", { name: "Name" }))).toBe(
+        "Required Name is required",
+      );
+    });
+
+    it.each(["", "   "])("should treat a hint of %j as no hint", (labelHint) => {
+      render(<TextField label="Name" labelHint={labelHint} />);
+
+      expect(
+        screen.getByRole("textbox", { name: "Name" }).getAttribute("aria-describedby"),
+      ).toBeNull();
+    });
+  });
 });

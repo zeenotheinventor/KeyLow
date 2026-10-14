@@ -137,6 +137,22 @@ describe("Button", () => {
     });
   });
 
+  describe("leading icon", () => {
+    it.each(["md", "lg", "default"] as const)("should be 20 px in the %s size", (size) => {
+      const classes = buttonVariants({ size });
+
+      expect(classes).toContain("[&_svg]:size-5");
+      expect(classes).not.toContain("[&_svg]:size-4");
+    });
+
+    it("should stay 16 px in the dense small size", () => {
+      const classes = buttonVariants({ size: "sm" });
+
+      expect(classes).toContain("[&_svg]:size-4");
+      expect(classes).not.toContain("[&_svg]:size-5");
+    });
+  });
+
   describe("className", () => {
     it("should let a screen override the height without a clash", () => {
       render(<Button className="h-11">Add entry</Button>);
