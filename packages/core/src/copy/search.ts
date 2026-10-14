@@ -74,3 +74,6 @@ export const ADD_PRODUCT_FAILED = {
   title: "This product could not be added",
   body: "Check your connection and try again.",
 };
+
+/** The title of the failed add notice when Open Food Facts no longer has the product. It has no body. */
+export const ADD_PRODUCT_NOT_FOUND = "Open Food Facts no longer has this product.";

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADD_PRODUCT_FAILED,
+  ADD_PRODUCT_NOT_FOUND,
   OPEN_FOOD_FACTS_BUSY,
   OPEN_FOOD_FACTS_SEARCH_FAILED,
   SEARCH_EMPTY,
@@ -100,5 +101,11 @@ describe("search sheet sentences", () => {
       title: "This product could not be added",
       body: "Check your connection and try again.",
     });
+  });
+});
+
+describe("add product not found", () => {
+  it("should pin the title the add-product-error board draws when the product is gone", () => {
+    expect(ADD_PRODUCT_NOT_FOUND).toBe("Open Food Facts no longer has this product.");
   });
 });

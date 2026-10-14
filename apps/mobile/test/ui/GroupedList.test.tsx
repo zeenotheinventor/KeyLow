@@ -1,6 +1,6 @@
 import { elevation } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { GroupedList, ListRow } from "../../components/ui";
@@ -87,6 +87,20 @@ describe("GroupedList", () => {
       expect(screen.queryByText(/UK CoFID/)).not.toBeOnTheScreen();
     });
 
+    it("should let the heading wrap, so See more stays on the screen at large text", async () => {
+      await renderList({ seeMore: { hiddenCount: 8, onPress: () => undefined } });
+
+      // The title shrinks and wraps when the row is short of room, and See more keeps its width.
+      expect(screen.getByRole("heading", { name: "Common foods · UK CoFID" })).toHaveStyle({
+        flexShrink: 1,
+      });
+      expect(
+        screen.getByRole("button", { name: "See 8 more in Common foods" }).parent,
+      ).not.toHaveStyle({
+        flexShrink: 1,
+      });
+    });
+
     it("should hold its rows in a list named by the title", async () => {
       await renderList();
 
@@ -94,6 +108,26 @@ describe("GroupedList", () => {
       const list = screen.getByLabelText("Common foods");
       expect(list).toHaveProp("role", "list");
       expect(within(list).getAllByRole("button")).toHaveLength(3);
+    });
+
+    it("should show a notice between the heading and the card, outside the list", async () => {
+      await renderList({ notice: <Text>Something to know</Text> });
+
+      const notice = screen.getByText("Something to know");
+      const list = screen.getByLabelText("Common foods");
+      expect(within(list).queryByText("Something to know")).not.toBeOnTheScreen();
+      // The notice sits in the group's column, after the heading and before the card.
+      const column = list.parent;
+      const children = column?.children ?? [];
+      const noticeIndex = children.indexOf(notice);
+      expect(noticeIndex).toBe(1);
+      expect(children.indexOf(list)).toBe(2);
+    });
+
+    it("should draw no notice when none is given", async () => {
+      await renderList();
+
+      expect(screen.getByLabelText("Common foods").parent?.children).toHaveLength(2);
     });
   });
 

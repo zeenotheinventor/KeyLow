@@ -8,8 +8,32 @@ import type { FunctionInvokeOptions, SupabaseClient } from "@supabase/supabase-j
 
 const RATE_LIMITED_STATUS = 429;
 
+// What this file reads of a response. React Native's fetch answers with its own class, so a response
+// is recognised by what it can do and never by `instanceof Response`.
+type HttpResponse = {
+  status: number;
+  headers: { get: (name: string) => string | null };
+  clone: () => { json: () => Promise<unknown> };
+};
+
+function isHttpResponse(value: unknown): value is HttpResponse {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "status" in value &&
+    typeof value.status === "number" &&
+    "headers" in value &&
+    typeof value.headers === "object" &&
+    value.headers !== null &&
+    "get" in value.headers &&
+    typeof value.headers.get === "function" &&
+    "clone" in value &&
+    typeof value.clone === "function"
+  );
+}
+
 /** The body of an error response as a typed edge error, or undefined when it is anything else. */
-async function readEdgeError(response: Response) {
+async function readEdgeError(response: HttpResponse) {
   try {
     // A clone, so the original response stays readable for whoever inspects the cause.
     const parsed = edgeErrorSchema.safeParse(await response.clone().json());
@@ -19,7 +43,7 @@ async function readEdgeError(response: Response) {
   }
 }
 
-const parseRetryAfterHeader = (response: Response) => {
+const parseRetryAfterHeader = (response: HttpResponse) => {
   const seconds = Number.parseInt(response.headers.get("Retry-After") ?? "", 10);
   return Number.isInteger(seconds) && seconds > 0 ? seconds : undefined;
 };
@@ -30,7 +54,7 @@ const parseRetryAfterHeader = (response: Response) => {
  * supabase-js puts the `Response` of a non-2xx answer in `error.context`.
  */
 async function toInvocationError(name: string, failure: unknown): Promise<Error> {
-  if (failure instanceof FunctionsHttpError && failure.context instanceof Response) {
+  if (failure instanceof FunctionsHttpError && isHttpResponse(failure.context)) {
     const response = failure.context;
     const edgeError = await readEdgeError(response);
 

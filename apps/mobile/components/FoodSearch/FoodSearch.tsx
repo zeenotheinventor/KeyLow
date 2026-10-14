@@ -1,158 +1,75 @@
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
+import { vars } from "nativewind";
+import { useState } from "react";
+import { ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { describeEnergy } from "./describeEnergy";
-import { describeRateLimit } from "./describeRateLimit";
-import { FoodRow } from "./FoodRow";
-import { LoadingStatus } from "./LoadingStatus";
-import { foodSourceLabel } from "../../lib/foodSourceLabel";
+import { OwnFoodResults } from "./OwnFoodResults";
+import { SearchResults } from "./SearchResults";
+import { IconButton, SearchField, SheetHeader } from "../ui";
 
 import type { FoodSearchProps } from "./types";
-import type { FoodSearchOffError } from "@keylow/api-client";
 
-const MIN_QUERY_LENGTH = 2;
+const WORDING = {
+  all: { title: "Find food", autoFocus: true },
+  own: { title: SEARCH_GROUP_HEADINGS.yours.title, autoFocus: false },
+} as const;
 
-function describeOffError(error: FoodSearchOffError): string {
-  return error.kind === "rate_limited"
-    ? describeRateLimit(error.retryAfterSeconds)
-    : "Open Food Facts could not be searched right now.";
-}
-
+/**
+ * The full-screen food search sheet: a header with close and create, the results scrolling above a
+ * search field docked at the bottom, and the field's scan control. For `scope="own"` it is titled
+ * "Your foods" and lists the user's own foods, and the cursor stays out of the field because the list
+ * is what the user came for.
+ */
 export function FoodSearch({
-  query,
-  searchedQuery,
-  onQueryChange,
-  results,
-  pendingCandidateCode,
-  candidateError,
-  onSelectFood,
-  onSelectCandidate,
+  scope = "all",
+  onClose,
   onCreateFood,
   onScanBarcode,
+  onOpenFood,
 }: FoodSearchProps) {
-  const { local, off, isLoadingLocal, isLoadingOff, offError, localError } = results;
-  const isSearchable = searchedQuery.length >= MIN_QUERY_LENGTH;
-  const isAddingProduct = pendingCandidateCode !== undefined;
-  const isEmpty =
-    !isLoadingLocal &&
-    !isLoadingOff &&
-    localError === null &&
-    local.length === 0 &&
-    off.length === 0;
+  const { title, autoFocus } = WORDING[scope];
+  const insets = useSafeAreaInsets();
+  const [query, setQuery] = useState("");
 
   return (
-    <View className="flex-1 bg-legacy-neutral-50">
-      <View className="gap-3 px-6 pb-2 pt-4">
-        <TextInput
-          accessibilityLabel="Search foods"
-          accessibilityRole="search"
-          placeholder="Name or brand"
-          returnKeyType="search"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={query}
-          onChangeText={onQueryChange}
-          className="h-12 rounded-lg border border-legacy-neutral-300 bg-legacy-neutral-50 px-4 text-base text-legacy-neutral-900"
-        />
-        <View className="flex-row gap-2">
-          <Pressable
-            accessibilityRole="button"
-            onPress={onCreateFood}
-            className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300 px-4"
-          >
-            <Text className="text-base font-semibold text-legacy-neutral-900">Create a food</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            onPress={onScanBarcode}
-            className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300 px-4"
-          >
-            <Text className="text-base font-semibold text-legacy-neutral-900">Scan barcode</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-4 px-6 py-4">
-        {isSearchable ? null : (
-          <Text className="text-base text-legacy-neutral-500">
-            Type at least 2 characters to search
-          </Text>
+    // The insets are runtime values no class can name, so they go through variables, as the field's lift does.
+    <View
+      className="flex-1 bg-background pb-[var(--inset-bottom)] pt-[var(--inset-top)]"
+      style={vars({ "--inset-top": insets.top, "--inset-bottom": insets.bottom })}
+    >
+      <SheetHeader
+        leading={{ icon: "X", label: "Close", onPress: onClose }}
+        title={title}
+        trailing={{ icon: "Plus", label: "Create a food", onPress: onCreateFood }}
+      />
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="grow gap-4 px-4 pb-4 pt-1"
+        keyboardShouldPersistTaps="handled"
+      >
+        {scope === "own" ? (
+          <OwnFoodResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
+        ) : (
+          <SearchResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
         )}
-
-        {isSearchable && localError !== null ? (
-          <Text accessibilityRole="alert" className="text-base text-legacy-danger-600">
-            Your foods could not be searched. Check your connection and try again.
-          </Text>
-        ) : null}
-        {isSearchable && isLoadingLocal ? <LoadingStatus label="Searching your foods" /> : null}
-        {isSearchable && local.length > 0 ? (
-          <View accessibilityRole="list" accessibilityLabel="Matching foods" className="gap-2">
-            {local.map((food) => (
-              <FoodRow
-                key={food.id}
-                name={food.name}
-                brand={food.brand}
-                sourceLabel={foodSourceLabel(food.source)}
-                energyText={describeEnergy(food.kcal, food.basis)}
-                onPress={() => {
-                  onSelectFood(food.id);
-                }}
-              />
-            ))}
-          </View>
-        ) : null}
-
-        {isSearchable && isLoadingOff ? <LoadingStatus label="Searching Open Food Facts" /> : null}
-        {isSearchable && offError !== null ? (
-          <Text accessibilityRole="alert" className="text-base text-legacy-neutral-700">
-            {describeOffError(offError)}
-          </Text>
-        ) : null}
-        {isSearchable && off.length > 0 ? (
-          <View className="gap-2">
-            <Text
-              accessibilityRole="header"
-              className="text-lg font-semibold text-legacy-neutral-900"
-            >
-              From Open Food Facts
-            </Text>
-            {candidateError === undefined ? null : (
-              <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
-                {candidateError}
-              </Text>
-            )}
-            <View
-              accessibilityRole="list"
-              accessibilityLabel="Open Food Facts results"
-              className="gap-2"
-            >
-              {off.map((candidate) => (
-                <FoodRow
-                  key={candidate.code}
-                  name={candidate.name}
-                  brand={candidate.brand}
-                  energyText={describeEnergy(candidate.kcal, candidate.basis)}
-                  isDisabled={isAddingProduct}
-                  {...(pendingCandidateCode === candidate.code
-                    ? { statusText: "Adding to your foods" }
-                    : {})}
-                  onPress={() => {
-                    onSelectCandidate(candidate.code);
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        ) : null}
-
-        {isSearchable && isEmpty ? (
-          <View className="gap-1">
-            <Text className="text-lg font-semibold text-legacy-neutral-900">No foods found</Text>
-            <Text className="text-base text-legacy-neutral-500">
-              Try other words, or create the food yourself.
-            </Text>
-          </View>
-        ) : null}
       </ScrollView>
+      <SearchField
+        autoFocus={autoFocus}
+        label="Search foods"
+        placeholder="Search for a food"
+        trailing={
+          <IconButton
+            icon="ScanBarcode"
+            label="Scan barcode"
+            size="sm"
+            variant="ghost"
+            onPress={onScanBarcode}
+          />
+        }
+        value={query}
+        onChangeText={setQuery}
+      />
     </View>
   );
 }

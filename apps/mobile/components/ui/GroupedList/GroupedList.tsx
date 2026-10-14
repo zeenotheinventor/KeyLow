@@ -28,16 +28,18 @@ function flattenRows(children: ReactNode, parentKey = ""): Row[] {
 
 /**
  * A titled group of rows on a card, with the group's source beside the title and, when the group has
- * more rows than it shows, a "See N more" button. The card is the design system's `Card`, drawn here
+ * more rows than it shows, a "See N more" button. A notice about the group, such as a failed add, sits
+ * between the heading and the card. The card is the design system's `Card`, drawn here
  * because the mobile kit has none yet.
  */
-export function GroupedList({ title, source, seeMore, children }: GroupedListProps) {
+export function GroupedList({ title, source, seeMore, notice, children }: GroupedListProps) {
   const rows = flattenRows(children);
 
   return (
     <View className="gap-2">
+      {/* The title shrinks and wraps at large text, so See more is never pushed off the edge. */}
       <View className="min-h-[32px] flex-row items-center justify-between gap-2 px-1">
-        <Text role="heading" variant="body-strong">
+        <Text className="shrink" role="heading" variant="body-strong">
           {title}
           {source === undefined ? null : (
             <Text tone="muted" variant="caption">
@@ -53,6 +55,7 @@ export function GroupedList({ title, source, seeMore, children }: GroupedListPro
           />
         )}
       </View>
+      {notice}
       <View
         aria-label={title}
         className="overflow-hidden rounded-large border border-border bg-surface elevation-card"
