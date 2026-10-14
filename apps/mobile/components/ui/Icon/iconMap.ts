@@ -1,6 +1,8 @@
 import {
   Apple,
   BookOpen,
+  Camera,
+  CameraOff,
   ChefHat,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +15,7 @@ import {
   LoaderCircle,
   Lock,
   Plus,
+  RefreshCcw,
   RotateCw,
   ScanBarcode,
   Search,
@@ -30,6 +33,8 @@ import {
 export const iconMap = {
   Apple,
   BookOpen,
+  Camera,
+  CameraOff,
   ChefHat,
   ChevronLeft,
   ChevronRight,
@@ -42,6 +47,7 @@ export const iconMap = {
   LoaderCircle,
   Lock,
   Plus,
+  RefreshCcw,
   RotateCw,
   ScanBarcode,
   Search,

@@ -1,7 +1,10 @@
 import { useFoodByBarcode } from "@keylow/api-client";
+import { BARCODE_SCAN } from "@keylow/core/copy";
 import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
+import { vars } from "nativewind";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   BarcodeScanner,
@@ -9,6 +12,8 @@ import {
   toScanOutcome,
   useBarcodeScan,
 } from "../../components/BarcodeScanner";
+import { SheetHeader } from "../../components/ui";
+import { useCloseFoodsSheet } from "../../lib/navigation";
 
 import type { UseFoodByBarcodeOptions } from "@keylow/api-client";
 
@@ -16,6 +21,8 @@ const noLookup: UseFoodByBarcodeOptions = { enabled: false };
 
 export default function ScanRoute() {
   const router = useRouter();
+  const closeSheet = useCloseFoodsSheet();
+  const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { scan, handleBarcodeScanned, clearScan } = useBarcodeScan(isFocused);
   const lookup = useFoodByBarcode(
@@ -49,7 +56,7 @@ export default function ScanRoute() {
     }, [clearScan]),
   );
 
-  function cancel() {
+  function goBack() {
     if (router.canGoBack()) {
       router.back();
     } else {
@@ -58,9 +65,21 @@ export default function ScanRoute() {
   }
 
   return (
-    <View className="flex-1 bg-legacy-neutral-50">
+    // The insets are runtime values no class can name, so they go through variables, as the search sheet's
+    // do. The camera's hint and the result's actions read the bottom one.
+    <View
+      className="flex-1 bg-background pt-[var(--inset-top)]"
+      style={vars({ "--inset-top": insets.top, "--inset-bottom": insets.bottom })}
+    >
+      <SheetHeader
+        leading={{ icon: "ChevronLeft", label: BARCODE_SCAN.backLabel, onPress: goBack }}
+        title={BARCODE_SCAN.title}
+        trailing={{ icon: "X", label: BARCODE_SCAN.closeLabel, onPress: closeSheet }}
+        variant="stack"
+      />
       {scan === undefined ? null : (
         <ScanResult
+          code={scan.rawCode}
           outcome={toScanOutcome(lookup)}
           onScanAgain={clearScan}
           onCreateFood={(code) => {
@@ -71,7 +90,6 @@ export default function ScanRoute() {
       <BarcodeScanner
         isActive={scan === undefined && isFocused}
         onBarcodeScanned={handleBarcodeScanned}
-        onCancel={cancel}
       />
     </View>
   );
