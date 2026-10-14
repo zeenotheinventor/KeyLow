@@ -318,6 +318,14 @@ This runs `expo start --dev-client`. Metro serves on port 8081 and listens on th
 pnpm --filter @keylow/mobile start --clear
 ```
 
+To update and start in one go, run this from the repo root:
+
+```sh
+pnpm mobile:dev
+```
+
+It pulls the current branch, runs `pnpm install`, and starts Metro with a clean cache. It stops before starting Metro if the pull cannot fast-forward (your branch has diverged) or would overwrite a file you have edited and not committed. pnpm runs under whichever Node your shell found, so run `source ~/.nvm/nvm.sh && nvm alias default 22` once if new terminals do not start on Node 22.
+
 ### Get a development client onto the phone
 
 **Device step, not run by the author of this runbook.** The repo is not ready for it yet, so read this part as the plan:
