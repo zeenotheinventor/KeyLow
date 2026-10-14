@@ -17,9 +17,10 @@ module.exports = {
   // transform. Node's own resolution picks the CommonJS build, which needs no transform.
   moduleNameMapper: { "^lucide-react-native$": require.resolve("lucide-react-native") },
   // Workspace packages ship TypeScript source, so Jest must transform them like app code. Storybook
-  // ships ES modules only, so it is transformed too.
+  // ships ES modules only, so it is transformed too. So do Victory and its d3 packages. Skia is
+  // mocked for every test, and is listed for a test that takes the real one (see skiaMock.ts).
   transformIgnorePatterns: [
-    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@keylow/.*|storybook|@storybook/.*|standard-navigation|@shopify/react-native-skia|victory-native|d3-[^/]*|internmap|@kingstinct/.*|react-native-health-connect|react-native-nitro-modules)",
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@keylow/.*|storybook|@storybook/.*|standard-navigation|@shopify/react-native-skia|victory-native|d3-[^/]*|internmap)",
     // Already plain CommonJS, so Babel would only slow the cold start. These are the biggest files the
     // first render loads: the React Native renderer and the web streams polyfill from Expo.
     "node_modules/react-native/Libraries/Renderer/implementations/",

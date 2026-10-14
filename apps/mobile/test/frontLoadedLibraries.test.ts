@@ -1,7 +1,9 @@
 // These native libraries ship in the main app's first build so a later milestone does not need a
 // new APK to start using them (charts and health data in M5 and M7, feature flag support later). No
 // screen imports them yet. Importing each one here keeps the Jest setup honest: the day a screen
-// does, its tests start from modules that load without native code.
+// does, its tests start from modules that load without native code. Skia is mocked for every test
+// (test/support/skiaMock.ts), so its case only proves that the Victory import chain, which sits on
+// top of it, loads.
 describe("native libraries that ship before their milestones", () => {
   it.each([
     "@shopify/react-native-skia",
