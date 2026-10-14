@@ -57,6 +57,20 @@ export const WithIcon: Story = {
   },
 };
 
+// The icon is 20 px in the 44 and 52 sizes and 16 px in the dense 36 size.
+export const SmallWithIcon: Story = {
+  args: {
+    variant: "secondary",
+    size: "sm",
+    children: (
+      <>
+        <Plus aria-hidden />
+        Add portion
+      </>
+    ),
+  },
+};
+
 export const IconOnly: Story = {
   args: {
     variant: "secondary",

@@ -1,0 +1,73 @@
+import { GroupedList } from "./GroupedList";
+
+import type { Meta, StoryObj } from "@storybook/nextjs";
+
+import { ListRow } from "@/components/ui/ListRow";
+
+const meta = {
+  title: "UI/GroupedList",
+  component: GroupedList,
+  args: {
+    title: "Food",
+    children: [
+      <ListRow
+        key="foods"
+        title="Your foods"
+        subtitle="Foods you created or copied"
+        href="/foods"
+      />,
+      <ListRow
+        key="weight"
+        title="Weight"
+        subtitle="Coming soon"
+        onClick={() => undefined}
+        disabled
+        chevron={false}
+      />,
+      <ListRow
+        key="out"
+        title="Sign out"
+        subtitle="sam.taylor@example.com"
+        onClick={() => undefined}
+        chevron={false}
+      />,
+    ],
+  },
+  decorators: [
+    (Story) => (
+      <div className="max-w-xl p-6">
+        <Story />
+      </div>
+    ),
+  ],
+} satisfies Meta<typeof GroupedList>;
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+export const Default: Story = {};
+
+export const WithSource: Story = { args: { title: "Common foods", source: "UK CoFID" } };
+
+export const WithSeeMore: Story = {
+  args: {
+    title: "Common foods",
+    source: "UK CoFID",
+    seeMore: { hiddenCount: 2, onClick: () => undefined },
+  },
+};
+
+export const SingleRow: Story = {
+  args: {
+    title: "Account",
+    children: (
+      <ListRow
+        title="Sign out"
+        subtitle="sam.taylor@example.com"
+        onClick={() => undefined}
+        chevron={false}
+      />
+    ),
+  },
+};

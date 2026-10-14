@@ -19,4 +19,15 @@ describe("cn", () => {
   it("should let a later type style replace an earlier one", () => {
     expect(cn("text-body", "text-caption")).toBe("text-caption");
   });
+
+  it.each(["small", "medium", "large", "pill"])(
+    "should let a later rounded-%s replace an earlier radius",
+    (radius) => {
+      expect(cn("rounded-small", `rounded-${radius}`)).toBe(`rounded-${radius}`);
+    },
+  );
+
+  it("should keep a radius next to a border colour", () => {
+    expect(cn("rounded-large", "border-border")).toBe("rounded-large border-border");
+  });
 });

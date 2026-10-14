@@ -27,6 +27,9 @@ export const Filled: Story = { args: { defaultValue: "Greek yoghurt" } };
 
 export const WithHelper: Story = { args: { helper: "As it appears on the pack" } };
 
+// The hint sits beside the label and is read as part of the field's description.
+export const WithLabelHint: Story = { args: { labelHint: "Required" } };
+
 // Focus is real: the play function tabs onto the field, so the accent border and ring show.
 export const Focused: Story = {
   play: async () => {

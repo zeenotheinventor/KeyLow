@@ -4,13 +4,35 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import * as badgeStories from "@/components/ui/Badge/Badge.stories";
+import * as bannerStories from "@/components/ui/Banner/Banner.stories";
 import * as buttonStories from "@/components/ui/button.stories";
 import * as cardStories from "@/components/ui/card.stories";
+import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
+import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
+import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
+import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
+import * as groupedListStories from "@/components/ui/GroupedList/GroupedList.stories";
 import * as inputStories from "@/components/ui/input.stories";
+import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
+import * as numericInputStories from "@/components/ui/NumericInput/NumericInput.stories";
+import * as nutrientTableStories from "@/components/ui/NutrientTable/NutrientTable.stories";
 import * as searchFieldStories from "@/components/ui/SearchField/SearchField.stories";
+import * as segmentedControlStories from "@/components/ui/SegmentedControl/SegmentedControl.stories";
+import * as skeletonStories from "@/components/ui/Skeleton/Skeleton.stories";
 import { storyManifest } from "@/components/ui/storyManifest";
 
 const storyModules: Record<string, object> = {
+  "Banner/Banner.stories.tsx": bannerStories,
+  "Checkbox/Checkbox.stories.tsx": checkboxStories,
+  "EmptyState/EmptyState.stories.tsx": emptyStateStories,
+  "ErrorState/ErrorState.stories.tsx": errorStateStories,
+  "FoodRow/FoodRow.stories.tsx": foodRowStories,
+  "GroupedList/GroupedList.stories.tsx": groupedListStories,
+  "ListRow/ListRow.stories.tsx": listRowStories,
+  "NumericInput/NumericInput.stories.tsx": numericInputStories,
+  "NutrientTable/NutrientTable.stories.tsx": nutrientTableStories,
+  "SegmentedControl/SegmentedControl.stories.tsx": segmentedControlStories,
+  "Skeleton/Skeleton.stories.tsx": skeletonStories,
   "Badge/Badge.stories.tsx": badgeStories,
   "button.stories.tsx": buttonStories,
   "card.stories.tsx": cardStories,
