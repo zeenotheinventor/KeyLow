@@ -21,24 +21,24 @@ describe("auth callback route", () => {
     mockSupabaseClient.auth.verifyOtp.mockResolvedValue({ data: {}, error: null });
   });
 
-  it("should exchange the PKCE code for a session and go to the diary", async () => {
+  it("should exchange the PKCE code for a session and go to the dashboard", async () => {
     routerMock.searchParams = { code: "pkce-code" };
 
     await render(<CallbackRoute />);
 
     await waitFor(() => {
-      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/diary");
+      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
     });
     expect(mockSupabaseClient.auth.exchangeCodeForSession).toHaveBeenCalledWith("pkce-code");
   });
 
-  it("should verify a token hash link and go to the diary", async () => {
+  it("should verify a token hash link and go to the dashboard", async () => {
     routerMock.searchParams = { token_hash: "hash", type: "email" };
 
     await render(<CallbackRoute />);
 
     await waitFor(() => {
-      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/diary");
+      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
     });
     expect(mockSupabaseClient.auth.verifyOtp).toHaveBeenCalledWith({
       token_hash: "hash",

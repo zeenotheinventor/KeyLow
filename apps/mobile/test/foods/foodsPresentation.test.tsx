@@ -7,7 +7,9 @@ import { Text } from "react-native";
 import { resetApiClientMock } from "./support/apiClientMock";
 import { resetSearchApiClientMock } from "./support/searchApiClientMock";
 import TabsLayout from "../../app/(tabs)/_layout";
+import DashboardRoute from "../../app/(tabs)/dashboard";
 import DiaryRoute from "../../app/(tabs)/diary";
+import MoreRoute from "../../app/(tabs)/more";
 import RootLayout from "../../app/_layout";
 import FoodsLayout from "../../app/foods/_layout";
 import FoodSearchRoute from "../../app/foods/index";
@@ -64,7 +66,9 @@ const standIn = (text: string) =>
 const routes = {
   _layout: RootLayout,
   "(tabs)/_layout": TabsLayout,
+  "(tabs)/dashboard": DashboardRoute,
   "(tabs)/diary": DiaryRoute,
+  "(tabs)/more": MoreRoute,
   "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/weight": standIn("Weight screen"),
   "(tabs)/settings": standIn("Settings screen"),
@@ -143,7 +147,7 @@ describe("the food search sheet as a route", () => {
       ]);
     });
 
-    it("should open from the Find food button on the diary", async () => {
+    it("should open from the centre plus on the diary", async () => {
       const user = userEvent.setup();
       await renderApp("/diary");
 
@@ -163,15 +167,16 @@ describe("the food search sheet as a route", () => {
     it("should draw the status bar for the dark scheme within the sheet's stack", async () => {
       await openSheetFrom("/diary");
 
-      // Dark content colours would vanish on the dark sheet, so the bar is light.
-      expect(screen.getByText("Status bar light")).toBeOnTheScreen();
+      // Dark content colours would vanish on the dark sheet, so the bar is light, in the root and in the sheet.
+      expect(await screen.findAllByText("Status bar light")).toHaveLength(2);
+      expect(screen.queryByText("Status bar dark")).not.toBeOnTheScreen();
     });
 
     it("should draw the status bar for the light scheme with dark content", async () => {
       mockStoredPreference = "light";
       await openSheetFrom("/diary");
 
-      // The root's bar, which is dark until the tab shell lands, and the sheet's own.
+      // The root's bar and the sheet's own.
       expect(await screen.findAllByText("Status bar dark")).toHaveLength(2);
       expect(screen.queryByText("Status bar light")).not.toBeOnTheScreen();
     });

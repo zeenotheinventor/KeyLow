@@ -131,14 +131,14 @@ describe("food search sheet", () => {
       expect(routerMock.replace).not.toHaveBeenCalled();
     });
 
-    it("should go to the diary when the sheet was opened with nowhere to go back to", async () => {
+    it("should go to the dashboard when the sheet was opened with nowhere to go back to", async () => {
       routerMock.canGoBack.mockReturnValue(false);
       const user = await renderSearch("");
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
       expect(routerMock.back).not.toHaveBeenCalled();
-      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/diary");
+      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
     });
 
     it("should offer to create a food before anything is typed and alongside results", async () => {

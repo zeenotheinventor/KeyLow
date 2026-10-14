@@ -2,9 +2,14 @@ import { render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import { AuthGate } from "../../components/AuthGate";
+import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { fakeSession, mockSupabaseClient, resetSupabaseMock } from "../support/supabaseMock";
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("../support/expoRouterMock").mockExpoRouter,
@@ -16,9 +21,11 @@ jest.mock("../../lib/supabase", () => ({
 
 async function renderGate() {
   await render(
-    <AuthGate>
-      <Text>Food screen</Text>
-    </AuthGate>,
+    <ThemeProvider fixedPreference="dark">
+      <AuthGate>
+        <Text>Food screen</Text>
+      </AuthGate>
+    </ThemeProvider>,
   );
 }
 

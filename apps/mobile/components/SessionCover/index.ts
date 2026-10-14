@@ -1,0 +1,1 @@
+export { SessionCover } from "./SessionCover";

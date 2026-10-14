@@ -11,9 +11,9 @@ jest.mock(
 describe("index route", () => {
   beforeEach(resetRouterMock);
 
-  it("should redirect to the diary tab", async () => {
+  it("should redirect to the dashboard tab", async () => {
     await render(<IndexRoute />);
 
-    expect(routerMock.redirect).toHaveBeenCalledWith("/(tabs)/diary");
+    expect(routerMock.redirect).toHaveBeenCalledWith("/(tabs)/dashboard");
   });
 });
