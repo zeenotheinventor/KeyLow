@@ -373,7 +373,7 @@ Storybook for React Native runs inside the dev client, on the real runtime, so a
 3. Open the deep link `keylow://storybook`. On Android, `adb shell am start -a android.intent.action.VIEW -d "keylow://storybook" com.sojisoft.keylow` does it, and on a phone you can type `keylow://storybook` into the browser. No sign-in is needed, because `AuthGate` lets the `storybook` route through while the flag is on.
 4. The bottom bar shows the story and opens the story list. The icon at its right opens the addons panel, whose **Theme** tab switches the story between **Dark** and **Light**. The on-device Storybook has no toolbar, so the switch is a panel. It runs through the app's own `ThemeProvider` with the scheme fixed, so a story takes the real theme path while your saved Appearance setting and the Storybook screens are left alone.
 
-Without `EXPO_PUBLIC_STORYBOOK=true`, `/storybook` redirects to the home route and `npx expo export` produces a bundle with no Storybook code. Check that with `npx expo export --platform android --no-bytecode --output-dir <dir>` and a search of the bundle for `SeedPressable` or `kilo/theme`, which only a Storybook build contains.
+Without `EXPO_PUBLIC_STORYBOOK=true`, `/storybook` redirects to the home route and `npx expo export` produces a bundle with no Storybook code. Check that with `npx expo export --platform android --no-bytecode --output-dir <dir>` and a search of the bundle for `UI/Button` or `kilo/theme`, which only a Storybook build contains.
 
 ### Checks that need no device
 
