@@ -1,8 +1,9 @@
+import { SIGN_IN_LINK_NOT_VERIFIED } from "@keylow/core/copy";
+
 import { LoginForm } from "./LoginForm";
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-
-const LINK_ERROR_MESSAGE = "We could not verify that link. Please try again.";
+import { Card } from "@/components/ui/card";
+import { KiLoMark } from "@/components/ui/KiLoMark";
 
 export default async function LoginPage({
   searchParams,
@@ -12,14 +13,13 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <h1 className="text-2xl font-semibold">Sign in to KeyLow</h1>
-        </CardHeader>
-        <CardContent>
-          <LoginForm linkError={error === undefined ? undefined : LINK_ERROR_MESSAGE} />
-        </CardContent>
+    <main className="flex min-h-dvh items-center justify-center px-4 py-6">
+      <Card padding="none" className="flex w-full max-w-md flex-col gap-4 p-6 sm:p-8">
+        <div className="mb-1 flex flex-col items-start gap-3">
+          <KiLoMark className="size-12" />
+          <h1 className="text-h1">Sign in to Ki-Lo</h1>
+        </div>
+        <LoginForm linkError={error === undefined ? undefined : SIGN_IN_LINK_NOT_VERIFIED} />
       </Card>
     </main>
   );

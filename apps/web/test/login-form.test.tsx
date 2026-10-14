@@ -1,3 +1,4 @@
+import { AuthRetryableFetchError } from "@supabase/supabase-js";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +19,9 @@ vi.mock("@/lib/supabase/client", () => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
 }));
+
+const SIGN_IN_REFUSED = "Email or password is not right. Check them and try again.";
+const GENERIC_ERROR = "Something went wrong. Try again.";
 
 function fillForm(email: string, password: string) {
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: email } });
@@ -41,6 +45,7 @@ describe("LoginForm", () => {
       fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
       expect(screen.getByText("Enter your email address")).toBeTruthy();
+      expect(screen.getByLabelText("Email").getAttribute("aria-invalid")).toBe("true");
       expect(signInWithPassword).not.toHaveBeenCalled();
     });
 
@@ -61,7 +66,22 @@ describe("LoginForm", () => {
       fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
       expect(screen.getByText("Enter your password")).toBeTruthy();
+      expect(screen.getByLabelText("Password").getAttribute("aria-invalid")).toBe("true");
       expect(signInWithPassword).not.toHaveBeenCalled();
+    });
+
+    it("should name each field error as the description of its field", () => {
+      render(<LoginForm />);
+      fillForm("", "");
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+      expect(screen.getByLabelText("Email").getAttribute("aria-describedby")).toBe(
+        screen.getByText("Enter your email address").id,
+      );
+      expect(screen.getByLabelText("Password").getAttribute("aria-describedby")).toBe(
+        screen.getByText("Enter your password").id,
+      );
     });
 
     it("should let a password shorter than 8 characters sign in", async () => {
@@ -109,18 +129,48 @@ describe("LoginForm", () => {
       expect(refresh).toHaveBeenCalled();
     });
 
-    it("should show the error message and stay on the page when sign-in fails", async () => {
+    it("should show the fixed sentence for refused credentials and stay on the page", async () => {
       signInWithPassword.mockResolvedValue({
         data: {},
-        error: { message: "Invalid login credentials" },
+        error: { message: "Invalid login credentials", code: "invalid_credentials" },
       });
       render(<LoginForm />);
       fillForm("ada@example.com", "password123");
 
       fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-      expect(await screen.findByText("Invalid login credentials")).toBeTruthy();
+      expect((await screen.findByRole("alert")).textContent).toBe(SIGN_IN_REFUSED);
+      expect(screen.queryByText("Invalid login credentials")).toBeNull();
       expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should never show a message the server sent that has no sentence of its own", async () => {
+      signInWithPassword.mockResolvedValue({
+        data: {},
+        error: { message: "pg timeout reading auth.users at 10.0.0.4", code: "unexpected_failure" },
+      });
+      render(<LoginForm />);
+      fillForm("ada@example.com", "password123");
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+      expect((await screen.findByRole("alert")).textContent).toBe(GENERIC_ERROR);
+      expect(document.body.textContent).not.toContain("10.0.0.4");
+    });
+
+    it("should say the server could not be reached when the request failed to send", async () => {
+      signInWithPassword.mockResolvedValue({
+        data: {},
+        error: new AuthRetryableFetchError("Failed to fetch", 0),
+      });
+      render(<LoginForm />);
+      fillForm("ada@example.com", "password123");
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "Ki-Lo could not reach the server. Check your connection and try again.",
+      );
     });
   });
 
@@ -143,32 +193,72 @@ describe("LoginForm", () => {
       expect(refresh).toHaveBeenCalled();
     });
 
-    it("should ask the user to confirm their email when no session is returned", async () => {
+    it("should tell the user to check their email, naming the address, when no session is returned", async () => {
       signUp.mockResolvedValue({ data: { session: null }, error: null });
       render(<LoginForm />);
       fillForm("ada@example.com", "password123");
 
       fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-      expect(await screen.findByText("Check your email to confirm your account")).toBeTruthy();
+      const notice = await screen.findByRole("status");
+      expect(notice.textContent).toBe(
+        "Check your emailOpen the confirmation link sent to ada@example.com to finish creating your account.",
+      );
       expect(push).not.toHaveBeenCalled();
     });
 
-    it("should show the error message when sign-up fails", async () => {
+    it("should show the fixed sentence when the account already exists", async () => {
       signUp.mockResolvedValue({
         data: { session: null },
-        error: { message: "User already registered" },
+        error: { message: "User already registered", code: "user_already_exists" },
       });
       render(<LoginForm />);
       fillForm("ada@example.com", "password123");
 
       fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
-      expect(await screen.findByText("User already registered")).toBeTruthy();
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        "An account with this email already exists. Sign in instead.",
+      );
+      expect(screen.queryByText("User already registered")).toBeNull();
+    });
+
+    it("should clear the check-your-email notice when signing in again", async () => {
+      signUp.mockResolvedValue({ data: { session: null }, error: null });
+      signInWithPassword.mockResolvedValue({
+        data: {},
+        error: { message: "Email not confirmed", code: "email_not_confirmed" },
+      });
+      render(<LoginForm />);
+      fillForm("ada@example.com", "password123");
+      fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+      await screen.findByRole("status");
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+      await screen.findByRole("alert");
+      expect(screen.queryByRole("status")).toBeNull();
     });
   });
 
   describe("pending state", () => {
+    it("should show a spinner on Sign in and disable the other two buttons", async () => {
+      signInWithPassword.mockReturnValue(new Promise(() => undefined));
+      render(<LoginForm />);
+      fillForm("ada@example.com", "password123");
+
+      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
+
+      const signingIn = await screen.findByRole("button", { name: "Signing in" });
+      expect(signingIn.getAttribute("aria-busy")).toBe("true");
+      expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
+        true,
+      );
+      expect(
+        screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
+      ).toBe(true);
+    });
+
     it("should enable the buttons again and show an error when the request throws", async () => {
       signInWithPassword.mockRejectedValue(new Error("network down"));
       render(<LoginForm />);
@@ -176,7 +266,7 @@ describe("LoginForm", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
-      expect(await screen.findByText("Something went wrong. Please try again.")).toBeTruthy();
+      expect((await screen.findByRole("alert")).textContent).toBe(GENERIC_ERROR);
       expect(screen.getByRole("button", { name: "Sign in" }).hasAttribute("disabled")).toBe(false);
       expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
         false,
@@ -191,7 +281,17 @@ describe("LoginForm", () => {
       const googleButton = screen.getByRole("button", { name: "Continue with Google" });
 
       expect(googleButton.hasAttribute("disabled")).toBe(false);
-      expect(screen.queryByText("Google sign-in is coming soon.")).toBeNull();
+    });
+
+    it("should carry the Google mark as a decorative image", () => {
+      render(<LoginForm />);
+
+      const mark = screen
+        .getByRole("button", { name: "Continue with Google" })
+        .querySelector("img");
+
+      expect(mark?.getAttribute("alt")).toBe("");
+      expect(mark?.getAttribute("src")).toContain("google-g.svg");
     });
 
     it("should start the Google OAuth flow with the callback route as the redirect", async () => {
@@ -209,7 +309,7 @@ describe("LoginForm", () => {
       });
     });
 
-    it("should show the error message when Google sign-in fails", async () => {
+    it("should show the generic sentence, not the server message, when Google sign-in fails", async () => {
       signInWithOAuth.mockResolvedValue({
         data: {},
         error: { message: "Unsupported provider: provider is not enabled" },
@@ -218,9 +318,7 @@ describe("LoginForm", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
 
-      expect((await screen.findByRole("alert")).textContent).toBe(
-        "Unsupported provider: provider is not enabled",
-      );
+      expect((await screen.findByRole("alert")).textContent).toBe(GENERIC_ERROR);
       expect(push).not.toHaveBeenCalled();
     });
 
@@ -230,11 +328,8 @@ describe("LoginForm", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
 
-      await waitFor(() => {
-        expect(
-          screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
-        ).toBe(true);
-      });
+      const opening = await screen.findByRole("button", { name: "Opening Google" });
+      expect(opening.hasAttribute("disabled")).toBe(true);
       expect(screen.getByRole("button", { name: "Sign in" }).hasAttribute("disabled")).toBe(true);
       expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
         true,
@@ -247,7 +342,7 @@ describe("LoginForm", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
 
-      expect(await screen.findByText("Something went wrong. Please try again.")).toBeTruthy();
+      expect((await screen.findByRole("alert")).textContent).toBe(GENERIC_ERROR);
       expect(
         screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
       ).toBe(false);
@@ -256,9 +351,11 @@ describe("LoginForm", () => {
 
   describe("link errors", () => {
     it("should show the link error passed in by the page", () => {
-      render(<LoginForm linkError="We could not verify that link. Please try again." />);
+      render(<LoginForm linkError="That sign-in link could not be verified." />);
 
-      expect(screen.getByText("We could not verify that link. Please try again.")).toBeTruthy();
+      expect(screen.getByRole("alert").textContent).toBe(
+        "That sign-in link could not be verified.",
+      );
     });
   });
 });

@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 describe("Card", () => {
   afterEach(() => {
@@ -56,21 +56,5 @@ describe("Card", () => {
 
     expect(section.textContent).toBe("Look up");
     expect(section.className).toContain("rounded-large");
-  });
-
-  it("should still compose the earlier header, title, description and content", () => {
-    render(
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>Use your email</CardDescription>
-        </CardHeader>
-        <CardContent>Form</CardContent>
-      </Card>,
-    );
-
-    expect(screen.getByText("Sign in")).toBeTruthy();
-    expect(screen.getByText("Use your email")).toBeTruthy();
-    expect(screen.getByText("Form")).toBeTruthy();
   });
 });

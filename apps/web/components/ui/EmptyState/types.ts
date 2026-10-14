@@ -14,7 +14,7 @@ export type EmptyStateSize = "list" | "section" | "page" | "placeholder";
 export type EmptyStateProps = {
   icon: LucideIcon;
   title: string;
-  body?: string;
+  body?: string | undefined;
   /** Level one when the state is the whole page, level two when it fills a part of one. */
   headingLevel?: 1 | 2;
   /** The one thing to do next. It is a secondary button, or a link when it goes to a page. */

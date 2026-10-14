@@ -4,9 +4,7 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-// Level picks the surface by what the card sits on: the page background, or another surface. The
-// header, content and footer parts from the earlier card carry their own padding, so a card made of
-// them gives its own padding up. They mark themselves with data-slot for that.
+// Level picks the surface by what the card sits on: the page background, or another surface.
 const cardVariants = cva(
   "relative overflow-hidden rounded-large border border-border text-text-primary shadow-card",
   {
@@ -16,7 +14,7 @@ const cardVariants = cva(
         raised: "bg-surface-raised",
       },
       padding: {
-        default: "p-4 has-[>[data-slot=card-part]]:p-0",
+        default: "p-4",
         none: "",
       },
     },
@@ -54,54 +52,5 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
 );
 Card.displayName = "Card";
 
-const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      data-slot="card-part"
-      className={cn("flex flex-col space-y-1.5 p-6", className)}
-      {...props}
-    />
-  ),
-);
-CardHeader.displayName = "CardHeader";
-
-const CardTitle = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("font-semibold leading-none tracking-tight", className)}
-      {...props}
-    />
-  ),
-);
-CardTitle.displayName = "CardTitle";
-
-const CardDescription = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("text-sm text-text-muted", className)} {...props} />
-  ),
-);
-CardDescription.displayName = "CardDescription";
-
-const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} data-slot="card-part" className={cn("p-6 pt-0", className)} {...props} />
-  ),
-);
-CardContent.displayName = "CardContent";
-
-const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      data-slot="card-part"
-      className={cn("flex items-center p-6 pt-0", className)}
-      {...props}
-    />
-  ),
-);
-CardFooter.displayName = "CardFooter";
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export { Card };
 export type { CardProps };

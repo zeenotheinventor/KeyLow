@@ -1,18 +1,27 @@
 "use client";
 
+import {
+  AUTH_FIELD_PROBLEMS,
+  CHECK_EMAIL_TITLE,
+  GENERIC_ERROR,
+  describeAuthError,
+  describeCheckEmail,
+} from "@keylow/core/copy";
+import { isAuthRetryableFetchError, type AuthError } from "@supabase/supabase-js";
+import { Mail } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState, type SubmitEvent } from "react";
 
-import type { FieldErrors, LoginFormProps } from "./types";
+import type { FieldErrors, LoginFormProps, PendingAction } from "./types";
 
+import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { TextField } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
 const PASSWORD_MIN_LENGTH = 8;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CONFIRM_EMAIL_NOTICE = "Check your email to confirm your account";
-const UNEXPECTED_ERROR_MESSAGE = "Something went wrong. Please try again.";
 
 type Action = "signIn" | "signUp";
 
@@ -20,19 +29,24 @@ function validate(email: string, password: string, action: Action): FieldErrors 
   const errors: FieldErrors = {};
 
   if (email === "") {
-    errors.email = "Enter your email address";
+    errors.email = AUTH_FIELD_PROBLEMS.emailRequired;
   } else if (!EMAIL_PATTERN.test(email)) {
-    errors.email = "Enter a valid email address";
+    errors.email = AUTH_FIELD_PROBLEMS.emailInvalid;
   }
 
   // Sign-in only needs a password, because accounts made under a shorter minimum must still work.
   if (password === "") {
-    errors.password = "Enter your password";
+    errors.password = AUTH_FIELD_PROBLEMS.passwordRequired;
   } else if (action === "signUp" && password.length < PASSWORD_MIN_LENGTH) {
-    errors.password = `Password must be at least ${String(PASSWORD_MIN_LENGTH)} characters`;
+    errors.password = AUTH_FIELD_PROBLEMS.passwordTooShort;
   }
 
   return errors;
+}
+
+// The server's message is never shown. A failed fetch has no code, so it is named for the copy.
+function describeFailure(error: AuthError): string {
+  return describeAuthError(isAuthRetryableFetchError(error) ? "network" : error.code);
 }
 
 export function LoginForm({ linkError }: LoginFormProps) {
@@ -41,22 +55,22 @@ export function LoginForm({ linkError }: LoginFormProps) {
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(linkError ?? null);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
 
   function openDiary() {
     router.push("/diary");
     router.refresh();
   }
 
-  async function runPending(request: () => Promise<void>) {
-    setIsPending(true);
+  async function runPending(action: PendingAction, request: () => Promise<void>) {
+    setPendingAction(action);
     try {
       await request();
     } catch {
-      setFormError(UNEXPECTED_ERROR_MESSAGE);
+      setFormError(GENERIC_ERROR);
     } finally {
-      setIsPending(false);
+      setPendingAction(null);
     }
   }
 
@@ -65,13 +79,13 @@ export function LoginForm({ linkError }: LoginFormProps) {
     const errors = validate(trimmedEmail, password, action);
 
     setFormError(null);
-    setNotice(null);
+    setConfirmationEmail(null);
     setFieldErrors(errors);
     if (errors.email !== undefined || errors.password !== undefined) {
       return;
     }
 
-    await runPending(async () => {
+    await runPending(action, async () => {
       const supabase = createClient();
 
       if (action === "signIn") {
@@ -80,7 +94,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
           password,
         });
         if (error) {
-          setFormError(error.message);
+          setFormError(describeFailure(error));
         } else {
           openDiary();
         }
@@ -91,11 +105,11 @@ export function LoginForm({ linkError }: LoginFormProps) {
           options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
         });
         if (error) {
-          setFormError(error.message);
+          setFormError(describeFailure(error));
         } else if (data.session) {
           openDiary();
         } else {
-          setNotice(CONFIRM_EMAIL_NOTICE);
+          setConfirmationEmail(trimmedEmail);
         }
       }
     });
@@ -103,16 +117,16 @@ export function LoginForm({ linkError }: LoginFormProps) {
 
   async function signInWithGoogle() {
     setFormError(null);
-    setNotice(null);
+    setConfirmationEmail(null);
 
-    await runPending(async () => {
+    await runPending("google", async () => {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/auth/callback` },
       });
       if (error) {
-        setFormError(error.message);
+        setFormError(describeFailure(error));
       }
     });
   }
@@ -122,95 +136,84 @@ export function LoginForm({ linkError }: LoginFormProps) {
     void submit("signIn");
   }
 
+  // The button that is running shows its spinner at full strength. The others are dimmed and wait.
+  const isWaiting = (action: PendingAction) => pendingAction !== null && pendingAction !== action;
+
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          value={email}
-          onChange={(event) => {
-            setEmail(event.target.value);
-          }}
-          aria-invalid={fieldErrors.email !== undefined}
-          aria-describedby={fieldErrors.email === undefined ? undefined : "email-error"}
-        />
-        {fieldErrors.email !== undefined && (
-          <p id="email-error" className="text-sm text-danger">
-            {fieldErrors.email}
-          </p>
-        )}
-      </div>
+      <TextField
+        label="Email"
+        name="email"
+        type="email"
+        autoComplete="email"
+        value={email}
+        onChange={(event) => {
+          setEmail(event.target.value);
+        }}
+        error={fieldErrors.email}
+      />
+      <TextField
+        label="Password"
+        name="password"
+        type="password"
+        autoComplete="current-password"
+        value={password}
+        onChange={(event) => {
+          setPassword(event.target.value);
+        }}
+        error={fieldErrors.password}
+      />
 
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-sm font-medium">
-          Password
-        </label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => {
-            setPassword(event.target.value);
-          }}
-          aria-invalid={fieldErrors.password !== undefined}
-          aria-describedby={fieldErrors.password === undefined ? undefined : "password-error"}
-        />
-        {fieldErrors.password !== undefined && (
-          <p id="password-error" className="text-sm text-danger">
-            {fieldErrors.password}
-          </p>
-        )}
-      </div>
-
-      {formError !== null && (
-        <p role="alert" className="text-sm text-danger">
-          {formError}
-        </p>
-      )}
-      {notice !== null && (
-        <p role="status" className="text-sm text-text-muted">
-          {notice}
-        </p>
+      {formError !== null && <Banner tone="error">{formError}</Banner>}
+      {confirmationEmail !== null && (
+        <Banner title={CHECK_EMAIL_TITLE} icon={Mail}>
+          {describeCheckEmail(confirmationEmail)}
+        </Banner>
       )}
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Button type="submit" disabled={isPending} className="h-11 flex-1 md:h-9">
+      <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+        <Button
+          type="submit"
+          loading={pendingAction === "signIn"}
+          loadingLabel="Signing in"
+          disabled={isWaiting("signIn")}
+        >
           Sign in
         </Button>
         <Button
           type="button"
-          variant="outline"
-          disabled={isPending}
+          variant="secondary"
+          loading={pendingAction === "signUp"}
+          loadingLabel="Creating account"
+          disabled={isWaiting("signUp")}
           onClick={() => {
             void submit("signUp");
           }}
-          className="h-11 flex-1 md:h-9"
         >
           Create account
         </Button>
       </div>
 
-      <div className="flex flex-col gap-1.5 border-t pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={isPending}
-          onClick={() => {
-            void signInWithGoogle();
-          }}
-          className="h-11 md:h-9"
-        >
-          Continue with Google
-        </Button>
+      <div className="flex items-center gap-3 text-caption text-text-muted">
+        <span className="h-px flex-1 bg-border" />
+        or
+        <span className="h-px flex-1 bg-border" />
       </div>
+
+      <Button
+        type="button"
+        variant="secondary"
+        loading={pendingAction === "google"}
+        loadingLabel="Opening Google"
+        disabled={isWaiting("google")}
+        onClick={() => {
+          void signInWithGoogle();
+        }}
+        className="gap-3"
+      >
+        <Image src="/brand/google-g.svg" alt="" width={20} height={20} unoptimized />
+        Continue with Google
+      </Button>
     </form>
   );
 }

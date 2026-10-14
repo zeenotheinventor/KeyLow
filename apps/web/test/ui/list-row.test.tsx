@@ -30,6 +30,25 @@ describe("ListRow", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
+  describe("as a submit button", () => {
+    it("should submit the form it is in, as a button named by its text", () => {
+      const onSubmit = vi.fn((event: React.SyntheticEvent) => {
+        event.preventDefault();
+      });
+      render(
+        <form onSubmit={onSubmit}>
+          <ul>
+            <ListRow title="Sign out" subtitle="ada@example.com" submit chevron={false} />
+          </ul>
+        </form>,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Sign out/ }));
+
+      expect(onSubmit).toHaveBeenCalledOnce();
+    });
+  });
+
   describe("as a link", () => {
     it("should be a link named by its text", () => {
       renderInList(

@@ -86,6 +86,18 @@ export const LauncherCompact: Story = {
   ),
 };
 
+// The top bar's launcher: 44 high below the large breakpoint and 36 from it.
+export const LauncherAdaptive: Story = {
+  render: () => (
+    <SearchLauncher
+      size="adaptive"
+      label="Search for a food"
+      onSearch={() => undefined}
+      barcodeButton={barcodeButton}
+    />
+  ),
+};
+
 export const LauncherFocused: Story = {
   render: () => (
     <SearchLauncher

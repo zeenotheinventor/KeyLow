@@ -56,6 +56,7 @@ export const storyManifest = {
     "Compact",
     "Launcher",
     "LauncherCompact",
+    "LauncherAdaptive",
     "LauncherFocused",
   ],
   "Banner/Banner.stories.tsx": [
@@ -97,6 +98,7 @@ export const storyManifest = {
     "Focused",
   ],
   "GroupedList/GroupedList.stories.tsx": ["Default", "WithSource", "WithSeeMore", "SingleRow"],
+  "KiLoMark/KiLoMark.stories.tsx": ["Default", "Large", "WithTitle"],
   "ListRow/ListRow.stories.tsx": [
     "Default",
     "Action",

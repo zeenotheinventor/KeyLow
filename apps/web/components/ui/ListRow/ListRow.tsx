@@ -19,11 +19,12 @@ export function ListRow({
   subtitle,
   href,
   onClick,
+  submit,
   chevron = true,
   disabled = false,
   className,
 }: ListRowProps) {
-  const interactive = href !== undefined || onClick !== undefined;
+  const interactive = href !== undefined || onClick !== undefined || submit === true;
   const classes = cn(
     rowClasses,
     interactive && interactiveClasses,
@@ -64,10 +65,15 @@ export function ListRow({
     );
   }
 
-  if (onClick !== undefined) {
+  if (onClick !== undefined || submit === true) {
     return (
       <li>
-        <button type="button" className={classes} onClick={onClick} disabled={disabled}>
+        <button
+          type={submit === true ? "submit" : "button"}
+          className={classes}
+          onClick={onClick}
+          disabled={disabled}
+        >
           {content}
         </button>
       </li>
