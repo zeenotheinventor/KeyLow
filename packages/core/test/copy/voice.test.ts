@@ -43,6 +43,12 @@ const sampleCalls: Record<string, () => string[]> = {
         copy.describeNutrientProblem(nutrient, problem),
       ),
     ),
+  describePortionField: () =>
+    (["label", "remove", "default"] as const).map((field) => copy.describePortionField(field, 1)),
+  describePortionAmountField: () =>
+    (["per_100g", "per_100ml"] as const).map((basis) => copy.describePortionAmountField(1, basis)),
+  describeAmountUnitNote: () =>
+    (["per_100g", "per_100ml"] as const).map(copy.describeAmountUnitNote),
   describePortionLabelProblem: () => [1, 2].map(copy.describePortionLabelProblem),
   describePortionAmountProblem: () => [1, 2].map(copy.describePortionAmountProblem),
   describePortionLabelAndAmountProblem: () => [1, 2].map(copy.describePortionLabelAndAmountProblem),

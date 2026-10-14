@@ -1,12 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  FOOD_FORM,
   FOOD_FORM_BARCODE_NOT_VALID,
   FOOD_FORM_BARCODE_PROBLEMS,
   FOOD_FORM_BUTTONS,
   FOOD_REVIEW_BANNER,
+  describeAmountUnitNote,
   describeNameProblem,
   describeNutrientProblem,
+  describePortionAmountField,
+  describePortionField,
   describePortionAmountProblem,
   describePortionLabelAndAmountProblem,
   describePortionLabelProblem,
@@ -83,5 +87,105 @@ describe("barcode problems on the food form", () => {
       not_upc_e: "Barcode is not a valid product code",
     });
     expect(FOOD_FORM_BARCODE_NOT_VALID).toBe("Barcode is not valid");
+  });
+});
+
+describe("the web food form copy", () => {
+  it("should pin the headings, the back and cancel links and the copy introduction", () => {
+    expect(FOOD_FORM.back).toBe("Back");
+    expect(FOOD_FORM.cancel).toBe("Cancel");
+    expect(FOOD_FORM.titles).toEqual({
+      create: "New food",
+      copy: "Copy to your foods",
+      edit: "Edit food",
+    });
+    expect(FOOD_FORM.copyIntro).toBe(
+      "Check each value and fill in the ones that are blank. Saving adds a food of your own and leaves the original as it is.",
+    );
+  });
+
+  it("should pin the section headings and field labels the boards draw", () => {
+    expect(FOOD_FORM.details).toBe("Details");
+    expect(FOOD_FORM.portions).toBe("Portions");
+    expect(FOOD_FORM.required).toBe("Required");
+    expect(FOOD_FORM.name).toBe("Name");
+    expect(FOOD_FORM.namePlaceholder).toBe("e.g. Greek yoghurt");
+    expect(FOOD_FORM.optionalPlaceholder).toBe("Optional");
+    expect(FOOD_FORM.brand).toBe("Brand");
+    expect(FOOD_FORM.barcode).toBe("Barcode");
+    expect(FOOD_FORM.nutrients).toEqual({
+      kcal: "Energy",
+      protein_g: "Protein",
+      carbs_g: "Carbohydrate",
+      fat_g: "Fat",
+      fibre_g: "Fibre (optional)",
+    });
+  });
+
+  it("should pin the nutrition note and the basis choices", () => {
+    expect(FOOD_FORM.nutritionNote).toBe("Energy, protein, carbohydrate and fat are required.");
+    expect(FOOD_FORM.basis).toBe("Basis");
+    expect(FOOD_FORM.basisOptions).toEqual({ per_100g: "Per 100 g", per_100ml: "Per 100 ml" });
+  });
+
+  it("should pin the notes under the barcode and the nutrients", () => {
+    expect(FOOD_FORM.barcodeFromEntry).toBe("Filled in from the barcode you entered");
+    expect(FOOD_FORM.barcodeFromCopy).toBe("Kept from the product you are copying");
+    expect(FOOD_FORM.notGivenBySource).toBe("Not given by the source");
+    expect(FOOD_FORM.usCarbsNote).toBe(
+      "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.",
+    );
+  });
+
+  it("should pin the portion row labels", () => {
+    expect(FOOD_FORM.portionLabelPlaceholder).toBe("e.g. 1 slice");
+    expect(FOOD_FORM.amount).toBe("Amount");
+    expect(FOOD_FORM.addPortion).toBe("Add portion");
+    expect(FOOD_FORM.remove).toBe("Remove");
+    expect(FOOD_FORM.makeDefault).toBe("Default");
+  });
+
+  it("should pin the validation summary and the save outcomes", () => {
+    expect(FOOD_FORM.validationSummary).toBe("Check the fields marked below and try again.");
+    expect(FOOD_FORM.saving).toBe("Saving");
+    expect(FOOD_FORM.saveFailed).toBe(
+      "Your food could not be saved. Check your connection and try again.",
+    );
+    expect(FOOD_FORM.savedWithoutPortions).toBe(
+      "Your food was saved, but its portions were not. Edit the food to add them again.",
+    );
+    expect(FOOD_FORM.editTheFood).toBe("Edit the food");
+    expect(FOOD_FORM.changesSavedWithoutPortions).toBe(
+      "Your changes to the food were saved, but its portions were not. Try saving again.",
+    );
+  });
+
+  it("should pin the sentence for a shared food that cannot be edited", () => {
+    expect(FOOD_FORM.cannotEdit).toEqual({
+      title: "Cannot edit this food",
+      body: "This food comes from a shared database and cannot be edited.",
+    });
+  });
+});
+
+describe("describePortionField", () => {
+  it("should name the portion by its position for each of its controls", () => {
+    expect(describePortionField("label", 2)).toBe("Portion 2 label");
+    expect(describePortionField("remove", 2)).toBe("Remove portion 2");
+    expect(describePortionField("default", 2)).toBe("Portion 2 is the default");
+  });
+});
+
+describe("describePortionAmountField", () => {
+  it("should name the amount by its portion and the unit that follows the basis", () => {
+    expect(describePortionAmountField(2, "per_100g")).toBe("Amount for portion 2 (g)");
+    expect(describePortionAmountField(1, "per_100ml")).toBe("Amount for portion 1 (ml)");
+  });
+});
+
+describe("describeAmountUnitNote", () => {
+  it("should name the unit that follows the basis", () => {
+    expect(describeAmountUnitNote("per_100g")).toBe("Each amount is in g, to match the basis.");
+    expect(describeAmountUnitNote("per_100ml")).toBe("Each amount is in ml, to match the basis.");
   });
 });

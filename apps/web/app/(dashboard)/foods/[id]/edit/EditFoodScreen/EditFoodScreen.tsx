@@ -1,71 +1,42 @@
 "use client";
 
-import { useFood, useFoodPortions } from "@keylow/api-client";
+import { useFoodWithPortions } from "@keylow/api-client";
+import { FOOD_DETAIL, FOOD_FORM } from "@keylow/core/copy";
+import { Lock } from "lucide-react";
 
 import { FoodForm } from "@/components/foods/FoodForm";
-
-function Notice({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto flex w-full max-w-2xl flex-col gap-2">{children}</div>;
-}
-
-function LoadFailure({ message }: { message: string }) {
-  return (
-    <Notice>
-      <p role="alert" className="text-sm text-danger">
-        {message}
-      </p>
-    </Notice>
-  );
-}
+import { FoodFormPage } from "@/components/foods/FoodFormPage";
+import { FoodLoadNotice } from "@/components/foods/FoodLoadNotice";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export function EditFoodScreen({ id }: { id: string }) {
-  const food = useFood(id);
-  const portions = useFoodPortions(id);
+  const state = useFoodWithPortions(id);
 
-  // A failed background refetch must not replace a form the user may be editing, so an error only
-  // takes over the screen when there is no data to show.
-  if (food.data === undefined && food.isError) {
-    return <LoadFailure message={food.error.message} />;
-  }
-  if (portions.data === undefined && portions.isError) {
-    return <LoadFailure message={portions.error.message} />;
-  }
-
-  if (food.data === undefined || portions.data === undefined) {
+  if (state.status !== "ready") {
     return (
-      <Notice>
-        <p role="status" className="text-sm text-text-muted">
-          Loading food
-        </p>
-      </Notice>
+      <FoodFormPage backLabel={FOOD_DETAIL.back}>
+        <FoodLoadNotice state={state} />
+      </FoodFormPage>
     );
   }
 
-  if (food.data === null) {
+  if (state.food.source !== "user") {
     return (
-      <Notice>
-        <h1 className="text-2xl font-semibold">Food not found</h1>
-        <p className="text-sm text-text-muted">
-          This food does not exist, or it is not one you can see.
-        </p>
-      </Notice>
-    );
-  }
-
-  if (food.data.source !== "user") {
-    return (
-      <Notice>
-        <p className="text-sm text-text-muted">
-          This food comes from a shared database and cannot be edited.
-        </p>
-      </Notice>
+      <FoodFormPage backLabel={FOOD_FORM.back}>
+        <EmptyState
+          icon={Lock}
+          headingLevel={1}
+          size="page"
+          title={FOOD_FORM.cannotEdit.title}
+          body={FOOD_FORM.cannotEdit.body}
+        />
+      </FoodFormPage>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Edit food</h1>
-      <FoodForm existing={{ food: food.data, portions: portions.data }} />
-    </div>
+    <FoodFormPage backLabel={FOOD_FORM.back} title={FOOD_FORM.titles.edit}>
+      <FoodForm existing={{ food: state.food, portions: state.portions }} />
+    </FoodFormPage>
   );
 }

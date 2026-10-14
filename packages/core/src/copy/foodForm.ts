@@ -1,4 +1,5 @@
 import type { BarcodeInvalidReason } from "../foods/barcode";
+import type { NutrientBasis } from "../schemas/food";
 
 export const FOOD_FORM_BUTTONS = {
   create: "Create food",
@@ -57,3 +58,79 @@ export const FOOD_FORM_BARCODE_PROBLEMS: Readonly<Record<BarcodeInvalidReason, s
 
 /** For a barcode the schema rejected although the code normalises, which should not happen. */
 export const FOOD_FORM_BARCODE_NOT_VALID = "Barcode is not valid";
+
+/**
+ * The labels, notes and outcomes of the web food form, as its boards draw them. A sentence that
+ * names a portion or a unit is a function below.
+ */
+export const FOOD_FORM = {
+  back: "Back",
+  cancel: "Cancel",
+  titles: { create: "New food", copy: "Copy to your foods", edit: "Edit food" },
+  copyIntro:
+    "Check each value and fill in the ones that are blank. Saving adds a food of your own and leaves the original as it is.",
+  details: "Details",
+  portions: "Portions",
+  required: "Required",
+  name: "Name",
+  namePlaceholder: "e.g. Greek yoghurt",
+  optionalPlaceholder: "Optional",
+  brand: "Brand",
+  barcode: "Barcode",
+  barcodeFromEntry: "Filled in from the barcode you entered",
+  barcodeFromCopy: "Kept from the product you are copying",
+  nutritionNote: "Energy, protein, carbohydrate and fat are required.",
+  basis: "Basis",
+  basisOptions: { per_100g: "Per 100 g", per_100ml: "Per 100 ml" },
+  nutrients: {
+    kcal: "Energy",
+    protein_g: "Protein",
+    carbs_g: "Carbohydrate",
+    fat_g: "Fat",
+    fibre_g: "Fibre (optional)",
+  },
+  notGivenBySource: "Not given by the source",
+  usCarbsNote: "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.",
+  portionLabelPlaceholder: "e.g. 1 slice",
+  amount: "Amount",
+  addPortion: "Add portion",
+  remove: "Remove",
+  makeDefault: "Default",
+  validationSummary: "Check the fields marked below and try again.",
+  saving: "Saving",
+  saveFailed: "Your food could not be saved. Check your connection and try again.",
+  savedWithoutPortions:
+    "Your food was saved, but its portions were not. Edit the food to add them again.",
+  editTheFood: "Edit the food",
+  changesSavedWithoutPortions:
+    "Your changes to the food were saved, but its portions were not. Try saving again.",
+  cannotEdit: {
+    title: "Cannot edit this food",
+    body: "This food comes from a shared database and cannot be edited.",
+  },
+};
+
+/** The name of one control in a portion row, which tells a screen reader which row it is in. `position` counts from 1. */
+export const describePortionField = (
+  field: "label" | "remove" | "default",
+  position: number,
+): string => {
+  switch (field) {
+    case "label":
+      return `Portion ${position} label`;
+    case "remove":
+      return `Remove portion ${position}`;
+    case "default":
+      return `Portion ${position} is the default`;
+  }
+};
+
+const amountUnit = (basis: NutrientBasis): string => (basis === "per_100g" ? "g" : "ml");
+
+/** The name of a portion's amount field, with the unit that follows the basis. `position` counts from 1. */
+export const describePortionAmountField = (position: number, basis: NutrientBasis): string =>
+  `Amount for portion ${position} (${amountUnit(basis)})`;
+
+/** Says which unit every portion amount is in: grams under a per 100 g basis, millilitres under per 100 ml. */
+export const describeAmountUnitNote = (basis: NutrientBasis): string =>
+  `Each amount is in ${amountUnit(basis)}, to match the basis.`;

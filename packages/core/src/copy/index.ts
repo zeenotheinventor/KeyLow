@@ -19,12 +19,16 @@ export {
 } from "./barcode";
 export { GENERIC_ERROR, describeEdgeError, describeRateLimit } from "./errors";
 export {
+  FOOD_FORM,
   FOOD_FORM_BARCODE_NOT_VALID,
   FOOD_FORM_BARCODE_PROBLEMS,
   FOOD_FORM_BUTTONS,
   FOOD_REVIEW_BANNER,
+  describeAmountUnitNote,
   describeNameProblem,
   describeNutrientProblem,
+  describePortionAmountField,
+  describePortionField,
   describePortionAmountProblem,
   describePortionLabelAndAmountProblem,
   describePortionLabelProblem,

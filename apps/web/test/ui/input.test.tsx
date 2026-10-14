@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { Lock } from "lucide-react";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -159,6 +160,87 @@ describe("TextField", () => {
     });
 
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty("value", "Greek yoghurt");
+  });
+
+  describe("invalid without a message", () => {
+    it("should flag the input invalid without showing a message or an alert", () => {
+      render(<TextField label="Portion 1 label" invalid />);
+
+      expect(
+        screen.getByRole("textbox", { name: "Portion 1 label" }).getAttribute("aria-invalid"),
+      ).toBe("true");
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("should still be invalid when it also has an error", () => {
+      render(<TextField label="Name" invalid error="Name is required" />);
+
+      expect(screen.getByRole("textbox", { name: "Name" }).getAttribute("aria-invalid")).toBe(
+        "true",
+      );
+      expect(screen.getAllByRole("alert")).toHaveLength(1);
+    });
+  });
+
+  describe("described by", () => {
+    it("should describe the input with the element it is pointed at", () => {
+      render(
+        <>
+          <TextField label="Portion 1 label" invalid describedBy="portion-note" />
+          <span id="portion-note">Portion 1 needs a label</span>
+        </>,
+      );
+
+      expect(describedText(screen.getByRole("textbox", { name: "Portion 1 label" }))).toBe(
+        "Portion 1 needs a label",
+      );
+    });
+
+    it("should read the hint and the message before the element it is pointed at", () => {
+      render(
+        <>
+          <TextField label="Name" labelHint="Required" helper="On the pack" describedBy="note" />
+          <span id="note">Extra</span>
+        </>,
+      );
+
+      expect(describedText(screen.getByRole("textbox", { name: "Name" }))).toBe(
+        "Required On the pack Extra",
+      );
+    });
+  });
+
+  describe("trailing icon", () => {
+    it("should draw a decorative icon after the input", () => {
+      render(<TextField label="Barcode" trailingIcon={Lock} />);
+
+      const input = screen.getByRole("textbox", { name: "Barcode" });
+
+      expect(input.parentElement?.querySelector("svg")?.getAttribute("aria-hidden")).toBe("true");
+    });
+
+    it("should leave room for the icon and keep the padding the screen asks for", () => {
+      render(<TextField label="Barcode" trailingIcon={Lock} className="px-3" />);
+
+      const { className } = screen.getByRole("textbox", { name: "Barcode" });
+
+      expect(className).toContain("px-3");
+      expect(className).toContain("pr-9");
+    });
+
+    it("should leave the icon out of the field's name", () => {
+      render(<TextField label="Barcode" trailingIcon={Lock} />);
+
+      expect(screen.getByRole("textbox", { name: "Barcode" })).toBeTruthy();
+    });
+
+    it("should draw no icon unless one is given", () => {
+      render(<TextField label="Barcode" />);
+
+      expect(
+        screen.getByRole("textbox", { name: "Barcode" }).parentElement?.querySelector("svg"),
+      ).toBeNull();
+    });
   });
 
   describe("label hint", () => {
