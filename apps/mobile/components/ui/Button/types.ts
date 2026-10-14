@@ -19,7 +19,7 @@ export type ButtonProps = {
   loading?: boolean;
   fullWidth?: boolean;
   /** A leading icon, by name. It is decoration. */
-  icon?: IconName;
+  icon?: IconName | undefined;
   /**
    * The haptic token to play when pressed. The design gives a button none of its own: a screen asks
    * for one where the design says so (`select` for a step, `confirm` for a save).

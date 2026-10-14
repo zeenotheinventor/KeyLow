@@ -1,10 +1,20 @@
 import {
+  Apple,
+  ChevronLeft,
   ChevronRight,
+  CircleAlert,
+  Clock,
+  CloudOff,
+  Info,
   LoaderCircle,
   Plus,
+  RotateCw,
   ScanBarcode,
   Search,
+  SearchX,
+  TriangleAlert,
   Utensils,
+  WifiOff,
   X,
 } from "lucide-react-native";
 
@@ -12,4 +22,22 @@ import {
  * Every icon the app draws, by its Lucide name. It is the only place icons are imported, so an icon
  * nobody lists is not bundled. A new screen adds the names it needs here.
  */
-export const iconMap = { ChevronRight, LoaderCircle, Plus, ScanBarcode, Search, Utensils, X };
+export const iconMap = {
+  Apple,
+  ChevronLeft,
+  ChevronRight,
+  CircleAlert,
+  Clock,
+  CloudOff,
+  Info,
+  LoaderCircle,
+  Plus,
+  RotateCw,
+  ScanBarcode,
+  Search,
+  SearchX,
+  TriangleAlert,
+  Utensils,
+  WifiOff,
+  X,
+};

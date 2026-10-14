@@ -1,0 +1,89 @@
+import { View } from "react-native";
+
+import { IconButton } from "../IconButton";
+import { Text } from "../Text";
+
+import type { SheetHeaderControl, SheetHeaderProps } from "./types";
+import type { IconButtonProps } from "../IconButton";
+
+type ControlIconSize = NonNullable<IconButtonProps["iconSize"]>;
+
+// The classes are written out so Tailwind sees them. The sheet header sits above a list with 12 points
+// under it. The stack header has 8, because the view under it brings its own spacing.
+const variants = {
+  sheet: {
+    className: "pb-3",
+    buttonVariant: "secondary",
+    leadingIconSize: "md",
+    trailingIconSize: "md",
+    titleVariant: "h2",
+  },
+  stack: {
+    className: "pb-2",
+    buttonVariant: "ghost",
+    // The boards draw the stack header's glyphs larger than a control's own 20 points: 24 for back and 22
+    // for close, which is off the icon scale, so it is given in points.
+    leadingIconSize: "lg",
+    trailingIconSize: 22,
+    titleVariant: "body-strong",
+  },
+} satisfies Record<
+  string,
+  {
+    className: string;
+    buttonVariant: IconButtonProps["variant"];
+    leadingIconSize: ControlIconSize;
+    trailingIconSize: ControlIconSize;
+    titleVariant: "h2" | "body-strong";
+  }
+>;
+
+/**
+ * The top of a sheet: a control at the left, a centred title and an optional control at the right. The
+ * screen gives the top inset and the header gives the 12 points under it, as the search field's dock
+ * gives the 12 above the bottom inset.
+ */
+export function SheetHeader({
+  variant = "sheet",
+  title,
+  leading,
+  trailing,
+  isTitleHeading = true,
+}: SheetHeaderProps) {
+  const look = variants[variant];
+
+  function renderControl(control: SheetHeaderControl, iconSize: ControlIconSize) {
+    return (
+      <IconButton
+        icon={control.icon}
+        iconSize={iconSize}
+        label={control.label}
+        variant={look.buttonVariant}
+        onPress={control.onPress}
+      />
+    );
+  }
+
+  return (
+    <View
+      className={`flex-row items-center gap-2 px-4 pt-3 ${look.className}`}
+      testID="sheet-header"
+    >
+      {renderControl(leading, look.leadingIconSize)}
+      <Text
+        className="flex-1 text-center"
+        numberOfLines={1}
+        role={isTitleHeading ? "heading" : undefined}
+        variant={look.titleVariant}
+      >
+        {title}
+      </Text>
+      {trailing === undefined ? (
+        // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
+        <View className="w-touch-target" testID="sheet-header-empty-slot" />
+      ) : (
+        renderControl(trailing, look.trailingIconSize)
+      )}
+    </View>
+  );
+}

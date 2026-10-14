@@ -1,5 +1,5 @@
 import type { HapticFeedbackName } from "../../../lib/haptics";
-import type { IconName } from "../Icon";
+import type { IconName, IconSizeName } from "../Icon";
 
 export type IconButtonVariant = "secondary" | "ghost";
 
@@ -8,6 +8,11 @@ export type IconButtonSize = "md" | "sm";
 
 export type IconButtonProps = {
   icon: IconName;
+  /**
+   * The size of the icon: a size token, or a size in points for a glyph the frames draw off the scale.
+   * A button draws it at `md`, 20 points, unless it is asked for another.
+   */
+  iconSize?: IconSizeName | number;
   /** What the button does, as a short sentence case name. It is the button's accessible name. */
   label: string;
   /** Defaults to `secondary`. */

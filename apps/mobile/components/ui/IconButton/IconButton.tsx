@@ -20,6 +20,7 @@ const sizeClassName: Record<IconButtonSize, string> = {
 
 export function IconButton({
   icon,
+  iconSize = "md",
   label,
   variant = "secondary",
   size = "md",
@@ -39,7 +40,7 @@ export function IconButton({
         label={label}
         onPress={onPress}
       >
-        <Icon name={icon} />
+        <Icon name={icon} size={iconSize} />
       </PressableSurface>
     </View>
   );
