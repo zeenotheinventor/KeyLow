@@ -3,7 +3,27 @@ import { themes } from "@keylow/tokens";
 import appJson from "../app.json";
 
 // Typed by hand because the app has no Node type definitions.
-const { existsSync } = jest.requireActual<{ existsSync: (path: string) => boolean }>("node:fs");
+const { existsSync, readFileSync } = jest.requireActual<{
+  existsSync: (path: string) => boolean;
+  readFileSync: (path: string) => {
+    readUInt32BE: (offset: number) => number;
+    readUInt8: (offset: number) => number;
+  };
+}>("node:fs");
+
+const PNG_WIDTH_OFFSET = 16;
+const PNG_HEIGHT_OFFSET = 20;
+const PNG_COLOR_TYPE_OFFSET = 25;
+const PNG_COLOR_TYPE_RGB = 2;
+
+function readPngHeader(path: string) {
+  const bytes = readFileSync(path);
+  return {
+    width: bytes.readUInt32BE(PNG_WIDTH_OFFSET),
+    height: bytes.readUInt32BE(PNG_HEIGHT_OFFSET),
+    colorType: bytes.readUInt8(PNG_COLOR_TYPE_OFFSET),
+  };
+}
 
 const { expo } = appJson;
 
@@ -37,6 +57,69 @@ function pluginOptions(name: string): Record<string, unknown> | undefined {
 }
 
 describe("app.json", () => {
+  describe("identity", () => {
+    it("should name the app Ki-Lo", () => {
+      expect(expo.name).toBe("Ki-Lo");
+    });
+
+    it("should keep the identifiers that the rename ruling froze", () => {
+      expect({
+        slug: expo.slug,
+        scheme: expo.scheme,
+        iosBundleIdentifier: expo.ios.bundleIdentifier,
+        androidPackage: expo.android.package,
+        owner: expo.owner,
+        easProjectId: expo.extra.eas.projectId,
+        updatesUrl: expo.updates.url,
+      }).toEqual({
+        slug: "keylow",
+        scheme: "keylow",
+        iosBundleIdentifier: "com.sojisoft.keylow",
+        androidPackage: "com.sojisoft.keylow",
+        owner: "sojisoft",
+        easProjectId: "cd8bec0b-6864-4b6f-97ef-e07d1a381b3a",
+        updatesUrl: "https://u.expo.dev/cd8bec0b-6864-4b6f-97ef-e07d1a381b3a",
+      });
+    });
+
+    it("should ask for the camera in the app's own name", () => {
+      const cameraPermission = String(pluginOptions("expo-camera")?.cameraPermission);
+
+      expect(cameraPermission).toContain("Ki-Lo");
+      expect(cameraPermission).not.toContain("KeyLow");
+    });
+  });
+
+  describe("icons", () => {
+    it("should ship an opaque square 1024 pixel iOS icon, because the App Store rejects an alpha channel", () => {
+      expect(readPngHeader(expo.icon)).toEqual({
+        width: 1024,
+        height: 1024,
+        colorType: PNG_COLOR_TYPE_RGB,
+      });
+    });
+
+    it.each([
+      ["foreground", expo.android.adaptiveIcon.foregroundImage],
+      ["monochrome", expo.android.adaptiveIcon.monochromeImage],
+    ])("should ship a square 1024 pixel Android adaptive %s layer", (_layer, path) => {
+      const { width, height } = readPngHeader(path);
+
+      expect({ width, height }).toEqual({ width: 1024, height: 1024 });
+    });
+
+    it("should paint the Android adaptive background with the dark background token", () => {
+      expect(expo.android.adaptiveIcon.backgroundColor.toLowerCase()).toBe(
+        themes.dark.background.toLowerCase(),
+      );
+    });
+
+    // Expo prefers a background image over the colour, so a leftover image would hide the token.
+    it("should not set an Android adaptive background image", () => {
+      expect("backgroundImage" in expo.android.adaptiveIcon).toBe(false);
+    });
+  });
+
   it("should let the native appearance follow the device so the app can choose its own scheme", () => {
     expect(expo.userInterfaceStyle).toBe("automatic");
   });
@@ -54,7 +137,7 @@ describe("app.json", () => {
   });
 
   // The splash style names a drawable made from this image. Without one the Android build has no
-  // such resource and fails to link, so the artwork (KEY-91) replaces a blank placeholder.
+  // such resource and fails to link.
   it("should give the splash an image that exists, so the Android splash drawable is generated", () => {
     const splash = pluginOptions("expo-splash-screen");
 
