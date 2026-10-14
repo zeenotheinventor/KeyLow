@@ -27,7 +27,8 @@ export const Default: Story = {};
 
 export const Filled: Story = { args: { defaultValue: "greek yoghurt" } };
 
-// Focus is real: the play function tabs onto the box, so the accent border and ring show.
+// Focus is real: the play function tabs onto the box, so the accent border shows. The ring joins
+// it in the light theme.
 export const Focused: Story = {
   play: async () => {
     await userEvent.tab();
@@ -98,6 +99,7 @@ export const LauncherAdaptive: Story = {
   ),
 };
 
+// The launcher draws the ring with the border in both themes.
 export const LauncherFocused: Story = {
   render: () => (
     <SearchLauncher

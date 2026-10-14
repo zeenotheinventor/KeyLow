@@ -9,11 +9,12 @@ const macroMarks = {
   fat: "bg-fat",
 } as const satisfies Record<NumericInputMacro, string>;
 
-// The same box as `Input`: 44 high, raised surface, medium radius, accent border and ring on focus,
-// danger border when invalid. The input sits inside it with the unit after it, so the box takes
-// the focus and the invalid state from the input through `has`.
+// The same box as `Input`: 44 high, raised surface, medium radius, accent border on focus with the
+// ring added in light, danger border when invalid. An invalid box has no border change to show
+// focus, so it keeps the ring in both themes. The input sits inside it with the unit after it, so
+// the box takes the focus from the input through `has`.
 const frameClasses =
-  "flex h-[44px] items-center gap-2 rounded-medium border bg-surface-raised px-4 transition-[border-color,box-shadow] duration-quick has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:bg-surface has-[:disabled]:opacity-50";
+  "flex h-[44px] items-center gap-2 rounded-medium border bg-surface-raised px-4 transition-[border-color,box-shadow] duration-quick light-theme:has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring light-theme:has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:bg-surface has-[:disabled]:opacity-50";
 
 /** A number with its unit after it, such as 165 kcal. It is a `TextField` whose digits are right aligned and tabular. */
 export function NumericInput({
@@ -62,7 +63,7 @@ export function NumericInput({
           className={cn(
             frameClasses,
             control["aria-invalid"]
-              ? "border-danger"
+              ? "border-danger has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2"
               : "border-border has-[:focus-visible]:border-accent",
             frameClassName,
           )}

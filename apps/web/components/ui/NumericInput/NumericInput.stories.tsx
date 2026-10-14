@@ -27,7 +27,8 @@ export const Filled: Story = { args: { defaultValue: "165" } };
 
 export const WithHelper: Story = { args: { helper: "Per 100 g" } };
 
-// Focus is real: the play function tabs onto the field, so the accent border and ring show.
+// Focus is real: the play function tabs onto the field, so the accent border shows. The ring joins
+// it in the light theme.
 export const WithLabelHint: Story = { args: { labelHint: "Required" } };
 
 export const Focused: Story = {

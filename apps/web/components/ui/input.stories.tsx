@@ -31,7 +31,8 @@ export const WithHelper: Story = { args: { helper: "As it appears on the pack" }
 // The hint sits beside the label and is read as part of the field's description.
 export const WithLabelHint: Story = { args: { labelHint: "Required" } };
 
-// Focus is real: the play function tabs onto the field, so the accent border and ring show.
+// Focus is real: the play function tabs onto the field, so the accent border shows. The ring joins
+// it in the light theme.
 export const Focused: Story = {
   play: async () => {
     await userEvent.tab();

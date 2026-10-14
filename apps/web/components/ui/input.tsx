@@ -6,15 +6,17 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // The design's input is a box: 44 high, raised surface, medium radius. Focus turns the border to the
-// accent and adds the ring. An invalid field keeps its danger border while focused, so the accent
-// border only applies to a field that is not invalid.
+// accent, which is the whole indicator in dark. The light accent border is under 3:1 against the
+// page, so light also adds the ring. An invalid field keeps its danger border while focused, so the
+// accent border only applies to a field that is not invalid. An invalid field has no border change to
+// show focus, so it keeps the ring in both themes.
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
     return (
       <input
         type={type}
         className={cn(
-          "flex h-[44px] w-full rounded-medium border border-border bg-surface-raised px-4 text-body text-text-primary outline-none transition-[border-color,box-shadow] duration-quick placeholder:text-text-muted focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset focus-visible:[&:not([aria-invalid=true])]:border-accent aria-[invalid=true]:border-danger disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-50",
+          "flex h-[44px] w-full rounded-medium border border-border bg-surface-raised px-4 text-body text-text-primary outline-none transition-[border-color,box-shadow] duration-quick placeholder:text-text-muted light-theme:focus-visible:ring-2 focus-visible:ring-focus-ring light-theme:focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset focus-visible:[&:not([aria-invalid=true])]:border-accent aria-[invalid=true]:border-danger aria-[invalid=true]:focus-visible:ring-2 aria-[invalid=true]:focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:bg-surface disabled:opacity-50",
           className,
         )}
         ref={ref}

@@ -14,9 +14,11 @@ import { cn } from "@/lib/utils";
 // The web analogue of the docked search bar. It is a design system addition drawn only on the
 // approved boards, so these values are the boards'. The compact size is the top bar's (36 high,
 // 14 on 20 text, which the type scale has no style for) and the default is the foods page's (44).
-// Focus anywhere inside gives the frame the accent border and the ring.
+// Focus anywhere inside gives the frame the accent border. The field adds the ring in light only,
+// where the accent border is under 3:1, as `Input` does. The launcher draws the ring in both
+// themes, as the shell board does.
 const searchFrame = cva(
-  "flex items-center rounded-medium border border-border bg-surface-raised text-text-muted transition-[border-color,box-shadow] duration-quick has-[:focus-visible]:border-accent has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:opacity-50",
+  "flex items-center rounded-medium border border-border bg-surface-raised text-text-muted transition-[border-color,box-shadow] duration-quick has-[:focus-visible]:border-accent has-[:focus-visible]:ring-focus-ring has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:opacity-50",
   {
     variants: {
       size: {
@@ -24,8 +26,13 @@ const searchFrame = cva(
         sm: "h-[36px] gap-2 pl-3 pr-1",
         adaptive: "h-[44px] gap-2 pl-4 pr-1 lg:h-[36px] lg:pl-3",
       },
+      focusRing: {
+        lightOnly:
+          "light-theme:has-[:focus-visible]:ring-2 light-theme:has-[:focus-visible]:ring-offset-2",
+        always: "has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-offset-2",
+      },
     },
-    defaultVariants: { size: "md" },
+    defaultVariants: { size: "md", focusRing: "lightOnly" },
   },
 );
 
@@ -98,7 +105,7 @@ export function SearchLauncher({
   className,
 }: SearchLauncherProps) {
   return (
-    <div className={cn(searchFrame({ size }), className)}>
+    <div className={cn(searchFrame({ size, focusRing: "always" }), className)}>
       <button
         type="button"
         onClick={onSearch}
