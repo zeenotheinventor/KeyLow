@@ -1,9 +1,7 @@
-import { Pressable, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { View } from "react-native";
 
-import { haptic as hapticFeedback } from "../../../lib/haptics";
-import { usePressScale } from "../../../lib/motion";
 import { Icon } from "../Icon";
+import { PressableSurface } from "../PressableSurface";
 import { Text } from "../Text";
 import { ButtonSpinner } from "./ButtonSpinner";
 
@@ -45,44 +43,25 @@ export function Button({
   onPress,
   className = "",
 }: ButtonProps) {
-  const { animatedStyle, isPressed, pressHandlers } = usePressScale();
-  const isInert = disabled || loading;
-
-  const handlePress = () => {
-    if (haptic !== undefined) {
-      void hapticFeedback[haptic]();
-    }
-    onPress?.();
-  };
-
-  // A class and an animated style cannot share an element: NativeWind merges the two and loses the
-  // classes. So the press scale sits on its own wrapper with no class, the button with all its classes
-  // is inside it, and the caller's layout classes are outside it.
+  // The press scale sits on a wrapper inside the layout view, with the button and all its classes inside
+  // that, so the caller's layout classes are outside the scale. See PressableSurface.
   return (
     <View className={`${fullWidth ? "w-full" : ""} ${className}`} testID="button-layout">
-      <Animated.View style={animatedStyle} testID="press-scale">
-        <Pressable
-          aria-busy={loading}
-          aria-disabled={isInert}
-          className={`min-w-touch-target flex-row items-center justify-center overflow-hidden rounded-medium border ${variantClassName[variant]} ${sizeClassName[size]} ${disabled ? "opacity-40" : ""}`}
-          disabled={isInert}
-          role="button"
-          onPress={handlePress}
-          {...pressHandlers}
-        >
-          {/* The press overlay is a layer with no meaning of its own, so it has no role to query by. */}
-          {isPressed && !isInert ? (
-            <View className="absolute inset-0 bg-press-overlay" testID="press-overlay" />
-          ) : null}
-          <View className={`flex-row items-center gap-2 ${loading ? "opacity-0" : ""}`}>
-            {icon === undefined ? null : <Icon name={icon} tone={variantTone[variant]} />}
-            <Text tone={variantTone[variant]} variant="body-strong">
-              {children}
-            </Text>
-          </View>
-          {loading ? <ButtonSpinner variant={variant} /> : null}
-        </Pressable>
-      </Animated.View>
+      <PressableSurface
+        busy={loading}
+        className={`min-w-touch-target flex-row items-center justify-center overflow-hidden rounded-medium border ${variantClassName[variant]} ${sizeClassName[size]} ${disabled ? "opacity-40" : ""}`}
+        disabled={disabled}
+        haptic={haptic}
+        onPress={onPress}
+      >
+        <View className={`flex-row items-center gap-2 ${loading ? "opacity-0" : ""}`}>
+          {icon === undefined ? null : <Icon name={icon} tone={variantTone[variant]} />}
+          <Text tone={variantTone[variant]} variant="body-strong">
+            {children}
+          </Text>
+        </View>
+        {loading ? <ButtonSpinner variant={variant} /> : null}
+      </PressableSurface>
     </View>
   );
 }

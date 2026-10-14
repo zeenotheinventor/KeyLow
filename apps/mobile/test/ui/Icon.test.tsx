@@ -74,15 +74,18 @@ describe("Icon", () => {
       inScheme(
         "dark",
         <>
+          <Icon label="Next" name="ChevronRight" />
+          <Icon label="Working" name="LoaderCircle" />
           <Icon label="Plus" name="Plus" />
           <Icon label="Scan barcode" name="ScanBarcode" />
           <Icon label="Search" name="Search" />
+          <Icon label="Food" name="Utensils" />
           <Icon label="Close" name="X" />
         </>,
       ),
     );
 
-    expect(screen.getAllByRole("img")).toHaveLength(4);
+    expect(screen.getAllByRole("img")).toHaveLength(7);
   });
 
   describe.each(schemes)("in the %s scheme", (scheme) => {
@@ -92,6 +95,17 @@ describe("Icon", () => {
       expect(screen.getByRole("img", { name: "Search" })).toHaveProp(
         "stroke",
         themes[scheme]["text-primary"],
+      );
+    });
+
+    // The design's `--accent-ink` is lime in dark and the primary text colour in light, because lime on a
+    // light surface is too faint for a thin glyph. It is a proposed token, so it is resolved here.
+    it("should take the accent ink tone as lime in dark and the primary text colour in light", async () => {
+      await render(inScheme(scheme, <Icon label="Search" name="Search" tone="accent-ink" />));
+
+      expect(screen.getByRole("img", { name: "Search" })).toHaveProp(
+        "stroke",
+        scheme === "dark" ? themes.dark.accent : themes.light["text-primary"],
       );
     });
 

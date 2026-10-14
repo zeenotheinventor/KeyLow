@@ -143,6 +143,25 @@ describe("IconButton", () => {
     });
   });
 
+  describe("going inert while pressed", () => {
+    it("should let go of the press when it becomes disabled under the finger", async () => {
+      const view = await renderIconButton();
+      await fireEvent(screen.getByRole("button", { name: "Close" }), "pressIn");
+      await advance(1000);
+      expect(readScale()).toBeCloseTo(0.96, 3);
+
+      await view.rerender(
+        <ThemeProvider fixedPreference="dark">
+          <IconButton disabled icon="X" label="Close" />
+        </ThemeProvider>,
+      );
+      await advance(1000);
+
+      expect(readScale()).toBeCloseTo(1, 3);
+      expect(screen.queryByTestId("press-overlay")).not.toBeOnTheScreen();
+    });
+  });
+
   describe("disabled", () => {
     it("should be a disabled button at 40 percent opacity that does nothing when pressed", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });

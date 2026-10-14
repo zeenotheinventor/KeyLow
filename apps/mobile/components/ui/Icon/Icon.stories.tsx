@@ -36,6 +36,7 @@ export const Sizes: Story = {
 };
 
 // Lime and the status colours are fills with an icon on top, so their tones are shown on their fills.
+// Accent ink is the one thin glyph in lime: it turns to the primary text colour in light.
 export const Tones: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">
@@ -48,6 +49,7 @@ export const Tones: Story = {
       <View className="rounded-small bg-danger p-2">
         <Icon {...args} tone="on-status" />
       </View>
+      <Icon {...args} tone="accent-ink" />
     </View>
   ),
 };
@@ -57,9 +59,12 @@ export const Labelled: Story = { args: { name: "ScanBarcode", size: "lg", label:
 export const Names: Story = {
   render: (args) => (
     <View className="flex-row gap-4">
+      <Icon {...args} name="ChevronRight" />
+      <Icon {...args} name="LoaderCircle" />
       <Icon {...args} name="Plus" />
       <Icon {...args} name="ScanBarcode" />
       <Icon {...args} name="Search" />
+      <Icon {...args} name="Utensils" />
       <Icon {...args} name="X" />
     </View>
   ),

@@ -8,15 +8,18 @@ import { animatedScale } from "../support/animatedStyle";
 
 setUpTests();
 
-function Probe() {
-  const { animatedStyle, isPressed, pressHandlers } = usePressScale();
+function Probe({ scale }: { scale?: number }) {
+  const { animatedStyle, isPressed, pressHandlers, resetPress } = usePressScale(scale);
 
   return (
-    <Pressable accessibilityRole="button" {...pressHandlers}>
-      <Animated.View accessibilityLabel="Pressable surface" style={animatedStyle}>
-        <Text>{isPressed ? "Pressed" : "Resting"}</Text>
-      </Animated.View>
-    </Pressable>
+    <>
+      <Pressable accessibilityRole="button" {...pressHandlers}>
+        <Animated.View accessibilityLabel="Pressable surface" style={animatedStyle}>
+          <Text>{isPressed ? "Pressed" : "Resting"}</Text>
+        </Animated.View>
+      </Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Reset press" onPress={resetPress} />
+    </>
   );
 }
 
@@ -28,14 +31,14 @@ function readScale(): number | undefined {
 }
 
 async function pressIn() {
-  await fireEvent(screen.getByRole("button"), "pressIn");
+  await fireEvent(screen.getByLabelText("Pressable surface"), "pressIn");
   await act(() => {
     jest.advanceTimersByTime(settleTime);
   });
 }
 
 async function pressOut() {
-  await fireEvent(screen.getByRole("button"), "pressOut");
+  await fireEvent(screen.getByLabelText("Pressable surface"), "pressOut");
   await act(() => {
     jest.advanceTimersByTime(settleTime);
   });
@@ -81,6 +84,26 @@ describe("usePressScale", () => {
     });
   });
 
+  it("should compress to the scale it is given, as a row does", async () => {
+    await render(<Probe scale={0.985} />);
+
+    await pressIn();
+
+    expect(readScale()).toBeCloseTo(0.985, 3);
+  });
+
+  it("should not compress to a given scale either when the user has asked for reduced motion", async () => {
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(true);
+    await render(<Probe scale={0.985} />);
+    await act(() => {
+      jest.advanceTimersByTime(settleTime);
+    });
+
+    await pressIn();
+
+    expect(readScale()).toBe(reducedMotion.pressScale);
+  });
+
   it("should spring back to full size on release", async () => {
     await render(<Probe />);
     await pressIn();
@@ -101,6 +124,22 @@ describe("usePressScale", () => {
 
     expect(screen.getByLabelText("Pressable surface")).toHaveAnimatedStyle({
       transform: [{ scale: reducedMotion.pressScale }],
+    });
+  });
+
+  describe("when the press is cut short", () => {
+    it("should let go of the press and spring back, as a pressable that goes inert mid press needs", async () => {
+      await render(<Probe />);
+      await pressIn();
+      expect(screen.getByText("Pressed")).toBeOnTheScreen();
+
+      await fireEvent.press(screen.getByRole("button", { name: "Reset press" }));
+      await act(() => {
+        jest.advanceTimersByTime(settleTime);
+      });
+
+      expect(screen.getByText("Resting")).toBeOnTheScreen();
+      expect(readScale()).toBeCloseTo(1, 3);
     });
   });
 });
