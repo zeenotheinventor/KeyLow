@@ -1,3 +1,5 @@
+import { AUTH_FIELD_PROBLEMS } from "@keylow/core/copy";
+
 export type Credentials = {
   email: string;
   password: string;
@@ -21,15 +23,15 @@ export function validateCredentials(
   const errors: CredentialErrors = {};
 
   if (email.trim() === "") {
-    errors.email = "Enter your email address";
+    errors.email = AUTH_FIELD_PROBLEMS.emailRequired;
   } else if (!wellFormedEmail.test(email.trim())) {
-    errors.email = "Enter a valid email address";
+    errors.email = AUTH_FIELD_PROBLEMS.emailInvalid;
   }
 
   if (passwordRule === "required" && password === "") {
-    errors.password = "Enter your password";
+    errors.password = AUTH_FIELD_PROBLEMS.passwordRequired;
   } else if (passwordRule === "minLength" && password.length < minimumPasswordLength) {
-    errors.password = `Password must be at least ${String(minimumPasswordLength)} characters`;
+    errors.password = AUTH_FIELD_PROBLEMS.passwordTooShort;
   }
 
   return errors;

@@ -1,3 +1,4 @@
+import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
 import { signInWithGoogle } from "../lib/googleSignIn";
@@ -78,7 +79,7 @@ describe("signInWithGoogle", () => {
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({ status: "error", message: "Google sign-in is not configured yet" });
+    expect(result).toEqual({ status: "error", code: undefined });
     expect(mockGoogleSignin.signIn).not.toHaveBeenCalled();
   });
 
@@ -87,7 +88,7 @@ describe("signInWithGoogle", () => {
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({ status: "error", message: "Google sign-in is not configured yet" });
+    expect(result).toEqual({ status: "error", code: undefined });
     expect(mockGoogleSignin.signIn).not.toHaveBeenCalled();
   });
 
@@ -98,7 +99,7 @@ describe("signInWithGoogle", () => {
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({ status: "error", message: "Google sign-in is not configured yet" });
+    expect(result).toEqual({ status: "error", code: undefined });
   });
 
   it("should report an error when the native sheet rejects", async () => {
@@ -106,7 +107,7 @@ describe("signInWithGoogle", () => {
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({ status: "error", message: "Google sign-in failed. Try again." });
+    expect(result).toEqual({ status: "error", code: undefined });
     expect(mockSupabaseClient.auth.signInWithIdToken).not.toHaveBeenCalled();
   });
 
@@ -125,22 +126,30 @@ describe("signInWithGoogle", () => {
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({
-      status: "error",
-      message: "Google did not return an ID token. Try again.",
-    });
+    expect(result).toEqual({ status: "error", code: undefined });
     expect(mockSupabaseClient.auth.signInWithIdToken).not.toHaveBeenCalled();
   });
 
-  it("should report the Supabase error message when the token exchange fails", async () => {
+  it("should report the code of the Supabase error, and never its message, when the token exchange fails", async () => {
     mockSupabaseClient.auth.signInWithIdToken.mockResolvedValue({
       data: {},
-      error: { message: "Unacceptable audience in id_token" },
+      error: new AuthApiError("Unacceptable audience in id_token", 400, "bad_jwt"),
     });
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({ status: "error", message: "Unacceptable audience in id_token" });
+    expect(result).toEqual({ status: "error", code: "bad_jwt" });
+  });
+
+  it("should call a token exchange that never reached Supabase a network failure", async () => {
+    mockSupabaseClient.auth.signInWithIdToken.mockResolvedValue({
+      data: {},
+      error: new AuthRetryableFetchError("Failed to fetch", 0),
+    });
+
+    const result = await signInWithGoogle();
+
+    expect(result).toEqual({ status: "error", code: "network" });
   });
 
   it("should report an error when the token exchange throws", async () => {
@@ -148,7 +157,7 @@ describe("signInWithGoogle", () => {
 
     const result = await signInWithGoogle();
 
-    expect(result).toEqual({ status: "error", message: "Google sign-in failed. Try again." });
+    expect(result).toEqual({ status: "error", code: undefined });
   });
 
   describe("on Android", () => {
@@ -169,7 +178,7 @@ describe("signInWithGoogle", () => {
 
       const result = await signInWithGoogle();
 
-      expect(result).toEqual({ status: "error", message: "Google sign-in failed. Try again." });
+      expect(result).toEqual({ status: "error", code: undefined });
       expect(mockGoogleSignin.signIn).not.toHaveBeenCalled();
     });
   });

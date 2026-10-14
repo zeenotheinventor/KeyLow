@@ -1,5 +1,6 @@
 import type { HapticFeedbackName } from "../../../lib/haptics";
 import type { IconName } from "../Icon";
+import type { ReactNode } from "react";
 
 export type ButtonVariant = "primary" | "secondary" | "destructive" | "ghost";
 
@@ -34,6 +35,12 @@ export type ButtonProps = {
   accessibilityLabel?: string;
   /** A leading icon, by name. It is decoration. */
   icon?: IconName | undefined;
+  /**
+   * A leading mark that is not one of the icon map's, such as the Google "G" of the sign in boards, with
+   * the 12 points between it and the label that those boards draw. It takes the place of `icon`. The
+   * caller hides it from screen readers, because the label names the button.
+   */
+  leading?: ReactNode;
   /**
    * The haptic token to play when pressed. The design gives a button none of its own: a screen asks
    * for one where the design says so (`select` for a step, `confirm` for a save).

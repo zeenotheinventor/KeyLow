@@ -43,6 +43,16 @@ export const WithIcon: Story = {
   args: { variant: "secondary", icon: "Plus", children: "Create a food" },
 };
 
+// A mark that is not one of the icon map's, such as the Google "G" of the sign in boards: 12 between it and the label.
+export const WithLeadingMark: Story = {
+  args: {
+    variant: "secondary",
+    size: "lg",
+    children: "Continue with Google",
+    leading: <View aria-hidden className="h-5 w-5 rounded-pill bg-accent" />,
+  },
+};
+
 export const FullWidth: Story = {
   decorators: [
     (Story) => (

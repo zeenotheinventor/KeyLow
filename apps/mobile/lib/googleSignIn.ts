@@ -1,14 +1,18 @@
 import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { Platform } from "react-native";
 
+import { authErrorCode } from "./authErrorCode";
 import { supabase } from "./supabase";
 
+/**
+ * An error carries a code for `describeAuthError`, never a message. Only a failure Supabase answered has
+ * one. A client id that is not set, a sheet that fails and a missing ID token have none, so they read as
+ * the generic sentence.
+ */
 export type GoogleSignInResult =
-  { status: "signed-in" } | { status: "cancelled" } | { status: "error"; message: string };
+  { status: "signed-in" } | { status: "cancelled" } | { status: "error"; code: string | undefined };
 
-const notConfiguredMessage = "Google sign-in is not configured yet";
-const failedMessage = "Google sign-in failed. Try again.";
-const missingIdTokenMessage = "Google did not return an ID token. Try again.";
+const failure: GoogleSignInResult = { status: "error", code: undefined };
 
 function isFilled(value: unknown): value is string {
   return typeof value === "string" && value !== "";
@@ -19,7 +23,7 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
   const iosClientId: unknown = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   const webClientId: unknown = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
   if (!isFilled(iosClientId) || !isFilled(webClientId)) {
-    return { status: "error", message: notConfiguredMessage };
+    return failure;
   }
 
   try {
@@ -35,17 +39,19 @@ export async function signInWithGoogle(): Promise<GoogleSignInResult> {
 
     const idToken = response.data.idToken;
     if (idToken === null) {
-      return { status: "error", message: missingIdTokenMessage };
+      return failure;
     }
 
     const { error } = await supabase.auth.signInWithIdToken({ provider: "google", token: idToken });
 
-    return error === null ? { status: "signed-in" } : { status: "error", message: error.message };
+    return error === null
+      ? { status: "signed-in" }
+      : { status: "error", code: authErrorCode(error) };
   } catch (error) {
     if (__DEV__) {
       console.warn("Google sign-in failed", error);
     }
 
-    return { status: "error", message: failedMessage };
+    return failure;
   }
 }

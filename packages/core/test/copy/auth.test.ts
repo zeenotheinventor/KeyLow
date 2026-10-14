@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   AUTH_FIELD_PROBLEMS,
+  AUTH_SCREEN,
   CHECK_EMAIL_TITLE,
   GENERIC_ERROR,
   PASSWORD_HELPER,
@@ -45,6 +46,37 @@ describe("drawn auth sentences", () => {
       passwordRequired: "Enter your password",
       passwordTooShort: "Password must be at least 8 characters",
     });
+  });
+});
+
+describe("the words on the sign in and sign up boards", () => {
+  it("should pin the sign in screen", () => {
+    expect(AUTH_SCREEN.signIn).toEqual({
+      heading: "Welcome back",
+      submitLabel: "Sign in",
+      footerPrompt: "New to Ki-Lo?",
+      footerLink: "Create account",
+    });
+  });
+
+  it("should pin the sign up screen", () => {
+    expect(AUTH_SCREEN.signUp).toEqual({
+      heading: "Create your account",
+      submitLabel: "Create account",
+      footerPrompt: "Already have an account?",
+      footerLink: "Sign in",
+    });
+  });
+
+  it("should pin the fields and the Google button that both screens share", () => {
+    expect(AUTH_SCREEN.emailLabel).toBe("Email");
+    expect(AUTH_SCREEN.passwordLabel).toBe("Password");
+    expect(AUTH_SCREEN.googleButton).toBe("Continue with Google");
+  });
+
+  it("should pin the sign in link screen", () => {
+    expect(AUTH_SCREEN.signingInLink).toBe("Signing you in");
+    expect(AUTH_SCREEN.backToSignIn).toBe("Back to sign in");
   });
 });
 

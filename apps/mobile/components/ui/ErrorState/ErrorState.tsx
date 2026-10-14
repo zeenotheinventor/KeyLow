@@ -15,7 +15,7 @@ import type { ErrorStateProps } from "./types";
  * role alone does not announce on mount on Android, so a screen reader says it as it appears. It fades in
  * once, in place of the design's cut-in.
  */
-export function ErrorState({ title, body, retry }: ErrorStateProps) {
+export function ErrorState({ title, body, retry, action, inset = "default" }: ErrorStateProps) {
   const animatedStyle = useFadeInStyle();
 
   // A class and an animated style cannot share an element, so the fade sits on a wrapper with no class,
@@ -24,7 +24,7 @@ export function ErrorState({ title, body, retry }: ErrorStateProps) {
   return (
     <View className="flex-1 justify-center">
       <Animated.View style={animatedStyle} testID="error-state">
-        <View className="items-center gap-2 px-6">
+        <View className={`items-center gap-2 ${inset === "wide" ? "px-8" : "px-6"}`}>
           <View
             className="mb-2 h-[56px] w-[56px] items-center justify-center rounded-medium bg-danger-muted"
             testID="error-state-tile"
@@ -41,9 +41,17 @@ export function ErrorState({ title, body, retry }: ErrorStateProps) {
               </Text>
             )}
           </View>
-          {retry === undefined ? null : (
+          {retry !== undefined ? (
             <Button className="mt-3" icon="RotateCw" variant="secondary" onPress={retry.onPress}>
               {retry.label}
+            </Button>
+          ) : action === undefined ? null : (
+            <Button
+              className="mt-3"
+              variant={action.variant ?? "secondary"}
+              onPress={action.onPress}
+            >
+              {action.label}
             </Button>
           )}
         </View>

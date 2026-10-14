@@ -12,7 +12,16 @@ export const storyManifest: Record<string, { states: string[] }> = {
     states: ["SourceOpenFoodFacts", "SourceCoFid", "SourceYours", "Neutral", "Tones", "WithDot"],
   },
   Banner: {
-    states: ["Review", "Offline", "Info", "InfoBusy", "InfoWithAction", "AddFailed", "PartialSave"],
+    states: [
+      "Review",
+      "Offline",
+      "Info",
+      "InfoBusy",
+      "InfoWithAction",
+      "AddFailed",
+      "Sentence",
+      "PartialSave",
+    ],
   },
   Button: {
     states: [
@@ -23,6 +32,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "Small",
       "Large",
       "WithIcon",
+      "WithLeadingMark",
       "FullWidth",
       "Disabled",
       "Loading",
@@ -30,7 +40,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
   },
   Card: { states: ["Surface", "Raised", "Compact", "Rows"] },
   EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction"] },
-  ErrorState: { states: ["SearchFailed", "WithRetry"] },
+  ErrorState: { states: ["SearchFailed", "WithRetry", "WithAction"] },
   FoodRow: {
     states: ["Default", "WithBrand", "LongName", "PerBasis", "NoEnergy", "Pending", "Disabled"],
   },

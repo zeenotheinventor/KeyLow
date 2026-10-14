@@ -1,5 +1,14 @@
 export { AuthForm } from "./AuthForm";
-export type { AuthFormOutcome, AuthFormProps } from "./AuthForm";
+export type { AuthFormFooter, AuthFormOutcome, AuthFormProps } from "./AuthForm";
+export { GoogleButton } from "./GoogleButton";
+export type { GoogleButtonProps } from "./GoogleButton";
+export { GoogleMark } from "./GoogleMark";
+export type { GoogleMarkProps } from "./GoogleMark";
+export { KiLoMark } from "./KiLoMark";
+export type { KiLoMarkProps } from "./KiLoMark";
+export { LinkNotValid } from "./LinkNotValid";
+export type { LinkNotValidProps } from "./LinkNotValid";
+export { SigningInLink } from "./SigningInLink";
 export { AuthGate } from "./AuthGate";
 export type { AuthGateProps } from "./AuthGate";
 export { MainTabBar } from "./MainTabBar";

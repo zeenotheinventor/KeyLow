@@ -9,7 +9,7 @@ export type { CardLevel, CardPadding, CardProps } from "./Card";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateAction, EmptyStateProps } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
-export type { ErrorStateProps, ErrorStateRetry } from "./ErrorState";
+export type { ErrorStateAction, ErrorStateProps, ErrorStateRetry } from "./ErrorState";
 export { FoodRow } from "./FoodRow";
 export type { FoodRowMacros, FoodRowProps } from "./FoodRow";
 export { GroupedList } from "./GroupedList";

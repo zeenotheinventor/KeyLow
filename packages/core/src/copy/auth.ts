@@ -12,6 +12,30 @@ export const SIGN_IN_LINK_INVALID = {
   body: "This sign-in link is not valid. It may have expired or already been used.",
 };
 
+/**
+ * What the mobile sign in and sign up boards say. The two screens share one layout and differ in the
+ * heading, the button, and the line that links to the other.
+ */
+export const AUTH_SCREEN = {
+  signIn: {
+    heading: "Welcome back",
+    submitLabel: "Sign in",
+    footerPrompt: "New to Ki-Lo?",
+    footerLink: "Create account",
+  },
+  signUp: {
+    heading: "Create your account",
+    submitLabel: "Create account",
+    footerPrompt: "Already have an account?",
+    footerLink: "Sign in",
+  },
+  emailLabel: "Email",
+  passwordLabel: "Password",
+  googleButton: "Continue with Google",
+  signingInLink: "Signing you in",
+  backToSignIn: "Back to sign in",
+};
+
 export const PASSWORD_HELPER = "At least 8 characters";
 
 export const AUTH_FIELD_PROBLEMS = {

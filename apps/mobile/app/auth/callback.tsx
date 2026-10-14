@@ -1,7 +1,8 @@
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
 
+import { LinkNotValid } from "../../components/LinkNotValid";
+import { SigningInLink } from "../../components/SigningInLink";
 import { supabase } from "../../lib/supabase";
 
 import type { EmailOtpType } from "@supabase/supabase-js";
@@ -19,24 +20,34 @@ function toEmailOtpType(value: string | undefined): EmailOtpType | undefined {
   return emailOtpTypes.find((emailOtpType) => emailOtpType === value);
 }
 
+// Whether the link signed the person in. Why it did not is for the server's log and not the screen: the
+// board draws one sentence for a link that cannot be used, whatever went wrong with it, including a call
+// that threw, so the screen never waits for ever.
 async function completeSignIn(
   code: string | undefined,
   tokenHash: string | undefined,
   type: string | undefined,
-): Promise<string | null> {
+): Promise<boolean> {
   const emailOtpType = toEmailOtpType(type);
 
-  if (code !== undefined) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    return error?.message ?? null;
+  try {
+    if (code !== undefined) {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      return error === null;
+    }
+
+    if (tokenHash !== undefined && emailOtpType !== undefined) {
+      const { error } = await supabase.auth.verifyOtp({
+        token_hash: tokenHash,
+        type: emailOtpType,
+      });
+      return error === null;
+    }
+  } catch {
+    return false;
   }
 
-  if (tokenHash !== undefined && emailOtpType !== undefined) {
-    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: emailOtpType });
-    return error?.message ?? null;
-  }
-
-  return "This sign-in link is not valid";
+  return false;
 }
 
 export default function AuthCallbackRoute() {
@@ -50,7 +61,7 @@ export default function AuthCallbackRoute() {
     token_hash?: string;
     type?: string;
   }>();
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasFailed, setHasFailed] = useState(false);
   const hasStarted = useRef(false);
 
   useEffect(() => {
@@ -60,34 +71,22 @@ export default function AuthCallbackRoute() {
     }
     hasStarted.current = true;
 
-    void completeSignIn(code, tokenHash, type).then((message) => {
-      if (message === null) {
+    void completeSignIn(code, tokenHash, type).then((isSignedIn) => {
+      if (isSignedIn) {
         router.replace("/(tabs)/dashboard");
       } else {
-        setErrorMessage(message);
+        setHasFailed(true);
       }
     });
   }, [code, tokenHash, type, router]);
 
-  return (
-    <View className="flex-1 items-center justify-center gap-4 bg-legacy-neutral-50 px-6">
-      {errorMessage === null ? (
-        <Text accessibilityLiveRegion="polite" className="text-base text-legacy-neutral-500">
-          Signing you in
-        </Text>
-      ) : (
-        <>
-          <Text accessibilityRole="alert" className="text-base text-legacy-danger-600">
-            {errorMessage}
-          </Text>
-          <Link
-            href="/(auth)/sign-in"
-            className="py-3 text-base font-semibold text-legacy-brand-600"
-          >
-            Back to sign in
-          </Link>
-        </>
-      )}
-    </View>
+  return hasFailed ? (
+    <LinkNotValid
+      onBackToSignIn={() => {
+        router.replace("/(auth)/sign-in");
+      }}
+    />
+  ) : (
+    <SigningInLink />
   );
 }

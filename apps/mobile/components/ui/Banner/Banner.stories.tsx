@@ -86,6 +86,16 @@ export const AddFailed: Story = {
   },
 };
 
+// The sign-in-error board: one sentence and no title, in regular body text, which only the `sentence` prop draws.
+export const Sentence: Story = {
+  args: {
+    variant: "error",
+    title: "Email or password is not right. Check them and try again.",
+    body: undefined,
+    sentence: true,
+  },
+};
+
 // The save-partial board: the food saved and its portions did not, so the warning notice is announced as
 // an alert, because the person is waiting on the result.
 export const PartialSave: Story = {

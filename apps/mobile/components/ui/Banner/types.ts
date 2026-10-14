@@ -25,6 +25,11 @@ export type BannerProps = {
    * crossed-out cloud for Open Food Facts being unreachable and a clock for it being busy.
    */
   icon?: IconName | undefined;
+  /**
+   * Draws a title with no body in regular body text, as the sign in error board draws its one sentence.
+   * Without it a title is always strong body text, as the design system card draws it.
+   */
+  sentence?: boolean | undefined;
   /** The one thing to do about it, drawn under the words as a text button. */
   action?: BannerAction | undefined;
   /**
