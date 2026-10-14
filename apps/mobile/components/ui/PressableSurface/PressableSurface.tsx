@@ -17,6 +17,7 @@ export function PressableSurface({
   label,
   role = "button",
   selected,
+  checked,
   busy,
   disabled = false,
   hitSlop,
@@ -49,6 +50,7 @@ export function PressableSurface({
     <Animated.View style={animatedStyle} testID="press-scale">
       <Pressable
         aria-busy={busy}
+        aria-checked={checked}
         aria-disabled={isInert}
         aria-label={label}
         aria-selected={selected}

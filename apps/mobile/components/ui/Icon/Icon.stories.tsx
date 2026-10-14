@@ -37,6 +37,7 @@ const names: IconName[] = [
   "Info",
   "LayoutDashboard",
   "LoaderCircle",
+  "Lock",
   "Plus",
   "RotateCw",
   "ScanBarcode",

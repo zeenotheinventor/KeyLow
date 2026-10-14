@@ -94,6 +94,19 @@ describe("Banner", () => {
       },
     );
 
+    it("should announce a review banner as an alert when the screen asks, as the partial save board draws it", async () => {
+      await renderBanner({ variant: "review", announce: true });
+
+      expect(screen.getByRole("alert", { name: reviewName })).toBeOnTheScreen();
+      expect(screen.queryByRole("note")).not.toBeOnTheScreen();
+    });
+
+    it("should keep a quiet variant quiet whatever the screen asks", async () => {
+      await renderBanner({ variant: "info", announce: true });
+
+      expect(screen.getByRole("status", { name: reviewName })).toBeOnTheScreen();
+    });
+
     it("should be an info banner by default", async () => {
       await renderBanner();
 
@@ -181,6 +194,19 @@ describe("Banner", () => {
 
       expect(screen.getByRole("button", { name: "Copy to your foods" })).toHaveStyle({
         minHeight: touchTarget,
+      });
+    });
+
+    it("should be set in Geist semibold at 14 over 20, as the boards draw it", async () => {
+      await renderBanner({
+        variant: "review",
+        action: { label: "Copy to your foods", onPress: () => undefined },
+      });
+
+      expect(screen.getByText("Copy to your foods")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 14,
+        lineHeight: 20,
       });
     });
 

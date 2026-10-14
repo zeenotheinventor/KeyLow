@@ -68,9 +68,11 @@ const variants: Record<
  * place of the design's cut-in from the side, which waits for a motion review on a device. The copy is
  * the screen's, from `@keylow/core/copy`.
  */
-export function Banner({ variant = "info", title, body, icon, action }: BannerProps) {
+export function Banner({ variant = "info", title, body, icon, action, announce }: BannerProps) {
   const animatedStyle = useFadeInStyle();
   const look = variants[variant];
+  // Only the review notice can be raised: the quiet ones are never an alert, and the error already is.
+  const isRaised = announce === true && variant === "review";
 
   // A class and an animated style cannot share an element, so the fade sits on a wrapper with no class.
   return (
@@ -84,7 +86,12 @@ export function Banner({ variant = "info", title, body, icon, action }: BannerPr
         </View>
         <View className="min-w-0 flex-1 gap-[2px]">
           {/* The words are announced as one group, and the action stays outside it so it can be reached. */}
-          <View accessible aria-live={look.liveRegion} className="gap-[2px]" role={look.role}>
+          <View
+            accessible
+            aria-live={isRaised ? "assertive" : look.liveRegion}
+            className="gap-[2px]"
+            role={isRaised ? "alert" : look.role}
+          >
             <Text tone={look.titleTone} variant="body-strong">
               {title}
             </Text>
@@ -104,7 +111,7 @@ export function Banner({ variant = "info", title, body, icon, action }: BannerPr
             >
               {/* The design sets this at 14 over 20, which is between the type scale's sizes, so it is not a Text variant. */}
               <NativeText
-                className={`text-[14px] font-semibold leading-5 tabular-nums ${look.actionClassName}`}
+                className={`text-[14px] font-semibold leading-[20px] tabular-nums ${look.actionClassName}`}
               >
                 {action.label}
               </NativeText>

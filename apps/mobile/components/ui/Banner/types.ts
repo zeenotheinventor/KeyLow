@@ -27,4 +27,10 @@ export type BannerProps = {
   icon?: IconName | undefined;
   /** The one thing to do about it, drawn under the words as a text button. */
   action?: BannerAction | undefined;
+  /**
+   * Announces a `review` notice as an alert when it appears, for a result the user is waiting on, such
+   * as the food form's partial save. The `review` notice is otherwise a note, and the other variants
+   * ignore this.
+   */
+  announce?: boolean | undefined;
 };

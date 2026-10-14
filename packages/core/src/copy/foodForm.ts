@@ -72,6 +72,8 @@ export const FOOD_FORM = {
   details: "Details",
   portions: "Portions",
   required: "Required",
+  /** What a screen reader adds to a field that shows a value and cannot be changed. */
+  readOnly: "Read only",
   name: "Name",
   namePlaceholder: "e.g. Greek yoghurt",
   optionalPlaceholder: "Optional",
