@@ -70,11 +70,16 @@ jobs:
           git diff --exit-code apps/mobile/.rnstorybook/storybook.requires.ts
       # Some doctor checks call the Expo API. A run where every failure is a network error is
       # downgraded to a warning, so an Expo outage does not block merges.
+      # Expo patch releases are installed in a batch, when a native build is being made anyway, because
+      # each one changes the native fingerprint. doctor has no option for "patch mismatches only", so
+      # tools/expo-doctor-gate runs it and reads its report. A package that is only a patch behind gets a
+      # warning annotation. Every other failure, a minor or major mismatch included, fails the step, and so
+      # does a report the script cannot read.
       - name: Check the Expo project health
         working-directory: apps/mobile
         env:
           EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
-        run: npx --yes expo-doctor
+        run: node --experimental-strip-types ../../tools/expo-doctor-gate/src/runDoctorGate.ts
 
   # Type-checks and lints the Edge Functions under Deno, runs the pgTAP tests and the Edge Function
   # HTTP suites against a real local Supabase stack with the functions served, then proves the
