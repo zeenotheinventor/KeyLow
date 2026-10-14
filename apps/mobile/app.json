@@ -25,7 +25,8 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.sojisoft.keylow",
-      "backgroundColor": "#0B0E13"
+      "backgroundColor": "#0B0E13",
+      "permissions": ["android.permission.health.READ_WEIGHT"]
     },
     "plugins": [
       "expo-router",
@@ -60,6 +61,23 @@
           "backgroundColor": "#0B0E13",
           "image": "./assets/splash-icon.png",
           "imageWidth": 200
+        }
+      ],
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Ki-Lo reads your weight from Apple Health so your weigh-ins appear in your trend without typing them twice.",
+          "NSHealthUpdateUsageDescription": false,
+          "background": false
         }
       ],
       "expo-system-ui"
