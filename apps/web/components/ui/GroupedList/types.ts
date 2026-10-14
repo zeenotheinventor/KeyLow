@@ -7,6 +7,11 @@ export type GroupedListProps = {
   source?: string;
   /** Offers the rows that are not shown. Nothing is offered when `hiddenCount` is 0. */
   seeMore?: { hiddenCount: number; onClick: () => void };
+  /**
+   * How tall the header row is. `default` holds 32 px, which gives a See more button its room.
+   * `compact` is the bare heading line, for a group that never has one, such as the lists on More.
+   */
+  headerSize?: "default" | "compact";
   /** A notice about the group, such as a `Banner`, drawn between the heading and the rows. */
   notice?: React.ReactNode;
   /** The rows, such as `ListRow` or `FoodRow`. */

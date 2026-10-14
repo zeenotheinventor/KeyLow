@@ -29,7 +29,7 @@ describe("proxy", () => {
     vi.resetAllMocks();
   });
 
-  it.each(["/diary", "/recipes", "/weight", "/settings", "/foods"])(
+  it.each(["/dashboard", "/diary", "/recipes", "/more", "/weight", "/settings", "/foods"])(
     "should send a signed out request for %s to the login page",
     async (path) => {
       const response = await proxy(requestFor(path));

@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { Badge } from "@/components/ui/Badge";
 
-const lightTextRule = "[[data-theme=light]_&]:text-text-primary";
+const lightTextRule = "light-theme:text-text-primary";
 
 const coloredTones = [
   "accent",

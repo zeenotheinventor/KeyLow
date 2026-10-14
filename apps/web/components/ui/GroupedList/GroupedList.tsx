@@ -10,6 +10,7 @@ export function GroupedList({
   title,
   source,
   seeMore,
+  headerSize = "default",
   notice,
   children,
   className,
@@ -18,7 +19,12 @@ export function GroupedList({
 
   return (
     <section aria-labelledby={titleId} className={cn("flex flex-col gap-2", className)}>
-      <div className="flex min-h-[32px] items-center justify-between gap-2 px-1">
+      <div
+        className={cn(
+          "flex items-center justify-between gap-2 px-1",
+          headerSize === "default" && "min-h-[32px]",
+        )}
+      >
         <h2 className="text-body-strong">
           <span id={titleId}>{title}</span>
           {source !== undefined && (

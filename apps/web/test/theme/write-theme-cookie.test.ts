@@ -23,6 +23,12 @@ describe("writeThemeCookie", () => {
     );
   });
 
+  it("should write device, so the page follows the system setting", async () => {
+    await writeThemeCookie("device");
+
+    expect(set).toHaveBeenCalledWith("kl-theme", "device", expect.objectContaining({ path: "/" }));
+  });
+
   it("should keep the cookie for a year, so the choice outlives the session", async () => {
     await writeThemeCookie("dark");
 

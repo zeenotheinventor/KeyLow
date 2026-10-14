@@ -5,7 +5,15 @@ import type { Database } from "@keylow/db";
 
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
-const DASHBOARD_PATHS = ["/diary", "/foods", "/recipes", "/weight", "/settings"];
+const DASHBOARD_PATHS = [
+  "/dashboard",
+  "/diary",
+  "/foods",
+  "/recipes",
+  "/more",
+  "/weight",
+  "/settings",
+];
 
 function isDashboardPath(pathname: string) {
   return DASHBOARD_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));

@@ -104,6 +104,14 @@ describe("SegmentedControl", () => {
     expect(screen.getByRole("radiogroup", { name: "Appearance" })).toBeTruthy();
   });
 
+  it("should keep a label on one line, so Match device does not wrap in a phone width column", async () => {
+    render(<ControlledSegmentedControl />);
+    const segment = screen.getByRole("radio", { name: "Match device" }).parentElement;
+    const css = await compileUtilities(segment?.getAttribute("class") ?? "");
+
+    expect(css).toContain("white-space: nowrap");
+  });
+
   describe("reduced motion", () => {
     it("should change colour without a transition under prefers-reduced-motion", async () => {
       render(<ControlledSegmentedControl />);

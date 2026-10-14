@@ -2,10 +2,10 @@
 
 import { cookies } from "next/headers";
 
-import { isThemeScheme, ONE_YEAR_IN_SECONDS, THEME_COOKIE_NAME } from "./themeCookie";
+import { isThemePreference, ONE_YEAR_IN_SECONDS, THEME_COOKIE_NAME } from "./themeCookie";
 
 export async function writeThemeCookie(theme: string): Promise<void> {
-  if (!isThemeScheme(theme)) {
+  if (!isThemePreference(theme)) {
     throw new Error(`Unknown theme: ${theme}`);
   }
 

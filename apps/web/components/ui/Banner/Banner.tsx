@@ -20,7 +20,7 @@ const toneStyles = {
   review: {
     frame: "border-warning bg-warning-muted",
     icon: "text-warning",
-    ink: "text-warning [[data-theme=light]_&]:text-text-primary",
+    ink: "text-warning light-theme:text-text-primary",
     defaultRole: "note",
     defaultIcon: CircleAlert,
   },

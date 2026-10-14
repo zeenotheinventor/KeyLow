@@ -19,7 +19,7 @@ export function InlineStatus({ children, size = "caption" }: InlineStatusProps) 
     >
       <LoaderCircle
         aria-hidden
-        className="size-4 shrink-0 animate-spin text-accent motion-reduce:animate-pulse [[data-theme=light]_&]:text-text-primary"
+        className="size-4 shrink-0 animate-spin text-accent motion-reduce:animate-pulse light-theme:text-text-primary"
         strokeWidth={iconStroke}
       />
       {children}

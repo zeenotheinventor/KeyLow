@@ -30,7 +30,7 @@ export function SegmentedControl<Value extends string>({
       {options.map((option) => (
         <label
           key={option.value}
-          className="flex cursor-pointer items-center justify-center rounded-[calc(theme(borderRadius.medium)-3px)] px-2 text-[14px] font-semibold leading-5 text-text-secondary transition-colors duration-quick motion-reduce:transition-none has-[:checked]:bg-text-primary has-[:checked]:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-inset has-[:focus-visible]:ring-focus-ring"
+          className="flex cursor-pointer items-center justify-center whitespace-nowrap rounded-[calc(theme(borderRadius.medium)-3px)] px-2 text-[14px] font-semibold leading-5 text-text-secondary transition-colors duration-quick motion-reduce:transition-none has-[:checked]:bg-text-primary has-[:checked]:text-background has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-inset has-[:focus-visible]:ring-focus-ring"
         >
           <input
             type="radio"
