@@ -79,4 +79,75 @@ describe("useReducedMotion", () => {
 
     expect(mockRemoveSubscription).toHaveBeenCalledTimes(1);
   });
+
+  describe("with many components using it", () => {
+    it("should ask the system and listen once, however many components read the setting", async () => {
+      const addEventListener = jest.spyOn(AccessibilityInfo, "addEventListener");
+      const isReduceMotionEnabled = jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled");
+      addEventListener.mockClear();
+      isReduceMotionEnabled.mockClear();
+
+      await renderHook(() => [useReducedMotion(), useReducedMotion()]);
+      await renderHook(() => useReducedMotion());
+
+      expect(addEventListener).toHaveBeenCalledTimes(1);
+      expect(isReduceMotionEnabled).toHaveBeenCalledTimes(1);
+    });
+
+    it("should hand a change to every component at once", async () => {
+      const first = await renderHook(() => useReducedMotion());
+      const second = await renderHook(() => useReducedMotion());
+
+      await act(() => {
+        announceReduceMotionChange?.(true);
+      });
+
+      expect(first.result.current).toBe(true);
+      expect(second.result.current).toBe(true);
+    });
+
+    it("should keep listening until the last component goes away", async () => {
+      const first = await renderHook(() => useReducedMotion());
+      const second = await renderHook(() => useReducedMotion());
+
+      await first.unmount();
+      expect(mockRemoveSubscription).not.toHaveBeenCalled();
+
+      await second.unmount();
+      expect(mockRemoveSubscription).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep the last answer for a component that arrives as the last one goes, until the fresh read corrects it", async () => {
+      setReduceMotion(true);
+      const first = await renderHook(() => useReducedMotion());
+      await waitFor(() => {
+        expect(first.result.current).toBe(true);
+      });
+      await first.unmount();
+      // The fresh read has not answered yet, so what the component sees first is the last answer.
+      jest
+        .spyOn(AccessibilityInfo, "isReduceMotionEnabled")
+        .mockReturnValue(new Promise(() => undefined));
+
+      const second = await renderHook(() => useReducedMotion());
+
+      expect(second.result.current).toBe(true);
+    });
+
+    it("should read the setting afresh when a component arrives after all have gone", async () => {
+      setReduceMotion(true);
+      const first = await renderHook(() => useReducedMotion());
+      await waitFor(() => {
+        expect(first.result.current).toBe(true);
+      });
+      await first.unmount();
+      setReduceMotion(false);
+
+      const second = await renderHook(() => useReducedMotion());
+
+      await waitFor(() => {
+        expect(second.result.current).toBe(false);
+      });
+    });
+  });
 });

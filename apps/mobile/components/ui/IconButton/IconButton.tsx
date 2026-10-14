@@ -1,10 +1,8 @@
 import { controlHeight, touchTarget } from "@keylow/tokens";
-import { Pressable, View } from "react-native";
-import Animated from "react-native-reanimated";
+import { View } from "react-native";
 
-import { haptic as hapticFeedback } from "../../../lib/haptics";
-import { usePressScale } from "../../../lib/motion";
 import { Icon } from "../Icon";
+import { PressableSurface } from "../PressableSurface";
 
 import type { IconButtonProps, IconButtonSize, IconButtonVariant } from "./types";
 
@@ -30,38 +28,19 @@ export function IconButton({
   onPress,
   className = "",
 }: IconButtonProps) {
-  const { animatedStyle, isPressed, pressHandlers } = usePressScale();
-
-  const handlePress = () => {
-    if (haptic !== undefined) {
-      void hapticFeedback[haptic]();
-    }
-    onPress?.();
-  };
-
-  // A class and an animated style cannot share an element, so the press scale sits on its own wrapper.
-  // See Button.
   return (
     <View className={className}>
-      <Animated.View style={animatedStyle} testID="press-scale">
-        <Pressable
-          aria-label={label}
-          aria-disabled={disabled}
-          className={`items-center justify-center overflow-hidden ${sizeClassName[size]} ${variantClassName[variant]} ${disabled ? "opacity-40" : ""}`}
-          disabled={disabled}
-          // A control smaller than the touch target reaches out to it. The reach is invisible.
-          hitSlop={(touchTarget - controlHeight[size]) / 2}
-          role="button"
-          onPress={handlePress}
-          {...pressHandlers}
-        >
-          {/* The press overlay is a layer with no meaning of its own, so it has no role to query by. */}
-          {isPressed && !disabled ? (
-            <View className="absolute inset-0 bg-press-overlay" testID="press-overlay" />
-          ) : null}
-          <Icon name={icon} />
-        </Pressable>
-      </Animated.View>
+      <PressableSurface
+        className={`items-center justify-center overflow-hidden ${sizeClassName[size]} ${variantClassName[variant]} ${disabled ? "opacity-40" : ""}`}
+        disabled={disabled}
+        haptic={haptic}
+        // A control smaller than the touch target reaches out to it. The reach is invisible.
+        hitSlop={(touchTarget - controlHeight[size]) / 2}
+        label={label}
+        onPress={onPress}
+      >
+        <Icon name={icon} />
+      </PressableSurface>
     </View>
   );
 }

@@ -7,7 +7,12 @@ export type IconName = keyof typeof iconMap;
 /** The design's icon size tokens: sm 16, md 20, lg 24, xl 32. */
 export type IconSizeName = keyof typeof iconSize;
 
-export type IconTone = Tone;
+/**
+ * A tone from the kit's text and fill tones, or `accent-ink`: the design's `--accent-ink`, which is lime
+ * in dark and the primary text colour in light. It is for a thin glyph such as a spinner, because lime
+ * is never text or a thin line on a light surface.
+ */
+export type IconTone = Tone | "accent-ink";
 
 export type IconProps = {
   name: IconName;

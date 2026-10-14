@@ -1,4 +1,4 @@
-const { controlHeight, preset, themeVariables, touchTarget } = require("@keylow/tokens");
+const { controlHeight, elevation, preset, themeVariables, touchTarget } = require("@keylow/tokens");
 const plugin = require("tailwindcss/plugin");
 
 // The classes read `--kl-*` variables. The app's ThemeProvider sets them on its root view for the
@@ -49,6 +49,22 @@ const tabularNumbersPlugin = plugin((api) => {
   api.addUtilities({ ".tabular-nums": { "-rn-font-variant": "tabular-nums" } });
 });
 
+// NativeWind turns `shadow-*` into the iOS shadow props and an Android elevation, and drops a theme
+// shadow whose value is a CSS variable, so `shadow-card` compiles to nothing. React Native draws a
+// `boxShadow` string itself, including the inset highlight the design's elevation has, and `-rn-` hands
+// it over. The variable is the scheme's own (`--kl-elevation-*`, set by the ThemeProvider), so a card
+// follows dark and light.
+const elevationPlugin = plugin((api) => {
+  api.addUtilities(
+    Object.fromEntries(
+      Object.keys(elevation.dark).map((name) => [
+        `.elevation-${name}`,
+        { "-rn-box-shadow": `var(--kl-elevation-${name})` },
+      ]),
+    ),
+  );
+});
+
 /** @type {import("tailwindcss").Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./.rnstorybook/**/*.{ts,tsx}"],
@@ -63,5 +79,5 @@ module.exports = {
       minHeight: controlSizes,
     },
   },
-  plugins: [themeVariablesPlugin, geistWeightsPlugin, tabularNumbersPlugin],
+  plugins: [themeVariablesPlugin, geistWeightsPlugin, tabularNumbersPlugin, elevationPlugin],
 };

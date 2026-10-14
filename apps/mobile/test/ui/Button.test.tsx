@@ -209,6 +209,41 @@ describe("Button", () => {
     });
   });
 
+  describe("going inert while pressed", () => {
+    it("should let go of the press when it starts loading under the finger", async () => {
+      const view = await renderButton();
+      await fireEvent(screen.getByRole("button", { name: "Add entry" }), "pressIn");
+      await advance(1000);
+      expect(readScale()).toBeCloseTo(0.96, 3);
+
+      await view.rerender(
+        <ThemeProvider fixedPreference="dark">
+          <Button loading>Add entry</Button>
+        </ThemeProvider>,
+      );
+      await advance(1000);
+
+      expect(readScale()).toBeCloseTo(1, 3);
+      expect(screen.queryByTestId("press-overlay")).not.toBeOnTheScreen();
+    });
+
+    it("should let go of the press when it becomes disabled under the finger", async () => {
+      const view = await renderButton();
+      await fireEvent(screen.getByRole("button", { name: "Add entry" }), "pressIn");
+      await advance(1000);
+
+      await view.rerender(
+        <ThemeProvider fixedPreference="dark">
+          <Button disabled>Add entry</Button>
+        </ThemeProvider>,
+      );
+      await advance(1000);
+
+      expect(readScale()).toBeCloseTo(1, 3);
+      expect(screen.queryByTestId("press-overlay")).not.toBeOnTheScreen();
+    });
+  });
+
   describe("loading", () => {
     it("should be a busy button still named by its label", async () => {
       await renderButton({ loading: true });
