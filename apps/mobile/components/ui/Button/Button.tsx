@@ -76,12 +76,14 @@ export function Button({
   fullWidth = false,
   accessibilityLabel,
   icon,
+  leading,
   haptic,
   onPress,
   className = "",
 }: ButtonProps) {
   const look = sizeLook[size];
   const tone = variant === "ghost" && quiet ? "secondary" : variantTone[variant];
+  const hasLeading = leading !== undefined;
 
   // The press scale sits on a wrapper inside the layout view, with the button and all its classes inside
   // that, so the caller's layout classes are outside the scale. See PressableSurface.
@@ -97,9 +99,13 @@ export function Button({
         onPress={onPress}
       >
         <View
-          className={`flex-row items-center ${look.rowClassName} ${loading ? "opacity-0" : ""}`}
+          className={`flex-row items-center ${hasLeading ? "gap-3" : look.rowClassName} ${loading ? "opacity-0" : ""}`}
         >
-          {icon === undefined ? null : <Icon name={icon} size={look.iconSize} tone={tone} />}
+          {hasLeading ? (
+            leading
+          ) : icon === undefined ? null : (
+            <Icon name={icon} size={look.iconSize} tone={tone} />
+          )}
           <Text tone={tone} variant={look.labelVariant}>
             {children}
           </Text>

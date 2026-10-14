@@ -1,7 +1,7 @@
-import { Link } from "expo-router";
-import { Text } from "react-native";
+import { AUTH_SCREEN } from "@keylow/core/copy";
 
 import { AuthForm } from "../../components/AuthForm";
+import { authErrorCode } from "../../lib/authErrorCode";
 import { supabase } from "../../lib/supabase";
 
 import type { AuthFormOutcome } from "../../components/AuthForm";
@@ -17,33 +17,27 @@ async function signUp(credentials: Credentials): Promise<AuthFormOutcome> {
   });
 
   if (error !== null) {
-    return { status: "error", message: error.message };
+    return { status: "error", code: authErrorCode(error) };
   }
 
   // With confirm-email on there is no session yet. Otherwise the AuthGate redirects on the new session.
   return data.session === null
-    ? { status: "notice", message: "Check your email to confirm your account" }
+    ? { status: "check-email", email: credentials.email }
     : { status: "done" };
 }
 
 export default function SignUpRoute() {
   return (
     <AuthForm
-      heading="Create your account"
-      submitLabel="Create account"
+      heading={AUTH_SCREEN.signUp.heading}
+      submitLabel={AUTH_SCREEN.signUp.submitLabel}
       passwordRule="minLength"
       onSubmit={signUp}
-      footer={
-        <>
-          <Text className="text-sm text-legacy-neutral-500">Already have an account?</Text>
-          <Link
-            href="/(auth)/sign-in"
-            className="py-3 text-base font-semibold text-legacy-brand-600"
-          >
-            Sign in
-          </Link>
-        </>
-      }
+      footer={{
+        prompt: AUTH_SCREEN.signUp.footerPrompt,
+        linkLabel: AUTH_SCREEN.signUp.footerLink,
+        href: "/(auth)/sign-in",
+      }}
     />
   );
 }

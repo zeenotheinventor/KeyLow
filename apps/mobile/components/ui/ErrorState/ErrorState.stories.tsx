@@ -1,4 +1,4 @@
-import { SEARCH_FAILED_MOBILE } from "@keylow/core/copy";
+import { AUTH_SCREEN, SIGN_IN_LINK_INVALID, SEARCH_FAILED_MOBILE } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { ErrorState } from "./ErrorState";
@@ -33,5 +33,15 @@ export const WithRetry: Story = {
     title: SEARCH_FAILED_MOBILE.title,
     body: SEARCH_FAILED_MOBILE.body,
     retry: { label: "Try again", onPress: () => undefined },
+  },
+};
+
+// The signing-in-link-error board: a plain button back to sign in, and 32 points at the sides.
+export const WithAction: Story = {
+  args: {
+    title: SIGN_IN_LINK_INVALID.title,
+    body: SIGN_IN_LINK_INVALID.body,
+    action: { label: AUTH_SCREEN.backToSignIn, onPress: () => undefined },
+    inset: "wide",
   },
 };

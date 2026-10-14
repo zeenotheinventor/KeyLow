@@ -50,6 +50,7 @@ const names: IconName[] = [
   "Info",
   "LayoutDashboard",
   "LoaderCircle",
+  "Mail",
   "Plus",
   "RefreshCcw",
   "RotateCw",

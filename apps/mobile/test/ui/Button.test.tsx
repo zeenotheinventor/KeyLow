@@ -1,7 +1,7 @@
 import { controlHeight, touchTarget } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
-import { AccessibilityInfo } from "react-native";
+import { AccessibilityInfo, Text as NativeText } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
 import { Button } from "../../components/ui";
@@ -476,6 +476,38 @@ describe("Button", () => {
       await renderButton();
 
       expect(drawings()).toHaveLength(0);
+    });
+
+    describe("a leading mark", () => {
+      // A mark that is not one of the icon map's, such as the Google "G" of the sign in boards.
+      const mark = <NativeText>Mark</NativeText>;
+
+      it("should draw the mark before the label", async () => {
+        await renderButton({ leading: mark });
+
+        expect(screen.getByRole("button", { name: /Add entry/ })).toBeOnTheScreen();
+        expect(screen.getByText("Mark")).toBeOnTheScreen();
+      });
+
+      it("should put 12 points between the mark and the label, as the sign in boards' Google button draws it", async () => {
+        await renderButton({ leading: mark, size: "lg" });
+
+        expect(viewsDrawn({ flexDirection: "row", columnGap: 12 })).toHaveLength(1);
+        expect(viewsDrawn({ flexDirection: "row", columnGap: 8 })).toHaveLength(0);
+      });
+
+      it("should take the place of an icon when both are given", async () => {
+        await renderButton({ leading: mark, icon: "Plus" });
+
+        expect(screen.getByText("Mark")).toBeOnTheScreen();
+        expect(drawings()).toHaveLength(0);
+      });
+
+      it("should be hidden with the label while the button loads", async () => {
+        await renderButton({ leading: mark, loading: true });
+
+        expect(viewsDrawn({ flexDirection: "row", columnGap: 12, opacity: 0 })).toHaveLength(1);
+      });
     });
   });
 });

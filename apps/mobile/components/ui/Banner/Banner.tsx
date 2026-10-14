@@ -68,7 +68,15 @@ const variants: Record<
  * place of the design's cut-in from the side, which waits for a motion review on a device. The copy is
  * the screen's, from `@keylow/core/copy`.
  */
-export function Banner({ variant = "info", title, body, icon, action, announce }: BannerProps) {
+export function Banner({
+  variant = "info",
+  title,
+  body,
+  icon,
+  sentence,
+  action,
+  announce,
+}: BannerProps) {
   const animatedStyle = useFadeInStyle();
   const look = variants[variant];
   // Only the review notice can be raised: the quiet ones are never an alert, and the error already is.
@@ -92,7 +100,11 @@ export function Banner({ variant = "info", title, body, icon, action, announce }
             className="gap-[2px]"
             role={isRaised ? "alert" : look.role}
           >
-            <Text tone={look.titleTone} variant="body-strong">
+            {/* The title is strong, as the design system card draws it. Only a sentence the screen asks for is regular. */}
+            <Text
+              tone={look.titleTone}
+              variant={sentence === true && body === undefined ? "body" : "body-strong"}
+            >
               {title}
             </Text>
             {body === undefined ? null : (

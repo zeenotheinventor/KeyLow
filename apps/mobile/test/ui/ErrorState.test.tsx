@@ -8,6 +8,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
+import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { ErrorStateProps } from "../../components/ui";
 import type { ThemeScheme } from "@keylow/tokens";
@@ -155,6 +156,77 @@ describe("ErrorState", () => {
         }),
       ).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Try again" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("the action", () => {
+    it("should be a button named by its label, which calls onPress", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      await renderErrorState({ action: { label: "Back to sign in", onPress } });
+
+      await user.press(screen.getByRole("button", { name: "Back to sign in" }));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it("should be a secondary button with no icon, because it is not a retry", async () => {
+      await renderErrorState({ action: { label: "Back to sign in", onPress: () => undefined } });
+
+      expect(screen.getByRole("button", { name: "Back to sign in" })).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border"),
+      });
+      // Only the tile's icon.
+      expect(drawings()).toHaveLength(1);
+    });
+
+    it("should take the variant it is given", async () => {
+      await renderErrorState({
+        action: { label: "Back to sign in", onPress: () => undefined, variant: "primary" },
+      });
+
+      expect(screen.getByRole("button", { name: "Back to sign in" })).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "accent"),
+      });
+    });
+
+    it("should stay reachable on its own, outside the alert's reading", async () => {
+      await renderErrorState({ action: { label: "Back to sign in", onPress: () => undefined } });
+
+      expect(
+        screen.getByRole("alert", {
+          name: "Your foods could not be searched Check your connection and try again.",
+        }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should give way to the retry when both are given, so the view has one button", async () => {
+      await renderErrorState({
+        action: { label: "Back to sign in", onPress: () => undefined },
+        retry: { label: "Try again", onPress: () => undefined },
+      });
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getByRole("button", { name: "Try again" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("the inset", () => {
+    it("should be 24 points at the sides by default", async () => {
+      await renderErrorState();
+
+      expect(viewsDrawn({ alignItems: "center", paddingLeft: 24, paddingRight: 24 })).toHaveLength(
+        1,
+      );
+    });
+
+    it("should be 32 points at the sides when wide, as the link error board draws it", async () => {
+      await renderErrorState({ inset: "wide" });
+
+      expect(viewsDrawn({ alignItems: "center", paddingLeft: 32, paddingRight: 32 })).toHaveLength(
+        1,
+      );
     });
   });
 

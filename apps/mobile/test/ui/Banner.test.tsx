@@ -134,6 +134,36 @@ describe("Banner", () => {
       });
     });
 
+    it("should keep a title with no body in strong body text, as the design system card draws it", async () => {
+      await renderBanner({ title: "Open Food Facts is busy", body: undefined });
+
+      expect(screen.getByText("Open Food Facts is busy")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 16,
+        lineHeight: 24,
+      });
+    });
+
+    it("should set a title with no body in regular body text when it is a sentence, as the sign in error board draws it", async () => {
+      await renderBanner({
+        title: "Email or password is not right.",
+        body: undefined,
+        sentence: true,
+      });
+
+      expect(screen.getByText("Email or password is not right.")).toHaveStyle({
+        fontFamily: "Geist-Regular",
+        fontSize: 16,
+        lineHeight: 24,
+      });
+    });
+
+    it("should keep the title strong when it is a sentence but has a body under it", async () => {
+      await renderBanner({ sentence: true });
+
+      expect(screen.getByText("Needs review")).toHaveStyle({ fontFamily: "Geist-SemiBold" });
+    });
+
     // React Native's alert role does not announce on mount on Android, so a failure is a live region too.
     it("should make the error variant an assertive live region, so a failure is announced as it appears", async () => {
       await renderBanner({ variant: "error" });

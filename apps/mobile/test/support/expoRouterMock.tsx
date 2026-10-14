@@ -73,8 +73,9 @@ export const mockExpoRouter = {
   useFocusEffect,
   useSegments: () => routerMock.segments,
   useLocalSearchParams: () => routerMock.searchParams,
-  Link: ({ children }: { children: ReactNode }) =>
-    createElement(Text, { accessibilityRole: "link" }, children),
+  // With `asChild` the link is its child, which is how the real one hands over its role and its press.
+  Link: ({ children, asChild }: { children: ReactNode; asChild?: boolean }) =>
+    asChild === true ? children : createElement(Text, { accessibilityRole: "link" }, children),
   Redirect: ({ href }: { href: string }) => {
     routerMock.redirect(href);
     return null;
