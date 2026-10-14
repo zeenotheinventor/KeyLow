@@ -439,7 +439,7 @@ cd ../..
 ```
 
 - `pnpm test` runs the jest-expo suite and should report every suite passed.
-- `npx expo-doctor` should end with `No issues detected!`.
+- `npx expo-doctor` should end with `No issues detected!`. A patch-only version mismatch is expected between Expo patch batches. Run `npx expo install --fix` when you build a new native binary.
 - `npx expo export --platform ios --no-bytecode` bundles the app with Metro and writes `apps/mobile/dist/`, which git ignores. It is the closest thing to a smoke test without a device. It reads `.env.local` for the two `EXPO_PUBLIC_` values.
 
 ## 6. Everyday commands
@@ -457,7 +457,7 @@ Run from the repo root.
 | `pnpm --filter @keylow/db migration:up`  | Applies the migrations the local database does not have yet, and keeps its data                                                                                               |
 | `pnpm --filter @keylow/db db:reset`      | Rebuilds the local database from nothing. Only for a broken database, announce it first                                                                                       |
 | `pnpm --filter @keylow/mobile typecheck` | Type-checks the mobile app with its own TypeScript                                                                                                                            |
-| `cd apps/mobile && npx expo-doctor`      | The Expo project health check. The CI pipeline runs it too once it exists.                                                                                                    |
+| `cd apps/mobile && npx expo-doctor`      | The Expo project health check. CI runs it through `tools/expo-doctor-gate`: a package that is only a patch behind is a warning there, anything else fails.                    |
 
 After you change the schema, the sequence is: add a migration in `packages/db/supabase/migrations/`, run `pnpm --filter @keylow/db migration:up`, run `pnpm gen-types`, add or update a pgTAP test in `packages/db/supabase/tests/`, run `pnpm check:integration`, then commit the migration, the test and the regenerated types together.
 
