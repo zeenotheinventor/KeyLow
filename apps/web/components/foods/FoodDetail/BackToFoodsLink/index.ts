@@ -1,0 +1,1 @@
+export { BackToFoodsLink } from "./BackToFoodsLink";

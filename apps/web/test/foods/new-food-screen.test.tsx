@@ -3,15 +3,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
 
-import type { CreatedFood } from "@keylow/api-client";
+import type { CreatedFood, FoodWithPortionsState } from "@keylow/api-client";
 
 import { NewFoodScreen } from "@/app/(dashboard)/foods/new/NewFoodScreen";
 
-const { searchParameters, useFood, useFoodPortions, createFood, updateFood, replace } = vi.hoisted(
+const { searchParameters, useFoodWithPortions, createFood, updateFood, replace } = vi.hoisted(
   () => ({
     searchParameters: { current: new URLSearchParams() },
-    useFood: vi.fn(),
-    useFoodPortions: vi.fn(),
+    useFoodWithPortions: vi.fn<(id: string) => FoodWithPortionsState>(),
     createFood: vi.fn<(input: unknown) => Promise<CreatedFood>>(),
     updateFood: vi.fn(),
     replace: vi.fn<(href: string) => void>(),
@@ -20,8 +19,7 @@ const { searchParameters, useFood, useFoodPortions, createFood, updateFood, repl
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
-  useFood,
-  useFoodPortions,
+  useFoodWithPortions,
   useCreateFood: () => ({ mutateAsync: createFood }),
   useUpdateFood: () => ({ mutateAsync: updateFood }),
 }));
@@ -30,9 +28,6 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
   useSearchParams: () => searchParameters.current,
 }));
-
-const loaded = <Data,>(data: Data) => ({ data, isPending: false, isError: false, error: null });
-const pending = { data: undefined, isPending: true, isError: false, error: null };
 
 const SOURCE_FOOD_ID = "55555555-5555-4555-8555-555555555555";
 const CREATED_FOOD_ID = "66666666-6666-4666-8666-666666666666";
@@ -92,13 +87,14 @@ describe("NewFoodScreen", () => {
 
     function copyFromSuspectFood(otherParameters: Record<string, string> = {}) {
       searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID, ...otherParameters });
-      useFood.mockReturnValue(loaded(suspectFood));
-      useFoodPortions.mockReturnValue(
-        loaded([
+      useFoodWithPortions.mockReturnValue({
+        status: "ready",
+        food: suspectFood,
+        portions: [
           makePortion({ id: "p1", label: "Slice", grams: 30, is_default: true }),
           makePortion({ id: "p2", label: "Pack", grams: 200, is_default: false }),
-        ]),
-      );
+        ],
+      });
       createFood.mockResolvedValue({
         food: makeFood({ id: CREATED_FOOD_ID }),
         portions: [],
@@ -108,30 +104,26 @@ describe("NewFoodScreen", () => {
 
     it("should load the food and its portions by the id in the from parameter", () => {
       searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID });
-      useFood.mockReturnValue(pending);
-      useFoodPortions.mockReturnValue(pending);
+      useFoodWithPortions.mockReturnValue({ status: "loading" });
 
       render(<NewFoodScreen />);
 
-      expect(useFood).toHaveBeenCalledWith(SOURCE_FOOD_ID);
-      expect(useFoodPortions).toHaveBeenCalledWith(SOURCE_FOOD_ID);
+      expect(useFoodWithPortions).toHaveBeenCalledWith(SOURCE_FOOD_ID);
     });
 
     it("should say it is loading and show no form while the food loads", () => {
       searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID });
-      useFood.mockReturnValue(pending);
-      useFoodPortions.mockReturnValue(pending);
+      useFoodWithPortions.mockReturnValue({ status: "loading" });
 
       render(<NewFoodScreen />);
 
-      expect(screen.getByRole("status").textContent).toBe("Loading food");
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeTruthy();
       expect(screen.queryByLabelText("Name")).toBeNull();
     });
 
     it("should say the food was not found and show no form", () => {
       searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID });
-      useFood.mockReturnValue(loaded(null));
-      useFoodPortions.mockReturnValue(loaded([]));
+      useFoodWithPortions.mockReturnValue({ status: "notFound" });
 
       render(<NewFoodScreen />);
 
@@ -139,19 +131,18 @@ describe("NewFoodScreen", () => {
       expect(screen.queryByLabelText("Name")).toBeNull();
     });
 
-    it("should show a failure to load the food in an alert", () => {
+    it("should show a failure to load the food in an alert, without the raw text of the failure", () => {
       searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID });
-      useFood.mockReturnValue({
-        data: undefined,
-        isPending: false,
-        isError: true,
-        error: new Error("Could not load the food: offline"),
+      useFoodWithPortions.mockReturnValue({
+        status: "error",
+        debugMessage: "Could not load the food: offline",
       });
-      useFoodPortions.mockReturnValue(loaded([]));
 
       render(<NewFoodScreen />);
 
-      expect(screen.getByRole("alert").textContent).toContain("Could not load the food: offline");
+      expect(screen.getByRole("heading", { name: "Food not loaded" })).toBeTruthy();
+      expect(screen.queryByText(/offline/)).toBeNull();
+      expect(screen.queryByLabelText("Name")).toBeNull();
     });
 
     it("should pre-fill the details, every nutrient that is present and the portions", () => {
@@ -233,8 +224,7 @@ describe("NewFoodScreen", () => {
 
       beforeEach(() => {
         searchParameters.current = new URLSearchParams({ from: SOURCE_FOOD_ID });
-        useFood.mockReturnValue(loaded(usFood));
-        useFoodPortions.mockReturnValue(loaded([]));
+        useFoodWithPortions.mockReturnValue({ status: "ready", food: usFood, portions: [] });
         createFood.mockResolvedValue({ food: makeFood({ id: CREATED_FOOD_ID }), portions: [] });
         render(<NewFoodScreen />);
       });
@@ -284,8 +274,7 @@ describe("NewFoodScreen", () => {
       render(<NewFoodScreen />);
 
       expect(screen.getByRole("heading", { name: "New food" })).toBeTruthy();
-      expect(useFood).not.toHaveBeenCalled();
-      expect(useFoodPortions).not.toHaveBeenCalled();
+      expect(useFoodWithPortions).not.toHaveBeenCalled();
     });
 
     it("should ignore a blank from parameter", () => {
@@ -294,7 +283,7 @@ describe("NewFoodScreen", () => {
       render(<NewFoodScreen />);
 
       expect(screen.getByRole("heading", { name: "New food" })).toBeTruthy();
-      expect(useFood).not.toHaveBeenCalled();
+      expect(useFoodWithPortions).not.toHaveBeenCalled();
     });
   });
 });

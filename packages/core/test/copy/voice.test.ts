@@ -11,6 +11,14 @@ const sampleCalls: Record<string, () => string[]> = {
   describeSpokenBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeSpokenBasis),
   describeEnergy: () => [0, 1, 148, 2480, null].map(copy.describeEnergy),
   describeShareOfEnergy: () => [0, 32, 100].map(copy.describeShareOfEnergy),
+  describeNutritionHeading: () =>
+    (["per_100g", "per_100ml"] as const).map(copy.describeNutritionHeading),
+  describeMissingValues: () => [
+    copy.describeMissingValues([], undefined),
+    copy.describeMissingValues(["protein_g"], undefined),
+    copy.describeMissingValues(["kcal", "carbs_g"], undefined),
+    copy.describeMissingValues(["fibre_g"], "us_total"),
+  ],
   describeSeeMore: () => [1, 2, 18].map(copy.describeSeeMore),
   describeRateLimit: () => [undefined, 1, 30].map(copy.describeRateLimit),
   describeBarcodeRateLimit: () => [undefined, 1, 30].map(copy.describeBarcodeRateLimit),

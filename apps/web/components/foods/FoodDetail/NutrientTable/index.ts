@@ -1,1 +1,0 @@
-export { NutrientTable } from "./NutrientTable";
