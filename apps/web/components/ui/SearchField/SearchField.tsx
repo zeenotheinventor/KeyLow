@@ -3,7 +3,6 @@ import { cva } from "class-variance-authority";
 import { ScanBarcode, Search } from "lucide-react";
 
 import type { BarcodeButton, SearchFieldProps, SearchLauncherProps, SearchSize } from "./types";
-import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -55,15 +54,13 @@ function BarcodeIconButton({ button, size }: { button: BarcodeButton; size: Sear
   );
 }
 
-// The return type names React on purpose: the repo has two copies of @types/react, and a file that
-// imports react gets the JSX types that match the input props from `./types`.
 export function SearchField({
   label,
   size = "md",
   barcodeButton,
   className,
   ...inputProps
-}: SearchFieldProps): React.JSX.Element {
+}: SearchFieldProps) {
   return (
     <div role="search" className={cn(searchFrame({ size }), className)}>
       <Search aria-hidden className={cn("shrink-0", iconSize[size])} strokeWidth={iconStroke} />

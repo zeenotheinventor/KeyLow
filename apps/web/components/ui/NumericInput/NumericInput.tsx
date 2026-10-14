@@ -1,5 +1,4 @@
 import type { NumericInputMacro, NumericInputProps } from "./types";
-import type * as React from "react";
 
 import { Field } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -16,8 +15,6 @@ const macroMarks = {
 const frameClasses =
   "flex h-[44px] items-center gap-2 rounded-medium border bg-surface-raised px-4 transition-[border-color,box-shadow] duration-quick has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring has-[:focus-visible]:ring-offset-2 has-[:focus-visible]:ring-offset-focus-ring-offset has-[:disabled]:bg-surface has-[:disabled]:opacity-50";
 
-// The return type names React on purpose: the repo has two copies of @types/react (KEY-125), and a
-// file that imports react gets the JSX types that match the input props from `./types`.
 /** A number with its unit after it, such as 165 kcal. It is a `TextField` whose digits are right aligned and tabular. */
 export function NumericInput({
   id,
@@ -31,7 +28,7 @@ export function NumericInput({
   className,
   placeholder = "0",
   ...inputProps
-}: NumericInputProps): React.JSX.Element {
+}: NumericInputProps) {
   return (
     <Field
       id={id}
