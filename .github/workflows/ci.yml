@@ -51,6 +51,12 @@ jobs:
       # fails the pull request. Turbo restores the output from its cache when nothing changed.
       - name: Build the web Storybook
         run: pnpm turbo run build-storybook --filter=@keylow/web
+      # Builds the web app the way Vercel does. `pnpm check` type-checks with tsc alone, and `next build`
+      # runs its own type-check and compile pass, which has failed on a pull request that passed the
+      # gate. Every route is rendered on demand, so the build needs no Supabase environment variables.
+      # Turbo restores the output from its cache when nothing changed.
+      - name: Build the web app
+        run: pnpm turbo run build --filter=@keylow/web
       # Fails when the lockfile contains duplicates that a dedupe would remove.
       # The flag keeps the install pass that dedupe runs from triggering the prepare script.
       - name: Check the lockfile for duplicates

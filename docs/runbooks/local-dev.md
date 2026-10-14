@@ -397,7 +397,7 @@ Run from the repo root.
 
 | Command                                  | What it does                                                                                                                                                                  |
 | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`                             | `turbo run format:check lint typecheck test`. Run it before every push. The CI pipeline, once it is added, runs exactly this command as its static job.                       |
+| `pnpm check`                             | `turbo run format:check lint typecheck test`. Run it before every push. CI's static job runs it, then builds the web Storybook and the web app.                               |
 | `pnpm check --force`                     | The same, ignoring the Turborepo cache                                                                                                                                        |
 | `pnpm check:integration`                 | Deno check and lint of the Edge Functions, the pgTAP tests in `packages/db/supabase/tests/`, then the Edge Function suites. Needs the stack running and the functions served. |
 | `pnpm dedupe --check`                    | Fails if the lockfile has duplicates that `pnpm dedupe` would remove                                                                                                          |
@@ -419,6 +419,8 @@ After you change the schema, the sequence is: add a migration in `packages/db/su
 - `.npmrc` sets `node-linker=hoisted`, so Metro finds one `node_modules` tree.
 - The root `package.json` has `pnpm.overrides` pinning `react` and `react-dom` to the version Expo SDK 57 needs (19.2.3).
 - `pnpm dedupe --check` catches duplicates a new dependency adds. Run `pnpm dedupe` to fix them.
+
+The same overrides also pin `@types/react` and `@types/react-dom` to the 19.2 line (the exact `@types/react` version Expo SDK 57 pins). This is a types guard, not a runtime one. Without it the web app loads two copies of `@types/react`, and a web file that spreads DOM props onto an element fails `next build` (error TS2322) even though `tsc --noEmit` passes. When an Expo upgrade moves its `@types/react` pin, bump the override to match; `expo-doctor` flags the mismatch.
 
 Never add `react-native` or a native module to anything under `packages/`.
 
