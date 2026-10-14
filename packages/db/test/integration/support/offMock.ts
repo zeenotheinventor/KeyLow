@@ -1,8 +1,12 @@
 // The test side of the Open Food Facts mock: how a test registers a product and reads back the
 // requests the function made. The server itself is in offMockServer.ts and runs in the global setup.
 
-/** The host port the function container reaches as `host.docker.internal:54399` (see .env.test). */
-export const offMockPort = 54399;
+/**
+ * The host port the function container reaches as `host.docker.internal:24399` (see .env.test).
+ * It is below 32768 on purpose: an outgoing connection takes its source port from 32768 upward
+ * (Linux) or 49152 upward (macOS), and a connection holding the mock's port makes the bind fail.
+ */
+export const offMockPort = 24399;
 
 export type RegisterProduct = {
   /** The barcode the mock answers for. */

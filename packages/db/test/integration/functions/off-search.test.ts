@@ -5,6 +5,7 @@ import { generateBarcode } from "../support/barcodes";
 import { deleteGeneratedFoods } from "../support/foods";
 import { callFunction } from "../support/functionClient";
 import { offMock } from "../support/offMock";
+import { waitForFreshRateLimitWindow } from "../support/rateLimitWindow";
 import { adminClient } from "../support/stack";
 import { requireFunctionEnvironmentValue } from "../support/testEnvironment";
 import { createTestUser, deleteCreatedTestUsers } from "../support/users";
@@ -396,6 +397,7 @@ describe("off-search", () => {
       const searchTerms = uniqueSearchTerms();
       await offMock.registerSearch({ searchTerms, products: [] });
 
+      await waitForFreshRateLimitWindow();
       for (let attempt = 0; attempt < perUserLimit; attempt += 1) {
         const allowed = await search(searchTerms, user.accessToken);
         expect(allowed.status).toBe(200);
@@ -415,12 +417,15 @@ describe("off-search", () => {
       const freshUser = await newUser();
       const searchTerms = uniqueSearchTerms();
       await offMock.registerSearch({ searchTerms, products: [] });
+      await waitForFreshRateLimitWindow();
+      const busy: number[] = [];
       for (let attempt = 0; attempt <= perUserLimit; attempt += 1) {
-        await search(searchTerms, busyUser.accessToken);
+        busy.push((await search(searchTerms, busyUser.accessToken)).status);
       }
 
       const response = await search(searchTerms, freshUser.accessToken);
 
+      expect(busy.at(-1)).toBe(429);
       expect(response.status).toBe(200);
     });
   });

@@ -5,6 +5,7 @@ import { generateBarcode } from "../support/barcodes";
 import { deleteGeneratedFoods } from "../support/foods";
 import { callFunction } from "../support/functionClient";
 import { offMock } from "../support/offMock";
+import { waitForFreshRateLimitWindow } from "../support/rateLimitWindow";
 import { adminClient } from "../support/stack";
 import { requireFunctionEnvironmentValue } from "../support/testEnvironment";
 import { createTestUser, deleteCreatedTestUsers } from "../support/users";
@@ -359,6 +360,7 @@ describe("off-product", () => {
       await lookUp(cachedCode, (await newUser()).accessToken);
       const user = await newUser();
 
+      await waitForFreshRateLimitWindow();
       for (let attempt = 0; attempt < perUserLimit; attempt += 1) {
         const allowed = await lookUp(generateBarcode(), user.accessToken);
         expect(allowed.status).toBe(404);

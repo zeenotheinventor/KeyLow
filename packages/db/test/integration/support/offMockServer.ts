@@ -175,9 +175,24 @@ function toSearchRegistration(body: unknown): RegisterSearch {
   };
 }
 
-export type OffMockServer = { close: () => Promise<void> };
+export type OffMockServer = {
+  /** The port the server listens on, which is the one the operating system chose for port 0. */
+  port: number;
+  close: () => Promise<void>;
+};
 
-/** Starts the mock on every interface, because a container reaches the host through the gateway. */
+function listeningPort(server: Server): number {
+  const address = server.address();
+  if (typeof address !== "object" || address === null) {
+    throw new Error("The OFF mock is not listening on a TCP port");
+  }
+  return address.port;
+}
+
+/**
+ * Starts the mock on every interface, because a container reaches the host through the gateway.
+ * Pass port 0 to take any free port. A start that fails says which port and why.
+ */
 export function startOffMock(port: number): Promise<OffMockServer> {
   const answers = new Map<string, Answer>();
   const searchAnswers = new Map<string, Answer>();
@@ -263,9 +278,14 @@ export function startOffMock(port: number): Promise<OffMockServer> {
   });
 
   return new Promise((resolve, reject) => {
-    server.once("error", reject);
+    server.once("error", (cause) => {
+      reject(
+        new Error(`Could not start the OFF mock on port ${port}: ${cause.message}`, { cause }),
+      );
+    });
     server.listen(port, "0.0.0.0", () => {
       resolve({
+        port: listeningPort(server),
         close: () =>
           new Promise((done, fail) => {
             server.close((closeError) => {

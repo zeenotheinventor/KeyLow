@@ -1,22 +1,27 @@
+import { createServer } from "node:net";
+
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { createOffMockClient } from "./offMock";
 import { startOffMock } from "./offMockServer";
 
+import type { OffMockClient } from "./offMock";
 import type { OffMockServer } from "./offMockServer";
 
-const testPort = 54398;
-const baseUrl = `http://127.0.0.1:${testPort}`;
-const client = createOffMockClient(baseUrl);
-
-let server: OffMockServer;
+// Port 0 asks the operating system for a free port. A fixed port can be taken by the source port
+// of an outgoing connection, because Linux hands those out from 32768 to 60999.
+let server: OffMockServer | undefined;
+let baseUrl: string;
+let client: OffMockClient;
 
 beforeAll(async () => {
-  server = await startOffMock(testPort);
+  server = await startOffMock(0);
+  baseUrl = `http://127.0.0.1:${server.port}`;
+  client = createOffMockClient(baseUrl);
 });
 
 afterAll(async () => {
-  await server.close();
+  await server?.close();
 });
 
 async function getSearch(searchTerms: string, headers: Record<string, string> = {}) {
@@ -35,6 +40,27 @@ async function getProduct(code: string, headers: Record<string, string> = {}) {
   const body: unknown = await response.json();
   return { status: response.status, body };
 }
+
+describe("starting the OFF mock server", () => {
+  it("reports the port the operating system gave it when asked for port 0", () => {
+    expect(server?.port).toBeGreaterThan(0);
+  });
+
+  it("fails with the port in the message when the port is taken", async () => {
+    const occupant = createServer();
+    await new Promise<void>((resolve) => occupant.listen(0, "0.0.0.0", resolve));
+    const address = occupant.address();
+    const takenPort = typeof address === "object" && address !== null ? address.port : 0;
+
+    try {
+      await expect(startOffMock(takenPort)).rejects.toThrow(
+        new RegExp(`port ${takenPort}.*EADDRINUSE`),
+      );
+    } finally {
+      await new Promise((resolve) => occupant.close(resolve));
+    }
+  });
+});
 
 describe("the OFF mock server", () => {
   it("answers an unregistered code like Open Food Facts does for an unknown product", async () => {
