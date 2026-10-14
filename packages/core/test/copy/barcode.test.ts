@@ -5,6 +5,8 @@ import {
   BARCODE_LOOKUP_PROGRESS,
   BARCODE_NOT_FOUND,
   BARCODE_NOT_RECOGNISED_TITLE,
+  BARCODE_SCAN,
+  CAMERA_PERMISSION,
   SCANNED_BARCODE_PROBLEMS,
   TYPED_BARCODE_PROBLEMS,
   describeBarcodeRateLimit,
@@ -113,5 +115,37 @@ describe("describeBarcodeRateLimit", () => {
     expect(describeBarcodeRateLimit(undefined)).toBe(
       "Too many lookups just now. Try again in a moment.",
     );
+  });
+});
+
+describe("barcode scan screen", () => {
+  it("should pin the header, the viewfinder and the lines around the camera", () => {
+    expect(BARCODE_SCAN).toEqual({
+      title: "Scan barcode",
+      backLabel: "Back to search",
+      closeLabel: "Close",
+      viewfinderLabel: "Barcode viewfinder",
+      hint: "Point the camera at a food barcode",
+      barcodeReadLabel: "Barcode read",
+      scanAgain: "Scan again",
+    });
+  });
+});
+
+describe("camera permission", () => {
+  it("should pin the screen that asks for the camera", () => {
+    expect(CAMERA_PERMISSION.ask).toEqual({
+      title: "Camera access",
+      body: "Ki-Lo uses the camera to scan food barcodes so you can look up a product without typing.",
+      action: "Allow camera",
+    });
+  });
+
+  it("should pin the screen for a camera that was refused for good", () => {
+    expect(CAMERA_PERMISSION.denied).toEqual({
+      title: "Camera access is off",
+      body: "Ki-Lo cannot scan barcodes without the camera. Open the settings, allow camera access for Ki-Lo, then come back to scan.",
+      action: "Open settings",
+    });
   });
 });

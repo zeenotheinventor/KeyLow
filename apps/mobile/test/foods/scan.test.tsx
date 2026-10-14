@@ -9,9 +9,11 @@ import {
   setLookupOutcome,
 } from "./support/barcodeLookupMock";
 import ScanRoute from "../../app/foods/scan";
+import { ThemeProvider } from "../../lib/theme";
 import { cameraMock, permissions, resetCameraMock, scanBarcode } from "../support/expoCameraMock";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
+import type { ReactNode } from "react";
 import type { AppStateStatus } from "react-native";
 
 jest.mock(
@@ -22,12 +24,27 @@ jest.mock(
   "expo-camera",
   () => jest.requireActual<{ mockExpoCamera: unknown }>("../support/expoCameraMock").mockExpoCamera,
 );
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+// The real provider renders nothing until the device reports its insets.
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
 jest.mock(
   "@keylow/api-client",
   () =>
     jest.requireActual<{ mockBarcodeApiClient: unknown }>("./support/barcodeLookupMock")
       .mockBarcodeApiClient,
 );
+
+// The kit's icons read the theme, which the app's root provides.
+function DarkTheme({ children }: { children: ReactNode }) {
+  return <ThemeProvider fixedPreference="dark">{children}</ThemeProvider>;
+}
 
 const cola = "5449000000996";
 const crisps = "5000159484695";
@@ -36,7 +53,7 @@ const viewfinderLabel = "Barcode viewfinder";
 
 async function renderScanner() {
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-  await render(<ScanRoute />);
+  await render(<ScanRoute />, { wrapper: DarkTheme });
   return user;
 }
 
@@ -70,7 +87,7 @@ describe("scan screen", () => {
       cameraMock.permission = permissions.undetermined;
       const user = await renderScanner();
 
-      expect(screen.getByRole("header", { name: "Camera access" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Camera access" })).toBeOnTheScreen();
       expect(screen.queryByLabelText(viewfinderLabel)).not.toBeOnTheScreen();
 
       await user.press(screen.getByRole("button", { name: "Allow camera" }));
@@ -91,7 +108,7 @@ describe("scan screen", () => {
       const openSettings = jest.spyOn(Linking, "openSettings").mockResolvedValue(undefined);
       const user = await renderScanner();
 
-      expect(screen.getByRole("header", { name: "Camera access is off" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Camera access is off" })).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Allow camera" })).not.toBeOnTheScreen();
       expect(screen.queryByLabelText(viewfinderLabel)).not.toBeOnTheScreen();
 
@@ -151,7 +168,7 @@ describe("scan screen", () => {
 
       it("should stop listening when the screen unmounts", async () => {
         const appState = captureAppStateListener();
-        const { unmount } = await render(<ScanRoute />);
+        const { unmount } = await render(<ScanRoute />, { wrapper: DarkTheme });
 
         await unmount();
 
@@ -164,7 +181,8 @@ describe("scan screen", () => {
       await renderScanner();
 
       expect(screen.queryByLabelText(viewfinderLabel)).not.toBeOnTheScreen();
-      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Allow camera" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Open settings" })).not.toBeOnTheScreen();
     });
   });
 
@@ -178,23 +196,61 @@ describe("scan screen", () => {
         barcodeTypes: ["ean13", "ean8", "upc_a", "upc_e"],
       });
     });
+  });
 
-    it("should go back to the previous screen on cancel", async () => {
+  describe("the header", () => {
+    it("should be titled Scan barcode, as a heading", async () => {
+      await renderScanner();
+
+      expect(screen.getByRole("heading", { name: "Scan barcode" })).toBeOnTheScreen();
+    });
+
+    it("should go back to the previous screen on back", async () => {
       const user = await renderScanner();
 
-      await user.press(screen.getByRole("button", { name: "Cancel" }));
+      await user.press(screen.getByRole("button", { name: "Back to search" }));
 
       expect(routerMock.back).toHaveBeenCalledTimes(1);
     });
 
-    it("should go to the food search on cancel when there is nothing to go back to", async () => {
+    it("should go to the food search on back when there is nothing to go back to", async () => {
       routerMock.canGoBack.mockReturnValue(false);
       const user = await renderScanner();
 
-      await user.press(screen.getByRole("button", { name: "Cancel" }));
+      await user.press(screen.getByRole("button", { name: "Back to search" }));
 
       expect(routerMock.back).not.toHaveBeenCalled();
       expect(routerMock.replace).toHaveBeenCalledWith("/foods");
+    });
+
+    it("should dismiss the whole sheet on close, not just this screen", async () => {
+      const user = await renderScanner();
+
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ["asking for the camera", permissions.undetermined],
+      ["refused for good", permissions.denied],
+    ])("should offer back and close while the camera is %s", async (_state, permission) => {
+      cameraMock.permission = permission;
+      await renderScanner();
+
+      expect(screen.getByRole("button", { name: "Back to search" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    });
+
+    it("should offer back and close while a lookup is in flight and after it", async () => {
+      setLookupOutcome({ isLoading: true });
+      await renderScanner();
+      await scan("ean13", cola);
+
+      expect(screen.getByRole("button", { name: "Back to search" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
     });
   });
 
@@ -312,7 +368,14 @@ describe("scan screen", () => {
 
       await scan("ean13", cola);
 
-      expect(screen.getByRole("header", { name: "Not in the database" })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("heading", { name: "Not in Ki-Lo or Open Food Facts" }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "Create the food with this barcode and it will be found next time you scan it.",
+        ),
+      ).toBeOnTheScreen();
       expect(screen.getByText(cola)).toBeOnTheScreen();
       expect(screen.queryByLabelText(viewfinderLabel)).not.toBeOnTheScreen();
 
@@ -324,7 +387,7 @@ describe("scan screen", () => {
     it("should end the lookup when the create form takes focus, so nothing underneath reacts to it", async () => {
       setLookupOutcome({ result: { status: "not_found", code: cola } });
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-      const { rerender } = await render(<ScanRoute />);
+      const { rerender } = await render(<ScanRoute />, { wrapper: DarkTheme });
       await scan("ean13", cola);
       await user.press(screen.getByRole("button", { name: "Create food with this barcode" }));
 
@@ -335,7 +398,7 @@ describe("scan screen", () => {
     });
 
     it("should ignore a scan the camera delivers while the screen is not in focus", async () => {
-      const { rerender } = await render(<ScanRoute />);
+      const { rerender } = await render(<ScanRoute />, { wrapper: DarkTheme });
       routerMock.isFocused = false;
       await rerender(<ScanRoute />);
 
@@ -350,9 +413,11 @@ describe("scan screen", () => {
 
       await scan("ean13", "5449000000995");
 
-      expect(screen.getByRole("header", { name: "Barcode not recognised" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Barcode not recognised" })).toBeOnTheScreen();
       expect(
-        screen.getByText("The last digit does not match the others, so the barcode was misread."),
+        screen.getByText(
+          "The last digit does not match the others, so the barcode was misread. Hold the camera steady and scan again.",
+        ),
       ).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Scan again" })).toBeOnTheScreen();
       expect(
@@ -367,9 +432,11 @@ describe("scan screen", () => {
 
       await scan("ean13", cola);
 
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Too many lookups just now. Try again in 30 seconds.",
-      );
+      expect(
+        screen.getByRole("status", {
+          name: "Open Food Facts is busy Too many lookups just now. Try again in 30 seconds.",
+        }),
+      ).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Scan again" })).toBeOnTheScreen();
     });
 
@@ -379,9 +446,9 @@ describe("scan screen", () => {
 
       await scan("ean13", cola);
 
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "Too many lookups just now. Try again in a moment.",
-      );
+      expect(
+        screen.getByText("Too many lookups just now. Try again in a moment."),
+      ).toBeOnTheScreen();
     });
 
     it("should give a generic retry message when the lookup failed", async () => {
@@ -390,9 +457,11 @@ describe("scan screen", () => {
 
       await scan("ean13", cola);
 
-      expect(screen.getByRole("alert")).toHaveTextContent(
-        "The barcode could not be looked up. Check your connection and try again.",
-      );
+      expect(
+        screen.getByRole("alert", {
+          name: "Lookup failed The barcode could not be looked up. Check your connection and try again.",
+        }),
+      ).toBeOnTheScreen();
       expect(screen.queryByText("socket hang up")).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Scan again" })).toBeOnTheScreen();
     });
@@ -412,7 +481,7 @@ describe("scan screen", () => {
 
     it("should not open a food that is found while the screen is not in focus", async () => {
       setLookupOutcome({ isLoading: true });
-      const { rerender } = await render(<ScanRoute />);
+      const { rerender } = await render(<ScanRoute />, { wrapper: DarkTheme });
       await scan("ean13", cola);
 
       routerMock.isFocused = false;
@@ -424,7 +493,7 @@ describe("scan screen", () => {
 
     it("should show a fresh camera when focus comes back to a stale result", async () => {
       setLookupOutcome({ result: { status: "not_found", code: cola } });
-      const { rerender } = await render(<ScanRoute />);
+      const { rerender } = await render(<ScanRoute />, { wrapper: DarkTheme });
       await scan("ean13", cola);
       routerMock.isFocused = false;
       await rerender(<ScanRoute />);
@@ -433,11 +502,13 @@ describe("scan screen", () => {
       await rerender(<ScanRoute />);
 
       expect(screen.getByLabelText(viewfinderLabel)).toBeOnTheScreen();
-      expect(screen.queryByRole("header", { name: "Not in the database" })).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("heading", { name: "Not in Ki-Lo or Open Food Facts" }),
+      ).not.toBeOnTheScreen();
     });
 
     it("should not run the camera while the screen is not in focus", async () => {
-      const { rerender } = await render(<ScanRoute />);
+      const { rerender } = await render(<ScanRoute />, { wrapper: DarkTheme });
 
       routerMock.isFocused = false;
       await rerender(<ScanRoute />);
@@ -453,7 +524,9 @@ describe("scan screen", () => {
       await user.press(screen.getByRole("button", { name: "Scan again" }));
 
       expect(screen.getByLabelText(viewfinderLabel)).toBeOnTheScreen();
-      expect(screen.queryByRole("header", { name: "Not in the database" })).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("heading", { name: "Not in Ki-Lo or Open Food Facts" }),
+      ).not.toBeOnTheScreen();
     });
   });
 });

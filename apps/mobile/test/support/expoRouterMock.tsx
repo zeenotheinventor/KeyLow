@@ -11,6 +11,11 @@ export const routerMock = {
   push: jest.fn<undefined, [string]>(),
   replace: jest.fn<undefined, [string]>(),
   back: jest.fn<undefined, []>(),
+  // Goes back in the navigator above the screen's own, which is how a screen closes the whole sheet it is in.
+  parentGoBack: jest.fn<undefined, []>(),
+  // Whether there is a navigator above the screen's own, and whether it has anything to go back to.
+  hasParentNavigator: true,
+  parentCanGoBack: jest.fn<boolean, []>(),
   canGoBack: jest.fn<boolean, []>(),
   // Whether the screen under test is the focused one. A test changes it, then rerenders.
   isFocused: true,
@@ -23,6 +28,10 @@ export function resetRouterMock(): void {
   routerMock.push.mockReset();
   routerMock.replace.mockReset();
   routerMock.back.mockReset();
+  routerMock.parentGoBack.mockReset();
+  routerMock.hasParentNavigator = true;
+  routerMock.parentCanGoBack.mockReset();
+  routerMock.parentCanGoBack.mockReturnValue(true);
   routerMock.canGoBack.mockReset();
   routerMock.canGoBack.mockReturnValue(true);
   routerMock.isFocused = true;
@@ -39,6 +48,14 @@ const router = {
   canGoBack: routerMock.canGoBack,
 };
 
+// The same object every render, like the real hook's, so an effect that depends on it does not rerun.
+const navigation = {
+  getParent: () =>
+    routerMock.hasParentNavigator
+      ? { goBack: routerMock.parentGoBack, canGoBack: routerMock.parentCanGoBack }
+      : undefined,
+};
+
 function useIsFocused(): boolean {
   return routerMock.isFocused;
 }
@@ -51,6 +68,7 @@ function useFocusEffect(effect: EffectCallback): void {
 
 export const mockExpoRouter = {
   useRouter: () => router,
+  useNavigation: () => navigation,
   useIsFocused,
   useFocusEffect,
   useSegments: () => routerMock.segments,

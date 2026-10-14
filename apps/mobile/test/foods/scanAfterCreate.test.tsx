@@ -6,6 +6,7 @@ import { act, render, screen, userEvent, waitFor } from "@testing-library/react-
 import { foodFixture } from "./support/apiClientMock";
 import { invalidateFoodQueries } from "../../../../packages/api-client/src/invalidateFoodQueries";
 import ScanRoute from "../../app/foods/scan";
+import { ThemeProvider } from "../../lib/theme";
 import { resetCameraMock, scanBarcode } from "../support/expoCameraMock";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
@@ -33,6 +34,17 @@ jest.mock(
   () => jest.requireActual<{ mockExpoCamera: unknown }>("../support/expoCameraMock").mockExpoCamera,
 );
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+// The real provider renders nothing until the device reports its insets.
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
+
 const cola = "5449000000996";
 
 // The repository layer is stubbed, so this client is never called.
@@ -41,7 +53,9 @@ const unusedClient = createClient("http://localhost:54321", "unused-key");
 function screenUnderTest(queryClient: QueryClient) {
   return (
     <KeyLowProvider client={unusedClient} queryClient={queryClient}>
-      <ScanRoute />
+      <ThemeProvider fixedPreference="dark">
+        <ScanRoute />
+      </ThemeProvider>
     </KeyLowProvider>
   );
 }

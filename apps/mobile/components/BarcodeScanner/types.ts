@@ -23,5 +23,4 @@ export type BarcodeScannerProps = {
   isActive: boolean;
   /** Called with each barcode the camera reads. It reads the same one many times a second. */
   onBarcodeScanned: (scan: { type: string; data: string }) => void;
-  onCancel: () => void;
 };

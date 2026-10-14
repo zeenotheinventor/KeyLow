@@ -22,6 +22,31 @@ export const SCANNED_BARCODE_PROBLEMS: Readonly<Record<BarcodeInvalidReason, str
     "That short code is not a valid barcode, so it was misread. Hold the camera steady and scan again.",
 };
 
+/** The scan screen's own lines: its header, the viewfinder's name, the hint under the camera and the card that shows the code. */
+export const BARCODE_SCAN = {
+  title: "Scan barcode",
+  backLabel: "Back to search",
+  closeLabel: "Close",
+  viewfinderLabel: "Barcode viewfinder",
+  hint: "Point the camera at a food barcode",
+  barcodeReadLabel: "Barcode read",
+  scanAgain: "Scan again",
+};
+
+/** The two screens that stand in for the camera: before it was asked for, and once the system will not ask again. */
+export const CAMERA_PERMISSION = {
+  ask: {
+    title: "Camera access",
+    body: "Ki-Lo uses the camera to scan food barcodes so you can look up a product without typing.",
+    action: "Allow camera",
+  },
+  denied: {
+    title: "Camera access is off",
+    body: "Ki-Lo cannot scan barcodes without the camera. Open the settings, allow camera access for Ki-Lo, then come back to scan.",
+    action: "Open settings",
+  },
+};
+
 export const BARCODE_NOT_RECOGNISED_TITLE = "Barcode not recognised";
 
 export const BARCODE_NOT_FOUND = {

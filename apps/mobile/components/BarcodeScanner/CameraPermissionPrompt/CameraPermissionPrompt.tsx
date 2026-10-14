@@ -1,33 +1,41 @@
-import { Pressable, Text, View } from "react-native";
+import { CAMERA_PERMISSION } from "@keylow/core/copy";
+import { View } from "react-native";
+
+import { Button, Icon, Text } from "../../ui";
 
 import type { CameraPermissionPromptProps } from "./types";
 
+/**
+ * What stands in for the camera until it may be used: why it is wanted, with the one action that gets it.
+ * The design draws the message in an empty state's tile, but with a primary full width action, which the
+ * kit's empty state does not take, so the tile is drawn here from the same pieces.
+ */
 export function CameraPermissionPrompt({
   canAskAgain,
   onAllowCamera,
   onOpenSettings,
 }: CameraPermissionPromptProps) {
+  const copy = canAskAgain ? CAMERA_PERMISSION.ask : CAMERA_PERMISSION.denied;
+
   return (
-    <View className="flex-1 justify-center gap-4 bg-legacy-neutral-50 px-6">
-      <View className="gap-2">
-        <Text accessibilityRole="header" className="text-2xl font-semibold text-legacy-neutral-900">
-          {canAskAgain ? "Camera access" : "Camera access is off"}
-        </Text>
-        <Text className="text-base text-legacy-neutral-500">
-          {canAskAgain
-            ? "KeyLow uses the camera to scan food barcodes so you can look up a product without typing."
-            : "KeyLow cannot scan barcodes without the camera. Open the settings, allow camera access for KeyLow, then come back to scan."}
-        </Text>
+    <View className="flex-1 items-center justify-center gap-2 px-8 pb-[96px]">
+      <View className="mb-2 h-[56px] w-[56px] items-center justify-center rounded-medium bg-surface-raised">
+        <Icon name={canAskAgain ? "Camera" : "CameraOff"} size="xl" tone="muted" />
       </View>
-      <Pressable
-        accessibilityRole="button"
+      <Text className="text-center" role="heading" variant="h2">
+        {copy.title}
+      </Text>
+      <Text className="text-center" tone="secondary">
+        {copy.body}
+      </Text>
+      <Button
+        className="mt-4"
+        fullWidth
+        size="lg"
         onPress={canAskAgain ? onAllowCamera : onOpenSettings}
-        className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600"
       >
-        <Text className="text-base font-semibold text-legacy-neutral-50">
-          {canAskAgain ? "Allow camera" : "Open settings"}
-        </Text>
-      </Pressable>
+        {copy.action}
+      </Button>
     </View>
   );
 }

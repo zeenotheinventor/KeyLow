@@ -38,6 +38,8 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
 const names: IconName[] = [
   "Apple",
   "BookOpen",
+  "Camera",
+  "CameraOff",
   "ChefHat",
   "ChevronLeft",
   "ChevronRight",
@@ -49,6 +51,7 @@ const names: IconName[] = [
   "LayoutDashboard",
   "LoaderCircle",
   "Plus",
+  "RefreshCcw",
   "RotateCw",
   "ScanBarcode",
   "Search",

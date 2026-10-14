@@ -1,3 +1,4 @@
+import { CAMERA_PERMISSION } from "@keylow/core/copy";
 import { themes } from "@keylow/tokens";
 
 import appJson from "../app.json";
@@ -82,11 +83,10 @@ describe("app.json", () => {
       });
     });
 
-    it("should ask for the camera in the app's own name", () => {
-      const cameraPermission = String(pluginOptions("expo-camera")?.cameraPermission);
-
-      expect(cameraPermission).toContain("Ki-Lo");
-      expect(cameraPermission).not.toContain("KeyLow");
+    // The system prompt and the scanner's own screen ask for the camera, so they say the same thing, in
+    // the app's own name.
+    it("should ask for the camera in the words the scanner's own camera screen uses", () => {
+      expect(pluginOptions("expo-camera")?.cameraPermission).toBe(CAMERA_PERMISSION.ask.body);
     });
   });
 

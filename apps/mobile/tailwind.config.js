@@ -93,6 +93,17 @@ const skeletonShinePlugin = plugin((api) => {
   });
 });
 
+// The dim over the camera outside the viewfinder's frame: the frame's own shadow, spread far enough to
+// cover the preview, which the camera view's parent clips. The design draws it as a black at 35 percent,
+// a value no token has, so it is written here once and not in a component. The value is a quoted string
+// so it reaches React Native as one: unquoted, NativeWind splits the shorthand into a list of numbers
+// that React Native does not read as a shadow.
+const viewfinderDimPlugin = plugin((api) => {
+  api.addUtilities({
+    ".viewfinder-dim": { "-rn-box-shadow": '"0 0 0 999px rgba(0, 0, 0, 0.35)"' },
+  });
+});
+
 /** @type {import("tailwindcss").Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./.rnstorybook/**/*.{ts,tsx}"],
@@ -101,7 +112,9 @@ module.exports = {
   theme: {
     extend: {
       // `--kl-warning-ink` is set by the ThemeProvider. It is a whole colour, so it takes no opacity modifier.
-      colors: { "warning-ink": "var(--kl-warning-ink)" },
+      // `camera` is the design's proposed `--camera`, the backdrop of the viewfinder before the preview
+      // shows: the dark background in both themes, which `@keylow/tokens` does not have as a token yet.
+      colors: { "warning-ink": "var(--kl-warning-ink)", camera: themes.dark.background },
       fontFamily: { sans: [geistWeights.normal.fontFamily] },
       width: controlSizes,
       height: controlSizes,
@@ -115,5 +128,6 @@ module.exports = {
     tabularNumbersPlugin,
     elevationPlugin,
     skeletonShinePlugin,
+    viewfinderDimPlugin,
   ],
 };
