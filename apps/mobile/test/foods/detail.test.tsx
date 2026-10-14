@@ -1,6 +1,5 @@
 import { DATA_SOURCE_ATTRIBUTION } from "@keylow/core/foods";
 import { render, screen, userEvent, within } from "@testing-library/react-native";
-import { Linking } from "react-native";
 
 import {
   foodFixture,
@@ -494,65 +493,26 @@ describe("food detail screen", () => {
     });
   });
 
-  describe("attribution", () => {
-    it("should credit Open Food Facts for one of its foods", async () => {
+  describe("the data source credit", () => {
+    it.each(["off", "cofid"] as const)(
+      "should not draw the licence credit for a %s food, which is on the About screen",
+      async (source) => {
+        showFood({ ...offFood, source });
+
+        await renderDetail();
+
+        expect(screen.queryByText(DATA_SOURCE_ATTRIBUTION.off.text)).not.toBeOnTheScreen();
+        expect(screen.queryByText(DATA_SOURCE_ATTRIBUTION.cofid.text)).not.toBeOnTheScreen();
+        expect(screen.queryByRole("link")).not.toBeOnTheScreen();
+      },
+    );
+
+    it("should keep the source badge under the name", async () => {
       showFood(offFood);
 
       await renderDetail();
 
-      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.off.text)).toBeOnTheScreen();
-      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.off.url)).toBeOnTheScreen();
-    });
-
-    it("should credit the CoFID dataset for one of its foods", async () => {
-      showFood({ ...offFood, source: "cofid" });
-
-      await renderDetail();
-
-      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.cofid.text)).toBeOnTheScreen();
-      expect(screen.queryByText(DATA_SOURCE_ATTRIBUTION.off.text)).not.toBeOnTheScreen();
-    });
-
-    it("should open the credit's address in the browser when it is pressed", async () => {
-      const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-      showFood(offFood);
-      const user = await renderDetail();
-
-      await user.press(screen.getByRole("link", { name: DATA_SOURCE_ATTRIBUTION.off.url }));
-
-      expect(openURL).toHaveBeenCalledTimes(1);
-      expect(openURL).toHaveBeenCalledWith(DATA_SOURCE_ATTRIBUTION.off.url);
-      openURL.mockRestore();
-    });
-
-    it("should stay on the food, with nothing unhandled, when the browser cannot be opened", async () => {
-      const openURL = jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser"));
-      showFood(offFood);
-      const user = await renderDetail();
-
-      await user.press(screen.getByRole("link", { name: DATA_SOURCE_ATTRIBUTION.off.url }));
-
-      expect(openURL).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole("heading", { name: "Crunchy granola" })).toBeOnTheScreen();
-      openURL.mockRestore();
-    });
-
-    it("should link to the CoFID dataset for one of its foods", async () => {
-      const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-      showFood({ ...offFood, source: "cofid" });
-      const user = await renderDetail();
-
-      await user.press(screen.getByRole("link", { name: DATA_SOURCE_ATTRIBUTION.cofid.url }));
-
-      expect(openURL).toHaveBeenCalledWith(DATA_SOURCE_ATTRIBUTION.cofid.url);
-      openURL.mockRestore();
-    });
-
-    it("should show no credit for the user's own food", async () => {
-      await renderDetail();
-
-      expect(screen.queryByText(DATA_SOURCE_ATTRIBUTION.off.text)).not.toBeOnTheScreen();
-      expect(screen.queryByText(DATA_SOURCE_ATTRIBUTION.cofid.text)).not.toBeOnTheScreen();
+      expect(screen.getByText("Open Food Facts")).toBeOnTheScreen();
     });
   });
 

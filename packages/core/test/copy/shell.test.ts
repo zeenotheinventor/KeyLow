@@ -49,6 +49,7 @@ describe("the tab shell copy", () => {
           title: "Appearance",
           options: { dark: "Dark", light: "Light", system: "Match device" },
         },
+        about: { title: "About" },
       },
       account: { title: "Account", signOut: "Sign out" },
     });

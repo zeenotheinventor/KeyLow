@@ -1,3 +1,4 @@
+export { ABOUT_SCREEN } from "./about";
 export {
   AUTH_FIELD_PROBLEMS,
   AUTH_SCREEN,

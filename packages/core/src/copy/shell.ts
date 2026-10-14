@@ -28,7 +28,7 @@ export const PLACEHOLDER_BODIES = {
   recipes: "Your recipes will appear here.",
 };
 
-/** The More screen: four sections, each a title over one row, as the `tab-shell.more` board draws them. */
+/** The More screen: four sections, each a title over its rows, as the `tab-shell.more` board draws them. */
 export const MORE_SCREEN = {
   food: {
     title: "Food",
@@ -41,6 +41,7 @@ export const MORE_SCREEN = {
       title: "Appearance",
       options: { dark: "Dark", light: "Light", system: "Match device" },
     },
+    about: { title: "About" },
   },
   account: { title: "Account", signOut: "Sign out" },
 };

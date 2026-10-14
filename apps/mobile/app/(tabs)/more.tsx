@@ -8,7 +8,8 @@ import { GroupedList, ListRow } from "../../components/ui";
 import { supabase } from "../../lib/supabase";
 
 // The four sections of the `tab-shell.more` board. Your foods opens the search sheet in its own-foods mode,
-// Weight waits for its screen, Appearance is set here, and Sign out is Account's one row.
+// Weight waits for its screen, Appearance is set here, and Sign out is Account's one row. About is under
+// Settings and opens the About screen. No board draws it.
 export default function MoreRoute() {
   const router = useRouter();
 
@@ -36,6 +37,13 @@ export default function MoreRoute() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title}>
           <AppearanceSetting />
+          <ListRow
+            icon="Info"
+            title={MORE_SCREEN.settings.about.title}
+            onPress={() => {
+              router.push("/about");
+            }}
+          />
         </GroupedList>
         <GroupedList title={MORE_SCREEN.account.title}>
           <ListRow
