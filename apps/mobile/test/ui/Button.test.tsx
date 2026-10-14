@@ -10,6 +10,7 @@ import { animatedRotation, animatedScale } from "../support/animatedStyle";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
+import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { ButtonProps, ButtonVariant } from "../../components/ui";
 import type { ColorName, ThemeScheme } from "@keylow/tokens";
@@ -96,6 +97,13 @@ describe("Button", () => {
       await renderButton({ children: "Add entry" });
 
       expect(screen.getByRole("button", { name: "Add entry" })).toBeOnTheScreen();
+    });
+
+    it("should be named by an accessible label of its own when it has one, which starts with the label drawn", async () => {
+      await renderButton({ children: "Remove", accessibilityLabel: "Remove portion 1" });
+
+      expect(screen.getByRole("button", { name: "Remove portion 1" })).toBeOnTheScreen();
+      expect(screen.getByText("Remove")).toBeOnTheScreen();
     });
 
     it("should call onPress when pressed", async () => {
@@ -330,6 +338,30 @@ describe("Button", () => {
       },
     );
 
+    it("should write a quiet ghost button's label in the secondary text colour", async () => {
+      await renderButton({ variant: "ghost", quiet: true }, scheme);
+      await screen.findByRole("button", { name: "Add entry" });
+
+      expect(screen.getByText("Add entry")).toHaveStyle({
+        color: resolvedColor(scheme, "text-secondary"),
+      });
+    });
+
+    it.each(["primary", "secondary", "destructive"] as const)(
+      "should leave the %s variant's label colour alone when asked to be quiet, because only ghost can be",
+      async (variant) => {
+        await renderButton({ variant, quiet: true }, scheme);
+        await screen.findByRole("button", { name: "Add entry" });
+
+        expect(screen.getByText("Add entry")).toHaveStyle({
+          color: resolvedColor(
+            scheme,
+            variants.find((row) => row.variant === variant)?.label ?? "text-primary",
+          ),
+        });
+      },
+    );
+
     it("should draw the press overlay from the press-overlay token", async () => {
       await renderButton({}, scheme);
       await fireEvent(await screen.findByRole("button", { name: "Add entry" }), "pressIn");
@@ -358,6 +390,64 @@ describe("Button", () => {
       });
     });
 
+    it("should be the small control height, 36 points, padded 8 across, as the food form boards draw Remove", async () => {
+      await renderButton({ size: "sm" });
+
+      expect(screen.getByRole("button", { name: "Add entry" })).toHaveStyle({
+        height: controlHeight.sm,
+        minWidth: touchTarget,
+        paddingLeft: 8,
+        paddingRight: 8,
+      });
+    });
+
+    it("should write a small button's label at 14 over 20 in semibold, as the boards draw it", async () => {
+      await renderButton({ size: "sm" });
+
+      expect(screen.getByText("Add entry")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 14,
+        lineHeight: 20,
+      });
+    });
+
+    it("should write a medium button's label at 16 over 24, as the design system card draws it", async () => {
+      await renderButton({ size: "md" });
+
+      expect(screen.getByText("Add entry")).toHaveStyle({ fontSize: 16, lineHeight: 24 });
+    });
+
+    it("should put 6 points between a small button's icon and its label, and 8 in the others", async () => {
+      await renderButton({ size: "sm", icon: "Plus" });
+      expect(viewsDrawn({ flexDirection: "row", columnGap: 6 })).toHaveLength(1);
+      expect(viewsDrawn({ flexDirection: "row", columnGap: 8 })).toHaveLength(0);
+    });
+
+    it("should put 8 points between a medium button's icon and its label", async () => {
+      await renderButton({ size: "md", icon: "Plus" });
+
+      expect(viewsDrawn({ flexDirection: "row", columnGap: 8 })).toHaveLength(1);
+    });
+
+    it("should reach a 44 point touch target when small, by taking the rest as hit slop above and below", async () => {
+      await renderButton({ size: "sm" });
+
+      const slop = (touchTarget - controlHeight.sm) / 2;
+      expect(screen.getByRole("button", { name: "Add entry" })).toHaveProp("hitSlop", {
+        top: slop,
+        bottom: slop,
+      });
+    });
+
+    it.each(["md", "lg"] as const)(
+      "should need no hit slop when %s, which is a touch target already",
+      async (size) => {
+        await renderButton({ size });
+
+        expect(screen.getByRole("button", { name: "Add entry" }).props.hitSlop).toBeUndefined();
+      },
+    );
+
     it("should fill its parent's width when fullWidth", async () => {
       await renderButton({ fullWidth: true });
 
@@ -370,6 +460,16 @@ describe("Button", () => {
       expect(screen.getByRole("button", { name: "Add entry" })).toBeOnTheScreen();
       // Decoration has no role to query by, so the drawing itself is looked for.
       expect(drawings()).toHaveLength(1);
+    });
+
+    it("should draw a small button's icon at 16 points, as the board's Remove draws it", async () => {
+      await renderButton({ icon: "Plus", size: "sm" });
+      expect(drawings()[0]).toHaveProp("width", 16);
+    });
+
+    it("should draw a medium button's icon at 20 points", async () => {
+      await renderButton({ icon: "Plus" });
+      expect(drawings()[0]).toHaveProp("width", 20);
     });
 
     it("should draw no icon unless given one", async () => {

@@ -10,12 +10,25 @@ export type InputDensity = "comfortable" | "compact";
 export type FieldFrameProps = {
   /** The visible label, and the field's accessible name. Short, sentence case. */
   label: string;
+  /**
+   * Names the field for a screen reader in place of the visible label, whole: a `NumericInput` does not add
+   * its unit to it. For a field whose visible label does not tell it apart from another, such as each
+   * portion's amount. Defaults to the label.
+   */
+  accessibilityLabel?: string | undefined;
   /** A short note at the end of the label's line, such as "Required". */
   labelHint?: string | undefined;
   /** One short sentence under the field. An error replaces it. */
   helper?: string | undefined;
   /** Says what to do. Turns the border danger and is announced as an alert. Replaces the helper. */
   error?: string | undefined;
+  /**
+   * Says the screen draws the error's message itself, as the food form draws a portion's amount error
+   * across the whole row. The field keeps the danger border and still describes itself by the error,
+   * so a screen reader reads it with the field, but it draws no message of its own and the screen draws
+   * the alert. Does nothing while there is no error.
+   */
+  errorShownElsewhere?: boolean | undefined;
   /**
    * Says the value is not given, drawn under the field with a warning icon, as the copy forms draw it
    * for a nutrient the source leaves out. An error replaces it.

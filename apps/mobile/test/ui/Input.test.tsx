@@ -1,7 +1,7 @@
 import { themes } from "@keylow/tokens";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 
-import { Input } from "../../components/ui";
+import { FieldError, Input } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -41,7 +41,7 @@ describe("Input", () => {
   let kitStyles: string;
 
   beforeAll(async () => {
-    kitStyles = await compileKitStyles();
+    kitStyles = await compileKitStyles("-mt-2");
   });
 
   beforeEach(() => {
@@ -119,6 +119,22 @@ describe("Input", () => {
     });
   });
 
+  describe("an accessible label of its own", () => {
+    it("should name the field by it instead of the visible label, when the label alone does not tell it apart", async () => {
+      await renderInput({ accessibilityLabel: "Portion 1 label" });
+
+      expect(screen.getByLabelText("Portion 1 label")).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
+      expect(screen.getByText("Name")).toBeOnTheScreen();
+    });
+
+    it("should be named by its visible label when it is not given one", async () => {
+      await renderInput();
+
+      expect(screen.getByLabelText("Name")).toBeOnTheScreen();
+    });
+  });
+
   describe("the label hint", () => {
     it("should show a short note beside the label, such as Required", async () => {
       await renderInput({ labelHint: "Required" });
@@ -176,6 +192,41 @@ describe("Input", () => {
 
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
       expect(screen.getByText("As it appears on the pack")).toBeOnTheScreen();
+    });
+  });
+
+  describe("an error the screen shows itself", () => {
+    it("should draw no message of its own", async () => {
+      await renderInput({ error: "Name is required", errorShownElsewhere: true });
+
+      expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Name is required")).not.toBeOnTheScreen();
+    });
+
+    it("should still describe the field by the error, which is how a native field says it is invalid", async () => {
+      await renderInput({ error: "Name is required", errorShownElsewhere: true });
+
+      expect(screen.getByLabelText("Name")).toHaveProp("accessibilityHint", "Name is required");
+    });
+
+    it("should not bring the helper back in the error's place", async () => {
+      await renderInput({
+        helper: "As it appears on the pack",
+        error: "Name is required",
+        errorShownElsewhere: true,
+      });
+
+      expect(screen.queryByText("As it appears on the pack")).not.toBeOnTheScreen();
+    });
+
+    it("should change nothing while there is no error", async () => {
+      await renderInput({ helper: "As it appears on the pack", errorShownElsewhere: true });
+
+      expect(screen.getByText("As it appears on the pack")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Name")).toHaveProp(
+        "accessibilityHint",
+        "As it appears on the pack",
+      );
     });
   });
 
@@ -341,6 +392,13 @@ describe("Input", () => {
       expect(boxOf({ borderColor: colorOf("accent") })).toHaveLength(0);
     });
 
+    it("should turn its border to danger for an error the screen shows itself", async () => {
+      await renderInput({ error: "Name is required", errorShownElsewhere: true }, scheme);
+      await screen.findByLabelText("Name");
+
+      expect(boxOf({ borderColor: colorOf("danger") })).toHaveLength(1);
+    });
+
     it("should sit on the surface, not the raised surface, when it is locked", async () => {
       await renderInput({ locked: true }, scheme);
       await screen.findByLabelText("Name");
@@ -429,6 +487,49 @@ describe("Input", () => {
       await screen.findByLabelText("Name");
 
       expect(viewsDrawn({ rowGap: 4 }).length).toBeGreaterThan(0);
+    });
+  });
+
+  describe("FieldError", () => {
+    function renderFieldError(scheme: ThemeScheme = "dark") {
+      return render(
+        <ThemeProvider fixedPreference={scheme}>
+          <FieldError>Portion 1 needs an amount above 0</FieldError>
+        </ThemeProvider>,
+      );
+    }
+
+    it("should be an alert, and a live region because the alert role alone does not announce on Android", async () => {
+      await renderFieldError();
+
+      expect(screen.getByRole("alert", { name: "Portion 1 needs an amount above 0" })).toHaveProp(
+        "aria-live",
+        "assertive",
+      );
+    });
+
+    it.each(schemes)(
+      "should be the same danger caption a field draws, in the %s scheme",
+      async (scheme) => {
+        await renderFieldError(scheme);
+
+        expect(await screen.findByText("Portion 1 needs an amount above 0")).toHaveStyle({
+          color: resolvedColor(scheme, "danger"),
+          fontFamily: "Geist-Medium",
+          fontSize: 12,
+          lineHeight: 16,
+        });
+      },
+    );
+
+    it("should take layout from its caller", async () => {
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <FieldError className="-mt-2">Portion 1 needs a label</FieldError>
+        </ThemeProvider>,
+      );
+
+      expect(await screen.findByText("Portion 1 needs a label")).toHaveStyle({ marginTop: -8 });
     });
   });
 });

@@ -3,8 +3,11 @@ import type { IconName } from "../Icon";
 
 export type ButtonVariant = "primary" | "secondary" | "destructive" | "ghost";
 
-/** The design's `sm` (36) is for the dense web layout only, so mobile has medium (44) and large (52). */
-export type ButtonSize = "md" | "lg";
+/**
+ * Small is 36 points, for a minor action drawn inside a card, such as removing a portion. It reaches the
+ * 44 point touch target through its hit slop. Medium is 44 and large is 52.
+ */
+export type ButtonSize = "sm" | "md" | "lg";
 
 export type ButtonProps = {
   /** The label: short, sentence case, no full stop. */
@@ -13,11 +16,22 @@ export type ButtonProps = {
   variant?: ButtonVariant;
   /** Defaults to `md`. */
   size?: ButtonSize;
+  /**
+   * Ghost only: writes the label and icon in the secondary text colour, for a minor action beside the
+   * main content, such as removing a portion. Every other variant keeps its own colour.
+   */
+  quiet?: boolean;
   /** Dims the button to 40 percent and stops it responding, with no motion. */
   disabled?: boolean;
   /** Keeps the label's width, hides it and shows a spinner. The button stops responding. */
   loading?: boolean;
   fullWidth?: boolean;
+  /**
+   * Names the button for a screen reader in place of its label, for a button whose label does not tell it
+   * apart from another, such as each portion's Remove. It starts with the label drawn, so the name
+   * contains what is on the button.
+   */
+  accessibilityLabel?: string;
   /** A leading icon, by name. It is decoration. */
   icon?: IconName | undefined;
   /**

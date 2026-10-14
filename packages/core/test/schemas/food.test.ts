@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { FOOD_FORM } from "../../src/copy";
 import {
   customFoodInputSchema,
   foodPortionSchema,
@@ -414,6 +415,18 @@ describe("customFoodInputSchema", () => {
       ];
       expect(customFoodInputSchema.safeParse({ ...goldenCustomFood, portions }).success).toBe(
         false,
+      );
+    });
+
+    it("should say the one-default rule in the sentence the food form copy has, so the two cannot drift", () => {
+      const portions = [
+        { label: "1 bowl", grams: 250, isDefault: true },
+        { label: "1 cup", grams: 120, isDefault: true },
+      ];
+      const result = customFoodInputSchema.safeParse({ ...goldenCustomFood, portions });
+
+      expect(result.success ? [] : result.error.issues.map((issue) => issue.message)).toStrictEqual(
+        [FOOD_FORM.onlyOneDefaultPortion],
       );
     });
 

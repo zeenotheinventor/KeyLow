@@ -1,6 +1,11 @@
-import { FOOD_FORM, describeNutrientProblem } from "@keylow/core/copy";
+import {
+  FOOD_FORM,
+  describeNutrientProblem,
+  describePortionAmountField,
+  describePortionAmountProblem,
+} from "@keylow/core/copy";
 import { useState } from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 
 import { NumericInput } from "./NumericInput";
 
@@ -86,6 +91,25 @@ export const Focused: Story = { args: { autoFocus: true } };
 
 export const WithError: Story = {
   args: { error: describeNutrientProblem("kcal", "required") },
+};
+
+// The screen draws the message itself, across the whole row a portion's amount sits in.
+export const ErrorShownElsewhere: Story = {
+  args: {
+    label: FOOD_FORM.amount,
+    unit: "g",
+    accessibilityLabel: describePortionAmountField(1, "per_100g"),
+    error: describePortionAmountProblem(1),
+    errorShownElsewhere: true,
+  },
+  render: (args) => (
+    <View className="gap-1">
+      <TypingNumericInput {...args} />
+      <Text className="text-caption font-medium tabular-nums text-danger" role="alert">
+        {describePortionAmountProblem(1)}
+      </Text>
+    </View>
+  ),
 };
 
 // The copy forms mark a nutrient the source leaves out.

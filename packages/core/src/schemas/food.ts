@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { nutrientAmountSchema } from "./nutrients";
+import { FOOD_FORM } from "../copy/foodForm";
 import { normaliseBarcode } from "../foods/barcode";
 
 export const foodSourceSchema = z.enum(["off", "cofid", "user"]);
@@ -116,7 +117,7 @@ export const customFoodInputSchema = z.object({
   portions: z
     .array(customFoodPortionInputSchema)
     .refine((portions) => portions.filter((portion) => portion.isDefault).length <= 1, {
-      message: "At most one portion can be the default",
+      message: FOOD_FORM.onlyOneDefaultPortion,
     }),
 });
 

@@ -1,3 +1,4 @@
+import { controlHeight, touchTarget } from "@keylow/tokens";
 import { View } from "react-native";
 
 import { Icon } from "../Icon";
@@ -5,7 +6,9 @@ import { PressableSurface } from "../PressableSurface";
 import { Text } from "../Text";
 import { ButtonSpinner } from "./ButtonSpinner";
 
-import type { ButtonProps, ButtonVariant } from "./types";
+import type { ButtonProps, ButtonSize, ButtonVariant } from "./types";
+import type { IconSizeName } from "../Icon";
+import type { TextVariant } from "../Text";
 import type { Tone } from "../tone";
 
 // The classes are written out so Tailwind sees them. A variant sets its fill and its 1 point border,
@@ -26,37 +29,78 @@ const variantTone: Record<ButtonVariant, Tone> = {
   ghost: "primary",
 };
 
-const sizeClassName = {
-  md: "h-control-md px-4",
-  lg: "h-control-lg px-5",
+// Medium and large are the design system card's: a body strong label, 8 between an icon and it. The small
+// button follows the food form boards' Remove, which the card does not draw: a 14 over 20 label, 8 across
+// the box, 6 between the icon and the label, and a 16 point icon.
+const sizeLook: Record<
+  ButtonSize,
+  {
+    boxClassName: string;
+    rowClassName: string;
+    labelVariant: TextVariant;
+    iconSize: IconSizeName | number;
+  }
+> = {
+  sm: {
+    boxClassName: "h-control-sm px-2",
+    rowClassName: "gap-[6px]",
+    labelVariant: "label-small",
+    iconSize: 16,
+  },
+  md: {
+    boxClassName: "h-control-md px-4",
+    rowClassName: "gap-2",
+    labelVariant: "body-strong",
+    iconSize: "md",
+  },
+  lg: {
+    boxClassName: "h-control-lg px-5",
+    rowClassName: "gap-2",
+    labelVariant: "body-strong",
+    iconSize: "md",
+  },
 };
+
+// The small button is 36 points high, so it reaches the 44 point touch target by taking the rest as hit
+// slop above and below. Its width is already the touch target's, through its minimum width.
+const smallSlop = (touchTarget - controlHeight.sm) / 2;
+const smallHitSlop = { top: smallSlop, bottom: smallSlop };
 
 export function Button({
   children,
   variant = "primary",
   size = "md",
+  quiet = false,
   disabled = false,
   loading = false,
   fullWidth = false,
+  accessibilityLabel,
   icon,
   haptic,
   onPress,
   className = "",
 }: ButtonProps) {
+  const look = sizeLook[size];
+  const tone = variant === "ghost" && quiet ? "secondary" : variantTone[variant];
+
   // The press scale sits on a wrapper inside the layout view, with the button and all its classes inside
   // that, so the caller's layout classes are outside the scale. See PressableSurface.
   return (
     <View className={`${fullWidth ? "w-full" : ""} ${className}`} testID="button-layout">
       <PressableSurface
         busy={loading}
-        className={`min-w-touch-target flex-row items-center justify-center overflow-hidden rounded-medium border ${variantClassName[variant]} ${sizeClassName[size]} ${disabled ? "opacity-40" : ""}`}
+        className={`min-w-touch-target flex-row items-center justify-center overflow-hidden rounded-medium border ${variantClassName[variant]} ${look.boxClassName} ${disabled ? "opacity-40" : ""}`}
         disabled={disabled}
         haptic={haptic}
+        hitSlop={size === "sm" ? smallHitSlop : undefined}
+        label={accessibilityLabel}
         onPress={onPress}
       >
-        <View className={`flex-row items-center gap-2 ${loading ? "opacity-0" : ""}`}>
-          {icon === undefined ? null : <Icon name={icon} tone={variantTone[variant]} />}
-          <Text tone={variantTone[variant]} variant="body-strong">
+        <View
+          className={`flex-row items-center ${look.rowClassName} ${loading ? "opacity-0" : ""}`}
+        >
+          {icon === undefined ? null : <Icon name={icon} size={look.iconSize} tone={tone} />}
+          <Text tone={tone} variant={look.labelVariant}>
             {children}
           </Text>
         </View>

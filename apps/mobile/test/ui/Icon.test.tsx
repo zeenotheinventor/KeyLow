@@ -56,6 +56,7 @@ const names: IconName[] = [
   "ScanBarcode",
   "Search",
   "SearchX",
+  "Trash2",
   "TriangleAlert",
   "Utensils",
   "WifiOff",

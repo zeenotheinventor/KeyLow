@@ -1,4 +1,4 @@
-import { FOOD_FORM, describeNameProblem } from "@keylow/core/copy";
+import { FOOD_FORM, describeNameProblem, describePortionField } from "@keylow/core/copy";
 import { useState } from "react";
 import { View } from "react-native";
 
@@ -59,6 +59,26 @@ export const WithError: Story = {
     density: "compact",
     labelHint: FOOD_FORM.required,
     error: describeNameProblem("required"),
+  },
+};
+
+// The screen draws the message itself, as the food form does across a portion's whole row. The field keeps
+// the danger border and describes itself by the error.
+export const ErrorShownElsewhere: Story = {
+  args: {
+    density: "compact",
+    error: describeNameProblem("required"),
+    errorShownElsewhere: true,
+  },
+};
+
+// Its accessible name differs from the visible label, such as each portion's own label.
+export const WithAccessibleLabel: Story = {
+  args: {
+    density: "compact",
+    label: FOOD_FORM.portionLabel,
+    accessibilityLabel: describePortionField("label", 1),
+    placeholder: FOOD_FORM.portionLabelPlaceholder,
   },
 };
 

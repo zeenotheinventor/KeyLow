@@ -1,10 +1,11 @@
 import { FOOD_FORM } from "@keylow/core/copy";
 import { useState } from "react";
-import { Text as NativeText, TextInput, View } from "react-native";
+import { TextInput, View } from "react-native";
 
 import { useTheme } from "../../../../lib/theme";
 import { Icon } from "../../Icon";
 import { Text } from "../../Text";
+import { FieldError } from "../FieldError";
 
 import type { FieldMacro, TextFieldProps } from "./types";
 import type { InputDensity } from "../types";
@@ -29,10 +30,6 @@ const macroMarkClassName: Record<FieldMacro, string> = {
 // points and the text has only the box to live in.
 const maxFontSizeMultiplier = 1.5;
 
-// The error is danger text in both schemes, as the boards draw it. The kit's Text has no danger tone,
-// because a status colour is not text in light anywhere the boards do not say so.
-const errorClassName = "text-caption font-medium tabular-nums text-danger";
-
 function nonEmpty(text: string | undefined): string | undefined {
   return text === undefined || text.trim() === "" ? undefined : text;
 }
@@ -44,9 +41,11 @@ function nonEmpty(text: string | undefined): string | undefined {
  */
 export function TextField({
   label,
+  accessibilityLabel,
   labelHint,
   helper,
   error,
+  errorShownElsewhere = false,
   missingNote,
   disabled = false,
   density = "comfortable",
@@ -67,6 +66,8 @@ export function TextField({
   // An empty error is no error, so it neither flags the field nor puts an empty alert on the screen.
   const errorText = nonEmpty(error);
   const message = errorText ?? nonEmpty(helper);
+  const isMessageDrawnHere =
+    message !== undefined && !(errorShownElsewhere && errorText !== undefined);
   const hint = nonEmpty(labelHint);
   const note = errorText === undefined ? nonEmpty(missingNote) : undefined;
   // A native field has nothing to point at its message, so what it says is read as the field's hint: the
@@ -107,7 +108,7 @@ export function TextField({
           // Left off unless disabled: on Android the accessibility state is applied after `editable`, so
           // `aria-disabled={false}` would turn a locked field's input back on.
           aria-disabled={disabled ? true : undefined}
-          aria-label={unit === undefined ? label : `${label} (${unit})`}
+          aria-label={accessibilityLabel ?? (unit === undefined ? label : `${label} (${unit})`)}
           className={`min-h-10 min-w-0 flex-1 p-0 text-body font-normal tabular-nums text-text-primary ${align === "right" ? "text-right" : ""}`}
           cursorColor={colors["text-primary"]}
           // `readOnly` is left out because React Native lets it override `editable` even when it is false.
@@ -138,16 +139,13 @@ export function TextField({
         )}
         {locked ? <Icon name="Lock" size="sm" tone="muted" /> : null}
       </View>
-      {message === undefined ? null : errorText === undefined ? (
+      {!isMessageDrawnHere ? null : errorText === undefined ? (
         <Text key="helper" tone="muted" variant="caption">
           {message}
         </Text>
       ) : (
-        // The key remounts the message when an error replaces the helper, so the alert is announced. The
-        // alert role alone does not announce on mount on Android, so a failure is a live region too.
-        <NativeText key="error" aria-live="assertive" className={errorClassName} role="alert">
-          {message}
-        </NativeText>
+        // The key remounts the message when an error replaces the helper, so the alert is announced.
+        <FieldError key="error">{message}</FieldError>
       )}
       {note === undefined ? null : (
         <View className="flex-row items-center gap-1">

@@ -14,10 +14,20 @@ import {
   savedFoodId,
 } from "./support/apiClientMock";
 import NewFoodRoute from "../../app/foods/new";
+import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
 import type { Food } from "@keylow/core/schemas";
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("../support/expoRouterMock").mockExpoRouter,
@@ -44,7 +54,11 @@ const suspectFood: Food = {
 
 async function renderCopy() {
   const user = userEvent.setup();
-  await render(<NewFoodRoute />);
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <NewFoodRoute />
+    </ThemeProvider>,
+  );
   return user;
 }
 
@@ -144,17 +158,17 @@ describe("new food screen, copying a food with the from parameter", () => {
       expect(screen.getByRole("radio", { name: "Per 100 g" })).toBeChecked();
       expect(screen.getByLabelText("Energy (kcal)")).toHaveDisplayValue("420");
       expect(screen.getByLabelText("Fat (g)")).toHaveDisplayValue("14");
-      expect(screen.getByLabelText("Fibre (g)")).toHaveDisplayValue("6.5");
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveDisplayValue("6.5");
     });
 
     it("should fill in the portions with their amounts and the default", async () => {
       await renderCopy();
 
-      expect(screen.getByLabelText("Portion 1 label")).toHaveDisplayValue("1 bar");
-      expect(screen.getByLabelText("Portion 1 amount (g)")).toHaveDisplayValue("45");
-      expect(screen.getByRole("switch", { name: "Portion 1 default" })).toBeChecked();
-      expect(screen.getByLabelText("Portion 2 label")).toHaveDisplayValue("Box of 6");
-      expect(screen.getByRole("switch", { name: "Portion 2 default" })).not.toBeChecked();
+      expect(screen.getByLabelText("Portion label, portion 1")).toHaveDisplayValue("1 bar");
+      expect(screen.getByLabelText("Amount for portion 1 (g)")).toHaveDisplayValue("45");
+      expect(screen.getByRole("switch", { name: "Portion 1 is the default" })).toBeChecked();
+      expect(screen.getByLabelText("Portion label, portion 2")).toHaveDisplayValue("Box of 6");
+      expect(screen.getByRole("switch", { name: "Portion 2 is the default" })).not.toBeChecked();
     });
 
     it("should keep a liquid's basis and its portion amounts in millilitres", async () => {
@@ -166,7 +180,7 @@ describe("new food screen, copying a food with the from parameter", () => {
       await renderCopy();
 
       expect(screen.getByRole("radio", { name: "Per 100 ml" })).toBeChecked();
-      expect(screen.getByLabelText("Portion 1 amount (ml)")).toHaveDisplayValue("250");
+      expect(screen.getByLabelText("Amount for portion 1 (ml)")).toHaveDisplayValue("250");
     });
 
     it("should leave the values the food is missing blank", async () => {
@@ -207,7 +221,7 @@ describe("new food screen, copying a food with the from parameter", () => {
       expect(screen.getByLabelText("Energy (kcal)")).toHaveDisplayValue("420");
       expect(screen.getByLabelText("Protein (g)")).toHaveDisplayValue("9");
       expect(screen.getByLabelText("Fat (g)")).toHaveDisplayValue("14");
-      expect(screen.getByLabelText("Fibre (g)")).toHaveDisplayValue("6.5");
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveDisplayValue("6.5");
       expect(screen.getByLabelText("Carbohydrate (g)")).toHaveDisplayValue("");
     });
 
@@ -359,7 +373,7 @@ describe("new food screen, copying a food with the from parameter", () => {
       await fillMissingValues(user);
       await save(user);
       await screen.findByRole("alert", {
-        name: "Your food was saved but its portions were not. Edit the food to add them again.",
+        name: "Portions not saved Your food was saved but its portions were not. Save again to add them.",
       });
 
       await user.press(screen.getByRole("button", { name: "Save" }));
@@ -383,7 +397,11 @@ describe("new food screen, copying a food with the from parameter", () => {
     it("should open a blank form when it is empty", async () => {
       routerMock.searchParams = { from: "" };
 
-      await render(<NewFoodRoute />);
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <NewFoodRoute />
+        </ThemeProvider>,
+      );
 
       expect(screen.getByLabelText("Name")).toHaveDisplayValue("");
       expect(screen.getByRole("button", { name: "Create food" })).toBeOnTheScreen();

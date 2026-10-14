@@ -12,8 +12,11 @@ import {
   describePortionAmountField,
   describePortionField,
   describePortionAmountProblem,
+  describePortionGroup,
   describePortionLabelAndAmountProblem,
+  describePortionLabelField,
   describePortionLabelProblem,
+  describeRemovePortion,
 } from "../../src/copy";
 
 describe("food form buttons and review banner", () => {
@@ -188,5 +191,60 @@ describe("describeAmountUnitNote", () => {
   it("should name the unit that follows the basis", () => {
     expect(describeAmountUnitNote("per_100g")).toBe("Each amount is in g, to match the basis.");
     expect(describeAmountUnitNote("per_100ml")).toBe("Each amount is in ml, to match the basis.");
+  });
+});
+
+describe("the mobile food form copy", () => {
+  it("should pin the labels the mobile boards draw that the web form does not", () => {
+    expect(FOOD_FORM.nutritionBasis).toBe("Nutrition basis");
+    expect(FOOD_FORM.portionLabel).toBe("Portion label");
+    expect(FOOD_FORM.barcodeFromScan).toBe("Filled in from the barcode you scanned");
+  });
+
+  it("should pin the sentence for stored portions that have more than one default", () => {
+    expect(FOOD_FORM.onlyOneDefaultPortion).toBe("At most one portion can be the default");
+  });
+
+  it("should pin the two save notices as a title and a sentence each", () => {
+    expect(FOOD_FORM.saveFailedNotice).toEqual({
+      title: "Your food could not be saved",
+      body: "Check your connection and try again.",
+    });
+    expect(FOOD_FORM.detailsNotValidNotice).toEqual({
+      title: "Some details are not valid",
+      body: "Check the fields and try again.",
+    });
+    expect(FOOD_FORM.portionsNotSavedNotice).toEqual({
+      title: "Portions not saved",
+      body: "Your food was saved but its portions were not. Save again to add them.",
+    });
+  });
+});
+
+describe("describePortionGroup", () => {
+  it("should name the portion by its position", () => {
+    expect(describePortionGroup(2)).toBe("Portion 2");
+  });
+});
+
+describe("describePortionLabelField", () => {
+  it("should keep the visible label whole at the start, so the name contains what is drawn", () => {
+    expect(describePortionLabelField(2)).toBe("Portion label, portion 2");
+    expect(describePortionLabelField(2).startsWith(FOOD_FORM.portionLabel)).toBe(true);
+  });
+});
+
+describe("describeRemovePortion", () => {
+  it("should name the portion by its label", () => {
+    expect(describeRemovePortion("Slice", 1)).toBe("Remove portion Slice");
+  });
+
+  it("should trim the label", () => {
+    expect(describeRemovePortion("  Slice ", 1)).toBe("Remove portion Slice");
+  });
+
+  it("should name the portion by its position while the label is empty", () => {
+    expect(describeRemovePortion("", 3)).toBe("Remove portion 3");
+    expect(describeRemovePortion("   ", 3)).toBe("Remove portion 3");
   });
 });

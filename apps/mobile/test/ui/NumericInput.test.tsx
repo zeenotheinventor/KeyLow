@@ -56,6 +56,24 @@ describe("NumericInput", () => {
       expect(screen.getByLabelText("Energy")).toBeOnTheScreen();
     });
 
+    it("should be named by an accessible label of its own, whole, instead of its label and unit", async () => {
+      await renderNumericInput({ accessibilityLabel: "Amount for portion 1 (g)", unit: "g" });
+
+      expect(screen.getByLabelText("Amount for portion 1 (g)")).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Energy (g)")).not.toBeOnTheScreen();
+      expect(screen.getByText("Energy")).toBeOnTheScreen();
+    });
+
+    it("should draw no message for an error the screen shows itself, and still describe the field by it", async () => {
+      await renderNumericInput({ error: "Energy is required", errorShownElsewhere: true });
+
+      expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+      expect(screen.getByLabelText("Energy (kcal)")).toHaveProp(
+        "accessibilityHint",
+        "Energy is required",
+      );
+    });
+
     it("should show the unit after the value and hide it from a screen reader", async () => {
       await renderNumericInput({ value: "165" });
 
