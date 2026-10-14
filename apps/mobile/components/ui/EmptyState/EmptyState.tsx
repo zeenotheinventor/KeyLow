@@ -13,7 +13,7 @@ import type { EmptyStateProps } from "./types";
  * optional action. It fills the height of its parent and sits in the middle of it, as the boards draw it.
  * The copy is the screen's, from `@keylow/core/copy`. It fades in once, in place of the design's cut-in.
  */
-export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
+export function EmptyState({ icon, title, body, action, inset = "default" }: EmptyStateProps) {
   const animatedStyle = useFadeInStyle();
 
   // A class and an animated style cannot share an element, so the fade sits on a wrapper with no class,
@@ -21,7 +21,7 @@ export function EmptyState({ icon, title, body, action }: EmptyStateProps) {
   return (
     <View className="flex-1 justify-center">
       <Animated.View style={animatedStyle} testID="empty-state">
-        <View className="items-center gap-2 px-6">
+        <View className={`items-center gap-2 ${inset === "wide" ? "px-8" : "px-6"}`}>
           <View
             className="mb-2 h-[56px] w-[56px] items-center justify-center rounded-medium bg-surface-raised"
             testID="empty-state-tile"

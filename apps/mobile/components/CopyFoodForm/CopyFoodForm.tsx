@@ -3,7 +3,7 @@ import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
 import { normaliseBarcode } from "@keylow/core/foods";
 
 import { foodToFormValues } from "../FoodForm";
-import { FoodFormLoadState } from "../FoodFormLoadState";
+import { FoodLoadState } from "../FoodLoadState";
 import { NewFoodForm } from "../NewFoodForm";
 
 import type { CopyFoodFormProps } from "./types";
@@ -17,7 +17,7 @@ export function CopyFoodForm({ sourceFoodId }: CopyFoodFormProps) {
   const state = useFoodWithPortions(sourceFoodId);
 
   if (state.status !== "ready") {
-    return <FoodFormLoadState state={state.status} />;
+    return <FoodLoadState state={state.status} />;
   }
 
   const { food, portions } = state;

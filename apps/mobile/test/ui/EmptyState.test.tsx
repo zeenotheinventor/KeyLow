@@ -8,6 +8,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
+import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { EmptyStateProps } from "../../components/ui";
 import type { ThemeScheme } from "@keylow/tokens";
@@ -65,6 +66,24 @@ describe("EmptyState", () => {
     jest.useFakeTimers();
     registerAppStyles(kitStyles);
     setReduceMotion(false);
+  });
+
+  describe("the inset", () => {
+    it("should be 24 points at the sides by default", async () => {
+      await renderEmptyState();
+
+      expect(viewsDrawn({ alignItems: "center", paddingLeft: 24, paddingRight: 24 })).toHaveLength(
+        1,
+      );
+    });
+
+    it("should be 32 points at the sides when wide, as the food not found board draws it", async () => {
+      await renderEmptyState({ inset: "wide" });
+
+      expect(viewsDrawn({ alignItems: "center", paddingLeft: 32, paddingRight: 32 })).toHaveLength(
+        1,
+      );
+    });
   });
 
   afterEach(() => {

@@ -1,48 +1,32 @@
-import { Text, View } from "react-native";
+import { describeNutritionHeading } from "@keylow/core/copy";
+import { View } from "react-native";
 
-import { NUTRIENT_ROWS } from "./nutrientRows";
-import { formatAmount } from "../../lib/formatAmount";
+import { NutrientRow } from "./NutrientRow";
+import { nutrientRows } from "./nutrientRows";
+import { Card, Text } from "../ui";
 
 import type { NutrientTableProps } from "./types";
-import type { NutrientBasis } from "@keylow/core/schemas";
 
-const BASIS_HEADINGS: Record<NutrientBasis, string> = {
-  per_100g: "Nutrition per 100 g",
-  per_100ml: "Nutrition per 100 ml",
-};
+/** The nutrition of a food per 100 g or 100 ml, as the boards draw it: a heading over a card of rows. */
+export function NutrientTable({ food, note }: NutrientTableProps) {
+  const heading = describeNutritionHeading(food.basis);
 
-export function NutrientTable({ food }: NutrientTableProps) {
   return (
     <View className="gap-2">
-      <Text accessibilityRole="header" className="text-lg font-semibold text-legacy-neutral-900">
-        {BASIS_HEADINGS[food.basis]}
+      <Text className="px-1" role="heading" variant="body-strong">
+        {heading}
       </Text>
-      <View>
-        {NUTRIENT_ROWS.map((row) => {
-          const amount = food[row.field];
-          // A missing value is never shown as 0, which would read as a real measurement.
-          const valueText = amount === null ? "not given" : `${formatAmount(amount)} ${row.unit}`;
-          return (
-            <View
-              key={row.field}
-              accessible
-              accessibilityLabel={`${row.label}: ${valueText}`}
-              className="min-h-11 flex-row items-center justify-between border-b border-legacy-neutral-200"
-            >
-              <Text className="text-base text-legacy-neutral-900">{row.label}</Text>
-              <Text
-                className={
-                  amount === null
-                    ? "text-base text-legacy-neutral-500"
-                    : "text-base text-legacy-neutral-900"
-                }
-              >
-                {valueText}
-              </Text>
-            </View>
-          );
-        })}
-      </View>
+      {/* The rows bring their own padding, so the card has none. */}
+      <Card aria-label={heading} padding={0} role="list">
+        {nutrientRows(food).map((row, index) => (
+          <NutrientRow key={row.label} isFirst={index === 0} label={row.label} value={row.value} />
+        ))}
+      </Card>
+      {note === undefined ? null : (
+        <Text className="px-1" tone="secondary" variant="caption">
+          {note}
+        </Text>
+      )}
     </View>
   );
 }

@@ -234,6 +234,19 @@ describe("Skeleton", () => {
   describe("the shine", () => {
     // The design's kl-shimmer is a gradient 40 percent of a 200 percent wide image, so a band 0.8 of a bone
     // wide, whose peak travels 4 bone widths in 1400 ms linear with the band clear of the bone for the rest.
+    it("should be as tall as its bone, so it does not float on a tall card", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      const [band] = screen.getAllByTestId("skeleton-shine-band", hidden);
+      expect(band).toHaveStyle({ height: "100%" });
+    });
+
+    it("should grow its sweep to the bone's height, or the full height band collapses to nothing", async () => {
+      await renderSkeleton({ variant: "detail" });
+
+      expect(getAnimatedStyle(firstShine()).flexGrow).toBe(1);
+    });
+
     it("should be a band 80 percent of a bone wide", async () => {
       await renderSkeleton({ variant: "row" });
 

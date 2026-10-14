@@ -1,3 +1,2 @@
 export { NutrientTable } from "./NutrientTable";
-export { describeNutrientField } from "./nutrientRows";
-export type { NutrientTableProps } from "./types";
+export type { NutrientTableFood, NutrientTableProps } from "./types";

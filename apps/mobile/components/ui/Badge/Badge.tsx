@@ -72,6 +72,7 @@ export function Badge(props: BadgeProps) {
   const lineHeight = useCappedLineHeight(captionLineHeight, maxFontScale);
 
   const isSource = props.kind === "source";
+  const isOutlined = isSource || props.outlined === true;
   const tone = isSource ? "neutral" : (props.tone ?? "neutral");
   const look = tones[tone];
   const text = isSource ? describeFoodSource(props.source) : props.children;
@@ -81,7 +82,7 @@ export function Badge(props: BadgeProps) {
   return (
     <View
       // A transparent border keeps a status badge the same size as a source badge, which draws one.
-      className={`h-5 flex-row items-center gap-[5px] self-start rounded-pill border px-2 ${look.fillClassName} ${isSource ? "border-border" : "border-transparent"}`}
+      className={`h-5 flex-row items-center gap-[5px] self-start rounded-pill border px-2 ${look.fillClassName} ${isOutlined ? "border-border" : "border-transparent"}`}
     >
       {!isSource && props.dot === true ? (
         <View aria-hidden className={`h-[6px] w-[6px] rounded-pill ${look.dotClassName}`} />
