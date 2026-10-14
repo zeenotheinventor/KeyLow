@@ -1,3 +1,4 @@
+import type { NutrientFieldName } from "./nutrientFields";
 import type { CustomFoodInput, NutrientBasis } from "@keylow/core/schemas";
 
 /** One portion as the form holds it. The amount stays text until the form is validated. */
@@ -35,6 +36,11 @@ export type FoodFormProps = {
   lockedBarcodeHint?: string;
   /** A sentence shown above the nutrient fields, for something the user should know before filling them. */
   nutrientNote?: string;
+  /**
+   * The nutrients a copied food's source left out. Each is cued as not given for as long as it is blank, and
+   * the cue gives way to the error when a save is tried with it still blank.
+   */
+  notGivenNutrients?: readonly NutrientFieldName[];
   /** Receives the validated input. A rejection is shown to the user as the reason the save failed. */
   onSubmit: (input: CustomFoodInput) => Promise<void>;
 };

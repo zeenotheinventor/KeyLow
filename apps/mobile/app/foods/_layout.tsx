@@ -4,9 +4,9 @@ import { StatusBar } from "expo-status-bar";
 import { useTheme } from "../../lib/theme";
 
 // The root layout's AuthGate already covers these routes, so the stack needs no guard of its own.
-// The sheet draws its own header, so the root has none, and neither has the scanner. The other screens it
-// opens keep a native header, now in the theme's colours, though what is under it is still the old light
-// look until the tab shell lands.
+// The sheet draws its own header, so the root has none, and neither have the scanner and the food form. The
+// food screen keeps a native header, now in the theme's colours, though what is under it is still the old
+// light look until its own restyle lands.
 export default function FoodsLayout() {
   const { scheme, colors } = useTheme();
 
@@ -24,8 +24,8 @@ export default function FoodsLayout() {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="[id]/index" options={{ title: "Food" }} />
-        <Stack.Screen name="new" options={{ title: "New food" }} />
-        <Stack.Screen name="[id]/edit" options={{ title: "Edit food" }} />
+        <Stack.Screen name="new" options={{ headerShown: false }} />
+        <Stack.Screen name="[id]/edit" options={{ headerShown: false }} />
         <Stack.Screen name="scan" options={{ headerShown: false }} />
       </Stack>
     </>

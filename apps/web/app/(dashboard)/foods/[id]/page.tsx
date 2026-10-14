@@ -1,8 +1,8 @@
+import { isFoodId } from "@keylow/core/foods";
 import { notFound } from "next/navigation";
 
 import { PageFrame } from "@/app/(dashboard)/PageFrame";
 import { FoodDetail } from "@/components/foods/FoodDetail";
-import { isFoodId } from "@/components/foods/isFoodId";
 
 export default async function FoodPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -1,5 +1,5 @@
 import type * as ApiClient from "@keylow/api-client";
-import type { CreatedFood } from "@keylow/api-client";
+import type { CreatedFood, FoodWithPortionsState } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 type QueryState<Data> = { data: Data | undefined; isPending: boolean; isError: boolean };
@@ -62,6 +62,7 @@ export const mockCreateFood = jest.fn<Promise<CreatedFood>, [unknown]>();
 export const mockUpdateFood = jest.fn<Promise<Food>, [{ id: string; input: unknown }]>();
 export const mockUseFood = jest.fn<QueryState<Food | null>, [string | undefined]>();
 export const mockUseFoodPortions = jest.fn<QueryState<FoodPortion[]>, [string | undefined]>();
+export const mockUseFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
 
 export const foodQuery: QueryState<Food | null> = {
   data: foodFixture,
@@ -73,6 +74,23 @@ export const portionsQuery: QueryState<FoodPortion[]> = {
   isPending: false,
   isError: false,
 };
+
+// What the real hook makes of the two queries, so a test sets the queries and the screen sees the state.
+function foodWithPortionsState(): FoodWithPortionsState {
+  if (foodQuery.data === undefined && foodQuery.isError) {
+    return { status: "error", debugMessage: "The food query failed" };
+  }
+  if (portionsQuery.data === undefined && portionsQuery.isError) {
+    return { status: "error", debugMessage: "The portions query failed" };
+  }
+  if (foodQuery.data === undefined || portionsQuery.data === undefined) {
+    return { status: "loading" };
+  }
+  if (foodQuery.data === null) {
+    return { status: "notFound" };
+  }
+  return { status: "ready", food: foodQuery.data, portions: portionsQuery.data };
+}
 
 export function resetApiClientMock(): void {
   mockCreateFood.mockReset();
@@ -86,6 +104,8 @@ export function resetApiClientMock(): void {
   mockUseFood.mockImplementation(() => foodQuery);
   mockUseFoodPortions.mockReset();
   mockUseFoodPortions.mockImplementation(() => portionsQuery);
+  mockUseFoodWithPortions.mockReset();
+  mockUseFoodWithPortions.mockImplementation(foodWithPortionsState);
 }
 
 // The real error classes stay in place so the screens' instanceof checks run against them.
@@ -96,4 +116,5 @@ export const mockApiClient = {
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
   useFood: mockUseFood,
   useFoodPortions: mockUseFoodPortions,
+  useFoodWithPortions: mockUseFoodWithPortions,
 };

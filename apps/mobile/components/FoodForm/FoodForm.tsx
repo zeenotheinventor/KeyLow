@@ -44,6 +44,7 @@ export function FoodForm({
   isBarcodeLocked = false,
   lockedBarcodeHint = FOOD_FORM.barcodeFromScan,
   nutrientNote,
+  notGivenNutrients = [],
   onSubmit,
 }: FoodFormProps) {
   const lastPortionNumber = useRef(initialValues.portions.length);
@@ -68,6 +69,10 @@ export function FoodForm({
     return {
       error: errors[name],
       label: FOOD_FORM.nutrients[name],
+      missingNote:
+        notGivenNutrients.includes(name) && values[name] === ""
+          ? FOOD_FORM.nutrientNotGiven
+          : undefined,
       value: values[name],
       onChangeText: (text: string) => {
         changeText(name, text);

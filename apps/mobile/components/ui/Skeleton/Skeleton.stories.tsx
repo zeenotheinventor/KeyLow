@@ -26,3 +26,6 @@ export const Row: Story = { args: { variant: "row" } };
 
 // A card of three rows, as the loading board draws a group of results.
 export const Group: Story = { args: { variant: "group" } };
+
+// A food's page, as the food boards draw it while the food loads.
+export const Detail: Story = { args: { variant: "detail" } };

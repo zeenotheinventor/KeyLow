@@ -1,18 +1,25 @@
 import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
+import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
 import { FoodForm } from "../FoodForm";
+import { FoodFormScreen } from "../FoodFormScreen";
 
 import type { NewFoodFormProps } from "./types";
 import type { CustomFoodInput } from "@keylow/core/schemas";
 
-/** The food form for a new food. Saving creates a food of the user's own and opens it. */
+/**
+ * The New food screen: the form for a food of the user's own, under the sheet's header. Saving creates the
+ * food and opens it. A save that wrote the food but not its portions turns the screen into an update of
+ * that food, so saving again never makes a second one.
+ */
 export function NewFoodForm({
   initialValues,
   isBarcodeLocked,
   lockedBarcodeHint,
   nutrientNote,
+  notGivenNutrients,
   submitLabel,
 }: NewFoodFormProps) {
   const router = useRouter();
@@ -48,13 +55,16 @@ export function NewFoodForm({
   }
 
   return (
-    <FoodForm
-      submitLabel={partiallySavedFoodId === undefined ? submitLabel : "Save"}
-      initialValues={initialValues}
-      isBarcodeLocked={isBarcodeLocked}
-      {...(lockedBarcodeHint === undefined ? {} : { lockedBarcodeHint })}
-      {...(nutrientNote === undefined ? {} : { nutrientNote })}
-      onSubmit={save}
-    />
+    <FoodFormScreen title={FOOD_FORM.titles.create}>
+      <FoodForm
+        submitLabel={partiallySavedFoodId === undefined ? submitLabel : FOOD_FORM_BUTTONS.save}
+        initialValues={initialValues}
+        isBarcodeLocked={isBarcodeLocked}
+        {...(lockedBarcodeHint === undefined ? {} : { lockedBarcodeHint })}
+        {...(nutrientNote === undefined ? {} : { nutrientNote })}
+        {...(notGivenNutrients === undefined ? {} : { notGivenNutrients })}
+        onSubmit={save}
+      />
+    </FoodFormScreen>
   );
 }

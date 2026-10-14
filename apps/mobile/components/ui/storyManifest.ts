@@ -91,7 +91,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
   SearchField: { states: ["Empty", "Filled", "WithClear", "Focused"] },
   SearchLauncher: { states: ["Default", "AboveTabBar"] },
   SheetHeader: { states: ["Search", "Detail", "Form", "Scanner"] },
-  Skeleton: { states: ["Row", "Group"] },
+  Skeleton: { states: ["Row", "Group", "Detail"] },
   Switch: { states: ["Off", "On"] },
   TabBar: {
     states: [

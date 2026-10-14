@@ -5,6 +5,8 @@ export const FOOD_FORM_BUTTONS = {
   create: "Create food",
   copy: "Save to your foods",
   edit: "Save changes",
+  /** What the button says once a create has saved the food but not its portions and the next save updates it. */
+  save: "Save",
 };
 
 /** The banner on a shared food that is missing values. The body names the missing values. */
@@ -65,6 +67,7 @@ export const FOOD_FORM_BARCODE_NOT_VALID = "Barcode is not valid";
  */
 export const FOOD_FORM = {
   back: "Back",
+  close: "Close",
   cancel: "Cancel",
   titles: { create: "New food", copy: "Copy to your foods", edit: "Edit food" },
   copyIntro:
@@ -95,6 +98,8 @@ export const FOOD_FORM = {
     fibre_g: "Fibre (optional)",
   },
   notGivenBySource: "Not given by the source",
+  /** The mobile form's cue under a required nutrient the copied food leaves blank, as its boards draw it. */
+  nutrientNotGiven: "Not given",
   usCarbsNote: "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.",
   portionLabel: "Portion label",
   portionLabelPlaceholder: "e.g. 1 slice",

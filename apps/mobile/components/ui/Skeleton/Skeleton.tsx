@@ -31,6 +31,20 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
+// A food's page as the loading board draws it: the name on two lines, the source as a pill, and the
+// two cards under them. Its sides are the screen's, so it gives none of its own.
+function SkeletonDetail() {
+  return (
+    <View className="gap-4" testID="skeleton-detail">
+      <SkeletonBone className="h-6 w-[80%]" />
+      <SkeletonBone className="h-6 w-[45%]" />
+      <SkeletonBone className="h-5 w-[90px] rounded-pill" />
+      <SkeletonBone className="h-[140px] rounded-large" />
+      <SkeletonBone className="h-[236px] rounded-large" />
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -41,9 +55,9 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
 
   return (
     <Animated.View aria-hidden style={animatedStyle} testID="skeleton">
-      {variant === "row" ? (
-        <SkeletonRow index={0} />
-      ) : (
+      {variant === "detail" ? <SkeletonDetail /> : null}
+      {variant === "row" ? <SkeletonRow index={0} /> : null}
+      {variant === "group" ? (
         <View
           className="overflow-hidden rounded-large border border-border bg-surface elevation-card"
           testID="skeleton-card"
@@ -52,7 +66,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
             <SkeletonRow key={index} index={index} />
           ))}
         </View>
-      )}
+      ) : null}
     </Animated.View>
   );
 }

@@ -1,16 +1,21 @@
-import { useFood, useFoodPortions, useUpdateFood } from "@keylow/api-client";
+import { useFoodWithPortions, useUpdateFood } from "@keylow/api-client";
+import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
+import { isFoodId } from "@keylow/core/foods";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Text, View } from "react-native";
 
 import { FoodForm, foodToFormValues } from "../../../components/FoodForm";
+import { FoodFormLoadState } from "../../../components/FoodFormLoadState";
+import { FoodFormScreen } from "../../../components/FoodFormScreen";
+import { EmptyState } from "../../../components/ui";
 
 import type { CustomFoodInput } from "@keylow/core/schemas";
 
 export default function EditFoodRoute() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const food = useFood(id);
-  const portions = useFoodPortions(id);
+  // An id that is not a food id is a food that is not there, so it is never asked for. An empty id is idle.
+  const isValidId = isFoodId(id);
+  const state = useFoodWithPortions(isValidId ? id : "");
   const updateFood = useUpdateFood();
 
   async function save(input: CustomFoodInput) {
@@ -18,58 +23,33 @@ export default function EditFoodRoute() {
     router.replace(`/foods/${id}`);
   }
 
-  // A refresh that fails while the form is on show must not replace it with an error.
-  if (
-    (food.isError && food.data === undefined) ||
-    (portions.isError && portions.data === undefined)
-  ) {
-    return (
-      <View className="flex-1 bg-legacy-neutral-50 px-6 py-6">
-        <Text accessibilityRole="alert" className="text-base text-legacy-danger-600">
-          The food could not be loaded. Try again later.
-        </Text>
-      </View>
-    );
+  if (!isValidId) {
+    return <FoodFormLoadState state="notFound" />;
   }
 
-  if (food.isPending || portions.isPending) {
-    return (
-      <View className="flex-1 bg-legacy-neutral-50 px-6 py-6">
-        <Text accessibilityLiveRegion="polite" className="text-base text-legacy-neutral-500">
-          Loading food
-        </Text>
-      </View>
-    );
+  if (state.status !== "ready") {
+    return <FoodFormLoadState state={state.status} />;
   }
 
-  if (food.data === null) {
+  if (state.food.source !== "user") {
     return (
-      <View className="flex-1 gap-2 bg-legacy-neutral-50 px-6 py-6">
-        <Text accessibilityRole="header" className="text-2xl font-semibold text-legacy-neutral-900">
-          Food not found
-        </Text>
-        <Text className="text-base text-legacy-neutral-500">
-          This food does not exist, or you cannot see it.
-        </Text>
-      </View>
-    );
-  }
-
-  if (food.data.source !== "user") {
-    return (
-      <View className="flex-1 bg-legacy-neutral-50 px-6 py-6">
-        <Text className="text-base text-legacy-neutral-500">
-          This food comes from a shared database and cannot be edited.
-        </Text>
-      </View>
+      <FoodFormScreen title={FOOD_FORM.titles.edit}>
+        <EmptyState
+          body={FOOD_FORM.cannotEdit.body}
+          icon="Lock"
+          title={FOOD_FORM.cannotEdit.title}
+        />
+      </FoodFormScreen>
     );
   }
 
   return (
-    <FoodForm
-      submitLabel="Save changes"
-      initialValues={foodToFormValues(food.data, portions.data)}
-      onSubmit={save}
-    />
+    <FoodFormScreen title={FOOD_FORM.titles.edit}>
+      <FoodForm
+        submitLabel={FOOD_FORM_BUTTONS.edit}
+        initialValues={foodToFormValues(state.food, state.portions)}
+        onSubmit={save}
+      />
+    </FoodFormScreen>
   );
 }
