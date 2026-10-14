@@ -1,8 +1,8 @@
 import { SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
+import { describeFoodRow } from "@keylow/core/search";
 
 import type { LocalFoodListProps } from "./types";
 
-import { toFoodRowContent } from "@/components/foods/FoodSearch/foodRowContent";
 import { FoodRow } from "@/components/ui/FoodRow";
 import { GroupedList } from "@/components/ui/GroupedList";
 
@@ -28,7 +28,7 @@ export function LocalFoodList({ groups, query, onSeeMore }: LocalFoodListProps) 
             })}
       >
         {group.visibleRows.map((food) => (
-          <FoodRow key={food.id} href={`/foods/${food.id}`} {...toFoodRowContent(food, query)} />
+          <FoodRow key={food.id} href={`/foods/${food.id}`} {...describeFoodRow(food, query)} />
         ))}
       </GroupedList>
     );

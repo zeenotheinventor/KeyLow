@@ -9,12 +9,12 @@ import {
   SEARCH_GROUP_HEADINGS,
   SEARCH_STATUS,
 } from "@keylow/core/copy";
+import { describeFoodRow } from "@keylow/core/search";
 import { useFocusEffect } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 
 import { Banner, FoodRow, GroupedList } from "../../ui";
 import { openFoodFactsBusyTitle } from "../openFoodFactsBusyTitle";
-import { toFoodRowProps } from "../toFoodRowProps";
 
 import type { OpenFoodFactsGroupProps } from "./types";
 
@@ -86,7 +86,7 @@ export function OpenFoodFactsGroup({ candidates, query, onOpenFood }: OpenFoodFa
       {candidates.map((candidate) => (
         <FoodRow
           key={candidate.code}
-          {...toFoodRowProps(candidate, query)}
+          {...describeFoodRow(candidate, query)}
           busyLabel={candidate.code === pendingCode ? SEARCH_STATUS.addingProduct : undefined}
           disabled={pendingCode !== undefined && candidate.code !== pendingCode}
           onPress={() => {
