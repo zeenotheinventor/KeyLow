@@ -1,6 +1,8 @@
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { pagePaddingOf } from "./pagePadding";
+
 import MorePage from "@/app/(dashboard)/more/page";
 
 const { getUser, signOut, themeCookie } = vi.hoisted(() => ({
@@ -126,6 +128,15 @@ describe("More page", () => {
 
     await waitFor(() => {
       expect(signOut).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("should pad top and bottom as the shell boards draw it", async () => {
+    const { container } = render(await MorePage());
+
+    expect(await pagePaddingOf(container.firstElementChild)).toEqual({
+      phone: [24, 24],
+      desktop: [40, 40],
     });
   });
 });

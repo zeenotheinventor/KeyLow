@@ -26,11 +26,11 @@ describe("GET /auth/callback", () => {
   });
 
   describe("PKCE code", () => {
-    it("should exchange the code and redirect to the diary by default", async () => {
+    it("should exchange the code and redirect to the dashboard by default", async () => {
       const location = await redirectLocation("?code=abc");
 
       expect(exchangeCodeForSession).toHaveBeenCalledWith("abc");
-      expect(location).toBe("http://localhost:3000/diary");
+      expect(location).toBe("http://localhost:3000/dashboard");
     });
 
     it("should redirect to the next path when it is a local path", async () => {
@@ -55,10 +55,10 @@ describe("GET /auth/callback", () => {
       "/\t/evil.example",
       "/\n/evil.example",
       "/\r/evil.example",
-    ])("should ignore the next value %s and redirect to the diary", async (next) => {
+    ])("should ignore the next value %s and redirect to the dashboard", async (next) => {
       const location = await redirectLocation(`?code=abc&next=${encodeURIComponent(next)}`);
 
-      expect(location).toBe("http://localhost:3000/diary");
+      expect(location).toBe("http://localhost:3000/dashboard");
     });
 
     it("should redirect to the login page with an error when the exchange fails", async () => {
@@ -71,11 +71,11 @@ describe("GET /auth/callback", () => {
   });
 
   describe("email links", () => {
-    it("should verify the token hash and redirect to the diary", async () => {
+    it("should verify the token hash and redirect to the dashboard", async () => {
       const location = await redirectLocation("?token_hash=hash123&type=signup");
 
       expect(verifyOtp).toHaveBeenCalledWith({ type: "signup", token_hash: "hash123" });
-      expect(location).toBe("http://localhost:3000/diary");
+      expect(location).toBe("http://localhost:3000/dashboard");
     });
 
     it("should redirect to the login page with an error when verification fails", async () => {

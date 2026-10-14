@@ -17,14 +17,14 @@ test("redirects a signed-out visitor from the dashboard to the login page", asyn
   await expect(page).toHaveURL(/\/login$/);
 });
 
-test("creates an account and lands on the diary", async ({ page }) => {
+test("creates an account and lands on the dashboard", async ({ page }) => {
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
 
   await page.getByRole("button", { name: "Create account" }).click();
 
-  await expect(page).toHaveURL(/\/diary$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Recipes" })).toBeVisible();
@@ -38,7 +38,7 @@ test("signs out and protects the dashboard again", async ({ page }) => {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(/\/diary$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
 
   await page.getByRole("link", { name: "More" }).click();
   await expect(page).toHaveURL(/\/more$/);
@@ -56,7 +56,7 @@ test("signs in with the account that was created", async ({ page }) => {
 
   await page.getByRole("button", { name: "Sign in" }).click();
 
-  await expect(page).toHaveURL(/\/diary$/);
+  await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
 });
 

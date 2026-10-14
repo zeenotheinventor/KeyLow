@@ -1,6 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { pagePaddingOf } from "../pagePadding";
+
 import type { FoodWithPortionsState } from "@keylow/api-client";
 
 import EditFoodPage from "@/app/(dashboard)/foods/[id]/edit/page";
@@ -56,5 +58,14 @@ describe("EditFoodPage", () => {
     await expect(EditFoodPage(ids("not-a-uuid"))).rejects.toThrow();
 
     expect(useFoodWithPortions).not.toHaveBeenCalled();
+  });
+
+  it("should pad top and bottom as the food detail and form boards draw it", async () => {
+    const { container } = render(await EditFoodPage(ids("55555555-5555-4555-8555-555555555555")));
+
+    expect(await pagePaddingOf(container.firstElementChild)).toEqual({
+      phone: [16, 16],
+      desktop: [24, 24],
+    });
   });
 });

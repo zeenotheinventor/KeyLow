@@ -92,7 +92,7 @@ describe("LoginForm", () => {
       fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
       await waitFor(() => {
-        expect(push).toHaveBeenCalledWith("/diary");
+        expect(push).toHaveBeenCalledWith("/dashboard");
       });
       expect(signInWithPassword).toHaveBeenCalledWith({
         email: "ada@example.com",
@@ -112,7 +112,7 @@ describe("LoginForm", () => {
   });
 
   describe("signing in", () => {
-    it("should call signInWithPassword with the entered values and open the diary", async () => {
+    it("should call signInWithPassword with the entered values and open the dashboard", async () => {
       signInWithPassword.mockResolvedValue({ data: {}, error: null });
       render(<LoginForm />);
       fillForm("ada@example.com", "password123");
@@ -120,7 +120,7 @@ describe("LoginForm", () => {
       fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
 
       await waitFor(() => {
-        expect(push).toHaveBeenCalledWith("/diary");
+        expect(push).toHaveBeenCalledWith("/dashboard");
       });
       expect(signInWithPassword).toHaveBeenCalledWith({
         email: "ada@example.com",
@@ -175,7 +175,7 @@ describe("LoginForm", () => {
   });
 
   describe("creating an account", () => {
-    it("should call signUp with the entered values and open the diary when a session is returned", async () => {
+    it("should call signUp with the entered values and open the dashboard when a session is returned", async () => {
       signUp.mockResolvedValue({ data: { session: { access_token: "token" } }, error: null });
       render(<LoginForm />);
       fillForm("ada@example.com", "password123");
@@ -183,7 +183,7 @@ describe("LoginForm", () => {
       fireEvent.click(screen.getByRole("button", { name: "Create account" }));
 
       await waitFor(() => {
-        expect(push).toHaveBeenCalledWith("/diary");
+        expect(push).toHaveBeenCalledWith("/dashboard");
       });
       expect(signUp).toHaveBeenCalledWith({
         email: "ada@example.com",

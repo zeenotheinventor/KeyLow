@@ -1,6 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { pagePaddingOf } from "../pagePadding";
+
 import DiaryPage from "@/app/(dashboard)/diary/page";
 
 describe("DiaryPage", () => {
@@ -25,5 +27,14 @@ describe("DiaryPage", () => {
     render(<DiaryPage />);
 
     expect(screen.queryByRole("link", { name: "Find food" })).toBeNull();
+  });
+
+  it("should pad top and bottom as the shell boards draw it", async () => {
+    const { container } = render(<DiaryPage />);
+
+    expect(await pagePaddingOf(container.firstElementChild)).toEqual({
+      phone: [24, 24],
+      desktop: [40, 40],
+    });
   });
 });

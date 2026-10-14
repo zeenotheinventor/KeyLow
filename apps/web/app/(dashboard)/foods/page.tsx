@@ -1,3 +1,4 @@
+import { PageFrame } from "@/app/(dashboard)/PageFrame";
 import { FoodSearch } from "@/components/foods/FoodSearch";
 
 type FoodsPageProps = {
@@ -11,10 +12,12 @@ export default async function FoodsPage({ searchParams }: FoodsPageProps) {
 
   // A change of either parameter is a new page, so the search starts again from its start state.
   return (
-    <FoodSearch
-      key={`${resolvedScope}-${String(startWithBarcodePanel)}`}
-      scope={resolvedScope}
-      startWithBarcodePanel={startWithBarcodePanel}
-    />
+    <PageFrame variant="foodSearch">
+      <FoodSearch
+        key={`${resolvedScope}-${String(startWithBarcodePanel)}`}
+        scope={resolvedScope}
+        startWithBarcodePanel={startWithBarcodePanel}
+      />
+    </PageFrame>
   );
 }

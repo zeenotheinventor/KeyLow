@@ -20,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   return (
     <Providers>
       <DashboardNav />
-      <main className="px-4 py-6 lg:px-8 lg:py-10">{children}</main>
+      <main className="px-4 lg:px-8">{children}</main>
     </Providers>
   );
 }

@@ -227,8 +227,8 @@ pnpm --filter @keylow/web dev
 Open <http://localhost:3000>. You should see:
 
 - `/login` shows a form with Email and Password fields and "Sign in" and "Create account" buttons.
-- Visiting `/diary`, `/recipes`, `/weight` or `/settings` while signed out redirects to `/login`.
-- Signing in as the demo user, or creating a new account, lands on `/diary` with a navigation bar of Diary, Recipes, Weight and Settings. A "Sign out" button returns you to `/login`.
+- Visiting `/dashboard`, `/diary`, `/foods`, `/recipes` or `/more` while signed out redirects to `/login`.
+- Signing in as the demo user, or creating a new account, lands on `/dashboard` with a navigation bar of Dashboard, Diary, Recipes and More. Weight and Settings are reached through More, and Sign out on More returns you to `/login`.
 - Sign-up needs no email confirmation locally (see Troubleshooting).
 - "Continue with Google" does not work against the local stack. Google is disabled in the local config and needs real OAuth credentials.
 

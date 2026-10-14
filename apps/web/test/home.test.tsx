@@ -23,11 +23,11 @@ describe("Home page", () => {
     expect(redirect).toHaveBeenCalledExactlyOnceWith("/login");
   });
 
-  it("should send a signed-in user to the diary", async () => {
+  it("should send a signed-in user to the dashboard", async () => {
     getUser.mockResolvedValue({ data: { user: { id: "user-1" } }, error: null });
 
     await Home();
 
-    expect(redirect).toHaveBeenCalledExactlyOnceWith("/diary");
+    expect(redirect).toHaveBeenCalledExactlyOnceWith("/dashboard");
   });
 });
