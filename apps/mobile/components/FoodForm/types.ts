@@ -38,3 +38,10 @@ export type FoodFormProps = {
   /** Receives the validated input. A rejection is shown to the user as the reason the save failed. */
   onSubmit: (input: CustomFoodInput) => Promise<void>;
 };
+
+/** What the form says above Save when a save fails: a title, one sentence and which notice draws it. */
+export type SaveNotice = {
+  variant: "error" | "review";
+  title: string;
+  body: string;
+};

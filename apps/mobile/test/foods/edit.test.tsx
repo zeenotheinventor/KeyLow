@@ -13,8 +13,18 @@ import {
   savedFoodId,
 } from "./support/apiClientMock";
 import EditFoodRoute from "../../app/foods/[id]/edit";
+import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("../support/expoRouterMock").mockExpoRouter,
@@ -26,7 +36,11 @@ jest.mock(
 
 async function renderEditor() {
   const user = userEvent.setup();
-  await render(<EditFoodRoute />);
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <EditFoodRoute />
+    </ThemeProvider>,
+  );
   return user;
 }
 
@@ -131,19 +145,19 @@ describe("edit food screen", () => {
       expect(screen.getByLabelText("Protein (g)")).toHaveDisplayValue("8.5");
       expect(screen.getByLabelText("Fat (g)")).toHaveDisplayValue("14");
       expect(screen.getByLabelText("Carbohydrate (g)")).toHaveDisplayValue("62");
-      expect(screen.getByLabelText("Fibre (g)")).toHaveDisplayValue("6.5");
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveDisplayValue("6.5");
       expect(screen.getByRole("radio", { name: "Per 100 g" })).toBeChecked();
     });
 
     it("should fill the portions in their stored order with the default switched on", async () => {
       await renderEditor();
 
-      expect(screen.getByLabelText("Portion 1 label")).toHaveDisplayValue("1 bar");
-      expect(screen.getByLabelText("Portion 1 amount (g)")).toHaveDisplayValue("45");
-      expect(screen.getByRole("switch", { name: "Portion 1 default" })).toBeChecked();
-      expect(screen.getByLabelText("Portion 2 label")).toHaveDisplayValue("Box of 6");
-      expect(screen.getByLabelText("Portion 2 amount (g)")).toHaveDisplayValue("270");
-      expect(screen.getByRole("switch", { name: "Portion 2 default" })).not.toBeChecked();
+      expect(screen.getByLabelText("Portion label, portion 1")).toHaveDisplayValue("1 bar");
+      expect(screen.getByLabelText("Amount for portion 1 (g)")).toHaveDisplayValue("45");
+      expect(screen.getByRole("switch", { name: "Portion 1 is the default" })).toBeChecked();
+      expect(screen.getByLabelText("Portion label, portion 2")).toHaveDisplayValue("Box of 6");
+      expect(screen.getByLabelText("Amount for portion 2 (g)")).toHaveDisplayValue("270");
+      expect(screen.getByRole("switch", { name: "Portion 2 is the default" })).not.toBeChecked();
     });
 
     it("should leave the optional fields blank when the food has no value for them", async () => {
@@ -155,7 +169,7 @@ describe("edit food screen", () => {
 
       expect(screen.getByLabelText("Brand")).toHaveDisplayValue("");
       expect(screen.getByLabelText("Barcode")).toHaveDisplayValue("");
-      expect(screen.getByLabelText("Fibre (g)")).toHaveDisplayValue("");
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveDisplayValue("");
     });
 
     it("should keep the barcode editable", async () => {
@@ -173,7 +187,7 @@ describe("edit food screen", () => {
       await renderEditor();
 
       expect(screen.getByRole("radio", { name: "Per 100 ml" })).toBeChecked();
-      expect(screen.getByLabelText("Portion 1 amount (ml)")).toHaveDisplayValue("250");
+      expect(screen.getByLabelText("Amount for portion 1 (ml)")).toHaveDisplayValue("250");
     });
   });
 
@@ -229,13 +243,11 @@ describe("edit food screen", () => {
 
       await save(user);
 
-      expect(
-        await screen.findByRole("alert", { name: "Energy (kcal) is required" }),
-      ).toBeOnTheScreen();
+      expect(await screen.findByRole("alert", { name: "Energy is required" })).toBeOnTheScreen();
       expect(mockUpdateFood).not.toHaveBeenCalled();
     });
 
-    it("should show the schema's message when stored portions have more than one default", async () => {
+    it("should say at most one portion can be the default when stored portions have more than one", async () => {
       Object.assign(portionsQuery, {
         data: portionFixtures.map((portion) => ({ ...portion, is_default: true })),
       });
@@ -257,7 +269,7 @@ describe("edit food screen", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Your food could not be saved. Check your connection and try again.",
+          name: "Your food could not be saved Check your connection and try again.",
         }),
       ).toBeOnTheScreen();
       expect(routerMock.replace).not.toHaveBeenCalled();
@@ -273,7 +285,7 @@ describe("edit food screen", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Your food was saved but its portions were not. Edit the food to add them again.",
+          name: "Portions not saved Your food was saved but its portions were not. Save again to add them.",
         }),
       ).toBeOnTheScreen();
     });

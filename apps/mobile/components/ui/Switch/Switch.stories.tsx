@@ -1,7 +1,8 @@
 import { FOOD_FORM } from "@keylow/core/copy";
 import { useState } from "react";
-import { Text as NativeText, View } from "react-native";
+import { View } from "react-native";
 
+import { Text } from "../Text";
 import { Switch } from "./Switch";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
@@ -11,10 +12,7 @@ function PortionDefaultRow({ initial }: { initial: boolean }) {
   const [isOn, setIsOn] = useState(initial);
   return (
     <View className="h-control-md flex-row items-center justify-between">
-      {/* The board sets the row's words at 14 over 20, semibold, which is between the type scale's sizes. */}
-      <NativeText className="text-[14px] font-semibold leading-[20px] tabular-nums text-text-primary">
-        {FOOD_FORM.makeDefault}
-      </NativeText>
+      <Text variant="label-small">{FOOD_FORM.makeDefault}</Text>
       <Switch isOn={isOn} label="Default portion" onValueChange={setIsOn} />
     </View>
   );

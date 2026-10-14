@@ -1,9 +1,19 @@
 import type { Tone } from "../tone";
 import type { TextProps as NativeTextProps } from "react-native";
 
-/** The design system's seven type styles. */
+/**
+ * The design system's seven type styles, and `label-small`, which is the 14 over 20 semibold the food form
+ * boards draw on Remove and on Default. It is between the design system's sizes, so it follows the boards.
+ */
 export type TextVariant =
-  "display-numeral" | "h1" | "h2" | "body" | "body-strong" | "caption" | "numeral-small";
+  | "display-numeral"
+  | "h1"
+  | "h2"
+  | "body"
+  | "body-strong"
+  | "caption"
+  | "label-small"
+  | "numeral-small";
 
 /**
  * A tone from the kit's text and fill tones, or `warning-ink`: the design's `--warning-ink`, which is

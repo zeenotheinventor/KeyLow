@@ -1,27 +1,36 @@
+import { FOOD_FORM, describeNutritionHeading } from "@keylow/core/copy";
 import { customFoodInputSchema } from "@keylow/core/schemas";
+import { vars } from "nativewind";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BasisChoice } from "./BasisChoice";
+import { Banner, Button, FieldError, Input, NumericInput, SegmentedControl, Text } from "../ui";
 import { describeSaveError } from "./describeSaveError";
 import { emptyFoodFormValues } from "./foodFormValues";
-import { FormField } from "./FormField";
 import { mapIssuesToErrors, portionErrorKey } from "./mapIssuesToErrors";
-import { NUTRIENT_FIELDS } from "./nutrientFields";
-import { PortionRow } from "./PortionRow";
+import { PortionCard } from "./PortionCard";
 import { toRawInput } from "./toRawInput";
 
 import type { FoodFormErrors, KeyedFoodFormValues } from "./mapIssuesToErrors";
-import type { TextFieldName } from "./nutrientFields";
-import type { FoodFormProps } from "./types";
+import type { NutrientFieldName, TextFieldName } from "./nutrientFields";
+import type { FoodFormProps, SaveNotice } from "./types";
 import type { NutrientBasis } from "@keylow/core/schemas";
 
-const BASIS_HEADINGS: Record<NutrientBasis, string> = {
-  per_100g: "Nutrition per 100 g",
-  per_100ml: "Nutrition per 100 ml",
-};
+const BASIS_OPTIONS: readonly { value: NutrientBasis; label: string }[] = [
+  { value: "per_100g", label: FOOD_FORM.basisOptions.per_100g },
+  { value: "per_100ml", label: FOOD_FORM.basisOptions.per_100ml },
+];
 
-const SCANNED_BARCODE_HINT = "Filled in from the barcode you scanned";
+// Protein, carbohydrate and fat share one row, each with its macro's colour beside the label.
+const MACRO_FIELDS = [
+  { name: "protein_g", macro: "protein" },
+  { name: "carbs_g", macro: "carbs" },
+  { name: "fat_g", macro: "fat" },
+] as const;
+
+// The footer sits on the screen's bottom inset, and never closer than the 12 points the boards give it.
+const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
 
 function withoutKeys(errors: FoodFormErrors, isRemoved: (key: string) => boolean): FoodFormErrors {
   return Object.fromEntries(Object.entries(errors).filter(([key]) => !isRemoved(key)));
@@ -33,7 +42,7 @@ export function FoodForm({
   submitLabel,
   initialValues = emptyFoodFormValues,
   isBarcodeLocked = false,
-  lockedBarcodeHint = SCANNED_BARCODE_HINT,
+  lockedBarcodeHint = FOOD_FORM.barcodeFromScan,
   nutrientNote,
   onSubmit,
 }: FoodFormProps) {
@@ -46,14 +55,24 @@ export function FoodForm({
     })),
   }));
   const [errors, setErrors] = useState<FoodFormErrors>({});
-  const [submitError, setSubmitError] = useState<string | undefined>(undefined);
+  const [saveNotice, setSaveNotice] = useState<SaveNotice | undefined>(undefined);
+  const insets = useSafeAreaInsets();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const amountUnit = values.basis === "per_100g" ? "g" : "ml";
 
   function changeText(name: TextFieldName, text: string) {
     setValues((current) => ({ ...current, [name]: text }));
     setErrors((current) => withoutKeys(current, (key) => key === name));
+  }
+
+  function nutrientProps(name: NutrientFieldName) {
+    return {
+      error: errors[name],
+      label: FOOD_FORM.nutrients[name],
+      value: values[name],
+      onChangeText: (text: string) => {
+        changeText(name, text);
+      },
+    };
   }
 
   function changePortion(key: string, patch: Partial<KeyedFoodFormValues["portions"][number]>) {
@@ -107,17 +126,17 @@ export function FoodForm({
     const result = customFoodInputSchema.safeParse(toRawInput(values));
     if (!result.success) {
       setErrors(mapIssuesToErrors(result.error.issues, values));
-      setSubmitError(undefined);
+      setSaveNotice(undefined);
       return;
     }
 
     setErrors({});
-    setSubmitError(undefined);
+    setSaveNotice(undefined);
     setIsSubmitting(true);
     try {
       await onSubmit(result.data);
     } catch (error) {
-      setSubmitError(describeSaveError(error));
+      setSaveNotice(describeSaveError(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -126,125 +145,158 @@ export function FoodForm({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-legacy-neutral-50"
+      className="flex-1 bg-background"
     >
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerClassName="gap-4 px-6 py-6">
-        <FormField
-          label="Name"
-          error={errors["name"]}
-          value={values.name}
-          onChangeText={(text) => {
-            changeText("name", text);
-          }}
-          autoCapitalize="sentences"
-        />
-        <FormField
-          label="Brand"
-          error={errors["brand"]}
-          value={values.brand}
-          onChangeText={(text) => {
-            changeText("brand", text);
-          }}
-          autoCapitalize="words"
-        />
-        <FormField
-          label="Barcode"
-          error={errors["barcode"]}
-          {...(isBarcodeLocked ? { hint: lockedBarcodeHint } : {})}
-          editable={!isBarcodeLocked}
-          value={values.barcode}
-          onChangeText={(text) => {
-            changeText("barcode", text);
-          }}
-          keyboardType="number-pad"
-        />
-
-        <BasisChoice
-          value={values.basis}
-          onChange={(basis) => {
-            setValues((current) => ({ ...current, basis }));
-          }}
-        />
-
-        <Text accessibilityRole="header" className="text-lg font-semibold text-legacy-neutral-900">
-          {BASIS_HEADINGS[values.basis]}
-        </Text>
-        {nutrientNote === undefined ? null : (
-          <Text className="text-sm text-legacy-neutral-600">{nutrientNote}</Text>
-        )}
-        {NUTRIENT_FIELDS.map((field) => (
-          <FormField
-            key={field.name}
-            label={field.label}
-            error={errors[field.name]}
-            value={values[field.name]}
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerClassName="gap-4 px-4 pb-5 pt-1"
+      >
+        <View className="gap-3">
+          <Input
+            autoCapitalize="sentences"
+            density="compact"
+            error={errors["name"]}
+            label={FOOD_FORM.name}
+            labelHint={FOOD_FORM.required}
+            placeholder={FOOD_FORM.namePlaceholder}
+            value={values.name}
             onChangeText={(text) => {
-              changeText(field.name, text);
-            }}
-            keyboardType="decimal-pad"
-          />
-        ))}
-
-        <Text accessibilityRole="header" className="text-lg font-semibold text-legacy-neutral-900">
-          Portions
-        </Text>
-        {values.portions.map((portion, index) => (
-          <PortionRow
-            key={portion.key}
-            position={index + 1}
-            label={portion.label}
-            amount={portion.amount}
-            isDefault={portion.isDefault}
-            unit={amountUnit}
-            labelError={errors[portionErrorKey(portion.key, "label")]}
-            amountError={errors[portionErrorKey(portion.key, "amount")]}
-            onLabelChange={(text) => {
-              changePortionText(portion.key, "label", text);
-            }}
-            onAmountChange={(text) => {
-              changePortionText(portion.key, "amount", text);
-            }}
-            onDefaultChange={(isDefault) => {
-              changeDefault(portion.key, isDefault);
-            }}
-            onRemove={() => {
-              removePortion(portion.key);
+              changeText("name", text);
             }}
           />
-        ))}
-        {errors["portions"] === undefined ? null : (
-          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
-            {errors["portions"]}
-          </Text>
-        )}
-        <Pressable
-          accessibilityRole="button"
-          onPress={addPortion}
-          className="h-12 items-center justify-center rounded-lg border border-legacy-neutral-300"
-        >
-          <Text className="text-base font-semibold text-legacy-neutral-900">Add portion</Text>
-        </Pressable>
+          <View className="flex-row gap-2">
+            <View className="min-w-0 flex-1">
+              <Input
+                autoCapitalize="words"
+                density="compact"
+                error={errors["brand"]}
+                label={FOOD_FORM.brand}
+                placeholder={FOOD_FORM.optionalPlaceholder}
+                value={values.brand}
+                onChangeText={(text) => {
+                  changeText("brand", text);
+                }}
+              />
+            </View>
+            <View className="min-w-0 flex-1">
+              <Input
+                density="compact"
+                error={errors["barcode"]}
+                helper={isBarcodeLocked ? lockedBarcodeHint : undefined}
+                keyboardType="number-pad"
+                label={FOOD_FORM.barcode}
+                locked={isBarcodeLocked}
+                placeholder={FOOD_FORM.optionalPlaceholder}
+                value={values.barcode}
+                onChangeText={(text) => {
+                  changeText("barcode", text);
+                }}
+              />
+            </View>
+          </View>
+        </View>
 
-        {errors["form"] === undefined ? null : (
-          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
-            {errors["form"]}
+        <View className="gap-1">
+          {/* The control carries the accessible name, so the visible label is not read out a second time. */}
+          <Text aria-hidden tone="secondary" variant="caption">
+            {FOOD_FORM.nutritionBasis}
           </Text>
-        )}
-        {submitError === undefined ? null : (
-          <Text accessibilityRole="alert" className="text-sm text-legacy-danger-600">
-            {submitError}
-          </Text>
-        )}
+          <SegmentedControl
+            label={FOOD_FORM.nutritionBasis}
+            options={BASIS_OPTIONS}
+            value={values.basis}
+            onChange={(basis) => {
+              setValues((current) => ({ ...current, basis }));
+            }}
+          />
+        </View>
 
-        <Pressable
-          accessibilityRole="button"
-          disabled={isSubmitting}
-          onPress={() => void handleSubmit()}
-          className="h-12 items-center justify-center rounded-lg bg-legacy-brand-600 disabled:opacity-50"
-        >
-          <Text className="text-base font-semibold text-legacy-neutral-50">{submitLabel}</Text>
-        </Pressable>
+        <View className="gap-3">
+          <View className="gap-[2px]">
+            <Text role="heading" variant="body-strong">
+              {describeNutritionHeading(values.basis)}
+            </Text>
+            <Text tone="muted" variant="caption">
+              {FOOD_FORM.nutritionNote}
+            </Text>
+            {nutrientNote === undefined ? null : (
+              <Text className="mt-1" tone="secondary" variant="caption">
+                {nutrientNote}
+              </Text>
+            )}
+          </View>
+          <NumericInput {...nutrientProps("kcal")} unit="kcal" />
+          <View className="flex-row gap-2">
+            {MACRO_FIELDS.map((field) => (
+              <View key={field.name} className="min-w-0 flex-1">
+                <NumericInput {...nutrientProps(field.name)} macro={field.macro} unit="g" />
+              </View>
+            ))}
+          </View>
+          <NumericInput {...nutrientProps("fibre_g")} unit="g" />
+        </View>
+
+        <View className="gap-3">
+          <Text role="heading" variant="body-strong">
+            {FOOD_FORM.portions}
+          </Text>
+          {values.portions.map((portion, index) => (
+            <PortionCard
+              key={portion.key}
+              position={index + 1}
+              label={portion.label}
+              amount={portion.amount}
+              isDefault={portion.isDefault}
+              basis={values.basis}
+              labelError={errors[portionErrorKey(portion.key, "label")]}
+              amountError={errors[portionErrorKey(portion.key, "amount")]}
+              onLabelChange={(text) => {
+                changePortionText(portion.key, "label", text);
+              }}
+              onAmountChange={(text) => {
+                changePortionText(portion.key, "amount", text);
+              }}
+              onDefaultChange={(isDefault) => {
+                changeDefault(portion.key, isDefault);
+              }}
+              onRemove={() => {
+                removePortion(portion.key);
+              }}
+            />
+          ))}
+          {errors["portions"] === undefined ? null : <FieldError>{errors["portions"]}</FieldError>}
+          <Button className="-ml-4 self-start" icon="Plus" variant="ghost" onPress={addPortion}>
+            {FOOD_FORM.addPortion}
+          </Button>
+        </View>
       </ScrollView>
+
+      {/* Save stays in view while the form scrolls. The inset is a runtime value no class can name, so it goes through a variable. */}
+      <View
+        className="gap-3 border-t border-border bg-surface-sheet px-4 pt-3 pb-[var(--footer-bottom-padding)]"
+        style={vars({
+          "--footer-bottom-padding": Math.max(insets.bottom, MINIMUM_FOOTER_BOTTOM_PADDING),
+        })}
+      >
+        {saveNotice === undefined ? null : (
+          <Banner
+            announce
+            body={saveNotice.body}
+            title={saveNotice.title}
+            variant={saveNotice.variant}
+          />
+        )}
+        {errors["form"] === undefined ? null : <Banner title={errors["form"]} variant="error" />}
+        <Button
+          fullWidth
+          haptic="confirm"
+          loading={isSubmitting}
+          size="lg"
+          onPress={() => void handleSubmit()}
+        >
+          {submitLabel}
+        </Button>
+      </View>
     </KeyboardAvoidingView>
   );
 }

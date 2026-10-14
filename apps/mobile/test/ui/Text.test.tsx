@@ -73,6 +73,16 @@ const variants: {
     lineHeight: 16,
     letterSpacing: 0.12,
   },
+  // The food form boards' small label: the Remove button and the Default beside a portion's switch. It is
+  // between the design system's sizes, so the boards win here and the design system card is to follow.
+  {
+    variant: "label-small",
+    fontFamily: "Geist-SemiBold",
+    fontWeight: "600",
+    fontSize: 14,
+    lineHeight: 20,
+    letterSpacing: 0,
+  },
   {
     variant: "numeral-small",
     fontFamily: "Geist-SemiBold",

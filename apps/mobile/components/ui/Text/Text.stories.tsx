@@ -38,6 +38,9 @@ export const BodyStrong: Story = { args: { variant: "body-strong", children: "Po
 
 export const Caption: Story = { args: { variant: "caption", children: "UK CoFID" } };
 
+// The food form boards' 14 over 20 semibold, on Remove and on Default.
+export const LabelSmall: Story = { args: { variant: "label-small", children: "Default" } };
+
 export const NumeralSmall: Story = { args: { variant: "numeral-small", children: "142 kcal" } };
 
 const tones: TextTone[] = ["primary", "secondary", "muted"];

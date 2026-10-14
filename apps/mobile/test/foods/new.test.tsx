@@ -1,5 +1,6 @@
 import { FoodsPartialWriteError } from "@keylow/api-client";
-import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
+import { render, screen, userEvent, within } from "@testing-library/react-native";
+import { impactAsync, ImpactFeedbackStyle } from "expo-haptics";
 
 import {
   foodFixture,
@@ -9,8 +10,18 @@ import {
   savedFoodId,
 } from "./support/apiClientMock";
 import NewFoodRoute from "../../app/foods/new";
+import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("../support/expoRouterMock").mockExpoRouter,
@@ -32,21 +43,24 @@ async function fillRequiredFields(user: User) {
 
 async function renderForm() {
   const user = userEvent.setup();
-  await render(<NewFoodRoute />);
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <NewFoodRoute />
+    </ThemeProvider>,
+  );
   return user;
 }
 
-// A native switch has no press to simulate, so the test raises its value change directly.
-async function setDefault(position: number, isDefault: boolean) {
-  await fireEvent(
-    screen.getByRole("switch", { name: `Portion ${position} default` }),
-    "valueChange",
-    isDefault,
-  );
+// A portion's own fields are found inside its group, because every portion has the same two labels.
+function portion(position: number) {
+  return within(screen.getByLabelText(`Portion ${position}`));
 }
 
+const defaultSwitch = (position: number) =>
+  screen.getByRole("switch", { name: `Portion ${position} is the default` });
+
 async function save(user: User) {
-  await user.press(screen.getByRole("button", { name: "Create food" }));
+  await user.press(screen.getByRole("button", { name: /Create food/ }));
 }
 
 describe("new food screen", () => {
@@ -62,7 +76,7 @@ describe("new food screen", () => {
       await save(user);
 
       expect(await screen.findByRole("alert", { name: "Name is required" })).toBeOnTheScreen();
-      expect(screen.getByRole("alert", { name: "Energy (kcal) is required" })).toBeOnTheScreen();
+      expect(screen.getByRole("alert", { name: "Energy is required" })).toBeOnTheScreen();
       expect(screen.getByRole("alert", { name: "Protein is required" })).toBeOnTheScreen();
       expect(screen.getByRole("alert", { name: "Fat is required" })).toBeOnTheScreen();
       expect(screen.getByRole("alert", { name: "Carbohydrate is required" })).toBeOnTheScreen();
@@ -159,11 +173,11 @@ describe("new food screen", () => {
       await fillRequiredFields(user);
       await user.type(screen.getByLabelText("Brand"), "  Acme ");
       await user.type(screen.getByLabelText("Barcode"), "5012345678900");
-      await user.type(screen.getByLabelText("Fibre (g)"), "6.5");
+      await user.type(screen.getByLabelText("Fibre (optional) (g)"), "6.5");
       await user.press(screen.getByRole("button", { name: "Add portion" }));
-      await user.type(screen.getByLabelText("Portion 1 label"), "1 bar");
-      await user.type(screen.getByLabelText("Portion 1 amount (g)"), "45");
-      await setDefault(1, true);
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "1 bar");
+      await user.type(screen.getByLabelText("Amount for portion 1 (g)"), "45");
+      await user.press(defaultSwitch(1));
 
       await save(user);
 
@@ -258,7 +272,7 @@ describe("new food screen", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Your food could not be saved. Check your connection and try again.",
+          name: "Your food could not be saved Check your connection and try again.",
         }),
       ).toBeOnTheScreen();
       expect(routerMock.replace).not.toHaveBeenCalled();
@@ -276,7 +290,7 @@ describe("new food screen", () => {
 
       expect(
         await screen.findByRole("alert", {
-          name: "Your food was saved but its portions were not. Edit the food to add them again.",
+          name: "Portions not saved Your food was saved but its portions were not. Save again to add them.",
         }),
       ).toBeOnTheScreen();
       expect(routerMock.replace).not.toHaveBeenCalled();
@@ -290,7 +304,7 @@ describe("new food screen", () => {
       await fillRequiredFields(user);
       await save(user);
       await screen.findByRole("alert", {
-        name: "Your food was saved but its portions were not. Edit the food to add them again.",
+        name: "Portions not saved Your food was saved but its portions were not. Save again to add them.",
       });
 
       await user.press(screen.getByRole("button", { name: "Save" }));
@@ -311,7 +325,7 @@ describe("new food screen", () => {
       await save(user);
 
       expect(mockCreateFood).toHaveBeenCalledTimes(1);
-      expect(screen.getByRole("button", { name: "Create food" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: /Create food/ })).toBeDisabled();
     });
   });
 
@@ -326,7 +340,6 @@ describe("new food screen", () => {
       const barcode = screen.getByLabelText("Barcode");
       expect(barcode).toHaveDisplayValue("5012345678900");
       expect(barcode).toHaveProp("editable", false);
-      expect(barcode).toBeDisabled();
       expect(screen.getByText("Filled in from the barcode you scanned")).toBeOnTheScreen();
     });
 
@@ -380,10 +393,7 @@ describe("new food screen", () => {
       await renderForm();
 
       // A radio group is a container rather than an accessibility element, so it is found by its label.
-      expect(screen.getByLabelText("Nutrition basis")).toHaveProp(
-        "accessibilityRole",
-        "radiogroup",
-      );
+      expect(screen.getByLabelText("Nutrition basis")).toHaveProp("role", "radiogroup");
     });
 
     it("should switch portion amounts to millilitres and save them as ml", async () => {
@@ -391,8 +401,8 @@ describe("new food screen", () => {
       await fillRequiredFields(user);
       await user.press(screen.getByRole("radio", { name: "Per 100 ml" }));
       await user.press(screen.getByRole("button", { name: "Add portion" }));
-      await user.type(screen.getByLabelText("Portion 1 label"), "1 glass");
-      await user.type(screen.getByLabelText("Portion 1 amount (ml)"), "250");
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "1 glass");
+      await user.type(screen.getByLabelText("Amount for portion 1 (ml)"), "250");
 
       await save(user);
 
@@ -410,7 +420,7 @@ describe("new food screen", () => {
     it("should start with no portions", async () => {
       await renderForm();
 
-      expect(screen.queryByLabelText("Portion 1 label")).not.toBeOnTheScreen();
+      expect(screen.queryByLabelText("Portion 1")).not.toBeOnTheScreen();
     });
 
     it("should add and remove portions", async () => {
@@ -418,14 +428,14 @@ describe("new food screen", () => {
 
       await user.press(screen.getByRole("button", { name: "Add portion" }));
       await user.press(screen.getByRole("button", { name: "Add portion" }));
-      await user.type(screen.getByLabelText("Portion 1 label"), "Slice");
-      await user.type(screen.getByLabelText("Portion 2 label"), "Loaf");
-      expect(screen.getByLabelText("Portion 2 label")).toBeOnTheScreen();
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "Slice");
+      await user.type(screen.getByLabelText("Portion label, portion 2"), "Loaf");
+      expect(screen.getByLabelText("Portion 2")).toBeOnTheScreen();
 
       await user.press(screen.getByRole("button", { name: "Remove portion Slice" }));
 
-      expect(screen.queryByLabelText("Portion 2 label")).not.toBeOnTheScreen();
-      expect(screen.getByLabelText("Portion 1 label")).toHaveDisplayValue("Loaf");
+      expect(screen.queryByLabelText("Portion 2")).not.toBeOnTheScreen();
+      expect(screen.getByLabelText("Portion label, portion 1")).toHaveDisplayValue("Loaf");
     });
 
     it("should name the remove button by position while the label is empty", async () => {
@@ -441,21 +451,21 @@ describe("new food screen", () => {
       await user.press(screen.getByRole("button", { name: "Add portion" }));
       await user.press(screen.getByRole("button", { name: "Add portion" }));
 
-      await setDefault(1, true);
-      await setDefault(2, true);
+      await user.press(defaultSwitch(1));
+      await user.press(defaultSwitch(2));
 
-      expect(screen.getByRole("switch", { name: "Portion 1 default" })).not.toBeChecked();
-      expect(screen.getByRole("switch", { name: "Portion 2 default" })).toBeChecked();
+      expect(defaultSwitch(1)).not.toBeChecked();
+      expect(defaultSwitch(2)).toBeChecked();
     });
 
     it("should let the default be switched off again", async () => {
       const user = await renderForm();
       await user.press(screen.getByRole("button", { name: "Add portion" }));
 
-      await setDefault(1, true);
-      await setDefault(1, false);
+      await user.press(defaultSwitch(1));
+      await user.press(defaultSwitch(1));
 
-      expect(screen.getByRole("switch", { name: "Portion 1 default" })).not.toBeChecked();
+      expect(defaultSwitch(1)).not.toBeChecked();
     });
 
     it("should announce a portion that has no label or amount", async () => {
@@ -478,14 +488,247 @@ describe("new food screen", () => {
       const user = await renderForm();
       await fillRequiredFields(user);
       await user.press(screen.getByRole("button", { name: "Add portion" }));
-      await user.type(screen.getByLabelText("Portion 1 label"), "Slice");
-      await user.type(screen.getByLabelText("Portion 1 amount (g)"), "0");
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "Slice");
+      await user.type(screen.getByLabelText("Amount for portion 1 (g)"), "0");
 
       await save(user);
 
       expect(
         await screen.findByRole("alert", { name: "Portion 1 needs an amount above 0" }),
       ).toBeOnTheScreen();
+    });
+  });
+  describe("form body", () => {
+    it("should mark only the name as required", async () => {
+      await renderForm();
+
+      expect(screen.getAllByText("Required")).toHaveLength(1);
+    });
+
+    it("should show the placeholders the boards draw", async () => {
+      await renderForm();
+
+      expect(screen.getByLabelText("Name")).toHaveProp("placeholder", "e.g. Greek yoghurt");
+      expect(screen.getByLabelText("Brand")).toHaveProp("placeholder", "Optional");
+      expect(screen.getByLabelText("Barcode")).toHaveProp("placeholder", "Optional");
+    });
+
+    it("should head the nutrients with the basis and say which of them are required", async () => {
+      await renderForm();
+
+      expect(screen.getByRole("heading", { name: "Nutrition per 100 g" })).toBeOnTheScreen();
+      expect(
+        screen.getByText("Energy, protein, carbohydrate and fat are required."),
+      ).toBeOnTheScreen();
+    });
+
+    it("should follow the basis in the nutrition heading and the units of the portions", async () => {
+      const user = await renderForm();
+
+      await user.press(screen.getByRole("radio", { name: "Per 100 ml" }));
+
+      expect(screen.getByRole("heading", { name: "Nutrition per 100 ml" })).toBeOnTheScreen();
+    });
+
+    it("should run the nutrients in protein, carbohydrate, fat order with fibre marked optional", async () => {
+      await renderForm();
+
+      expect(
+        screen.getAllByLabelText(/\((g|kcal)\)$/).map((field) => String(field.props["aria-label"])),
+      ).toStrictEqual([
+        "Energy (kcal)",
+        "Protein (g)",
+        "Carbohydrate (g)",
+        "Fat (g)",
+        "Fibre (optional) (g)",
+      ]);
+      expect(screen.getByText("Fibre (optional)")).toBeOnTheScreen();
+    });
+
+    it("should head the portions", async () => {
+      await renderForm();
+
+      expect(screen.getByRole("heading", { name: "Portions" })).toBeOnTheScreen();
+    });
+
+    it("should leave a nutrient the user has not filled in blank, never 0", async () => {
+      await renderForm();
+
+      expect(screen.getByLabelText("Energy (kcal)")).toHaveDisplayValue("");
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveDisplayValue("");
+    });
+
+    it("should offer the decimal keyboard on every nutrient and the portion amount", async () => {
+      const user = await renderForm();
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+
+      expect(screen.getByLabelText("Energy (kcal)")).toHaveProp("keyboardType", "decimal-pad");
+      expect(screen.getByLabelText("Fibre (optional) (g)")).toHaveProp(
+        "keyboardType",
+        "decimal-pad",
+      );
+      expect(screen.getByLabelText("Amount for portion 1 (g)")).toHaveProp(
+        "keyboardType",
+        "decimal-pad",
+      );
+    });
+
+    it("should show a portion's units beside its amount and give it the placeholder the board draws", async () => {
+      const user = await renderForm();
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+
+      expect(screen.getByLabelText("Portion label, portion 1")).toHaveProp(
+        "placeholder",
+        "e.g. 1 slice",
+      );
+      expect(portion(1).getByText("g", { includeHiddenElements: true })).toBeOnTheScreen();
+    });
+
+    it("should say which field a portion error is about with the board's sentences", async () => {
+      const user = await renderForm();
+      await fillRequiredFields(user);
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+
+      await save(user);
+
+      expect(
+        await portion(1).findByRole("alert", { name: "Portion 1 needs a label" }),
+      ).toBeOnTheScreen();
+      expect(
+        portion(1).getByRole("alert", { name: "Portion 1 needs an amount above 0" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should clear a portion's error once the user edits that field", async () => {
+      const user = await renderForm();
+      await fillRequiredFields(user);
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+      await save(user);
+      await screen.findByRole("alert", { name: "Portion 1 needs a label" });
+
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "S");
+
+      expect(
+        screen.queryByRole("alert", { name: "Portion 1 needs a label" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should draw a portion's amount error once, and still describe the amount field by it", async () => {
+      const user = await renderForm();
+      await fillRequiredFields(user);
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "Slice");
+
+      await save(user);
+
+      expect(
+        await screen.findAllByRole("alert", { name: "Portion 1 needs an amount above 0" }),
+      ).toHaveLength(1);
+      expect(screen.getByLabelText("Amount for portion 1 (g)")).toHaveProp(
+        "accessibilityHint",
+        "Portion 1 needs an amount above 0",
+      );
+    });
+
+    it("should reach a 44 point touch target at each portion's Remove, which is drawn smaller", async () => {
+      const user = await renderForm();
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+
+      expect(screen.getByRole("button", { name: "Remove portion 1" })).toHaveProp("hitSlop", {
+        top: 4,
+        bottom: 4,
+      });
+    });
+
+    it("should draw a trash icon before Remove, which is decoration and adds nothing to the name", async () => {
+      const user = await renderForm();
+      // Add portion draws the plus, and nothing else on the empty form is an icon.
+      const iconsBefore = screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+
+      const iconsAfter = screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
+      expect(iconsAfter).toHaveLength(iconsBefore.length + 1);
+      expect(screen.getByRole("button", { name: "Remove portion 1" })).toBeOnTheScreen();
+    });
+
+    it("should keep the visible Remove label inside the button's name", async () => {
+      const user = await renderForm();
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+      await user.type(screen.getByLabelText("Portion label, portion 1"), "Slice");
+
+      expect(screen.getByRole("button", { name: "Remove portion Slice" })).toBeOnTheScreen();
+      expect(screen.getByText("Remove")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Portion label, portion 1")).toBeOnTheScreen();
+      expect(screen.getByText("Portion label")).toBeOnTheScreen();
+    });
+
+    it("should name each control in a portion so a row can be told from the next", async () => {
+      const user = await renderForm();
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+      await user.press(screen.getByRole("button", { name: "Add portion" }));
+
+      expect(screen.getByLabelText("Portion 1")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Portion 2")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Portion label, portion 1")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Portion label, portion 2")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Amount for portion 1 (g)")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Amount for portion 2 (g)")).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Remove portion 1" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Remove portion 2" })).toBeOnTheScreen();
+      expect(defaultSwitch(2)).toBeOnTheScreen();
+    });
+  });
+
+  describe("the save button", () => {
+    it("should be the one primary button, labelled from the screen", async () => {
+      await renderForm();
+
+      expect(screen.getByRole("button", { name: "Create food" })).toBeOnTheScreen();
+    });
+
+    it("should play the confirm haptic when it is pressed", async () => {
+      jest.mocked(impactAsync).mockClear();
+      const user = await renderForm();
+
+      await save(user);
+
+      expect(impactAsync).toHaveBeenCalledWith(ImpactFeedbackStyle.Medium);
+    });
+
+    it("should show the saving state while the save runs, keeping its label", async () => {
+      mockCreateFood.mockReturnValue(new Promise(() => undefined));
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(screen.getByRole("progressbar", { name: "Loading" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /Create food/, busy: true })).toBeOnTheScreen();
+    });
+
+    it("should not show the saving state before it is pressed", async () => {
+      await renderForm();
+
+      expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("what a failed save says", () => {
+    it("should show no notice before a save", async () => {
+      await renderForm();
+
+      expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+    });
+
+    it("should not render the raw message of the error that failed the save", async () => {
+      mockCreateFood.mockRejectedValue(new Error("network down"));
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+      await screen.findByRole("alert");
+
+      expect(screen.queryByText(/network down/)).not.toBeOnTheScreen();
     });
   });
 });

@@ -80,9 +80,12 @@ export const FOOD_FORM = {
   brand: "Brand",
   barcode: "Barcode",
   barcodeFromEntry: "Filled in from the barcode you entered",
+  barcodeFromScan: "Filled in from the barcode you scanned",
   barcodeFromCopy: "Kept from the product you are copying",
   nutritionNote: "Energy, protein, carbohydrate and fat are required.",
   basis: "Basis",
+  /** The mobile form's name for the basis control, which the boards draw as "Nutrition basis". */
+  nutritionBasis: "Nutrition basis",
   basisOptions: { per_100g: "Per 100 g", per_100ml: "Per 100 ml" },
   nutrients: {
     kcal: "Energy",
@@ -93,14 +96,30 @@ export const FOOD_FORM = {
   },
   notGivenBySource: "Not given by the source",
   usCarbsNote: "This product's carbohydrate included fibre. Enter the carbohydrate without fibre.",
+  portionLabel: "Portion label",
   portionLabelPlaceholder: "e.g. 1 slice",
   amount: "Amount",
   addPortion: "Add portion",
   remove: "Remove",
   makeDefault: "Default",
+  /** For stored portions with more than one default, which the form's switches cannot produce. */
+  onlyOneDefaultPortion: "At most one portion can be the default",
   validationSummary: "Check the fields marked below and try again.",
   saving: "Saving",
   saveFailed: "Your food could not be saved. Check your connection and try again.",
+  /** The mobile form's notices above Save, a title and one sentence each, as its boards draw them. */
+  saveFailedNotice: {
+    title: "Your food could not be saved",
+    body: "Check your connection and try again.",
+  },
+  detailsNotValidNotice: {
+    title: "Some details are not valid",
+    body: "Check the fields and try again.",
+  },
+  portionsNotSavedNotice: {
+    title: "Portions not saved",
+    body: "Your food was saved but its portions were not. Save again to add them.",
+  },
   savedWithoutPortions:
     "Your food was saved, but its portions were not. Edit the food to add them again.",
   editTheFood: "Edit the food",
@@ -111,6 +130,20 @@ export const FOOD_FORM = {
     body: "This food comes from a shared database and cannot be edited.",
   },
 };
+
+/** The name of one portion's group of fields, which tells a screen reader which row the fields are in. `position` counts from 1. */
+export const describePortionGroup = (position: number): string => `Portion ${position}`;
+
+/**
+ * The name of a portion's label field. It starts with the visible label, "Portion label", whole, so the
+ * name contains what is drawn, and then says which portion. `position` counts from 1.
+ */
+export const describePortionLabelField = (position: number): string =>
+  `${FOOD_FORM.portionLabel}, portion ${position}`;
+
+/** The name of a portion's remove button: by its label, or by its position while the label is blank. */
+export const describeRemovePortion = (label: string, position: number): string =>
+  label.trim() === "" ? describePortionField("remove", position) : `Remove portion ${label.trim()}`;
 
 /** The name of one control in a portion row, which tells a screen reader which row it is in. `position` counts from 1. */
 export const describePortionField = (

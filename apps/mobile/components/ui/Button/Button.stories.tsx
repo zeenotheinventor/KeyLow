@@ -32,6 +32,11 @@ export const Destructive: Story = { args: { variant: "destructive", children: "D
 
 export const Ghost: Story = { args: { variant: "ghost", children: "Add portion" } };
 
+// The minor action inside a card, such as removing a portion: 36 high, in the secondary text colour.
+export const Small: Story = {
+  args: { variant: "ghost", size: "sm", quiet: true, icon: "Trash2", children: "Remove" },
+};
+
 export const Large: Story = { args: { size: "lg", children: "Create food" } };
 
 export const WithIcon: Story = {

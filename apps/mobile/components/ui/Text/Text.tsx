@@ -16,6 +16,7 @@ const variantClassName: Record<TextVariant, string> = {
   body: "text-body font-normal tabular-nums",
   "body-strong": "text-body-strong font-semibold tabular-nums",
   caption: "text-caption font-medium tabular-nums",
+  "label-small": "text-[14px] font-semibold leading-[20px] tracking-normal tabular-nums",
   "numeral-small": "text-numeral-small font-semibold tabular-nums",
 };
 

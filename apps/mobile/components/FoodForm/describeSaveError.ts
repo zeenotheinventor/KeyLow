@@ -1,12 +1,15 @@
 import { CustomFoodValidationError, FoodsPartialWriteError } from "@keylow/api-client";
+import { FOOD_FORM } from "@keylow/core/copy";
 
-/** A plain sentence for a failed save, never the raw error. */
-export function describeSaveError(error: unknown): string {
+import type { SaveNotice } from "./types";
+
+/** A title and a sentence for a failed save, never the raw error. The partial save is the one a review notice draws. */
+export function describeSaveError(error: unknown): SaveNotice {
   if (error instanceof FoodsPartialWriteError) {
-    return "Your food was saved but its portions were not. Edit the food to add them again.";
+    return { variant: "review", ...FOOD_FORM.portionsNotSavedNotice };
   }
   if (error instanceof CustomFoodValidationError) {
-    return "Some details are not valid. Check the fields and try again.";
+    return { variant: "error", ...FOOD_FORM.detailsNotValidNotice };
   }
-  return "Your food could not be saved. Check your connection and try again.";
+  return { variant: "error", ...FOOD_FORM.saveFailedNotice };
 }
