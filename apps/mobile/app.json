@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "KeyLow",
+    "name": "Ki-Lo",
     "slug": "keylow",
     "scheme": "keylow",
     "version": "1.0.0",
@@ -19,9 +19,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#0B0E13",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
@@ -40,7 +39,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "KeyLow uses the camera to scan food barcodes so you can look up a product without typing.",
+          "cameraPermission": "Ki-Lo uses the camera to scan food barcodes so you can look up a product without typing.",
           "microphonePermission": false,
           "recordAudioAndroid": false
         }
@@ -59,7 +58,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#0B0E13",
-          "image": "./assets/splash-placeholder.png"
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200
         }
       ],
       "expo-system-ui"
