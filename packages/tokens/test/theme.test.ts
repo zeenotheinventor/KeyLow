@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { colors, elevation, lightColors, themePlugin, themes, themeVariables } from "../src";
 import { isSolidColor } from "../src/theme";
-import { renderCss } from "./support/renderCss";
+import { renderCss, warmUpTailwindBeforeAll } from "./support/renderCss";
 import { customPropertiesUnder } from "./support/sources";
+
+warmUpTailwindBeforeAll();
 
 const channelsToHex = (channels: string): string => {
   const hex = channels

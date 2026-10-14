@@ -1,5 +1,7 @@
 import { createRequire } from "node:module";
 
+import { beforeAll } from "vitest";
+
 import type { Config } from "tailwindcss";
 
 type Tailwind = (config: Config) => unknown;
@@ -38,4 +40,17 @@ export const renderCss = async (
     tailwind({ ...config, content: [{ raw: classNames.join(" "), extension: "html" }] }),
   ]).process(stylesheet, { from: undefined });
   return result.css;
+};
+
+const WARM_UP_TIMEOUT_MILLISECONDS = 60_000;
+
+/**
+ * Registers a hook that pays Tailwind's one-off cold start (loading the engine and building its first context)
+ * before the file's tests run, with a budget of its own. Without it the first test that renders CSS absorbs that cost
+ * and timed out at 5s on a busy CI runner, where the cold start took 12s. Call it once at the top of a test file.
+ */
+export const warmUpTailwindBeforeAll = (): void => {
+  beforeAll(async () => {
+    await renderCss({}, ["block"]);
+  }, WARM_UP_TIMEOUT_MILLISECONDS);
 };
