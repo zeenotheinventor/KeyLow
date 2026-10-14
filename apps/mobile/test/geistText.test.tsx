@@ -59,12 +59,14 @@ describe("Geist text", () => {
     });
   });
 
-  // NativeWind 4.2.7 drops font-variant-numeric, so the class is accepted and has no effect. The
-  // Text primitive in KEY-93 has to set fontVariant itself. When this test fails, NativeWind has
-  // started supporting it, and that primitive can use the class instead.
-  it("should accept tabular-nums without producing a style", async () => {
+  // NativeWind 4.2.7 drops font-variant-numeric, so Tailwind's own tabular-nums utility has no effect.
+  // tailwind.config.js redefines the class with the `-rn-font-variant` escape hatch, which NativeWind
+  // passes through as the native fontVariant style. It arrives as a string, which React Native
+  // accepts in place of an array. When this test fails, the redefinition or NativeWind's handling of
+  // that escape hatch has changed.
+  it("should resolve tabular-nums to the native tabular figures", async () => {
     await render(<Text className="tabular-nums">123</Text>);
 
-    expect(screen.getByText("123").props.style).toBeUndefined();
+    expect(screen.getByText("123").props.style).toMatchObject({ fontVariant: "tabular-nums" });
   });
 });

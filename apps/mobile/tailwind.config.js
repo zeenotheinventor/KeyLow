@@ -1,4 +1,4 @@
-const { preset, themeVariables } = require("@keylow/tokens");
+const { controlHeight, preset, themeVariables, touchTarget } = require("@keylow/tokens");
 const plugin = require("tailwindcss/plugin");
 
 // The classes read `--kl-*` variables. The app's ThemeProvider sets them on its root view for the
@@ -31,15 +31,37 @@ const geistWeightsPlugin = plugin((api) => {
   );
 });
 
+// The design's control heights and touch target are not in the Tailwind preset, which only carries the
+// spacing scale. They are the sizes a button, a field or a row is built to, so they get names here,
+// read from the tokens package, for `h-control-md`, `w-touch-target` and the like.
+const controlSizes = {
+  "control-sm": `${controlHeight.sm}px`,
+  "control-md": `${controlHeight.md}px`,
+  "control-lg": `${controlHeight.lg}px`,
+  "touch-target": `${touchTarget}px`,
+};
+
+// NativeWind 4.2.7 drops `font-variant-numeric`, so Tailwind's own `tabular-nums` compiles to nothing.
+// `-rn-` is react-native-css-interop's escape hatch for a native style prop it has no CSS mapping for:
+// it strips the prefix and camel-cases the rest, so this becomes the `fontVariant` style. The class
+// keeps Tailwind's name, and the core plugin that would also emit it is switched off below.
+const tabularNumbersPlugin = plugin((api) => {
+  api.addUtilities({ ".tabular-nums": { "-rn-font-variant": "tabular-nums" } });
+});
+
 /** @type {import("tailwindcss").Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./.rnstorybook/**/*.{ts,tsx}"],
   presets: [require("nativewind/preset"), preset],
-  corePlugins: { fontWeight: false },
+  corePlugins: { fontWeight: false, fontVariantNumeric: false },
   theme: {
     extend: {
       fontFamily: { sans: [geistWeights.normal.fontFamily] },
+      width: controlSizes,
+      height: controlSizes,
+      minWidth: controlSizes,
+      minHeight: controlSizes,
     },
   },
-  plugins: [themeVariablesPlugin, geistWeightsPlugin],
+  plugins: [themeVariablesPlugin, geistWeightsPlugin, tabularNumbersPlugin],
 };

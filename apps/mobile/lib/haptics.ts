@@ -25,3 +25,6 @@ export const haptic = {
   warning: () => play(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
   error: () => play(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)),
 };
+
+/** The name of a haptic token, for a component that lets its caller choose the feedback. */
+export type HapticFeedbackName = keyof typeof haptic;

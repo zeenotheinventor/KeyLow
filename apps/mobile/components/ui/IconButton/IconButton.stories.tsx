@@ -1,0 +1,39 @@
+import { View } from "react-native";
+
+import { IconButton } from "./IconButton";
+
+import type { Meta, StoryObj } from "@storybook/react-native";
+
+const meta = {
+  title: "UI/IconButton",
+  component: IconButton,
+  decorators: [
+    (Story) => (
+      <View className="flex-1 items-start justify-center gap-4 p-4">
+        <Story />
+      </View>
+    ),
+  ],
+  args: { icon: "X", label: "Close" },
+} satisfies Meta<typeof IconButton>;
+
+export default meta;
+
+type Story = StoryObj<typeof meta>;
+
+// The sheet header's close and create controls.
+export const Secondary: Story = { args: { variant: "secondary" } };
+
+// The scan control inside the search field: 36 points to look at, 44 to touch.
+export const Ghost: Story = {
+  args: { variant: "ghost", size: "sm", icon: "ScanBarcode", label: "Scan barcode" },
+};
+
+export const Disabled: Story = {
+  render: (args) => (
+    <View className="flex-row items-center gap-4">
+      <IconButton {...args} disabled variant="secondary" />
+      <IconButton {...args} disabled icon="ScanBarcode" size="sm" variant="ghost" />
+    </View>
+  ),
+};

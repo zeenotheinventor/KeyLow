@@ -7,6 +7,7 @@ module.exports = {
   setupFilesAfterEnv: [
     "<rootDir>/test/support/warmReactNative.ts",
     "<rootDir>/test/support/expoHapticsMock.ts",
+    "<rootDir>/test/support/reanimatedWorkletsMock.ts",
   ],
   // Headroom for a busy CI runner, where the same work takes several times as long.
   testTimeout: 20000,
