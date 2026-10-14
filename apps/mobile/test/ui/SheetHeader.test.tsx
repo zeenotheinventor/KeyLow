@@ -1,0 +1,235 @@
+import { controlHeight, iconSize, touchTarget } from "@keylow/tokens";
+import { render, screen, userEvent } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
+import { setUpTests } from "react-native-reanimated";
+
+import { SheetHeader } from "../../components/ui";
+import { ThemeProvider } from "../../lib/theme";
+import { compileKitStyles } from "../support/kitStyles";
+import { registerAppStyles } from "../support/nativeWindStyles";
+import { resolvedColor } from "../support/themeColor";
+
+import type { SheetHeaderProps } from "../../components/ui";
+import type { ThemeScheme } from "@keylow/tokens";
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+
+setUpTests();
+
+const searchHeader: SheetHeaderProps = {
+  title: "Find food",
+  leading: { icon: "X", label: "Close", onPress: () => undefined },
+  trailing: { icon: "Plus", label: "Create a food", onPress: () => undefined },
+};
+
+const stackHeader: SheetHeaderProps = {
+  variant: "stack",
+  title: "New food",
+  leading: { icon: "ChevronLeft", label: "Back", onPress: () => undefined },
+  trailing: { icon: "X", label: "Close", onPress: () => undefined },
+};
+
+function renderHeader(props: SheetHeaderProps, scheme: ThemeScheme = "dark") {
+  return render(
+    <ThemeProvider fixedPreference={scheme}>
+      <SheetHeader {...props} />
+    </ThemeProvider>,
+  );
+}
+
+// An icon in a button is decoration and has no role to query by, so its drawing is looked for.
+function drawings() {
+  return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
+}
+
+// The header's padding is on a plain row with no role, and the empty slot is a spacer. Both are found by
+// ids, which exist for this and nothing else.
+
+// What NativeWind resolves a transparent class to.
+const transparent = "#00000000";
+
+const schemes: ThemeScheme[] = ["dark", "light"];
+
+describe("SheetHeader", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    registerAppStyles(kitStyles);
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  describe("the sheet header, which heads the search sheet", () => {
+    it("should head the sheet with its title between a close control and a create control", async () => {
+      await renderHeader(searchHeader);
+
+      expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Create a food" })).toBeOnTheScreen();
+    });
+
+    it("should call the handler of the control that is pressed", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      const onCreate = jest.fn();
+      await renderHeader({
+        ...searchHeader,
+        leading: { icon: "X", label: "Close", onPress: onClose },
+        trailing: { icon: "Plus", label: "Create a food", onPress: onCreate },
+      });
+
+      await user.press(screen.getByRole("button", { name: "Create a food" }));
+      expect(onCreate).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+
+      await user.press(screen.getByRole("button", { name: "Close" }));
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should set the title in the h2 style, centred", async () => {
+      await renderHeader(searchHeader);
+
+      expect(screen.getByRole("heading", { name: "Find food" })).toHaveStyle({
+        fontSize: 20,
+        lineHeight: 26,
+        textAlign: "center",
+      });
+    });
+
+    it("should draw 20 point icons in 44 point raised, bordered controls", async () => {
+      await renderHeader(searchHeader);
+
+      expect(drawings()).toHaveLength(2);
+      for (const drawing of drawings()) {
+        expect(drawing).toHaveProp("width", iconSize.md);
+      }
+      expect(screen.getByRole("button", { name: "Close" })).toHaveStyle({
+        height: controlHeight.md,
+        width: touchTarget,
+        borderWidth: 1,
+      });
+    });
+
+    it("should give 16 points at the sides and 12 above and below", async () => {
+      await renderHeader(searchHeader);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingTop: 12,
+        paddingBottom: 12,
+      });
+    });
+  });
+
+  describe("the stack header, which heads a view inside the sheet", () => {
+    it("should head the view with its title between a back control and a close control", async () => {
+      await renderHeader(stackHeader);
+
+      expect(screen.getByRole("heading", { name: "New food" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    });
+
+    it("should set the title in strong body text, centred", async () => {
+      await renderHeader(stackHeader);
+
+      expect(screen.getByRole("heading", { name: "New food" })).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 16,
+        lineHeight: 24,
+        textAlign: "center",
+      });
+    });
+
+    it("should draw the back icon at 24 points and the close icon at 22, as the frames do", async () => {
+      await renderHeader(stackHeader);
+
+      const [back, close] = drawings();
+      expect(back).toHaveProp("width", iconSize.lg);
+      expect(close).toHaveProp("width", 22);
+    });
+
+    it("should draw 44 point controls with no fill and no border", async () => {
+      await renderHeader(stackHeader);
+
+      const back = screen.getByRole("button", { name: "Back" });
+      expect(back).toHaveStyle({ height: controlHeight.md, width: touchTarget });
+      expect(back.props.style).not.toHaveProperty("borderWidth", 1);
+    });
+
+    it("should give 16 points at the sides, 12 above and 8 below", async () => {
+      await renderHeader(stackHeader);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingLeft: 16,
+        paddingRight: 16,
+        paddingTop: 12,
+        paddingBottom: 8,
+      });
+    });
+
+    it("should leave the title out of the headings when the view has its own, as the food detail does", async () => {
+      await renderHeader({ ...stackHeader, title: "Food", isTitleHeading: false });
+
+      expect(screen.queryByRole("heading")).not.toBeOnTheScreen();
+      expect(screen.getByText("Food")).toBeOnTheScreen();
+    });
+  });
+
+  describe("without a trailing control", () => {
+    it("should draw only the leading control, and keep the title in the middle", async () => {
+      await renderHeader({ ...searchHeader, trailing: undefined });
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+      // The title is centred by two slots of one width, so the empty one still takes its 44 points.
+      expect(screen.getByTestId("sheet-header-empty-slot")).toHaveStyle({ width: touchTarget });
+    });
+  });
+
+  it("should keep a long title to one line", async () => {
+    await renderHeader({ ...searchHeader, title: "A very long name for a food somebody saved" });
+
+    expect(
+      screen.getByRole("heading", { name: "A very long name for a food somebody saved" }),
+    ).toHaveProp("numberOfLines", 1);
+  });
+
+  describe.each(schemes)("in the %s scheme", (scheme) => {
+    it("should draw the sheet header's controls on the raised surface", async () => {
+      await renderHeader(searchHeader, scheme);
+
+      expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
+        backgroundColor: resolvedColor(scheme, "surface-raised"),
+        borderColor: resolvedColor(scheme, "border"),
+      });
+    });
+
+    it("should draw the stack header's controls clear", async () => {
+      await renderHeader(stackHeader, scheme);
+
+      expect(await screen.findByRole("button", { name: "Back" })).toHaveStyle({
+        backgroundColor: transparent,
+      });
+    });
+
+    it("should set the title in the primary text colour", async () => {
+      await renderHeader(searchHeader, scheme);
+
+      expect(await screen.findByRole("heading", { name: "Find food" })).toHaveStyle({
+        color: resolvedColor(scheme, "text-primary"),
+      });
+    });
+  });
+});

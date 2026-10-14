@@ -1,4 +1,4 @@
-import { controlHeight, touchTarget } from "@keylow/tokens";
+import { controlHeight, iconSize, touchTarget } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
 import { AccessibilityInfo } from "react-native";
@@ -44,6 +44,11 @@ async function advance(milliseconds: number) {
 // A spring stops a hair short of its target, so the scale is read as a number and compared close.
 function readScale(): number | undefined {
   return animatedScale(screen.getByTestId("press-scale"));
+}
+
+// The icon is decoration, so its drawing is looked for.
+function drawings() {
+  return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 }
 
 // What NativeWind resolves a transparent class to.
@@ -208,6 +213,24 @@ describe("IconButton", () => {
 
       const reach = (touchTarget - controlHeight.sm) / 2;
       expect(screen.getByRole("button", { name: "Close" })).toHaveProp("hitSlop", reach);
+    });
+
+    it("should draw a 20 point icon by default", async () => {
+      await renderIconButton();
+
+      expect(drawings()[0]).toHaveProp("width", iconSize.md);
+    });
+
+    it("should draw the icon at the size it is given, which the stack header's back control asks for", async () => {
+      await renderIconButton({ iconSize: "lg" });
+
+      expect(drawings()[0]).toHaveProp("width", iconSize.lg);
+    });
+
+    it("should draw the icon at a size in points when given a number", async () => {
+      await renderIconButton({ iconSize: 22 });
+
+      expect(drawings()[0]).toHaveProp("width", 22);
     });
 
     it("should need no extra reach at the medium size", async () => {

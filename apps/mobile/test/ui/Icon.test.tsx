@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react-native";
 import { Icon } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 
-import type { IconSizeName, IconTone } from "../../components/ui";
+import type { IconName, IconSizeName, IconTone } from "../../components/ui";
 import type { ColorName, ThemeScheme } from "@keylow/tokens";
 import type { ReactNode } from "react";
 
@@ -30,6 +30,29 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   { tone: "muted", colorName: "text-muted" },
   { tone: "accent-foreground", colorName: "accent-foreground" },
   { tone: "on-status", colorName: "text-on-status" },
+  // The status glyphs of a banner and an error tile, drawn on a muted fill or beside the words.
+  { tone: "warning", colorName: "warning" },
+  { tone: "danger", colorName: "danger" },
+];
+
+const names: IconName[] = [
+  "Apple",
+  "ChevronLeft",
+  "ChevronRight",
+  "CircleAlert",
+  "Clock",
+  "CloudOff",
+  "Info",
+  "LoaderCircle",
+  "Plus",
+  "RotateCw",
+  "ScanBarcode",
+  "Search",
+  "SearchX",
+  "TriangleAlert",
+  "Utensils",
+  "WifiOff",
+  "X",
 ];
 
 const schemes: ThemeScheme[] = ["dark", "light"];
@@ -63,6 +86,14 @@ describe("Icon", () => {
     expect(icon).toHaveProp("height", pixels);
   });
 
+  it("should draw at a size in points when given a number, for a glyph the frames draw off the scale", async () => {
+    await render(inScheme("dark", <Icon label="Close" name="X" size={22} />));
+
+    const icon = screen.getByRole("img", { name: "Close" });
+    expect(icon).toHaveProp("width", 22);
+    expect(icon).toHaveProp("height", 22);
+  });
+
   it("should draw every icon with the design's stroke weight", async () => {
     await render(inScheme("dark", <Icon label="Search" name="Search" size="xl" />));
 
@@ -74,18 +105,14 @@ describe("Icon", () => {
       inScheme(
         "dark",
         <>
-          <Icon label="Next" name="ChevronRight" />
-          <Icon label="Working" name="LoaderCircle" />
-          <Icon label="Plus" name="Plus" />
-          <Icon label="Scan barcode" name="ScanBarcode" />
-          <Icon label="Search" name="Search" />
-          <Icon label="Food" name="Utensils" />
-          <Icon label="Close" name="X" />
+          {names.map((name) => (
+            <Icon key={name} label={name} name={name} />
+          ))}
         </>,
       ),
     );
 
-    expect(screen.getAllByRole("img")).toHaveLength(7);
+    expect(screen.getAllByRole("img")).toHaveLength(names.length);
   });
 
   describe.each(schemes)("in the %s scheme", (scheme) => {

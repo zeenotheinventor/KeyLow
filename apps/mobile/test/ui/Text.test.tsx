@@ -1,3 +1,4 @@
+import { themes } from "@keylow/tokens";
 import { render, screen } from "@testing-library/react-native";
 
 import { Text } from "../../components/ui";
@@ -162,6 +163,22 @@ describe("Text", () => {
 
       expect(await screen.findByText("Toned")).toHaveStyle({
         color: resolvedColor(scheme, colorName),
+      });
+    });
+  });
+
+  // The design's `--warning-ink` is the warning colour in dark and the primary text colour in light,
+  // where warning is too faint for text (Q14). It is a proposed token, so the theme resolves it.
+  describe.each(schemes)("the warning ink tone in the %s scheme", (scheme) => {
+    it("should be the warning colour in dark and the primary text colour in light", async () => {
+      await render(
+        <ThemeProvider fixedPreference={scheme}>
+          <Text tone="warning-ink">Needs review</Text>
+        </ThemeProvider>,
+      );
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({
+        color: scheme === "dark" ? themes.dark.warning : themes.light["text-primary"],
       });
     });
   });

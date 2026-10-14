@@ -2,7 +2,7 @@ import { View } from "react-native";
 
 import { Icon } from "./Icon";
 
-import type { IconSizeName, IconTone } from "./types";
+import type { IconName, IconSizeName, IconTone } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -24,6 +24,25 @@ type Story = StoryObj<typeof meta>;
 
 const sizes: IconSizeName[] = ["sm", "md", "lg", "xl"];
 const tones: IconTone[] = ["primary", "secondary", "muted"];
+const names: IconName[] = [
+  "Apple",
+  "ChevronLeft",
+  "ChevronRight",
+  "CircleAlert",
+  "Clock",
+  "CloudOff",
+  "Info",
+  "LoaderCircle",
+  "Plus",
+  "RotateCw",
+  "ScanBarcode",
+  "Search",
+  "SearchX",
+  "TriangleAlert",
+  "Utensils",
+  "WifiOff",
+  "X",
+];
 
 export const Sizes: Story = {
   render: (args) => (
@@ -36,7 +55,8 @@ export const Sizes: Story = {
 };
 
 // Lime and the status colours are fills with an icon on top, so their tones are shown on their fills.
-// Accent ink is the one thin glyph in lime: it turns to the primary text colour in light.
+// Accent ink is the one thin glyph in lime: it turns to the primary text colour in light. The warning
+// and danger glyphs sit on their muted fills, as a banner and an error tile draw them.
 export const Tones: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">
@@ -50,6 +70,12 @@ export const Tones: Story = {
         <Icon {...args} tone="on-status" />
       </View>
       <Icon {...args} tone="accent-ink" />
+      <View className="rounded-small bg-warning-muted p-2">
+        <Icon {...args} tone="warning" />
+      </View>
+      <View className="rounded-small bg-danger-muted p-2">
+        <Icon {...args} tone="danger" />
+      </View>
     </View>
   ),
 };
@@ -58,14 +84,10 @@ export const Labelled: Story = { args: { name: "ScanBarcode", size: "lg", label:
 
 export const Names: Story = {
   render: (args) => (
-    <View className="flex-row gap-4">
-      <Icon {...args} name="ChevronRight" />
-      <Icon {...args} name="LoaderCircle" />
-      <Icon {...args} name="Plus" />
-      <Icon {...args} name="ScanBarcode" />
-      <Icon {...args} name="Search" />
-      <Icon {...args} name="Utensils" />
-      <Icon {...args} name="X" />
+    <View className="flex-row flex-wrap gap-4">
+      {names.map((name) => (
+        <Icon key={name} {...args} name={name} />
+      ))}
     </View>
   ),
 };

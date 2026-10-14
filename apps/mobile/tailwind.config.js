@@ -1,4 +1,11 @@
-const { controlHeight, elevation, preset, themeVariables, touchTarget } = require("@keylow/tokens");
+const {
+  controlHeight,
+  elevation,
+  preset,
+  themes,
+  themeVariables,
+  touchTarget,
+} = require("@keylow/tokens");
 const plugin = require("tailwindcss/plugin");
 
 // The classes read `--kl-*` variables. The app's ThemeProvider sets them on its root view for the
@@ -6,8 +13,18 @@ const plugin = require("tailwindcss/plugin");
 // resolves to outside a provider, and it is dark because dark is the default. It is not driven by
 // the device scheme: "Match device" is resolved by the provider, from the native scheme that
 // `userInterfaceStyle: "automatic"` in app.json lets follow the device.
+//
+// Two of the variables are the proposed tokens the ThemeProvider adds (`--warning-ink` and the skeleton's
+// shine gradient), which `@keylow/tokens` does not have yet. Their dark values are here too, and the
+// ThemeProvider holds the same two rules for both schemes.
 const themeVariablesPlugin = plugin((api) => {
-  api.addBase({ ":root": themeVariables("dark") });
+  api.addBase({
+    ":root": {
+      ...themeVariables("dark"),
+      "--kl-warning-ink": themes.dark.warning,
+      "--kl-skeleton-shine-gradient": `linear-gradient(100deg, transparent, ${themes.dark["skeleton-shine"]}, transparent)`,
+    },
+  });
 });
 
 // React Native cannot select a weight of a custom font family, so each weight is its own embedded
@@ -65,6 +82,17 @@ const elevationPlugin = plugin((api) => {
   );
 });
 
+// The shine that sweeps over a skeleton bone. React Native draws a gradient from `experimental_backgroundImage`,
+// which `-rn-` hands over, and the ThemeProvider holds the whole gradient in one variable because a class
+// cannot build one from a colour variable. The design's value is soft at both edges, so the band fades.
+const skeletonShinePlugin = plugin((api) => {
+  api.addUtilities({
+    ".skeleton-shine": {
+      "-rn-experimental_background-image": "var(--kl-skeleton-shine-gradient)",
+    },
+  });
+});
+
 /** @type {import("tailwindcss").Config} */
 module.exports = {
   content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./.rnstorybook/**/*.{ts,tsx}"],
@@ -72,6 +100,8 @@ module.exports = {
   corePlugins: { fontWeight: false, fontVariantNumeric: false },
   theme: {
     extend: {
+      // `--kl-warning-ink` is set by the ThemeProvider. It is a whole colour, so it takes no opacity modifier.
+      colors: { "warning-ink": "var(--kl-warning-ink)" },
       fontFamily: { sans: [geistWeights.normal.fontFamily] },
       width: controlSizes,
       height: controlSizes,
@@ -79,5 +109,11 @@ module.exports = {
       minHeight: controlSizes,
     },
   },
-  plugins: [themeVariablesPlugin, geistWeightsPlugin, tabularNumbersPlugin, elevationPlugin],
+  plugins: [
+    themeVariablesPlugin,
+    geistWeightsPlugin,
+    tabularNumbersPlugin,
+    elevationPlugin,
+    skeletonShinePlugin,
+  ],
 };

@@ -10,14 +10,18 @@ export type IconSizeName = keyof typeof iconSize;
 /**
  * A tone from the kit's text and fill tones, or `accent-ink`: the design's `--accent-ink`, which is lime
  * in dark and the primary text colour in light. It is for a thin glyph such as a spinner, because lime
- * is never text or a thin line on a light surface.
+ * is never text or a thin line on a light surface. `warning` and `danger` are the status glyphs the
+ * boards draw in both schemes, on a muted fill or beside the words, which stay in a text colour (Q14).
  */
-export type IconTone = Tone | "accent-ink";
+export type IconTone = Tone | "accent-ink" | "warning" | "danger";
 
 export type IconProps = {
   name: IconName;
-  /** Defaults to `md`. */
-  size?: IconSizeName;
+  /**
+   * A size token, or a size in points for a glyph the frames draw off the scale, such as the stack
+   * header's close at 22. Defaults to `md`.
+   */
+  size?: IconSizeName | number;
   /** Defaults to `primary`. */
   tone?: IconTone;
   /** The accessible name. An icon without one is decoration and is hidden from screen readers. */
