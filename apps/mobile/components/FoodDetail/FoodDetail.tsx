@@ -1,10 +1,9 @@
 import { FOOD_DETAIL, FOOD_REVIEW_BANNER, describeMissingValues } from "@keylow/core/copy";
-import { DATA_SOURCE_ATTRIBUTION, requiresConfirmation } from "@keylow/core/foods";
+import { requiresConfirmation } from "@keylow/core/foods";
 import { vars } from "nativewind";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { FoodAttribution } from "./FoodAttribution";
 import { FoodHeader } from "./FoodHeader";
 import { MacroHero } from "./MacroHero";
 import { PortionList } from "./PortionList";
@@ -20,7 +19,8 @@ const MINIMUM_BOTTOM_PADDING = 34;
 /**
  * A food as the food detail boards draw it, under the sheet's "Food" header: its name and source, the
  * energy card, an Edit action for the user's own food or the review notice for a shared one with values
- * missing, then the nutrition, the portions and the source's credit. Values are per 100 g or 100 ml.
+ * missing, then the nutrition and the portions. Values are per 100 g or 100 ml. The source's licence credit
+ * is not here but on the About screen, reached from More.
  */
 export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) {
   const { source } = food;
@@ -66,10 +66,6 @@ export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) 
           />
 
           {portions.length === 0 ? null : <PortionList portions={portions} />}
-
-          {source === "user" ? null : (
-            <FoodAttribution attribution={DATA_SOURCE_ATTRIBUTION[source]} />
-          )}
         </ScrollView>
       </View>
     </FoodFormScreen>

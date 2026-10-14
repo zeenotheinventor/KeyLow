@@ -21,7 +21,7 @@ import type { Food } from "@keylow/core/schemas";
 import type { ThemeScheme } from "@keylow/tokens";
 
 // The food detail boards, in dark and light, on the real route: the values the boards give for the
-// hero card, the macro tiles, the nutrition table, the portions, the notice and the attribution.
+// hero card, the macro tiles, the nutrition table, the portions and the notice.
 // What the screen does is in detail.test.tsx.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -330,17 +330,6 @@ describe("food detail boards", () => {
           borderColor: "#00000000",
         }),
       ).toHaveLength(1);
-    });
-
-    it("should draw the attribution under a hairline, in secondary caption text", async () => {
-      await renderDetail(scheme, { ...foodFixture, source: "off", owner_id: null });
-
-      expect(
-        screen.getByText("Data from Open Food Facts, available under the Open Database Licence."),
-      ).toHaveStyle({ fontSize: 12, lineHeight: 16, color: colorOf("text-secondary") });
-      expect(
-        viewsDrawn({ borderTopWidth: 1, borderColor: colorOf("border") }).length,
-      ).toBeGreaterThan(0);
     });
 
     it("should draw the Needs review notice with the warning border and fill, and its action", async () => {

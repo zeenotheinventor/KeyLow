@@ -210,6 +210,29 @@ describe("the More screen", () => {
     );
   });
 
+  describe("About", () => {
+    it("should be an enabled row in Settings, with its icon and a chevron because it goes somewhere", async () => {
+      await renderMore();
+
+      // The role query does not resolve a list, so the Settings list is found by its label.
+      const row = within(screen.getByLabelText("Settings")).getByRole("button", {
+        name: "About",
+      });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+    });
+
+    it("should open the About screen when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "About" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/about");
+    });
+  });
+
   describe("Sign out", () => {
     it("should draw its icon and no chevron, because it acts and goes nowhere", async () => {
       await renderMore();
