@@ -120,6 +120,27 @@ describe("SearchField", () => {
     });
   });
 
+  describe("focus", () => {
+    it("should turn the frame border accent and draw no ring in dark", () => {
+      render(<SearchField label="Search foods" />);
+
+      const { classList } = screen.getByRole("search");
+
+      expect(classList.contains("has-[:focus-visible]:border-accent")).toBe(true);
+      expect(classList.contains("has-[:focus-visible]:ring-2")).toBe(false);
+      expect(classList.contains("has-[:focus-visible]:ring-offset-2")).toBe(false);
+    });
+
+    it("should add the ring to the frame in light", () => {
+      render(<SearchField label="Search foods" />);
+
+      const { classList } = screen.getByRole("search");
+
+      expect(classList.contains("light-theme:has-[:focus-visible]:ring-2")).toBe(true);
+      expect(classList.contains("light-theme:has-[:focus-visible]:ring-offset-2")).toBe(true);
+    });
+  });
+
   describe("size", () => {
     it("should be 44 high by default", () => {
       render(<SearchField label="Search foods" />);
@@ -168,6 +189,19 @@ describe("SearchLauncher", () => {
     fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
 
     expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  describe("focus", () => {
+    it("should keep the accent border and the ring in every theme, as the shell board draws it", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} />);
+
+      const frame = screen.getByRole("button", { name: "Search for a food" }).parentElement;
+
+      expect(frame?.classList.contains("has-[:focus-visible]:border-accent")).toBe(true);
+      expect(frame?.classList.contains("has-[:focus-visible]:ring-2")).toBe(true);
+      expect(frame?.classList.contains("has-[:focus-visible]:ring-offset-2")).toBe(true);
+      expect(frame?.classList.contains("light-theme:has-[:focus-visible]:ring-2")).toBe(false);
+    });
   });
 
   describe("size", () => {

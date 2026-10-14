@@ -2,6 +2,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { compileUtilities } from "./compileUtilities";
+
 import { NumericInput } from "@/components/ui/NumericInput";
 
 function describedText(element: HTMLElement): string {
@@ -178,6 +180,49 @@ describe("NumericInput", () => {
       expect(input.parentElement?.className).toContain("gap-1.5");
       expect(input.parentElement?.className).not.toContain("px-4");
       expect(input.className).not.toContain("px-3");
+    });
+  });
+
+  describe("focus", () => {
+    it("should turn the frame border accent and draw no ring in dark", () => {
+      render(<NumericInput label="Energy" unit="kcal" />);
+
+      const frame = screen.getByRole("textbox", { name: energyName }).parentElement;
+
+      expect(frame?.classList.contains("has-[:focus-visible]:border-accent")).toBe(true);
+      expect(frame?.classList.contains("has-[:focus-visible]:ring-2")).toBe(false);
+      expect(frame?.classList.contains("has-[:focus-visible]:ring-offset-2")).toBe(false);
+    });
+
+    it("should add the ring to the frame in light", () => {
+      render(<NumericInput label="Energy" unit="kcal" />);
+
+      const frame = screen.getByRole("textbox", { name: energyName }).parentElement;
+
+      expect(frame?.classList.contains("light-theme:has-[:focus-visible]:ring-2")).toBe(true);
+      expect(frame?.classList.contains("light-theme:has-[:focus-visible]:ring-offset-2")).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("focus when invalid", () => {
+    it("should keep the ring on the frame in every theme, because the danger border cannot show focus", () => {
+      render(<NumericInput label="Energy" unit="kcal" error="Energy is required" />);
+
+      const frame = screen.getByRole("textbox", { name: energyName }).parentElement;
+
+      expect(frame?.classList.contains("has-[:focus-visible]:ring-2")).toBe(true);
+      expect(frame?.classList.contains("has-[:focus-visible]:ring-offset-2")).toBe(true);
+    });
+
+    it("should emit the ring for an invalid frame that holds focus", async () => {
+      render(<NumericInput label="Energy" unit="kcal" error="Energy is required" />);
+
+      const frame = screen.getByRole("textbox", { name: energyName }).parentElement;
+      const css = await compileUtilities(frame?.outerHTML ?? "");
+
+      expect(css).toMatch(/\.has-\\\[\\:focus-visible\\\]\\:ring-2:has\(:focus-visible\)/);
     });
   });
 

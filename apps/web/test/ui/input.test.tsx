@@ -3,6 +3,8 @@ import { Lock } from "lucide-react";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { compileUtilities } from "./compileUtilities";
+
 import { Input, TextField } from "@/components/ui/input";
 
 function describedText(element: HTMLElement): string {
@@ -46,6 +48,64 @@ describe("Input", () => {
     render(<Input aria-label="Name" disabled />);
 
     expect(screen.getByRole("textbox", { name: "Name" })).toHaveProperty("disabled", true);
+  });
+
+  describe("focus", () => {
+    it("should turn the border accent and draw no ring in dark", () => {
+      render(<Input aria-label="Name" />);
+
+      const { classList } = screen.getByRole("textbox", { name: "Name" });
+
+      expect(classList.contains("focus-visible:[&:not([aria-invalid=true])]:border-accent")).toBe(
+        true,
+      );
+      expect(classList.contains("focus-visible:ring-2")).toBe(false);
+      expect(classList.contains("focus-visible:ring-offset-2")).toBe(false);
+    });
+
+    it("should add the ring in light, because the light accent border is under 3:1", () => {
+      render(<Input aria-label="Name" />);
+
+      const { classList } = screen.getByRole("textbox", { name: "Name" });
+
+      expect(classList.contains("light-theme:focus-visible:ring-2")).toBe(true);
+      expect(classList.contains("light-theme:focus-visible:ring-offset-2")).toBe(true);
+    });
+
+    it("should emit the ring only under the light theme, which includes Match device on a light system", async () => {
+      render(<Input aria-label="Name" />);
+
+      const css = await compileUtilities(screen.getByRole("textbox", { name: "Name" }).outerHTML);
+
+      expect(css).toContain(
+        '[data-theme="light"] .light-theme\\:focus-visible\\:ring-2:focus-visible',
+      );
+      expect(css).toContain(
+        '[data-theme="device"] .light-theme\\:focus-visible\\:ring-2:focus-visible',
+      );
+      expect(css).not.toMatch(/^\.focus-visible\\:ring-2:focus-visible/m);
+    });
+  });
+
+  describe("focus when invalid", () => {
+    it("should keep the ring in every theme, because the danger border cannot show focus", () => {
+      render(<Input aria-label="Name" aria-invalid />);
+
+      const { classList } = screen.getByRole("textbox", { name: "Name" });
+
+      expect(classList.contains("aria-[invalid=true]:focus-visible:ring-2")).toBe(true);
+      expect(classList.contains("aria-[invalid=true]:focus-visible:ring-offset-2")).toBe(true);
+    });
+
+    it("should emit the ring for an invalid field that has focus", async () => {
+      render(<Input aria-label="Name" aria-invalid />);
+
+      const css = await compileUtilities(screen.getByRole("textbox", { name: "Name" }).outerHTML);
+
+      expect(css).toMatch(
+        /\.aria-\\\[invalid\\=true\\\]\\:focus-visible\\:ring-2:focus-visible\[aria-invalid="true"\]/,
+      );
+    });
   });
 
   it("should keep the caller's height so a screen can still override it", () => {
