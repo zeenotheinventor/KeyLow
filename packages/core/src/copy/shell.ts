@@ -27,3 +27,20 @@ export const PLACEHOLDER_BODIES = {
   diary: "Your logged foods will appear here, day by day.",
   recipes: "Your recipes will appear here.",
 };
+
+/** The More screen: four sections, each a title over one row, as the `tab-shell.more` board draws them. */
+export const MORE_SCREEN = {
+  food: {
+    title: "Food",
+    yourFoods: { title: "Your foods", subtitle: "Foods you created or copied" },
+  },
+  body: { title: "Body", weight: { title: "Weight", subtitle: COMING_SOON_TITLE } },
+  settings: {
+    title: "Settings",
+    appearance: {
+      title: "Appearance",
+      options: { dark: "Dark", light: "Light", system: "Match device" },
+    },
+  },
+  account: { title: "Account", signOut: "Sign out" },
+};

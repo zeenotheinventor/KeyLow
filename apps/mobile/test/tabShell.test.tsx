@@ -5,14 +5,17 @@ import { Text } from "react-native";
 
 import { resetApiClientMock } from "./foods/support/apiClientMock";
 import { resetSearchApiClientMock } from "./foods/support/searchApiClientMock";
-import { fakeSession, mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
+import {
+  emitAuthStateChange,
+  fakeSession,
+  mockSupabaseClient,
+  resetSupabaseMock,
+} from "./support/supabaseMock";
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
 import DiaryRoute from "../app/(tabs)/diary";
 import MoreRoute from "../app/(tabs)/more";
 import RecipesRoute from "../app/(tabs)/recipes";
-import SettingsRoute from "../app/(tabs)/settings";
-import WeightRoute from "../app/(tabs)/weight";
 import RootLayout from "../app/_layout";
 import FoodsLayout from "../app/foods/_layout";
 import FoodSearchRoute from "../app/foods/index";
@@ -64,8 +67,6 @@ const routes = {
   "(tabs)/diary": DiaryRoute,
   "(tabs)/recipes": RecipesRoute,
   "(tabs)/more": MoreRoute,
-  "(tabs)/weight": WeightRoute,
-  "(tabs)/settings": SettingsRoute,
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
   "foods/new": standIn("New food screen"),
@@ -136,12 +137,14 @@ describe("the tab shell", () => {
       expect(screen.getByRole("tab", { name, selected: true })).toBeOnTheScreen();
     });
 
-    it("should draw no tab for the weight and settings screens, which More links to", async () => {
-      await renderApp("/settings");
+    it("should draw no tab for what More holds, which has no screen of its own", async () => {
+      await renderApp("/more");
 
       expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
       expect(screen.getAllByRole("tab")).toHaveLength(4);
-      expect(screen.queryByRole("tab", { name: /settings|weight/i })).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("tab", { name: /settings|weight|your foods/i }),
+      ).not.toBeOnTheScreen();
     });
   });
 
@@ -201,7 +204,7 @@ describe("the tab shell", () => {
       expect(screen.getByRole("button", { name: "Scan barcode" })).toBeOnTheScreen();
     });
 
-    it.each(["recipes", "more", "settings", "weight"])("should not show on %s", async (route) => {
+    it.each(["recipes", "more"])("should not show on %s", async (route) => {
       await renderApp(`/${route}`);
 
       expect(await screen.findByLabelText("Main")).toBeOnTheScreen();
@@ -285,37 +288,70 @@ describe("the tab shell", () => {
   });
 
   describe("More", () => {
-    it("should open Weight and Settings from its rows", async () => {
+    it("should open Your foods in the search sheet, titled Your foods", async () => {
       const user = userEvent.setup();
       await renderApp("/more");
 
-      await user.press(await screen.findByRole("button", { name: "Weight" }));
-      expect(await screen.findByRole("heading", { name: "Weight" })).toBeOnTheScreen();
+      await user.press(await screen.findByRole("button", { name: /^Your foods/ }));
 
-      await goBack();
-      await user.press(await screen.findByRole("button", { name: "Settings" }));
-      expect(await screen.findByRole("heading", { name: "Settings" })).toBeOnTheScreen();
+      expect(await screen.findByRole("heading", { name: "Your foods" })).toBeOnTheScreen();
+      expect(sheetHeading()).not.toBeOnTheScreen();
     });
 
-    it("should keep Sign out reachable, and sign the user out", async () => {
+    it("should return to More from Your foods, on the close button", async () => {
       const user = userEvent.setup();
       await renderApp("/more");
+      await user.press(await screen.findByRole("button", { name: /^Your foods/ }));
+      expect(await screen.findByRole("heading", { name: "Your foods" })).toBeOnTheScreen();
 
-      await user.press(await screen.findByRole("button", { name: "Settings" }));
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(await screen.findByRole("heading", { name: "More" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should return to More from Your foods, on the back key", async () => {
+      const user = userEvent.setup();
+      await renderApp("/more");
+      await user.press(await screen.findByRole("button", { name: /^Your foods/ }));
+      expect(await screen.findByRole("heading", { name: "Your foods" })).toBeOnTheScreen();
+
+      await goBack();
+
+      expect(await screen.findByRole("heading", { name: "More" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should leave Weight as a disabled row, with no screen to open", async () => {
+      await renderApp("/more");
+
+      expect(await screen.findByLabelText("Weight, Coming soon")).toBeDisabled();
+      expect(screen.queryByRole("button", { name: /^Weight/ })).not.toBeOnTheScreen();
+    });
+
+    it("should choose the appearance in place, in the root's theme", async () => {
+      const user = userEvent.setup();
+      await renderApp("/more");
+      expect(await screen.findByRole("radio", { name: "Dark" })).toBeChecked();
+
+      await user.press(screen.getByRole("radio", { name: "Light" }));
+
+      expect(screen.getByRole("radio", { name: "Light" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "Dark" })).not.toBeChecked();
+    });
+
+    it("should sign the user out and return to sign in", async () => {
+      const user = userEvent.setup();
+      mockSupabaseClient.auth.signOut.mockImplementation(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+        return Promise.resolve({ error: null });
+      });
+      await renderApp("/more");
+
       await user.press(await screen.findByRole("button", { name: "Sign out" }));
 
       expect(mockSupabaseClient.auth.signOut).toHaveBeenCalledTimes(1);
-    });
-
-    it("should go back from Settings to More", async () => {
-      const user = userEvent.setup();
-      await renderApp("/more");
-      await user.press(await screen.findByRole("button", { name: "Settings" }));
-      expect(await screen.findByRole("heading", { name: "Settings" })).toBeOnTheScreen();
-
-      await goBack();
-
-      expect(await screen.findByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+      expect(await screen.findByText("Sign in screen")).toBeOnTheScreen();
     });
   });
 

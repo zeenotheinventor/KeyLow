@@ -78,6 +78,7 @@ export type { SearchGroupKey } from "./search";
 export {
   ADD_FOOD_BUTTON_LABEL,
   COMING_SOON_TITLE,
+  MORE_SCREEN,
   PLACEHOLDER_BODIES,
   SEARCH_LAUNCHER,
   TAB_BAR_LABEL,

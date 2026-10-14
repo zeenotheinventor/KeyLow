@@ -70,8 +70,6 @@ const routes = {
   "(tabs)/diary": DiaryRoute,
   "(tabs)/more": MoreRoute,
   "(tabs)/recipes": standIn("Recipes screen"),
-  "(tabs)/weight": standIn("Weight screen"),
-  "(tabs)/settings": standIn("Settings screen"),
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
   "foods/new": standIn("New food screen"),
@@ -258,14 +256,14 @@ describe("the food search sheet as a route", () => {
   describe("Your foods", () => {
     it("should open the same sheet titled Your foods, and close back to where it was opened", async () => {
       const user = userEvent.setup();
-      await openSheetFrom("/settings", "/foods?scope=own");
+      await openSheetFrom("/more", "/foods?scope=own");
 
       expect(screen.getByRole("heading", { name: "Your foods" })).toBeOnTheScreen();
       expect(modals()).toHaveLength(1);
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Settings screen")).toBeOnTheScreen();
+      expect(await screen.findByRole("heading", { name: "More" })).toBeOnTheScreen();
     });
   });
 });

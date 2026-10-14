@@ -63,7 +63,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "Password",
     ],
   },
-  ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled"] },
+  ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled", "WithControl"] },
   NumericInput: {
     states: [
       "Empty",

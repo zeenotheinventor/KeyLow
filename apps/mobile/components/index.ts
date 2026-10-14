@@ -1,3 +1,4 @@
+export { AppearanceSetting } from "./AppearanceSetting";
 export { AuthForm } from "./AuthForm";
 export type { AuthFormFooter, AuthFormOutcome, AuthFormProps } from "./AuthForm";
 export { GoogleButton } from "./GoogleButton";

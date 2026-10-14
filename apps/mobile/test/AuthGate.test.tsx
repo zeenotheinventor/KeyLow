@@ -103,7 +103,7 @@ describe("AuthGate", () => {
       data: { session: fakeSession },
       error: null,
     });
-    routerMock.segments = ["(tabs)", "settings"];
+    routerMock.segments = ["(tabs)", "more"];
     await renderGate();
 
     await act(() => {

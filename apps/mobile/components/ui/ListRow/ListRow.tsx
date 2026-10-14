@@ -1,3 +1,4 @@
+import { Children } from "react";
 import { View } from "react-native";
 
 import { rowPressScale } from "../../../lib/motion";
@@ -18,11 +19,14 @@ export function ListRow({
   chevron = true,
   onPress,
   disabled = false,
+  children,
 }: ListRowProps) {
   const { isFirst } = useGroupedRowPosition();
   const trailingValue = value === undefined ? undefined : [value, unit].filter(Boolean).join(" ");
   const label = [title, subtitle, trailingValue].filter(Boolean).join(", ");
-  const rowClassName = `min-h-[56px] flex-row items-center gap-3 px-3 py-2 ${isFirst ? "" : "border-t border-border"} ${disabled ? "opacity-50" : ""}`;
+  const separatorClassName = isFirst ? "" : "border-t border-border";
+  const dimClassName = disabled ? "opacity-50" : "";
+  const rowClassName = `min-h-[56px] flex-row items-center gap-3 px-3 py-2 ${separatorClassName} ${dimClassName}`;
 
   const contents = (
     <>
@@ -56,6 +60,25 @@ export function ListRow({
       ) : null}
     </>
   );
+
+  // `null`, `undefined` and `false` draw nothing, so a conditional control that is off leaves a plain row.
+  if (Children.toArray(children).length > 0) {
+    // The title row is named on its own, and the control under it is not folded into that name, so a
+    // screen reader reaches the control itself. The 12 points above and around match the design's card.
+    return (
+      <View className={`${separatorClassName} ${dimClassName}`}>
+        <View
+          accessible
+          aria-disabled={disabled}
+          aria-label={label}
+          className="flex-row items-center gap-3 px-3 pt-3"
+        >
+          {contents}
+        </View>
+        <View className="p-3">{children}</View>
+      </View>
+    );
+  }
 
   if (onPress === undefined) {
     return (
