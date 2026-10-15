@@ -4,8 +4,8 @@ import { customFoodInputSchema } from "@keylow/core/schemas";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { drainGeneratedBarcodes, generateBarcode, offMock } from "./support/offProduct";
-import { adminClient } from "./support/stack";
+import { deleteGeneratedFoods } from "./support/foods";
+import { generateBarcode, offMock } from "./support/offProduct";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import { useFoodByBarcode } from "../../src/hooks/useFoodByBarcode";
 import { createFood, fetchOffProduct } from "../../src/repos";
@@ -28,30 +28,6 @@ beforeAll(async () => {
   invoke = vi.spyOn(functionsClient, "invoke");
 });
 
-/** Deletes the shared off rows of the generated barcodes. Portions and the raw product reference the food, so they go first. */
-async function deleteGeneratedOffFoods(codes: string[]) {
-  const admin = adminClient();
-  const { data: foods, error: readError } = await admin
-    .from("foods")
-    .select("id")
-    .eq("source", "off")
-    .in("source_ref", codes);
-  expect(readError).toBeNull();
-  const foodIds = (foods ?? []).map((food) => food.id);
-
-  expect((await admin.from("food_portions").delete().in("food_id", foodIds)).error).toBeNull();
-  expect((await admin.from("food_source_data").delete().in("food_id", foodIds)).error).toBeNull();
-  expect((await admin.from("foods").delete().in("id", foodIds)).error).toBeNull();
-
-  const { count, error: countError } = await admin
-    .from("foods")
-    .select("id", { count: "exact", head: true })
-    .eq("source", "off")
-    .in("source_ref", codes);
-  expect(countError).toBeNull();
-  expect(count).toBe(0);
-}
-
 beforeEach(() => {
   invoke.mockClear();
 });
@@ -62,7 +38,7 @@ afterEach(() => {
 
 afterAll(async () => {
   try {
-    await deleteGeneratedOffFoods(drainGeneratedBarcodes());
+    await deleteGeneratedFoods();
   } finally {
     // The user's own foods and portions go with them (on delete cascade).
     await deleteCreatedTestUsers();
