@@ -250,6 +250,31 @@ describe("keeping a spoon when the entry is updated or logged again", () => {
     expect(foodLogEntryInsertSchema.safeParse(entry).success).toBe(true);
   });
 
+  it("should keep the grams of a gram portion that is labelled like a spoon and no longer exists", () => {
+    const ownTablespoon = buildFoodPortion({ ...slice, label: tablespoon.label, grams: 14 });
+    const food = buildFood({ ...oil, kcal: 400, density_g_per_ml: null });
+    const entry = buildLogEntry({
+      food,
+      quantity: 2,
+      unit: "portion",
+      portion: ownTablespoon,
+      ...when,
+    });
+
+    const refreshed = refreshEntryFromFood(entry, food, []);
+    const matched = matchPortionOnFood(
+      { quantity: 2, portionId: ownTablespoon.id, portion: { label: "1 tbsp", grams: 14 } },
+      [],
+    );
+
+    expect(matched).toEqual({ quantity: 28, unit: "g" });
+    expect(refreshed.unit).toBe("g");
+    expect(refreshed.quantity).toBe(28);
+    expect(refreshed.resolved_grams).toBe(28);
+    expect(refreshed.nutrients.kcal).toBeCloseTo(112, 10);
+    expect(refreshed.nutrients.kcal).toBe(entry.nutrients.kcal);
+  });
+
   it("should still fall back to the direct amount for a gram portion that no longer exists", () => {
     const sliceEntry = buildLogEntry({
       food: oil,

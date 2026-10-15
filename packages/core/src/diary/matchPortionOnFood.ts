@@ -21,9 +21,10 @@ export type MatchedAmount =
  * data" and for "log again". In order: the portion the link still points to, a portion with the same
  * label, the teaspoon or tablespoon when the old portion was one (a spoon is not a row, so no link could
  * point to it), and finally a direct amount in the unit of the old portion (grams for a gram portion,
- * millilitres for a millilitre portion), so the logged amount is kept exactly. The count of portions
- * is kept for the first three. The food's default portion is deliberately not a step, because it
- * could be a different size and silently change what was logged.
+ * millilitres for a millilitre portion), so the logged amount is kept exactly. A portion is a spoon only
+ * when it is in millilitres and has the spoon's label and size, so a gram portion that merely shares a
+ * spoon's label keeps its grams. The count of portions is kept for the first three. The food's default
+ * portion is deliberately not a step, because it could be a different size and silently change what was logged.
  */
 export const matchPortionOnFood = (
   previous: LoggedPortion,
@@ -36,7 +37,7 @@ export const matchPortionOnFood = (
     return { quantity: previous.quantity, unit: "portion", portion: match };
   }
   const spoon = spoonPortionWithLabel(previous.portion.label);
-  if (spoon !== undefined) {
+  if (spoon !== undefined && "ml" in previous.portion && previous.portion.ml === spoon.ml) {
     return { quantity: previous.quantity, unit: "portion", portion: spoon };
   }
   return "grams" in previous.portion
