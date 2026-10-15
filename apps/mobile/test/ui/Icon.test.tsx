@@ -31,6 +31,7 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   { tone: "accent-foreground", colorName: "accent-foreground" },
   { tone: "on-status", colorName: "text-on-status" },
   // The status glyphs of a banner and an error tile, drawn on a muted fill or beside the words.
+  { tone: "success", colorName: "success" },
   { tone: "warning", colorName: "warning" },
   { tone: "danger", colorName: "danger" },
   // The flame on a food row's stats line, in the calories colour beside the energy.
@@ -42,6 +43,7 @@ const names: IconName[] = [
   "BookOpen",
   "Camera",
   "CameraOff",
+  "Check",
   "ChefHat",
   "ChevronLeft",
   "ChevronRight",

@@ -31,6 +31,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "PartialSave",
     ],
   },
+  BottomSheet: { states: ["Default", "WithoutTitle", "Tall", "Closed", "Interactive"] },
   Button: {
     states: [
       "Primary",
@@ -159,6 +160,18 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "NumeralSmall",
       "Tones",
       "TabularFigures",
+    ],
+  },
+  Toast: {
+    states: [
+      "WithUndo",
+      "Success",
+      "Warning",
+      "Danger",
+      "MessageOnly",
+      "LongMessage",
+      "AboveTabBar",
+      "WithProvider",
     ],
   },
 };

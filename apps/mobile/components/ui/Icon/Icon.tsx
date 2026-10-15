@@ -11,7 +11,11 @@ function toneColor(tone: IconTone, theme: Theme): string {
   // The ink, status and calories glyphs are the colours themselves, where every other tone is a text or fill tone.
   // `accent-ink` is the design's token: lime in dark, and the primary text colour in light where lime is
   // too faint for a thin glyph.
-  return tone === "accent-ink" || tone === "warning" || tone === "danger" || tone === "calories"
+  return tone === "accent-ink" ||
+    tone === "success" ||
+    tone === "warning" ||
+    tone === "danger" ||
+    tone === "calories"
     ? theme.colors[tone]
     : theme.colors[toneColorName[tone]];
 }
