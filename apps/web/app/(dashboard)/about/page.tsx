@@ -1,4 +1,5 @@
 import { ABOUT_SCREEN, LEGAL_PATHS } from "@keylow/core/copy";
+import { APP_VERSION, formatAppVersion } from "@keylow/core/format";
 import { FileText, Shield } from "lucide-react";
 import { useId } from "react";
 
@@ -35,6 +36,10 @@ export default function AboutPage() {
           <ListRow icon={Shield} title={legal.privacy} href={LEGAL_PATHS.privacy} />
           <ListRow icon={FileText} title={legal.terms} href={LEGAL_PATHS.terms} />
         </GroupedList>
+        {/* Vercel sets the commit while it builds, and this page is prerendered, so each deployment keeps its own. It is unset locally. */}
+        <p className="px-1 text-caption text-text-secondary">
+          {formatAppVersion({ version: APP_VERSION, commit: process.env.VERCEL_GIT_COMMIT_SHA })}
+        </p>
       </div>
     </PageFrame>
   );

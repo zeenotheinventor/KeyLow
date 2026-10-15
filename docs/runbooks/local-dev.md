@@ -480,6 +480,21 @@ How it stays conflict-free:
 - `copy/index.ts` is the only committed list, with one independent entry per line and `merge=union` in `.gitattributes`. A local rebase that leaves a duplicate or a missing line is caught by the tests and the type check. Do not put a file in `.gitattributes` unless its lines are single and independent.
 - `pnpm-lock.yaml` still conflicts when two branches change dependencies. Take either side and run `pnpm install`, which repairs the lockfile, then commit it.
 
+## Version line
+
+Both About screens show one line, `Version 1.0.0 (a1b2c3d)`: the product version, then the first seven characters of the commit the running code was built from. Both apps build it with `formatAppVersion` from `@keylow/core/format`, so the two cannot drift.
+
+- **Product version**: `APP_VERSION` in `packages/core/src/format/appVersion.ts`. To bump it, change that one line. It ships with the next web deploy and the next update to the phone.
+- **Web commit**: `VERCEL_GIT_COMMIT_SHA`, which Vercel sets during the build when "Automatically expose System Environment Variables" is on for the project (the default). The About page is prerendered, so each deployment keeps its own commit. Locally it is unset and the line is just `Version 1.0.0`.
+- **Phone commit**: `EXPO_PUBLIC_COMMIT_SHA`, set only in the environment of the `eas update` step in `.github/workflows/eas-update.yml` (to `${{ github.sha }}`). Metro inlines it into the bundle at export. Housekeeping adds this line to `eas-update.yml`; until it has merged, no update carries a commit and the phone shows `Version 1.0.0`. The screen reads it as the literal `process.env.EXPO_PUBLIC_COMMIT_SHA`. The bundle inside the installed app has no commit, so it shows `Version 1.0.0` and `Built in` until the app has picked up an update, and an update shows the commit only once the workflow line has merged. The phone can show an older commit than the web, because EAS Update runs only when the app or the shared packages change.
+- **Never put the commit in `app.json`, `app.config.ts` or `eas.json`.** The Expo fingerprint hashes the whole config, so a value that changes on every commit would change the runtime version on every merge and stop updates reaching installed apps. For the same reason, editing `app.json` `version` changes the fingerprint. It stays the installed binary's own number and is aligned the next time a change needs a new APK anyway.
+
+To check that the fingerprint has not moved, run this from the repository root on the branch and on a worktree of `origin/main`, and compare the two `hash` values. Run it once more on the branch with `EXPO_PUBLIC_COMMIT_SHA` set to any 40-character hex value, and the hash must still be the same:
+
+```sh
+pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate
+```
+
 ## 6. Everyday commands
 
 Run from the repo root.
