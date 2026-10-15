@@ -4,6 +4,7 @@ import { formatDeltaGrams, formatGrams } from "@keylow/core/format";
 
 import type { MacroBarRowProps, MacroName } from "./types";
 
+import { overTargetOutlineOnSurface } from "@/components/ui/MacroProgressStrip";
 import { useWhipFill } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { vars } from "@/lib/vars";
@@ -13,18 +14,6 @@ const swatchClassName: Record<MacroName, string> = {
   protein: "bg-protein",
   carbs: "bg-carbs",
   fat: "bg-fat",
-};
-
-// Over target the bar takes the same brighter outline of its own colour as the compact strip: a 1 px gap,
-// then a 1.5 px ring of the macro colour mixed 55 % with white, drawn as a shadow. The gap is in the
-// card's surface colour, because these bars sit on a card and not on the page. The classes are written
-// out whole so Tailwind sees them.
-const outlineClassName: Record<MacroName, string> = {
-  protein:
-    "[box-shadow:0_0_0_1px_rgb(var(--kl-surface)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-protein))_55%,white)]",
-  carbs:
-    "[box-shadow:0_0_0_1px_rgb(var(--kl-surface)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-carbs))_55%,white)]",
-  fat: "[box-shadow:0_0_0_1px_rgb(var(--kl-surface)),0_0_0_2.5px_color-mix(in_srgb,rgb(var(--kl-fat))_55%,white)]",
 };
 
 // Each bar starts a stagger later than the one above it. A stagger is 36 ms, and a test holds these to
@@ -61,7 +50,7 @@ export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRo
         className={cn(
           "relative overflow-hidden rounded-pill bg-border",
           compact ? "h-1.5" : "h-2",
-          isOver && outlineClassName[macro],
+          isOver && overTargetOutlineOnSurface[macro],
         )}
       >
         <span

@@ -11,6 +11,7 @@ import { useCountUp } from "./useCountUp";
 
 import type { CalorieRingProps } from "./types";
 
+import { overTargetRingStroke } from "@/components/ui/MacroProgressStrip";
 import { useWhipFill } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -20,10 +21,8 @@ const fillMotion =
 
 // Over target the ring takes two brighter outlines of its own colour (ruling 17): a 1 px gap beside the
 // stroke, then a 1.5 px line of the calories colour mixed 55 % with white, one outside and one inside.
-// The class is written out whole so Tailwind sees it.
 const outlineWidth = 1.5;
 const outlineOffset = 1.75;
-const outlineClassName = "fill-none [stroke:color-mix(in_srgb,rgb(var(--kl-calories))_55%,white)]";
 
 function captionOf({
   hasTarget,
@@ -110,7 +109,7 @@ export function CalorieRing({
               cy={centre}
               r={outerOutlineRadius}
               strokeWidth={outlineWidth}
-              className={outlineClassName}
+              className={overTargetRingStroke}
             />
             <circle
               data-testid="ring-inner-outline"
@@ -118,7 +117,7 @@ export function CalorieRing({
               cy={centre}
               r={innerOutlineRadius}
               strokeWidth={outlineWidth}
-              className={outlineClassName}
+              className={overTargetRingStroke}
             />
           </>
         )}
