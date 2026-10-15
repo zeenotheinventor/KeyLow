@@ -1,3 +1,4 @@
+import type { GoogleSignInResult } from "../../lib/googleSignIn";
 import type { Credentials, PasswordRule } from "../../lib/validateCredentials";
 import type { Href } from "expo-router";
 
@@ -23,4 +24,11 @@ export type AuthFormProps = {
   passwordRule: PasswordRule;
   onSubmit: (credentials: Credentials) => Promise<AuthFormOutcome>;
   footer: AuthFormFooter;
+  /**
+   * Draws the sign up board: the acceptance checkbox, unticked, with the Google button and the primary
+   * button both disabled until it is ticked. Only the sign up screen sets it.
+   */
+  requireAcceptance?: boolean | undefined;
+  /** What the Google button runs. Defaults to a plain Google sign-in. */
+  onGoogleSignIn?: (() => Promise<GoogleSignInResult>) | undefined;
 };

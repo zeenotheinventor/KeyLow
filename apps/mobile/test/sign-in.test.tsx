@@ -114,6 +114,14 @@ describe("sign-in screen", () => {
       expect(screen.queryByText("At least 8 characters")).not.toBeOnTheScreen();
     });
 
+    it("should not ask for the terms to be accepted", async () => {
+      await renderAuthScreen(<SignInRoute />);
+
+      expect(screen.queryByRole("checkbox")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("link", { name: "Terms" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Sign in" })).toBeEnabled();
+    });
+
     it("should ask the person who is new to Ki-Lo to create an account", async () => {
       await renderAuthScreen(<SignInRoute />);
 
@@ -256,6 +264,16 @@ describe("sign-in screen", () => {
     });
   });
 
+  it("should not send any terms version with a password sign-in", async () => {
+    await fillAndSubmit("zee@example.com", "password123");
+
+    expect(mockSupabaseClient.auth.signInWithPassword).toHaveBeenCalledWith({
+      email: "zee@example.com",
+      password: "password123",
+    });
+    expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+  });
+
   it("should link to the sign-up screen", async () => {
     await renderAuthScreen(<SignInRoute />);
 
@@ -358,6 +376,15 @@ describe("sign-in screen", () => {
 
       expect(await screen.findByText("Something went wrong. Try again.")).toBeOnTheScreen();
       expect(mockGoogleSignin.signIn).not.toHaveBeenCalled();
+    });
+
+    it("should not record any terms acceptance after a successful sign-in", async () => {
+      await pressGoogleButton();
+
+      await waitFor(() => {
+        expect(mockSupabaseClient.auth.signInWithIdToken).toHaveBeenCalled();
+      });
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
     });
 
     it("should not show a coming soon note", async () => {

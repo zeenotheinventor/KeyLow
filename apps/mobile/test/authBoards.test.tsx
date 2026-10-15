@@ -1,4 +1,4 @@
-import { themes } from "@keylow/tokens";
+import { controlHeight, themes } from "@keylow/tokens";
 import { AuthApiError } from "@supabase/supabase-js";
 import { act, screen, userEvent } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -48,6 +48,10 @@ async function typeAndSubmit(buttonName: string | RegExp, email: string, passwor
   await user.type(screen.getByLabelText("Email"), email);
   await user.type(screen.getByLabelText("Password"), password);
   await user.press(screen.getByRole("button", { name: buttonName }));
+}
+
+async function tickAcceptance() {
+  await userEvent.setup().press(screen.getByRole("checkbox"));
 }
 
 // The scroll view holds the form's layout in its content container, which has no role to query by.
@@ -188,12 +192,76 @@ describe("the auth boards", () => {
     });
 
     describe("sign-up", () => {
-      it("should say the password rule in muted text under the field", async () => {
+      it("should lay the form out as the sign-up board does: 14 between, the mark at 56 and the header centred", async () => {
         await renderAuthScreen(<SignUpRoute />, scheme);
 
-        expect(screen.getByText("At least 8 characters")).toHaveStyle({
-          color: resolvedColor(scheme, "text-muted"),
+        expect(formScrollView()?.props.contentContainerStyle).toMatchObject({
+          paddingLeft: 24,
+          paddingRight: 24,
+          paddingTop: 56,
+          paddingBottom: 34,
+          rowGap: 14,
         });
+        expect(drawings()[0]?.props.width).toBe(56);
+        expect(screen.getByRole("heading", { name: "Create account" })).toHaveStyle({
+          fontSize: 28,
+          lineHeight: 34,
+          textAlign: "center",
+          color: resolvedColor(scheme, "text-primary"),
+        });
+        expect(
+          screen.getByText("Track intake and weigh-ins. The engine estimates the rest."),
+        ).toHaveStyle({ textAlign: "center", color: resolvedColor(scheme, "text-secondary") });
+      });
+
+      it("should dim both buttons to 40 percent until the box is ticked", async () => {
+        await renderAuthScreen(<SignUpRoute />, scheme);
+        const dimmed = { opacity: Math.fround(0.4) };
+
+        expect(screen.getByRole("button", { name: "Create account" })).toHaveStyle(dimmed);
+        expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveStyle(dimmed);
+
+        await tickAcceptance();
+
+        expect(screen.getByRole("button", { name: "Create account" })).not.toHaveStyle(dimmed);
+        expect(screen.getByRole("button", { name: "Continue with Google" })).not.toHaveStyle(
+          dimmed,
+        );
+      });
+
+      it("should say the password rule as the field's placeholder, with no text under it", async () => {
+        await renderAuthScreen(<SignUpRoute />, scheme);
+
+        expect(screen.getByPlaceholderText("At least 8 characters")).toBeOnTheScreen();
+        expect(screen.queryByText("At least 8 characters")).not.toBeOnTheScreen();
+      });
+
+      it("should draw the Google button at the medium height and Create account at the large", async () => {
+        await renderAuthScreen(<SignUpRoute />, scheme);
+
+        expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveStyle({
+          height: controlHeight.md,
+        });
+        expect(screen.getByRole("button", { name: "Create account" })).toHaveStyle({
+          height: controlHeight.lg,
+        });
+      });
+
+      it("should put the footer's prompt in secondary caption text and its link underlined in the accent ink", async () => {
+        await renderAuthScreen(<SignUpRoute />, scheme);
+
+        expect(screen.getByText("Already have an account?")).toHaveStyle({
+          fontSize: 12,
+          lineHeight: 16,
+          color: resolvedColor(scheme, "text-secondary"),
+        });
+        expect(screen.getByText("Sign in")).toHaveStyle({
+          fontSize: 12,
+          lineHeight: 16,
+          textDecorationLine: "underline",
+          color: resolvedColor(scheme, scheme === "dark" ? "accent" : "text-primary"),
+        });
+        expect(screen.getByRole("link", { name: "Sign in" })).toHaveStyle({ minHeight: 44 });
       });
     });
 
@@ -201,6 +269,7 @@ describe("the auth boards", () => {
       it("should say both problems, the password's in place of the rule", async () => {
         await renderAuthScreen(<SignUpRoute />, scheme);
 
+        await tickAcceptance();
         await typeAndSubmit("Create account", "", "abc");
 
         expect(
@@ -209,7 +278,6 @@ describe("the auth boards", () => {
         expect(
           screen.getByRole("alert", { name: "Password must be at least 8 characters" }),
         ).toBeOnTheScreen();
-        expect(screen.queryByText("At least 8 characters")).not.toBeOnTheScreen();
       });
     });
 
@@ -218,6 +286,7 @@ describe("the auth boards", () => {
         mockSupabaseClient.auth.signUp.mockResolvedValue({ data: { session: null }, error: null });
         await renderAuthScreen(<SignUpRoute />, scheme);
 
+        await tickAcceptance();
         await typeAndSubmit("Create account", "sam.taylor@example.com", "correcthorse");
 
         expect(await screen.findByText("Check your email")).toHaveStyle({

@@ -5,14 +5,14 @@ import { Button } from "../ui";
 
 import type { GoogleButtonProps } from "./types";
 
-/** The large secondary button of the sign in boards, with the Google "G" before its label. */
-export function GoogleButton({ disabled = false, onPress }: GoogleButtonProps) {
+/** The secondary button of the sign in boards, large unless asked otherwise, with the Google "G" before its label. */
+export function GoogleButton({ disabled = false, size = "lg", onPress }: GoogleButtonProps) {
   return (
     <Button
       disabled={disabled}
       fullWidth
       leading={<GoogleMark />}
-      size="lg"
+      size={size}
       variant="secondary"
       onPress={onPress}
     >
