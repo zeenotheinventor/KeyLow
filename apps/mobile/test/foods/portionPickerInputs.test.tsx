@@ -43,7 +43,10 @@ const box = buildFoodPortion({
   position: 1,
 });
 
-async function renderPicker(props: Partial<PortionPickerProps> = {}) {
+type AddProps = Extract<PortionPickerProps, { mode: "add" }>;
+type EditProps = Extract<PortionPickerProps, { mode: "edit" }>;
+
+async function renderPicker(props: Partial<Omit<AddProps, "mode">> = {}) {
   const onSubmit = jest.fn();
   const user = userEvent.setup();
   await render(
@@ -53,10 +56,34 @@ async function renderPicker(props: Partial<PortionPickerProps> = {}) {
         hasSaveError={false}
         isNow
         isSaving={false}
+        mode="add"
         portions={[bar, box]}
         time="12:40"
         onBack={() => undefined}
         onCopy={() => undefined}
+        onSubmit={onSubmit}
+        {...props}
+      />
+    </ThemeProvider>,
+  );
+  return { user, onSubmit };
+}
+
+async function renderEditPicker(props: Partial<Omit<EditProps, "mode">> = {}) {
+  const onSubmit = jest.fn();
+  const user = userEvent.setup();
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <PortionPicker
+        food={foodFixture}
+        hasSaveError={false}
+        isNow={false}
+        isSaving={false}
+        mode="edit"
+        portions={[bar, box]}
+        time="12:40"
+        onBack={() => undefined}
+        onDelete={() => undefined}
         onSubmit={onSubmit}
         {...props}
       />
@@ -165,7 +192,7 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should offer Save with a Delete under it, in place of Add", async () => {
-      await renderPicker({ onDelete, isNow: false });
+      await renderEditPicker({ onDelete });
 
       expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
       expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
@@ -173,9 +200,8 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should hand over the amount, the unit and the entry's own time on Save", async () => {
-      const { user, onSubmit } = await renderPicker({
+      const { user, onSubmit } = await renderEditPicker({
         onDelete,
-        isNow: false,
         time: "12:40",
         initialAmount: { unit: "g", quantity: 150 },
       });
@@ -191,7 +217,7 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should delete when Delete is pressed", async () => {
-      const { user } = await renderPicker({ onDelete, isNow: false });
+      const { user } = await renderEditPicker({ onDelete });
 
       await user.press(screen.getByRole("button", { name: "Delete" }));
 
@@ -199,9 +225,8 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should keep Save off for an amount that is not above 0", async () => {
-      const { user } = await renderPicker({
+      const { user } = await renderEditPicker({
         onDelete,
-        isNow: false,
         initialAmount: { unit: "g", quantity: 150 },
       });
 
@@ -211,16 +236,15 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should turn Save and Delete off while the connection is lost", async () => {
-      await renderPicker({ onDelete, isNow: false, isOnline: false });
+      await renderEditPicker({ onDelete, isOnline: false });
 
       expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
       expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
     });
 
     it("should not ask for a review of a food with a value missing, which an entry keeps as saved", async () => {
-      await renderPicker({
+      await renderEditPicker({
         onDelete,
-        isNow: false,
         food: { ...foodFixture, carbs_g: null },
       });
 
@@ -233,7 +257,7 @@ describe("PortionPicker as a component", () => {
 
   describe("a notice and a caption", () => {
     it("should draw the banner it is given above the hero, and the caption under the note", async () => {
-      await renderPicker({
+      await renderEditPicker({
         banner: <Text>Banner words</Text>,
         caption: "Caption words",
       });
@@ -243,7 +267,7 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should draw neither when there are none", async () => {
-      await renderPicker();
+      await renderEditPicker();
 
       expect(screen.queryByText("Banner words")).not.toBeOnTheScreen();
     });

@@ -397,7 +397,7 @@ describe("QuickAddForm", () => {
       expect(onLeave).toHaveBeenCalledTimes(1);
     });
 
-    it("should show what was logged, which cannot be changed, and the entry's own time", async () => {
+    it("should show what was logged, in fields that can be changed, and the entry's own time", async () => {
       await renderEdit();
 
       expect(calories()).toHaveDisplayValue("130");
@@ -406,10 +406,55 @@ describe("QuickAddForm", () => {
       expect(fat()).toHaveDisplayValue("7");
       expect(label()).toHaveDisplayValue("Meal deal crisps");
       for (const field of [calories(), protein(), carbohydrate(), fat(), label()]) {
-        expect(field).toHaveProp("editable", false);
+        expect(field).not.toHaveProp("editable", false);
       }
       expect(screen.getByRole("button", { name: "Time, 12:45, change" })).toBeOnTheScreen();
       expect(screen.getByText("Macros add up to 131 kcal")).toBeOnTheScreen();
+    });
+
+    it("should not take the cursor on opening", async () => {
+      await renderEdit();
+
+      expect(calories()).not.toHaveProp("autoFocus", true);
+    });
+
+    it("should hand over the values as they were edited, with the time", async () => {
+      const { user, onSubmit } = await renderEdit();
+
+      await fill(user, calories, "150");
+      await user.clear(protein());
+      await fill(user, fat, "0");
+      await user.clear(label());
+      await user.press(screen.getByRole("button", { name: "Save" }));
+
+      expect(onSubmit).toHaveBeenCalledWith({
+        kcal: 150,
+        protein_g: null,
+        carbs_g: 15,
+        fat_g: 0,
+        label: null,
+        time: "12:45",
+        isNow: false,
+      });
+    });
+
+    it("should ask for calories and keep Save off when they are cleared", async () => {
+      const { user } = await renderEdit();
+
+      await user.clear(calories());
+
+      expect(screen.getByRole("alert")).toHaveTextContent("Enter calories.");
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
+    it("should update the helper and turn it to the review colour as the macros are edited", async () => {
+      const { user } = await renderEdit();
+
+      await fill(user, carbohydrate, "60");
+
+      expect(screen.getByText("Macros add up to 311 kcal")).toHaveStyle({
+        color: resolvedColor("dark", "warning-ink"),
+      });
     });
 
     it("should offer Save and a Delete under it, and no Add", async () => {

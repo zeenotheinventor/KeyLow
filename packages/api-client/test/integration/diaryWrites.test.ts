@@ -255,6 +255,75 @@ describe("writing the diary against the local stack with real user JWTs", () => 
     });
   });
 
+  describe("changing the values of a quick add", () => {
+    const day = "2026-10-30";
+
+    it("should store the new nutrients and label, and the day's totals follow", async () => {
+      const entry = await logQuickEntry(userA.client, {
+        localDate: day,
+        loggedAt: londonTime(day, 12).loggedAt,
+        kcal: 130,
+        protein_g: 2,
+        carbs_g: 15,
+        fat_g: 7,
+        label: `key207 crisps ${RUN_ID}`,
+      });
+
+      const updated = await updateLogEntry(userA.client, {
+        entry,
+        quick: { kcal: 300, protein_g: null, carbs_g: 40, fat_g: 0, label: null },
+      });
+
+      expect(updated.nutrients).toEqual({
+        kcal: 300,
+        protein_g: null,
+        fat_g: 0,
+        carbs_g: 40,
+        fibre_g: null,
+      });
+      expect(updated.snapshot).toEqual({ v: 1, kind: "quick", label: null });
+      expect(updated.kcal).toBe(300);
+      expect(updated.logged_at).toBe(entry.logged_at);
+      const { entries, totals } = await getDiaryDay(userA.client, day);
+      expect(entries.map(({ id }) => id)).toEqual([entry.id]);
+      expect(totals).toMatchObject({ entry_count: 1, kcal: 300 });
+    });
+
+    it("should write the values and a new time together", async () => {
+      const entry = await logQuickEntry(userA.client, {
+        localDate: day,
+        loggedAt: londonTime(day, 9).loggedAt,
+        kcal: 100,
+      });
+
+      const updated = await updateLogEntry(userA.client, {
+        entry,
+        quick: { kcal: 120, protein_g: null, carbs_g: null, fat_g: null, label: "key207 snack" },
+        time: londonTime(day, 17, 30),
+      });
+
+      expect(updated).toMatchObject({ kcal: 120, snapshot: { label: "key207 snack" } });
+      expect(new Date(updated.logged_at).toISOString()).toBe(londonTime(day, 17, 30).loggedAt);
+    });
+
+    it("should not let another user change them", async () => {
+      const entry = await logQuickEntry(userA.client, {
+        localDate: day,
+        loggedAt: londonTime(day, 10).loggedAt,
+        kcal: 100,
+      });
+
+      await expect(
+        updateLogEntry(userB.client, {
+          entry,
+          quick: { kcal: 999, protein_g: null, carbs_g: null, fat_g: null, label: null },
+        }),
+      ).rejects.toThrow();
+      const stored = await getDiaryDay(userA.client, day);
+      expect(stored.entries.find(({ id }) => id === entry.id)?.nutrients.kcal).toBe(100);
+    });
+  });
+
   describe("deleting and restoring", () => {
     const day = "2026-10-29";
 

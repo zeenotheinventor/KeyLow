@@ -1,4 +1,4 @@
-import { foodSnapshotSchema, weekOf } from "@keylow/core/diary";
+import { foodSnapshotSchema, isEntryId, weekOf } from "@keylow/core/diary";
 import { z } from "zod";
 
 import { ENTRY_COLUMNS, dateOfRow, idOfRow, parseRow, repoError } from "./diaryRows";
@@ -87,8 +87,6 @@ export async function getDiaryDay(
   };
 }
 
-const ENTRY_ID = z.guid();
-
 /**
  * Loads one live (not deleted) entry by its id, for the screen that edits it. Resolves to null when the
  * entry does not exist, is deleted or is not the caller's.
@@ -97,7 +95,7 @@ export async function getLogEntry(
   client: SupabaseClient<Database>,
   id: string,
 ): Promise<LogEntry | null> {
-  if (!ENTRY_ID.safeParse(id).success) {
+  if (!isEntryId(id)) {
     throw new RangeError("An entry id must be a UUID");
   }
 

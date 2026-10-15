@@ -289,7 +289,7 @@ describe("reading the diary against the local stack with real user JWTs", () => 
   });
   describe("an entry by its id", () => {
     const day = "2026-10-26";
-    const ids: Record<string, string> = {};
+    const ids = { live: "", removed: "" };
 
     beforeAll(async () => {
       ids.live = await entryAt(oats, day, "08:00", 70);
@@ -302,7 +302,7 @@ describe("reading the diary against the local stack with real user JWTs", () => 
     });
 
     it("should read the user's own live entry", async () => {
-      const entry = await getLogEntry(userA.client, ids.live ?? "");
+      const entry = await getLogEntry(userA.client, ids.live);
 
       expect(entry).toMatchObject({
         id: ids.live,
@@ -314,11 +314,11 @@ describe("reading the diary against the local stack with real user JWTs", () => 
     });
 
     it("should read nothing for an entry the user deleted", async () => {
-      expect(await getLogEntry(userA.client, ids.removed ?? "")).toBeNull();
+      expect(await getLogEntry(userA.client, ids.removed)).toBeNull();
     });
 
     it("should read nothing of user A's entry for user B", async () => {
-      expect(await getLogEntry(userB.client, ids.live ?? "")).toBeNull();
+      expect(await getLogEntry(userB.client, ids.live)).toBeNull();
     });
   });
 });

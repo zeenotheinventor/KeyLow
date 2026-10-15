@@ -1,8 +1,7 @@
-import { useFood, useUpdateEntry } from "@keylow/api-client";
+import { useFood } from "@keylow/api-client";
 import { FOOD_CHANGED_BANNER, FOOD_DELETED_NOTICE } from "@keylow/core/copy";
 import { formatClockTime } from "@keylow/core/dates";
 import { foodChangedSinceLogged } from "@keylow/core/diary";
-import { useState } from "react";
 
 import { useIsOnline } from "../../../lib/connectivity";
 import { foodEntryChange } from "../../../lib/entryChange";
@@ -11,9 +10,9 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 import { useDeleteEntryWithUndo } from "../../DiaryScreen";
 import { PortionPicker } from "../../PortionPicker";
 import { Banner } from "../../ui";
+import { useEntrySave } from "../useEntrySave";
 
 import type { FoodEntryFormProps } from "./types";
-import type { PortionSelection } from "../../PortionPicker";
 
 /**
  * A logged food on the entry screen: the portion picker drawn from the entry's own snapshot, with Save and
@@ -24,13 +23,12 @@ import type { PortionSelection } from "../../PortionPicker";
  */
 export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) {
   const isOnline = useIsOnline();
-  const updateEntry = useUpdateEntry();
+  const entrySave = useEntrySave(onLeave);
   const deleteWithUndo = useDeleteEntryWithUndo();
-  // The live food is read unfiltered, so a deleted food still answers. A food that cannot be read counts as
-  // gone. Nothing is read while the terms gate is up, and a query with no id stays idle.
+  // The live food is read unfiltered, so a deleted food still answers. A food that is not visible to the user
+  // (null) counts as gone, and a read that failed says nothing. Nothing is read while the terms gate is up, and
+  // a query with no id stays idle.
   const liveFood = useFood(useReadsEnabled() ? entry.snapshot.ref : undefined);
-  const [isSaving, setIsSaving] = useState(false);
-  const [hasSaveError, setHasSaveError] = useState(false);
   const { food, portions, initialAmount } = foodEntryForm(entry);
 
   const isFoodGone =
@@ -40,40 +38,6 @@ export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) 
     liveFood.data !== null &&
     !isFoodGone &&
     foodChangedSinceLogged(liveFood.data, entry.snapshot);
-
-  async function save(selection: PortionSelection) {
-    const change = foodEntryChange(entry, selection, timeZone);
-    if (change === null) {
-      onLeave();
-      return;
-    }
-    setIsSaving(true);
-    setHasSaveError(false);
-    try {
-      await updateEntry.mutateAsync({ entry, ...change });
-      onLeave();
-    } catch {
-      // The failure is not kept: it can quote the amount, which is health data. The banner says what to do.
-      setHasSaveError(true);
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function updateToCurrentFood() {
-    if (isSaving) {
-      return;
-    }
-    setIsSaving(true);
-    setHasSaveError(false);
-    try {
-      await updateEntry.mutateAsync({ entry, useCurrentFoodData: true });
-    } catch {
-      setHasSaveError(true);
-    } finally {
-      setIsSaving(false);
-    }
-  }
 
   return (
     <PortionPicker
@@ -86,7 +50,7 @@ export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) 
                 ? {
                     label: FOOD_CHANGED_BANNER.action,
                     onPress: () => {
-                      void updateToCurrentFood();
+                      void entrySave.update({ entry, useCurrentFoodData: true });
                     },
                   }
                 : undefined
@@ -99,11 +63,16 @@ export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) 
       }
       caption={isFoodGone ? FOOD_DELETED_NOTICE : undefined}
       food={food}
-      hasSaveError={hasSaveError}
+      // The picker keeps the amount and the unit it was opened with. When the entry's amount is no longer the
+      // same thing (an update to the current food can replace the portion it was logged with, or land on
+      // grams), the picker is opened afresh on the entry as it now is.
+      key={`${entry.snapshot.unit}:${entry.portion_id ?? ""}`}
+      hasSaveError={entrySave.hasSaveError}
       initialAmount={initialAmount}
       isNow={false}
       isOnline={isOnline}
-      isSaving={isSaving}
+      isSaving={entrySave.isSaving}
+      mode="edit"
       portions={portions}
       time={formatClockTime(new Date(entry.logged_at), timeZone)}
       onBack={onLeave}
@@ -112,7 +81,8 @@ export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) 
         onLeave();
       }}
       onSubmit={(selection) => {
-        void save(selection);
+        const change = foodEntryChange(entry, selection, timeZone);
+        void entrySave.save(change === null ? null : { entry, ...change });
       }}
     />
   );

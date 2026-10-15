@@ -2,6 +2,7 @@ import { breastEntry, chickenEntry, crispsEntry } from "./support/entries";
 import { foodEntryChange, quickEntryChange } from "../lib/entryChange";
 
 import type { PortionSelection } from "../components/PortionPicker";
+import type { QuickAddSubmission } from "../components/QuickAddForm";
 
 // What Save writes: only what the person changed, so a save that changes nothing writes nothing and an edit of
 // the amount never moves the time (an entry's seconds keep it in its place among those at the same minute).
@@ -104,13 +105,69 @@ describe("foodEntryChange", () => {
 });
 
 describe("quickEntryChange", () => {
-  it("should be nothing when the time is as logged", () => {
-    expect(quickEntryChange(crispsEntry(), "12:45", London)).toBeNull();
+  // The saved crisps: 130 kcal, P 2, C 15, F 7, "Meal deal crisps" at 12:45.
+  function submission(changes: Partial<QuickAddSubmission> = {}): QuickAddSubmission {
+    return {
+      kcal: 130,
+      protein_g: 2,
+      carbs_g: 15,
+      fat_g: 7,
+      label: "Meal deal crisps",
+      time: "12:45",
+      isNow: false,
+      ...changes,
+    };
+  }
+
+  it("should be nothing when the values and the time are as logged", () => {
+    expect(quickEntryChange(crispsEntry(), submission(), London)).toBeNull();
   });
 
-  it("should change the time alone", () => {
-    expect(quickEntryChange(crispsEntry(), "13:15", London)).toEqual({
+  it("should change the time alone when only the time changed", () => {
+    expect(quickEntryChange(crispsEntry(), submission({ time: "13:15" }), London)).toEqual({
       time: { loggedAt: "2026-10-15T12:15:00.000Z", timeZone: London },
+    });
+  });
+
+  it.each([
+    ["calories", { kcal: 140 }],
+    ["protein", { protein_g: 3 }],
+    ["carbohydrate", { carbs_g: 16 }],
+    ["fat", { fat_g: 8 }],
+    ["a macro cleared", { protein_g: null }],
+    ["a macro set to 0", { fat_g: 0 }],
+    ["the label", { label: "Crisps" }],
+    ["the label cleared", { label: null }],
+  ])("should change the values alone when the %s changed", (_name, changes) => {
+    const update = quickEntryChange(crispsEntry(), submission(changes), London);
+
+    expect(update).toEqual({ quick: expect.objectContaining(changes) as unknown });
+    expect(update).not.toHaveProperty("time");
+  });
+
+  it("should hand over all the values, not only the one that changed, and no time", () => {
+    expect(quickEntryChange(crispsEntry(), submission({ kcal: 140 }), London)).toEqual({
+      quick: { kcal: 140, protein_g: 2, carbs_g: 15, fat_g: 7, label: "Meal deal crisps" },
+    });
+  });
+
+  it("should change the values and the time together", () => {
+    expect(
+      quickEntryChange(crispsEntry(), submission({ kcal: 140, time: "13:15" }), London),
+    ).toEqual({
+      quick: { kcal: 140, protein_g: 2, carbs_g: 15, fat_g: 7, label: "Meal deal crisps" },
+      time: { loggedAt: "2026-10-15T12:15:00.000Z", timeZone: London },
+    });
+  });
+
+  it("should tell a macro never given from one given as 0", () => {
+    const entry = crispsEntry({
+      nutrients: { kcal: 130, protein_g: null, fat_g: 7, carbs_g: 15, fibre_g: null },
+    });
+
+    expect(quickEntryChange(entry, submission({ protein_g: null }), London)).toBeNull();
+    expect(quickEntryChange(entry, submission({ protein_g: 0 }), London)).toEqual({
+      quick: expect.objectContaining({ protein_g: 0 }) as unknown,
     });
   });
 });

@@ -14,7 +14,7 @@ export type PortionSelection = PortionAmount & {
   isNow: boolean;
 };
 
-export type PortionPickerProps = {
+type PortionPickerBaseProps = {
   food: Food;
   portions: readonly FoodPortion[];
   /** Starts the amount at this instead of the food's default serving, such as the amount last logged. */
@@ -25,23 +25,34 @@ export type PortionPickerProps = {
   isNow: boolean;
   /** A line under the header beside the food's source, such as "Scanned 5201054013410" or "Last logged 50 g, yesterday". */
   note?: string | undefined;
-  /** Draws Add as working and stops it responding. */
+  /** Draws Add or Save as working and stops it responding. */
   isSaving: boolean;
-  /** Shows that the last Add was not saved. */
+  /** Shows that the last Add or Save was not saved. */
   hasSaveError: boolean;
   /** False while the connection is lost: Add, Save and Delete stop responding. Defaults to true. */
   isOnline?: boolean | undefined;
-  /**
-   * Draws the picker for a logged entry, which the food's own review does not apply to: Save in place of Add,
-   * with this Delete under it. The food is then the entry's own snapshot, and `time` is the entry's.
-   */
-  onDelete?: (() => void) | undefined;
+  onSubmit: (selection: PortionSelection) => void;
+  onBack: () => void;
+};
+
+/** The page for a food that is about to be logged: Add, or Copy to your foods for a food that must be reviewed first. */
+type PortionPickerAddProps = PortionPickerBaseProps & {
+  mode: "add";
+  /** Opens the copy form, for a food that has to be reviewed before its first log. */
+  onCopy: () => void;
+};
+
+/**
+ * The page for a logged entry, which the food's own review does not apply to: Save in place of Add, with a
+ * Delete under it. The food is the entry's own snapshot, and `time` is the entry's.
+ */
+type PortionPickerEditProps = PortionPickerBaseProps & {
+  mode: "edit";
+  onDelete: () => void;
   /** A notice above the hero, such as the entry's "This food has changed" banner with its action. */
   banner?: ReactNode;
   /** A line of text above the hero, such as the entry's note that its food has been deleted. */
   caption?: string | undefined;
-  onSubmit: (selection: PortionSelection) => void;
-  /** Opens the copy form, for a food that has to be reviewed before its first log. A logged entry has none. */
-  onCopy?: (() => void) | undefined;
-  onBack: () => void;
 };
+
+export type PortionPickerProps = PortionPickerAddProps | PortionPickerEditProps;

@@ -99,6 +99,7 @@ export type {
   LogEntry,
   LogFoodInput,
   LogQuickEntryInput,
+  QuickEntryValues,
   QuickLogEntry,
   RecentFood,
   Targets,

@@ -41,23 +41,21 @@ import type { PortionPickerProps } from "./types";
  * picker keeps, and Add is the only part that belongs to adding: it hands them over with `onSubmit`. A food
  * that must be reviewed first has Copy to your foods in place of Add and no Time row.
  */
-export function PortionPicker({
-  food,
-  portions,
-  initialAmount,
-  time,
-  isNow,
-  note,
-  isSaving,
-  hasSaveError,
-  isOnline = true,
-  onDelete,
-  banner,
-  caption,
-  onSubmit,
-  onCopy,
-  onBack,
-}: PortionPickerProps) {
+export function PortionPicker(props: PortionPickerProps) {
+  const {
+    food,
+    portions,
+    initialAmount,
+    time,
+    isNow,
+    note,
+    isSaving,
+    hasSaveError,
+    isOnline = true,
+    onSubmit,
+    onBack,
+  } = props;
+  const isEditing = props.mode === "edit";
   const insets = useSafeAreaInsets();
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
@@ -71,7 +69,6 @@ export function PortionPicker({
 
   const { amount, hero } = previewAmount(food, portions, unitValue, quantityText);
   const options = unitOptions(food, portions);
-  const isEditing = onDelete !== undefined;
   // A logged entry keeps the values it was saved with, so the food's own review does not apply to it.
   const needsReview = !isEditing && foodNeedsReview(food);
   const chosenPortion = portions.find((portion) => portion.id === unitValue);
@@ -112,7 +109,7 @@ export function PortionPicker({
                 variant="review"
               />
             ) : null}
-            {banner}
+            {props.mode === "edit" ? props.banner : null}
             {hasSaveError ? <Banner sentence title={SAVE_FAILED_BANNER} variant="error" /> : null}
             {note === undefined ? null : (
               <View className="flex-row items-center gap-2">
@@ -122,11 +119,11 @@ export function PortionPicker({
                 </Text>
               </View>
             )}
-            {caption === undefined ? null : (
+            {props.mode === "edit" && props.caption !== undefined ? (
               <Text tone="secondary" variant="caption">
-                {caption}
+                {props.caption}
               </Text>
-            )}
+            ) : null}
             <MacroHero amount={hero} food={food} />
             <PerHundredList food={food} />
           </ScrollView>
@@ -150,16 +147,8 @@ export function PortionPicker({
               value={chosenUnit === undefined ? null : unitValue}
               onChange={setUnitValue}
             />
-            {needsReview ? (
-              <Button
-                fullWidth
-                icon="Copy"
-                size="lg"
-                variant="primary"
-                onPress={() => {
-                  onCopy?.();
-                }}
-              >
+            {props.mode === "add" && needsReview ? (
+              <Button fullWidth icon="Copy" size="lg" variant="primary" onPress={props.onCopy}>
                 {FOOD_REVIEW_BANNER.action}
               </Button>
             ) : (
@@ -187,14 +176,14 @@ export function PortionPicker({
                   >
                     {isEditing ? ENTRY_SCREEN.saveAction : PORTION_PICKER.addAction}
                   </Button>
-                  {isEditing ? (
+                  {props.mode === "edit" ? (
                     <Button
                       disabled={!isOnline}
                       fullWidth
                       icon="Trash2"
                       tone="danger"
                       variant="ghost"
-                      onPress={onDelete}
+                      onPress={props.onDelete}
                     >
                       {ENTRY_SCREEN.deleteAction}
                     </Button>

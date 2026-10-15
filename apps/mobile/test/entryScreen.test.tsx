@@ -2,7 +2,7 @@ import "react-native-gesture-handler/jestSetup";
 
 import { KeyLowProvider, getDiaryDay, keys } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
-import { buildFood } from "@keylow/core/testing";
+import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import {
   act,
@@ -515,6 +515,66 @@ describe("the entry screen", () => {
       });
     });
 
+    describe("when Update to current food data changes how the amount is held", () => {
+      const BANANA_INDEX = 2;
+      const newPortionId = "99999999-9999-4999-8999-999999999999";
+      const liveBanana = { ...loggedFood, name: "Banana", kcal: 200 };
+
+      it("should keep a portion entry usable when the live portion has a new id", async () => {
+        entryBackend.foods = [liveBanana];
+        entryBackend.foodPortions = [
+          buildFoodPortion({
+            id: newPortionId,
+            food_id: FOOD_ID,
+            label: "1 medium",
+            grams: 100,
+            is_default: true,
+          }),
+        ];
+        const user = await renderEntry(BANANA_INDEX);
+        await screen.findByRole("heading", { name: "Banana" });
+
+        await user.press(
+          await screen.findByRole("button", { name: "Update to current food data" }),
+        );
+
+        await waitFor(() => {
+          expect(updates()).toHaveLength(1);
+        });
+        expect(lastUpdate()).toMatchObject({ portion_id: newPortionId, unit: "portion" });
+        expect(
+          await screen.findByRole("radio", { name: "1 medium", checked: true }),
+        ).toBeOnTheScreen();
+        expect(amountField()).toHaveDisplayValue("1");
+        await waitFor(() => {
+          expect(heroKcal("For 1 medium (100 g)").getByText("200")).toBeOnTheScreen();
+        });
+        expect(saveButton()).toBeEnabled();
+      });
+
+      it("should show the grams the entry landed on when its portion is gone, not the old count as grams", async () => {
+        entryBackend.foods = [liveBanana];
+        entryBackend.foodPortions = [];
+        const user = await renderEntry(BANANA_INDEX);
+        await screen.findByRole("heading", { name: "Banana" });
+
+        await user.press(
+          await screen.findByRole("button", { name: "Update to current food data" }),
+        );
+
+        await waitFor(() => {
+          expect(updates()).toHaveLength(1);
+        });
+        expect(lastUpdate()).toMatchObject({ unit: "g", quantity: 100, portion_id: null });
+        expect(await screen.findByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+        expect(amountField()).toHaveDisplayValue("100");
+        await waitFor(() => {
+          expect(heroKcal("For 100 g").getByText("200")).toBeOnTheScreen();
+        });
+        expect(saveButton()).toBeEnabled();
+      });
+    });
+
     describe("Delete", () => {
       it("should delete at once, go back and say Entry deleted with Undo", async () => {
         const user = await renderEntry(CHICKEN_INDEX);
@@ -602,6 +662,74 @@ describe("the entry screen", () => {
       });
       expect(lastUpdate()).toEqual({ logged_at: "2026-10-15T12:10:00.000Z", local_date: DAY });
       expect(routerMock.back).toHaveBeenCalledTimes(1);
+    });
+
+    it("should write the edited values as the whole nutrients and the snapshot, and not the time", async () => {
+      const user = await renderEntry(CRISPS_INDEX);
+      await screen.findByRole("heading", { name: "Edit quick add" });
+
+      await user.clear(screen.getByLabelText("Calories (kcal)"));
+      await user.type(screen.getByLabelText("Calories (kcal)"), "150");
+      await user.clear(screen.getByLabelText("Protein in grams"));
+      await user.clear(screen.getByLabelText("Label (optional)"));
+      await user.type(screen.getByLabelText("Label (optional)"), "Crisps");
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toEqual({
+        nutrients: { kcal: 150, protein_g: null, fat_g: 7, carbs_g: 15, fibre_g: null },
+        snapshot: { v: 1, kind: "quick", label: "Crisps" },
+      });
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+    });
+
+    it("should write a macro set to 0 as 0 and a cleared label as null", async () => {
+      const user = await renderEntry(CRISPS_INDEX);
+      await screen.findByRole("heading", { name: "Edit quick add" });
+
+      await user.clear(screen.getByLabelText("Fat in grams"));
+      await user.type(screen.getByLabelText("Fat in grams"), "0");
+      await user.clear(screen.getByLabelText("Label (optional)"));
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        nutrients: { fat_g: 0 },
+        snapshot: { label: null },
+      });
+    });
+
+    it("should write the values and the time together", async () => {
+      const user = await renderEntry(CRISPS_INDEX);
+      await screen.findByRole("heading", { name: "Edit quick add" });
+
+      await user.clear(screen.getByLabelText("Calories (kcal)"));
+      await user.type(screen.getByLabelText("Calories (kcal)"), "140");
+      await chooseTime(user, "12:45", "13", "10");
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        nutrients: { kcal: 140 },
+        logged_at: "2026-10-15T12:10:00.000Z",
+        local_date: DAY,
+      });
+    });
+
+    it("should keep Save off while the calories are not valid", async () => {
+      const user = await renderEntry(CRISPS_INDEX);
+      await screen.findByRole("heading", { name: "Edit quick add" });
+
+      await user.clear(screen.getByLabelText("Calories (kcal)"));
+
+      expect(saveButton()).toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent("Enter calories.");
     });
 
     it("should write nothing and go back when the time was not changed", async () => {

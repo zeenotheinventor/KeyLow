@@ -46,8 +46,8 @@ const finiteOrNull = (value: number | null): number | null =>
  * The quick add form, as the quick add boards draw it: calories, then protein, carbohydrate and fat in
  * grams, a label, the Time row and a note, with Add at the bottom. The helper under the calories says what
  * the macros add up to, in the review colour when they are more than a quarter off the calories; it is
- * information only. A logged quick add shows its saved values, which cannot be changed (a quick add takes a
- * new time only), with Save and a Delete under it. Add, Save and Delete wait for a connection.
+ * information only. A logged quick add shows its saved values to edit, with Save and a Delete under it. Add,
+ * Save and Delete wait for a connection.
  */
 export function QuickAddForm(props: QuickAddFormProps) {
   const { time, isNow, isOnline, isSaving, hasSaveError, onSubmit, onLeave } = props;
@@ -141,10 +141,9 @@ export function QuickAddForm(props: QuickAddFormProps) {
             <NumericInput
               autoFocus={!isEditing}
               error={kcalError}
-              helper={disagrees ? undefined : macroNote}
+              helper={macroNote}
+              helperTone={disagrees ? "warning" : undefined}
               label={QUICK_ADD_FORM.caloriesLabel}
-              locked={isEditing}
-              missingNote={disagrees ? macroNote : undefined}
               unit="kcal"
               value={values.kcal}
               onBlur={() => {
@@ -161,7 +160,6 @@ export function QuickAddForm(props: QuickAddFormProps) {
                   <NumericInput
                     accessibilityLabel={describeQuickAddMacroField(field.label)}
                     label={field.label}
-                    locked={isEditing}
                     unit="g"
                     value={values[field.name]}
                     onChangeText={(text) => {
@@ -173,7 +171,6 @@ export function QuickAddForm(props: QuickAddFormProps) {
             </View>
             <Input
               label={QUICK_ADD_FORM.labelLabel}
-              locked={isEditing}
               placeholder={QUICK_ADD_FORM.labelPlaceholder}
               value={values.label}
               onChangeText={(text) => {

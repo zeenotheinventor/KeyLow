@@ -4,14 +4,20 @@ import { foodEntryForm } from "./entryForms";
 import { clockTimeOn } from "./loggedAt";
 
 import type { PortionSelection } from "../components/PortionPicker";
-import type { EntryTimeChange, FoodLogEntry, QuickLogEntry } from "@keylow/api-client";
+import type { QuickAddSubmission } from "../components/QuickAddForm";
+import type {
+  EntryTimeChange,
+  FoodLogEntry,
+  QuickEntryValues,
+  QuickLogEntry,
+} from "@keylow/api-client";
 import type { EntryQuantityChange } from "@keylow/core/diary";
 
 /** What a save of a logged food writes: the amount, the time, or both. */
 export type FoodEntryChange = { amount?: EntryQuantityChange; time?: EntryTimeChange };
 
-/** What a save of a logged quick add writes: a new time, the one thing a quick add takes. */
-export type QuickEntryChange = { time: EntryTimeChange };
+/** What a save of a logged quick add writes: its values, its time, or both. */
+export type QuickEntryChange = { quick?: QuickEntryValues; time?: EntryTimeChange };
 
 /**
  * The time to write for a Time row, or nothing while the row still reads the entry's own time. The time is on
@@ -55,13 +61,38 @@ export function foodEntryChange(
   return Object.keys(change).length === 0 ? null : change;
 }
 
-/** What to write for a logged quick add from the time the Time row shows, or null when it is as logged. */
+/**
+ * What to write for a logged quick add from what the form handed over, or null when the calories, the
+ * macros, the label and the time are all as logged. A macro is compared as given: a cleared one (null) is
+ * not a 0 g one. When any value changed, all of them are handed over, since they are written as a whole.
+ */
 export function quickEntryChange(
   entry: QuickLogEntry,
-  time: string,
+  submission: QuickAddSubmission,
   timeZone: string,
 ): QuickEntryChange | null {
-  const change = timeChange(entry, time, timeZone);
+  const { nutrients, snapshot } = entry;
+  const isChanged =
+    submission.kcal !== nutrients.kcal ||
+    submission.protein_g !== nutrients.protein_g ||
+    submission.carbs_g !== nutrients.carbs_g ||
+    submission.fat_g !== nutrients.fat_g ||
+    submission.label !== snapshot.label;
+  const time = timeChange(entry, submission.time, timeZone);
+  const change: QuickEntryChange = {
+    ...(isChanged
+      ? {
+          quick: {
+            kcal: submission.kcal,
+            protein_g: submission.protein_g,
+            carbs_g: submission.carbs_g,
+            fat_g: submission.fat_g,
+            label: submission.label,
+          },
+        }
+      : {}),
+    ...(time === undefined ? {} : { time }),
+  };
 
-  return change === undefined ? null : { time: change };
+  return Object.keys(change).length === 0 ? null : change;
 }

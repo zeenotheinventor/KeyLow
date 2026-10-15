@@ -12,7 +12,13 @@ export {
   softDeleteLogEntry,
   updateLogEntry,
 } from "./diaryWrites";
-export type { EntryTimeChange, EntryUpdate, LogFoodInput, LogQuickEntryInput } from "./diaryWrites";
+export type {
+  EntryTimeChange,
+  EntryUpdate,
+  LogFoodInput,
+  LogQuickEntryInput,
+  QuickEntryValues,
+} from "./diaryWrites";
 export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,

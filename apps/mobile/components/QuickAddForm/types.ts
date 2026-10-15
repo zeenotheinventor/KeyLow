@@ -43,10 +43,7 @@ type QuickAddFormCreateProps = QuickAddFormBaseProps & {
   mode: "create";
 };
 
-/**
- * A logged quick add: its saved values, which cannot be changed (a quick add takes a new time only), and Save
- * with a Delete under it.
- */
+/** A logged quick add: its saved values to edit, and Save with a Delete under it. */
 type QuickAddFormEditProps = QuickAddFormBaseProps & {
   mode: "edit";
   initialValues: QuickAddFormValues;

@@ -260,6 +260,42 @@ describe("Input", () => {
     });
   });
 
+  describe("a warning helper", () => {
+    it("should draw the helper with a warning icon, and announce it with the field", async () => {
+      await renderInput({ helper: "Macros add up to 311 kcal", helperTone: "warning" });
+
+      expect(screen.getByText("Macros add up to 311 kcal")).toBeOnTheScreen();
+      expect(drawings()).toHaveLength(1);
+      expect(screen.getByLabelText("Name")).toHaveProp(
+        "accessibilityHint",
+        "Macros add up to 311 kcal",
+      );
+    });
+
+    it("should draw a plain helper with no icon", async () => {
+      await renderInput({ helper: "Macros are optional" });
+
+      expect(drawings()).toHaveLength(0);
+    });
+
+    it("should give way to an error, which is not a warning", async () => {
+      await renderInput({
+        helper: "Macros add up to 311 kcal",
+        helperTone: "warning",
+        error: "Enter calories.",
+      });
+
+      expect(screen.queryByText("Macros add up to 311 kcal")).not.toBeOnTheScreen();
+      expect(screen.getByText("Enter calories.")).toBeOnTheScreen();
+    });
+
+    it("should draw nothing when there is no helper to warn with", async () => {
+      await renderInput({ helperTone: "warning" });
+
+      expect(drawings()).toHaveLength(0);
+    });
+  });
+
   describe("the missing note", () => {
     it("should show a note that the value is not given, with a warning icon", async () => {
       await renderInput({ missingNote: "Not given by the source" });
@@ -510,6 +546,18 @@ describe("Input", () => {
       });
       expect(drawings()[0]).toHaveProp("stroke", themes[scheme].warning);
       expect(drawings()[0]).toHaveProp("width", 14);
+    });
+
+    it("should draw a warning helper's triangle at 16 in warning and write the words in the warning ink", async () => {
+      await renderInput({ helper: "Macros add up to 311 kcal", helperTone: "warning" }, scheme);
+
+      expect(await screen.findByText("Macros add up to 311 kcal")).toHaveStyle({
+        color: resolvedColor(scheme, "warning-ink"),
+        fontSize: 12,
+        lineHeight: 16,
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes[scheme].warning);
+      expect(drawings()[0]).toHaveProp("width", 16);
     });
 
     it("should stack its label, field and message 4 points apart", async () => {

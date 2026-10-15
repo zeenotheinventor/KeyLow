@@ -36,21 +36,6 @@ describe("NumericInput", () => {
     registerAppStyles(kitStyles);
   });
 
-  describe("locked", () => {
-    it("should show its value and its unit and not take typing", async () => {
-      await renderNumericInput({ value: "130", locked: true });
-
-      expect(screen.getByLabelText("Energy (kcal)")).toHaveDisplayValue("130");
-      expect(screen.getByLabelText("Energy (kcal)")).toHaveProp("editable", false);
-    });
-
-    it("should set no disabled state of its own, which on Android would make it editable again", async () => {
-      await renderNumericInput({ value: "130", locked: true });
-
-      expect(screen.getByLabelText("Energy (kcal)").props["aria-disabled"]).toBeUndefined();
-    });
-  });
-
   describe("the field", () => {
     it("should ask for the decimal keyboard", async () => {
       await renderNumericInput();

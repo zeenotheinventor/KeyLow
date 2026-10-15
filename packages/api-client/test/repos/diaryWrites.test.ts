@@ -306,11 +306,129 @@ describe("updateLogEntry", () => {
       answerEntryWrites([quickEntryRow()]);
 
       await expect(
-        // @ts-expect-error A quick add takes a time only; the run time guard is for callers past the types.
+        // @ts-expect-error A quick add takes its values or a time only; the run time guard is for callers past the types.
         updateLogEntry(createTestClient(), {
           entry: quickEntryRow(),
           amount: { quantity: 100, unit: "g" },
         }),
+      ).rejects.toThrow(RangeError);
+      expect(recorded).toEqual([]);
+    });
+  });
+
+  describe("changing the values of a quick add", () => {
+    const crisps = quickEntryRow({
+      snapshot: { v: 1, kind: "quick", label: "Meal deal crisps" },
+      nutrients: { kcal: 130, protein_g: 2, fat_g: 7, carbs_g: 15, fibre_g: null },
+      kcal: 130,
+    });
+
+    it("should write the whole nutrients object and the snapshot, and nothing else", async () => {
+      answerEntryWrites([crisps]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: 150, protein_g: 3, carbs_g: 16, fat_g: 8, label: "Crisps" },
+      });
+
+      expect(bodyOfUpdate()).toEqual({
+        nutrients: { kcal: 150, protein_g: 3, fat_g: 8, carbs_g: 16, fibre_g: null },
+        snapshot: { v: 1, kind: "quick", label: "Crisps" },
+      });
+    });
+
+    it("should never write the generated or fixed columns", async () => {
+      answerEntryWrites([crisps]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: 150, protein_g: 3, carbs_g: 16, fat_g: 8, label: "Crisps" },
+      });
+
+      for (const column of ["kcal", "item_type", "food_id", "recipe_id", "quantity", "unit"]) {
+        expect(bodyOfUpdate()).not.toHaveProperty(column);
+      }
+    });
+
+    it("should store a macro that was cleared as null, never as 0", async () => {
+      answerEntryWrites([crisps]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: 130, protein_g: null, carbs_g: null, fat_g: 0, label: "Crisps" },
+      });
+
+      expect(bodyOfUpdate()).toMatchObject({
+        nutrients: { kcal: 130, protein_g: null, carbs_g: null, fat_g: 0, fibre_g: null },
+      });
+    });
+
+    it("should store a blank label as null and trim a label", async () => {
+      answerEntryWrites([crisps]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: 130, protein_g: null, carbs_g: null, fat_g: null, label: "   " },
+      });
+      await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: 130, protein_g: null, carbs_g: null, fat_g: null, label: " Crisps " },
+      });
+
+      const [blank, trimmed] = writesTo("food_log_entries").map((write) =>
+        z.record(z.string(), z.unknown()).parse(write.body),
+      );
+      expect(blank).toMatchObject({ snapshot: { label: null } });
+      expect(trimmed).toMatchObject({ snapshot: { label: "Crisps" } });
+    });
+
+    it("should write the values and the time together in one request", async () => {
+      answerEntryWrites([crisps]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: 150, protein_g: null, carbs_g: null, fat_g: null, label: null },
+        time: { loggedAt: "2026-10-15T18:00:00.000Z", timeZone: "UTC" },
+      });
+
+      expect(writesTo("food_log_entries")).toHaveLength(1);
+      expect(bodyOfUpdate()).toMatchObject({
+        logged_at: "2026-10-15T18:00:00.000Z",
+        local_date: "2026-10-15",
+        nutrients: { kcal: 150 },
+      });
+    });
+
+    it("should throw without asking for values that are not valid", async () => {
+      answerEntryWrites([crisps]);
+
+      await expect(
+        updateLogEntry(createTestClient(), {
+          entry: crisps,
+          quick: { kcal: -1, protein_g: null, carbs_g: null, fat_g: null, label: null },
+        }),
+      ).rejects.toThrow(RangeError);
+      expect(recorded).toEqual([]);
+    });
+
+    it("should leave the values out of the error", async () => {
+      answerEntryWrites([crisps]);
+
+      const failure = await updateLogEntry(createTestClient(), {
+        entry: crisps,
+        quick: { kcal: -12345, protein_g: null, carbs_g: null, fat_g: null, label: null },
+      }).catch((error: unknown) => error);
+
+      expect(failure instanceof Error ? failure.message : "").not.toContain("12345");
+    });
+
+    it("should throw without asking for a food, which has no quick values", async () => {
+      answerEntryWrites([original]);
+      const values = { kcal: 150, protein_g: null, carbs_g: null, fat_g: null, label: null };
+
+      await expect(
+        // @ts-expect-error A food takes an amount, the current food data or a time; the run time guard is for callers past the types.
+        updateLogEntry(createTestClient(), { entry: original, quick: values }),
       ).rejects.toThrow(RangeError);
       expect(recorded).toEqual([]);
     });
@@ -481,7 +599,7 @@ describe("updateLogEntry", () => {
       answerEntryWrites([quickEntryRow()]);
 
       await expect(
-        // @ts-expect-error A quick add takes a time only; the run time guard is for callers past the types.
+        // @ts-expect-error A quick add takes its values or a time only; the run time guard is for callers past the types.
         updateLogEntry(createTestClient(), { entry: quickEntryRow(), useCurrentFoodData: true }),
       ).rejects.toThrow(RangeError);
       expect(recorded).toEqual([]);

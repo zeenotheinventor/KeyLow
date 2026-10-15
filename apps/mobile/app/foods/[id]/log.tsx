@@ -122,6 +122,7 @@ export default function PortionPickerRoute() {
       hasSaveError={hasSaveError}
       isNow={logContext?.time === undefined}
       isOnline={isOnline}
+      mode="add"
       isSaving={isSaving}
       initialAmount={lastAmount === undefined ? undefined : amountForPicker(lastAmount)}
       note={
