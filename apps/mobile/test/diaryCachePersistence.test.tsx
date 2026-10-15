@@ -106,30 +106,29 @@ async function waitForStoredCacheOfTheDiary() {
 // The library saves at most once a second, and a save asked for while one is waiting runs when its turn comes.
 const SAVE_INTERVAL_MS = 1000;
 
+// Lets every save that is waiting for its turn run. The clock is fake in these tests, so this is no sleep.
+async function letWaitingSavesRun() {
+  await act(async () => {
+    await jest.advanceTimersByTimeAsync(SAVE_INTERVAL_MS * 2);
+  });
+}
+
 /**
  * Looks at today's diary with a connection, until the cache is stored, then closes the app.
  *
  * A save can still be waiting for its turn when the app closes, and it would land later and overwrite what a
- * test then does to the stored cache. So a last change is made to make sure one is waiting, and the clock is
- * fake while the app runs, so that the wait can be played out without a real sleep.
+ * test then does to the stored cache. So a last change is made to make sure one is waiting, and it is let run.
  */
 async function storeTheDiaryAndCloseTheApp() {
-  jest.useFakeTimers();
-  try {
-    await renderDiary();
-    await screen.findByRole("button", { name: /^Porridge oats/ });
-    await waitForStoredCacheOfTheDiary();
-    await act(() => {
-      void queryClient.invalidateQueries({ queryKey: keys.diary.all, refetchType: "none" });
-    });
-    await cleanup();
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(SAVE_INTERVAL_MS * 2);
-    });
-    queryClient.clear();
-  } finally {
-    jest.useRealTimers();
-  }
+  await renderDiary();
+  await screen.findByRole("button", { name: /^Porridge oats/ });
+  await waitForStoredCacheOfTheDiary();
+  await act(() => {
+    void queryClient.invalidateQueries({ queryKey: keys.diary.all, refetchType: "none" });
+  });
+  await cleanup();
+  await letWaitingSavesRun();
+  queryClient.clear();
 }
 
 async function changeStoredCache(change: (stored: PersistedClient) => PersistedClient) {
@@ -157,12 +156,18 @@ const porridge = () => screen.queryByRole("button", { name: /^Porridge oats/ });
 
 describe("the persisted diary cache", () => {
   let kitStyles: string;
+  let isClockFake = true;
 
   beforeAll(async () => {
     kitStyles = await compileKitStyles("", ["components/DiaryScreen"]);
   });
 
+  // The library saves at most once a second, and the save of a test that ends while another waits for its turn
+  // would land in the next test and write over what that test stored. So the clock is fake, and each test lets the
+  // saves that are waiting run before it ends.
   beforeEach(async () => {
+    isClockFake = true;
+    jest.useFakeTimers();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -177,7 +182,11 @@ describe("the persisted diary cache", () => {
     await act(() => {
       onlineManager.setOnline(true);
     });
+    if (isClockFake) {
+      await letWaitingSavesRun();
+    }
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("a cold start with a stored cache", () => {
@@ -327,6 +336,9 @@ describe("the persisted diary cache", () => {
 
   describe("signing out", () => {
     it("should empty the stored cache and the one in memory, and leave them empty", async () => {
+      // This test waits out the real save interval itself, so it needs the real clock and leaves no save waiting.
+      isClockFake = false;
+      jest.useRealTimers();
       await renderDiary();
       await screen.findByRole("button", { name: /^Porridge oats/ });
       await waitForStoredCacheOfTheDiary();
@@ -341,9 +353,7 @@ describe("the persisted diary cache", () => {
       });
       expect(queryClient.getQueryData(keys.diary.day(TODAY))).toBeUndefined();
       // A save that was already waiting for its turn must not bring the cache back.
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, SLOW_CONNECTION_MS));
-      });
+      await new Promise((resolve) => setTimeout(resolve, SLOW_CONNECTION_MS));
       expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
     });
 
