@@ -43,16 +43,40 @@ function OpenToast({
   duration = defaultDuration,
   position = "absolute",
   announce = true,
+  focusAction,
 }: Omit<ToastProps, "open">) {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const onCloseRef = useRef(onClose);
+  const actionRef = useRef<HTMLButtonElement>(null);
+  // A ref as well as the state: when the toast goes, the cleanup below must know whether focus was on it.
+  const hasFocusRef = useRef(false);
+  const returnToRef = useRef(focusAction?.returnTo ?? null);
   const canClose = onClose !== undefined;
   const paused = hovered || focused;
+  const shouldFocusAction = focusAction !== undefined && actionLabel !== undefined;
 
   useEffect(() => {
     onCloseRef.current = onClose;
+    returnToRef.current = focusAction?.returnTo ?? null;
   });
+
+  useEffect(() => {
+    if (shouldFocusAction) {
+      actionRef.current?.focus();
+    }
+  }, [shouldFocusAction]);
+
+  // Focus goes back only if it is still on the toast. A person who has tabbed or clicked away is left there.
+  useEffect(
+    () => () => {
+      const target = returnToRef.current;
+      if (hasFocusRef.current && target?.isConnected === true) {
+        target.focus();
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!canClose || paused) return;
@@ -77,10 +101,17 @@ function OpenToast({
         if (event.pointerType === "mouse") setHovered(false);
       }}
       onFocus={() => {
+        hasFocusRef.current = true;
         setFocused(true);
       }}
       onBlur={() => {
+        hasFocusRef.current = false;
         setFocused(false);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          onClose?.();
+        }
       }}
     >
       {Icon !== undefined && (
@@ -90,7 +121,7 @@ function OpenToast({
       )}
       <span className="min-w-0 flex-1 text-[14px] leading-5">{message}</span>
       {actionLabel !== undefined && (
-        <button type="button" onClick={onAction} className={actionButton}>
+        <button type="button" ref={actionRef} onClick={onAction} className={actionButton}>
           {actionLabel}
         </button>
       )}
@@ -102,8 +133,10 @@ function OpenToast({
  * Confirms a quick action and offers one action, such as Undo. It closes itself after the duration
  * (5000 ms by default), but waits while a mouse is over it or the action holds focus.
  *
- * The action is a shortcut. A screen must not make it the only way to recover from an action,
- * because a keyboard user may not reach the toast within the wait. Focus is never moved to it.
+ * The action is a shortcut, and the toast sits after the page, so a keyboard user could not reach it
+ * within the wait. After an action the person made with the keyboard, a screen passes `focusAction`:
+ * focus moves to the action, the wait holds while focus is there, Escape closes the toast, and focus
+ * goes back to `returnTo`. Without `focusAction` focus is never moved to the toast.
  */
 export function Toast({ open = true, ...rest }: ToastProps) {
   return open ? <OpenToast {...rest} /> : null;

@@ -27,3 +27,5 @@ export { nextWeek, previousWeek, weekOf, weekStripDays } from "./weekStrip";
 export type { WeekStripDay, WeekStripInput } from "./weekStrip";
 export type { EnteredNumber, MacroField, ValidationResult } from "./validation";
 export { enteredNumber, fieldText } from "./enteredNumber";
+export { weekAverage } from "./weekAverage";
+export type { WeekAverageDay, WeekDayTotals } from "./weekAverage";

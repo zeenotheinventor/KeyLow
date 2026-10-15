@@ -13,14 +13,15 @@ const VIEW_OPTIONS = [
 
 /**
  * The top of the diary, as the board draws it: the title (Today, or the day) with the calendar button
- * that opens the date picker, and the Day | Week control. The week view has a day stepper of its own, so
- * there the title and the calendar are left out and the control stays.
+ * that opens the date picker, and the Day | Week control. The week view draws the day stepper it is given
+ * in their place, and the control stays.
  */
 export function DayHeader({
   title,
   selectedDate,
   today,
   view,
+  weekStepper,
   onSelectDate,
   onViewChange,
 }: DayHeaderProps) {
@@ -32,6 +33,7 @@ export function DayHeader({
           <ChooseDate selectedDate={selectedDate} today={today} onSelectDate={onSelectDate} />
         </div>
       )}
+      {view === "week" && weekStepper}
       <SegmentedControl
         label={DIARY_VIEW.label}
         options={VIEW_OPTIONS}

@@ -1,41 +1,13 @@
-import { useCompleteDays } from "@keylow/api-client";
 import { DAY_STEPPER } from "@keylow/core/copy";
-import { monthOf } from "@keylow/core/dates";
 import { iconStroke } from "@keylow/tokens";
 import { Calendar } from "lucide-react";
 import { useRef, useState } from "react";
 
+import { CompleteDaysPicker } from "../CompleteDaysPicker";
+
 import type { ChooseDateProps } from "./types";
 
 import { Button } from "@/components/ui/Button";
-import { DatePicker } from "@/components/ui/DatePicker";
-
-function PickerWithCompleteDays({
-  selectedDate,
-  today,
-  opener,
-  onSelectDate,
-  onClose,
-}: ChooseDateProps & {
-  opener: React.RefObject<HTMLElement | null>;
-  onClose: () => void;
-}) {
-  const [month, setMonth] = useState(monthOf(selectedDate));
-  const completeDays = useCompleteDays(month);
-
-  return (
-    <DatePicker
-      className="absolute left-0 top-full z-20 mt-1"
-      selectedDate={selectedDate}
-      today={today}
-      completeDays={completeDays.data ?? []}
-      opener={opener}
-      onMonthChange={setMonth}
-      onSelectDate={onSelectDate}
-      onClose={onClose}
-    />
-  );
-}
 
 /**
  * The calendar button of the diary's header and the date picker it opens. The picker is drawn under the
@@ -63,7 +35,8 @@ export function ChooseDate({ selectedDate, today, onSelectDate }: ChooseDateProp
         <Calendar aria-hidden strokeWidth={iconStroke} />
       </Button>
       {isOpen && (
-        <PickerWithCompleteDays
+        <CompleteDaysPicker
+          className="absolute left-0 top-full z-20 mt-1"
           selectedDate={selectedDate}
           today={today}
           opener={opener}

@@ -25,6 +25,8 @@ export function DayStepper({
   timeZone = deviceTimeZone(),
   onChange,
   onPickDate,
+  calendarButtonRef,
+  isPickerOpen,
   className,
 }: DayStepperProps) {
   // Stepping back wipes the label in from the other side.
@@ -76,7 +78,15 @@ export function DayStepper({
       >
         <ChevronRight aria-hidden strokeWidth={iconStroke} />
       </Button>
-      <Button variant="secondary" iconOnly aria-label={DAY_STEPPER.chooseDate} onClick={onPickDate}>
+      <Button
+        ref={calendarButtonRef}
+        variant="secondary"
+        iconOnly
+        aria-label={DAY_STEPPER.chooseDate}
+        aria-haspopup={isPickerOpen === undefined ? undefined : "dialog"}
+        aria-expanded={isPickerOpen}
+        onClick={onPickDate}
+      >
         <Calendar aria-hidden strokeWidth={iconStroke} />
       </Button>
     </div>
