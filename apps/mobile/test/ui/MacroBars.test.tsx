@@ -17,13 +17,6 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
 
-// Skia draws nothing in Jest. The warning cap's stripes are Skia, so this stands in for it.
-jest.mock("@shopify/react-native-skia", () => ({
-  __esModule: true,
-  Canvas: ({ children }: { children: unknown }) => children,
-  Path: () => null,
-}));
-
 setUpTests();
 
 const under: MacroBarsProps = {
@@ -76,6 +69,16 @@ const fillOf = (row: string) => {
 function fillPercent(row: string): number {
   const { width }: { width?: unknown } = getAnimatedStyle(fillOf(row));
   return typeof width === "string" ? parseFloat(width) : Number.NaN;
+}
+
+// The ruling's ring, worked out here from the token itself: 55 per cent of each channel plus 45 per
+// cent of white, so the expected colour is never copied from the code under test.
+function ringColourOf(scheme: ThemeScheme, macro: "protein" | "carbs" | "fat"): string {
+  const [red, green, blue] = [1, 3, 5].map((start) => {
+    const channel = parseInt(themes[scheme][macro].slice(start, start + 2), 16);
+    return Math.round(channel * 0.55 + 255 * 0.45);
+  });
+  return `rgb(${red}, ${green}, ${blue})`;
 }
 
 const schemes: ThemeScheme[] = ["dark", "light"];
@@ -175,11 +178,41 @@ describe("MacroBars", () => {
       });
     });
 
-    it("should set the delta in the warning ink", async () => {
+    it("should print the delta in the primary text colour, never the warning ink", async () => {
       await renderBars(over, scheme);
-      const ink = resolvedColor(scheme, "warning-ink");
 
-      expect(screen.getByText("+11 g")).toHaveStyle({ color: ink });
+      expect(screen.getByText("+11 g")).toHaveStyle({
+        color: resolvedColor(scheme, "text-primary"),
+      });
+      expect(screen.getByText("+37 g")).toHaveStyle({
+        color: resolvedColor(scheme, "text-primary"),
+      });
+    });
+
+    it.each(["carbs", "fat"] as const)(
+      "should draw the %s outline as its colour mixed with 45 per cent white, outside a 1 point gap in the card surface colour",
+      async (macro) => {
+        await renderBars(over, scheme);
+
+        expect(screen.getByTestId(`${macro}-outline-colour`, hidden)).toHaveStyle({
+          backgroundColor: ringColourOf(scheme, macro),
+          inset: -2.5,
+        });
+        expect(screen.getByTestId(`${macro}-outline-gap`, hidden)).toHaveStyle({
+          backgroundColor: resolvedColor(scheme, "surface"),
+          inset: -1,
+        });
+      },
+    );
+
+    it("should draw no warning or danger colour on a bar that is over", async () => {
+      const { toJSON } = await renderBars(over, scheme);
+      const drawn = JSON.stringify(toJSON()).toLowerCase();
+
+      for (const name of ["warning", "warning-muted", "danger", "danger-muted"] as const) {
+        expect(drawn).not.toContain(themes[scheme][name].toLowerCase());
+      }
+      expect(drawn).not.toMatch(/warning|danger/);
     });
 
     it("should set the grams eaten in the primary text colour, over or not", async () => {
@@ -205,25 +238,29 @@ describe("MacroBars", () => {
       expect(getAnimatedStyle(fillOf("carbs"))).toMatchObject({ width: "100%" });
     });
 
-    it("should draw the warning cap only on a bar that is over the target", async () => {
+    it("should draw the outline only on a bar that is over the target", async () => {
       await renderBars(over);
       await advance(1500);
 
-      expect(screen.getAllByTestId("carbs-cap", hidden)).toHaveLength(1);
-      expect(screen.getAllByTestId("fat-cap", hidden)).toHaveLength(1);
-      expect(screen.queryByTestId("protein-cap", hidden)).not.toBeOnTheScreen();
+      expect(screen.getAllByTestId("carbs-outline", hidden)).toHaveLength(1);
+      expect(screen.getAllByTestId("fat-outline", hidden)).toHaveLength(1);
+      expect(screen.queryByTestId("protein-outline", hidden)).not.toBeOnTheScreen();
     });
 
-    it("should size the cap by the overflow, up to 35 per cent of the bar", async () => {
+    it("should draw no outline exactly at the target", async () => {
+      await renderBars({ ...under, protein: { eaten: 160, target: 160 } });
+      await advance(1500);
+
+      expect(getAnimatedStyle(fillOf("protein"))).toMatchObject({ width: "100%" });
+      expect(screen.queryByTestId("protein-outline", hidden)).not.toBeOnTheScreen();
+    });
+
+    it("should fill an over bar to its own width however far over it is, with no overflow segment", async () => {
       await renderBars({ ...over, carbs: { eaten: 440, target: 220 } });
       await advance(1500);
 
-      expect(getAnimatedStyle(screen.getByTestId("carbs-cap", hidden))).toMatchObject({
-        width: "35%",
-      });
-      expect(getAnimatedStyle(screen.getByTestId("fat-cap", hidden))).toMatchObject({
-        width: `${(81 / 70 - 1) * 100}%`,
-      });
+      expect(getAnimatedStyle(fillOf("carbs"))).toMatchObject({ width: "100%" });
+      expect(screen.queryByTestId("carbs-cap", hidden)).not.toBeOnTheScreen();
     });
 
     it("should leave the bar empty when there is no target", async () => {
@@ -231,7 +268,7 @@ describe("MacroBars", () => {
       await advance(1500);
 
       expect(getAnimatedStyle(fillOf("protein"))).toMatchObject({ width: "0%" });
-      expect(screen.queryByTestId("protein-cap", hidden)).not.toBeOnTheScreen();
+      expect(screen.queryByTestId("protein-outline", hidden)).not.toBeOnTheScreen();
     });
   });
 

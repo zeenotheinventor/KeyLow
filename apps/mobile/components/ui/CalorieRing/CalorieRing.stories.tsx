@@ -26,8 +26,13 @@ export const UnderTarget: Story = {};
 
 export const AtTarget: Story = { args: { eaten: 2200 } };
 
-// Past the target the ring keeps filling in warning on top, and the numeral reads the amount over.
+// Past the target the ring is full and gains two outlines of the calories colour mixed with white, one outside
+// the stroke and one inside it. The numeral reads the amount over, in the primary ink: no warning colour.
 export const OverTarget: Story = { args: { eaten: 2412 } };
+
+// A target of zero means none is set: the numeral is the calories eaten, the caption says eaten, and the
+// ring is empty with no eaten or target lines.
+export const NoTarget: Story = { args: { eaten: 1039, target: 0 } };
 
 // Under 180 the numeral is the heading size and the eaten and target lines are left off.
 export const Compact: Story = { args: { size: 160 } };

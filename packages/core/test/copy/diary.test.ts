@@ -24,6 +24,7 @@ import {
   describeAddedFood,
   describeCopiedEntriesToToday,
   describeCopiedFromYesterday,
+  describeDateInWords,
   describeEntryCaption,
   describeMacroTargetField,
   describeHourChip,
@@ -439,5 +440,15 @@ describe("the Targets screen's copy", () => {
   it("should ask for calories when they are blank, and for a range when they are out of it", () => {
     expect(DIARY_PROBLEMS.targetKcalRequired).toBe("Enter a calorie target.");
     expect(DIARY_PROBLEMS.targetKcal).toBe("Enter a target between 800 and 6,000 kcal.");
+  });
+});
+
+describe("describeDateInWords", () => {
+  it("should write the weekday, the day and the month, as the dashboard's eyebrow does", () => {
+    expect(describeDateInWords("2026-10-15")).toBe("Thursday 15 October");
+  });
+
+  it("should write the day without a leading zero", () => {
+    expect(describeDateInWords("2026-03-01")).toBe("Sunday 1 March");
   });
 });

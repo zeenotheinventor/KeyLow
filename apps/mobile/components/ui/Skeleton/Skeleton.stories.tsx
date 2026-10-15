@@ -35,3 +35,6 @@ export const Diary: Story = { args: { variant: "diary" } };
 
 // The same without the week, for a day that loads under a week strip that is already on screen.
 export const DiaryDay: Story = { args: { variant: "diaryDay" } };
+
+// The dashboard's nutrition card while it loads: the title, a 200 point ring, three bar rows and a caption.
+export const NutritionCard: Story = { args: { variant: "nutritionCard" } };
