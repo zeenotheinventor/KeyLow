@@ -7,6 +7,7 @@ import {
   FOOD_NOT_LOADED,
   FOOD_NUTRIENT_LABELS,
   describeMissingValues,
+  describeMissingValuesBeforeLogging,
   describeNutritionHeading,
   nutrientRows,
 } from "../../src/copy";
@@ -97,6 +98,32 @@ describe("describeMissingValues", () => {
 
     expect(describeMissingValues([], undefined)).toBe(general);
     expect(describeMissingValues(["salt_g"], undefined)).toBe(general);
+  });
+});
+
+describe("describeMissingValuesBeforeLogging", () => {
+  it("should say the food has to be copied and the gap filled before it is logged", () => {
+    expect(describeMissingValuesBeforeLogging(["carbs_g"], undefined)).toBe(
+      "Carbohydrate is not given for this food. Copy it to your foods and fill the gap before you log it.",
+    );
+  });
+
+  it("should name several in the order of the nutrition table and say gaps", () => {
+    expect(describeMissingValuesBeforeLogging(["carbs_g", "kcal"], undefined)).toBe(
+      "Energy and carbohydrate are not given for this food. Copy it to your foods and fill the gaps before you log it.",
+    );
+  });
+
+  it("should say carbohydrate still includes fibre when only fibre is missing from a US label", () => {
+    expect(describeMissingValuesBeforeLogging(["fibre_g"], "us_total")).toBe(
+      "Fibre is not given for this food, so carbohydrate still includes it. Copy it to your foods and fill the gap before you log it.",
+    );
+  });
+
+  it("should fall back to a general sentence when no known nutrient is named", () => {
+    expect(describeMissingValuesBeforeLogging([], undefined)).toBe(
+      "Some values are not given for this food. Copy it to your foods and fill the gaps before you log it.",
+    );
   });
 });
 

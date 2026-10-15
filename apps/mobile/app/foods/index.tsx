@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { FoodSearch } from "../../components/FoodSearch";
+import { readLogContext, withLogContext } from "../../lib/navigation";
 
 /**
  * The root of the food search sheet. `/foods?scope=own` is the same sheet titled "Your foods", which
@@ -9,7 +10,12 @@ import { FoodSearch } from "../../components/FoodSearch";
  */
 export default function FoodSearchRoute() {
   const router = useRouter();
-  const { scope } = useLocalSearchParams<{ scope?: string }>();
+  const { scope, day, time } = useLocalSearchParams<{
+    scope?: string;
+    day?: string;
+    time?: string;
+  }>();
+  const logContext = readLogContext({ day, time });
 
   return (
     <FoodSearch
@@ -28,7 +34,8 @@ export default function FoodSearchRoute() {
         router.push(`/foods/${foodId}`);
       }}
       onScanBarcode={() => {
-        router.push("/foods/scan");
+        // While food is being logged the scanner carries the day and the time on to the portion picker.
+        router.push(withLogContext("/foods/scan", logContext));
       }}
     />
   );

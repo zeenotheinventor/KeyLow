@@ -12,6 +12,12 @@ export const samples: Record<string, () => string[]> = {
     copy.describeMissingValues(["kcal", "carbs_g"], undefined),
     copy.describeMissingValues(["fibre_g"], "us_total"),
   ],
+  describeMissingValuesBeforeLogging: () => [
+    copy.describeMissingValuesBeforeLogging([], undefined),
+    copy.describeMissingValuesBeforeLogging(["carbs_g"], undefined),
+    copy.describeMissingValuesBeforeLogging(["kcal", "carbs_g"], undefined),
+    copy.describeMissingValuesBeforeLogging(["fibre_g"], "us_total"),
+  ],
   nutrientRows: () =>
     [
       { kcal: 148, protein_g: 31.2, carbs_g: 0, fat_g: 7.5, fibre_g: 12 },

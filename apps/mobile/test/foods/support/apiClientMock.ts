@@ -2,7 +2,7 @@ import { TERMS_VERSION } from "@keylow/core/copy";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
 import type * as ApiClient from "@keylow/api-client";
-import type { CreatedFood, FoodWithPortionsState } from "@keylow/api-client";
+import type { CreatedFood, FoodWithPortionsState, LogFoodInput } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 type QueryState<Data> = { data: Data | undefined; isPending: boolean; isError: boolean };
@@ -48,6 +48,8 @@ export const portionFixtures: FoodPortion[] = [
 
 export const mockCreateFood = jest.fn<Promise<CreatedFood>, [unknown]>();
 export const mockUpdateFood = jest.fn<Promise<Food>, [{ id: string; input: unknown }]>();
+// What logging a food resolves to is not read by the screens, so a test only looks at what it was called with.
+export const mockLogFood = jest.fn<Promise<unknown>, [LogFoodInput]>();
 export const mockUseFood = jest.fn<QueryState<Food | null>, [string | undefined]>();
 export const mockUseFoodPortions = jest.fn<QueryState<FoodPortion[]>, [string | undefined]>();
 export const mockUseFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
@@ -83,6 +85,8 @@ function foodWithPortionsState(): FoodWithPortionsState {
 export function resetApiClientMock(): void {
   mockCreateFood.mockReset();
   mockUpdateFood.mockReset();
+  mockLogFood.mockReset();
+  mockLogFood.mockResolvedValue({});
   mockCreateFood.mockResolvedValue({ food: foodFixture, portions: [] });
   mockUpdateFood.mockResolvedValue(foodFixture);
 
@@ -102,6 +106,7 @@ export const mockApiClient = {
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
+  useLogFood: () => ({ mutateAsync: mockLogFood }),
   useFood: mockUseFood,
   useFoodPortions: mockUseFoodPortions,
   useFoodWithPortions: mockUseFoodWithPortions,
