@@ -38,7 +38,15 @@ function describeBanner(
   isEditing: boolean,
 ): BannerProps | null {
   if (errors !== null) {
-    return { tone: "error", role: "alert", children: FOOD_FORM.validationSummary };
+    return {
+      tone: "error",
+      role: "alert",
+      children: errors.bannerSentences.map((sentence) => (
+        <span key={sentence} className="block">
+          {sentence}
+        </span>
+      )),
+    };
   }
   if (failure === null) {
     return null;

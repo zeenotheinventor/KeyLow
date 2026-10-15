@@ -252,6 +252,43 @@ describe("FoodForm", () => {
       ).toBe(true);
     });
 
+    describe("a problem no field can show", () => {
+      const bothDefault = [
+        makePortion({ label: "Bowl", grams: 250, is_default: true, position: 0 }),
+        makePortion({ label: "Cup", grams: 150, is_default: true, position: 1 }),
+      ];
+      const alerts = () => screen.getAllByRole("alert").map((alert) => alert.textContent);
+
+      it("should say at most one portion can be the default and not save", () => {
+        renderForm({ existing: { food: makeFood(), portions: bothDefault } });
+
+        save("Save changes");
+
+        expect(updateFood).not.toHaveBeenCalled();
+        expect(alerts()).toEqual(["At most one portion can be the default"]);
+      });
+
+      it("should say it alongside the summary when a field failed too", () => {
+        renderForm({ existing: { food: makeFood(), portions: bothDefault } });
+        typeInto("Name", "");
+
+        save("Save changes");
+
+        expect(alerts()).toContain(
+          "Check the fields marked below and try again.At most one portion can be the default",
+        );
+      });
+
+      it("should give the summary for a problem with a value the form does not show", () => {
+        renderForm({ existing: { food: makeFood({ density_g_per_ml: -1 }), portions: [] } });
+
+        save("Save changes");
+
+        expect(updateFood).not.toHaveBeenCalled();
+        expect(alerts()).toEqual(["Check the fields marked below and try again."]);
+      });
+    });
+
     it("should treat a blank required number as a required-field error rather than zero", () => {
       renderForm();
       fillRequiredFields();

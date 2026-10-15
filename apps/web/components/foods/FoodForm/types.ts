@@ -34,6 +34,8 @@ export type FormErrors = {
   nutrients: Partial<Record<FoodFormNutrient, string>>;
   /** By the portion's position in the list, from 0. */
   portions: Partial<Record<number, PortionError>>;
+  /** The sentences for the banner above the actions, one line each. Never empty when a field failed. */
+  bannerSentences: string[];
 };
 
 export type FormIssue = CustomFoodValidationError["issues"][number];
