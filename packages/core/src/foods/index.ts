@@ -8,7 +8,7 @@ export type {
   CustomFoodProblem,
   FormNutrient,
 } from "./customFoodProblems";
-export { carriedNutrients } from "./carriedNutrients";
+export { carriedNutrients, withCarriedNutrients } from "./carriedNutrients";
 export type { CarriedNutrients } from "./carriedNutrients";
 export {
   REQUIRED_FOOD_NUTRIENTS,

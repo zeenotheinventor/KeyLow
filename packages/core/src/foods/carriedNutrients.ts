@@ -25,3 +25,14 @@ export function carriedNutrients(
     ...(source.salt_g !== null ? { salt_g: source.salt_g } : {}),
   };
 }
+
+/**
+ * The input of a copy of a food, ready to create: the edited input with the source's carried
+ * nutrients added. Only the creation of a copy uses it. A plain new food and an edit never do.
+ */
+export function withCarriedNutrients(
+  source: { [Key in CarriedKey]: number | null },
+  input: CustomFoodInput,
+): CustomFoodInput {
+  return { ...input, ...carriedNutrients(source, input) };
+}

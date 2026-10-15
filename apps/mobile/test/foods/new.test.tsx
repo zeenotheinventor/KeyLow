@@ -197,6 +197,18 @@ describe("new food screen", () => {
       expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
     });
 
+    it("should send no saturated fat, sugars or salt for a plain new food", async () => {
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(mockCreateFood).toHaveBeenCalledTimes(1);
+      for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+        expect(mockCreateFood.mock.calls[0]?.[0]).not.toHaveProperty(key);
+      }
+    });
+
     it("should save a brand and barcode typed with surrounding spaces trimmed", async () => {
       mockCreateFood.mockResolvedValue({
         food: { ...foodFixture, id: savedFoodId },
