@@ -7,6 +7,9 @@ import { importCofid } from "../../../scripts/cofid/importFoods";
 import { createSqlSeedStore } from "../../../scripts/cofid/sqlSeedStore";
 import { parseSubsetFile } from "../../../scripts/cofid/subset";
 
+// Rendering the whole subset took 3.2 to 3.9s on idle CI runners (KEY-137 survey) and timed out at the 5s default on PR #92 and #93.
+const SEED_RENDER_TIMEOUT_MILLISECONDS = 30_000;
+
 const readPackageFile = (path: string): Buffer =>
   readFileSync(new URL(`../../../${path}`, import.meta.url));
 
@@ -35,23 +38,27 @@ describe("the committed CoFID subset", () => {
     expect(expectedCodes).toEqual(subsetCodes);
   });
 
-  it("should be what 10_cofid_subset.sql holds, so the seed cannot drift from the CSV and the mapping", async () => {
-    const csv = readPackageFile("data/cofid/cofid-2021.normalised.csv");
-    const store = createSqlSeedStore();
+  it(
+    "should be what 10_cofid_subset.sql holds, so the seed cannot drift from the CSV and the mapping",
+    async () => {
+      const csv = readPackageFile("data/cofid/cofid-2021.normalised.csv");
+      const store = createSqlSeedStore();
 
-    await importCofid(store, {
-      csv: csv.toString("utf8"),
-      fileSha256: sha256Hex(csv),
-      label: "seed-subset",
-      subsetCodes,
-      dryRun: false,
-      batchSize: 100,
-      log: () => undefined,
-    });
+      await importCofid(store, {
+        csv: csv.toString("utf8"),
+        fileSha256: sha256Hex(csv),
+        label: "seed-subset",
+        subsetCodes,
+        dryRun: false,
+        batchSize: 100,
+        log: () => undefined,
+      });
 
-    // Compared as a boolean so a mismatch does not print two multi-megabyte strings.
-    const isUpToDate =
-      store.render() === readPackageFile("supabase/seeds/10_cofid_subset.sql").toString("utf8");
-    expect(isUpToDate, "run the regeneration command in docs/runbooks/local-dev.md").toBe(true);
-  });
+      // Compared as a boolean so a mismatch does not print two multi-megabyte strings.
+      const isUpToDate =
+        store.render() === readPackageFile("supabase/seeds/10_cofid_subset.sql").toString("utf8");
+      expect(isUpToDate, "run the regeneration command in docs/runbooks/local-dev.md").toBe(true);
+    },
+    SEED_RENDER_TIMEOUT_MILLISECONDS,
+  );
 });
