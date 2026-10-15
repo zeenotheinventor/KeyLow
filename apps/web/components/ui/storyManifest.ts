@@ -68,6 +68,15 @@ export const storyManifest = {
     "TwoIncomplete",
     "Pressable",
   ],
+  "Dialog/Dialog.stories.tsx": [
+    "Default",
+    "WithLeadingDelete",
+    "WithoutFooter",
+    "LongContent",
+    "LongTitle",
+    "Narrow",
+    "WithTrigger",
+  ],
   "Input/Input.stories.tsx": [
     "Default",
     "Filled",
