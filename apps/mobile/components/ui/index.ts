@@ -6,6 +6,8 @@ export { Button } from "./Button";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { Card } from "./Card";
 export type { CardLevel, CardPadding, CardProps } from "./Card";
+export { Checkbox, CheckboxLink } from "./Checkbox";
+export type { CheckboxLinkProps, CheckboxProps } from "./Checkbox";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateAction, EmptyStateProps } from "./EmptyState";
 export { ErrorState } from "./ErrorState";

@@ -29,6 +29,7 @@ const names: IconName[] = [
   "BookOpen",
   "Camera",
   "CameraOff",
+  "Check",
   "ChefHat",
   "ChevronLeft",
   "ChevronRight",
