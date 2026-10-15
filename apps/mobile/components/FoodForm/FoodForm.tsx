@@ -5,6 +5,8 @@ import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useKeyboardLift } from "../../lib/useKeyboardLift";
+import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { Banner, Button, FieldError, Input, NumericInput, SegmentedControl, Text } from "../ui";
 import { describeSaveError } from "./describeSaveError";
 import { emptyFoodFormValues } from "./foodFormValues";
@@ -58,6 +60,12 @@ export function FoodForm({
   const [errors, setErrors] = useState<FoodFormErrors>({});
   const [saveNotice, setSaveNotice] = useState<SaveNotice | undefined>(undefined);
   const insets = useSafeAreaInsets();
+  const footerRef = useRef<View>(null);
+  // Android 15 draws edge to edge, so the window does not resize for the keyboard and nothing moves the
+  // footer. iOS has the padding view above.
+  const keyboardLift = useKeyboardLift(footerRef, Platform.OS === "android");
+  const scrollViewRef = useRef<ScrollView>(null);
+  const trackScrollOffset = useScrollFocusedInputIntoView(scrollViewRef, keyboardLift);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   function changeText(name: TextFieldName, text: string) {
@@ -153,8 +161,11 @@ export function FoodForm({
       className="flex-1 bg-background"
     >
       <ScrollView
+        ref={scrollViewRef}
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
         contentContainerClassName="gap-4 px-4 pb-5 pt-1"
+        onScroll={trackScrollOffset}
       >
         <View className="gap-3">
           <Input
@@ -276,11 +287,19 @@ export function FoodForm({
         </View>
       </ScrollView>
 
-      {/* Save stays in view while the form scrolls. The inset is a runtime value no class can name, so it goes through a variable. */}
+      {/* Save stays in view while the form scrolls, and rides above the keyboard. The footer is a sibling of
+          the scroll view, so its rise shortens the scroll view by as much, and Android scrolls the focused
+          field into what is left. The keyboard covers the screen's bottom inset, so the footer's own padding
+          is the 12 points alone while it is up. Both are runtime values no class can name, so they go
+          through a variable. */}
       <View
+        ref={footerRef}
         className="gap-3 border-t border-border bg-surface-sheet px-4 pt-3 pb-[var(--footer-bottom-padding)]"
         style={vars({
-          "--footer-bottom-padding": Math.max(insets.bottom, MINIMUM_FOOTER_BOTTOM_PADDING),
+          "--footer-bottom-padding":
+            keyboardLift > 0
+              ? keyboardLift + MINIMUM_FOOTER_BOTTOM_PADDING
+              : Math.max(insets.bottom, MINIMUM_FOOTER_BOTTOM_PADDING),
         })}
       >
         {saveNotice === undefined ? null : (

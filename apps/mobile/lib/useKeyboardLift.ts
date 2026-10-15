@@ -14,14 +14,21 @@ import type { KeyboardEventListener, View } from "react-native";
  * Android announces the keyboard once it has arrived. iOS announces it as it starts to move, and
  * again when it changes height while shown, such as a switch of keyboard or the suggestions bar. The
  * lift jumps to its new value: the design plan's motion scope has no keyboard motion.
+ *
+ * A screen that iOS already moves with `KeyboardAvoidingView` passes `isEnabled` false there, so the
+ * lift is 0 and nothing is listened to.
  */
-export function useKeyboardLift(viewRef: RefObject<View | null>): number {
+export function useKeyboardLift(viewRef: RefObject<View | null>, isEnabled = true): number {
   const [lift, setLift] = useState(0);
   // Measuring answers later. Each announcement takes a number, and an answer for an older one is dropped,
   // so a keyboard that has already gone, or changed again, is not lifted for.
   const latestAnnouncement = useRef(0);
 
   useEffect(() => {
+    if (!isEnabled) {
+      return undefined;
+    }
+
     const lifted: KeyboardEventListener = (event) => {
       latestAnnouncement.current += 1;
       const announcement = latestAnnouncement.current;
@@ -53,7 +60,7 @@ export function useKeyboardLift(viewRef: RefObject<View | null>): number {
         subscription.remove();
       });
     };
-  }, [viewRef]);
+  }, [viewRef, isEnabled]);
 
   return lift;
 }
