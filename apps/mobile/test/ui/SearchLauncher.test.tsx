@@ -101,6 +101,16 @@ describe("SearchLauncher", () => {
       });
     });
 
+    it("should dim the scan control once, with the bar, and not a second time on its own", async () => {
+      await renderLauncher({ disabled: true });
+      const scan = screen.getByRole("button", { name: "Scan barcode" });
+
+      // Half strength is the bar's alone. Dimmed by the button as well it would be 20 percent.
+      expect(scan).toBeDisabled();
+      expect(scan).not.toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(scan.parent?.parent?.parent).toHaveStyle({ opacity: 0.5 });
+    });
+
     it("should be enabled and at full strength by default", async () => {
       await renderLauncher();
 

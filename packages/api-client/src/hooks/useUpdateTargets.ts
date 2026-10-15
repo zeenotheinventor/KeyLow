@@ -46,9 +46,10 @@ export function useUpdateTargets() {
 
       return updateMyTargets(client, data.user.id, result.value);
     },
-    onSuccess: async (saved) => {
+    onSuccess: (saved) => {
       queryClient.setQueryData(keys.profiles.targets, saved);
-      await queryClient.invalidateQueries({ queryKey: keys.diary.all });
+      // Not awaited: the save is done, and the diary reads again in its own time.
+      void queryClient.invalidateQueries({ queryKey: keys.diary.all });
     },
   });
 }

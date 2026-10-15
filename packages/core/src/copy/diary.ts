@@ -68,6 +68,7 @@ export const DIARY_PROBLEMS = {
   quickAddKcal: "Enter calories.",
   targetKcal: `Enter a target between ${TARGET_KCAL_RANGE}.`,
   targetKcalRequired: "Enter a calorie target.",
+  targetKcalWhole: "Enter whole calories.",
 };
 
 export const TARGET_KCAL_HELPER = `Between ${TARGET_KCAL_RANGE}`;

@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { ScrollView, View } from "react-native";
 
-import { EmptyDayCard } from "./EmptyDayCard";
-import { entryRowProps } from "./entryRowProps";
-import { DayCompleteToggle, FoodRow, HourRow } from "../ui";
+import { DayCompleteToggle, FoodRow, HourRow } from "../../ui";
+import { EmptyDayCard } from "../EmptyDayCard";
+import { entryRowProps } from "../entryRowProps";
 
 import type { FoodLogProps } from "./types";
 

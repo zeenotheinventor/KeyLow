@@ -140,7 +140,12 @@ describe("the diary screen", () => {
       expect(list).toHaveProp("role", "list");
       // Every child of the list is an hour: no gap view, no separator, nothing else.
       expect(list?.children).toHaveLength(24);
-      expect(list?.children.every((child) => items.includes(child as never))).toBe(true);
+      for (const child of list?.children ?? []) {
+        expect(typeof child).toBe("object");
+        if (typeof child !== "string") {
+          expect(child).toHaveProp("role", "listitem");
+        }
+      }
     });
 
     it("should show each food under its hour, with the time and amount as the caption", async () => {
@@ -395,6 +400,86 @@ describe("the diary screen", () => {
       ).toBeDefined();
       expect(screen.queryByRole("button", { name: /^Add food at / })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /^Targets\./ })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("the week strip while a day loads", () => {
+    async function goToHungYesterday() {
+      const user = userEvent.setup();
+      await renderLoadedDiary();
+      return user;
+    }
+
+    it("should stay on screen with the header when the day picked is slow to load", async () => {
+      const user = await goToHungYesterday();
+      diaryBackend.hungTables.add("food_log_entries");
+
+      await user.press(screen.getByRole("button", { name: "Wednesday 14 October" }));
+
+      expect(await screen.findByRole("heading", { name: "Wed 14 Oct" })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", { name: "Wednesday 14 October", selected: true }),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Monday 12 October" })).toBeEnabled();
+      // Only the bars and the log below the strip are the skeleton.
+      expect(screen.queryByRole("button", { name: /^Add food at / })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Targets\./ })).not.toBeOnTheScreen();
+    });
+
+    it("should let the person go back to today from there, to the day already read", async () => {
+      const user = await goToHungYesterday();
+      diaryBackend.hungTables.add("food_log_entries");
+      await user.press(screen.getByRole("button", { name: "Wednesday 14 October" }));
+      await screen.findByRole("heading", { name: "Wed 14 Oct" });
+
+      await user.press(screen.getByRole("button", { name: "Thursday 15 October, today" }));
+
+      expect(await screen.findByRole("heading", { name: "Today" })).toBeOnTheScreen();
+      expect(await screen.findByRole("button", { name: "Add food at 08:00" })).toBeOnTheScreen();
+    });
+
+    it("should stay on screen offline, where the day picked waits for the connection", async () => {
+      const user = await goToHungYesterday();
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      await user.press(screen.getByRole("button", { name: "Wednesday 14 October" }));
+
+      expect(await screen.findByRole("heading", { name: "Wed 14 Oct" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Monday 12 October" })).toBeEnabled();
+      expect(screen.getByText("You're offline")).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Add food at / })).not.toBeOnTheScreen();
+
+      await user.press(screen.getByRole("button", { name: "Thursday 15 October, today" }));
+
+      expect(await screen.findByRole("heading", { name: "Today" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Add food at 08:00" })).toBeDisabled();
+    });
+
+    it("should draw the whole skeleton, strip included, only until the first day has loaded", async () => {
+      diaryBackend.hungTables.add("food_log_entries");
+      await renderDiary();
+
+      expect(
+        await screen.findByTestId("skeleton-diary", { includeHiddenElements: true }),
+      ).toBeDefined();
+      expect(screen.queryByRole("button", { name: "Monday 12 October" })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("a cold start offline", () => {
+    it("should show the offline notice over a skeleton, and no strip or log, until a connection returns", async () => {
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+      await renderDiary();
+
+      expect(await screen.findByText("You're offline")).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Today" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Add food at / })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Monday 12 October" })).not.toBeOnTheScreen();
+      expect(requestsTo("food_log_entries")).toBe(0);
     });
   });
 

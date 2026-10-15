@@ -35,6 +35,7 @@ export function IconButton({
   variant = "secondary",
   size = "md",
   disabled = false,
+  dimsWhenDisabled = true,
   haptic,
   onPress,
   className = "",
@@ -45,7 +46,7 @@ export function IconButton({
   return (
     <View className={className}>
       <PressableSurface
-        className={`items-center justify-center overflow-hidden ${isRing ? ringTargetClassName : sizeClassName[size]} ${variantClassName[variant]} ${disabled ? "opacity-40" : ""}`}
+        className={`items-center justify-center overflow-hidden ${isRing ? ringTargetClassName : sizeClassName[size]} ${variantClassName[variant]} ${disabled && dimsWhenDisabled ? "opacity-40" : ""}`}
         disabled={disabled}
         haptic={haptic}
         // A control smaller than the touch target reaches out to it. The reach is invisible. The ring

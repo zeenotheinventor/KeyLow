@@ -4,9 +4,11 @@ import { useEffect } from "react";
 
 import { DiaryDay } from "./DiaryDay";
 import { DiaryFrame } from "./DiaryFrame";
+import { DiaryLoading } from "./DiaryLoading";
+import { useIsOnline } from "../../lib/connectivity";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { setViewedDay } from "../../lib/viewedDay";
-import { ErrorState, Skeleton } from "../ui";
+import { ErrorState } from "../ui";
 
 /**
  * The diary tab: the hour-by-hour food log for a day. It stays mounted under the terms gate's cover, so
@@ -16,6 +18,7 @@ import { ErrorState, Skeleton } from "../ui";
  */
 export function DiaryScreen() {
   const isReadEnabled = useReadsEnabled();
+  const isOnline = useIsOnline();
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
 
   // The tab bar's plus reads the day on view, so it is cleared when the diary goes.
@@ -46,7 +49,7 @@ export function DiaryScreen() {
   if (timeZone.data === undefined) {
     return (
       <DiaryFrame moreLabel={DIARY_MORE_LABEL}>
-        <Skeleton variant="diary" />
+        <DiaryLoading includesWeek isOnline={isOnline} />
       </DiaryFrame>
     );
   }

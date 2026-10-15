@@ -90,7 +90,7 @@ describe("getMyTargets", () => {
     );
 
     await expect(getMyTargets(createTestClient())).rejects.toMatchObject({
-      message: "Could not load your targets: database unavailable",
+      message: "Could not load your targets (XX000)",
       cause: { code: "XX000" },
     });
   });
@@ -174,21 +174,28 @@ describe("updateMyTargets", () => {
     );
   });
 
-  it("should throw with the database error as the cause and no value in the message", async () => {
+  it("should name the action and the error code only, even when the database quotes the value", async () => {
     server.use(
       http.patch(`${REST_URL}/profiles`, () =>
         HttpResponse.json(
-          { code: "23514", message: "check constraint violated", details: null, hint: null },
+          {
+            code: "22P02",
+            message: 'invalid input syntax for type integer: "2200.5"',
+            details: null,
+            hint: null,
+          },
           { status: 400 },
         ),
       ),
     );
 
-    const failure = updateMyTargets(createTestClient(), SIGNED_IN_USER_ID, targets);
+    const failure = updateMyTargets(createTestClient(), SIGNED_IN_USER_ID, {
+      ...targets,
+      kcal: 2200.5,
+    });
 
-    await expect(failure).rejects.toMatchObject({ cause: { code: "23514" } });
-    // A target is health data, so the message holds none of the digits that were sent.
-    await expect(failure).rejects.toThrow(/^\D+$/);
+    await expect(failure).rejects.toThrow(new Error("Could not save your targets (22P02)"));
+    await expect(failure).rejects.toHaveProperty("cause", { code: "22P02" });
   });
 });
 
@@ -229,7 +236,7 @@ describe("getMyTimeZone", () => {
     );
 
     await expect(getMyTimeZone(createTestClient())).rejects.toMatchObject({
-      message: "Could not load your time zone: database unavailable",
+      message: "Could not load your time zone (XX000)",
     });
   });
 });

@@ -1,7 +1,7 @@
 import { DAY_STEPPER } from "@keylow/core/copy";
 import { View } from "react-native";
 
-import { DiaryHeader } from "./DiaryHeader";
+import { DiaryHeader } from "../DiaryHeader";
 
 import type { DiaryFrameProps } from "./types";
 

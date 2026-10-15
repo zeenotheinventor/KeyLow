@@ -38,7 +38,9 @@ export function SearchLauncher({
             </Text>
           </PressableSurface>
         </View>
+        {/* The whole bar is dimmed above, so the scan control does not dim itself a second time. */}
         <IconButton
+          dimsWhenDisabled={false}
           disabled={disabled}
           icon="ScanBarcode"
           label={scanLabel}

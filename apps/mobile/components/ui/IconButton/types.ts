@@ -26,6 +26,11 @@ export type IconButtonProps = {
   size?: IconButtonSize;
   /** Dims the button to 40 percent and stops it responding, with no motion. */
   disabled?: boolean;
+  /**
+   * Whether a disabled button dims itself to 40 percent. Defaults to true. A button inside something that
+   * is already dimmed as a whole, such as the offline search bar, turns it off, so it is dimmed once.
+   */
+  dimsWhenDisabled?: boolean;
   /** The haptic token to play when pressed. The design gives none of its own. */
   haptic?: HapticFeedbackName;
   onPress?: () => void;

@@ -57,14 +57,16 @@ const hourBones = [
   { key: "fifth", hasFood: false },
 ];
 
-function SkeletonDiary() {
+function SkeletonDiary({ includesWeek }: { includesWeek: boolean }) {
   return (
     <View className="gap-3" testID="skeleton-diary">
-      <View className="flex-row gap-[6px] px-4">
-        {dayBoneKeys.map((key) => (
-          <SkeletonBone key={key} className="h-[56px] flex-1 rounded-pill" />
-        ))}
-      </View>
+      {includesWeek ? (
+        <View className="flex-row gap-[6px] px-4">
+          {dayBoneKeys.map((key) => (
+            <SkeletonBone key={key} className="h-[56px] flex-1 rounded-pill" />
+          ))}
+        </View>
+      ) : null}
       <View className="flex-row gap-2 px-4 pt-1">
         {barBoneKeys.map((key, index) => (
           <View key={key} className={`gap-[10px] ${index === 0 ? "flex-[1.5]" : "flex-1"}`}>
@@ -99,7 +101,9 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
   return (
     <Animated.View aria-hidden style={animatedStyle} testID="skeleton">
       {variant === "detail" ? <SkeletonDetail /> : null}
-      {variant === "diary" ? <SkeletonDiary /> : null}
+      {variant === "diary" || variant === "diaryDay" ? (
+        <SkeletonDiary includesWeek={variant === "diary"} />
+      ) : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "group" ? (
         <View

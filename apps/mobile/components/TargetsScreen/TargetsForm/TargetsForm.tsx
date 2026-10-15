@@ -19,10 +19,10 @@ import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { enteredNumber, fieldText } from "./enteredNumber";
-import { useIsOnline } from "../../lib/connectivity";
-import { useKeyboardLift } from "../../lib/useKeyboardLift";
-import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
-import { Banner, Button, NumericInput, Text, useToast } from "../ui";
+import { useIsOnline } from "../../../lib/connectivity";
+import { useKeyboardLift } from "../../../lib/useKeyboardLift";
+import { useScrollFocusedInputIntoView } from "../../../lib/useScrollFocusedInputIntoView";
+import { Banner, Button, NumericInput, Text, useToast } from "../../ui";
 
 import type { TargetsFormProps } from "./types";
 
@@ -38,7 +38,7 @@ const FOOTER_EXTRA_PADDING = 8;
 const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
 
 /**
- * The Targets form: calories (800 to 6,000, required) and protein, carbohydrate and fat in grams, with a
+ * The Targets form: calories (whole numbers from 800 to 6,000, required) and protein, carbohydrate and fat in grams, with a
  * live note of what the macros add up to. Save is dimmed until the targets pass core's `validateTargets`.
  * A save goes back to where the user came from with the Toast "Targets saved".
  */
@@ -71,9 +71,11 @@ export function TargetsForm({ initial }: TargetsFormProps) {
   const kcalError =
     kcalProblem === "out_of_range"
       ? DIARY_PROBLEMS.targetKcal
-      : kcalProblem === "required" && isKcalTouched
-        ? DIARY_PROBLEMS.targetKcalRequired
-        : undefined;
+      : kcalProblem === "not_whole"
+        ? DIARY_PROBLEMS.targetKcalWhole
+        : kcalProblem === "required" && isKcalTouched
+          ? DIARY_PROBLEMS.targetKcalRequired
+          : undefined;
   const hasMacro = protein.trim() !== "" || carbs.trim() !== "" || fat.trim() !== "";
   const macroNote = hasMacro
     ? describeMacroTotal(Math.round(macroKcal(input.protein_g, input.fat_g, input.carbs_g)))

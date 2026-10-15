@@ -123,6 +123,7 @@ describe("the field errors and helpers", () => {
       quickAddKcal: "Enter calories.",
       targetKcal: "Enter a target between 800 and 6,000 kcal.",
       targetKcalRequired: "Enter a calorie target.",
+      targetKcalWhole: "Enter whole calories.",
     });
   });
 

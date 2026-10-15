@@ -32,3 +32,6 @@ export const Detail: Story = { args: { variant: "detail" } };
 
 // The diary's food log while it loads: the week's pills, the four bars and five hours.
 export const Diary: Story = { args: { variant: "diary" } };
+
+// The same without the week, for a day that loads under a week strip that is already on screen.
+export const DiaryDay: Story = { args: { variant: "diaryDay" } };

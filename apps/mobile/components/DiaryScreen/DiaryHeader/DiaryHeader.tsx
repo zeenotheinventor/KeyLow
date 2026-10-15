@@ -2,7 +2,7 @@ import { vars } from "nativewind";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { IconButton, Text } from "../ui";
+import { IconButton, Text } from "../../ui";
 
 import type { DiaryHeaderProps } from "./types";
 

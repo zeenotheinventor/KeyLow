@@ -202,6 +202,20 @@ describe("the Targets screen", () => {
       }
     });
 
+    it.each(["2200.5", "2200,5"])(
+      "should ask for whole calories for %s, and disable Save",
+      async (value) => {
+        const user = userEvent.setup();
+        await renderLoadedTargets();
+
+        await user.clear(calories());
+        await user.type(calories(), value);
+
+        expect(screen.getByRole("alert")).toHaveTextContent("Enter whole calories.");
+        expect(save()).toBeDisabled();
+      },
+    );
+
     it("should ask for calories when the field is cleared, and disable Save", async () => {
       const user = userEvent.setup();
       await renderLoadedTargets();

@@ -186,6 +186,14 @@ describe("IconButton", () => {
       expect(readScale()).toBe(1);
       expect(screen.queryByTestId("press-overlay")).not.toBeOnTheScreen();
     });
+
+    it("should stay disabled but not dim itself when the caller dims it as a whole", async () => {
+      await renderIconButton({ disabled: true, dimsWhenDisabled: false });
+      const button = screen.getByRole("button", { name: "Close" });
+
+      expect(button).toBeDisabled();
+      expect(button).not.toHaveStyle({ opacity: Math.fround(0.4) });
+    });
   });
 
   describe("layout", () => {

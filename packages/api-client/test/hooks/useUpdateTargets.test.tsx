@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TargetsValidationError, useUpdateTargets } from "../../src/hooks/useUpdateTargets";
 import { keys } from "../../src/queryKeys";
@@ -149,6 +149,22 @@ describe("useUpdateTargets", () => {
     });
 
     expect(updates).toHaveLength(2);
+  });
+
+  it("should resolve without waiting for the diary to read again", async () => {
+    const { queryClient, result } = await renderSignedIn();
+    // A read that never finishes, as a slow connection gives.
+    const invalidate = vi
+      .spyOn(queryClient, "invalidateQueries")
+      .mockReturnValue(new Promise(() => undefined));
+
+    let saved: unknown;
+    await act(async () => {
+      saved = await result.current.mutateAsync(valid);
+    });
+
+    expect(saved).toEqual(valid);
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.diary.all });
   });
 
   it("should leave the diary and the cached targets alone and expose the error when the save fails", async () => {

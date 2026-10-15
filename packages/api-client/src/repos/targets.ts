@@ -2,8 +2,8 @@ import type { Database } from "../database.types";
 import type { ProgressTargets, ValidTargets } from "@keylow/core/diary";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
-// Targets are health data. A failure names the action and the database error, never a value the row held
-// or the user sent.
+// Targets are health data. The database's own message can quote a value (a refused number is written into
+// it), so a failure names the action and the error code only, and the cause holds the code and nothing else.
 
 const TARGET_COLUMNS = "target_kcal,target_protein_g,target_carbs_g,target_fat_g";
 
@@ -11,7 +11,7 @@ const TARGET_COLUMNS = "target_kcal,target_protein_g,target_carbs_g,target_fat_g
 export type Targets = ProgressTargets;
 
 const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action}: ${cause.message}`, { cause });
+  new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 type TargetColumns = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],

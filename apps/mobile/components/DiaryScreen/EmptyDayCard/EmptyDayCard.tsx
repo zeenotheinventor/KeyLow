@@ -1,7 +1,7 @@
 import { DIARY_ACTIONS, EMPTY_DAY } from "@keylow/core/copy";
 import { View } from "react-native";
 
-import { Button, Card, Text } from "../ui";
+import { Button, Card, Text } from "../../ui";
 
 import type { EmptyDayCardProps } from "./types";
 

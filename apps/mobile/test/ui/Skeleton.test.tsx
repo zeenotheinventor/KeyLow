@@ -203,6 +203,15 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the food log under a week strip", () => {
+    it("should be the bars and the hours without the seven day pills", async () => {
+      await renderSkeleton({ variant: "diaryDay" });
+
+      expect(bones()).toHaveLength(4 * 2 + 5 * 2 + 2);
+      expect(bones()[0]).toHaveStyle({ height: 12 });
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });

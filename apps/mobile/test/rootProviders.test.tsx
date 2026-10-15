@@ -40,16 +40,14 @@ function ScreenThatShowsAToast() {
   const toast = useToast();
 
   return (
-    <>
-      <Text
-        role="button"
-        onPress={() => {
-          toast.show({ message: "Targets saved" });
-        }}
-      >
-        Show toast
-      </Text>
-    </>
+    <Text
+      role="button"
+      onPress={() => {
+        toast.show({ message: "Targets saved" });
+      }}
+    >
+      Show toast
+    </Text>
   );
 }
 function MockStack() {
