@@ -1,5 +1,6 @@
 import { View } from "react-native";
 
+import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
 
 import type { SwitchProps } from "./types";
@@ -15,19 +16,46 @@ const looks = {
   off: { trackClassName: "bg-border-strong", knobClassName: "left-[3px] bg-text-primary" },
 };
 
+const trackClassName = "h-[26px] w-touch-target overflow-hidden rounded-pill";
+
+// The check on the day complete switch's knob is 12 points, as its card draws it.
+const knobIconSize = 12;
+
 /**
  * An on and off choice, such as the food form's default portion. It is a design system addition drawn
  * only on the food form boards, so its sizes are the boards': a 44 by 26 track and a 20 point knob. The
  * state changes at once and plays the selection haptic. The knob does not slide, because the plan's
  * motion scope has no switch motion.
+ *
+ * Two opt-in props serve the day complete row, which draws the same track and knob: `isDecorative`
+ * draws only the track and knob, and `onKnobIcon` puts an icon on the knob while the switch is on.
  */
-export function Switch({ isOn, label, onValueChange }: SwitchProps) {
-  const look = looks[isOn ? "on" : "off"];
+export function Switch(props: SwitchProps) {
+  const look = looks[props.isOn ? "on" : "off"];
+  const knob = (
+    <View
+      aria-hidden
+      className={`absolute top-[3px] h-[20px] w-[20px] items-center justify-center rounded-pill ${look.knobClassName}`}
+    >
+      {props.isOn && props.onKnobIcon !== undefined ? (
+        <Icon name={props.onKnobIcon} size={knobIconSize} tone="accent" />
+      ) : null}
+    </View>
+  );
 
+  if (props.isDecorative === true) {
+    return (
+      <View aria-hidden className={`${trackClassName} ${look.trackClassName}`}>
+        {knob}
+      </View>
+    );
+  }
+
+  const { isOn, label, onValueChange } = props;
   return (
     <PressableSurface
       checked={isOn}
-      className={`h-[26px] w-touch-target overflow-hidden rounded-pill ${look.trackClassName}`}
+      className={`${trackClassName} ${look.trackClassName}`}
       haptic="select"
       hitSlop={trackHitSlop}
       label={label}
@@ -36,10 +64,7 @@ export function Switch({ isOn, label, onValueChange }: SwitchProps) {
         onValueChange(!isOn);
       }}
     >
-      <View
-        aria-hidden
-        className={`absolute top-[3px] h-[20px] w-[20px] rounded-pill ${look.knobClassName}`}
-      />
+      {knob}
     </PressableSurface>
   );
 }

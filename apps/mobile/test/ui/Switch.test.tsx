@@ -1,4 +1,9 @@
-import { render, screen, userEvent } from "@testing-library/react-native";
+import {
+  isHiddenFromAccessibility,
+  render,
+  screen,
+  userEvent,
+} from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
 import { useState } from "react";
 import { setUpTests } from "react-native-reanimated";
@@ -41,6 +46,11 @@ function PortionDefault() {
 }
 
 const schemes: ThemeScheme[] = ["dark", "light"];
+
+// The icon is decoration, so its drawing is looked for.
+function drawings() {
+  return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
+}
 
 describe("Switch", () => {
   let kitStyles: string;
@@ -122,6 +132,77 @@ describe("Switch", () => {
       await user.press(screen.getByRole("switch", { name: "Default portion" }));
 
       expect(screen.getByRole("switch", { name: "Default portion" })).toBeChecked();
+    });
+  });
+
+  // The day complete row is the switch, and it draws the track and knob inside itself.
+  describe("as a drawing inside a switch of its own", () => {
+    it("should add no switch of its own, so the row around it is the only one", async () => {
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <Switch isDecorative isOn />
+        </ThemeProvider>,
+      );
+
+      expect(screen.queryByRole("switch")).not.toBeOnTheScreen();
+    });
+
+    it("should hide its drawing from assistive technology", async () => {
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <Switch isDecorative isOn onKnobIcon="Check" />
+        </ThemeProvider>,
+      );
+
+      const tracks = viewsDrawn({ width: 44, height: 26 });
+
+      expect(tracks).toHaveLength(1);
+      expect(tracks.map((track) => isHiddenFromAccessibility(track))).toEqual([true]);
+    });
+
+    it("should draw the same 44 by 26 track and knob as the switch does", async () => {
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <Switch isDecorative isOn />
+        </ThemeProvider>,
+      );
+
+      expect(
+        viewsDrawn({
+          width: 44,
+          height: 26,
+          borderRadius: 999,
+          backgroundColor: resolvedColor("dark", "accent"),
+        }),
+      ).toHaveLength(1);
+      expect(
+        viewsDrawn({
+          width: 20,
+          height: 20,
+          backgroundColor: resolvedColor("dark", "accent-foreground"),
+          left: 21,
+        }),
+      ).toHaveLength(1);
+    });
+  });
+
+  describe("the mark on the knob", () => {
+    it("should draw the icon on the knob while it is on", async () => {
+      await renderSwitch({ isOn: true, onKnobIcon: "Check" });
+
+      expect(drawings()).toHaveLength(1);
+    });
+
+    it("should draw nothing on the knob while it is off", async () => {
+      await renderSwitch({ isOn: false, onKnobIcon: "Check" });
+
+      expect(drawings()).toHaveLength(0);
+    });
+
+    it("should draw nothing on the knob when it is not asked for one", async () => {
+      await renderSwitch({ isOn: true });
+
+      expect(drawings()).toHaveLength(0);
     });
   });
 

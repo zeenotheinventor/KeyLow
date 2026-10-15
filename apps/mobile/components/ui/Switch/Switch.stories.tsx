@@ -5,7 +5,10 @@ import { View } from "react-native";
 import { Text } from "../Text";
 import { Switch } from "./Switch";
 
+import type { SwitchProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
+
+type InteractiveSwitchProps = Extract<SwitchProps, { isDecorative?: false }>;
 
 // The food form draws the switch at the end of a row whose words are the screen's, so a story does too.
 function PortionDefaultRow({ initial }: { initial: boolean }) {
@@ -30,7 +33,9 @@ const meta = {
   ],
   // Every story renders its own kept choice, so these only satisfy the props.
   args: { isOn: false, label: "Default portion", onValueChange: () => undefined },
-} satisfies Meta<typeof Switch>;
+  // The props are a union of the pressable switch and the drawing of one, so the controls are the
+  // pressable switch's.
+} satisfies Meta<InteractiveSwitchProps>;
 
 export default meta;
 
