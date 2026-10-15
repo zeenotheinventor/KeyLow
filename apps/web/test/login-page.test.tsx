@@ -1,6 +1,8 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { compileUtilities } from "./ui/compileUtilities";
+
 import LoginPage from "@/app/login/page";
 
 vi.mock("@/lib/supabase/client", () => ({ createClient: () => ({ auth: {} }) }));
@@ -22,6 +24,14 @@ describe("Login page", () => {
     await renderPage();
 
     expect(screen.getByRole("heading", { level: 1, name: "Sign in to Ki-Lo" })).toBeTruthy();
+  });
+
+  it("should leave room for the footer instead of filling the whole viewport", async () => {
+    await renderPage();
+    const css = await compileUtilities(screen.getByRole("main").getAttribute("class") ?? "");
+
+    expect(css).not.toContain("min-height: 100dvh");
+    expect(css).toContain("flex: 1 1 0%");
   });
 
   it("should show no error when the user arrives normally", async () => {

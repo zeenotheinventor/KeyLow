@@ -1,5 +1,8 @@
+import { within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { compileUtilities } from "./ui/compileUtilities";
 
 import RootLayout, { metadata } from "@/app/layout";
 
@@ -22,6 +25,13 @@ vi.mock("next/font/google", () => ({
 async function renderedPage() {
   const markup = renderToStaticMarkup(await RootLayout({ children: <p>Page content</p> }));
   return new DOMParser().parseFromString(markup, "text/html");
+}
+
+// The parsed page has no window of its own, which role queries need to work out accessible names.
+// Its body is put into the test's document, so they can run.
+function queriesFor(page: Document) {
+  document.body.innerHTML = page.body.innerHTML;
+  return within(document.body);
 }
 
 describe("RootLayout", () => {
@@ -69,7 +79,31 @@ describe("RootLayout", () => {
   it("should render the page inside the body", async () => {
     const page = await renderedPage();
 
-    expect(page.body.textContent).toBe("Page content");
+    expect(page.body.textContent).toContain("Page content");
+  });
+
+  it("should put the legal footer after the page, on every page", async () => {
+    const page = await renderedPage();
+
+    const footer = queriesFor(page).getByRole("contentinfo");
+    expect(footer.previousElementSibling?.textContent).toBe("Page content");
+    expect(within(footer).getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
+      "/privacy",
+    );
+    expect(within(footer).getByRole("link", { name: "Terms of Use" }).getAttribute("href")).toBe(
+      "/terms",
+    );
+  });
+
+  it("should keep the footer at the foot of a short page", async () => {
+    const page = await renderedPage();
+    const css = await compileUtilities(
+      `${page.body.getAttribute("class") ?? ""} ${queriesFor(page).getByRole("contentinfo").getAttribute("class") ?? ""}`,
+    );
+
+    expect(css).toContain("min-height: 100dvh");
+    expect(css).toContain("flex-direction: column");
+    expect(css).toContain("margin-top: auto");
   });
 
   it("should title the app Ki-Lo", () => {
