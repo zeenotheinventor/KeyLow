@@ -1,1 +1,1 @@
-export const storyStates = ["Default", "AboveTabBar"];
+export const storyStates = ["Default", "Disabled", "AboveTabBar"];

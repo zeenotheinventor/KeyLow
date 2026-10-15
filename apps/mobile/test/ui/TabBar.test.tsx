@@ -222,6 +222,35 @@ describe("TabBar", () => {
     });
   });
 
+  describe("the add button when disabled", () => {
+    it("should be disabled, dimmed to 40 percent and not call the add callback", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onAddPress = jest.fn();
+      await renderTabBar({ addDisabled: true, onAddPress });
+      const add = screen.getByRole("button", { name: "Find food" });
+
+      await user.press(add);
+
+      expect(add).toBeDisabled();
+      expect(add).toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(onAddPress).not.toHaveBeenCalled();
+    });
+
+    it("should leave the destinations pressable", async () => {
+      await renderTabBar({ addDisabled: true });
+
+      expect(screen.getByRole("tab", { name: "Diary" })).toBeEnabled();
+    });
+
+    it("should be enabled and at full strength by default", async () => {
+      await renderTabBar();
+      const add = screen.getByRole("button", { name: "Find food" });
+
+      expect(add).toBeEnabled();
+      expect(add).not.toHaveStyle({ opacity: Math.fround(0.4) });
+    });
+  });
+
   describe.each(schemes)("the iOS idiom in the %s scheme", (scheme) => {
     it("should be the surface with a hairline above it, 49 points tall counting the hairline", async () => {
       await renderTabBar({}, scheme);

@@ -10,7 +10,6 @@ import { mockUseFoodByBarcode, resetBarcodeLookupMock } from "./support/barcodeL
 import { resetSearchApiClientMock } from "./support/searchApiClientMock";
 import TabsLayout from "../../app/(tabs)/_layout";
 import DashboardRoute from "../../app/(tabs)/dashboard";
-import DiaryRoute from "../../app/(tabs)/diary";
 import MoreRoute from "../../app/(tabs)/more";
 import RootLayout from "../../app/_layout";
 import FoodsLayout from "../../app/foods/_layout";
@@ -58,11 +57,16 @@ const standIn = (text: string) =>
     return <Text>{text}</Text>;
   };
 
+// The diary has its own tests. Here it is a heading, because these tests are about the shell around it.
+function DiaryStandIn() {
+  return <Text role="heading">Diary</Text>;
+}
+
 const routes = {
   _layout: RootLayout,
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": DashboardRoute,
-  "(tabs)/diary": DiaryRoute,
+  "(tabs)/diary": DiaryStandIn,
   "(tabs)/more": MoreRoute,
   "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/weight": standIn("Weight screen"),

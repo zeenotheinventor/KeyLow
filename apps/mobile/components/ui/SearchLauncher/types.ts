@@ -7,4 +7,6 @@ export type SearchLauncherProps = {
   onPress: () => void;
   /** Opens the scanner. */
   onScanPress: () => void;
+  /** Dims the bar to half and stops both controls responding, such as while offline. Defaults to false. */
+  disabled?: boolean | undefined;
 };

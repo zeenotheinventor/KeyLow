@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { describeDay } from "../../src/dates";
+import { describeDay, describeDiaryTitle } from "../../src/dates";
 
 // Thursday 15 October 2026, midday in London (BST, UTC+1) and midday in UTC.
 const today = new Date("2026-10-15T12:00:00Z");
@@ -103,5 +103,26 @@ describe("describeDay", () => {
 
   it("should throw a RangeError for an invalid date", () => {
     expect(() => describeDay(new Date("not a date"), today, "UTC")).toThrow(RangeError);
+  });
+});
+
+describe("describeDiaryTitle", () => {
+  it("should call today Today", () => {
+    expect(describeDiaryTitle(new Date("2026-10-15T07:30:00Z"), today, "UTC")).toBe("Today");
+  });
+
+  it("should write yesterday as its date, as the past-day board does, and not as Yesterday", () => {
+    expect(describeDiaryTitle(new Date("2026-10-14T12:00:00Z"), today, "UTC")).toBe("Wed 14 Oct");
+  });
+
+  it("should write any other day as a short date", () => {
+    expect(describeDiaryTitle(new Date("2026-10-12T12:00:00Z"), today, "UTC")).toBe("Mon 12 Oct");
+  });
+
+  it("should read both days in the given zone", () => {
+    // 23:30 UTC on the 14th is already the 15th in London, where it is BST.
+    expect(describeDiaryTitle(new Date("2026-10-14T23:30:00Z"), today, "Europe/London")).toBe(
+      "Today",
+    );
   });
 });

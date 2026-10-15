@@ -15,7 +15,6 @@ import {
 } from "./support/supabaseMock";
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
-import DiaryRoute from "../app/(tabs)/diary";
 import MoreRoute from "../app/(tabs)/more";
 import RecipesRoute from "../app/(tabs)/recipes";
 import RootLayout from "../app/_layout";
@@ -60,13 +59,18 @@ const standIn = (text: string) =>
     return <Text>{text}</Text>;
   };
 
+// The diary has its own tests. Here it is a heading, because these tests are about the shell around it.
+function DiaryStandIn() {
+  return <Text role="heading">Diary</Text>;
+}
+
 const routes = {
   _layout: RootLayout,
   index: IndexRoute,
   "(auth)/sign-in": standIn("Sign in screen"),
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": DashboardRoute,
-  "(tabs)/diary": DiaryRoute,
+  "(tabs)/diary": DiaryStandIn,
   "(tabs)/recipes": RecipesRoute,
   "(tabs)/more": MoreRoute,
   "foods/_layout": FoodsLayout,
@@ -271,21 +275,12 @@ describe("the tab shell", () => {
   describe("the placeholders", () => {
     it.each([
       ["dashboard", "Your weekly nutrition, weight trend and expenditure will appear here."],
-      ["diary", "Your logged foods will appear here, day by day."],
       ["recipes", "Your recipes will appear here."],
     ])("should say what %s will show, under Coming soon", async (route, body) => {
       await renderApp(`/${route}`);
 
       expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeOnTheScreen();
       expect(screen.getByText(body)).toBeOnTheScreen();
-    });
-
-    it("should leave the diary with no Find food button of its own, since the launcher replaces it", async () => {
-      await renderApp("/diary");
-
-      await screen.findByRole("heading", { name: "Coming soon" });
-      // The one button of that name is the centre plus.
-      expect(screen.getAllByRole("button", { name: "Find food" })).toHaveLength(1);
     });
   });
 

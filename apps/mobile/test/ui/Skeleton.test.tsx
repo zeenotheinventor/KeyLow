@@ -163,6 +163,46 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the food log", () => {
+    it("should be seven day pills, four bars, five hour chips with their plus and two foods", async () => {
+      await renderSkeleton({ variant: "diary" });
+
+      // 7 pills, 4 bars with a label and a track each, 5 hours with a chip and a plus, and 2 foods.
+      expect(bones()).toHaveLength(7 + 4 * 2 + 5 * 2 + 2);
+    });
+
+    it("should draw the day pills 56 points tall with the pill radius", async () => {
+      await renderSkeleton({ variant: "diary" });
+
+      expect(bones()[0]).toHaveStyle({ height: 56, borderRadius: 999 });
+      expect(bones()[6]).toHaveStyle({ height: 56, borderRadius: 999 });
+    });
+
+    it("should draw each bar as a 12 point label over a 4 point track", async () => {
+      await renderSkeleton({ variant: "diary" });
+
+      expect(bones()[7]).toHaveStyle({ height: 12 });
+      expect(bones()[8]).toHaveStyle({ height: 4 });
+    });
+
+    it("should draw an hour as a 64 by 28 chip and a 32 point circle, and a food as a 64 point card", async () => {
+      await renderSkeleton({ variant: "diary" });
+
+      expect(bones()[15]).toHaveStyle({ width: 64, height: 28, borderRadius: 999 });
+      expect(bones()[16]).toHaveStyle({ width: 32, height: 32, borderRadius: 999 });
+      expect(bones()[19]).toHaveStyle({ height: 64, borderRadius: 20 });
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "diary" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });

@@ -20,6 +20,17 @@ export const samples: Record<string, () => string[]> = {
     copy.describeHourChip("11:00", true),
   ],
   describeHourGroup: () => [0, 1, 2].map((count) => copy.describeHourGroup("08:00", count)),
+  describeLoggedAmount: () => [
+    copy.describeLoggedAmount(null),
+    copy.describeLoggedAmount({ unit: "g", quantity: 50, resolvedGrams: 50, portion: null }),
+    copy.describeLoggedAmount({
+      unit: "portion",
+      quantity: 2,
+      resolvedGrams: 340,
+      portion: { label: "1 pot" },
+    }),
+  ],
+  describeEntryCaption: () => [copy.describeEntryCaption("08:05", "50 g")],
   describeWeekStripDay: () => [
     copy.describeWeekStripDay("2026-10-15", { isToday: true, isComplete: false }),
     copy.describeWeekStripDay("2026-10-13", { isToday: false, isComplete: true }),

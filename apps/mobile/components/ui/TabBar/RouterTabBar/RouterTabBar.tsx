@@ -26,6 +26,7 @@ export function RouterTabBar({
   insets,
   addLabel,
   onAddPress,
+  addDisabled,
   label,
 }: RouterTabBarProps) {
   const tabs = state.routes.flatMap((route): TabBarTab[] => {
@@ -38,6 +39,7 @@ export function RouterTabBar({
   return (
     <TabBar
       activeKey={state.routes[state.index]?.key}
+      addDisabled={addDisabled}
       addLabel={addLabel}
       bottomInset={insets.bottom}
       label={label}

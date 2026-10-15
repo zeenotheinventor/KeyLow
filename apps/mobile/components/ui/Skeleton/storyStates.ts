@@ -1,1 +1,1 @@
-export const storyStates = ["Row", "Group", "Detail"];
+export const storyStates = ["Row", "Group", "Detail", "Diary"];

@@ -29,3 +29,6 @@ export const Group: Story = { args: { variant: "group" } };
 
 // A food's page, as the food boards draw it while the food loads.
 export const Detail: Story = { args: { variant: "detail" } };
+
+// The diary's food log while it loads: the week's pills, the four bars and five hours.
+export const Diary: Story = { args: { variant: "diary" } };

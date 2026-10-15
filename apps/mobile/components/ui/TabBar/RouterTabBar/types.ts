@@ -6,4 +6,4 @@ import type { BottomTabBarProps } from "expo-router/js-tabs";
  * and the insets), with the three things the bar needs that the navigator does not know.
  */
 export type RouterTabBarProps = BottomTabBarProps &
-  Pick<TabBarProps, "addLabel" | "onAddPress" | "label">;
+  Pick<TabBarProps, "addLabel" | "onAddPress" | "addDisabled" | "label">;

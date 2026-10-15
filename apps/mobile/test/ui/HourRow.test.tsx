@@ -92,6 +92,29 @@ describe("HourRow", () => {
       expect(onAdd).toHaveBeenCalledWith(23);
     });
 
+    it.each(schemes)(
+      "should draw the plus as a 32 by 32 ring with the ring variant's border inside the 44 point target in %s",
+      async (scheme) => {
+        await renderHourRow({ scheme });
+
+        // The drawn circle is 32 across with a 1 point border in the border colour and no fill. The button
+        // around it is the 44 point touch target.
+        expect(
+          viewsDrawn({
+            width: 32,
+            height: 32,
+            borderRadius: 999,
+            borderWidth: 1,
+            borderColor: resolvedColor(scheme, "border"),
+          }),
+        ).toHaveLength(1);
+        expect(screen.getByRole("button", { name: "Add food at 08:00" })).toHaveStyle({
+          height: 44,
+          width: 44,
+        });
+      },
+    );
+
     it("should be disabled, dimmed to 40 percent and not call onAdd when addDisabled is set", async () => {
       const { onAdd } = await renderHourRow({ addDisabled: true, children: porridge });
       const add = screen.getByRole("button", { name: "Add food at 08:00" });

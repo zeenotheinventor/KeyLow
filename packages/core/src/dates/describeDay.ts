@@ -64,3 +64,20 @@ function relativeDay(
     pickerName: describeDatePickerButton(label, dateInWords),
   };
 }
+
+/**
+ * The title of the diary screen: "Today", or the day as a short date such as "Wed 14 Oct". Unlike
+ * `describeDay` it does not call the days around today Yesterday or Tomorrow, because the diary's
+ * board writes the date of every other day. Both days are read in the given IANA time zone.
+ */
+export function describeDiaryTitle(date: Date, today: Date, timeZone: string): string {
+  const calendarDate = toLocalDate(date, timeZone);
+  if (calendarDate === toLocalDate(today, timeZone)) {
+    return DAY_STEPPER.today;
+  }
+
+  const { year, month, day } = parseCalendarDay(calendarDate);
+  const weekday = WEEKDAY_NAMES_SHORT[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+
+  return `${weekday} ${day} ${MONTH_NAMES_SHORT[month - 1]}`;
+}

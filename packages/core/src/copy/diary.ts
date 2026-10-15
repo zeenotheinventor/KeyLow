@@ -5,6 +5,7 @@ import { TARGET_KCAL_MAXIMUM, TARGET_KCAL_MINIMUM } from "../diary/rules";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { ProgressBar } from "../diary/rules";
+import type { QuantityUnit } from "../nutrition/units";
 
 /**
  * The diary's own sentences, as its boards draw them. The calorie ring and the day stepper have
@@ -19,6 +20,9 @@ export const DIARY_ACTIONS = {
   quickAdd: "Quick add",
   quickAddCaption: "Calories and macros by hand",
 };
+
+/** The name of the diary header's second button, which opens the menu with Copy yesterday. */
+export const DIARY_MORE_LABEL = "More";
 
 const describeEntryCount = (count: number): string =>
   count === 1 ? "1 entry" : `${count} entries`;
@@ -188,3 +192,36 @@ export const describeProgressTarget = (bar: ProgressBar): string => {
 
   return bar.hasTarget ? `/ ${format(bar.target)}` : unit;
 };
+
+/** The part of a logged entry that says how much was eaten. Null stands for a quick add. */
+export type LoggedAmount = {
+  unit: QuantityUnit;
+  quantity: number;
+  resolvedGrams: number;
+  /** Set exactly when the unit is `portion`. */
+  portion: { label: string } | null;
+};
+
+const MEASURED_UNIT_NAMES = { g: "g", ml: "ml", oz: "oz", fl_oz: "fl oz" } as const;
+
+/**
+ * How much of a food an entry holds, as a diary row writes it after the time: "50 g", "200 ml" or, for a
+ * portion, its label and the grams it came to ("1 medium (100 g)"). Several portions read "2 × 1 pot
+ * (340 g)". A quick add (null) reads "Quick add".
+ */
+export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
+  if (amount === null) {
+    return FOOD_ROW.quickAdd;
+  }
+  if (amount.unit !== "portion" || amount.portion === null) {
+    const unit = amount.unit === "portion" ? "g" : MEASURED_UNIT_NAMES[amount.unit];
+    return `${formatGrams(amount.quantity)} ${unit}`;
+  }
+  const grams = `${amount.portion.label} (${formatGrams(amount.resolvedGrams)} g)`;
+
+  return amount.quantity === 1 ? grams : `${formatGrams(amount.quantity)} × ${grams}`;
+};
+
+/** The line under a diary row's title: the time, then the amount, such as "08:05 · 50 g". */
+export const describeEntryCaption = (clockTime: string, amount: string): string =>
+  `${clockTime} · ${amount}`;

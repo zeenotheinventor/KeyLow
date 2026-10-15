@@ -1,9 +1,5 @@
-import { PLACEHOLDER_BODIES, TAB_TITLES } from "@keylow/core/copy";
-
-import { PlaceholderScreen } from "../../components/PlaceholderScreen";
+import { DiaryScreen } from "../../components/DiaryScreen";
 
 export default function DiaryRoute() {
-  return (
-    <PlaceholderScreen body={PLACEHOLDER_BODIES.diary} icon="BookOpen" title={TAB_TITLES.diary} />
-  );
+  return <DiaryScreen />;
 }
