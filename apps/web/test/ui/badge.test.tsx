@@ -56,10 +56,21 @@ describe("Badge", () => {
   });
 
   describe("light mode", () => {
-    it.each(coloredTones)("should keep %s text in the primary text colour", (tone) => {
-      render(<Badge tone={tone}>Label</Badge>);
+    it.each(coloredTones.filter((tone) => tone !== "success"))(
+      "should keep %s text in the primary text colour",
+      (tone) => {
+        render(<Badge tone={tone}>Label</Badge>);
 
-      expect(screen.getByText("Label").className).toContain(lightTextRule);
+        expect(screen.getByText("Label").className).toContain(lightTextRule);
+      },
+    );
+
+    it("should set success text in the success ink, which is darker green in light", () => {
+      render(<Badge tone="success">Label</Badge>);
+
+      const { className } = screen.getByText("Label");
+      expect(className).toContain("text-success-ink");
+      expect(className).not.toContain(lightTextRule);
     });
 
     it("should not recolour the neutral tone", () => {

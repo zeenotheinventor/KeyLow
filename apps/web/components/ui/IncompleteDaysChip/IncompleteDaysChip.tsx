@@ -7,11 +7,12 @@ import type { IncompleteDaysChipProps } from "./types";
 import { cn } from "@/lib/utils";
 
 // A status tone is the tone's muted fill with the tone's colour as the text. In light mode that
-// colour is too weak for small text, so the words fall back to the primary text colour and the
-// icon keeps the colour. The icon is not text, so it takes its colour as a stroke.
+// colour is too weak for small text, so the warning words fall back to the primary text colour and the
+// icon keeps the colour. The success words take the success ink, a darker green in light. The icon is
+// not text, so it takes its colour as a stroke.
 const tones = {
   warning: "bg-warning-muted text-warning light-theme:text-text-primary",
-  success: "bg-success-muted text-success light-theme:text-text-primary",
+  success: "bg-success-muted text-success-ink",
 } as const;
 
 const iconTones = { warning: "stroke-warning", success: "stroke-success" } as const;

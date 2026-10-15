@@ -117,8 +117,8 @@ describe("IncompleteDaysChip", () => {
       ).toHaveLength(1);
     });
 
-    // Warning and success are too faint as light-mode text, so the words fall back to the primary text
-    // colour there, as the badge does.
+    // Warning is too faint as light-mode text, so its words fall back to the primary text colour there.
+    // Success has its own ink, a darker green in light.
     it("should colour the words of a warning chip in the warning ink", async () => {
       await renderChip({ count: 1 }, scheme);
 
@@ -127,11 +127,11 @@ describe("IncompleteDaysChip", () => {
       });
     });
 
-    it("should colour the words of a success chip in success in dark and the primary text colour in light", async () => {
+    it("should colour the words of a success chip in the success ink", async () => {
       await renderChip({ count: 0 }, scheme);
 
       expect(screen.getByText("All days complete this week")).toHaveStyle({
-        color: resolvedColor(scheme, scheme === "dark" ? "success" : "text-primary"),
+        color: resolvedColor(scheme, "success-ink"),
       });
     });
   });
