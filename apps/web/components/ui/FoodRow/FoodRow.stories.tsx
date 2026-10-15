@@ -393,3 +393,18 @@ export const TableFocused: Story = {
     await userEvent.tab();
   },
 };
+
+// Offline, Delete is dimmed and stops responding, and Edit stays. The buttons are shown the way hover shows them.
+export const TableDeleteDisabled: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <HourTable>
+      <FoodRow
+        {...porridgeOats}
+        deleteDisabled
+        className="bg-hover-overlay [&>div:last-child]:opacity-100"
+      />
+      <FoodRow {...semiSkimmedMilk} deleteDisabled />
+    </HourTable>
+  ),
+};

@@ -17,11 +17,13 @@ import { HourRow } from "@/components/ui/HourRow";
  * and so the switch is a new one (it belongs to the day) that plays no moment for a day that is already complete.
  */
 export function FoodLog({
+  ref,
   hours,
   timeZone,
   currentHour,
   isToday,
   isComplete,
+  isOnline,
   isYesterdayEmpty,
   isCopying,
   hasCopyFailed,
@@ -40,10 +42,11 @@ export function FoodLog({
   }, []);
 
   return (
-    <div className="flex flex-col">
+    <div ref={ref} className="flex flex-col">
       {isEmpty && (
         <EmptyDayCard
           isYesterdayEmpty={isYesterdayEmpty}
+          isOnline={isOnline}
           isCopying={isCopying}
           hasCopyFailed={hasCopyFailed}
           onCopyYesterday={onCopyYesterday}
@@ -58,12 +61,14 @@ export function FoodLog({
             label={group.label}
             foodCount={group.entries.length}
             isNow={isToday && group.hour === currentHour}
+            addDisabled={!isOnline}
             onAdd={onAddFood}
           >
             <HourFoods
               label={group.label}
               entries={group.entries}
               timeZone={timeZone}
+              deleteDisabled={!isOnline}
               onEdit={onEdit}
               onDelete={onDelete}
             />
@@ -73,6 +78,7 @@ export function FoodLog({
       <div className="pl-8 pt-3">
         <DayCompleteToggle
           complete={isComplete}
+          disabled={!isOnline}
           className="md:max-w-[520px]"
           onChange={onCompleteChange}
         />

@@ -251,6 +251,18 @@ describe("FoodRow table", () => {
       expect(onDelete).toHaveBeenCalledTimes(1);
     });
 
+    it("should keep Delete from deleting, and leave Edit alone, with deleteDisabled", () => {
+      const { onEdit, onDelete } = renderTable({ deleteDisabled: true });
+
+      const remove = screen.getByRole("button", { name: "Delete Porridge oats" });
+      fireEvent.click(remove);
+      fireEvent.click(screen.getByRole("button", { name: "Edit Porridge oats" }));
+
+      expect(remove).toHaveProperty("disabled", true);
+      expect(onDelete).not.toHaveBeenCalled();
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+
     it("should stay reachable by keyboard while they are not shown", () => {
       renderTable();
 

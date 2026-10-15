@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -187,6 +188,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   vi.useRealTimers();
 });
 
@@ -473,6 +475,39 @@ describe("the week view", () => {
       for (const button of screen.getAllByRole("button", { name: /^Copy to today/ })) {
         expect(button).toHaveProperty("disabled", true);
       }
+    });
+
+    describe("offline", () => {
+      it("should be disabled on every day, and copy nothing", () => {
+        onlineManager.setOnline(false);
+        renderWeek();
+
+        for (const button of screen.getAllByRole("button", { name: /^Copy to today/ })) {
+          fireEvent.click(button);
+          expect(button).toHaveProperty("disabled", true);
+        }
+        expect(copyDay.mutate).not.toHaveBeenCalled();
+      });
+
+      it("should leave the date links and the week navigation alone", () => {
+        onlineManager.setOnline(false);
+        renderWeek();
+
+        expect(screen.getByRole("link", { name: "Tue 13" })).toBeTruthy();
+        expect(screen.getByRole("radio", { name: "Day" })).toHaveProperty("disabled", false);
+      });
+
+      it("should copy again with no reload when the connection returns", () => {
+        onlineManager.setOnline(false);
+        renderWeek();
+
+        act(() => {
+          onlineManager.setOnline(true);
+        });
+        fireEvent.click(copyButton("Tue 13"));
+
+        expect(copyDay.mutate).toHaveBeenCalledOnce();
+      });
     });
 
     describe("by keyboard", () => {

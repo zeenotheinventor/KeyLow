@@ -33,6 +33,7 @@ export function WeekGrid({
   calorieTarget,
   dayHref,
   onCopyToToday,
+  copyDisabled = false,
   isCopying = false,
   className,
 }: WeekGridProps) {
@@ -61,6 +62,7 @@ export function WeekGrid({
                 : undefined
             }
             isCopying={isCopying}
+            copyDisabled={copyDisabled}
           />
         );
       })}
@@ -71,6 +73,7 @@ export function WeekGrid({
         calorieTarget={calorieTarget}
         isComplete={false}
         isCopying={isCopying}
+        copyDisabled={copyDisabled}
       />
     </ul>
   );

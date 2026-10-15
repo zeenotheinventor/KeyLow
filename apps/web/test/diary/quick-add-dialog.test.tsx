@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { quickEntry } from "./support";
@@ -63,6 +64,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   vi.useRealTimers();
 });
 
@@ -406,6 +408,66 @@ describe("the quick add dialog", () => {
 
       expect(onClose).toHaveBeenCalledTimes(2);
       expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("offline", () => {
+    const setOnline = (isOnline: boolean) => {
+      act(() => {
+        onlineManager.setOnline(isOnline);
+      });
+    };
+
+    it("should disable Add, and add nothing, even when the form is submitted", () => {
+      renderDialog();
+      type(calories(), "130");
+
+      setOnline(false);
+      fireEvent.click(add());
+      fireEvent.submit(calories());
+
+      expect(add()).toHaveProperty("disabled", true);
+      expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should keep what was typed when the connection drops and when it returns", () => {
+      renderDialog();
+      type(calories(), "130");
+      type(protein(), "12");
+      type(label(), "Crisps");
+
+      setOnline(false);
+      expect(calories()).toHaveProperty("value", "130");
+      expect(protein()).toHaveProperty("value", "12");
+      expect(label()).toHaveProperty("value", "Crisps");
+
+      setOnline(true);
+      expect(calories()).toHaveProperty("value", "130");
+      expect(protein()).toHaveProperty("value", "12");
+      expect(label()).toHaveProperty("value", "Crisps");
+    });
+
+    it("should add what was typed once the connection returns", async () => {
+      const { onClose } = renderDialog();
+      type(calories(), "130");
+      setOnline(false);
+      setOnline(true);
+
+      fireEvent.click(add());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.quickAdd.mutateAsync.mock.calls[0]?.[0].kcal).toBe(130);
+    });
+
+    it("should leave Cancel alone", () => {
+      const { onClose } = renderDialog();
+      setOnline(false);
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(onClose).toHaveBeenCalledOnce();
     });
   });
 });

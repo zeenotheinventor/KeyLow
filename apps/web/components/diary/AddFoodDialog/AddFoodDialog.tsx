@@ -16,15 +16,18 @@ import { useLoggingTime } from "@/components/diary/useLoggingTime";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
+import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
  * The add food dialog. Food is logged at a time, not in a meal: the Time field starts at the hour an hour's
  * plus asked for, or at the moment the dialog opened ("Now"), on the day on view. The first step is the
  * search, where a row's plus logs its serving at once and the dialog stays open so several foods can be
  * added. A press on a row goes to the portion step, where Add logs the chosen amount and closes the dialog.
+ * Both adds need a connection, so offline the plus and Add are off and what was typed stays.
  */
 export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodDialogProps) {
   const toast = useToast();
+  const isOnline = useIsOnline();
   const { time, isNow, chooseTime, resolve: resolveLoggedAt } = useLoggingTime(request);
   const [query, setQuery] = useState("");
   const [foodId, setFoodId] = useState<string | undefined>(undefined);
@@ -81,7 +84,10 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
             <Button
               type="button"
               disabled={
-                draft.status !== "ready" || draft.preview.amount === null || draft.needsReview
+                !isOnline ||
+                draft.status !== "ready" ||
+                draft.preview.amount === null ||
+                draft.needsReview
               }
               loading={draft.status === "ready" && draft.isSaving}
               loadingLabel="Adding"

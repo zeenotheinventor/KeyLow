@@ -12,7 +12,14 @@ import { FoodTable } from "@/components/ui/FoodTable";
  * Delete on each row, below it stacked rows that open the edit dialog when pressed. Both are in the page,
  * because the width decides which is shown.
  */
-export function HourFoods({ label, entries, timeZone, onEdit, onDelete }: HourFoodsProps) {
+export function HourFoods({
+  label,
+  entries,
+  timeZone,
+  deleteDisabled,
+  onEdit,
+  onDelete,
+}: HourFoodsProps) {
   return (
     <>
       <FoodTable label={describeFoodsAtHour(label)}>
@@ -27,6 +34,7 @@ export function HourFoods({ label, entries, timeZone, onEdit, onDelete }: HourFo
               caption={row.caption}
               energy={row.energy}
               macros={row.cells}
+              deleteDisabled={deleteDisabled}
               onEdit={() => {
                 onEdit(entry);
               }}

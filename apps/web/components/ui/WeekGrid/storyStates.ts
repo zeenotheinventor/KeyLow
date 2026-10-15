@@ -4,6 +4,7 @@ export const storyStates = [
   "WeekWithFutureDays",
   "NoTarget",
   "PastDayWithoutEntries",
+  "CopyDisabled",
   "OnPhone",
   "OnDesktop",
 ];

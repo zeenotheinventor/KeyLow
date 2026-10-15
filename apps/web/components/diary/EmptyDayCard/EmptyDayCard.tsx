@@ -10,9 +10,10 @@ import { Card } from "@/components/ui/Card";
 /**
  * The small card above 00:00 on a day with nothing logged: "Nothing logged yet", a hint, and a Copy
  * yesterday button, which copies the whole day. It is dimmed, with the reason, when yesterday is empty
- * too, and says so when the copy failed.
+ * too or the app is offline, and says so when the copy failed.
  */
 export function EmptyDayCard({
+  isOnline,
   isYesterdayEmpty,
   isCopying,
   hasCopyFailed,
@@ -38,7 +39,7 @@ export function EmptyDayCard({
         <Button
           type="button"
           variant="secondary"
-          disabled={isYesterdayEmpty}
+          disabled={isYesterdayEmpty || !isOnline}
           loading={isCopying}
           onClick={onCopyYesterday}
         >

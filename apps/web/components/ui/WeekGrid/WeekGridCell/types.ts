@@ -17,6 +17,8 @@ export type WeekGridCellProps = {
   isComplete: boolean;
   /** Adds Copy to today to the cell. */
   onCopyToToday?: (() => void) | undefined;
+  /** Copy to today is off, such as while offline. */
+  copyDisabled: boolean;
   /** A copy is on its way, so Copy to today waits. */
   isCopying: boolean;
 };

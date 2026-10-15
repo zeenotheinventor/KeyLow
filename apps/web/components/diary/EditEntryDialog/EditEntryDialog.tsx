@@ -22,34 +22,30 @@ import type { Ref } from "react";
 
 import { DIARY_DIALOG_CLASSES } from "@/components/diary/diaryDialogClasses";
 import { PortionFields } from "@/components/diary/PortionFields";
-import { MacroHero } from "@/components/foods/FoodDetail/MacroHero";
+import { QuickAddFields } from "@/components/diary/QuickAddFields";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { TimeField } from "@/components/ui/TimeField";
 import { useDeleteEntryWithUndo } from "@/lib/foodLogActions/useDeleteEntryWithUndo";
+import { useIsOnline } from "@/lib/useIsOnline";
 
-type EntryFormProps = { entry: LogEntry; draft: EntryDraft; amountRef?: Ref<HTMLInputElement> };
+type EntryFormProps = {
+  entry: LogEntry;
+  draft: EntryDraft;
+  amountRef?: Ref<HTMLInputElement>;
+  caloriesRef?: Ref<HTMLInputElement>;
+};
 
-// A quick add has no food and no amount, only values it was given, so only its time can change. The hero shows
-// what it was logged with, and the note says what a quick add is.
-function QuickAddEntryFields({ entry, draft }: EntryFormProps) {
+// A quick add has no food and no amount, only values it was given, which are the same fields as the quick add
+// dialog's. The note says what a quick add is.
+function QuickAddEntryFields({ draft, caloriesRef }: EntryFormProps) {
   return (
     <>
       {draft.hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
-      <MacroHero
-        food={{ basis: "per_100g", ...entry.nutrients }}
-        amount={{
-          name:
-            entry.item_type === "quick"
-              ? (entry.snapshot.label ?? FOOD_ROW.quickAdd)
-              : FOOD_ROW.quickAdd,
-          caption: FOOD_ROW.quickAdd,
-          values: entry.nutrients,
-        }}
-      />
-      <p className="text-caption text-text-muted">{QUICK_ADD_NOTE}</p>
+      <QuickAddFields draft={draft.quick} caloriesRef={caloriesRef} />
       <TimeField value={draft.time} onChange={draft.setTime} />
+      <p className="text-caption text-text-muted">{QUICK_ADD_NOTE}</p>
     </>
   );
 }
@@ -110,16 +106,22 @@ function EditEntryForm({
 }) {
   const draft = useEntryDraft(entry);
   const remove = useDeleteEntryWithUndo();
+  const isOnline = useIsOnline();
   const isFood = entry.item_type === "food";
   const formId = useId();
   const amountField = useRef<HTMLInputElement>(null);
+  const caloriesField = useRef<HTMLInputElement>(null);
 
-  // The cursor starts in the amount, the field a food entry is edited by.
+  // The cursor starts in the amount for a food, the field it is edited by, and in Calories for a quick add.
   useEffect(() => {
-    amountField.current?.focus();
-  }, []);
+    (isFood ? amountField : caloriesField).current?.focus();
+  }, [isFood]);
 
   function save() {
+    // Saving needs a connection, and Enter in a field submits the form even though the button is off.
+    if (!isOnline) {
+      return;
+    }
     void draft.save().then((isSaved) => {
       if (isSaved) {
         onClose();
@@ -140,6 +142,7 @@ function EditEntryForm({
           variant="ghost"
           tone="danger"
           className="px-2"
+          disabled={!isOnline}
           onClick={() => {
             // The row goes with the entry, so the keyboard route starts from the control that opened this.
             remove(entry, { from: opener });
@@ -163,7 +166,9 @@ function EditEntryForm({
           <Button
             type="submit"
             form={formId}
-            disabled={isFood && draft.preview.amount === null}
+            disabled={
+              !isOnline || (isFood ? draft.preview.amount === null : !draft.quick.validated.ok)
+            }
             loading={draft.isSaving}
             loadingLabel="Saving"
           >
@@ -183,7 +188,7 @@ function EditEntryForm({
         {isFood ? (
           <FoodEntryFields entry={entry} draft={draft} amountRef={amountField} />
         ) : (
-          <QuickAddEntryFields entry={entry} draft={draft} />
+          <QuickAddEntryFields entry={entry} draft={draft} caloriesRef={caloriesField} />
         )}
       </form>
     </Dialog>
@@ -208,6 +213,6 @@ export function EditEntryDialog({ entryId, date, opener, onClose }: EditEntryDia
   }, [day.data, entry, onClose]);
 
   return entry === undefined ? null : (
-    <EditEntryForm entry={entry} opener={opener} onClose={onClose} />
+    <EditEntryForm key={entry.id} entry={entry} opener={opener} onClose={onClose} />
   );
 }

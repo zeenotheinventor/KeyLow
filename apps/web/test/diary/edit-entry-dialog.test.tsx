@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -97,6 +98,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
 });
 
 describe("the edit entry dialog for a logged food", () => {
@@ -610,55 +612,363 @@ describe("the edit entry dialog for a quick add", () => {
     });
   }
 
-  it("should show what the quick add was logged with, and the note about quick adds", () => {
-    renderDialog(crisps());
+  const calories = () => screen.getByRole("textbox", { name: /^Calories/ });
+  const protein = () => screen.getByRole("textbox", { name: /^Protein/ });
+  const carbs = () => screen.getByRole("textbox", { name: /^Carbohydrate/ });
+  const fat = () => screen.getByRole("textbox", { name: /^Fat/ });
+  const label = () => screen.getByRole("textbox", { name: /^Label/ });
+  const save = () => screen.getByRole("button", { name: "Save" });
+  const type = (field: HTMLElement, value: string) => {
+    fireEvent.change(field, { target: { value } });
+  };
 
-    const hero = screen.getByRole("group", { name: "Energy and macros, Quick add" });
-    expect(within(hero).getByText("Meal deal crisps")).toBeTruthy();
-    expect(within(hero).getByText("130")).toBeTruthy();
-    expect(
-      screen.getByText(
-        'Quick adds count towards the day\'s totals and show as "Quick add" in the diary.',
-      ),
-    ).toBeTruthy();
+  // The one request the dialog made, read without a cast.
+  function updateSent(): EntryUpdate {
+    const [update] = api.updateEntry.mutateAsync.mock.calls[0] ?? [];
+    if (update === undefined) {
+      throw new Error("no update was sent");
+    }
+
+    return update;
+  }
+
+  describe("what it shows", () => {
+    it("should show Calories, Protein, Carbohydrate, Fat, Label and Time with the entry's values", () => {
+      renderDialog(crisps());
+
+      expect(calories()).toHaveProperty("value", "130");
+      expect(protein()).toHaveProperty("value", "2");
+      expect(carbs()).toHaveProperty("value", "15");
+      expect(fat()).toHaveProperty("value", "7");
+      expect(label()).toHaveProperty("value", "Meal deal crisps");
+      expect(screen.getByRole("button", { name: "Time 12:45" })).toBeTruthy();
+    });
+
+    it("should list the fields in the add dialog's order", () => {
+      renderDialog(crisps());
+
+      expect(
+        within(dialog())
+          .getAllByRole("textbox")
+          .map((field) => field.id),
+      ).toEqual([calories().id, protein().id, carbs().id, fat().id, label().id]);
+    });
+
+    it("should have no hero, and still the note about quick adds", () => {
+      renderDialog(crisps());
+
+      expect(screen.queryByRole("group", { name: "Energy and macros, Quick add" })).toBeNull();
+      expect(
+        screen.getByText(
+          'Quick adds count towards the day\'s totals and show as "Quick add" in the diary.',
+        ),
+      ).toBeTruthy();
+    });
+
+    it("should show a macro that was not given, and a label that was not given, as empty", () => {
+      renderDialog(quickEntry({ date: TODAY, time: "12:45", label: "", kcal: 90 }));
+
+      expect(protein()).toHaveProperty("value", "");
+      expect(carbs()).toHaveProperty("value", "");
+      expect(fat()).toHaveProperty("value", "");
+      expect(label()).toHaveProperty("value", "");
+    });
+
+    it("should have no amount or unit to change", () => {
+      renderDialog(crisps());
+
+      expect(screen.queryByRole("textbox", { name: /^Amount/ })).toBeNull();
+    });
+
+    it("should put the cursor in Calories", () => {
+      renderDialog(crisps());
+
+      expect(document.activeElement).toBe(calories());
+    });
   });
 
-  it("should have no amount or unit to change, and the entry's own time", () => {
-    renderDialog(crisps());
+  describe("saving what changed", () => {
+    it("should send all five values and no time when the calories changed", async () => {
+      const entry = crisps();
+      const { onClose } = renderDialog(entry);
+      type(calories(), "150");
 
-    expect(screen.queryByRole("textbox", { name: /^Amount/ })).toBeNull();
-    expect(screen.getByRole("button", { name: "Time 12:45" })).toBeTruthy();
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      const update = updateSent();
+      expect(update).toEqual({
+        entry,
+        quick: { kcal: 150, protein_g: 2, carbs_g: 15, fat_g: 7, label: "Meal deal crisps" },
+      });
+      expect("time" in update).toBe(false);
+    });
+
+    it("should send all five values when only a macro changed", async () => {
+      const entry = crisps();
+      renderDialog(entry);
+      type(fat(), "9.5");
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(updateSent()).toEqual({
+        entry,
+        quick: { kcal: 130, protein_g: 2, carbs_g: 15, fat_g: 9.5, label: "Meal deal crisps" },
+      });
+    });
+
+    it("should send all five values when only the label changed", async () => {
+      const entry = crisps();
+      renderDialog(entry);
+      type(label(), "  Crisps  ");
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(updateSent()).toEqual({
+        entry,
+        quick: { kcal: 130, protein_g: 2, carbs_g: 15, fat_g: 7, label: "Crisps" },
+      });
+    });
+
+    it("should send null for a macro that was cleared, not 0", async () => {
+      const entry = crisps();
+      renderDialog(entry);
+      type(protein(), "");
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      const update = updateSent();
+      expect(update.quick?.protein_g).toBeNull();
+      expect(update.quick?.carbs_g).toBe(15);
+    });
+
+    it("should send null for a label that was cleared", async () => {
+      renderDialog(crisps());
+      type(label(), "");
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(updateSent().quick?.label).toBeNull();
+    });
+
+    it("should send 0 for a macro that was not given and has been set to 0", async () => {
+      renderDialog(quickEntry({ date: TODAY, time: "12:45", label: "", kcal: 90 }));
+      type(protein(), "0");
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(updateSent().quick).toEqual({
+        kcal: 90,
+        protein_g: 0,
+        carbs_g: null,
+        fat_g: null,
+        label: null,
+      });
+    });
+
+    it("should save a new time, and only the time", async () => {
+      const entry = crisps();
+      const { onClose } = renderDialog(entry);
+      fireEvent.click(screen.getByRole("button", { name: "Time 12:45" }));
+      fireEvent.click(
+        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "07" }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledExactlyOnceWith({
+        entry,
+        time: { loggedAt: "2026-10-15T07:45:00.000Z", timeZone: "UTC" },
+      });
+      expect("quick" in updateSent()).toBe(false);
+    });
+
+    it("should send the values and the time together when both changed", async () => {
+      renderDialog(crisps());
+      type(calories(), "140");
+      fireEvent.click(screen.getByRole("button", { name: "Time 12:45" }));
+      fireEvent.click(
+        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "07" }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      const update = updateSent();
+      expect(update.quick?.kcal).toBe(140);
+      expect(update.time).toEqual({ loggedAt: "2026-10-15T07:45:00.000Z", timeZone: "UTC" });
+    });
+
+    it("should close on Save with nothing changed, without a request", async () => {
+      const { onClose } = renderDialog(crisps());
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should send nothing when a value is typed again as it was", async () => {
+      const { onClose } = renderDialog(crisps());
+      type(calories(), "130.0");
+      type(label(), "Meal deal crisps ");
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should save when Enter is pressed in a field, as the Save button does", async () => {
+      const { onClose } = renderDialog(crisps());
+      type(calories(), "150");
+
+      fireEvent.submit(calories());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(updateSent().quick?.kcal).toBe(150);
+    });
+
+    it("should stay open with the error banner, keeping what was typed, when the save fails", async () => {
+      api.updateEntry.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW 150 kcal failure")));
+      const { onClose } = renderDialog(crisps());
+      type(calories(), "150");
+      type(label(), "Crisps");
+
+      fireEvent.click(save());
+
+      expect(
+        await screen.findByText("Not saved. Check your connection and try again."),
+      ).toBeTruthy();
+      expect(screen.queryByText(/RAW/)).toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(calories()).toHaveProperty("value", "150");
+      expect(label()).toHaveProperty("value", "Crisps");
+    });
   });
 
-  it("should save a new time, and only the time", async () => {
-    const entry = crisps();
-    const { onClose } = renderDialog(entry);
-    fireEvent.click(screen.getByRole("button", { name: "Time 12:45" }));
-    fireEvent.click(
-      within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: "07" }),
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Done" }));
+  describe("the calories", () => {
+    it("should disable Save and say Enter calories once they are cleared", () => {
+      renderDialog(crisps());
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      type(calories(), "");
 
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalledOnce();
+      expect(save()).toHaveProperty("disabled", true);
+      expect(screen.getByText("Enter calories.")).toBeTruthy();
     });
-    expect(api.updateEntry.mutateAsync).toHaveBeenCalledExactlyOnceWith({
-      entry,
-      time: { loggedAt: "2026-10-15T07:45:00.000Z", timeZone: "UTC" },
+
+    it("should disable Save and say Enter calories for 0", () => {
+      renderDialog(crisps());
+
+      type(calories(), "0");
+
+      expect(save()).toHaveProperty("disabled", true);
+      expect(screen.getByText("Enter calories.")).toBeTruthy();
+    });
+
+    it("should not save on Enter while the calories are not above 0", () => {
+      renderDialog(crisps());
+      type(calories(), "0");
+
+      fireEvent.submit(calories());
+
+      expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should keep digits and one point or comma, and refuse anything else", () => {
+      renderDialog(crisps());
+
+      type(protein(), "1a");
+
+      expect(protein()).toHaveProperty("value", "2");
     });
   });
 
-  it("should close on Save with nothing changed, without a request", async () => {
-    const { onClose } = renderDialog(crisps());
+  describe("the line under Calories", () => {
+    const line = (text: string) => screen.getByText(text);
+    const isWarning = (text: string) => line(text).className.includes("text-warning-ink");
 
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    it("should say what the macros add up to", () => {
+      renderDialog(crisps());
 
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalledOnce();
+      expect(screen.getByText("Macros add up to 131 kcal")).toBeTruthy();
     });
-    expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+
+    it("should say the macros are optional when none was given", () => {
+      renderDialog(quickEntry({ date: TODAY, time: "12:45", label: "", kcal: 90 }));
+
+      expect(screen.getByText("Macros are optional")).toBeTruthy();
+    });
+
+    it("should stay plain at exactly a quarter above the calories and warn just over it", () => {
+      renderDialog(crisps());
+      type(calories(), "130");
+
+      // 40.5 g of protein is 162 kcal: 32 kcal over, which is under a quarter of 130.
+      type(protein(), "40.5");
+      type(carbs(), "");
+      type(fat(), "");
+      expect(isWarning("Macros add up to 162 kcal")).toBe(false);
+
+      // 40.75 g of protein is 163 kcal: 33 kcal over, which is more than a quarter of 130.
+      type(protein(), "40.75");
+      expect(isWarning("Macros add up to 163 kcal")).toBe(true);
+    });
+
+    it("should stay plain at a quarter below the calories and warn just under it", () => {
+      renderDialog(crisps());
+      type(calories(), "130");
+      type(carbs(), "");
+      type(fat(), "");
+
+      type(protein(), "24.5");
+      expect(isWarning("Macros add up to 98 kcal")).toBe(false);
+
+      type(protein(), "24.25");
+      expect(isWarning("Macros add up to 97 kcal")).toBe(true);
+    });
+
+    it("should be information only: Save is still allowed", () => {
+      renderDialog(crisps());
+      type(calories(), "130");
+      type(protein(), "60");
+      type(carbs(), "");
+      type(fat(), "");
+
+      expect(isWarning("Macros add up to 240 kcal")).toBe(true);
+      expect(save()).toHaveProperty("disabled", false);
+    });
   });
 
   it("should delete with Undo, like any entry", () => {
@@ -668,5 +978,78 @@ describe("the edit entry dialog for a quick add", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(api.deleteEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
+  });
+});
+
+describe("the edit entry dialog offline", () => {
+  const setOnline = (isOnline: boolean) => {
+    act(() => {
+      onlineManager.setOnline(isOnline);
+    });
+  };
+  const save = () => screen.getByRole("button", { name: "Save" });
+  const remove = () => screen.getByRole("button", { name: "Delete" });
+  const crispsEntry = (): LogEntry =>
+    quickEntry({ date: TODAY, time: "12:45", label: "Crisps", kcal: 130 });
+
+  describe.each([
+    ["a logged food", chickenEntry, () => amount(), "200"],
+    ["a quick add", crispsEntry, () => screen.getByRole("textbox", { name: /^Calories/ }), "150"],
+  ])("for %s", (_name, makeEntry, field, typed) => {
+    it("should disable Save, and save nothing, even when the form is submitted", () => {
+      renderDialog(makeEntry());
+      fireEvent.change(field(), { target: { value: typed } });
+
+      setOnline(false);
+      fireEvent.click(save());
+      fireEvent.submit(field());
+
+      expect(save()).toHaveProperty("disabled", true);
+      expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should disable Delete, and delete nothing", () => {
+      renderDialog(makeEntry());
+
+      setOnline(false);
+      fireEvent.click(remove());
+
+      expect(remove()).toHaveProperty("disabled", true);
+      expect(api.deleteEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should keep what was typed when the connection drops and when it returns", () => {
+      renderDialog(makeEntry());
+      fireEvent.change(field(), { target: { value: typed } });
+
+      setOnline(false);
+      expect(field()).toHaveProperty("value", typed);
+
+      setOnline(true);
+      expect(field()).toHaveProperty("value", typed);
+    });
+
+    it("should save what was typed once the connection returns", async () => {
+      const { onClose } = renderDialog(makeEntry());
+      fireEvent.change(field(), { target: { value: typed } });
+      setOnline(false);
+      setOnline(true);
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+
+    it("should leave Cancel alone", () => {
+      const { onClose } = renderDialog(makeEntry());
+      setOnline(false);
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
   });
 });

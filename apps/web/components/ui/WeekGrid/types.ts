@@ -21,6 +21,8 @@ export type WeekGridProps = {
   dayHref: (localDate: string) => string;
   /** Called with the day to copy into today. */
   onCopyToToday: (localDate: string) => void;
+  /** Dims every Copy to today and stops it responding, such as while offline. The date links are left alone. */
+  copyDisabled?: boolean;
   /** A copy is on its way, so every Copy to today waits. */
   isCopying?: boolean;
   className?: string;

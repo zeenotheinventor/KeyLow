@@ -14,10 +14,11 @@ export type ToastPosition = "absolute" | "fixed";
 export type ToastFocusAction = {
   /**
    * Where focus goes when the toast closes with focus still on it: the next row after a delete, or the
-   * button pressed after a copy. Null leaves focus where the browser puts it. A target that has left the
-   * page is skipped.
+   * button pressed after a copy. Give a function when the place does not exist yet, such as a row that
+   * a copy has yet to draw: it is called when the toast closes. Null leaves focus where the browser puts
+   * it. A target that has left the page is skipped.
    */
-  returnTo: HTMLElement | null;
+  returnTo: HTMLElement | null | (() => HTMLElement | null);
 };
 
 export type ToastProps = {

@@ -77,6 +77,9 @@ export const PastDayWithoutEntries: Story = {
   args: { days: [monday, tuesday, day("2026-10-14", null), thursday, ...toCome] },
 };
 
+// Offline, every Copy to today is dimmed and stops responding. The date links stay.
+export const CopyDisabled: Story = { args: { copyDisabled: true } };
+
 // The phone layout: one card of eight rows.
 export const OnPhone: Story = {
   globals: { viewport: { value: "mobile", isRotated: false } },

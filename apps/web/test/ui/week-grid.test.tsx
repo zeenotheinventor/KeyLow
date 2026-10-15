@@ -312,6 +312,22 @@ describe("WeekGrid", () => {
       expect(onCopyToToday).toHaveBeenCalledExactlyOnceWith("2026-10-13");
     });
 
+    it("should be disabled, and copy nothing, with copyDisabled", () => {
+      const { onCopyToToday } = renderGrid({ copyDisabled: true });
+
+      for (const button of screen.getAllByRole("button")) {
+        fireEvent.click(button);
+        expect(button).toHaveProperty("disabled", true);
+      }
+      expect(onCopyToToday).not.toHaveBeenCalled();
+    });
+
+    it("should leave the date links alone with copyDisabled", () => {
+      renderGrid({ copyDisabled: true });
+
+      expect(screen.getByRole("link", { name: "Mon 12" })).toBeTruthy();
+    });
+
     it("should be disabled while a copy is on its way, so a double press copies once", () => {
       renderGrid({ isCopying: true });
 

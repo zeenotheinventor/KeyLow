@@ -11,8 +11,13 @@ import {
 } from "@keylow/core/diary";
 import { useState } from "react";
 
+import { quickEntryChange } from "./quickEntryChange";
+
+import type { QuickAddDraft, QuickAddTexts } from "@/components/diary/QuickAddFields";
 import type { EntryUpdate, LogEntry } from "@keylow/api-client";
 import type { AmountFood, AmountPortion, AmountPreview, UnitOption } from "@keylow/core/diary";
+
+import { useQuickAddDraft } from "@/components/diary/QuickAddFields";
 
 type Edits = { entryId: string; quantityText?: string; unitValue?: string; chosenTime?: string };
 
@@ -24,6 +29,8 @@ export type EntryDraft = {
   preview: AmountPreview;
   quantityText: string;
   unitValue: string;
+  /** A quick add's fields, which start from the entry. Nothing for a food entry. */
+  quick: QuickAddDraft;
   /** The Time field's value, `HH:mm`. */
   time: string;
   /** The live food differs from what the entry kept, so "Update to current food data" is offered. */
@@ -51,15 +58,35 @@ const NO_FOOD: AmountFood = {
   fibre_g: null,
 };
 
+const numberText = (value: number | null): string => (value === null ? "" : String(value));
+
+// A quick add's saved numbers and label, as the fields hold them. A food entry has none.
+function quickTexts(entry: LogEntry): QuickAddTexts {
+  if (entry.item_type !== "quick") {
+    return { kcal: "", protein: "", carbs: "", fat: "", label: "" };
+  }
+  const { nutrients, snapshot } = entry;
+
+  return {
+    kcal: numberText(nutrients.kcal),
+    protein: numberText(nutrients.protein_g),
+    carbs: numberText(nutrients.carbs_g),
+    fat: numberText(nutrients.fat_g),
+    label: snapshot.label ?? "",
+  };
+}
+
 /**
  * The edit dialog's state for one entry. A food entry changes its amount (worked out from its own snapshot,
  * never the live food), its time, or all of its values at once ("Update to current food data"); a quick add
- * changes its time only. What the person has typed is kept apart from the entry and starts again for another
- * entry. Nothing a failed save throws is kept: it can quote the amount, which is health data.
+ * changes its calories, macros and label (written as a whole), its time, or both. What the person has typed
+ * is kept apart from the entry and starts again for another entry. Nothing a failed save throws is kept: it
+ * can quote the amount, which is health data.
  */
 export function useEntryDraft(entry: LogEntry): EntryDraft {
   const timeZone = useProfileTimeZone().data ?? "UTC";
   const updateEntry = useUpdateEntry();
+  const quick = useQuickAddDraft(quickTexts(entry));
   const [edits, setEdits] = useState<Edits | undefined>(undefined);
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaveError, setHasSaveError] = useState(false);
@@ -113,6 +140,7 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
     preview,
     quantityText,
     unitValue,
+    quick,
     time,
     isFoodChanged:
       snapshot !== undefined &&
@@ -139,7 +167,18 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
     save: async () => {
       const time = timeChange();
       if (entry.item_type === "quick") {
-        return time === undefined ? true : write({ entry, time });
+        if (!quick.validated.ok) {
+          return false;
+        }
+        const values = quickEntryChange(entry, quick.validated.value);
+        if (values === undefined && time === undefined) {
+          return true;
+        }
+        return write({
+          entry,
+          ...(values === undefined ? {} : { quick: values }),
+          ...(time === undefined ? {} : { time }),
+        });
       }
       const { amount } = preview;
       if (amount === null) {

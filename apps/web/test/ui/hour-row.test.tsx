@@ -34,6 +34,28 @@ describe("HourRow", () => {
     expect(onAdd).toHaveBeenCalledExactlyOnceWith(8);
   });
 
+  describe("with addDisabled", () => {
+    it("should dim the plus and keep it from adding", () => {
+      const { onAdd } = renderHour({ addDisabled: true });
+
+      const plus = screen.getByRole("button", { name: "Add food at 08:00" });
+      fireEvent.click(plus);
+
+      expect(plus).toHaveProperty("disabled", true);
+      expect(plus.className).toContain("opacity-40");
+      expect(onAdd).not.toHaveBeenCalled();
+    });
+
+    it("should leave the plus enabled by default", () => {
+      renderHour();
+
+      expect(screen.getByRole("button", { name: "Add food at 08:00" })).toHaveProperty(
+        "disabled",
+        false,
+      );
+    });
+  });
+
   it("should draw no button at all when there is nowhere to add yet", () => {
     renderHour({ onAdd: undefined, foodCount: 0 });
 

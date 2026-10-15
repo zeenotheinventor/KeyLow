@@ -1,1 +1,1 @@
-export const storyStates = ["EmptyHour", "OneFood", "ThreeFoods", "CurrentHour"];
+export const storyStates = ["EmptyHour", "OneFood", "ThreeFoods", "CurrentHour", "AddDisabled"];

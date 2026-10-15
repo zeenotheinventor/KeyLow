@@ -11,6 +11,8 @@ export type HourRowProps = {
   isNow?: boolean;
   /** The row's element, so the screen can scroll an hour into view. */
   ref?: Ref<HTMLDivElement> | undefined;
+  /** Dims the plus and stops it responding, such as while offline. The row and its foods are left alone. Defaults to false. */
+  addDisabled?: boolean | undefined;
   /** Called with the hour when the plus is pressed. Leave it out when there is nowhere to add yet, and no plus is drawn. */
   onAdd?: ((hour: number) => void) | undefined;
   /**
