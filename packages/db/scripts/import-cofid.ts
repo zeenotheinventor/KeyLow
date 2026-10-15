@@ -11,10 +11,9 @@
 //   pnpm --filter @keylow/db import:cofid normalise --xlsx data/cofid/cofid-2021.xlsx
 //   pnpm --filter @keylow/db import:cofid import --csv data/cofid/cofid-2021.normalised.csv --label local-full-2021
 //   pnpm --filter @keylow/db import:cofid import --csv data/cofid/cofid-2021.normalised.csv --label seed-subset --subset data/cofid/subset.txt --emit-sql supabase/seeds/10_cofid_subset.sql
-import { execFile } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { basename, dirname, extname, join } from "node:path";
-import { parseArgs, promisify } from "node:util";
+import { parseArgs } from "node:util";
 
 import { createClient } from "@supabase/supabase-js";
 
@@ -25,6 +24,7 @@ import { normaliseWorkbook } from "./cofid/normalise";
 import { createSqlSeedStore } from "./cofid/sqlSeedStore";
 import { parseSubsetFile } from "./cofid/subset";
 import { createSupabaseImportStore } from "./cofid/supabaseImportStore";
+import { readSupabaseStatus } from "./supabaseStatus";
 
 import type { ImportStore } from "./cofid/importFoods";
 import type { Database } from "../src/types.gen";
@@ -57,16 +57,6 @@ async function runNormalise(xlsxPath: string, outputPath: string | undefined): P
   for (const { code, sheet, column } of summary.identityDifferences) {
     console.log(`  ${sheet} gives food ${code} a different ${column} from proximates`);
   }
-}
-
-async function readLocalStatus(): Promise<unknown> {
-  const { stdout } = await promisify(execFile)(
-    "supabase",
-    ["status", "--workdir", process.cwd(), "--output", "json"],
-    { timeout: 30_000 },
-  );
-  // The CLI can print notices before the JSON document.
-  return JSON.parse(stdout.slice(stdout.indexOf("{")));
 }
 
 /** The CSV is checked against its .sha256 file when it has one, so a hand-edited CSV is not imported as the published one. */
@@ -108,7 +98,9 @@ async function runImport(options: {
   if (emitSqlPath !== undefined) {
     store = seedStore;
   } else if (!dryRun) {
-    const { url, serviceRoleKey } = await resolveConnection(process.env, readLocalStatus);
+    const { url, serviceRoleKey } = await resolveConnection(process.env, () =>
+      readSupabaseStatus(process.cwd()),
+    );
     console.log(`Importing into ${url}`);
     store = createSupabaseImportStore(
       createClient<Database>(url, serviceRoleKey, {
