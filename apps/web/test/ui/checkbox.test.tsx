@@ -84,6 +84,67 @@ describe("Checkbox", () => {
     expect(checkbox.getAttribute("value")).toBe("yes");
   });
 
+  describe("a label made of text and links", () => {
+    const richLabel = (
+      <>
+        I accept the <a href="/terms">Terms</a> and the <a href="/privacy">Privacy Policy</a>.
+      </>
+    );
+
+    it("should be named by the whole text of the label, links included", () => {
+      render(<Checkbox multiline label={richLabel} />);
+
+      expect(
+        screen.getByRole("checkbox", { name: "I accept the Terms and the Privacy Policy." }),
+      ).toBeTruthy();
+    });
+
+    it("should keep the links in the label reachable as links", () => {
+      render(<Checkbox multiline label={richLabel} />);
+
+      expect(screen.getByRole("link", { name: "Terms" }).getAttribute("href")).toBe("/terms");
+    });
+
+    it("should not toggle when a link in the label is clicked", () => {
+      render(<Checkbox multiline label={richLabel} />);
+      const checkbox = screen.getByRole("checkbox");
+
+      fireEvent.click(screen.getByRole("link", { name: "Terms" }));
+
+      expect(checkbox).toHaveProperty("checked", false);
+    });
+
+    it("should toggle when the text of the label is clicked", () => {
+      render(<Checkbox multiline label={richLabel} />);
+
+      fireEvent.click(screen.getByText(/I accept the/));
+
+      expect(screen.getByRole("checkbox")).toHaveProperty("checked", true);
+    });
+  });
+
+  describe("layout", () => {
+    it("should keep the centred, one line layout by default", () => {
+      render(<Checkbox label="Default" />);
+      const labelClasses = screen.getByText("Default").closest("label")?.classList;
+      const box = screen.getByRole("checkbox").nextElementSibling;
+
+      expect(labelClasses?.contains("items-center")).toBe(true);
+      expect(box?.classList.contains("size-5")).toBe(true);
+    });
+
+    it("should top align a box that is 22px with a 1.5px border for a label that wraps", () => {
+      render(<Checkbox multiline label="Default" />);
+      const labelClasses = screen.getByText("Default").closest("label")?.classList;
+      const box = screen.getByRole("checkbox").nextElementSibling;
+
+      expect(labelClasses?.contains("items-start")).toBe(true);
+      expect(labelClasses?.contains("gap-3")).toBe(true);
+      expect(box?.classList.contains("size-[22px]")).toBe(true);
+      expect(box?.classList.contains("border-[1.5px]")).toBe(true);
+    });
+  });
+
   describe("reduced motion", () => {
     it("should drop the colour change under prefers-reduced-motion", async () => {
       render(<Checkbox label="Default" />);

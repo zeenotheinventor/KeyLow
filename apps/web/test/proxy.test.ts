@@ -101,4 +101,28 @@ describe("proxy", () => {
 
     expect(response.headers.get("location")).toBeNull();
   });
+
+  it("should send a signed in request for the sign-up page to the dashboard", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/sign-up"));
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost:3000/dashboard");
+  });
+
+  it("should let a signed out request for the sign-up page through", async () => {
+    const response = await proxy(requestFor("/sign-up"));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
+  it("should not treat a path that only starts with sign-up as the sign-up page", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/sign-up-guide"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
 });

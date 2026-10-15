@@ -26,6 +26,15 @@ describe("Login page", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Sign in to Ki-Lo" })).toBeTruthy();
   });
 
+  it("should link to the sign-up page for someone who needs an account", async () => {
+    await renderPage();
+
+    expect(screen.getByText(/New to Ki-Lo\?/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "Create account" }).getAttribute("href")).toBe(
+      "/sign-up",
+    );
+  });
+
   it("should leave room for the footer instead of filling the whole viewport", async () => {
     await renderPage();
     const css = await compileUtilities(screen.getByRole("main").getAttribute("class") ?? "");

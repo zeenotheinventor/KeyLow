@@ -38,6 +38,30 @@ export const AUTH_SCREEN = {
 
 export const PASSWORD_HELPER = "At least 8 characters";
 
+/** What the web sign up page says. It is a page of its own, apart from the sign in page. */
+export const SIGN_UP_SCREEN = {
+  heading: "Create account",
+  caption: "Track intake and weigh-ins. The engine estimates the rest.",
+  emailPlaceholder: "you@example.com",
+  passwordPlaceholder: PASSWORD_HELPER,
+  divider: "or",
+  submitLabel: "Create account",
+  footerPrompt: "Already have an account?",
+  footerLink: "Sign in",
+};
+
+/**
+ * The sentence beside the sign up checkbox, in the order it reads. The two link texts are the
+ * parts a screen turns into links to the Terms and the Privacy Policy.
+ */
+export const SIGN_UP_ACCEPTANCE = {
+  beforeTerms: "I accept the ",
+  termsLink: "Terms",
+  betweenLinks: " and the ",
+  privacyLink: "Privacy Policy",
+  afterPrivacy: ", including storing my weight, food diary and body stats to run the app.",
+};
+
 export const AUTH_FIELD_PROBLEMS = {
   emailRequired: "Enter your email address",
   emailInvalid: "Enter a valid email address",

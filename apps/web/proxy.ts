@@ -16,6 +16,9 @@ const DASHBOARD_PATHS = [
   "/settings",
 ];
 
+// A signed in user has no use for these pages.
+const AUTH_PATHS = ["/login", "/sign-up"];
+
 function isDashboardPath(pathname: string) {
   return DASHBOARD_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
@@ -51,7 +54,7 @@ export async function proxy(request: NextRequest) {
   const redirectPath =
     !user && isDashboardPath(pathname)
       ? "/login"
-      : user && pathname === "/login"
+      : user && AUTH_PATHS.includes(pathname)
         ? "/dashboard"
         : null;
 

@@ -153,6 +153,8 @@ const exportedFunctionNames = Object.entries(copy)
   .filter(([, value]) => typeof value === "function")
   .map(([name]) => name);
 
+const personsOwnStatements = collectStrings(copy.SIGN_UP_ACCEPTANCE);
+
 const allSentences = [
   ...Object.values(copy).flatMap(collectStrings),
   ...Object.values(sampleCalls).flatMap((call) => call()),
@@ -194,8 +196,11 @@ describe("the voice of the copy", () => {
 
   it("should never speak as my, I or we, and use no emoji or ticket id", () => {
     for (const sentence of allSentences) {
-      expect(sentence).not.toMatch(/\b(my|we)\b/i);
-      expect(sentence).not.toMatch(/\bI\b/);
+      // The sign up checkbox is the person's own statement, so it is the one place that says I and my.
+      if (!personsOwnStatements.includes(sentence)) {
+        expect(sentence).not.toMatch(/\b(my|we)\b/i);
+        expect(sentence).not.toMatch(/\bI\b/);
+      }
       expect(sentence).not.toMatch(/\p{Extended_Pictographic}/u);
       expect(sentence).not.toMatch(/\b(KEY|DC)-\d+\b/);
     }

@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import type { AuthError, EmailOtpType } from "@supabase/supabase-js";
 
+import { TERMS_PENDING_COOKIE, readPendingTermsVersion } from "@/lib/auth/termsPendingCookie";
 import { createClient } from "@/lib/supabase/server";
 
 const DEFAULT_NEXT_PATH = "/dashboard";
@@ -26,7 +27,30 @@ function resolveNext(next: string | null, origin: string) {
   return target.origin === origin ? target : fallback;
 }
 
-export async function GET(request: NextRequest) {
+// The `accept_terms` function is called here and not through `acceptTerms` in the api-client package,
+// because that package only exports one entry point, which pulls React hooks into this route.
+// The sign-up page leaves the version in a cookie before it sends someone to Google. A failure to
+// record it must not stop the sign-in. The accept-to-continue screen asks again if it was missed.
+async function recordPendingTermsAcceptance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  request: NextRequest,
+) {
+  const version = readPendingTermsVersion(request.cookies.get(TERMS_PENDING_COOKIE)?.value);
+  if (version === null) {
+    return;
+  }
+
+  try {
+    const { error } = await supabase.rpc("accept_terms", { p_version: version });
+    if (error) {
+      console.error("Could not record the Terms acceptance", error);
+    }
+  } catch (error) {
+    console.error("Could not record the Terms acceptance", error);
+  }
+}
+
+async function completeSignIn(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const failureRedirect = NextResponse.redirect(new URL("/login?error=callback", origin));
   const code = searchParams.get("code");
@@ -41,6 +65,9 @@ export async function GET(request: NextRequest) {
   let error: AuthError | null;
   if (code) {
     ({ error } = await supabase.auth.exchangeCodeForSession(code));
+    if (!error) {
+      await recordPendingTermsAcceptance(supabase, request);
+    }
   } else if (tokenHash && emailOtpType) {
     ({ error } = await supabase.auth.verifyOtp({ type: emailOtpType, token_hash: tokenHash }));
   } else {
@@ -52,4 +79,12 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.redirect(resolveNext(searchParams.get("next"), origin));
+}
+
+export async function GET(request: NextRequest) {
+  const response = await completeSignIn(request);
+  // The cookie is good for one sign-in only, whatever came of it.
+  response.cookies.delete(TERMS_PENDING_COOKIE);
+
+  return response;
 }
