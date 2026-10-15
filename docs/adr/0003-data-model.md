@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15.
 
 ## Context
 
@@ -241,3 +241,81 @@ Limits are not stored in the database. They live in Edge Function environment va
 ### Consequences of Amendment 1
 
 Migrations KEY-36, KEY-40 and KEY-41 implement exactly this amendment, and the core zod schemas in KEY-37 mirror it. Any further deviation from the frozen Decision or from this amendment needs an Amendment 2 before the migration that implements it lands.
+
+## Amendment 2 (M3 prerequisites, 2026-10-15)
+
+### Status
+
+Recorded on 2026-10-15 under KEY-153. Implements the five rulings Zee made on 2026-10-15 on KEY-68 (M3 prerequisites). The remaining details are interpretations made for implementation. They are, in full: the plain (non-unique) index on each `portion_id`, the rule for when the snapshot `portion` is set and its shape, the rule that "log again" uses `portion_id` while it is still set, the rule that an optional nutrient key is present only when the source food has a non-null value, and the rules that the drop comparisons are strict `>` and apply only at copy time and that an absent optional input key is never written on update. Zee confirms them by approving the PR that carries this amendment. The frozen Decision text and Amendment 1 are unchanged. This amendment fills in details they leave open and overrides nothing in them. It adds no table or column and needs no migration at M2. M3's diary migration implements the `portion_id` rules below.
+
+### `portion_id` on log entries and recipe ingredients
+
+The frozen Decision lists `portion_id` on `food_log_entries` and `recipe_ingredients` and says nothing about what it references. M3's diary migration declares both columns as nullable:
+
+- `food_log_entries.portion_id uuid references public.food_portions (id) on delete set null`.
+- `recipe_ingredients.portion_id uuid references public.food_portions (id) on delete set null`.
+- Each table gets a plain index on `portion_id`. Postgres does not index the referencing side of a foreign key, and without the index every portion delete scans the whole table to find the rows to clear.
+
+The reason is the delete-and-reinsert pattern recorded in the "Privileges and RLS" section above (decision Q10, under `food_portions`). Editing a custom food deletes the user's portions and inserts the new ones, so every portion comes back with a new id. An OFF refresh does the same for the shared portions of an OFF food. With `on delete set null`, those deletes clear the link and succeed, and no log row or ingredient row is ever deleted or blocked by them. There is no portion diff-update, which means no matching of old portions to new ones and no remapping of ids.
+
+The snapshot, not the link, is the record. A log entry's and an ingredient's snapshot stores the portion it was logged with in `portion`:
+
+- `portion` is `{ label: string, grams: number }` or `{ label: string, ml: number }`, with the other key absent. That mirrors the `food_portions` check `num_nonnulls(grams, ml) = 1`.
+- `portion` is non-null exactly when the entry's `unit` is `'portion'`. It is null for every other unit (g, ml, oz, fl_oz, serving) and for quick entries. This shape and this null rule are interpretations, the rulings do not state them.
+- `resolved_grams` and the snapshot's `per100` keep the entry's numbers, so nutrients are rebuilt from the snapshot alone and never from `food_portions`.
+
+The accepted trade-off: after a food edit or an OFF refresh, `portion_id` is null on the affected entries. "Log again" uses the portion `portion_id` points to while it is still set (an interpretation). When it is null, the order of fallbacks is not fixed by this ADR and is M3's call. The options are a label match on `portion.label` from the old snapshot, the food's default portion, or a direct amount.
+
+Implemented by M3's diary migration (the two columns and their indexes) and by M3's `buildFoodSnapshot` (the `portion` shape).
+
+### Log entry `nutrients` key set
+
+A `food_log_entries.nutrients` object holds the five required keys `kcal`, `protein_g`, `fat_g`, `carbs_g` and `fibre_g`, plus `sat_fat_g`, `sugars_g` and `salt_g` when present. It never holds micronutrients. The key set is the one `nutrientsSchema` in `@keylow/core` already defines, and `scaleNutrients` already produces it from a snapshot's `per100`: the five required keys are always written, an optional key is written only when `per100` carries it, and an absent optional key stays absent. Each of the five required keys may be null, because `nutrientsSchema` allows it and `scaleNutrients` keeps a null as null, so `buildFoodSnapshot` and its callers must handle null. An optional key is "present" when the source food records a non-null value for it. It is `buildFoodSnapshot`'s duty to omit a null `sat_fat_g`, `sugars_g` or `salt_g` column from `per100`, because `scaleNutrients` passes a null through as null rather than dropping the key (an interpretation, the rulings do not state it). The view `day_totals` sums these keys per user per day as the frozen Decision says.
+
+The display contract does not change for M2:
+
+- Food detail follows the boards, which show none of saturated fat, sugars, salt or micronutrients.
+- A CoFID "Tr" is a recorded 0 listed in `quality.trace_fields` (see the "`foods.quality` key set" section above), so a food detail or log row showing it as 0 g is correct.
+- The log row's visual content comes from the M3 diary frames.
+- The label saying a value was converted from kilojoules stays off, because no `quality` key records that conversion.
+
+Implemented by M3's `buildFoodSnapshot` and the M3 diary screens. No M2 ticket changes the display.
+
+### `micros` and `food_group` stay raw source data
+
+`foods.micros` and `foods.food_group` hold what the source gave, in the source's own vocabulary (OFF nutriment names and categories, CoFID column names and food groups). Two sources do not share a vocabulary, so the columns have no common meaning yet. Therefore:
+
+- Nothing in v1 reads them. They are not part of a snapshot, a log entry's `nutrients` or any screen.
+- They are never copied to a `source = 'user'` food. A user food is created with `micros = '{}'` and a null `food_group`, as `createFood` already does, and the "Copy to your foods" flow does not carry them.
+- Any layer that maps source vocabularies to one set of names is post-v1. Until then the columns keep their Amendment 1 definitions and are not dropped.
+
+This matches the build plan, whose line 24 puts `micros` out of v1. The three frozen columns `sat_fat_g`, `sugars_g` and `salt_g` stay stored and are carried by the copy flow, per Zee's ruling. Implemented by KEY-154 (the copy carries neither column).
+
+### Soft delete and `getFood`
+
+Removing a custom food sets its `deleted_at`, as decision Q10 and the "Privileges and RLS" section above already say. This amendment adds only how reads treat a deleted food:
+
+- `getFood` is deliberately unfiltered on `deleted_at`. A log entry or a recipe ingredient that points at a deleted food must still resolve it, which is why Q10 uses a soft delete at all. A caller that has to hide a deleted food reads `deleted_at` from the row it gets back.
+- List and lookup reads filter `deleted_at is null`: `search_foods` (in the database), and `getFoodByBarcode` and `listOwnFoods` (in `@keylow/api-client`). This is the existing "Filtering on `deleted_at` is done by `search_foods` and the clients, not by policy" rule, and it stands.
+- The API lands now and the screen later. `@keylow/api-client` gains `softDeleteFood` (an update setting `deleted_at`, which the existing column grant already allows) and the `useDeleteFood` hook. The delete UI waits for a board and is not part of the M3 diary brief.
+
+Implemented by KEY-156.
+
+### Copy flow carries saturated fat, sugars and salt
+
+"Copy to your foods" creates a `source = 'user'` food from a shared food. The boards give the form no fields for saturated fat, sugars or salt, so the copy carries them invisibly from the source food into the new food's `sat_fat_g`, `sugars_g` and `salt_g` columns. The `foods` insert grant already covers all three columns, so no migration is needed. The drop rules apply once, at copy time, to the values the user submitted in the form:
+
+- `sat_fat_g` is dropped (written as null) when it is greater than the edited `fat_g`.
+- `sugars_g` is dropped (written as null) when it is greater than the edited `carbs_g`.
+- `salt_g` has no rule and is carried as it is.
+- A carried value that is null stays null.
+
+Updates never clear the three columns. `updateFood` already leaves them untouched, because the editable columns it writes exclude them. The drop rules do not run on update, so a later edit of fat or carbs can leave a stored value above it. That is accepted.
+
+`customFoodInputSchema` in `@keylow/core` gains `sat_fat_g`, `sugars_g` and `salt_g` as optional keys, each a non-negative number and not nullable, like `fibre_g`. A null value on the source food is omitted from the input, never passed as null, so an update can never clear a column. An absent key on create is stored as null. An absent key on update is never written, so the existing value stays (an interpretation of "updates never clear them"). The ordinary create and edit forms do not send these keys, so for them nothing changes.
+
+Implemented by KEY-154 (the schema keys, the drop rules in `@keylow/core` and the carrying in `@keylow/api-client`) and by KEY-155 (the apps' copy flow, which calls the core helper `carriedNutrients`, and that helper applies the drop rules).
+
+### Consequences of Amendment 2
+
+M3's diary migration matches the `portion_id` rules above, and its `buildFoodSnapshot` produces the `portion` and `nutrients` shapes above. KEY-154, KEY-155 and KEY-156 implement the rest, and none of them needs a schema change. Any further deviation from the frozen Decision, from Amendment 1 or from this amendment needs an Amendment 3 before the migration or code that implements it lands.
