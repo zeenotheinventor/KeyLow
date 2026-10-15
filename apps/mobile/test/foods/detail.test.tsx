@@ -1,4 +1,5 @@
 import { DATA_SOURCE_ATTRIBUTION } from "@keylow/core/foods";
+import { buildFoodPortion } from "@keylow/core/testing";
 import { render, screen, userEvent, within } from "@testing-library/react-native";
 
 import {
@@ -51,18 +52,13 @@ const suspectFood: Food = {
 };
 
 function makePortion(overrides: Partial<FoodPortion>): FoodPortion {
-  return {
+  return buildFoodPortion({
     id: "88888888-8888-4888-8888-888888888888",
     food_id: savedFoodId,
-    owner_id: null,
-    label: "Portion",
     grams: null,
-    ml: null,
-    is_default: false,
-    position: 0,
     created_at: "2026-10-07T09:00:00Z",
     ...overrides,
-  };
+  });
 }
 
 function showFood(food: Food, portions: FoodPortion[] = portionFixtures) {

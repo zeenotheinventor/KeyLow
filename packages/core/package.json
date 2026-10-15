@@ -12,7 +12,8 @@
     "./engine": "./src/engine/index.ts",
     "./copy": "./src/copy/index.ts",
     "./format": "./src/format/index.ts",
-    "./search": "./src/search/index.ts"
+    "./search": "./src/search/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
