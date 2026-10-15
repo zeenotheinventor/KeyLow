@@ -1,6 +1,8 @@
 import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
+import { cva } from "class-variance-authority";
 import * as React from "react";
+
+import type { CardProps } from "./types";
 
 import { cn } from "@/lib/utils";
 
@@ -22,15 +24,7 @@ const cardVariants = cva(
   },
 );
 
-type CardProps = Omit<React.HTMLAttributes<HTMLDivElement>, "title"> &
-  VariantProps<typeof cardVariants> & {
-    /** A level two heading at the top of the card. */
-    title?: React.ReactNode;
-    /** Renders the card's styles on a single child such as a `section` or a `form`, which brings its own content and so its own title. */
-    asChild?: boolean;
-  };
-
-const Card = React.forwardRef<HTMLDivElement, CardProps>(
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   ({ className, level, padding, title, asChild = false, children, ...props }, ref) => {
     const classes = cn(cardVariants({ level, padding, className }));
 
@@ -51,6 +45,3 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
   },
 );
 Card.displayName = "Card";
-
-export { Card };
-export type { CardProps };

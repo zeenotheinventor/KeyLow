@@ -60,7 +60,8 @@ export function GroupedList({ title, source, seeMore, notice, children }: Groupe
       <Card aria-label={title} padding={0} role="list">
         {rows.map((row, index) => (
           <GroupedRowPositionContext key={row.key} value={index === 0 ? firstRow : followingRow}>
-            {row.node}
+            {/* Not `accessible`: the row inside is a button, which an accessible wrapper would fold away. */}
+            <View role="listitem">{row.node}</View>
           </GroupedRowPositionContext>
         ))}
       </Card>

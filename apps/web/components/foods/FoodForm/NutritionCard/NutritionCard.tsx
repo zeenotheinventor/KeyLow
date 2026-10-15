@@ -9,7 +9,7 @@ import type { NutrientField, NutritionCardProps } from "./types";
 import type { NumericInputMacro } from "@/components/ui/NumericInput";
 import type { FoodFormNutrient } from "@keylow/core/copy";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 

@@ -34,7 +34,7 @@ export const storyManifest = {
     "Loading",
     "AsLink",
   ],
-  "card.stories.tsx": ["Surface", "Raised", "WithTitle", "Unpadded"],
+  "Card/Card.stories.tsx": ["Surface", "Raised", "WithTitle", "Unpadded"],
   "Input/Input.stories.tsx": [
     "Default",
     "Filled",

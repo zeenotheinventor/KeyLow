@@ -6,7 +6,7 @@ import { MacroTile } from "./MacroTile";
 
 import type { MacroHeroProps } from "./types";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 
 /** The energy of a food as a large number, with its protein, carbohydrate and fat under it. */
 export function MacroHero({ food }: MacroHeroProps) {

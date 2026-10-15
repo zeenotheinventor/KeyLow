@@ -2,7 +2,7 @@ import { useId } from "react";
 
 import type { GroupedListProps } from "./types";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 
 /** A titled section holding a card of rows. The rows are separated by a hairline. */
