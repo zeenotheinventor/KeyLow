@@ -14,3 +14,6 @@ export * from "./nutrition";
 export * from "./portionPicker";
 export * from "./search";
 export * from "./shell";
+export * from "./datePicker";
+export * from "./foodLog";
+export * from "./targetsPage";

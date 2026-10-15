@@ -4,6 +4,7 @@ import { KeyLowProvider } from "@keylow/api-client";
 import { useState, type ReactNode } from "react";
 
 import { ToastProvider } from "@/components/ui/Toast";
+import { FoodLogActionsProvider } from "@/lib/foodLogActions";
 import { createClient } from "@/lib/supabase/client";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -11,7 +12,9 @@ export function Providers({ children }: { children: ReactNode }) {
 
   return (
     <KeyLowProvider client={client}>
-      <ToastProvider>{children}</ToastProvider>
+      <ToastProvider>
+        <FoodLogActionsProvider>{children}</FoodLogActionsProvider>
+      </ToastProvider>
     </KeyLowProvider>
   );
 }

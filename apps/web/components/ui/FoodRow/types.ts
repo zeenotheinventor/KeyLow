@@ -55,12 +55,25 @@ export type FoodLogRowProps = {
   /** Dims the row and stops it, and its add button, responding. */
   disabled?: boolean | undefined;
   className?: string | undefined;
-  /** Opens the food: the edit dialog for a `stacked` row, the portion picker for a `search` row. */
-  onClick: () => void;
+  /**
+   * Opens the food: the edit dialog for a `stacked` row, the portion picker for a `search` row. Leave it
+   * out when there is nothing to open yet, and the row is plain text with no chevron.
+   */
+  onClick?: (() => void) | undefined;
   /** Logs the serving at once. Gives a `search` row its add button. Pressing it does not press the row. */
   onAdd?: (() => void) | undefined;
   /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. */
   addDisabled?: boolean | undefined;
+};
+
+/**
+ * The macros of a table row. A value that is null is written as a dash with no unit, such as the
+ * macros of a quick add made with calories alone.
+ */
+export type FoodTableRowMacros = {
+  protein: string | null;
+  carbs: string | null;
+  fat: string | null;
 };
 
 /**
@@ -73,11 +86,12 @@ export type FoodTableRowProps = {
   nameSegments: readonly FoodNameSegment[];
   /** The line under the name: the time and amount ("08:05 · 50 g"). It is one line. */
   caption?: string | undefined;
-  /** The energy, already formatted, in kcal. */
-  energy: string;
+  /** The energy, already formatted, in kcal. Leave it out for an entry that has none, and the cell is a dash. */
+  energy?: string | undefined;
   /** The macros as `formatGrams` writes them. The table adds the unit. */
-  macros: FoodRowMacros;
-  onEdit: () => void;
+  macros: FoodTableRowMacros;
+  /** Shows the Edit button. Leave it out when there is no edit to open yet, and only Delete is drawn. */
+  onEdit?: (() => void) | undefined;
   onDelete: () => void;
   className?: string | undefined;
 };

@@ -15,6 +15,8 @@ export const FOOD_ROW = {
   actionsColumn: "Actions",
   /** The unit written after a macro in the diary table. */
   gramUnit: "g",
+  /** Stands in a table cell for a value the entry does not have, such as the macros of a quick add made with calories alone. */
+  notGivenMark: "–",
   /** The amount of a food logged with its energy alone, written after the time: "12:45 · Quick add". */
   quickAdd: "Quick add",
 } as const;

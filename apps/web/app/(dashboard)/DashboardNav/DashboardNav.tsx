@@ -11,6 +11,7 @@ import type { DashboardSection } from "./types";
 import { Button } from "@/components/ui/Button";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 import { SearchLauncher } from "@/components/ui/SearchField";
+import { useFoodLogActions } from "@/lib/foodLogActions";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: readonly DashboardSection[] = [
@@ -34,6 +35,7 @@ const focusRing =
 export function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { viewedDate, openAddFood } = useFoodLogActions();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPathname, setMenuPathname] = useState(pathname);
   // Going to another page closes the menu, and coming back to this one does not reopen it.
@@ -49,8 +51,13 @@ export function DashboardNav() {
   const panel = useRef<HTMLElement>(null);
   const panelId = useId();
 
-  function goToFoods() {
-    router.push(FOODS_HREF);
+  // On the diary the search adds food to the day on view, at now. Anywhere else it is the food search.
+  function startSearch() {
+    if (viewedDate === undefined) {
+      router.push(FOODS_HREF);
+    } else {
+      openAddFood({ date: viewedDate });
+    }
   }
 
   useEffect(() => {
@@ -149,7 +156,7 @@ export function DashboardNav() {
           <SearchLauncher
             size="adaptive"
             label="Search for a food"
-            onSearch={goToFoods}
+            onSearch={startSearch}
             barcodeButton={{
               label: "Look up a barcode",
               onClick: () => {

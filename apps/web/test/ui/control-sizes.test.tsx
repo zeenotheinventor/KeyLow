@@ -29,6 +29,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock("@/lib/foodLogActions", () => ({
+  useFoodLogActions: () => ({ viewedDate: undefined, openAddFood: vi.fn() }),
+}));
+
 const escapeForPattern = (text: string): string => text.replace(/[.*+?^${}()|[\]\\:]/g, "\\$&");
 
 /** The declarations Tailwind generates for one class, e.g. `height: 44px`, or an empty string. */

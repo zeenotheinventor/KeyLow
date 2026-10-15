@@ -316,7 +316,7 @@ const porridgeOats: FoodTableRowProps = {
   nameSegments: [{ text: "Porridge oats", matched: false }],
   caption: "08:05 · 50 g",
   energy: "187",
-  macros: { protein: "5.6", carbs: "27", fat: "3.4", description: "not used by the table" },
+  macros: { protein: "5.6", carbs: "27", fat: "3.4" },
   onEdit: () => undefined,
   onDelete: () => undefined,
 };
@@ -326,7 +326,7 @@ const semiSkimmedMilk: FoodTableRowProps = {
   nameSegments: [{ text: "Semi-skimmed milk", matched: false }],
   caption: "08:05 · 200 ml",
   energy: "92",
-  macros: { protein: "6.6", carbs: "9.6", fat: "3.4", description: "not used by the table" },
+  macros: { protein: "6.6", carbs: "9.6", fat: "3.4" },
 };
 
 function HourTable({ children }: { children: ReactNode }) {

@@ -17,6 +17,7 @@ describe("the food row copy", () => {
       actionsColumn: "Actions",
       foodColumn: "Food",
       gramUnit: "g",
+      notGivenMark: "–",
       quickAdd: "Quick add",
     });
   });

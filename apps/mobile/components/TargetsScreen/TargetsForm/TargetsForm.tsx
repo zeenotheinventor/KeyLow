@@ -11,14 +11,13 @@ import {
   describeMacroTargetField,
   describeMacroTotal,
 } from "@keylow/core/copy";
-import { macroKcal, validateTargets } from "@keylow/core/diary";
+import { enteredNumber, fieldText, macroKcal, validateTargets } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { enteredNumber, fieldText } from "./enteredNumber";
 import { useIsOnline } from "../../../lib/connectivity";
 import { useKeyboardLift } from "../../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../../lib/useScrollFocusedInputIntoView";

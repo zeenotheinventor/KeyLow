@@ -1,4 +1,4 @@
-import type { EnteredNumber } from "@keylow/core/diary";
+import type { EnteredNumber } from "./validation";
 
 /**
  * What a field holds as a number for core's `validateTargets`: blank is null, a comma is read as a decimal

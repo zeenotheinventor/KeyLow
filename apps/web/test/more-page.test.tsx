@@ -5,10 +5,16 @@ import { pagePaddingOf } from "./pagePadding";
 
 import MorePage from "@/app/(dashboard)/more/page";
 
-const { getUser, signOut, themeCookie } = vi.hoisted(() => ({
+const { getUser, signOut, themeCookie, useTargets } = vi.hoisted(() => ({
   getUser: vi.fn(),
   signOut: vi.fn(),
   themeCookie: vi.fn<() => string | undefined>(),
+  useTargets: vi.fn<() => { data: { kcal: number | null } | undefined }>(),
+}));
+
+vi.mock("@keylow/api-client", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  useTargets,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -37,6 +43,7 @@ describe("More page", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     getUser.mockResolvedValue({ data: { user: { email: "ada@example.com" } }, error: null });
+    useTargets.mockReturnValue({ data: { kcal: 2200 } });
   });
 
   afterEach(() => {
@@ -49,19 +56,19 @@ describe("More page", () => {
     expect(screen.getByRole("heading", { level: 1, name: "More" })).toBeTruthy();
   });
 
-  it("should have the four sections the board draws, in order", async () => {
+  it("should have the five sections the board draws, in order, with Nutrition between Food and Body", async () => {
     await renderPage();
 
     const headings = screen
       .getAllByRole("heading", { level: 2 })
       .map((heading) => heading.textContent);
-    expect(headings).toEqual(["Food", "Body", "Settings", "Account"]);
+    expect(headings).toEqual(["Food", "Nutrition", "Body", "Settings", "Account"]);
   });
 
   it("should draw each heading as the bare line the board draws", async () => {
     await renderPage();
 
-    for (const name of ["Food", "Body", "Settings", "Account"]) {
+    for (const name of ["Food", "Nutrition", "Body", "Settings", "Account"]) {
       expect(
         screen.getByRole("heading", { level: 2, name }).parentElement?.className,
       ).not.toContain("min-h-[32px]");
@@ -74,6 +81,28 @@ describe("More page", () => {
     const link = screen.getByRole("link", { name: /Your foods/ });
     expect(link.getAttribute("href")).toBe("/foods?scope=own");
     expect(link.textContent).toContain("Foods you created or copied");
+  });
+
+  describe("the Nutrition section", () => {
+    it("should reach Targets, with its subtitle and the calorie target as its value", async () => {
+      await renderPage();
+
+      const link = screen.getByRole("link", { name: /Targets/ });
+
+      expect(link.getAttribute("href")).toBe("/more/targets");
+      expect(link.textContent).toBe("TargetsSet by you2,200 kcal");
+    });
+
+    it("should show no value while the target is unset or still loading", async () => {
+      useTargets.mockReturnValue({ data: { kcal: null } });
+      await renderPage();
+      expect(screen.getByRole("link", { name: /Targets/ }).textContent).toBe("TargetsSet by you");
+
+      cleanup();
+      useTargets.mockReturnValue({ data: undefined });
+      await renderPage();
+      expect(screen.getByRole("link", { name: /Targets/ }).textContent).toBe("TargetsSet by you");
+    });
   });
 
   it("should show Weight as coming soon and not available", async () => {

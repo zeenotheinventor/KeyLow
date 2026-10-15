@@ -8,4 +8,5 @@ export { previousCalendarDay } from "./previousCalendarDay";
 export { clockHourOf } from "./clockHourOf";
 export { joinClockTime, parseClockTime } from "./clockTime";
 export type { ClockTime } from "./clockTime";
-export { isCalendarDay } from "./calendarDay";
+export { addMonths, monthOf, monthWeeks } from "./monthGrid";
+export { addCalendarDays, daysSinceMonday, isCalendarDay } from "./calendarDay";

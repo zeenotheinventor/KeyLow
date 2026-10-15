@@ -19,7 +19,7 @@ const porridge: FoodTableRowProps = {
   nameSegments: [{ text: "Porridge oats", matched: false }],
   caption: "08:05 · 50 g",
   energy: "187",
-  macros: { protein: "5.6", carbs: "27", fat: "3.4", description: "not used by the table" },
+  macros: { protein: "5.6", carbs: "27", fat: "3.4" },
   onEdit: () => undefined,
   onDelete: () => undefined,
 };
@@ -121,6 +121,48 @@ describe("FoodTable", () => {
     expect(css).toMatch(
       /@media not all and \(min-width: 768px\) \{ \.max-md\\:hidden \{ display: none/,
     );
+  });
+});
+
+describe("FoodRow table, with values not given", () => {
+  it("should write a macro that is not given as a dash with no unit", () => {
+    renderTable({ macros: { protein: "5.6", carbs: null, fat: null } });
+
+    const row = within(screen.getByRole("row", { name: /Porridge oats/ }));
+
+    expect(row.getAllByRole("cell").map((cell) => cell.textContent)).toEqual([
+      "Porridge oats08:05 · 50 g",
+      "5.6 g",
+      "–",
+      "–",
+      "187 kcal",
+      "",
+    ]);
+  });
+
+  it("should call a dash not given for a screen reader", () => {
+    renderTable({ macros: { protein: "5.6", carbs: null, fat: null } });
+
+    expect(screen.getAllByRole("cell", { name: "not given" })).toHaveLength(2);
+  });
+
+  it("should write energy that is not given as a dash with no unit", () => {
+    renderTable({ energy: undefined });
+
+    expect(screen.getByRole("cell", { name: "not given" }).textContent).toBe("–");
+  });
+});
+
+describe("FoodRow table, without an edit to open", () => {
+  it("should draw Delete and no Edit button when it is not given onEdit", () => {
+    render(
+      <FoodTable label="Foods at 08:00">
+        <FoodRow {...porridge} onEdit={undefined} />
+      </FoodTable>,
+    );
+
+    expect(screen.queryByRole("button", { name: "Edit Porridge oats" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Delete Porridge oats" })).toBeTruthy();
   });
 });
 
