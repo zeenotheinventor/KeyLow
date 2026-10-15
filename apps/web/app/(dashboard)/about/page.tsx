@@ -1,5 +1,5 @@
 import { ABOUT_SCREEN, LEGAL_PATHS } from "@keylow/core/copy";
-import { formatAppVersion, APP_VERSION } from "@keylow/core/format";
+import { APP_VERSION, formatAppVersion } from "@keylow/core/format";
 import { FileText, Shield } from "lucide-react";
 import { useId } from "react";
 
