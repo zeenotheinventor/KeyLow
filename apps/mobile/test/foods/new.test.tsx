@@ -197,6 +197,23 @@ describe("new food screen", () => {
       expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
     });
 
+    it("should save a brand and barcode typed with surrounding spaces trimmed", async () => {
+      mockCreateFood.mockResolvedValue({
+        food: { ...foodFixture, id: savedFoodId },
+        portions: [],
+      });
+      const user = await renderForm();
+      await fillRequiredFields(user);
+      await user.type(screen.getByLabelText("Brand"), "  Acme  ");
+      await user.type(screen.getByLabelText("Barcode"), "  5012345678900  ");
+
+      await save(user);
+
+      expect(mockCreateFood).toHaveBeenCalledWith(
+        expect.objectContaining({ brand: "Acme", barcode: "5012345678900" }),
+      );
+    });
+
     it("should leave blank optional fields out rather than send zero or an empty string", async () => {
       const user = await renderForm();
       await fillRequiredFields(user);

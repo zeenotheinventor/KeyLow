@@ -1,4 +1,5 @@
 import { FOOD_FORM, describeNutritionHeading } from "@keylow/core/copy";
+import { customFoodInputFrom } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
@@ -12,7 +13,6 @@ import { describeSaveError } from "./describeSaveError";
 import { emptyFoodFormValues } from "./foodFormValues";
 import { mapIssuesToErrors, portionErrorKey } from "./mapIssuesToErrors";
 import { PortionCard } from "./PortionCard";
-import { toRawInput } from "./toRawInput";
 
 import type { FoodFormErrors, KeyedFoodFormValues } from "./mapIssuesToErrors";
 import type { NutrientFieldName, TextFieldName } from "./nutrientFields";
@@ -136,7 +136,9 @@ export function FoodForm({
   }
 
   async function handleSubmit() {
-    const result = customFoodInputSchema.safeParse(toRawInput(values));
+    const result = customFoodInputSchema.safeParse(
+      customFoodInputFrom(values, values.densityGramsPerMillilitre ?? null),
+    );
     if (!result.success) {
       setErrors(mapIssuesToErrors(result.error.issues, values));
       setSaveNotice(undefined);

@@ -1,8 +1,8 @@
+import { customFoodInputFrom } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 
 import { emptyFoodFormValues } from "../../components/FoodForm";
 import { mapIssuesToErrors } from "../../components/FoodForm/mapIssuesToErrors";
-import { toRawInput } from "../../components/FoodForm/toRawInput";
 
 import type { FoodFormValues } from "../../components/FoodForm";
 import type { KeyedFoodFormValues } from "../../components/FoodForm/mapIssuesToErrors";
@@ -22,7 +22,10 @@ const validValues: FoodFormValues = {
   carbs_g: "62",
 };
 
-function errorsFor(values: FoodFormValues, rawInput: Record<string, unknown> = toRawInput(values)) {
+function errorsFor(
+  values: FoodFormValues,
+  rawInput: Record<string, unknown> = customFoodInputFrom(values, null),
+) {
   const keyed: KeyedFoodFormValues = {
     ...values,
     portions: values.portions.map((portion, index) => ({
@@ -103,7 +106,10 @@ describe("mapIssuesToErrors", () => {
   });
 
   it("should never pass an issue's own message through for a problem that maps to no field", () => {
-    const errors = errorsFor(validValues, { ...toRawInput(validValues), basis: "per_100oz" });
+    const errors = errorsFor(validValues, {
+      ...customFoodInputFrom(validValues, null),
+      basis: "per_100oz",
+    });
 
     expect(errors).toStrictEqual({ form: "Check the fields marked below and try again." });
   });
