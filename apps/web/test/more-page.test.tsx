@@ -113,6 +113,19 @@ describe("More page", () => {
     },
   );
 
+  it("should reach About from Settings, after Appearance", async () => {
+    await renderPage();
+
+    const settings = screen.getByRole("region", { name: "Settings" });
+    const about = within(settings).getByRole("link", { name: "About" });
+    expect(about.getAttribute("href")).toBe("/about");
+    expect(
+      within(settings)
+        .getAllByRole("listitem")
+        .map((row) => row.textContent),
+    ).toEqual([expect.stringContaining("Appearance"), "About"]);
+  });
+
   it("should show who is signed in under the Sign out button", async () => {
     await renderPage();
 

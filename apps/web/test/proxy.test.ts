@@ -29,15 +29,21 @@ describe("proxy", () => {
     vi.resetAllMocks();
   });
 
-  it.each(["/dashboard", "/diary", "/recipes", "/more", "/weight", "/settings", "/foods"])(
-    "should send a signed out request for %s to the login page",
-    async (path) => {
-      const response = await proxy(requestFor(path));
+  it.each([
+    "/dashboard",
+    "/diary",
+    "/recipes",
+    "/more",
+    "/about",
+    "/weight",
+    "/settings",
+    "/foods",
+  ])("should send a signed out request for %s to the login page", async (path) => {
+    const response = await proxy(requestFor(path));
 
-      expect(response.status).toBe(307);
-      expect(response.headers.get("location")).toBe("http://localhost:3000/login");
-    },
-  );
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("http://localhost:3000/login");
+  });
 
   it.each(["/foods/new", "/foods/22222222-2222-4222-8222-222222222222", "/foods?scope=own"])(
     "should send a signed out request for %s to the login page",

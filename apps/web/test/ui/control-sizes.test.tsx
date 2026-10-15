@@ -1,10 +1,11 @@
-import { BARCODE_NOT_FOUND, FOOD_DETAIL, FOOD_FORM } from "@keylow/core/copy";
+import { ABOUT_SCREEN, BARCODE_NOT_FOUND, FOOD_DETAIL, FOOD_FORM } from "@keylow/core/copy";
 import { controlHeight, pressScale, touchTarget } from "@keylow/tokens";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities } from "./compileUtilities";
 
+import { DataSourceCredit } from "@/app/(dashboard)/about/DataSourceCredit";
 import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
 import { BarcodeResult } from "@/components/foods/BarcodeLookup/BarcodeResult";
 import { BackToFoodsLink } from "@/components/foods/FoodDetail/BackToFoodsLink";
@@ -227,6 +228,16 @@ describe("the links and navigation outside the kit", () => {
       />,
     );
     const { className } = screen.getByRole("link", { name: BARCODE_NOT_FOUND.action });
+
+    expect(await declarationsOf(className, "min-h-touch-target")).toBe(
+      `min-height: ${touchTarget}px`,
+    );
+  });
+
+  it("should keep a data source link on the About page at least a touch target high", async () => {
+    const { off } = ABOUT_SCREEN.dataSources;
+    render(<DataSourceCredit name={off.name} text={off.text} url={off.url} />);
+    const { className } = screen.getByRole("link", { name: off.url });
 
     expect(await declarationsOf(className, "min-h-touch-target")).toBe(
       `min-height: ${touchTarget}px`,
