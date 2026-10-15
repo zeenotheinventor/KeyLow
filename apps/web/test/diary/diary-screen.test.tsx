@@ -165,11 +165,20 @@ function setTargets(value: Targets) {
 }
 
 function renderDiary(props: { date?: string | undefined; view?: "day" | "week" } = {}) {
-  return render(
+  const tree = () => (
     <ToastProvider>
       <DiaryScreen date={props.date} view={props.view ?? "day"} />
-    </ToastProvider>,
+    </ToastProvider>
   );
+  const view = render(tree());
+
+  // Draws the screen again with what the backend holds now, as it is when the diary has refetched.
+  return {
+    ...view,
+    redraw: () => {
+      view.rerender(tree());
+    },
+  };
 }
 
 // The entries the screen was given, as it was given them: their ids are what Edit hands over.
@@ -767,6 +776,108 @@ describe("the diary screen", () => {
       expect(screen.getByRole("alert").textContent).toBe(
         "Not copied. Check your connection and try again.",
       );
+    });
+
+    describe("by keyboard", () => {
+      const copied: CopiedDay = { localDate: TODAY, count: 8, entryIds: ["a"] };
+      const copyYesterday = () => screen.getByRole("button", { name: "Copy yesterday" });
+      const dayCompleteSwitch = () => screen.getByRole("switch", { name: /Mark day complete/ });
+      const firstCopiedRow = () =>
+        within(tableOf("08:00")).getByRole("button", { name: "Edit Porridge oats" });
+
+      function pressWithKeyboard() {
+        fireEvent.keyDown(document, { key: "Enter" });
+        copyYesterday().focus();
+        fireEvent.click(copyYesterday());
+      }
+
+      // The copy goes through. The day fills, and the empty day's card, with its button, goes.
+      function finishCopy(view: { redraw: () => void }, { fillsDay = true } = {}) {
+        act(() => {
+          if (fillsDay) {
+            showDay(TODAY, sampleDay(TODAY));
+          }
+          copyDay.mutate.mock.calls[0]?.[1].onSuccess(copied);
+        });
+        act(() => {
+          view.redraw();
+        });
+      }
+
+      it("should move focus to Undo", () => {
+        const view = renderDiary();
+        pressWithKeyboard();
+
+        finishCopy(view);
+
+        expect(screen.queryByRole("button", { name: "Copy yesterday" })).toBeNull();
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      });
+
+      it("should give focus to the first copied row when the toast is dismissed, never the page", () => {
+        const view = renderDiary();
+        pressWithKeyboard();
+        finishCopy(view);
+
+        fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+        expect(document.activeElement).toBe(firstCopiedRow());
+        expect(document.activeElement).not.toBe(document.body);
+      });
+
+      it("should give focus to the day's complete switch when no row has been drawn", () => {
+        const view = renderDiary();
+        pressWithKeyboard();
+        finishCopy(view, { fillsDay: false });
+
+        fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+        expect(document.activeElement).toBe(dayCompleteSwitch());
+      });
+
+      it("should take the copy back with Undo and leave focus on the complete switch, which is still there", () => {
+        const view = renderDiary();
+        pressWithKeyboard();
+        finishCopy(view);
+
+        fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+        expect(undoCopyDay.mutate.mock.calls[0]?.[0]).toBe(copied);
+        // The undo is answered, and the empty day's card comes back.
+        act(() => {
+          showDay(TODAY, []);
+        });
+        act(() => {
+          view.redraw();
+        });
+
+        expect(screen.getByRole("button", { name: "Copy yesterday" })).toBeTruthy();
+        expect(document.activeElement).toBe(dayCompleteSwitch());
+      });
+
+      it("should leave focus alone after a pointer press", () => {
+        const view = renderDiary();
+        fireEvent.pointerDown(copyYesterday());
+        copyYesterday().focus();
+        fireEvent.click(copyYesterday(), { detail: 1 });
+
+        finishCopy(view);
+
+        expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+        expect(document.activeElement).toBe(document.body);
+      });
+
+      it("should leave focus where the person put it when they moved on before the copy finished", () => {
+        const view = renderDiary();
+        pressWithKeyboard();
+        const elsewhere = screen.getByRole("button", { name: "Choose a date" });
+        act(() => {
+          elsewhere.focus();
+        });
+
+        finishCopy(view);
+
+        expect(document.activeElement).toBe(elsewhere);
+      });
     });
 
     it("should dim the button and say why when yesterday has nothing to copy", () => {

@@ -149,6 +149,32 @@ describe("the keyboard route to Undo", () => {
       expect(document.activeElement).toBe(screen.getByRole("link", { name: "Elsewhere" }));
     });
 
+    it("should look for the place to go back to only when it closes", () => {
+      const lateRow = document.createElement("button");
+      const resolve = vi.fn(() => lateRow);
+      renderRows({ options: { focusAction: { returnTo: resolve } } });
+      pressDelete();
+      expect(resolve).not.toHaveBeenCalled();
+      // The place appears while the toast waits, as the rows of a copied day do.
+      document.body.append(lateRow);
+
+      fireEvent.keyDown(undoButton(), { key: "Escape" });
+
+      expect(resolve).toHaveBeenCalledOnce();
+      expect(document.activeElement).toBe(lateRow);
+      lateRow.remove();
+    });
+
+    it("should close quietly when the place it is asked to go back to is not there", () => {
+      renderRows({ options: { focusAction: { returnTo: () => null } } });
+      pressDelete();
+
+      fireEvent.keyDown(undoButton(), { key: "Escape" });
+
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+      expect(document.activeElement).toBe(document.body);
+    });
+
     it("should close quietly when there is no row to give focus to", () => {
       renderRows({ options: { focusAction: { returnTo: null } } });
       pressDelete();

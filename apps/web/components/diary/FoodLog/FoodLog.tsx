@@ -17,6 +17,7 @@ import { HourRow } from "@/components/ui/HourRow";
  * and so the switch is a new one (it belongs to the day) that plays no moment for a day that is already complete.
  */
 export function FoodLog({
+  ref,
   hours,
   timeZone,
   currentHour,
@@ -41,7 +42,7 @@ export function FoodLog({
   }, []);
 
   return (
-    <div className="flex flex-col">
+    <div ref={ref} className="flex flex-col">
       {isEmpty && (
         <EmptyDayCard
           isYesterdayEmpty={isYesterdayEmpty}

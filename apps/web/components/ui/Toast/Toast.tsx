@@ -70,7 +70,8 @@ function OpenToast({
   // Focus goes back only if it is still on the toast. A person who has tabbed or clicked away is left there.
   useEffect(
     () => () => {
-      const target = returnToRef.current;
+      const { current: returnTo } = returnToRef;
+      const target = typeof returnTo === "function" ? returnTo() : returnTo;
       if (hasFocusRef.current && target?.isConnected === true) {
         target.focus();
       }

@@ -69,6 +69,11 @@ function controlBeside(row: Element): HTMLElement | null {
   );
 }
 
+/** The first control inside `container` that a keyboard can reach and the page shows, or null. */
+export function firstControlIn(container: Element | null): HTMLElement | null {
+  return Array.from(container?.querySelectorAll<HTMLElement>(TABBABLE) ?? []).find(isShown) ?? null;
+}
+
 /**
  * The keyboard route to Undo (KEY-218). The toast sits after the page, so a keyboard user could not reach
  * its Undo within the wait. When the last thing the person did was press a key, these give the toast's
@@ -87,7 +92,7 @@ export function useKeyboardUndo(): KeyboardUndo {
 
       return { focusAction: { returnTo: row === null ? null : controlBeside(row) } };
     },
-    afterPressingButton: () => {
+    afterPressingButton: ({ returnTo } = {}) => {
       const pressedByKeyboard = lastInputWasKeyboard;
       const pressed = focusedElement();
 
@@ -96,7 +101,9 @@ export function useKeyboardUndo(): KeyboardUndo {
         // Focus on nothing is focus lost to the page, as when the button is disabled while the action runs.
         const isFocusStillThere = focused === null || focused === pressed;
 
-        return pressedByKeyboard && isFocusStillThere ? { focusAction: { returnTo: pressed } } : {};
+        return pressedByKeyboard && isFocusStillThere
+          ? { focusAction: { returnTo: returnTo ?? pressed } }
+          : {};
       };
     },
   };

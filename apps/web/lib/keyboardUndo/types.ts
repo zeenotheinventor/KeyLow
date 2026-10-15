@@ -12,10 +12,14 @@ export type KeyboardUndo = {
    */
   afterRemovingRow: (options?: { from?: Element | null | undefined }) => KeyboardUndoOptions;
   /**
-   * For an action that leaves its button in place and finishes later, such as a copy: call it when the
-   * press arrives, and call what it returns when the action finishes. The route is given only if focus
-   * is still on the button or has been lost to the page, so a person who has moved on is left there.
-   * Focus then comes back to the button.
+   * For an action that finishes later, such as a copy: call it when the press arrives, and call what it
+   * returns when the action finishes. The route is given only if focus is still on the button or has been
+   * lost to the page, so a person who has moved on is left there. Focus then comes back to the button.
+   * When the action takes the button away (the copy fills the day, so the empty day's card goes), give
+   * `returnTo`: it is asked for the place to go back to when the toast closes, by which time the page has
+   * drawn what the action made, and it must give something that is on the page.
    */
-  afterPressingButton: () => () => KeyboardUndoOptions;
+  afterPressingButton: (options?: {
+    returnTo?: (() => HTMLElement | null) | undefined;
+  }) => () => KeyboardUndoOptions;
 };

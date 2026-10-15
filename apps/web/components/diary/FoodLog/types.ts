@@ -1,7 +1,10 @@
 import type { LogEntry } from "@keylow/api-client";
 import type { HourGroup } from "@keylow/core/diary";
+import type { Ref } from "react";
 
 export type FoodLogProps = {
+  /** The log's element, so the screen can find a control in it to give focus to. */
+  ref?: Ref<HTMLDivElement> | undefined;
   /** All 24 hours, from core's `groupEntriesByHour`. */
   hours: readonly HourGroup<LogEntry>[];
   timeZone: string;
