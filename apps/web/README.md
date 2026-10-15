@@ -34,3 +34,4 @@ Set these on the Vercel project:
 - Install Command and Build Command: the defaults (Vercel detects pnpm from the workspace lockfile)
 - Node.js Version: 22.x
 - Ignored Build Step: set by `vercel.json` (`npx turbo-ignore`), so leave the dashboard field unset
+- Deployments: only `main` deploys. `vercel.json` turns off every other branch, so pull requests get no preview (see [docs/ci.md](../../docs/ci.md))
