@@ -79,8 +79,9 @@ function quickTexts(entry: LogEntry): QuickAddTexts {
 /**
  * The edit dialog's state for one entry. A food entry changes its amount (worked out from its own snapshot,
  * never the live food), its time, or all of its values at once ("Update to current food data"); a quick add
- * changes its calories, macros and label (written as a whole), its time, or both. What the person has typed is kept apart from the entry and starts again for another
- * entry. Nothing a failed save throws is kept: it can quote the amount, which is health data.
+ * changes its calories, macros and label (written as a whole), its time, or both. What the person has typed
+ * is kept apart from the entry and starts again for another entry. Nothing a failed save throws is kept: it
+ * can quote the amount, which is health data.
  */
 export function useEntryDraft(entry: LogEntry): EntryDraft {
   const timeZone = useProfileTimeZone().data ?? "UTC";

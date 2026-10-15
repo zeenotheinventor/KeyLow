@@ -442,7 +442,10 @@ describe("the add food dialog", () => {
       fireEvent.click(plus);
       await screen.findByText("Added Basmati rice, boiled");
 
-      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      // The toast commits first and moves focus to Undo in an effect, so focus is waited for.
+      await waitFor(() => {
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      });
 
       fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
 
