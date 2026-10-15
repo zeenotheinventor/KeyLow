@@ -211,6 +211,60 @@ describe("foodRowSchema", () => {
     },
   );
 
+  describe("plausibility bounds per 100 g or 100 ml", () => {
+    const parse = (changes: Record<string, unknown>) =>
+      customFoodInputSchema.safeParse({ ...goldenCustomFood, ...changes });
+
+    it("should accept 900 kcal", () => {
+      expect(parse({ kcal: 900 }).success).toBe(true);
+    });
+
+    it("should reject 900.01 kcal", () => {
+      expect(parse({ kcal: 900.01 }).success).toBe(false);
+    });
+
+    it.each(["protein_g", "carbs_g", "fibre_g", "sugars_g", "salt_g"])(
+      "should accept 100 for %s",
+      (key) => {
+        expect(parse({ [key]: 100 }).success).toBe(true);
+      },
+    );
+
+    it.each(["protein_g", "carbs_g", "fibre_g", "sugars_g", "salt_g"])(
+      "should reject 100.01 for %s",
+      (key) => {
+        expect(parse({ [key]: 100.01 }).success).toBe(false);
+      },
+    );
+
+    it("should accept 100 for fat and reject 100.01", () => {
+      expect(parse({ fat_g: 100 }).success).toBe(true);
+      expect(parse({ fat_g: 100.01 }).success).toBe(false);
+    });
+
+    it("should accept saturated fat equal to fat", () => {
+      expect(parse({ fat_g: 4, sat_fat_g: 4 }).success).toBe(true);
+    });
+
+    it("should reject saturated fat above fat, on the saturated fat field", () => {
+      const result = parse({ fat_g: 4, sat_fat_g: 4.01 });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.issues.map((issue) => issue.path)).toEqual([["sat_fat_g"]]);
+    });
+
+    it("should accept input with no saturated fat", () => {
+      expect(parse({ sat_fat_g: undefined }).success).toBe(true);
+    });
+
+    it("should not bound the stored row, which carries whatever the source recorded", () => {
+      expect(
+        foodRowSchema.safeParse({ ...goldenFoodRow, kcal: 950, carbs_g: 105, sugars_g: 105 })
+          .success,
+      ).toBe(true);
+    });
+  });
+
   it("should reject a density of zero", () => {
     expect(foodRowSchema.safeParse({ ...goldenFoodRow, density_g_per_ml: 0 }).success).toBe(false);
   });

@@ -2,6 +2,21 @@ import { z } from "zod";
 
 export const nutrientAmountSchema = z.number().nonnegative();
 
+/**
+ * The most a food can plausibly hold per 100 g or 100 ml: 900 kcal is pure fat, and nothing weighs
+ * more than itself. These bound what a person types into a food (see `customFoodInputSchema`), to
+ * catch typos. They do not bound a stored food, a diary entry or a day total: a day's energy is far
+ * over 900, and the sources record what they record (CoFID sugars are above 100 g per 100 g).
+ */
+export const MAX_KCAL_PER_100 = 900;
+export const MAX_GRAMS_PER_100 = 100;
+
+/** Energy typed in for a food, per 100 g or 100 ml. */
+export const kcalPer100InputSchema = nutrientAmountSchema.max(MAX_KCAL_PER_100);
+
+/** A nutrient in grams typed in for a food, per 100 g or 100 ml. */
+export const gramsPer100InputSchema = nutrientAmountSchema.max(MAX_GRAMS_PER_100);
+
 const nullableNutrientAmountSchema = nutrientAmountSchema.nullable();
 
 // `nutrientsSchema` is the nullable shape that rows and previews carry, `strictNutrientsSchema` is the

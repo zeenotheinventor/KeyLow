@@ -6,7 +6,7 @@ export const samples: Record<string, () => string[]> = {
   describeNameProblem: () => (["required", "too_long"] as const).map(copy.describeNameProblem),
   describeNutrientProblem: () =>
     (["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g"] as const).flatMap((nutrient) =>
-      (["required", "negative", "not_a_number"] as const).map((problem) =>
+      (["required", "negative", "not_a_number", "too_large"] as const).map((problem) =>
         copy.describeNutrientProblem(nutrient, problem),
       ),
     ),

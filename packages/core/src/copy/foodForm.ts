@@ -1,4 +1,5 @@
 import { amountUnit } from "../foods/foodForm";
+import { MAX_GRAMS_PER_100, MAX_KCAL_PER_100 } from "../schemas/nutrients";
 
 import type { BarcodeInvalidReason } from "../foods/barcode";
 import type { NutrientBasis } from "../schemas/food";
@@ -21,7 +22,7 @@ export const describeNameProblem = (problem: "required" | "too_long"): string =>
   problem === "required" ? "Name is required" : "Name must be 200 characters or fewer";
 
 export type FoodFormNutrient = "kcal" | "protein_g" | "fat_g" | "carbs_g" | "fibre_g";
-export type NutrientProblem = "required" | "negative" | "not_a_number";
+export type NutrientProblem = "required" | "negative" | "not_a_number" | "too_large";
 
 const NUTRIENT_SUBJECTS: Readonly<Record<FoodFormNutrient, string>> = {
   kcal: "Energy",
@@ -31,16 +32,22 @@ const NUTRIENT_SUBJECTS: Readonly<Record<FoodFormNutrient, string>> = {
   fibre_g: "Fibre",
 };
 
-const NUTRIENT_PROBLEM_ENDINGS: Readonly<Record<NutrientProblem, string>> = {
+const NUTRIENT_PROBLEM_ENDINGS: Readonly<Record<Exclude<NutrientProblem, "too_large">, string>> = {
   required: "is required",
   negative: "cannot be negative",
   not_a_number: "must be a number",
 };
 
+const describeLargestAmount = (nutrient: FoodFormNutrient): string =>
+  nutrient === "kcal" ? `${MAX_KCAL_PER_100} kcal` : `${MAX_GRAMS_PER_100} g`;
+
 export const describeNutrientProblem = (
   nutrient: FoodFormNutrient,
   problem: NutrientProblem,
-): string => `${NUTRIENT_SUBJECTS[nutrient]} ${NUTRIENT_PROBLEM_ENDINGS[problem]}`;
+): string =>
+  problem === "too_large"
+    ? `${NUTRIENT_SUBJECTS[nutrient]} cannot be more than ${describeLargestAmount(nutrient)} per 100 g or 100 ml`
+    : `${NUTRIENT_SUBJECTS[nutrient]} ${NUTRIENT_PROBLEM_ENDINGS[problem]}`;
 
 /** `position` counts from 1, as the user reads the list of portions. */
 export const describePortionLabelProblem = (position: number): string =>

@@ -66,49 +66,64 @@ describe("searchFoods", () => {
   });
 
   it("should parse the rows, keeping nulls and the score", async () => {
-    const row = searchHitRow({ brand: null, barcode: null, deleted_at: null, score: 0.75 });
+    const row = searchHitRow({ brand: null, score: 0.75 });
     answerWith([row]);
 
     expect(await searchFoods(createTestClient(), "chicken")).toEqual([row]);
   });
 
-  it("should sort by score descending, then by name, keeping the order of equal rows", async () => {
-    const low = searchHitRow({
+  it("should keep the default portion, grams or millilitres, when the food has one", async () => {
+    const grams = searchHitRow({
       id: "00000000-0000-4000-8000-000000000001",
-      name: "Apple",
+      default_portion_id: "00000000-0000-4000-8000-0000000000a1",
+      default_portion_label: "1 slice",
+      default_portion_grams: 30,
+      score: 2,
+    });
+    const millilitres = searchHitRow({
+      id: "00000000-0000-4000-8000-000000000002",
+      basis: "per_100ml",
+      default_portion_id: "00000000-0000-4000-8000-0000000000a2",
+      default_portion_label: "1 glass",
+      default_portion_ml: 250,
       score: 1,
     });
-    const highZ = searchHitRow({
-      id: "00000000-0000-4000-8000-000000000002",
+    answerWith([grams, millilitres]);
+
+    expect(await searchFoods(createTestClient(), "bread")).toEqual([grams, millilitres]);
+  });
+
+  it("should reject a row that has no default portion columns at all", async () => {
+    const withoutPortion = Object.fromEntries(
+      Object.entries(searchHitRow()).filter(([column]) => !column.startsWith("default_portion")),
+    );
+    answerWith([withoutPortion]);
+
+    await expect(searchFoods(createTestClient(), "chicken")).rejects.toThrow();
+  });
+
+  it("should keep the order the RPC ranked the rows in, including equal scores", async () => {
+    // Equal scores in the RPC's tie-break order (fewer commas), which is not alphabetical.
+    const simpler = searchHitRow({
+      id: "00000000-0000-4000-8000-000000000001",
       name: "Zucchini",
       score: 2,
     });
-    const highA = searchHitRow({
+    const next = searchHitRow({
+      id: "00000000-0000-4000-8000-000000000002",
+      name: "Asparagus, green, raw",
+      score: 2,
+    });
+    const last = searchHitRow({
       id: "00000000-0000-4000-8000-000000000003",
-      name: "Asparagus",
-      score: 2,
+      name: "Apple",
+      score: 1,
     });
-    const tieFirst = searchHitRow({
-      id: "00000000-0000-4000-8000-000000000004",
-      name: "Same",
-      score: 2,
-    });
-    const tieSecond = searchHitRow({
-      id: "00000000-0000-4000-8000-000000000005",
-      name: "Same",
-      score: 2,
-    });
-    answerWith([low, highZ, tieFirst, tieSecond, highA]);
+    answerWith([simpler, next, last]);
 
     const hits = await searchFoods(createTestClient(), "food");
 
-    expect(hits.map((hit) => hit.id)).toEqual([
-      highA.id,
-      tieFirst.id,
-      tieSecond.id,
-      highZ.id,
-      low.id,
-    ]);
+    expect(hits.map((hit) => hit.id)).toEqual([simpler.id, next.id, last.id]);
   });
 
   it("should reject when a row is malformed instead of dropping it", async () => {
