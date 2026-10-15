@@ -30,6 +30,11 @@ export const diaryBackend: {
   failingWriteTables: Set<string>;
   /** Never answers the writes to this table, as a slow connection does. Its reads are answered. */
   hungWriteTables: Set<string>;
+  /** Never answers the first read of the entries of each of these days (`YYYY-MM-DD`), as a slow connection does. Later reads are answered. */
+  hungEntryReadsOnce: Set<string>;
+  /** Holds each update of the entries until a test lets it go, by calling the function it was queued as in `heldUpdates`. */
+  holdUpdates: boolean;
+  heldUpdates: (() => void)[];
   /** Fails the inserts into the entries from this one on, counting from 1, as a copy that stops part way does. */
   failingInsertsFrom: number | null;
   /** Fails the next this many updates of the entries. */
@@ -52,6 +57,9 @@ export const diaryBackend: {
   hungTables: new Set(),
   failingWriteTables: new Set(),
   hungWriteTables: new Set(),
+  hungEntryReadsOnce: new Set(),
+  holdUpdates: false,
+  heldUpdates: [],
   failingInsertsFrom: null,
   failingUpdates: 0,
   targetsReadFails: false,
@@ -78,6 +86,9 @@ export function resetDiaryBackend(): void {
   diaryBackend.hungTables.clear();
   diaryBackend.failingWriteTables.clear();
   diaryBackend.hungWriteTables.clear();
+  diaryBackend.hungEntryReadsOnce.clear();
+  diaryBackend.holdUpdates = false;
+  diaryBackend.heldUpdates = [];
   diaryBackend.failingInsertsFrom = null;
   diaryBackend.failingUpdates = 0;
   diaryBackend.saves = [];
@@ -442,6 +453,9 @@ function writeShouldFail(table: string, method: string): boolean {
   return false;
 }
 
+const readDateOf = (search: URLSearchParams): string =>
+  search.get("local_date")?.replace("eq.", "") ?? "";
+
 function byTimeline(first: Row, second: Row): number {
   return (
     String(first["logged_at"]).localeCompare(String(second["logged_at"])) ||
@@ -468,6 +482,9 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     });
     if (diaryBackend.hungWriteTables.has(table)) {
       return new Promise(() => undefined);
+    }
+    if (table === "food_log_entries" && method === "PATCH" && diaryBackend.holdUpdates) {
+      await new Promise<void>((release) => diaryBackend.heldUpdates.push(release));
     }
     if (writeShouldFail(table, method)) {
       return jsonResponse(
@@ -508,6 +525,9 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
     case "food_log_entries":
       if (init !== undefined && isDiaryWrite) {
         return Promise.resolve(writeEntries(init, searchParams));
+      }
+      if (diaryBackend.hungEntryReadsOnce.delete(readDateOf(searchParams))) {
+        return new Promise(() => undefined);
       }
       return Promise.resolve(
         jsonResponse(

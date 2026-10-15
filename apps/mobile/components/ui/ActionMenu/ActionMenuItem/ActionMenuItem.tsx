@@ -1,6 +1,5 @@
-import { Text as NativeText, View } from "react-native";
+import { View } from "react-native";
 
-import { useTheme } from "../../../../lib/theme";
 import { Icon } from "../../Icon";
 import { PressableSurface } from "../../PressableSurface";
 import { Text } from "../../Text";
@@ -8,15 +7,10 @@ import { Text } from "../../Text";
 import type { ActionMenuItemProps } from "./types";
 
 // The classes are written out so Tailwind sees them. A disabled item dims its icon and label to 40 percent
-// and leaves the caption as it is. A destructive label is written as a text style, because the kit's Text
-// takes a text tone and not a status colour. The danger colour is the label's in dark only: in light it is too
-// faint for small text, so the label falls back to the primary text colour and the icon keeps the danger
-// colour (Q14), as a Badge does.
+// and leaves the caption as it is. A destructive label is the danger colour in dark only: in light it is too
+// faint for small text, so the label keeps the primary text colour and the icon keeps the danger colour (Q14).
 const dimClassName = "opacity-40";
-const destructiveLabel = {
-  darkClassName: "text-body font-normal tabular-nums text-danger",
-  lightClassName: "text-body font-normal tabular-nums text-text-primary",
-};
+const destructiveLabelClassName = "dark:text-danger";
 
 /** One action of a menu: a 52 point row with its icon, its label and, under the label, an optional caption. */
 export function ActionMenuItem({
@@ -27,7 +21,6 @@ export function ActionMenuItem({
   destructive = false,
   onPress,
 }: ActionMenuItemProps) {
-  const { scheme } = useTheme();
   const dim = disabled ? dimClassName : "";
 
   return (
@@ -41,15 +34,7 @@ export function ActionMenuItem({
         <Icon name={icon} tone={destructive ? "danger" : "secondary"} />
       </View>
       <View className="min-w-0 flex-1 gap-[2px]">
-        {destructive ? (
-          <NativeText
-            className={`${scheme === "dark" ? destructiveLabel.darkClassName : destructiveLabel.lightClassName} ${dim}`}
-          >
-            {label}
-          </NativeText>
-        ) : (
-          <Text className={dim}>{label}</Text>
-        )}
+        <Text className={`${destructive ? destructiveLabelClassName : ""} ${dim}`}>{label}</Text>
         {caption === undefined ? null : (
           <Text tone="muted" variant="caption">
             {caption}

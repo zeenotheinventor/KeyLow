@@ -15,9 +15,11 @@ export function useDeleteEntryWithUndo(): (entry: LogEntry) => void {
   const deleteEntry = useDeleteEntry();
   const restoreEntry = useRestoreEntry();
 
+  // `mutateAsync` is per call, where the callbacks of `mutate` run for the latest call only, so each delete
+  // keeps its own toast and Undo when another follows before it is saved.
   return (entry) => {
-    deleteEntry.mutate(entry, {
-      onSuccess: () => {
+    deleteEntry.mutateAsync(entry).then(
+      () => {
         toast.show({
           message: ENTRY_DELETED_TOAST,
           icon: "Trash2",
@@ -27,6 +29,8 @@ export function useDeleteEntryWithUndo(): (entry: LogEntry) => void {
           },
         });
       },
-    });
+      // The hook has put the row back, and a delete that failed has nothing to say.
+      () => undefined,
+    );
   };
 }

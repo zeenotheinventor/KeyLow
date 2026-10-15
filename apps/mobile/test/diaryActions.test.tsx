@@ -202,6 +202,31 @@ describe("the diary's actions", () => {
       expect(captions()).toHaveLength(7);
     });
 
+    it("should keep the first delete's toast and Undo when a second delete follows before it is saved", async () => {
+      // Each update waits to be let go, so both deletes are asked for before either is saved.
+      diaryBackend.holdUpdates = true;
+      await renderLoadedDiary();
+      await deleteChicken();
+      await fireEvent(
+        screen.getByRole("button", { name: /^Porridge oats/ }),
+        "accessibilityAction",
+        { nativeEvent: { actionName: "delete" } },
+      );
+      await waitFor(() => {
+        expect(diaryBackend.heldUpdates).toHaveLength(1);
+      });
+
+      // The first is saved and the second is still waiting: the first one's toast is shown.
+      const [saveFirst] = diaryBackend.heldUpdates;
+      await act(() => {
+        saveFirst?.();
+      });
+
+      expect(await screen.findByRole("status", { name: "Entry deleted" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
+      expect(diaryBackend.heldUpdates).toHaveLength(2);
+    });
+
     it("should offer Delete on a row, as its accessibility action", async () => {
       await renderLoadedDiary();
 
@@ -336,6 +361,30 @@ describe("the diary's actions", () => {
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
     });
 
+    // The empty day's button is enabled while yesterday is not yet known, so a copy can find it empty.
+    it("should show no toast when the copy finds yesterday empty after all", async () => {
+      const user = userEvent.setup();
+      diaryBackend.entries = [];
+      diaryBackend.hungEntryReadsOnce.add(yesterday);
+      await renderLoadedDiary();
+
+      await user.press(copyYesterdayButton());
+
+      await waitFor(() => {
+        const readsOfYesterday = diaryBackend.requests.filter(
+          (request) =>
+            request.table === "food_log_entries" &&
+            request.search.includes(`local_date=eq.${yesterday}`),
+        );
+        expect(readsOfYesterday).toHaveLength(2);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      });
+      expect(screen.queryByText(/^Copied/)).not.toBeOnTheScreen();
+      expect(diaryBackend.writes).toEqual([]);
+    });
+
     it("should disable the button while offline", async () => {
       await renderLoadedDiary();
       await goOffline();
@@ -402,6 +451,21 @@ describe("the diary's actions", () => {
 
       expect(await screen.findByText("Nothing logged yesterday")).toBeOnTheScreen();
       expect(menuItem()).toBeDisabled();
+    });
+
+    it("should disable Copy yesterday, with no caption yet, while yesterday is still loading", async () => {
+      const user = userEvent.setup();
+      diaryBackend.entries = [...sampleDay(), ...yesterdaysEntries()];
+      diaryBackend.hungEntryReadsOnce.add(yesterday);
+      await renderLoadedDiary();
+
+      await user.press(moreButton());
+
+      const item = await screen.findByRole("button", { name: "Copy yesterday" });
+      expect(item).toBeDisabled();
+      expect(screen.queryByText("Nothing logged yesterday")).not.toBeOnTheScreen();
+      await user.press(item);
+      expect(diaryBackend.writes).toEqual([]);
     });
 
     it("should copy nothing when the disabled item is pressed", async () => {
@@ -641,6 +705,74 @@ describe("the diary's actions", () => {
         expect(diaryBackend.dayLogs).toEqual([
           expect.objectContaining({ local_date: yesterday, is_complete: true }),
         ]);
+      });
+    });
+
+    // The log is keyed by the day. Without that, the switch would live on across days, and the moment of
+    // a press on one day would still be playing on the next day it shows.
+    describe("when the day shown changes", () => {
+      const slash = () =>
+        screen.queryByTestId("day-complete-slash", { includeHiddenElements: true });
+      const yesterdayPill = () => screen.getByRole("button", { name: /^Wednesday 14 October/ });
+      const todayPill = () => screen.getByRole("button", { name: /^Thursday 15 October, today/ });
+
+      // Visits yesterday and comes back, so its day is in the cache and shows with no loading between.
+      async function visitYesterdayAndReturn(user: ReturnType<typeof userEvent.setup>) {
+        await renderLoadedDiary();
+        await user.press(yesterdayPill());
+        await screen.findByRole("heading", { name: "Wed 14 Oct" });
+        await screen.findByRole("switch");
+        await user.press(todayPill());
+        await screen.findByRole("heading", { name: "Today" });
+      }
+
+      it("should not play a press's moment again on a day that is already complete", async () => {
+        const user = userEvent.setup();
+        diaryBackend.dayLogs = [
+          {
+            local_date: yesterday,
+            is_complete: true,
+            completed_at: "2026-10-14T20:00:00+00:00",
+            note: null,
+          },
+        ];
+        // The save is never answered, so the press is still in flight when the day changes.
+        diaryBackend.hungWriteTables.add("day_logs");
+        await visitYesterdayAndReturn(user);
+        await user.press(screen.getByRole("switch"));
+        await waitFor(() => {
+          expect(slash()).toBeOnTheScreen();
+        });
+
+        await user.press(yesterdayPill());
+
+        await screen.findByRole("heading", { name: "Wed 14 Oct" });
+        expect(screen.getByRole("switch")).toBeChecked();
+        expect(slash()).not.toBeOnTheScreen();
+      });
+
+      it("should not play the moment when the day shown then becomes complete from outside", async () => {
+        const user = userEvent.setup();
+        diaryBackend.hungWriteTables.add("day_logs");
+        await visitYesterdayAndReturn(user);
+        await user.press(screen.getByRole("switch"));
+        await user.press(yesterdayPill());
+        await screen.findByRole("heading", { name: "Wed 14 Oct" });
+
+        diaryBackend.dayLogs = [
+          {
+            local_date: yesterday,
+            is_complete: true,
+            completed_at: "2026-10-14T20:00:00+00:00",
+            note: null,
+          },
+        ];
+        await act(() => queryClient.invalidateQueries());
+
+        await waitFor(() => {
+          expect(screen.getByRole("switch")).toBeChecked();
+        });
+        expect(slash()).not.toBeOnTheScreen();
       });
     });
 

@@ -1,5 +1,6 @@
 import { themes } from "@keylow/tokens";
 import { fireEvent, render, screen, within } from "@testing-library/react-native";
+import { colorScheme } from "nativewind";
 
 import { ActionMenu } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
@@ -21,6 +22,8 @@ const schemes: ThemeScheme[] = ["dark", "light"];
 const drawings = () => screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 
 async function renderMenu(props: Partial<ActionMenuProps> = {}, scheme: ThemeScheme = "dark") {
+  // The fixed theme in a test does not move NativeWind's own scheme, which the `dark:` variant follows.
+  colorScheme.set(scheme);
   const copy = jest.fn();
   const remove = jest.fn();
   await render(

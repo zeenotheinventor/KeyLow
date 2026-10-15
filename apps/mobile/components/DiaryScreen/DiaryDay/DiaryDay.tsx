@@ -190,7 +190,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         }}
       />
       <DiaryMoreSheet
-        isCopyDisabled={!isOnline || isCopying}
+        isCopyDisabled={!isOnline || isCopying || previousDayQuery.isPending}
         isYesterdayEmpty={isYesterdayEmpty}
         open={isMenuOpen}
         onClose={() => {
