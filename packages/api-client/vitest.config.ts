@@ -2,6 +2,8 @@ import { configDefaults, defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
+    // Locally a run uses half the cores, so several runs at once do not bury the machine. CI keeps the default.
+    ...(process.env.CI ? {} : { maxWorkers: "50%" }),
     environment: "jsdom",
     setupFiles: ["./test/support/setup.ts"],
     include: ["test/**/*.test.{ts,tsx}"],

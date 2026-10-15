@@ -8,7 +8,7 @@
   "scripts": {
     "prepare": "lefthook install",
     "check": "turbo run format:check lint typecheck test",
-    "check:ci": "sh -c 'turbo run format:check lint typecheck test --filter=!@keylow/web \"$@\" && turbo run format:check lint typecheck --filter=@keylow/web \"$@\"' check:ci",
+    "check:affected": "node scripts/ci-scope.mjs",
     "check:integration": "turbo run check:functions test:integration",
     "dev:db": "pnpm --filter @keylow/db run dev:db",
     "format:check": "prettier --check .",

@@ -42,3 +42,11 @@ Several pull requests merge in parallel, so the files every feature used to edit
 - A new job is added to the `needs` list of `checks`, nothing else changes in the settings.
 - `scope` runs turbo through npx, so it needs no install and takes a few seconds.
 - `mobile-fingerprint.yml` is separate and is not a required check. It comments on pull requests and needs write access to them.
+
+## Checking before a push
+
+CI runs the full gate on the pull request, so before a push run `pnpm check:affected`, which checks only what the change can affect (see [local-dev.md](runbooks/local-dev.md)). Run the full `pnpm check` when a root file, a shared package's public API or a config changes, or when asked.
+
+`pnpm check:affected` (`scripts/ci-scope.mjs`) compares the working tree with `origin/main`. A change to a file outside `apps/`, `packages/` and `tools/` (Markdown aside) runs everything, and a clean branch runs nothing. CI has its own scope step in `ci.yml`.
+
+Local test runs use half the cores. The Vitest configs and `apps/mobile/jest.config.js` set `maxWorkers` only when `CI` is unset, so CI keeps each tool's default. Testing Library's `waitFor` and `findBy*` wait up to 5 s, not the 1 s default, which flaked on a busy machine.

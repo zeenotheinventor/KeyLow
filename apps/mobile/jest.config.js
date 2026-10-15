@@ -21,6 +21,7 @@ module.exports = {
   // Reads the React Native components before the first test, so that test no longer pays for loading
   // them on a cold cache.
   setupFilesAfterEnv: [
+    "<rootDir>/test/support/asyncWaitDefault.ts",
     "<rootDir>/test/support/warmReactNative.ts",
     "<rootDir>/test/support/expoHapticsMock.ts",
     "<rootDir>/test/support/reanimatedWorkletsMock.ts",
@@ -28,6 +29,8 @@ module.exports = {
     "<rootDir>/test/support/skiaMock.ts",
     "<rootDir>/test/support/holdSplashScreenMock.ts",
   ],
+  // Locally a run uses half the cores, so several runs at once do not bury the machine. CI keeps the default.
+  ...(process.env.CI ? {} : { maxWorkers: "50%" }),
   // Headroom for a busy CI runner, where the same work takes several times as long.
   testTimeout: 20000,
   // lucide-react-native names its ES module build for the react-native condition, which Jest does not
