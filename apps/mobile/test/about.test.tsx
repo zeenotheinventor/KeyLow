@@ -11,6 +11,30 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
+type MockUpdatesState = {
+  isEnabled: boolean;
+  isEmbeddedLaunch: boolean;
+  createdAt: Date | null;
+};
+
+// The state expo-updates reports, which a test changes. The mock reads it at call time.
+const mockUpdatesState: MockUpdatesState = {
+  isEnabled: true,
+  isEmbeddedLaunch: false,
+  createdAt: new Date("2026-10-15T10:00:00Z"),
+};
+
+jest.mock("expo-updates", () => ({
+  get isEnabled() {
+    return mockUpdatesState.isEnabled;
+  },
+  get isEmbeddedLaunch() {
+    return mockUpdatesState.isEmbeddedLaunch;
+  },
+  get createdAt() {
+    return mockUpdatesState.createdAt;
+  },
+}));
 jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
@@ -34,9 +58,13 @@ async function renderAbout() {
 describe("the About screen", () => {
   beforeEach(() => {
     resetRouterMock();
+    mockUpdatesState.isEnabled = true;
+    mockUpdatesState.isEmbeddedLaunch = false;
+    mockUpdatesState.createdAt = new Date("2026-10-15T10:00:00Z");
   });
 
   afterEach(() => {
+    delete process.env.EXPO_PUBLIC_COMMIT_SHA;
     jest.restoreAllMocks();
     // `Linking.openURL` is already a mock in the React Native jest setup, so restoring it keeps its calls. Clearing drops them.
     jest.clearAllMocks();
@@ -169,6 +197,49 @@ describe("the About screen", () => {
 
       expect(openURL).toHaveBeenCalledTimes(1);
       expect(screen.getByRole("heading", { name: "About" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("the version line", () => {
+    it("should show the version and the commit the update was built from", async () => {
+      process.env.EXPO_PUBLIC_COMMIT_SHA = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
+      await renderAbout();
+
+      expect(screen.getByText("Version 1.0.0 (a1b2c3d)")).toBeOnTheScreen();
+    });
+
+    it("should show only the version when the build has no commit", async () => {
+      await renderAbout();
+
+      expect(screen.getByText("Version 1.0.0")).toBeOnTheScreen();
+    });
+
+    it("should say on which day the running update was made", async () => {
+      await renderAbout();
+
+      expect(screen.getByText("Updated 2026-10-15")).toBeOnTheScreen();
+    });
+
+    it("should say Built in when the app runs the bundle it shipped with", async () => {
+      mockUpdatesState.isEmbeddedLaunch = true;
+      await renderAbout();
+
+      expect(screen.getByText("Built in")).toBeOnTheScreen();
+    });
+
+    it("should show no second line when updates are disabled", async () => {
+      mockUpdatesState.isEnabled = false;
+      await renderAbout();
+
+      expect(screen.queryByText(/^Updated /)).not.toBeOnTheScreen();
+      expect(screen.queryByText("Built in")).not.toBeOnTheScreen();
+    });
+
+    it("should add no heading", async () => {
+      await renderAbout();
+
+      // The stack header, Data sources and Legal.
+      expect(screen.getAllByRole("heading")).toHaveLength(3);
     });
   });
 });

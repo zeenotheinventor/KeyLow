@@ -1,6 +1,6 @@
 import { ABOUT_SCREEN, LEGAL_PATHS } from "@keylow/core/copy";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { pagePaddingOf } from "./pagePadding";
 
@@ -11,6 +11,7 @@ const { dataSources } = ABOUT_SCREEN;
 describe("About page", () => {
   afterEach(() => {
     cleanup();
+    vi.unstubAllEnvs();
   });
 
   it("should be titled About", () => {
@@ -75,6 +76,36 @@ describe("About page", () => {
       .getAllByRole("link")
       .map((link) => link.textContent);
     expect(names).toEqual(["Privacy Policy", "Terms"]);
+  });
+
+  describe("the version line", () => {
+    it("should show the version and the commit the deployment was built from", () => {
+      vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678");
+      render(<AboutPage />);
+
+      expect(screen.getByText("Version 1.0.0 (a1b2c3d)")).toBeTruthy();
+    });
+
+    it("should show only the version when there is no commit, as in local development", () => {
+      vi.stubEnv("VERCEL_GIT_COMMIT_SHA", undefined);
+      render(<AboutPage />);
+
+      expect(screen.getByText("Version 1.0.0")).toBeTruthy();
+    });
+
+    it("should add no heading and no link", () => {
+      vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678");
+      render(<AboutPage />);
+
+      expect(screen.getAllByRole("heading").map((heading) => heading.textContent)).toEqual([
+        "About",
+        dataSources.title,
+        dataSources.cofid.name,
+        dataSources.off.name,
+        ABOUT_SCREEN.legal.title,
+      ]);
+      expect(screen.getAllByRole("link")).toHaveLength(4);
+    });
   });
 
   it("should pad top and bottom as the shell boards draw it", async () => {

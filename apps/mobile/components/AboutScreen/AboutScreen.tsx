@@ -1,11 +1,18 @@
 import { ABOUT_SCREEN, LEGAL_URLS } from "@keylow/core/copy";
+import { APP_VERSION, formatAppVersion, formatBuildLine } from "@keylow/core/format";
 import { useRouter } from "expo-router";
+import * as Updates from "expo-updates";
 import { vars } from "nativewind";
 import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { GroupedList, ListRow, SheetHeader, Text } from "../ui";
 import { DataSourceCredit } from "./DataSourceCredit";
+
+// The environment is typed loosely here, so this narrows a read to what it is.
+const textOrUndefined = (value: unknown) => (typeof value === "string" ? value : undefined);
+
+const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /**
  * The About screen, pushed from More: a stack header with Back, and the Data sources section, which
@@ -30,6 +37,17 @@ export function AboutScreen() {
     // A device with no browser rejects, and there is nothing else to do about it, so the screen stays as it is.
     Linking.openURL(url).catch(() => undefined);
   }
+
+  // Metro inlines this value where `eas update` exports the bundle, and only for a read by this full name, so it
+  // is never destructured or looked up by a key. The commit must stay out of the Expo config and `eas.json`: the
+  // fingerprint hashes both, and a value that changes per commit there would change the runtime version on every merge.
+  const commit = textOrUndefined(process.env.EXPO_PUBLIC_COMMIT_SHA);
+  const buildLine = formatBuildLine({
+    isEnabled: Updates.isEnabled,
+    isEmbeddedLaunch: Updates.isEmbeddedLaunch,
+    createdAt: Updates.createdAt,
+    timeZone: deviceTimeZone(),
+  });
 
   return (
     // The insets are runtime values no class can name, so they go through variables, as the food screens' do.
@@ -77,6 +95,16 @@ export function AboutScreen() {
               }}
             />
           </GroupedList>
+        </View>
+        <View className="px-1">
+          <Text variant="caption" tone="muted">
+            {formatAppVersion({ version: APP_VERSION, commit })}
+          </Text>
+          {buildLine === null ? null : (
+            <Text variant="caption" tone="muted">
+              {buildLine}
+            </Text>
+          )}
         </View>
       </ScrollView>
     </View>
