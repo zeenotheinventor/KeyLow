@@ -1,0 +1,21 @@
+{
+  "keyframes": {
+    "toast-in": {
+      "from": {
+        "opacity": "0",
+        "transform": "translate(40px, 12px) skewX(-12deg)"
+      },
+      "60%": {
+        "opacity": "1",
+        "transform": "translate(-4px, 0) skewX(3deg)"
+      },
+      "to": {
+        "opacity": "1",
+        "transform": "none"
+      }
+    }
+  },
+  "animation": {
+    "toast-in": "toast-in {transitionDuration.standard} {transitionTimingFunction.enter} both"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "keyframes": {
+    "flash": {
+      "from": {
+        "color": "theme(colors.accent.DEFAULT)"
+      }
+    }
+  },
+  "animation": {
+    "flash": "flash {transitionDuration.flourish} {transitionTimingFunction.exit} both"
+  }
+}

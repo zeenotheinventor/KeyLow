@@ -254,7 +254,7 @@ pnpm --filter @keylow/web build-storybook
 
 - `pnpm storybook` runs the web app's `storybook` script from the repo root and serves on <http://localhost:6006>. Add `--port <port>` to use another port. `build-storybook` writes the static site to `apps/web/storybook-static/`, which git, Prettier and ESLint ignore. CI no longer builds the web Storybook, so run `pnpm --filter @keylow/web build-storybook` locally when you change stories or the Storybook config.
 - The **Theme** toolbar item flips `data-theme` on `html` between Dark (the default) and Light, the same attribute the app's layout sets from the cookie. The **Viewport** item has Desktop 1280 and Mobile 375.
-- Stories live next to the components, as `components/**/*.stories.tsx`. Vitest only runs `test/**`, so stories are never run as unit tests.
+- Stories live next to the components, as `components/**/*.stories.tsx`. Vitest only runs `test/**`, so stories are never run as unit tests. The states a component must have a story for are listed beside it in `storyStates.ts`, and `test/ui/story-manifest.test.ts` reads every folder.
 - The **Accessibility** panel runs axe on the open story. Fix a violation before you merge a story.
 - Storybook's `next/font` mock loads Geist from Google's font servers when the page opens, so a story shows the fallback font offline.
 - The root `package.json` pins `postcss-loader` to 8.1.1, the lowest version `@storybook/nextjs` accepts. Version 8.2 depends on `jiti` 2 while Tailwind 3 needs `jiti` 1, and with both in the lockfile `pnpm dedupe --check` flips between two answers from one run to the next. Drop the pin once Tailwind moves to version 4.
@@ -418,7 +418,7 @@ Storybook for React Native runs inside the dev client, on the real runtime, so a
    EXPO_PUBLIC_STORYBOOK=true pnpm --filter @keylow/mobile start --clear
    ```
 
-   `--clear` matters when you switch the flag, because Metro inlines it into the bundle. Metro turns Storybook telemetry off for you (`STORYBOOK_DISABLE_TELEMETRY=1`, set in `metro.config.js` when the flag is on). It also rewrites the story index, `apps/mobile/.rnstorybook/storybook.requires.ts`, on every start. Commit it when it changes. CI regenerates it and fails on a difference, and `pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook` does the same by hand. It is not a package script on purpose: a script name is part of the native fingerprint.
+   `--clear` matters when you switch the flag, because Metro inlines it into the bundle. Metro turns Storybook telemetry off for you (`STORYBOOK_DISABLE_TELEMETRY=1`, set in `metro.config.js` when the flag is on). It also rewrites the story index, `apps/mobile/.rnstorybook/storybook.requires.ts`, on every start. That file is generated and not committed (git ignores it), so a story added or removed never touches a shared file. `pnpm generate:lists` writes it for tsc, ESLint and Jest, which turbo runs before them. It is not a package script on purpose: a script name is part of the native fingerprint.
 
 2. Open the dev client and connect to Metro as in "Connect the phone".
 3. Open the deep link `keylow://storybook`. On Android, `adb shell am start -a android.intent.action.VIEW -d "keylow://storybook" com.sojisoft.keylow.dev` does it, and on a phone you can type `keylow://storybook` into the browser. No sign-in is needed, because `AuthGate` lets the `storybook` route through while the flag is on.
@@ -442,6 +442,28 @@ cd ../..
 - `npx expo-doctor` should end with `No issues detected!`. A patch-only version mismatch is expected between Expo patch batches. Run `npx expo install --fix` when you build a new native binary.
 - `npx expo export --platform ios --no-bytecode` bundles the app with Metro and writes `apps/mobile/dist/`, which git ignores. It is the closest thing to a smoke test without a device. It reads `.env.local` for the two `EXPO_PUBLIC_` values.
 
+## Adding to the shared lists
+
+Files that every feature used to edit are now derived from folders, so a pull request that adds a component, an icon, an icon tone or an animation touches only new files and cannot conflict with another one. The one list still edited by hand is the copy index, which takes one line per module (see below).
+
+**Add a mobile kit component** (`apps/mobile/components/ui`): create the folder `Name/` with `Name.tsx`, `types.ts`, `index.ts`, `Name.stories.tsx`, `storyStates.ts` (`export const storyStates = ["Default", ...]`, the names of the story exports) and `test/ui/Name.test.tsx`. Nothing else. `components/ui/index.ts` is generated from the folders, so you add no line to it. Start `index.ts` with `// @not-in-barrel` for a component only other kit components use.
+
+**Add a web kit component** (`apps/web/components/ui`): create the folder with the component, `index.ts`, `Name.stories.tsx` and `storyStates.ts`. `test/ui/story-manifest.test.ts` finds them with `import.meta.glob`.
+
+**Add an icon**: create `apps/mobile/components/ui/Icon/icons/Name.ts` containing `export { Name } from "lucide-react-native";`, where `Name` is the Lucide name and the file name. `Icon/iconMap.ts` is generated from that folder. `test/ui/iconMap.test.ts` fails a file that does not export exactly the name it is called, so each icon name can exist once.
+
+**Add an icon tone**: create `Icon/tones/name.ts` with `export const colorName = "colour-token" satisfies ColorName;` and a one-line comment saying what the tone is for. `Icon/iconColorTones.ts` is generated from that folder, and both the `IconTone` type and the colour lookup read it.
+
+**Add a copy module** (`packages/core/src/copy`): create `name.ts`, add one line, `export * from "./name";`, to `copy/index.ts`, and create `test/copy/samples/name.ts` with a row for each function it exports (`test/copy/voice.test.ts` finds the file). `copy/index.test.ts` fails when the line is missing or twice. Start a module that is not part of `@keylow/core/copy` with `// @not-in-barrel`. `copy/index.ts` is committed because the Deno bundle, Vercel and EAS all read it, so two pull requests that both add a new module still touch the same file. `.gitattributes` marks it `merge=union`, which makes the local rebase clean, but GitHub ignores that attribute: it shows both pull requests as conflicting until you merge or rebase main into the second one locally (git then keeps both lines, so push the result).
+
+**Add an animation** (`apps/web/tailwind/animations`): create `name.json` with its `keyframes` and `animation`. See the README in that folder.
+
+How it stays conflict-free:
+
+- `pnpm generate:lists` (the `tools/generate-lists` package) writes `apps/mobile/components/ui/index.ts`, `Icon/iconMap.ts`, `Icon/iconColorTones.ts` and `apps/mobile/.rnstorybook/storybook.requires.ts`. All four are ignored by git, so no pull request can conflict on them. Turbo runs it before the mobile app's `lint`, `typecheck` and `test` (`apps/mobile/turbo.json`), and `metro.config.js` and `jest.config.js` run it too, so a fresh clone needs no manual step and a pulled change to the folders is picked up. If tsc or your editor cannot find one of them, run it by hand.
+- `copy/index.ts` is the only committed list, with one independent entry per line and `merge=union` in `.gitattributes`. A local rebase that leaves a duplicate or a missing line is caught by the tests and the type check. Do not put a file in `.gitattributes` unless its lines are single and independent.
+- `pnpm-lock.yaml` still conflicts when two branches change dependencies. Take either side and run `pnpm install`, which repairs the lockfile, then commit it.
+
 ## 6. Everyday commands
 
 Run from the repo root.
@@ -454,6 +476,7 @@ Run from the repo root.
 | `pnpm check:integration`                 | Deno check and lint of the Edge Functions, the pgTAP tests in `packages/db/supabase/tests/`, then the Edge Function suites. Needs the stack running and the functions served.                                                                                                                                                                                                          |
 | `pnpm dedupe --check`                    | Fails if the lockfile has duplicates that `pnpm dedupe` would remove                                                                                                                                                                                                                                                                                                                   |
 | `pnpm exec prettier --write <path>`      | Formats a file the way `format:check` expects. Markdown is checked too.                                                                                                                                                                                                                                                                                                                |
+| `pnpm generate:lists`                    | Writes the generated, uncommitted lists (the mobile kit barrel, icon map, icon tones and story index). Turbo does it for you before the mobile app's `lint`, `typecheck` and `test`.                                                                                                                                                                                                   |
 | `pnpm storybook`                         | Starts the web Storybook on <http://localhost:6006>                                                                                                                                                                                                                                                                                                                                    |
 | `pnpm gen-types`                         | Regenerates `packages/db/src/types.gen.ts`. Run it after every migration, then commit the result.                                                                                                                                                                                                                                                                                      |
 | `pnpm --filter @keylow/db migration:up`  | Applies the migrations the local database does not have yet, and keeps its data                                                                                                                                                                                                                                                                                                        |

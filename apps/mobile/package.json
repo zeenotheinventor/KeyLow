@@ -57,6 +57,7 @@
   "devDependencies": {
     "@gorhom/bottom-sheet": "^5.2.14",
     "@keylow/config": "workspace:*",
+    "@keylow/generate-lists": "workspace:*",
     "@storybook/react": "^10.6.2",
     "@storybook/react-native": "^10.7.0",
     "@testing-library/react-native": "^14.0.1",

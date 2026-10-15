@@ -1,0 +1,20 @@
+{
+  "keyframes": {
+    "wipe-in": {
+      "from": {
+        "opacity": "0",
+        "clipPath": "polygon(0 0, 0 0, -30% 100%, -30% 100%)"
+      },
+      "1%": {
+        "opacity": "1"
+      },
+      "to": {
+        "opacity": "1",
+        "clipPath": "polygon(0 0, 130% 0, 100% 100%, -30% 100%)"
+      }
+    }
+  },
+  "animation": {
+    "wipe-in": "wipe-in {transitionDuration.standard} {transitionTimingFunction.whip} both"
+  }
+}

@@ -1,1 +1,8 @@
 packages/db/supabase/seeds/10_cofid_subset.sql linguist-generated -diff
+
+# The copy index is one independent `export *` line per module. Git's union driver keeps the lines both
+# branches added when you rebase or merge locally, so two branches that each add a module rebase without
+# a conflict. GitHub ignores .gitattributes when it works out whether a pull request can merge, so it still
+# shows two such pull requests as conflicting until main is merged or rebased in locally. The tests fail on
+# a duplicate or missing line. Never put a file here whose lines depend on their order or span several lines.
+packages/core/src/copy/index.ts merge=union

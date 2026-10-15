@@ -1,0 +1,5 @@
+{
+  "animation": {
+    "dialog-in": "punch {transitionDuration.standard} {transitionTimingFunction.enter} both"
+  }
+}

@@ -1,0 +1,18 @@
+export const storyStates = [
+  "Primary",
+  "Secondary",
+  "Destructive",
+  "Ghost",
+  "Small",
+  "Large",
+  "WithIcon",
+  "SmallWithIcon",
+  "IconOnly",
+  "Hover",
+  "Pressed",
+  "Focused",
+  "Disabled",
+  "Loading",
+  "AsLink",
+  "Ring",
+];
