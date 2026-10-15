@@ -20,20 +20,21 @@ import type { PersistedDiaryCacheProps } from "./types";
  * this. It sits inside `KeyLowProvider`, whose query client it persists, and outside the sign-in gate,
  * so the gate's own read finds the stored acceptance.
  *
- * Whenever no one is signed in (a sign out, an account that was deleted, a session that ended while
- * the app was closed) the stored cache is removed and the one in memory is reset, so the next person
- * to sign in never sees it.
+ * On a sign out, which is also how an account deletion ends, the stored cache is removed and the one in
+ * memory is reset, so the next person to sign in never sees it. A start with no session it can read
+ * does not clear it: offline, with an access token that has expired, Supabase reports no session
+ * although the person is still signed in, and that is when the cache is wanted.
  */
 export function PersistedDiaryCache({ children }: PersistedDiaryCacheProps) {
   const client = useSupabase();
   const queryClient = useQueryClient();
   const [persister] = useState(() => createDiaryCachePersister(AsyncStorage));
-  const hasSeenNoSession = useRef(false);
+  const hasSeenSignOut = useRef(false);
 
   useEffect(() => {
-    const { data } = client.auth.onAuthStateChange((_event, session) => {
-      if (session === null) {
-        hasSeenNoSession.current = true;
+    const { data } = client.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        hasSeenSignOut.current = true;
         void persister.removeClient();
         void queryClient.resetQueries();
       }
@@ -47,10 +48,10 @@ export function PersistedDiaryCache({ children }: PersistedDiaryCacheProps) {
   return (
     <PersistQueryClientProvider
       client={queryClient}
-      // The sign in state can be known before the stored cache has been read, and the read then fills
+      // A sign out can come before the stored cache has been read, and the read then fills
       // the cache after the reset. So the reset is made again once the read is done.
       onSuccess={() => {
-        if (hasSeenNoSession.current) {
+        if (hasSeenSignOut.current) {
           void queryClient.resetQueries();
         }
       }}

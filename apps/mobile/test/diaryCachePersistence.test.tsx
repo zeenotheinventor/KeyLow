@@ -316,17 +316,46 @@ describe("the persisted diary cache", () => {
       expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
     });
 
-    it("should find nothing stored when the session ended while the app was closed, as after the account was deleted", async () => {
+    it("should leave nothing in memory when the sign out comes before the stored cache has been read", async () => {
       await storeTheDiaryAndCloseTheApp();
-      await diaryClient.auth.signOut();
+      const stored = await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY);
+      let finishReading: () => void = () => undefined;
+      const slowRead = new Promise<void>((resolve) => {
+        finishReading = resolve;
+      });
+      jest.mocked(AsyncStorage.getItem).mockImplementationOnce(async () => {
+        await slowRead;
+        return stored;
+      });
       networkAnswersNothing();
+      await renderDiary();
+
+      await act(async () => {
+        await diaryClient.auth.signOut();
+      });
+      await act(async () => {
+        finishReading();
+        await slowRead;
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryData(keys.diary.day(TODAY))).toBeUndefined();
+      });
+      expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
+    });
+
+    it("should keep the stored cache when the app starts with no session it can read, as offline once the access token has expired", async () => {
+      await storeTheDiaryAndCloseTheApp();
+      // The app is closed, so nothing hears this. The next start finds a client with no session.
+      await diaryClient.auth.signOut();
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
 
       await renderDiary();
 
-      await waitFor(async () => {
-        expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
-      });
-      expect(queryClient.getQueryData(keys.diary.day(TODAY))).toBeUndefined();
+      expect(await screen.findByRole("button", { name: /^Porridge oats/ })).toBeOnTheScreen();
+      expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).not.toBeNull();
     });
   });
 });
