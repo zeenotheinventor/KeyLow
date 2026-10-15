@@ -1,0 +1,1 @@
+export { hasCurrentTermsAcceptance } from "./hasCurrentTermsAcceptance";

@@ -30,6 +30,7 @@ describe("proxy", () => {
   });
 
   it.each([
+    "/accept-terms",
     "/dashboard",
     "/diary",
     "/recipes",
@@ -53,6 +54,14 @@ describe("proxy", () => {
       expect(response.headers.get("location")).toBe("http://localhost:3000/login");
     },
   );
+
+  it("should let a signed in request for the accept-terms page through", async () => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor("/accept-terms"));
+
+    expect(response.headers.get("location")).toBeNull();
+  });
 
   it("should let a signed in request for the foods page through", async () => {
     getUser.mockResolvedValue(signedIn);

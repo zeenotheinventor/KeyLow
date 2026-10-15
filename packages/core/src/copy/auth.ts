@@ -62,6 +62,17 @@ export const SIGN_UP_ACCEPTANCE = {
   afterPrivacy: ", including storing my weight, food diary and body stats to run the app.",
 };
 
+/**
+ * What the web accept-to-continue page says. It shows to a signed in account with no current
+ * acceptance of the Terms. The sign up board draws the checkbox and button, not this page.
+ */
+export const ACCEPT_TERMS_SCREEN = {
+  heading: "Accept to continue",
+  caption: "To use Ki-Lo, accept the Terms and the Privacy Policy.",
+  continueLabel: "Continue",
+  signOutLabel: "Sign out",
+};
+
 export const AUTH_FIELD_PROBLEMS = {
   emailRequired: "Enter your email address",
   emailInvalid: "Enter a valid email address",

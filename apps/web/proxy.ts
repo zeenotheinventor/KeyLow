@@ -5,7 +5,10 @@ import type { Database } from "@keylow/db";
 
 import { getSupabaseEnv } from "@/lib/supabase/env";
 
-const DASHBOARD_PATHS = [
+// Pages that need a session. The accept-terms page is one: the terms check itself is in the
+// dashboard layout, as the proxy has no profile to read.
+const PROTECTED_PATHS = [
+  "/accept-terms",
   "/dashboard",
   "/diary",
   "/foods",
@@ -19,8 +22,8 @@ const DASHBOARD_PATHS = [
 // A signed in user has no use for these pages.
 const AUTH_PATHS = ["/login", "/sign-up"];
 
-function isDashboardPath(pathname: string) {
-  return DASHBOARD_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+function isProtectedPath(pathname: string) {
+  return PROTECTED_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 }
 
 export async function proxy(request: NextRequest) {
@@ -52,7 +55,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const redirectPath =
-    !user && isDashboardPath(pathname)
+    !user && isProtectedPath(pathname)
       ? "/login"
       : user && AUTH_PATHS.includes(pathname)
         ? "/dashboard"
