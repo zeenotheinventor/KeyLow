@@ -93,6 +93,10 @@
   --type-display-numeral-line: 60px;
   --type-display-numeral-weight: 600;
   --type-display-numeral-tracking: -0.03em;
+  --type-numeral-large-size: 44px;
+  --type-numeral-large-line: 48px;
+  --type-numeral-large-weight: 600;
+  --type-numeral-large-tracking: -0.03em;
   --type-h1-size: 28px;
   --type-h1-line: 34px;
   --type-h1-weight: 600;

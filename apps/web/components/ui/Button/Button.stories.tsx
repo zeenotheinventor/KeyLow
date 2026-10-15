@@ -1,14 +1,25 @@
-import { Menu, Plus } from "lucide-react";
+import { Menu, Plus, Trash2 } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { Button } from "./Button";
 
+import type { buttonVariants } from "./buttonVariants";
+import type { ButtonProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/nextjs";
-import type { ReactNode } from "react";
+import type { VariantProps } from "class-variance-authority";
+import type { ComponentType, ReactNode } from "react";
+
+// Storybook flattens a union of props into one type where `variant` is never. The stories say what a
+// button takes, tone included, and the component's own types refuse a tone on any variant but ghost.
+type StoryProps = Omit<ButtonProps, "variant" | "tone"> & {
+  variant?: NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
+  tone?: "danger";
+};
 
 const meta = {
   title: "UI/Button",
-  component: Button,
+  // Storybook needs the one flat prop type above, which the component's union does not accept as a whole.
+  component: Button as ComponentType<StoryProps>,
   args: { children: "Add entry" },
   decorators: [
     (Story) => (
@@ -17,11 +28,11 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof Button>;
+} satisfies Meta<StoryProps>;
 
 export default meta;
 
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<StoryProps>;
 
 const variants = ["primary", "secondary", "destructive", "ghost"] as const;
 
@@ -40,6 +51,30 @@ export const Secondary: Story = { args: { variant: "secondary", children: "Scan 
 export const Destructive: Story = { args: { variant: "destructive", children: "Delete account" } };
 
 export const Ghost: Story = { args: { variant: "ghost", children: "Cancel" } };
+
+// The destructive action that sits under the main one, such as Delete beside Save: the label and the icon in
+// the danger colour on the plain background. The filled destructive variant stays for the point of a view.
+const deleteLabel = (
+  <>
+    <Trash2 aria-hidden />
+    Delete
+  </>
+);
+
+export const GhostDanger: Story = {
+  args: { variant: "ghost", tone: "danger", children: deleteLabel },
+};
+
+export const GhostDangerFocused: Story = {
+  args: { variant: "ghost", tone: "danger", children: deleteLabel },
+  play: async () => {
+    await userEvent.tab();
+  },
+};
+
+export const GhostDangerDisabled: Story = {
+  args: { variant: "ghost", tone: "danger", disabled: true, children: deleteLabel },
+};
 
 export const Small: Story = { args: { variant: "secondary", size: "sm", children: "Look up" } };
 

@@ -327,6 +327,20 @@ describe("Toast", () => {
     });
   });
 
+  describe("stacking", () => {
+    it("should sit above a dialog's dimmed page, so an Undo shown over a dialog can be pressed", async () => {
+      render(<Toast message="Added Banana" />);
+      const toastCss = await compileUtilities(
+        screen.getByRole("status").getAttribute("class") ?? "",
+      );
+      const dialogCss = await compileUtilities("z-40");
+
+      const zIndex = (css: string) => Number(/z-index:\s*(\d+)/.exec(css)?.[1]);
+
+      expect(zIndex(toastCss)).toBeGreaterThan(zIndex(dialogCss));
+    });
+  });
+
   describe("reduced motion", () => {
     it("should cut in with the toast animation", async () => {
       render(<Toast message="Entry added" />);

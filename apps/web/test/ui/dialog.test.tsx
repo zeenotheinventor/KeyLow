@@ -89,6 +89,47 @@ describe("Dialog", () => {
     cleanup();
   });
 
+  it("should give focus back to the element it is told to, not the one focused when it opened", () => {
+    const { rerender } = render(
+      <>
+        <button type="button">Hour plus</button>
+        <button type="button">Elsewhere</button>
+        <AddFoodDialog open={false} />
+      </>,
+    );
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    screen.getByRole("button", { name: "Elsewhere" }).focus();
+    rerender(
+      <>
+        <button type="button">Hour plus</button>
+        <button type="button">Elsewhere</button>
+        <AddFoodDialog open returnFocusTo={screen.getByRole("button", { name: "Hour plus" })} />
+      </>,
+    );
+
+    rerender(
+      <>
+        <button type="button">Hour plus</button>
+        <button type="button">Elsewhere</button>
+        <AddFoodDialog
+          open={false}
+          returnFocusTo={screen.getByRole("button", { name: "Hour plus" })}
+        />
+      </>,
+    );
+
+    expect(elsewhere).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Hour plus" }));
+  });
+
+  it("should add the classes it is given to the panel, such as a height", () => {
+    render(<AddFoodDialog className="min-[700px]:h-[600px]" />);
+
+    expect(screen.getByRole("dialog", { name: "Add food" }).className).toContain(
+      "min-[700px]:h-[600px]",
+    );
+  });
+
   describe("stacked dialogs", () => {
     function TwoDialogs({
       firstOpen,

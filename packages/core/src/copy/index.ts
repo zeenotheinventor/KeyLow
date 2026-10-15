@@ -21,3 +21,4 @@ export * from "./targetsPage";
 export * from "./weekGrid";
 export * from "./quickAdd";
 export * from "./entryScreen";
+export * from "./diaryDialogs";

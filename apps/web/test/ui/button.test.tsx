@@ -180,6 +180,59 @@ describe("Button", () => {
     });
   });
 
+  describe("ghost danger", () => {
+    it("should write the label in the danger colour with no fill and no visible border", async () => {
+      render(
+        <Button variant="ghost" tone="danger">
+          Delete
+        </Button>,
+      );
+      const { className } = screen.getByRole("button", { name: "Delete" });
+      const css = await compileUtilities(className);
+
+      expect(css).toMatch(/\.text-danger\s*\{[^}]*color: rgb\(var\(--kl-danger\)/);
+      expect(css).not.toMatch(/\.text-text-primary\s*\{/);
+      expect(className).toContain("bg-transparent");
+      expect(className).toContain("border-transparent");
+    });
+
+    it("should reach the 44 px touch target", async () => {
+      render(
+        <Button variant="ghost" tone="danger">
+          Delete
+        </Button>,
+      );
+      const css = await compileUtilities(screen.getByRole("button", { name: "Delete" }).className);
+
+      expect(css).toMatch(/\.h-control-md\s*\{\s*height: 44px/);
+      expect(css).toMatch(/\.min-w-touch-target\s*\{\s*min-width: 44px/);
+    });
+
+    it("should keep the focus ring and dim when disabled", () => {
+      render(
+        <Button variant="ghost" tone="danger" disabled>
+          Delete
+        </Button>,
+      );
+      const button = screen.getByRole("button", { name: "Delete" });
+
+      expect(button.className).toContain("focus-visible:ring-2");
+      expect(button.classList.contains("opacity-40")).toBe(true);
+    });
+
+    it("should leave every other variant in its own colour", () => {
+      render(
+        // The types refuse a tone on any variant but ghost. This is what a caller that got past them would get.
+        // @ts-expect-error tone belongs to the ghost variant
+        <Button variant="secondary" tone="danger">
+          Remove
+        </Button>,
+      );
+
+      expect(screen.getByRole("button", { name: "Remove" }).className).not.toContain("text-danger");
+    });
+  });
+
   describe("buttonVariants", () => {
     it("should fill the primary variant with the accent", () => {
       expect(buttonVariants({ variant: "primary" })).toContain("bg-accent");

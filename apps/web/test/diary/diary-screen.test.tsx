@@ -80,11 +80,11 @@ const {
   openEditEntry: vi.fn<(entryId: string) => void>(),
   setViewedDate: vi.fn<(date: string | undefined) => void>(),
   deleteEntry: {
-    mutate: vi.fn<(entry: LogEntry, options: { onError: () => void }) => void>(),
+    mutateAsync: vi.fn<(entry: LogEntry) => Promise<void>>(),
     isPending: false,
   },
   restoreEntry: {
-    mutate: vi.fn<(entry: LogEntry, options: { onError: () => void }) => void>(),
+    mutateAsync: vi.fn<(entry: LogEntry) => Promise<void>>(),
     isPending: false,
   },
   copyDay: {
@@ -109,7 +109,8 @@ const {
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-vi.mock("@/lib/foodLogActions", () => ({
+vi.mock("@/lib/foodLogActions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/foodLogActions")>()),
   useFoodLogActions: () => ({
     openAddFood,
     openEditEntry,
@@ -170,11 +171,15 @@ function renderDiary(props: { date?: string | undefined; view?: "day" | "week" }
   );
 }
 
+// The entries the screen was given, as it was given them: their ids are what Edit hands over.
+const entryOnShow = (index: number) => backend.days.get(TODAY)?.data?.entries[index];
 const strip = () => screen.getByRole("button", { name: /^Targets\./ });
 const tableOf = (hour: string) => screen.getByRole("table", { name: `Foods at ${hour}` });
 
 beforeEach(() => {
   vi.resetAllMocks();
+  deleteEntry.mutateAsync.mockResolvedValue();
+  restoreEntry.mutateAsync.mockResolvedValue();
   // 11:20 on Thursday 15 October 2026, so the current hour is 11:00.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-15T11:20:00Z"));
@@ -311,36 +316,66 @@ describe("the diary screen", () => {
     });
   });
 
-  // The add and edit dialogs are KEY-211's. Until they exist nothing on the page offers a press that
-  // does nothing: no plus on an hour, no Edit button, and a stacked row is plain text.
-  describe("until the add and edit dialogs exist", () => {
-    it("should draw no plus on any hour", () => {
+  describe("adding food at an hour", () => {
+    it("should draw a plus on every hour, named for the hour", () => {
       renderDiary();
 
-      expect(screen.queryAllByRole("button", { name: /^Add food at / })).toHaveLength(0);
+      expect(screen.getAllByRole("button", { name: /^Add food at / })).toHaveLength(24);
+      expect(screen.getByRole("button", { name: "Add food at 12:00" })).toBeTruthy();
     });
 
-    it("should draw no Edit button on a table row", () => {
+    it("should open the add dialog for the day on the hour that was pressed", () => {
       renderDiary();
 
-      expect(screen.queryAllByRole("button", { name: /^Edit / })).toHaveLength(0);
+      fireEvent.click(screen.getByRole("button", { name: "Add food at 12:00" }));
+
+      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: TODAY, time: "12:00" });
     });
 
-    it("should draw a stacked row as plain text with no button", () => {
+    it("should write the hour with a leading zero", () => {
+      renderDiary();
+
+      fireEvent.click(screen.getByRole("button", { name: "Add food at 07:00" }));
+
+      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: TODAY, time: "07:00" });
+    });
+
+    it("should add to the day on view, not to today", () => {
+      renderDiary({ date: "2026-10-14" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add food at 08:00" }));
+
+      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: "2026-10-14", time: "08:00" });
+    });
+  });
+
+  describe("editing an entry", () => {
+    it("should open the edit dialog for the entry whose Edit button is pressed", () => {
+      renderDiary();
+      const porridge = entryOnShow(0);
+
+      fireEvent.click(within(tableOf("08:00")).getByRole("button", { name: "Edit Porridge oats" }));
+
+      expect(openEditEntry).toHaveBeenCalledExactlyOnceWith(porridge?.id);
+    });
+
+    it("should open the edit dialog from a press on a stacked row", () => {
       renderDiary();
       const stacked = within(screen.getByRole("region", { name: "Foods at 08:00" })).getByRole(
         "list",
       );
+      const banana = entryOnShow(2);
 
-      expect(within(stacked).queryAllByRole("button")).toHaveLength(0);
-      expect(within(stacked).getByText("Porridge oats")).toBeTruthy();
+      fireEvent.click(within(stacked).getByRole("button", { name: /Banana/ }));
+
+      expect(openEditEntry).toHaveBeenCalledExactlyOnceWith(banana?.id);
     });
 
-    it("should not call the add or edit actions from anywhere on the page", () => {
+    it("should not open anything when a row is only looked at", () => {
       renderDiary();
 
-      expect(openAddFood).not.toHaveBeenCalled();
       expect(openEditEntry).not.toHaveBeenCalled();
+      expect(openAddFood).not.toHaveBeenCalled();
     });
   });
 
@@ -364,7 +399,7 @@ describe("the diary screen", () => {
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
 
-      expect(deleteEntry.mutate).toHaveBeenCalledOnce();
+      expect(deleteEntry.mutateAsync).toHaveBeenCalledOnce();
       expect(screen.getByText("Entry deleted")).toBeTruthy();
       expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
     });
@@ -374,12 +409,12 @@ describe("the diary screen", () => {
       fireEvent.click(
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
-      const deleted = deleteEntry.mutate.mock.calls[0]?.[0];
+      const deleted = deleteEntry.mutateAsync.mock.calls[0]?.[0];
 
       fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
-      expect(restoreEntry.mutate).toHaveBeenCalledOnce();
-      expect(restoreEntry.mutate.mock.calls[0]?.[0]).toBe(deleted);
+      expect(restoreEntry.mutateAsync).toHaveBeenCalledOnce();
+      expect(restoreEntry.mutateAsync.mock.calls[0]?.[0]).toBe(deleted);
     });
 
     describe("by keyboard", () => {
@@ -407,7 +442,7 @@ describe("the diary screen", () => {
         fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
 
         expect(document.activeElement).toBe(
-          within(tableOf("08:00")).getByRole("button", { name: "Delete Semi-skimmed milk" }),
+          within(tableOf("08:00")).getByRole("button", { name: "Edit Semi-skimmed milk" }),
         );
       });
 
@@ -417,9 +452,9 @@ describe("the diary screen", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
-        expect(restoreEntry.mutate).toHaveBeenCalledOnce();
+        expect(restoreEntry.mutateAsync).toHaveBeenCalledOnce();
         expect(document.activeElement).toBe(
-          within(tableOf("08:00")).getByRole("button", { name: "Delete Semi-skimmed milk" }),
+          within(tableOf("08:00")).getByRole("button", { name: "Edit Semi-skimmed milk" }),
         );
       });
 
@@ -443,18 +478,15 @@ describe("the diary screen", () => {
       });
     });
 
-    it("should say so when a delete does not go through", () => {
+    it("should say so when a delete does not go through", async () => {
+      deleteEntry.mutateAsync.mockRejectedValue(new Error("RAW"));
       renderDiary();
+
       fireEvent.click(
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
-      const options = deleteEntry.mutate.mock.calls[0]?.[1];
 
-      act(() => {
-        options?.onError();
-      });
-
-      expect(screen.getByText("Something went wrong. Try again.")).toBeTruthy();
+      expect(await screen.findByText("Something went wrong. Try again.")).toBeTruthy();
     });
   });
 

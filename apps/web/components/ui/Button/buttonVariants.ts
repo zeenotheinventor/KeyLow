@@ -33,8 +33,15 @@ export const buttonVariants = cva(
         true: "px-0",
         false: "",
       },
+      // Only the ghost variant takes a tone. Any other variant keeps its own colour.
+      tone: {
+        danger: "",
+      },
     },
     compoundVariants: [
+      // The destructive action that sits under the main one, such as Delete beside Save: the label and
+      // the icon in the danger colour on the plain background, as the M3 boards draw it in both themes.
+      { variant: "ghost", tone: "danger", className: "text-danger" },
       { iconOnly: true, size: "sm", className: "w-control-sm" },
       { iconOnly: true, size: ["md", "default"], className: "w-control-md" },
       { iconOnly: true, size: "lg", className: "w-control-lg" },

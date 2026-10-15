@@ -50,7 +50,7 @@ describe("kilo-tokens.css", () => {
     );
   });
 
-  it("should hold the ink, camera, label-small and row press tokens with the design's literal values", () => {
+  it("should hold the ink, camera, label-small, numeral-large and row press tokens with the design's literal values", () => {
     expect(committedScopes[":root"]).toMatchObject({
       "--accent-ink": "#CCF249",
       "--warning-ink": "#FF9F43",
@@ -62,6 +62,10 @@ describe("kilo-tokens.css", () => {
       "--type-label-small-weight": "600",
       "--type-label-small-tracking": "0",
       "--press-scale-row": "0.985",
+      "--type-numeral-large-size": "44px",
+      "--type-numeral-large-line": "48px",
+      "--type-numeral-large-weight": "600",
+      "--type-numeral-large-tracking": "-0.03em",
     });
     expect(committedScopes['[data-theme="light"]']).toMatchObject({
       "--accent-ink": "#0F131A",

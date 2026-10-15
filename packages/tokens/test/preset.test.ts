@@ -81,6 +81,13 @@ describe("preset as consumed by Tailwind", () => {
     ]);
   });
 
+  it("should resolve numeral-large as 44 over 48 semibold with the display numeral's tracking", () => {
+    expect(valueOf(resolvedTheme.fontSize, "numeral-large")).toEqual([
+      "44px",
+      { lineHeight: "48px", letterSpacing: "-0.03em", fontWeight: "600" },
+    ]);
+  });
+
   it("should resolve the design's spacing, radius, type and shadows", () => {
     expect(resolvedTheme.spacing["4"]).toBe("16px");
     expect(valueOf(resolvedTheme.borderRadius, "medium")).toBe("12px");
@@ -108,6 +115,7 @@ describe("the classes the design's screens are written with", () => {
     "text-h1",
     "shadow-card",
     "text-label-small",
+    "text-numeral-large",
     "text-accent-ink",
     "text-warning-ink",
     "text-success-ink",

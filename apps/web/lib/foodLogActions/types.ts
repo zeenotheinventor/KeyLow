@@ -9,12 +9,11 @@ export type AddFoodRequest = {
 };
 
 export type FoodLogActions = {
-  /**
-   * Opens the add food dialog for a day, with a time when an hour's plus was pressed. The dialog is
-   * the food log dialogs ticket's (KEY-211): until it lands this takes the person to the food search.
-   */
+  /** Opens the add food dialog for a day, with a time when an hour's plus was pressed. */
   openAddFood: (request: AddFoodRequest) => void;
-  /** Opens the edit dialog for a logged entry. The dialog is KEY-211's, so until it lands this does nothing. */
+  /** Opens the quick add dialog for a day, with a time when an hour's plus was pressed. */
+  openQuickAdd: (request: AddFoodRequest) => void;
+  /** Opens the edit dialog for a logged entry on the day on view. Does nothing away from the diary. */
   openEditEntry: (entryId: string) => void;
   /** The day the diary is showing, `YYYY-MM-DD`, or undefined away from the diary. The top bar's search adds food to it. */
   viewedDate: string | undefined;

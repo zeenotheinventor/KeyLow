@@ -1,2 +1,2 @@
 export { MacroHero } from "./MacroHero";
-export type { MacroHeroProps } from "./types";
+export type { MacroHeroAmount, MacroHeroAmountValues, MacroHeroProps } from "./types";

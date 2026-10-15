@@ -166,6 +166,7 @@ export const fontSize = {
   "body-strong": ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "600" }],
   caption: ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "500" }],
   "label-small": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "600" }],
+  "numeral-large": ["44px", { lineHeight: "48px", letterSpacing: "-0.03em", fontWeight: "600" }],
   "numeral-small": ["20px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
 } satisfies Record<
   string,

@@ -26,7 +26,7 @@ const placements = {
 // On a phone the toast spans the width with a 16 px inset. From 700 px, where the design stops
 // calling a screen narrow, it is 360 px wide in the bottom right corner.
 const frame =
-  "bottom-4 left-4 right-4 z-30 flex min-h-touch-target items-center gap-3 rounded-medium border border-border bg-surface-sheet py-2 pl-4 pr-2 text-text-primary shadow-toast animate-toast-in motion-reduce:animate-none min-[700px]:left-auto min-[700px]:w-[360px]";
+  "bottom-4 left-4 right-4 z-50 flex min-h-touch-target items-center gap-3 rounded-medium border border-border bg-surface-sheet py-2 pl-4 pr-2 text-text-primary shadow-toast animate-toast-in motion-reduce:animate-none min-[700px]:left-auto min-[700px]:w-[360px]";
 
 // The action is accent in dark. In light that colour is too weak for small text, so it falls back
 // to the primary text colour.
@@ -110,6 +110,8 @@ function OpenToast({
       }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
+          // The toast answers its own Escape, so a dialog behind it stays open.
+          event.stopPropagation();
           onClose?.();
         }
       }}

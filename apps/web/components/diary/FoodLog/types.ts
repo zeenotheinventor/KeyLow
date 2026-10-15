@@ -15,6 +15,9 @@ export type FoodLogProps = {
   isYesterdayEmpty: boolean;
   isCopying: boolean;
   hasCopyFailed: boolean;
+  /** Called with the hour (0 to 23) when its plus is pressed. */
+  onAddFood: (hour: number) => void;
+  onEdit: (entry: LogEntry) => void;
   onDelete: (entry: LogEntry) => void;
   onCopyYesterday: () => void;
   /** Called with the state the Mark day complete switch asks for. */
