@@ -114,6 +114,9 @@ export const customFoodInputSchema = z.object({
   fat_g: nutrientAmountSchema,
   carbs_g: nutrientAmountSchema,
   fibre_g: nutrientAmountSchema.optional(),
+  sat_fat_g: nutrientAmountSchema.optional(),
+  sugars_g: nutrientAmountSchema.optional(),
+  salt_g: nutrientAmountSchema.optional(),
   portions: z
     .array(customFoodPortionInputSchema)
     .refine((portions) => portions.filter((portion) => portion.isDefault).length <= 1, {

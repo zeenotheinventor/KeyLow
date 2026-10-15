@@ -373,7 +373,29 @@ describe("customFoodInputSchema", () => {
     });
   });
 
-  it.each(["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g"])(
+  it("should parse an input carrying saturated fat, sugars and salt", () => {
+    const carrying = { ...goldenCustomFood, sat_fat_g: 1.2, sugars_g: 4.5, salt_g: 0.3 };
+    expect(customFoodInputSchema.parse(carrying)).toEqual(carrying);
+  });
+
+  it.each(["sat_fat_g", "sugars_g", "salt_g"])(
+    "should accept an input without %s, because it is optional",
+    (key) => {
+      const carrying = { ...goldenCustomFood, sat_fat_g: 1.2, sugars_g: 4.5, salt_g: 0.3 };
+      expect(customFoodInputSchema.safeParse(without(carrying, key)).success).toBe(true);
+    },
+  );
+
+  it.each(["sat_fat_g", "sugars_g", "salt_g"])(
+    "should reject a null %s, because an absent key is the way to say none",
+    (key) => {
+      expect(customFoodInputSchema.safeParse({ ...goldenCustomFood, [key]: null }).success).toBe(
+        false,
+      );
+    },
+  );
+
+  it.each(["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g", "sat_fat_g", "sugars_g", "salt_g"])(
     "should reject a negative %s",
     (key) => {
       expect(customFoodInputSchema.safeParse({ ...goldenCustomFood, [key]: -1 }).success).toBe(

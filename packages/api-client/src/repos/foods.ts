@@ -56,8 +56,8 @@ export type CreatedFood = { food: Food; portions: FoodPortion[] };
  * The columns a user may write, built from the validated form input. Optional values the
  * input leaves out become null so that editing a food can clear them. `quality`, `source_ref`
  * and `fetched_at` are never written because the database role has no grant on them.
- * `sat_fat_g`, `sugars_g`, `salt_g`, `food_group` and `micros` are not part of the form, so
- * an update intentionally leaves them untouched.
+ * `sat_fat_g`, `sugars_g` and `salt_g` are written separately, by `carriedColumns`. `food_group`
+ * and `micros` are not part of the form, so an update intentionally leaves them untouched.
  */
 const editableColumns = (input: CustomFoodInput): Omit<FoodInsert, "source" | "owner_id"> => ({
   name: input.name,
@@ -70,6 +70,19 @@ const editableColumns = (input: CustomFoodInput): Omit<FoodInsert, "source" | "o
   fat_g: input.fat_g,
   carbs_g: input.carbs_g,
   fibre_g: input.fibre_g ?? null,
+});
+
+/**
+ * The saturated fat, sugars and salt the input carries, only for the keys it has. The ordinary form
+ * does not send them, and the copy flow omits a value the source food lacks, so an absent key is
+ * left out and an update can never clear a stored value.
+ */
+const carriedColumns = (
+  input: CustomFoodInput,
+): Pick<FoodInsert, "sat_fat_g" | "sugars_g" | "salt_g"> => ({
+  ...(input.sat_fat_g !== undefined && { sat_fat_g: input.sat_fat_g }),
+  ...(input.sugars_g !== undefined && { sugars_g: input.sugars_g }),
+  ...(input.salt_g !== undefined && { salt_g: input.salt_g }),
 });
 
 const portionRows = (
@@ -230,7 +243,16 @@ export async function createFood(
 ): Promise<CreatedFood> {
   const { data, error } = await client
     .from("foods")
-    .insert({ ...editableColumns(input), source: "user", owner_id: ownerId, micros: {} })
+    .insert({
+      ...editableColumns(input),
+      sat_fat_g: null,
+      sugars_g: null,
+      salt_g: null,
+      ...carriedColumns(input),
+      source: "user",
+      owner_id: ownerId,
+      micros: {},
+    })
     .select(FOOD_COLUMNS)
     .single();
 
@@ -273,7 +295,7 @@ export async function updateFood(
 ): Promise<Food> {
   const { data, error } = await client
     .from("foods")
-    .update(editableColumns(input))
+    .update({ ...editableColumns(input), ...carriedColumns(input) })
     .eq("id", id)
     .select(FOOD_COLUMNS)
     .maybeSingle();
