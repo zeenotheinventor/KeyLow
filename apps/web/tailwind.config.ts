@@ -42,12 +42,15 @@ const config: Config = {
           "55%": { opacity: "1", transform: "scale(0.97)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        // The design system's kl-flash: the calorie ring's numeral lands in the accent and settles.
+        flash: { from: { color: "theme(colors.accent.DEFAULT)" } },
       },
       animation: {
         skeleton: "shimmer 1400ms linear infinite, skeleton-in 160ms ease both",
         "wipe-in": `wipe-in ${transitionDuration.standard} ${transitionTimingFunction.whip} both`,
         slash: `slash ${transitionDuration.flourish} ${transitionTimingFunction.exit} both`,
         punch: `punch ${transitionDuration.flourish} ${transitionTimingFunction.enter} both`,
+        flash: `flash ${transitionDuration.flourish} ${transitionTimingFunction.exit} both`,
       },
     },
   },

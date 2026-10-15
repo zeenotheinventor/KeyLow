@@ -34,6 +34,17 @@ export const storyManifest = {
     "Loading",
     "AsLink",
   ],
+  "CalorieRing/CalorieRing.stories.tsx": [
+    "UnderTarget",
+    "AtTarget",
+    "OverTarget",
+    "Compact",
+    "Estimate",
+    "NotAnEstimate",
+    "NothingEaten",
+    "CountsUp",
+    "ReducedMotion",
+  ],
   "Card/Card.stories.tsx": ["Surface", "Raised", "WithTitle", "Unpadded"],
   "DayStepper/DayStepper.stories.tsx": [
     "OnToday",
@@ -137,6 +148,13 @@ export const storyManifest = {
     "Hover",
     "Pressed",
     "Focused",
+  ],
+  "MacroBars/MacroBars.stories.tsx": [
+    "UnderTarget",
+    "OverTarget",
+    "NoTarget",
+    "Compact",
+    "CompactOverTarget",
   ],
   "NumericInput/NumericInput.stories.tsx": [
     "Default",
