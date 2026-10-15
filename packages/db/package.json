@@ -15,6 +15,7 @@
     "bundle-core-for-deno": "node --experimental-strip-types scripts/bundle-core-for-deno.ts",
     "check:functions": "pnpm run bundle-core-for-deno && pnpm exec deno check --config supabase/functions/deno.json 'supabase/functions/*/index.ts' 'supabase/functions/_shared/*.ts' && pnpm exec deno lint --config supabase/functions/deno.json supabase/functions",
     "import:cofid": "node --experimental-strip-types scripts/run-typescript.ts scripts/import-cofid.ts",
+    "import:portions": "node --experimental-strip-types scripts/run-typescript.ts scripts/import-cofid-portions.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
