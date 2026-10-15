@@ -7,3 +7,4 @@ export * from "./format";
 export * from "./nutrition";
 export * from "./schemas";
 export * from "./search";
+export * from "./terms";

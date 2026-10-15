@@ -6,6 +6,7 @@ export { CustomFoodValidationError } from "./customFoodInput";
 export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./errors";
 export type { EdgeErrorKind } from "./errors";
 export {
+  useAcceptTerms,
   useCreateFood,
   useDebouncedValue,
   useFood,
@@ -15,6 +16,7 @@ export {
   useFoodWithPortions,
   useMaterialiseOffProduct,
   useOwnFoods,
+  useTermsAcceptance,
   useUpdateFood,
 } from "./hooks";
 export type {
@@ -32,10 +34,12 @@ export type {
 export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,
+  acceptTerms,
   createFood,
   fetchOffProduct,
   getFood,
   getFoodByBarcode,
+  getMyTermsAcceptance,
   listFoodPortions,
   listOwnFoods,
   replaceFoodPortions,

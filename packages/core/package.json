@@ -14,6 +14,7 @@
     "./copy": "./src/copy/index.ts",
     "./format": "./src/format/index.ts",
     "./search": "./src/search/index.ts",
+    "./terms": "./src/terms/index.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {
