@@ -51,10 +51,11 @@ Every new table carries these two columns, with these exact definitions:
 - `id uuid primary key default gen_random_uuid()`
 - `created_at timestamptz not null default now()`
 
-There are two exceptions:
+There are three exceptions (the third was added with the diary migration, KEY-181):
 
 - `food_source_data` is keyed by `food_id` and has no `id`.
 - `rate_limits` has the composite primary key `(bucket, window_start)` and has neither `id` nor `created_at`.
+- `day_logs` has the frozen primary key `(user_id, local_date)` and so has no `id`. It keeps `created_at`.
 
 There is no `updated_at` on any table, matching `profiles`.
 
