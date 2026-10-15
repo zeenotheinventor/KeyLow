@@ -68,9 +68,7 @@ describe("CalorieRing", () => {
     it("should be one image that says what was eaten, the target and what is left", () => {
       renderRing();
 
-      expect(
-        screen.getByRole("img", { name: "1,039 eaten of 2,200 target, 1,161 remaining" }),
-      ).toBeTruthy();
+      expect(screen.getByRole("img", { name: "1,161 calories remaining of 2,200" })).toBeTruthy();
     });
 
     it("should print the calories left as the numeral, under a caption", () => {
@@ -202,9 +200,7 @@ describe("CalorieRing", () => {
 
       expect(screen.getByText("212").className).toContain("text-warning");
       expect(screen.getByText("over target").className).toContain("text-warning");
-      expect(
-        screen.getByRole("img", { name: "2,412 eaten of 2,200 target, 212 over" }),
-      ).toBeTruthy();
+      expect(screen.getByRole("img", { name: "212 calories over target of 2,200" })).toBeTruthy();
     });
 
     it("should never turn to danger", () => {

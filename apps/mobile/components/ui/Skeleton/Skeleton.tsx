@@ -4,6 +4,7 @@ import Animated from "react-native-reanimated";
 
 import { SkeletonBone } from "./SkeletonBone";
 import { useFadeInStyle } from "../../../lib/motion";
+import { Card } from "../Card";
 
 import type { SkeletonProps } from "./types";
 
@@ -90,6 +91,39 @@ function SkeletonDiary({ includesWeek }: { includesWeek: boolean }) {
   );
 }
 
+// The dashboard's card as its loading board draws it: a title, the ring as an outline in the skeleton base
+// colour (it does not shine), three bar rows with a label, a track and the grams, and a caption. The
+// label and the grams sit in the columns of a bar row, 72 and 96 points wide.
+const barRowKeys = ["protein", "carbs", "fat"];
+
+function SkeletonNutritionCard() {
+  return (
+    <Card>
+      <View className="gap-4" testID="skeleton-nutrition-card">
+        <SkeletonBone className="h-5 w-[72px]" />
+        <View
+          className="h-[200px] w-[200px] self-center rounded-full border-[14px] border-skeleton-base"
+          testID="skeleton-ring"
+        />
+        <View className="gap-3">
+          {barRowKeys.map((key) => (
+            <View key={key} className="flex-row items-center gap-3">
+              <View className="w-[72px]">
+                <SkeletonBone className="h-3 w-[56px]" />
+              </View>
+              <SkeletonBone className="h-2 min-w-0 flex-1 rounded-pill" />
+              <View className="w-[96px]">
+                <SkeletonBone className="h-3" />
+              </View>
+            </View>
+          ))}
+        </View>
+        <SkeletonBone className="h-3 w-[140px]" />
+      </View>
+    </Card>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -104,6 +138,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "diary" || variant === "diaryDay" ? (
         <SkeletonDiary includesWeek={variant === "diary"} />
       ) : null}
+      {variant === "nutritionCard" ? <SkeletonNutritionCard /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "group" ? (
         <View

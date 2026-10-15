@@ -4,7 +4,7 @@ import { AccessibilityInfo } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
 import { CalorieRing } from "../../components/ui";
-import { ThemeProvider } from "../../lib/theme";
+import { outlineColour, ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
@@ -18,17 +18,26 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
 
-// Skia draws nothing in Jest, so this stands in for it and keeps what each arc was given.
-type DrawnArc = { color: string; start: unknown; end: unknown; strokeWidth: number };
+// Skia draws nothing in Jest, so this stands in for it and keeps what each arc was given. The canvas is a view,
+// so its place can be read.
+type DrawnArc = { color: string; path: string; start: unknown; end: unknown; strokeWidth: number };
 const mockArcs: DrawnArc[] = [];
-jest.mock("@shopify/react-native-skia", () => ({
-  __esModule: true,
-  Canvas: ({ children }: { children: unknown }) => children,
-  Path: (arc: DrawnArc) => {
-    mockArcs.push(arc);
-    return null;
-  },
-}));
+jest.mock("@shopify/react-native-skia", () => {
+  const { createElement } = jest.requireActual<{ createElement: (...args: unknown[]) => unknown }>(
+    "react",
+  );
+  const { View } = jest.requireActual<{ View: unknown }>("react-native");
+
+  return {
+    __esModule: true,
+    Canvas: ({ children, style }: { children: unknown; style: unknown }) =>
+      createElement(View, { style, testID: "ring-canvas" }, children),
+    Path: (arc: DrawnArc) => {
+      mockArcs.push(arc);
+      return null;
+    },
+  };
+});
 
 setUpTests();
 
@@ -57,6 +66,23 @@ async function advance(milliseconds: number) {
 // The newest draw of each arc, found by the colour it is drawn in. A track and a fill have different colours.
 function latestArcs(color: string): DrawnArc | undefined {
   return mockArcs.findLast((arc) => arc.color === color);
+}
+
+// The newest draw of each arc of this colour, in the order they were drawn.
+function arcsDrawnIn(color: string): DrawnArc[] {
+  const newest = new Map<string, DrawnArc>();
+  for (const arc of mockArcs) {
+    if (arc.color === color) {
+      newest.set(arc.path, arc);
+    }
+  }
+  return [...newest.values()];
+}
+
+// The radius a path was drawn at: "M 103 10 A 93 93 0 1 1 ..." is 93.
+function radiusOf(arc: DrawnArc): number {
+  const radius = /A ([\d.]+) /.exec(arc.path)?.[1];
+  return radius === undefined ? Number.NaN : parseFloat(radius);
 }
 
 // A shared value is read the way Skia reads it, and a plain number is itself.
@@ -96,11 +122,19 @@ describe("CalorieRing", () => {
   });
 
   describe("what it says", () => {
-    it("should be one image named by what was eaten, the target and what is left", async () => {
+    it("should be one image named by what is left of the target", async () => {
       await renderRing();
 
       expect(
-        screen.getByRole("img", { name: "1,039 eaten of 2,200 target, 1,161 remaining" }),
+        screen.getByRole("img", { name: "1,161 calories remaining of 2,200" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should be named by the whole target when nothing is eaten", async () => {
+      await renderRing({ eaten: 0 });
+
+      expect(
+        screen.getByRole("img", { name: "2,200 calories remaining of 2,200" }),
       ).toBeOnTheScreen();
     });
 
@@ -144,11 +178,30 @@ describe("CalorieRing", () => {
       await renderRing({ eaten: 2412 });
 
       expect(
-        screen.getByRole("img", { name: "2,412 eaten of 2,200 target, 212 over" }),
+        screen.getByRole("img", { name: "212 calories over target of 2,200" }),
       ).toBeOnTheScreen();
       expect(screen.getByText("212")).toBeOnTheScreen();
       expect(screen.getByText("over target")).toBeOnTheScreen();
       expect(screen.queryByText("remaining")).not.toBeOnTheScreen();
+    });
+
+    it("should print the calories eaten, with the caption eaten, when there is no target", async () => {
+      await renderRing({ eaten: 1039, target: 0 });
+
+      expect(
+        screen.getByRole("img", { name: "1,039 calories eaten, no target set" }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText("1,039")).toBeOnTheScreen();
+      expect(screen.getByText("eaten")).toBeOnTheScreen();
+      expect(screen.queryByText("remaining")).not.toBeOnTheScreen();
+      expect(screen.queryByText("over target")).not.toBeOnTheScreen();
+    });
+
+    it("should draw no eaten or target lines when there is no target", async () => {
+      await renderRing({ eaten: 1039, target: 0 });
+
+      expect(screen.queryByText("1,039 eaten")).not.toBeOnTheScreen();
+      expect(screen.queryByText(/target/)).not.toBeOnTheScreen();
     });
 
     it("should draw no eaten or target lines when it is compact", async () => {
@@ -173,6 +226,18 @@ describe("CalorieRing", () => {
       expect(viewsDrawn({ width: 200, height: 200 })).toHaveLength(1);
       expect(latestArcs(themes.dark.border)?.strokeWidth).toBe(14);
       expect(screen.getByText("1,161").parent).toHaveStyle({ fontSize: 44 });
+    });
+
+    // The outer outline reaches 2.5 points past the 200 box and a Skia canvas clips at its edge, so the canvas is 3
+    // points larger on every side. It is positioned over the ring, so the layout does not move.
+    it("should give the canvas 3 points of room on every side without moving the layout", async () => {
+      await renderRing();
+
+      expect(screen.getByTestId("ring-canvas")).toHaveStyle({
+        position: "absolute",
+        inset: -3,
+      });
+      expect(viewsDrawn({ width: 200, height: 200 })).toHaveLength(1);
     });
 
     it("should keep its centre 28 points in from the edge, so the text never touches the stroke", async () => {
@@ -211,12 +276,13 @@ describe("CalorieRing", () => {
       });
     });
 
-    it("should set the numeral and the caption in the warning ink over the target", async () => {
+    it("should keep the numeral in the primary ink and the caption in the secondary ink over the target, never the warning ink", async () => {
       await renderRing({ eaten: 2412 }, scheme);
-      const ink = resolvedColor(scheme, "warning-ink");
 
-      expect(screen.getByText("212")).toHaveStyle({ color: ink });
-      expect(screen.getByText("over target")).toHaveStyle({ color: ink });
+      expect(screen.getByText("212")).toHaveStyle({ color: resolvedColor(scheme, "text-primary") });
+      expect(screen.getByText("over target")).toHaveStyle({
+        color: resolvedColor(scheme, "text-secondary"),
+      });
     });
 
     it("should draw the track in border and the fill in calories under the target", async () => {
@@ -228,12 +294,63 @@ describe("CalorieRing", () => {
       expect(latestArcs(themes[scheme].warning)).toBeUndefined();
     });
 
-    it("should fill the calories to the end and keep filling in warning on top over the target", async () => {
+    it("should draw no outline under the target", async () => {
+      await renderRing({}, scheme);
+      await advance(1000);
+
+      expect(arcsDrawnIn(outlineColour(themes[scheme].calories))).toEqual([]);
+    });
+
+    it("should draw no outline at exactly the target", async () => {
+      await renderRing({ eaten: 2200 }, scheme);
+      await advance(1000);
+
+      expect(arcsDrawnIn(outlineColour(themes[scheme].calories))).toEqual([]);
+    });
+
+    it("should fill the calories all the way round over the target", async () => {
       await renderRing({ eaten: 2412 }, scheme);
       await advance(1000);
 
       expect(fractionOf(latestArcs(themes[scheme].calories)?.end)).toBe(1);
-      expect(fractionOf(latestArcs(themes[scheme].warning)?.end)).toBeCloseTo(212 / 2200, 5);
+    });
+
+    it("should draw two outlines over the target in the calories colour mixed with white, 1.5 points wide", async () => {
+      await renderRing({ eaten: 2412 }, scheme);
+      await advance(1000);
+
+      const outlines = arcsDrawnIn(outlineColour(themes[scheme].calories));
+
+      expect(outlines).toHaveLength(2);
+      for (const outline of outlines) {
+        expect(outline.strokeWidth).toBe(1.5);
+        expect(fractionOf(outline.start)).toBe(0);
+        expect(fractionOf(outline.end)).toBe(1);
+      }
+    });
+
+    it("should leave a 1 point gap between the stroke and each outline, one outside and one inside", async () => {
+      await renderRing({ eaten: 2412 }, scheme);
+      await advance(1000);
+      const radii = arcsDrawnIn(outlineColour(themes[scheme].calories))
+        .map((outline) => radiusOf(outline))
+        .sort((first, second) => first - second);
+      const [innerOutline = Number.NaN, outerOutline = Number.NaN] = radii;
+      const ringRadius = 93;
+      const strokeHalf = 7;
+      const outlineHalf = 0.75;
+
+      expect(radii).toEqual([84.25, 101.75]);
+      expect(outerOutline - outlineHalf - (ringRadius + strokeHalf)).toBe(1);
+      expect(ringRadius - strokeHalf - (innerOutline + outlineHalf)).toBe(1);
+    });
+
+    it("should draw no warning arc and no notch over the target", async () => {
+      await renderRing({ eaten: 2412 }, scheme);
+      await advance(1000);
+
+      expect(latestArcs(themes[scheme].warning)).toBeUndefined();
+      expect(latestArcs(themes[scheme].background)).toBeUndefined();
     });
 
     it("should never draw the ring in danger", async () => {
@@ -245,11 +362,11 @@ describe("CalorieRing", () => {
   });
 
   describe("how far it fills", () => {
-    it("should stop the warning at a full lap, so it never resets", async () => {
+    it("should stop at a full lap however far over the target the day is", async () => {
       await renderRing({ eaten: 9000 });
       await advance(1000);
 
-      expect(fractionOf(latestArcs(themes.dark.warning)?.end)).toBe(1);
+      expect(fractionOf(latestArcs(themes.dark.calories)?.end)).toBe(1);
     });
 
     it("should draw no fill when nothing is eaten", async () => {
@@ -259,20 +376,13 @@ describe("CalorieRing", () => {
       expect(latestArcs(themes.dark.calories)).toBeUndefined();
     });
 
-    it("should draw no fill when there is no target", async () => {
+    it("should draw no fill and no outline when there is no target", async () => {
       await renderRing({ eaten: 500, target: 0 });
       await advance(1000);
 
       expect(latestArcs(themes.dark.calories)).toBeUndefined();
-    });
-
-    it("should draw the notch between the fill and the warning in the background colour", async () => {
-      await renderRing({ eaten: 2412 });
-      await advance(1000);
-
-      const notch = latestArcs(themes.dark.background);
-      expect(fractionOf(notch?.start)).toBeCloseTo(212 / 2200 - 1 / (Math.PI * (200 - 14)), 4);
-      expect(notch?.strokeWidth).toBe(18);
+      expect(arcsDrawnIn(outlineColour(themes.dark.calories))).toEqual([]);
+      expect(latestArcs(themes.dark.border)).toBeDefined();
     });
 
     it("should draw the stroke at the width given", async () => {

@@ -1,1 +1,0 @@
-export { WarningCap } from "./WarningCap";

@@ -14,6 +14,7 @@ describe("calorie ring wording", () => {
   it("should pin the drawn words", () => {
     expect(CALORIE_RING.remaining).toBe("remaining");
     expect(CALORIE_RING.overTarget).toBe("over target");
+    expect(CALORIE_RING.eaten).toBe("eaten");
   });
 
   it("should name the macros as the diary draws them", () => {
@@ -37,19 +38,31 @@ describe("describeEatenLine and describeTargetLine", () => {
 
 describe("describeCalorieRing", () => {
   it("should read what is left under the target", () => {
-    expect(describeCalorieRing(1039, 2200)).toBe("1,039 eaten of 2,200 target, 1,161 remaining");
+    expect(describeCalorieRing(1039, 2200)).toBe("1,161 calories remaining of 2,200");
+  });
+
+  it("should read the whole target as remaining when nothing is eaten", () => {
+    expect(describeCalorieRing(0, 2200)).toBe("2,200 calories remaining of 2,200");
   });
 
   it("should read nothing remaining at the target", () => {
-    expect(describeCalorieRing(2200, 2200)).toBe("2,200 eaten of 2,200 target, 0 remaining");
+    expect(describeCalorieRing(2200, 2200)).toBe("0 calories remaining of 2,200");
   });
 
   it("should read the amount over the target without a sign", () => {
-    expect(describeCalorieRing(2412, 2200)).toBe("2,412 eaten of 2,200 target, 212 over");
+    expect(describeCalorieRing(2412, 2200)).toBe("212 calories over target of 2,200");
   });
 
   it("should work from whole calories, so 2,200.4 against 2,200 is not over", () => {
-    expect(describeCalorieRing(2200.4, 2200)).toBe("2,200 eaten of 2,200 target, 0 remaining");
+    expect(describeCalorieRing(2200.4, 2200)).toBe("0 calories remaining of 2,200");
+  });
+
+  it("should read the calories eaten and say there is no target when the target is zero", () => {
+    expect(describeCalorieRing(1039, 0)).toBe("1,039 calories eaten, no target set");
+  });
+
+  it("should read 0 calories eaten with no target and nothing eaten", () => {
+    expect(describeCalorieRing(0, 0)).toBe("0 calories eaten, no target set");
   });
 });
 

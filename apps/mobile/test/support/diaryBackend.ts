@@ -41,6 +41,8 @@ export const diaryBackend: {
   failingUpdates: number;
   /** Fails the read of the targets alone, so the terms acceptance still loads. */
   targetsReadFails: boolean;
+  /** Fails the read of the profile's time zone alone, so the terms acceptance still loads. */
+  timeZoneReadFails: boolean;
   /** The bodies of the updates made to the profile. */
   saves: unknown[];
   /** Every request made, as the table, its query string and its method. */
@@ -63,6 +65,7 @@ export const diaryBackend: {
   failingInsertsFrom: null,
   failingUpdates: 0,
   targetsReadFails: false,
+  timeZoneReadFails: false,
   saves: [],
   requests: [],
   writes: [],
@@ -93,6 +96,7 @@ export function resetDiaryBackend(): void {
   diaryBackend.failingUpdates = 0;
   diaryBackend.saves = [];
   diaryBackend.targetsReadFails = false;
+  diaryBackend.timeZoneReadFails = false;
   diaryBackend.requests = [];
   diaryBackend.writes = [];
 }
@@ -513,7 +517,10 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
       if (init?.method === "PATCH") {
         return Promise.resolve(saveTargets(init.body));
       }
-      if (diaryBackend.targetsReadFails && searchParams.get("select")?.includes("target_kcal")) {
+      if (
+        (diaryBackend.targetsReadFails && searchParams.get("select")?.includes("target_kcal")) ||
+        (diaryBackend.timeZoneReadFails && searchParams.get("select")?.includes("timezone"))
+      ) {
         return Promise.resolve(
           jsonResponse(
             { code: "XX000", message: "raw database text", details: null, hint: null },

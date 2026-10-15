@@ -150,7 +150,8 @@ export const WEEK_STRIP_DAY_NAMES = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] a
 /** What the name of a day's pill says. Whether it is selected is the control's own state, not part of the name. */
 export type WeekStripDayState = { isToday: boolean; isComplete: boolean };
 
-const describeDateInWords = (localDate: string): string => {
+/** A date as the boards write it, such as "Thursday 15 October". */
+export const describeDateInWords = (localDate: string): string => {
   const { year, month, day } = parseCalendarDay(localDate);
   const weekday = WEEKDAY_NAMES_LONG[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
 

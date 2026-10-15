@@ -12,6 +12,7 @@ export const samples: Record<string, () => string[]> = {
     copy.describeCalorieRing(1039, 2200),
     copy.describeCalorieRing(2200, 2200),
     copy.describeCalorieRing(2412, 2200),
+    copy.describeCalorieRing(1039, 0),
   ],
   describeMacroBar: () => [
     copy.describeMacroBar("Protein", 86, 160),

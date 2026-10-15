@@ -1,13 +1,5 @@
-import { PLACEHOLDER_BODIES, TAB_TITLES } from "@keylow/core/copy";
-
-import { PlaceholderScreen } from "../../components/PlaceholderScreen";
+import { DashboardScreen } from "../../components/DashboardScreen";
 
 export default function DashboardRoute() {
-  return (
-    <PlaceholderScreen
-      body={PLACEHOLDER_BODIES.dashboard}
-      icon="LayoutDashboard"
-      title={TAB_TITLES.dashboard}
-    />
-  );
+  return <DashboardScreen />;
 }

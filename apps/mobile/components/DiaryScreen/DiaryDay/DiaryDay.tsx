@@ -4,11 +4,12 @@ import {
   clockHourOf,
   describeDiaryTitle,
   instantAtLocalTime,
+  isCalendarDay,
   previousCalendarDay,
   toLocalDate,
 } from "@keylow/core/dates";
 import { nextWeek, previousWeek, weekOf } from "@keylow/core/diary";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 
 import { useIsOnline } from "../../../lib/connectivity";
@@ -58,6 +59,25 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
     setViewedDay(viewedDate);
   }, [viewedDate]);
 
+  // A link to the diary can name the day to show, as the dashboard's card does with today. The tab stays
+  // mounted, so the link is used up and cleared: a later link to the same day is a new change, and
+  // choosing the tab again leaves the day alone. A day that does not exist or has not come is ignored.
+  const { day: dayParam } = useLocalSearchParams<{ day?: string | string[] }>();
+  const linkedDay = Array.isArray(dayParam) ? dayParam[0] : dayParam;
+  const [usedLinkedDay, setUsedLinkedDay] = useState<string | undefined>(undefined);
+  if (linkedDay !== usedLinkedDay) {
+    setUsedLinkedDay(linkedDay);
+    if (linkedDay !== undefined && isCalendarDay(linkedDay) && linkedDay <= today) {
+      setSelectedDate(linkedDay === today ? null : linkedDay);
+      setShownWeekDate(null);
+    }
+  }
+  useEffect(() => {
+    if (linkedDay !== undefined) {
+      router.setParams({ day: undefined });
+    }
+  }, [linkedDay, router]);
+
   const dayQuery = useDiaryDay(viewedDate, { enabled: isReadEnabled });
   const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate, { enabled: isReadEnabled });
   const targetsQuery = useTargets({ enabled: isReadEnabled });
@@ -82,7 +102,9 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
     now,
     timeZone,
   );
-  const isFailed = dayQuery.isError || targetsQuery.isError;
+  // A refetch that fails keeps what is cached on screen: only a read that never produced data is a failure.
+  const isFailed =
+    (dayQuery.isError && day === undefined) || (targetsQuery.isError && targets === undefined);
 
   function selectDay(localDate: string) {
     setSelectedDate(localDate === today ? null : localDate);

@@ -23,7 +23,6 @@ export const COMING_SOON_TITLE = "Coming soon";
 
 /** The sentence under `COMING_SOON_TITLE` on each placeholder the boards draw. */
 export const PLACEHOLDER_BODIES = {
-  dashboard: "Your weekly nutrition, weight trend and expenditure will appear here.",
   diary: "Your logged foods will appear here, day by day.",
   recipes: "Your recipes will appear here.",
 };

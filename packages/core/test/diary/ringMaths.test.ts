@@ -9,6 +9,7 @@ describe("ringNumbers", () => {
       overFraction: 0,
       remainingCalories: 1161,
       isOver: false,
+      hasTarget: true,
     });
   });
 
@@ -18,6 +19,7 @@ describe("ringNumbers", () => {
       overFraction: 0,
       remainingCalories: 0,
       isOver: false,
+      hasTarget: true,
     });
   });
 
@@ -44,6 +46,21 @@ describe("ringNumbers", () => {
 
     expect(numbers.eatenFraction).toBe(0);
     expect(numbers.overFraction).toBe(0);
+  });
+
+  it("should say there is no target at zero, and count the calories eaten as the number to print", () => {
+    const numbers = ringNumbers(1039, 0);
+
+    expect(numbers.hasTarget).toBe(false);
+    expect(numbers.remainingCalories).toBe(1039);
+  });
+
+  it("should never be over when there is no target", () => {
+    expect(ringNumbers(500, 0).isOver).toBe(false);
+  });
+
+  it("should have a target from one calorie up", () => {
+    expect(ringNumbers(0, 1).hasTarget).toBe(true);
   });
 });
 

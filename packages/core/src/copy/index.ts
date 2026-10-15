@@ -1,6 +1,7 @@
 export * from "./about";
 export * from "./auth";
 export * from "./barcode";
+export * from "./dashboard";
 export * from "./diary";
 export * from "./diaryDay";
 export * from "./diaryRing";

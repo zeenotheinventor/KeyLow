@@ -4,7 +4,7 @@ import {
   describeEatenLine,
   describeTargetLine,
 } from "@keylow/core/copy";
-import { compactBelowSize, ringCircumference, ringNumbers } from "@keylow/core/diary";
+import { compactBelowSize, ringNumbers } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import { easingCurve, motionDuration } from "@keylow/tokens";
 import { Path } from "@shopify/react-native-skia";
@@ -15,26 +15,43 @@ import Animated, {
   Easing,
   interpolateColor,
   useAnimatedStyle,
-  useDerivedValue,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
 
-import { ringPath } from "./ringMaths";
+import { outlineWidth, ringPaths } from "./ringMaths";
 import { useCountUp } from "./useCountUp";
 import { useReducedMotion, useWhipFill } from "../../../lib/motion";
 import { strokePaint } from "../../../lib/skia/strokePaint";
 import { StyledCanvas } from "../../../lib/skia/StyledCanvas";
-import { useTheme } from "../../../lib/theme";
+import { outlineColour, useTheme } from "../../../lib/theme";
 import { Text } from "../Text";
 
 import type { CalorieRingProps } from "./types";
 
 const flashEasing = Easing.bezier(...easingCurve.exit);
 
+function captionOf({
+  hasTarget,
+  isOver,
+  label,
+}: {
+  hasTarget: boolean;
+  isOver: boolean;
+  label: string;
+}): string {
+  if (!hasTarget) {
+    return CALORIE_RING.eaten;
+  }
+
+  return isOver ? CALORIE_RING.overTarget : label;
+}
+
 /**
- * The diary's hero: the calories left as a display numeral inside a ring that fills eaten over target.
- * Past the target the ring keeps filling in warning on top, and never resets or turns to danger. The
+ * The calories left as a display numeral inside a ring that fills eaten over target. Over target the
+ * ring is full and gains two outlines of its own colour mixed with white, a 1 point gap outside the
+ * stroke and the same inside it (ruling 17): no warning colour, and the numeral stays in the primary
+ * ink. A target of zero means none is set: the ring is empty and the numeral is the calories eaten. The
  * numeral counts to a new value and flashes the accent as it lands. It is one image to a screen reader.
  */
 export function CalorieRing({
@@ -47,16 +64,12 @@ export function CalorieRing({
 }: CalorieRingProps) {
   const { colors } = useTheme();
   const isReducedMotion = useReducedMotion();
-  const { eatenFraction, overFraction, remainingCalories, isOver } = ringNumbers(eaten, target);
+  const { eatenFraction, remainingCalories, hasTarget, isOver } = ringNumbers(eaten, target);
   const isCompact = size < compactBelowSize;
-  const path = ringPath(size, stroke);
+  const paths = ringPaths(size, stroke);
+  const outline = outlineColour(colors.calories);
 
   const eatenFilled = useWhipFill(eatenFraction);
-  const overFilled = useWhipFill(overFraction);
-  // The notch is a gap of 2 points, 1 each side of where the warning ends.
-  const notchHalf = 1 / ringCircumference(size, stroke);
-  const notchStart = useDerivedValue(() => Math.max(0, overFilled.get() - notchHalf));
-  const notchEnd = useDerivedValue(() => Math.min(1, overFilled.get() + notchHalf));
 
   const { value, arrivals } = useCountUp(remainingCalories, isReducedMotion);
   const flash = useSharedValue(0);
@@ -67,13 +80,11 @@ export function CalorieRing({
     }
   }, [arrivals, flash, isReducedMotion]);
 
-  const restingColor = isOver ? colors["warning-ink"] : colors["text-primary"];
+  const restingColor = colors["text-primary"];
   const accent = colors.accent;
   const flashStyle = useAnimatedStyle(() => ({
     color: interpolateColor(flash.get(), [0, 1], [restingColor, accent]),
   }));
-
-  const tone = isOver ? "warning-ink" : "primary";
 
   return (
     <View
@@ -83,11 +94,12 @@ export function CalorieRing({
       style={vars({ "--ring-size": `${size}px` })}
     >
       <View className="h-[var(--ring-size)] w-[var(--ring-size)]">
-        <StyledCanvas className="h-full w-full">
+        {/* The canvas is larger than the ring, so the outer outline is not clipped, and sits over it, so the layout does not move. */}
+        <StyledCanvas className="absolute -inset-[3px]">
           <Path
             color={colors.border}
             end={1}
-            path={path}
+            path={paths.ring}
             start={0}
             strokeWidth={stroke}
             {...strokePaint}
@@ -96,43 +108,42 @@ export function CalorieRing({
             <Path
               color={colors.calories}
               end={eatenFilled}
-              path={path}
+              path={paths.ring}
               start={0}
               strokeCap="round"
               strokeWidth={stroke}
               {...strokePaint}
             />
           )}
-          {overFraction > 0 && (
+          {isOver && (
             <Path
-              color={colors.warning}
-              end={overFilled}
-              path={path}
+              color={outline}
+              end={1}
+              path={paths.outerOutline}
               start={0}
-              strokeCap="round"
-              strokeWidth={stroke}
+              strokeWidth={outlineWidth}
               {...strokePaint}
             />
           )}
-          {overFraction > 0 && (
+          {isOver && (
             <Path
-              color={colors.background}
-              end={notchEnd}
-              path={path}
-              start={notchStart}
-              strokeWidth={stroke + 4}
+              color={outline}
+              end={1}
+              path={paths.innerOutline}
+              start={0}
+              strokeWidth={outlineWidth}
               {...strokePaint}
             />
           )}
         </StyledCanvas>
         <View className="absolute inset-[28px] items-center justify-center gap-[2px]">
-          <Text tone={tone} variant={isCompact ? "h1" : "ring-numeral"}>
+          <Text variant={isCompact ? "h1" : "ring-numeral"}>
             <Animated.Text style={flashStyle}>{formatCalories(value)}</Animated.Text>
           </Text>
-          <Text tone={isOver ? "warning-ink" : "secondary"} variant="caption">
-            {isOver ? CALORIE_RING.overTarget : label}
+          <Text tone="secondary" variant="caption">
+            {captionOf({ hasTarget, isOver, label })}
           </Text>
-          {!isCompact && (
+          {!isCompact && hasTarget && (
             <View className="mt-[2px] items-center">
               <Text tone="muted" variant="caption">
                 {describeEatenLine(eaten)}

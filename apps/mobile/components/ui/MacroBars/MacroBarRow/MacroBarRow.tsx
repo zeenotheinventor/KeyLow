@@ -5,7 +5,7 @@ import { stagger } from "@keylow/tokens";
 import { View } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 
-import { WarningCap } from "./WarningCap";
+import { BarOutline } from "./BarOutline";
 import { useWhipFill } from "../../../../lib/motion";
 import { useTheme } from "../../../../lib/theme";
 import { Text } from "../../Text";
@@ -38,7 +38,7 @@ export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRo
   const { colors } = useTheme();
   const name = MACRO_NAMES[macro];
   const look = compact ? compactLook : regular;
-  const { fillFraction, capFraction, isOver, overGrams } = barNumbers(eaten, target);
+  const { fillFraction, isOver, overGrams } = barNumbers(eaten, target);
 
   // Each bar starts a stagger later than the one above it.
   const filled = useWhipFill(fillFraction, index * stagger);
@@ -62,23 +62,19 @@ export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRo
           {name}
         </Text>
       </View>
-      <View className={`flex-1 overflow-hidden rounded-pill bg-border ${look.barClassName}`}>
-        {/* A class and an animated style cannot share an element, so the fill carries the style alone. */}
-        <Animated.View style={fillStyle} testID={`${macro}-fill`} />
-        {isOver && (
-          <WarningCap barHeight={look.barHeight} capFraction={capFraction} macro={macro} />
-        )}
+      <View className={`flex-1 ${look.barClassName}`}>
+        {isOver && <BarOutline macro={macro} />}
+        <View className="h-full overflow-hidden rounded-pill bg-border">
+          {/* A class and an animated style cannot share an element, so the fill carries the style alone. */}
+          <Animated.View style={fillStyle} testID={`${macro}-fill`} />
+        </View>
       </View>
       <View className={`flex-row items-baseline justify-end gap-1 ${look.gramsClassName}`}>
         <Text variant={compact ? "caption" : "body-strong"}>{formatGrams(eaten)}</Text>
         <Text tone="muted" variant="caption">
           {describeMacroTarget(target)}
         </Text>
-        {isOver && (
-          <Text tone="warning-ink" variant="caption">
-            {formatDeltaGrams(overGrams)}
-          </Text>
-        )}
+        {isOver && <Text variant="caption">{formatDeltaGrams(overGrams)}</Text>}
       </View>
     </View>
   );

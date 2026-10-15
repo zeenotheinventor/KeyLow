@@ -3,10 +3,9 @@ import { formatCalories, formatGrams } from "@keylow/core/format";
 import { vars } from "nativewind";
 import { View } from "react-native";
 
-import { useTheme } from "../../../lib/theme";
+import { outlineColour, useTheme } from "../../../lib/theme";
 import { Icon } from "../Icon";
 import { Text } from "../Text";
-import { outlineColour } from "./outlineColour";
 
 import type { ProgressBar, ProgressBarKey } from "@keylow/core/diary";
 

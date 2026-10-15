@@ -391,6 +391,60 @@ describe("the diary screen", () => {
     });
   });
 
+  describe("opened with a day", () => {
+    it("should show the day in the link, as the dashboard card opens it", async () => {
+      routerMock.searchParams = { day: "2026-10-14" };
+      await renderDiary();
+
+      expect(await screen.findByRole("heading", { name: "Wed 14 Oct" })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", { name: "Wednesday 14 October", selected: true }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should use the link up, clearing it, so choosing the tab again does not reset the day", async () => {
+      routerMock.searchParams = { day: "2026-10-14" };
+      await renderDiary();
+      await screen.findByRole("heading", { name: "Wed 14 Oct" });
+
+      expect(routerMock.setParams).toHaveBeenCalledWith({ day: undefined });
+    });
+
+    it("should go back to following today when the day in the link is today", async () => {
+      routerMock.searchParams = { day: "2026-10-14" };
+      queryClient = createDiaryQueryClient();
+      const tree = (
+        <ThemeProvider fixedPreference="dark">
+          <KeyLowProvider client={diaryClient} queryClient={queryClient}>
+            <ToastProvider>
+              <DiaryScreen />
+            </ToastProvider>
+          </KeyLowProvider>
+        </ThemeProvider>
+      );
+      const { rerender } = await render(tree);
+      await screen.findByRole("heading", { name: "Wed 14 Oct" });
+
+      routerMock.searchParams = { day: "2026-10-15" };
+      await rerender(tree);
+
+      expect(await screen.findByRole("heading", { name: "Today" })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", { name: "Thursday 15 October, today", selected: true }),
+      ).toBeOnTheScreen();
+    });
+
+    it.each(["not-a-day", "2026-02-30", "2026-10-20"])(
+      "should ignore %s, which is not a day to show, and stay on today",
+      async (day) => {
+        routerMock.searchParams = { day };
+        await renderLoadedDiary();
+
+        expect(screen.getByRole("heading", { name: "Today" })).toBeOnTheScreen();
+      },
+    );
+  });
+
   describe("loading", () => {
     it("should show the header and a skeleton, and no hours, while the day loads", async () => {
       diaryBackend.hungTables.add("food_log_entries");
@@ -508,6 +562,34 @@ describe("the diary screen", () => {
       await user.press(screen.getByRole("button", { name: "Try again" }));
 
       expect(await screen.findByRole("button", { name: "Add food at 08:00" })).toBeOnTheScreen();
+    });
+
+    it("should keep the log on screen when a refetch fails and the day is already cached", async () => {
+      await renderLoadedDiary();
+
+      diaryBackend.failingTables.add("food_log_entries");
+      await act(async () => {
+        await queryClient.invalidateQueries();
+        // The failed answer reaches the screen on the next turn of the event loop.
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+
+      expect(screen.queryByText("Couldn't load your diary")).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Add food at 08:00" })).toBeOnTheScreen();
+    });
+
+    it("should keep the log on screen when a refetch of the targets fails and they are cached", async () => {
+      await renderLoadedDiary();
+
+      diaryBackend.targetsReadFails = true;
+      await act(async () => {
+        await queryClient.invalidateQueries();
+        // The failed answer reaches the screen on the next turn of the event loop.
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+
+      expect(screen.queryByText("Couldn't load your diary")).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Add food at 08:00" })).toBeOnTheScreen();
     });
 
     it("should not put the database's own words on the screen", async () => {

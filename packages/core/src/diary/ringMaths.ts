@@ -6,8 +6,11 @@ export type RingNumbers = {
   eatenFraction: number;
   /** How far the warning has gone round on top of a full ring, from 0 to 1. It stops at a full lap and never resets. */
   overFraction: number;
-  /** The calories left, or past the target when `isOver`, always positive or zero. */
+  /** The calories left, or past the target when `isOver`, always positive or zero. With no target it is the calories eaten. */
   remainingCalories: number;
+  /** False for a target of zero, which means none is set. The ring then has nothing to fill and the calories eaten are its number. */
+  hasTarget: boolean;
+  /** Never true without a target. */
   isOver: boolean;
 };
 
@@ -22,7 +25,8 @@ export function ringNumbers(eaten: number, target: number): RingNumbers {
     eatenFraction: Math.min(1, ratio),
     overFraction: Math.max(0, Math.min(1, ratio - 1)),
     remainingCalories: Math.abs(remaining),
-    isOver: remaining < 0,
+    hasTarget: wholeTarget > 0,
+    isOver: wholeTarget > 0 && remaining < 0,
   };
 }
 

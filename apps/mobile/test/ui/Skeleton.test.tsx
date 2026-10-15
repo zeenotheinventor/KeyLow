@@ -212,6 +212,56 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the dashboard's nutrition card", () => {
+    it("should be a title, three bar rows of a label, a track and the grams, and a caption", async () => {
+      await renderSkeleton({ variant: "nutritionCard" });
+
+      expect(bones()).toHaveLength(1 + 3 * 3 + 1);
+    });
+
+    it("should draw the title as a bone 72 wide and 20 tall", async () => {
+      await renderSkeleton({ variant: "nutritionCard" });
+
+      expect(bones()[0]).toHaveStyle({ width: 72, height: 20 });
+    });
+
+    it("should draw the ring as a 200 point circle with a 14 point stroke, and no shine", async () => {
+      await renderSkeleton({ variant: "nutritionCard" });
+
+      expect(screen.getByTestId("skeleton-ring", hidden)).toHaveStyle({
+        width: 200,
+        height: 200,
+        borderWidth: 14,
+        borderRadius: 9999,
+      });
+    });
+
+    it("should draw each bar row as a 56 by 12 label, an 8 point pill track and a 12 point grams bone", async () => {
+      await renderSkeleton({ variant: "nutritionCard" });
+
+      for (const first of [1, 4, 7]) {
+        expect(bones()[first]).toHaveStyle({ width: 56, height: 12 });
+        expect(bones()[first + 1]).toHaveStyle({ height: 8, borderRadius: 999 });
+        expect(bones()[first + 2]).toHaveStyle({ height: 12 });
+      }
+    });
+
+    it("should end with a caption bone 140 wide and 12 tall", async () => {
+      await renderSkeleton({ variant: "nutritionCard" });
+
+      expect(bones()[10]).toHaveStyle({ width: 140, height: 12 });
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "nutritionCard" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });
@@ -265,6 +315,14 @@ describe("Skeleton", () => {
       const [band] = screen.getAllByTestId("skeleton-shine-band", hidden);
       expect(band).toHaveStyle({
         experimental_backgroundImage: `linear-gradient(100deg, transparent, ${themes[scheme]["skeleton-shine"]}, transparent)`,
+      });
+    });
+
+    it("should draw the nutrition card's ring in the skeleton base colour", async () => {
+      await renderSkeleton({ variant: "nutritionCard" }, scheme);
+
+      expect(screen.getByTestId("skeleton-ring", hidden)).toHaveStyle({
+        borderColor: resolvedColor(scheme, "skeleton-base"),
       });
     });
 

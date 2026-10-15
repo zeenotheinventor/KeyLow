@@ -110,3 +110,8 @@ export const GhostDestructiveDisabled: Story = {
     children: "Delete",
   },
 };
+
+// Edit beside a target: a link-like action in the accent ink, lime in dark and the primary text colour in light.
+export const GhostAccentInk: Story = {
+  args: { variant: "ghost", tone: "accent-ink", children: "Edit" },
+};
