@@ -89,21 +89,33 @@ export const describeAmountBasis = (input: AmountBasisInput): string => {
 export const describePortionCount = (quantity: number): string =>
   quantity === 1 ? "portion" : "portions";
 
-const MEASURE_PREFIX = /^(?:kg|mg|g|ml|cl|dl|l|fl\.?\s?oz|oz)\b\s*/i;
-const LEADING_COUNT = /^(?:\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?|[\u00bc\u00bd\u00be])\s*/;
+const MEASURE = "(?:kg|mg|g|ml|cl|dl|l|fl\\.?\\s?oz|oz)";
+const MEASURE_PREFIX = new RegExp(`^${MEASURE}\\b\\s*`, "i");
+// "1 x 400 g tin": the multiplier and the size of each come between the count and the noun.
+const SIZE_EACH = new RegExp(`^[x\u00d7]\\s*\\d+(?:[.,]\\d+)?\\s*${MEASURE}\\b\\s*`, "i");
+const STARTS_WITH_COUNT = /^[\d\u00bc-\u00be]/;
+const EXACTLY_ONE = /^1(?![\d.,/])\s*/;
 const TRAILING_SIZE = /\s*\([^)]*\)\s*$/;
 const LONGEST_NOUN = 20;
 
 /**
  * The noun a portion's name gives the amount field, as the portion boards draw it ("medium", "bar", "pot"):
- * the label without its leading count, any measure that follows it and any size in brackets, so
- * "1 medium (100 g)" gives "medium". A label that has no noun, such as "30 g", or one too long to sit
- * beside a field, gives nothing.
+ * the label without its count, any measure that follows it and any size in brackets, so "1 medium (100 g)"
+ * gives "medium". One portion is the whole label, so the noun is only taken when the label counts exactly
+ * one ("1 pot", "1 x 400 g tin") or counts nothing ("Serving", "Box of 6"). "2 biscuits", "6 nuggets",
+ * "1/2 pizza" and "0.5 cup" give nothing, because "1 biscuits" would be wrong. Nor does a label that has no
+ * noun, such as "30 g", or one too long to sit beside a field.
  */
 export const describePortionNoun = (label: string): string | undefined => {
   const withoutSize = label.trim().replace(TRAILING_SIZE, "");
-  const withoutCount = withoutSize.replace(LEADING_COUNT, "");
-  const noun = withoutCount.replace(MEASURE_PREFIX, "").trim().toLowerCase();
+  let rest = withoutSize;
+  if (STARTS_WITH_COUNT.test(withoutSize)) {
+    if (!EXACTLY_ONE.test(withoutSize)) {
+      return undefined;
+    }
+    rest = withoutSize.replace(EXACTLY_ONE, "").replace(SIZE_EACH, "").replace(MEASURE_PREFIX, "");
+  }
+  const noun = rest.trim().toLowerCase();
 
   return noun === "" || noun.length > LONGEST_NOUN ? undefined : noun;
 };

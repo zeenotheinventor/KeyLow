@@ -141,10 +141,10 @@ describe("describePortionNoun", () => {
     ["1 cup", "cup"],
     ["1 bar (45g)", "bar"],
     ["1 serving", "serving"],
-    ["2 biscuits (30 g)", "biscuits"],
-    ["1/2 pot", "pot"],
-    ["1.5 slices", "slices"],
-    ["100 g serving", "serving"],
+    ["1 pot (170 g)", "pot"],
+    ["1 x 400 g tin", "tin"],
+    ["1 \u00d7 330 ml can", "can"],
+    ["Box of 6", "box of 6"],
     ["1 Pot", "pot"],
     ["Slice", "slice"],
   ])("should take the noun of %j to be %j", (label, noun) => {
@@ -174,5 +174,11 @@ describe("describePortionUnit", () => {
   it("should be portion or portions when the label gives no noun", () => {
     expect(describePortionUnit("30 g", 1)).toBe("portion");
     expect(describePortionUnit("30 g", 3)).toBe("portions");
+  });
+
+  it("should not read a label that counts more than one as a single item", () => {
+    expect(describePortionUnit("6 nuggets", 1)).toBe("portion");
+    expect(describePortionUnit("6 nuggets", 2)).toBe("portions");
+    expect(describePortionUnit("1/2 pizza", 1)).toBe("portion");
   });
 });
