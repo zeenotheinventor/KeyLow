@@ -52,6 +52,16 @@ export {
 } from "./foodDetail";
 export { describeFoodSource } from "./foodSources";
 export {
+  COMPANY_DETAILS,
+  LEGAL_FOOTER,
+  LEGAL_PATHS,
+  LEGAL_URLS,
+  PRIVACY_POLICY,
+  TERMS,
+  TERMS_VERSION,
+} from "./legal";
+export type { LegalDocument, LegalSection } from "./legal";
+export {
   ENERGY_NOT_GIVEN,
   NOT_GIVEN,
   SHARES_OF_ENERGY_ARE_ESTIMATES,

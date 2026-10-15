@@ -68,6 +68,25 @@ describe("proxy", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 
+  it.each(["/privacy", "/terms"])(
+    "should let a signed out request for %s through",
+    async (path) => {
+      const response = await proxy(requestFor(path));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("location")).toBeNull();
+    },
+  );
+
+  it.each(["/privacy", "/terms"])("should let a signed in request for %s through", async (path) => {
+    getUser.mockResolvedValue(signedIn);
+
+    const response = await proxy(requestFor(path));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
+
   it("should send a signed in request for the login page to the dashboard", async () => {
     getUser.mockResolvedValue(signedIn);
 

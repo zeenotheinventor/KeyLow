@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 
+import { LegalFooter } from "@/components/legal/LegalFooter";
 import { THEME_COOKIE_NAME, themeFromCookie } from "@/lib/theme/themeCookie";
 
 // Self-hosted at build time. The preset's font stack reaches it through --font-geist.
@@ -21,7 +22,10 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
 
   return (
     <html lang="en" data-theme={theme} className={geist.variable}>
-      <body>{children}</body>
+      <body className="flex min-h-dvh flex-col">
+        {children}
+        <LegalFooter />
+      </body>
     </html>
   );
 }

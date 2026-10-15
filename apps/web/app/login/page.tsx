@@ -13,7 +13,7 @@ export default async function LoginPage({
   const { error } = await searchParams;
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-4 py-6">
+    <main className="flex flex-1 items-center justify-center px-4 py-6">
       <Card padding="none" className="flex w-full max-w-md flex-col gap-4 p-6 sm:p-8">
         <div className="mb-1 flex flex-col items-start gap-3">
           <KiLoMark className="size-12" />
