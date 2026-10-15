@@ -17,7 +17,7 @@ export type { EmptyStateAction, EmptyStateProps } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
 export type { ErrorStateAction, ErrorStateProps, ErrorStateRetry } from "./ErrorState";
 export { FoodRow } from "./FoodRow";
-export type { FoodRowMacros, FoodRowProps } from "./FoodRow";
+export type { FoodRowLayout, FoodRowMacros, FoodRowProps } from "./FoodRow";
 export { GroupedList } from "./GroupedList";
 export type { GroupedListProps, GroupedListSeeMore } from "./GroupedList";
 export { Icon } from "./Icon";

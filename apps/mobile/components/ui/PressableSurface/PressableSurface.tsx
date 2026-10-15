@@ -23,6 +23,8 @@ export function PressableSurface({
   hitSlop,
   haptic,
   pressScale,
+  accessibilityActions,
+  onAccessibilityAction,
   onPress,
   className = "",
 }: PressableSurfaceProps) {
@@ -49,6 +51,7 @@ export function PressableSurface({
   return (
     <Animated.View style={animatedStyle} testID="press-scale">
       <Pressable
+        accessibilityActions={accessibilityActions}
         aria-busy={busy}
         aria-checked={checked}
         aria-disabled={isInert}
@@ -58,6 +61,7 @@ export function PressableSurface({
         disabled={isInert}
         hitSlop={hitSlop}
         role={role}
+        onAccessibilityAction={onAccessibilityAction}
         onPress={handlePress}
         {...pressHandlers}
       >

@@ -96,6 +96,7 @@ export {
   nutrientRows,
 } from "./foodDetail";
 export type { NutrientRow } from "./foodDetail";
+export { FOOD_ROW, describeAddFood, describeFoodRowStats } from "./foodRow";
 export { describeFoodSource } from "./foodSources";
 export {
   COMPANY_DETAILS,

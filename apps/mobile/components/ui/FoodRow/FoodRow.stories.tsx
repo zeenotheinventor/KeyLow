@@ -122,3 +122,127 @@ export const Pending: Story = {
 
 // The rows around a pending one are dimmed and do nothing.
 export const Disabled: Story = { args: { disabled: true } };
+
+// The food log's rows. The texts are what @keylow/core writes for the sample day of the boards.
+const banana = {
+  nameSegments: [{ text: "Banana", matched: true }],
+  caption: "1 medium (100 g)",
+  energy: "95",
+  macros: {
+    protein: "1.2",
+    carbs: "20.3",
+    fat: "0.1",
+    description: "protein 1.2 grams, fat 0.1 grams, carbohydrate 20.3 grams",
+  },
+};
+
+const chickenBreast = {
+  nameSegments: [{ text: "Chicken breast, grilled", matched: true }],
+  caption: "12:40 · 150 g",
+  energy: "222",
+  macros: {
+    protein: "48",
+    carbs: "0",
+    fat: "3.3",
+    description: "protein 48 grams, fat 3.3 grams, carbohydrate 0 grams",
+  },
+};
+
+// Search results: the food icon tile, the serving, the stats line and the quiet add button.
+export const Search: Story = { args: { ...banana, layout: "search", onAdd: () => undefined } };
+
+// Recent: the caption is the amount last logged, the row is 56 points tall and the name is semibold.
+export const Recent: Story = {
+  args: {
+    ...banana,
+    layout: "recent",
+    nameSegments: [{ text: "Greek yoghurt 0% fat", matched: false }],
+    caption: "1 pot (170 g)",
+    energy: "97",
+    macros: {
+      protein: "17.3",
+      carbs: "6.5",
+      fat: "0.3",
+      description: "protein 17.3 grams, fat 0.3 grams, carbohydrate 6.5 grams",
+    },
+    onAdd: () => undefined,
+  },
+};
+
+// A logged food: no tile, the time in the caption, a chevron, and swipe to delete.
+export const Diary: Story = {
+  args: { ...chickenBreast, layout: "diary", onDelete: () => undefined },
+};
+
+// The row after a swipe left: the danger Delete action, 88 points wide.
+export const Swiped: Story = {
+  args: { ...chickenBreast, layout: "diary", onDelete: () => undefined, startsSwiped: true },
+};
+
+// A title that needs both its lines, a caption longer than its line, and the stats line below them.
+export const LongTitleAndCaption: Story = {
+  args: {
+    ...banana,
+    layout: "search",
+    nameSegments: [
+      { text: "Reduced salt roast chicken ", matched: true },
+      { text: "breast fillets in a garlic and herb marinade, skinless", matched: false },
+    ],
+    caption: "1 large fillet, cooked weight without the skin or the bone (165 g)",
+    onAdd: () => undefined,
+  },
+};
+
+// A narrow row, where the stats line breaks between its items and never inside one.
+export const StatsLineWraps: Story = {
+  args: {
+    ...banana,
+    layout: "search",
+    brand: "Northfield Mills",
+    energy: "1,373",
+    onAdd: () => undefined,
+  },
+  decorators: [
+    (Story) => (
+      <View className="w-[260px] self-center">
+        <Story />
+      </View>
+    ),
+  ],
+};
+
+// A food missing a macro: Needs review in place of the dots, and a chevron in place of the plus.
+export const NeedsReview: Story = {
+  args: {
+    ...banana,
+    layout: "search",
+    nameSegments: [{ text: "Rice pudding", matched: true }],
+    caption: "1 pot (200 g)",
+    energy: "130",
+    needsReview: true,
+    onAdd: () => undefined,
+  },
+};
+
+// The plus dimmed while offline, with the row left readable and pressable.
+export const AddDisabled: Story = {
+  args: { ...banana, layout: "search", onAdd: () => undefined, addDisabled: true },
+};
+
+// A four-digit energy, with its thousands separator.
+export const FourDigitEnergy: Story = {
+  args: {
+    ...chickenBreast,
+    layout: "diary",
+    nameSegments: [{ text: "Lasagne", matched: true }],
+    caption: "19:30 · 1 portion (400 g)",
+    energy: "1,373",
+    macros: {
+      protein: "63",
+      carbs: "112",
+      fat: "72",
+      description: "protein 63 grams, fat 72 grams, carbohydrate 112 grams",
+    },
+    onDelete: () => undefined,
+  },
+};

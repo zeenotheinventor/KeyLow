@@ -1,7 +1,12 @@
 import type { HapticFeedbackName } from "../../../lib/haptics";
 import type { IconName, IconSizeName } from "../Icon";
 
-export type IconButtonVariant = "secondary" | "ghost";
+/**
+ * The ring is the quiet plus on a food row: a 32 point circle with a border and no fill, the icon in the
+ * secondary text colour, reached out to a 44 point touch target. It has the one shape, so the size does not
+ * change it.
+ */
+export type IconButtonVariant = "secondary" | "ghost" | "ring";
 
 /** Medium is a 44 point square. Small is a 36 point square that still reaches a 44 point touch target. */
 export type IconButtonSize = "md" | "sm";

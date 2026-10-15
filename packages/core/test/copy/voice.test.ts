@@ -7,6 +7,15 @@ import { edgeErrorCodeSchema } from "../../src/schemas";
 // Every function the copy module exports, called with representative arguments. The test below
 // fails when a new function is exported without a row here, so no sentence escapes the sweep.
 const sampleCalls: Record<string, () => string[]> = {
+  describeAddFood: () => [
+    copy.describeAddFood("Banana", "1 medium (100 g)"),
+    copy.describeAddFood("Banana"),
+  ],
+  describeFoodRowStats: () => [
+    copy.describeFoodRowStats({ energy: "222", protein: "48", carbs: "0", fat: "3.3" }),
+    copy.describeFoodRowStats({ energy: "130" }),
+    copy.describeFoodRowStats({}),
+  ],
   describeFoodSource: () => (["off", "cofid", "user"] as const).map(copy.describeFoodSource),
   describeBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeBasis),
   describeSpokenBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeSpokenBasis),

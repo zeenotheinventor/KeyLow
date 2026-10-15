@@ -172,6 +172,28 @@ describe("PressableSurface", () => {
     });
   });
 
+  describe("accessibility actions", () => {
+    it("should offer the named actions to a screen reader and hand the chosen one to the caller", async () => {
+      const onAccessibilityAction = jest.fn();
+      const accessibilityActions = [{ name: "delete", label: "Delete" }];
+      await renderSurface({ accessibilityActions, onAccessibilityAction });
+      const button = screen.getByRole("button", { name: "Open food" });
+      const chosen = { nativeEvent: { actionName: "delete" } };
+
+      expect(button).toHaveProp("accessibilityActions", accessibilityActions);
+      // The handler is called on the button itself: fireEvent would find the one on the surface's own props.
+      const handler: unknown = button.props.onAccessibilityAction;
+      if (typeof handler !== "function") {
+        throw new Error("The button does not handle accessibility actions");
+      }
+      await act(() => {
+        Reflect.apply(handler, undefined, [chosen]);
+      });
+
+      expect(onAccessibilityAction).toHaveBeenCalledWith(chosen);
+    });
+  });
+
   describe("disabled", () => {
     it("should be a disabled button", async () => {
       await renderSurface({ disabled: true });

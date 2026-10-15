@@ -33,6 +33,8 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   // The status glyphs of a banner and an error tile, drawn on a muted fill or beside the words.
   { tone: "warning", colorName: "warning" },
   { tone: "danger", colorName: "danger" },
+  // The flame on a food row's stats line, in the calories colour beside the energy.
+  { tone: "calories", colorName: "calories" },
 ];
 
 const names: IconName[] = [
@@ -47,6 +49,7 @@ const names: IconName[] = [
   "Clock",
   "CloudOff",
   "Ellipsis",
+  "Flame",
   "Info",
   "LayoutDashboard",
   "LoaderCircle",
