@@ -1,0 +1,71 @@
+import { useSupabase } from "@keylow/api-client";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useQueryClient } from "@tanstack/react-query";
+import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import { useEffect, useRef, useState } from "react";
+
+import {
+  DIARY_CACHE_BUSTER,
+  DIARY_CACHE_MAX_AGE_MS,
+  createDiaryCachePersister,
+  isPersistedQuery,
+} from "../../lib/diaryCache";
+
+import type { PersistedDiaryCacheProps } from "./types";
+
+/**
+ * Keeps the diary reads on the phone, so the diary opens at once and without a connection. The
+ * stored cache is read before any query runs, and the queries it holds show their data while they
+ * refresh. Only the families `isPersistedQuery` lists are stored, no write is, and web does not use
+ * this. It sits inside `KeyLowProvider`, whose query client it persists, and outside the sign-in gate,
+ * so the gate's own read finds the stored acceptance.
+ *
+ * Whenever no one is signed in (a sign out, an account that was deleted, a session that ended while
+ * the app was closed) the stored cache is removed and the one in memory is reset, so the next person
+ * to sign in never sees it.
+ */
+export function PersistedDiaryCache({ children }: PersistedDiaryCacheProps) {
+  const client = useSupabase();
+  const queryClient = useQueryClient();
+  const [persister] = useState(() => createDiaryCachePersister(AsyncStorage));
+  const hasSeenNoSession = useRef(false);
+
+  useEffect(() => {
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      if (session === null) {
+        hasSeenNoSession.current = true;
+        void persister.removeClient();
+        void queryClient.resetQueries();
+      }
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, [client, persister, queryClient]);
+
+  return (
+    <PersistQueryClientProvider
+      client={queryClient}
+      // The sign in state can be known before the stored cache has been read, and the read then fills
+      // the cache after the reset. So the reset is made again once the read is done.
+      onSuccess={() => {
+        if (hasSeenNoSession.current) {
+          void queryClient.resetQueries();
+        }
+      }}
+      persistOptions={{
+        persister,
+        maxAge: DIARY_CACHE_MAX_AGE_MS,
+        buster: DIARY_CACHE_BUSTER,
+        dehydrateOptions: {
+          shouldDehydrateQuery: isPersistedQuery,
+          // A write waits for a connection, and is never replayed from storage.
+          shouldDehydrateMutation: () => false,
+        },
+      }}
+    >
+      {children}
+    </PersistQueryClientProvider>
+  );
+}

@@ -426,6 +426,20 @@ Storybook for React Native runs inside the dev client, on the real runtime, so a
 
 Without `EXPO_PUBLIC_STORYBOOK=true`, `/storybook` redirects to the home route and `npx expo export` produces a bundle with no Storybook code. Check that with `npx expo export --platform android --no-bytecode --output-dir <dir>` and a search of the bundle for `UI/Button` or `kilo/theme`, which only a Storybook build contains.
 
+### The stored diary cache
+
+The mobile app keeps the diary reads on the phone so the diary opens at once, and without a connection. This is health data (what a person ate, their targets), so the rules below are part of how the app is run.
+
+- **What is stored.** The queries for a diary day, a diary week, the complete days of a month, the recent foods, the targets, the profile time zone and the Terms acceptance. Nothing else: a food search, a barcode lookup and a food's detail are not, and neither is any write. The list is `PERSISTED_QUERY_KEYS` in `apps/mobile/lib/diaryCache/persistedQueryKeys.ts`. The time zone is there because the diary reads its days in it, and the acceptance because the Terms gate needs it to open the app offline.
+- **Where.** One `AsyncStorage` item, `keylow.diary-cache`, in the app's own private storage. It is not encrypted by the app (the session is, in `LargeSecureStore`). It is never written to a log: a cache that cannot be read is discarded with a fixed message.
+- **How long.** A query's data is kept for 7 days (`DIARY_CACHE_MAX_AGE_MS`), in memory and in storage. A cache stored more than 7 days ago is not read.
+- **Changing the shape of a stored query.** Bump `DIARY_CACHE_SCHEMA_VERSION` in `apps/mobile/lib/diaryCache/constants.ts`. The cache stamped with the old number is thrown away on the next start.
+- **When it is removed.** Whenever the app learns that no one is signed in: a sign out, an account that was deleted, and a session that ended while the app was closed (the app checks on every start). The cache in memory is reset at the same time. A deleted account has no screen yet; its session ends with the same event, so it is covered.
+- **The Terms.** A stored cache is read only if it records that its account accepted the current Terms version. After a new Terms version ships, the cache is dropped on the first start, and the account sees the accept screen with nothing of its diary in memory.
+- **Web does not store a cache.** It is not persisted in M3.
+
+To see the offline diary on a device or emulator, open today's diary online, then turn the connection off and restart the app. To start from nothing, clear the app's storage in the system settings (or reinstall).
+
 ### Checks that need no device
 
 Run these from `apps/mobile`:
