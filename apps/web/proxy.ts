@@ -11,6 +11,7 @@ const DASHBOARD_PATHS = [
   "/foods",
   "/recipes",
   "/more",
+  "/about",
   "/weight",
   "/settings",
 ];

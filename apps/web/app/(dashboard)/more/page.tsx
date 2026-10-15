@@ -34,6 +34,7 @@ export default async function MorePage() {
         </GroupedList>
         <GroupedList title="Settings" headerSize="compact">
           <AppearanceSetting initialPreference={themePreference} />
+          <ListRow title="About" href="/about" />
         </GroupedList>
         <form action={signOut}>
           <GroupedList title="Account" headerSize="compact">

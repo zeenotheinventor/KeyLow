@@ -330,43 +330,27 @@ describe("FoodDetail", () => {
   });
 
   describe("attribution", () => {
-    it("should credit Open Food Facts under its licence for one of its products", () => {
-      showFood(makeFood({ source: "off" }));
+    it.each([
+      ["off", "Open Food Facts"],
+      ["cofid", "UK CoFID"],
+    ] as const)("should name a %s food's source in the badge", (source, badge) => {
+      showFood(makeFood({ source }));
 
-      expect(
-        screen.getByText("Data from Open Food Facts, available under the Open Database Licence."),
-      ).toBeTruthy();
+      expect(screen.getByText(badge)).toBeTruthy();
     });
 
-    it("should credit the CoFID dataset under the Open Government Licence", () => {
-      showFood(makeFood({ source: "cofid" }));
+    it.each(["off", "cofid"] as const)(
+      "should carry no credit block under a %s food, since About holds it",
+      (source) => {
+        showFood(makeFood({ source }));
 
-      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.cofid.text)).toBeTruthy();
-    });
-
-    it("should link to Open Food Facts under the credit, in a new tab", () => {
-      showFood(makeFood({ source: "off" }));
-
-      const link = screen.getByRole("link", { name: "https://world.openfoodfacts.org" });
-      expect(link.getAttribute("href")).toBe("https://world.openfoodfacts.org");
-      expect(link.getAttribute("target")).toBe("_blank");
-      expect(link.getAttribute("rel")).toBe("noreferrer");
-    });
-
-    it("should link to the CoFID dataset under the credit", () => {
-      showFood(makeFood({ source: "cofid" }));
-
-      expect(
-        screen.getByRole("link", { name: DATA_SOURCE_ATTRIBUTION.cofid.url }).getAttribute("href"),
-      ).toBe(DATA_SOURCE_ATTRIBUTION.cofid.url);
-    });
-
-    it("should credit nobody and link to no source for a food the user made", () => {
-      showFood(makeFood({ source: "user" }));
-
-      expect(screen.queryByText(/licen[cs]ed|Licence/)).toBeNull();
-      expect(screen.queryByRole("link", { name: /^https?:/ })).toBeNull();
-    });
+        expect(screen.queryByText(DATA_SOURCE_ATTRIBUTION[source].text)).toBeNull();
+        expect(
+          screen.queryByRole("link", { name: DATA_SOURCE_ATTRIBUTION[source].url }),
+        ).toBeNull();
+        expect(screen.queryByRole("contentinfo")).toBeNull();
+      },
+    );
   });
 
   describe("editing", () => {
@@ -452,12 +436,11 @@ describe("FoodDetail", () => {
       expect(screen.queryByRole("link", { name: "Copy to your foods" })).toBeNull();
     });
 
-    it("should leave only the way back and the source as links for a food that is not suspect", () => {
+    it("should leave only the way back as a link for a food that is not suspect", () => {
       showFood(makeFood({ source: "off", quality: {} }));
 
       expect(screen.getAllByRole("link").map((link) => link.textContent)).toEqual([
         "Back to foods",
-        "https://world.openfoodfacts.org",
       ]);
       expect(screen.queryByRole("button")).toBeNull();
     });

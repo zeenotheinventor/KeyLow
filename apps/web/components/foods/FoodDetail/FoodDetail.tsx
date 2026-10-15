@@ -2,10 +2,9 @@
 
 import { useFoodWithPortions } from "@keylow/api-client";
 import { FOOD_DETAIL, describeNutritionHeading } from "@keylow/core/copy";
-import { DATA_SOURCE_ATTRIBUTION, requiresConfirmation } from "@keylow/core/foods";
+import { requiresConfirmation } from "@keylow/core/foods";
 
 import { BackToFoodsLink } from "./BackToFoodsLink";
-import { FoodAttribution } from "./FoodAttribution";
 import { FoodHeader } from "./FoodHeader";
 import { MacroHero } from "./MacroHero";
 import { MissingValuesReview } from "./MissingValuesReview";
@@ -44,9 +43,6 @@ export function FoodDetail({ id }: FoodDetailProps) {
             )}
           </div>
           {state.portions.length > 0 && <PortionList portions={state.portions} />}
-          {state.food.source !== "user" && (
-            <FoodAttribution attribution={DATA_SOURCE_ATTRIBUTION[state.food.source]} />
-          )}
         </>
       ) : (
         <FoodLoadNotice state={state} />
