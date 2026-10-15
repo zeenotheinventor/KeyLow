@@ -253,6 +253,32 @@ describe("DatePicker", () => {
       expect(document.activeElement).toBe(cell("13 October, selected, complete"));
     });
 
+    it("should not take focus from a month button after a key that moved nothing", () => {
+      renderPicker();
+      fireEvent.keyDown(cell("15 October, today, selected"), { key: "ArrowRight" });
+      const previous = screen.getByRole("button", { name: "Previous month" });
+
+      previous.focus();
+      fireEvent.click(previous);
+
+      expect(screen.getByRole("heading", { name: "September 2026" })).toBeTruthy();
+      expect(document.activeElement).toBe(previous);
+    });
+
+    it("should keep focus in the grid when Next month disables itself on the current month", () => {
+      renderPicker();
+      const previous = screen.getByRole("button", { name: "Previous month" });
+      fireEvent.click(previous);
+      const next = screen.getByRole("button", { name: "Next month" });
+
+      next.focus();
+      fireEvent.click(next);
+
+      expect(next).toHaveProperty("disabled", true);
+      expect(document.activeElement).not.toBe(document.body);
+      expect(screen.getByRole("grid").contains(document.activeElement)).toBe(true);
+    });
+
     it("should close on Escape and return focus to the opener", () => {
       const { onClose } = renderPicker();
 

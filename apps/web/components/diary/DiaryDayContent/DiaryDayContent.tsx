@@ -24,7 +24,6 @@ import type { LogEntry } from "@keylow/api-client";
 
 import { MacroProgressStrip } from "@/components/ui/MacroProgressStrip";
 import { useToast } from "@/components/ui/Toast";
-import { useFoodLogActions } from "@/lib/foodLogActions";
 
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets) and the
@@ -41,7 +40,6 @@ export function DiaryDayContent({
   onOpenTargets,
 }: DiaryDayContentProps) {
   const toast = useToast();
-  const { openAddFood, openEditEntry } = useFoodLogActions();
   const deleteEntry = useDeleteEntry();
   const restoreEntry = useRestoreEntry();
   const copyDay = useCopyDay();
@@ -101,7 +99,6 @@ export function DiaryDayContent({
       <FoodLog
         // A new day is a new log, so it scrolls to its own first food.
         key={day.localDate}
-        localDate={day.localDate}
         currentHour={currentHour}
         hasCopyFailed={hasCopyFailed}
         hours={groupEntriesByHour(day.entries, timeZone)}
@@ -110,15 +107,11 @@ export function DiaryDayContent({
         isToday={isToday}
         isYesterdayEmpty={yesterdayQuery.isSuccess && yesterdayQuery.data.entries.length === 0}
         timeZone={timeZone}
-        onAddFood={(hour) => {
-          openAddFood({ date: day.localDate, time: `${String(hour).padStart(2, "0")}:00` });
-        }}
         onCompleteChange={(isComplete) => {
           setDayComplete.mutate({ localDate: day.localDate, complete: isComplete });
         }}
         onCopyYesterday={copyYesterday}
         onDelete={remove}
-        onEdit={openEditEntry}
       />
     </>
   );

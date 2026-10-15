@@ -60,7 +60,10 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
 
   const day = dayQuery.data;
   const targets = targetsQuery.data;
-  const isFailed = dayQuery.isError || targetsQuery.isError;
+  // A refetch that fails while the data is on screen leaves the data where it is: the error replaces the
+  // diary only when there is nothing to show.
+  const isFailed =
+    (dayQuery.isError && day === undefined) || (targetsQuery.isError && targets === undefined);
 
   if (day !== undefined && !hasLoadedADay) {
     setHasLoadedADay(true);

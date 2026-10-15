@@ -237,10 +237,10 @@ describe("the diary screen", () => {
       expect(push).toHaveBeenCalledExactlyOnceWith("/more/targets");
     });
 
-    it("should list all 24 hours with a plus on each, grouped by what is in them", () => {
+    it("should list all 24 hours, grouped by what is in them", () => {
       renderDiary();
 
-      expect(screen.getAllByRole("button", { name: /^Add food at / })).toHaveLength(24);
+      expect(screen.getAllByRole("group", { name: /^\d{2}:00, / })).toHaveLength(24);
       expect(screen.getByRole("group", { name: "08:00, 3 foods" })).toBeTruthy();
       expect(screen.getByRole("group", { name: "12:00, 3 foods" })).toBeTruthy();
       expect(screen.getByRole("group", { name: "09:00, nothing logged" })).toBeTruthy();
@@ -311,60 +311,50 @@ describe("the diary screen", () => {
     });
   });
 
-  describe("adding food", () => {
-    it("should open add food at the hour's time from an hour's plus", () => {
+  // The add and edit dialogs are KEY-211's. Until they exist nothing on the page offers a press that
+  // does nothing: no plus on an hour, no Edit button, and a stacked row is plain text.
+  describe("until the add and edit dialogs exist", () => {
+    it("should draw no plus on any hour", () => {
       renderDiary();
 
-      fireEvent.click(screen.getByRole("button", { name: "Add food at 12:00" }));
-
-      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: TODAY, time: "12:00" });
+      expect(screen.queryAllByRole("button", { name: /^Add food at / })).toHaveLength(0);
     });
 
-    it("should add to the day on view when it is not today", () => {
-      renderDiary({ date: "2026-10-14" });
-
-      fireEvent.click(screen.getByRole("button", { name: "Add food at 07:00" }));
-
-      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: "2026-10-14", time: "07:00" });
-    });
-
-    it("should open the edit dialog for an entry from its Edit button", () => {
-      const entries = sampleDay();
-      showDay(TODAY, entries);
+    it("should draw no Edit button on a table row", () => {
       renderDiary();
 
-      fireEvent.click(within(tableOf("08:00")).getByRole("button", { name: "Edit Porridge oats" }));
-
-      expect(openEditEntry).toHaveBeenCalledExactlyOnceWith(entries[0]?.id);
+      expect(screen.queryAllByRole("button", { name: /^Edit / })).toHaveLength(0);
     });
 
-    it("should open the edit dialog from a stacked row too", () => {
-      const entries = sampleDay();
-      showDay(TODAY, entries);
+    it("should draw a stacked row as plain text with no button", () => {
       renderDiary();
       const stacked = within(screen.getByRole("region", { name: "Foods at 08:00" })).getByRole(
         "list",
       );
 
-      fireEvent.click(within(stacked).getByRole("button", { name: /Porridge oats/ }));
+      expect(within(stacked).queryAllByRole("button")).toHaveLength(0);
+      expect(within(stacked).getByText("Porridge oats")).toBeTruthy();
+    });
 
-      expect(openEditEntry).toHaveBeenCalledExactlyOnceWith(entries[0]?.id);
+    it("should not call the add or edit actions from anywhere on the page", () => {
+      renderDiary();
+
+      expect(openAddFood).not.toHaveBeenCalled();
+      expect(openEditEntry).not.toHaveBeenCalled();
     });
   });
 
-  describe("a row's Edit and Delete", () => {
-    it("should be buttons the keyboard reaches, shown on focus within the row", () => {
+  describe("a row's Delete", () => {
+    it("should be a button the keyboard reaches, shown on focus within the row", () => {
       renderDiary();
-      const edit = within(tableOf("08:00")).getByRole("button", { name: "Edit Porridge oats" });
       const remove = within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" });
 
-      edit.focus();
+      remove.focus();
 
-      expect(document.activeElement).toBe(edit);
-      expect(edit.tabIndex).toBe(0);
+      expect(document.activeElement).toBe(remove);
       expect(remove.tabIndex).toBe(0);
-      expect(edit.parentElement?.className).toContain("group-focus-within/row:opacity-100");
-      expect(edit.parentElement?.className).toContain("group-hover/row:opacity-100");
+      expect(remove.parentElement?.className).toContain("group-focus-within/row:opacity-100");
+      expect(remove.parentElement?.className).toContain("group-hover/row:opacity-100");
     });
 
     it("should delete at once and offer Undo", () => {
@@ -617,7 +607,7 @@ describe("the diary screen", () => {
     it("should still list all 24 hours, and scroll to the current hour", () => {
       renderDiary();
 
-      expect(screen.getAllByRole("button", { name: /^Add food at / })).toHaveLength(24);
+      expect(screen.getAllByRole("group", { name: /^\d{2}:00, / })).toHaveLength(24);
       expect(scrollIntoView.mock.contexts[0]).toBe(
         screen.getByRole("group", { name: "11:00, nothing logged" }),
       );
@@ -791,6 +781,15 @@ describe("the diary screen", () => {
       fireEvent.click(screen.getByRole("button", { name: "Try again" }));
 
       expect(refetch).toHaveBeenCalledOnce();
+    });
+
+    it("should keep the log on screen when a refetch fails and the day is already loaded", () => {
+      backend.days.set(TODAY, { ...settled(diaryDay(TODAY, sampleDay())), isError: true });
+      backend.targets = { ...settled(targets), isError: true };
+      renderDiary();
+
+      expect(screen.queryByRole("heading", { name: "Couldn't load your diary" })).toBeNull();
+      expect(screen.getByRole("group", { name: "08:00, 3 foods" })).toBeTruthy();
     });
 
     it("should say so when the targets could not load either", () => {

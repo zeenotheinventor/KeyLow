@@ -31,7 +31,7 @@ export function entryRowFields(entry: LogEntry, timeZone: string) {
     caption: describeEntryCaption(formatClockTime(new Date(entry.logged_at), timeZone), amount),
     energy: kcal === null ? undefined : formatCalories(kcal),
     // The table writes a dash for a macro that is not given, one at a time.
-    cells: { protein, carbs, fat, description: accessibleDescription },
+    cells: { protein, carbs, fat },
     // The stacked row writes "Needs review" in place of all three when any is missing.
     macros: hasAllMacros ? { protein, carbs, fat, description: accessibleDescription } : undefined,
   };

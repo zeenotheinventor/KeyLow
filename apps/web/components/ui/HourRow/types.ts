@@ -11,8 +11,8 @@ export type HourRowProps = {
   isNow?: boolean;
   /** The row's element, so the screen can scroll an hour into view. */
   ref?: Ref<HTMLDivElement> | undefined;
-  /** Called with the hour when the plus is pressed. */
-  onAdd: (hour: number) => void;
+  /** Called with the hour when the plus is pressed. Leave it out when there is nowhere to add yet, and no plus is drawn. */
+  onAdd?: ((hour: number) => void) | undefined;
   /**
    * The hour's foods, which the card holds under the chip: at the wide width a `FoodTable` of
    * table rows, at the narrow width a list of stacked rows. Not drawn when `foodCount` is 0.

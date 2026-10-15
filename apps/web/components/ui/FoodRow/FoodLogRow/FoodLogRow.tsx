@@ -57,18 +57,11 @@ export function FoodLogRow({
       ))
     : name;
 
-  const row = (
-    <button
-      type="button"
-      className={cn(
-        rowButtonClasses,
-        layoutClasses[layout],
-        !disabled && interactiveClasses,
-        disabled && "pointer-events-none",
-      )}
-      onClick={disabled ? undefined : onClick}
-      aria-disabled={disabled || undefined}
-    >
+  // A row with nothing to open is plain text: no button and no chevron, so it does not promise a press.
+  const isPressable = onClick !== undefined;
+
+  const content = (
+    <>
       {isSearch && (
         <span
           aria-hidden
@@ -87,7 +80,7 @@ export function FoodLogRow({
         )}
         <StatsLine energy={energy} macros={macros} needsReview={needsReview} />
       </span>
-      {!showsAdd && (
+      {!showsAdd && isPressable && (
         // Where the add button would be, the chevron sits in a box of the same 44 px so the rows line up.
         <span
           aria-hidden
@@ -99,7 +92,27 @@ export function FoodLogRow({
           <ChevronRight className="size-4" strokeWidth={iconStroke} />
         </span>
       )}
+    </>
+  );
+
+  const row = isPressable ? (
+    <button
+      type="button"
+      className={cn(
+        rowButtonClasses,
+        layoutClasses[layout],
+        !disabled && interactiveClasses,
+        disabled && "pointer-events-none",
+      )}
+      onClick={disabled ? undefined : onClick}
+      aria-disabled={disabled || undefined}
+    >
+      {content}
     </button>
+  ) : (
+    <div className={cn("flex w-full min-w-0 flex-1 items-center gap-3", layoutClasses[layout])}>
+      {content}
+    </div>
   );
 
   return (

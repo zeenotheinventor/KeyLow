@@ -60,18 +60,20 @@ export function HourRow({
               />
             )}
           </span>
-          <Button
-            type="button"
-            variant="ring"
-            iconOnly
-            className="shrink-0"
-            aria-label={describeAddFoodAtHour(label)}
-            onClick={() => {
-              onAdd(hour);
-            }}
-          >
-            <Plus aria-hidden strokeWidth={2} />
-          </Button>
+          {onAdd !== undefined && (
+            <Button
+              type="button"
+              variant="ring"
+              iconOnly
+              className="shrink-0"
+              aria-label={describeAddFoodAtHour(label)}
+              onClick={() => {
+                onAdd(hour);
+              }}
+            >
+              <Plus aria-hidden strokeWidth={2} />
+            </Button>
+          )}
         </div>
         {foodCount > 0 && (
           <Card asChild padding="none">

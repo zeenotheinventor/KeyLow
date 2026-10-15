@@ -203,9 +203,11 @@ describe("TargetsForm", () => {
 
       fireEvent.click(save());
 
-      expect((await screen.findByRole("alert")).textContent).toContain(
-        "Not saved. Check your connection and try again.",
-      );
+      const alert = (await screen.findByRole("alert")).textContent;
+      expect(alert).toContain("Not saved. Check your connection and try again.");
+      // The reason and the person's numbers stay out of what the page says.
+      expect(alert).not.toContain("42501");
+      expect(alert).not.toMatch(/2,?200/);
       expect(push).not.toHaveBeenCalled();
       expect(screen.queryByText("Targets saved")).toBeNull();
     });

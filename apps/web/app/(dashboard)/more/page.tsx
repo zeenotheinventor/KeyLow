@@ -1,3 +1,4 @@
+import { MORE_SCREEN } from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
 import { signOut } from "../actions";
@@ -29,7 +30,7 @@ export default async function MorePage() {
             href="/foods?scope=own"
           />
         </GroupedList>
-        <GroupedList title="Nutrition" headerSize="compact">
+        <GroupedList title={MORE_SCREEN.nutrition.title} headerSize="compact">
           <TargetsRow />
         </GroupedList>
         <GroupedList title="Body" headerSize="compact">

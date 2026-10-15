@@ -55,8 +55,11 @@ export type FoodLogRowProps = {
   /** Dims the row and stops it, and its add button, responding. */
   disabled?: boolean | undefined;
   className?: string | undefined;
-  /** Opens the food: the edit dialog for a `stacked` row, the portion picker for a `search` row. */
-  onClick: () => void;
+  /**
+   * Opens the food: the edit dialog for a `stacked` row, the portion picker for a `search` row. Leave it
+   * out when there is nothing to open yet, and the row is plain text with no chevron.
+   */
+  onClick?: (() => void) | undefined;
   /** Logs the serving at once. Gives a `search` row its add button. Pressing it does not press the row. */
   onAdd?: (() => void) | undefined;
   /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. */
@@ -71,8 +74,6 @@ export type FoodTableRowMacros = {
   protein: string | null;
   carbs: string | null;
   fat: string | null;
-  /** Not used by the table, which writes the values in cells; it is the stacked row's sentence. */
-  description: string;
 };
 
 /**
@@ -89,7 +90,8 @@ export type FoodTableRowProps = {
   energy?: string | undefined;
   /** The macros as `formatGrams` writes them. The table adds the unit. */
   macros: FoodTableRowMacros;
-  onEdit: () => void;
+  /** Shows the Edit button. Leave it out when there is no edit to open yet, and only Delete is drawn. */
+  onEdit?: (() => void) | undefined;
   onDelete: () => void;
   className?: string | undefined;
 };

@@ -94,13 +94,17 @@ export function DatePicker({
 
   const moveFocusTo = (localDate: string) => {
     const target = withinReach(localDate);
-    isMovingFocus.current = true;
+    // A key that goes nowhere, such as ArrowRight on today, moves nothing, so focus has no move to make.
+    isMovingFocus.current = target !== focusDate;
     setFocusDate(target);
     showMonthOf(target);
   };
 
   const stepMonth = (direction: -1 | 1) => {
     const target = withinReach(addMonths(focusDate, direction));
+    // Next month disables itself on the month of today. Focus moves to the grid first, so a keyboard
+    // user keeps their place and is not dropped onto the page.
+    isMovingFocus.current = direction === 1 && monthOf(target) >= monthOf(today);
     setFocusDate(target);
     showMonthOf(target);
   };

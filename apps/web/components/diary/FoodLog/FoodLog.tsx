@@ -14,10 +14,9 @@ import { HourRow } from "@/components/ui/HourRow";
  * because each draws its own piece of the guide line. On a day with nothing logged the Nothing logged
  * yet card sits above 00:00. When it first appears the page scrolls once, so the first food's hour, or
  * the current hour when the day is empty, is near the top. Key it by the day, so a new day scrolls again,
- * and so the switch is a new one that plays no moment for a day that is already complete.
+ * and so the switch is a new one (it belongs to the day) that plays no moment for a day that is already complete.
  */
 export function FoodLog({
-  localDate,
   hours,
   timeZone,
   currentHour,
@@ -26,8 +25,6 @@ export function FoodLog({
   isYesterdayEmpty,
   isCopying,
   hasCopyFailed,
-  onAddFood,
-  onEdit,
   onDelete,
   onCopyYesterday,
   onCompleteChange,
@@ -59,13 +56,11 @@ export function FoodLog({
             label={group.label}
             foodCount={group.entries.length}
             isNow={isToday && group.hour === currentHour}
-            onAdd={onAddFood}
           >
             <HourFoods
               label={group.label}
               entries={group.entries}
               timeZone={timeZone}
-              onEdit={onEdit}
               onDelete={onDelete}
             />
           </HourRow>
@@ -73,7 +68,6 @@ export function FoodLog({
       </div>
       <div className="pl-8 pt-3">
         <DayCompleteToggle
-          key={localDate}
           complete={isComplete}
           className="md:max-w-[520px]"
           onChange={onCompleteChange}

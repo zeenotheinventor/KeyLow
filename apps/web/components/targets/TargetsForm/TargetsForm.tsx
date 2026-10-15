@@ -11,13 +11,11 @@ import {
   describeMacroTargetField,
   describeMacroTotal,
 } from "@keylow/core/copy";
-import { macroKcal, validateTargets } from "@keylow/core/diary";
+import { enteredNumber, fieldText, macroKcal, validateTargets } from "@keylow/core/diary";
 import { Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-import { enteredNumber, fieldText } from "./enteredNumber";
 
 import type { TargetsFormProps } from "./types";
 import type { SyntheticEvent } from "react";

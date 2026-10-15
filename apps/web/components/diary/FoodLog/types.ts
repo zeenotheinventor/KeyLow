@@ -2,8 +2,6 @@ import type { LogEntry } from "@keylow/api-client";
 import type { HourGroup } from "@keylow/core/diary";
 
 export type FoodLogProps = {
-  /** The day shown, `YYYY-MM-DD`. The complete switch is keyed by it. */
-  localDate: string;
   /** All 24 hours, from core's `groupEntriesByHour`. */
   hours: readonly HourGroup<LogEntry>[];
   timeZone: string;
@@ -17,9 +15,6 @@ export type FoodLogProps = {
   isYesterdayEmpty: boolean;
   isCopying: boolean;
   hasCopyFailed: boolean;
-  /** Called with the hour of the plus that was pressed. */
-  onAddFood: (hour: number) => void;
-  onEdit: (entryId: string) => void;
   onDelete: (entry: LogEntry) => void;
   onCopyYesterday: () => void;
   /** Called with the state the Mark day complete switch asks for. */

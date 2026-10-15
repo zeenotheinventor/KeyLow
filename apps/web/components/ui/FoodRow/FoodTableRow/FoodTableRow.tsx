@@ -1,4 +1,4 @@
-import { FOOD_ROW, describeDeleteFood, describeEditFood } from "@keylow/core/copy";
+import { FOOD_ROW, NOT_GIVEN, describeDeleteFood, describeEditFood } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { Pencil, Trash2 } from "lucide-react";
 
@@ -46,11 +46,21 @@ export function FoodTableRow({
         )}
       </div>
       {macroColumns.map((macro) => (
-        <div key={macro} role="cell" className="text-right text-body tabular-nums">
+        <div
+          key={macro}
+          role="cell"
+          // The dash is a mark for the eye, so a screen reader is told in words.
+          aria-label={macros[macro] === null ? NOT_GIVEN : undefined}
+          className="text-right text-body tabular-nums"
+        >
           {macros[macro] === null ? FOOD_ROW.notGivenMark : `${macros[macro]} ${FOOD_ROW.gramUnit}`}
         </div>
       ))}
-      <div role="cell" className="text-right tabular-nums">
+      <div
+        role="cell"
+        aria-label={energy === undefined ? NOT_GIVEN : undefined}
+        className="text-right tabular-nums"
+      >
         {energy === undefined ? (
           FOOD_ROW.notGivenMark
         ) : (
@@ -65,16 +75,18 @@ export function FoodTableRow({
         role="cell"
         className="-my-1 flex justify-end opacity-0 transition-opacity duration-quick group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none"
       >
-        <Button
-          type="button"
-          variant="ghost"
-          iconOnly
-          className={iconButtonClasses}
-          aria-label={describeEditFood(name)}
-          onClick={onEdit}
-        >
-          <Pencil aria-hidden strokeWidth={iconStroke} />
-        </Button>
+        {onEdit !== undefined && (
+          <Button
+            type="button"
+            variant="ghost"
+            iconOnly
+            className={iconButtonClasses}
+            aria-label={describeEditFood(name)}
+            onClick={onEdit}
+          >
+            <Pencil aria-hidden strokeWidth={iconStroke} />
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"

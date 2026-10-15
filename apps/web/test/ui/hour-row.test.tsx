@@ -34,6 +34,13 @@ describe("HourRow", () => {
     expect(onAdd).toHaveBeenCalledExactlyOnceWith(8);
   });
 
+  it("should draw no button at all when there is nowhere to add yet", () => {
+    renderHour({ onAdd: undefined, foodCount: 0 });
+
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByText("08:00")).toBeTruthy();
+  });
+
   it("should draw the plus as the quiet ring, not a filled button", () => {
     renderHour();
 

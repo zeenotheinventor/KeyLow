@@ -37,7 +37,7 @@ export const WithRows: Story = {
         nameSegments={[{ text: "Porridge oats", matched: false }]}
         caption="08:05 · 50 g"
         energy="187"
-        macros={{ protein: "5.6", carbs: "27", fat: "3.4", description: "not used by the table" }}
+        macros={{ protein: "5.6", carbs: "27", fat: "3.4" }}
         onEdit={() => undefined}
         onDelete={() => undefined}
       />

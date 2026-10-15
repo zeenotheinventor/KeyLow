@@ -157,6 +157,14 @@ describe("FoodRow stacked", () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it("should be plain text with no button and no chevron when there is nothing to open", () => {
+    renderStacked({ onClick: undefined });
+
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.getByRole("listitem").textContent).toContain("Chicken breast, grilled");
+    expect(screen.getByRole("listitem").querySelector("svg.lucide-chevron-right")).toBeNull();
+  });
+
   it("should write the whole name in semibold, clamped to two lines", async () => {
     renderStacked();
 

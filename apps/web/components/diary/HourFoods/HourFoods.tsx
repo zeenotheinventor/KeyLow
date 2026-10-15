@@ -8,11 +8,12 @@ import { FoodRow } from "@/components/ui/FoodRow";
 import { FoodTable } from "@/components/ui/FoodTable";
 
 /**
- * An hour's foods in two shapes, one of which the width hides: at 768 px and up a table with Edit and
- * Delete on each row, below it stacked rows that open the entry. Both are in the page, because the
- * width decides which is shown.
+ * An hour's foods in two shapes, one of which the width hides: at 768 px and up a table with Delete on
+ * each row, below it stacked rows. Both are in the page, because the width decides which is shown. There
+ * is no Edit button and a stacked row is plain text until the edit dialog exists (KEY-211): pass `onEdit`
+ * to the rows then.
  */
-export function HourFoods({ label, entries, timeZone, onEdit, onDelete }: HourFoodsProps) {
+export function HourFoods({ label, entries, timeZone, onDelete }: HourFoodsProps) {
   return (
     <>
       <FoodTable label={describeFoodsAtHour(label)}>
@@ -27,9 +28,6 @@ export function HourFoods({ label, entries, timeZone, onEdit, onDelete }: HourFo
               caption={row.caption}
               energy={row.energy}
               macros={row.cells}
-              onEdit={() => {
-                onEdit(entry.id);
-              }}
               onDelete={() => {
                 onDelete(entry);
               }}
@@ -50,9 +48,6 @@ export function HourFoods({ label, entries, timeZone, onEdit, onDelete }: HourFo
               energy={row.energy}
               macros={row.macros}
               needsReview={row.macros === undefined}
-              onClick={() => {
-                onEdit(entry.id);
-              }}
             />
           );
         })}
