@@ -71,6 +71,7 @@ describe("syncing the device time zone to the profile", () => {
       deviceTimeZone: "Europe/London",
       profileTimeZone: "UTC",
       enabled: true,
+      foregroundEventCount: 0,
     });
   });
 
@@ -103,6 +104,7 @@ describe("syncing the device time zone to the profile", () => {
       deviceTimeZone: "America/New_York",
       profileTimeZone: "UTC",
       enabled: true,
+      foregroundEventCount: 1,
     });
   });
 
@@ -113,7 +115,7 @@ describe("syncing the device time zone to the profile", () => {
     changeVisibility("hidden");
 
     expect(syncSpy).toHaveBeenLastCalledWith(
-      expect.objectContaining({ deviceTimeZone: "Europe/London" }),
+      expect.objectContaining({ deviceTimeZone: "Europe/London", foregroundEventCount: 0 }),
     );
   });
 

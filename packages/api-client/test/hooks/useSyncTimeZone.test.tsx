@@ -51,6 +51,7 @@ const syncing: UseSyncTimeZoneInput = {
   deviceTimeZone: "Europe/London",
   profileTimeZone: "UTC",
   enabled: true,
+  foregroundEventCount: 0,
 };
 
 async function renderSync(initialProps: UseSyncTimeZoneInput) {
@@ -156,6 +157,68 @@ describe("useSyncTimeZone", () => {
     await settle();
     expect(writtenZones).toHaveLength(1);
     expect(result.current).toBeUndefined();
+  });
+
+  it("should try a failed write again once the app returns to the foreground", async () => {
+    respondWithFailure = true;
+    const { rerender } = await renderSync(syncing);
+    await waitFor(() => {
+      expect(writtenZones).toHaveLength(1);
+    });
+    await settle();
+    expect(writtenZones).toHaveLength(1);
+
+    rerender({ ...syncing, foregroundEventCount: 1 });
+
+    await waitFor(() => {
+      expect(writtenZones).toEqual([{ timezone: "Europe/London" }, { timezone: "Europe/London" }]);
+    });
+  });
+
+  it("should write at most once for each foreground event while the write keeps failing", async () => {
+    respondWithFailure = true;
+    const { rerender } = await renderSync(syncing);
+    await waitFor(() => {
+      expect(writtenZones).toHaveLength(1);
+    });
+
+    rerender({ ...syncing, foregroundEventCount: 1 });
+    await waitFor(() => {
+      expect(writtenZones).toHaveLength(2);
+    });
+    rerender({ ...syncing, foregroundEventCount: 1, profileTimeZone: undefined });
+    rerender({ ...syncing, foregroundEventCount: 1 });
+    await settle();
+    expect(writtenZones).toHaveLength(2);
+
+    rerender({ ...syncing, foregroundEventCount: 2 });
+    await waitFor(() => {
+      expect(writtenZones).toHaveLength(3);
+    });
+  });
+
+  it("should not write again after a foreground event once the write succeeded and the profile zone matches", async () => {
+    const { rerender } = await renderSync(syncing);
+    await waitFor(() => {
+      expect(writtenZones).toHaveLength(1);
+    });
+
+    rerender({ ...syncing, profileTimeZone: "Europe/London" });
+    rerender({ ...syncing, profileTimeZone: "Europe/London", foregroundEventCount: 1 });
+
+    await settle();
+    expect(writtenZones).toHaveLength(1);
+  });
+
+  it("should write nothing for an invalid device zone on any foreground event", async () => {
+    const invalid = { ...syncing, deviceTimeZone: "Mars/Olympus" };
+    const { rerender } = await renderSync(invalid);
+
+    rerender({ ...invalid, foregroundEventCount: 1 });
+    rerender({ ...invalid, foregroundEventCount: 2 });
+
+    await settle();
+    expect(writtenZones).toEqual([]);
   });
 
   it("should try a zone again after it was disabled and enabled, as when another user signs in", async () => {

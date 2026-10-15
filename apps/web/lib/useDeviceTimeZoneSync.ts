@@ -7,20 +7,23 @@ const readDeviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZon
 
 /**
  * Keeps the profile's time zone equal to the browser's, with no page of its own. The zone is read when it
- * mounts and again each time the tab becomes visible, since a user can travel with the tab open. Nothing is
- * read or written until the account has accepted the current Terms. An acceptance that is not known yet
- * counts as not accepted. Mount it once, where a user is signed in.
+ * mounts and again each time the tab becomes visible, since a user can travel with the tab open. A write
+ * that failed is tried again then too. Nothing is read or written until the account has accepted the
+ * current Terms. An acceptance that is not known yet counts as not accepted. Mount it once, where a user is
+ * signed in.
  */
 export function useDeviceTimeZoneSync(): void {
   const acceptance = useTermsAcceptance();
   const isEnabled = !needsTermsAcceptance(acceptance.data ?? null, TERMS_VERSION);
   const profileTimeZone = useProfileTimeZone({ enabled: isEnabled });
   const [deviceTimeZone, setDeviceTimeZone] = useState(readDeviceTimeZone);
+  const [foregroundEventCount, setForegroundEventCount] = useState(0);
 
   useEffect(() => {
     const readWhenVisible = () => {
       if (document.visibilityState === "visible") {
         setDeviceTimeZone(readDeviceTimeZone());
+        setForegroundEventCount((count) => count + 1);
       }
     };
 
@@ -31,5 +34,10 @@ export function useDeviceTimeZoneSync(): void {
     };
   }, []);
 
-  useSyncTimeZone({ deviceTimeZone, profileTimeZone: profileTimeZone.data, enabled: isEnabled });
+  useSyncTimeZone({
+    deviceTimeZone,
+    profileTimeZone: profileTimeZone.data,
+    enabled: isEnabled,
+    foregroundEventCount,
+  });
 }
