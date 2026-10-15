@@ -34,6 +34,14 @@ describe("haptic", () => {
     expect(mockImpact).toHaveBeenCalledWith("medium");
   });
 
+  it("should map complete to two heavy impacts, the --haptic-complete token", async () => {
+    await haptic.complete();
+
+    expect(mockImpact).toHaveBeenCalledTimes(2);
+    expect(mockImpact).toHaveBeenNthCalledWith(1, "heavy");
+    expect(mockImpact).toHaveBeenNthCalledWith(2, "heavy");
+  });
+
   it("should map warning to a warning notification, the --haptic-warning token", async () => {
     await haptic.warning();
 
@@ -51,6 +59,7 @@ describe("haptic", () => {
 
     await haptic.select();
     await haptic.confirm();
+    await haptic.complete();
     await haptic.warning();
     await haptic.error();
 

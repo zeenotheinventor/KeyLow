@@ -1,6 +1,7 @@
 import {
   Apple,
   BookOpen,
+  Calendar,
   Camera,
   CameraOff,
   Check,
@@ -8,6 +9,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  CircleCheck,
+  CircleDashed,
   Clock,
   CloudOff,
   Ellipsis,
@@ -43,6 +46,7 @@ import {
 export const iconMap = {
   Apple,
   BookOpen,
+  Calendar,
   Camera,
   CameraOff,
   Check,
@@ -50,6 +54,8 @@ export const iconMap = {
   ChevronLeft,
   ChevronRight,
   CircleAlert,
+  CircleCheck,
+  CircleDashed,
   Clock,
   CloudOff,
   Ellipsis,

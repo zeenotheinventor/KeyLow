@@ -16,12 +16,20 @@ async function play(feedback: () => Promise<void>): Promise<void> {
   }
 }
 
-/** The design's haptic tokens (`--haptic-*`). `complete` is deferred with the motion moments. */
+// The design's `--haptic-complete` is "heavy-double": two firm impacts, one straight after the other.
+async function playHeavyDouble(): Promise<void> {
+  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+  await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+}
+
+/** The design's haptic tokens (`--haptic-*`). */
 export const haptic = {
   /** A selection, step, tab or segment change. */
   select: () => play(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)),
   /** An entry added or saved. */
   confirm: () => play(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)),
+  /** A day marked complete. */
+  complete: () => play(playHeavyDouble),
   warning: () => play(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning)),
   error: () => play(() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)),
 };

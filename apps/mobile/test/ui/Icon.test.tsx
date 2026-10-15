@@ -36,11 +36,14 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   { tone: "danger", colorName: "danger" },
   // The flame on a food row's stats line, in the calories colour beside the energy.
   { tone: "calories", colorName: "calories" },
+  // The check on the day complete switch's knob.
+  { tone: "accent", colorName: "accent" },
 ];
 
 const names: IconName[] = [
   "Apple",
   "BookOpen",
+  "Calendar",
   "Camera",
   "CameraOff",
   "Check",
@@ -48,6 +51,8 @@ const names: IconName[] = [
   "ChevronLeft",
   "ChevronRight",
   "CircleAlert",
+  "CircleCheck",
+  "CircleDashed",
   "Clock",
   "CloudOff",
   "Ellipsis",

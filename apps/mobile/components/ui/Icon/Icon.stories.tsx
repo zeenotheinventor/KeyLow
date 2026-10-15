@@ -27,6 +27,7 @@ const tones: IconTone[] = ["primary", "secondary", "muted"];
 const names: IconName[] = [
   "Apple",
   "BookOpen",
+  "Calendar",
   "Camera",
   "CameraOff",
   "Check",
@@ -34,6 +35,8 @@ const names: IconName[] = [
   "ChevronLeft",
   "ChevronRight",
   "CircleAlert",
+  "CircleCheck",
+  "CircleDashed",
   "Clock",
   "CloudOff",
   "Ellipsis",

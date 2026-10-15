@@ -63,6 +63,8 @@ export const storyManifest: Record<string, { states: string[] }> = {
   ChipGroup: {
     states: ["TwoChips", "FiveChipsScroll", "LongLabel", "OneSelected", "NoneSelected"],
   },
+  DayCompleteToggle: { states: ["Off", "On", "Disabled", "DisabledOn"] },
+  DayStepper: { states: ["Today", "Yesterday", "OlderDay", "Interactive"] },
   EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction", "Wide"] },
   ErrorState: { states: ["SearchFailed", "WithRetry", "WithAction"] },
   FoodRow: {
@@ -88,6 +90,9 @@ export const storyManifest: Record<string, { states: string[] }> = {
   GroupedList: { states: ["Default", "WithSeeMore", "TitleOnly", "WithNotice"] },
   Icon: { states: ["Sizes", "Tones", "Labelled", "Names"] },
   IconButton: { states: ["Secondary", "Ghost", "Ring", "Disabled"] },
+  IncompleteDaysChip: {
+    states: ["AllComplete", "OneIncomplete", "SeveralIncomplete", "Pressable"],
+  },
   Input: {
     states: [
       "Empty",

@@ -13,8 +13,10 @@ export type IconSizeName = keyof typeof iconSize;
  * is never text or a thin line on a light surface. `success`, `warning` and `danger` are the status glyphs the
  * boards draw in both schemes, on a muted fill or beside the words, which stay in a text colour (Q14).
  * `calories` is the flame beside an energy value, in the calories colour.
+ * `accent` is the lime itself, for a mark on an accent-foreground fill such as the day complete switch's knob.
  */
-export type IconTone = Tone | "accent-ink" | "success" | "warning" | "danger" | "calories";
+export type IconTone =
+  Tone | "accent-ink" | "accent" | "success" | "warning" | "danger" | "calories";
 
 export type IconProps = {
   name: IconName;
