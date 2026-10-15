@@ -110,6 +110,10 @@ function persistedClientWith(
   };
 }
 
+const OWNER = "11111111-1111-4111-8111-111111111111";
+const ANOTHER_ACCOUNT = "22222222-2222-4222-8222-222222222222";
+const signedInAs = (userId: string | null) => () => Promise.resolve(userId);
+
 const currentAcceptance = {
   queryKey: keys.profiles.termsAcceptance,
   data: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
@@ -119,7 +123,7 @@ const aDay = { queryKey: keys.diary.day("2026-10-15"), data: { entries: [] } };
 describe("the diary cache persister", () => {
   it("should give back what it stored", async () => {
     const storage = createFakeStorage();
-    const persister = createDiaryCachePersister(storage);
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
     const client = persistedClientWith([currentAcceptance, aDay]);
 
     await persister.persistClient(client);
@@ -129,7 +133,7 @@ describe("the diary cache persister", () => {
 
   it("should store nothing, and remove what was there, when the cache has no queries left", async () => {
     const storage = createFakeStorage();
-    const persister = createDiaryCachePersister(storage);
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
     await persister.persistClient(persistedClientWith([currentAcceptance, aDay]));
 
     await persister.persistClient(persistedClientWith([]));
@@ -139,7 +143,7 @@ describe("the diary cache persister", () => {
 
   it("should not give back a cache whose account has not accepted the current terms", async () => {
     const storage = createFakeStorage();
-    const persister = createDiaryCachePersister(storage);
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
     await persister.persistClient(
       persistedClientWith([
         {
@@ -159,7 +163,7 @@ describe("the diary cache persister", () => {
 
   it("should not give back a cache that never learned whether the terms were accepted", async () => {
     const storage = createFakeStorage();
-    const persister = createDiaryCachePersister(storage);
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
     await persister.persistClient(persistedClientWith([aDay]));
 
     await expect(persister.restoreClient()).resolves.toBeUndefined();
@@ -167,7 +171,7 @@ describe("the diary cache persister", () => {
 
   it("should not give back a cache of an account that has no profile row, which has accepted nothing", async () => {
     const storage = createFakeStorage();
-    const persister = createDiaryCachePersister(storage);
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
     await persister.persistClient(
       persistedClientWith([{ queryKey: keys.profiles.termsAcceptance, data: null }, aDay]),
     );
@@ -175,10 +179,69 @@ describe("the diary cache persister", () => {
     await expect(persister.restoreClient()).resolves.toBeUndefined();
   });
 
+  describe("whose cache it is", () => {
+    async function storeAs(storage: ReturnType<typeof createFakeStorage>, userId: string | null) {
+      await createDiaryCachePersister(storage, signedInAs(userId)).persistClient(
+        persistedClientWith([currentAcceptance, aDay]),
+      );
+    }
+
+    it("should give back the cache to the account that stored it", async () => {
+      const storage = createFakeStorage();
+      await storeAs(storage, OWNER);
+
+      const restored = await createDiaryCachePersister(storage, signedInAs(OWNER)).restoreClient();
+
+      expect(restored?.clientState.queries).toHaveLength(2);
+      expect(restored?.buster).toBe("any");
+    });
+
+    it("should remove another account's cache without giving it back", async () => {
+      const storage = createFakeStorage();
+      await storeAs(storage, ANOTHER_ACCOUNT);
+
+      const restored = await createDiaryCachePersister(storage, signedInAs(OWNER)).restoreClient();
+
+      expect(restored).toBeUndefined();
+      expect(storage.items.size).toBe(0);
+    });
+
+    it("should remove the cache without giving it back when it does not know who is signed in", async () => {
+      const storage = createFakeStorage();
+      await storeAs(storage, OWNER);
+
+      const restored = await createDiaryCachePersister(storage, signedInAs(null)).restoreClient();
+
+      expect(restored).toBeUndefined();
+      expect(storage.items.size).toBe(0);
+    });
+
+    it("should store nothing when it does not know who is signed in", async () => {
+      const storage = createFakeStorage();
+
+      await storeAs(storage, null);
+
+      expect(storage.items.size).toBe(0);
+    });
+
+    it("should not give back a cache stored with no owner", async () => {
+      const storage = createFakeStorage();
+      storage.items.set(
+        "keylow.diary-cache",
+        JSON.stringify(persistedClientWith([currentAcceptance, aDay])),
+      );
+
+      await expect(
+        createDiaryCachePersister(storage, signedInAs(OWNER)).restoreClient(),
+      ).resolves.toBeUndefined();
+      expect(storage.items.size).toBe(0);
+    });
+  });
+
   it("should fail to read a damaged cache without putting any of it in the message", async () => {
     const storage = createFakeStorage();
     storage.items.set("keylow.diary-cache", '{"clientState": {"queries": [Porridge oats 187 kcal');
-    const persister = createDiaryCachePersister(storage);
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
 
     // The message is exactly the fixed one, so none of the stored text is in it.
     await expect(Promise.resolve(persister.restoreClient())).rejects.toThrow(

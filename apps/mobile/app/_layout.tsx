@@ -10,7 +10,7 @@ import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
 import { feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
-import { supabase } from "../lib/supabase";
+import { readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
 import { holdSplashScreen } from "../lib/updates";
 
@@ -33,8 +33,8 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ThemeProvider>
           <KeyLowProvider client={supabase} queryClient={queryClient}>
-            <PersistedDiaryCache>
-              <AuthGate>
+            <PersistedDiaryCache readStoredUserId={readStoredUserId}>
+              <AuthGate readStoredUserId={readStoredUserId}>
                 <ToastProvider>
                   <RootNavigator />
                 </ToastProvider>

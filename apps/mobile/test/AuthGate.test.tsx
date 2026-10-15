@@ -1,5 +1,6 @@
 import { KeyLowProvider } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
+import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
 import { act, cleanup, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
@@ -122,6 +123,62 @@ describe("AuthGate", () => {
     await renderGate();
 
     expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
+  describe("when Supabase answers with no session and an error", () => {
+    it("should keep a signed in user in the tabs when the error is a lost connection", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: new AuthRetryableFetchError("Network request failed", 0),
+      });
+      routerMock.segments = ["(tabs)", "diary"];
+
+      await renderGate();
+
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("should not undo that when Supabase then repeats the first event with no session", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: new AuthRetryableFetchError("Network request failed", 0),
+      });
+      routerMock.segments = ["(tabs)", "diary"];
+      await renderGate();
+
+      await act(() => {
+        emitAuthStateChange("INITIAL_SESSION", null);
+      });
+
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("should still sign the user out when Supabase then reports a sign out", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: new AuthRetryableFetchError("Network request failed", 0),
+      });
+      routerMock.segments = ["(tabs)", "diary"];
+      await renderGate();
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+      });
+
+      expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+    });
+
+    it("should redirect to sign-in when the error is not a lost connection", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: null },
+        error: new AuthApiError("Invalid Refresh Token", 400, "refresh_token_not_found"),
+      });
+      routerMock.segments = ["(tabs)", "diary"];
+
+      await renderGate();
+
+      expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+    });
   });
 
   it("should redirect to sign-in when the user signs out", async () => {

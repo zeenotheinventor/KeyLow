@@ -25,10 +25,10 @@ import type { PersistedDiaryCacheProps } from "./types";
  * does not clear it: offline, with an access token that has expired, Supabase reports no session
  * although the person is still signed in, and that is when the cache is wanted.
  */
-export function PersistedDiaryCache({ children }: PersistedDiaryCacheProps) {
+export function PersistedDiaryCache({ children, readStoredUserId }: PersistedDiaryCacheProps) {
   const client = useSupabase();
   const queryClient = useQueryClient();
-  const [persister] = useState(() => createDiaryCachePersister(AsyncStorage));
+  const [persister] = useState(() => createDiaryCachePersister(AsyncStorage, readStoredUserId));
   const hasSeenSignOut = useRef(false);
 
   useEffect(() => {

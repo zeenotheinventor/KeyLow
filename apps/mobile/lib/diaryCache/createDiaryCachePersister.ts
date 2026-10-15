@@ -46,12 +46,24 @@ export function parseStoredCache(stored: string): PersistedClient {
   return parsed;
 }
 
+// Joins the buster and the owner, which no buster or user id (a UUID) contains.
+const OWNER_SEPARATOR = "|";
+
 /**
  * The persister of the diary cache, over a private key-value storage. Saves are throttled by the
  * library, and an empty cache is removed rather than stored, so after a sign out the last save
- * leaves nothing behind. A stored cache is read only when its account has accepted the current Terms.
+ * leaves nothing behind.
+ *
+ * Whose cache it is travels with it, joined to the buster. A save with no one signed in stores nothing.
+ * A stored cache is read only when it was stored by the account that is signed in now, and only when
+ * that account has accepted the current Terms. Anything else (another account, no account known) is
+ * removed before it reaches memory. `readStoredUserId` must answer from the phone's own storage,
+ * so it knows the account at a start with no connection too.
  */
-export function createDiaryCachePersister(storage: AsyncStorage): Persister {
+export function createDiaryCachePersister(
+  storage: AsyncStorage,
+  readStoredUserId: () => Promise<string | null>,
+): Persister {
   const stored = createAsyncStoragePersister({
     storage: {
       getItem: (key) => storage.getItem(key),
@@ -60,8 +72,14 @@ export function createDiaryCachePersister(storage: AsyncStorage): Persister {
       removeItem: (key) => storage.removeItem(key),
     },
     key: DIARY_CACHE_STORAGE_KEY,
-    serialize: (client) =>
-      client.clientState.queries.length === 0 ? EMPTY_CACHE : JSON.stringify(client),
+    serialize: async (client) => {
+      const ownerId = await readStoredUserId();
+      if (ownerId === null || client.clientState.queries.length === 0) {
+        return EMPTY_CACHE;
+      }
+
+      return JSON.stringify({ ...client, buster: `${client.buster}${OWNER_SEPARATOR}${ownerId}` });
+    },
     deserialize: parseStoredCache,
   });
 
@@ -72,12 +90,17 @@ export function createDiaryCachePersister(storage: AsyncStorage): Persister {
       if (client === undefined) {
         return undefined;
       }
-      if (!hasCurrentTermsAcceptance(client.clientState)) {
+      const separatorIndex = client.buster.lastIndexOf(OWNER_SEPARATOR);
+      const ownerId = separatorIndex === -1 ? null : client.buster.slice(separatorIndex + 1);
+      const signedInUserId = await readStoredUserId();
+      const isOwnedBySignedInUser =
+        ownerId !== null && signedInUserId !== null && ownerId === signedInUserId;
+      if (!isOwnedBySignedInUser || !hasCurrentTermsAcceptance(client.clientState)) {
         await stored.removeClient();
         return undefined;
       }
 
-      return client;
+      return { ...client, buster: client.buster.slice(0, separatorIndex) };
     },
     removeClient: stored.removeClient,
   };

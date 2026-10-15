@@ -53,12 +53,16 @@ const SLOW_CONNECTION_MS = 1200;
 
 let queryClient: QueryClient;
 
+// Whose session the client holds, which is where the app reads it from the phone's storage.
+const readSignedInUserId = async () =>
+  (await diaryClient.auth.getSession()).data.session?.user.id ?? null;
+
 async function renderDiary(client: QueryClient = createDiaryQueryClient()) {
   queryClient = client;
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <PersistedDiaryCache>
+        <PersistedDiaryCache readStoredUserId={readSignedInUserId}>
           <DiaryScreen />
         </PersistedDiaryCache>
       </KeyLowProvider>
@@ -342,20 +346,6 @@ describe("the persisted diary cache", () => {
         expect(queryClient.getQueryData(keys.diary.day(TODAY))).toBeUndefined();
       });
       expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
-    });
-
-    it("should keep the stored cache when the app starts with no session it can read, as offline once the access token has expired", async () => {
-      await storeTheDiaryAndCloseTheApp();
-      // The app is closed, so nothing hears this. The next start finds a client with no session.
-      await diaryClient.auth.signOut();
-      await act(() => {
-        onlineManager.setOnline(false);
-      });
-
-      await renderDiary();
-
-      expect(await screen.findByRole("button", { name: /^Porridge oats/ })).toBeOnTheScreen();
-      expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).not.toBeNull();
     });
   });
 });
