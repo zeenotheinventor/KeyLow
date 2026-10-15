@@ -3,9 +3,15 @@ name: CI
 # Runs on every pull request, and on main only when a change resets the dependency or Jest caches.
 # Every merge to main is a squash of a pull request whose checks ran on its merge with main, and the
 # deploy workflows do not wait for CI on main, so a full rerun there gated nothing and cost about 40%
-# of the minutes. The run on main is kept for those few paths because Actions caches saved by a pull
-# request are visible to that pull request only. Main's runs are what refresh the pnpm store and the
-# Jest cache that every new pull request starts from.
+# of the minutes. The run on main is kept for those few paths because main's runs are what save the
+# pnpm store and the Jest cache that every new pull request starts from.
+#
+# Pull requests only restore those two caches and never save them. A cache saved by a pull request
+# is visible to that pull request only, and each lockfile change saved its own 1.2 to 1.5 GB pnpm
+# store, which pushed the repository past the 10 GB Actions cache limit. Actions then evicts the
+# least recently used caches first, which included main's own store and Jest cache. A pull request
+# that changes the lockfile restores the closest earlier store from main and downloads only what
+# is missing, which is what its first run did anyway.
 #
 # Nothing reruns on main after an ordinary merge. Two pull requests merged without rebasing can break
 # main between them, and that shows up only in the next pull request whose affected packages include
@@ -32,7 +38,7 @@ concurrency:
 permissions:
   contents: read
 
-# The job here and the one in mobile-fingerprint.yml repeat the same four setup steps, because a
+# The job here and the one in mobile-fingerprint.yml repeat the same setup steps, because a
 # composite action would need another file.
 # The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
 # when no version input is given) and the Node version comes from .nvmrc.
@@ -68,11 +74,35 @@ jobs:
         with:
           fetch-depth: 2
       - uses: pnpm/action-setup@v6
+      # No `cache: pnpm` here, because setup-node saves the store at the end of every job that missed,
+      # pull requests included. The steps below restore and save the store themselves, under the key
+      # setup-node uses (node-cache-<os>-<arch>-pnpm-<hash of the lockfile>). The key matches the
+      # store main already holds, and eas-update.yml and deploy-supabase.yml (push to main only)
+      # still use setup-node's cache under the same key. The architecture is x64 on ubuntu-latest.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - name: Find the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      # Every run restores. The exact key is the store for this lockfile. The prefix falls back to the
+      # newest earlier store, and `pnpm install` fetches whatever the lockfile has beyond it.
+      - name: Restore the pnpm store
+        id: pnpm-store-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: node-cache-${{ runner.os }}-x64-pnpm-
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Only main saves, and only when the exact key was not restored. Saving here, right after the
+      # install, keeps the store complete and out of reach of a later failing check.
+      - name: Save the pnpm store
+        if: github.event_name == 'push' && steps.pnpm-store-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
       # Turbo's --affected runs a task only in the packages the pull request changed and the packages
       # that depend on them, so a web pull request does not run the mobile Jest suites. Turbo only maps
       # files inside a package to that package. A change anywhere else (root config, the lockfile, a
@@ -161,10 +191,12 @@ jobs:
       # On a cold start the mobile food search suite alone has Jest transform about 300 React Native
       # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
       # transformer config, so restoring one from a near miss is safe: stale entries are never read.
-      # The path is the cacheDirectory in apps/mobile/jest.config.js.
+      # The path is the cacheDirectory in apps/mobile/jest.config.js. Pull requests only restore it,
+      # and the step that saves it runs on main (see the header).
       - name: Restore the mobile Jest cache
+        id: jest-cache
         if: steps.scope.outputs.mobile == 'true'
-        uses: actions/cache@v6
+        uses: actions/cache/restore@v6
         with:
           path: apps/mobile/node_modules/.cache/jest
           key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
@@ -174,6 +206,14 @@ jobs:
       # both turbo runs inside the script.
       - name: Run the local gate
         run: pnpm check:ci ${{ steps.scope.outputs.affected }}
+      # Saved after the gate, which is what fills the Jest cache. Only main saves, and only on a miss
+      # of the exact key.
+      - name: Save the mobile Jest cache
+        if: github.event_name == 'push' && steps.scope.outputs.mobile == 'true' && steps.jest-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: apps/mobile/node_modules/.cache/jest
+          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
       # The root format:check task belongs to no package, so --affected skips it. Prettier checks the
       # whole repository in seconds, so it runs here instead.
       - name: Check the formatting of the whole repository

@@ -59,10 +59,23 @@ jobs:
         with:
           fetch-depth: 2
       - uses: pnpm/action-setup@v6
+      # No `cache: pnpm` here, because setup-node saves the store at the end of every job that missed,
+      # and a pull request that changes the lockfile would save its own 1.2 to 1.5 GB copy. This
+      # workflow only restores the store, under the key setup-node uses, and never saves it. The
+      # runs of ci.yml on main save it (see the header of ci.yml). The two installs below use the
+      # restored store and fetch whatever the lockfile has beyond it.
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-          cache: pnpm
+      - name: Find the pnpm store
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+      - name: Restore the pnpm store
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: node-cache-${{ runner.os }}-x64-pnpm-
       - name: Fingerprint the merged pull request
         run: |
           pnpm install --frozen-lockfile --ignore-scripts
