@@ -50,3 +50,22 @@ CI runs the full gate on the pull request, so before a push run `pnpm check:affe
 `pnpm check:affected` (`scripts/ci-scope.mjs`) compares the working tree with `origin/main`. A change to a file outside `apps/`, `packages/` and `tools/` (Markdown aside) runs everything, and a clean branch runs nothing. CI has its own scope step in `ci.yml`.
 
 Local test runs use half the cores. The Vitest configs and `apps/mobile/jest.config.js` set `maxWorkers` only when `CI` is unset, so CI keeps each tool's default. Testing Library's `waitFor` and `findBy*` wait up to 5 s, not the 1 s default, which flaked on a busy machine.
+
+## Repository settings
+
+These are set on GitHub for `zeenotheinventor/KeyLow` and are not stored in the repo. Nothing secret is involved.
+
+- **Merging:** squash merge only. Merge commits and rebase merges are off. The squash commit takes its title and message from the pull request (`PR_TITLE`, `PR_BODY`).
+- **Auto-merge:** allowed, so a pull request can be armed and GitHub merges it when the required check passes.
+- **Head branches:** deleted automatically after a merge. Do not delete one yourself (`gh pr merge --delete-branch` or the API): a child pull request that targets a branch deleted that way is closed, not retargeted to `main`.
+- **Branch protection on `main`:** the only required status is `checks`, with `strict` off, so a branch does not have to be up to date with `main`. No required reviews. `enforce_admins` is off, so the owner can override in an emergency. Force pushes and deletions are blocked.
+- Vercel is never a required check (see "Vercel deploys `main` only").
+
+Read the settings back:
+
+```sh
+gh api repos/zeenotheinventor/KeyLow --jq '{allow_squash_merge,allow_merge_commit,allow_rebase_merge,allow_auto_merge,delete_branch_on_merge,squash_merge_commit_title,squash_merge_commit_message}'
+gh api repos/zeenotheinventor/KeyLow/branches/main/protection
+```
+
+To change them, use `gh api -X PATCH repos/zeenotheinventor/KeyLow` for the merge options and `gh api -X PUT repos/zeenotheinventor/KeyLow/branches/main/protection` for the branch protection (it replaces the whole rule, so send every field), or use Settings on GitHub. Update this section in the same change.
