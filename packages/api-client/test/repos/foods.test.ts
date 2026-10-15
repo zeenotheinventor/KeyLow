@@ -1,7 +1,7 @@
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   FoodsPartialWriteError,
@@ -9,6 +9,7 @@ import {
   getFood,
   listFoodPortions,
   replaceFoodPortions,
+  softDeleteFood,
   updateFood,
 } from "../../src/repos/foods";
 import { createTestClient } from "../createTestClient";
@@ -770,5 +771,73 @@ describe("updateFood", () => {
     );
 
     expect(failure).toHaveProperty("cause.message", "database unavailable");
+  });
+});
+
+describe("softDeleteFood", () => {
+  const NOW = new Date("2026-10-15T09:30:00.000Z");
+
+  const respondToSoftDelete = () => {
+    server.use(
+      http.patch(`${REST_URL}/foods`, async ({ request }) => {
+        await record(request);
+        return postgrestRows(request, [foodRow({ deleted_at: NOW.toISOString() })]);
+      }),
+    );
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"], now: NOW });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("should write only deleted_at, as the current time, to the food with this id", async () => {
+    respondToSoftDelete();
+
+    await softDeleteFood(createTestClient(), FOOD_ID);
+
+    const requests = requestsTo("PATCH", "foods");
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.body).toEqual({ deleted_at: "2026-10-15T09:30:00.000Z" });
+    expect(requests[0]?.url.searchParams.get("id")).toBe(`eq.${FOOD_ID}`);
+  });
+
+  it("should write nothing but the food row, so its portions stay", async () => {
+    respondToSoftDelete();
+
+    await softDeleteFood(createTestClient(), FOOD_ID);
+
+    expect(recorded.map((request) => request.url.pathname)).toEqual(["/rest/v1/foods"]);
+  });
+
+  it("should resolve to the food with deleted_at set", async () => {
+    respondToSoftDelete();
+
+    const food = await softDeleteFood(createTestClient(), FOOD_ID);
+
+    expect(food).toMatchObject({ id: FOOD_ID, deleted_at: NOW.toISOString() });
+  });
+
+  it("should throw that the food was not found or is not the caller's when no row was changed", async () => {
+    server.use(http.patch(`${REST_URL}/foods`, ({ request }) => postgrestRows(request, [])));
+
+    await expect(softDeleteFood(createTestClient(), FOOD_ID)).rejects.toThrow(
+      `The food ${FOOD_ID} was not found or cannot be deleted`,
+    );
+  });
+
+  it("should throw with the database message and keep it as the cause when the request fails", async () => {
+    server.use(
+      http.patch(`${REST_URL}/foods`, () => postgrestError(500, "XX000", "database unavailable")),
+    );
+
+    const failure = await softDeleteFood(createTestClient(), FOOD_ID).catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toHaveProperty("message", "Could not delete the food: database unavailable");
+    expect(failure).toHaveProperty("cause");
   });
 });
