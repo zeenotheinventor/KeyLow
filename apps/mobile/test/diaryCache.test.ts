@@ -25,6 +25,7 @@ describe("which queries the diary cache keeps", () => {
     ["a day of the diary", keys.diary.day("2026-10-15")],
     ["a week of the diary", keys.diary.week("2026-10-12")],
     ["the complete days of a month", keys.diary.completeDays("2026-10")],
+    ["one entry by its id", keys.diary.entry("entry-1")],
     ["the recent foods", keys.diary.recentFoods],
     ["the targets", keys.profiles.targets],
     ["the time zone the diary reads its days in", keys.profiles.timeZone],

@@ -8,6 +8,7 @@ import { AuthGate } from "../components/AuthGate";
 import { DiaryScreen } from "../components/DiaryScreen";
 import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
 import { SignOutButton } from "../components/SignOutButton";
+import { ToastProvider } from "../components/ui";
 import { parseStoredCache } from "../lib/diaryCache";
 import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
 import { createStoredUserIdReader } from "../lib/storedSession";
@@ -105,7 +106,9 @@ describe("opening the diary with no connection, from a cold start", () => {
               (await diaryClient.auth.getSession()).data.session?.user.id ?? null
             }
           >
-            <DiaryScreen />
+            <ToastProvider>
+              <DiaryScreen />
+            </ToastProvider>
           </PersistedDiaryCache>
         </KeyLowProvider>
       </ThemeProvider>,
@@ -144,7 +147,9 @@ describe("opening the diary with no connection, from a cold start", () => {
         <KeyLowProvider client={client} queryClient={queryClient}>
           <PersistedDiaryCache readStoredUserId={readStoredUserId}>
             <AuthGate readStoredUserId={readStoredUserId}>
-              <DiaryScreen />
+              <ToastProvider>
+                <DiaryScreen />
+              </ToastProvider>
               <SignOutButton />
             </AuthGate>
           </PersistedDiaryCache>

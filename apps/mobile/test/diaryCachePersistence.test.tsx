@@ -6,6 +6,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react-na
 
 import { DiaryScreen } from "../components/DiaryScreen";
 import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
+import { ToastProvider } from "../components/ui";
 import { DIARY_CACHE_BUSTER, createQueryClient, parseStoredCache } from "../lib/diaryCache";
 import { DIARY_CACHE_MAX_AGE_MS, DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
 import { ThemeProvider } from "../lib/theme";
@@ -67,7 +68,9 @@ async function renderDiary(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
         <PersistedDiaryCache readStoredUserId={readStoredUserId}>
-          <DiaryScreen />
+          <ToastProvider>
+            <DiaryScreen />
+          </ToastProvider>
         </PersistedDiaryCache>
       </KeyLowProvider>
     </ThemeProvider>,

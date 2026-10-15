@@ -10,6 +10,8 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.diary.days,
   keys.diary.weeks,
   keys.diary.completeDaysAll,
+  // One entry by its id, so an entry opened from the diary can be viewed offline too.
+  keys.diary.entries,
   keys.diary.recentFoods,
   keys.profiles.targets,
   keys.profiles.timeZone,
