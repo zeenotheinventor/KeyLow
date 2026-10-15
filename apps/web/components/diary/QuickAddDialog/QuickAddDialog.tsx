@@ -6,6 +6,7 @@ import {
   DIARY_PROBLEMS,
   MACROS_OPTIONAL,
   QUICK_ADD_DIALOG,
+  QUICK_ADD_FORM,
   SAVE_FAILED_BANNER,
   describeMacroTotal,
 } from "@keylow/core/copy";
@@ -139,7 +140,7 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
       open
       className={DIARY_DIALOG_CLASSES}
       returnFocusTo={opener}
-      title={QUICK_ADD_DIALOG.title}
+      title={QUICK_ADD_FORM.title}
       onClose={onClose}
       footer={
         <>
@@ -175,7 +176,7 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
         <div className="flex flex-col gap-1">
           <NumericInput
             ref={caloriesField}
-            label={QUICK_ADD_DIALOG.calories}
+            label={QUICK_ADD_FORM.caloriesLabel}
             unit="kcal"
             value={kcalText}
             error={kcalError ? DIARY_PROBLEMS.quickAddKcal : undefined}
@@ -217,7 +218,7 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
           />
         </div>
         <TextField
-          label={QUICK_ADD_DIALOG.label}
+          label={QUICK_ADD_FORM.labelLabel}
           autoComplete="off"
           value={label}
           onChange={(event) => {

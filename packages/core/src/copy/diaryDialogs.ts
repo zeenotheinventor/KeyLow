@@ -26,14 +26,14 @@ export const EDIT_ENTRY_DIALOG = {
   delete: "Delete",
 };
 
-/** The words of the quick add form, on the web dialog and later on the mobile screen. The macros are always protein, carbohydrate, fat. */
+/**
+ * The words of the web quick add dialog that the shared `QUICK_ADD_FORM` does not have: the macro labels, always
+ * protein, carbohydrate, fat, and the footer buttons. Its title, Calories and Label come from `QUICK_ADD_FORM`.
+ */
 export const QUICK_ADD_DIALOG = {
-  title: "Quick add",
-  calories: "Calories",
   protein: "Protein",
   carbs: "Carbohydrate",
   fat: "Fat",
-  label: "Label (optional)",
   add: "Add",
   cancel: "Cancel",
 };

@@ -44,12 +44,9 @@ describe("the edit entry dialog's wording", () => {
 describe("the quick add dialog's wording", () => {
   it("should pin the drawn words, with the macros in the order protein, carbohydrate, fat", () => {
     expect(QUICK_ADD_DIALOG).toEqual({
-      title: "Quick add",
-      calories: "Calories",
       protein: "Protein",
       carbs: "Carbohydrate",
       fat: "Fat",
-      label: "Label (optional)",
       add: "Add",
       cancel: "Cancel",
     });
