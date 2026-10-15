@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15.
 
 ## Context
 
@@ -19,7 +19,7 @@ The following, transcribed verbatim from the document's Data model (Supabase Pos
 - `food_source_data` (food_id, import_run_id, raw jsonb) and `import_runs` (source, label, file_sha256, started/finished, row_count): service role only
 - `recipes` (owner_id, name, servings > 0, yield_grams nullable, notes, computed jsonb cache, is_archived)
 - `recipe_ingredients` (recipe_id, owner_id, position, food_id, quantity, unit, portion_id, resolved_grams, snapshot jsonb); sub-recipes deferred
-- `food_log_entries` (user_id, local_date, meal_slot breakfast|lunch|dinner|snack, logged_at, item_type food|recipe|quick, food_id, recipe_id, quantity, unit, portion_id, resolved_grams, snapshot jsonb, nutrients jsonb, kcal generated, deleted_at); indexes on `(user_id, local_date)`, `(user_id, logged_at desc)`, `(user_id, food_id)`
+- `food_log_entries` (user_id, local_date, meal_slot breakfast|lunch|dinner|snack, logged_at, item_type food|recipe|quick, food_id, recipe_id, quantity, unit, portion_id, resolved_grams, snapshot jsonb, nutrients jsonb, kcal generated, deleted_at); indexes on `(user_id, local_date)`, `(user_id, logged_at desc)`, `(user_id, food_id)` (superseded in part by Amendment 5: `meal_slot` is dropped, and the `(user_id, local_date)` index is replaced by `(user_id, local_date, logged_at)`)
 - `day_logs` (user_id, local_date, is_complete, completed_at, note), PK `(user_id, local_date)`
 - `programs` (user_id, goal, rate_pct_per_week, protein_g_per_kg, fat_fraction_of_remaining, split_preset, dow_offsets_kcal int[7], goal_weight_kg, started_on, ended_on, next_checkin_date); one active per user
 - `expenditure_snapshots` (user_id, as_of_date, mu_kcal, var_kcal2, measurement jsonb, trend_weight_kg, engine_version, params jsonb); unique `(user_id, as_of_date)`
@@ -418,3 +418,57 @@ The columns are a stopgap. In M6 the adaptive engine writes live rows to `target
 ### Consequences of Amendment 4
 
 The diary migration (KEY-182) adds the five columns, their checks and the extended column grants, and matches the lists above. The targets screens on mobile and web, and the diary's progress bars and `no-target` state, read and write them through the owner's `profiles` row. Any further deviation from the frozen Decision, from Amendments 1 to 3 or from this amendment needs an Amendment 5 before the migration or code that implements it lands.
+
+## Amendment 5 (Diary: a timeline by time, no meal slots, 2026-10-15)
+
+### Status
+
+Recorded on 2026-10-15 under KEY-221. Implements Zee's ruling of 2026-10-15 on the M3 diary canvas review (KEY-178, brief 16): the diary is a timeline by time and not a set of meal slots. Food is logged at a time, the user can change that time, and there is no Breakfast, Lunch, Dinner or Snacks. Brief 17 (the hour-by-hour log) builds on it and needs no schema of its own, because a client groups a day's entries by the hour of `logged_at`. The remaining details are interpretations made for implementation. They are, in full: the rule that the database does not check `local_date` against `logged_at`, the rule that a copy keeps the wall-clock time in the profile's time zone, the rule that the `now()` default serves a new entry only when the client sends no time, the rule that times display in the current profile time zone, the `id` tie-break in the ordering, the grants on the time columns, and the handling of daylight saving changes when copying. Zee confirms them by approving the PR that carries this amendment. Unlike Amendments 1 to 4, this amendment changes the frozen Decision text, in one place only, and says so in the "Supersedes" section below and inline on that line. Amendments 1 to 4 are unchanged.
+
+### Supersedes
+
+The frozen `food_log_entries` line in the Decision changes in two ways:
+
+- `meal_slot breakfast|lunch|dinner|snack` is dropped. No column replaces it.
+- The index on `(user_id, local_date)` is replaced by an index on `(user_id, local_date, logged_at)`. The indexes on `(user_id, logged_at desc)` and `(user_id, food_id)` stay.
+
+Nothing else on that line changes. The line carries an inline note pointing here, and the rest of the Decision is untouched.
+
+No data is migrated. `food_log_entries` does not exist in any database yet, so M3's diary migration (KEY-181) creates it without `meal_slot` and with the new index. Nothing earlier in this ADR refers to meal slots, so no other text needs a note.
+
+### `food_log_entries` time columns
+
+| Column       | Definition                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `logged_at`  | `timestamptz not null default now()`. The entry's time. The user can edit it. It is the time the food was eaten, not only the time it was saved. |
+| `local_date` | `date not null`. The day the entry belongs to, in the time zone of the user's profile (`profiles.timezone`).                                     |
+
+- Adding food stamps the current time. The client sends no `logged_at` then, and the `now()` default applies. The client sends one in two cases: on a past day, where it is the current clock time on that day, and when the user adds at an hour (the hour's "+"), where it is that hour, for example 12:00. Future times on today are allowed (an interpretation).
+- When the user edits `logged_at`, the client recomputes `local_date` from the new value, so an entry moved across midnight moves to the other day. The two always change together.
+- The database does not check that `local_date` agrees with `logged_at`. The agreement depends on the profile's time zone, which the user can change, and a stored entry keeps the day it was logged on. This is an interpretation.
+- Quick entries (`item_type = 'quick'`) have a `logged_at` like any other entry.
+- The clock time and the hour the diary shows use the current `profiles.timezone`. There is no `tz` column on a log entry in v1. After the user changes time zone, an old entry's shown hour can shift, and can even fall outside its stored `local_date`. That is the accepted consequence (an interpretation).
+- `day_totals` and `day_logs` group by `local_date` and never by `logged_at`, so a day's totals do not move when a time zone changes.
+
+### Ordering and index
+
+The diary lists a day by `logged_at`, then `created_at` (the audit column from Amendment 1), then `id`. Entries logged at the same time therefore appear in the order they were saved. Rows saved in one statement share a `created_at`, because it is the transaction time, so the order among them falls to `id`, which is a random uuid: stable from one read to the next, but otherwise arbitrary. The index is on `(user_id, local_date, logged_at)`, which serves the day query. `created_at` and `id` are only the tie-breaks and are not in the index. The `id` tie-break is an interpretation.
+
+### Copy yesterday
+
+Copy yesterday copies a whole day. There is no copy of a single meal. The same rule serves the web week view's "Copy to today", which copies a past day whole.
+
+- Each copied entry keeps its clock time on the target day. The clock time is the wall-clock time in the profile's time zone, and `local_date` is the target day (an interpretation).
+- A copy goes after anything already logged at the same time, because it is saved later and so has a later `created_at`. Copies from one statement share a `created_at`, so their order among themselves follows the tie-break above.
+- A copied wall-clock time that falls in a daylight saving gap or overlap on the target day takes the platform's standard (compatible) resolution (an interpretation).
+
+### Privileges
+
+M3's diary migration (KEY-181) sets the full column grants for `food_log_entries`. This amendment fixes only the time columns among them, in the style of Amendment 3:
+
+- `logged_at` and `local_date` are in both the `insert` and the `update` column lists, because the client sets them on insert and rewrites both when the user edits an entry's time.
+- `created_at` is in neither list, as an audit column the database fills in. `id` is in neither list either.
+
+### Consequences of Amendment 5
+
+M3's diary migration (KEY-181) creates `food_log_entries` with the time columns and index above and without `meal_slot`. KEY-183 (merged in #119) already takes `loggedAt` and `localDate` in place of a slot and drops the slot schema. KEY-184 is the one follow-on: it drops the slot helper and adds time formatting and copying a whole day, and it matches this amendment. Any further deviation from the frozen Decision, from Amendments 1 to 4 or from this amendment needs an Amendment 6 before the migration or code that implements it lands.
