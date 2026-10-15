@@ -21,6 +21,10 @@ export const keys = {
    */
   diary: {
     all: ["diary"] as const,
+    /** The prefix of every `day` key, to invalidate or update all the cached days. */
+    days: ["diary", "day"] as const,
+    /** The prefix of every `week` key. */
+    weeks: ["diary", "week"] as const,
     day: (localDate: string) => ["diary", "day", localDate] as const,
     week: (weekStart: string) => ["diary", "week", weekStart] as const,
     completeDays: (month: string) => ["diary", "complete-days", month] as const,

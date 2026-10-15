@@ -9,7 +9,7 @@ import {
   listRecentFoods,
 } from "../../src/repos/diary";
 import { createTestClient } from "../createTestClient";
-import { dayLogRow, dayTotalsRow, foodEntryRow, quickEntryRow } from "../support/diary";
+import { FOOD_ID, dayLogRow, dayTotalsRow, foodEntryRow, quickEntryRow } from "../support/diary";
 import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 
 const recorded: URL[] = [];
@@ -103,6 +103,15 @@ describe("getDiaryDay", () => {
 
     await expect(getDiaryDay(createTestClient(), "2026-02-30")).rejects.toThrow(RangeError);
     expect(recorded).toEqual([]);
+  });
+
+  it("should name item_type when a row is a recipe, which the diary does not read until M4", async () => {
+    // Recipes in the diary are M4 (KEY-3 scope): until then a `recipe` row is a shape the read
+    // refuses loudly instead of dropping it, so a day never silently loses an entry.
+    const recipe = { ...foodEntryRow(), item_type: "recipe", food_id: null, recipe_id: FOOD_ID };
+    answerWith({ entries: [recipe] });
+
+    await expect(getDiaryDay(createTestClient(), "2026-10-15")).rejects.toThrow(/item_type/);
   });
 
   it("should throw an error that names the failed read when the database refuses", async () => {
@@ -315,4 +324,22 @@ describe("listRecentFoods", () => {
     expect(params?.get("order")).toBe("logged_at.desc,created_at.desc,id.desc");
     expect(params?.get("select")).toContain("foods!inner");
   });
+
+  it("should look at the newest 200 entries, whatever the limit", async () => {
+    answerWith({});
+
+    await listRecentFoods(createTestClient(), { limit: 3 });
+
+    expect(requestsTo("food_log_entries")[0]?.searchParams.get("limit")).toBe("200");
+  });
+
+  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+    "should throw without asking when the limit is %s",
+    async (limit) => {
+      answerWith({});
+
+      await expect(listRecentFoods(createTestClient(), { limit })).rejects.toThrow(RangeError);
+      expect(recorded).toEqual([]);
+    },
+  );
 });

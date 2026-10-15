@@ -106,4 +106,17 @@ describe("useDiaryDay", () => {
     });
     expect(result.current.error).toHaveProperty("cause.message", "unavailable");
   });
+
+  it("should not retry a date that is not a calendar date, since asking again cannot change the answer", async () => {
+    answerDay();
+    const { wrapper } = createWrapper(undefined, { retryDelayMs: 20 });
+
+    const { result } = renderHook(() => useDiaryDay("2026-02-30"), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(result.current.failureCount).toBe(1);
+  });
 });

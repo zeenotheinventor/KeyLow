@@ -48,12 +48,28 @@ Anything below the provider can call `useSupabase()` for the client and TanStack
 | `useDiaryDay(localDate, { enabled })`  | One diary day: its live entries as a flat list ordered by `logged_at`, `created_at`, then `id` (group with `groupEntriesByHour` from core), its `day_logs` row and its `day_totals` row. Key `keys.diary.day(localDate)`. |
 | `useDiaryWeek(weekStart, { enabled })` | Seven days, Monday to Sunday, each with its totals and day log, or null. No day log means not complete. `weekStart` must be a Monday. Key `keys.diary.week(weekStart)`.                                                   |
 | `useCompleteDays(month, { enabled })`  | The dates in a month (`YYYY-MM`) marked complete, from `day_logs` only. Key `keys.diary.completeDays(month)`.                                                                                                             |
-| `useRecentFoods({ enabled })`          | The newest distinct foods logged, each with the snapshot of its last entry. Key `keys.diary.recentFoods`.                                                                                                                 |
+| `useRecentFoods({ enabled })`          | The newest distinct foods logged, each with the snapshot of its last entry. Key `keys.diary.recentFoods`. It looks at the newest 200 live food entries only, so it can hold fewer foods than its limit (20).              |
 | `useDebouncedValue(v, ms)`             | The debounce `useFoodSearch` uses, exported so a screen does not need its own copy.                                                                                                                                       |
 
 ### Diary reads and the terms gate
 
 Every diary read takes `enabled`, and `enabled: false` makes no request. The mobile app stays mounted under the terms cover, so its screens pass `enabled: !needsTermsAcceptance(...)`. All four keys sit under `keys.diary.all`, so one invalidation refreshes a diary after a write. Rows are parsed with the core diary schemas, and a row that does not fit fails the read with an error that names the row id and the field paths only, never the values (they are health data).
+
+### Diary writes
+
+Food is logged at a time, not in a meal: no mutation takes or returns a meal slot. Writes need a connection (there is no offline queue). Entries are built with the core builders and `recomputeEntry` / `refreshEntryFromFood`, so the hooks only move data.
+
+| Hook                | Takes and returns                                                                                                                                                                                                                                                             |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useLogFood()`      | `{ food, quantity, unit, portion?, loggedAt, localDate }`, where `loggedAt` (an ISO string) and `localDate` come from `defaultLoggedAt` in core. Resolves to the stored entry.                                                                                                |
+| `useQuickAdd()`     | `{ kcal, protein_g?, fat_g?, carbs_g?, label?, loggedAt, localDate }`. Resolves to the stored entry.                                                                                                                                                                          |
+| `useUpdateEntry()`  | `{ entry, amount?, useCurrentFoodData?, time? }`, written in one request. `amount` recomputes from the entry's own snapshot, `useCurrentFoodData` is "Update to current food data" (an unfiltered `getFood`), `time` is `{ loggedAt, timeZone }` and recomputes `local_date`. |
+| `useDeleteEntry()`  | The entry. Soft deletes it (`deleted_at`).                                                                                                                                                                                                                                    |
+| `useRestoreEntry()` | The entry. Clears `deleted_at` (the 5 s Undo).                                                                                                                                                                                                                                |
+
+For the one-tap plus, call `mutateAsync` of `useLogFood` once per tap: calls do not wait for each other and each resolves to the entry it stored, so the toast's Undo passes that entry to `useDeleteEntry` and removes only it. (`mutate` callbacks fire for the latest call only.)
+
+Cache: a stored or edited entry is put into its cached day in time order at once, a delete and a restore update the day before the request answers (and undo that if it fails), and then every cached day, every cached week and the recent foods are marked stale and refetched if on screen. The complete days are not touched. Day totals are not adjusted by hand: they come from the database on the refetch.
 
 ### The debounce signal
 

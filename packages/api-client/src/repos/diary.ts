@@ -1,31 +1,14 @@
 import { foodSnapshotSchema, weekOf } from "@keylow/core/diary";
 import { z } from "zod";
 
+import { ENTRY_COLUMNS, dateOfRow, idOfRow, parseRow, repoError } from "./diaryRows";
 import { dayLogSchema, dayTotalsSchema, logEntrySchema } from "./diarySchemas";
 
 import type { DayLog, DayTotals, LogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";
 import type { FoodSnapshot } from "@keylow/core/diary";
-import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-// These are health data. Nothing here puts a value of an entry, a note or a total in an error: a
-// failed read names the action, a row id and the field paths, never what the row held.
-
-const ENTRY_COLUMNS = [
-  "id",
-  "local_date",
-  "logged_at",
-  "created_at",
-  "item_type",
-  "food_id",
-  "quantity",
-  "unit",
-  "portion_id",
-  "resolved_grams",
-  "snapshot",
-  "nutrients",
-  "kcal",
-].join(",");
 const DAY_LOG_COLUMNS = Object.keys(dayLogSchema.shape).join(",");
 const DAY_TOTALS_COLUMNS = Object.keys(dayTotalsSchema.shape).join(",");
 
@@ -36,43 +19,6 @@ const DEFAULT_RECENT_FOODS_LIMIT = 20;
 
 const LOCAL_DATE = z.iso.date();
 const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
-
-const repoError = (action: string, cause: PostgrestError) =>
-  new Error(`Could not ${action}: ${cause.message}`, { cause });
-
-/**
- * Parses what the database returned, and on failure reports where the row is wrong. The message
- * has the row id and the failing field paths only, and the Zod error is not attached as the cause,
- * because its issues can quote the value that failed.
- */
-function parseRow<Schema extends z.ZodType>(
-  schema: Schema,
-  row: unknown,
-  action: string,
-  idOf: (row: unknown) => string,
-): z.output<Schema> {
-  const result = schema.safeParse(row);
-  if (result.success) {
-    return result.data;
-  }
-  const paths = result.error.issues.map((issue) => issue.path.join(".") || "(row)");
-  throw new Error(
-    `Could not ${action}: row ${idOf(row)} has an unexpected shape at ${paths.join(", ")}`,
-  );
-}
-
-const idOfRow = (row: unknown): string =>
-  typeof row === "object" && row !== null && "id" in row && typeof row.id === "string"
-    ? row.id
-    : "(unknown)";
-
-const dateOfRow = (row: unknown): string =>
-  typeof row === "object" &&
-  row !== null &&
-  "local_date" in row &&
-  typeof row.local_date === "string"
-    ? row.local_date
-    : "(unknown)";
 
 function assertLocalDate(localDate: string): void {
   if (!LOCAL_DATE.safeParse(localDate).success) {
@@ -266,12 +212,21 @@ const recentEntrySchema = z.object({
 /**
  * The foods the user logged most recently, each once, newest first, with the snapshot of the entry
  * that logged it last ("last" by `logged_at`, the time eaten). Quick adds, deleted entries and
- * foods that have been deleted are left out. Only the newest 200 entries are looked at.
+ * foods that have been deleted are left out. `limit` (default 20) is a positive whole number.
+ *
+ * Only the newest 200 live food entries are looked at, whatever `limit` is, so a food that was last
+ * logged before the newest 200 entries is not "recent" and the list can hold fewer foods than
+ * `limit`. Deleting the newest entry of a food makes the list fall back to that food's earlier
+ * entry, and to nothing when it has none inside the window.
  */
 export async function listRecentFoods(
   client: SupabaseClient<Database>,
   { limit = DEFAULT_RECENT_FOODS_LIMIT }: { limit?: number } = {},
 ): Promise<RecentFood[]> {
+  if (!Number.isInteger(limit) || limit < 1) {
+    throw new RangeError("The recent foods limit must be a positive whole number");
+  }
+
   const { data, error } = await client
     .from("food_log_entries")
     .select("id, food_id, logged_at, portion_id, snapshot, foods!inner(deleted_at)")

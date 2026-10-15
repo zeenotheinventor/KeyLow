@@ -3,6 +3,14 @@ export { getDiaryDay, getDiaryWeek, listCompleteDays, listRecentFoods } from "./
 export type { DiaryDay, DiaryWeekDay, RecentFood } from "./diary";
 export type { DayLog, DayTotals, LogEntry } from "./diarySchemas";
 export {
+  logFood,
+  logQuickEntry,
+  restoreLogEntry,
+  softDeleteLogEntry,
+  updateLogEntry,
+} from "./diaryWrites";
+export type { EntryTimeChange, EntryUpdate, LogFoodInput, LogQuickEntryInput } from "./diaryWrites";
+export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,
   createFood,
