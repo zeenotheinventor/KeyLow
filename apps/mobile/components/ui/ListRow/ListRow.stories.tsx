@@ -77,6 +77,12 @@ function AppearanceChoice() {
 // The More screen's Appearance setting: a row that goes nowhere, with its control under the title. The card
 // is 116 points tall, with 12 points of padding around the 44 point control.
 // Its props are the row with a control, which takes no press, so it has a story type of its own.
+// The control is drawn by `render`, because Storybook walks every arg to infer its type, and a React element in the args fails the whole story index on a device.
 export const WithControl: StoryObj<Meta<ListRowWithControlProps>> = {
-  args: { icon: "SunMoon", title: "Appearance", children: <AppearanceChoice /> },
+  args: { icon: "SunMoon", title: "Appearance", children: null },
+  render: (args) => (
+    <ListRow {...args}>
+      <AppearanceChoice />
+    </ListRow>
+  ),
 };

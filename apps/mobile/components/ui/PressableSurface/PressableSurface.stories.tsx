@@ -17,7 +17,7 @@ const meta = {
       </View>
     ),
   ],
-  // The contents are drawn by `render`, because a React element in the args is not serializable and Storybook warns of it.
+  // The contents are drawn by `render`, because Storybook walks every arg to infer its type, and a React element in the args fails the whole story index on a device.
   render: (args) => (
     <PressableSurface {...args}>
       <Text>Savoury Stock Cube</Text>

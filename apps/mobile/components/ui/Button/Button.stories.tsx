@@ -44,13 +44,12 @@ export const WithIcon: Story = {
 };
 
 // A mark that is not one of the icon map's, such as the Google "G" of the sign in boards: 12 between it and the label.
+// The mark is drawn by `render`, because Storybook walks every arg to infer its type, and a React element in the args fails the whole story index on a device.
 export const WithLeadingMark: Story = {
-  args: {
-    variant: "secondary",
-    size: "lg",
-    children: "Continue with Google",
-    leading: <View aria-hidden className="h-5 w-5 rounded-pill bg-accent" />,
-  },
+  args: { variant: "secondary", size: "lg", children: "Continue with Google" },
+  render: (args) => (
+    <Button {...args} leading={<View aria-hidden className="h-5 w-5 rounded-pill bg-accent" />} />
+  ),
 };
 
 export const FullWidth: Story = {
