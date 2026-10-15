@@ -1,27 +1,15 @@
 import type { NutrientFieldName } from "./nutrientFields";
-import type { CustomFoodInput, NutrientBasis } from "@keylow/core/schemas";
+import type { FoodFormFields, PortionFormFields } from "@keylow/core/foods";
+import type { CustomFoodInput } from "@keylow/core/schemas";
 
 /** One portion as the form holds it. The amount stays text until the form is validated. */
-export type PortionFormValues = {
-  label: string;
-  amount: string;
-  isDefault: boolean;
-};
+export type PortionFormValues = PortionFormFields;
 
 /**
- * Everything the form edits, as the text the user typed. The names of the nutrient fields match the
- * keys of `customFoodInputSchema` so that a validation issue maps straight back to its field.
+ * Everything the form edits, as the text the user typed: core's form fields, plus what the form
+ * carries through without showing.
  */
-export type FoodFormValues = {
-  name: string;
-  brand: string;
-  barcode: string;
-  basis: NutrientBasis;
-  kcal: string;
-  protein_g: string;
-  fat_g: string;
-  carbs_g: string;
-  fibre_g: string;
+export type FoodFormValues = FoodFormFields & {
   /** Not shown or edited here, carried through so that saving an edit does not clear it. */
   densityGramsPerMillilitre?: number;
   portions: PortionFormValues[];
