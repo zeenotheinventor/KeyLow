@@ -21,7 +21,10 @@ const knob =
 /**
  * Marks a diary day complete so the energy engine can use it. Completing is a moment: an accent
  * slash crosses the row and the label punches in. Unmarking is quiet. Both movements stop under
- * prefers-reduced-motion.
+ * prefers-reduced-motion. The moment belongs to a press from the off state, so a day that turns
+ * complete by itself, such as the diary stepping to a complete day, plays nothing. The diary keys
+ * the toggle by day (`key={localDate}`). A press the parent has not answered stays armed until
+ * `complete` changes or the toggle is keyed anew, so a parent may answer after the server replies.
  */
 export function DayCompleteToggle({
   complete = false,
@@ -29,14 +32,21 @@ export function DayCompleteToggle({
   className,
   ...buttonProps
 }: DayCompleteToggleProps) {
-  const [slashes, setSlashes] = useState(0);
+  const [moments, setMoments] = useState(0);
   const [wasComplete, setWasComplete] = useState(complete);
+  const [isAwaitingComplete, setIsAwaitingComplete] = useState(false);
+  const [isMomentLive, setIsMomentLive] = useState(false);
 
-  // A new slash for each time the day becomes complete, not for the first render or for unmarking.
+  // A new moment when the day becomes complete after a press from the off state. Any change of
+  // `complete` uses up the press and ends the moment before it, so a change nobody pressed for plays
+  // nothing. The moment is live for one change, not for as long as a counter is above zero.
   if (wasComplete !== complete) {
+    const isMoment = complete && isAwaitingComplete;
     setWasComplete(complete);
-    if (complete) {
-      setSlashes((count) => count + 1);
+    setIsAwaitingComplete(false);
+    setIsMomentLive(isMoment);
+    if (isMoment) {
+      setMoments((count) => count + 1);
     }
   }
 
@@ -46,15 +56,18 @@ export function DayCompleteToggle({
       role="switch"
       aria-checked={complete}
       className={cn(frame, className)}
-      onClick={() => onChange?.(!complete)}
+      onClick={() => {
+        setIsAwaitingComplete(!complete);
+        onChange?.(!complete);
+      }}
       {...buttonProps}
     >
       <span className="flex flex-1 flex-col">
         <span
-          key={slashes}
+          key={moments}
           className={cn(
             "text-body-strong",
-            slashes > 0 && complete && "animate-punch motion-reduce:animate-none",
+            isMomentLive && "animate-punch motion-reduce:animate-none",
           )}
         >
           {complete ? DAY_COMPLETE_TOGGLE.complete : DAY_COMPLETE_TOGGLE.markComplete}
@@ -71,9 +84,9 @@ export function DayCompleteToggle({
           />
         </span>
       </span>
-      {slashes > 0 && complete && (
+      {isMomentLive && (
         <span
-          key={`slash-${slashes}`}
+          key={`slash-${moments}`}
           aria-hidden
           data-testid="day-complete-slash"
           className="pointer-events-none absolute -bottom-[20%] -top-[20%] left-0 w-[16%] animate-slash bg-accent opacity-0 motion-reduce:animate-none"

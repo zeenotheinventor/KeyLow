@@ -1,0 +1,19 @@
+import type { ReactNode } from "react";
+
+export type HourRowProps = {
+  /** The hour of the day, 0 to 23. `onAdd` is called with it. */
+  hour: number;
+  /** The hour's label as core writes it, such as "08:00". It is the chip's text and part of the names. */
+  label: string;
+  /** How many foods are logged in the hour. It names the group ("08:00, 2 foods") and decides whether the card is drawn. */
+  foodCount: number;
+  /** The current hour: its chip carries an accent dot named "Current hour". Defaults to false. */
+  isNow?: boolean;
+  /** Called with the hour when the plus is pressed. */
+  onAdd: (hour: number) => void;
+  /**
+   * The hour's foods, which the card holds under the chip: at the wide width a `FoodTable` of
+   * table rows, at the narrow width a list of stacked rows. Not drawn when `foodCount` is 0.
+   */
+  children?: ReactNode;
+};
