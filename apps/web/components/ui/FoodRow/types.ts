@@ -27,5 +27,59 @@ export type FoodRowContent = {
 };
 
 /** A row either goes to the food's page or runs an action, such as adding the product. */
-export type FoodRowProps = FoodRowContent &
-  ({ href: string; onClick?: never } | { onClick: () => void; href?: never });
+export type FoodListRowProps = FoodRowContent &
+  ({ href: string; onClick?: never } | { onClick: () => void; href?: never }) & {
+    layout?: undefined;
+  };
+
+/** The food log's two rows: `stacked` is a logged food in the diary, `search` is a result in the add dialog. */
+export type FoodRowLayout = "stacked" | "search";
+
+/**
+ * A food in the food log. The stats line replaces the big energy numeral on the right, and its
+ * macros are always protein, carbohydrate, fat. `stacked` is a logged food: the name over the time
+ * and amount, the stats line and a chevron. `search` is a result: the food icon tile, the serving,
+ * the stats line and a trailing add button. Leave `layout` out for the M2 row.
+ */
+export type FoodLogRowProps = {
+  layout: FoodRowLayout;
+  nameSegments: readonly FoodNameSegment[];
+  brand?: string | undefined;
+  /** The energy, already formatted, in kcal. Leave it out when the food has none. */
+  energy?: string | undefined;
+  macros?: FoodRowMacros | undefined;
+  /** The line under the name: the time and amount ("08:05 · 50 g") or the serving ("1 breast (150 g)"). It is one line. */
+  caption?: string | undefined;
+  /** The food is missing a macro. The stats line says "Needs review" in place of the macros, and the add button gives way to a chevron. */
+  needsReview?: boolean | undefined;
+  /** Dims the row and stops it, and its add button, responding. */
+  disabled?: boolean | undefined;
+  className?: string | undefined;
+  /** Opens the food: the edit dialog for a `stacked` row, the portion picker for a `search` row. */
+  onClick: () => void;
+  /** Logs the serving at once. Gives a `search` row its add button. Pressing it does not press the row. */
+  onAdd?: (() => void) | undefined;
+  /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. */
+  addDisabled?: boolean | undefined;
+};
+
+/**
+ * A logged food at the wide width, one row of the diary's table: the name and the time and amount, then
+ * protein, carbs, fat and energy in columns, and Edit and Delete buttons that show on hover and on focus
+ * within the row. Put it inside an element with `role="table"`, under a `FoodTableHeader`.
+ */
+export type FoodTableRowProps = {
+  layout: "table";
+  nameSegments: readonly FoodNameSegment[];
+  /** The line under the name: the time and amount ("08:05 · 50 g"). It is one line. */
+  caption?: string | undefined;
+  /** The energy, already formatted, in kcal. */
+  energy: string;
+  /** The macros as `formatGrams` writes them. The table adds the unit. */
+  macros: FoodRowMacros;
+  onEdit: () => void;
+  onDelete: () => void;
+  className?: string | undefined;
+};
+
+export type FoodRowProps = FoodListRowProps | FoodLogRowProps | FoodTableRowProps;

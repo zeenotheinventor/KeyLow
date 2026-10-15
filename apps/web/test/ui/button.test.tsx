@@ -118,6 +118,68 @@ describe("Button", () => {
     });
   });
 
+  describe("ring", () => {
+    it("should draw a bordered circle without a fill inside its own 44 px box", async () => {
+      render(
+        <Button variant="ring" iconOnly aria-label="Add">
+          +
+        </Button>,
+      );
+      const { className } = screen.getByRole("button", { name: "Add" });
+      const css = await compileUtilities(className);
+
+      expect(css).toMatch(/\.h-control-md\s*\{\s*height: 44px/);
+      expect(css).toMatch(/\.w-control-md\s*\{\s*width: 44px/);
+      expect(css).toMatch(/\.after\\:inset-1\\.5::after\s*\{[^}]*inset: 0\.375rem/);
+      expect(css).toMatch(/\.after\\:border::after\s*\{[^}]*border-width: 1px/);
+      expect(css).toMatch(/\.after\\:rounded-pill::after/);
+      expect(css).toMatch(/\.border-0\s*\{\s*border-width: 0px/);
+      expect(className).toContain("bg-transparent");
+      expect(className).toContain("text-text-secondary");
+    });
+
+    it.each([
+      ["sm", true],
+      ["sm", false],
+      ["md", true],
+      ["md", false],
+      ["lg", true],
+      ["lg", false],
+    ] as const)(
+      "should stay a 44 px square in size %s with iconOnly %s",
+      async (size, iconOnly) => {
+        render(
+          <Button variant="ring" size={size} iconOnly={iconOnly} aria-label="Add">
+            +
+          </Button>,
+        );
+        const { className } = screen.getByRole("button", { name: "Add" });
+        const classes = className.split(" ");
+        const css = await compileUtilities(className);
+
+        expect(classes).toContain("h-control-md");
+        expect(classes).toContain("w-control-md");
+        expect(classes).not.toContain("h-control-sm");
+        expect(classes).not.toContain("h-control-lg");
+        expect(classes).not.toContain("w-control-sm");
+        expect(classes).not.toContain("w-control-lg");
+        expect(css).toMatch(/\.px-0\s*\{/);
+      },
+    );
+
+    it("should tint the circle and not the whole box when hovered", () => {
+      render(
+        <Button variant="ring" iconOnly aria-label="Add">
+          +
+        </Button>,
+      );
+      const { className } = screen.getByRole("button", { name: "Add" });
+
+      expect(className).toContain("before:inset-1.5");
+      expect(className).not.toContain("before:inset-0");
+    });
+  });
+
   describe("buttonVariants", () => {
     it("should fill the primary variant with the accent", () => {
       expect(buttonVariants({ variant: "primary" })).toContain("bg-accent");

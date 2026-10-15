@@ -14,6 +14,8 @@ import * as dayStepperStories from "@/components/ui/DayStepper/DayStepper.storie
 import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
 import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
 import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
+import * as foodTableStories from "@/components/ui/FoodTable/FoodTable.stories";
+import * as foodTableHeaderStories from "@/components/ui/FoodTableHeader/FoodTableHeader.stories";
 import * as groupedListStories from "@/components/ui/GroupedList/GroupedList.stories";
 import * as incompleteDaysChipStories from "@/components/ui/IncompleteDaysChip/IncompleteDaysChip.stories";
 import * as inputStories from "@/components/ui/Input/Input.stories";
@@ -36,6 +38,8 @@ const storyModules: Record<string, object> = {
   "EmptyState/EmptyState.stories.tsx": emptyStateStories,
   "ErrorState/ErrorState.stories.tsx": errorStateStories,
   "FoodRow/FoodRow.stories.tsx": foodRowStories,
+  "FoodTable/FoodTable.stories.tsx": foodTableStories,
+  "FoodTableHeader/FoodTableHeader.stories.tsx": foodTableHeaderStories,
   "GroupedList/GroupedList.stories.tsx": groupedListStories,
   "KiLoMark/KiLoMark.stories.tsx": kiLoMarkStories,
   "ListRow/ListRow.stories.tsx": listRowStories,

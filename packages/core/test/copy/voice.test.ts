@@ -11,6 +11,8 @@ const sampleCalls: Record<string, () => string[]> = {
     copy.describeAddFood("Banana", "1 medium (100 g)"),
     copy.describeAddFood("Banana"),
   ],
+  describeEditFood: () => [copy.describeEditFood("Porridge oats")],
+  describeDeleteFood: () => [copy.describeDeleteFood("Porridge oats")],
   describeFoodRowStats: () => [
     copy.describeFoodRowStats({ energy: "222", protein: "48", carbs: "0", fat: "3.3" }),
     copy.describeFoodRowStats({ energy: "130" }),

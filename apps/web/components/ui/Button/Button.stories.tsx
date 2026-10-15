@@ -80,6 +80,17 @@ export const IconOnly: Story = {
   },
 };
 
+// The quiet add button of a food row: a 20 px plus in a 32 px circle with a 1 px border, inside a
+// 44 px box that is the button itself.
+export const Ring: Story = {
+  args: {
+    variant: "ring",
+    iconOnly: true,
+    "aria-label": "Add Chicken breast, grilled, 1 breast (150 g)",
+    children: <Plus aria-hidden />,
+  },
+};
+
 // A story cannot hold a real :hover or :active, so these two apply the classes the hover and press
 // states apply, on every variant at once. The unit of truth is still the component's own classes.
 export const Hover: Story = {

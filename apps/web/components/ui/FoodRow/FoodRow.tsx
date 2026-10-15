@@ -2,7 +2,11 @@ import { iconStroke } from "@keylow/tokens";
 import { ChevronRight, LoaderCircle, Utensils } from "lucide-react";
 import Link from "next/link";
 
-import type { FoodRowMacros, FoodRowProps } from "./types";
+import { FoodLogRow } from "./FoodLogRow";
+import { FoodTableRow } from "./FoodTableRow";
+import { interactiveClasses } from "./rowStates";
+
+import type { FoodListRowProps, FoodRowMacros, FoodRowProps } from "./types";
 
 import { cn } from "@/lib/utils";
 
@@ -11,9 +15,6 @@ import { cn } from "@/lib/utils";
 // inside the row because the list clips its corners.
 const rowClasses =
   "flex min-h-[60px] w-full items-center gap-3 px-3 py-2 text-left text-text-primary no-underline outline-none transition-[transform,background-color] duration-instant ease-spring focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring";
-
-const interactiveClasses =
-  "cursor-pointer hover:bg-hover-overlay active:scale-[0.985] active:bg-press-overlay motion-reduce:active:scale-100";
 
 const macroDots = {
   protein: "bg-protein",
@@ -44,8 +45,21 @@ function Macros({ macros, basis }: { macros: FoodRowMacros; basis?: string | und
   );
 }
 
-/** A food on the search and Your foods lists: its name with the matched words in bold, then its macros and energy. Put it inside a `GroupedList`. */
-export function FoodRow({
+/**
+ * A food on the search and Your foods lists: its name with the matched words in bold, then its macros and
+ * energy. Put it inside a `GroupedList`. Give it a `layout` for the food log's rows instead.
+ */
+export function FoodRow(props: FoodRowProps) {
+  if (props.layout === "table") {
+    return <FoodTableRow {...props} />;
+  }
+  if (props.layout !== undefined) {
+    return <FoodLogRow {...props} />;
+  }
+  return <FoodListRow {...props} />;
+}
+
+function FoodListRow({
   nameSegments,
   brand,
   energy,
@@ -57,7 +71,7 @@ export function FoodRow({
   href,
   onClick,
   className,
-}: FoodRowProps) {
+}: FoodListRowProps) {
   const busy = busyLabel !== undefined;
   const unavailable = disabled || busy;
   const classes = cn(

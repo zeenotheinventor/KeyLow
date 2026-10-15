@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { FOOD_ROW, describeAddFood, describeFoodRowStats } from "../../src/copy";
+import {
+  FOOD_ROW,
+  describeAddFood,
+  describeDeleteFood,
+  describeEditFood,
+  describeFoodRowStats,
+} from "../../src/copy";
 
 describe("the food row copy", () => {
   it("should name the review flag, the swipe action and the energy unit as the boards do", () => {
@@ -8,6 +14,17 @@ describe("the food row copy", () => {
       needsReview: "Needs review",
       deleteAction: "Delete",
       energyUnit: "kcal",
+      actionsColumn: "Actions",
+      foodColumn: "Food",
+      gramUnit: "g",
+      quickAdd: "Quick add",
+    });
+  });
+
+  describe("describeEditFood and describeDeleteFood", () => {
+    it("should name the food the table row's Edit and Delete buttons act on", () => {
+      expect(describeEditFood("Porridge oats")).toBe("Edit Porridge oats");
+      expect(describeDeleteFood("Porridge oats")).toBe("Delete Porridge oats");
     });
   });
 

@@ -13,6 +13,11 @@ export const buttonVariants = cva(
         secondary: "border-border bg-surface-raised text-text-primary",
         destructive: "border-transparent bg-danger text-text-on-status",
         ghost: "border-transparent bg-transparent text-text-primary",
+        // The quiet add button of a food row. The button is the 44 px hit area and draws nothing
+        // itself. It has no border, so its pseudo elements measure from its 44 px edge: the 32 px
+        // circle with its 1 px border is one, and the hover and press tint fills the same circle.
+        // It is always the 44 px square, whatever the size or iconOnly, so it cannot be drawn as a wide pill.
+        ring: "rounded-pill border-0 bg-transparent text-text-secondary before:inset-1.5 before:rounded-pill after:pointer-events-none after:absolute after:inset-1.5 after:rounded-pill after:border after:border-border",
         // Names the screens use today. They resolve to the design's variants until the screen
         // tickets move over.
         default: "border-transparent bg-accent text-accent-foreground",
@@ -33,6 +38,8 @@ export const buttonVariants = cva(
       { iconOnly: true, size: "sm", className: "w-control-sm" },
       { iconOnly: true, size: ["md", "default"], className: "w-control-md" },
       { iconOnly: true, size: "lg", className: "w-control-lg" },
+      // Last, so the ring's 44 px square beats the icon only widths above.
+      { variant: "ring", className: "h-control-md w-control-md px-0" },
     ],
     defaultVariants: {
       variant: "primary",
