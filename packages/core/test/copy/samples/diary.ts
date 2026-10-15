@@ -30,6 +30,7 @@ export const samples: Record<string, () => string[]> = {
       portion: { label: "1 pot" },
     }),
   ],
+  describeMacroTargetField: () => [copy.describeMacroTargetField("Protein")],
   describeEntryCaption: () => [copy.describeEntryCaption("08:05", "50 g")],
   describeWeekStripDay: () => [
     copy.describeWeekStripDay("2026-10-15", { isToday: true, isComplete: false }),

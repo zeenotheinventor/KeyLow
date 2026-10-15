@@ -1,9 +1,18 @@
+import { KeyLowProvider } from "@keylow/api-client";
 import { render, screen, userEvent, within } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import MoreRoute from "../app/(tabs)/more";
 import { ThemeProvider, useTheme } from "../lib/theme";
 import { deviceScheme } from "./support/deviceScheme";
+import {
+  createDiaryQueryClient,
+  diaryBackend,
+  diaryClient,
+  noTargets,
+  requestsTo,
+  resetDiaryBackend,
+} from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
 
@@ -61,8 +70,10 @@ function drawingsIn(row: Instance) {
 async function renderMore() {
   await render(
     <ThemeProvider>
-      <MoreRoute />
-      <ThemeProbe />
+      <KeyLowProvider client={diaryClient} queryClient={createDiaryQueryClient()}>
+        <MoreRoute />
+        <ThemeProbe />
+      </KeyLowProvider>
     </ThemeProvider>,
   );
   await screen.findByRole("heading", { name: "More" });
@@ -72,19 +83,20 @@ describe("the More screen", () => {
   beforeEach(() => {
     resetRouterMock();
     resetSupabaseMock();
+    resetDiaryBackend();
     mockStorageItems.clear();
     mockSetItem.mockClear();
     deviceScheme.current = "light";
   });
 
   describe("its sections", () => {
-    it("should be headed More, over Food, Body, Settings and Account in that order", async () => {
+    it("should be headed More, over Food, Nutrition, Body, Settings and Account in that order", async () => {
       await renderMore();
 
       const headings = screen.getAllByRole("heading");
 
-      expect(headings).toHaveLength(5);
-      ["More", "Food", "Body", "Settings", "Account"].forEach((name, index) => {
+      expect(headings).toHaveLength(6);
+      ["More", "Food", "Nutrition", "Body", "Settings", "Account"].forEach((name, index) => {
         expect(headings[index]).toHaveTextContent(name);
       });
     });
@@ -118,6 +130,44 @@ describe("the More screen", () => {
       await user.press(screen.getByRole("button", { name: /^Your foods/ }));
 
       expect(routerMock.push).toHaveBeenCalledWith("/foods?scope=own");
+    });
+  });
+
+  describe("Targets", () => {
+    it("should be an enabled row in Nutrition that shows the calorie target once it is read", async () => {
+      await renderMore();
+
+      const row = await screen.findByRole("button", { name: "Targets, Set by you, 2,200 kcal" });
+
+      expect(within(screen.getByLabelText("Nutrition")).getByRole("button")).toBe(row);
+      expect(row).toBeEnabled();
+    });
+
+    it("should show no value when no target is set", async () => {
+      diaryBackend.targets = noTargets;
+      await renderMore();
+
+      expect(await screen.findByRole("button", { name: "Targets, Set by you" })).toBeEnabled();
+    });
+
+    it("should open the Targets screen when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(await screen.findByRole("button", { name: /^Targets/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/targets");
+    });
+
+    it("should read no targets while the terms are not accepted", async () => {
+      diaryBackend.terms = { terms_accepted_at: null, terms_version: null };
+      await renderMore();
+
+      expect(await screen.findByRole("button", { name: "Targets, Set by you" })).toBeEnabled();
+      expect(
+        diaryBackend.requests.filter((request) => !request.search.includes("terms_accepted_at")),
+      ).toEqual([]);
+      expect(requestsTo("profiles")).toBe(1);
     });
   });
 

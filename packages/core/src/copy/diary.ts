@@ -67,6 +67,7 @@ export const DIARY_PROBLEMS = {
   quantity: "Enter an amount above 0.",
   quickAddKcal: "Enter calories.",
   targetKcal: `Enter a target between ${TARGET_KCAL_RANGE}.`,
+  targetKcalRequired: "Enter a calorie target.",
 };
 
 export const TARGET_KCAL_HELPER = `Between ${TARGET_KCAL_RANGE}`;
@@ -74,6 +75,21 @@ export const MACROS_OPTIONAL = "Macros are optional";
 
 export const describeMacroTotal = (kcal: number): string =>
   `Macros add up to ${formatCalories(kcal)} kcal`;
+
+/** The Targets screen: its title, the back button, the fields and Save, as the `targets` boards draw them. */
+export const TARGETS_SCREEN = {
+  title: "Targets",
+  back: "Back",
+  calories: "Calories",
+  protein: "Protein",
+  carbs: "Carbohydrate",
+  fat: "Fat",
+  save: "Save",
+};
+
+/** The name of a macro field on the Targets screen: "Protein target in grams". */
+export const describeMacroTargetField = (macroName: string): string =>
+  `${macroName} target in grams`;
 
 export const TARGETS_NOTE =
   "You set these yourself for now. Later, Ki-Lo will suggest targets from your weight trend.";

@@ -26,6 +26,10 @@ export const diaryBackend: {
   failingTables: Set<string>;
   /** Never answers the reads of this table, as a slow connection does. */
   hungTables: Set<string>;
+  /** Fails the read of the targets alone, so the terms acceptance still loads. */
+  targetsReadFails: boolean;
+  /** The bodies of the updates made to the profile. */
+  saves: unknown[];
   /** Every request made, as the table and its query string. */
   requests: { table: string; search: string }[];
 } = {
@@ -36,6 +40,8 @@ export const diaryBackend: {
   dayLogs: [],
   failingTables: new Set(),
   hungTables: new Set(),
+  targetsReadFails: false,
+  saves: [],
   requests: [],
 };
 
@@ -55,6 +61,8 @@ export function resetDiaryBackend(): void {
   diaryBackend.dayLogs = [];
   diaryBackend.failingTables.clear();
   diaryBackend.hungTables.clear();
+  diaryBackend.saves = [];
+  diaryBackend.targetsReadFails = false;
   diaryBackend.requests = [];
 }
 
@@ -257,6 +265,30 @@ function inDateFilter(search: URLSearchParams, localDate: unknown): boolean {
   });
 }
 
+export const SIGNED_IN_USER_ID = "11111111-1111-4111-8111-111111111111";
+
+// The update of the targets: the columns that were sent replace the stored ones, and the row is returned.
+function saveTargets(body: unknown): Response {
+  const saved: unknown = typeof body === "string" ? JSON.parse(body) : {};
+  diaryBackend.saves.push(saved);
+  if (typeof saved === "object" && saved !== null) {
+    diaryBackend.targets = {
+      target_kcal: numberOrNull(saved, "target_kcal"),
+      target_protein_g: numberOrNull(saved, "target_protein_g"),
+      target_carbs_g: numberOrNull(saved, "target_carbs_g"),
+      target_fat_g: numberOrNull(saved, "target_fat_g"),
+    };
+  }
+
+  return jsonResponse([diaryBackend.targets]);
+}
+
+function numberOrNull(source: object, key: string): number | null {
+  const value: unknown = Object.getOwnPropertyDescriptor(source, key)?.value;
+
+  return typeof value === "number" ? value : null;
+}
+
 function profileRow(select: string): Row {
   if (select.includes("target_kcal")) {
     return diaryBackend.targets;
@@ -267,7 +299,7 @@ function profileRow(select: string): Row {
   return diaryBackend.terms;
 }
 
-function fakeFetch(input: string | URL | Request): Promise<Response> {
+async function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
   const table = pathname.split("/").pop() ?? "";
@@ -284,7 +316,22 @@ function fakeFetch(input: string | URL | Request): Promise<Response> {
   }
 
   switch (table) {
+    case "user":
+      return Promise.resolve(
+        jsonResponse({ id: SIGNED_IN_USER_ID, aud: "authenticated", role: "authenticated" }),
+      );
     case "profiles":
+      if (init?.method === "PATCH") {
+        return Promise.resolve(saveTargets(init.body));
+      }
+      if (diaryBackend.targetsReadFails && searchParams.get("select")?.includes("target_kcal")) {
+        return Promise.resolve(
+          jsonResponse(
+            { code: "XX000", message: "raw database text", details: null, hint: null },
+            500,
+          ),
+        );
+      }
       return Promise.resolve(jsonResponse([profileRow(searchParams.get("select") ?? "")]));
     case "food_log_entries":
       return Promise.resolve(
@@ -328,3 +375,23 @@ export function createDiaryQueryClient(): QueryClient {
 /** The number of requests made to a table. */
 export const requestsTo = (table: string): number =>
   diaryBackend.requests.filter((request) => request.table === table).length;
+
+const encodeSegment = (value: object) =>
+  btoa(JSON.stringify(value)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+
+/** Gives the client a session without a real sign in. The token is unsigned: the fake user endpoint vouches for it. */
+export async function signInDiaryClient(): Promise<void> {
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60;
+  const accessToken = [
+    encodeSegment({ alg: "HS256", typ: "JWT" }),
+    encodeSegment({
+      sub: SIGNED_IN_USER_ID,
+      role: "authenticated",
+      aud: "authenticated",
+      exp: expiresAt,
+    }),
+    encodeSegment({ note: "unsigned" }),
+  ].join(".");
+
+  await diaryClient.auth.setSession({ access_token: accessToken, refresh_token: "refresh" });
+}

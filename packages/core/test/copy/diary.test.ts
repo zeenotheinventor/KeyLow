@@ -25,6 +25,7 @@ import {
   describeCopiedEntriesToToday,
   describeCopiedFromYesterday,
   describeEntryCaption,
+  describeMacroTargetField,
   describeHourChip,
   describeLoggedAmount,
   describeHourGroup,
@@ -121,6 +122,7 @@ describe("the field errors and helpers", () => {
       quantity: "Enter an amount above 0.",
       quickAddKcal: "Enter calories.",
       targetKcal: "Enter a target between 800 and 6,000 kcal.",
+      targetKcalRequired: "Enter a calorie target.",
     });
   });
 
@@ -403,5 +405,16 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
 
   it("should join the time and the amount with a middle dot", () => {
     expect(describeEntryCaption("08:05", "50 g")).toBe("08:05 · 50 g");
+  });
+});
+
+describe("the Targets screen's copy", () => {
+  it("should name a macro field by the macro and its unit", () => {
+    expect(describeMacroTargetField("Protein")).toBe("Protein target in grams");
+  });
+
+  it("should ask for calories when they are blank, and for a range when they are out of it", () => {
+    expect(DIARY_PROBLEMS.targetKcalRequired).toBe("Enter a calorie target.");
+    expect(DIARY_PROBLEMS.targetKcal).toBe("Enter a target between 800 and 6,000 kcal.");
   });
 });

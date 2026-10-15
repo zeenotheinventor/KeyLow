@@ -1,10 +1,10 @@
-import { useProfileTimeZone, useTermsAcceptance } from "@keylow/api-client";
-import { DIARY_LOAD_FAILED, DIARY_MORE_LABEL, TERMS_VERSION } from "@keylow/core/copy";
-import { needsTermsAcceptance } from "@keylow/core/terms";
+import { useProfileTimeZone } from "@keylow/api-client";
+import { DIARY_LOAD_FAILED, DIARY_MORE_LABEL } from "@keylow/core/copy";
 import { useEffect } from "react";
 
 import { DiaryDay } from "./DiaryDay";
 import { DiaryFrame } from "./DiaryFrame";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { setViewedDay } from "../../lib/viewedDay";
 import { ErrorState, Skeleton } from "../ui";
 
@@ -15,8 +15,7 @@ import { ErrorState, Skeleton } from "../ui";
  * The profile's time zone is read first, because every day and hour of the diary is read in it.
  */
 export function DiaryScreen() {
-  const acceptance = useTermsAcceptance();
-  const isReadEnabled = !needsTermsAcceptance(acceptance.data ?? null, TERMS_VERSION);
+  const isReadEnabled = useReadsEnabled();
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
 
   // The tab bar's plus reads the day on view, so it is cleared when the diary goes.
