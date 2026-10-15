@@ -8,10 +8,13 @@ import * as bannerStories from "@/components/ui/Banner/Banner.stories";
 import * as buttonStories from "@/components/ui/Button/Button.stories";
 import * as cardStories from "@/components/ui/Card/Card.stories";
 import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
+import * as dayCompleteToggleStories from "@/components/ui/DayCompleteToggle/DayCompleteToggle.stories";
+import * as dayStepperStories from "@/components/ui/DayStepper/DayStepper.stories";
 import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
 import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
 import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
 import * as groupedListStories from "@/components/ui/GroupedList/GroupedList.stories";
+import * as incompleteDaysChipStories from "@/components/ui/IncompleteDaysChip/IncompleteDaysChip.stories";
 import * as inputStories from "@/components/ui/Input/Input.stories";
 import * as kiLoMarkStories from "@/components/ui/KiLoMark/KiLoMark.stories";
 import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
@@ -24,6 +27,9 @@ import { storyManifest } from "@/components/ui/storyManifest";
 
 const storyModules: Record<string, object> = {
   "Banner/Banner.stories.tsx": bannerStories,
+  "DayCompleteToggle/DayCompleteToggle.stories.tsx": dayCompleteToggleStories,
+  "DayStepper/DayStepper.stories.tsx": dayStepperStories,
+  "IncompleteDaysChip/IncompleteDaysChip.stories.tsx": incompleteDaysChipStories,
   "Checkbox/Checkbox.stories.tsx": checkboxStories,
   "EmptyState/EmptyState.stories.tsx": emptyStateStories,
   "ErrorState/ErrorState.stories.tsx": errorStateStories,

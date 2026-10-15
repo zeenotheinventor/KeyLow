@@ -63,6 +63,11 @@ const sampleCalls: Record<string, () => string[]> = {
   describePortionLabelProblem: () => [1, 2].map(copy.describePortionLabelProblem),
   describePortionAmountProblem: () => [1, 2].map(copy.describePortionAmountProblem),
   describePortionLabelAndAmountProblem: () => [1, 2].map(copy.describePortionLabelAndAmountProblem),
+  describeDatePickerButton: () => [
+    copy.describeDatePickerButton("Today", "15 October"),
+    copy.describeDatePickerButton("Mon 12 Oct"),
+  ],
+  describeIncompleteDays: () => [0, 1, 2].map(copy.describeIncompleteDays),
 };
 
 const collectStrings = (value: unknown): string[] => {

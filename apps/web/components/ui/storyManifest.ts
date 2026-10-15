@@ -35,6 +35,26 @@ export const storyManifest = {
     "AsLink",
   ],
   "Card/Card.stories.tsx": ["Surface", "Raised", "WithTitle", "Unpadded"],
+  "DayStepper/DayStepper.stories.tsx": [
+    "OnToday",
+    "OnYesterday",
+    "OnTomorrow",
+    "OnAnOlderDay",
+    "Stepping",
+  ],
+  "DayCompleteToggle/DayCompleteToggle.stories.tsx": [
+    "Off",
+    "On",
+    "Disabled",
+    "DisabledOn",
+    "Interactive",
+  ],
+  "IncompleteDaysChip/IncompleteDaysChip.stories.tsx": [
+    "AllComplete",
+    "OneIncomplete",
+    "TwoIncomplete",
+    "Pressable",
+  ],
   "Input/Input.stories.tsx": [
     "Default",
     "Filled",

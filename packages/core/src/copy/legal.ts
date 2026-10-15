@@ -1,28 +1,15 @@
+import { MONTH_NAMES_LONG } from "./diaryDay";
+
 /**
  * The version of the Terms of Use and the Privacy Policy that people accept at sign-up. It is the date
  * the current wording took effect. A later version asks people to accept again.
  */
 export const TERMS_VERSION = "2026-10-15";
 
-const MONTH_NAMES = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
-
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {
   const [year, month, day] = versionDate.split("-").map(Number);
-  return `Last updated ${day} ${MONTH_NAMES[(month ?? 1) - 1]} ${year}`;
+  return `Last updated ${day} ${MONTH_NAMES_LONG[(month ?? 1) - 1]} ${year}`;
 }
 
 const LAST_UPDATED = describeLastUpdated(TERMS_VERSION);
