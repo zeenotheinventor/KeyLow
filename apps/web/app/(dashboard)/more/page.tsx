@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { signOut } from "../actions";
 import { PageFrame } from "../PageFrame";
 import { AppearanceSetting } from "./AppearanceSetting";
+import { TargetsRow } from "./TargetsRow";
 
 import { GroupedList } from "@/components/ui/GroupedList";
 import { ListRow } from "@/components/ui/ListRow";
@@ -27,6 +28,9 @@ export default async function MorePage() {
             subtitle="Foods you created or copied"
             href="/foods?scope=own"
           />
+        </GroupedList>
+        <GroupedList title="Nutrition" headerSize="compact">
+          <TargetsRow />
         </GroupedList>
         <GroupedList title="Body" headerSize="compact">
           {/* Weight is not built yet. A disabled row has no destination and does nothing. */}

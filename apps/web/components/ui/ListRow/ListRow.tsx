@@ -19,6 +19,7 @@ export function ListRow({
   icon: Icon,
   title,
   subtitle,
+  value,
   href,
   onClick,
   submit,
@@ -44,6 +45,9 @@ export function ListRow({
         <span className="text-body-strong">{title}</span>
         {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}
       </span>
+      {value !== undefined && (
+        <span className="shrink-0 text-body tabular-nums text-text-secondary">{value}</span>
+      )}
       {interactive && chevron && (
         <ChevronRight
           aria-hidden

@@ -25,6 +25,19 @@ describe("ListRow", () => {
     expect(item.textContent).toContain("Coming soon");
   });
 
+  it("should show a value after the title, before the chevron", () => {
+    renderWithRouter(
+      <ul>
+        <ListRow title="Targets" subtitle="Set by you" value="2,200 kcal" href="/more/targets" />
+      </ul>,
+    );
+
+    const link = screen.getByRole("link", { name: /Targets/ });
+
+    expect(link.textContent).toBe("TargetsSet by you2,200 kcal");
+    expect(screen.getByText("2,200 kcal").className).toContain("tabular-nums");
+  });
+
   it("should be plain text with no control when it goes nowhere", () => {
     renderInList(<ListRow title="Expenditure" />);
 

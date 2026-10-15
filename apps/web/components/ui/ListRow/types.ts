@@ -12,6 +12,8 @@ type ListRowContent = {
   icon?: ListRowIcon;
   title: string;
   subtitle?: string | undefined;
+  /** A short value that sits after the title, before the chevron, such as the calorie target on the Targets row. */
+  value?: string | undefined;
   /** The chevron marks a row that goes somewhere. Leave it off for an action such as signing out. */
   chevron?: boolean;
   disabled?: boolean;

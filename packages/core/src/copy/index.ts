@@ -16,3 +16,4 @@ export * from "./search";
 export * from "./shell";
 export * from "./datePicker";
 export * from "./foodLog";
+export * from "./targetsPage";

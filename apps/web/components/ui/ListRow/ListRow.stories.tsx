@@ -28,6 +28,13 @@ export const Default: Story = {
   render: () => <ListRow title="Your foods" subtitle="Foods you created or copied" href="/foods" />,
 };
 
+// A value sits before the chevron, as the Targets row on More shows the calorie target.
+export const WithValue: Story = {
+  render: () => (
+    <ListRow title="Targets" subtitle="Set by you" value="2,200 kcal" href="/more/targets" />
+  ),
+};
+
 // A row that runs an action, such as signing out, has no chevron.
 export const Action: Story = {
   render: () => (
