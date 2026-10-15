@@ -13,7 +13,7 @@ const canvasJson = {
     "WebShellScreen.dc.html",
   ],
   boards: {
-    "Main.dc.html": board(0, 0),
+    "Main.dc.html": { ...board(0, 0), title: "food-search · idle" },
     "food-search.loading.dc.html": board(900, 0),
     "FoodSearchScreen.dc.html": board(0, 900, 390, 844),
     "web.login-default.dc.html": board(0, 3000, 3430, 812),
@@ -39,14 +39,38 @@ describe("parseCanvas", () => {
 });
 
 describe("listBoards", () => {
-  const boards = listBoards(parseCanvas(canvasJson));
+  const boards = listBoards(parseCanvas(canvasJson), "source");
 
-  it("should name the Main board food-search idle", () => {
+  it("should name the Main board after the screen and state in its canvas title", () => {
     expect(boards[0]).toMatchObject({
       slug: "food-search",
       state: "idle",
       fileName: "Main.dc.html",
     });
+  });
+
+  it("should name the Main board of another canvas from its own title", () => {
+    const otherCanvas = parseCanvas({
+      ...canvasJson,
+      boards: { ...canvasJson.boards, "Main.dc.html": { ...board(0, 0), title: "diary · today" } },
+    });
+    expect(listBoards(otherCanvas, "source-m3")[0]).toMatchObject({
+      slug: "diary",
+      state: "today",
+    });
+  });
+
+  it("should refuse a Main board whose canvas title names no screen and state", () => {
+    const untitled = parseCanvas({
+      ...canvasJson,
+      boards: { ...canvasJson.boards, "Main.dc.html": { ...board(0, 0), title: "Main" } },
+    });
+    expect(() => listBoards(untitled, "source")).toThrow(/Main\.dc\.html/);
+  });
+
+  it("should record the source folder each board was read from", () => {
+    expect(boards.every((entry) => entry.sourceFolder === "source")).toBe(true);
+    expect(listBoards(parseCanvas(canvasJson), "source-m3")[0]?.sourceFolder).toBe("source-m3");
   });
 
   it("should split a file name into screen slug and state", () => {
@@ -72,13 +96,16 @@ describe("listBoards", () => {
 
 describe("listScreens", () => {
   it("should list each slug once in canvas order", () => {
-    expect(listScreens(listBoards(parseCanvas(canvasJson)))).toEqual(["food-search", "web"]);
+    expect(listScreens(listBoards(parseCanvas(canvasJson), "source"))).toEqual([
+      "food-search",
+      "web",
+    ]);
   });
 });
 
 describe("sectionsOf", () => {
   const canvas = parseCanvas(canvasJson);
-  const sections = sectionsOf(canvas, listBoards(canvas));
+  const sections = sectionsOf(canvas, listBoards(canvas, "source"));
 
   it("should take the heading of each screen from its title note", () => {
     expect(sections.get("food-search")?.heading).toBe("Find food sheet");

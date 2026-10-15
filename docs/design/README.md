@@ -1,15 +1,15 @@
 # Ki-Lo screen designs
 
-The approved designs for the M2 screens, kept in source control so that any engineer can read them without an account on the design tool and without running anything deployed. Nothing here is hosted. There is no gallery site and no preview deployment, and none is planned. The files exist to help engineers (and Zee) look at a design before it is built.
+The designs for the M2 screens and the M3 diary screens, kept in source control so that any engineer can read them without an account on the design tool and without running anything deployed. Nothing here is hosted. There is no gallery site and no preview deployment, and none is planned. The files exist to help engineers (and Zee) look at a design before it is built.
 
 ## Where the designs come from
 
-The designs were drawn on a design canvas called "Ki-Lo M2 screens", from the briefs and rulings in the design conformance plan. Zee reviewed and approved the boards on 2026-10-13. This folder holds that approved canvas, exported:
+The designs were drawn on a design canvas called "Ki-Lo M2 screens", from the briefs and rulings in the design conformance plan. Zee reviewed and approved the boards on 2026-10-13. The M3 diary screens were drawn on a second canvas, "Ki-Lo M3 diary screens", and are exported beside M2 without changing it. The M3 boards are not yet approved by Zee (KEY-178), so they are not the source of truth until it closes. This folder holds both canvases, exported:
 
-- `source/` is the canvas source, copied byte for byte: the boards, `canvas.json`, the brand marks and the canvas's own copy of the token stylesheet. Nothing in it is edited here.
+- `source/` is the M2 canvas source, copied byte for byte: the boards, `canvas.json`, the brand marks and the canvas's own copy of the token stylesheet. `source-m3/` is the same for the M3 canvas "Ki-Lo M3 diary screens" (it also holds `tokens/kilo-m3-canvas.css`). Nothing in either is edited here.
 - `<screen>/` holds one PNG and one standalone HTML page per board, and a README with the decisions behind the screen.
 - `design-system/` is a verbatim snapshot of the Ki-Lo design system the boards are built from.
-- `tokens/kilo-proposals.css` holds the few canvas-only proposals that are not in the design system yet. Every HTML page links it after the token stylesheet in `packages/tokens`.
+- `tokens/kilo-proposals.css` holds the few canvas-only proposals that are not in the design system yet. Every HTML page links it after the token stylesheet in `packages/tokens`. `tokens/kilo-m3-canvas.css` holds the type styles and repeated surfaces the M3 boards use. Only the M3 pages link it, after the proposals.
 
 The boards are the source of truth for layout and behaviour in M2. If code and a board disagree, the board wins unless Zee has ruled otherwise. A change to a board goes back to Zee before it is built.
 
@@ -30,9 +30,9 @@ A page loads its two stylesheets from this clone, by relative path, so it opens 
 Every board is the whole canvas board, with all of its frames side by side on a grey background:
 
 - **Mobile boards** are 820 by 844. The frames are 390 by 844 points, dark on the left and light on the right.
-- **Web boards** are 3430 by 812. The frames are 1280 dark, 1280 light, 375 dark and 375 light, from left to right.
+- **Web boards** are 3430 wide. M2 web boards are 812 high, and M3 web boards are 760 or 940 high. The frames are 1280 dark, 1280 light, 375 dark and 375 light, from left to right.
 
-The PNGs are rendered at device pixel ratio 2, so a mobile board is 1640 by 1688 and a web board is 6860 by 1624.
+The PNGs are rendered at device pixel ratio 2, so a mobile board is 1640 by 1688 and a web board is 6860 wide.
 
 ## Naming
 
@@ -49,8 +49,17 @@ A board is `<screen>/<state>`, taken from the canvas file name. `food-search.res
 | [`web`](web/README.md)                   | Web login and app shell.                                                      |
 | [`web-foods`](web-foods/README.md)       | Web Foods page: search, barcode lookup, your foods.                           |
 | [`web-food`](web-food/README.md)         | Web food detail and food form.                                                |
+| [`diary`](diary/README.md)               | M3 mobile diary day. The board `today` is the canvas file `Main.dc.html`.     |
+| [`copy`](copy/README.md)                 | M3 mobile copy from yesterday: copied, nothing to copy, error.                |
+| [`log-search`](log-search/README.md)     | M3 mobile food search in log mode.                                            |
+| [`portion`](portion/README.md)           | M3 mobile portion picker.                                                     |
+| [`entry`](entry/README.md)               | M3 mobile edit of a diary entry.                                              |
+| [`quick-add`](quick-add/README.md)       | M3 mobile quick add.                                                          |
+| [`targets`](targets/README.md)           | M3 mobile manual target.                                                      |
+| [`web-diary`](web-diary/README.md)       | M3 web diary: day, week and the add, edit and quick add dialogs.              |
+| [`web-targets`](web-targets/README.md)   | M3 web targets.                                                               |
 
-There are 115 boards. A state with `proposal` in its name (`history-proposal`, `quantity-proposal-m3`, `label-scan-proposal-m3`) is a labelled proposal for M3 and is not built in M2. The component files (`*Screen.dc.html`) hold the markup for a screen's states and are not boards. They stay in `source/project/`.
+There are 179 boards: 115 from the M2 canvas and 64 from the M3 canvas. A state with `proposal` in its name (`history-proposal`, `quantity-proposal-m3`, `label-scan-proposal-m3`) is a labelled proposal for M3 and is not built in M2. The component files (`*Screen.dc.html`) hold the markup for a screen's states and are not boards. They stay in the `project/` folder of their source folder.
 
 ## The token chain
 
@@ -73,7 +82,7 @@ The exports are generated by [`tools/design-export`](../../tools/design-export/R
 
 1. Copy the updated canvas source folder somewhere on your machine. It holds `project/`, `tokens/` and `brand/`.
 2. Get the canvas runtime file (`dc-runtime.js`). It is third-party code used only to render. Never copy it into this repository.
-3. Run the export, passing the three paths (the README of the tool has the full command and the one-off browser install).
+3. Run the export, passing the canvas folder, its blob map and the runtime path. M3 also takes `--source-folder source-m3`. The README of the tool has the full commands and the one-off browser install.
 4. Run the verify script, which opens every page from disk and compares it with its PNG.
 5. Write the decisions behind any new or changed board into its screen README, below the generated list. The export rewrites only the part between the markers and leaves your text alone.
 6. Commit the result.

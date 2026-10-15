@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>web-diary, loading</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c95588d44fb532c449b40cf4b94c3f5c">
+<link rel="stylesheet" href="/_blob/2327a85940832eff6a39c0c61e55fbca">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 3430px; height: 940px; display: flex; align-items: flex-start; gap: 40px; background: #565C66; font-family: 'Geist', system-ui, sans-serif">
+<dc-import name="WebDiaryScreen" screen-state="loading" theme="dark" width="1280" hint-size="1280px,940px"></dc-import>
+<dc-import name="WebDiaryScreen" screen-state="loading" theme="light" width="1280" hint-size="1280px,940px"></dc-import>
+<dc-import name="WebDiaryScreen" screen-state="loading" theme="dark" width="375" hint-size="375px,940px"></dc-import>
+<dc-import name="WebDiaryScreen" screen-state="loading" theme="light" width="375" hint-size="375px,940px"></dc-import>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3430,"height":940}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

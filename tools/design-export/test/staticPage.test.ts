@@ -22,6 +22,7 @@ describe("buildStaticPage", () => {
     title: "Find food, idle",
     tokensHref: "../../../packages/tokens/css/kilo-tokens.css",
     proposalsHref: "../tokens/kilo-proposals.css",
+    canvasStylesheetHrefs: ["../tokens/kilo-m3-canvas.css"],
     fontsHref: "https://fonts.googleapis.com/css2?family=Geist&display=swap",
     styles: ["body{margin:0}"],
     boardHtml: '<div data-theme="dark">board</div>',
@@ -38,6 +39,26 @@ describe("buildStaticPage", () => {
     expect(page).toContain(`${tokensLink}\n${proposalsLink}\n`);
   });
 
+  it("should link the stylesheets of its canvas right after the proposals", () => {
+    expect(page).toContain(
+      '<link rel="stylesheet" href="../tokens/kilo-proposals.css">\n<link rel="stylesheet" href="../tokens/kilo-m3-canvas.css">\n<link rel="stylesheet" href="https://fonts',
+    );
+  });
+
+  it("should link no canvas stylesheet for a canvas that has none", () => {
+    const plain = buildStaticPage({
+      lang: "en-GB",
+      title: "t",
+      tokensHref: "t.css",
+      proposalsHref: "p.css",
+      canvasStylesheetHrefs: [],
+      fontsHref: "f",
+      styles: [],
+      boardHtml: "",
+    });
+    expect(plain).toContain('href="p.css">\n<link rel="stylesheet" href="f">');
+  });
+
   it("should link Google Fonts and carry the board styles", () => {
     expect(page).toContain(
       'href="https://fonts.googleapis.com/css2?family=Geist&amp;display=swap"',
@@ -51,6 +72,7 @@ describe("buildStaticPage", () => {
       title: "a < b & c",
       tokensHref: "t.css",
       proposalsHref: "p.css",
+      canvasStylesheetHrefs: [],
       fontsHref: "f",
       styles: [],
       boardHtml: "",

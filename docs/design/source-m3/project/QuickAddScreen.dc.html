@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Quick add</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c95588d44fb532c449b40cf4b94c3f5c">
+<link rel="stylesheet" href="/_blob/2327a85940832eff6a39c0c61e55fbca">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="SheetHeader + SlotPill" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-2); padding: 56px var(--space-4) var(--space-3)">
+<button class="kl-ib" type="button" aria-label="{{closeLabel}}"><sc-if value="{{edit}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></sc-if><sc-if value="{{create}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></sc-if></button>
+<h1 class="t-h2" style="flex: 1; margin: 0; text-align: center">{{title}}</h1>
+<button data-kilo="SlotPill" type="button" aria-label="Meal: Lunch, change" class="t-ls" style="height: 44px; display: inline-flex; align-items: center; gap: 4px; padding: 0 var(--space-2) 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); font-family: var(--font-sans)">Lunch<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button>
+</header>
+
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) var(--space-4) var(--space-4)">
+
+<sc-if value="{{saveError}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner error, sentence only" role="alert" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--danger-muted); border: 1px solid var(--danger); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--danger)"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+<span class="t-body" style="flex: 1">Not saved. Check your connection and try again.</span>
+</div>
+</sc-if>
+
+<div class="kl-field">
+<label class="t-ls" for="qa-kcal">Calories</label>
+<div data-kilo="NumericInput" class="{{kcalClass}}">
+<input id="qa-kcal" inputmode="numeric" value="{{v.kcal}}" onChange="{{noop}}" aria-invalid="{{kcalInvalid}}" aria-describedby="qa-kcal-help" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)">
+<span class="t-body c-mut">kcal</span>
+</div>
+<sc-if value="{{kcalError}}" hint-placeholder-val="{{ false }}"><span id="qa-kcal-help" class="t-cap c-danger" role="alert">Enter calories.</span></sc-if>
+<sc-if value="{{helperPlain}}" hint-placeholder-val="{{ true }}"><span id="qa-kcal-help" class="t-cap tab c-mut">{{helper}}</span></sc-if>
+<sc-if value="{{helperWarn}}" hint-placeholder-val="{{ false }}"><span id="qa-kcal-help" class="t-cap tab c-warn" style="display: inline-flex; align-items: center; gap: 4px"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--warning)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>{{helper}}</span></sc-if>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2)">
+<sc-for list="{{macros}}" as="m" hint-placeholder-count="3">
+<div class="kl-field">
+<label class="t-ls">{{m.label}}</label>
+<div data-kilo="NumericInput" class="kl-input">
+<input inputmode="decimal" value="{{m.value}}" onChange="{{noop}}" aria-label="{{m.label}} in grams" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)">
+<span class="t-body c-mut">g</span>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div class="kl-field">
+<label class="t-ls" for="qa-label">Label (optional)</label>
+<div data-kilo="Input" class="kl-input"><input id="qa-label" value="{{v.label}}" placeholder="For example, meal deal crisps" onChange="{{noop}}" class="t-body" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; font-family: var(--font-sans); color: var(--text-primary)"></div>
+</div>
+
+<p class="t-cap c-mut" style="margin: 0">Quick adds count towards the day's totals and show as "Quick add" in the diary.</p>
+</div>
+
+<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4) var(--space-4) 42px; background: var(--surface-sheet); border-top: 1px solid var(--border)">
+<sc-if value="{{create}}" hint-placeholder-val="{{ true }}"><button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg); opacity: {{saveOpacity}}">Add to Lunch</button></sc-if>
+<sc-if value="{{edit}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg)">Save</button>
+<button data-kilo="Button ghost destructive (proposed)" type="button" class="kl-btn kl-ghost-danger" style="width: 100%"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>Delete</button>
+</sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["empty","filled","macros-mismatch","error","save-error","edit"],"default":"filled"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'filled';
+    const S = {
+      'empty': { kcal: '', p: '', f: '', c: '', label: '', focus: true },
+      'filled': { kcal: '130', p: '2', f: '7', c: '15', label: 'Meal deal crisps' },
+      'macros-mismatch': { kcal: '130', p: '20', f: '10', c: '15', label: 'Meal deal crisps' },
+      'error': { kcal: '', p: '2', f: '7', c: '15', label: '', error: true },
+      'save-error': { kcal: '130', p: '2', f: '7', c: '15', label: 'Meal deal crisps', saveError: true },
+      'edit': { kcal: '130', p: '2', f: '7', c: '15', label: 'Meal deal crisps', edit: true }
+    };
+    const s = S[st] || S.filled;
+    const n = (x) => parseFloat(x) || 0;
+    const mk = n(s.p) * 4 + n(s.c) * 4 + n(s.f) * 9;
+    const kcal = n(s.kcal);
+    const anyMacro = !!(s.p || s.f || s.c);
+    const mismatch = anyMacro && kcal > 0 && Math.abs(mk - kcal) > kcal * 0.25;
+    const helper = anyMacro ? 'Macros add up to ' + Math.round(mk).toLocaleString('en-GB') + ' kcal' : 'Macros are optional';
+    return {
+      theme,
+      title: s.edit ? 'Edit quick add' : 'Quick add',
+      closeLabel: s.edit ? 'Back' : 'Close',
+      edit: !!s.edit,
+      create: !s.edit,
+      saveError: !!s.saveError,
+      v: { kcal: s.kcal, label: s.label },
+      kcalClass: s.error ? 'kl-input kl-input-error' : s.focus ? 'kl-input kl-input-focus' : 'kl-input',
+      kcalInvalid: s.error ? 'true' : 'false',
+      kcalError: !!s.error,
+      helperPlain: !s.error && !mismatch,
+      helperWarn: !s.error && mismatch,
+      helper,
+      macros: [{ label: 'Protein', value: s.p }, { label: 'Fat', value: s.f }, { label: 'Carbohydrate', value: s.c }],
+      saveOpacity: kcal > 0 ? '1' : '0.4',
+      noop: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>

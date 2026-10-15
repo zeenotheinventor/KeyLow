@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Portion picker and entry edit</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c95588d44fb532c449b40cf4b94c3f5c">
+<link rel="stylesheet" href="/_blob/2327a85940832eff6a39c0c61e55fbca">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="SheetHeader + SlotPill" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-2); padding: 56px var(--space-4) var(--space-3)">
+<button class="kl-ib" type="button" aria-label="Back"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+<h1 class="t-h2" style="flex: 1; min-width: 0; margin: 0; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{heading}}</h1>
+<button data-kilo="SlotPill" type="button" aria-label="Meal: {{slot}}, change" class="t-ls" style="height: 44px; display: inline-flex; align-items: center; gap: 4px; padding: 0 var(--space-2) 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-pill); background: var(--surface-raised); color: var(--text-primary); font-family: var(--font-sans)">{{slot}}<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button>
+</header>
+
+<div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4) var(--space-4)">
+
+<sc-if value="{{suspect}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner review" role="status" style="display: flex; gap: var(--space-3); padding: var(--space-3); background: var(--warning-muted); border: 1px solid var(--warning); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--warning)"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Needs review</span><span class="t-body c-sec">Carbohydrate is not given for this food. Copy it to your foods and fill the gap before you log it.</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{changed}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner info + action" role="status" style="display: flex; gap: var(--space-3); padding: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-secondary)"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">This food has changed since you logged it.</span><span class="t-body c-sec">Your entry keeps the values you saved.</span><a href="#update" class="t-bs c-ink" style="text-decoration: underline">Update to current food data</a></div>
+</div>
+</sc-if>
+
+<sc-if value="{{saveError}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner error, sentence only" role="alert" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--danger-muted); border: 1px solid var(--danger); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--danger)"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+<span class="t-body" style="flex: 1">Not saved. Check your connection and try again.</span>
+</div>
+</sc-if>
+
+<sc-if value="{{metaLine}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; gap: var(--space-2)">
+<span data-kilo="Badge source" class="t-cap" style="display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-secondary)">{{sourceLabel}}</span>
+<span class="t-cap tab c-mut">{{metaText}}</span>
+</div>
+</sc-if>
+
+<sc-if value="{{deleted}}" hint-placeholder-val="{{ false }}">
+<p class="t-cap c-sec" style="margin: 0">This food has been deleted. Your entry keeps its saved values.</p>
+</sc-if>
+
+<section data-kilo="FoodHeroCard (for this amount)" class="kl-card" aria-label="Nutrition for this amount" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4)">
+<div style="display: flex; align-items: baseline; justify-content: space-between">
+<span style="display: flex; align-items: baseline; gap: 6px"><span class="t-dn">{{hero.kcal}}</span><span class="t-cap c-sec">kcal</span></span>
+<span class="t-cap tab c-mut">{{hero.basis}}</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2)">
+<sc-for list="{{hero.tiles}}" as="t" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 4px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-medium); background: var(--surface-raised)">
+<sc-if value="{{t.hasShare}}" hint-placeholder-val="{{ true }}"><span class="t-cap tab" style="align-self: flex-start; padding: 0 6px; border-radius: var(--radius-pill); background: {{t.muted}}; color: var(--text-primary)">{{t.share}}</span></sc-if>
+<span class="t-bs tab">{{t.value}}</span>
+<span class="t-cap c-sec" style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 2px; background: {{t.color}}"></span>{{t.label}}</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{hero.showCaption}}" hint-placeholder-val="{{ true }}"><span class="t-cap c-mut">Shares of energy are estimates</span></sc-if>
+</section>
+
+<sc-if value="{{impact}}" hint-placeholder-val="{{ false }}">
+<section class="kl-card" aria-label="Share of today's target" style="padding: var(--space-3)">
+<span class="t-cap c-sec">Share of today's target</span>
+<div style="display: flex; justify-content: space-between; margin-top: var(--space-2)">
+<sc-for list="{{rings}}" as="r" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+<svg role="img" aria-label="{{r.aria}}" width="44" height="44" viewBox="0 0 44 44" style="transform: rotate(-90deg)"><circle cx="22" cy="22" r="18" fill="none" stroke="var(--border)" stroke-width="4"></circle><circle cx="22" cy="22" r="18" fill="none" stroke="{{r.color}}" stroke-width="4" stroke-linecap="round" stroke-dasharray="113.1" stroke-dashoffset="{{r.offset}}"></circle></svg>
+<span class="t-cap tab">{{r.text}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<section data-kilo="GroupedListCard: per 100 g" class="kl-card" aria-label="Per 100 g" style="overflow: hidden">
+<div class="t-bs" style="padding: var(--space-3) var(--space-4) var(--space-1)">Per 100 g</div>
+<sc-for list="{{per100}}" as="n" hint-placeholder-count="4">
+<div data-kilo="ListRow (value)" style="min-height: 44px; display: flex; align-items: center; padding: 0 var(--space-4); border-top: 1px solid var(--border)">
+<span class="t-body" style="flex: 1">{{n.label}}</span>
+<span class="t-body tab" style="color: {{n.color}}">{{n.value}}</span>
+</div>
+</sc-for>
+</section>
+</div>
+
+<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-4) 42px; background: var(--surface-sheet); border-top: 1px solid var(--border)">
+<div class="kl-field">
+<label class="t-ls" for="amount">Amount</label>
+<div data-kilo="NumericInput" class="{{inputClass}}">
+<input id="amount" inputmode="decimal" value="{{qty}}" onChange="{{noop}}" aria-invalid="{{invalid}}" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)">
+<span class="t-body c-mut">{{unitSuffix}}</span>
+</div>
+<sc-if value="{{invalidFlag}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-danger" role="alert">Enter an amount above 0.</span></sc-if>
+</div>
+<div data-kilo="ChipGroup" role="radiogroup" aria-label="Unit" style="display: flex; gap: var(--space-2); overflow: hidden">
+<sc-for list="{{chips}}" as="c" hint-placeholder-count="3">
+<button type="button" role="radio" aria-checked="{{c.on}}" class="{{c.cls}}">{{c.label}}</button>
+</sc-for>
+</div>
+<sc-if value="{{addMode}}" hint-placeholder-val="{{ true }}">
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg); opacity: {{addOpacity}}">
+<sc-if value="{{saving}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg></sc-if>
+<span style="visibility: {{labelVis}}">Add to {{slot}}</span>
+</button>
+</sc-if>
+<sc-if value="{{suspect}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>Copy to your foods</button>
+</sc-if>
+<sc-if value="{{editMode}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; flex-direction: column; gap: var(--space-1)">
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg)">Save</button>
+<button data-kilo="Button ghost destructive (proposed)" type="button" class="kl-btn kl-ghost-danger" style="width: 100%"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>Delete</button>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{proposal}}" hint-placeholder-val="{{ false }}">
+<span class="t-cap c-warn" style="position: absolute; top: 14px; right: 12px; z-index: 50; padding: 4px 10px; border-radius: var(--radius-pill); background: var(--warning-muted); border: 1px solid var(--warning)">Proposal, not built</span>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["default-portion","grams","from-recent","from-scan","invalid-quantity","saving","save-error","suspect","impact-proposal-m6","entry-food","entry-food-changed","entry-food-deleted"],"default":"grams"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'grams';
+    const g = (n) => { const a = Math.abs(n); return String(a < 10 ? Math.round(a * 10) / 10 : Math.round(a)); };
+    const kc = (n) => Math.round(n).toLocaleString('en-GB');
+    const foods = {
+      banana: { name: 'Banana', per: { kcal: 95, p: 1.2, f: 0.1, c: 20.3 }, units: [['1 medium (100 g)', 100, 'medium'], ['1 small (80 g)', 80, 'small'], ['g', 1, 'g']], source: 'UK CoFID' },
+      chicken: { name: 'Chicken breast, grilled', per: { kcal: 148, p: 32, f: 2.2, c: 0 }, units: [['1 breast (150 g)', 150, 'breast'], ['g', 1, 'g']], source: 'UK CoFID' },
+      oats: { name: 'Porridge oats', per: { kcal: 374, p: 11.2, f: 8.4, c: 60.4 }, units: [['1 serving (40 g)', 40, 'serving'], ['g', 1, 'g']], source: 'UK CoFID' },
+      yoghurt: { name: 'Greek yoghurt 0% fat', per: { kcal: 57, p: 10.2, f: 0.2, c: 3.8 }, units: [['1 pot (170 g)', 170, 'pot'], ['g', 1, 'g']], source: 'Open Food Facts' },
+      bar: { name: 'Protein bar, cookie dough', per: { kcal: 350, p: 33, f: 12, c: null }, units: [['1 bar (60 g)', 60, 'bar'], ['g', 1, 'g']], source: 'Open Food Facts' }
+    };
+    const S = {
+      'default-portion': { food: 'banana', unit: 0, qty: '1', slot: 'Breakfast' },
+      'grams': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch' },
+      'from-recent': { food: 'oats', unit: 1, qty: '50', slot: 'Breakfast', meta: 'Last logged 50 g, yesterday' },
+      'from-scan': { food: 'yoghurt', unit: 0, qty: '1', slot: 'Snacks', meta: 'Scanned 5201054013410' },
+      'invalid-quantity': { food: 'chicken', unit: 1, qty: '', slot: 'Lunch', invalid: true },
+      'saving': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch', saving: true },
+      'save-error': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch', saveError: true },
+      'suspect': { food: 'bar', unit: 0, qty: '1', slot: 'Snacks', suspect: true },
+      'impact-proposal-m6': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch', impact: true, proposal: true },
+      'entry-food': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch', edit: true },
+      'entry-food-changed': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch', edit: true, changed: true },
+      'entry-food-deleted': { food: 'chicken', unit: 1, qty: '150', slot: 'Lunch', edit: true, deleted: true }
+    };
+    const s = S[st] || S.grams;
+    const food = foods[s.food];
+    const u = food.units[s.unit];
+    const grams = (parseFloat(s.qty) || 0) * u[1];
+    const has = grams > 0;
+    const v = { kcal: food.per.kcal * grams / 100, p: food.per.p * grams / 100, f: food.per.f * grams / 100, c: food.per.c == null ? null : food.per.c * grams / 100 };
+    const share = (x, k) => (x == null || !v.kcal) ? '' : Math.round(x * k / v.kcal * 100) + '% of energy';
+    const tile = (label, color, muted, x, k) => ({ label, color, muted, value: !has ? '–' : x == null ? 'Not given' : g(x) + ' g', share: has ? share(x, k) : '', hasShare: has && x != null });
+    const tiles = [tile('Protein', 'var(--protein)', 'var(--protein-muted)', v.p, 4), tile('Carbs', 'var(--carbs)', 'var(--carbs-muted)', v.c, 4), tile('Fat', 'var(--fat)', 'var(--fat-muted)', v.f, 9)];
+    const basis = !has ? 'For this amount' : u[2] === 'g' ? 'For ' + g(grams) + ' g' : 'For ' + s.qty + ' ' + u[2] + ' (' + g(grams) + ' g)';
+    const T = { kcal: 2200, p: 160, c: 220, f: 70 };
+    const ring = (label, color, x, t) => { const r = Math.min(1, (x || 0) / t); return { color, offset: (113.1 * (1 - r)).toFixed(1), text: Math.round(r * 100) + '% ' + label, aria: Math.round(r * 100) + ' per cent of today’s ' + label.toLowerCase() + ' target' }; };
+    const per100 = [
+      { label: 'Energy', value: kc(food.per.kcal) + ' kcal', color: 'var(--text-primary)' },
+      { label: 'Protein', value: g(food.per.p) + ' g', color: 'var(--text-primary)' },
+      { label: 'Fat', value: g(food.per.f) + ' g', color: 'var(--text-primary)' },
+      { label: 'Carbohydrate', value: food.per.c == null ? 'Not given' : g(food.per.c) + ' g', color: food.per.c == null ? 'var(--warning-ink)' : 'var(--text-primary)' }
+    ];
+    const chips = food.units.map((x, i) => ({ label: x[0], on: i === s.unit ? 'true' : 'false', cls: i === s.unit ? 'kl-chip kl-chip-on' : 'kl-chip' }));
+    const add = !s.edit && !s.suspect;
+    return {
+      theme,
+      heading: food.name,
+      slot: s.slot,
+      suspect: !!s.suspect,
+      changed: !!s.changed,
+      saveError: !!s.saveError,
+      deleted: !!s.deleted,
+      metaLine: !!s.meta,
+      metaText: s.meta || '',
+      sourceLabel: food.source,
+      hero: { kcal: has ? kc(v.kcal) : '–', basis, tiles, showCaption: has },
+      impact: !!s.impact,
+      rings: [ring('Calories', 'var(--calories)', v.kcal, T.kcal), ring('Protein', 'var(--protein)', v.p, T.p), ring('Carbs', 'var(--carbs)', v.c, T.c), ring('Fat', 'var(--fat)', v.f, T.f)],
+      per100,
+      qty: s.qty,
+      unitSuffix: u[2],
+      invalid: s.invalid ? 'true' : 'false',
+      invalidFlag: !!s.invalid,
+      inputClass: s.invalid ? 'kl-input kl-input-error' : 'kl-input',
+      chips,
+      addMode: add,
+      addOpacity: s.invalid ? '0.4' : '1',
+      saving: !!s.saving,
+      labelVis: s.saving ? 'hidden' : 'visible',
+      editMode: !!s.edit,
+      proposal: !!s.proposal,
+      noop: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,658 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-15T03:15:00Z"
+ },
+ "title": "Ki-Lo M3 diary screens",
+ "launch": {
+  "view": "canvas"
+ },
+ "pages": [],
+ "boards": {
+  "Main.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 today"
+  },
+  "diary.today-scrolled.dc.html": {
+   "x": 900,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 today-scrolled"
+  },
+  "diary.today-empty.dc.html": {
+   "x": 1800,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 today-empty"
+  },
+  "diary.over-target.dc.html": {
+   "x": 2700,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 over-target"
+  },
+  "diary.complete.dc.html": {
+   "x": 3600,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 complete"
+  },
+  "diary.past-day.dc.html": {
+   "x": 4500,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 past-day"
+  },
+  "diary.no-target.dc.html": {
+   "x": 5400,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 no-target"
+  },
+  "diary.loading.dc.html": {
+   "x": 6300,
+   "y": 0,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 loading"
+  },
+  "diary.offline.dc.html": {
+   "x": 0,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 offline"
+  },
+  "diary.error.dc.html": {
+   "x": 900,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 error"
+  },
+  "diary.row-swiped.dc.html": {
+   "x": 1800,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 row-swiped"
+  },
+  "diary.deleted-toast.dc.html": {
+   "x": 2700,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 deleted-toast"
+  },
+  "diary.slot-menu.dc.html": {
+   "x": 3600,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 slot-menu"
+  },
+  "diary.date-picker.dc.html": {
+   "x": 4500,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 date-picker"
+  },
+  "diary.week-sheet.dc.html": {
+   "x": 5400,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 week-sheet"
+  },
+  "diary.week-strip-proposal.dc.html": {
+   "x": 6300,
+   "y": 964,
+   "w": 820,
+   "h": 844,
+   "title": "diary \u00b7 week-strip-proposal"
+  },
+  "copy.slot-copied.dc.html": {
+   "x": 0,
+   "y": 2348,
+   "w": 820,
+   "h": 844,
+   "title": "copy \u00b7 slot-copied"
+  },
+  "copy.day-copied.dc.html": {
+   "x": 900,
+   "y": 2348,
+   "w": 820,
+   "h": 844,
+   "title": "copy \u00b7 day-copied"
+  },
+  "copy.nothing-to-copy.dc.html": {
+   "x": 1800,
+   "y": 2348,
+   "w": 820,
+   "h": 844,
+   "title": "copy \u00b7 nothing-to-copy"
+  },
+  "copy.copy-error.dc.html": {
+   "x": 2700,
+   "y": 2348,
+   "w": 820,
+   "h": 844,
+   "title": "copy \u00b7 copy-error"
+  },
+  "log-search.idle-recent.dc.html": {
+   "x": 0,
+   "y": 3732,
+   "w": 820,
+   "h": 844,
+   "title": "log-search \u00b7 idle-recent"
+  },
+  "log-search.idle-no-history.dc.html": {
+   "x": 900,
+   "y": 3732,
+   "w": 820,
+   "h": 844,
+   "title": "log-search \u00b7 idle-no-history"
+  },
+  "log-search.slot-picker.dc.html": {
+   "x": 1800,
+   "y": 3732,
+   "w": 820,
+   "h": 844,
+   "title": "log-search \u00b7 slot-picker"
+  },
+  "log-search.results.dc.html": {
+   "x": 2700,
+   "y": 3732,
+   "w": 820,
+   "h": 844,
+   "title": "log-search \u00b7 results"
+  },
+  "log-search.plate-proposal.dc.html": {
+   "x": 3600,
+   "y": 3732,
+   "w": 820,
+   "h": 844,
+   "title": "log-search \u00b7 plate-proposal"
+  },
+  "portion.default-portion.dc.html": {
+   "x": 0,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 default-portion"
+  },
+  "portion.grams.dc.html": {
+   "x": 900,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 grams"
+  },
+  "portion.from-recent.dc.html": {
+   "x": 1800,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 from-recent"
+  },
+  "portion.from-scan.dc.html": {
+   "x": 2700,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 from-scan"
+  },
+  "portion.invalid-quantity.dc.html": {
+   "x": 3600,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 invalid-quantity"
+  },
+  "portion.saving.dc.html": {
+   "x": 4500,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 saving"
+  },
+  "portion.save-error.dc.html": {
+   "x": 5400,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 save-error"
+  },
+  "portion.suspect.dc.html": {
+   "x": 6300,
+   "y": 5116,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 suspect"
+  },
+  "portion.saved-toast.dc.html": {
+   "x": 0,
+   "y": 6080,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 saved-toast"
+  },
+  "portion.impact-proposal-m6.dc.html": {
+   "x": 900,
+   "y": 6080,
+   "w": 820,
+   "h": 844,
+   "title": "portion \u00b7 impact-proposal-m6"
+  },
+  "entry.food.dc.html": {
+   "x": 0,
+   "y": 7464,
+   "w": 820,
+   "h": 844,
+   "title": "entry \u00b7 food"
+  },
+  "entry.food-changed.dc.html": {
+   "x": 900,
+   "y": 7464,
+   "w": 820,
+   "h": 844,
+   "title": "entry \u00b7 food-changed"
+  },
+  "entry.quick-add.dc.html": {
+   "x": 1800,
+   "y": 7464,
+   "w": 820,
+   "h": 844,
+   "title": "entry \u00b7 quick-add"
+  },
+  "entry.food-deleted.dc.html": {
+   "x": 2700,
+   "y": 7464,
+   "w": 820,
+   "h": 844,
+   "title": "entry \u00b7 food-deleted"
+  },
+  "quick-add.empty.dc.html": {
+   "x": 0,
+   "y": 8848,
+   "w": 820,
+   "h": 844,
+   "title": "quick-add \u00b7 empty"
+  },
+  "quick-add.filled.dc.html": {
+   "x": 900,
+   "y": 8848,
+   "w": 820,
+   "h": 844,
+   "title": "quick-add \u00b7 filled"
+  },
+  "quick-add.macros-mismatch.dc.html": {
+   "x": 1800,
+   "y": 8848,
+   "w": 820,
+   "h": 844,
+   "title": "quick-add \u00b7 macros-mismatch"
+  },
+  "quick-add.error.dc.html": {
+   "x": 2700,
+   "y": 8848,
+   "w": 820,
+   "h": 844,
+   "title": "quick-add \u00b7 error"
+  },
+  "quick-add.save-error.dc.html": {
+   "x": 3600,
+   "y": 8848,
+   "w": 820,
+   "h": 844,
+   "title": "quick-add \u00b7 save-error"
+  },
+  "targets.empty.dc.html": {
+   "x": 0,
+   "y": 10232,
+   "w": 820,
+   "h": 844,
+   "title": "targets \u00b7 empty"
+  },
+  "targets.filled.dc.html": {
+   "x": 900,
+   "y": 10232,
+   "w": 820,
+   "h": 844,
+   "title": "targets \u00b7 filled"
+  },
+  "targets.error.dc.html": {
+   "x": 1800,
+   "y": 10232,
+   "w": 820,
+   "h": 844,
+   "title": "targets \u00b7 error"
+  },
+  "targets.saved.dc.html": {
+   "x": 2700,
+   "y": 10232,
+   "w": 820,
+   "h": 844,
+   "title": "targets \u00b7 saved"
+  },
+  "web-diary.day.dc.html": {
+   "x": 0,
+   "y": 11616,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 day \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.day-empty.dc.html": {
+   "x": 0,
+   "y": 12676,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 day-empty \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.day-over-target.dc.html": {
+   "x": 0,
+   "y": 13736,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 day-over-target \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.day-complete.dc.html": {
+   "x": 0,
+   "y": 14796,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 day-complete \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.add-dialog-search.dc.html": {
+   "x": 0,
+   "y": 15856,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 add-dialog-search \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.add-dialog-portion.dc.html": {
+   "x": 0,
+   "y": 16916,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 add-dialog-portion \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.edit-dialog.dc.html": {
+   "x": 0,
+   "y": 17976,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 edit-dialog \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.quick-add-dialog.dc.html": {
+   "x": 0,
+   "y": 19036,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 quick-add-dialog \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.week.dc.html": {
+   "x": 0,
+   "y": 20096,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 week \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.week-copied.dc.html": {
+   "x": 0,
+   "y": 21156,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 week-copied \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.loading.dc.html": {
+   "x": 0,
+   "y": 22216,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 loading \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-diary.error.dc.html": {
+   "x": 0,
+   "y": 23276,
+   "w": 3430,
+   "h": 940,
+   "title": "web-diary \u00b7 error \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-targets.empty.dc.html": {
+   "x": 0,
+   "y": 24636,
+   "w": 3430,
+   "h": 760,
+   "title": "web-targets \u00b7 empty \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-targets.filled.dc.html": {
+   "x": 0,
+   "y": 25516,
+   "w": 3430,
+   "h": 760,
+   "title": "web-targets \u00b7 filled \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-targets.error.dc.html": {
+   "x": 0,
+   "y": 26396,
+   "w": 3430,
+   "h": 760,
+   "title": "web-targets \u00b7 error \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "web-targets.saved.dc.html": {
+   "x": 0,
+   "y": 27276,
+   "w": 3430,
+   "h": 760,
+   "title": "web-targets \u00b7 saved \u00b7 1280 dark, 1280 light, 375 dark, 375 light"
+  },
+  "DiaryScreen.dc.html": {
+   "x": 7700,
+   "y": 0,
+   "w": 390,
+   "h": 844,
+   "title": "Component \u00b7 DiaryScreen (state, theme tweaks)"
+  },
+  "LogSearchScreen.dc.html": {
+   "x": 7700,
+   "y": 964,
+   "w": 390,
+   "h": 844,
+   "title": "Component \u00b7 LogSearchScreen (state, theme tweaks)"
+  },
+  "PortionScreen.dc.html": {
+   "x": 7700,
+   "y": 1928,
+   "w": 390,
+   "h": 844,
+   "title": "Component \u00b7 PortionScreen (state, theme tweaks)"
+  },
+  "QuickAddScreen.dc.html": {
+   "x": 7700,
+   "y": 2892,
+   "w": 390,
+   "h": 844,
+   "title": "Component \u00b7 QuickAddScreen (state, theme tweaks)"
+  },
+  "TargetsScreen.dc.html": {
+   "x": 7700,
+   "y": 3856,
+   "w": 390,
+   "h": 844,
+   "title": "Component \u00b7 TargetsScreen (state, theme tweaks)"
+  },
+  "WebDiaryScreen.dc.html": {
+   "x": 7700,
+   "y": 4820,
+   "w": 1280,
+   "h": 940,
+   "title": "Component \u00b7 WebDiaryScreen (state, theme, width tweaks)"
+  },
+  "WebTargetsScreen.dc.html": {
+   "x": 7700,
+   "y": 5880,
+   "w": 1280,
+   "h": 760,
+   "title": "Component \u00b7 WebTargetsScreen (state, theme, width tweaks)"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "diary.today-scrolled.dc.html",
+  "diary.today-empty.dc.html",
+  "diary.over-target.dc.html",
+  "diary.complete.dc.html",
+  "diary.past-day.dc.html",
+  "diary.no-target.dc.html",
+  "diary.loading.dc.html",
+  "diary.offline.dc.html",
+  "diary.error.dc.html",
+  "diary.row-swiped.dc.html",
+  "diary.deleted-toast.dc.html",
+  "diary.slot-menu.dc.html",
+  "diary.date-picker.dc.html",
+  "diary.week-sheet.dc.html",
+  "diary.week-strip-proposal.dc.html",
+  "copy.slot-copied.dc.html",
+  "copy.day-copied.dc.html",
+  "copy.nothing-to-copy.dc.html",
+  "copy.copy-error.dc.html",
+  "log-search.idle-recent.dc.html",
+  "log-search.idle-no-history.dc.html",
+  "log-search.slot-picker.dc.html",
+  "log-search.results.dc.html",
+  "log-search.plate-proposal.dc.html",
+  "portion.default-portion.dc.html",
+  "portion.grams.dc.html",
+  "portion.from-recent.dc.html",
+  "portion.from-scan.dc.html",
+  "portion.invalid-quantity.dc.html",
+  "portion.saving.dc.html",
+  "portion.save-error.dc.html",
+  "portion.suspect.dc.html",
+  "portion.saved-toast.dc.html",
+  "portion.impact-proposal-m6.dc.html",
+  "entry.food.dc.html",
+  "entry.food-changed.dc.html",
+  "entry.quick-add.dc.html",
+  "entry.food-deleted.dc.html",
+  "quick-add.empty.dc.html",
+  "quick-add.filled.dc.html",
+  "quick-add.macros-mismatch.dc.html",
+  "quick-add.error.dc.html",
+  "quick-add.save-error.dc.html",
+  "targets.empty.dc.html",
+  "targets.filled.dc.html",
+  "targets.error.dc.html",
+  "targets.saved.dc.html",
+  "web-diary.day.dc.html",
+  "web-diary.day-empty.dc.html",
+  "web-diary.day-over-target.dc.html",
+  "web-diary.day-complete.dc.html",
+  "web-diary.add-dialog-search.dc.html",
+  "web-diary.add-dialog-portion.dc.html",
+  "web-diary.edit-dialog.dc.html",
+  "web-diary.quick-add-dialog.dc.html",
+  "web-diary.week.dc.html",
+  "web-diary.week-copied.dc.html",
+  "web-diary.loading.dc.html",
+  "web-diary.error.dc.html",
+  "web-targets.empty.dc.html",
+  "web-targets.filled.dc.html",
+  "web-targets.error.dc.html",
+  "web-targets.saved.dc.html",
+  "DiaryScreen.dc.html",
+  "LogSearchScreen.dc.html",
+  "PortionScreen.dc.html",
+  "QuickAddScreen.dc.html",
+  "TargetsScreen.dc.html",
+  "WebDiaryScreen.dc.html",
+  "WebTargetsScreen.dc.html"
+ ],
+ "notes": {
+  "diarytitle": {
+   "x": 0,
+   "y": -300,
+   "text": "Diary day \u00b7 mobile 390 pt \u00b7 dark and light \u00b7 CalorieRing and MacroBars hero, four meal slots",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "copytitle": {
+   "x": 0,
+   "y": 2048,
+   "text": "Copy from yesterday \u00b7 mobile \u00b7 copies at once, Undo toast",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "logsearchtitle": {
+   "x": 0,
+   "y": 3432,
+   "text": "Search in log mode \u00b7 mobile \u00b7 slot pill, Quick add, Recent",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "portiontitle": {
+   "x": 0,
+   "y": 4816,
+   "text": "Portion picker \u00b7 mobile \u00b7 values for the chosen amount, one food at a time",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "entrytitle": {
+   "x": 0,
+   "y": 7164,
+   "text": "Edit an entry \u00b7 mobile \u00b7 frozen snapshot, Update to current food data",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "quickaddtitle": {
+   "x": 0,
+   "y": 8548,
+   "text": "Quick add \u00b7 mobile \u00b7 calories required, macros optional",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "targetstitle": {
+   "x": 0,
+   "y": 9932,
+   "text": "Manual target \u00b7 mobile \u00b7 More, Nutrition, Targets",
+   "kind": "title1",
+   "maxW": 7120
+  },
+  "webdiarytitle": {
+   "x": 0,
+   "y": 11316,
+   "text": "Web diary \u00b7 1280 dark, 1280 light, 375 dark, 375 light \u00b7 day and week views, dialogs",
+   "kind": "title1",
+   "maxW": 3430
+  },
+  "webtargetstitle": {
+   "x": 0,
+   "y": 24336,
+   "text": "Web targets \u00b7 1280 and 375, dark and light",
+   "kind": "title1",
+   "maxW": 3430
+  },
+  "about": {
+   "x": -620,
+   "y": 0,
+   "w": 520,
+   "fill": "gray",
+   "maxH": 900,
+   "text": "Ki-Lo M3 diary screens (KEY-3).\nPorted from the boards Zee drew in the Ki-Lo Design System project (Claude Design, screens/*), with the M3 design audit applied (keylow-wt/design-briefs/m3/AUDIT-2026-10-15.md).\n\nRulings (Zee, 2026-10-15, KEY-62): four meal slots; one food at a time; slot by time of day; Targets under More, Nutrition; CalorieRing and MacroBars hero; suspect foods are copied before logging; delete with Undo, no confirm; copy yesterday on mobile, Copy to today per past day on web; web adds in a dialog.\n\nRecommendations applied overnight, for Zee to confirm: no \"+\" one-tap add on rows; an Undo toast auto-dismisses after 5 s; the manual target shows without \"(est.)\".\n\nEach board shows dark and light (mobile) or 1280 and 375 in both themes (web). Components on the right carry the state and theme tweaks."
+  }
+ },
+ "designSystems": []
+}

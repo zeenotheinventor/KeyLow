@@ -5,7 +5,8 @@ import { boardsEnd, boardsStart, mergeScreenReadme } from "../src/screenReadme.t
 import type { Board } from "../src/boards.ts";
 import type { ScreenReadmeInput } from "../src/screenReadme.ts";
 
-const board = (state: string, fileName: string): Board => ({
+const board = (state: string, fileName: string, sourceFolder = "source"): Board => ({
+  sourceFolder,
   fileName,
   slug: "food-search",
   state,
@@ -41,6 +42,14 @@ describe("mergeScreenReadme", () => {
     expect(readme).toContain("Find food, idle");
     expect(readme).toContain("[idle.html](idle.html)");
     expect(readme).toContain("[Main.dc.html](../source/project/Main.dc.html)");
+  });
+
+  it("should link the source of a board under the source folder of its canvas", () => {
+    const readme = mergeScreenReadme(undefined, {
+      ...input,
+      boards: [board("idle", "Main.dc.html", "source-m3")],
+    });
+    expect(readme).toContain("[Main.dc.html](../source-m3/project/Main.dc.html)");
   });
 
   it("should quote the canvas notes", () => {

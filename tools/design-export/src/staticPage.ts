@@ -6,6 +6,7 @@ export type StaticPageInput = {
   title: string;
   tokensHref: string;
   proposalsHref: string;
+  canvasStylesheetHrefs: readonly string[];
   fontsHref: string;
   styles: readonly string[];
   boardHtml: string;
@@ -37,6 +38,7 @@ export function buildStaticPage(input: StaticPageInput): string {
     `<title>${escapeText(input.title)}</title>`,
     `<link rel="stylesheet" href="${input.tokensHref}">`,
     `<link rel="stylesheet" href="${input.proposalsHref}">`,
+    ...input.canvasStylesheetHrefs.map((href) => `<link rel="stylesheet" href="${href}">`),
     `<link rel="stylesheet" href="${escapeText(input.fontsHref)}">`,
     ...styleBlocks,
     "</head>",

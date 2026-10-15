@@ -6,11 +6,16 @@ import { readFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { join } from "node:path";
 
-import { canvasAssets } from "./assets.ts";
+import type { CanvasAsset } from "./assets.ts";
 
 export type BoardServerOptions = {
   designDirectory: string;
+  // The folder under designDirectory that holds the canvas source to serve, such as source-m3.
+  sourceFolder: string;
+  assets: readonly CanvasAsset[];
   runtimePath: string;
+  // Defaults to a free port the system picks.
+  port?: number | undefined;
 };
 
 export type BoardServer = {
@@ -29,11 +34,11 @@ async function readOrUndefined(path: string): Promise<Buffer | undefined> {
 }
 
 export async function startBoardServer(options: BoardServerOptions): Promise<BoardServer> {
-  const projectDirectory = join(options.designDirectory, "source/project");
+  const projectDirectory = join(options.designDirectory, options.sourceFolder, "project");
   const server = createServer((request, response) => {
     void (async () => {
       const path = (request.url ?? "/").split("?")[0] ?? "/";
-      const asset = canvasAssets.find((candidate) => candidate.blob === path);
+      const asset = options.assets.find((candidate) => candidate.blob === path);
       let found: { body: Buffer | undefined; contentType: string } | undefined;
       if (path === "/support.js") {
         found = {
@@ -42,7 +47,9 @@ export async function startBoardServer(options: BoardServerOptions): Promise<Boa
         };
       } else if (asset !== undefined) {
         found = {
-          body: await readOrUndefined(join(options.designDirectory, asset.file)),
+          body: await readOrUndefined(
+            join(options.designDirectory, options.sourceFolder, asset.file),
+          ),
           contentType: asset.contentType,
         };
       } else if (boardFileName.test(path)) {
@@ -61,7 +68,7 @@ export async function startBoardServer(options: BoardServerOptions): Promise<Boa
     })();
   });
   await new Promise<void>((resolve) => {
-    server.listen(0, "127.0.0.1", resolve);
+    server.listen(options.port ?? 0, "127.0.0.1", resolve);
   });
   const address = server.address();
   if (address === null || typeof address === "string") {

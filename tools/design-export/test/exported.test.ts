@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { listBoards, parseCanvas } from "../src/boards.ts";
+import { listCanvasSources, readAllBoards } from "../src/canvasSources.ts";
 import { checkBoards } from "../src/checkBoards.ts";
 import { extractProposals } from "../src/proposals.ts";
 import { deviceScaleFactor } from "../src/renderBoard.ts";
@@ -13,10 +13,14 @@ import { findPageProblems } from "../src/staticPage.ts";
 
 const designDirectory = resolve(import.meta.dirname, "../../../docs/design");
 const repositoryRoot = resolve(import.meta.dirname, "../../..");
-const canvas = parseCanvas(
-  JSON.parse(readFileSync(join(designDirectory, "source/project/canvas.json"), "utf8")),
-);
-const boards = listBoards(canvas);
+const sources = listCanvasSources(designDirectory);
+const boards = readAllBoards(designDirectory);
+
+// The stylesheets each canvas ships beside the proposals, which its pages link after them.
+const canvasStylesheets: Readonly<Record<string, readonly string[]>> = {
+  source: [],
+  "source-m3": ["kilo-m3-canvas.css"],
+};
 
 // These two boards are the Ki-Lo mark on a plain background, with a line of text on the second.
 // They use no design system component.
@@ -35,13 +39,27 @@ function listFilesBelow(directory: string): string[] {
 }
 
 describe("the committed design export", () => {
-  it("should have a PNG, an HTML page and a README for every board in canvas.json and nothing else", () => {
+  it("should hold the M2 canvas and the M3 canvas, each in its own source folder", () => {
+    expect(sources).toEqual(["source", "source-m3"]);
+    expect(boards.filter((board) => board.sourceFolder === "source")).toHaveLength(115);
+    expect(boards.filter((board) => board.sourceFolder === "source-m3")).toHaveLength(64);
+  });
+
+  it("should have a PNG, an HTML page and a README for every board in each canvas.json and nothing else", () => {
     expect(checkBoards(designDirectory)).toEqual({
-      boardCount: 115,
-      screenCount: 9,
+      boardCount: 179,
+      screenCount: 18,
       missing: [],
       extra: [],
     });
+  });
+
+  it("should name the M3 Main board diary today", () => {
+    expect(
+      boards.find(
+        (board) => board.sourceFolder === "source-m3" && board.fileName === "Main.dc.html",
+      ),
+    ).toMatchObject({ slug: "diary", state: "today" });
   });
 
   it.each(boards.map((board) => [`${board.slug}/${board.state}`, board] as const))(
@@ -78,21 +96,52 @@ describe("the committed design export", () => {
     for (const board of boards) {
       const folder = join(designDirectory, board.slug);
       const html = readFileSync(join(folder, `${board.state}.html`), "utf8");
+      const canvasLinks = (canvasStylesheets[board.sourceFolder] ?? []).map(
+        (file) => `<link rel="stylesheet" href="../tokens/${file}">`,
+      );
       expect(html).toContain(
-        '<link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css">\n<link rel="stylesheet" href="../tokens/kilo-proposals.css">',
+        [
+          '<link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css">',
+          '<link rel="stylesheet" href="../tokens/kilo-proposals.css">',
+          ...canvasLinks,
+        ].join("\n"),
       );
       expect(resolve(folder, "../../../packages/tokens/css/kilo-tokens.css")).toBe(stylesheet);
     }
   });
 
-  it("should keep the proposals stylesheet equal to the marked block of the canvas token file", () => {
-    const canvasTokens = readFileSync(
-      join(designDirectory, "source/tokens/kilo-tokens.css"),
-      "utf8",
-    );
-    expect(readFileSync(join(designDirectory, "tokens/kilo-proposals.css"), "utf8")).toBe(
-      extractProposals(canvasTokens),
-    );
+  it.each(sources)(
+    "%s should keep the proposals stylesheet equal to the marked block of its canvas token file",
+    (source) => {
+      const canvasTokens = readFileSync(
+        join(designDirectory, source, "tokens/kilo-tokens.css"),
+        "utf8",
+      );
+      expect(readFileSync(join(designDirectory, "tokens/kilo-proposals.css"), "utf8")).toBe(
+        extractProposals(canvasTokens),
+      );
+    },
+  );
+
+  it.each(sources)(
+    "%s should ship each stylesheet of its canvas beside the proposals",
+    (source) => {
+      for (const file of canvasStylesheets[source] ?? []) {
+        expect(readFileSync(join(designDirectory, "tokens", file), "utf8")).toBe(
+          readFileSync(join(designDirectory, source, "tokens", file), "utf8"),
+        );
+      }
+    },
+  );
+
+  it("should point every relative file a page loads at a file that exists", () => {
+    for (const board of boards) {
+      const folder = join(designDirectory, board.slug);
+      const html = readFileSync(join(folder, `${board.state}.html`), "utf8");
+      for (const match of html.matchAll(/(?:href|src)="(?<target>\.\.\/[^"]+)"/g)) {
+        expect(existsSync(resolve(folder, match.groups?.["target"] ?? "missing"))).toBe(true);
+      }
+    }
   });
 
   it("should propose no custom property that packages/tokens already defines", () => {

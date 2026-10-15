@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Web targets</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/c95588d44fb532c449b40cf4b94c3f5c">
+<link rel="stylesheet" href="/_blob/2327a85940832eff6a39c0c61e55fbca">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: {{w}}px; height: 760px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="Web top bar" style="flex-shrink: 0; height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-4); padding: 0 {{barPad}}; background: var(--surface); border-bottom: 1px solid var(--border)">
+<span style="display: flex; align-items: center; gap: var(--space-2)"><img src="{{markUrl}}" alt="Ki-Lo" style="width: 24px; height: 24px"><sc-if value="{{wide}}" hint-placeholder-val="{{ true }}"><span class="t-bs">Ki-Lo</span></sc-if></span>
+<sc-if value="{{wide}}" hint-placeholder-val="{{ true }}">
+<nav aria-label="Main" style="display: flex; gap: var(--space-1); margin-left: var(--space-4)">
+<a href="#dashboard" class="t-ls c-sec" style="height: 36px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-small); text-decoration: none">Dashboard</a>
+<a href="#diary" class="t-ls c-sec" style="height: 36px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-small); text-decoration: none">Diary</a>
+<a href="#recipes" class="t-ls c-sec" style="height: 36px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-small); text-decoration: none">Recipes</a>
+<a href="#more" aria-current="page" class="t-ls" style="height: 36px; display: inline-flex; align-items: center; padding: 0 10px; border-radius: var(--radius-small); text-decoration: none; color: var(--text-primary); background: var(--surface-raised)">More</a>
+</nav>
+</sc-if>
+<span style="flex: 1"></span>
+<div data-kilo="SearchField compact" role="search" style="width: {{searchW}}; height: 36px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-2); padding: 0 var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); color: var(--text-muted)"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span class="t-ls" style="font-weight: 400">Search foods</span></div>
+<sc-if value="{{narrow}}" hint-placeholder-val="{{ false }}"><button class="kl-ibg" type="button" aria-label="Open menu" style="color: var(--text-primary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16"></path><path d="M4 6h16"></path><path d="M4 18h16"></path></svg></button></sc-if>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow: hidden">
+<div style="max-width: 560px; margin: 0 auto; box-sizing: border-box; padding: {{pagePad}}; display: flex; flex-direction: column; gap: var(--space-4)">
+
+<sc-if value="{{form}}" hint-placeholder-val="{{ true }}">
+<div><a href="#more" class="t-cap c-ink" style="text-decoration: none">More</a><span class="t-cap c-mut"> / Targets</span><h1 class="t-h1" style="margin: 4px 0 0">Targets</h1></div>
+<section class="kl-card" style="display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5)">
+<div class="kl-field">
+<label class="t-ls" for="wt-kcal">Calories</label>
+<div data-kilo="NumericInput" class="{{kcalClass}}"><input id="wt-kcal" inputmode="numeric" value="{{v.kcal}}" onChange="{{noop}}" aria-invalid="{{kcalInvalid}}" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)"><span class="t-body c-mut">kcal</span></div>
+<sc-if value="{{kcalError}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-danger" role="alert">Enter a target between 800 and 6,000 kcal.</span></sc-if>
+<sc-if value="{{kcalHelp}}" hint-placeholder-val="{{ true }}"><span class="t-cap c-mut">Between 800 and 6,000 kcal</span></sc-if>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: grid; grid-template-columns: {{macroCols}}; gap: var(--space-2)">
+<sc-for list="{{macros}}" as="m" hint-placeholder-count="3">
+<div class="kl-field"><label class="t-ls">{{m.label}}</label><div data-kilo="NumericInput" class="kl-input"><input inputmode="numeric" value="{{m.value}}" onChange="{{noop}}" aria-label="{{m.label}} target in grams" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)"><span class="t-body c-mut">g</span></div></div>
+</sc-for>
+</div>
+<span class="t-cap tab c-mut">{{macroHelper}}</span>
+</div>
+<p class="t-cap c-mut" style="margin: 0">You set these yourself for now. Later, Ki-Lo will suggest targets from your weight trend.</p>
+<div style="display: flex; align-items: center; justify-content: flex-end; gap: var(--space-4)">
+<a href="#more" data-kilo="TextLink" class="t-ls c-sec" style="min-height: 44px; display: inline-flex; align-items: center; text-decoration: none">Cancel</a>
+<button data-kilo="Button primary" type="button" class="kl-btn kl-primary" style="opacity: {{saveOpacity}}">Save</button>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{more}}" hint-placeholder-val="{{ false }}">
+<h1 class="t-h1" style="margin: 0">More</h1>
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="5">
+<section aria-label="{{sec.title}}" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 class="t-bs" style="margin: 0; padding: 0 var(--space-1)">{{sec.title}}<sc-if value="{{sec.isNew}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-mut"> · new in M3</span></sc-if></h2>
+<div class="kl-card" style="overflow: hidden; outline: {{sec.outline}}; outline-offset: 2px">
+<sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="1">
+<div data-kilo="ListRow" style="min-height: 52px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); border-top: {{r.divider}}; opacity: {{r.opacity}}">
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">{{r.title}}</span><sc-if value="{{r.hasSub}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-mut">{{r.sub}}</span></sc-if></span>
+<sc-if value="{{r.hasValue}}" hint-placeholder-val="{{ false }}"><span class="t-body tab c-sec">{{r.value}}</span></sc-if>
+<sc-if value="{{r.chevron}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+</sc-if>
+</div>
+</main>
+
+<sc-if value="{{more}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Toast" role="status" class="kl-toast" style="position: absolute; bottom: 16px; right: 16px; left: {{toastLeft}}; width: {{toastW}}; z-index: 30">
+<span style="display: flex; color: var(--success)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<span style="flex: 1; font-size: 14px; line-height: 20px">Targets saved</span>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["empty","filled","error","saved"],"default":"filled"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"width":{"editor":"enum","options":["1280","375"],"default":"1280"},"$preview":{"width":1280,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'filled';
+    const w = String(this.props.width ?? '1280') === '375' ? 375 : 1280;
+    const narrow = w < 700;
+    const S = {
+      empty: { kcal: '', p: '', c: '', f: '' },
+      filled: { kcal: '2200', p: '160', c: '220', f: '70' },
+      error: { kcal: '7500', p: '160', c: '220', f: '70', error: true },
+      saved: { more: true }
+    };
+    const s = S[st] || S.filled;
+    const n = (x) => parseFloat(x) || 0;
+    const mk = n(s.p) * 4 + n(s.c) * 4 + n(s.f) * 9;
+    const anyMacro = !!(s.p || s.c || s.f);
+    const kcal = n(s.kcal);
+    const row = (o, i) => Object.assign({ divider: i ? '1px solid var(--border)' : '0', opacity: '1', hasSub: !!o.sub, hasValue: !!o.value, chevron: o.chevron !== false }, o);
+    const sections = [
+      { title: 'Food', rows: [row({ title: 'Your foods', sub: 'Foods you created or copied' }, 0)] },
+      { title: 'Nutrition', isNew: true, outline: '2px dashed var(--accent)', rows: [row({ title: 'Targets', sub: 'Set by you', value: '2,200 kcal' }, 0)] },
+      { title: 'Body', rows: [row({ title: 'Weight', sub: 'Coming soon', opacity: '0.5', chevron: false }, 0)] },
+      { title: 'Settings', rows: [row({ title: 'Appearance', value: 'Dark' }, 0), row({ title: 'About' }, 1)] },
+      { title: 'Account', rows: [row({ title: 'Sign out', chevron: false }, 0)] }
+    ].map((x) => Object.assign({ isNew: false, outline: 'none' }, x));
+    return {
+      theme, w, wide: !narrow, narrow,
+      markUrl: theme === 'light' ? '/_blob/2c512c5f828f8c5fba793d6f19c296d6' : '/_blob/69bfc2a284361f081588253a6837cd94',
+      barPad: narrow ? '12px' : '24px', searchW: narrow ? '160px' : '260px', pagePad: narrow ? '16px' : '32px',
+      form: !s.more, more: !!s.more,
+      v: { kcal: s.kcal || '' },
+      kcalClass: s.error ? 'kl-input kl-input-error' : 'kl-input', kcalInvalid: s.error ? 'true' : 'false', kcalError: !!s.error, kcalHelp: !s.error,
+      macroCols: narrow ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+      macros: [{ label: 'Protein', value: s.p || '' }, { label: 'Carbohydrate', value: s.c || '' }, { label: 'Fat', value: s.f || '' }],
+      macroHelper: anyMacro ? 'Macros add up to ' + Math.round(mk).toLocaleString('en-GB') + ' kcal' : 'Macros are optional',
+      saveOpacity: kcal >= 800 && kcal <= 6000 ? '1' : '0.4',
+      sections,
+      toastLeft: narrow ? '16px' : 'auto', toastW: narrow ? 'auto' : '360px',
+      noop: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>

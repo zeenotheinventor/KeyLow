@@ -24,6 +24,8 @@ export type Canvas = {
 export type BoardLayout = "mobile" | "web";
 
 export type Board = {
+  // The folder under docs/design that holds the canvas source this board comes from.
+  sourceFolder: string;
   fileName: string;
   slug: string;
   state: string;
@@ -109,9 +111,11 @@ export function parseCanvas(json: unknown): Canvas {
 const mainBoardFile = "Main.dc.html";
 const componentFilePattern = /^[A-Z][A-Za-z]*\.dc\.html$/;
 const boardFilePattern = /^(?<slug>[a-z][a-z-]*)\.(?<state>[a-z0-9][a-z0-9-]*)\.dc\.html$/;
+// The Main board has no screen in its file name. Its canvas title names it, as "food-search · idle".
+const mainTitlePattern = /^(?<slug>[a-z][a-z-]*) · (?<state>[a-z0-9][a-z0-9-]*)$/;
 const mobileBoardWidth = 820;
 
-export function listBoards(canvas: Canvas): Board[] {
+export function listBoards(canvas: Canvas, sourceFolder: string): Board[] {
   const boards: Board[] = [];
   for (const fileName of canvas.order) {
     const entry = canvas.boards[fileName];
@@ -122,15 +126,15 @@ export function listBoards(canvas: Canvas): Board[] {
     if (!isMain && componentFilePattern.test(fileName)) {
       continue;
     }
-    const named = isMain
-      ? { slug: "food-search", state: "idle" }
-      : boardFilePattern.exec(fileName)?.groups;
+    const named = (isMain ? mainTitlePattern.exec(entry.title) : boardFilePattern.exec(fileName))
+      ?.groups;
     const slug = named?.["slug"];
     const state = named?.["state"];
     if (slug === undefined || state === undefined) {
       throw new Error(`canvas.json: cannot read a screen and state from ${fileName}`);
     }
     boards.push({
+      sourceFolder,
       fileName,
       slug,
       state,

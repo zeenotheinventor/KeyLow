@@ -32,7 +32,7 @@ function renderBoard(board: Board, pageTitle: string): string {
     "",
     `![${board.slug} ${board.state}](${board.state}.png)`,
     "",
-    `Open [${board.state}.html](${board.state}.html) in a browser, or read the source [${board.fileName}](../source/project/${board.fileName}).`,
+    `Open [${board.state}.html](${board.state}.html) in a browser, or read the source [${board.fileName}](../${board.sourceFolder}/project/${board.fileName}).`,
   ].join("\n");
 }
 

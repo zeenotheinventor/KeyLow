@@ -1,0 +1,34 @@
+/* Ki-Lo M3 canvas helpers. Type styles and a few repeated surfaces, all built from the Ki-Lo tokens in kilo-tokens.css. Canvas only: the apps use their kit components. */
+.t-h1{font-size:var(--type-h1-size);line-height:var(--type-h1-line);font-weight:var(--type-h1-weight);letter-spacing:var(--type-h1-tracking)}
+.t-h2{font-size:var(--type-h2-size);line-height:var(--type-h2-line);font-weight:var(--type-h2-weight);letter-spacing:var(--type-h2-tracking)}
+.t-body{font-size:var(--type-body-size);line-height:var(--type-body-line);font-weight:var(--type-body-weight);letter-spacing:var(--type-body-tracking)}
+.t-bs{font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--type-body-strong-weight);letter-spacing:var(--type-body-strong-tracking)}
+.t-cap{font-size:var(--type-caption-size);line-height:var(--type-caption-line);font-weight:var(--type-caption-weight);letter-spacing:var(--type-caption-tracking)}
+.t-dn{font-size:var(--type-display-numeral-size);line-height:1;font-weight:var(--type-display-numeral-weight);letter-spacing:var(--type-display-numeral-tracking);font-variant-numeric:tabular-nums}
+.t-ns{font-size:var(--type-numeral-small-size);line-height:var(--type-numeral-small-line);font-weight:var(--type-numeral-small-weight);letter-spacing:var(--type-numeral-small-tracking);font-variant-numeric:tabular-nums}
+.t-ls{font-size:14px;line-height:20px;font-weight:600}
+.tab{font-variant-numeric:tabular-nums}
+.c-sec{color:var(--text-secondary)}
+.c-mut{color:var(--text-muted)}
+.c-ink{color:var(--accent-ink)}
+.c-warn{color:var(--warning-ink)}
+.c-danger{color:var(--danger)}
+.kl-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-large);box-shadow:var(--elevation-card)}
+.kl-btn{height:var(--control-height-md);box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);padding:0 var(--space-4);border-radius:var(--radius-medium);font-family:var(--font-sans);font-size:var(--type-body-strong-size);line-height:var(--type-body-strong-line);font-weight:var(--type-body-strong-weight);cursor:pointer}
+.kl-primary{background:var(--accent);color:var(--accent-foreground);border:0}
+.kl-secondary{background:var(--surface-raised);color:var(--text-primary);border:1px solid var(--border)}
+.kl-ghost{background:transparent;color:var(--text-primary);border:0}
+.kl-ghost-danger{background:transparent;color:var(--danger);border:0}
+.kl-disabled{opacity:.4}
+.kl-ib{width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;border-radius:var(--radius-medium);border:1px solid var(--border);background:var(--surface-raised);color:var(--text-primary)}
+.kl-ibg{width:36px;height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0;border-radius:var(--radius-small);border:0;background:transparent;color:var(--text-secondary)}
+.kl-field{display:flex;flex-direction:column;gap:6px}
+.kl-input{height:var(--control-height-md);box-sizing:border-box;display:flex;align-items:center;gap:var(--space-2);padding:0 12px;background:var(--surface-raised);border:1px solid var(--border);border-radius:var(--radius-small);font-family:var(--font-sans);color:var(--text-primary)}
+.kl-input-error{border-color:var(--danger)}
+.kl-input-focus{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.kl-chip{height:36px;box-sizing:border-box;display:inline-flex;align-items:center;padding:0 var(--space-3);border-radius:var(--radius-pill);border:1px solid var(--border);background:var(--surface-raised);color:var(--text-primary);font-family:var(--font-sans);font-size:var(--type-body-size);line-height:var(--type-body-line);white-space:nowrap;flex-shrink:0}
+.kl-chip-on{background:var(--accent);border-color:var(--accent);color:var(--accent-foreground);font-weight:600}
+.kl-toast{display:flex;align-items:center;gap:var(--space-3);min-height:44px;box-sizing:border-box;padding:var(--space-2) var(--space-2) var(--space-2) var(--space-4);background:var(--surface-sheet);border:1px solid var(--border);border-radius:var(--radius-medium);box-shadow:var(--elevation-toast);color:var(--text-primary)}
+.kl-sheet{background:var(--surface-sheet);color:var(--text-primary);border-radius:var(--radius-large) var(--radius-large) 0 0;box-shadow:var(--elevation-sheet)}
+.kl-dim{background:var(--overlay)}
+.kl-sk{background:var(--skeleton-base);border-radius:var(--radius-small)}
