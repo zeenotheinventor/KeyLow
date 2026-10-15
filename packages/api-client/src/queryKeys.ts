@@ -2,6 +2,7 @@ export const keys = {
   profiles: {
     all: ["profiles"] as const,
     detail: (id: string) => ["profiles", id] as const,
+    termsAcceptance: ["profiles", "terms-acceptance"] as const,
   },
   foods: {
     all: ["foods"] as const,

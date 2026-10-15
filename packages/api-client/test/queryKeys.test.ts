@@ -10,6 +10,10 @@ describe("keys.profiles", () => {
   it("should build a detail key scoped to the profile id", () => {
     expect(keys.profiles.detail("user-1")).toEqual(["profiles", "user-1"]);
   });
+
+  it("should expose a key for the signed in user's terms acceptance, under the profiles root", () => {
+    expect(keys.profiles.termsAcceptance).toEqual(["profiles", "terms-acceptance"]);
+  });
 });
 
 describe("keys.foods", () => {

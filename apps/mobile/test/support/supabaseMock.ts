@@ -31,14 +31,17 @@ export const fakeSession: Session = {
   },
 };
 
-let authStateListener: AuthStateListener | undefined;
+// More than one part of the app listens (the sign-in gate and the provider that clears its cache).
+const authStateListeners = new Set<AuthStateListener>();
 
 export function emitAuthStateChange(event: string, session: Session | null): void {
-  authStateListener?.(event, session);
+  for (const listener of authStateListeners) {
+    listener(event, session);
+  }
 }
 
 export function resetSupabaseMock(): void {
-  authStateListener = undefined;
+  authStateListeners.clear();
   unsubscribeMock.mockReset();
   for (const method of Object.values(mockSupabaseClient.auth)) {
     method.mockReset();
@@ -46,7 +49,11 @@ export function resetSupabaseMock(): void {
   mockSupabaseClient.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   mockSupabaseClient.auth.signOut.mockResolvedValue({ error: null });
   mockSupabaseClient.auth.onAuthStateChange.mockImplementation((listener: AuthStateListener) => {
-    authStateListener = listener;
-    return { data: { subscription: { unsubscribe: unsubscribeMock } } };
+    authStateListeners.add(listener);
+    const unsubscribe = () => {
+      authStateListeners.delete(listener);
+      unsubscribeMock();
+    };
+    return { data: { subscription: { unsubscribe } } };
   });
 }

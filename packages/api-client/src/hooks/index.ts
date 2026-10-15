@@ -1,4 +1,5 @@
 // TanStack Query hooks over the repos land here from M2 onward.
+export { useAcceptTerms } from "./useAcceptTerms";
 export { useCreateFood } from "./useCreateFood";
 export { useDebouncedValue } from "./useDebouncedValue";
 export { useFood } from "./useFood";
@@ -22,4 +23,5 @@ export { useFoodWithPortions } from "./useFoodWithPortions";
 export type { FoodWithPortionsState } from "./useFoodWithPortions";
 export { useMaterialiseOffProduct } from "./useMaterialiseOffProduct";
 export { useOwnFoods } from "./useOwnFoods";
+export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useUpdateFood } from "./useUpdateFood";

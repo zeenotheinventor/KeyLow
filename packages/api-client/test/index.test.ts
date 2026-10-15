@@ -5,10 +5,14 @@ import * as apiClient from "../src";
 describe("the package index", () => {
   it.each([
     "MIN_SEARCH_LENGTH",
+    "acceptTerms",
+    "getMyTermsAcceptance",
     "listOwnFoods",
+    "useAcceptTerms",
     "useDebouncedValue",
     "useFoodWithPortions",
     "useOwnFoods",
+    "useTermsAcceptance",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

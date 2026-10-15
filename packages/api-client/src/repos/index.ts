@@ -13,3 +13,4 @@ export {
 } from "./foods";
 export type { CreatedFood, FoodSearchHit } from "./foods";
 export { fetchOffProduct, searchOff } from "./off";
+export { acceptTerms, getMyTermsAcceptance } from "./terms";
