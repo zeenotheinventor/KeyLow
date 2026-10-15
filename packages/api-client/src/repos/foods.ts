@@ -100,6 +100,12 @@ const portionRows = (
     position,
   }));
 
+/**
+ * Loads one food by id. Deleted foods are deliberately still returned, with `deleted_at` set,
+ * because a log entry points at its food and must keep resolving it after the food is removed
+ * (ADR 0003 decision Q10 and Amendment 2). Hiding deleted foods is the job of `search_foods`,
+ * `getFoodByBarcode`, `listOwnFoods` and the clients, never of this lookup.
+ */
 export async function getFood(client: SupabaseClient<Database>, id: string): Promise<Food | null> {
   const { data, error } = await client
     .from("foods")
@@ -326,6 +332,33 @@ export async function updateFood(
   }
 
   return food;
+}
+
+/**
+ * Removes one of the caller's own custom foods by setting `deleted_at` to the current time, as the
+ * caller's clock gives it, since PostgREST cannot call `now()` in an update. The row is kept, so log
+ * entries still resolve it through `getFood`, and its portions are untouched. `authenticated` has no
+ * delete grant on `foods`. Throws when the food is not visible to the caller or is not theirs to
+ * change (a shared food, or another user's). Deleting a food that is already deleted succeeds and
+ * moves `deleted_at` to the new time.
+ */
+export async function softDeleteFood(client: SupabaseClient<Database>, id: string): Promise<Food> {
+  const { data, error } = await client
+    .from("foods")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", id)
+    .select(FOOD_COLUMNS)
+    .maybeSingle();
+
+  if (error) {
+    throw repoError("delete the food", error);
+  }
+
+  if (data === null) {
+    throw new Error(`The food ${id} was not found or cannot be deleted`);
+  }
+
+  return foodRowSchema.parse(data);
 }
 
 /**

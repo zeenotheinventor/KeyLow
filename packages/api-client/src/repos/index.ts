@@ -9,6 +9,7 @@ export {
   listOwnFoods,
   replaceFoodPortions,
   searchFoods,
+  softDeleteFood,
   updateFood,
 } from "./foods";
 export type { CreatedFood, FoodSearchHit } from "./foods";

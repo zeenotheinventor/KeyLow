@@ -9,6 +9,7 @@ export {
   useAcceptTerms,
   useCreateFood,
   useDebouncedValue,
+  useDeleteFood,
   useFood,
   useFoodByBarcode,
   useFoodPortions,
@@ -45,6 +46,7 @@ export {
   replaceFoodPortions,
   searchFoods,
   searchOff,
+  softDeleteFood,
   updateFood,
 } from "./repos";
 export type { CreatedFood, FoodSearchHit } from "./repos";

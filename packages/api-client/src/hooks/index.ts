@@ -2,6 +2,7 @@
 export { useAcceptTerms } from "./useAcceptTerms";
 export { useCreateFood } from "./useCreateFood";
 export { useDebouncedValue } from "./useDebouncedValue";
+export { useDeleteFood } from "./useDeleteFood";
 export { useFood } from "./useFood";
 export { useFoodByBarcode } from "./useFoodByBarcode";
 export type {
