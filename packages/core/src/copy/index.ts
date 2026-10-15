@@ -18,3 +18,4 @@ export * from "./shell";
 export * from "./datePicker";
 export * from "./foodLog";
 export * from "./targetsPage";
+export * from "./weekGrid";

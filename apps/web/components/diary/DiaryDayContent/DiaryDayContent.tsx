@@ -24,6 +24,7 @@ import type { LogEntry } from "@keylow/api-client";
 
 import { MacroProgressStrip } from "@/components/ui/MacroProgressStrip";
 import { useToast } from "@/components/ui/Toast";
+import { useKeyboardUndo } from "@/lib/keyboardUndo";
 
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets) and the
@@ -40,6 +41,7 @@ export function DiaryDayContent({
   onOpenTargets,
 }: DiaryDayContentProps) {
   const toast = useToast();
+  const keyboardUndo = useKeyboardUndo();
   const deleteEntry = useDeleteEntry();
   const restoreEntry = useRestoreEntry();
   const copyDay = useCopyDay();
@@ -57,6 +59,8 @@ export function DiaryDayContent({
   }
 
   function remove(entry: LogEntry) {
+    // Asked before the row goes, while focus is still on its button.
+    const keyboardRoute = keyboardUndo.afterRemovingRow();
     deleteEntry.mutate(entry, { onError: showFailure });
     toast.show({
       message: ENTRY_DELETED_TOAST,
@@ -65,6 +69,7 @@ export function DiaryDayContent({
       onAction: () => {
         restoreEntry.mutate(entry, { onError: showFailure });
       },
+      ...keyboardRoute,
     });
   }
 

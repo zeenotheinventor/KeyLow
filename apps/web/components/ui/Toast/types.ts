@@ -6,6 +6,20 @@ export type ToastTone = "neutral" | "success" | "warning" | "danger";
 /** Where the toast sits. Absolute is inside its nearest positioned container, fixed is on the viewport. */
 export type ToastPosition = "absolute" | "fixed";
 
+/**
+ * The keyboard route to the action. A screen asks for it when the person pressed a button with the keyboard
+ * (a delete, a copy), because the toast sits after the page and a keyboard user could not reach Undo within
+ * the wait.
+ */
+export type ToastFocusAction = {
+  /**
+   * Where focus goes when the toast closes with focus still on it: the next row after a delete, or the
+   * button pressed after a copy. Null leaves focus where the browser puts it. A target that has left the
+   * page is skipped.
+   */
+  returnTo: HTMLElement | null;
+};
+
 export type ToastProps = {
   /** One short sentence, without a full stop or an exclamation mark. */
   message: string;
@@ -16,8 +30,13 @@ export type ToastProps = {
   tone?: ToastTone;
   icon?: LucideIcon;
   open?: boolean;
-  /** Called when the wait is over. Without it the toast never closes itself. */
+  /**
+   * Called when the wait is over, and when Escape is pressed with focus inside the toast. Without it
+   * the toast never closes itself.
+   */
   onClose?: () => void;
+  /** Moves focus to the action when the toast opens, and back to `returnTo` when it closes. Needs an action. */
+  focusAction?: ToastFocusAction;
   /** How long the toast waits, in milliseconds, with or without an action. */
   duration?: number;
   position?: ToastPosition;
@@ -28,7 +47,7 @@ export type ToastProps = {
 /** What a screen passes to `show`. The provider owns opening, closing and placement. */
 export type ToastOptions = Pick<
   ToastProps,
-  "message" | "actionLabel" | "onAction" | "tone" | "icon"
+  "message" | "actionLabel" | "onAction" | "tone" | "icon" | "focusAction"
 >;
 
 export type ToastContextValue = {

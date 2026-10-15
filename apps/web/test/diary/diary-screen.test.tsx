@@ -382,6 +382,67 @@ describe("the diary screen", () => {
       expect(restoreEntry.mutate.mock.calls[0]?.[0]).toBe(deleted);
     });
 
+    describe("by keyboard", () => {
+      const deletePorridge = () =>
+        within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" });
+
+      function pressDeleteWithKeyboard() {
+        fireEvent.keyDown(document, { key: "Enter" });
+        deletePorridge().focus();
+        fireEvent.click(deletePorridge());
+      }
+
+      it("should move focus to Undo", () => {
+        renderDiary();
+
+        pressDeleteWithKeyboard();
+
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      });
+
+      it("should give focus to the next row when the toast is dismissed", () => {
+        renderDiary();
+        pressDeleteWithKeyboard();
+
+        fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+        expect(document.activeElement).toBe(
+          within(tableOf("08:00")).getByRole("button", { name: "Delete Semi-skimmed milk" }),
+        );
+      });
+
+      it("should give focus to the next row when Undo is pressed, and bring the entry back", () => {
+        renderDiary();
+        pressDeleteWithKeyboard();
+
+        fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+        expect(restoreEntry.mutate).toHaveBeenCalledOnce();
+        expect(document.activeElement).toBe(
+          within(tableOf("08:00")).getByRole("button", { name: "Delete Semi-skimmed milk" }),
+        );
+      });
+
+      it("should announce the toast once", () => {
+        renderDiary();
+
+        pressDeleteWithKeyboard();
+
+        expect(screen.getAllByText("Entry deleted")).toHaveLength(1);
+        expect(screen.getAllByRole("status")).toHaveLength(1);
+      });
+
+      it("should leave focus alone after a pointer press", () => {
+        renderDiary();
+        fireEvent.pointerDown(deletePorridge());
+        deletePorridge().focus();
+
+        fireEvent.click(deletePorridge());
+
+        expect(document.activeElement).toBe(deletePorridge());
+      });
+    });
+
     it("should say so when a delete does not go through", () => {
       renderDiary();
       fireEvent.click(
