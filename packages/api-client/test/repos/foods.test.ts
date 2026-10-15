@@ -81,20 +81,31 @@ afterAll(() => {
 
 const FOOD_ID = foodRow().id;
 
+const customFoodInputValues = {
+  name: "  Protein flapjack ",
+  brand: "Home made",
+  barcode: "0 36000-29145 2",
+  basis: "per_100g",
+  density_g_per_ml: 1.1,
+  kcal: 410,
+  protein_g: 22,
+  fat_g: 14,
+  carbs_g: 45,
+  fibre_g: 6,
+};
+
+const carryingInputValues = {
+  ...customFoodInputValues,
+  sat_fat_g: 3.5,
+  sugars_g: 12,
+  salt_g: 0.4,
+  portions: [],
+};
+
 const customFoodInput = (portions: unknown[] = []) =>
-  customFoodInputSchema.parse({
-    name: "  Protein flapjack ",
-    brand: "Home made",
-    barcode: "0 36000-29145 2",
-    basis: "per_100g",
-    density_g_per_ml: 1.1,
-    kcal: 410,
-    protein_g: 22,
-    fat_g: 14,
-    carbs_g: 45,
-    fibre_g: 6,
-    portions,
-  });
+  customFoodInputSchema.parse({ ...customFoodInputValues, portions });
+
+const carryingInput = () => customFoodInputSchema.parse(carryingInputValues);
 
 const twoPortions = [
   { label: "1 bar", grams: 60, isDefault: true },
@@ -264,6 +275,54 @@ describe("createFood", () => {
       density_g_per_ml: null,
       fibre_g: null,
     });
+  });
+
+  it("should write saturated fat, sugars and salt when the input carries them", async () => {
+    respondToInserts();
+
+    await createFood(createTestClient(), SIGNED_IN_USER_ID, carryingInput());
+
+    const [request] = requestsTo("POST", "foods");
+    expect(request?.body).toEqual({
+      name: "Protein flapjack",
+      brand: "Home made",
+      barcode: "0036000291452",
+      basis: "per_100g",
+      density_g_per_ml: 1.1,
+      kcal: 410,
+      protein_g: 22,
+      fat_g: 14,
+      carbs_g: 45,
+      fibre_g: 6,
+      sat_fat_g: 3.5,
+      sugars_g: 12,
+      salt_g: 0.4,
+      source: "user",
+      owner_id: SIGNED_IN_USER_ID,
+      micros: {},
+    });
+  });
+
+  it("should write null for saturated fat, sugars and salt the input leaves out", async () => {
+    respondToInserts();
+
+    await createFood(createTestClient(), SIGNED_IN_USER_ID, customFoodInput());
+
+    const [request] = requestsTo("POST", "foods");
+    expect(request?.body).toMatchObject({ sat_fat_g: null, sugars_g: null, salt_g: null });
+  });
+
+  it("should write a carried zero as zero, not as null", async () => {
+    respondToInserts();
+
+    await createFood(
+      createTestClient(),
+      SIGNED_IN_USER_ID,
+      customFoodInputSchema.parse({ ...carryingInputValues, sat_fat_g: 0, sugars_g: 0, salt_g: 0 }),
+    );
+
+    const [request] = requestsTo("POST", "foods");
+    expect(request?.body).toMatchObject({ sat_fat_g: 0, sugars_g: 0, salt_g: 0 });
   });
 
   it("should return the created food with no portions when none were given", async () => {
@@ -533,6 +592,65 @@ describe("updateFood", () => {
       density_g_per_ml: null,
       fibre_g: null,
     });
+  });
+
+  it("should write saturated fat, sugars and salt when the input carries them", async () => {
+    respondToUpdate();
+
+    await updateFood(createTestClient(), FOOD_ID, carryingInput());
+
+    const [request] = requestsTo("PATCH", "foods");
+    expect(request?.body).toEqual({
+      name: "Protein flapjack",
+      brand: "Home made",
+      barcode: "0036000291452",
+      basis: "per_100g",
+      density_g_per_ml: 1.1,
+      kcal: 410,
+      protein_g: 22,
+      fat_g: 14,
+      carbs_g: 45,
+      fibre_g: 6,
+      sat_fat_g: 3.5,
+      sugars_g: 12,
+      salt_g: 0.4,
+    });
+  });
+
+  it("should never write saturated fat, sugars or salt the input leaves out, so an edit cannot clear them", async () => {
+    respondToUpdate();
+
+    await updateFood(createTestClient(), FOOD_ID, customFoodInput());
+
+    const [request] = requestsTo("PATCH", "foods");
+    expect(request?.body).toEqual({
+      name: "Protein flapjack",
+      brand: "Home made",
+      barcode: "0036000291452",
+      basis: "per_100g",
+      density_g_per_ml: 1.1,
+      kcal: 410,
+      protein_g: 22,
+      fat_g: 14,
+      carbs_g: 45,
+      fibre_g: 6,
+    });
+  });
+
+  it("should write only the carried values the input has, leaving the others untouched", async () => {
+    respondToUpdate();
+    const input = customFoodInputSchema.parse({
+      ...customFoodInputValues,
+      salt_g: 0,
+      portions: [],
+    });
+
+    await updateFood(createTestClient(), FOOD_ID, input);
+
+    const [request] = requestsTo("PATCH", "foods");
+    expect(request?.body).toMatchObject({ salt_g: 0 });
+    expect(request?.body).not.toHaveProperty("sat_fat_g");
+    expect(request?.body).not.toHaveProperty("sugars_g");
   });
 
   it("should replace the portions with the owner of the updated food", async () => {
