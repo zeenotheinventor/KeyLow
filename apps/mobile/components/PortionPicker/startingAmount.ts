@@ -28,7 +28,8 @@ export function unitOptions(
 
 /**
  * Where the amount field and the chips start: the amount the screen was given, or else the food's default
- * serving, which is one of the default portion or 100 g. That is the serving a row's plus logs, so the two agree.
+ * serving, which is one of the default portion, or 100 g (100 ml for a drink). That is the serving a row's
+ * plus logs, so the two agree.
  */
 export function startingAmount(
   food: Food,
@@ -39,6 +40,10 @@ export function startingAmount(
     return { quantity: String(initialAmount.quantity), unitValue: unitValueOf(initialAmount) };
   }
   const serving = defaultServing(food, portions);
+  if (serving.unit === "g" && food.basis === "per_100ml") {
+    // A drink with no portion starts at 100 ml, as its row in the search shows, where core's default is 100 g.
+    return { quantity: String(serving.quantity), unitValue: "ml" };
+  }
 
   return {
     quantity: String(serving.quantity),

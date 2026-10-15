@@ -30,8 +30,26 @@ export default function FoodSearchRoute() {
       onCreateFood={() => {
         router.push("/foods/new");
       }}
+      // While food is being logged a result opens the portion picker, not the food, with the day and time carried on.
+      logging={
+        logContext === undefined
+          ? undefined
+          : {
+              context: logContext,
+              onQuickAdd: () => {
+                router.push(withLogContext("/foods/quick-add", logContext));
+              },
+              onOpenRecent: (foodId) => {
+                router.push(withLogContext(`/foods/${foodId}/log`, logContext, { recent: "1" }));
+              },
+            }
+      }
       onOpenFood={(foodId) => {
-        router.push(`/foods/${foodId}`);
+        router.push(
+          logContext === undefined
+            ? `/foods/${foodId}`
+            : withLogContext(`/foods/${foodId}/log`, logContext),
+        );
       }}
       onScanBarcode={() => {
         // While food is being logged the scanner carries the day and the time on to the portion picker.

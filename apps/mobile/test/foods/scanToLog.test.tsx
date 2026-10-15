@@ -56,7 +56,6 @@ jest.mock("@keylow/api-client", () => ({
       )
       .mockUseFoodByBarcode(rawCode, options),
 }));
-jest.mock("../../lib/deviceTimeZone", () => ({ deviceTimeZone: () => "Europe/London" }));
 
 setUpTests();
 

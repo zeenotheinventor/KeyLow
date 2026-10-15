@@ -13,7 +13,6 @@ import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { GestureRoot } from "../../lib/GestureRoot";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import {
   Badge,
@@ -78,7 +77,7 @@ export function PortionPicker({
   const chosenUnit = options.find((option) => option.value === unitValue);
 
   return (
-    <GestureRoot className="flex-1 bg-background">
+    <View className="flex-1 bg-background">
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
         className="flex-1"
@@ -184,6 +183,6 @@ export function PortionPicker({
           }}
         />
       </KeyboardAvoidingView>
-    </GestureRoot>
+    </View>
   );
 }

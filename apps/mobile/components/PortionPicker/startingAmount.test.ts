@@ -52,6 +52,13 @@ describe("startingAmount", () => {
     expect(startingAmount(buildFood(), [])).toEqual({ quantity: "100", unitValue: "g" });
   });
 
+  it("should start a drink with no portion at 100 ml", () => {
+    expect(startingAmount(buildFood({ basis: "per_100ml" }), [])).toEqual({
+      quantity: "100",
+      unitValue: "ml",
+    });
+  });
+
   it("should start at the amount it is given, such as the one last logged", () => {
     expect(startingAmount(buildFood(), [medium, large], { unit: "g", quantity: 50 })).toEqual({
       quantity: "50",

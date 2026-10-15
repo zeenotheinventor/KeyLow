@@ -1,4 +1,5 @@
 import "react-native-gesture-handler/jestSetup";
+import { SNAPSHOT_VERSION } from "@keylow/core/diary";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
@@ -9,6 +10,8 @@ import {
   mockUseFoodWithPortions,
   portionFixtures,
   portionsQuery,
+  profileTimeZone,
+  recentFoods,
   resetApiClientMock,
   savedFoodId,
 } from "./support/apiClientMock";
@@ -19,6 +22,7 @@ import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
+import type { RecentFood } from "@keylow/api-client";
 import type { Food } from "@keylow/core/schemas";
 
 // The portion picker on its route, with the data hooks and the router mocked: what the boards draw, the
@@ -41,14 +45,12 @@ jest.mock(
   "@keylow/api-client",
   () => jest.requireActual<{ mockApiClient: unknown }>("./support/apiClientMock").mockApiClient,
 );
-// The device is in London, where 11:40 UTC on 15 October 2026 reads 12:40.
-jest.mock("../../lib/deviceTimeZone", () => ({ deviceTimeZone: () => "Europe/London" }));
 
 setUpTests();
 
 const openedAt = new Date("2026-10-15T11:40:30Z");
 
-type Params = { day?: string; time?: string; barcode?: string };
+type Params = { day?: string; time?: string; barcode?: string; recent?: string };
 
 async function renderPicker(params: Params = {}) {
   routerMock.searchParams = { id: savedFoodId, ...params };
@@ -84,6 +86,28 @@ async function advance(milliseconds: number) {
     jest.advanceTimersByTime(milliseconds);
   });
 }
+
+// Oats last logged yesterday morning, 50 g.
+const oatsLastLogged: RecentFood = {
+  foodId: savedFoodId,
+  entryId: "entry-oats",
+  loggedAt: "2026-10-14T07:05:00Z",
+  portionId: null,
+  snapshot: {
+    v: SNAPSHOT_VERSION,
+    kind: "food",
+    ref: savedFoodId,
+    name: "Oat bar",
+    basis: "per_100g",
+    per100: { kcal: 420, protein_g: 8.5, fat_g: 14, carbs_g: 62, fibre_g: 6.5 },
+    quantity: 50,
+    unit: "g",
+    portion: null,
+    density: null,
+    resolvedGrams: 50,
+    engineVersion: 1,
+  },
+};
 
 describe("portion picker", () => {
   let kitStyles: string;
@@ -130,6 +154,28 @@ describe("portion picker", () => {
       await renderPicker();
 
       expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
+    });
+
+    it("should wait for the profile's time zone, because the time is read in it", async () => {
+      profileTimeZone.current = { data: undefined, isPending: true, isError: false };
+      await renderPicker();
+
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+    });
+
+    it("should say it could not load when the time zone could not be read", async () => {
+      profileTimeZone.current = { data: undefined, isPending: false, isError: true };
+      await renderPicker();
+
+      expect(within(screen.getByRole("alert")).getByText("Food not loaded")).toBeOnTheScreen();
+    });
+
+    it("should read the time in the profile's zone, not the device's", async () => {
+      profileTimeZone.current = { data: "America/New_York", isPending: false, isError: false };
+      await renderPicker({ day: "2026-10-15" });
+
+      expect(timeRow("Time, now, 07:40, change")).toBeOnTheScreen();
     });
 
     it("should say the food could not be loaded when it failed", async () => {
@@ -480,6 +526,53 @@ describe("portion picker", () => {
       expect(
         within(screen.getByLabelText("Per 100 g")).getByLabelText("Carbohydrate, not given"),
       ).toBeOnTheScreen();
+    });
+  });
+
+  describe("from Recent", () => {
+    beforeEach(() => {
+      recentFoods.current = { data: [oatsLastLogged], isPending: false, isError: false };
+    });
+
+    it("should start at the amount last logged and say when it was", async () => {
+      await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      expect(amountField()).toHaveDisplayValue("50");
+      expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+      expect(screen.getByText("Last logged 50 g, yesterday")).toBeOnTheScreen();
+      expect(hero("For 50 g")).toBeOnTheScreen();
+    });
+
+    it("should log that amount when Add is pressed without a change", async () => {
+      const user = await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      await user.press(addButton());
+
+      expect(mockLogFood).toHaveBeenCalledWith(
+        expect.objectContaining({ quantity: 50, unit: "g" }),
+      );
+    });
+
+    it("should wait for the recent foods rather than start at the default and jump", async () => {
+      recentFoods.current = { data: undefined, isPending: true, isError: false };
+      await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      expect(screen.getByRole("status", { name: "Loading food" })).toBeOnTheScreen();
+    });
+
+    it("should start at the default serving when the food is not among the recent ones", async () => {
+      recentFoods.current = { data: [], isPending: false, isError: false };
+      await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      expect(amountField()).toHaveDisplayValue("1");
+      expect(screen.queryByText(/Last logged/)).not.toBeOnTheScreen();
+    });
+
+    it("should ignore the recent foods when the picker was not opened from Recent", async () => {
+      await renderPicker({ day: "2026-10-15" });
+
+      expect(amountField()).toHaveDisplayValue("1");
+      expect(screen.queryByText(/Last logged/)).not.toBeOnTheScreen();
     });
   });
 

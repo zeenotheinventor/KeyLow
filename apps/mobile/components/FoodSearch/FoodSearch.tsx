@@ -1,9 +1,10 @@
-import { SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
+import { LOG_SEARCH, SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { LogSearchResults } from "./LogSearchResults";
 import { OwnFoodResults } from "./OwnFoodResults";
 import { SearchResults } from "./SearchResults";
 import { IconButton, SearchField, SheetHeader } from "../ui";
@@ -27,6 +28,7 @@ export function FoodSearch({
   onCreateFood,
   onScanBarcode,
   onOpenFood,
+  logging,
 }: FoodSearchProps) {
   const { title, autoFocus } = WORDING[scope];
   const insets = useSafeAreaInsets();
@@ -40,8 +42,13 @@ export function FoodSearch({
     >
       <SheetHeader
         leading={{ icon: "X", label: "Close", onPress: onClose }}
-        title={title}
-        trailing={{ icon: "Plus", label: "Create a food", onPress: onCreateFood }}
+        title={logging === undefined ? title : LOG_SEARCH.title}
+        // Logging has no create control in the header, as its boards draw none. An empty search still offers one.
+        trailing={
+          logging === undefined
+            ? { icon: "Plus", label: "Create a food", onPress: onCreateFood }
+            : undefined
+        }
       />
       {scope === "own" ? (
         // The list scrolls itself, so it can load the next page when the end is reached.
@@ -52,7 +59,16 @@ export function FoodSearch({
           contentContainerClassName="grow gap-4 px-4 pb-4 pt-1"
           keyboardShouldPersistTaps="handled"
         >
-          <SearchResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
+          {logging === undefined ? (
+            <SearchResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
+          ) : (
+            <LogSearchResults
+              logging={logging}
+              query={query}
+              onCreateFood={onCreateFood}
+              onOpenFood={onOpenFood}
+            />
+          )}
         </ScrollView>
       )}
       <SearchField
