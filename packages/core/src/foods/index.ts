@@ -1,6 +1,13 @@
 export { DATA_SOURCE_ATTRIBUTION } from "./attribution";
 export { normaliseBarcode } from "./barcode";
 export type { BarcodeInvalidReason, BarcodeSymbology, NormaliseBarcodeResult } from "./barcode";
+export { FORM_NUTRIENTS, classifyCustomFoodIssues } from "./customFoodProblems";
+export type {
+  ClassifiableValues,
+  CustomFoodIssue,
+  CustomFoodProblem,
+  FormNutrient,
+} from "./customFoodProblems";
 export { carriedNutrients } from "./carriedNutrients";
 export type { CarriedNutrients } from "./carriedNutrients";
 export {

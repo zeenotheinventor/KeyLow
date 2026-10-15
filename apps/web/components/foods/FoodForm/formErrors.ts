@@ -1,4 +1,5 @@
 import {
+  FOOD_FORM,
   FOOD_FORM_BARCODE_NOT_VALID,
   FOOD_FORM_BARCODE_PROBLEMS,
   describeNameProblem,
@@ -7,19 +8,15 @@ import {
   describePortionLabelAndAmountProblem,
   describePortionLabelProblem,
 } from "@keylow/core/copy";
-import { normaliseBarcode } from "@keylow/core/foods";
+import { classifyCustomFoodIssues } from "@keylow/core/foods";
 
 import type { FormErrors, FormIssue, FoodFormValues, PortionError } from "./types";
-import type { FoodFormNutrient } from "@keylow/core/copy";
+import type { CustomFoodProblem } from "@keylow/core/foods";
 
-const NUTRIENTS: readonly FoodFormNutrient[] = ["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g"];
+type BarcodeProblem = Extract<CustomFoodProblem, { target: "barcode" }>;
 
-const isNutrient = (key: unknown): key is FoodFormNutrient =>
-  NUTRIENTS.some((nutrient) => nutrient === key);
-
-function describeBarcodeProblem(barcode: string): string {
-  const result = normaliseBarcode(barcode.trim());
-  return result.ok ? FOOD_FORM_BARCODE_NOT_VALID : FOOD_FORM_BARCODE_PROBLEMS[result.reason];
+function describeBarcodeProblem({ rule }: BarcodeProblem): string {
+  return rule === "not_valid" ? FOOD_FORM_BARCODE_NOT_VALID : FOOD_FORM_BARCODE_PROBLEMS[rule];
 }
 
 function describePortionProblem(
@@ -37,29 +34,36 @@ function describePortionProblem(
 
 /**
  * Maps the schema's issues to one sentence for each field that failed, from core's form copy. The
- * first issue for a field wins. A portion row gets one sentence however many of its fields failed,
- * and any issue below the label counts against the amount.
+ * first issue for a field wins. A portion row gets one sentence however many of its fields failed.
+ * No issue goes unsaid: one that no field can show, such as more than one default portion, is a
+ * sentence for the banner above the actions.
  */
 export function formErrorsFrom(issues: FormIssue[], values: FoodFormValues): FormErrors {
-  const errors: FormErrors = { nutrients: {}, portions: {} };
+  const errors: FormErrors = { nutrients: {}, portions: {}, bannerSentences: [] };
   const portionIssues = new Map<number, { label: boolean; amount: boolean }>();
+  let hasProblemBesidesDefaults = false;
+  let hasMoreThanOneDefault = false;
 
-  for (const issue of issues) {
-    const [head, index, field] = issue.path;
+  for (const problem of classifyCustomFoodIssues(issues, values)) {
+    if (problem.target === "portions") {
+      hasMoreThanOneDefault = true;
+      continue;
+    }
+    hasProblemBesidesDefaults = true;
 
-    if (head === "name") {
-      errors.name ??= describeNameProblem(issue.code === "too_big" ? "too_long" : "required");
-    } else if (head === "barcode") {
-      errors.barcode ??= describeBarcodeProblem(values.barcode);
-    } else if (isNutrient(head)) {
-      const text = values[head];
-      const problem =
-        issue.code === "too_small" ? "negative" : text.trim() === "" ? "required" : "not_a_number";
-      errors.nutrients[head] ??= describeNutrientProblem(head, problem);
-    } else if (head === "portions" && typeof index === "number") {
-      const problems = portionIssues.get(index) ?? { label: false, amount: false };
-      problems[field === "label" ? "label" : "amount"] = true;
-      portionIssues.set(index, problems);
+    if (problem.target === "name") {
+      errors.name ??= describeNameProblem(problem.rule);
+    } else if (problem.target === "barcode") {
+      errors.barcode ??= describeBarcodeProblem(problem);
+    } else if (problem.target === "nutrient") {
+      errors.nutrients[problem.nutrient] ??= describeNutrientProblem(
+        problem.nutrient,
+        problem.rule,
+      );
+    } else if (problem.target === "portion") {
+      const problems = portionIssues.get(problem.index) ?? { label: false, amount: false };
+      problems[problem.field] = true;
+      portionIssues.set(problem.index, problems);
     }
   }
 
@@ -70,6 +74,13 @@ export function formErrorsFrom(issues: FormIssue[], values: FoodFormValues): For
       isAmountInvalid: problems.amount,
     };
     errors.portions[index] = error;
+  }
+
+  if (hasProblemBesidesDefaults) {
+    errors.bannerSentences.push(FOOD_FORM.validationSummary);
+  }
+  if (hasMoreThanOneDefault) {
+    errors.bannerSentences.push(FOOD_FORM.onlyOneDefaultPortion);
   }
 
   return errors;
