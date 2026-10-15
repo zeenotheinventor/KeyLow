@@ -103,13 +103,33 @@ async function waitForStoredCacheOfTheDiary() {
   });
 }
 
-/** Looks at today's diary with a connection, until the cache is stored, then closes the app. */
+// The library saves at most once a second, and a save asked for while one is waiting runs when its turn comes.
+const SAVE_INTERVAL_MS = 1000;
+
+/**
+ * Looks at today's diary with a connection, until the cache is stored, then closes the app.
+ *
+ * A save can still be waiting for its turn when the app closes, and it would land later and overwrite what a
+ * test then does to the stored cache. So a last change is made to make sure one is waiting, and the clock is
+ * fake while the app runs, so that the wait can be played out without a real sleep.
+ */
 async function storeTheDiaryAndCloseTheApp() {
-  await renderDiary();
-  await screen.findByRole("button", { name: /^Porridge oats/ });
-  await waitForStoredCacheOfTheDiary();
-  await cleanup();
-  queryClient.clear();
+  jest.useFakeTimers();
+  try {
+    await renderDiary();
+    await screen.findByRole("button", { name: /^Porridge oats/ });
+    await waitForStoredCacheOfTheDiary();
+    await act(() => {
+      void queryClient.invalidateQueries({ queryKey: keys.diary.all, refetchType: "none" });
+    });
+    await cleanup();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(SAVE_INTERVAL_MS * 2);
+    });
+    queryClient.clear();
+  } finally {
+    jest.useRealTimers();
+  }
 }
 
 async function changeStoredCache(change: (stored: PersistedClient) => PersistedClient) {

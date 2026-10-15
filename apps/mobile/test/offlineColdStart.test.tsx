@@ -96,7 +96,22 @@ describe("opening the diary with no connection, from a cold start", () => {
     queryClient.clear();
   });
 
+  // The library saves at most once a second, and a save asked for while one is waiting runs when its turn comes.
+  const SAVE_INTERVAL_MS = 1000;
+
+  // A save can still be waiting when the app closes, and it would land later and overwrite what a test then does
+  // to the stored cache. So a last change makes sure one is waiting, and the clock is fake while the app runs, so
+  // that the wait is played out without a real sleep.
   async function useTheDiaryOnlineThenCloseTheApp() {
+    jest.useFakeTimers();
+    try {
+      await showTheDiaryOnline();
+    } finally {
+      jest.useRealTimers();
+    }
+  }
+
+  async function showTheDiaryOnline() {
     queryClient = createDiaryQueryClient();
     await render(
       <ThemeProvider fixedPreference="dark">
@@ -122,7 +137,13 @@ describe("opening the diary with no connection, from a cold start", () => {
         expect(hashes).toContain(hashKey(queryKey));
       }
     });
+    await act(() => {
+      void queryClient.invalidateQueries({ queryKey: keys.diary.all, refetchType: "none" });
+    });
     await cleanup();
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(SAVE_INTERVAL_MS * 2);
+    });
     queryClient.clear();
   }
 
