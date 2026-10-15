@@ -1,4 +1,7 @@
 // Plain async functions over SupabaseClient<Database> land here from M2 onward.
+export { getDiaryDay, getDiaryWeek, listCompleteDays, listRecentFoods } from "./diary";
+export type { DiaryDay, DiaryWeekDay, RecentFood } from "./diary";
+export type { DayLog, DayTotals, LogEntry } from "./diarySchemas";
 export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,

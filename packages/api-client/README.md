@@ -39,13 +39,21 @@ Anything below the provider can call `useSupabase()` for the client and TanStack
 
 ## Hooks worth knowing
 
-| Hook                       | Notes                                                                                                                                  |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `useFoodSearch(query)`     | Debounced local search with an Open Food Facts fallback. `isDebouncing` says the user has typed and the search is waiting (see below). |
-| `useFoodByBarcode(code)`   | Local lookup, then Open Food Facts. Never retried, and not repeated on focus or reconnect.                                             |
-| `useFoodWithPortions(id)`  | One screen state for a food: `loading`, `error`, `notFound` or `ready`. A failed background refetch never replaces a `ready` food.     |
-| `useOwnFoods()`            | The signed in user's own foods by name, up to 200, with no query. Key `keys.foods.own`. Creating or updating a food refreshes it.      |
-| `useDebouncedValue(v, ms)` | The debounce `useFoodSearch` uses, exported so a screen does not need its own copy.                                                    |
+| Hook                                   | Notes                                                                                                                                                                                                                     |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useFoodSearch(query)`                 | Debounced local search with an Open Food Facts fallback. `isDebouncing` says the user has typed and the search is waiting (see below).                                                                                    |
+| `useFoodByBarcode(code)`               | Local lookup, then Open Food Facts. Never retried, and not repeated on focus or reconnect.                                                                                                                                |
+| `useFoodWithPortions(id)`              | One screen state for a food: `loading`, `error`, `notFound` or `ready`. A failed background refetch never replaces a `ready` food.                                                                                        |
+| `useOwnFoods()`                        | The signed in user's own foods by name, up to 200, with no query. Key `keys.foods.own`. Creating or updating a food refreshes it.                                                                                         |
+| `useDiaryDay(localDate, { enabled })`  | One diary day: its live entries as a flat list ordered by `logged_at`, `created_at`, then `id` (group with `groupEntriesByHour` from core), its `day_logs` row and its `day_totals` row. Key `keys.diary.day(localDate)`. |
+| `useDiaryWeek(weekStart, { enabled })` | Seven days, Monday to Sunday, each with its totals and day log, or null. No day log means not complete. `weekStart` must be a Monday. Key `keys.diary.week(weekStart)`.                                                   |
+| `useCompleteDays(month, { enabled })`  | The dates in a month (`YYYY-MM`) marked complete, from `day_logs` only. Key `keys.diary.completeDays(month)`.                                                                                                             |
+| `useRecentFoods({ enabled })`          | The newest distinct foods logged, each with the snapshot of its last entry. Key `keys.diary.recentFoods`.                                                                                                                 |
+| `useDebouncedValue(v, ms)`             | The debounce `useFoodSearch` uses, exported so a screen does not need its own copy.                                                                                                                                       |
+
+### Diary reads and the terms gate
+
+Every diary read takes `enabled`, and `enabled: false` makes no request. The mobile app stays mounted under the terms cover, so its screens pass `enabled: !needsTermsAcceptance(...)`. All four keys sit under `keys.diary.all`, so one invalidation refreshes a diary after a write. Rows are parsed with the core diary schemas, and a row that does not fit fails the read with an error that names the row id and the field paths only, never the values (they are health data).
 
 ### The debounce signal
 
