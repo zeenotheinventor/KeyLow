@@ -29,11 +29,17 @@ export const Ghost: Story = {
   args: { variant: "ghost", size: "sm", icon: "ScanBarcode", label: "Scan barcode" },
 };
 
+// The quiet plus on a food row: a 32 point ring, reached out to 44 points to touch.
+export const Ring: Story = {
+  args: { variant: "ring", icon: "Plus", label: "Add Banana, 1 medium (100 g)" },
+};
+
 export const Disabled: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">
       <IconButton {...args} disabled variant="secondary" />
       <IconButton {...args} disabled icon="ScanBarcode" size="sm" variant="ghost" />
+      <IconButton {...args} disabled icon="Plus" variant="ring" />
     </View>
   ),
 };

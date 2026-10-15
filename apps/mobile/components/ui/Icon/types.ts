@@ -12,8 +12,9 @@ export type IconSizeName = keyof typeof iconSize;
  * in dark and the primary text colour in light. It is for a thin glyph such as a spinner, because lime
  * is never text or a thin line on a light surface. `warning` and `danger` are the status glyphs the
  * boards draw in both schemes, on a muted fill or beside the words, which stay in a text colour (Q14).
+ * `calories` is the flame beside an energy value, in the calories colour.
  */
-export type IconTone = Tone | "accent-ink" | "warning" | "danger";
+export type IconTone = Tone | "accent-ink" | "warning" | "danger" | "calories";
 
 export type IconProps = {
   name: IconName;

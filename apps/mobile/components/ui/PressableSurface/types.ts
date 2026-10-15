@@ -22,6 +22,9 @@ export type PressableSurfaceProps = {
   haptic?: HapticFeedbackName | undefined;
   /** How far the surface compresses when pressed. Defaults to the design's `--press-scale`, 0.96. */
   pressScale?: number | undefined;
+  /** Named actions a screen reader offers on the control, such as Delete on a row that also swipes. */
+  accessibilityActions?: PressableProps["accessibilityActions"] | undefined;
+  onAccessibilityAction?: PressableProps["onAccessibilityAction"] | undefined;
   onPress?: (() => void) | undefined;
   /** Classes for the pressable itself: its size, fill, border and layout. The press scale sits outside them. */
   className?: string;

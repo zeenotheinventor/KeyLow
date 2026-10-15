@@ -1,4 +1,4 @@
-import { controlHeight, iconSize, touchTarget } from "@keylow/tokens";
+import { controlHeight, iconSize, themes, touchTarget } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
 import { AccessibilityInfo } from "react-native";
@@ -10,6 +10,7 @@ import { animatedScale } from "../support/animatedStyle";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
+import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { IconButtonProps } from "../../components/ui";
 import type { ThemeScheme } from "@keylow/tokens";
@@ -238,6 +239,79 @@ describe("IconButton", () => {
 
       expect(screen.getByRole("button", { name: "Close" })).toHaveProp("hitSlop", 0);
     });
+  });
+
+  describe("ring", () => {
+    // The circle is a view with no role of its own, so it is found by the look it was drawn with.
+    function ringCircle() {
+      return viewsDrawn({ height: 32, width: 32, borderRadius: 999 });
+    }
+
+    it("should be a 44 point touch target itself, because a touch outside its parent is never delivered", async () => {
+      await renderIconButton({ variant: "ring", icon: "Plus" });
+
+      expect(screen.getByRole("button", { name: "Close" })).toHaveStyle({
+        height: touchTarget,
+        width: touchTarget,
+        borderRadius: 999,
+      });
+    });
+
+    it("should hold a 32 point circle, so the plus sits in a mild ring", async () => {
+      await renderIconButton({ variant: "ring", icon: "Plus" });
+
+      const button = screen.getByRole("button", { name: "Close" });
+      const [circle] = ringCircle();
+      expect(ringCircle()).toHaveLength(1);
+      let ancestor = circle?.parent;
+      while (ancestor && ancestor !== button) {
+        ancestor = ancestor.parent;
+      }
+      expect(ancestor).toBe(button);
+    });
+
+    it("should rely on no hit slop, which could not reach past its 32 point parent", async () => {
+      await renderIconButton({ variant: "ring", icon: "Plus" });
+
+      expect(screen.getByRole("button", { name: "Close" }).props.hitSlop).toBeUndefined();
+    });
+
+    it("should draw the icon at 20 points, whatever size the button is given", async () => {
+      await renderIconButton({ variant: "ring", icon: "Plus", size: "sm" });
+
+      expect(drawings()[0]).toHaveProp("width", iconSize.md);
+    });
+
+    it("should be dimmed to 40 percent and disabled when disabled, and do nothing when pressed", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      await renderIconButton({ variant: "ring", icon: "Plus", disabled: true, onPress });
+      const button = screen.getByRole("button", { name: "Close" });
+
+      await user.press(button);
+
+      expect(button).toBeDisabled();
+      expect(button).toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it.each(schemes)(
+      "should draw a border and no fill on the circle, with the plus in secondary text, in the %s scheme",
+      async (scheme) => {
+        await renderIconButton({ variant: "ring", icon: "Plus" }, scheme);
+
+        await screen.findByRole("button", { name: "Close" });
+        expect(
+          viewsDrawn({
+            height: 32,
+            borderColor: resolvedColor(scheme, "border"),
+            borderWidth: 1,
+            backgroundColor: transparent,
+          }),
+        ).toHaveLength(1);
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-secondary"]);
+      },
+    );
   });
 
   describe.each(schemes)("in the %s scheme", (scheme) => {
