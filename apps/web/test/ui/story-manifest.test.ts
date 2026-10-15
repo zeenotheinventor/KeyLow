@@ -1,89 +1,65 @@
-import { readdirSync } from "node:fs";
-import { join } from "node:path";
-
+/// <reference types="vite/client" />
 import { describe, expect, it } from "vitest";
 
-import * as badgeStories from "@/components/ui/Badge/Badge.stories";
-import * as bannerStories from "@/components/ui/Banner/Banner.stories";
-import * as buttonStories from "@/components/ui/Button/Button.stories";
-import * as calorieRingStories from "@/components/ui/CalorieRing/CalorieRing.stories";
-import * as cardStories from "@/components/ui/Card/Card.stories";
-import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
-import * as chipGroupStories from "@/components/ui/ChipGroup/ChipGroup.stories";
-import * as dayCompleteToggleStories from "@/components/ui/DayCompleteToggle/DayCompleteToggle.stories";
-import * as dayStepperStories from "@/components/ui/DayStepper/DayStepper.stories";
-import * as dialogStories from "@/components/ui/Dialog/Dialog.stories";
-import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
-import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
-import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
-import * as foodTableStories from "@/components/ui/FoodTable/FoodTable.stories";
-import * as foodTableHeaderStories from "@/components/ui/FoodTableHeader/FoodTableHeader.stories";
-import * as groupedListStories from "@/components/ui/GroupedList/GroupedList.stories";
-import * as incompleteDaysChipStories from "@/components/ui/IncompleteDaysChip/IncompleteDaysChip.stories";
-import * as inputStories from "@/components/ui/Input/Input.stories";
-import * as kiLoMarkStories from "@/components/ui/KiLoMark/KiLoMark.stories";
-import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
-import * as macroBarsStories from "@/components/ui/MacroBars/MacroBars.stories";
-import * as macroProgressStripStories from "@/components/ui/MacroProgressStrip/MacroProgressStrip.stories";
-import * as numericInputStories from "@/components/ui/NumericInput/NumericInput.stories";
-import * as nutrientTableStories from "@/components/ui/NutrientTable/NutrientTable.stories";
-import * as searchFieldStories from "@/components/ui/SearchField/SearchField.stories";
-import * as segmentedControlStories from "@/components/ui/SegmentedControl/SegmentedControl.stories";
-import * as skeletonStories from "@/components/ui/Skeleton/Skeleton.stories";
-import { storyManifest } from "@/components/ui/storyManifest";
-import * as toastStories from "@/components/ui/Toast/Toast.stories";
-import * as weekStripStories from "@/components/ui/WeekStrip/WeekStrip.stories";
+// Every primitive in the kit lists the states it must have a story for, by the name of the story's
+// export, in a `storyStates.ts` beside its stories file. A folder without that list or without stories,
+// a state without its story and a story its list does not name all fail here, so a state cannot be
+// dropped or left out of the list without the build saying so. States come from the design-system card
+// for the component plus the states the approved boards use.
+//
+// Vite reads the folders, so there is no shared list to edit: a new primitive brings its own files.
+const kitIndexes = import.meta.glob("../../components/ui/*/index.ts");
+const storyModules = import.meta.glob("../../components/ui/*/*.stories.tsx", { eager: true });
+const storyStatesModules = import.meta.glob("../../components/ui/*/storyStates.ts", {
+  eager: true,
+});
 
-const storyModules: Record<string, object> = {
-  "Banner/Banner.stories.tsx": bannerStories,
-  "DayCompleteToggle/DayCompleteToggle.stories.tsx": dayCompleteToggleStories,
-  "DayStepper/DayStepper.stories.tsx": dayStepperStories,
-  "IncompleteDaysChip/IncompleteDaysChip.stories.tsx": incompleteDaysChipStories,
-  "Checkbox/Checkbox.stories.tsx": checkboxStories,
-  "EmptyState/EmptyState.stories.tsx": emptyStateStories,
-  "ErrorState/ErrorState.stories.tsx": errorStateStories,
-  "FoodRow/FoodRow.stories.tsx": foodRowStories,
-  "FoodTable/FoodTable.stories.tsx": foodTableStories,
-  "FoodTableHeader/FoodTableHeader.stories.tsx": foodTableHeaderStories,
-  "GroupedList/GroupedList.stories.tsx": groupedListStories,
-  "KiLoMark/KiLoMark.stories.tsx": kiLoMarkStories,
-  "ListRow/ListRow.stories.tsx": listRowStories,
-  "NumericInput/NumericInput.stories.tsx": numericInputStories,
-  "NutrientTable/NutrientTable.stories.tsx": nutrientTableStories,
-  "SegmentedControl/SegmentedControl.stories.tsx": segmentedControlStories,
-  "Skeleton/Skeleton.stories.tsx": skeletonStories,
-  "Badge/Badge.stories.tsx": badgeStories,
-  "Button/Button.stories.tsx": buttonStories,
-  "CalorieRing/CalorieRing.stories.tsx": calorieRingStories,
-  "Card/Card.stories.tsx": cardStories,
-  "ChipGroup/ChipGroup.stories.tsx": chipGroupStories,
-  "MacroBars/MacroBars.stories.tsx": macroBarsStories,
-  "Dialog/Dialog.stories.tsx": dialogStories,
-  "MacroProgressStrip/MacroProgressStrip.stories.tsx": macroProgressStripStories,
-  "WeekStrip/WeekStrip.stories.tsx": weekStripStories,
-  "Input/Input.stories.tsx": inputStories,
-  "SearchField/SearchField.stories.tsx": searchFieldStories,
-  "Toast/Toast.stories.tsx": toastStories,
-};
+const folderOf = (filePath: string) => filePath.split("/").at(-2) ?? filePath;
 
-const uiDirectory = join(__dirname, "../../components/ui");
+function isStoryStatesModule(value: unknown): value is { storyStates: string[] } {
+  return typeof value === "object" && value !== null && "storyStates" in value;
+}
 
-describe("storyManifest", () => {
-  it("should list every primitive that has a stories file", () => {
-    const storyFiles = readdirSync(uiDirectory, { recursive: true, encoding: "utf8" })
-      .filter((name) => name.endsWith(".stories.tsx"))
-      .sort();
+function isStoryModule(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
 
-    expect(Object.keys(storyManifest).sort()).toEqual(storyFiles);
+const kitFolders = Object.keys(kitIndexes).map(folderOf).sort();
+const storyModuleByFolder = new Map(
+  Object.entries(storyModules).map(([filePath, module]) => [folderOf(filePath), module]),
+);
+const storyStatesByFolder = new Map(
+  Object.entries(storyStatesModules).flatMap(([filePath, module]) =>
+    isStoryStatesModule(module) ? [[folderOf(filePath), module.storyStates] as const] : [],
+  ),
+);
+
+describe("the kit's story states", () => {
+  it("should find the kit's folders", () => {
+    expect(kitFolders.length).toBeGreaterThan(0);
   });
 
-  it("should have a stories module for every primitive in the manifest", () => {
-    expect(Object.keys(storyModules).sort()).toEqual(Object.keys(storyManifest).sort());
+  it("should have a stories file in every kit folder", () => {
+    expect(kitFolders.filter((folder) => !storyModuleByFolder.has(folder))).toEqual([]);
   });
 
-  describe.each(Object.entries(storyManifest))("%s", (file, states) => {
+  it("should have a storyStates.ts in every kit folder", () => {
+    expect(kitFolders.filter((folder) => !storyStatesByFolder.has(folder))).toEqual([]);
+  });
+
+  describe.each(kitFolders)("%s", (folder) => {
+    const states = storyStatesByFolder.get(folder) ?? [];
+    const storyModule = storyModuleByFolder.get(folder);
+    const stories = isStoryModule(storyModule)
+      ? Object.keys(storyModule).filter((name) => name !== "default")
+      : [];
+
     it.each(states)("should have a story for the %s state", (state) => {
-      expect(Object.keys(storyModules[file] ?? {})).toContain(state);
+      expect(stories).toContain(state);
+    });
+
+    it("should not have a story its storyStates.ts does not list", () => {
+      expect(stories.filter((story) => !states.includes(story))).toEqual([]);
     });
   });
 });

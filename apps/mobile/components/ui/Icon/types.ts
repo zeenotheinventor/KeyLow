@@ -1,4 +1,5 @@
-import type { iconMap } from "./iconMap";
+import type { iconColorTones } from "./iconColorTones";
+import type * as iconMap from "./iconMap";
 import type { Tone } from "../tone";
 import type { iconSize } from "@keylow/tokens";
 
@@ -8,15 +9,12 @@ export type IconName = keyof typeof iconMap;
 export type IconSizeName = keyof typeof iconSize;
 
 /**
- * A tone from the kit's text and fill tones, or `accent-ink`: the design's `--accent-ink`, which is lime
- * in dark and the primary text colour in light. It is for a thin glyph such as a spinner, because lime
- * is never text or a thin line on a light surface. `success`, `warning` and `danger` are the status glyphs the
- * boards draw in both schemes, on a muted fill or beside the words, which stay in a text colour (Q14).
- * `calories` is the flame beside an energy value, in the calories colour.
- * `accent` is the lime itself, for a mark on an accent-foreground fill such as the day complete switch's knob.
+ * A tone from the kit's text and fill tones, or a colour tone: the theme colour itself, for a glyph that is
+ * drawn in `accent-ink`, `accent`, `success`, `warning`, `danger` or `calories`. Each colour tone is one
+ * file in `./tones`, named for the tone and saying what it is for, and `iconColorTones.ts` is generated
+ * from them (see tools/generate-lists), so adding a tone is adding a file.
  */
-export type IconTone =
-  Tone | "accent-ink" | "accent" | "success" | "warning" | "danger" | "calories";
+export type IconTone = Tone | keyof typeof iconColorTones;
 
 export type IconProps = {
   name: IconName;

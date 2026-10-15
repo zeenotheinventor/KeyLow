@@ -1,160 +1,26 @@
+/// <reference types="vite/client" />
 import { describe, expect, it } from "vitest";
 
+import { collectStrings } from "./collectStrings";
 import * as copy from "../../src/copy";
-import { progressBars } from "../../src/diary/rules";
 import { edgeErrorCodeSchema } from "../../src/schemas";
 
-// Every function the copy module exports, called with representative arguments. The test below
-// fails when a new function is exported without a row here, so no sentence escapes the sweep.
-const sampleCalls: Record<string, () => string[]> = {
-  describeAddFood: () => [
-    copy.describeAddFood("Banana", "1 medium (100 g)"),
-    copy.describeAddFood("Banana"),
-  ],
-  describeEditFood: () => [copy.describeEditFood("Porridge oats")],
-  describeDeleteFood: () => [copy.describeDeleteFood("Porridge oats")],
-  describeFoodRowStats: () => [
-    copy.describeFoodRowStats({ energy: "222", protein: "48", carbs: "0", fat: "3.3" }),
-    copy.describeFoodRowStats({ energy: "130" }),
-    copy.describeFoodRowStats({}),
-  ],
-  describeFoodSource: () => (["off", "cofid", "user"] as const).map(copy.describeFoodSource),
-  describeBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeBasis),
-  describeSpokenBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeSpokenBasis),
-  describeAddedFood: () => ["Banana", "Chicken breast, grilled"].map(copy.describeAddedFood),
-  describeCopiedFromYesterday: () => [1, 8].map(copy.describeCopiedFromYesterday),
-  describeTimeValue: () => [
-    copy.describeTimeValue("12:40", false),
-    copy.describeTimeValue("12:40", true),
-  ],
-  describeTimeRowName: () => [
-    copy.describeTimeRowName("12:40", false),
-    copy.describeTimeRowName("12:40", true),
-  ],
-  describeAddFoodAtHour: () => [copy.describeAddFoodAtHour("12:00")],
-  describeHourChip: () => [
-    copy.describeHourChip("08:00", false),
-    copy.describeHourChip("11:00", true),
-  ],
-  describeHourGroup: () => [0, 1, 2].map((count) => copy.describeHourGroup("08:00", count)),
-  describeWeekStripDay: () => [
-    copy.describeWeekStripDay("2026-10-15", { isToday: true, isComplete: false }),
-    copy.describeWeekStripDay("2026-10-13", { isToday: false, isComplete: true }),
-  ],
-  describeProgressTarget: () =>
-    [
-      { kcal: 2200, protein_g: 160, carbs_g: null, fat_g: null },
-      { kcal: null, protein_g: null, carbs_g: null, fat_g: null },
-    ].flatMap((targets) =>
-      progressBars({ kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 }, targets).map(
-        copy.describeProgressTarget,
-      ),
-    ),
-  describeWeekStripName: () => [
-    copy.describeWeekStripName("2026-10-12", true),
-    copy.describeWeekStripName("2026-10-12", false),
-  ],
-  describeProgressBar: () =>
-    progressBars(
-      { kcal: 2412, protein_g: 86, carbs_g: 129, fat_g: 19 },
-      { kcal: 2200, protein_g: 160, carbs_g: 0, fat_g: null },
-    ).map(copy.describeProgressBar),
-  describeProgressStrip: () => [
-    copy.describeProgressStrip(
-      progressBars(
-        { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 81 },
-        { kcal: 2200, protein_g: 160, carbs_g: 0, fat_g: 70 },
-      ),
-    ),
-  ],
-  describeCopiedEntriesToToday: () => [1, 8].map(copy.describeCopiedEntriesToToday),
-  describeMacroTotal: () => [0, 131, 2480].map(copy.describeMacroTotal),
-  describeEnergy: () => [0, 1, 148, 2480, null].map(copy.describeEnergy),
-  describeShareOfEnergy: () => [0, 32, 100].map(copy.describeShareOfEnergy),
-  describeNutritionHeading: () =>
-    (["per_100g", "per_100ml"] as const).map(copy.describeNutritionHeading),
-  describeMissingValues: () => [
-    copy.describeMissingValues([], undefined),
-    copy.describeMissingValues(["protein_g"], undefined),
-    copy.describeMissingValues(["kcal", "carbs_g"], undefined),
-    copy.describeMissingValues(["fibre_g"], "us_total"),
-  ],
-  nutrientRows: () =>
-    [
-      { kcal: 148, protein_g: 31.2, carbs_g: 0, fat_g: 7.5, fibre_g: 12 },
-      { kcal: null, protein_g: null, carbs_g: null, fat_g: null, fibre_g: null },
-    ].flatMap((food) => copy.nutrientRows(food).flatMap(collectStrings)),
-  describeSeeMore: () => [1, 2, 18].map(copy.describeSeeMore),
-  describeRateLimit: () => [undefined, 1, 30].map(copy.describeRateLimit),
-  describeBarcodeRateLimit: () => [undefined, 1, 30].map(copy.describeBarcodeRateLimit),
-  describeEdgeError: () => [undefined, ...edgeErrorCodeSchema.options].map(copy.describeEdgeError),
-  describeAuthError: () =>
-    [
-      undefined,
-      "invalid_credentials",
-      "user_already_exists",
-      "email_exists",
-      "over_request_rate_limit",
-      "over_email_send_rate_limit",
-      "email_not_confirmed",
-      "network",
-      "unknown_code",
-    ].map(copy.describeAuthError),
-  describeCheckEmail: () => [copy.describeCheckEmail("sam.taylor@example.com")],
-  describeNameProblem: () => (["required", "too_long"] as const).map(copy.describeNameProblem),
-  describeNutrientProblem: () =>
-    (["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g"] as const).flatMap((nutrient) =>
-      (["required", "negative", "not_a_number"] as const).map((problem) =>
-        copy.describeNutrientProblem(nutrient, problem),
-      ),
-    ),
-  describePortionField: () =>
-    (["label", "remove", "default"] as const).map((field) => copy.describePortionField(field, 1)),
-  describePortionAmountField: () =>
-    (["per_100g", "per_100ml"] as const).map((basis) => copy.describePortionAmountField(1, basis)),
-  describeAmountUnitNote: () =>
-    (["per_100g", "per_100ml"] as const).map(copy.describeAmountUnitNote),
-  describePortionLabelField: () => [1, 2].map(copy.describePortionLabelField),
-  describeRemovePortion: () => [
-    copy.describeRemovePortion("Slice", 1),
-    copy.describeRemovePortion("", 2),
-  ],
-  describePortionGroup: () => [1, 2].map(copy.describePortionGroup),
-  describePortionLabelProblem: () => [1, 2].map(copy.describePortionLabelProblem),
-  describePortionAmountProblem: () => [1, 2].map(copy.describePortionAmountProblem),
-  describePortionLabelAndAmountProblem: () => [1, 2].map(copy.describePortionLabelAndAmountProblem),
-  describeDatePickerButton: () => [
-    copy.describeDatePickerButton("Today", "15 October"),
-    copy.describeDatePickerButton("Mon 12 Oct"),
-  ],
-  describeIncompleteDays: () => [0, 1, 2].map(copy.describeIncompleteDays),
-  describeEatenLine: () => [0, 1039].map(copy.describeEatenLine),
-  describeTargetLine: () => [
-    copy.describeTargetLine(2200, false),
-    copy.describeTargetLine(2200, true),
-  ],
-  describeCalorieRing: () => [
-    copy.describeCalorieRing(1039, 2200),
-    copy.describeCalorieRing(2200, 2200),
-    copy.describeCalorieRing(2412, 2200),
-  ],
-  describeMacroBar: () => [
-    copy.describeMacroBar("Protein", 86, 160),
-    copy.describeMacroBar("Fat", 81, 70),
-    copy.describeMacroBar("Carbs", 129.1, 0),
-  ],
-  describeMacroTarget: () => [0, 160].map(copy.describeMacroTarget),
-};
+// Every function the copy module exports is called with representative arguments, from a row in
+// `samples/<module>.ts` beside the module's own test. The test below fails when a function is exported
+// without a row, so no sentence escapes the sweep. Vite finds the sample files, so a new copy module
+// brings its own file and no shared list is edited.
+const sampleModules = import.meta.glob("./samples/*.ts", { eager: true });
 
-const collectStrings = (value: unknown): string[] => {
-  if (typeof value === "string") {
-    return [value];
-  }
-  if (typeof value === "object" && value !== null) {
-    return Object.values(value).flatMap(collectStrings);
-  }
-  return [];
-};
+function isSampleModule(value: unknown): value is { samples: Record<string, () => string[]> } {
+  return typeof value === "object" && value !== null && "samples" in value;
+}
+
+const sampleFiles = Object.entries(sampleModules).flatMap(([filePath, module]) =>
+  isSampleModule(module) ? [{ filePath, samples: module.samples }] : [],
+);
+const sampleCalls: Record<string, () => string[]> = Object.fromEntries(
+  sampleFiles.flatMap(({ samples }) => Object.entries(samples)),
+);
 
 const exportedFunctionNames = Object.entries(copy)
   .filter(([, value]) => typeof value === "function")

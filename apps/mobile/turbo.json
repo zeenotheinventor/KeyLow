@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    // The mobile app reads two generated, uncommitted files (components/ui/index.ts and
+    // .rnstorybook/storybook.requires.ts), so its checks wait for `pnpm generate:lists`.
+    "lint": { "dependsOn": ["$TURBO_EXTENDS$", "//#generate:lists"] },
+    "typecheck": { "dependsOn": ["$TURBO_EXTENDS$", "//#generate:lists"] },
+    "test": { "dependsOn": ["$TURBO_EXTENDS$", "//#generate:lists"] }
+  }
+}

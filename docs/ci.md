@@ -25,3 +25,10 @@ Branch keys use minimatch syntax. `*` does not match a `/`, so it would miss bra
 Remove the `git` line from `apps/web/vercel.json` (or set `"**"` to `true`). This is a repo change only, nothing in the Vercel dashboard needs to change.
 
 Sources: <https://vercel.com/docs/project-configuration/git-configuration> and <https://vercel.com/docs/project-configuration/project-settings#ignored-build-step>.
+
+## Merge conflicts on shared files
+
+Several pull requests merge in parallel, so the files every feature used to edit are derived from folders instead (see "Adding to the shared lists" in [docs/runbooks/local-dev.md](runbooks/local-dev.md)). Two things still conflict, and neither is machinery worth adding:
+
+- **`pnpm-lock.yaml`**: when two branches change dependencies, take either side and run `pnpm install`. pnpm repairs the lockfile. Commit the result.
+- **`packages/core/src/copy/index.ts`**: one `export *` line per copy module, so two pull requests that each add a new module conflict. `.gitattributes` marks it `merge=union`, which makes a local rebase or merge clean, but GitHub ignores `.gitattributes` when it works out mergeability. It shows both pull requests as conflicting until main is merged or rebased into the second one locally. Do that, check that both lines are there once each, and push.

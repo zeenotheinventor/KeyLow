@@ -1,3 +1,19 @@
+const { execFileSync } = require("node:child_process");
+const path = require("node:path");
+
+// The kit barrel (components/ui/index.ts) and the story index (.rnstorybook/storybook.requires.ts) are
+// generated and not committed. Turbo writes them before a test run, and this does the same for Jest run
+// on its own, so a pull that added a component does not leave a stale barrel behind.
+execFileSync(
+  process.execPath,
+  [
+    "--experimental-strip-types",
+    "--no-warnings",
+    path.join(__dirname, "..", "..", "tools", "generate-lists", "src", "run.ts"),
+  ],
+  { stdio: "inherit" },
+);
+
 module.exports = {
   preset: "jest-expo",
   // A fixed place, under the ignored node_modules, so CI can keep it between runs.

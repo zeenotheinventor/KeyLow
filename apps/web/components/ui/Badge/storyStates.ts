@@ -1,0 +1,15 @@
+export const storyStates = [
+  "SourceOpenFoodFacts",
+  "SourceCoFid",
+  "SourceYours",
+  "Neutral",
+  "Accent",
+  "Success",
+  "Warning",
+  "Danger",
+  "Protein",
+  "Carbs",
+  "Fat",
+  "Calories",
+  "WithDot",
+];

@@ -1,0 +1,17 @@
+{
+  "keyframes": {
+    "slash": {
+      "from": {
+        "opacity": "0.9",
+        "transform": "translateX(-140%) skewX(-22deg)"
+      },
+      "to": {
+        "opacity": "0",
+        "transform": "translateX(240%) skewX(-22deg)"
+      }
+    }
+  },
+  "animation": {
+    "slash": "slash {transitionDuration.flourish} {transitionTimingFunction.exit} both"
+  }
+}

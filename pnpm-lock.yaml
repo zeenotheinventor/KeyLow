@@ -160,6 +160,9 @@ importers:
       '@keylow/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@keylow/generate-lists':
+        specifier: workspace:*
+        version: link:../../tools/generate-lists
       '@storybook/react':
         specifier: ^10.6.2
         version: 10.6.2(@types/react-dom@19.2.7(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(storybook@10.6.2(@types/react@19.2.18)(prettier@3.9.9)(react@19.2.3))(typescript@6.0.3)
@@ -527,6 +530,24 @@ importers:
       expo-doctor:
         specifier: 1.20.4
         version: 1.20.4
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@22.20.5)(jsdom@30.1.2)(msw@3.0.2(@types/node@22.20.5)(typescript@5.9.3)(vite@8.3.2(@types/node@22.20.5)(esbuild@0.28.2)(jiti@1.21.7)(terser@5.51.2)(yaml@2.9.1)))(vite@8.3.2(@types/node@22.20.5)(esbuild@0.28.2)(jiti@1.21.7)(terser@5.51.2)(yaml@2.9.1))
+
+  tools/generate-lists:
+    devDependencies:
+      '@keylow/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      eslint:
+        specifier: ^9.39.5
+        version: 9.39.5(jiti@1.21.7)
       typescript:
         specifier: ^5.9.3
         version: 5.9.3

@@ -1,3 +1,4 @@
+const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 
 const { withStorybook } = require("@storybook/react-native/metro/withStorybook");
@@ -6,6 +7,21 @@ const { withNativeWind } = require("nativewind/metro");
 
 const projectRoot = __dirname;
 const workspaceRoot = path.resolve(projectRoot, "../..");
+
+// components/ui/index.ts is generated from the kit's folders and not committed, so a start after a pull
+// that added a component writes it again. `pnpm generate:lists` does the same by hand.
+execFileSync(
+  process.execPath,
+  [
+    "--experimental-strip-types",
+    "--no-warnings",
+    path.join(workspaceRoot, "tools", "generate-lists", "src", "run.ts"),
+    "ui-barrel",
+    "icon-map",
+    "icon-tones",
+  ],
+  { stdio: "inherit" },
+);
 
 const config = getDefaultConfig(projectRoot);
 

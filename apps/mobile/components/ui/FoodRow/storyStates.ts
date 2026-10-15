@@ -1,0 +1,18 @@
+export const storyStates = [
+  "Default",
+  "WithBrand",
+  "LongName",
+  "PerBasis",
+  "NoEnergy",
+  "Pending",
+  "Disabled",
+  "Search",
+  "Recent",
+  "Diary",
+  "Swiped",
+  "LongTitleAndCaption",
+  "StatsLineWraps",
+  "NeedsReview",
+  "AddDisabled",
+  "FourDigitEnergy",
+];

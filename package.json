@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.6"
   },
   "scripts": {
     "prepare": "lefthook install",
@@ -12,6 +12,7 @@
     "check:integration": "turbo run check:functions test:integration",
     "dev:db": "pnpm --filter @keylow/db run dev:db",
     "format:check": "prettier --check .",
+    "generate:lists": "node --experimental-strip-types --no-warnings tools/generate-lists/src/run.ts",
     "gen-types": "pnpm --filter @keylow/db run gen-types",
     "mobile:dev": "git pull --ff-only && pnpm install && pnpm --filter @keylow/mobile start --clear",
     "storybook": "pnpm --filter @keylow/web run storybook"

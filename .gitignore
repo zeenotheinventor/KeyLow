@@ -54,3 +54,9 @@ pnpm-debug.log*
 
 # storybook
 apps/*/storybook-static/
+
+# written by `pnpm generate:lists` (tools/generate-lists), which turbo runs before the mobile app's typecheck, lint and test, and Metro and Jest run on start
+apps/mobile/components/ui/index.ts
+apps/mobile/components/ui/Icon/iconMap.ts
+apps/mobile/components/ui/Icon/iconColorTones.ts
+apps/mobile/.rnstorybook/storybook.requires.ts
