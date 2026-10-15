@@ -7,6 +7,9 @@ import { useKeyboardUndo } from "@/lib/keyboardUndo";
 
 type Result = { focusAction?: ToastFocusAction };
 
+// What afterPressingButton gave on each press, to be called when the action finishes.
+let settlers: (() => Result)[] = [];
+
 // A log of two foods, a control the page hides at this width, and the buttons after the log.
 function Log({ onResult }: { onResult: (result: Result) => void }) {
   const keyboardUndo = useKeyboardUndo();
@@ -41,11 +44,12 @@ function Log({ onResult }: { onResult: (result: Result) => void }) {
       <button
         type="button"
         onClick={() => {
-          onResult(keyboardUndo.afterPressingButton());
+          settlers.push(keyboardUndo.afterPressingButton());
         }}
       >
         Copy to today
       </button>
+      <button type="button">Elsewhere</button>
       <button type="button" role="switch" aria-checked="false">
         Mark day complete
       </button>
@@ -55,6 +59,7 @@ function Log({ onResult }: { onResult: (result: Result) => void }) {
 
 function renderLog() {
   const results: Result[] = [];
+  settlers = [];
   render(
     <Log
       onResult={(result) => {
@@ -69,10 +74,11 @@ function renderLog() {
 const keyboard = () => fireEvent.keyDown(document, { key: "Enter" });
 const pointer = () => fireEvent.pointerDown(document);
 
-function press(name: string) {
+// A keyboard press is a click with no detail, a mouse click has one or more, as in a browser.
+function press(name: string, detail = 0) {
   const button = screen.getByRole("button", { name });
   button.focus();
-  fireEvent.click(button);
+  fireEvent.click(button, { detail });
 }
 
 describe("useKeyboardUndo", () => {
@@ -113,7 +119,7 @@ describe("useKeyboardUndo", () => {
 
     it("should fall back to the control before the row when nothing after it is shown", () => {
       const results = renderLog();
-      for (const name of ["Hidden copy", "Copy to today", "Mark day complete"]) {
+      for (const name of ["Hidden copy", "Copy to today", "Elsewhere", "Mark day complete"]) {
         Object.defineProperty(
           screen.getByRole(name === "Mark day complete" ? "switch" : "button", { name }),
           "checkVisibility",
@@ -135,7 +141,7 @@ describe("useKeyboardUndo", () => {
       const results = renderLog();
       pointer();
 
-      press("Delete porridge");
+      press("Delete porridge", 1);
 
       expect(results[0]).toEqual({});
     });
@@ -145,7 +151,7 @@ describe("useKeyboardUndo", () => {
       keyboard();
       pointer();
 
-      press("Delete porridge");
+      press("Delete porridge", 1);
 
       expect(results[0]).toEqual({});
     });
@@ -160,25 +166,65 @@ describe("useKeyboardUndo", () => {
     });
   });
 
-  describe("afterPressingButton", () => {
-    it("should return focus to the button that was pressed", () => {
+  describe("a click with no detail", () => {
+    it("should count as the keyboard, so a screen reader's virtual click gets the route", () => {
+      const results = renderLog();
+
+      press("Delete porridge");
+
+      expect(results[0]?.focusAction?.returnTo).toBe(
+        screen.getByRole("button", { name: "Delete milk" }),
+      );
+    });
+
+    it("should count as a pointer when it has a detail, whatever key was pressed before", () => {
       const results = renderLog();
       keyboard();
 
+      press("Delete porridge", 1);
+
+      expect(results[0]).toEqual({});
+    });
+  });
+
+  describe("afterPressingButton", () => {
+    it("should return focus to the button that was pressed, when the action finishes with focus still on it", () => {
+      renderLog();
+      keyboard();
       press("Copy to today");
 
-      expect(results[0]?.focusAction?.returnTo).toBe(
+      expect(settlers[0]?.().focusAction?.returnTo).toBe(
         screen.getByRole("button", { name: "Copy to today" }),
       );
     });
 
+    it("should still ask when the action finishes with focus lost to the page", () => {
+      renderLog();
+      keyboard();
+      press("Copy to today");
+      screen.getByRole("button", { name: "Copy to today" }).blur();
+
+      expect(settlers[0]?.().focusAction?.returnTo).toBe(
+        screen.getByRole("button", { name: "Copy to today" }),
+      );
+    });
+
+    it("should ask for nothing when the person has moved focus to another control meanwhile", () => {
+      renderLog();
+      keyboard();
+      press("Copy to today");
+      screen.getByRole("button", { name: "Elsewhere" }).focus();
+
+      expect(settlers[0]?.()).toEqual({});
+    });
+
     it("should ask for nothing when the last press was a pointer", () => {
-      const results = renderLog();
+      renderLog();
       pointer();
 
-      press("Copy to today");
+      press("Copy to today", 1);
 
-      expect(results[0]).toEqual({});
+      expect(settlers[0]?.()).toEqual({});
     });
   });
 
@@ -189,7 +235,7 @@ describe("useKeyboardUndo", () => {
     cleanup();
 
     expect(remove.mock.calls.map(([type]) => type)).toEqual(
-      expect.arrayContaining(["keydown", "pointerdown"]),
+      expect.arrayContaining(["keydown", "pointerdown", "click"]),
     );
     remove.mockRestore();
   });

@@ -8,9 +8,9 @@ import type { WeekGridCellKind } from "./WeekGridCell";
 
 import { cn } from "@/lib/utils";
 
-// Below the large breakpoint the week is one card of eight rows. From it, eight columns of cards.
+// Below the xl breakpoint the week is one card of eight rows. From it, eight columns of cards.
 const listClassName =
-  "overflow-hidden rounded-large border border-border bg-surface shadow-card lg:grid lg:grid-cols-[repeat(8,minmax(0,1fr))] lg:gap-2 lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none";
+  "overflow-hidden rounded-large border border-border bg-surface shadow-card xl:grid xl:grid-cols-[repeat(8,minmax(0,1fr))] xl:gap-2 xl:overflow-visible xl:rounded-none xl:border-0 xl:bg-transparent xl:shadow-none";
 
 function kindOfDay(localDate: string, today: string): WeekGridCellKind {
   if (localDate > today) {
@@ -20,7 +20,7 @@ function kindOfDay(localDate: string, today: string): WeekGridCellKind {
 }
 
 /**
- * The web week view's grid: the seven days of a week, Monday to Sunday, then their Average. At 1024 px
+ * The web week view's grid: the seven days of a week, Monday to Sunday, then their Average. At 1280 px
  * and up each is a card in one of eight columns, below it a row of one list. A day shows its calories
  * against the target with a thin bar, its macros, whether it is complete, and, on a past day with
  * entries, Copy to today. Today is framed, a day to come is dimmed, and the Average covers the days with

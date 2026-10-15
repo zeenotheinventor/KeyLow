@@ -239,6 +239,19 @@ describe("WeekGrid", () => {
       expect(friday.queryByRole("meter")).toBeNull();
     });
 
+    it("should say No entries yet in the secondary text in the list and the muted text in the cards, as the board draws it", async () => {
+      renderGrid();
+
+      const css = await compileUtilities(
+        within(cellOf("Fri 16")).getByText("No entries yet").className,
+      );
+      const [listRules, cardRules] = css.split("@media (min-width: 1280px)");
+
+      expect(listRules).toMatch(/\.text-text-secondary\s*\{[^}]*--kl-text-secondary/);
+      expect(listRules).not.toContain("--kl-text-muted");
+      expect(cardRules).toMatch(/xl\\:text-text-muted\s*\{[^}]*--kl-text-muted/);
+    });
+
     it("should dim a day that has not come to half strength", () => {
       renderGrid();
 
@@ -312,7 +325,7 @@ describe("WeekGrid", () => {
     it("should be framed with the strong border and lifted onto the raised surface", () => {
       renderGrid();
 
-      expect(cellOf("Thu 15").className).toContain("lg:border-border-strong");
+      expect(cellOf("Thu 15").className).toContain("xl:border-border-strong");
       expect(cellOf("Thu 15").className).toContain("bg-surface-raised");
       expect(cellOf("Wed 14").className).not.toContain("border-strong");
     });
@@ -350,14 +363,14 @@ describe("WeekGrid", () => {
   });
 
   describe("the layout", () => {
-    it("should be eight columns from the large breakpoint and one card of rows below it", async () => {
+    it("should be eight columns from the xl breakpoint and one card of rows below it", async () => {
       renderGrid();
 
       const list = screen.getByRole("list", { name: "Week of Mon 12 Oct" });
       const css = await compileUtilities(`${list.className} ${cellOf("Mon 12").className}`);
 
       expect(css).toMatch(
-        /@media \(min-width: 1024px\)[^]*grid-template-columns: repeat\(8,minmax\(0,1fr\)\)/,
+        /@media \(min-width: 1280px\)[^]*grid-template-columns: repeat\(8,minmax\(0,1fr\)\)/,
       );
       expect(list.className).toContain("overflow-hidden");
     });

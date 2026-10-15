@@ -44,7 +44,7 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
   }
 
   function copyToToday(from: string) {
-    // Asked as the press arrives, while focus is still on its button.
+    // Asked as the press arrives, while focus is still on its button, and settled when the copy is done.
     const keyboardRoute = keyboardUndo.afterPressingButton();
     copyDay.mutate(
       { from, to: today, timeZone },
@@ -57,7 +57,7 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
             onAction: () => {
               undoCopyDay.mutate(copied, { onError: showFailure });
             },
-            ...keyboardRoute,
+            ...keyboardRoute(),
           });
         },
         onError: showFailure,
@@ -106,7 +106,7 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="text-h2">{title}</h2>
+      <h1 className="text-h2">{title}</h1>
       <WeekGrid
         label={title}
         days={days}

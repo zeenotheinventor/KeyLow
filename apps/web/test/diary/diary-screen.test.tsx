@@ -437,7 +437,7 @@ describe("the diary screen", () => {
         fireEvent.pointerDown(deletePorridge());
         deletePorridge().focus();
 
-        fireEvent.click(deletePorridge());
+        fireEvent.click(deletePorridge(), { detail: 1 });
 
         expect(document.activeElement).toBe(deletePorridge());
       });

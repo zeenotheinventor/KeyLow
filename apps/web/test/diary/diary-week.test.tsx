@@ -1,11 +1,10 @@
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
-import { RouterContext } from "next/dist/shared/lib/router-context.shared-runtime";
+import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diaryDay, targets } from "./support";
+import { renderWithRouter } from "../ui/appRouter";
 
 import type { CopiedDay, DayTotals, DiaryDay, DiaryWeekDay, Targets } from "@keylow/api-client";
-import type { NextRouter } from "next/router";
 
 import { DiaryScreen } from "@/components/diary";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -160,18 +159,10 @@ const earlierWeek = [5, 6, 7, 8, 9, 10, 11].map((day) =>
 );
 
 function renderWeek(props: { date?: string | undefined } = {}) {
-  const router = {
-    push: vi.fn().mockResolvedValue(true),
-    replace: vi.fn().mockResolvedValue(true),
-    prefetch: vi.fn().mockResolvedValue(undefined),
-  } as unknown as NextRouter;
-
-  return render(
-    <RouterContext.Provider value={router}>
-      <ToastProvider>
-        <DiaryScreen date={props.date} view="week" />
-      </ToastProvider>
-    </RouterContext.Provider>,
+  renderWithRouter(
+    <ToastProvider>
+      <DiaryScreen date={props.date} view="week" />
+    </ToastProvider>,
   );
 }
 
@@ -210,10 +201,12 @@ describe("the week view", () => {
       expect(screen.getByRole("radio", { name: "Week" })).toHaveProperty("checked", true);
     });
 
-    it("should leave the day view's heading and calendar button out", () => {
+    it("should leave the day view's title and calendar button out, and head the page with the week", () => {
       renderWeek();
 
-      expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+      expect(screen.queryByRole("heading", { level: 1, name: "Today" })).toBeNull();
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      expect(screen.getByRole("heading", { level: 1, name: "Week of Mon 12 Oct" })).toBeTruthy();
       expect(screen.getAllByRole("button", { name: "Choose a date" })).toHaveLength(1);
     });
 
@@ -532,11 +525,48 @@ describe("the week view", () => {
         expect(screen.getAllByRole("status")).toHaveLength(1);
       });
 
+      it("should leave focus where the person put it when they moved on before the copy finished", () => {
+        renderWeek();
+        fireEvent.keyDown(document, { key: "Enter" });
+        copyButton("Tue 13").focus();
+        fireEvent.click(copyButton("Tue 13"));
+        screen.getByRole("radio", { name: "Day" }).focus();
+
+        act(() => {
+          copyDay.mutate.mock.calls[0]?.[1].onSuccess({
+            localDate: TODAY,
+            count: 8,
+            entryIds: ["a"],
+          });
+        });
+
+        expect(screen.getByText("Copied 8 entries to today")).toBeTruthy();
+        expect(document.activeElement).toBe(screen.getByRole("radio", { name: "Day" }));
+      });
+
+      it("should still move focus to Undo when focus was lost to the page while the copy ran", () => {
+        renderWeek();
+        fireEvent.keyDown(document, { key: "Enter" });
+        copyButton("Tue 13").focus();
+        fireEvent.click(copyButton("Tue 13"));
+        copyButton("Tue 13").blur();
+
+        act(() => {
+          copyDay.mutate.mock.calls[0]?.[1].onSuccess({
+            localDate: TODAY,
+            count: 8,
+            entryIds: ["a"],
+          });
+        });
+
+        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+      });
+
       it("should leave focus alone after a pointer press", () => {
         renderWeek();
         fireEvent.pointerDown(copyButton("Tue 13"));
         copyButton("Tue 13").focus();
-        fireEvent.click(copyButton("Tue 13"));
+        fireEvent.click(copyButton("Tue 13"), { detail: 1 });
 
         act(() => {
           copyDay.mutate.mock.calls[0]?.[1].onSuccess({

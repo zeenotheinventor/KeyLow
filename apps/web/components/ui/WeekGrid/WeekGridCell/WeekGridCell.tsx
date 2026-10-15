@@ -2,6 +2,7 @@ import {
   DIARY_ACTIONS,
   WEEK_GRID,
   describeWeekGridBarName,
+  describeWeekGridCopyToToday,
   describeWeekGridMacros,
 } from "@keylow/core/copy";
 import { formatCalories } from "@keylow/core/format";
@@ -16,19 +17,19 @@ import type { WeekGridCellKind, WeekGridCellProps } from "./types";
 
 import { cn } from "@/lib/utils";
 
-// Below the large breakpoint a cell is a row of a list: the name, then the calories and the bar, then the
+// Below the xl breakpoint a cell is a row of a list: the name, then the calories and the bar, then the
 // state. A row is 56 px of content plus its padding, as the design draws it (its box is the content box),
-// so it is 72 px high before its divider. From the large breakpoint a cell is a card in a column. The
+// so it is 72 px high before its divider. From the xl breakpoint a cell is a card in a column. The
 // middle and last groups dissolve at that width, so the card's parts stack in the order the design draws them.
 const cellClassName =
-  "box-content grid min-h-[56px] grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-3 py-2 first:border-t-0 lg:flex lg:min-h-0 lg:flex-col lg:items-stretch lg:gap-2 lg:rounded-large lg:border lg:p-3 lg:shadow-card lg:first:border-t";
+  "box-content grid min-h-[56px] grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-3 py-2 first:border-t-0 xl:flex xl:min-h-0 xl:flex-col xl:items-stretch xl:gap-2 xl:rounded-large xl:border xl:p-3 xl:shadow-card xl:first:border-t";
 
 // Each class is written out whole so Tailwind can see it.
 const kindClassNames = {
   past: "bg-surface",
-  today: "bg-surface-raised lg:border-border-strong",
+  today: "bg-surface-raised xl:border-border-strong",
   future: "bg-surface opacity-50",
-  average: "lg:bg-transparent",
+  average: "xl:bg-transparent",
 } as const satisfies Record<WeekGridCellKind, string>;
 
 const focusRing =
@@ -38,7 +39,7 @@ const focusRing =
 // than the design draws it.
 const linkClassName = cn("-my-2.5 inline-flex min-h-touch-target items-center", focusRing);
 const copyClassName = cn(
-  "-my-1.5 min-h-touch-target text-caption font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-50 lg:-my-1 lg:-ml-1 lg:self-start lg:px-1 lg:text-label-small",
+  "-my-1.5 min-h-touch-target text-caption font-semibold text-accent-ink disabled:cursor-not-allowed disabled:opacity-50 xl:-my-1 xl:-ml-1 xl:self-start xl:px-1 xl:text-label-small",
   focusRing,
 );
 
@@ -70,20 +71,22 @@ export function WeekGridCell({
           </Link>
         )}
       </span>
-      <span className="flex min-w-0 flex-col gap-1 lg:contents">
+      <span className="flex min-w-0 flex-col gap-1 xl:contents">
         {totals === null ? (
           <>
-            <span className="text-caption text-text-muted">{WEEK_GRID.noEntries}</span>
+            <span className="text-caption text-text-secondary xl:text-text-muted">
+              {WEEK_GRID.noEntries}
+            </span>
             {/* An empty track keeps the row's shape in the list. */}
-            <span aria-hidden className="block h-1 rounded-pill bg-border lg:hidden" />
+            <span aria-hidden className="block h-1 rounded-pill bg-border xl:hidden" />
           </>
         ) : (
           <>
             <span className="flex items-baseline gap-1 tabular-nums">
-              <span className="text-caption text-text-secondary lg:text-h2 lg:text-text-primary">
+              <span className="text-caption text-text-secondary xl:text-h2 xl:text-text-primary">
                 {formatCalories(totals.kcal)}
               </span>
-              <span className="text-caption text-text-secondary lg:text-text-muted">
+              <span className="text-caption text-text-secondary xl:text-text-muted">
                 {calorieTarget === null ? "kcal" : `/ ${formatCalories(calorieTarget)} kcal`}
               </span>
             </span>
@@ -98,13 +101,13 @@ export function WeekGridCell({
         )}
       </span>
       {totals !== null && (
-        <span className="hidden text-caption tabular-nums text-text-secondary lg:block">
+        <span className="hidden text-caption tabular-nums text-text-secondary xl:block">
           {describeWeekGridMacros(totals)}
         </span>
       )}
-      <span className="flex flex-col items-end lg:contents">
+      <span className="flex flex-col items-end xl:contents">
         {kind === "average" && (
-          <span className="text-caption text-text-muted lg:hidden">{WEEK_GRID.averageCaption}</span>
+          <span className="text-caption text-text-muted xl:hidden">{WEEK_GRID.averageCaption}</span>
         )}
         {showsState && (
           <span
@@ -116,13 +119,13 @@ export function WeekGridCell({
             {isComplete ? (
               <CheckCircle2
                 aria-hidden
-                className="hidden size-4 stroke-success lg:block"
+                className="hidden size-4 stroke-success xl:block"
                 strokeWidth={iconStroke}
               />
             ) : (
               <CircleDashed
                 aria-hidden
-                className="hidden size-4 stroke-warning lg:block"
+                className="hidden size-4 stroke-warning xl:block"
                 strokeWidth={iconStroke}
               />
             )}
@@ -133,7 +136,7 @@ export function WeekGridCell({
           <button
             type="button"
             // The words on the button stay "Copy to today", and the name adds the day, so the buttons differ.
-            aria-label={`${DIARY_ACTIONS.copyToToday}, ${name}`}
+            aria-label={describeWeekGridCopyToToday(name)}
             disabled={isCopying}
             className={copyClassName}
             onClick={onCopyToToday}

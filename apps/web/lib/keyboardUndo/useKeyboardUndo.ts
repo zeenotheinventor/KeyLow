@@ -1,19 +1,6 @@
 import { useEffect } from "react";
 
-import type { ToastFocusAction } from "@/components/ui/Toast";
-
-/** What a screen spreads into a toast's options: the keyboard route, or nothing for a pointer. */
-export type KeyboardUndoOptions = { focusAction?: ToastFocusAction };
-
-export type KeyboardUndo = {
-  /**
-   * For a delete: call it when the press arrives, while focus is still on the row's button. Focus goes to
-   * Undo, and on close to the next row's first control, or the one before the row when it was the last.
-   */
-  afterRemovingRow: () => KeyboardUndoOptions;
-  /** For an action that leaves its button in place, such as a copy: focus comes back to that button. */
-  afterPressingButton: () => KeyboardUndoOptions;
-};
+import type { KeyboardUndo } from "./types";
 
 const TABBABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -29,11 +16,17 @@ const noteKeyboard = () => {
 const notePointer = () => {
   lastInputWasKeyboard = false;
 };
+// A mouse or touch click has a detail of 1 or more. A click with none is made by the keyboard, or by a
+// screen reader's virtual cursor, which sends no key and no pointer event, and needs the route as much.
+const noteClick = (event: MouseEvent) => {
+  lastInputWasKeyboard = event.detail === 0;
+};
 
 function listenToInputDevice() {
   if (screensListening === 0) {
     document.addEventListener("keydown", noteKeyboard, true);
     document.addEventListener("pointerdown", notePointer, true);
+    document.addEventListener("click", noteClick, true);
   }
   screensListening += 1;
 
@@ -42,6 +35,7 @@ function listenToInputDevice() {
     if (screensListening === 0) {
       document.removeEventListener("keydown", noteKeyboard, true);
       document.removeEventListener("pointerdown", notePointer, true);
+      document.removeEventListener("click", noteClick, true);
     }
   };
 }
@@ -89,7 +83,17 @@ export function useKeyboardUndo(): KeyboardUndo {
 
       return { focusAction: { returnTo: row === null ? null : controlBeside(row) } };
     },
-    afterPressingButton: () =>
-      lastInputWasKeyboard ? { focusAction: { returnTo: focusedElement() } } : {},
+    afterPressingButton: () => {
+      const pressedByKeyboard = lastInputWasKeyboard;
+      const pressed = focusedElement();
+
+      return () => {
+        const focused = focusedElement();
+        // Focus on nothing is focus lost to the page, as when the button is disabled while the action runs.
+        const isFocusStillThere = focused === null || focused === pressed;
+
+        return pressedByKeyboard && isFocusStillThere ? { focusAction: { returnTo: pressed } } : {};
+      };
+    },
   };
 }

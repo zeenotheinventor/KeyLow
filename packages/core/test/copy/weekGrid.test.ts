@@ -4,6 +4,7 @@ import {
   WEEK_GRID,
   describeWeekGridBarName,
   describeWeekGridBarValue,
+  describeWeekGridCopyToToday,
   describeWeekGridDay,
   describeWeekGridMacros,
   describeWeekGridTitle,
@@ -46,5 +47,9 @@ describe("the week view's words", () => {
     expect(describeWeekGridBarValue(2140, 2200)).toBe("2,140 of 2,200 kilocalories");
     expect(describeWeekGridBarValue(2260, 2200)).toBe("2,260 of 2,200 kilocalories, over target");
     expect(describeWeekGridBarValue(2200, 2200)).toBe("2,200 of 2,200 kilocalories");
+  });
+
+  it("should name a day's Copy to today for the day, so the buttons differ", () => {
+    expect(describeWeekGridCopyToToday("Mon 12")).toBe("Copy to today, Mon 12");
   });
 });

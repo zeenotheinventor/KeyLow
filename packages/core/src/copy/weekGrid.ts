@@ -1,3 +1,4 @@
+import { DIARY_ACTIONS } from "./diary";
 import { MONTH_NAMES_SHORT, WEEKDAY_NAMES_SHORT } from "./diaryDay";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { formatCalories, formatGrams } from "../format/numbers";
@@ -40,3 +41,7 @@ export const describeWeekGridBarName = (dayName: string): string => `${dayName} 
 /** What a day's calories bar holds, such as "2,260 of 2,200 kilocalories, over target". */
 export const describeWeekGridBarValue = (kcal: number, target: number): string =>
   `${formatCalories(kcal)} of ${formatCalories(target)} kilocalories${kcal > target ? ", over target" : ""}`;
+
+/** The name of a day's Copy to today button: the visible words, then the day, "Copy to today, Mon 12". */
+export const describeWeekGridCopyToToday = (dayName: string): string =>
+  `${DIARY_ACTIONS.copyToToday}, ${dayName}`;

@@ -6,6 +6,7 @@ export const samples: Record<string, () => string[]> = {
   describeWeekGridDay: () => ["2026-10-12", "2026-10-18"].map(copy.describeWeekGridDay),
   describeWeekGridTitle: () => ["2026-10-12", "2026-12-28"].map(copy.describeWeekGridTitle),
   describeWeekGridBarName: () => ["Mon 12", "Average"].map(copy.describeWeekGridBarName),
+  describeWeekGridCopyToToday: () => ["Mon 12"].map(copy.describeWeekGridCopyToToday),
   describeWeekGridBarValue: () => [
     copy.describeWeekGridBarValue(2140, 2200),
     copy.describeWeekGridBarValue(2260, 2200),
