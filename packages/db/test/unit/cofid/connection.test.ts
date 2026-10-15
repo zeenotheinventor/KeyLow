@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { resolveConnection } from "../../../scripts/cofid/connection";
 
-const localStatus = { API_URL: "http://127.0.0.1:54321", SERVICE_ROLE_KEY: "local-key" };
+const localStatus = {
+  apiUrl: "http://127.0.0.1:54321",
+  anonKey: "local-anon-key",
+  serviceRoleKey: "local-key",
+};
 
 describe("resolveConnection", () => {
   it("should use SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY when both are set", async () => {
@@ -42,11 +46,5 @@ describe("resolveConnection", () => {
     await expect(resolveConnection(env, () => Promise.resolve(localStatus))).rejects.toThrow(
       missing,
     );
-  });
-
-  it("should refuse a local status without the API URL and service role key", async () => {
-    await expect(
-      resolveConnection({}, () => Promise.resolve({ API_URL: "http://127.0.0.1:54321" })),
-    ).rejects.toThrow("SERVICE_ROLE_KEY");
   });
 });

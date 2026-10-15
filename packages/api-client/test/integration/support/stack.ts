@@ -1,33 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
-import { inject } from "vitest";
-
-import type { Database } from "../../../src/database.types";
-import type { SupabaseClient } from "@supabase/supabase-js";
-
-/** What the global setup reads from `supabase status` and hands to every test file. */
-export type StackConfig = {
-  apiUrl: string;
-  anonKey: string;
-  serviceRoleKey: string;
-};
-
-declare module "vitest" {
-  export interface ProvidedContext {
-    stack: StackConfig;
-  }
-}
-
-// Sessions are never persisted or refreshed, so each client is a self-contained caller.
-const stateless = { auth: { persistSession: false, autoRefreshToken: false } };
-
-/** A client with the anon key and no session, which signs users in. */
-export const anonClient = (): SupabaseClient<Database> => {
-  const { apiUrl, anonKey } = inject("stack");
-  return createClient<Database>(apiUrl, anonKey, stateless);
-};
-
-/** A client with the service role key. It bypasses RLS and is only for creating and checking test users. */
-export const adminClient = (): SupabaseClient<Database> => {
-  const { apiUrl, serviceRoleKey } = inject("stack");
-  return createClient<Database>(apiUrl, serviceRoleKey, stateless);
-};
+// The stack clients are the ones @keylow/db's integration suites use, so the two cannot drift apart.
+// This file only keeps the import path that this suite's test files already use.
+export { adminClient, anonClient } from "../../../../db/test/integration/support/stack";

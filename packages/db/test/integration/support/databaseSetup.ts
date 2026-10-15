@@ -1,4 +1,4 @@
-import { requireStack } from "./globalSetup";
+import { requireStack } from "./requireStack";
 
 import type { TestProject } from "vitest/node";
 

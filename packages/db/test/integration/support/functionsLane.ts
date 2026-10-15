@@ -1,9 +1,7 @@
-// The global setup side of calling the served `off-product` function against the Open Food Facts
-// mock. The mock server is the one @keylow/db uses for its function suites, imported rather than
-// copied so the two cannot drift apart. The function container reaches the mock on one fixed port,
-// so only one test run at a time can start it.
-import { offMockPort } from "../../../../db/test/integration/support/offMock";
-import { startOffMock } from "../../../../db/test/integration/support/offMockServer";
+// The global setup side of calling the served Edge Functions against the Open Food Facts mock.
+// The function container reaches the mock on one fixed port, so only one test run at a time can start it.
+import { offMockPort } from "./offMock";
+import { startOffMock } from "./offMockServer";
 
 import type { StackConfig } from "./stack";
 
@@ -18,8 +16,8 @@ const probeTimeoutMilliseconds = 15_000;
 
 /**
  * Fails with a hint unless `functions serve` answers for `name`. It answers the CORS preflight (204)
- * or, when the gateway checks the JWT, a 401. Anything else means it is not running or the function
- * failed to boot.
+ * or, when the gateway checks the JWT, a 401. Anything else means it is not running (the gateway
+ * answers 502 or 503) or the function failed to boot.
  */
 export async function requireServedFunction(stack: StackConfig, name: string): Promise<void> {
   let status: number;

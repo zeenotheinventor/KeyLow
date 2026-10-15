@@ -1,15 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import { inject } from "vitest";
 
+import type { SupabaseStatus } from "../../../scripts/supabaseStatus";
 import type { Database } from "../../../src/types.gen";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /** What the global setup reads from `supabase status` and hands to every test file. */
-export type StackConfig = {
-  apiUrl: string;
-  anonKey: string;
-  serviceRoleKey: string;
-};
+export type StackConfig = SupabaseStatus;
 
 declare module "vitest" {
   export interface ProvidedContext {

@@ -1,7 +1,6 @@
-export type SupabaseConnection = { url: string; serviceRoleKey: string };
+import type { SupabaseStatus } from "../supabaseStatus";
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+export type SupabaseConnection = { url: string; serviceRoleKey: string };
 
 /**
  * The Supabase project to import into. SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY name any project,
@@ -10,7 +9,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
  */
 export async function resolveConnection(
   environment: Readonly<Record<string, string | undefined>>,
-  readLocalStatus: () => Promise<unknown>,
+  readLocalStatus: () => Promise<SupabaseStatus>,
 ): Promise<SupabaseConnection> {
   const url = environment["SUPABASE_URL"] || undefined;
   const serviceRoleKey = environment["SUPABASE_SERVICE_ROLE_KEY"] || undefined;
@@ -25,13 +24,6 @@ export async function resolveConnection(
     );
   }
 
-  const status = await readLocalStatus();
-  if (
-    !isRecord(status) ||
-    typeof status["API_URL"] !== "string" ||
-    typeof status["SERVICE_ROLE_KEY"] !== "string"
-  ) {
-    throw new Error("API_URL or SERVICE_ROLE_KEY is missing from the `supabase status` output");
-  }
-  return { url: status["API_URL"], serviceRoleKey: status["SERVICE_ROLE_KEY"] };
+  const local = await readLocalStatus();
+  return { url: local.apiUrl, serviceRoleKey: local.serviceRoleKey };
 }
