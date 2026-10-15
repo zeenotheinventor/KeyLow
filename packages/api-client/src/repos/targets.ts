@@ -83,3 +83,25 @@ export async function getMyTimeZone(client: SupabaseClient<Database>): Promise<s
 
   return data?.timezone ?? null;
 }
+
+/**
+ * Saves the IANA time zone on the signed in user's own profile, writing the time zone column and nothing
+ * else (the column grant allows it, and row level security limits the update to the user's own row, so
+ * it never reaches another user's). The caller checks the zone first, with core's `isValidTimeZone`. A
+ * failure names the action and the error code only, so the zone is never in a message.
+ */
+export async function updateMyTimeZone(client: SupabaseClient<Database>, timeZone: string) {
+  const { data, error: userError } = await client.auth.getUser();
+  if (userError) {
+    throw new Error("Could not save your time zone: you are not signed in", { cause: userError });
+  }
+
+  const { error } = await client
+    .from("profiles")
+    .update({ timezone: timeZone })
+    .eq("id", data.user.id);
+
+  if (error) {
+    throw repoError("save your time zone", error);
+  }
+}

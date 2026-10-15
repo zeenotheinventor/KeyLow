@@ -34,6 +34,8 @@ describe("the package index", () => {
     "getMyTermsAcceptance",
     "getMyTimeZone",
     "updateMyTargets",
+    "updateMyTimeZone",
+    "useSyncTimeZone",
     "listOwnFoods",
     "softDeleteFood",
     "useAcceptTerms",
