@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { Shield } from "lucide-react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { renderWithRouter } from "./appRouter";
@@ -133,6 +134,43 @@ describe("ListRow", () => {
       renderInList(<ListRow title="Expenditure" />);
 
       expect(screen.getByRole("listitem").querySelector("svg")).toBeNull();
+    });
+  });
+
+  describe("icon", () => {
+    // Lucide icons carry no role, so a stand-in that does lets the test find the one the row draws.
+    function MarkerIcon(props: {
+      className?: string;
+      strokeWidth?: number;
+      "aria-hidden"?: boolean;
+    }) {
+      return <svg role="img" aria-label="Marker" {...props} />;
+    }
+
+    it("should draw no icon unless it is given one", () => {
+      renderInList(<ListRow title="Your foods" href="/foods" />);
+
+      expect(screen.queryByRole("img", { hidden: true })).toBeNull();
+    });
+
+    it("should draw the icon, decorative and 20 px, in a 36 px tile on the raised surface", () => {
+      renderInList(<ListRow icon={MarkerIcon} title="Privacy Policy" href="/privacy" />);
+
+      const icon = screen.getByRole("img", { hidden: true });
+      expect(icon.getAttribute("aria-hidden")).toBe("true");
+      expect(icon.getAttribute("class")).toContain("size-5");
+      expect(icon.getAttribute("stroke-width")).toBe("1.75");
+      expect(icon.parentElement?.className).toContain("h-control-sm");
+      expect(icon.parentElement?.className).toContain("w-control-sm");
+      expect(icon.parentElement?.className).toContain("rounded-small");
+      expect(icon.parentElement?.className).toContain("bg-surface-raised");
+      expect(icon.parentElement?.className).toContain("text-text-secondary");
+    });
+
+    it("should leave the row named by its title alone", () => {
+      renderInList(<ListRow icon={Shield} title="Privacy Policy" href="/privacy" />);
+
+      expect(screen.getByRole("link", { name: "Privacy Policy" })).toBeTruthy();
     });
   });
 

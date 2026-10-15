@@ -1,4 +1,15 @@
+import type { ComponentType } from "react";
+
+/** What the row needs of an icon: the props it sets. A `lucide-react` icon fits. */
+export type ListRowIcon = ComponentType<{
+  className?: string;
+  strokeWidth?: number;
+  "aria-hidden"?: boolean;
+}>;
+
 type ListRowContent = {
+  /** A leading icon, such as `Shield` from `lucide-react`, in a small tile. It is decorative: the title names the row. */
+  icon?: ListRowIcon;
   title: string;
   subtitle?: string | undefined;
   /** The chevron marks a row that goes somewhere. Leave it off for an action such as signing out. */

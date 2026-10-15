@@ -1,5 +1,6 @@
+import { LEGAL_URLS } from "@keylow/core/copy";
 import { DATA_SOURCE_ATTRIBUTION } from "@keylow/core/foods";
-import { render, screen, userEvent } from "@testing-library/react-native";
+import { render, screen, userEvent, within } from "@testing-library/react-native";
 import { Linking } from "react-native";
 
 import AboutRoute from "../app/about";
@@ -33,6 +34,12 @@ async function renderAbout() {
 describe("the About screen", () => {
   beforeEach(() => {
     resetRouterMock();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    // `Linking.openURL` is already a mock in the React Native jest setup, so restoring it keeps its calls. Clearing drops them.
+    jest.clearAllMocks();
   });
 
   it("should be headed About", async () => {
@@ -95,7 +102,6 @@ describe("the About screen", () => {
 
       expect(openURL).toHaveBeenCalledTimes(1);
       expect(openURL).toHaveBeenCalledWith(url);
-      openURL.mockRestore();
     });
 
     it("should reach the 44 point touch target past its line of text", async () => {
@@ -115,7 +121,54 @@ describe("the About screen", () => {
 
       expect(openURL).toHaveBeenCalledTimes(1);
       expect(screen.getByRole("heading", { name: "About" })).toBeOnTheScreen();
-      openURL.mockRestore();
+    });
+  });
+
+  describe("the Legal section", () => {
+    it("should have a Legal heading", async () => {
+      await renderAbout();
+
+      expect(screen.getByRole("heading", { name: "Legal" })).toBeOnTheScreen();
+    });
+
+    it("should list Privacy Policy then Terms in the Legal list", async () => {
+      await renderAbout();
+
+      const rows = within(screen.getByLabelText("Legal")).getAllByRole("button");
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveAccessibleName("Privacy Policy");
+      expect(rows[1]).toHaveAccessibleName("Terms");
+    });
+
+    it("should come after the Data sources section", async () => {
+      await renderAbout();
+
+      const headings = screen.getAllByRole("heading");
+      expect(headings.at(-2)).toHaveTextContent("Data sources");
+      expect(headings.at(-1)).toHaveTextContent("Legal");
+    });
+
+    it.each([
+      ["Privacy Policy", LEGAL_URLS.privacy],
+      ["Terms", LEGAL_URLS.terms],
+    ])("should open the %s page in the browser when its row is pressed", async (name, url) => {
+      const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+      const user = await renderAbout();
+
+      await user.press(screen.getByRole("button", { name }));
+
+      expect(openURL).toHaveBeenCalledTimes(1);
+      expect(openURL).toHaveBeenCalledWith(url);
+    });
+
+    it("should stay on the screen, with nothing unhandled, when the browser cannot be opened", async () => {
+      const openURL = jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser"));
+      const user = await renderAbout();
+
+      await user.press(screen.getByRole("button", { name: "Terms" }));
+
+      expect(openURL).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("heading", { name: "About" })).toBeOnTheScreen();
     });
   });
 });

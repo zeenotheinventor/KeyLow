@@ -1,3 +1,4 @@
+import { FileText, Shield } from "lucide-react";
 import { userEvent } from "storybook/test";
 
 import { ListRow } from "./ListRow";
@@ -36,6 +37,16 @@ export const Action: Story = {
       onClick={() => undefined}
       chevron={false}
     />
+  ),
+};
+
+// The icon sits in a small tile, as the About board draws the Legal rows.
+export const WithIcon: Story = {
+  render: () => (
+    <>
+      <ListRow icon={Shield} title="Privacy Policy" href="/privacy" />
+      <ListRow icon={FileText} title="Terms" href="/terms" />
+    </>
   ),
 };
 

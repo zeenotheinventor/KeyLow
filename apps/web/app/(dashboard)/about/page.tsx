@@ -1,11 +1,15 @@
-import { ABOUT_SCREEN } from "@keylow/core/copy";
+import { ABOUT_SCREEN, LEGAL_PATHS } from "@keylow/core/copy";
+import { FileText, Shield } from "lucide-react";
 import { useId } from "react";
 
 import { PageFrame } from "../PageFrame";
 import { DataSourceCredit } from "./DataSourceCredit";
 
+import { GroupedList } from "@/components/ui/GroupedList";
+import { ListRow } from "@/components/ui/ListRow";
+
 export default function AboutPage() {
-  const { dataSources } = ABOUT_SCREEN;
+  const { dataSources, legal } = ABOUT_SCREEN;
   const dataSourcesHeadingId = useId();
 
   return (
@@ -27,6 +31,10 @@ export default function AboutPage() {
             url={dataSources.off.url}
           />
         </section>
+        <GroupedList title={legal.title} headerSize="compact">
+          <ListRow icon={Shield} title={legal.privacy} href={LEGAL_PATHS.privacy} />
+          <ListRow icon={FileText} title={legal.terms} href={LEGAL_PATHS.terms} />
+        </GroupedList>
       </div>
     </PageFrame>
   );
