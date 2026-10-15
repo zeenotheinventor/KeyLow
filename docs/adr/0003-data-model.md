@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15.
 
 ## Context
 
@@ -542,3 +542,63 @@ One consequence is recorded, with the CoFID figures measured on the full import 
 ### Consequences of Amendment 6
 
 The migration `20261015180000_search_foods_ranking_and_index_use.sql` creates the helper, the check and the revokes, and replaces `search_foods`. `@keylow/api-client` parses the lean row as `FoodSearchHit` and no longer expects a whole food from the search. `getFood` and `listFoodPortions` are unchanged. Any further deviation from the frozen Decision, from Amendments 1 to 5 or from this amendment needs an Amendment 7 before the migration or code that implements it lands.
+
+## Amendment 7 (Open Food Facts store: one transaction, 2026-10-15)
+
+### Status
+
+Recorded on 2026-10-15 under KEY-60. It replaces the three separate writes the `off-product` Edge Function made to store an Open Food Facts product with one database function that does them in one transaction. The details are interpretations made for implementation. They are, in full:
+
+- that the function takes and returns JSON, and the three argument names `p_food`, `p_portions` and `p_raw`;
+- that the database, not the caller, sets `fetched_at`, and from the statement clock (`clock_timestamp()`), not the transaction start;
+- that the writers of one barcode are serialised by the row lock of the food upsert, with no advisory lock, and that the portions are replaced by delete and insert and not by a diff;
+- that a payload which is not an object, is not an `off` food, has an owner, has no `source_ref` or has more than one default portion is refused with `22023` before anything is written, and that every other bad value is left to the table's own check;
+- that an empty portions array is valid and clears the food's portions, and a null one is refused;
+- that `execute` is held by `service_role` alone;
+- that the stale-refresh claim stays in the Edge Function.
+
+Zee confirms them by approving the PR that carries this amendment. The frozen Decision text and Amendments 1 to 6 are unchanged. This amendment adds one function and no table, column or policy.
+
+### Why
+
+PostgREST has no transaction between calls, so the three writes (upsert the food, delete and insert its global portions, upsert its raw data) had three failures that code in the Edge Function could only soften:
+
+- Simultaneous first lookups of one barcode raced on the portions insert and collided on `food_portions_one_default_per_food_idx` (`23505`). The function treated that error as "another writer won" and re-read.
+- A reader could see a fresh food with no portions between the delete and the insert of a refresh.
+- A portions insert that failed after the delete left the food without portions until its next refresh, which is 90 days away.
+
+### `store_off_product(p_food jsonb, p_portions jsonb, p_raw jsonb) returns jsonb`
+
+`security definer`, `set search_path = ''` and `set row_security = off`, with every name schema-qualified, as `search_food_candidate_ids` is. Row security is off so that a policy can never silently hide the row being updated: the function sees it or fails. In one transaction it:
+
+1. Upserts the food on `(source, source_ref)`. The columns and the conflict rule are the ones the Edge Function used: on a conflict every sent column is updated, and `id`, `created_at` and `deleted_at` are left alone. `source` is `'off'`, `owner_id` is null, and `fetched_at` is the database clock.
+2. Upserts `food_source_data` (`import_run_id` null, `raw` replaced).
+3. Deletes the food's portions and inserts the sent ones as global rows (`owner_id` null), in the order sent, with `position` the index in the array.
+
+`p_food` holds the columns the OFF normaliser fills plus `source` and `source_ref`. Keys the function does not know, including `id`, `fetched_at`, `deleted_at` and `created_at`, are ignored, so a caller cannot set them. Each value is read with its column's type. `p_portions` is an array of `{ label, grams, ml, is_default }`. `p_raw` is the product as OFF sent it.
+
+It returns `{ food, portions }`: the stored food with every column except the generated `search`, and the stored portions in order. That is the body of the `off-product` response, which the Edge Function parses with `offProductResponseSchema`, so one round trip stores a product and reads it back. When callers race for one barcode, each answers with what its own call stored, and the last writer replaces the portions, so a losing caller's response can carry portion ids that no longer exist. The old code had the same gap. It is accepted for a personal app, where concurrent first lookups of one barcode are rare.
+
+### Input checks
+
+Before any write, `22023` (`invalid_parameter_value`) with a message that says what is wrong, for: a food, raw product or portions list of the wrong JSON type (a null counts as the wrong type); a `source` other than `off`; a non-null `owner_id`; a missing or blank `source_ref`; and more than one portion with `is_default` true. The last is checked up front so the caller gets a clear error and not the unique violation. Everything else is left to the tables: a portion with both `grams` and `ml`, or an amount of zero or less, fails the table's check (`23514`), a missing `name`, `basis`, `micros` or `quality` fails `not null` (`23502`), and the whole call rolls back. `jsonb_populate_record` applies no column defaults, so `micros` and `quality` do not fall back to `{}`; the Edge Function always sends both.
+
+### Concurrency
+
+Two calls for one barcode are serialised by the row lock that the food upsert takes, and no advisory lock is used. `insert ... on conflict do update` on `(source, source_ref)` inserts the row or locks the existing one until the transaction ends. A second writer waits at that statement for the first to commit, then updates the row, and only then deletes and inserts the portions, in a statement of its own that sees what the first committed. So a writer never inserts a default portion beside another writer's, no `23505` can come back, both calls succeed and the last to commit wins, with its food columns, portions and raw data all from one writer. Two writers take their locks in one order (the food, its raw data, its portions), so they cannot deadlock.
+
+An advisory lock on a hash of `source_ref` was the alternative. It would also serialise the writers, but it takes a lock on a made up key that nothing else respects, it needs a hash of text with a chance of a collision between two barcodes, and it adds a statement that does nothing the upsert's lock does not already do. The cost of the chosen design is a constraint on the code: the food upsert must stay the first write of the function. A comment in the migration says so, and the integration test `test/integration/database/store-off-product.test.ts` fails when it does not hold. That test runs eight simultaneous calls on separate connections, for a first store and for a refresh, and it fails against a variant that does not lock the existing row.
+
+Replacing the portions by delete and insert and not by a diff means the portion rows get new ids on every refresh. Amendment 2 already accepts this for an OFF refresh: nothing references a global portion by id that must survive it, because `portion_id` on a log entry is `on delete set null` and the entry keeps its own snapshot. A diff would keep the ids, at the price of matching portions by label, and OFF gives a product at most one portion, so it was not worth it.
+
+### Privileges
+
+`execute` is revoked from `public`, `anon` and `authenticated` and granted to `service_role` alone. It is not an RPC for a signed-in user: it writes the shared catalogue, which only the Edge Function does, with the service role key. pgTAP asserts the exact set of roles that can execute it, and that an `authenticated` and an `anon` call fail with `42501`.
+
+### The stale-refresh claim stays in the Edge Function
+
+`claimRefresh` moves `fetched_at` forward with a compare-and-set before a refresh so that one request in a burst refreshes. It happens before the OFF call, when there is nothing to store yet, and it is a decision about whether to call OFF at all. Moving it into `store_off_product` would put the decision after the call it exists to avoid. It is unchanged.
+
+### Consequences of Amendment 7
+
+The migration `20261015190000_store_off_product.sql` creates the function and its grants. The `off-product` Edge Function calls it through `.rpc` and no longer treats `23505` as a lost race or re-reads the cache after a store: a failed store is an error (500 `internal_error`), and nothing is half written. `packages/db/src/types.gen.ts` gains `store_off_product`. Any further deviation from the frozen Decision, from Amendments 1 to 6 or from this amendment needs an Amendment 8 before the migration or code that implements it lands.
