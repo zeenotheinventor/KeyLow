@@ -18,6 +18,12 @@ export type FieldFrameProps = {
   accessibilityLabel?: string | undefined;
   /** A short note at the end of the label's line, such as "Required". */
   labelHint?: string | undefined;
+  /**
+   * Says a screen reader should announce the field as required, for a field whose "Required" is not drawn,
+   * such as the nutrients, which a note above them covers. It is read as the first part of the field's hint,
+   * so the field's name is unchanged, and it gives way to an error, which says so itself. Draws nothing.
+   */
+  required?: boolean | undefined;
   /** One short sentence under the field. An error replaces it. */
   helper?: string | undefined;
   /** Says what to do. Turns the border danger and is announced as an alert. Replaces the helper. */

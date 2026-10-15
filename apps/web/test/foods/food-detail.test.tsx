@@ -394,6 +394,15 @@ describe("FoodDetail", () => {
       ).toBeTruthy();
     });
 
+    it("should be drawn in the warning tone, never the danger tone, as the boards draw it", () => {
+      showFood(makeFood({ source: "off", quality: suspect }));
+
+      const classes = screen.getByRole("note").className.split(" ");
+      expect(classes).toContain("border-warning");
+      expect(classes).toContain("bg-warning-muted");
+      expect(classes.filter((name) => /danger|destructive/.test(name))).toEqual([]);
+    });
+
     it("should offer one action, to copy the food to the user's own foods", () => {
       showFood(makeFood({ id: "suspect-food", source: "off", quality: suspect }));
 

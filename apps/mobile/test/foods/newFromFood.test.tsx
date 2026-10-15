@@ -235,6 +235,29 @@ describe("new food screen, copying a food with the from parameter", () => {
     });
   });
 
+  describe("the required nutrients", () => {
+    it.each(["Energy (kcal)", "Protein (g)", "Carbohydrate (g)", "Fat (g)"])(
+      "should announce %s as required to a screen reader",
+      async (name) => {
+        await renderCopy();
+
+        expect(screen.getByLabelText(name)).toHaveProp(
+          "accessibilityHint",
+          expect.stringMatching(/^Required/),
+        );
+      },
+    );
+
+    it("should not announce fibre, which is optional, as required", async () => {
+      await renderCopy();
+
+      expect(screen.getByLabelText("Fibre (optional) (g)")).not.toHaveProp(
+        "accessibilityHint",
+        expect.stringContaining("Required"),
+      );
+    });
+  });
+
   describe("the values the source does not give", () => {
     it("should cue each required nutrient left blank as not given", async () => {
       await renderCopy();

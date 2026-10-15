@@ -43,6 +43,7 @@ export function TextField({
   label,
   accessibilityLabel,
   labelHint,
+  required = false,
   helper,
   error,
   errorShownElsewhere = false,
@@ -70,11 +71,15 @@ export function TextField({
     message !== undefined && !(errorShownElsewhere && errorText !== undefined);
   const hint = nonEmpty(labelHint);
   const note = errorText === undefined ? nonEmpty(missingNote) : undefined;
-  // A native field has nothing to point at its message, so what it says is read as the field's hint: the
-  // error or the helper, then the missing note, then that a locked field cannot be changed.
-  const hintParts = [message, note, locked ? FOOD_FORM.readOnly : undefined].filter(
-    (part) => part !== undefined,
-  );
+  // A native field has nothing to point at its message, so what it says is read as the field's hint: that
+  // it is required (unless the error already says so), the error or the helper, then the missing note,
+  // then that a locked field cannot be changed.
+  const hintParts = [
+    required && errorText === undefined ? FOOD_FORM.required : undefined,
+    message,
+    note,
+    locked ? FOOD_FORM.readOnly : undefined,
+  ].filter((part) => part !== undefined);
   const accessibilityHint = hintParts.length === 0 ? undefined : hintParts.join(". ");
 
   const borderClassName =

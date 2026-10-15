@@ -1,8 +1,7 @@
-// Fetch wrapper for the Open Food Facts API. `fetchOff` adds what every call needs and returns the
-// raw response, for callers that read non-2xx answers themselves (a 404 for an unknown barcode, say).
-// `offRequest` is the common case: it turns a timeout, a network error or a non-2xx answer into the
-// typed `upstream_error` response. Deferred to the functions that use them: building paths, parsing
-// bodies and retries.
+// Fetch wrapper for the Open Food Facts API. `offRequest` adds what every call needs and turns a
+// timeout, a network error or a non-2xx answer into the typed `upstream_error` response. A status the
+// caller reads itself (a 404 for an unknown barcode, say) is listed in `acceptedStatuses`. Deferred to
+// the functions that use it: building paths, parsing bodies and retries.
 import { error } from "./http.ts";
 
 const defaultBaseUrl = "https://world.openfoodfacts.org";
@@ -50,18 +49,12 @@ function buildRequest(path: string, options: OffFetchOptions): { url: URL; init:
   };
 }
 
-// `path` starts with a slash, for example `/api/v2/product/5000112637922`.
-export async function fetchOff(path: string, options: OffFetchOptions): Promise<Response> {
-  const { url, init } = buildRequest(path, options);
-  return await fetch(url, init);
-}
-
 function isTimeout(caught: unknown): boolean {
   return caught instanceof DOMException && caught.name === "TimeoutError";
 }
 
 // Returns the 2xx response (or one of the `acceptedStatuses`), or the `upstream_error` response to
-// send back.
+// send back. `path` starts with a slash, for example `/api/v2/product/5000112637922`.
 export async function offRequest(path: string, options: OffFetchOptions): Promise<OffResult> {
   const { url, init } = buildRequest(path, options);
   let response: Response;

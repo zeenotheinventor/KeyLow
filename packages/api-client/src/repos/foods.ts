@@ -22,8 +22,8 @@ export type FoodSearchHit = z.infer<typeof foodSearchHitSchema>;
 // and the caller's own is picked. More than this would mean the same code on a crowd of rows.
 const BARCODE_LOOKUP_LIMIT = 5;
 
-// The "Your foods" list is bounded so a user with a great many foods cannot make one huge request.
-const DEFAULT_OWN_FOODS_LIMIT = 200;
+/** How many of the caller's own foods one request loads. The "Your foods" list loads a page at a time. */
+export const OWN_FOODS_PAGE_SIZE = 50;
 
 /** The shortest text, once trimmed, that the food search looks for. Anything shorter is answered with no results. */
 export const MIN_SEARCH_LENGTH = 2;
@@ -150,13 +150,15 @@ export async function getFoodByBarcode(
 }
 
 /**
- * Lists the caller's own foods by name, without a query, for the "Your foods" screen. Deleted foods
- * are left out. At most `limit` foods are returned, 200 unless told otherwise. `search_foods` cannot
+ * Lists one page of the caller's own foods by name, without a query, for the "Your foods" screen.
+ * Deleted foods are left out. The page holds at most `limit` foods (50 unless told otherwise) and
+ * starts after the first `offset` foods. Equal names fall back to the creation time and then the
+ * id, so the order is total and no food is skipped or repeated between pages. `search_foods` cannot
  * do this because it answers nothing for a query under 2 characters.
  */
 export async function listOwnFoods(
   client: SupabaseClient<Database>,
-  { limit = DEFAULT_OWN_FOODS_LIMIT }: { limit?: number } = {},
+  { limit = OWN_FOODS_PAGE_SIZE, offset = 0 }: { limit?: number; offset?: number } = {},
 ): Promise<Food[]> {
   const { data, error } = await client
     .from("foods")
@@ -167,7 +169,8 @@ export async function listOwnFoods(
     .is("deleted_at", null)
     .order("name", { ascending: true })
     .order("created_at", { ascending: true })
-    .limit(limit);
+    .order("id", { ascending: true })
+    .range(offset, offset + limit - 1);
 
   if (error) {
     throw repoError("list your foods", error);

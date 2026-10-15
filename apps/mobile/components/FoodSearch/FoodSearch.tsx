@@ -43,17 +43,18 @@ export function FoodSearch({
         title={title}
         trailing={{ icon: "Plus", label: "Create a food", onPress: onCreateFood }}
       />
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="grow gap-4 px-4 pb-4 pt-1"
-        keyboardShouldPersistTaps="handled"
-      >
-        {scope === "own" ? (
-          <OwnFoodResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
-        ) : (
+      {scope === "own" ? (
+        // The list scrolls itself, so it can load the next page when the end is reached.
+        <OwnFoodResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
+      ) : (
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="grow gap-4 px-4 pb-4 pt-1"
+          keyboardShouldPersistTaps="handled"
+        >
           <SearchResults query={query} onCreateFood={onCreateFood} onOpenFood={onOpenFood} />
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
       <SearchField
         autoFocus={autoFocus}
         label="Search foods"
