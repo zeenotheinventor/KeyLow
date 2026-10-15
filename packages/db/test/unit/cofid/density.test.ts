@@ -72,10 +72,30 @@ describe("estimateDensity on real CoFID foods", () => {
 
   it.each([
     ["11-886", "plain flour", 0.51],
+    ["11-887", "strong white flour", 0.51],
     ["11-888", "self raising flour", 0.48],
     ["11-889", "wholemeal flour", 0.48],
+    ["11-890", "strong wholemeal flour", 0.48],
+    ["11-891", "wholemeal self raising flour", 0.48],
+    ["17-063", "white sugar", 0.84],
+    ["17-060", "brown sugar", 0.9],
+    ["17-061", "Demerara sugar", 0.93],
+    ["17-062", "icing sugar", 0.48],
+    ["17-661", "unsalted butter", 0.96],
+    ["17-685", "salted butter", 0.96],
   ])("should give %s (%s) an override", (code, _name, gPerMl) => {
     expect(estimateDensity(cofidFoodByCode(code))).toEqual({ gPerMl, basis: "override" });
+  });
+
+  it.each([
+    ["11-892", "brown flour"],
+    ["11-893", "strong brown flour"],
+  ])("should leave %s (%s) without a density, as no chart entry matches it", (code) => {
+    expect(estimateDensity(cofidFoodByCode(code))).toBeNull();
+  });
+
+  it("should give Irish coffee (17-594) the infusion group density", () => {
+    expect(estimateDensity(cofidFoodByCode("17-594"))).toEqual({ gPerMl: 1, basis: "group" });
   });
 
   it.each([

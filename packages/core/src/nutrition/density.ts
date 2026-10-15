@@ -10,7 +10,10 @@ import type { Food } from "../schemas/food";
  *   "group"     the entry for the food's CoFID food group, found by the longest matching prefix of the
  *               group code (BAH, else BA, else B). Only CoFID foods get one.
  * It returns null when none applies: measuring this food by volume is not sensible (a chicken breast, a
- * banana), or its group is too mixed for one honest number.
+ * banana), or its group is too mixed for one honest number. Null does not mean the food cannot be measured
+ * in millilitres: a food whose nutrient basis is per_100ml (CoFID group Q, the alcoholic drinks) is
+ * measured in millilitres without a density, so a caller checks the basis before reading null as "no
+ * volume measure".
  *
  * An estimate is approximate. A liquid's is usually within a few percent; a powder's can be 20 percent
  * off, because a spoonful weighs less when loose than when packed.
@@ -195,7 +198,7 @@ export const COFID_GROUP_DENSITIES: Readonly<Record<string, CofidGroupEntry>> = 
     {
       gPerMl: 1,
       source:
-        "Water, 0.9982 g/ml at 20 C (CRC Handbook of Chemistry and Physics); CoFID 2021 sheet 1.3 Proximates, water 96.8 to 99.8 g per 100 g for the coffee and tea infusions",
+        "Derived, not a published food table: water is 0.9982 g/ml at 20 C (CRC Handbook of Chemistry and Physics), and the 16 coffee and tea infusions in the group hold 96.8 to 99.7 g water per 100 g (CoFID 2021 sheet 1.3 Proximates). Irish coffee 17-594 is also in the group, at 83.1 percent water with 5 g alcohol, and still falls within 10 percent of 1.00",
     },
   ],
   [
@@ -224,18 +227,59 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     gPerMl: 1.42,
     source: `${FAO_HONEY_SPECIFIC_GRAVITY}, and CoFID honey holds 17.5 percent water; King Arthur Baking weight chart agrees at 21 g per US tablespoon (14.787 ml)`,
   },
-  // Powder: the source states no filling method, so read these as a level spoon of loose flour.
+  // Every entry below is the King Arthur Baking ingredient weight chart: grams per US cup (236.588 ml), or
+  // per half cup (118.294 ml) for butter. The chart states no filling method for flours, so read those as a
+  // level spoon of loose flour. Brown sugar is the chart's packed figure and icing sugar its unsifted one.
+  // Flours: the plain soft, strong white and self raising rows match a chart entry directly.
   "11-886": {
     gPerMl: 0.51,
-    source: `${KING_ARTHUR_WEIGHT_CHART}: all-purpose flour 120 g per US cup (236.588 ml), the nearest to plain soft wheat flour`,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: all-purpose flour 120 g per US cup, the nearest to plain soft wheat flour`,
+  },
+  "11-887": {
+    gPerMl: 0.51,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: bread flour 120 g per US cup`,
   },
   "11-888": {
     gPerMl: 0.48,
-    source: `${KING_ARTHUR_WEIGHT_CHART}: self-rising flour 113 g per US cup (236.588 ml)`,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: self-rising flour 113 g per US cup`,
   },
   "11-889": {
     gPerMl: 0.48,
-    source: `${KING_ARTHUR_WEIGHT_CHART}: whole wheat flour 113 g per US cup (236.588 ml)`,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: whole wheat flour 113 g per US cup`,
+  },
+  "11-890": {
+    gPerMl: 0.48,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: whole wheat flour 113 g per US cup, for strong wholemeal flour`,
+  },
+  "11-891": {
+    gPerMl: 0.48,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: self-rising flour and whole wheat flour are both 113 g per US cup`,
+  },
+  // Sugars
+  "17-063": {
+    gPerMl: 0.84,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: granulated white sugar 198 g per US cup (0.837), for CoFID's granulated and loaf sugar`,
+  },
+  "17-060": {
+    gPerMl: 0.9,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: brown sugar (dark or light), packed, 213 g per US cup`,
+  },
+  "17-061": {
+    gPerMl: 0.93,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: Demerara sugar 220 g per US cup`,
+  },
+  "17-062": {
+    gPerMl: 0.48,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: confectioners' sugar, unsifted, 113 g per US cup`,
+  },
+  // Butter
+  "17-685": {
+    gPerMl: 0.96,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: butter 113 g per half US cup (8 tablespoons, 118.294 ml), 0.955`,
+  },
+  "17-661": {
+    gPerMl: 0.96,
+    source: `${KING_ARTHUR_WEIGHT_CHART}: butter 113 g per half US cup (8 tablespoons, 118.294 ml), 0.955`,
   },
 };
 
@@ -253,7 +297,12 @@ const findGroupEntry = (groupCode: string): CofidGroupEntry | undefined => {
   return undefined;
 };
 
-/** A food's density in grams per millilitre and where it came from, or null when volume is no sensible measure for it. */
+/**
+ * A food's density in grams per millilitre and where it came from, or null when no density applies.
+ * Null does not mean the food cannot be measured in millilitres: a food whose nutrient basis is per_100ml
+ * (CoFID group Q) is measured in millilitres without a density, so check the basis before treating null as
+ * "no volume measure".
+ */
 export const estimateDensity = (
   food: Pick<Food, "source" | "source_ref" | "food_group" | "density_g_per_ml">,
 ): DensityEstimate | null => {

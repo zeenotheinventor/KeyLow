@@ -85,6 +85,22 @@ describe("estimateDensity group lookup", () => {
   });
 });
 
+describe("estimateDensity with keys that exist on every object", () => {
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty"])(
+    "should return null for a CoFID group named %s",
+    (group) => {
+      expect(estimateDensity(cofidFood({ food_group: group }))).toBeNull();
+    },
+  );
+
+  it.each(["constructor", "__proto__", "toString", "hasOwnProperty"])(
+    "should not read a CoFID food code named %s as an override",
+    (code) => {
+      expect(estimateDensity(cofidFood({ source_ref: code, food_group: null }))).toBeNull();
+    },
+  );
+});
+
 describe("estimateDensity ignores other sources", () => {
   it("should return null for an Open Food Facts food with no density, whatever its group text", () => {
     const oils = { source: "off", source_ref: "5000000000000", food_group: "oils" } as const;
