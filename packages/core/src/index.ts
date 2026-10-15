@@ -1,5 +1,6 @@
 export * from "./copy";
 export * from "./dates";
+export * from "./diary";
 export * from "./engine";
 export * from "./foods";
 export * from "./format";
