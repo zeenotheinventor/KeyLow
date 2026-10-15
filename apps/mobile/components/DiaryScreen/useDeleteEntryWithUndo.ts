@@ -1,5 +1,5 @@
 import { useDeleteEntry, useRestoreEntry } from "@keylow/api-client";
-import { DIARY_UNDO_ACTION, ENTRY_DELETED_TOAST } from "@keylow/core/copy";
+import { UNDO_LABEL, ENTRY_DELETED_TOAST } from "@keylow/core/copy";
 
 import { useToast } from "../ui";
 
@@ -23,7 +23,7 @@ export function useDeleteEntryWithUndo(): (entry: LogEntry) => void {
         toast.show({
           message: ENTRY_DELETED_TOAST,
           icon: "Trash2",
-          actionLabel: DIARY_UNDO_ACTION,
+          actionLabel: UNDO_LABEL,
           onAction: () => {
             restoreEntry.mutate(entry);
           },

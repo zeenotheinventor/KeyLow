@@ -1,5 +1,5 @@
 import { CopyDayPartialWriteError, useCopyDay, useUndoCopyDay } from "@keylow/api-client";
-import { DIARY_UNDO_ACTION, describeCopiedFromYesterday } from "@keylow/core/copy";
+import { UNDO_LABEL, describeCopiedFromYesterday } from "@keylow/core/copy";
 import { previousCalendarDay } from "@keylow/core/dates";
 import { useState } from "react";
 
@@ -36,7 +36,7 @@ export function useCopyYesterday(viewedDate: string, timeZone: string): CopyYest
             toast.show({
               message: describeCopiedFromYesterday(copied.count),
               icon: "Copy",
-              actionLabel: DIARY_UNDO_ACTION,
+              actionLabel: UNDO_LABEL,
               onAction: () => {
                 undoCopyDay.mutate(copied);
               },

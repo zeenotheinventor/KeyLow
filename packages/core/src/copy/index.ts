@@ -4,7 +4,6 @@ export * from "./barcode";
 export * from "./diary";
 export * from "./diaryDay";
 export * from "./diaryRing";
-export * from "./diaryUndo";
 export * from "./errors";
 export * from "./foodDetail";
 export * from "./foodForm";

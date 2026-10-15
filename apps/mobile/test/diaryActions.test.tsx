@@ -516,9 +516,7 @@ describe("the diary's actions", () => {
     it("should open on the month of the day shown, with today chosen", async () => {
       await openPicker();
 
-      expect(
-        screen.getByRole("button", { name: "15 October, today", selected: true }),
-      ).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "15 October, today, selected" })).toBeOnTheScreen();
     });
 
     it("should dot the complete days that the diary reads for the month", async () => {
