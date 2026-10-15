@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 
 describe("Card", () => {
   afterEach(() => {

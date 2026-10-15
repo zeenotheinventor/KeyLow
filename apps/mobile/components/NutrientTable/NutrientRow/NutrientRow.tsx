@@ -8,6 +8,8 @@ import type { NutrientRowProps } from "./types";
 /** One nutrient: its name at the left and its value at the right, which is quieter when it is not given. */
 export function NutrientRow({ label, value, isFirst }: NutrientRowProps) {
   return (
+    // A leaf row with no control inside, so it is one accessibility element. GroupedList's wrapper is not,
+    // because its rows hold buttons.
     <View
       accessible
       aria-label={`${label}: ${value ?? NOT_GIVEN}`}

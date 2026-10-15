@@ -14,7 +14,7 @@ import type { BarcodeLookupProps, BarcodeLookupRequest } from "./types";
 import type { BarcodeInvalidReason } from "@keylow/core/foods";
 
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
 
 /**

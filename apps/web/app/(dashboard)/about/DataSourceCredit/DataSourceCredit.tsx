@@ -2,7 +2,7 @@ import { useId } from "react";
 
 import type { DataSourceCreditProps } from "./types";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 
 /** One source's credit on a card: its name, the statement its licence asks for and its address, which opens in a new tab. */
 export function DataSourceCredit({ name, text, url }: DataSourceCreditProps) {

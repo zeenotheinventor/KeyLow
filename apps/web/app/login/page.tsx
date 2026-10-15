@@ -2,7 +2,7 @@ import { SIGN_IN_LINK_NOT_VERIFIED } from "@keylow/core/copy";
 
 import { LoginForm } from "./LoginForm";
 
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 
 export default async function LoginPage({

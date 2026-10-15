@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import * as badgeStories from "@/components/ui/Badge/Badge.stories";
 import * as bannerStories from "@/components/ui/Banner/Banner.stories";
 import * as buttonStories from "@/components/ui/Button/Button.stories";
-import * as cardStories from "@/components/ui/card.stories";
+import * as cardStories from "@/components/ui/Card/Card.stories";
 import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
 import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
 import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
@@ -37,7 +37,7 @@ const storyModules: Record<string, object> = {
   "Skeleton/Skeleton.stories.tsx": skeletonStories,
   "Badge/Badge.stories.tsx": badgeStories,
   "Button/Button.stories.tsx": buttonStories,
-  "card.stories.tsx": cardStories,
+  "Card/Card.stories.tsx": cardStories,
   "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
 };

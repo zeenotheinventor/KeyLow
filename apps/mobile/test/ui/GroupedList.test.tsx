@@ -110,6 +110,44 @@ describe("GroupedList", () => {
       expect(within(list).getAllByRole("button")).toHaveLength(3);
     });
 
+    it("should expose each row as a list item, keeping the row's own button role", async () => {
+      await renderList();
+
+      // A list item is not an accessibility element either, so a role query cannot see it and the items are
+      // read off the list. It must stay that way: an accessible wrapper would fold the button inside it away
+      // from a screen reader, which the test library does not model, so that is asserted on the prop.
+      const items = screen
+        .getByLabelText("Common foods")
+        .children.filter((child) => typeof child !== "string");
+      expect(items).toHaveLength(3);
+      for (const item of items) {
+        expect(item).toHaveProp("role", "listitem");
+        expect(item).not.toHaveProp("accessible", true);
+        expect(within(item).getAllByRole("button")).toHaveLength(1);
+      }
+    });
+
+    it("should count the rows inside a fragment as list items, and skip empty children", async () => {
+      await renderList(
+        {},
+        "dark",
+        <>
+          {null}
+          <ListRow title="Chicken breast" onPress={() => undefined} />
+          <>
+            <ListRow title="Chicken thigh" onPress={() => undefined} />
+            {false}
+          </>
+        </>,
+      );
+
+      const items = screen.getByLabelText("Common foods").children;
+      expect(items).toHaveLength(2);
+      for (const item of items) {
+        expect(item).toHaveProp("role", "listitem");
+      }
+    });
+
     it("should show a notice between the heading and the card, outside the list", async () => {
       await renderList({ notice: <Text>Something to know</Text> });
 

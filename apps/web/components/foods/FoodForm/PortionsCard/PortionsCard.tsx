@@ -8,7 +8,7 @@ import { PortionRow } from "../PortionRow";
 import type { PortionsCardProps } from "./types";
 
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/Card";
 
 /** The portions of the food, each with its own row, then the note on units and the way to add one. */
 export function PortionsCard({

@@ -27,6 +27,8 @@ export function PortionRow({ portion, isFirst }: PortionRowProps) {
     .join(", ");
 
   return (
+    // A leaf row with no control inside, so it is one accessibility element. GroupedList's wrapper is not,
+    // because its rows hold buttons.
     <View
       accessible
       aria-label={label}

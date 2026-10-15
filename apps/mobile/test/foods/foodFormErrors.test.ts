@@ -1,11 +1,17 @@
 import { customFoodInputSchema } from "@keylow/core/schemas";
 
-import { emptyFoodFormValues } from "../../components/FoodForm/foodFormValues";
+import { emptyFoodFormValues } from "../../components/FoodForm";
 import { mapIssuesToErrors } from "../../components/FoodForm/mapIssuesToErrors";
 import { toRawInput } from "../../components/FoodForm/toRawInput";
 
+import type { FoodFormValues } from "../../components/FoodForm";
 import type { KeyedFoodFormValues } from "../../components/FoodForm/mapIssuesToErrors";
-import type { FoodFormValues } from "../../components/FoodForm/types";
+
+// The folder's index also loads the form, which reads the theme from storage.
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
 
 const validValues: FoodFormValues = {
   ...emptyFoodFormValues,
