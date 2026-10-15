@@ -1,31 +1,12 @@
 import { describeSeeMore } from "@keylow/core/copy";
-import { Children, Fragment, isValidElement } from "react";
 import { View } from "react-native";
 
 import { Card } from "../Card";
 import { Text } from "../Text";
-import { GroupedRowPositionContext } from "./rowPosition";
+import { GroupedRowPositionContext, positionedRows } from "./rowPosition";
 import { SeeMoreButton } from "./SeeMoreButton";
 
 import type { GroupedListProps } from "./types";
-import type { ReactNode } from "react";
-
-// Each row is told whether it is first. These are made once, so a row does not render for a new object.
-const firstRow = { isFirst: true };
-const followingRow = { isFirst: false };
-
-type Row = { key: string; node: ReactNode };
-
-// The rows of the list in order, with those inside a fragment counted as rows of their own, so a
-// fragment does not make the rows inside it look like one. Each has a key that holds its place.
-function flattenRows(children: ReactNode, parentKey = ""): Row[] {
-  return Children.toArray(children).flatMap((child, index) => {
-    const key = `${parentKey}/${isValidElement(child) && child.key !== null ? child.key : index}`;
-    return isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment
-      ? flattenRows(child.props.children, key)
-      : [{ key, node: child }];
-  });
-}
 
 /**
  * A titled group of rows on a card, with the group's source beside the title and, when the group has
@@ -33,7 +14,7 @@ function flattenRows(children: ReactNode, parentKey = ""): Row[] {
  * between the heading and the card, which is the kit's `Card`.
  */
 export function GroupedList({ title, source, seeMore, notice, children }: GroupedListProps) {
-  const rows = flattenRows(children);
+  const rows = positionedRows(children);
 
   return (
     <View className="gap-2">
@@ -58,8 +39,8 @@ export function GroupedList({ title, source, seeMore, notice, children }: Groupe
       {notice}
       {/* The rows bring their own padding, so the card has none. */}
       <Card aria-label={title} padding={0} role="list">
-        {rows.map((row, index) => (
-          <GroupedRowPositionContext key={row.key} value={index === 0 ? firstRow : followingRow}>
+        {rows.map((row) => (
+          <GroupedRowPositionContext key={row.key} value={row.position}>
             {/* Not `accessible`: the row inside is a button, which an accessible wrapper would fold away. */}
             <View role="listitem">{row.node}</View>
           </GroupedRowPositionContext>
