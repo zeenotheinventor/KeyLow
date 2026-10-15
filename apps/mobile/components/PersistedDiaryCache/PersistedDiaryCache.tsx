@@ -21,8 +21,8 @@ import type { PersistedDiaryCacheProps } from "./types";
  * so the gate's own read finds the stored acceptance.
  *
  * On a sign out, which is also how an account deletion ends, the stored cache is removed and the one in
- * memory is reset, so the next person to sign in never sees it. A start with no session it can read
- * does not clear it: offline, with an access token that has expired, Supabase reports no session
+ * memory is reset, so the next person to sign in never sees it. Supabase reporting no session at a
+ * start does not clear it: offline, with an access token that has expired, it reports no session
  * although the person is still signed in, and that is when the cache is wanted.
  */
 export function PersistedDiaryCache({ children, readStoredUserId }: PersistedDiaryCacheProps) {

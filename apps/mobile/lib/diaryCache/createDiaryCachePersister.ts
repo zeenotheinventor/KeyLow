@@ -1,6 +1,6 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
-import { DIARY_CACHE_STORAGE_KEY } from "./constants";
+import { DIARY_CACHE_MAX_AGE_MS, DIARY_CACHE_STORAGE_KEY } from "./constants";
 import { hasCurrentTermsAcceptance } from "./hasCurrentTermsAcceptance";
 
 import type {
@@ -57,13 +57,18 @@ const OWNER_SEPARATOR = "|";
  * Whose cache it is travels with it, joined to the buster. A save with no one signed in stores nothing.
  * A stored cache is read only when it was stored by the account that is signed in now, and only when
  * that account has accepted the current Terms. Anything else (another account, no account known) is
- * removed before it reaches memory. `readStoredUserId` must answer from the phone's own storage,
+ * removed before it reaches memory. Each query is also held to the age limit by its own
+ * `dataUpdatedAt`: the limit on the stored cache as a whole runs from its last save, which every
+ * change renews, so on its own it would let a query's data grow older than the limit.
+ * `readStoredUserId` must answer from the phone's own storage,
  * so it knows the account at a start with no connection too.
  */
 export function createDiaryCachePersister(
   storage: AsyncStorage,
-  readStoredUserId: () => Promise<string | null>,
+  readStoredUserIdFromStorage: () => Promise<string | null>,
 ): Persister {
+  // A read that fails is a user that is not known, which stores nothing and reads nothing back.
+  const readStoredUserId = () => readStoredUserIdFromStorage().catch(() => null);
   const stored = createAsyncStoragePersister({
     storage: {
       getItem: (key) => storage.getItem(key),
@@ -95,12 +100,19 @@ export function createDiaryCachePersister(
       const signedInUserId = await readStoredUserId();
       const isOwnedBySignedInUser =
         ownerId !== null && signedInUserId !== null && ownerId === signedInUserId;
-      if (!isOwnedBySignedInUser || !hasCurrentTermsAcceptance(client.clientState)) {
+      const oldestAllowed = Date.now() - DIARY_CACHE_MAX_AGE_MS;
+      const clientState = {
+        ...client.clientState,
+        queries: client.clientState.queries.filter(
+          ({ state }) => state.dataUpdatedAt >= oldestAllowed,
+        ),
+      };
+      if (!isOwnedBySignedInUser || !hasCurrentTermsAcceptance(clientState)) {
         await stored.removeClient();
         return undefined;
       }
 
-      return { ...client, buster: client.buster.slice(0, separatorIndex) };
+      return { ...client, clientState, buster: client.buster.slice(0, separatorIndex) };
     },
     removeClient: stored.removeClient,
   };

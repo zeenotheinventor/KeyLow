@@ -37,6 +37,8 @@ type GateOptions = {
   refresh: RefreshOutcome;
   /** Whether the gate is given the reader of the phone's own storage, as the app gives it. */
   readsStorage: boolean;
+  /** Makes the reader of the phone's storage fail. */
+  readerFails?: boolean;
   /** Where the app is when the gate decides. */
   segments?: string[];
 };
@@ -45,6 +47,7 @@ async function renderGateOver({
   hasStoredSession,
   refresh,
   readsStorage,
+  readerFails = false,
   segments = ["(tabs)", "diary"],
 }: GateOptions) {
   const { client, storage } = createStoredSessionClient({ hasStoredSession, refresh });
@@ -52,7 +55,9 @@ async function renderGateOver({
   stopRefreshing = () => client.auth.stopAutoRefresh();
   routerMock.segments = segments;
   queryClient = createDiaryQueryClient();
-  const readStoredUserId = createStoredUserIdReader(storage, STORED_SESSION_KEY);
+  const readStoredUserId = readerFails
+    ? () => Promise.reject(new Error("storage unavailable"))
+    : createStoredUserIdReader(storage, STORED_SESSION_KEY);
 
   await render(
     <ThemeProvider fixedPreference="dark">
@@ -132,6 +137,35 @@ describe("AuthGate at a start whose stored session has an expired access token",
         hasStoredSession: false,
         refresh: "network-down",
         readsStorage: true,
+      });
+
+      await letSupabaseGiveUp();
+
+      expect(routerMock.replace).toHaveBeenCalledWith(SIGN_IN);
+    });
+  });
+
+  describe("when the phone's storage cannot be read", () => {
+    it("should leave the decision to Supabase, which here refreshes the session", async () => {
+      await renderGateOver({
+        hasStoredSession: true,
+        refresh: "refreshes",
+        readsStorage: true,
+        readerFails: true,
+        segments: ["(auth)", "sign-in"],
+      });
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+      });
+    });
+
+    it("should send the person to sign-in when Supabase finds no session either", async () => {
+      await renderGateOver({
+        hasStoredSession: false,
+        refresh: "network-down",
+        readsStorage: true,
+        readerFails: true,
       });
 
       await letSupabaseGiveUp();

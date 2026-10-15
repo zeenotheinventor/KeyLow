@@ -29,6 +29,8 @@ export const keys = {
     weeks: ["diary", "week"] as const,
     /** The prefix of every `entry` key. */
     entries: ["diary", "entry"] as const,
+    /** The prefix of every `completeDays` key. */
+    completeDaysAll: ["diary", "complete-days"] as const,
     day: (localDate: string) => ["diary", "day", localDate] as const,
     /** One entry by its id, for the screen that edits it. */
     entry: (id: string) => ["diary", "entry", id] as const,

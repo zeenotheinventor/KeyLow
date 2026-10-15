@@ -1,11 +1,13 @@
 import { KeyLowProvider, keys } from "@keylow/api-client";
+import { ACCEPT_TERMS_SCREEN } from "@keylow/core/copy";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { hashKey, onlineManager } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react-native";
+import { act, cleanup, render, screen, fireEvent, waitFor } from "@testing-library/react-native";
 
 import { AuthGate } from "../components/AuthGate";
 import { DiaryScreen } from "../components/DiaryScreen";
 import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
+import { SignOutButton } from "../components/SignOutButton";
 import { parseStoredCache } from "../lib/diaryCache";
 import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
 import { createStoredUserIdReader } from "../lib/storedSession";
@@ -47,15 +49,21 @@ jest.mock("../lib/useNow", () => {
   return { useNow: () => mockNow };
 });
 // AuthGate reads the app's client from this module, which the test points at the client it builds.
-const mockApp: { client: unknown } = { client: undefined };
+const mockApp: { client: unknown; removeStoredSession: () => Promise<void> } = {
+  client: undefined,
+  removeStoredSession: () => Promise.resolve(),
+};
 jest.mock("../lib/supabase", () => ({
   get supabase() {
     return mockApp.client;
   },
+  removeStoredSession: () => mockApp.removeStoredSession(),
 }));
 
 const TODAY = "2026-10-15";
 const SUPABASE_GIVES_UP_MS = 40_000;
+// Supabase's start stops trying the refresh after about 25 seconds.
+const SUPABASE_START_ENDS_MS = 26_000;
 
 let queryClient: QueryClient;
 let stopRefreshing: () => Promise<void> = () => Promise.resolve();
@@ -121,6 +129,7 @@ describe("opening the diary with no connection, from a cold start", () => {
       refresh: "network-down",
     });
     mockApp.client = client;
+    mockApp.removeStoredSession = () => storage.removeItem(STORED_SESSION_KEY);
     stopRefreshing = () => client.auth.stopAutoRefresh();
     const readStoredUserId = createStoredUserIdReader(storage, STORED_SESSION_KEY);
     jest.useFakeTimers();
@@ -136,11 +145,14 @@ describe("opening the diary with no connection, from a cold start", () => {
           <PersistedDiaryCache readStoredUserId={readStoredUserId}>
             <AuthGate readStoredUserId={readStoredUserId}>
               <DiaryScreen />
+              <SignOutButton />
             </AuthGate>
           </PersistedDiaryCache>
         </KeyLowProvider>
       </ThemeProvider>,
     );
+
+    return { storage };
   }
 
   it("should show today's entries at once when the access token has expired, and keep showing them once Supabase gives up refreshing", async () => {
@@ -149,7 +161,7 @@ describe("opening the diary with no connection, from a cold start", () => {
     await startOffline({ hasStoredSession: true });
 
     expect(await screen.findByRole("button", { name: /^Porridge oats/ })).toBeOnTheScreen();
-    expect(screen.getByText("You're offline")).toBeOnTheScreen();
+    expect(screen.getByRole("status", { name: /You're offline/ })).toBeOnTheScreen();
     await act(async () => {
       await jest.advanceTimersByTimeAsync(SUPABASE_GIVES_UP_MS);
     });
@@ -168,6 +180,27 @@ describe("opening the diary with no connection, from a cold start", () => {
       expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
     });
     expect(screen.queryByRole("button", { name: /^Porridge oats/ })).not.toBeOnTheScreen();
+    expect(queryClient.getQueryData(keys.diary.day(TODAY))).toBeUndefined();
+  });
+
+  it("should sign the person out, and empty the phone, when they sign out offline with an expired access token", async () => {
+    await useTheDiaryOnlineThenCloseTheApp();
+    const { storage } = await startOffline({ hasStoredSession: true });
+    await screen.findByRole("button", { name: /^Porridge oats/ });
+    expect(storage.items.has(STORED_SESSION_KEY)).toBe(true);
+    expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).not.toBeNull();
+
+    await fireEvent.press(screen.getByRole("button", { name: ACCEPT_TERMS_SCREEN.signOutLabel }));
+    // Supabase finishes its start before it signs out, and offline that start is still trying the refresh.
+    await act(async () => {
+      await jest.advanceTimersByTimeAsync(SUPABASE_START_ENDS_MS);
+    });
+
+    await waitFor(() => {
+      expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+    });
+    expect(storage.items.has(STORED_SESSION_KEY)).toBe(false);
+    expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
     expect(queryClient.getQueryData(keys.diary.day(TODAY))).toBeUndefined();
   });
 });

@@ -9,8 +9,7 @@ import { keys } from "@keylow/api-client";
 export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.diary.days,
   keys.diary.weeks,
-  // The prefix of the complete days, which `keys` only builds with a month.
-  keys.diary.completeDays("").slice(0, 2),
+  keys.diary.completeDaysAll,
   keys.diary.recentFoods,
   keys.profiles.targets,
   keys.profiles.timeZone,

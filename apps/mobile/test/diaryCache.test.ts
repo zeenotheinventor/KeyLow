@@ -80,21 +80,21 @@ function createFakeStorage() {
 }
 
 function persistedClientWith(
-  queries: { queryKey: readonly unknown[]; data: unknown }[],
+  queries: { queryKey: readonly unknown[]; data: unknown; updatedAt?: number }[],
 ): PersistedClient {
   return {
     buster: "any",
     timestamp: Date.now(),
     clientState: {
       mutations: [],
-      queries: queries.map(({ queryKey, data }) => ({
+      queries: queries.map(({ queryKey, data, updatedAt = Date.now() }) => ({
         queryKey,
         queryHash: JSON.stringify(queryKey),
         dehydratedAt: Date.now(),
         state: {
           data,
           dataUpdateCount: 1,
-          dataUpdatedAt: Date.now(),
+          dataUpdatedAt: updatedAt,
           error: null,
           errorUpdateCount: 0,
           errorUpdatedAt: 0,
@@ -234,6 +234,65 @@ describe("the diary cache persister", () => {
       await expect(
         createDiaryCachePersister(storage, signedInAs(OWNER)).restoreClient(),
       ).resolves.toBeUndefined();
+      expect(storage.items.size).toBe(0);
+    });
+  });
+
+  describe("how old a query's data may be", () => {
+    it("should leave out a query whose data is older than the limit, though the cache was saved just now", async () => {
+      const storage = createFakeStorage();
+      const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
+      const staleDay = {
+        queryKey: keys.diary.day("2026-10-01"),
+        data: { entries: [] },
+        updatedAt: Date.now() - DIARY_CACHE_MAX_AGE_MS - HOUR_MS,
+      };
+      await persister.persistClient(persistedClientWith([currentAcceptance, aDay, staleDay]));
+
+      const restored = await persister.restoreClient();
+
+      expect(restored?.clientState.queries.map(({ queryKey }) => queryKey)).toEqual([
+        currentAcceptance.queryKey,
+        aDay.queryKey,
+      ]);
+    });
+
+    it("should not give back a cache whose terms acceptance is older than the limit", async () => {
+      const storage = createFakeStorage();
+      const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
+      await persister.persistClient(
+        persistedClientWith([
+          { ...currentAcceptance, updatedAt: Date.now() - DIARY_CACHE_MAX_AGE_MS - HOUR_MS },
+          aDay,
+        ]),
+      );
+
+      await expect(persister.restoreClient()).resolves.toBeUndefined();
+    });
+  });
+
+  describe("when the stored user cannot be read", () => {
+    const failingReader = () => Promise.reject(new Error("storage unavailable"));
+
+    it("should give back nothing, and not fail, when reading the cache", async () => {
+      const storage = createFakeStorage();
+      await createDiaryCachePersister(storage, signedInAs(OWNER)).persistClient(
+        persistedClientWith([currentAcceptance, aDay]),
+      );
+
+      await expect(
+        createDiaryCachePersister(storage, failingReader).restoreClient(),
+      ).resolves.toBeUndefined();
+      expect(storage.items.size).toBe(0);
+    });
+
+    it("should store nothing, and not fail, when saving the cache", async () => {
+      const storage = createFakeStorage();
+
+      await createDiaryCachePersister(storage, failingReader).persistClient(
+        persistedClientWith([currentAcceptance, aDay]),
+      );
+
       expect(storage.items.size).toBe(0);
     });
   });

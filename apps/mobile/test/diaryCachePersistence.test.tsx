@@ -16,6 +16,7 @@ import {
   requestsTo,
   resetDiaryBackend,
   sampleDay,
+  SIGNED_IN_USER_ID,
   signInDiaryClient,
 } from "./support/diaryBackend";
 import { resetRouterMock } from "./support/expoRouterMock";
@@ -57,12 +58,15 @@ let queryClient: QueryClient;
 const readSignedInUserId = async () =>
   (await diaryClient.auth.getSession()).data.session?.user.id ?? null;
 
-async function renderDiary(client: QueryClient = createDiaryQueryClient()) {
+async function renderDiary(
+  client: QueryClient = createDiaryQueryClient(),
+  readStoredUserId: () => Promise<string | null> = readSignedInUserId,
+) {
   queryClient = client;
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <PersistedDiaryCache readStoredUserId={readSignedInUserId}>
+        <PersistedDiaryCache readStoredUserId={readStoredUserId}>
           <DiaryScreen />
         </PersistedDiaryCache>
       </KeyLowProvider>
@@ -176,7 +180,7 @@ describe("the persisted diary cache", () => {
       await renderDiary();
 
       expect(await screen.findByRole("button", { name: /^Porridge oats/ })).toBeOnTheScreen();
-      expect(screen.getByText("You're offline")).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: /You're offline/ })).toBeOnTheScreen();
       expect(diaryBackend.requests).toEqual([]);
     });
 
@@ -332,7 +336,9 @@ describe("the persisted diary cache", () => {
         return stored;
       });
       networkAnswersNothing();
-      await renderDiary();
+      // The account is read from the phone's storage before the sign out has taken the session out of it, so
+      // the stored cache passes the owner check and only the reset after the read keeps it out of memory.
+      await renderDiary(createDiaryQueryClient(), () => Promise.resolve(SIGNED_IN_USER_ID));
 
       await act(async () => {
         await diaryClient.auth.signOut();

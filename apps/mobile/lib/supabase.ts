@@ -34,6 +34,9 @@ const storageKey = authStorageKey(supabaseUrl);
 /** Whose session is stored on the phone, or null. It answers at once, whatever the connection. */
 export const readStoredUserId = createStoredUserIdReader(authStorage, storageKey);
 
+/** Removes the stored session, for a sign out that Supabase could not carry out (see `endSession`). */
+export const removeStoredSession = () => authStorage.removeItem(storageKey);
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: authStorage,

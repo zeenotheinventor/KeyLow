@@ -35,12 +35,15 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
     //    session to refresh), is signed in. No session, a refused refresh token or any other auth error is
     //    signed out, and so is a start with nothing stored.
     // When the connection returns, Supabase refreshes the token, or finds it dead and signs out.
-    void readStoredUserId().then((userId) => {
-      if (!isCancelled && !hasSupabaseAnswered && userId !== null) {
-        setIsSignedIn(true);
-        setIsSessionLoaded(true);
-      }
-    });
+    // A read that fails is nothing stored, and Supabase's answer decides.
+    void readStoredUserId()
+      .catch(() => null)
+      .then((userId) => {
+        if (!isCancelled && !hasSupabaseAnswered && userId !== null) {
+          setIsSignedIn(true);
+          setIsSessionLoaded(true);
+        }
+      });
 
     void supabase.auth.getSession().then(({ data, error }) => {
       if (!isCancelled) {
