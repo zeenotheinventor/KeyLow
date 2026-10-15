@@ -7,7 +7,7 @@ import { ScrollView, View } from "react-native";
 import { AppearanceSetting } from "../../components/AppearanceSetting";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../components/ui";
-import { supabase } from "../../lib/supabase";
+import { signOut } from "../../lib/signOut";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 // The sections of the `tab-shell.more` board, with Nutrition between Food and Body. Your foods opens the search
@@ -69,7 +69,7 @@ export default function MoreRoute() {
             icon="LogOut"
             title={MORE_SCREEN.account.signOut}
             onPress={() => {
-              void supabase.auth.signOut();
+              void signOut();
             }}
           />
         </GroupedList>

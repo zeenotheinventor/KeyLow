@@ -149,7 +149,12 @@ export const mockApiClient = {
   useProfileTimeZone: mockUseProfileTimeZone,
   useRecentFoods: mockUseRecentFoods,
   useDeleteEntry: () => ({ mutateAsync: mockDeleteEntry }),
-  useSupabase: () => ({}),
+  // The client is not used by these tests, but the stored diary cache listens to its auth events.
+  useSupabase: () => ({
+    auth: {
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => undefined } } }),
+    },
+  }),
   getFood: mockGetFood,
   listFoodPortions: mockListFoodPortions,
   useFood: mockUseFood,

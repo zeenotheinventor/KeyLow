@@ -3,6 +3,7 @@ import { AppState } from "react-native";
 
 import { installCryptoShim } from "./installCryptoShim";
 import { LargeSecureStore } from "./LargeSecureStore";
+import { authStorageKey, createStoredUserIdReader } from "./storedSession";
 
 import type { Database } from "@keylow/api-client";
 
@@ -27,9 +28,19 @@ const supabaseAnonKey = requireEnvironmentValue(
 // PKCE needs a secure random verifier, so the shim goes in before the client exists.
 installCryptoShim();
 
+const authStorage = new LargeSecureStore();
+const storageKey = authStorageKey(supabaseUrl);
+
+/** Whose session is stored on the phone, or null. It answers at once, whatever the connection. */
+export const readStoredUserId = createStoredUserIdReader(authStorage, storageKey);
+
+/** Removes the stored session, for a sign out that Supabase could not carry out (see `endSession`). */
+export const removeStoredSession = () => authStorage.removeItem(storageKey);
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: new LargeSecureStore(),
+    storage: authStorage,
+    storageKey,
     flowType: "pkce",
     autoRefreshToken: true,
     persistSession: true,

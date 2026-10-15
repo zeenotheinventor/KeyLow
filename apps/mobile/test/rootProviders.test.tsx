@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { Text } from "react-native";
 
@@ -7,6 +8,7 @@ import { resetRouterMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { resetSupabaseMock } from "./support/supabaseMock";
+import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
 
 import type { ReactNode } from "react";
 
@@ -14,7 +16,11 @@ import type { ReactNode } from "react";
 jest.mock("../global.css", () => ({}));
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: jest.fn(() => Promise.resolve(null)),
+    setItem: () => Promise.resolve(),
+    removeItem: () => Promise.resolve(),
+  },
 }));
 jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
 jest.mock("react-native-gesture-handler", () => {
@@ -86,6 +92,14 @@ describe("the app root", () => {
     await user.press(await screen.findByRole("button", { name: "Show toast" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+  });
+
+  it("should read the stored diary cache, so the screens find it", async () => {
+    await render(<RootLayout />);
+
+    await screen.findByRole("button", { name: "Show toast" });
+
+    expect(AsyncStorage.getItem).toHaveBeenCalledWith(DIARY_CACHE_STORAGE_KEY);
   });
 
   it("should put the screens inside the gesture root, so a drag on a sheet is heard", async () => {

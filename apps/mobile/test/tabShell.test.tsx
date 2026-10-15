@@ -29,7 +29,11 @@ import type { ComponentType } from "react";
 jest.mock("../global.css", () => ({}));
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: () => Promise.resolve(null),
+    setItem: () => Promise.resolve(),
+    removeItem: () => Promise.resolve(),
+  },
 }));
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")

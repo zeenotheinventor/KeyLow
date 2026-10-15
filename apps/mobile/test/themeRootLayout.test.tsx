@@ -27,8 +27,10 @@ let mockStoredPreference: string | null = null;
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
-    getItem: () => Promise.resolve(mockStoredPreference),
+    // Only the theme preference is stored. Any other key, such as the diary cache's, is empty.
+    getItem: (key: string) => Promise.resolve(key === "kl-theme" ? mockStoredPreference : null),
     setItem: () => Promise.resolve(),
+    removeItem: () => Promise.resolve(),
   },
 }));
 // A status bar draws nothing, so the mock says which style it was asked for.

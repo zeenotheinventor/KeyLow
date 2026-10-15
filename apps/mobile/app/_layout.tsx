@@ -5,10 +5,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthGate } from "../components/AuthGate";
+import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
 import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
 import { feedOnlineManager } from "../lib/connectivity";
-import { supabase } from "../lib/supabase";
+import { createQueryClient } from "../lib/diaryCache";
+import { readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
 import { holdSplashScreen } from "../lib/updates";
 
@@ -19,20 +21,25 @@ holdSplashScreen();
 // React Native has no online and offline events, so the queries are told whether the server can be reached.
 feedOnlineManager();
 
+const queryClient = createQueryClient();
+
 // The gesture root is the outermost view, so a drag works anywhere below it. The safe area comes next, for the
 // screens and the toast. The toast provider sits inside the theme (the toast reads it) and the cache,
-// and around the navigator, so a screen of any route can show one.
+// and around the navigator, so a screen of any route can show one. The stored diary cache is read inside
+// the query provider and around the sign-in gate, so the gate's own read finds the stored acceptance.
 export default function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
         <ThemeProvider>
-          <KeyLowProvider client={supabase}>
-            <AuthGate>
-              <ToastProvider>
-                <RootNavigator />
-              </ToastProvider>
-            </AuthGate>
+          <KeyLowProvider client={supabase} queryClient={queryClient}>
+            <PersistedDiaryCache readStoredUserId={readStoredUserId}>
+              <AuthGate readStoredUserId={readStoredUserId}>
+                <ToastProvider>
+                  <RootNavigator />
+                </ToastProvider>
+              </AuthGate>
+            </PersistedDiaryCache>
           </KeyLowProvider>
         </ThemeProvider>
       </SafeAreaProvider>

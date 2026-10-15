@@ -56,6 +56,7 @@ describe("supabase client", () => {
     expect(options).toMatchObject({
       auth: {
         storage,
+        storageKey: "sb-192-auth-token",
         flowType: "pkce",
         autoRefreshToken: true,
         persistSession: true,
