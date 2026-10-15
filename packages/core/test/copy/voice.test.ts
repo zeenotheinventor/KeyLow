@@ -19,6 +19,11 @@ const sampleCalls: Record<string, () => string[]> = {
     copy.describeMissingValues(["kcal", "carbs_g"], undefined),
     copy.describeMissingValues(["fibre_g"], "us_total"),
   ],
+  nutrientRows: () =>
+    [
+      { kcal: 148, protein_g: 31.2, carbs_g: 0, fat_g: 7.5, fibre_g: 12 },
+      { kcal: null, protein_g: null, carbs_g: null, fat_g: null, fibre_g: null },
+    ].flatMap((food) => copy.nutrientRows(food).flatMap(collectStrings)),
   describeSeeMore: () => [1, 2, 18].map(copy.describeSeeMore),
   describeRateLimit: () => [undefined, 1, 30].map(copy.describeRateLimit),
   describeBarcodeRateLimit: () => [undefined, 1, 30].map(copy.describeBarcodeRateLimit),

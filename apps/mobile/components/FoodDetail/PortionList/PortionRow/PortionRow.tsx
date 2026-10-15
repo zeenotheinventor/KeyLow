@@ -1,23 +1,14 @@
 import { FOOD_DETAIL } from "@keylow/core/copy";
-import { formatGrams } from "@keylow/core/format";
+import { formatPortionAmount } from "@keylow/core/format";
 import { View } from "react-native";
 
 import { Badge, Text } from "../../../ui";
 
 import type { PortionRowProps } from "./types";
-import type { FoodPortion } from "@keylow/core/schemas";
-
-// A portion has exactly one of grams and ml, so the last case is only there for the type.
-function portionAmount(portion: FoodPortion): { amount: string; unit: "g" | "ml" } | null {
-  if (portion.grams !== null) {
-    return { amount: formatGrams(portion.grams), unit: "g" };
-  }
-  return portion.ml === null ? null : { amount: formatGrams(portion.ml), unit: "ml" };
-}
 
 /** One portion: its name, a Default badge when it is the default one, and its amount in grams or millilitres. */
 export function PortionRow({ portion, isFirst }: PortionRowProps) {
-  const amount = portionAmount(portion);
+  const amount = formatPortionAmount(portion);
   const label = [
     portion.label,
     amount === null ? null : `${amount.amount} ${amount.unit}`,

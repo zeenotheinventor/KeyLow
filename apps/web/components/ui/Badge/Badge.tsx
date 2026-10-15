@@ -1,12 +1,8 @@
-import type { BadgeProps, BadgeSource, BadgeTone } from "./types";
+import { describeFoodSource } from "@keylow/core/copy";
+
+import type { BadgeProps, BadgeTone } from "./types";
 
 import { cn } from "@/lib/utils";
-
-const sourceNames = {
-  off: "Open Food Facts",
-  cofid: "UK CoFID",
-  user: "Yours",
-} as const satisfies Record<BadgeSource, string>;
 
 // A status tone is the tone's muted fill with the tone's colour as the text. In light mode that
 // colour is too weak for small text, so the text falls back to the primary text colour and the
@@ -58,7 +54,7 @@ export function Badge(props: BadgeProps) {
     const { kind, source, className, ...rest } = props;
     return (
       <span className={cn(frame, "border-border", tones.neutral.surface, className)} {...rest}>
-        {sourceNames[source]}
+        {describeFoodSource(source)}
       </span>
     );
   }
