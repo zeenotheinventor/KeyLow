@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15.
 
 ## Context
 
@@ -375,3 +375,46 @@ A column added to `profiles` later is not writable by clients until the migratio
 ### Consequences of Amendment 3
 
 The sign-up screens (KEY-159 and KEY-160), the Google path and the accept-to-continue gate (KEY-161 and KEY-162) read and write acceptance only through the `terms_version` metadata key and `accept_terms`. The api-client functions that wrap them are KEY-158. M3's target columns on `profiles` are not part of this amendment. They follow in an Amendment 4 and must add their own column grants on top of the lists above. Any further deviation from the frozen Decision, from Amendment 1, Amendment 2 or this amendment needs an Amendment 4 before the migration or code that implements it lands.
+
+## Amendment 4 (Profiles: manual calorie and macro target, 2026-10-15)
+
+### Status
+
+Recorded on 2026-10-15 under KEY-180. Implements the manual target that KEY-3 scope 4 asks for and the targets brief (brief 14) describes: a calorie and macro target the user types in More, which the diary reads until M6's live `targets` replace it. The calorie range of 800 to 6000 kcal is Zee's confirmed range for the app, from the canvas review on 2026-10-15 (KEY-178: "targets of 800 to 6,000 kcal"). Enforcing that range as a database check, and the checks that each macro is `>= 0` with no upper bound, come from the KEY-180 ticket spec, not from a ruling. The remaining details are interpretations made for implementation. They are, in full: the choice that each target column is independently nullable with no check pairing them, the rule that a null macro column means no bar for that macro alone, the decision that the client writes `targets_updated_at`, the widening of `insert` as well as `update`, and the rule that the diary reads no target from a null `target_kcal`. Zee confirms them by approving the PR that carries this amendment. The frozen Decision text and Amendments 1 to 3 are unchanged. This amendment adds five columns to `profiles`, which the frozen column list does not name, and extends the two column grants that Amendment 3 narrowed.
+
+### `profiles` columns
+
+| Column               | Definition                                                                                                               |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `target_kcal`        | `int`, nullable. The daily calorie target. Check `profiles_target_kcal_range`: `target_kcal between 800 and 6000`.       |
+| `target_protein_g`   | `numeric`, nullable. The daily protein target in grams. Covered by `profiles_target_macros_nonnegative`.                 |
+| `target_carbs_g`     | `numeric`, nullable. The daily carbohydrate target in grams (EU-style). Covered by `profiles_target_macros_nonnegative`. |
+| `target_fat_g`       | `numeric`, nullable. The daily fat target in grams. Covered by `profiles_target_macros_nonnegative`.                     |
+| `targets_updated_at` | `timestamptz`, nullable. When the user last saved their targets. Null until a target has been saved.                     |
+
+- Null means no target is set. A Postgres check passes on null, so a null column needs no extra rule.
+- Two named checks, which KEY-182's pgTAP asserts: `profiles_target_kcal_range` and `profiles_target_macros_nonnegative`. The second is one check, `target_protein_g >= 0 and target_carbs_g >= 0 and target_fat_g >= 0`, and a null column passes it. The macros have no upper bound, and `numeric >= 0` accepts `NaN` and `Infinity`, the same accepted risk as the `foods` nutrient columns.
+- The columns are independent. There is no check that pairs them, and no check that the macros add up to `target_kcal`. Brief 14 shows "Macros add up to 2,150 kcal" as information only, computed in the app, as quick add is. A user can therefore hold a calorie target with no macros, or the reverse.
+- The diary treats a null `target_kcal` as no calorie target. Its progress bars show the day's total with no bar for that column, and the `diary.no-target` board and its "Set target" banner follow from it. A null macro column does the same for that macro alone. The diary shows a target exactly as the user typed it, with no "(est.)" marker.
+- The app, not the database, requires `target_kcal` on the targets screen: the form refuses a blank calorie field. The database allows a row with macros and no calories, so a client other than the app cannot be locked out by a rule only one screen enforces.
+- `targets_updated_at` is set by the client to the time of the save. Unlike `terms_accepted_at`, it records nothing a client could gain by forging, so it needs no trigger or function, and the table grants below let the client write it.
+- No other table changes. `day_totals` does not read these columns. The diary reads them from the user's own `profiles` row.
+
+### Privileges
+
+Amendment 3 made the `insert` and `update` grants on `profiles` explicit column lists. This amendment adds the five columns above to both, so the lists become:
+
+- `insert`: `id`, `sex`, `birth_date`, `height_cm`, `activity`, `weight_unit`, `energy_unit`, `timezone`, `checkin_weekday`, `onboarding_weight_kg`, `onboarding_completed_at`, `target_kcal`, `target_protein_g`, `target_carbs_g`, `target_fat_g`, `targets_updated_at`.
+- `update`: the same list without `id`.
+- Amendment 3's exclusions stand: neither list has `terms_accepted_at`, `terms_version` or `created_at`, and `id` is not updatable.
+- `select` and `delete` are unchanged, and `select` is table-wide, so the new columns are readable by the owner with no further grant. The four owner-only policies are unchanged, so a user reads and writes only their own targets.
+
+The migration that adds the columns grants them. The rule at the end of Amendment 3's Privileges section still applies to every later `profiles` column.
+
+### Lifetime
+
+The columns are a stopgap. In M6 the adaptive engine writes live rows to `targets`, and once a user has one, the app stops reading these five columns. They are not dropped in v1, so nothing needs a migration to remove them. How M6 treats a user with typed targets and no `targets` row yet is M6's call.
+
+### Consequences of Amendment 4
+
+The diary migration (KEY-182) adds the five columns, their checks and the extended column grants, and matches the lists above. The targets screens on mobile and web, and the diary's progress bars and `no-target` state, read and write them through the owner's `profiles` row. Any further deviation from the frozen Decision, from Amendments 1 to 3 or from this amendment needs an Amendment 5 before the migration or code that implements it lands.
