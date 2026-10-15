@@ -1,6 +1,6 @@
 name: CI
 
-# The full gate, as parallel jobs. It runs on every pull request and on every push to main.
+# The full gate, as parallel jobs. It runs on every pull request and every push to main, and on demand.
 #
 #   scope ──┬─ core ────────┐   formatting, lint, type-check and tests of the packages and tools,
 #           │               │   and the repository-wide suites
@@ -24,14 +24,19 @@ name: CI
 # fingerprint comment (mobile-fingerprint.yml) is informational, needs write access to pull requests,
 # and has a `paths` filter, so it stays a separate workflow and is not a required check.
 #
-# A pull request runs only the jobs its change can affect, and inside them only the packages the change
-# affects (see `scope`). A push to main always runs every job, as a full run.
+# A pull request and a push to main run only the jobs the change can affect, and inside them only the
+# packages the change affects (see `scope`). A push is scoped the same way as a pull request, because
+# the checkout of a push is the squash commit and HEAD^1 is the previous commit on main. A manual run
+# (`gh workflow run CI --ref main`) is always a full run, for when everything must be checked, for
+# example after a migration that renames something an app or a function uses by name.
 #
 # Two sessions merge pull requests in parallel, and two pull requests that each pass on their own can
-# break main together. A pull request run sees main only as it was when the run started, so the full
-# run on each push to main is the guard. The deploy workflows do not wait for it, so it never slows a
-# merge. Actions minutes are free because the repository is public. Every commit on main gets its own
-# run, and those runs go in parallel and are never cancelled (see the concurrency block).
+# break main together. A pull request run sees main only as it was when the run started, so the run on
+# each push to main checks the merged result for the packages it touched, and that run is the guard.
+# A link the dependency graph cannot see is not covered by a scoped run, so a manual full run checks
+# those. The deploy workflows do not wait for either, so they never slow a merge. Actions minutes are
+# free because the repository is public. Every commit on main gets its own run, and those runs go in
+# parallel and are never cancelled (see the concurrency block).
 #
 # Pull requests only restore the pnpm store and the Jest cache and never save them. A cache saved by
 # a pull request is visible to that pull request only, and each lockfile change saved its own 1.2 to
@@ -40,28 +45,37 @@ name: CI
 # request that changes the lockfile restores the closest earlier store from main and downloads only
 # what is missing. Main's runs save both caches, and only when the exact key was not restored, so a
 # push that changes neither the lockfile nor the Jest or Babel config restores both caches and saves
-# nothing. The `core` job saves the pnpm store and the `mobile` job saves the Jest cache.
+# nothing. The `core` job saves the pnpm store and the `mobile` job saves the Jest cache. A scoped push
+# can skip `mobile`, but both keys change only with the lockfile or the Jest and Babel config. A
+# lockfile change makes a full run, and a change to the Jest or Babel config affects the app, so the
+# job that saves each cache runs. A manual run restores both caches and never saves (the steps check
+# for a push).
 #
 # Setup (pnpm, Node, the store cache, the install) is the local action .github/actions/setup.
 on:
   pull_request:
   push:
     branches: [main]
+  # An on-demand full run, started by hand: gh workflow run CI --ref main
+  workflow_dispatch:
 
 # A newer push to a pull request makes the older run pointless, so a pull request has one group per
-# ref and a newer push cancels the older run. A push to main has a group of its own per commit, which
-# nothing else ever joins, so no run on main is cancelled or dropped and every merge commit gets a
-# complete run. Two runs on main can both miss the same cache key and both try to save it. The second
-# save only logs a warning that the key already exists.
+# ref and a newer push cancels the older run. Every other run (a push to main, a manual run) has a
+# group of its own per run, which nothing else ever joins, so no run on main is cancelled or dropped,
+# every merge commit gets its run, and a manual run on a commit never cancels the push run of that
+# commit. Two runs on main can both miss the same cache key and both try to save it. The second save
+# only logs a warning that the key already exists.
 concurrency:
-  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
 # On a pull request the checkout is the merge into its base, so HEAD^1 is the base tip and the diff
-# against it is exactly what the pull request changes. Turbo reads this variable for --affected.
+# against it is exactly what the pull request changes. On a push to main the checkout is the squash
+# commit, so HEAD^1 is the previous commit on main and the diff is exactly what the merge changed.
+# Turbo reads this variable for --affected.
 env:
   TURBO_SCM_BASE: HEAD^1
 
@@ -69,7 +83,10 @@ jobs:
   # Decides which jobs run. It installs nothing: turbo runs from npx at the version the lockfile pins,
   # which takes seconds, and it needs no node_modules to list the packages and their dependents.
   #
-  # Turbo's --affected selects the packages the pull request changed and the packages that depend on
+  # A manual run is always full. A pull request and a push to main are scoped to their change as
+  # follows.
+  #
+  # Turbo's --affected selects the packages the change touched and the packages that depend on
   # them. Turbo only maps files inside a package to a package. A change anywhere else (root config, the
   # lockfile, a workflow, the design boards tools/design-export reads) can reach any package without
   # turbo seeing it, so it makes a full run, as does an empty diff. Markdown outside the packages is
@@ -90,7 +107,8 @@ jobs:
       mobile: ${{ steps.scope.outputs.mobile }}
       web: ${{ steps.scope.outputs.web }}
     steps:
-      # Depth 2 fetches the first parent, which is the base tip on a pull request.
+      # Depth 2 fetches the first parent, which is the base tip on a pull request and the previous
+      # commit on main on a push.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
@@ -111,8 +129,8 @@ jobs:
             } >> "$GITHUB_OUTPUT"
             exit 0
           }
-          if [ "$GITHUB_EVENT_NAME" = push ]; then
-            full "A push to main runs every job."
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            full "A manual run runs every job."
           fi
           changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
           outside=$(grep -vE '^(apps|packages|tools)/|\.md$' <<<"$changed" || true)
@@ -177,7 +195,7 @@ jobs:
 
   # Fails when the lockfile contains duplicates that a dedupe would remove. It resolves against the
   # registry, which took anywhere from 20 s to 110 s, so it has a job of its own. A lockfile change
-  # always makes a full run, and so does every push to main, so the other runs skip it.
+  # always makes a full run, and so does a manual run, so the other runs skip it.
   # The flag keeps the install pass that dedupe runs from triggering the prepare script.
   lockfile:
     needs: scope
@@ -334,7 +352,7 @@ jobs:
       # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
       # transformer config, so restoring one from a near miss is safe: stale entries are never read.
       # The path is the cacheDirectory in apps/mobile/jest.config.js. Pull requests only restore it,
-      # and the step that saves it runs on main (see the header).
+      # and the step that saves it runs on a push to main (see the header).
       - name: Restore the mobile Jest cache
         id: jest-cache
         uses: actions/cache/restore@v6
@@ -350,8 +368,8 @@ jobs:
         run: pnpm generate:lists
       - name: Lint, type-check and test the app
         run: pnpm turbo run lint typecheck test --filter=@keylow/mobile --only
-      # Saved after the tests, which is what fills the Jest cache. Only main saves, and only on a miss
-      # of the exact key.
+      # Saved after the tests, which is what fills the Jest cache. Only a push to main saves, and only
+      # on a miss of the exact key.
       - name: Save the mobile Jest cache
         if: github.event_name == 'push' && steps.jest-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6

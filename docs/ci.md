@@ -35,9 +35,12 @@ Several pull requests merge in parallel, so the files every feature used to edit
 
 ## CI runs the full gate as parallel jobs
 
-`.github/workflows/ci.yml` runs on every pull request and every push to `main`. `scope` decides what the change needs, then `core`, `functions`, `db`, `mobile`, `web` and `web-storybook` run in parallel, and `checks` collects their results. `checks` is the only required check, and the name `checks` is what branch protection lists.
+`.github/workflows/ci.yml` runs on every pull request, every push to `main` and on demand. `scope` decides what the change needs, then `core`, `functions`, `db`, `mobile`, `web` and `web-storybook` run in parallel, and `checks` collects their results. `checks` is the only required check, and the name `checks` is what branch protection lists.
 
-- A pull request runs only the jobs its change can affect, and inside them only the affected packages. A change outside `apps/`, `packages/` and `tools/` (root config, the lockfile, a workflow) and every push to `main` run everything. A job that is not needed shows as skipped, and `checks` counts a skipped job as passed. A failed or cancelled job fails `checks`.
+- A pull request runs only the jobs its change can affect, and inside them only the affected packages. A change outside `apps/`, `packages/` and `tools/` (root config, the lockfile, a workflow) runs everything. A job that is not needed shows as skipped, and `checks` counts a skipped job as passed. A failed or cancelled job fails `checks`.
+- A push to `main` is scoped exactly like a pull request. The checkout of a push is the squash commit, so `HEAD^1` is the previous commit on `main` and the run covers what that merge changed: the same diff, the same rule for files outside the packages, the same `turbo ls --affected`. A merge that touches only the mobile app runs `core` and `mobile`, and skips `db`, `functions`, `web`, `web-storybook` and the lockfile check. Every merge still gets its own run, and no run on `main` is cancelled.
+- The scoped run on `main` is the guard. A scoped run cannot see a link the dependency graph does not know. For example, a migration renames a column, and another pull request queries that column by name from an app or an Edge Function. No import ties the query to the migration, so each merge runs only its own side. There is no nightly run, because even a skipped scheduled run costs a minute a day. When everything must be checked, for example after a migration that renames something used by name, start a full run by hand.
+- Start a full run (every job, every package) with `gh workflow run CI --ref main`, or with "Run workflow" on the CI page of the Actions tab. It runs every job against that ref and costs nothing unless someone starts it. A manual run only restores the caches and never saves them, and it never cancels the push run of the same commit.
 - The workflow has no `paths` filter and must never get one. A required check that is never reported blocks the pull request for good.
 - A new job is added to the `needs` list of `checks`, nothing else changes in the settings.
 - `scope` runs turbo through npx, so it needs no install and takes a few seconds.
@@ -86,11 +89,11 @@ A pull request is merged by GitHub once `checks` is green, after the reviewer ha
    Never add `--delete-branch` and never rebase onto `main` first. The repository setting deletes the branch after the merge (see "Repository settings"), and deleting it that way makes GitHub retarget stacked children to `main`. Deleting a parent branch through the API closed child pull request #110.
 
 5. GitHub merges when `checks` is green. A new push cancels the superseded run and keeps the arm. If a push after approval changes behaviour, run `gh pr merge <n> --disable-auto` first, and arm it again once the reviewer approves.
-6. After the merge, move the ticket to Done and check the push-to-`main` run.
+6. After the merge, move the ticket to Done and check the push-to-`main` run (a scoped run, see "CI runs the full gate as parallel jobs").
 
 ### Red main
 
-Branches need not be up to date, so two pull requests that pass alone can still break `main` together. Every merge to `main` gets a full run, and that run is the guard. If it goes red, stop arming other pull requests and open a fix pull request within the hour. Arm it as soon as it is approved. The orchestrator of the session that merged the breaking pull request owns it. Revert only if the fix is not obvious within that hour.
+Branches need not be up to date, so two pull requests that pass alone can still break `main` together. Every merge to `main` gets a run scoped to what it changed, and that run is the guard. If it goes red, stop arming other pull requests and open a fix pull request within the hour. Arm it as soon as it is approved. The orchestrator of the session that merged the breaking pull request owns it. Revert only if the fix is not obvious within that hour.
 
 ### Stacked pull requests
 
