@@ -18,6 +18,7 @@ export function PressableSurface({
   role = "button",
   selected,
   checked,
+  expanded,
   busy,
   disabled = false,
   hitSlop,
@@ -55,6 +56,7 @@ export function PressableSurface({
         aria-busy={busy}
         aria-checked={checked}
         aria-disabled={isInert}
+        aria-expanded={expanded}
         aria-label={label}
         aria-selected={selected}
         className={className}

@@ -22,12 +22,15 @@ const variantClassName: Record<ButtonVariant, string> = {
   ghost: "border-transparent bg-transparent",
 };
 
-const variantTone: Record<ButtonVariant, Tone> = {
+const variantTone: Record<ButtonVariant, ButtonTone> = {
   primary: "accent-foreground",
   secondary: "primary",
   destructive: "on-status",
   ghost: "primary",
 };
+
+// What a label and its icon can be written in: the variant's own tone, or the ghost button's danger.
+type ButtonTone = Tone | "danger";
 
 // Medium and large are the design system card's: a body strong label, 8 between an icon and it. The small
 // button follows the food form boards' Remove, which the card does not draw: a 14 over 20 label, 8 across
@@ -71,6 +74,7 @@ export function Button({
   variant = "primary",
   size = "md",
   quiet = false,
+  tone: requestedTone,
   disabled = false,
   loading = false,
   fullWidth = false,
@@ -82,7 +86,12 @@ export function Button({
   className = "",
 }: ButtonProps) {
   const look = sizeLook[size];
-  const tone = variant === "ghost" && quiet ? "secondary" : variantTone[variant];
+  const isGhostDanger = variant === "ghost" && requestedTone === "danger";
+  const tone = isGhostDanger
+    ? "danger"
+    : variant === "ghost" && quiet
+      ? "secondary"
+      : variantTone[variant];
   const hasLeading = leading !== undefined;
 
   // The press scale sits on a wrapper inside the layout view, with the button and all its classes inside
@@ -110,7 +119,7 @@ export function Button({
             {children}
           </Text>
         </View>
-        {loading ? <ButtonSpinner variant={variant} /> : null}
+        {loading ? <ButtonSpinner isDanger={isGhostDanger} variant={variant} /> : null}
       </PressableSurface>
     </View>
   );

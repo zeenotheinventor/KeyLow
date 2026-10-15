@@ -2,7 +2,13 @@ import { TERMS_VERSION } from "@keylow/core/copy";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
 import type * as ApiClient from "@keylow/api-client";
-import type { CreatedFood, FoodWithPortionsState } from "@keylow/api-client";
+import type {
+  CreatedFood,
+  FoodWithPortionsState,
+  LogEntry,
+  LogFoodInput,
+  RecentFood,
+} from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 type QueryState<Data> = { data: Data | undefined; isPending: boolean; isError: boolean };
@@ -48,6 +54,28 @@ export const portionFixtures: FoodPortion[] = [
 
 export const mockCreateFood = jest.fn<Promise<CreatedFood>, [unknown]>();
 export const mockUpdateFood = jest.fn<Promise<Food>, [{ id: string; input: unknown }]>();
+// What logging a food resolves to is not read by the screens, so a test only looks at what it was called with.
+export const mockLogFood = jest.fn<Promise<unknown>, [LogFoodInput]>();
+// The profile's time zone, which the picker reads the time in. A test changes `profileTimeZone` for a case.
+export const profileTimeZone: { current: QueryState<string | null> } = {
+  current: { data: "Europe/London", isPending: false, isError: false },
+};
+// What the one-tap plus loads by id, and what Undo removes.
+export const mockGetFood = jest.fn<Promise<Food | null>, [unknown, string]>();
+export const mockListFoodPortions = jest.fn<Promise<FoodPortion[]>, [unknown, string]>();
+export const mockDeleteEntry = jest.fn<Promise<void>, [LogEntry]>();
+// The foods logged most recently, which a test sets for a case.
+export const recentFoods: { current: QueryState<RecentFood[]> } = {
+  current: { data: [], isPending: false, isError: false },
+};
+// The options the two terms-gated reads were asked with, so a test can see whether they were enabled.
+export const mockUseProfileTimeZone = jest.fn<
+  QueryState<string | null>,
+  [{ enabled?: boolean }?]
+>();
+export const mockUseRecentFoods = jest.fn<QueryState<RecentFood[]>, [{ enabled?: boolean }?]>();
+// Whether the signed in account has accepted the current Terms, which a test turns off for the gate.
+export const termsAccepted = { current: true };
 export const mockUseFood = jest.fn<QueryState<Food | null>, [string | undefined]>();
 export const mockUseFoodPortions = jest.fn<QueryState<FoodPortion[]>, [string | undefined]>();
 export const mockUseFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
@@ -83,6 +111,21 @@ function foodWithPortionsState(): FoodWithPortionsState {
 export function resetApiClientMock(): void {
   mockCreateFood.mockReset();
   mockUpdateFood.mockReset();
+  mockLogFood.mockReset();
+  mockLogFood.mockResolvedValue({});
+  profileTimeZone.current = { data: "Europe/London", isPending: false, isError: false };
+  termsAccepted.current = true;
+  mockUseProfileTimeZone.mockReset();
+  mockUseProfileTimeZone.mockImplementation(() => profileTimeZone.current);
+  mockUseRecentFoods.mockReset();
+  mockUseRecentFoods.mockImplementation(() => recentFoods.current);
+  recentFoods.current = { data: [], isPending: false, isError: false };
+  mockGetFood.mockReset();
+  mockGetFood.mockResolvedValue(foodFixture);
+  mockListFoodPortions.mockReset();
+  mockListFoodPortions.mockResolvedValue(portionFixtures);
+  mockDeleteEntry.mockReset();
+  mockDeleteEntry.mockResolvedValue(undefined);
   mockCreateFood.mockResolvedValue({ food: foodFixture, portions: [] });
   mockUpdateFood.mockResolvedValue(foodFixture);
 
@@ -102,6 +145,13 @@ export const mockApiClient = {
   ...jest.requireActual<typeof ApiClient>("@keylow/api-client"),
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
+  useLogFood: () => ({ mutateAsync: mockLogFood }),
+  useProfileTimeZone: mockUseProfileTimeZone,
+  useRecentFoods: mockUseRecentFoods,
+  useDeleteEntry: () => ({ mutateAsync: mockDeleteEntry }),
+  useSupabase: () => ({}),
+  getFood: mockGetFood,
+  listFoodPortions: mockListFoodPortions,
   useFood: mockUseFood,
   useFoodPortions: mockUseFoodPortions,
   useFoodWithPortions: mockUseFoodWithPortions,
@@ -110,7 +160,9 @@ export const mockApiClient = {
     isPending: false,
     isError: false,
     isFetching: false,
-    data: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
+    data: termsAccepted.current
+      ? { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION }
+      : null,
     refetch: jest.fn(),
   }),
 };

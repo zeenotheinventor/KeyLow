@@ -1,4 +1,4 @@
-import { controlHeight, touchTarget } from "@keylow/tokens";
+import { controlHeight, themes, touchTarget } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
 import { AccessibilityInfo, Text as NativeText } from "react-native";
@@ -217,6 +217,30 @@ describe("Button", () => {
     });
   });
 
+  describe("the ghost destructive look at the sizes of the other buttons", () => {
+    it("should keep the large size, 52 points high with a 44 point minimum width", async () => {
+      await renderButton({ variant: "ghost", tone: "danger", size: "lg" });
+
+      expect(screen.getByRole("button", { name: "Add entry" })).toHaveStyle({
+        height: controlHeight.lg,
+        minWidth: touchTarget,
+      });
+    });
+
+    it("should dim to 40 percent and stop responding when disabled", async () => {
+      const onPress = jest.fn();
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      await renderButton({ variant: "ghost", tone: "danger", disabled: true, onPress });
+
+      const button = screen.getByRole("button", { name: "Add entry" });
+      await user.press(button);
+
+      expect(button).toBeDisabled();
+      expect(button).toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(onPress).not.toHaveBeenCalled();
+    });
+  });
+
   describe("going inert while pressed", () => {
     it("should let go of the press when it starts loading under the finger", async () => {
       const view = await renderButton();
@@ -361,6 +385,58 @@ describe("Button", () => {
         });
       },
     );
+
+    describe("the ghost destructive look", () => {
+      it("should write the label in the danger colour, with no fill and no visible border", async () => {
+        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, scheme);
+
+        expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
+          backgroundColor: transparent,
+          borderColor: transparent,
+        });
+        expect(screen.getByText("Add entry")).toHaveStyle({
+          color: resolvedColor(scheme, "danger"),
+        });
+      });
+
+      it("should draw the leading icon in the danger colour", async () => {
+        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, scheme);
+        await screen.findByRole("button", { name: "Add entry" });
+
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
+      });
+
+      it("should never use the filled destructive fill", async () => {
+        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, scheme);
+        await screen.findByRole("button", { name: "Add entry" });
+
+        expect(viewsDrawn({ backgroundColor: resolvedColor(scheme, "danger") })).toHaveLength(0);
+      });
+
+      it("should draw the spinner ring in the danger colour while loading", async () => {
+        await renderButton({ variant: "ghost", tone: "danger", loading: true }, scheme);
+        await screen.findByRole("progressbar", { name: "Loading" });
+
+        expect(
+          viewsDrawn({ width: 18, height: 18, borderColor: resolvedColor(scheme, "danger") }),
+        ).toHaveLength(1);
+      });
+
+      it.each(["primary", "secondary", "destructive"] as const)(
+        "should leave the %s variant alone when asked for the danger tone, because only ghost can have it",
+        async (variant) => {
+          await renderButton({ variant, tone: "danger" }, scheme);
+          await screen.findByRole("button", { name: "Add entry" });
+
+          expect(screen.getByText("Add entry")).toHaveStyle({
+            color: resolvedColor(
+              scheme,
+              variants.find((row) => row.variant === variant)?.label ?? "text-primary",
+            ),
+          });
+        },
+      );
+    });
 
     it("should draw the press overlay from the press-overlay token", async () => {
       await renderButton({}, scheme);

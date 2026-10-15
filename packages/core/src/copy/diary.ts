@@ -1,5 +1,6 @@
 import { MONTH_NAMES_LONG, WEEKDAY_NAMES_LONG, WEEKDAY_NAMES_SHORT } from "./diaryDay";
 import { FOOD_ROW } from "./foodRow";
+import { describePortionWithSize } from "./portionPicker";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { TARGET_KCAL_MAXIMUM, TARGET_KCAL_MINIMUM } from "../diary/rules";
 import { formatCalories, formatGrams } from "../format/numbers";
@@ -234,9 +235,13 @@ export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
     const unit = amount.unit === "portion" ? "g" : MEASURED_UNIT_NAMES[amount.unit];
     return `${formatGrams(amount.quantity)} ${unit}`;
   }
-  const grams = `${amount.portion.label} (${formatGrams(amount.resolvedGrams)} g)`;
+  // A label that already says its size, such as "30 g", is not given it twice.
+  const portion = describePortionWithSize(amount.portion.label, {
+    amount: amount.resolvedGrams,
+    unit: "g",
+  });
 
-  return amount.quantity === 1 ? grams : `${formatGrams(amount.quantity)} × ${grams}`;
+  return amount.quantity === 1 ? portion : `${formatGrams(amount.quantity)} × ${portion}`;
 };
 
 /** The line under a diary row's title: the time, then the amount, such as "08:05 · 50 g". */

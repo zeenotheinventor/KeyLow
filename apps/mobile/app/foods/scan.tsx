@@ -1,6 +1,6 @@
 import { useFoodByBarcode } from "@keylow/api-client";
 import { BARCODE_SCAN } from "@keylow/core/copy";
-import { useFocusEffect, useIsFocused, useRouter } from "expo-router";
+import { useFocusEffect, useIsFocused, useLocalSearchParams, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useCallback, useEffect } from "react";
 import { View } from "react-native";
@@ -13,7 +13,7 @@ import {
   useBarcodeScan,
 } from "../../components/BarcodeScanner";
 import { SheetHeader } from "../../components/ui";
-import { useCloseFoodsSheet } from "../../lib/navigation";
+import { readLogContext, useCloseFoodsSheet, withLogContext } from "../../lib/navigation";
 
 import type { UseFoodByBarcodeOptions } from "@keylow/api-client";
 
@@ -22,6 +22,8 @@ const noLookup: UseFoodByBarcodeOptions = { enabled: false };
 export default function ScanRoute() {
   const router = useRouter();
   const closeSheet = useCloseFoodsSheet();
+  const { day, time } = useLocalSearchParams<{ day?: string; time?: string }>();
+  const logContext = readLogContext({ day, time });
   const insets = useSafeAreaInsets();
   const isFocused = useIsFocused();
   const { scan, handleBarcodeScanned, clearScan } = useBarcodeScan(isFocused);
@@ -37,14 +39,23 @@ export default function ScanRoute() {
       ? lookup.result.food.id
       : undefined;
 
+  // Where a hit goes. While food is being logged (the sheet carries a day) it is the portion picker, with the
+  // day, the time and the scanned code carried on; otherwise it is the food.
+  const foundHref =
+    foundFoodId === undefined || scan === undefined
+      ? undefined
+      : logContext === undefined
+        ? `/foods/${foundFoodId}`
+        : withLogContext(`/foods/${foundFoodId}/log`, logContext, { barcode: scan.rawCode });
+
   // The stack keeps this screen mounted under the ones pushed over it, so a screen that is not in
   // focus never navigates: it could be the create form's save refreshing the lookup behind it.
   // Replacing the scan screen means back from the food goes to where the scan was started.
   useEffect(() => {
-    if (isFocused && foundFoodId !== undefined) {
-      router.replace(`/foods/${foundFoodId}`);
+    if (isFocused && foundHref !== undefined) {
+      router.replace(foundHref);
     }
-  }, [isFocused, foundFoodId, router]);
+  }, [isFocused, foundHref, router]);
 
   // Leaving the screen ends its scan. That drops the lookup, so saving a food on the form pushed
   // over this screen cannot refetch it, and what was showing is not stale when the screen is back.

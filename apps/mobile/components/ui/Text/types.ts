@@ -21,9 +21,12 @@ export type TextVariant =
 /**
  * A tone from the kit's text and fill tones, or `warning-ink`: the `--warning-ink` token, which is
  * the warning colour in dark and the primary text colour in light, where warning is too faint for text
- * (Q14). It is for the title and the action of a review notice.
+ * (Q14). It is for the title and the action of a review notice. `danger` is the danger colour itself, for
+ * the label of the ghost destructive button, which the board draws in it on the plain background.
+ * `accent-ink` is the `--accent-ink` token: lime in dark and the primary text colour in light, for the
+ * chosen row of the time picker's wheels.
  */
-export type TextTone = Tone | "warning-ink";
+export type TextTone = Tone | "warning-ink" | "danger" | "accent-ink";
 
 export type TextProps = NativeTextProps & {
   /** Only a look. Heading semantics are the caller's, with `role="heading"`. Defaults to `body`. */

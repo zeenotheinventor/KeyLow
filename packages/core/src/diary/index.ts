@@ -7,6 +7,7 @@ export type { FoodSnapshotInput } from "./buildFoodSnapshot";
 export { matchPortionOnFood } from "./matchPortionOnFood";
 export type { LoggedPortion, MatchedAmount } from "./matchPortionOnFood";
 export { recomputeEntry, refreshEntryFromFood } from "./recomputeEntry";
+export { nutrientsOfSnapshot } from "./snapshotQuantity";
 export type { EntryQuantityChange } from "./recomputeEntry";
 export { compactBelowSize, ringCircumference, ringNumbers } from "./ringMaths";
 export type { RingNumbers } from "./ringMaths";

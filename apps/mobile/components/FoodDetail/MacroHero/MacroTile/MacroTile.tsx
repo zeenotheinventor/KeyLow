@@ -1,4 +1,4 @@
-import { NOT_GIVEN, describeShareOfEnergy } from "@keylow/core/copy";
+import { NOT_GIVEN, PORTION_PICKER, describeShareOfEnergy } from "@keylow/core/copy";
 import { formatEnergyShare, formatGrams } from "@keylow/core/format";
 import { View } from "react-native";
 
@@ -13,7 +13,15 @@ const dotClassName: Record<MacroTileMacro, string> = {
   fat: "bg-fat",
 };
 
-function describeTile({ label, grams, share }: Pick<MacroTileProps, "label" | "grams" | "share">) {
+function describeTile({
+  label,
+  grams,
+  share,
+  isBlank,
+}: Pick<MacroTileProps, "label" | "grams" | "share" | "isBlank">) {
+  if (isBlank === true) {
+    return `${label}, ${PORTION_PICKER.noAmountTile}`;
+  }
   if (grams === null) {
     return `${label}, ${NOT_GIVEN}`;
   }
@@ -22,11 +30,11 @@ function describeTile({ label, grams, share }: Pick<MacroTileProps, "label" | "g
 }
 
 /** One macro of the energy card: its colour and name, its grams and, when it can be worked out, its share of the energy. */
-export function MacroTile({ label, macro, grams, share }: MacroTileProps) {
+export function MacroTile({ label, macro, grams, share, isBlank = false }: MacroTileProps) {
   return (
     <View
       accessible
-      aria-label={describeTile({ label, grams, share })}
+      aria-label={describeTile({ label, grams, share, isBlank })}
       className="min-w-0 flex-1 gap-1 rounded-medium bg-surface-raised px-3 py-[10px]"
     >
       <View className="flex-row items-center gap-[6px]">
@@ -35,7 +43,11 @@ export function MacroTile({ label, macro, grams, share }: MacroTileProps) {
           {label}
         </Text>
       </View>
-      {grams === null ? (
+      {isBlank ? (
+        <Text tone="muted" variant="numeral-small">
+          {PORTION_PICKER.noValue}
+        </Text>
+      ) : grams === null ? (
         <Text tone="muted">{NOT_GIVEN}</Text>
       ) : (
         <>

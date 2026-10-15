@@ -37,13 +37,22 @@ function limitsFor(
  * searching, so "No foods found" is only ever said about a search that has come back empty. A failed
  * or rate limited Open Food Facts search never takes the loaded local results away.
  */
-export function SearchResults({ query, onOpenFood, onCreateFood }: SearchResultsProps) {
+export function SearchResults({
+  query,
+  onOpenFood,
+  onCreateFood,
+  idleContent,
+  logRows,
+}: SearchResultsProps) {
   const trimmedQuery = query.trim();
   const { local, off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } =
     useFoodSearch(trimmedQuery);
   const [expansion, setExpansion] = useState<Expansion>({ query: "", groups: [] });
 
   if (trimmedQuery.length < MIN_SEARCH_LENGTH) {
+    if (idleContent !== undefined) {
+      return idleContent;
+    }
     return <EmptyState body={SEARCH_IDLE.body} icon="Search" title={SEARCH_IDLE.title} />;
   }
 
@@ -60,7 +69,7 @@ export function SearchResults({ query, onOpenFood, onCreateFood }: SearchResults
     <>
       {isSearching && <SearchStatus label={SEARCH_STATUS.searchingYourFoods} />}
       {isSearching && !hasRows && <Skeleton variant="group" />}
-      {hasRows && (
+      {hasRows && logRows === undefined && (
         <Text className="-mb-2" tone="muted" variant="caption">
           {VALUES_PER_100_G_NOTE}
         </Text>
@@ -75,6 +84,7 @@ export function SearchResults({ query, onOpenFood, onCreateFood }: SearchResults
         >
           <LocalFoodGroups
             groups={groups}
+            logRows={logRows}
             query={trimmedQuery}
             onOpenFood={onOpenFood}
             onSeeMore={(key) => {
@@ -82,7 +92,16 @@ export function SearchResults({ query, onOpenFood, onCreateFood }: SearchResults
             }}
           />
           {off.length > 0 && (
-            <OpenFoodFactsGroup candidates={off} query={trimmedQuery} onOpenFood={onOpenFood} />
+            <>
+              {/* The live Open Food Facts rows stay per 100 g, so in the log search, where the rows above show
+                  servings, the note stands above them. */}
+              {logRows !== undefined && (
+                <Text className="-mb-2" tone="muted" variant="caption">
+                  {VALUES_PER_100_G_NOTE}
+                </Text>
+              )}
+              <OpenFoodFactsGroup candidates={off} query={trimmedQuery} onOpenFood={onOpenFood} />
+            </>
           )}
         </View>
       )}

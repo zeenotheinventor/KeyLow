@@ -20,13 +20,15 @@ const borderClassName: Record<ButtonVariant, string> = {
   ghost: "border-text-primary",
 };
 
-export function ButtonSpinner({ variant }: ButtonSpinnerProps) {
+export function ButtonSpinner({ variant, isDanger = false }: ButtonSpinnerProps) {
   const animatedStyle = useSpinStyle();
 
   return (
     <View className="absolute inset-0 items-center justify-center">
       <Animated.View accessible aria-label="Loading" role="progressbar" style={animatedStyle}>
-        <View className={`${ringClassName} ${borderClassName[variant]}`} />
+        <View
+          className={`${ringClassName} ${isDanger ? "border-danger" : borderClassName[variant]}`}
+        />
       </Animated.View>
     </View>
   );

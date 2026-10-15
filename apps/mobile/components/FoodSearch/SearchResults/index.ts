@@ -1,2 +1,2 @@
 export { SearchResults } from "./SearchResults";
-export type { SearchResultsProps } from "./types";
+export type { LogRows, SearchResultsProps } from "./types";

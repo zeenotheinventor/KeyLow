@@ -10,6 +10,8 @@ export type PressableSurfaceProps = {
   selected?: boolean | undefined;
   /** Whether the radio or switch is on. Only for a `radio` or a `switch`. */
   checked?: boolean | undefined;
+  /** Whether the control has opened something that is showing, such as the Time row's picker. Only for a `button` that opens one. */
+  expanded?: boolean | undefined;
   /** The accessible name. Leave it out when the contents already read as the name. */
   label?: string | undefined;
   /** Says the control is working on something. A busy control stops responding. */

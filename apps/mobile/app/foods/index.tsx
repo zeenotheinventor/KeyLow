@@ -1,6 +1,7 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { FoodSearch } from "../../components/FoodSearch";
+import { readLogContext, withLogContext } from "../../lib/navigation";
 
 /**
  * The root of the food search sheet. `/foods?scope=own` is the same sheet titled "Your foods", which
@@ -9,7 +10,12 @@ import { FoodSearch } from "../../components/FoodSearch";
  */
 export default function FoodSearchRoute() {
   const router = useRouter();
-  const { scope } = useLocalSearchParams<{ scope?: string }>();
+  const { scope, day, time } = useLocalSearchParams<{
+    scope?: string;
+    day?: string;
+    time?: string;
+  }>();
+  const logContext = readLogContext({ day, time });
 
   return (
     <FoodSearch
@@ -24,11 +30,27 @@ export default function FoodSearchRoute() {
       onCreateFood={() => {
         router.push("/foods/new");
       }}
+      // While food is being logged a result opens the portion picker, not the food, with the day and time carried on.
+      logging={
+        logContext === undefined
+          ? undefined
+          : {
+              context: logContext,
+              onOpenRecent: (foodId) => {
+                router.push(withLogContext(`/foods/${foodId}/log`, logContext, { recent: "1" }));
+              },
+            }
+      }
       onOpenFood={(foodId) => {
-        router.push(`/foods/${foodId}`);
+        router.push(
+          logContext === undefined
+            ? `/foods/${foodId}`
+            : withLogContext(`/foods/${foodId}/log`, logContext),
+        );
       }}
       onScanBarcode={() => {
-        router.push("/foods/scan");
+        // While food is being logged the scanner carries the day and the time on to the portion picker.
+        router.push(withLogContext("/foods/scan", logContext));
       }}
     />
   );
