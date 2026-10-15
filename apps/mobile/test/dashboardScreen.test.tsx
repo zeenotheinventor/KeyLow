@@ -8,6 +8,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import {
   createDiaryQueryClient,
@@ -48,7 +49,9 @@ function Providers() {
   return (
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <Slot />
+        <ToastProvider>
+          <Slot />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>
   );
