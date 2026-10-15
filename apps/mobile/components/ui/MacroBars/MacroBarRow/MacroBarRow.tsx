@@ -1,10 +1,10 @@
 import { MACRO_NAMES, describeMacroBar, describeMacroTarget } from "@keylow/core/copy";
+import { barNumbers } from "@keylow/core/diary";
 import { formatDeltaGrams, formatGrams } from "@keylow/core/format";
 import { stagger } from "@keylow/tokens";
 import { View } from "react-native";
 import Animated, { useAnimatedStyle } from "react-native-reanimated";
 
-import { barNumbers } from "./barNumbers";
 import { WarningCap } from "./WarningCap";
 import { useWhipFill } from "../../../../lib/motion";
 import { useTheme } from "../../../../lib/theme";

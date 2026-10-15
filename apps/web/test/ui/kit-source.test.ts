@@ -12,7 +12,7 @@ describe("the kit's source", () => {
   it.each(sourceFiles)("%s should use tokens only", (name) => {
     const source = readFileSync(join(uiDirectory, name), "utf8");
 
-    expect(source).not.toMatch(/\sstyle=/);
+    // Inline style is enforced by the source guard in packages/config (its inlineStyle rule).
     expect(source).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
     expect(source).not.toContain("—");
   });

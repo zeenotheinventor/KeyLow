@@ -1,3 +1,5 @@
+export { barNumbers, longestCapFraction } from "./barNumbers";
+export type { BarNumbers } from "./barNumbers";
 export { buildLogEntry, buildQuickEntry } from "./buildLogEntry";
 export type { BuildLogEntryInput, BuildQuickEntryInput } from "./buildLogEntry";
 export { buildFoodSnapshot } from "./buildFoodSnapshot";
@@ -6,6 +8,8 @@ export { matchPortionOnFood } from "./matchPortionOnFood";
 export type { LoggedPortion, MatchedAmount } from "./matchPortionOnFood";
 export { recomputeEntry, refreshEntryFromFood } from "./recomputeEntry";
 export type { EntryQuantityChange } from "./recomputeEntry";
+export { compactBelowSize, ringCircumference, ringNumbers } from "./ringMaths";
+export type { RingNumbers } from "./ringMaths";
 export {
   foodLogEntryInsertSchema,
   foodSnapshotSchema,

@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 import * as badgeStories from "@/components/ui/Badge/Badge.stories";
 import * as bannerStories from "@/components/ui/Banner/Banner.stories";
 import * as buttonStories from "@/components/ui/Button/Button.stories";
+import * as calorieRingStories from "@/components/ui/CalorieRing/CalorieRing.stories";
 import * as cardStories from "@/components/ui/Card/Card.stories";
 import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
 import * as dayCompleteToggleStories from "@/components/ui/DayCompleteToggle/DayCompleteToggle.stories";
@@ -18,6 +19,7 @@ import * as incompleteDaysChipStories from "@/components/ui/IncompleteDaysChip/I
 import * as inputStories from "@/components/ui/Input/Input.stories";
 import * as kiLoMarkStories from "@/components/ui/KiLoMark/KiLoMark.stories";
 import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
+import * as macroBarsStories from "@/components/ui/MacroBars/MacroBars.stories";
 import * as numericInputStories from "@/components/ui/NumericInput/NumericInput.stories";
 import * as nutrientTableStories from "@/components/ui/NutrientTable/NutrientTable.stories";
 import * as searchFieldStories from "@/components/ui/SearchField/SearchField.stories";
@@ -43,7 +45,9 @@ const storyModules: Record<string, object> = {
   "Skeleton/Skeleton.stories.tsx": skeletonStories,
   "Badge/Badge.stories.tsx": badgeStories,
   "Button/Button.stories.tsx": buttonStories,
+  "CalorieRing/CalorieRing.stories.tsx": calorieRingStories,
   "Card/Card.stories.tsx": cardStories,
+  "MacroBars/MacroBars.stories.tsx": macroBarsStories,
   "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
 };

@@ -4,6 +4,7 @@ import {
   describeEatenLine,
   describeTargetLine,
 } from "@keylow/core/copy";
+import { compactBelowSize, ringCircumference, ringNumbers } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import { easingCurve, motionDuration } from "@keylow/tokens";
 import { Path } from "@shopify/react-native-skia";
@@ -19,7 +20,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { ringCircumference, ringNumbers, ringPath, compactBelowSize } from "./ringMaths";
+import { ringPath } from "./ringMaths";
 import { useCountUp } from "./useCountUp";
 import { useReducedMotion, useWhipFill } from "../../../lib/motion";
 import { strokePaint } from "../../../lib/skia/strokePaint";

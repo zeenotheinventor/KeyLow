@@ -1,3 +1,4 @@
+import { longestCapFraction } from "@keylow/core/diary";
 import { Path } from "@shopify/react-native-skia";
 import { useState } from "react";
 import { View } from "react-native";
@@ -8,7 +9,6 @@ import { useWhipFill } from "../../../../../lib/motion";
 import { strokePaint } from "../../../../../lib/skia/strokePaint";
 import { StyledCanvas } from "../../../../../lib/skia/StyledCanvas";
 import { useTheme } from "../../../../../lib/theme";
-import { longestCapFraction } from "../barNumbers";
 
 import type { WarningCapProps } from "./types";
 
