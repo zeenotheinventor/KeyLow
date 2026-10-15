@@ -1,0 +1,119 @@
+name: Mobile fingerprint
+
+# Native code reaches the app only through apps/mobile's dependencies and Expo config, since nothing
+# under packages/ may add a native module (docs/runbooks/local-dev.md). These paths are what the
+# fingerprint hashes, so a pull request that touches none of them cannot change it and gets no run.
+# GitHub matches the paths against the whole pull request, not the last push. A pull request whose
+# later push reverts its only native change gets no further run, so the earlier "changed" comment
+# stays and is wrong. Delete it by hand in that case.
+on:
+  pull_request:
+    paths:
+      - "apps/mobile/package.json"
+      - "apps/mobile/app.json"
+      - "apps/mobile/app.config.ts"
+      - "apps/mobile/eas.json"
+      - "apps/mobile/fingerprint.config.js"
+      - "apps/mobile/assets/**"
+      - "apps/mobile/android/**"
+      - "apps/mobile/ios/**"
+      - "apps/mobile/plugins/**"
+      - "apps/mobile/modules/**"
+      - "apps/mobile/patches/**"
+      - "apps/mobile/.fingerprintignore"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".npmrc"
+      - ".nvmrc"
+      - ".github/workflows/mobile-fingerprint.yml"
+
+# A newer push to the same pull request makes the older run pointless.
+concurrency:
+  group: mobile-fingerprint-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Warns on a pull request when it changes the native fingerprint of the mobile app, meaning an
+  # EAS Update cannot ship it and a new build is needed. The expo/expo-github-action/fingerprint
+  # action is not used. It posts no comment itself, it only reports a diff, and it compares
+  # against a database that has to be built up by runs on main. Instead this job fingerprints both
+  # sides with the @expo/fingerprint CLI that expo already installs, so the comparison does not
+  # depend on any earlier run.
+  mobile-fingerprint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      # The checkout is the merge of the pull request into its base, so its first parent is the
+      # base tip. Depth 2 fetches both parents.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - name: Fingerprint the merged pull request
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate > "$RUNNER_TEMP/head.json"
+      # Dependencies are installed again at the base because native modules are part of the
+      # fingerprint.
+      - name: Fingerprint the base
+        run: |
+          git checkout --detach HEAD^1
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate > "$RUNNER_TEMP/base.json"
+      # One comment per pull request, found by its marker and updated on every push. A comment that
+      # reported a change is rewritten when a later push that still matches the paths above brings
+      # the fingerprints back in line.
+      - name: Comment on the pull request
+        run: |
+          set -euo pipefail
+          base_hash=$(jq -r .hash "$RUNNER_TEMP/base.json")
+          head_hash=$(jq -r .hash "$RUNNER_TEMP/head.json")
+          comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/comments" \
+            --jq '.[] | select(.body | startswith("<!-- keylow-mobile-fingerprint -->")) | .id' | sed -n 1p)
+
+          if [ "$base_hash" = "$head_hash" ]; then
+            if [ -z "$comment_id" ]; then
+              echo "Fingerprint unchanged and no earlier comment to update."
+              exit 0
+            fi
+            {
+              echo "<!-- keylow-mobile-fingerprint -->"
+              echo "**Native fingerprint unchanged.** An earlier push changed it, this one does not. Hash: \`$head_hash\`."
+            } > "$RUNNER_TEMP/comment.md"
+          else
+            pnpm --filter @keylow/mobile exec fingerprint fingerprint:diff "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" > "$RUNNER_TEMP/diff.json"
+            changed_count=$(jq 'length' "$RUNNER_TEMP/diff.json")
+            {
+              echo "<!-- keylow-mobile-fingerprint -->"
+              echo "**Native fingerprint changed.** This pull request cannot ship as an EAS Update, a new native build is needed."
+              echo
+              echo "Base: \`$base_hash\`"
+              echo "Head: \`$head_hash\`"
+              echo
+              echo "Changed sources:"
+              jq -r '.[:30][] | "- \(.op): `\((.addedSource // .removedSource // .afterSource) | (.filePath // .id))`"' "$RUNNER_TEMP/diff.json"
+              if [ "$changed_count" -gt 30 ]; then
+                echo "- and $((changed_count - 30)) more"
+              fi
+            } > "$RUNNER_TEMP/comment.md"
+          fi
+
+          if [ -z "$comment_id" ]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/comments" -F body=@"$RUNNER_TEMP/comment.md"
+          else
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -F body=@"$RUNNER_TEMP/comment.md"
+          fi

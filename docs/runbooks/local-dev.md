@@ -252,7 +252,7 @@ pnpm storybook
 pnpm --filter @keylow/web build-storybook
 ```
 
-- `pnpm storybook` runs the web app's `storybook` script from the repo root and serves on <http://localhost:6006>. Add `--port <port>` to use another port. `build-storybook` writes the static site to `apps/web/storybook-static/`, which git, Prettier and ESLint ignore. CI runs the build in the `static` job.
+- `pnpm storybook` runs the web app's `storybook` script from the repo root and serves on <http://localhost:6006>. Add `--port <port>` to use another port. `build-storybook` writes the static site to `apps/web/storybook-static/`, which git, Prettier and ESLint ignore. CI runs the build in the `static` job when a pull request affects the web app.
 - The **Theme** toolbar item flips `data-theme` on `html` between Dark (the default) and Light, the same attribute the app's layout sets from the cookie. The **Viewport** item has Desktop 1280 and Mobile 375.
 - Stories live next to the components, as `components/**/*.stories.tsx`. Vitest only runs `test/**`, so stories are never run as unit tests.
 - The **Accessibility** panel runs axe on the open story. Fix a violation before you merge a story.

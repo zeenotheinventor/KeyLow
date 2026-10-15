@@ -1,9 +1,28 @@
 name: CI
 
+# Runs on every pull request, and on main only when a change resets the dependency or Jest caches.
+# Every merge to main is a squash of a pull request whose checks ran on its merge with main, and the
+# deploy workflows do not wait for CI on main, so a full rerun there gated nothing and cost about 40%
+# of the minutes. The run on main is kept for those few paths because Actions caches saved by a pull
+# request are visible to that pull request only. Main's runs are what refresh the pnpm store and the
+# Jest cache that every new pull request starts from.
+#
+# Nothing reruns on main after an ordinary merge. Two pull requests merged without rebasing can break
+# main between them, and that shows up only in the next pull request whose affected packages include
+# the broken code, so rebase before merging when main has moved.
+#
+# The Supabase stack and the native fingerprint run in db-integration.yml and mobile-fingerprint.yml,
+# which only start when their paths change. This file has no path filter on pull requests, so every
+# pull request gets a `static` check.
 on:
   pull_request:
   push:
     branches: [main]
+    paths:
+      - "pnpm-lock.yaml"
+      - "apps/mobile/babel.config.js"
+      - "apps/mobile/jest.config.js"
+      - ".nvmrc"
 
 # A newer push to the same ref makes the older run pointless.
 concurrency:
@@ -13,7 +32,8 @@ concurrency:
 permissions:
   contents: read
 
-# Every job repeats the same four setup steps because composite actions would need a second file.
+# Every job here, in db-integration.yml and in mobile-fingerprint.yml repeats the same four setup
+# steps, because a composite action would need another file.
 # The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
 # when no version input is given) and the Node version comes from .nvmrc.
 #
@@ -22,49 +42,114 @@ permissions:
 # scripts, since pnpm only allows lefthook (onlyBuiltDependencies) to run one.
 
 jobs:
-  # Mirrors the local gate. `pnpm check` is the first command so that what passes here is exactly
-  # what passes on a laptop. The extra checks come after it and are the ones the monorepo ADR lists.
+  # Mirrors the local gate. `pnpm check` is the first check so that what passes here is what passes
+  # on a laptop. The extra checks come after it and are the ones the monorepo ADR lists.
   static:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # On a pull request the checkout is the merge into its base, so its first parent is the base tip
+      # and the diff against it is exactly what the pull request changes. On main it is the squash
+      # commit, whose first parent is the commit before it. Depth 2 fetches both.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # Turbo's --affected runs a task only in the packages the pull request changed and the packages
+      # that depend on them, so a web pull request does not run the mobile Jest suites. Turbo only maps
+      # files inside a package to that package. A change anywhere else (root config, the lockfile, a
+      # workflow, the design boards tools/design-export reads) can reach any package without turbo
+      # seeing it, so it runs every check, as does an empty diff. Markdown outside the packages is
+      # covered by the formatting step and the repository-wide suites below. --no-renames lists both
+      # sides of a move, so a file moved out of the root still counts as a root change.
+      # The step runs with `shell: bash` for pipefail, so a failing `turbo ls` fails the step instead
+      # of reporting no affected packages.
+      - name: Work out which checks the pull request needs
+        id: scope
+        shell: bash
+        run: |
+          changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
+          outside=$(grep -vE '^(apps|packages|tools)/|\.md$' <<<"$changed" || true)
+          if [ -z "$changed" ] || [ -n "$outside" ]; then
+            echo "A file outside the packages changed, so every check runs."
+            {
+              echo "affected="
+              echo "full=true"
+              echo "web=true"
+              echo "mobile=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "TURBO_SCM_BASE=HEAD^1" >> "$GITHUB_ENV"
+          TURBO_SCM_BASE=HEAD^1 pnpm -s turbo ls --affected --output=json > "$RUNNER_TEMP/affected.json"
+          packages=$(jq -r '.packages.items[].name' "$RUNNER_TEMP/affected.json")
+          echo "Affected packages:" $packages
+          has() { grep -qx "$1" <<<"$packages"; }
+          web=false
+          mobile=false
+          if has @keylow/web; then web=true; fi
+          # The doctor gate is not a dependency of the app, but a change to it is tested by running it.
+          if has @keylow/mobile || has @keylow/expo-doctor-gate; then mobile=true; fi
+          {
+            echo "affected=--affected"
+            echo "full=false"
+            echo "web=$web"
+            echo "mobile=$mobile"
+          } >> "$GITHUB_OUTPUT"
       # On a cold start the mobile food search suite alone has Jest transform about 300 React Native
       # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
       # transformer config, so restoring one from a near miss is safe: stale entries are never read.
       # The path is the cacheDirectory in apps/mobile/jest.config.js.
       - name: Restore the mobile Jest cache
+        if: steps.scope.outputs.mobile == 'true'
         uses: actions/cache@v6
         with:
           path: apps/mobile/node_modules/.cache/jest
           key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
           restore-keys: jest-${{ runner.os }}-
       - name: Run the local gate
-        run: pnpm check
+        run: pnpm check ${{ steps.scope.outputs.affected }}
+      # The root format:check task belongs to no package, so --affected skips it. Prettier checks the
+      # whole repository in seconds, so it runs here instead.
+      - name: Check the formatting of the whole repository
+        if: steps.scope.outputs.full != 'true'
+        run: pnpm format:check
+      # Two suites read files across the repository instead of importing them, so turbo never counts
+      # them as affected. The source guard in @keylow/config walks every source file in apps/ and
+      # packages/ and reads the core helpers. tools/design-export checks docs/design, its READMEs
+      # included, and the packages/tokens stylesheet. Both take seconds, so they always run.
+      - name: Run the repository-wide suites
+        if: steps.scope.outputs.full != 'true'
+        run: pnpm turbo run test --filter=@keylow/config --filter=@keylow/design-export
       # Builds the web Storybook, so a broken story or a Storybook config that no longer matches Next
-      # fails the pull request. Turbo restores the output from its cache when nothing changed.
+      # fails the pull request.
       - name: Build the web Storybook
+        if: steps.scope.outputs.web == 'true'
         run: pnpm turbo run build-storybook --filter=@keylow/web
       # Builds the web app the way Vercel does. `pnpm check` type-checks with tsc alone, and `next build`
       # runs its own type-check and compile pass, which has failed on a pull request that passed the
-      # gate. Every route is rendered on demand, so the build needs no Supabase environment variables.
-      # Turbo restores the output from its cache when nothing changed.
+      # gate. Vercel's own build is not relied on for this, since it builds the branch head rather than
+      # the merge with main and its turbo-ignore can skip a multi-commit push. Every route is rendered
+      # on demand, so the build needs no Supabase environment variables.
       - name: Build the web app
+        if: steps.scope.outputs.web == 'true'
         run: pnpm turbo run build --filter=@keylow/web
-      # Fails when the lockfile contains duplicates that a dedupe would remove.
+      # Fails when the lockfile contains duplicates that a dedupe would remove. A lockfile change
+      # always makes a full run, so the other runs skip it.
       # The flag keeps the install pass that dedupe runs from triggering the prepare script.
       - name: Check the lockfile for duplicates
+        if: steps.scope.outputs.full == 'true'
         run: pnpm dedupe --check --ignore-scripts
       # Mobile Storybook has no static build. Its stories are type-checked and rendered in both schemes by
       # the gate above (tsc covers .rnstorybook, and the Jest smoke test renders every story). What is left
       # is that the committed story index is the one the story files generate, which Metro rewrites on start.
       - name: Check the mobile story index is committed
+        if: steps.scope.outputs.mobile == 'true'
         run: |
           pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook
           git diff --exit-code apps/mobile/.rnstorybook/storybook.requires.ts
@@ -76,169 +161,8 @@ jobs:
       # warning annotation. Every other failure, a minor or major mismatch included, fails the step, and so
       # does a report the script cannot read.
       - name: Check the Expo project health
+        if: steps.scope.outputs.mobile == 'true'
         working-directory: apps/mobile
         env:
           EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
         run: node --experimental-strip-types ../../tools/expo-doctor-gate/src/runDoctorGate.ts
-
-  # Type-checks and lints the Edge Functions under Deno, runs the pgTAP tests and the Edge Function
-  # HTTP suites against a real local Supabase stack with the functions served, then proves the
-  # committed packages/db/src/types.gen.ts is what the migrations generate.
-  db-integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      # Pinned to the CLI version used locally. The action also accepts "latest".
-      - uses: supabase/setup-cli@v3
-        with:
-          version: 2.106.0
-      # The CLI pulls some of its images from public.ecr.aws, which refuses anonymous pulls with
-      # "toomanyrequests: Rate exceeded" once a runner's address has used its quota. The same images
-      # are on GitHub's registry, which does not share that quota. Pulling them from there and tagging
-      # them with the names the CLI looks for means it finds them locally and never calls ECR.
-      # postgres-meta v0.96.6 is what `supabase start` runs for the meta service and v0.96.1 is
-      # what `supabase gen types` runs (the failed log named it), so both are pulled.
-      # edge-runtime is what `supabase functions serve` runs and pg_prove is what `supabase test
-      # db` runs. Bump a tag here when the CLI pin above moves.
-      - name: Pre-pull the CLI images from GitHub's registry
-        run: |
-          for image in postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36; do
-            docker pull "ghcr.io/supabase/$image"
-            docker tag "ghcr.io/supabase/$image" "public.ecr.aws/supabase/$image"
-          done
-      # Keeps the services the tests and type generation need. That is the database, the API
-      # gateway (kong), rest and meta (gen types). Auth always starts and cannot be excluded.
-      # Excluded: analytics and vector (log pipeline), edge-runtime and functions, imgproxy,
-      # inbucket (mail catcher), realtime, storage and studio.
-      - name: Start the local Supabase stack
-        working-directory: packages/db
-        run: supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
-      # `functions serve` starts its own edge-runtime container, so edge-runtime stays in the -x list
-      # above. The functions import the @keylow/core bundle, so it is written first. The container
-      # reaches the OFF mock the tests start on the runner through the gateway address of the
-      # stack's Docker network. Docker Desktop resolves host.docker.internal, a Linux runner does
-      # not, so the env file the function reads gets the gateway address in its place. The loop is
-      # bounded. A function that never answers fails the step, and the last step of the job prints the
-      # serve log.
-      - name: Serve the Edge Functions
-        working-directory: packages/db
-        run: |
-          pnpm --filter @keylow/db bundle-core-for-deno
-          gateway=$(docker network inspect supabase_network_keylow --format '{{(index .IPAM.Config 0).Gateway}}')
-          sed "s/host.docker.internal/$gateway/" supabase/functions/.env.test > "$RUNNER_TEMP/functions.env"
-          nohup supabase functions serve --env-file "$RUNNER_TEMP/functions.env" --no-verify-jwt \
-            > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
-          for attempt in $(seq 1 45); do
-            status=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS http://127.0.0.1:54321/functions/v1/off-product || true)
-            if [ "$status" = "204" ] || [ "$status" = "401" ]; then
-              echo "The functions are being served."
-              exit 0
-            fi
-            sleep 2
-          done
-          echo "The functions were not served within 90 seconds. The last status was $status."
-          exit 1
-      # check:integration includes check:functions. Turbo bundles @keylow/core for Deno first, then
-      # `deno check` and `deno lint` run from the pinned `deno` npm package, so no Deno setup step is
-      # needed. Deno downloads the supabase-js and zod packages itself, which is why this job and
-      # not the static one runs it. After the pgTAP tests, the Edge Function HTTP suites run against
-      # the served functions.
-      - name: Check the Edge Functions and run the pgTAP tests and the function suites
-        run: pnpm check:integration
-      # gen-types rewrites the file in place, so any difference means it was not committed.
-      - name: Check the generated types are committed
-        run: |
-          pnpm gen-types
-          git diff --exit-code packages/db/src/types.gen.ts
-      # Shows what the functions logged, which is where a 5xx from a suite is explained.
-      - name: Print the functions serve log
-        if: failure()
-        run: cat "$RUNNER_TEMP/functions-serve.log" || true
-
-  # Warns on a pull request when it changes the native fingerprint of the mobile app, meaning an
-  # EAS Update cannot ship it and a new build is needed. The expo/expo-github-action/fingerprint
-  # action is not used. It posts no comment itself, it only reports a diff, and it compares
-  # against a database that has to be built up by runs on main. Instead this job fingerprints both
-  # sides with the @expo/fingerprint CLI that expo already installs, so the comparison does not
-  # depend on any earlier run.
-  mobile-fingerprint:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      pull-requests: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-      PULL_REQUEST_NUMBER: ${{ github.event.pull_request.number }}
-    steps:
-      # The checkout is the merge of the pull request into its base, so its first parent is the
-      # base tip. Depth 2 fetches both parents.
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 2
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - name: Fingerprint the merged pull request
-        run: |
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate > "$RUNNER_TEMP/head.json"
-      # Dependencies are installed again at the base because native modules are part of the
-      # fingerprint.
-      - name: Fingerprint the base
-        run: |
-          git checkout --detach HEAD^1
-          pnpm install --frozen-lockfile --ignore-scripts
-          pnpm --filter @keylow/mobile exec fingerprint fingerprint:generate > "$RUNNER_TEMP/base.json"
-      # One comment per pull request, found by its marker and updated on every push. A comment that
-      # reported a change is rewritten when a later push brings the fingerprints back in line.
-      - name: Comment on the pull request
-        run: |
-          set -euo pipefail
-          base_hash=$(jq -r .hash "$RUNNER_TEMP/base.json")
-          head_hash=$(jq -r .hash "$RUNNER_TEMP/head.json")
-          comment_id=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/comments" \
-            --jq '.[] | select(.body | startswith("<!-- keylow-mobile-fingerprint -->")) | .id' | sed -n 1p)
-
-          if [ "$base_hash" = "$head_hash" ]; then
-            if [ -z "$comment_id" ]; then
-              echo "Fingerprint unchanged and no earlier comment to update."
-              exit 0
-            fi
-            {
-              echo "<!-- keylow-mobile-fingerprint -->"
-              echo "**Native fingerprint unchanged.** An earlier push changed it, this one does not. Hash: \`$head_hash\`."
-            } > "$RUNNER_TEMP/comment.md"
-          else
-            pnpm --filter @keylow/mobile exec fingerprint fingerprint:diff "$RUNNER_TEMP/base.json" "$RUNNER_TEMP/head.json" > "$RUNNER_TEMP/diff.json"
-            changed_count=$(jq 'length' "$RUNNER_TEMP/diff.json")
-            {
-              echo "<!-- keylow-mobile-fingerprint -->"
-              echo "**Native fingerprint changed.** This pull request cannot ship as an EAS Update, a new native build is needed."
-              echo
-              echo "Base: \`$base_hash\`"
-              echo "Head: \`$head_hash\`"
-              echo
-              echo "Changed sources:"
-              jq -r '.[:30][] | "- \(.op): `\((.addedSource // .removedSource // .afterSource) | (.filePath // .id))`"' "$RUNNER_TEMP/diff.json"
-              if [ "$changed_count" -gt 30 ]; then
-                echo "- and $((changed_count - 30)) more"
-              fi
-            } > "$RUNNER_TEMP/comment.md"
-          fi
-
-          if [ -z "$comment_id" ]; then
-            gh api --method POST "repos/$GITHUB_REPOSITORY/issues/$PULL_REQUEST_NUMBER/comments" -F body=@"$RUNNER_TEMP/comment.md"
-          else
-            gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -F body=@"$RUNNER_TEMP/comment.md"
-          fi
