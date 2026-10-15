@@ -19,7 +19,8 @@ export function DashboardScreen() {
   const isOnline = useIsOnline();
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
 
-  if (timeZone.isError) {
+  // A refetch that fails keeps the zone it already has: only a read that never produced one is a failure.
+  if (timeZone.isError && timeZone.data === undefined) {
     return (
       <DashboardFrame>
         <ErrorState

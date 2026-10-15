@@ -8,6 +8,7 @@ import {
 import { toLocalDate } from "@keylow/core/dates";
 import { sumEntries } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { ScrollView } from "react-native";
 
 import { useIsOnline } from "../../../lib/connectivity";
@@ -19,6 +20,7 @@ import { DashboardLoading } from "../DashboardLoading";
 import { NutritionCard } from "../NutritionCard";
 
 import type { DashboardTodayProps } from "./types";
+import type { DiaryDay } from "@keylow/api-client";
 
 /**
  * Today's card, once the profile's time zone is known: today's entries (the same query the diary reads, so
@@ -34,7 +36,13 @@ export function DashboardToday({ timeZone, isReadEnabled }: DashboardTodayProps)
   const dayQuery = useDiaryDay(today, { enabled: isReadEnabled });
   const targetsQuery = useTargets({ enabled: isReadEnabled });
 
-  const day = dayQuery.data;
+  // When midnight comes the new day is still loading. The card keeps the last day it had until it arrives,
+  // and the date has already moved on, so the card never flashes to its skeleton.
+  const [lastDay, setLastDay] = useState<DiaryDay | undefined>(undefined);
+  if (dayQuery.data !== undefined && dayQuery.data !== lastDay) {
+    setLastDay(dayQuery.data);
+  }
+  const day = dayQuery.data ?? lastDay;
   const targets = targetsQuery.data;
   const eyebrow = describeDateInWords(today);
 
@@ -50,7 +58,12 @@ export function DashboardToday({ timeZone, isReadEnabled }: DashboardTodayProps)
   }
 
   function renderBody() {
-    if (dayQuery.isError || targetsQuery.isError) {
+    // A refetch that fails keeps what is cached on screen: only a read that never produced data is a failure. A new day that fails
+    // while the last day is still shown is one too.
+    if (
+      (dayQuery.isError && dayQuery.data === undefined) ||
+      (targetsQuery.isError && targets === undefined)
+    ) {
       return (
         <ErrorState
           body={DASHBOARD_LOAD_FAILED.body}

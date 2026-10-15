@@ -49,7 +49,8 @@ export function NutritionCard({ totals, targets, onOpenDiary, onEditTargets }: N
           </Text>
           <Button
             accessibilityLabel={DASHBOARD_CARD.editName}
-            className="-mr-4"
+            className="-mr-3"
+            tone="accent-ink"
             variant="ghost"
             onPress={onEditTargets}
           >

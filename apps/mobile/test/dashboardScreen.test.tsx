@@ -22,6 +22,7 @@ import {
 } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { resolvedColor } from "./support/themeColor";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -34,12 +35,35 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
-// 11:20 in London on Thursday 15 October 2026.
+// 11:20 in London on Thursday 15 October 2026. A test moves the clock with `moveClockTo`.
+let mockNow = new Date("2026-10-15T10:20:00Z");
+const mockClockListeners = new Set<() => void>();
 jest.mock("../lib/useNow", () => {
-  const mockNow = new Date("2026-10-15T10:20:00Z");
+  const { useSyncExternalStore } = jest.requireActual<typeof import("react")>("react");
 
-  return { useNow: () => mockNow };
+  return {
+    useNow: () =>
+      useSyncExternalStore(
+        (listener: () => void) => {
+          mockClockListeners.add(listener);
+
+          return () => {
+            mockClockListeners.delete(listener);
+          };
+        },
+        () => mockNow,
+      ),
+  };
 });
+
+async function moveClockTo(instant: string) {
+  await act(() => {
+    mockNow = new Date(instant);
+    for (const listener of mockClockListeners) {
+      listener();
+    }
+  });
+}
 
 setUpTests();
 
@@ -120,6 +144,7 @@ describe("the dashboard screen", () => {
   });
 
   beforeEach(() => {
+    mockNow = new Date("2026-10-15T10:20:00Z");
     registerAppStyles(kitStyles);
     resetDiaryBackend();
     diaryBackend.entries = sampleDay();
@@ -182,6 +207,13 @@ describe("the dashboard screen", () => {
 
       expect(screen.getByText("Target 2,200 kcal")).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Edit targets" })).toBeOnTheScreen();
+    });
+
+    it("should draw Edit in the accent ink", async () => {
+      await renderDashboard();
+      await card();
+
+      expect(screen.getByText("Edit")).toHaveStyle({ color: resolvedColor("dark", "accent-ink") });
     });
 
     it("should show no banner", async () => {
@@ -438,6 +470,66 @@ describe("the dashboard screen", () => {
       await user.press(screen.getByRole("button", { name: "Try again" }));
 
       expect(await card()).toHaveAccessibleName(underTargetName);
+    });
+  });
+
+  describe("a refetch that fails once the card is on screen", () => {
+    // react-query tells the screen about the failed answer on the next turn of the event loop.
+    async function refetchEverything() {
+      await act(async () => {
+        await queryClient.invalidateQueries();
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      });
+    }
+
+    it("should keep the card when the day fails to refetch", async () => {
+      await renderDashboard();
+      await card();
+
+      diaryBackend.failingTables.add("food_log_entries");
+      await refetchEverything();
+
+      expect(screen.queryByText("Couldn't load today's nutrition")).not.toBeOnTheScreen();
+      expect(await card()).toHaveAccessibleName(underTargetName);
+    });
+
+    it("should keep the card when the targets fail to refetch", async () => {
+      await renderDashboard();
+      await card();
+
+      diaryBackend.targetsReadFails = true;
+      await refetchEverything();
+
+      expect(screen.queryByText("Couldn't load today's nutrition")).not.toBeOnTheScreen();
+      expect(await card()).toHaveAccessibleName(underTargetName);
+    });
+
+    it("should keep the card when the time zone fails to refetch", async () => {
+      await renderDashboard();
+      await card();
+
+      diaryBackend.timeZoneReadFails = true;
+      await refetchEverything();
+
+      expect(screen.queryByText("Couldn't load today's nutrition")).not.toBeOnTheScreen();
+      expect(await card()).toHaveAccessibleName(underTargetName);
+    });
+  });
+
+  describe("at midnight", () => {
+    it("should roll the date over and keep the card on screen while the new day loads", async () => {
+      await renderDashboard();
+      await card();
+
+      // 00:30 in London on Friday 16 October. The new day never answers.
+      diaryBackend.hungTables.add("food_log_entries");
+      await moveClockTo("2026-10-15T23:30:00Z");
+
+      expect(await screen.findByText("Friday 16 October")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("status", { name: "Loading today's nutrition" }),
+      ).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /^Today, open the diary\. / })).toBeOnTheScreen();
     });
   });
 

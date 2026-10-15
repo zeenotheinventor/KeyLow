@@ -62,7 +62,8 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
   // A link to the diary can name the day to show, as the dashboard's card does with today. The tab stays
   // mounted, so the link is used up and cleared: a later link to the same day is a new change, and
   // choosing the tab again leaves the day alone. A day that does not exist or has not come is ignored.
-  const { day: linkedDay } = useLocalSearchParams<{ day?: string }>();
+  const { day: dayParam } = useLocalSearchParams<{ day?: string | string[] }>();
+  const linkedDay = Array.isArray(dayParam) ? dayParam[0] : dayParam;
   const [usedLinkedDay, setUsedLinkedDay] = useState<string | undefined>(undefined);
   if (linkedDay !== usedLinkedDay) {
     setUsedLinkedDay(linkedDay);
