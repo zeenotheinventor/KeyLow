@@ -7,6 +7,8 @@ import type { DashboardFrameProps } from "./types";
  */
 export function DashboardFrame({ eyebrow, children }: DashboardFrameProps) {
   return (
+    // The board's container. The shell's main already pads outside it, and 1132 would push the bar
+    // tracks under 100 px in the half column.
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5">
       <div className="flex flex-col gap-0.5">
         <p className="min-h-4 text-caption text-text-muted">{eyebrow}</p>

@@ -73,7 +73,11 @@ function BarcodeIconButton({
       aria-expanded={button.expanded}
       aria-disabled={disabled || undefined}
       onClick={disabled ? undefined : button.onClick}
-      className={barcodeButtonSize({ size })}
+      // A disabled button opens nothing, so it shows no hover or press overlay.
+      className={cn(
+        barcodeButtonSize({ size }),
+        disabled && "hover:bg-transparent active:bg-transparent",
+      )}
     >
       <ScanBarcode aria-hidden className={iconSize[size]} strokeWidth={iconStroke} />
     </button>

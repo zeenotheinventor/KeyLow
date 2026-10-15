@@ -238,6 +238,23 @@ describe("SearchLauncher", () => {
       expect(barcodeButton.onClick).not.toHaveBeenCalled();
     });
 
+    it("should show no hover or press overlay on a disabled barcode button", () => {
+      render(
+        <SearchLauncher
+          label="Search for a food"
+          onSearch={vi.fn()}
+          barcodeButton={barcodeButton}
+          disabled
+        />,
+      );
+
+      const { classList } = screen.getByRole("button", { name: "Look up a barcode" });
+
+      expect(classList.contains("hover:bg-transparent")).toBe(true);
+      expect(classList.contains("hover:bg-hover-overlay")).toBe(false);
+      expect(classList.contains("active:bg-press-overlay")).toBe(false);
+    });
+
     it("should be full strength and enabled by default", () => {
       render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} />);
 

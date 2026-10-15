@@ -39,33 +39,36 @@ export function NutritionCard({ totals, targets }: NutritionCardProps) {
           href="/diary"
           aria-label={describeDashboardCard(totals, targets)}
           className={cn(
-            "flex flex-col gap-4 px-4 pt-4 transition-colors duration-quick hover:bg-hover-overlay sm:px-5",
-            hasTarget ? "pb-3" : "pb-4",
+            "block transition-colors duration-quick hover:bg-hover-overlay",
+            // The inset focus ring follows the card's corners, which the footer squares off.
+            hasTarget ? "rounded-t-large" : "rounded-large",
             pressFocusRing,
           )}
         >
-          <span className="flex items-center gap-2">
-            <h2 className="flex-1 text-h2">{DASHBOARD_CARD.title}</h2>
-            <ChevronRight
-              aria-hidden
-              className="size-4 shrink-0 text-text-muted"
-              strokeWidth={iconStroke}
-            />
-          </span>
-          <span className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
-            <CalorieRing
-              eaten={totals.kcal ?? 0}
-              target={calorieTarget}
-              estimate={false}
-              className="shrink-0"
-            />
-            <MacroBars
-              protein={{ eaten: totals.protein_g ?? 0, target: targets.protein_g ?? 0 }}
-              carbs={{ eaten: totals.carbs_g ?? 0, target: targets.carbs_g ?? 0 }}
-              fat={{ eaten: totals.fat_g ?? 0, target: targets.fat_g ?? 0 }}
-              className="w-full min-w-0 sm:w-auto sm:flex-1"
-            />
-          </span>
+          {/* The link's name already says all of this, so a screen reader is not told it twice. */}
+          <div
+            aria-hidden
+            className={cn("flex flex-col gap-4 px-4 pt-4 sm:px-5", hasTarget ? "pb-3" : "pb-4")}
+          >
+            <div className="flex items-center gap-2">
+              <h2 className="flex-1 text-h2">{DASHBOARD_CARD.title}</h2>
+              <ChevronRight className="size-4 shrink-0 text-text-muted" strokeWidth={iconStroke} />
+            </div>
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
+              <CalorieRing
+                eaten={totals.kcal ?? 0}
+                target={calorieTarget}
+                estimate={false}
+                className="shrink-0"
+              />
+              <MacroBars
+                protein={{ eaten: totals.protein_g ?? 0, target: targets.protein_g ?? 0 }}
+                carbs={{ eaten: totals.carbs_g ?? 0, target: targets.carbs_g ?? 0 }}
+                fat={{ eaten: totals.fat_g ?? 0, target: targets.fat_g ?? 0 }}
+                className="w-full min-w-0 sm:w-auto sm:flex-1"
+              />
+            </div>
+          </div>
         </Link>
         {hasTarget && (
           <div className="mx-4 flex min-h-touch-target items-center justify-between gap-3 border-t border-border py-1 sm:mx-5">

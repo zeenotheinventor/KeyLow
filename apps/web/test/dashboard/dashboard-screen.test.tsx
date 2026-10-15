@@ -124,7 +124,9 @@ describe("the dashboard screen", () => {
     it("should draw the calorie ring named by what is left of the target", () => {
       renderDashboard();
 
-      expect(screen.getByRole("img", { name: "1,161 calories remaining of 2,200" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "1,161 calories remaining of 2,200", hidden: true }),
+      ).toBeTruthy();
     });
 
     it("should leave (est.) off the ring's target line, because the person set it", () => {
@@ -137,9 +139,13 @@ describe("the dashboard screen", () => {
     it("should draw the three macro rows named by grams against the target", () => {
       renderDashboard();
 
-      expect(screen.getByRole("group", { name: "Protein: 86 of 160 grams" })).toBeTruthy();
-      expect(screen.getByRole("group", { name: "Carbs: 129 of 220 grams" })).toBeTruthy();
-      expect(screen.getByRole("group", { name: "Fat: 19 of 70 grams" })).toBeTruthy();
+      expect(
+        screen.getByRole("group", { name: "Protein: 86 of 160 grams", hidden: true }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("group", { name: "Carbs: 129 of 220 grams", hidden: true }),
+      ).toBeTruthy();
+      expect(screen.getByRole("group", { name: "Fat: 19 of 70 grams", hidden: true })).toBeTruthy();
     });
 
     it("should be one link to the diary, named by its title, the ring and the three macros", () => {
@@ -151,12 +157,16 @@ describe("the dashboard screen", () => {
       );
     });
 
-    it("should hold the title and the ring and bars inside that link", () => {
+    it("should hold the title and the ring and bars inside that link, hidden from assistive technology so they are not read twice", () => {
       renderDashboard();
 
-      expect(within(card()).getByRole("heading", { level: 2, name: "Today" })).toBeTruthy();
-      expect(within(card()).getByRole("img")).toBeTruthy();
-      expect(within(card()).getAllByRole("group")).toHaveLength(3);
+      expect(screen.queryByRole("img")).toBeNull();
+      expect(screen.queryByRole("group")).toBeNull();
+      expect(screen.queryByRole("heading", { level: 2, name: "Today" })).toBeNull();
+      const inside = within(card());
+      expect(inside.getByRole("heading", { level: 2, name: "Today", hidden: true })).toBeTruthy();
+      expect(inside.getByRole("img", { hidden: true })).toBeTruthy();
+      expect(inside.getAllByRole("group", { hidden: true })).toHaveLength(3);
     });
 
     it("should print the target under a hairline, outside the link, with an Edit link to the targets", () => {
@@ -210,8 +220,12 @@ describe("the dashboard screen", () => {
     it("should read the whole target as remaining, with empty bars", () => {
       renderDashboard();
 
-      expect(screen.getByRole("img", { name: "2,200 calories remaining of 2,200" })).toBeTruthy();
-      expect(screen.getByRole("group", { name: "Protein: 0 of 160 grams" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "2,200 calories remaining of 2,200", hidden: true }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("group", { name: "Protein: 0 of 160 grams", hidden: true }),
+      ).toBeTruthy();
       expect(screen.queryByTestId("ring-eaten-arc")).toBeNull();
     });
 
@@ -231,9 +245,15 @@ describe("the dashboard screen", () => {
     it("should read the calories over the target", () => {
       renderDashboard();
 
-      expect(screen.getByRole("img", { name: "212 calories over target of 2,200" })).toBeTruthy();
-      expect(screen.getByRole("group", { name: "Fat: 81 of 70 grams, 11 over" })).toBeTruthy();
-      expect(screen.getByRole("group", { name: "Carbs: 257 of 220 grams, 37 over" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "212 calories over target of 2,200", hidden: true }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("group", { name: "Fat: 81 of 70 grams, 11 over", hidden: true }),
+      ).toBeTruthy();
+      expect(
+        screen.getByRole("group", { name: "Carbs: 257 of 220 grams, 37 over", hidden: true }),
+      ).toBeTruthy();
     });
 
     it("should name the card with the over-target ring", () => {
@@ -286,8 +306,10 @@ describe("the dashboard screen", () => {
     it("should draw the ring as the calories eaten and the bars as grams only", () => {
       renderDashboard();
 
-      expect(screen.getByRole("img", { name: "1,039 calories eaten, no target set" })).toBeTruthy();
-      expect(screen.getByRole("group", { name: "Protein: 86 grams" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "1,039 calories eaten, no target set", hidden: true }),
+      ).toBeTruthy();
+      expect(screen.getByRole("group", { name: "Protein: 86 grams", hidden: true })).toBeTruthy();
       expect(card().getAttribute("aria-label")).toBe(
         "Today, open the diary. 1,039 calories eaten, no target set. Protein: 86 grams. Carbs: 129 grams. Fat: 19 grams",
       );
@@ -423,7 +445,9 @@ describe("the dashboard screen", () => {
         within(banner).getByText("Showing your last saved diary. Changes need a connection."),
       ).toBeTruthy();
       expect(card()).toBeTruthy();
-      expect(screen.getByRole("img", { name: "1,161 calories remaining of 2,200" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "1,161 calories remaining of 2,200", hidden: true }),
+      ).toBeTruthy();
     });
 
     it("should show the banner over the skeleton when the page opens already offline", () => {
@@ -463,7 +487,9 @@ describe("the dashboard screen", () => {
   describe("midnight", () => {
     it("should keep the last day on screen while the new day loads, and move the date on", () => {
       renderDashboard();
-      expect(screen.getByRole("img", { name: "1,161 calories remaining of 2,200" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "1,161 calories remaining of 2,200", hidden: true }),
+      ).toBeTruthy();
 
       act(() => {
         vi.setSystemTime(new Date("2026-10-16T00:01:00Z"));
@@ -472,7 +498,9 @@ describe("the dashboard screen", () => {
 
       expect(screen.getByText("Friday 16 October")).toBeTruthy();
       expect(backend.dayReads).toContain("2026-10-16");
-      expect(screen.getByRole("img", { name: "1,161 calories remaining of 2,200" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "1,161 calories remaining of 2,200", hidden: true }),
+      ).toBeTruthy();
       expect(screen.queryByRole("status", { name: "Loading today's nutrition" })).toBeNull();
     });
 
@@ -485,16 +513,29 @@ describe("the dashboard screen", () => {
         vi.advanceTimersByTime(60_000);
       });
 
-      expect(screen.getByRole("img", { name: "2,200 calories remaining of 2,200" })).toBeTruthy();
+      expect(
+        screen.getByRole("img", { name: "2,200 calories remaining of 2,200", hidden: true }),
+      ).toBeTruthy();
       fireEvent.click(card());
       expect(push).toHaveBeenCalledExactlyOnceWith("/diary", expect.anything());
     });
 
-    it("should show the error when the new day fails and the first never loaded", () => {
-      backend.days.set(TODAY, { data: undefined, isError: true, refetch: refetchDay });
+    it("should show the error when the new day fails while the last day is on screen", () => {
       renderDashboard();
+      expect(card()).toBeTruthy();
+      backend.days.set("2026-10-16", { data: undefined, isError: true, refetch: refetchDay });
 
-      expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
+      act(() => {
+        vi.setSystemTime(new Date("2026-10-16T00:01:00Z"));
+        vi.advanceTimersByTime(60_000);
+      });
+
+      expect(
+        screen.getByRole("heading", { level: 2, name: "Couldn't load today's nutrition" }),
+      ).toBeTruthy();
+      expect(screen.queryByRole("link", { name: /^Today/ })).toBeNull();
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(refetchDay).toHaveBeenCalledOnce();
     });
   });
 });

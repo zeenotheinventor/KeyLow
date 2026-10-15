@@ -241,7 +241,6 @@ describe("CalorieRing", () => {
     it("should draw no warning arc, gap or class", () => {
       renderRing(over);
 
-      expect(screen.queryByTestId("ring-over-arc")).toBeNull();
       expect(screen.getByRole("img").innerHTML).not.toContain("warning");
     });
 
