@@ -16,6 +16,7 @@ import {
   motionDuration,
   motionScale,
   pressScale,
+  pressScaleRow,
   safeArea,
   sheetHandle,
   skeletonDelay,
@@ -96,6 +97,7 @@ export const flattenTokens = (scheme: "dark" | "light"): FlatTokens => {
           "motion-distance": String(motionScale.distance),
           "motion-skew": String(motionScale.skew),
           "press-scale": String(pressScale),
+          "press-scale-row": String(pressScaleRow),
           ...prefixed("haptic-", haptic),
         }),
   };

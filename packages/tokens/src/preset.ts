@@ -5,6 +5,7 @@ import {
   fontFamily,
   fontSize,
   pressScale,
+  pressScaleRow,
   spacing,
   transitionDuration,
   touchTarget,
@@ -65,8 +66,11 @@ export const controlSizes = {
   "touch-target": `${touchTarget}px`,
 };
 
-/** The design's `--press-scale`, as the one step the preset adds to Tailwind's scale: `scale-press`. */
-export const scaleSteps = { press: String(pressScale) };
+/**
+ * The design's `--press-scale` and `--press-scale-row`, as the two steps the preset adds to Tailwind's
+ * scale: `scale-press` for a button and `scale-press-row` for a list row.
+ */
+export const scaleSteps = { press: String(pressScale), "press-row": String(pressScaleRow) };
 
 export const preset: Partial<Config> = {
   theme: {
@@ -81,7 +85,7 @@ export const preset: Partial<Config> = {
       height: controlSizes,
       minWidth: controlSizes,
       minHeight: controlSizes,
-      // A button compresses to `scale-press` under `active:`.
+      // A button compresses to `scale-press` under `active:`, and a list row to `scale-press-row`.
       scale: scaleSteps,
       transitionDuration,
       transitionTimingFunction,

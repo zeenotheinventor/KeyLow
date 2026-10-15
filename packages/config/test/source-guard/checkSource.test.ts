@@ -317,6 +317,7 @@ describe("coloured text in light mode", () => {
   it.each([
     "text-text-primary",
     "text-accent-foreground",
+    "text-accent-ink",
     "text-warning-ink",
     "bg-danger-muted",
     "border-danger",

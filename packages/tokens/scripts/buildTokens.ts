@@ -224,6 +224,7 @@ export const buildTokens = (sources: TokenSourceTexts): Record<string, unknown> 
     skew: toNumber(darkLedger.take("motion-skew"), ""),
   };
   const pressScale = toNumber(darkLedger.take("press-scale"), "");
+  const pressScaleRow = toNumber(darkLedger.take("press-scale-row"), "");
   const haptic = darkLedger.takeMatching(/^haptic-(.+)$/);
   darkLedger.assertEmpty();
 
@@ -242,6 +243,7 @@ export const buildTokens = (sources: TokenSourceTexts): Record<string, unknown> 
     distance: toNumber(reducedMotionLedger.take("motion-distance"), ""),
     skew: toNumber(reducedMotionLedger.take("motion-skew"), ""),
     pressScale: toNumber(reducedMotionLedger.take("press-scale"), ""),
+    pressScaleRow: toNumber(reducedMotionLedger.take("press-scale-row"), ""),
     timingFunction: reducedMotionLedger.takeMatching(/^ease-(.+)$/),
   };
   reducedMotionLedger.assertEmpty();
@@ -274,6 +276,7 @@ export const buildTokens = (sources: TokenSourceTexts): Record<string, unknown> 
     easingCurve,
     motionScale,
     pressScale,
+    pressScaleRow,
     reducedMotion,
     haptic,
   };

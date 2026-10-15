@@ -57,4 +57,4 @@ pnpm --filter @keylow/design-export check:boards
 
 - The tool keeps the `<span>` the runtime wraps around each interpolated value, without its class. In a flex or grid parent that span is a layout item, so removing it changes the spacing. Removing it was tried first and moved text in the search rows.
 - The `docs/design` folder is excluded from Prettier (see the root `.prettierignore`) because most of it is generated or verbatim.
-- The canvas boards are never edited here. A design change is made on the canvas, approved, then exported again.
+- The canvas boards are never edited here. A design change is made on the canvas, approved, then exported again. The one exception is the proposals block at the end of the canvas token file, reconciled by hand on 2026-10-15 because the design system accepted `--accent-ink`, `--warning-ink` and `--camera`. The next canvas export should come from a canvas without them.

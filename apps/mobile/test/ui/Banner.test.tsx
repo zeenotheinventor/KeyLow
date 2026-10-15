@@ -300,7 +300,7 @@ describe("Banner", () => {
         },
         scheme,
       );
-      const ink = scheme === "dark" ? themes.dark.warning : themes.light["text-primary"];
+      const ink = resolvedColor(scheme, "warning-ink");
 
       expect(await screen.findByText("Needs review")).toHaveStyle({ color: ink });
       expect(screen.getByText("Copy to your foods")).toHaveStyle({ color: ink });

@@ -1,7 +1,7 @@
 import resolveConfig from "tailwindcss/resolveConfig";
 import { describe, expect, it } from "vitest";
 
-import { controlHeight, preset, pressScale, touchTarget } from "../src";
+import { controlHeight, preset, pressScale, pressScaleRow, touchTarget } from "../src";
 import { renderCss, warmUpTailwindBeforeAll } from "./support/renderCss";
 
 warmUpTailwindBeforeAll();
@@ -64,6 +64,22 @@ describe("preset as consumed by Tailwind", () => {
     });
   });
 
+  it("should resolve the ink colours as nested shades, so the classes read text-accent-ink and text-warning-ink", () => {
+    expect(resolvedTheme.colors).toMatchObject({
+      accent: { ink: "rgb(var(--kl-accent-ink) / <alpha-value>)" },
+      warning: { ink: "rgb(var(--kl-warning-ink) / <alpha-value>)" },
+      camera: "rgb(var(--kl-camera) / <alpha-value>)",
+      "viewfinder-dim": "var(--kl-viewfinder-dim)",
+    });
+  });
+
+  it("should resolve label-small as 14 over 20 semibold with no tracking", () => {
+    expect(valueOf(resolvedTheme.fontSize, "label-small")).toEqual([
+      "14px",
+      { lineHeight: "20px", letterSpacing: "0", fontWeight: "600" },
+    ]);
+  });
+
   it("should resolve the design's spacing, radius, type and shadows", () => {
     expect(resolvedTheme.spacing["4"]).toBe("16px");
     expect(valueOf(resolvedTheme.borderRadius, "medium")).toBe("12px");
@@ -90,6 +106,11 @@ describe("the classes the design's screens are written with", () => {
     "rounded-medium",
     "text-h1",
     "shadow-card",
+    "text-label-small",
+    "text-accent-ink",
+    "text-warning-ink",
+    "bg-camera",
+    "bg-viewfinder-dim",
   ];
 
   it.each(classNames)("should generate %s", async (className) => {
@@ -147,6 +168,11 @@ describe("the control sizes and the press scale", () => {
     expect(valueOf(resolvedTheme.scale, "press")).toBe(String(pressScale));
   });
 
+  it("should resolve the list row press scale from the token", () => {
+    expect(valueOf(resolvedTheme.scale, "press-row")).toBe(String(pressScaleRow));
+    expect(pressScaleRow).toBe(0.985);
+  });
+
   it("should keep Tailwind's own height, width and scale values", () => {
     expect(valueOf(resolvedTheme.height, "full")).toBe("100%");
     expect(valueOf(resolvedTheme.minWidth, "0")).toBe("0px");
@@ -174,5 +200,13 @@ describe("the control sizes and the press scale", () => {
     expect(css).toContain(".active\\:scale-press:active");
     expect(css).toContain(`--tw-scale-x: ${pressScale}`);
     expect(css).toContain(`--tw-scale-y: ${pressScale}`);
+  });
+
+  it("should generate the list row press scale under a state variant", async () => {
+    const css = await renderCss({ presets: [preset] }, ["active:scale-press-row"]);
+
+    expect(css).toContain(".active\\:scale-press-row:active");
+    expect(css).toContain("--tw-scale-x: 0.985");
+    expect(css).toContain("--tw-scale-y: 0.985");
   });
 });

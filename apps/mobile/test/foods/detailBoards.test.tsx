@@ -345,7 +345,7 @@ describe("food detail boards", () => {
         }),
       ).toHaveLength(1);
       // Warning is the text colour in dark, and the primary text colour in light, where it is too faint.
-      const ink = scheme === "dark" ? themes.dark.warning : themes.light["text-primary"];
+      const ink = resolvedColor(scheme, "warning-ink");
       expect(screen.getByText("Needs review")).toHaveStyle({ color: ink });
       expect(screen.getByText("Copy to your foods")).toHaveStyle({ color: ink });
     });

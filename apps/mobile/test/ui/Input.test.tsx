@@ -476,7 +476,7 @@ describe("Input", () => {
       await renderInput({ missingNote: "Not given by the source" }, scheme);
 
       expect(await screen.findByText("Not given by the source")).toHaveStyle({
-        color: scheme === "dark" ? themes.dark.warning : themes.light["text-primary"],
+        color: resolvedColor(scheme, "warning-ink"),
       });
       expect(drawings()[0]).toHaveProp("stroke", themes[scheme].warning);
       expect(drawings()[0]).toHaveProp("width", 14);

@@ -5,6 +5,7 @@ import {
   haptic,
   motionDuration,
   pressScale,
+  pressScaleRow,
   reducedMotion,
   skeletonDelay,
   springs,
@@ -64,6 +65,11 @@ describe("press and haptics", () => {
   it("should compress a pressed control to 0.96 and not at all under reduced motion", () => {
     expect(pressScale).toBe(0.96);
     expect(reducedMotion.pressScale).toBe(1);
+  });
+
+  it("should compress a pressed list row to 0.985 and not at all under reduced motion", () => {
+    expect(pressScaleRow).toBe(0.985);
+    expect(reducedMotion.pressScaleRow).toBe(1);
   });
 
   it("should collapse movement and skew to nothing under reduced motion", () => {

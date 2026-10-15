@@ -23,14 +23,12 @@ function resolveScheme(
   return deviceScheme === "light" ? "light" : "dark";
 }
 
-// Two tokens the design proposes that `@keylow/tokens` does not have yet, so the provider sets them beside
-// the tokens' own variables, as the tailwind config does for the dark fallback. `--warning-ink` is the warning colour in dark and the primary text colour in
-// light, where warning is too faint for text (Q14): `text-warning-ink` reads it. The skeleton's shine is
-// the design's kl-shimmer gradient (100 degrees, clear at both edges), which a class cannot build from a
-// colour variable, so the whole value is one variable for the `skeleton-shine` class.
+// The skeleton's shine is the design's kl-shimmer gradient (100 degrees, clear at both edges), which a
+// class cannot build from a colour variable, so the whole value is one variable for the `skeleton-shine`
+// class. The provider sets it beside the tokens' own variables, as the tailwind config does for the dark
+// fallback.
 function proposedTokenVariables(scheme: ThemeScheme) {
   return {
-    "--kl-warning-ink": scheme === "dark" ? themes.dark.warning : themes.light["text-primary"],
     "--kl-skeleton-shine-gradient": `linear-gradient(100deg, transparent, ${themes[scheme]["skeleton-shine"]}, transparent)`,
   };
 }

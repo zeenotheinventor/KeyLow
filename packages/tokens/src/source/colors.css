@@ -25,6 +25,9 @@ color-scheme:dark;
 --success-muted:rgba(92,214,122,0.14);
 --warning-muted:rgba(255,159,67,0.14);
 --danger-muted:rgba(255,92,92,0.14);
+/* ink: coloured text that turns to primary text in light (no small coloured text in light) */
+--accent-ink:#CCF249;
+--warning-ink:#FF9F43;
 /* macros — tuned to read on dark, always paired with a label */
 --protein:#6E9BFF;
 --carbs:#F2C14E;
@@ -49,6 +52,9 @@ color-scheme:dark;
 --focus-ring-offset:#0B0E13;
 --skeleton-base:#1C212C;
 --skeleton-shine:rgba(255,255,255,0.07);
+/* camera: the scan surface, dark in both themes; the dim covers only the camera area */
+--camera:#07090D;
+--viewfinder-dim:rgba(0,0,0,0.35);
 --status-bar-style:light-content;/* @kind other */
 }
 [data-theme="light"]{
@@ -73,6 +79,8 @@ color-scheme:light;
 --success-muted:rgba(31,157,78,0.12);
 --warning-muted:rgba(199,106,0,0.12);
 --danger-muted:rgba(217,48,48,0.12);
+--accent-ink:#0F131A;
+--warning-ink:#0F131A;
 --protein:#2F6BEA;
 --carbs:#B9800E;
 --fat:#C2399A;
@@ -94,5 +102,7 @@ color-scheme:light;
 --focus-ring-offset:#EEF0F4;
 --skeleton-base:#E4E7EC;
 --skeleton-shine:rgba(255,255,255,0.7);
+--camera:#07090D;
+--viewfinder-dim:rgba(0,0,0,0.35);
 --status-bar-style:dark-content;/* @kind other */
 }

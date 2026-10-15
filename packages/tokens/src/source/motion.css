@@ -13,6 +13,7 @@
 --motion-distance:1;/* @kind other */
 --motion-skew:1;/* @kind other */
 --press-scale:0.96;/* @kind other */
+--press-scale-row:0.985;/* @kind other */
 --skeleton-delay:200ms;/* @kind other */
 --haptic-select:light;/* @kind other */
 --haptic-confirm:medium;/* @kind other */
@@ -20,7 +21,7 @@
 --haptic-warning:notification-warning;/* @kind other */
 --haptic-error:notification-error;/* @kind other */
 }
-@media (prefers-reduced-motion:reduce){:root{--motion-distance:0;/* @kind other */--motion-skew:0;/* @kind other */--press-scale:1;/* @kind other */--ease-enter:ease-out;/* @kind other */--ease-spring:ease-out;/* @kind other */--ease-whip:ease-out;/* @kind other */}}
+@media (prefers-reduced-motion:reduce){:root{--motion-distance:0;/* @kind other */--motion-skew:0;/* @kind other */--press-scale:1;/* @kind other */--press-scale-row:1;/* @kind other */--ease-enter:ease-out;/* @kind other */--ease-spring:ease-out;/* @kind other */--ease-whip:ease-out;/* @kind other */}}
 /* panels, list rows, banners: cut in from the side, slightly skewed, straighten on settle */
 @keyframes kl-cut-in{from{opacity:0;transform:translateX(calc(28px * var(--motion-distance))) skewX(calc(-8deg * var(--motion-skew)))}65%{opacity:1;transform:translateX(calc(-3px * var(--motion-distance))) skewX(calc(2deg * var(--motion-skew)))}to{opacity:1;transform:translateX(0) skewX(0)}}
 @keyframes kl-cut-out{from{opacity:1;transform:translateX(0) skewX(0)}to{opacity:0;transform:translateX(calc(-24px * var(--motion-distance))) skewX(calc(6deg * var(--motion-skew)))}}
