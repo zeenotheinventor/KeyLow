@@ -73,7 +73,7 @@ export const lightColors = {
   "danger-muted": "rgba(217,48,48,0.12)",
   "accent-ink": "#0F131A",
   "warning-ink": "#0F131A",
-  "success-ink": "#157A38",
+  "success-ink": "#126D31",
   protein: "#2F6BEA",
   carbs: "#B9800E",
   fat: "#C2399A",

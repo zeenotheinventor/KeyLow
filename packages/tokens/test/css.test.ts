@@ -66,7 +66,7 @@ describe("kilo-tokens.css", () => {
     expect(committedScopes['[data-theme="light"]']).toMatchObject({
       "--accent-ink": "#0F131A",
       "--warning-ink": "#0F131A",
-      "--success-ink": "#157A38",
+      "--success-ink": "#126D31",
       "--camera": "#07090D",
       "--viewfinder-dim": "rgba(0,0,0,0.35)",
     });

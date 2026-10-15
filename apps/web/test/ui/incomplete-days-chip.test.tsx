@@ -55,13 +55,17 @@ describe("IncompleteDaysChip", () => {
     expect(screen.getByText("All days complete this week").className).toContain("bg-success-muted");
   });
 
-  it("should keep warning words in the primary text colour in light mode, and set success words in the success ink", () => {
-    const { rerender } = render(<IncompleteDaysChip count={1} />);
+  it("should keep warning words in the primary text colour in light mode", () => {
+    render(<IncompleteDaysChip count={1} />);
+
     expect(screen.getByText("1 incomplete day this week").className).toContain(
       "light-theme:text-text-primary",
     );
+  });
 
-    rerender(<IncompleteDaysChip count={0} />);
+  it("should set success words in the success ink", () => {
+    render(<IncompleteDaysChip count={0} />);
+
     const { className } = screen.getByText("All days complete this week");
     expect(className).toContain("text-success-ink");
     expect(className).not.toContain("light-theme:text-text-primary");
