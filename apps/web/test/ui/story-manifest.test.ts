@@ -24,6 +24,7 @@ import * as inputStories from "@/components/ui/Input/Input.stories";
 import * as kiLoMarkStories from "@/components/ui/KiLoMark/KiLoMark.stories";
 import * as listRowStories from "@/components/ui/ListRow/ListRow.stories";
 import * as macroBarsStories from "@/components/ui/MacroBars/MacroBars.stories";
+import * as macroProgressStripStories from "@/components/ui/MacroProgressStrip/MacroProgressStrip.stories";
 import * as numericInputStories from "@/components/ui/NumericInput/NumericInput.stories";
 import * as nutrientTableStories from "@/components/ui/NutrientTable/NutrientTable.stories";
 import * as searchFieldStories from "@/components/ui/SearchField/SearchField.stories";
@@ -31,6 +32,7 @@ import * as segmentedControlStories from "@/components/ui/SegmentedControl/Segme
 import * as skeletonStories from "@/components/ui/Skeleton/Skeleton.stories";
 import { storyManifest } from "@/components/ui/storyManifest";
 import * as toastStories from "@/components/ui/Toast/Toast.stories";
+import * as weekStripStories from "@/components/ui/WeekStrip/WeekStrip.stories";
 
 const storyModules: Record<string, object> = {
   "Banner/Banner.stories.tsx": bannerStories,
@@ -57,6 +59,8 @@ const storyModules: Record<string, object> = {
   "ChipGroup/ChipGroup.stories.tsx": chipGroupStories,
   "MacroBars/MacroBars.stories.tsx": macroBarsStories,
   "Dialog/Dialog.stories.tsx": dialogStories,
+  "MacroProgressStrip/MacroProgressStrip.stories.tsx": macroProgressStripStories,
+  "WeekStrip/WeekStrip.stories.tsx": weekStripStories,
   "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
   "Toast/Toast.stories.tsx": toastStories,
