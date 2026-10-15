@@ -25,3 +25,13 @@ Branch keys use minimatch syntax. `*` does not match a `/`, so it would miss bra
 Remove the `git` line from `apps/web/vercel.json` (or set `"**"` to `true`). This is a repo change only, nothing in the Vercel dashboard needs to change.
 
 Sources: <https://vercel.com/docs/project-configuration/git-configuration> and <https://vercel.com/docs/project-configuration/project-settings#ignored-build-step>.
+
+## CI runs the full gate as parallel jobs
+
+`.github/workflows/ci.yml` runs on every pull request and every push to `main`. `scope` decides what the change needs, then `core`, `functions`, `db`, `mobile`, `web` and `web-storybook` run in parallel, and `checks` collects their results. `checks` is the only required check, and the name `checks` is what branch protection lists.
+
+- A pull request runs only the jobs its change can affect, and inside them only the affected packages. A change outside `apps/`, `packages/` and `tools/` (root config, the lockfile, a workflow) and every push to `main` run everything. A job that is not needed shows as skipped, and `checks` counts a skipped job as passed. A failed or cancelled job fails `checks`.
+- The workflow has no `paths` filter and must never get one. A required check that is never reported blocks the pull request for good.
+- A new job is added to the `needs` list of `checks`, nothing else changes in the settings.
+- `scope` runs turbo through npx, so it needs no install and takes a few seconds.
+- `mobile-fingerprint.yml` is separate and is not a required check. It comments on pull requests and needs write access to them.

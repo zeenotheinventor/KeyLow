@@ -1,27 +1,48 @@
 name: CI
 
-# Runs on every pull request and on every push to main. A pull request runs only the checks its
-# change can affect. A push to main always runs every check, as a full run.
+# The full gate, as parallel jobs. It runs on every pull request and on every push to main.
+#
+#   scope ──┬─ core ────────┐   formatting, lint, type-check and tests of the packages and tools,
+#           │               │   and the repository-wide suites
+#           ├─ lockfile ────┤   the lockfile duplicate check, on full runs
+#           ├─ functions ───┤   Deno type-check and lint of the Edge Functions
+#           │               │
+#           ├─ db ──────────┤   the local Supabase stack, pgTAP, the function suites, the generated
+#           │               │   types
+#           ├─ mobile ──────┼─ checks   Jest, lint and type-check of the app, the story index, the
+#           │               │           Expo doctor gate
+#           ├─ web ─────────┤   Vitest, lint, type-check and `next build` of the web app
+#           └─ web-storybook┘   the web Storybook build
+#
+# `checks` is the one required check. It needs every other job, so branch protection names only
+# `checks` and a new job never has to be added to the settings. A job that `scope` skips counts as
+# passed, a failed or cancelled job fails it.
+#
+# THIS WORKFLOW MUST NEVER HAVE A `paths` FILTER. A required check that never reports, because a
+# filter skipped the workflow, leaves the pull request waiting for it forever. Everything that depends
+# on what changed is a job-level `if` on the outputs of `scope`, and `checks` always runs. The native
+# fingerprint comment (mobile-fingerprint.yml) is informational, needs write access to pull requests,
+# and has a `paths` filter, so it stays a separate workflow and is not a required check.
+#
+# A pull request runs only the jobs its change can affect, and inside them only the packages the change
+# affects (see `scope`). A push to main always runs every job, as a full run.
 #
 # Two sessions merge pull requests in parallel, and two pull requests that each pass on their own can
 # break main together. A pull request run sees main only as it was when the run started, so the full
 # run on each push to main is the guard. The deploy workflows do not wait for it, so it never slows a
-# merge. Actions minutes are free now that the repository is public, which is why this is no longer
-# limited to the pushes that reset a cache. Every commit on main gets its own run, and those runs
-# go in parallel and are never cancelled (see the concurrency block).
+# merge. Actions minutes are free because the repository is public. Every commit on main gets its own
+# run, and those runs go in parallel and are never cancelled (see the concurrency block).
 #
 # Pull requests only restore the pnpm store and the Jest cache and never save them. A cache saved by
 # a pull request is visible to that pull request only, and each lockfile change saved its own 1.2 to
 # 1.5 GB pnpm store, which pushed the repository past the 10 GB Actions cache limit. Actions then
 # evicts the least recently used caches first, which included main's own store and Jest cache. A pull
 # request that changes the lockfile restores the closest earlier store from main and downloads only
-# what is missing, which is what its first run did anyway. Main's runs save both caches, and only when
-# the exact key was not restored, so a push that changes neither the lockfile nor the Jest or Babel
-# config restores both caches and saves nothing.
+# what is missing. Main's runs save both caches, and only when the exact key was not restored, so a
+# push that changes neither the lockfile nor the Jest or Babel config restores both caches and saves
+# nothing. The `core` job saves the pnpm store and the `mobile` job saves the Jest cache.
 #
-# One job, `checks`, runs everything but the native fingerprint (mobile-fingerprint.yml, which only
-# starts when its paths change). This file has no path filter on pull requests, so every pull request
-# gets a `checks` run.
+# Setup (pnpm, Node, the store cache, the install) is the local action .github/actions/setup.
 on:
   pull_request:
   push:
@@ -39,131 +60,164 @@ concurrency:
 permissions:
   contents: read
 
-# The job here and the one in mobile-fingerprint.yml repeat the same setup steps, because a
-# composite action would need another file.
-# The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
-# when no version input is given) and the Node version comes from .nvmrc.
-#
-# Installs use --ignore-scripts. LEFTHOOK=0 only disables running hooks, `lefthook install` still
-# writes them, so the flag is the way to skip the root "prepare" script. Nothing else needs install
-# scripts, since pnpm only allows lefthook (onlyBuiltDependencies) to run one.
+# On a pull request the checkout is the merge into its base, so HEAD^1 is the base tip and the diff
+# against it is exactly what the pull request changes. Turbo reads this variable for --affected.
+env:
+  TURBO_SCM_BASE: HEAD^1
 
 jobs:
-  # Mirrors the local gate, minus the web tests and web builds. KeyLow is mobile first, so this job
-  # runs `pnpm check:ci`, which is `pnpm check` with the @keylow/web test task left out. The web
-  # app is still formatted, linted and type-checked here, so a change to a shared package that
-  # breaks web still fails the pull request. What it skips is the web Vitest suite, the web
-  # Storybook build and the web app build. Vercel builds the web app (not Storybook) as its own
-  # check, but only when a pull request affects web (apps/web/vercel.json runs turbo-ignore), and it
-  # builds the branch head rather than the merge with main. `pnpm check` is unchanged and still
-  # runs the web tests, so run it locally for a web change. The extra checks come after the gate
-  # and are the ones the monorepo ADR lists.
+  # Decides which jobs run. It installs nothing: turbo runs from npx at the version the lockfile pins,
+  # which takes seconds, and it needs no node_modules to list the packages and their dependents.
   #
-  # When a pull request changes something the Supabase stack, the Edge Functions or the integration
-  # suites read, and on every push to main, the same job also runs those against a real local stack.
-  # The stack starts in the background right after the install, so its image pulls and boot overlap
-  # the static checks. A separate job cost a second checkout, install and minute rounding, and booted
-  # the stack on its own clock. The stack steps run even when a static check fails, so one run
-  # reports both.
-  checks:
+  # Turbo's --affected selects the packages the pull request changed and the packages that depend on
+  # them. Turbo only maps files inside a package to a package. A change anywhere else (root config, the
+  # lockfile, a workflow, the design boards tools/design-export reads) can reach any package without
+  # turbo seeing it, so it makes a full run, as does an empty diff. Markdown outside the packages is
+  # covered by the formatting step and the repository-wide suites in `core`. --no-renames lists both
+  # sides of a move, so a file moved out of a package still counts as a change outside it.
+  #
+  # Composing the filter: `turbo run <tasks> --filter=<package> --affected` runs the tasks for the
+  # package only when it is affected, and it selects nothing (exit code 0, no tasks) when it is not.
+  # Checked on turbo 2.11.2. `--filter=...[HEAD^1]` selects the same, but it needs one filter per
+  # package and cannot be combined with the exclusions `core` uses, so --affected is used instead.
+  scope:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.scope.outputs.full }}
+      affected: ${{ steps.scope.outputs.affected }}
+      db: ${{ steps.scope.outputs.db }}
+      mobile: ${{ steps.scope.outputs.mobile }}
+      web: ${{ steps.scope.outputs.web }}
     steps:
-      # On a pull request the checkout is the merge into its base, so its first parent is the base tip
-      # and the diff against it is exactly what the pull request changes. A push to main does not read
-      # the diff, because it is always a full run. Depth 2 fetches the first parent.
+      # Depth 2 fetches the first parent, which is the base tip on a pull request.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
-      - uses: pnpm/action-setup@v6
-      # No `cache: pnpm` here, because setup-node saves the store at the end of every job that missed,
-      # pull requests included. The steps below restore and save the store themselves, under the key
-      # setup-node uses (node-cache-<os>-<arch>-pnpm-<hash of the lockfile>). The key matches the
-      # store main already holds, and eas-update.yml and deploy-supabase.yml (push to main only)
-      # still use setup-node's cache under the same key. The architecture is x64 on ubuntu-latest.
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-      - name: Find the pnpm store
-        id: pnpm-store
-        run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-      # Every run restores. The exact key is the store for this lockfile. The prefix falls back to the
-      # newest earlier store, and `pnpm install` fetches whatever the lockfile has beyond it.
-      - name: Restore the pnpm store
-        id: pnpm-store-cache
-        uses: actions/cache/restore@v6
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-          restore-keys: node-cache-${{ runner.os }}-x64-pnpm-
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      # Only main saves, and only when the exact key was not restored. Saving here, right after the
-      # install, keeps the store complete and out of reach of a later failing check.
-      - name: Save the pnpm store
-        if: github.event_name == 'push' && steps.pnpm-store-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: ${{ steps.pnpm-store.outputs.path }}
-          key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
-      # Turbo's --affected runs a task only in the packages the pull request changed and the packages
-      # that depend on them, so a web pull request does not run the mobile Jest suites. Turbo only maps
-      # files inside a package to that package. A change anywhere else (root config, the lockfile, a
-      # workflow, the design boards tools/design-export reads) can reach any package without turbo
-      # seeing it, so it runs every check, as does an empty diff. A push to main runs every check
-      # without looking at the diff. Markdown outside the packages is covered by the formatting step
-      # and the repository-wide suites below. --no-renames lists both sides of a move, so a file moved
-      # out of the root still counts as a root change.
-      # The step runs with `shell: bash` for pipefail, so a failing `turbo ls` fails the step instead
-      # of reporting no affected packages.
-      - name: Work out which checks the pull request needs
+      # The step runs with `shell: bash` for pipefail, so a failing `turbo ls` fails the step instead of
+      # reporting no affected packages.
+      - name: Work out which jobs the change needs
         id: scope
         shell: bash
         run: |
-          if [ "$GITHUB_EVENT_NAME" = push ]; then
-            echo "A push to main runs every check, the Supabase stack included."
+          full() {
+            echo "$1"
             {
-              echo "db=true"
-              echo "affected="
               echo "full=true"
+              echo "affected="
+              echo "db=true"
               echo "mobile=true"
+              echo "web=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
+          }
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            full "A push to main runs every job."
           fi
           changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
-          # The stack runs for the packages the stack, the functions (which embed @keylow/core) and the
-          # integration suites read, and for root files that change the tools or the task graph.
-          db=false
-          if grep -qE '^(packages/(db|core|api-client|config)/|(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc|turbo\.json|tsconfig\.base\.json|\.nvmrc|\.github/workflows/ci\.yml)$)' <<<"$changed"; then
-            db=true
-          fi
-          echo "Supabase stack needed: $db"
-          echo "db=$db" >> "$GITHUB_OUTPUT"
           outside=$(grep -vE '^(apps|packages|tools)/|\.md$' <<<"$changed" || true)
           if [ -z "$changed" ] || [ -n "$outside" ]; then
-            echo "A file outside the packages changed, so every check runs."
-            {
-              echo "affected="
-              echo "full=true"
-              echo "mobile=true"
-            } >> "$GITHUB_OUTPUT"
-            exit 0
+            full "A file outside the packages changed, so every job runs."
           fi
-          echo "TURBO_SCM_BASE=HEAD^1" >> "$GITHUB_ENV"
-          TURBO_SCM_BASE=HEAD^1 pnpm -s turbo ls --affected --output=json > "$RUNNER_TEMP/affected.json"
+          # The stack runs for the packages the stack, the functions (which embed @keylow/core) and the
+          # integration suites read.
+          db=false
+          if grep -qE '^packages/(db|core|api-client|config)/' <<<"$changed"; then
+            db=true
+          fi
+          turbo_version=$(sed -n 's/^  turbo@\(.*\):$/\1/p' pnpm-lock.yaml | head -n 1)
+          npx --yes "turbo@$turbo_version" ls --affected --output=json > "$RUNNER_TEMP/affected.json"
           packages=$(jq -r '.packages.items[].name' "$RUNNER_TEMP/affected.json")
           echo "Affected packages:" $packages
           has() { grep -qx "$1" <<<"$packages"; }
           mobile=false
+          web=false
           # The doctor gate is not a dependency of the app, but a change to it is tested by running it.
           if has @keylow/mobile || has @keylow/expo-doctor-gate; then mobile=true; fi
+          if has @keylow/web; then web=true; fi
+          echo "Jobs: db=$db mobile=$mobile web=$web"
           {
-            echo "affected=--affected"
             echo "full=false"
+            echo "affected=--affected"
+            echo "db=$db"
             echo "mobile=$mobile"
+            echo "web=$web"
           } >> "$GITHUB_OUTPUT"
+
+  # The cheap checks, which always run. Formatting is checked for the whole repository, not only the
+  # affected packages, because the root format:check task belongs to no package, so --affected skips it,
+  # and Prettier checks the repository in seconds. Everything that is not an app is linted,
+  # type-checked and tested here, so a change to a package is also tested by the jobs of the apps that
+  # use it.
+  core:
+    needs: scope
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: ./.github/actions/setup
+        with:
+          save-store: "true"
+      - name: Check the formatting of the whole repository
+        run: pnpm format:check
+      - name: Lint, type-check and test the packages and tools
+        run: pnpm turbo run lint typecheck test --filter='!@keylow/mobile' --filter='!@keylow/web' ${{ needs.scope.outputs.affected }}
+      # Two suites read files across the repository instead of importing them, so turbo never counts
+      # them as affected. The source guard in @keylow/config walks every source file in apps/ and
+      # packages/ and reads the core helpers. tools/design-export checks docs/design, its READMEs
+      # included, and the packages/tokens stylesheet. Both take seconds, so they always run. A full run
+      # has run them above.
+      - name: Run the repository-wide suites
+        if: needs.scope.outputs.full != 'true'
+        run: pnpm turbo run test --filter=@keylow/config --filter=@keylow/design-export
+
+  # Fails when the lockfile contains duplicates that a dedupe would remove. It resolves against the
+  # registry, which took anywhere from 20 s to 110 s, so it has a job of its own. A lockfile change
+  # always makes a full run, and so does every push to main, so the other runs skip it.
+  # The flag keeps the install pass that dedupe runs from triggering the prepare script.
+  lockfile:
+    needs: scope
+    if: needs.scope.outputs.full == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Check the lockfile for duplicates
+        run: pnpm dedupe --check --ignore-scripts
+
+  # The Edge Functions under Deno: type-check and lint. It needs no stack, so it has a job of its own
+  # and runs beside `db`, whose stack boot it would otherwise slow down by sharing the runner's cores.
+  # It runs for the same changes as `db`, because the functions embed @keylow/core. `deno check` and
+  # `deno lint` run from the pinned `deno` npm package, so no Deno setup step is needed. Deno downloads
+  # the supabase-js and zod packages itself. The check bundles @keylow/core for Deno first.
+  functions:
+    needs: scope
+    if: needs.scope.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Check the Edge Functions
+        run: pnpm --filter @keylow/db check:functions
+
+  # The Supabase stack and the integration suites against a real local stack, with the Edge Functions
+  # served. It runs for the packages the stack, the functions and the suites read, and on every full
+  # run. The stack starts in the background before anything is installed, so its image pulls and boot
+  # overlap the install and the core bundle, and the stack steps run even when a step before them
+  # fails, so one run reports everything.
+  db:
+    needs: scope
+    if: needs.scope.outputs.db == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
       # Pinned to the CLI version used locally. The action also accepts "latest".
       - uses: supabase/setup-cli@v3
-        if: steps.scope.outputs.db == 'true'
         with:
           version: 2.106.0
       # The CLI pulls some of its images from public.ecr.aws, which refuses anonymous pulls with
@@ -181,90 +235,28 @@ jobs:
       # inbucket (mail catcher), realtime, storage and studio.
       #
       # All of it runs in the background and writes its exit status to a file, which the wait step
-      # below reads after the static checks. The file is written under another name and moved, so the
-      # wait step never reads it half written.
+      # below reads. The file is written under another name and moved, so the wait step never reads
+      # it half written.
       - name: Start the local Supabase stack in the background
         id: start
-        if: steps.scope.outputs.db == 'true'
         working-directory: packages/db
         run: |
           nohup bash -c '
             (
               set -e
-              for image in postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36; do
-                docker pull "ghcr.io/supabase/$image"
-                docker tag "ghcr.io/supabase/$image" "public.ecr.aws/supabase/$image"
-              done
+              printf "%s\n" postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36 |
+                xargs -P 4 -I {} sh -c "docker pull ghcr.io/supabase/{} && docker tag ghcr.io/supabase/{} public.ecr.aws/supabase/{}"
               supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
             )
             echo $? > "$RUNNER_TEMP/supabase-start.status.tmp"
             mv "$RUNNER_TEMP/supabase-start.status.tmp" "$RUNNER_TEMP/supabase-start.status"
           ' > "$RUNNER_TEMP/supabase-start.log" 2>&1 &
-      # On a cold start the mobile food search suite alone has Jest transform about 300 React Native
-      # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
-      # transformer config, so restoring one from a near miss is safe: stale entries are never read.
-      # The path is the cacheDirectory in apps/mobile/jest.config.js. Pull requests only restore it,
-      # and the step that saves it runs on main (see the header).
-      - name: Restore the mobile Jest cache
-        id: jest-cache
-        if: steps.scope.outputs.mobile == 'true'
-        uses: actions/cache/restore@v6
-        with:
-          path: apps/mobile/node_modules/.cache/jest
-          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
-          restore-keys: jest-${{ runner.os }}-
-      # `check:ci` is `pnpm check` for every package except @keylow/web, plus the web format, lint and
-      # type-check tasks, so it skips only the web tests (see the root package.json). The flag reaches
-      # both turbo runs inside the script.
-      - name: Run the local gate
-        run: pnpm check:ci ${{ steps.scope.outputs.affected }}
-      # Saved after the gate, which is what fills the Jest cache. Only main saves, and only on a miss
-      # of the exact key.
-      - name: Save the mobile Jest cache
-        if: github.event_name == 'push' && steps.scope.outputs.mobile == 'true' && steps.jest-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v6
-        with:
-          path: apps/mobile/node_modules/.cache/jest
-          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
-      # The root format:check task belongs to no package, so --affected skips it. Prettier checks the
-      # whole repository in seconds, so it runs here instead.
-      - name: Check the formatting of the whole repository
-        if: steps.scope.outputs.full != 'true'
-        run: pnpm format:check
-      # Two suites read files across the repository instead of importing them, so turbo never counts
-      # them as affected. The source guard in @keylow/config walks every source file in apps/ and
-      # packages/ and reads the core helpers. tools/design-export checks docs/design, its READMEs
-      # included, and the packages/tokens stylesheet. Both take seconds, so they always run.
-      - name: Run the repository-wide suites
-        if: steps.scope.outputs.full != 'true'
-        run: pnpm turbo run test --filter=@keylow/config --filter=@keylow/design-export
-      # Fails when the lockfile contains duplicates that a dedupe would remove. A lockfile change
-      # always makes a full run, and so does every push to main, so the other runs skip it.
-      # The flag keeps the install pass that dedupe runs from triggering the prepare script.
-      - name: Check the lockfile for duplicates
-        if: steps.scope.outputs.full == 'true'
-        run: pnpm dedupe --check --ignore-scripts
-      # Mobile Storybook has no static build. Its stories are type-checked and rendered in both schemes by
-      # the gate above (tsc covers .rnstorybook, and the Jest smoke test renders every story). What is left
-      # is that the committed story index is the one the story files generate, which Metro rewrites on start.
-      - name: Check the mobile story index is committed
-        if: steps.scope.outputs.mobile == 'true'
-        run: |
-          pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook
-          git diff --exit-code apps/mobile/.rnstorybook/storybook.requires.ts
-      # Some doctor checks call the Expo API. A run where every failure is a network error is
-      # downgraded to a warning, so an Expo outage does not block merges.
-      # Expo patch releases are installed in a batch, when a native build is being made anyway, because
-      # each one changes the native fingerprint. doctor has no option for "patch mismatches only", so
-      # tools/expo-doctor-gate runs it and reads its report. A package that is only a patch behind gets a
-      # warning annotation. Every other failure, a minor or major mismatch included, fails the step, and so
-      # does a report the script cannot read.
-      - name: Check the Expo project health
-        if: steps.scope.outputs.mobile == 'true'
-        working-directory: apps/mobile
-        env:
-          EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
-        run: node --experimental-strip-types ../../tools/expo-doctor-gate/src/runDoctorGate.ts
+      - uses: ./.github/actions/setup
+      # The functions import the @keylow/core bundle, so it is written before they are served. Serving
+      # needs no declarations, which are the slow part and are read by the `functions` job only.
+      - name: Bundle @keylow/core for Deno
+        working-directory: packages/db
+        run: node --experimental-strip-types scripts/bundle-core-for-deno.ts --skip-declarations
       # Bounded at ten minutes. Prints the start log either way, so a failed pull or start is explained.
       - name: Wait for the Supabase stack
         id: stack
@@ -283,18 +275,16 @@ jobs:
             exit 1
           fi
       # `functions serve` starts its own edge-runtime container, so edge-runtime stays in the -x list
-      # above. The functions import the @keylow/core bundle, so it is written first. The container
-      # reaches the OFF mock the tests start on the runner through the gateway address of the
-      # stack's Docker network. Docker Desktop resolves host.docker.internal, a Linux runner does
-      # not, so the env file the function reads gets the gateway address in its place. The loop is
-      # bounded. A function that never answers fails the step, and the last step of the job prints the
-      # serve log.
+      # above. The container reaches the OFF mock the tests start on the runner through the gateway
+      # address of the stack's Docker network. Docker Desktop resolves host.docker.internal, a Linux
+      # runner does not, so the env file the function reads gets the gateway address in its place. The
+      # loop is bounded. A function that never answers fails the step, and the last step of the job
+      # prints the serve log.
       - name: Serve the Edge Functions
         id: serve
         if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
         working-directory: packages/db
         run: |
-          pnpm --filter @keylow/db bundle-core-for-deno
           gateway=$(docker network inspect supabase_network_keylow --format '{{(index .IPAM.Config 0).Gateway}}')
           sed "s/host.docker.internal/$gateway/" supabase/functions/.env.test > "$RUNNER_TEMP/functions.env"
           nohup supabase functions serve --env-file "$RUNNER_TEMP/functions.env" --no-verify-jwt \
@@ -309,13 +299,10 @@ jobs:
           done
           echo "The functions were not served within 90 seconds. The last status was $status."
           exit 1
-      # check:integration includes check:functions. Turbo bundles @keylow/core for Deno first, then
-      # `deno check` and `deno lint` run from the pinned `deno` npm package, so no Deno setup step is
-      # needed. Deno downloads the supabase-js and zod packages itself. After the pgTAP tests, the
-      # Edge Function HTTP suites run against the served functions.
-      - name: Check the Edge Functions and run the pgTAP tests and the function suites
+      # The pgTAP tests, then the Edge Function HTTP suites run against the served functions.
+      - name: Run the pgTAP tests and the function suites
         if: ${{ !cancelled() && steps.serve.outcome == 'success' }}
-        run: pnpm check:integration
+        run: pnpm turbo run test:integration
       # gen-types rewrites the file in place, so any difference means it was not committed.
       - name: Check the generated types are committed
         if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
@@ -326,3 +313,109 @@ jobs:
       - name: Print the functions serve log
         if: ${{ failure() && steps.serve.outcome != 'skipped' }}
         run: cat "$RUNNER_TEMP/functions-serve.log" || true
+
+  # The mobile app. A change to the app, to a package it uses or to the doctor gate runs it. The tasks
+  # run with --only, so the packages the app depends on are not linted and type-checked again, `core`
+  # does that.
+  mobile:
+    needs: scope
+    if: needs.scope.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: ./.github/actions/setup
+      # On a cold start the mobile food search suite alone has Jest transform about 300 React Native
+      # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
+      # transformer config, so restoring one from a near miss is safe: stale entries are never read.
+      # The path is the cacheDirectory in apps/mobile/jest.config.js. Pull requests only restore it,
+      # and the step that saves it runs on main (see the header).
+      - name: Restore the mobile Jest cache
+        id: jest-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: apps/mobile/node_modules/.cache/jest
+          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
+          restore-keys: jest-${{ runner.os }}-
+      # Selects nothing when only the doctor gate changed, which is what the doctor step below is for.
+      - name: Lint, type-check and test the app
+        run: pnpm turbo run lint typecheck test --filter=@keylow/mobile --only ${{ needs.scope.outputs.affected }}
+      # Saved after the tests, which is what fills the Jest cache. Only main saves, and only on a miss
+      # of the exact key.
+      - name: Save the mobile Jest cache
+        if: github.event_name == 'push' && steps.jest-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: apps/mobile/node_modules/.cache/jest
+          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
+      # Mobile Storybook has no static build. Its stories are type-checked and rendered in both schemes by
+      # the step above (tsc covers .rnstorybook, and the Jest smoke test renders every story). What is
+      # left is that the committed story index is the one the story files generate, which Metro rewrites
+      # on start.
+      - name: Check the mobile story index is committed
+        run: |
+          pnpm --filter @keylow/mobile exec sb-rn-get-stories --config-path .rnstorybook
+          git diff --exit-code apps/mobile/.rnstorybook/storybook.requires.ts
+      # Some doctor checks call the Expo API. A run where every failure is a network error is
+      # downgraded to a warning, so an Expo outage does not block merges.
+      # Expo patch releases are installed in a batch, when a native build is being made anyway, because
+      # each one changes the native fingerprint. doctor has no option for "patch mismatches only", so
+      # tools/expo-doctor-gate runs it and reads its report. A package that is only a patch behind gets a
+      # warning annotation. Every other failure, a minor or major mismatch included, fails the step, and so
+      # does a report the script cannot read.
+      - name: Check the Expo project health
+        working-directory: apps/mobile
+        env:
+          EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
+        run: node --experimental-strip-types ../../tools/expo-doctor-gate/src/runDoctorGate.ts
+
+  # The web app, and the web build gate: Vercel deploys main only, so the build that a pull request is
+  # checked with is `next build` here. `tsc` alone does not find everything `next build` does, which
+  # runs its own type-check and compile pass and has failed on a pull request that passed the gate.
+  # Every route is rendered on demand, so the build needs no Supabase environment variables.
+  web:
+    needs: scope
+    if: needs.scope.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Lint, type-check and test the web app
+        run: pnpm turbo run lint typecheck test --filter=@keylow/web --only
+      - name: Build the web app
+        run: pnpm turbo run build --filter=@keylow/web --only
+
+  # Builds the web Storybook, so a broken story or a Storybook config that no longer matches Next
+  # fails the pull request.
+  web-storybook:
+    needs: scope
+    if: needs.scope.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Build the web Storybook
+        run: pnpm turbo run build-storybook --filter=@keylow/web --only
+
+  # The required check. It always runs, so a pull request whose other jobs were skipped still gets a
+  # result. A skipped job passes. A failed or cancelled job, or a result this script does not know,
+  # fails it. When a job is missing from `needs` it is not checked, so add each new job to the list.
+  checks:
+    needs: [scope, core, lockfile, functions, db, mobile, web, web-storybook]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail unless every job succeeded or was skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          echo "$NEEDS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          if echo "$NEEDS" | jq -e 'any(.[]; .result != "success" and .result != "skipped")' > /dev/null; then
+            echo "A job failed or was cancelled."
+            exit 1
+          fi
