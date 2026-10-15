@@ -6,7 +6,6 @@ describe("ringNumbers", () => {
   it("should fill the ring by the share eaten and leave the rest as the calories remaining", () => {
     expect(ringNumbers(1039, 2200)).toEqual({
       eatenFraction: 1039 / 2200,
-      overFraction: 0,
       remainingCalories: 1161,
       isOver: false,
       hasTarget: true,
@@ -16,24 +15,23 @@ describe("ringNumbers", () => {
   it("should be full and not over at exactly the target", () => {
     expect(ringNumbers(2200, 2200)).toEqual({
       eatenFraction: 1,
-      overFraction: 0,
       remainingCalories: 0,
       isOver: false,
       hasTarget: true,
     });
   });
 
-  it("should keep filling in the overflow past the target, and count the calories over", () => {
-    const numbers = ringNumbers(2412, 2200);
-
-    expect(numbers.eatenFraction).toBe(1);
-    expect(numbers.overFraction).toBeCloseTo(212 / 2200, 10);
-    expect(numbers.remainingCalories).toBe(212);
-    expect(numbers.isOver).toBe(true);
+  it("should be full past the target, and count the calories over", () => {
+    expect(ringNumbers(2412, 2200)).toEqual({
+      eatenFraction: 1,
+      remainingCalories: 212,
+      isOver: true,
+      hasTarget: true,
+    });
   });
 
-  it("should stop the overflow at one full lap and never reset", () => {
-    expect(ringNumbers(9000, 2200).overFraction).toBe(1);
+  it("should stay one full lap however far past the target the day is", () => {
+    expect(ringNumbers(9000, 2200).eatenFraction).toBe(1);
   });
 
   it("should work from whole calories, so half a calorie past the target is not over", () => {
@@ -42,10 +40,7 @@ describe("ringNumbers", () => {
   });
 
   it("should draw an empty ring when there is no target", () => {
-    const numbers = ringNumbers(500, 0);
-
-    expect(numbers.eatenFraction).toBe(0);
-    expect(numbers.overFraction).toBe(0);
+    expect(ringNumbers(500, 0).eatenFraction).toBe(0);
   });
 
   it("should say there is no target at zero, and count the calories eaten as the number to print", () => {

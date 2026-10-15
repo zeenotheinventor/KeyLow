@@ -2,10 +2,8 @@
 export const compactBelowSize = 180;
 
 export type RingNumbers = {
-  /** How much of the ring the calories fill, from 0 to 1. */
+  /** How much of the ring the calories fill, from 0 to 1. A ring that is over target is full. */
   eatenFraction: number;
-  /** How far the warning has gone round on top of a full ring, from 0 to 1. It stops at a full lap and never resets. */
-  overFraction: number;
   /** The calories left, or past the target when `isOver`, always positive or zero. With no target it is the calories eaten. */
   remainingCalories: number;
   /** False for a target of zero, which means none is set. The ring then has nothing to fill and the calories eaten are its number. */
@@ -23,7 +21,6 @@ export function ringNumbers(eaten: number, target: number): RingNumbers {
 
   return {
     eatenFraction: Math.min(1, ratio),
-    overFraction: Math.max(0, Math.min(1, ratio - 1)),
     remainingCalories: Math.abs(remaining),
     hasTarget: wholeTarget > 0,
     isOver: wholeTarget > 0 && remaining < 0,

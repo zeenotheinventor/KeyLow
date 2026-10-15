@@ -34,9 +34,8 @@ function whipIn() {
 }
 
 const fillOf = (macro: string) => screen.getByTestId(`${macro}-fill`);
-const capOf = (macro: string) => screen.getByTestId(`${macro}-cap`);
-const percentOf = (element: HTMLElement, property: "--fill" | "--cap") =>
-  parseFloat(element.style.getPropertyValue(property));
+const barOf = (macro: string) => screen.getByTestId(`${macro}-bar`);
+const percentOf = (element: HTMLElement) => parseFloat(element.style.getPropertyValue("--fill"));
 
 describe("MacroBars", () => {
   beforeEach(() => {
@@ -70,15 +69,21 @@ describe("MacroBars", () => {
       render(<MacroBars {...under} />);
       whipIn();
 
-      expect(percentOf(fillOf("protein"), "--fill")).toBeCloseTo(53.75, 6);
-      expect(percentOf(fillOf("fat"), "--fill")).toBeCloseTo((19 / 70) * 100, 6);
+      expect(percentOf(fillOf("protein"))).toBeCloseTo(53.75, 6);
+      expect(percentOf(fillOf("fat"))).toBeCloseTo((19 / 70) * 100, 6);
     });
 
-    it("should draw no cap and no delta while under target", () => {
+    it("should draw no outline and no delta while under target", () => {
       render(<MacroBars {...under} />);
 
-      expect(screen.queryByTestId("protein-cap")).toBeNull();
+      expect(barOf("protein").className).not.toContain("box-shadow");
       expect(screen.queryByText(/^\+/)).toBeNull();
+    });
+
+    it("should draw no outline at exactly the target", () => {
+      render(<MacroBars {...under} protein={{ eaten: 160, target: 160 }} />);
+
+      expect(barOf("protein").className).not.toContain("box-shadow");
     });
   });
 
@@ -90,42 +95,57 @@ describe("MacroBars", () => {
       expect(screen.getByRole("group", { name: "Carbs: 257 of 220 grams, 37 over" })).toBeTruthy();
     });
 
-    it("should print the delta with a plus sign, in the warning ink", () => {
+    it("should print the delta with a plus sign, in the primary text", () => {
       render(<MacroBars {...over} />);
 
       const fat = within(screen.getByRole("group", { name: /Fat/ }));
-      expect(fat.getByText("+11 g").className).toContain("text-warning");
+      expect(fat.getByText("+11 g").className).toContain("text-text-primary");
       expect(within(screen.getByRole("group", { name: /Carbs/ })).getByText("+37 g")).toBeTruthy();
     });
 
-    it("should complete the fill and add a warning cap", () => {
+    it("should complete the fill", () => {
       render(<MacroBars {...over} />);
       whipIn();
 
-      expect(percentOf(fillOf("fat"), "--fill")).toBe(100);
-      expect(capOf("fat").getAttribute("class")).toContain("bg-warning");
-      expect(percentOf(capOf("fat"), "--cap")).toBeCloseTo((11 / 70) * 100, 6);
+      expect(percentOf(fillOf("fat"))).toBe(100);
     });
 
-    it("should hatch the cap in the surface colour, so it is not colour alone", async () => {
-      render(<MacroBars {...over} />);
-      const css = await compileUtilities(capOf("fat").getAttribute("class") ?? "");
-
-      expect(css).toContain("repeating-linear-gradient(-45deg");
-      expect(css).toContain("var(--kl-surface)");
-    });
-
-    it("should stop the cap at 35 per cent of the bar", () => {
+    it("should draw no cap, however far over the day is", () => {
       render(<MacroBars {...over} carbs={{ eaten: 400, target: 220 }} />);
-      whipIn();
 
-      expect(percentOf(capOf("carbs"), "--cap")).toBe(35);
+      expect(screen.queryByTestId("fat-cap")).toBeNull();
+      expect(screen.queryByTestId("carbs-cap")).toBeNull();
     });
 
-    it("should draw no cap for a macro that is still under", () => {
+    it("should draw no warning class anywhere", () => {
+      const { container } = render(<MacroBars {...over} />);
+
+      expect(container.innerHTML).not.toContain("warning");
+    });
+
+    it.each(["protein", "carbs", "fat"])(
+      "should outline the %s bar in its own colour: a 1 px gap in the card surface, then a 1.5 px ring mixed with white",
+      async (macro) => {
+        render(<MacroBars {...over} protein={{ eaten: 197, target: 160 }} />);
+        const css = await compileUtilities(barOf(macro).getAttribute("class") ?? "");
+
+        expect(css).toContain(
+          `box-shadow: 0 0 0 1px rgb(var(--kl-surface)),0 0 0 2.5px color-mix(in srgb,rgb(var(--kl-${macro})) 55%,white)`,
+        );
+      },
+    );
+
+    it("should outline only the bars that are over", () => {
       render(<MacroBars {...over} />);
 
-      expect(screen.queryByTestId("protein-cap")).toBeNull();
+      expect(barOf("protein").className).not.toContain("box-shadow");
+      expect(barOf("fat").className).toContain("box-shadow");
+    });
+
+    it("should outline the compact bars in the same way", () => {
+      render(<MacroBars {...over} compact />);
+
+      expect(barOf("fat").className).toContain("box-shadow");
     });
   });
 
@@ -138,7 +158,7 @@ describe("MacroBars", () => {
       expect(within(protein).getByText("86")).toBeTruthy();
       expect(within(protein).getByText("g")).toBeTruthy();
       expect(within(protein).queryByText(/\//)).toBeNull();
-      expect(percentOf(fillOf("protein"), "--fill")).toBe(0);
+      expect(percentOf(fillOf("protein"))).toBe(0);
     });
   });
 
@@ -168,9 +188,7 @@ describe("MacroBars", () => {
 
     it("should draw without a transition under reduced motion", async () => {
       render(<MacroBars {...over} />);
-      const css = await compileUtilities(
-        `${fillOf("fat").getAttribute("class")} ${screen.getByTestId("fat-cap").getAttribute("class")}`,
-      );
+      const css = await compileUtilities(fillOf("fat").getAttribute("class") ?? "");
 
       expect(reducedMotionRules(css, "motion-reduce\\:transition-none")).toContain("transition");
     });

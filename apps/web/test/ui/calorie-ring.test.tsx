@@ -158,20 +158,27 @@ describe("CalorieRing", () => {
       );
     });
 
-    it("should draw no warning while the day is under target", () => {
+    it("should draw no outline while the day is under target", () => {
       renderRing();
 
-      expect(screen.queryByTestId("ring-over-arc")).toBeNull();
+      expect(screen.queryByTestId("ring-outer-outline")).toBeNull();
+      expect(screen.queryByTestId("ring-inner-outline")).toBeNull();
     });
 
-    it("should be full, with no warning, at the target", () => {
+    it("should be full, with no outline, at the target", () => {
       renderRing({ eaten: 2200 });
       whipIn();
 
       expect(Number(screen.getByTestId("ring-eaten-arc").getAttribute("stroke-dashoffset"))).toBe(
         0,
       );
-      expect(screen.queryByTestId("ring-over-arc")).toBeNull();
+      expect(screen.queryByTestId("ring-outer-outline")).toBeNull();
+    });
+
+    it("should draw no calories arc while nothing is eaten, so a round cap leaves no dot", () => {
+      renderRing({ eaten: 0 });
+
+      expect(screen.queryByTestId("ring-eaten-arc")).toBeNull();
     });
   });
 
@@ -180,26 +187,69 @@ describe("CalorieRing", () => {
       vi.useFakeTimers({ toFake: ["requestAnimationFrame", "cancelAnimationFrame"] });
     });
 
-    it("should keep filling in warning on top of a full ring", () => {
+    it("should fill the ring completely in the calories colour", () => {
       renderRing(over);
       whipIn();
 
-      const warning = screen.getByTestId("ring-over-arc");
-      expect(warning.getAttribute("class")).toContain("stroke-warning");
-      expect(Number(warning.getAttribute("stroke-dasharray")?.split(" ")[0])).toBeCloseTo(
-        circumference * (212 / 2200),
-        3,
-      );
-      expect(Number(screen.getByTestId("ring-eaten-arc").getAttribute("stroke-dashoffset"))).toBe(
-        0,
+      const arc = screen.getByTestId("ring-eaten-arc");
+      expect(Number(arc.getAttribute("stroke-dashoffset"))).toBe(0);
+      expect(arc.getAttribute("class")).toContain("stroke-calories");
+    });
+
+    it("should gain an outline outside the stroke, a 1 px gap then a 1.5 px line", () => {
+      renderRing(over);
+
+      const outer = screen.getByTestId("ring-outer-outline");
+      expect(outer.getAttribute("r")).toBe("101.75");
+      expect(outer.getAttribute("stroke-width")).toBe("1.5");
+    });
+
+    it("should gain an outline inside the stroke, with the same gap and line", () => {
+      renderRing(over);
+
+      const inner = screen.getByTestId("ring-inner-outline");
+      expect(inner.getAttribute("r")).toBe("84.25");
+      expect(inner.getAttribute("stroke-width")).toBe("1.5");
+    });
+
+    it("should keep the outline to the same radii when the ring is a different size", () => {
+      renderRing({ ...over, size: 160, stroke: 10 });
+
+      // r + stroke / 2 + 1.75 and r - stroke / 2 - 1.75, with r = 75.
+      expect(screen.getByTestId("ring-outer-outline").getAttribute("r")).toBe("81.75");
+      expect(screen.getByTestId("ring-inner-outline").getAttribute("r")).toBe("68.25");
+    });
+
+    it.each(["ring-outer-outline", "ring-inner-outline"])(
+      "should draw %s in the calories colour mixed 55 per cent with white, which both themes resolve",
+      async (testId) => {
+        renderRing(over);
+        const css = await compileUtilities(screen.getByTestId(testId).getAttribute("class") ?? "");
+
+        expect(css).toContain("stroke: color-mix(in srgb,rgb(var(--kl-calories)) 55%,white)");
+      },
+    );
+
+    it("should let the outer outline show outside the svg", () => {
+      renderRing(over);
+
+      expect(screen.getByTestId("ring-track").closest("svg")?.getAttribute("class")).toContain(
+        "overflow-visible",
       );
     });
 
-    it("should turn the numeral and the caption to the warning ink, and read the amount over", () => {
+    it("should draw no warning arc, gap or class", () => {
       renderRing(over);
 
-      expect(screen.getByText("212").className).toContain("text-warning");
-      expect(screen.getByText("over target").className).toContain("text-warning");
+      expect(screen.queryByTestId("ring-over-arc")).toBeNull();
+      expect(screen.getByRole("img").innerHTML).not.toContain("warning");
+    });
+
+    it("should keep the numeral and the caption in primary and secondary ink, and read the amount over", () => {
+      renderRing(over);
+
+      expect(screen.getByText("212").className).toContain("text-text-primary");
+      expect(screen.getByText("over target").className).toContain("text-text-secondary");
       expect(screen.getByRole("img", { name: "212 calories over target of 2,200" })).toBeTruthy();
     });
 
@@ -214,6 +264,45 @@ describe("CalorieRing", () => {
 
       expect(screen.getByText("1,161").className).toContain("text-text-primary");
       expect(screen.getByText("remaining").className).toContain("text-text-secondary");
+    });
+  });
+
+  describe("no target", () => {
+    const noTarget = { eaten: 1039, target: 0 };
+
+    it("should be named by the calories eaten and say no target is set", () => {
+      renderRing(noTarget);
+
+      expect(screen.getByRole("img", { name: "1,039 calories eaten, no target set" })).toBeTruthy();
+    });
+
+    it("should print the calories eaten as the numeral under the caption eaten", () => {
+      renderRing(noTarget);
+
+      expect(screen.getByText("1,039")).toBeTruthy();
+      expect(screen.getByText("eaten")).toBeTruthy();
+    });
+
+    it("should keep the caption eaten whatever label it is given", () => {
+      renderRing({ ...noTarget, label: "left today" });
+
+      expect(screen.getByText("eaten")).toBeTruthy();
+      expect(screen.queryByText("left today")).toBeNull();
+    });
+
+    it("should print no eaten or target lines", () => {
+      renderRing(noTarget);
+
+      expect(screen.queryByText("1,039 eaten")).toBeNull();
+      expect(screen.queryByText(/target/)).toBeNull();
+    });
+
+    it("should draw only the track: no fill and no outline", () => {
+      renderRing(noTarget);
+
+      expect(screen.getByTestId("ring-track")).toBeTruthy();
+      expect(screen.queryByTestId("ring-eaten-arc")).toBeNull();
+      expect(screen.queryByTestId("ring-outer-outline")).toBeNull();
     });
   });
 
@@ -289,10 +378,7 @@ describe("CalorieRing", () => {
     it("should draw the fill without a transition", async () => {
       renderRing(over);
       const css = await compileUtilities(
-        [
-          screen.getByTestId("ring-eaten-arc").getAttribute("class"),
-          screen.getByTestId("ring-over-arc").getAttribute("class"),
-        ].join(" "),
+        screen.getByTestId("ring-eaten-arc").getAttribute("class") ?? "",
       );
 
       expect(reducedMotionRules(css, "motion-reduce\\:transition-none")).toContain("transition");

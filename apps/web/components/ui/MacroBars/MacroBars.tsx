@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * Protein, carbs and fat against their targets. Each row is named in words (never colour alone) and
- * prints the grams eaten over the target. Past a target the fill completes, a warning cap marks the
- * overflow and the delta is printed in the warning ink. With no target the bar stays empty and only the
- * grams show. The fills whip in one after another.
+ * prints the grams eaten over the target. Past a target the fill completes and the bar gains a brighter
+ * outline of its own colour (ruling 17), and the delta is printed in the primary text. With no target the
+ * bar stays empty and only the grams show. The fills whip in one after another.
  */
 export function MacroBars({ protein, carbs, fat, compact = false, className }: MacroBarsProps) {
   return (
