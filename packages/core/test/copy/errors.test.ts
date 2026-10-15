@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { GENERIC_ERROR, describeEdgeError, describeRateLimit } from "../../src/copy";
+import { GENERIC_ERROR, RETRY_LABEL, describeEdgeError, describeRateLimit } from "../../src/copy";
 import { edgeErrorCodeSchema } from "../../src/schemas";
 
 describe("describeRateLimit", () => {
@@ -30,6 +30,10 @@ describe("describeEdgeError", () => {
 
   it("should pin the generic sentence", () => {
     expect(GENERIC_ERROR).toBe("Something went wrong. Try again.");
+  });
+
+  it("should pin the retry button's label", () => {
+    expect(RETRY_LABEL).toBe("Try again");
   });
 
   it("should have its own sentence for each of the six edge error codes", () => {

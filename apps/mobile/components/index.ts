@@ -1,5 +1,8 @@
 export { AboutScreen } from "./AboutScreen";
+export { AcceptTermsScreen } from "./AcceptTermsScreen";
 export { AppearanceSetting } from "./AppearanceSetting";
+export { AcceptanceCheckbox } from "./AcceptanceCheckbox";
+export type { AcceptanceCheckboxProps } from "./AcceptanceCheckbox";
 export { AuthForm } from "./AuthForm";
 export type { AuthFormFooter, AuthFormOutcome, AuthFormProps } from "./AuthForm";
 export { GoogleButton } from "./GoogleButton";
@@ -13,6 +16,9 @@ export type { LinkNotValidProps } from "./LinkNotValid";
 export { SigningInLink } from "./SigningInLink";
 export { AuthGate } from "./AuthGate";
 export type { AuthGateProps } from "./AuthGate";
+export { SignOutButton } from "./SignOutButton";
+export { TermsGate } from "./TermsGate";
+export type { TermsGateProps } from "./TermsGate";
 export { MainTabBar } from "./MainTabBar";
 export { PlaceholderScreen } from "./PlaceholderScreen";
 export type { PlaceholderScreenProps } from "./PlaceholderScreen";

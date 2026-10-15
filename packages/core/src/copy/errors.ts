@@ -3,6 +3,9 @@ import type { EdgeErrorCode } from "../schemas/off";
 /** Says what happened and what to do, for a failure with no sentence of its own. */
 export const GENERIC_ERROR = "Something went wrong. Try again.";
 
+/** The label of a button that tries a failed load again. */
+export const RETRY_LABEL = "Try again";
+
 /**
  * How long to wait before retrying, for a rate limited call: "Try again in 30 seconds." The time
  * rounds up so a retry is never early. With no time known, or under a second, it reads "a moment".

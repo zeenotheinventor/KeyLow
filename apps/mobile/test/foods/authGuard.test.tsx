@@ -1,3 +1,5 @@
+import { KeyLowProvider } from "@keylow/api-client";
+import { TERMS_VERSION } from "@keylow/core/copy";
 import { render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
@@ -5,6 +7,12 @@ import { AuthGate } from "../../components/AuthGate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { fakeSession, mockSupabaseClient, resetSupabaseMock } from "../support/supabaseMock";
+import {
+  createTestQueryClient,
+  resetTermsBackend,
+  termsBackend,
+  termsClient,
+} from "../support/termsBackend";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -22,9 +30,11 @@ jest.mock("../../lib/supabase", () => ({
 async function renderGate() {
   await render(
     <ThemeProvider fixedPreference="dark">
-      <AuthGate>
-        <Text>Food screen</Text>
-      </AuthGate>
+      <KeyLowProvider client={termsClient} queryClient={createTestQueryClient()}>
+        <AuthGate>
+          <Text>Food screen</Text>
+        </AuthGate>
+      </KeyLowProvider>
     </ThemeProvider>,
   );
 }
@@ -35,6 +45,12 @@ describe("food routes behind the auth gate", () => {
   beforeEach(() => {
     resetRouterMock();
     resetSupabaseMock();
+    resetTermsBackend();
+    // A signed in user here has accepted the current Terms, so the terms gate stays out of the way.
+    termsBackend.row = {
+      terms_accepted_at: "2026-10-15T09:30:00+00:00",
+      terms_version: TERMS_VERSION,
+    };
     routerMock.segments = ["foods", "new"];
   });
 
@@ -60,7 +76,8 @@ describe("food routes behind the auth gate", () => {
 
     await renderGate();
 
+    // The screen shows once the terms gate has read the acceptance.
+    expect(await screen.findByText("Food screen")).toBeOnTheScreen();
     expect(routerMock.replace).not.toHaveBeenCalled();
-    expect(screen.getByText("Food screen")).toBeOnTheScreen();
   });
 });

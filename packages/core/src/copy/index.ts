@@ -70,7 +70,7 @@ export {
   WEEK_STRIP_DAY_NAMES,
 } from "./diary";
 export type { WeekStripDayState } from "./diary";
-export { GENERIC_ERROR, describeEdgeError, describeRateLimit } from "./errors";
+export { GENERIC_ERROR, RETRY_LABEL, describeEdgeError, describeRateLimit } from "./errors";
 export {
   FOOD_FORM,
   FOOD_FORM_BARCODE_NOT_VALID,

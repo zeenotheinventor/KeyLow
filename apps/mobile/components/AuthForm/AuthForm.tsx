@@ -13,10 +13,10 @@ import { signInWithGoogle } from "../../lib/googleSignIn";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { validateCredentials } from "../../lib/validateCredentials";
+import { AcceptanceCheckbox } from "../AcceptanceCheckbox";
 import { GoogleButton } from "../GoogleButton";
 import { KiLoMark } from "../KiLoMark";
 import { Banner, Button, Input, Text } from "../ui";
-import { AcceptanceCheckbox } from "./AcceptanceCheckbox";
 import { AuthFooter } from "./AuthFooter";
 
 import type { AuthFormOutcome, AuthFormProps } from "./types";

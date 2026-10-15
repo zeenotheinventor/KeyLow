@@ -1,4 +1,6 @@
-import { act, render, screen } from "@testing-library/react-native";
+import { KeyLowProvider } from "@keylow/api-client";
+import { TERMS_VERSION } from "@keylow/core/copy";
+import { act, cleanup, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
@@ -11,6 +13,14 @@ import {
   mockSupabaseClient,
   unsubscribeMock,
 } from "./support/supabaseMock";
+import {
+  createTestQueryClient,
+  resetTermsBackend,
+  termsBackend,
+  termsClient,
+} from "./support/termsBackend";
+
+import type { QueryClient } from "@tanstack/react-query";
 
 jest.mock(
   "expo-router",
@@ -25,12 +35,18 @@ jest.mock("../lib/supabase", () => ({
     .mockSupabaseClient,
 }));
 
+let queryClient: QueryClient;
+
+// A signed in user in these tests has accepted the current Terms, so the terms gate has nothing to say.
 async function renderGate() {
+  queryClient = createTestQueryClient();
   await render(
     <ThemeProvider fixedPreference="dark">
-      <AuthGate>
-        <Text>Protected content</Text>
-      </AuthGate>
+      <KeyLowProvider client={termsClient} queryClient={queryClient}>
+        <AuthGate>
+          <Text>Protected content</Text>
+        </AuthGate>
+      </KeyLowProvider>
     </ThemeProvider>,
   );
 }
@@ -39,6 +55,16 @@ describe("AuthGate", () => {
   beforeEach(() => {
     resetRouterMock();
     resetSupabaseMock();
+    resetTermsBackend();
+    termsBackend.row = {
+      terms_accepted_at: "2026-10-15T09:30:00+00:00",
+      terms_version: TERMS_VERSION,
+    };
+  });
+
+  afterEach(async () => {
+    await cleanup();
+    queryClient.clear();
   });
 
   it("should redirect to sign-in when there is no session and the route is in the tabs", async () => {
