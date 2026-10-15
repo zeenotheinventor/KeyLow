@@ -10,6 +10,7 @@ module.exports = {
     "<rootDir>/test/support/reanimatedWorkletsMock.ts",
     "<rootDir>/test/support/nitroModulesMock.ts",
     "<rootDir>/test/support/skiaMock.ts",
+    "<rootDir>/test/support/holdSplashScreenMock.ts",
   ],
   // Headroom for a busy CI runner, where the same work takes several times as long.
   testTimeout: 20000,
