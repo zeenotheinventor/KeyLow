@@ -333,6 +333,11 @@ export type Database = {
           onboarding_completed_at: string | null;
           onboarding_weight_kg: number | null;
           sex: string | null;
+          target_carbs_g: number | null;
+          target_fat_g: number | null;
+          target_kcal: number | null;
+          target_protein_g: number | null;
+          targets_updated_at: string | null;
           terms_accepted_at: string | null;
           terms_version: string | null;
           timezone: string;
@@ -349,6 +354,11 @@ export type Database = {
           onboarding_completed_at?: string | null;
           onboarding_weight_kg?: number | null;
           sex?: string | null;
+          target_carbs_g?: number | null;
+          target_fat_g?: number | null;
+          target_kcal?: number | null;
+          target_protein_g?: number | null;
+          targets_updated_at?: string | null;
           terms_accepted_at?: string | null;
           terms_version?: string | null;
           timezone?: string;
@@ -365,6 +375,11 @@ export type Database = {
           onboarding_completed_at?: string | null;
           onboarding_weight_kg?: number | null;
           sex?: string | null;
+          target_carbs_g?: number | null;
+          target_fat_g?: number | null;
+          target_kcal?: number | null;
+          target_protein_g?: number | null;
+          targets_updated_at?: string | null;
           terms_accepted_at?: string | null;
           terms_version?: string | null;
           timezone?: string;
@@ -392,7 +407,22 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      day_totals: {
+        Row: {
+          carbs_g: number | null;
+          entry_count: number | null;
+          fat_g: number | null;
+          fibre_g: number | null;
+          kcal: number | null;
+          local_date: string | null;
+          protein_g: number | null;
+          salt_g: number | null;
+          sat_fat_g: number | null;
+          sugars_g: number | null;
+          user_id: string | null;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
       accept_terms: { Args: { p_version: string }; Returns: undefined };

@@ -24,7 +24,7 @@ The following, transcribed verbatim from the document's Data model (Supabase Pos
 - `programs` (user_id, goal, rate_pct_per_week, protein_g_per_kg, fat_fraction_of_remaining, split_preset, dow_offsets_kcal int[7], goal_weight_kg, started_on, ended_on, next_checkin_date); one active per user
 - `expenditure_snapshots` (user_id, as_of_date, mu_kcal, var_kcal2, measurement jsonb, trend_weight_kg, engine_version, params jsonb); unique `(user_id, as_of_date)`
 - `targets` (user_id, program_id, expenditure_snapshot_id, effective_from, effective_to null = current, calories_kcal, protein_g, fat_g, carbs_g, dow_calories_kcal int[7], basis jsonb, engine_version); one current per user
-- view `day_totals` (security_invoker) summing entry `nutrients` per user per day
+- view `day_totals` (security_invoker) summing entry `nutrients` per user per day (a null nutrient is skipped in the sum, so a day's total is null, never 0, only when every live entry leaves that nutrient null or absent; soft-deleted entries are excluded; KEY-182)
 
 RLS: owner-only on every user table using `(select auth.uid())`; `foods` and `food_portions` readable where `owner_id is null or owner_id = uid`, writable only for `source='user'` own rows; global rows written only by the service role (CoFID import, `off-product`). pgTAP asserts every policy.
 
