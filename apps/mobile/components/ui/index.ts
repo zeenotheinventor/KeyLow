@@ -52,6 +52,8 @@ export { RouterTabBar, TabBar, useTabTransitionOptions } from "./TabBar";
 export type { RouterTabBarProps, TabBarPlatform, TabBarProps, TabBarTab } from "./TabBar";
 export { MacroBars } from "./MacroBars";
 export type { MacroAmount, MacroBarsProps } from "./MacroBars";
+export { MacroProgressStrip } from "./MacroProgressStrip";
+export type { MacroProgressStripProps } from "./MacroProgressStrip";
 export { Switch } from "./Switch";
 export type { SwitchProps } from "./Switch";
 export { Text } from "./Text";
@@ -64,3 +66,5 @@ export type {
   ToastTone,
 } from "./Toast";
 export type { TextProps, TextTone, TextVariant } from "./Text";
+export { WeekStrip } from "./WeekStrip";
+export type { WeekStripDayInput, WeekStripProps, WeekStripWeekChange } from "./WeekStrip";

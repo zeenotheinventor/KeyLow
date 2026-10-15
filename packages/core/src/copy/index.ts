@@ -61,10 +61,12 @@ export {
   describeMacroTotal,
   describeProgressBar,
   describeProgressStrip,
+  describeProgressTarget,
   describeTimeRowName,
   describeTimeValue,
   describeWeekStripDay,
   describeWeekStripName,
+  WEEK_STRIP_DAY_NAMES,
 } from "./diary";
 export type { WeekStripDayState } from "./diary";
 export { GENERIC_ERROR, describeEdgeError, describeRateLimit } from "./errors";
