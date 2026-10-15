@@ -109,7 +109,8 @@ const {
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
-vi.mock("@/lib/foodLogActions", () => ({
+vi.mock("@/lib/foodLogActions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/foodLogActions")>()),
   useFoodLogActions: () => ({
     openAddFood,
     openEditEntry,

@@ -1,8 +1,6 @@
 "use client";
 
-import { useProfileTimeZone } from "@keylow/api-client";
 import { ADDED_TOAST, ADD_FOOD_DIALOG, PORTION_PICKER } from "@keylow/core/copy";
-import { clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,6 +12,7 @@ import { usePortionDraft } from "./usePortionDraft";
 import type { AddFoodDialogProps } from "./types";
 
 import { DIARY_DIALOG_CLASSES } from "@/components/diary/diaryDialogClasses";
+import { useLoggingTime } from "@/components/diary/useLoggingTime";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { useToast } from "@/components/ui/Toast";
@@ -26,26 +25,11 @@ import { useToast } from "@/components/ui/Toast";
  */
 export function AddFoodDialog({ request, onClose }: AddFoodDialogProps) {
   const toast = useToast();
-  // The diary reads its days and hours in the profile's zone, so the time logged here is read in it too.
-  // A signed in user always has a profile row, which the database creates. If it is missing the day is UTC.
-  const timeZone = useProfileTimeZone().data ?? "UTC";
-  // The moment the dialog opened, so "Now" does not move while it is open.
-  const [openedAt] = useState(() => new Date());
-  const [chosenTime, setChosenTime] = useState<string | undefined>(undefined);
+  const { time, isNow, chooseTime, resolve: resolveLoggedAt } = useLoggingTime(request);
   const [query, setQuery] = useState("");
   const [foodId, setFoodId] = useState<string | undefined>(undefined);
   const searchField = useRef<HTMLInputElement>(null);
   const amountField = useRef<HTMLInputElement>(null);
-
-  const opening = openingLoggedAt(
-    openedAt,
-    { day: request.date, ...(request.time === undefined ? {} : { time: request.time }) },
-    timeZone,
-  );
-  const time = chosenTime ?? opening.clockTime;
-  const isNow = chosenTime === undefined && request.time === undefined;
-  const resolveLoggedAt = () =>
-    chosenTime === undefined ? opening : clockTimeOn(opening.localDate, chosenTime, timeZone);
 
   const draft = usePortionDraft(foodId);
   const addServing = useAddServing(resolveLoggedAt);
@@ -117,7 +101,7 @@ export function AddFoodDialog({ request, onClose }: AddFoodDialogProps) {
             onQueryChange={setQuery}
             time={time}
             isNow={isNow}
-            onTimeChange={setChosenTime}
+            onTimeChange={chooseTime}
             searchRef={searchField}
             onOpenFood={setFoodId}
             onAddServing={addServing}
@@ -127,7 +111,7 @@ export function AddFoodDialog({ request, onClose }: AddFoodDialogProps) {
             draft={draft}
             time={time}
             isNow={isNow}
-            onTimeChange={setChosenTime}
+            onTimeChange={chooseTime}
             amountRef={amountField}
             onBack={() => {
               setFoodId(undefined);

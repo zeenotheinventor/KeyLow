@@ -6,9 +6,13 @@ import { createContext, useContext, useMemo, useRef, useState } from "react";
 import type { AddFoodRequest, FoodLogActions, FoodLogActionsProviderProps } from "./types";
 
 import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
+import { EditEntryDialog } from "@/components/diary/EditEntryDialog";
+import { QuickAddDialog } from "@/components/diary/QuickAddDialog";
 
 // Each request gets its own number, so a request made while a dialog is open starts a fresh dialog.
-type OpenDialog = { kind: "add"; request: AddFoodRequest; id: number };
+type OpenDialog =
+  | { kind: "add" | "quick"; request: AddFoodRequest; id: number }
+  | { kind: "edit"; entryId: string; date: string; id: number };
 
 const FoodLogActionsContext = createContext<FoodLogActions | undefined>(undefined);
 
@@ -37,23 +41,42 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
         requestCount.current += 1;
         setDialog({ kind: "add", request, id: requestCount.current });
       },
-      openEditEntry: () => undefined,
+      openQuickAdd: (request) => {
+        requestCount.current += 1;
+        setDialog({ kind: "quick", request, id: requestCount.current });
+      },
+      openEditEntry: (entryId) => {
+        // An entry is edited on the diary's day on view, so away from the diary there is nothing to edit.
+        if (viewedDate !== undefined) {
+          requestCount.current += 1;
+          setDialog({ kind: "edit", entryId, date: viewedDate, id: requestCount.current });
+        }
+      },
       viewedDate,
       setViewedDate,
     }),
     [viewedDate],
   );
 
+  function closeDialog() {
+    setDialog(undefined);
+  }
+
   return (
     <FoodLogActionsContext.Provider value={value}>
       {children}
       {dialog?.kind === "add" && (
-        <AddFoodDialog
+        <AddFoodDialog key={dialog.id} request={dialog.request} onClose={closeDialog} />
+      )}
+      {dialog?.kind === "quick" && (
+        <QuickAddDialog key={dialog.id} request={dialog.request} onClose={closeDialog} />
+      )}
+      {dialog?.kind === "edit" && (
+        <EditEntryDialog
           key={dialog.id}
-          request={dialog.request}
-          onClose={() => {
-            setDialog(undefined);
-          }}
+          entryId={dialog.entryId}
+          date={dialog.date}
+          onClose={closeDialog}
         />
       )}
     </FoodLogActionsContext.Provider>

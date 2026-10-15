@@ -1,31 +1,18 @@
-import {
-  useCopyDay,
-  useDeleteEntry,
-  useDiaryDay,
-  useRestoreEntry,
-  useSetDayComplete,
-  useUndoCopyDay,
-} from "@keylow/api-client";
-import {
-  ENTRY_DELETED_TOAST,
-  GENERIC_ERROR,
-  UNDO_LABEL,
-  describeCopiedFromYesterday,
-} from "@keylow/core/copy";
+import { useCopyDay, useDiaryDay, useSetDayComplete, useUndoCopyDay } from "@keylow/api-client";
+import { GENERIC_ERROR, UNDO_LABEL, describeCopiedFromYesterday } from "@keylow/core/copy";
 import { joinClockTime, previousCalendarDay } from "@keylow/core/dates";
 import { groupEntriesByHour, progressBars, sumEntries } from "@keylow/core/diary";
-import { Copy, Trash2 } from "lucide-react";
+import { Copy } from "lucide-react";
 import { useState } from "react";
 
 import { FoodLog } from "../FoodLog";
 
 import type { DiaryDayContentProps } from "./types";
-import type { LogEntry } from "@keylow/api-client";
 
 import { MacroProgressStrip } from "@/components/ui/MacroProgressStrip";
 import { useToast } from "@/components/ui/Toast";
-import { useKeyboardUndo } from "@/lib/keyboardUndo";
 import { useFoodLogActions } from "@/lib/foodLogActions";
+import { useDeleteEntryWithUndo } from "@/lib/foodLogActions/useDeleteEntryWithUndo";
 
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets) and the
@@ -43,10 +30,8 @@ export function DiaryDayContent({
   onOpenTargets,
 }: DiaryDayContentProps) {
   const toast = useToast();
-  const keyboardUndo = useKeyboardUndo();
   const { openAddFood, openEditEntry } = useFoodLogActions();
-  const deleteEntry = useDeleteEntry();
-  const restoreEntry = useRestoreEntry();
+  const remove = useDeleteEntryWithUndo();
   const copyDay = useCopyDay();
   const undoCopyDay = useUndoCopyDay();
   const setDayComplete = useSetDayComplete();
@@ -59,21 +44,6 @@ export function DiaryDayContent({
 
   function showFailure() {
     toast.show({ message: GENERIC_ERROR, tone: "danger" });
-  }
-
-  function remove(entry: LogEntry) {
-    // Asked before the row goes, while focus is still on its button.
-    const keyboardRoute = keyboardUndo.afterRemovingRow();
-    deleteEntry.mutate(entry, { onError: showFailure });
-    toast.show({
-      message: ENTRY_DELETED_TOAST,
-      icon: Trash2,
-      actionLabel: UNDO_LABEL,
-      onAction: () => {
-        restoreEntry.mutate(entry, { onError: showFailure });
-      },
-      ...keyboardRoute,
-    });
   }
 
   function copyYesterday() {

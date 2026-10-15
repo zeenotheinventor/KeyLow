@@ -51,3 +51,4 @@ export {
 export { startingAmount, unitOptions, unitValueOf } from "./startingAmount";
 export type { UnitOption } from "./startingAmount";
 export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
+export { isNumberBeingTyped } from "./isNumberBeingTyped";

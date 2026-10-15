@@ -2,6 +2,8 @@ import { act, cleanup, render, renderHook, screen } from "@testing-library/react
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AddFoodDialogProps } from "@/components/diary/AddFoodDialog";
+import type { EditEntryDialogProps } from "@/components/diary/EditEntryDialog";
+import type { QuickAddDialogProps } from "@/components/diary/QuickAddDialog";
 
 import { FoodLogActionsProvider, useFoodLogActions } from "@/lib/foodLogActions";
 
@@ -15,6 +17,28 @@ vi.mock("@/components/diary/AddFoodDialog", () => ({
       <p>{`Adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
       <button type="button" onClick={onClose}>
         Close the add dialog
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/diary/EditEntryDialog", () => ({
+  EditEntryDialog: ({ entryId, date, onClose }: EditEntryDialogProps) => (
+    <div role="dialog" aria-label="Edit entry">
+      <p>{`Editing ${entryId} on ${date}`}</p>
+      <button type="button" onClick={onClose}>
+        Close the edit dialog
+      </button>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/diary/QuickAddDialog", () => ({
+  QuickAddDialog: ({ request, onClose }: QuickAddDialogProps) => (
+    <div role="dialog" aria-label="Quick add">
+      <p>{`Quick adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
+      <button type="button" onClick={onClose}>
+        Close the quick add dialog
       </button>
     </div>
   ),
@@ -99,6 +123,73 @@ describe("FoodLogActionsProvider", () => {
       });
 
       expect(screen.getByText("Adding on 2026-10-15 at 08:00")).toBeTruthy();
+    });
+  });
+
+  describe("openEditEntry", () => {
+    it("should open the edit dialog for the entry, on the day on view", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.setViewedDate("2026-10-14");
+      });
+
+      act(() => {
+        result.current.openEditEntry("entry-1");
+      });
+
+      expect(screen.getByText("Editing entry-1 on 2026-10-14")).toBeTruthy();
+    });
+
+    it("should do nothing away from the diary, where no day is on view", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+
+      act(() => {
+        result.current.openEditEntry("entry-1");
+      });
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should close the dialog when the dialog asks to", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.setViewedDate("2026-10-14");
+      });
+      act(() => {
+        result.current.openEditEntry("entry-1");
+      });
+
+      act(() => {
+        screen.getByRole("button", { name: "Close the edit dialog" }).click();
+      });
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  describe("openQuickAdd", () => {
+    it("should open the quick add dialog with the day and the hour", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+
+      act(() => {
+        result.current.openQuickAdd({ date: "2026-10-15", time: "12:00" });
+      });
+
+      expect(screen.getByText("Quick adding on 2026-10-15 at 12:00")).toBeTruthy();
+    });
+
+    it("should have one dialog open at a time", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
+
+      act(() => {
+        result.current.openQuickAdd({ date: "2026-10-15" });
+      });
+
+      expect(screen.getAllByRole("dialog")).toHaveLength(1);
+      expect(screen.getByRole("dialog", { name: "Quick add" })).toBeTruthy();
     });
   });
 
