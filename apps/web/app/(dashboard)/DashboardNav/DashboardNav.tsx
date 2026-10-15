@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/Button";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 import { SearchLauncher } from "@/components/ui/SearchField";
 import { useFoodLogActions } from "@/lib/foodLogActions";
+import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: readonly DashboardSection[] = [
@@ -36,6 +37,7 @@ export function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { viewedDate, openAddFood } = useFoodLogActions();
+  const isOnline = useIsOnline();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [menuPathname, setMenuPathname] = useState(pathname);
   // Going to another page closes the menu, and coming back to this one does not reopen it.
@@ -157,6 +159,8 @@ export function DashboardNav() {
             size="adaptive"
             label="Search for a food"
             onSearch={startSearch}
+            // A search cannot run offline, so the launcher is dimmed on every page of the shell.
+            disabled={!isOnline}
             barcodeButton={{
               label: "Look up a barcode",
               onClick: () => {

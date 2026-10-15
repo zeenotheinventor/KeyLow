@@ -22,6 +22,7 @@ describe("the dashboard copy", () => {
       title: "Today",
       edit: "Edit",
       editName: "Edit targets",
+      regionName: "Today's nutrition",
     });
   });
 

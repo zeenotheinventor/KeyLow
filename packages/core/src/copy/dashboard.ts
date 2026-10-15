@@ -6,6 +6,8 @@ export const DASHBOARD_CARD = {
   title: "Today",
   edit: "Edit",
   editName: "Edit targets",
+  /** The name of the card's region on the web, where the card is a section of the page. */
+  regionName: "Today's nutrition",
 } as const;
 
 /** The name a screen reader reads while the card loads. */
