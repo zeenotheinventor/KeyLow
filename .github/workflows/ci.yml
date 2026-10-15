@@ -11,9 +11,9 @@ name: CI
 # main between them, and that shows up only in the next pull request whose affected packages include
 # the broken code, so rebase before merging when main has moved.
 #
-# The Supabase stack and the native fingerprint run in db-integration.yml and mobile-fingerprint.yml,
-# which only start when their paths change. This file has no path filter on pull requests, so every
-# pull request gets a `static` check.
+# One job, `checks`, runs everything but the native fingerprint (mobile-fingerprint.yml, which only
+# starts when its paths change). This file has no path filter on pull requests, so every pull request
+# gets a `checks` run.
 on:
   pull_request:
   push:
@@ -32,8 +32,8 @@ concurrency:
 permissions:
   contents: read
 
-# Every job here, in db-integration.yml and in mobile-fingerprint.yml repeats the same four setup
-# steps, because a composite action would need another file.
+# The job here and the one in mobile-fingerprint.yml repeat the same four setup steps, because a
+# composite action would need another file.
 # The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
 # when no version input is given) and the Node version comes from .nvmrc.
 #
@@ -44,9 +44,15 @@ permissions:
 jobs:
   # Mirrors the local gate. `pnpm check` is the first check so that what passes here is what passes
   # on a laptop. The extra checks come after it and are the ones the monorepo ADR lists.
-  static:
+  #
+  # When a pull request changes something the Supabase stack, the Edge Functions or the integration
+  # suites read, the same job also runs those against a real local stack. The stack starts in the
+  # background right after the install, so its image pulls and boot overlap the static checks. A
+  # separate job cost a second checkout, install and minute rounding, and booted the stack on its own
+  # clock. The stack steps run even when a static check fails, so one run reports both.
+  checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       # On a pull request the checkout is the merge into its base, so its first parent is the base tip
       # and the diff against it is exactly what the pull request changes. On main it is the squash
@@ -74,6 +80,15 @@ jobs:
         shell: bash
         run: |
           changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
+          # The stack runs for the packages the stack, the functions (which embed @keylow/core) and the
+          # integration suites read, and for root files that change the tools or the task graph. It
+          # runs on pull requests only; the runs on main are there to refresh the caches.
+          db=false
+          if [ "$GITHUB_EVENT_NAME" = pull_request ] && grep -qE '^(packages/(db|core|api-client|config)/|(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc|turbo\.json|tsconfig\.base\.json|\.nvmrc|\.github/workflows/ci\.yml)$)' <<<"$changed"; then
+            db=true
+          fi
+          echo "Supabase stack needed: $db"
+          echo "db=$db" >> "$GITHUB_OUTPUT"
           outside=$(grep -vE '^(apps|packages|tools)/|\.md$' <<<"$changed" || true)
           if [ -z "$changed" ] || [ -n "$outside" ]; then
             echo "A file outside the packages changed, so every check runs."
@@ -101,6 +116,45 @@ jobs:
             echo "web=$web"
             echo "mobile=$mobile"
           } >> "$GITHUB_OUTPUT"
+      # Pinned to the CLI version used locally. The action also accepts "latest".
+      - uses: supabase/setup-cli@v3
+        if: steps.scope.outputs.db == 'true'
+        with:
+          version: 2.106.0
+      # The CLI pulls some of its images from public.ecr.aws, which refuses anonymous pulls with
+      # "toomanyrequests: Rate exceeded" once a runner's address has used its quota. The same images
+      # are on GitHub's registry, which does not share that quota. Pulling them from there and tagging
+      # them with the names the CLI looks for means it finds them locally and never calls ECR.
+      # postgres-meta v0.96.6 is what `supabase start` runs for the meta service and v0.96.1 is
+      # what `supabase gen types` runs (the failed log named it), so both are pulled.
+      # edge-runtime is what `supabase functions serve` runs and pg_prove is what `supabase test
+      # db` runs. Bump a tag here when the CLI pin above moves.
+      #
+      # `supabase start` keeps the services the tests and type generation need. That is the database,
+      # the API gateway (kong), rest and meta (gen types). Auth always starts and cannot be excluded.
+      # Excluded: analytics and vector (log pipeline), edge-runtime and functions, imgproxy,
+      # inbucket (mail catcher), realtime, storage and studio.
+      #
+      # All of it runs in the background and writes its exit status to a file, which the wait step
+      # below reads after the static checks. The file is written under another name and moved, so the
+      # wait step never reads it half written.
+      - name: Start the local Supabase stack in the background
+        id: start
+        if: steps.scope.outputs.db == 'true'
+        working-directory: packages/db
+        run: |
+          nohup bash -c '
+            (
+              set -e
+              for image in postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36; do
+                docker pull "ghcr.io/supabase/$image"
+                docker tag "ghcr.io/supabase/$image" "public.ecr.aws/supabase/$image"
+              done
+              supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
+            )
+            echo $? > "$RUNNER_TEMP/supabase-start.status.tmp"
+            mv "$RUNNER_TEMP/supabase-start.status.tmp" "$RUNNER_TEMP/supabase-start.status"
+          ' > "$RUNNER_TEMP/supabase-start.log" 2>&1 &
       # On a cold start the mobile food search suite alone has Jest transform about 300 React Native
       # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
       # transformer config, so restoring one from a near miss is safe: stale entries are never read.
@@ -166,3 +220,64 @@ jobs:
         env:
           EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
         run: node --experimental-strip-types ../../tools/expo-doctor-gate/src/runDoctorGate.ts
+      # Bounded at ten minutes. Prints the start log either way, so a failed pull or start is explained.
+      - name: Wait for the Supabase stack
+        id: stack
+        if: ${{ !cancelled() && steps.start.outcome == 'success' }}
+        run: |
+          for attempt in $(seq 1 300); do
+            if [ -f "$RUNNER_TEMP/supabase-start.status" ]; then
+              break
+            fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/supabase-start.log"
+          status=$(cat "$RUNNER_TEMP/supabase-start.status" 2>/dev/null || echo "no status after ten minutes")
+          if [ "$status" != "0" ]; then
+            echo "The Supabase stack did not start: $status."
+            exit 1
+          fi
+      # `functions serve` starts its own edge-runtime container, so edge-runtime stays in the -x list
+      # above. The functions import the @keylow/core bundle, so it is written first. The container
+      # reaches the OFF mock the tests start on the runner through the gateway address of the
+      # stack's Docker network. Docker Desktop resolves host.docker.internal, a Linux runner does
+      # not, so the env file the function reads gets the gateway address in its place. The loop is
+      # bounded. A function that never answers fails the step, and the last step of the job prints the
+      # serve log.
+      - name: Serve the Edge Functions
+        id: serve
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        working-directory: packages/db
+        run: |
+          pnpm --filter @keylow/db bundle-core-for-deno
+          gateway=$(docker network inspect supabase_network_keylow --format '{{(index .IPAM.Config 0).Gateway}}')
+          sed "s/host.docker.internal/$gateway/" supabase/functions/.env.test > "$RUNNER_TEMP/functions.env"
+          nohup supabase functions serve --env-file "$RUNNER_TEMP/functions.env" --no-verify-jwt \
+            > "$RUNNER_TEMP/functions-serve.log" 2>&1 &
+          for attempt in $(seq 1 45); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS http://127.0.0.1:54321/functions/v1/off-product || true)
+            if [ "$status" = "204" ] || [ "$status" = "401" ]; then
+              echo "The functions are being served."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "The functions were not served within 90 seconds. The last status was $status."
+          exit 1
+      # check:integration includes check:functions. Turbo bundles @keylow/core for Deno first, then
+      # `deno check` and `deno lint` run from the pinned `deno` npm package, so no Deno setup step is
+      # needed. Deno downloads the supabase-js and zod packages itself. After the pgTAP tests, the
+      # Edge Function HTTP suites run against the served functions.
+      - name: Check the Edge Functions and run the pgTAP tests and the function suites
+        if: ${{ !cancelled() && steps.serve.outcome == 'success' }}
+        run: pnpm check:integration
+      # gen-types rewrites the file in place, so any difference means it was not committed.
+      - name: Check the generated types are committed
+        if: ${{ !cancelled() && steps.stack.outcome == 'success' }}
+        run: |
+          pnpm gen-types
+          git diff --exit-code packages/db/src/types.gen.ts
+      # Shows what the functions logged, which is where a 5xx from a suite is explained.
+      - name: Print the functions serve log
+        if: ${{ failure() && steps.serve.outcome != 'skipped' }}
+        run: cat "$RUNNER_TEMP/functions-serve.log" || true
