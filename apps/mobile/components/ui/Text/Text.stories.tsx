@@ -23,6 +23,9 @@ type Story = StoryObj<typeof meta>;
 
 export const DisplayNumeral: Story = { args: { variant: "display-numeral", children: "2,480" } };
 
+// The calorie ring's numeral on the diary canvas: the display style at 44 over 48.
+export const RingNumeral: Story = { args: { variant: "ring-numeral", children: "1,161" } };
+
 export const H1: Story = { args: { variant: "h1", children: "Find food" } };
 
 export const H2: Story = { args: { variant: "h2", children: "Search for a food" } };

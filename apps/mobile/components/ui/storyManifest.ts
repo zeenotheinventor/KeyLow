@@ -46,6 +46,17 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "Loading",
     ],
   },
+  CalorieRing: {
+    states: [
+      "UnderTarget",
+      "AtTarget",
+      "OverTarget",
+      "Compact",
+      "Estimate",
+      "NotAnEstimate",
+      "NothingEaten",
+    ],
+  },
   Card: { states: ["Surface", "Raised", "Compact", "Rows"] },
   Checkbox: { states: ["Unticked", "Ticked", "WithLinks", "Disabled", "DisabledTicked"] },
   EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction", "Wide"] },
@@ -73,6 +84,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
     ],
   },
   ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled", "WithControl"] },
+  MacroBars: { states: ["UnderTarget", "OverTarget", "NoTarget", "Compact"] },
   NumericInput: {
     states: [
       "Empty",
@@ -117,6 +129,7 @@ export const storyManifest: Record<string, { states: string[] }> = {
   Text: {
     states: [
       "DisplayNumeral",
+      "RingNumeral",
       "H1",
       "H2",
       "Body",
