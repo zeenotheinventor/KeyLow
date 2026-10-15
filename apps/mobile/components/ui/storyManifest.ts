@@ -111,6 +111,9 @@ export const storyManifest: Record<string, { states: string[] }> = {
   },
   ListRow: { states: ["Default", "WithValue", "TitleOnly", "Disabled", "WithControl"] },
   MacroBars: { states: ["UnderTarget", "OverTarget", "NoTarget", "Compact"] },
+  MacroProgressStrip: {
+    states: ["UnderTarget", "AtTarget", "OverTarget", "NoTarget", "FourDigitCalories"],
+  },
   NumericInput: {
     states: [
       "Empty",
@@ -178,5 +181,8 @@ export const storyManifest: Record<string, { states: string[] }> = {
       "AboveTabBar",
       "WithProvider",
     ],
+  },
+  WeekStrip: {
+    states: ["TodaySelected", "PastDaySelected", "TodayComplete", "FutureDays", "MonthEnd"],
   },
 };

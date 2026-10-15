@@ -31,7 +31,9 @@ import {
   describeProgressStrip,
   describeTimeRowName,
   describeTimeValue,
+  describeProgressTarget,
   describeWeekStripDay,
+  WEEK_STRIP_DAY_NAMES,
   describeWeekStripName,
 } from "../../src/copy";
 import * as diaryCopy from "../../src/copy/diary";
@@ -197,11 +199,7 @@ describe("the diary has no meals", () => {
     diaryCopy.describeAddFoodAtHour("12:00"),
     diaryCopy.describeHourChip("11:00", true),
     ...[0, 1, 2].map((count) => diaryCopy.describeHourGroup("08:00", count)),
-    diaryCopy.describeWeekStripDay("2026-10-15", {
-      isToday: true,
-      isSelected: true,
-      isComplete: true,
-    }),
+    diaryCopy.describeWeekStripDay("2026-10-15", { isToday: true, isComplete: true }),
     diaryCopy.describeWeekStripName("2026-10-12", true),
     diaryCopy.describeWeekStripName("2026-10-12", false),
     ...progressBars(overDay.totals, overDay.targets).map(diaryCopy.describeProgressBar),
@@ -266,34 +264,20 @@ describe("the empty day", () => {
 
 describe("the week strip", () => {
   it.each([
-    [
-      "2026-10-15",
-      { isToday: true, isSelected: true, isComplete: false },
-      "Thursday 15 October, today, selected",
-    ],
-    [
-      "2026-10-13",
-      { isToday: false, isSelected: false, isComplete: true },
-      "Tuesday 13 October, complete",
-    ],
-    [
-      "2026-10-14",
-      { isToday: false, isSelected: false, isComplete: false },
-      "Wednesday 14 October",
-    ],
-    [
-      "2026-10-14",
-      { isToday: false, isSelected: true, isComplete: true },
-      "Wednesday 14 October, complete, selected",
-    ],
-    [
-      "2026-10-15",
-      { isToday: true, isSelected: true, isComplete: true },
-      "Thursday 15 October, today, complete, selected",
-    ],
-    ["2026-11-01", { isToday: false, isSelected: false, isComplete: false }, "Sunday 1 November"],
-  ])("should name the day %s", (localDate, state, expected) => {
-    expect(describeWeekStripDay(localDate, state)).toBe(expected);
+    ["2026-10-15", { isToday: true, isComplete: false }, "Thursday 15 October, today"],
+    ["2026-10-13", { isToday: false, isComplete: true }, "Tuesday 13 October, complete"],
+    ["2026-10-14", { isToday: false, isComplete: false }, "Wednesday 14 October"],
+    ["2026-10-15", { isToday: true, isComplete: true }, "Thursday 15 October, today, complete"],
+    ["2026-11-01", { isToday: false, isComplete: false }, "Sunday 1 November"],
+  ])(
+    "should name the day %s, leaving selection to the control's own state",
+    (localDate, state, expected) => {
+      expect(describeWeekStripDay(localDate, state)).toBe(expected);
+    },
+  );
+
+  it("should name the days Mo to Su, Monday first", () => {
+    expect(WEEK_STRIP_DAY_NAMES).toEqual(["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"]);
   });
 
   it("should name the strip This week, or Week of the Monday", () => {
@@ -318,6 +302,23 @@ describe("the progress strip", () => {
     }
     return bar;
   };
+
+  it("should write the target after the value as a slash and the target, in each bar's own format", () => {
+    expect(describeProgressTarget(barOf("calories", sampleDay, targets))).toBe("/ 2,200");
+    expect(describeProgressTarget(barOf("protein", sampleDay, targets))).toBe("/ 160");
+    expect(
+      describeProgressTarget(
+        barOf("fat", { ...sampleDay, fat_g: 4.5 }, { ...targets, fat_g: 7.5 }),
+      ),
+    ).toBe("/ 7.5");
+  });
+
+  it("should write only the unit when there is no target", () => {
+    const noTargets = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };
+
+    expect(describeProgressTarget(barOf("calories", sampleDay, noTargets))).toBe("kcal");
+    expect(describeProgressTarget(barOf("carbs", sampleDay, noTargets))).toBe("g");
+  });
 
   it("should say the calories as kilocalories", () => {
     expect(describeProgressBar(barOf("calories", sampleDay, targets))).toBe(

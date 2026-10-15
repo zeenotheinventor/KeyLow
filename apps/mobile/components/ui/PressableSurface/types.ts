@@ -6,7 +6,7 @@ export type PressableSurfaceProps = {
   children: ReactNode;
   /** What a screen reader announces the control as. Defaults to `button`. A tab bar's items are `tab`s, a segmented control's are `radio`s. */
   role?: "button" | "tab" | "radio" | "switch" | undefined;
-  /** Whether the tab is the selected one. Only for a `tab`. */
+  /** Whether the tab, or the day on a week strip, is the selected one. Only for a `tab` or a `button` that picks one of several. */
   selected?: boolean | undefined;
   /** Whether the radio or switch is on. Only for a `radio` or a `switch`. */
   checked?: boolean | undefined;

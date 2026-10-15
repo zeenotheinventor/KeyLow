@@ -1,4 +1,5 @@
 import { MONTH_NAMES_LONG, WEEKDAY_NAMES_LONG, WEEKDAY_NAMES_SHORT } from "./diaryDay";
+import { FOOD_ROW } from "./foodRow";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { TARGET_KCAL_MAXIMUM, TARGET_KCAL_MINIMUM } from "../diary/rules";
 import { formatCalories, formatGrams } from "../format/numbers";
@@ -121,7 +122,11 @@ export const EMPTY_DAY = {
   webHint: "Search, scan or quick add, or copy yesterday.",
 };
 
-export type WeekStripDayState = { isToday: boolean; isSelected: boolean; isComplete: boolean };
+/** The two letter day on a week strip pill, Monday first, as the strip is laid out. */
+export const WEEK_STRIP_DAY_NAMES = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"] as const;
+
+/** What the name of a day's pill says. Whether it is selected is the control's own state, not part of the name. */
+export type WeekStripDayState = { isToday: boolean; isComplete: boolean };
 
 const describeDateInWords = (localDate: string): string => {
   const { year, month, day } = parseCalendarDay(localDate);
@@ -130,13 +135,12 @@ const describeDateInWords = (localDate: string): string => {
   return `${weekday} ${day} ${MONTH_NAMES_LONG[month - 1]}`;
 };
 
-/** The name of a day's pill, such as "Thursday 15 October, today, selected". */
+/** The name of a day's pill, such as "Thursday 15 October, today" or "Tuesday 13 October, complete". */
 export const describeWeekStripDay = (localDate: string, state: WeekStripDayState): string =>
   [
     describeDateInWords(localDate),
     ...(state.isToday ? ["today"] : []),
     ...(state.isComplete ? ["complete"] : []),
-    ...(state.isSelected ? ["selected"] : []),
   ].join(", ");
 
 /** The name of the week strip: "This week", or "Week of Mon 12 October" given that Monday. */
@@ -173,3 +177,14 @@ export const describeProgressBar = (bar: ProgressBar): string => {
 /** The name of the progress strip with its values: "Targets. Calories: ... . Protein: ...". */
 export const describeProgressStrip = (bars: readonly ProgressBar[]): string =>
   ["Targets", ...bars.map(describeProgressBar)].join(". ");
+
+/**
+ * What follows the value in a column of the progress strip: "/ 2,200" against a target, or the unit
+ * alone ("kcal" or "g") when there is no target.
+ */
+export const describeProgressTarget = (bar: ProgressBar): string => {
+  const format = bar.key === "calories" ? formatCalories : formatGrams;
+  const unit = bar.key === "calories" ? FOOD_ROW.energyUnit : FOOD_ROW.gramUnit;
+
+  return bar.hasTarget ? `/ ${format(bar.target)}` : unit;
+};

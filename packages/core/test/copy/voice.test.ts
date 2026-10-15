@@ -38,13 +38,18 @@ const sampleCalls: Record<string, () => string[]> = {
   ],
   describeHourGroup: () => [0, 1, 2].map((count) => copy.describeHourGroup("08:00", count)),
   describeWeekStripDay: () => [
-    copy.describeWeekStripDay("2026-10-15", { isToday: true, isSelected: true, isComplete: false }),
-    copy.describeWeekStripDay("2026-10-13", {
-      isToday: false,
-      isSelected: false,
-      isComplete: true,
-    }),
+    copy.describeWeekStripDay("2026-10-15", { isToday: true, isComplete: false }),
+    copy.describeWeekStripDay("2026-10-13", { isToday: false, isComplete: true }),
   ],
+  describeProgressTarget: () =>
+    [
+      { kcal: 2200, protein_g: 160, carbs_g: null, fat_g: null },
+      { kcal: null, protein_g: null, carbs_g: null, fat_g: null },
+    ].flatMap((targets) =>
+      progressBars({ kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 }, targets).map(
+        copy.describeProgressTarget,
+      ),
+    ),
   describeWeekStripName: () => [
     copy.describeWeekStripName("2026-10-12", true),
     copy.describeWeekStripName("2026-10-12", false),
@@ -197,7 +202,9 @@ describe("the voice of the copy", () => {
   });
 
   it("should never speak as my, I or we, and use no emoji or ticket id", () => {
-    for (const sentence of allSentences) {
+    // "We" on the week strip is Wednesday, a day abbreviation and not a pronoun.
+    const dayAbbreviations: readonly string[] = copy.WEEK_STRIP_DAY_NAMES;
+    for (const sentence of allSentences.filter((text) => !dayAbbreviations.includes(text))) {
       // The sign up checkbox is the person's own statement, so it is the one place that says I and my.
       if (!personsOwnStatements.includes(sentence)) {
         expect(sentence).not.toMatch(/\b(my|we)\b/i);
