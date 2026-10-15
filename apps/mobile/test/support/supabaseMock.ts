@@ -13,6 +13,7 @@ export const mockSupabaseClient = {
     exchangeCodeForSession: jest.fn(),
     verifyOtp: jest.fn(),
   },
+  rpc: jest.fn(),
 };
 
 export const unsubscribeMock = jest.fn();
@@ -46,6 +47,7 @@ export function resetSupabaseMock(): void {
   for (const method of Object.values(mockSupabaseClient.auth)) {
     method.mockReset();
   }
+  mockSupabaseClient.rpc.mockReset();
   mockSupabaseClient.auth.getSession.mockResolvedValue({ data: { session: null }, error: null });
   mockSupabaseClient.auth.signOut.mockResolvedValue({ error: null });
   mockSupabaseClient.auth.onAuthStateChange.mockImplementation((listener: AuthStateListener) => {

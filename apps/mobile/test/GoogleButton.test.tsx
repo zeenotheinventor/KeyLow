@@ -45,6 +45,14 @@ describe("GoogleButton", () => {
     expect(screen.getByRole("button", { name: "Continue with Google" })).toBeOnTheScreen();
   });
 
+  it("should be the medium control height when it is asked to be", async () => {
+    await renderButton({ size: "md" });
+
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveStyle({
+      height: controlHeight.md,
+    });
+  });
+
   it("should call onPress when it is pressed", async () => {
     const onPress = jest.fn();
     const user = userEvent.setup();

@@ -61,15 +61,6 @@ describe("the words on the sign in and sign up boards", () => {
     });
   });
 
-  it("should pin the sign up screen", () => {
-    expect(AUTH_SCREEN.signUp).toEqual({
-      heading: "Create your account",
-      submitLabel: "Create account",
-      footerPrompt: "Already have an account?",
-      footerLink: "Sign in",
-    });
-  });
-
   it("should pin the fields and the Google button that both screens share", () => {
     expect(AUTH_SCREEN.emailLabel).toBe("Email");
     expect(AUTH_SCREEN.passwordLabel).toBe("Password");

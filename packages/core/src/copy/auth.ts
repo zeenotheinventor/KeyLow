@@ -13,8 +13,8 @@ export const SIGN_IN_LINK_INVALID = {
 };
 
 /**
- * What the mobile sign in and sign up boards say. The two screens share one layout and differ in the
- * heading, the button, and the line that links to the other.
+ * What the mobile sign in board says, and the labels the sign in and sign up screens share. The sign up
+ * screen's own words are in `SIGN_UP_SCREEN`.
  */
 export const AUTH_SCREEN = {
   signIn: {
@@ -22,12 +22,6 @@ export const AUTH_SCREEN = {
     submitLabel: "Sign in",
     footerPrompt: "New to Ki-Lo?",
     footerLink: "Create account",
-  },
-  signUp: {
-    heading: "Create your account",
-    submitLabel: "Create account",
-    footerPrompt: "Already have an account?",
-    footerLink: "Sign in",
   },
   emailLabel: "Email",
   passwordLabel: "Password",

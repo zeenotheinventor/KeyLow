@@ -1,14 +1,13 @@
 import {
   AUTH_SCREEN,
   CHECK_EMAIL_TITLE,
-  PASSWORD_HELPER,
+  SIGN_UP_SCREEN,
   describeAuthError,
   describeCheckEmail,
 } from "@keylow/core/copy";
-import { Link } from "expo-router";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 
 import { signInWithGoogle } from "../../lib/googleSignIn";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
@@ -17,6 +16,8 @@ import { validateCredentials } from "../../lib/validateCredentials";
 import { GoogleButton } from "../GoogleButton";
 import { KiLoMark } from "../KiLoMark";
 import { Banner, Button, Input, Text } from "../ui";
+import { AcceptanceCheckbox } from "./AcceptanceCheckbox";
+import { AuthFooter } from "./AuthFooter";
 
 import type { AuthFormOutcome, AuthFormProps } from "./types";
 import type { GoogleSignInResult } from "../../lib/googleSignIn";
@@ -34,13 +35,26 @@ function toOutcome(result: GoogleSignInResult): AuthFormOutcome {
  * an Email and a Password field, a notice when there is something to say, the primary button and the
  * Google button, and a line that links to the other screen. The words an error says are core's fixed
  * sentences, chosen by Supabase's error code, so no server text can reach the screen.
+ *
+ * With `requireAcceptance` it is the sign up board instead: a centred mark, heading and caption, the
+ * Google button above the fields with an "or" between, and the acceptance checkbox above the primary
+ * button. Both buttons stay disabled until the box is ticked, and the box starts unticked.
  */
-export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer }: AuthFormProps) {
+export function AuthForm({
+  heading,
+  submitLabel,
+  passwordRule,
+  onSubmit,
+  footer,
+  requireAcceptance = false,
+  onGoogleSignIn = signInWithGoogle,
+}: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<CredentialErrors>({});
   const [outcome, setOutcome] = useState<AuthFormOutcome>({ status: "done" });
   const [method, setMethod] = useState<Method | undefined>(undefined);
+  const [isAccepted, setIsAccepted] = useState(false);
 
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
@@ -51,6 +65,7 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
 
   const isSubmitting = method !== undefined;
   const isSigningUp = passwordRule === "minLength";
+  const isAwaitingAcceptance = requireAcceptance && !isAccepted;
 
   async function runSubmission(nextMethod: Method, submit: () => Promise<AuthFormOutcome>) {
     setMethod(nextMethod);
@@ -77,8 +92,16 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
   }
 
   async function handleGoogleSignIn() {
-    await runSubmission("google", async () => toOutcome(await signInWithGoogle()));
+    await runSubmission("google", async () => toOutcome(await onGoogleSignIn()));
   }
+
+  const googleButton = (
+    <GoogleButton
+      size={requireAcceptance ? "md" : "lg"}
+      disabled={isSubmitting || isAwaitingAcceptance}
+      onPress={() => void handleGoogleSignIn()}
+    />
+  );
 
   return (
     <KeyboardAvoidingView
@@ -99,14 +122,39 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
           keyboardShouldPersistTaps="handled"
           scrollEventThrottle={16}
           onScroll={trackScrollOffset}
-          contentContainerClassName="flex-grow justify-center gap-4 px-6 pb-[34px] pt-[56px]"
+          contentContainerClassName={`flex-grow justify-center px-6 pb-[34px] pt-[56px] ${requireAcceptance ? "gap-[14px]" : "gap-4"}`}
         >
-          <View className="mb-2 items-start gap-4">
-            <KiLoMark label="Ki-Lo" size={64} />
-            <Text role="heading" variant="h1">
-              {heading}
-            </Text>
-          </View>
+          {requireAcceptance ? (
+            <View className="items-center gap-1.5">
+              <KiLoMark label="Ki-Lo" size={56} />
+              <Text className="text-center" role="heading" variant="h1">
+                {heading}
+              </Text>
+              <Text className="text-center" tone="secondary" variant="caption">
+                {SIGN_UP_SCREEN.caption}
+              </Text>
+            </View>
+          ) : (
+            <View className="mb-2 items-start gap-4">
+              <KiLoMark label="Ki-Lo" size={64} />
+              <Text role="heading" variant="h1">
+                {heading}
+              </Text>
+            </View>
+          )}
+
+          {requireAcceptance ? (
+            <>
+              {googleButton}
+              <View className="flex-row items-center gap-[10px]">
+                <View className="flex-1 border-t border-border" />
+                <Text tone="secondary" variant="caption">
+                  {SIGN_UP_SCREEN.divider}
+                </Text>
+                <View className="flex-1 border-t border-border" />
+              </View>
+            </>
+          ) : null}
 
           <Input
             autoCapitalize="none"
@@ -115,6 +163,7 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
             error={fieldErrors.email}
             keyboardType="email-address"
             label={AUTH_SCREEN.emailLabel}
+            placeholder={requireAcceptance ? SIGN_UP_SCREEN.emailPlaceholder : undefined}
             value={email}
             onChangeText={setEmail}
           />
@@ -123,8 +172,8 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
             autoComplete={isSigningUp ? "new-password" : "current-password"}
             autoCorrect={false}
             error={fieldErrors.password}
-            helper={isSigningUp ? PASSWORD_HELPER : undefined}
             label={AUTH_SCREEN.passwordLabel}
+            placeholder={requireAcceptance ? SIGN_UP_SCREEN.passwordPlaceholder : undefined}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -142,9 +191,13 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
             />
           ) : null}
 
+          {requireAcceptance ? (
+            <AcceptanceCheckbox checked={isAccepted} onChange={setIsAccepted} />
+          ) : null}
+
           <View className="mt-2 gap-2">
             <Button
-              disabled={method === "google"}
+              disabled={method === "google" || isAwaitingAcceptance}
               loading={method === "password"}
               size="lg"
               fullWidth
@@ -152,20 +205,10 @@ export function AuthForm({ heading, submitLabel, passwordRule, onSubmit, footer 
             >
               {submitLabel}
             </Button>
-            <GoogleButton disabled={isSubmitting} onPress={() => void handleGoogleSignIn()} />
+            {requireAcceptance ? null : googleButton}
           </View>
 
-          <View className="mt-2 flex-row items-center justify-center gap-1">
-            <Text tone="secondary">{footer.prompt}</Text>
-            {/* The link is the pressable's, because a class on the link's own text is not read on a device. */}
-            <Link asChild href={footer.href}>
-              <Pressable className="min-h-touch-target justify-center px-1" role="link">
-                <Text className="underline" variant="body-strong">
-                  {footer.linkLabel}
-                </Text>
-              </Pressable>
-            </Link>
-          </View>
+          <AuthFooter footer={footer} size={requireAcceptance ? "caption" : "body"} />
         </ScrollView>
       </View>
     </KeyboardAvoidingView>

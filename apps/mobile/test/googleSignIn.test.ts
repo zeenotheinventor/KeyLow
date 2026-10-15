@@ -57,6 +57,73 @@ describe("signInWithGoogle", () => {
     expect(result).toEqual({ status: "signed-in" });
   });
 
+  it("should not record any terms acceptance unless asked to", async () => {
+    await signInWithGoogle();
+
+    expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+  });
+
+  describe("when asked to record the acceptance of a terms version", () => {
+    beforeEach(() => {
+      mockSupabaseClient.rpc.mockResolvedValue({ data: null, error: null });
+    });
+
+    it("should record that version, after the token exchange, and report a sign-in", async () => {
+      const result = await signInWithGoogle({ acceptedTermsVersion: "2026-10-15" });
+
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledTimes(1);
+      expect(mockSupabaseClient.rpc).toHaveBeenCalledWith("accept_terms", {
+        p_version: "2026-10-15",
+      });
+      expect(mockSupabaseClient.auth.signInWithIdToken.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSupabaseClient.rpc.mock.invocationCallOrder[0] ?? 0,
+      );
+      expect(result).toEqual({ status: "signed-in" });
+    });
+
+    it("should still report a sign-in, and warn without the token, when recording fails", async () => {
+      const databaseError = { message: "profile missing", code: "P0002" };
+      mockSupabaseClient.rpc.mockResolvedValue({ data: null, error: databaseError });
+
+      const result = await signInWithGoogle({ acceptedTermsVersion: "2026-10-15" });
+
+      expect(result).toEqual({ status: "signed-in" });
+      expect(warnSpy).toHaveBeenCalledWith(
+        "Recording the terms acceptance failed",
+        expect.any(Error),
+      );
+      expect(JSON.stringify(warnSpy.mock.calls)).not.toContain(googleIdToken);
+    });
+
+    it("should still report a sign-in when recording throws", async () => {
+      mockSupabaseClient.rpc.mockRejectedValue(new Error("network down"));
+
+      const result = await signInWithGoogle({ acceptedTermsVersion: "2026-10-15" });
+
+      expect(result).toEqual({ status: "signed-in" });
+    });
+
+    it("should not record it when the person cancels", async () => {
+      mockGoogleSignin.signIn.mockResolvedValue({ type: "cancelled", data: null });
+
+      await signInWithGoogle({ acceptedTermsVersion: "2026-10-15" });
+
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+    });
+
+    it("should not record it when the token exchange fails", async () => {
+      mockSupabaseClient.auth.signInWithIdToken.mockResolvedValue({
+        data: {},
+        error: new AuthApiError("Unacceptable audience in id_token", 400, "bad_jwt"),
+      });
+
+      const result = await signInWithGoogle({ acceptedTermsVersion: "2026-10-15" });
+
+      expect(result).toEqual({ status: "error", code: "bad_jwt" });
+      expect(mockSupabaseClient.rpc).not.toHaveBeenCalled();
+    });
+  });
+
   it("should open the native sheet before it calls Supabase", async () => {
     await signInWithGoogle();
 

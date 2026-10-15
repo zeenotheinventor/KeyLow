@@ -1,7 +1,8 @@
-import { AUTH_SCREEN } from "@keylow/core/copy";
+import { SIGN_UP_SCREEN, TERMS_VERSION } from "@keylow/core/copy";
 
 import { AuthForm } from "../../components/AuthForm";
 import { authErrorCode } from "../../lib/authErrorCode";
+import { signInWithGoogle } from "../../lib/googleSignIn";
 import { supabase } from "../../lib/supabase";
 
 import type { AuthFormOutcome } from "../../components/AuthForm";
@@ -13,7 +14,8 @@ const authCallbackUrl = "keylow://auth/callback";
 async function signUp(credentials: Credentials): Promise<AuthFormOutcome> {
   const { data, error } = await supabase.auth.signUp({
     ...credentials,
-    options: { emailRedirectTo: authCallbackUrl },
+    // The profile trigger records the acceptance from the version in the user's metadata.
+    options: { emailRedirectTo: authCallbackUrl, data: { terms_version: TERMS_VERSION } },
   });
 
   if (error !== null) {
@@ -26,16 +28,21 @@ async function signUp(credentials: Credentials): Promise<AuthFormOutcome> {
     : { status: "done" };
 }
 
+// The box was ticked before the button could be pressed, so the account Google makes is accepted at once.
+const signUpWithGoogle = () => signInWithGoogle({ acceptedTermsVersion: TERMS_VERSION });
+
 export default function SignUpRoute() {
   return (
     <AuthForm
-      heading={AUTH_SCREEN.signUp.heading}
-      submitLabel={AUTH_SCREEN.signUp.submitLabel}
+      heading={SIGN_UP_SCREEN.heading}
+      submitLabel={SIGN_UP_SCREEN.submitLabel}
       passwordRule="minLength"
+      requireAcceptance
       onSubmit={signUp}
+      onGoogleSignIn={signUpWithGoogle}
       footer={{
-        prompt: AUTH_SCREEN.signUp.footerPrompt,
-        linkLabel: AUTH_SCREEN.signUp.footerLink,
+        prompt: SIGN_UP_SCREEN.footerPrompt,
+        linkLabel: SIGN_UP_SCREEN.footerLink,
         href: "/(auth)/sign-in",
       }}
     />
