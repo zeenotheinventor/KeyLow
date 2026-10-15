@@ -248,11 +248,11 @@ pnpm --filter @keylow/web test:e2e
 Storybook (`@storybook/nextjs`, the webpack framework) shows the web components in every state. It uses the app's PostCSS and Tailwind setup, so a story is styled exactly like the app. It needs no Supabase stack and no `.env.local`.
 
 ```sh
-pnpm --filter @keylow/web storybook
+pnpm storybook
 pnpm --filter @keylow/web build-storybook
 ```
 
-- `storybook` serves on <http://localhost:6006>. Add `-p <port>` to use another port. `build-storybook` writes the static site to `apps/web/storybook-static/`, which git, Prettier and ESLint ignore. CI runs the build in the `static` job.
+- `pnpm storybook` runs the web app's `storybook` script from the repo root and serves on <http://localhost:6006>. Add `--port <port>` to use another port. `build-storybook` writes the static site to `apps/web/storybook-static/`, which git, Prettier and ESLint ignore. CI runs the build in the `static` job.
 - The **Theme** toolbar item flips `data-theme` on `html` between Dark (the default) and Light, the same attribute the app's layout sets from the cookie. The **Viewport** item has Desktop 1280 and Mobile 375.
 - Stories live next to the components, as `components/**/*.stories.tsx`. Vitest only runs `test/**`, so stories are never run as unit tests.
 - The **Accessibility** panel runs axe on the open story. Fix a violation before you merge a story.
@@ -453,6 +453,7 @@ Run from the repo root.
 | `pnpm check:integration`                 | Deno check and lint of the Edge Functions, the pgTAP tests in `packages/db/supabase/tests/`, then the Edge Function suites. Needs the stack running and the functions served. |
 | `pnpm dedupe --check`                    | Fails if the lockfile has duplicates that `pnpm dedupe` would remove                                                                                                          |
 | `pnpm exec prettier --write <path>`      | Formats a file the way `format:check` expects. Markdown is checked too.                                                                                                       |
+| `pnpm storybook`                         | Starts the web Storybook on <http://localhost:6006>                                                                                                                           |
 | `pnpm gen-types`                         | Regenerates `packages/db/src/types.gen.ts`. Run it after every migration, then commit the result.                                                                             |
 | `pnpm --filter @keylow/db migration:up`  | Applies the migrations the local database does not have yet, and keeps its data                                                                                               |
 | `pnpm --filter @keylow/db db:reset`      | Rebuilds the local database from nothing. Only for a broken database, announce it first                                                                                       |
