@@ -319,6 +319,7 @@ describe("coloured text in light mode", () => {
     "text-accent-foreground",
     "text-accent-ink",
     "text-warning-ink",
+    "text-success-ink",
     "bg-danger-muted",
     "border-danger",
     "text-caption",

@@ -9,11 +9,17 @@ import type { BadgeProps, BadgeTone } from "./types";
 
 // The classes are written out so Tailwind sees them. A status tone is the tone's muted fill with the
 // tone's colour as the text. In light that colour is too faint for small text, so the text falls back to
-// the primary text colour and the colour stays as the fill and the dot (Q14). Neutral and the source
-// badge are the sheet surface with secondary text, in both schemes.
+// the primary text colour and the colour stays as the fill and the dot (Q14). Success is the exception:
+// it has an ink token, a darker green that reads as text in light. Neutral and the source badge are the
+// sheet surface with secondary text, in both schemes.
 const tones: Record<
   BadgeTone,
-  { fillClassName: string; darkTextClassName: string; dotClassName: string }
+  {
+    fillClassName: string;
+    darkTextClassName: string;
+    lightTextClassName?: string;
+    dotClassName: string;
+  }
 > = {
   neutral: {
     fillClassName: "bg-surface-sheet",
@@ -28,6 +34,7 @@ const tones: Record<
   success: {
     fillClassName: "bg-success-muted",
     darkTextClassName: "text-success",
+    lightTextClassName: "text-success-ink",
     dotClassName: "bg-success",
   },
   warning: {
@@ -76,8 +83,9 @@ export function Badge(props: BadgeProps) {
   const tone = isSource ? "neutral" : (props.tone ?? "neutral");
   const look = tones[tone];
   const text = isSource ? describeFoodSource(props.source) : props.children;
+  const lightTextClassName = look.lightTextClassName ?? "text-text-primary";
   const textClassName =
-    scheme === "light" && tone !== "neutral" ? "text-text-primary" : look.darkTextClassName;
+    scheme === "light" && tone !== "neutral" ? lightTextClassName : look.darkTextClassName;
 
   return (
     <View

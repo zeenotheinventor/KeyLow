@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { colors, elevation, lightColors, themePlugin, themes, themeVariables } from "../src";
 import { isSolidColor } from "../src/theme";
+import { contrastRatio } from "./support/contrastRatio";
 import { renderCss, warmUpTailwindBeforeAll } from "./support/renderCss";
 import { customPropertiesUnder } from "./support/sources";
 
@@ -50,6 +51,24 @@ describe("the ink and camera colours", () => {
     expect(lightColors["warning-ink"]).toBe(lightColors["text-primary"]);
   });
 
+  it("should make the success ink the success colour in dark and a darker green in light", () => {
+    expect(colors["success-ink"]).toBe("#5CD67A");
+    expect(colors["success-ink"]).toBe(colors.success);
+    expect(lightColors["success-ink"]).toBe("#157A38");
+    expect(lightColors["success-ink"]).not.toBe(lightColors.success);
+  });
+
+  it.each([
+    ["dark", colors],
+    ["light", lightColors],
+  ] as const)(
+    "should read as text on the surface and the background in %s, at 4.5:1 or more",
+    (_scheme, palette) => {
+      expect(contrastRatio(palette["success-ink"], palette.surface)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(palette["success-ink"], palette.background)).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+
   it("should keep the camera surface and the viewfinder dim the same in both themes", () => {
     for (const palette of [colors, lightColors]) {
       expect(palette.camera).toBe("#07090D");
@@ -62,6 +81,8 @@ describe("the ink and camera colours", () => {
     expect(themeVariables("light")["--kl-accent-ink"]).toBe("15 19 26");
     expect(themeVariables("dark")["--kl-warning-ink"]).toBe("255 159 67");
     expect(themeVariables("light")["--kl-warning-ink"]).toBe("15 19 26");
+    expect(themeVariables("dark")["--kl-success-ink"]).toBe("92 214 122");
+    expect(themeVariables("light")["--kl-success-ink"]).toBe("21 122 56");
     expect(themeVariables("light")["--kl-camera"]).toBe("7 9 13");
     expect(themeVariables("light")["--kl-viewfinder-dim"]).toBe("rgba(0,0,0,0.35)");
   });

@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 
 // A status tone is the tone's muted fill with the tone's colour as the text. In light mode that
 // colour is too weak for small text, so the text falls back to the primary text colour and the
-// colour is kept as the fill and the dot. Each class is written out whole so Tailwind can see it.
+// colour is kept as the fill and the dot. Success is the exception: its ink token is a darker green
+// that reads as text in light. Each class is written out whole so Tailwind can see it.
 const tones = {
   neutral: { surface: "bg-surface-sheet text-text-secondary", dot: "bg-text-secondary" },
   accent: {
@@ -14,7 +15,7 @@ const tones = {
     dot: "bg-accent",
   },
   success: {
-    surface: "bg-success-muted text-success light-theme:text-text-primary",
+    surface: "bg-success-muted text-success-ink",
     dot: "bg-success",
   },
   warning: {

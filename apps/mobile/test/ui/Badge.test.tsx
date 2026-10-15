@@ -207,7 +207,7 @@ describe("Badge", () => {
       ).toHaveLength(1);
     });
 
-    it.each(coloredTones)(
+    it.each(coloredTones.filter((tone) => tone !== "success"))(
       scheme === "dark"
         ? "should set the %s status text in the tone's colour"
         : "should set the %s status text in the primary text colour, because a status colour is not text in light",
@@ -219,6 +219,12 @@ describe("Badge", () => {
         });
       },
     );
+
+    it("should set the success status text in the success ink, a darker green in light", async () => {
+      await renderBadge({ children: "Status", tone: "success" }, scheme);
+
+      expect(await screen.findByText("Status")).toHaveStyle({ color: colorOf("success-ink") });
+    });
 
     it.each(coloredTones)(
       "should draw the %s dot in the tone's colour in both schemes",
