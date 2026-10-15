@@ -1,4 +1,6 @@
+import { keys } from "@keylow/api-client";
 import { SIGN_UP_SCREEN, TERMS_VERSION } from "@keylow/core/copy";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { AuthForm } from "../../components/AuthForm";
 import { authErrorCode } from "../../lib/authErrorCode";
@@ -28,10 +30,18 @@ async function signUp(credentials: Credentials): Promise<AuthFormOutcome> {
     : { status: "done" };
 }
 
-// The box was ticked before the button could be pressed, so the account Google makes is accepted at once.
-const signUpWithGoogle = () => signInWithGoogle({ acceptedTermsVersion: TERMS_VERSION });
-
 export default function SignUpRoute() {
+  const queryClient = useQueryClient();
+
+  // The box was ticked before the button could be pressed, so the account Google makes is accepted at once.
+  // The AuthGate's gate read the acceptance when the session arrived, so it is read again once recorded.
+  const signUpWithGoogle = () =>
+    signInWithGoogle({
+      acceptedTermsVersion: TERMS_VERSION,
+      refreshTermsAcceptance: () =>
+        queryClient.invalidateQueries({ queryKey: keys.profiles.termsAcceptance }),
+    });
+
   return (
     <AuthForm
       heading={SIGN_UP_SCREEN.heading}

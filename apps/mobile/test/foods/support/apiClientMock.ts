@@ -1,3 +1,4 @@
+import { TERMS_VERSION } from "@keylow/core/copy";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
 import type * as ApiClient from "@keylow/api-client";
@@ -104,4 +105,12 @@ export const mockApiClient = {
   useFood: mockUseFood,
   useFoodPortions: mockUseFoodPortions,
   useFoodWithPortions: mockUseFoodWithPortions,
+  // A signed in user here has accepted the current Terms, so the AuthGate's terms gate stays out of the way.
+  useTermsAcceptance: () => ({
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    data: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
+    refetch: jest.fn(),
+  }),
 };

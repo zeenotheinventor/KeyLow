@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 
 import { authErrorCode } from "./authErrorCode";
 import { supabase } from "./supabase";
+import { holdTermsGate } from "./termsGateHold";
 
 /**
  * An error carries a code for `describeAuthError`, never a message. Only a failure Supabase answered has
@@ -15,9 +16,15 @@ export type GoogleSignInResult =
 
 /**
  * `acceptedTermsVersion` is set by the sign-up screen alone. It records that version as accepted once
- * the sign-in has succeeded, because the person ticked the box before pressing the button.
+ * the sign-in has succeeded, because the person ticked the box before pressing the button. The
+ * accept-to-continue gate is held on its loading state from before the sign-in until the acceptance is
+ * recorded and `refreshTermsAcceptance` has read it again, so the gate never sees the session without it.
  */
-export type GoogleSignInOptions = { acceptedTermsVersion?: string | undefined };
+export type GoogleSignInOptions = {
+  acceptedTermsVersion?: string | undefined;
+  /** Makes the app read the acceptance again, and settles when it has. Called after the acceptance is recorded. */
+  refreshTermsAcceptance?: (() => Promise<unknown>) | undefined;
+};
 
 const failure: GoogleSignInResult = { status: "error", code: undefined };
 
@@ -27,9 +34,14 @@ function isFilled(value: unknown): value is string {
 
 // A failure here must not undo a sign-in that worked, and it says nothing to the person: the gate that asks
 // for the terms to be accepted catches an account with no acceptance recorded.
-async function recordAcceptance(version: string): Promise<void> {
+async function recordAcceptance(
+  version: string,
+  refreshTermsAcceptance: (() => Promise<unknown>) | undefined,
+): Promise<void> {
   try {
     await acceptTerms(supabase, version);
+    // The gate read the acceptance when the session arrived, before this call, so it holds the old answer.
+    await refreshTermsAcceptance?.();
   } catch (error) {
     if (__DEV__) {
       console.warn("Recording the terms acceptance failed", error);
@@ -39,6 +51,7 @@ async function recordAcceptance(version: string): Promise<void> {
 
 export async function signInWithGoogle({
   acceptedTermsVersion,
+  refreshTermsAcceptance,
 }: GoogleSignInOptions = {}): Promise<GoogleSignInResult> {
   // Metro inlines each EXPO_PUBLIC_ variable only where it is read by its full name.
   const iosClientId: unknown = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
@@ -46,6 +59,8 @@ export async function signInWithGoogle({
   if (!isFilled(iosClientId) || !isFilled(webClientId)) {
     return failure;
   }
+
+  let releaseTermsGate: (() => void) | undefined;
 
   try {
     GoogleSignin.configure({ iosClientId, webClientId });
@@ -63,6 +78,8 @@ export async function signInWithGoogle({
       return failure;
     }
 
+    // Held before the sign-in, because the session it starts reaches the gate before the acceptance exists.
+    releaseTermsGate = acceptedTermsVersion === undefined ? undefined : holdTermsGate();
     const { error } = await supabase.auth.signInWithIdToken({ provider: "google", token: idToken });
 
     if (error !== null) {
@@ -70,7 +87,7 @@ export async function signInWithGoogle({
     }
 
     if (acceptedTermsVersion !== undefined) {
-      await recordAcceptance(acceptedTermsVersion);
+      await recordAcceptance(acceptedTermsVersion, refreshTermsAcceptance);
     }
 
     return { status: "signed-in" };
@@ -80,5 +97,7 @@ export async function signInWithGoogle({
     }
 
     return failure;
+  } finally {
+    releaseTermsGate?.();
   }
 }

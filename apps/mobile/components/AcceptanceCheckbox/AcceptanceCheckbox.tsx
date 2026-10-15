@@ -1,7 +1,7 @@
 import { LEGAL_URLS, SIGN_UP_ACCEPTANCE } from "@keylow/core/copy";
 import { Linking } from "react-native";
 
-import { Checkbox, CheckboxLink } from "../../ui";
+import { Checkbox, CheckboxLink } from "../ui";
 
 import type { AcceptanceCheckboxProps } from "./types";
 
