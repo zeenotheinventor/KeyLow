@@ -425,6 +425,21 @@ describe("FoodForm", () => {
       expect(updateFood).not.toHaveBeenCalled();
     });
 
+    it("should send no saturated fat, sugars or salt for a plain new food", async () => {
+      renderForm();
+      fillRequiredFields();
+
+      save();
+
+      await waitFor(() => {
+        expect(createFood).toHaveBeenCalledTimes(1);
+      });
+      const input = createFood.mock.calls[0]?.[0];
+      for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+        expect(input).not.toHaveProperty(key);
+      }
+    });
+
     it('should read a decimal comma as a decimal point, so "12,5" saves 12.5', async () => {
       renderForm();
       fillRequiredFields();
@@ -652,6 +667,135 @@ describe("FoodForm", () => {
         expect.objectContaining({ density_g_per_ml: 1.03, basis: "per_100ml" }),
       );
       expect(updateFood).not.toHaveBeenCalled();
+    });
+
+    describe("the saturated fat, sugars and salt of the source", () => {
+      const cofidCopyOf = {
+        food: makeFood({
+          source: "cofid",
+          owner_id: null,
+          kcal: 90,
+          protein_g: 3,
+          fat_g: 10,
+          carbs_g: 30,
+          sat_fat_g: 3,
+          sugars_g: 12,
+          salt_g: 0.8,
+        }),
+        portions: [],
+      };
+
+      async function saveCopy(copyOfFood: typeof cofidCopyOf = cofidCopyOf) {
+        renderForm({ copyOf: copyOfFood });
+        save("Save to your foods");
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        return createFood.mock.calls[0]?.[0];
+      }
+
+      it("should write all three on the new food without showing a field for them", async () => {
+        expect(await saveCopy()).toMatchObject({ sat_fat_g: 3, sugars_g: 12, salt_g: 0.8 });
+        for (const name of [/saturated/i, /sugars/i, /salt/i]) {
+          expect(screen.queryByRole("textbox", { name })).toBeNull();
+        }
+      });
+
+      it("should drop the saturated fat when the fat is edited below it", async () => {
+        renderForm({ copyOf: cofidCopyOf });
+        typeInto(fat, "2.9");
+
+        save("Save to your foods");
+
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        const input = createFood.mock.calls[0]?.[0];
+        expect(input).toMatchObject({ sugars_g: 12, salt_g: 0.8 });
+        expect(input).not.toHaveProperty("sat_fat_g");
+      });
+
+      it("should keep the saturated fat when the fat is edited to equal it", async () => {
+        renderForm({ copyOf: cofidCopyOf });
+        typeInto(fat, "3");
+
+        save("Save to your foods");
+
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        expect(createFood.mock.calls[0]?.[0]).toMatchObject({ sat_fat_g: 3 });
+      });
+
+      it("should drop the sugars when the carbohydrate is edited below them", async () => {
+        renderForm({ copyOf: cofidCopyOf });
+        typeInto(carbohydrate, "11.9");
+
+        save("Save to your foods");
+
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        const input = createFood.mock.calls[0]?.[0];
+        expect(input).toMatchObject({ sat_fat_g: 3, salt_g: 0.8 });
+        expect(input).not.toHaveProperty("sugars_g");
+      });
+
+      it("should keep the sugars when the carbohydrate is edited to equal them", async () => {
+        renderForm({ copyOf: cofidCopyOf });
+        typeInto(carbohydrate, "12");
+
+        save("Save to your foods");
+
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        expect(createFood.mock.calls[0]?.[0]).toMatchObject({ sugars_g: 12 });
+      });
+
+      it("should carry the salt whatever the fat and carbohydrate are edited to", async () => {
+        renderForm({ copyOf: cofidCopyOf });
+        typeInto(fat, "0");
+        typeInto(carbohydrate, "0");
+
+        save("Save to your foods");
+
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        const input = createFood.mock.calls[0]?.[0];
+        expect(input).toMatchObject({ salt_g: 0.8 });
+        expect(input).not.toHaveProperty("sat_fat_g");
+        expect(input).not.toHaveProperty("sugars_g");
+      });
+
+      it("should keep the saturated fat and sugars the source holds above its own fat and carbohydrate when the edit raises them", async () => {
+        const mismatchedSource = {
+          ...cofidCopyOf,
+          food: { ...cofidCopyOf.food, fat_g: 2, sat_fat_g: 3, carbs_g: 5, sugars_g: 8 },
+        };
+        renderForm({ copyOf: mismatchedSource });
+        typeInto(fat, "5");
+        typeInto(carbohydrate, "10");
+
+        save("Save to your foods");
+
+        await waitFor(() => {
+          expect(createFood).toHaveBeenCalledTimes(1);
+        });
+        expect(createFood.mock.calls[0]?.[0]).toMatchObject({ sat_fat_g: 3, sugars_g: 8 });
+      });
+
+      it("should leave out a value the source does not record, never sending null", async () => {
+        const input = await saveCopy({
+          ...cofidCopyOf,
+          food: { ...cofidCopyOf.food, sat_fat_g: null, sugars_g: null, salt_g: null },
+        });
+
+        for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+          expect(input).not.toHaveProperty(key);
+        }
+      });
     });
 
     describe("when the carbohydrate of the food included fibre", () => {
@@ -1032,6 +1176,25 @@ describe("FoodForm", () => {
         },
       });
       expect(createFood).not.toHaveBeenCalled();
+    });
+
+    it("should send no saturated fat, sugars or salt on an edit, so an update never touches them", async () => {
+      renderForm({
+        existing: {
+          food: makeFood({ ...existing.food, sat_fat_g: 1, sugars_g: 2, salt_g: 0.1 }),
+          portions: existing.portions,
+        },
+      });
+
+      save("Save changes");
+
+      await waitFor(() => {
+        expect(updateFood).toHaveBeenCalledTimes(1);
+      });
+      const input = updateFood.mock.calls[0]?.[0].input;
+      for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+        expect(input).not.toHaveProperty(key);
+      }
     });
 
     it("should carry the stored density through unchanged because the form does not show it", async () => {

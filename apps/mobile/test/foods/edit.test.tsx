@@ -282,6 +282,20 @@ describe("edit food screen", () => {
       expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
     });
 
+    it("should send no saturated fat, sugars or salt, so an update never touches them", async () => {
+      Object.assign(foodQuery, {
+        data: { ...foodFixture, sat_fat_g: 1, sugars_g: 2, salt_g: 0.1 },
+      });
+      const user = await renderEditor();
+
+      await save(user);
+
+      expect(mockUpdateFood).toHaveBeenCalledTimes(1);
+      for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+        expect(mockUpdateFood.mock.calls[0]?.[0].input).not.toHaveProperty(key);
+      }
+    });
+
     it("should carry an existing density through so saving does not clear it", async () => {
       Object.assign(foodQuery, { data: { ...foodFixture, density_g_per_ml: 1.03 } });
       const user = await renderEditor();

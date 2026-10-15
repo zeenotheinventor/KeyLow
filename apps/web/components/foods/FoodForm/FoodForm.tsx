@@ -2,7 +2,7 @@
 
 import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
 import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
-import { customFoodInputFrom, normaliseBarcode } from "@keylow/core/foods";
+import { customFoodInputFrom, normaliseBarcode, withCarriedNutrients } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type SubmitEvent } from "react";
@@ -155,7 +155,10 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
     setStatus("saving");
     try {
       if (existing === undefined) {
-        const created = await createFood.mutateAsync(result.data);
+        // A copy also carries the source's saturated fat, sugars and salt. A new food has no source.
+        const created = await createFood.mutateAsync(
+          copyOf === undefined ? result.data : withCarriedNutrients(copyOf.food, result.data),
+        );
         router.replace(`/foods/${created.food.id}`);
       } else {
         await updateFood.mutateAsync({ id: existing.food.id, input: result.data });

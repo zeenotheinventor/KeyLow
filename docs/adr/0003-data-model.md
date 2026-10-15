@@ -315,7 +315,7 @@ Updates never clear the three columns. `updateFood` already leaves them untouche
 
 `customFoodInputSchema` in `@keylow/core` gains `sat_fat_g`, `sugars_g` and `salt_g` as optional keys, each a non-negative number and not nullable, like `fibre_g`. A null value on the source food is omitted from the input, never passed as null, so an update can never clear a column. An absent key on create is stored as null. An absent key on update is never written, so the existing value stays (an interpretation of "updates never clear them"). The ordinary create and edit forms do not send these keys, so for them nothing changes.
 
-Implemented by KEY-154 (the schema keys, the drop rules in `@keylow/core` and the carrying in `@keylow/api-client`) and by KEY-155 (the apps' copy flow, which calls the core helper `carriedNutrients`, and that helper applies the drop rules).
+Implemented by KEY-154 (the schema keys, the drop rules in `@keylow/core` and the carrying in `@keylow/api-client`) and by KEY-155 (the apps' copy flow, which calls the core helper `withCarriedNutrients`, which wraps `carriedNutrients`, where the drop rules are applied).
 
 ### Consequences of Amendment 2
 

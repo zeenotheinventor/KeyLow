@@ -27,6 +27,7 @@ export function CopyFoodForm({ sourceFoodId }: CopyFoodFormProps) {
   return (
     <NewFoodForm
       submitLabel={FOOD_FORM_BUTTONS.copy}
+      copiedFrom={food}
       initialValues={initialValues}
       {...(isCarbsIncludingFibre ? { nutrientNote: FOOD_FORM.usCarbsNote } : {})}
       notGivenNutrients={notGiven}

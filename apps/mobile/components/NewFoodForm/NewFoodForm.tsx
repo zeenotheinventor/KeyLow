@@ -1,5 +1,6 @@
 import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
 import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
+import { withCarriedNutrients } from "@keylow/core/foods";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
@@ -21,6 +22,7 @@ export function NewFoodForm({
   nutrientNote,
   notGivenNutrients,
   submitLabel,
+  copiedFrom,
 }: NewFoodFormProps) {
   const router = useRouter();
   const createFood = useCreateFood();
@@ -31,7 +33,9 @@ export function NewFoodForm({
 
   async function create(input: CustomFoodInput) {
     try {
-      const created = await createFood.mutateAsync(input);
+      const created = await createFood.mutateAsync(
+        copiedFrom === undefined ? input : withCarriedNutrients(copiedFrom, input),
+      );
       router.replace(`/foods/${created.food.id}`);
     } catch (error) {
       if (error instanceof FoodsPartialWriteError) {

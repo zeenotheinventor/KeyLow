@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { carriedNutrients } from "../../src/foods/carriedNutrients";
+import { carriedNutrients, withCarriedNutrients } from "../../src/foods/carriedNutrients";
 
 const editedMacros = { fat_g: 10, carbs_g: 30 };
 
@@ -88,5 +88,40 @@ describe("carriedNutrients", () => {
     const source = { sat_fat_g: 11, sugars_g: 12, salt_g: 1.5 };
 
     expect(carriedNutrients(source, editedMacros)).toEqual({ sugars_g: 12, salt_g: 1.5 });
+  });
+});
+
+describe("withCarriedNutrients", () => {
+  const input = {
+    name: "Oat drink",
+    basis: "per_100g" as const,
+    kcal: 90,
+    protein_g: 3,
+    fat_g: 10,
+    carbs_g: 30,
+    portions: [],
+  };
+
+  it("should add the carried nutrients to the input, leaving every other key as it was", () => {
+    const source = { sat_fat_g: 3, sugars_g: 12, salt_g: 0.8 };
+
+    expect(withCarriedNutrients(source, input)).toEqual({
+      ...input,
+      sat_fat_g: 3,
+      sugars_g: 12,
+      salt_g: 0.8,
+    });
+  });
+
+  it("should apply the drop rules against the fat and carbs of the input", () => {
+    const source = { sat_fat_g: 10.1, sugars_g: 30.1, salt_g: 0.8 };
+
+    expect(withCarriedNutrients(source, input)).toEqual({ ...input, salt_g: 0.8 });
+  });
+
+  it("should add no keys when the source holds none", () => {
+    const source = { sat_fat_g: null, sugars_g: null, salt_g: null };
+
+    expect(withCarriedNutrients(source, input)).toEqual(input);
   });
 });

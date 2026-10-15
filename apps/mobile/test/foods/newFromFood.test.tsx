@@ -539,4 +539,143 @@ describe("new food screen, copying a food with the from parameter", () => {
       expect(screen.queryByRole("status", { name: "Loading food" })).not.toBeOnTheScreen();
     });
   });
+
+  describe("the saturated fat, sugars and salt of the source", () => {
+    // A CoFID food that gives every nutrient, including the three the form does not show.
+    const cofidFood: Food = {
+      ...foodFixture,
+      source: "cofid",
+      source_ref: "13-145",
+      owner_id: null,
+      protein_g: 3,
+      fat_g: 10,
+      carbs_g: 30,
+      sat_fat_g: 3,
+      sugars_g: 12,
+      salt_g: 0.8,
+    };
+
+    async function replaceValue(
+      user: Awaited<ReturnType<typeof renderCopy>>,
+      label: string,
+      value: string,
+    ) {
+      await user.clear(screen.getByLabelText(label));
+      await user.type(screen.getByLabelText(label), value);
+    }
+
+    function createdInput() {
+      expect(mockCreateFood).toHaveBeenCalledTimes(1);
+      return mockCreateFood.mock.calls[0]?.[0];
+    }
+
+    beforeEach(() => {
+      Object.assign(foodQuery, { data: cofidFood });
+    });
+
+    it("should write all three on the new food without showing a field for them", async () => {
+      const user = await renderCopy();
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ sat_fat_g: 3, sugars_g: 12, salt_g: 0.8 });
+      for (const label of [/saturated/i, /sugars/i, /salt/i]) {
+        expect(screen.queryByLabelText(label)).not.toBeOnTheScreen();
+      }
+    });
+
+    it("should drop the saturated fat when the fat is edited below it", async () => {
+      const user = await renderCopy();
+      await replaceValue(user, "Fat (g)", "2.9");
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ sugars_g: 12, salt_g: 0.8 });
+      expect(createdInput()).not.toHaveProperty("sat_fat_g");
+    });
+
+    it("should keep the saturated fat when the fat is edited to equal it", async () => {
+      const user = await renderCopy();
+      await replaceValue(user, "Fat (g)", "3");
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ sat_fat_g: 3 });
+    });
+
+    it("should drop the sugars when the carbohydrate is edited below them", async () => {
+      const user = await renderCopy();
+      await replaceValue(user, "Carbohydrate (g)", "11.9");
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ sat_fat_g: 3, salt_g: 0.8 });
+      expect(createdInput()).not.toHaveProperty("sugars_g");
+    });
+
+    it("should keep the sugars when the carbohydrate is edited to equal them", async () => {
+      const user = await renderCopy();
+      await replaceValue(user, "Carbohydrate (g)", "12");
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ sugars_g: 12 });
+    });
+
+    it("should carry the salt whatever the fat and carbohydrate are edited to", async () => {
+      const user = await renderCopy();
+      await replaceValue(user, "Fat (g)", "0");
+      await replaceValue(user, "Carbohydrate (g)", "0");
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ salt_g: 0.8 });
+      expect(createdInput()).not.toHaveProperty("sat_fat_g");
+      expect(createdInput()).not.toHaveProperty("sugars_g");
+    });
+
+    it("should keep the saturated fat and sugars the source holds above its own fat and carbohydrate when the edit raises them", async () => {
+      Object.assign(foodQuery, {
+        data: { ...cofidFood, fat_g: 2, sat_fat_g: 3, carbs_g: 5, sugars_g: 8 },
+      });
+      const user = await renderCopy();
+      await replaceValue(user, "Fat (g)", "5");
+      await replaceValue(user, "Carbohydrate (g)", "10");
+
+      await save(user);
+
+      expect(createdInput()).toMatchObject({ sat_fat_g: 3, sugars_g: 8 });
+    });
+
+    it("should send none of the three when a partial write makes the next save an update", async () => {
+      mockCreateFood.mockRejectedValue(
+        new FoodsPartialWriteError(copiedFoodId, "portions failed", new Error("insert failed")),
+      );
+      const user = await renderCopy();
+      await save(user);
+      await screen.findByRole("alert", {
+        name: "Portions not saved Your food was saved but its portions were not. Save again to add them.",
+      });
+
+      await user.press(screen.getByRole("button", { name: "Save" }));
+
+      expect(mockUpdateFood).toHaveBeenCalledTimes(1);
+      for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+        expect(mockUpdateFood.mock.calls[0]?.[0].input).not.toHaveProperty(key);
+      }
+    });
+
+    it("should leave out a value the source does not record, never sending null", async () => {
+      Object.assign(foodQuery, {
+        data: { ...cofidFood, sat_fat_g: null, sugars_g: null, salt_g: null },
+      });
+      const user = await renderCopy();
+
+      await save(user);
+
+      for (const key of ["sat_fat_g", "sugars_g", "salt_g"]) {
+        expect(createdInput()).not.toHaveProperty(key);
+      }
+    });
+  });
 });
