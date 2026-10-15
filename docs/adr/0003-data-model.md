@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15.
 
 ## Context
 
@@ -319,3 +319,59 @@ Implemented by KEY-154 (the schema keys, the drop rules in `@keylow/core` and th
 ### Consequences of Amendment 2
 
 M3's diary migration matches the `portion_id` rules above, and its `buildFoodSnapshot` produces the `portion` and `nutrients` shapes above. KEY-154, KEY-155 and KEY-156 implement the rest, and none of them needs a schema change. Any further deviation from the frozen Decision, from Amendment 1 or from this amendment needs an Amendment 3 before the migration or code that implements it lands.
+
+## Amendment 3 (Profiles: terms acceptance, 2026-10-15)
+
+### Status
+
+Recorded on 2026-10-15 under KEY-157. Implements Zee's rulings on KEY-136 (2026-10-14 and 2026-10-15). Sign-up requires ticking acceptance of the Terms and the Privacy Policy, and that acceptance is the explicit consent for health data. It is recorded on the profile in the same step that creates the account. On the Google path the user ticks first and the acceptance is recorded straight after sign-in. An accept-to-continue gate catches any signed-in account without a current acceptance. The remaining details are interpretations made for implementation. They are, in full: the check that pairs the two columns, the rule that a blank version counts as no version, the narrowing of `insert` as well as `update`, the exclusion of `id` and `created_at` from both column lists, the grant of `accept_terms` to `authenticated` only, and the error raised when the caller has no profile row. Zee confirms them by approving the PR that carries this amendment. The frozen Decision text, Amendment 1 and Amendment 2 are unchanged. This amendment adds two columns to `profiles`, which the frozen column list does not name, and narrows two grants that `0001_init.sql` set wide.
+
+### `profiles` columns
+
+| Column              | Definition                                                                                                                             |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `terms_accepted_at` | `timestamptz`, nullable. When the user accepted, taken from the database clock.                                                        |
+| `terms_version`     | `text`, nullable. The version of the Terms and Privacy Policy the user accepted. The app's `TERMS_VERSION` constant in `@keylow/core`. |
+
+Both are null until the user accepts. A check, `profiles_terms_acceptance_paired`, requires `(terms_accepted_at is null) = (terms_version is null)`, so a row never carries a version without a time or a time without a version. The database does not know which version is current, so it does not validate the value. Deciding whether a stored version is current is the app's job and is what the accept-to-continue gate does. A stored version is the version the user saw, not a claim that it is the latest.
+
+### Sign-up trigger
+
+`handle_new_user()` keeps everything it did before (insert the `profiles` row for the new `auth.users` row, security definer, empty `search_path`, execute revoked) and now also reads `raw_user_meta_data ->> 'terms_version'`:
+
+- When it is a non-blank string, the new row gets that `terms_version` and `terms_accepted_at = now()`.
+- When it is missing, null or blank (empty or only whitespace), both columns stay null.
+- The time is always the database's. A `terms_accepted_at` key in the metadata is ignored.
+
+The client sends the version as user metadata in the same call that creates the account (`options.data.terms_version`), so the account and its acceptance are written in one transaction. The trigger fires on insert only, so changing user metadata later does not change the profile. The value is client-supplied, so a client could claim any version string. That is accepted. The record shows what the app said it showed, and the timestamp is the part that cannot be chosen by the client.
+
+### `accept_terms(p_version text)`
+
+`public.accept_terms(p_version text) returns void`, security definer, `search_path = ''`:
+
+- Raises `28000` when there is no signed-in user (`auth.uid()` is null).
+- Raises `22023` when `p_version` is null or blank.
+- Updates the caller's own row only (`where id = (select auth.uid())`), setting `terms_version = p_version` and `terms_accepted_at = now()`.
+- Raises `P0002` when the caller has no `profiles` row, so a user without a profile does not get a silent success.
+- Accepting a newer version overwrites both columns. The earlier acceptance is not kept. History of acceptances is out of scope.
+
+Execute is revoked from `public` and `anon` and granted to `authenticated`. `service_role` is not granted it, unlike `search_foods`, because the function acts on the caller and `service_role` has none.
+
+It serves the Google path (record the acceptance straight after sign-in) and the accept-to-continue gate (record a newer version).
+
+### Privileges
+
+`0001_init.sql` granted `authenticated` `insert` and `update` on every column of `profiles`. Both are now explicit column lists, the same approach as `foods` in Amendment 1:
+
+- `insert`: `id`, `sex`, `birth_date`, `height_cm`, `activity`, `weight_unit`, `energy_unit`, `timezone`, `checkin_weekday`, `onboarding_weight_kg`, `onboarding_completed_at`.
+- `update`: the same list without `id`.
+- Neither list has `terms_accepted_at`, `terms_version` or `created_at`. The terms columns are written only by the trigger and by `accept_terms`, because a client that could write them could record consent it never gave. `created_at` is an audit column the database fills in.
+- `id` is not updatable. A row's id is its `auth.users` id and no client changes it. This turns the one existing case where an update to `id` failed on the `profiles_update_own` check into a failure on privileges instead, which is still an error with code `42501`.
+- `id` stays insertable and `insert` is narrowed rather than removed. No app code inserts `profiles` rows, because the trigger does. The grant is kept so the `profiles_insert_own` policy still has a statement to guard. A user who deletes their row and inserts it again gets a row with no acceptance, which the accept-to-continue gate then catches.
+- `select` and `delete` are unchanged. The four owner-only policies are unchanged.
+
+A column added to `profiles` later is not writable by clients until the migration that adds it grants it.
+
+### Consequences of Amendment 3
+
+The sign-up screens (KEY-159 and KEY-160), the Google path and the accept-to-continue gate (KEY-161 and KEY-162) read and write acceptance only through the `terms_version` metadata key and `accept_terms`. The api-client functions that wrap them are KEY-158. M3's target columns on `profiles` are not part of this amendment. They follow in an Amendment 4 and must add their own column grants on top of the lists above. Any further deviation from the frozen Decision, from Amendment 1, Amendment 2 or this amendment needs an Amendment 4 before the migration or code that implements it lands.

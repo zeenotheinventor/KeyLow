@@ -234,6 +234,8 @@ export type Database = {
           onboarding_completed_at: string | null;
           onboarding_weight_kg: number | null;
           sex: string | null;
+          terms_accepted_at: string | null;
+          terms_version: string | null;
           timezone: string;
           weight_unit: string | null;
         };
@@ -248,6 +250,8 @@ export type Database = {
           onboarding_completed_at?: string | null;
           onboarding_weight_kg?: number | null;
           sex?: string | null;
+          terms_accepted_at?: string | null;
+          terms_version?: string | null;
           timezone?: string;
           weight_unit?: string | null;
         };
@@ -262,6 +266,8 @@ export type Database = {
           onboarding_completed_at?: string | null;
           onboarding_weight_kg?: number | null;
           sex?: string | null;
+          terms_accepted_at?: string | null;
+          terms_version?: string | null;
           timezone?: string;
           weight_unit?: string | null;
         };
@@ -290,6 +296,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_terms: { Args: { p_version: string }; Returns: undefined };
       consume_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number };
         Returns: {
