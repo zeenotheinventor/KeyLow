@@ -1,5 +1,6 @@
 import { withQuantity } from "./snapshotQuantity";
 import { SNAPSHOT_VERSION } from "./versions";
+import { densityForLogging } from "../nutrition/volume";
 
 import type { FoodSnapshot, SnapshotPortion } from "./schemas";
 import type { QuantityUnit } from "../nutrition/units";
@@ -46,7 +47,8 @@ const toSnapshotPortion = (
 };
 
 /**
- * Freezes a food at the moment it is logged: its name, basis, per 100 values and density, plus the
+ * Freezes a food at the moment it is logged: its name, basis, per 100 values and density (its own, else
+ * the estimate for its group, so a later change to the density table never changes the entry), plus the
  * quantity, unit and portion it was logged with and the grams that resolves to. Optional nutrients
  * the food does not record are left out of `per100` (ADR 0003, Amendment 2), and micronutrients are
  * never carried.
@@ -63,7 +65,7 @@ export const buildFoodSnapshot = (food: Food, input: FoodSnapshotInput): FoodSna
       name: food.name,
       basis: food.basis,
       per100: buildPer100(food),
-      density: food.density_g_per_ml,
+      density: densityForLogging(food),
     },
     {
       quantity: input.quantity,

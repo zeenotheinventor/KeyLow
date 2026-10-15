@@ -3,13 +3,13 @@ import { GRAMS_PER_OUNCE, ML_PER_FLUID_OUNCE } from "@keylow/core/nutrition";
 
 import type { PortionAmount } from "../components/PortionPicker";
 import type { RecentFood } from "@keylow/api-client";
-import type { QuantityUnit } from "@keylow/core/nutrition";
+import type { QuantityUnit, SpoonPortion } from "@keylow/core/nutrition";
 import type { FoodPortion } from "@keylow/core/schemas";
 
 /** An amount of a food to log: a count of one of its portions, or a measured amount. */
 export type LoggableAmount =
   | { quantity: number; unit: Exclude<QuantityUnit, "portion"> }
-  | { quantity: number; unit: "portion"; portion: FoodPortion };
+  | { quantity: number; unit: "portion"; portion: FoodPortion | SpoonPortion };
 
 /**
  * The amount a Recent food was last logged with, to log it again against the food as it is now. A portion
