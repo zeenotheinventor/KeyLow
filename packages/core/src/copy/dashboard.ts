@@ -4,7 +4,6 @@ import { formatCalories } from "../format/numbers";
 /** The words of the dashboard's nutrition card, as the `dashboard` boards draw them. */
 export const DASHBOARD_CARD = {
   title: "Today",
-  regionName: "Today's nutrition",
   edit: "Edit",
   editName: "Edit targets",
 } as const;

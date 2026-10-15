@@ -273,14 +273,11 @@ describe("the tab shell", () => {
   });
 
   describe("the placeholders", () => {
-    it.each([
-      ["dashboard", "Your weekly nutrition, weight trend and expenditure will appear here."],
-      ["recipes", "Your recipes will appear here."],
-    ])("should say what %s will show, under Coming soon", async (route, body) => {
-      await renderApp(`/${route}`);
+    it("should say what recipes will show, under Coming soon", async () => {
+      await renderApp("/recipes");
 
       expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeOnTheScreen();
-      expect(screen.getByText(body)).toBeOnTheScreen();
+      expect(screen.getByText("Your recipes will appear here.")).toBeOnTheScreen();
     });
   });
 

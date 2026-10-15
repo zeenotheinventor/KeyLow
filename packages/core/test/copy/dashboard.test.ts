@@ -20,7 +20,6 @@ describe("the dashboard copy", () => {
   it("should pin the words of the card as the board draws them", () => {
     expect(DASHBOARD_CARD).toEqual({
       title: "Today",
-      regionName: "Today's nutrition",
       edit: "Edit",
       editName: "Edit targets",
     });

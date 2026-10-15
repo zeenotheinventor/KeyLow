@@ -30,7 +30,6 @@ describe("the tab shell copy", () => {
   it("should pin the placeholder sentences the boards draw", () => {
     expect(COMING_SOON_TITLE).toBe("Coming soon");
     expect(PLACEHOLDER_BODIES).toEqual({
-      dashboard: "Your weekly nutrition, weight trend and expenditure will appear here.",
       diary: "Your logged foods will appear here, day by day.",
       recipes: "Your recipes will appear here.",
     });
