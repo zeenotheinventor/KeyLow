@@ -21,6 +21,14 @@ type Column = "hours" | "minutes";
 const panelClasses =
   "fixed inset-x-0 bottom-0 z-10 flex flex-col gap-3 rounded-t-large border border-border bg-surface-sheet px-4 pb-5 pt-3 text-text-primary shadow-sheet outline-none min-[700px]:inset-x-auto min-[700px]:bottom-auto min-[700px]:mt-1 min-[700px]:w-[232px] min-[700px]:rounded-medium min-[700px]:p-3 min-[700px]:shadow-card";
 
+// Where there is no room under the field the popover goes above it: up by its own height, the field's 44 and
+// the two 4 px gaps.
+const aboveClasses =
+  "min-[700px]:-translate-y-[calc(100%+theme(height.control-md)+theme(spacing.2))]";
+
+// The gap between the field and the popover, over and above its 4 px margin: the same 4 px.
+const PLACEMENT_GAP = 8;
+
 const listClasses =
   "relative flex h-[200px] flex-col overflow-y-auto [scrollbar-width:none] min-[700px]:h-[180px] [&::-webkit-scrollbar]:hidden";
 
@@ -97,6 +105,7 @@ function TimePickerPanel({ value, onApply, onClose, anchorRef }: PanelProps) {
   const [hour, setHour] = useState(start.hour);
   const [minute, setMinute] = useState(start.minute);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [isAbove, setIsAbove] = useState(false);
   const lists = useRef<Record<Column, HTMLDivElement | null>>({ hours: null, minutes: null });
   const options = useRef<Record<Column, (HTMLButtonElement | null)[]>>({ hours: [], minutes: [] });
   // The column whose selected option takes focus once the render that moved the selection is done.
@@ -109,6 +118,18 @@ function TimePickerPanel({ value, onApply, onClose, anchorRef }: PanelProps) {
       if (list !== null && option !== undefined && option !== null) centreInList(list, option);
     }
     options.current.hours[start.hour]?.focus();
+
+    // From 700 px the popover is under its field, unless that would run it off the bottom of the window and
+    // there is room above. Below 700 px the panel sits on the bottom edge, which is not past it, and the
+    // classes that lift it only apply from 700 px.
+    const panel = panelRef.current;
+    const anchor = anchorRef?.current;
+    if (panel !== null && anchor !== null && anchor !== undefined) {
+      const panelBox = panel.getBoundingClientRect();
+      const anchorBox = anchor.getBoundingClientRect();
+      const isRoomAbove = anchorBox.top - panelBox.height - PLACEMENT_GAP >= 0;
+      setIsAbove(panelBox.bottom > window.innerHeight && isRoomAbove);
+    }
     // The picker starts once, from its first value.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -220,7 +241,12 @@ function TimePickerPanel({ value, onApply, onClose, anchorRef }: PanelProps) {
   return (
     <>
       <div aria-hidden className="fixed inset-0 z-10 bg-overlay min-[700px]:hidden" />
-      <div ref={panelRef} role="dialog" aria-label={TIME_FIELD.pickerName} className={panelClasses}>
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-label={TIME_FIELD.pickerName}
+        className={isAbove ? `${panelClasses} ${aboveClasses}` : panelClasses}
+      >
         <span
           aria-hidden
           className="mx-auto h-1 w-9 rounded-pill bg-border-strong min-[700px]:hidden"

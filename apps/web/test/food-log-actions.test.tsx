@@ -1,11 +1,24 @@
-import { act, cleanup, render, renderHook } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { AddFoodDialogProps } from "@/components/diary/AddFoodDialog";
 
 import { FoodLogActionsProvider, useFoodLogActions } from "@/lib/foodLogActions";
 
-const { push } = vi.hoisted(() => ({ push: vi.fn<(href: string) => void>() }));
+const { pathname } = vi.hoisted(() => ({ pathname: { current: "/diary" } }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+vi.mock("next/navigation", () => ({ usePathname: () => pathname.current }));
+
+vi.mock("@/components/diary/AddFoodDialog", () => ({
+  AddFoodDialog: ({ request, onClose }: AddFoodDialogProps) => (
+    <div role="dialog" aria-label="Add food">
+      <p>{`Adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
+      <button type="button" onClick={onClose}>
+        Close the add dialog
+      </button>
+    </div>
+  ),
+}));
 
 function wrapper({ children }: { children: React.ReactNode }) {
   return <FoodLogActionsProvider>{children}</FoodLogActionsProvider>;
@@ -13,27 +26,80 @@ function wrapper({ children }: { children: React.ReactNode }) {
 
 describe("FoodLogActionsProvider", () => {
   beforeEach(() => {
-    vi.resetAllMocks();
+    pathname.current = "/diary";
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it("should send an add food request to the food search until the dialog exists", () => {
-    const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+  describe("openAddFood", () => {
+    it("should show no dialog until it is asked to", () => {
+      render(<FoodLogActionsProvider>{null}</FoodLogActionsProvider>);
 
-    result.current.openAddFood({ date: "2026-10-15", time: "12:00" });
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
 
-    expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
-  });
+    it("should open the add food dialog for the day", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
 
-  it("should do nothing for an edit request until the dialog exists", () => {
-    const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
 
-    result.current.openEditEntry("entry-1");
+      expect(screen.getByText("Adding on 2026-10-15")).toBeTruthy();
+    });
 
-    expect(push).not.toHaveBeenCalled();
+    it("should hand the hour of an hour's plus to the dialog", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15", time: "12:00" });
+      });
+
+      expect(screen.getByText("Adding on 2026-10-15 at 12:00")).toBeTruthy();
+    });
+
+    it("should close the dialog when the dialog asks to", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
+
+      act(() => {
+        screen.getByRole("button", { name: "Close the add dialog" }).click();
+      });
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should close the dialog when the page changes under it", () => {
+      const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15" });
+      });
+
+      pathname.current = "/foods/new";
+      rerender();
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should start the next request fresh, with its own hour", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15", time: "12:00" });
+      });
+      act(() => {
+        screen.getByRole("button", { name: "Close the add dialog" }).click();
+      });
+
+      act(() => {
+        result.current.openAddFood({ date: "2026-10-15", time: "08:00" });
+      });
+
+      expect(screen.getByText("Adding on 2026-10-15 at 08:00")).toBeTruthy();
+    });
   });
 
   it("should know no day on view until a page says which", () => {

@@ -11,4 +11,6 @@ export type DialogProps = {
   footer?: React.ReactNode;
   /** An action set apart on the left of the footer, such as a destructive Delete. */
   leadingAction?: React.ReactNode;
+  /** Classes for the panel, such as a height for a dialog that keeps one size through its steps. */
+  className?: string;
 };

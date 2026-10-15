@@ -12,7 +12,7 @@ import {
   UNDO_LABEL,
   describeCopiedFromYesterday,
 } from "@keylow/core/copy";
-import { previousCalendarDay } from "@keylow/core/dates";
+import { joinClockTime, previousCalendarDay } from "@keylow/core/dates";
 import { groupEntriesByHour, progressBars, sumEntries } from "@keylow/core/diary";
 import { Copy, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -25,12 +25,14 @@ import type { LogEntry } from "@keylow/api-client";
 import { MacroProgressStrip } from "@/components/ui/MacroProgressStrip";
 import { useToast } from "@/components/ui/Toast";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
+import { useFoodLogActions } from "@/lib/foodLogActions";
 
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets) and the
  * hour-by-hour log, and everything that changes the day. The bars add up the entries on screen with
  * core's `sumEntries`, so they always agree with the rows. Delete is immediate and offers Undo. Copy
- * yesterday copies the whole day and offers Undo too. The complete switch marks the day at once.
+ * yesterday copies the whole day and offers Undo too. The complete switch marks the day at once. An
+ * hour's plus opens the add dialog at that hour, and a row's Edit opens the edit dialog.
  */
 export function DiaryDayContent({
   day,
@@ -42,6 +44,7 @@ export function DiaryDayContent({
 }: DiaryDayContentProps) {
   const toast = useToast();
   const keyboardUndo = useKeyboardUndo();
+  const { openAddFood, openEditEntry } = useFoodLogActions();
   const deleteEntry = useDeleteEntry();
   const restoreEntry = useRestoreEntry();
   const copyDay = useCopyDay();
@@ -115,8 +118,14 @@ export function DiaryDayContent({
         onCompleteChange={(isComplete) => {
           setDayComplete.mutate({ localDate: day.localDate, complete: isComplete });
         }}
+        onAddFood={(hour) => {
+          openAddFood({ date: day.localDate, time: joinClockTime(hour, 0) });
+        }}
         onCopyYesterday={copyYesterday}
         onDelete={remove}
+        onEdit={(entry) => {
+          openEditEntry(entry.id);
+        }}
       />
     </>
   );

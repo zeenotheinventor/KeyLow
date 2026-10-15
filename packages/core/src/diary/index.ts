@@ -32,3 +32,22 @@ export type {
 } from "./schemas";
 export { NUTRITION_ENGINE_VERSION, SNAPSHOT_VERSION } from "./versions";
 export * from "./rules";
+export { openingLoggedAt, clockTimeOn } from "./openingLoggedAt";
+export type { LogContext } from "./openingLoggedAt";
+export { previewAmount } from "./previewAmount";
+export type {
+  AmountFood,
+  AmountPortion,
+  AmountPreview,
+  AmountSummary,
+  ChosenAmount,
+} from "./previewAmount";
+export {
+  SNAPSHOT_PORTION_ID,
+  snapshotAmountStart,
+  snapshotAsFood,
+  snapshotPortions,
+} from "./snapshotAmount";
+export { startingAmount, unitOptions, unitValueOf } from "./startingAmount";
+export type { UnitOption } from "./startingAmount";
+export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";

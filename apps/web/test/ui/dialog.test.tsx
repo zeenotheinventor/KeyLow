@@ -89,6 +89,14 @@ describe("Dialog", () => {
     cleanup();
   });
 
+  it("should add the classes it is given to the panel, such as a height", () => {
+    render(<AddFoodDialog className="min-[700px]:h-[600px]" />);
+
+    expect(screen.getByRole("dialog", { name: "Add food" }).className).toContain(
+      "min-[700px]:h-[600px]",
+    );
+  });
+
   describe("stacked dialogs", () => {
     function TwoDialogs({
       firstOpen,

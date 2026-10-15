@@ -262,6 +262,53 @@ describe("TimePicker", () => {
     });
   });
 
+  describe("placement from 700 px", () => {
+    // jsdom has no layout, so the viewport, the picker and its anchor are given sizes to place it by.
+    function placeBy({
+      viewportHeight,
+      panelBottom,
+    }: {
+      viewportHeight: number;
+      panelBottom: number;
+    }) {
+      vi.stubGlobal("innerHeight", viewportHeight);
+      const rect = (top: number, bottom: number) =>
+        ({ top, bottom, height: bottom - top }) as DOMRect;
+      vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+        this: HTMLElement,
+      ) {
+        return this.getAttribute("role") === "dialog"
+          ? rect(panelBottom - 260, panelBottom)
+          : rect(600, 644);
+      });
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    });
+
+    it("should sit under the field when it fits in the window", () => {
+      placeBy({ viewportHeight: 940, panelBottom: 900 });
+      const anchor = { current: document.createElement("button") };
+      renderPicker({ anchorRef: anchor });
+
+      expect(screen.getByRole("dialog", { name: "Choose a time" }).className).not.toContain(
+        "-translate-y",
+      );
+    });
+
+    it("should sit above the field when it would run off the bottom of the window", () => {
+      placeBy({ viewportHeight: 700, panelBottom: 900 });
+      const anchor = { current: document.createElement("button") };
+      renderPicker({ anchorRef: anchor });
+
+      expect(screen.getByRole("dialog", { name: "Choose a time" }).className).toContain(
+        "min-[700px]:-translate-y-[calc(100%+theme(height.control-md)+theme(spacing.2))]",
+      );
+    });
+  });
+
   describe("inside a dialog", () => {
     function InDialog({ onApply }: { onApply: (time: string) => void }) {
       return (
