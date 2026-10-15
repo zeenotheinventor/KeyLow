@@ -19,6 +19,7 @@ import { useToast } from "@/components/ui/Toast";
 import { WeekGrid } from "@/components/ui/WeekGrid";
 import { diaryHref } from "@/lib/diary";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
+import { useIsOnline } from "@/lib/useIsOnline";
 
 const WEEK_ROWS = 8;
 
@@ -31,6 +32,7 @@ const WEEK_ROWS = 8;
 export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
   const toast = useToast();
   const keyboardUndo = useKeyboardUndo();
+  const isOnline = useIsOnline();
   const copyDay = useCopyDay();
   const undoCopyDay = useUndoCopyDay();
   const monday = weekOf(viewedDate)[0] ?? viewedDate;
@@ -115,6 +117,7 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
         dayHref={(localDate) =>
           diaryHref({ date: localDate === today ? undefined : localDate, view: "day" })
         }
+        copyDisabled={!isOnline}
         isCopying={copyDay.isPending}
         onCopyToToday={copyToToday}
       />

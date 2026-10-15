@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -97,6 +98,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
 });
 
 describe("the edit entry dialog for a logged food", () => {
@@ -976,5 +978,78 @@ describe("the edit entry dialog for a quick add", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     expect(api.deleteEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
+  });
+});
+
+describe("the edit entry dialog offline", () => {
+  const setOnline = (isOnline: boolean) => {
+    act(() => {
+      onlineManager.setOnline(isOnline);
+    });
+  };
+  const save = () => screen.getByRole("button", { name: "Save" });
+  const remove = () => screen.getByRole("button", { name: "Delete" });
+  const crispsEntry = (): LogEntry =>
+    quickEntry({ date: TODAY, time: "12:45", label: "Crisps", kcal: 130 });
+
+  describe.each([
+    ["a logged food", chickenEntry, () => amount(), "200"],
+    ["a quick add", crispsEntry, () => screen.getByRole("textbox", { name: /^Calories/ }), "150"],
+  ])("for %s", (_name, makeEntry, field, typed) => {
+    it("should disable Save, and save nothing, even when the form is submitted", () => {
+      renderDialog(makeEntry());
+      fireEvent.change(field(), { target: { value: typed } });
+
+      setOnline(false);
+      fireEvent.click(save());
+      fireEvent.submit(field());
+
+      expect(save()).toHaveProperty("disabled", true);
+      expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should disable Delete, and delete nothing", () => {
+      renderDialog(makeEntry());
+
+      setOnline(false);
+      fireEvent.click(remove());
+
+      expect(remove()).toHaveProperty("disabled", true);
+      expect(api.deleteEntry.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should keep what was typed when the connection drops and when it returns", () => {
+      renderDialog(makeEntry());
+      fireEvent.change(field(), { target: { value: typed } });
+
+      setOnline(false);
+      expect(field()).toHaveProperty("value", typed);
+
+      setOnline(true);
+      expect(field()).toHaveProperty("value", typed);
+    });
+
+    it("should save what was typed once the connection returns", async () => {
+      const { onClose } = renderDialog(makeEntry());
+      fireEvent.change(field(), { target: { value: typed } });
+      setOnline(false);
+      setOnline(true);
+
+      fireEvent.click(save());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+
+    it("should leave Cancel alone", () => {
+      const { onClose } = renderDialog(makeEntry());
+      setOnline(false);
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
   });
 });

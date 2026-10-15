@@ -33,6 +33,7 @@ import { ListRow } from "@/components/ui/ListRow";
 import { SearchField } from "@/components/ui/SearchField";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TimeField } from "@/components/ui/TimeField";
+import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
 // Only the foods in the database are searched here, so the one-tap plus has a food to log: the live Open
@@ -70,6 +71,7 @@ export function SearchStep({
   onAddServing,
   onQuickAdd,
 }: SearchStepProps) {
+  const isOnline = useIsOnline();
   const trimmedQuery = query.trim();
   const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
     trimmedQuery,
@@ -171,6 +173,7 @@ export function SearchStep({
                     onClick={() => {
                       onOpenFood(hit.id);
                     }}
+                    addDisabled={!isOnline}
                     onAdd={() => {
                       onAddServing(hit);
                     }}

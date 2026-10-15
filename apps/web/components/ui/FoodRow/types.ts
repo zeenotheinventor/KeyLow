@@ -93,6 +93,8 @@ export type FoodTableRowProps = {
   /** Shows the Edit button. Leave it out when there is no edit to open yet, and only Delete is drawn. */
   onEdit?: (() => void) | undefined;
   onDelete: () => void;
+  /** Dims Delete and stops it responding, such as while offline. Edit is left alone. */
+  deleteDisabled?: boolean | undefined;
   className?: string | undefined;
 };
 

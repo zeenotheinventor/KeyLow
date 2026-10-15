@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { foodEntry } from "./support";
@@ -181,6 +182,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   vi.useRealTimers();
 });
 
@@ -755,6 +757,94 @@ describe("the add food dialog", () => {
       expect(onClose).not.toHaveBeenCalled();
 
       fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+  });
+
+  describe("offline", () => {
+    const setOnline = (isOnline: boolean) => {
+      act(() => {
+        onlineManager.setOnline(isOnline);
+      });
+    };
+    const rowPlus = () => addButton("Add Chicken breast, grilled, 1 breast (150 g)");
+
+    it("should disable the plus on a row, and log nothing when it is pressed", () => {
+      onlineManager.setOnline(false);
+      renderDialog();
+      search("chicken");
+
+      fireEvent.click(rowPlus());
+
+      expect(rowPlus().getAttribute("aria-disabled")).toBe("true");
+      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should leave opening a row alone", () => {
+      onlineManager.setOnline(false);
+      renderDialog();
+      search("chicken");
+
+      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
+
+      expect(screen.getByRole("button", { name: "Results" })).toBeTruthy();
+    });
+
+    it("should enable the plus again, and log, when the connection returns", async () => {
+      onlineManager.setOnline(false);
+      renderDialog();
+      search("chicken");
+
+      setOnline(true);
+      fireEvent.click(rowPlus());
+
+      await waitFor(() => {
+        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+      });
+    });
+
+    it("should disable Add on the portion step, and keep the amount that was typed", () => {
+      renderDialog();
+      search("chicken");
+      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
+      fireEvent.click(screen.getByRole("radio", { name: "g" }));
+      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
+        target: { value: "200" },
+      });
+
+      setOnline(false);
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      expect(screen.getByRole("button", { name: "Add" })).toHaveProperty("disabled", true);
+      expect(api.logFood.mutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByRole("textbox", { name: /^Amount/ })).toHaveProperty("value", "200");
+    });
+
+    it("should add what was typed once the connection returns", async () => {
+      const { onClose } = renderDialog();
+      search("chicken");
+      fireEvent.click(results().getByRole("button", { name: /^Chicken\s*breast,\s*grilled/ }));
+      fireEvent.click(screen.getByRole("radio", { name: "g" }));
+      fireEvent.change(screen.getByRole("textbox", { name: /^Amount/ }), {
+        target: { value: "200" },
+      });
+      setOnline(false);
+      setOnline(true);
+
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.logFood.mutateAsync.mock.calls[0]?.[0].quantity).toBe(200);
+    });
+
+    it("should leave Cancel alone", () => {
+      const { onClose } = renderDialog();
+      setOnline(false);
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(onClose).toHaveBeenCalledOnce();
     });

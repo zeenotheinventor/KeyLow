@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { TimeField } from "@/components/ui/TimeField";
 import { useToast } from "@/components/ui/Toast";
+import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
  * The quick add dialog: the quick add fields (Calories, Protein, Carbohydrate and Fat, a Label) and the
@@ -28,6 +29,7 @@ import { useToast } from "@/components/ui/Toast";
 export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps) {
   const toast = useToast();
   const quickAdd = useQuickAdd();
+  const isOnline = useIsOnline();
   const { time, isNow, chooseTime, resolve } = useLoggingTime(request);
   const draft = useQuickAddDraft();
   const formId = useId();
@@ -42,7 +44,8 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
   }, []);
 
   async function handleAdd() {
-    if (!validated.ok) {
+    // Adding needs a connection, and Enter in a field submits the form even though the button is off.
+    if (!validated.ok || !isOnline) {
       return;
     }
     const { value } = validated;
@@ -89,7 +92,7 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
           <Button
             type="submit"
             form={formId}
-            disabled={!validated.ok}
+            disabled={!validated.ok || !isOnline}
             loading={isSaving}
             loadingLabel="Adding"
           >

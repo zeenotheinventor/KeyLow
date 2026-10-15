@@ -107,6 +107,16 @@ export const ThreeFoods: Story = {
   ),
 };
 
+// Offline, the plus is dimmed and stops responding, and the hour's foods stay as they are.
+export const AddDisabled: Story = {
+  args: { foodCount: 1, addDisabled: true },
+  render: (args) => (
+    <HourRow {...args}>
+      <HoursFoods count={1} />
+    </HourRow>
+  ),
+};
+
 // The chip carries the accent dot of the hour on the clock now.
 export const CurrentHour: Story = {
   args: { hour: 11, label: "11:00", isNow: true },

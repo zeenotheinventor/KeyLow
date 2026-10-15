@@ -6,6 +6,8 @@ export type HourFoodsProps = {
   /** The hour's entries in timeline order. */
   entries: readonly LogEntry[];
   timeZone: string;
+  /** Delete is off, such as while offline. Edit and a press on a stacked row still open the entry. */
+  deleteDisabled: boolean;
   /** Opens the edit dialog for an entry: the table's Edit button and a press on a stacked row. */
   onEdit: (entry: LogEntry) => void;
   /** Deletes an entry at once. The screen offers Undo. */

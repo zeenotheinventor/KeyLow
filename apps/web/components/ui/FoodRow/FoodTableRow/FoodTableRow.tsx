@@ -26,6 +26,7 @@ export function FoodTableRow({
   macros,
   onEdit,
   onDelete,
+  deleteDisabled = false,
   className,
 }: FoodTableRowProps) {
   const name = nameSegments.map((segment) => segment.text).join("");
@@ -93,6 +94,7 @@ export function FoodTableRow({
           iconOnly
           className={cn(iconButtonClasses, "[&_svg]:stroke-danger")}
           aria-label={describeDeleteFood(name)}
+          disabled={deleteDisabled}
           onClick={onDelete}
         >
           <Trash2 aria-hidden strokeWidth={iconStroke} />

@@ -11,6 +11,8 @@ export type FoodLogProps = {
   isToday: boolean;
   /** The day is marked complete. */
   isComplete: boolean;
+  /** The app can reach the server. Offline, the hour plus, Delete, Copy yesterday and the complete switch are off. */
+  isOnline: boolean;
   /** Yesterday has nothing to copy, as the empty day's card says. */
   isYesterdayEmpty: boolean;
   isCopying: boolean;

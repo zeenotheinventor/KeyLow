@@ -55,6 +55,7 @@ export function WeekGridCell({
   calorieTarget,
   isComplete,
   onCopyToToday,
+  copyDisabled,
   isCopying,
 }: WeekGridCellProps) {
   const nameId = useId();
@@ -137,7 +138,7 @@ export function WeekGridCell({
             type="button"
             // The words on the button stay "Copy to today", and the name adds the day, so the buttons differ.
             aria-label={describeWeekGridCopyToToday(name)}
-            disabled={isCopying}
+            disabled={copyDisabled || isCopying}
             className={copyClassName}
             onClick={onCopyToToday}
           >

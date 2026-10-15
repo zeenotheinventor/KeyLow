@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { TimeField } from "@/components/ui/TimeField";
 import { useDeleteEntryWithUndo } from "@/lib/foodLogActions/useDeleteEntryWithUndo";
+import { useIsOnline } from "@/lib/useIsOnline";
 
 type EntryFormProps = {
   entry: LogEntry;
@@ -105,6 +106,7 @@ function EditEntryForm({
 }) {
   const draft = useEntryDraft(entry);
   const remove = useDeleteEntryWithUndo();
+  const isOnline = useIsOnline();
   const isFood = entry.item_type === "food";
   const formId = useId();
   const amountField = useRef<HTMLInputElement>(null);
@@ -116,6 +118,10 @@ function EditEntryForm({
   }, [isFood]);
 
   function save() {
+    // Saving needs a connection, and Enter in a field submits the form even though the button is off.
+    if (!isOnline) {
+      return;
+    }
     void draft.save().then((isSaved) => {
       if (isSaved) {
         onClose();
@@ -136,6 +142,7 @@ function EditEntryForm({
           variant="ghost"
           tone="danger"
           className="px-2"
+          disabled={!isOnline}
           onClick={() => {
             // The row goes with the entry, so the keyboard route starts from the control that opened this.
             remove(entry, { from: opener });
@@ -159,7 +166,9 @@ function EditEntryForm({
           <Button
             type="submit"
             form={formId}
-            disabled={isFood ? draft.preview.amount === null : !draft.quick.validated.ok}
+            disabled={
+              !isOnline || (isFood ? draft.preview.amount === null : !draft.quick.validated.ok)
+            }
             loading={draft.isSaving}
             loadingLabel="Saving"
           >

@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -197,6 +198,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   vi.useRealTimers();
 });
 
@@ -783,6 +785,180 @@ describe("the diary screen", () => {
       renderDiary();
 
       expect(screen.queryByRole("region", { name: "Nothing logged yet" })).toBeNull();
+    });
+  });
+
+  describe("offline", () => {
+    const goOffline = () => {
+      act(() => {
+        onlineManager.setOnline(false);
+      });
+    };
+    const goOnline = () => {
+      act(() => {
+        onlineManager.setOnline(true);
+      });
+    };
+
+    describe("the notice", () => {
+      it("should say the diary is offline and that changes need a connection", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        // The toast region is a status too, so the notice is the one that holds its title.
+        const notice = screen
+          .getAllByRole("status")
+          .find((status) => within(status).queryByText("You're offline") !== null);
+        if (notice === undefined) {
+          throw new Error("no offline notice");
+        }
+        expect(within(notice).getByText("You're offline")).toBeTruthy();
+        expect(
+          within(notice).getByText("Showing your last saved diary. Changes need a connection."),
+        ).toBeTruthy();
+      });
+
+      it("should be absent online, appear when the connection drops and go when it returns", () => {
+        renderDiary();
+        expect(screen.queryByText("You're offline")).toBeNull();
+
+        goOffline();
+        expect(screen.getByText("You're offline")).toBeTruthy();
+
+        goOnline();
+        expect(screen.queryByText("You're offline")).toBeNull();
+      });
+
+      it("should sit above the bars, at the top of the day", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        const position = screen.getByText("You're offline").compareDocumentPosition(strip());
+        expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      });
+    });
+
+    describe("the hour's plus", () => {
+      it("should be disabled on every hour, and add nothing", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        const pluses = screen.getAllByRole("button", { name: /^Add food at / });
+        expect(pluses).toHaveLength(24);
+        for (const plus of pluses) {
+          fireEvent.click(plus);
+          expect(plus).toHaveProperty("disabled", true);
+        }
+        expect(openAddFood).not.toHaveBeenCalled();
+      });
+
+      it("should work again with no reload when the connection returns", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        goOnline();
+        fireEvent.click(screen.getByRole("button", { name: "Add food at 12:00" }));
+
+        expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: TODAY, time: "12:00" });
+      });
+    });
+
+    describe("a row's Delete", () => {
+      it("should be disabled, and delete nothing", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+        const remove = within(tableOf("08:00")).getByRole("button", {
+          name: "Delete Porridge oats",
+        });
+
+        fireEvent.click(remove);
+
+        expect(remove).toHaveProperty("disabled", true);
+        expect(deleteEntry.mutateAsync).not.toHaveBeenCalled();
+      });
+
+      it("should delete again when the connection returns", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        goOnline();
+        fireEvent.click(
+          within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
+        );
+
+        expect(deleteEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+    });
+
+    describe("the complete switch", () => {
+      it("should be disabled, and mark nothing", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+        const toggle = screen.getByRole("switch", { name: /Mark day complete/ });
+
+        fireEvent.click(toggle);
+
+        expect(toggle).toHaveProperty("disabled", true);
+        expect(setDayComplete.mutate).not.toHaveBeenCalled();
+      });
+
+      it("should work again when the connection returns", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        goOnline();
+        fireEvent.click(screen.getByRole("switch", { name: /Mark day complete/ }));
+
+        expect(setDayComplete.mutate).toHaveBeenCalledOnce();
+      });
+    });
+
+    describe("Copy yesterday", () => {
+      beforeEach(() => {
+        showDay(TODAY, []);
+        showDay("2026-10-14", sampleDay("2026-10-14"));
+      });
+
+      it("should be disabled, and copy nothing", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+        const copy = screen.getByRole("button", { name: "Copy yesterday" });
+
+        fireEvent.click(copy);
+
+        expect(copy).toHaveProperty("disabled", true);
+        expect(copyDay.mutate).not.toHaveBeenCalled();
+      });
+
+      it("should copy again when the connection returns", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        goOnline();
+        fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
+
+        expect(copyDay.mutate).toHaveBeenCalledOnce();
+      });
+    });
+
+    describe("what stays on", () => {
+      it("should leave opening a row, the date controls, the week strip and the view control alone", () => {
+        onlineManager.setOnline(false);
+        renderDiary();
+
+        fireEvent.click(
+          within(tableOf("08:00")).getByRole("button", { name: "Edit Porridge oats" }),
+        );
+        expect(openEditEntry).toHaveBeenCalledOnce();
+        for (const control of [
+          screen.getByRole("button", { name: "Choose a date" }),
+          screen.getByRole("button", { name: "Monday 12 October, complete" }),
+          screen.getByRole("radio", { name: "Week" }),
+          strip(),
+        ]) {
+          expect(control).toHaveProperty("disabled", false);
+        }
+      });
     });
   });
 

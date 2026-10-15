@@ -26,4 +26,5 @@ export const storyStates = [
   "TableLongTitle",
   "TableHover",
   "TableFocused",
+  "TableDeleteDisabled",
 ];

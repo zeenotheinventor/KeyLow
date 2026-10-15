@@ -30,6 +30,7 @@ export function HourRow({
   label,
   foodCount,
   isNow = false,
+  addDisabled = false,
   ref,
   onAdd,
   children,
@@ -66,6 +67,7 @@ export function HourRow({
               variant="ring"
               iconOnly
               className="shrink-0"
+              disabled={addDisabled}
               aria-label={describeAddFoodAtHour(label)}
               onClick={() => {
                 onAdd(hour);
