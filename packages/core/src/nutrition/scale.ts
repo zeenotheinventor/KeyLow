@@ -37,6 +37,7 @@ export const scaleNutrients = (per100: NullableNutrients, amount: number): Nulla
  * when ANY item has it null (unknown plus known is unknown, never silently 0). For an optional
  * key, an absent value counts as unknown too, and the key is left absent only when every item
  * leaves it absent. The sum of an empty list is 0 for the five required keys and omits the optional keys.
+ * Not the day_totals rule, which skips a null: see sumEntries.
  */
 export const sumNutrients = (items: readonly NullableNutrients[]): NullableNutrients => {
   const sumKey = (read: (item: NullableNutrients) => number | null | undefined) => {

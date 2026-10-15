@@ -27,3 +27,4 @@ export type {
   SnapshotPortion,
 } from "./schemas";
 export { NUTRITION_ENGINE_VERSION, SNAPSHOT_VERSION } from "./versions";
+export * from "./rules";
