@@ -12,6 +12,7 @@ import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
 import * as chipGroupStories from "@/components/ui/ChipGroup/ChipGroup.stories";
 import * as dayCompleteToggleStories from "@/components/ui/DayCompleteToggle/DayCompleteToggle.stories";
 import * as dayStepperStories from "@/components/ui/DayStepper/DayStepper.stories";
+import * as dialogStories from "@/components/ui/Dialog/Dialog.stories";
 import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
 import * as errorStateStories from "@/components/ui/ErrorState/ErrorState.stories";
 import * as foodRowStories from "@/components/ui/FoodRow/FoodRow.stories";
@@ -55,6 +56,7 @@ const storyModules: Record<string, object> = {
   "Card/Card.stories.tsx": cardStories,
   "ChipGroup/ChipGroup.stories.tsx": chipGroupStories,
   "MacroBars/MacroBars.stories.tsx": macroBarsStories,
+  "Dialog/Dialog.stories.tsx": dialogStories,
   "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
   "Toast/Toast.stories.tsx": toastStories,

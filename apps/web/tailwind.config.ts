@@ -52,6 +52,7 @@ const config: Config = {
           "60%": { opacity: "1", transform: "translate(-4px, 0) skewX(3deg)" },
           to: { opacity: "1", transform: "none" },
         },
+        "dim-in": { from: { opacity: "0" }, to: { opacity: "1" } },
       },
       animation: {
         skeleton: "shimmer 1400ms linear infinite, skeleton-in 160ms ease both",
@@ -60,6 +61,10 @@ const config: Config = {
         punch: `punch ${transitionDuration.flourish} ${transitionTimingFunction.enter} both`,
         flash: `flash ${transitionDuration.flourish} ${transitionTimingFunction.exit} both`,
         "toast-in": `toast-in ${transitionDuration.standard} ${transitionTimingFunction.enter} both`,
+        // A dialog enters with the design's kl-punch and dims the page with kl-dim-in, both over
+        // the standard duration. Reduced motion is a `motion-reduce:animate-none` on each use.
+        "dialog-in": `punch ${transitionDuration.standard} ${transitionTimingFunction.enter} both`,
+        "dim-in": `dim-in ${transitionDuration.standard} ease both`,
       },
     },
   },
