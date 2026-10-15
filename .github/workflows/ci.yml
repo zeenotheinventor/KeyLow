@@ -1,21 +1,23 @@
 name: CI
 
-# Runs on every pull request, and on main only when a change resets the dependency or Jest caches.
-# Every merge to main is a squash of a pull request whose checks ran on its merge with main, and the
-# deploy workflows do not wait for CI on main, so a full rerun there gated nothing and cost about 40%
-# of the minutes. The run on main is kept for those few paths because main's runs are what save the
-# pnpm store and the Jest cache that every new pull request starts from.
+# Runs on every pull request and on every push to main. A pull request runs only the checks its
+# change can affect. A push to main always runs every check, as a full run.
 #
-# Pull requests only restore those two caches and never save them. A cache saved by a pull request
-# is visible to that pull request only, and each lockfile change saved its own 1.2 to 1.5 GB pnpm
-# store, which pushed the repository past the 10 GB Actions cache limit. Actions then evicts the
-# least recently used caches first, which included main's own store and Jest cache. A pull request
-# that changes the lockfile restores the closest earlier store from main and downloads only what
-# is missing, which is what its first run did anyway.
+# Two sessions merge pull requests in parallel, and two pull requests that each pass on their own can
+# break main together. A pull request run sees main only as it was when the run started, so the full
+# run on each push to main is the guard. The deploy workflows do not wait for it, so it never slows a
+# merge. Actions minutes are free now that the repository is public, which is why this is no longer
+# limited to the pushes that reset a cache. Every commit on main gets its own run, and those runs
+# go in parallel and are never cancelled (see the concurrency block).
 #
-# Nothing reruns on main after an ordinary merge. Two pull requests merged without rebasing can break
-# main between them, and that shows up only in the next pull request whose affected packages include
-# the broken code, so rebase before merging when main has moved.
+# Pull requests only restore the pnpm store and the Jest cache and never save them. A cache saved by
+# a pull request is visible to that pull request only, and each lockfile change saved its own 1.2 to
+# 1.5 GB pnpm store, which pushed the repository past the 10 GB Actions cache limit. Actions then
+# evicts the least recently used caches first, which included main's own store and Jest cache. A pull
+# request that changes the lockfile restores the closest earlier store from main and downloads only
+# what is missing, which is what its first run did anyway. Main's runs save both caches, and only when
+# the exact key was not restored, so a push that changes neither the lockfile nor the Jest or Babel
+# config restores both caches and saves nothing.
 #
 # One job, `checks`, runs everything but the native fingerprint (mobile-fingerprint.yml, which only
 # starts when its paths change). This file has no path filter on pull requests, so every pull request
@@ -24,15 +26,14 @@ on:
   pull_request:
   push:
     branches: [main]
-    paths:
-      - "pnpm-lock.yaml"
-      - "apps/mobile/babel.config.js"
-      - "apps/mobile/jest.config.js"
-      - ".nvmrc"
 
-# A newer push to the same ref makes the older run pointless.
+# A newer push to a pull request makes the older run pointless, so a pull request has one group per
+# ref and a newer push cancels the older run. A push to main has a group of its own per commit, which
+# nothing else ever joins, so no run on main is cancelled or dropped and every merge commit gets a
+# complete run. Two runs on main can both miss the same cache key and both try to save it. The second
+# save only logs a warning that the key already exists.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.sha }}
   cancel-in-progress: true
 
 permissions:
@@ -59,17 +60,18 @@ jobs:
   # and are the ones the monorepo ADR lists.
   #
   # When a pull request changes something the Supabase stack, the Edge Functions or the integration
-  # suites read, the same job also runs those against a real local stack. The stack starts in the
-  # background right after the install, so its image pulls and boot overlap the static checks. A
-  # separate job cost a second checkout, install and minute rounding, and booted the stack on its own
-  # clock. The stack steps run even when a static check fails, so one run reports both.
+  # suites read, and on every push to main, the same job also runs those against a real local stack.
+  # The stack starts in the background right after the install, so its image pulls and boot overlap
+  # the static checks. A separate job cost a second checkout, install and minute rounding, and booted
+  # the stack on its own clock. The stack steps run even when a static check fails, so one run
+  # reports both.
   checks:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       # On a pull request the checkout is the merge into its base, so its first parent is the base tip
-      # and the diff against it is exactly what the pull request changes. On main it is the squash
-      # commit, whose first parent is the commit before it. Depth 2 fetches both.
+      # and the diff against it is exactly what the pull request changes. A push to main does not read
+      # the diff, because it is always a full run. Depth 2 fetches the first parent.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
@@ -107,21 +109,31 @@ jobs:
       # that depend on them, so a web pull request does not run the mobile Jest suites. Turbo only maps
       # files inside a package to that package. A change anywhere else (root config, the lockfile, a
       # workflow, the design boards tools/design-export reads) can reach any package without turbo
-      # seeing it, so it runs every check, as does an empty diff. Markdown outside the packages is
-      # covered by the formatting step and the repository-wide suites below. --no-renames lists both
-      # sides of a move, so a file moved out of the root still counts as a root change.
+      # seeing it, so it runs every check, as does an empty diff. A push to main runs every check
+      # without looking at the diff. Markdown outside the packages is covered by the formatting step
+      # and the repository-wide suites below. --no-renames lists both sides of a move, so a file moved
+      # out of the root still counts as a root change.
       # The step runs with `shell: bash` for pipefail, so a failing `turbo ls` fails the step instead
       # of reporting no affected packages.
       - name: Work out which checks the pull request needs
         id: scope
         shell: bash
         run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            echo "A push to main runs every check, the Supabase stack included."
+            {
+              echo "db=true"
+              echo "affected="
+              echo "full=true"
+              echo "mobile=true"
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           changed=$(git diff --name-only --no-renames HEAD^1 HEAD)
           # The stack runs for the packages the stack, the functions (which embed @keylow/core) and the
-          # integration suites read, and for root files that change the tools or the task graph. It
-          # runs on pull requests only; the runs on main are there to refresh the caches.
+          # integration suites read, and for root files that change the tools or the task graph.
           db=false
-          if [ "$GITHUB_EVENT_NAME" = pull_request ] && grep -qE '^(packages/(db|core|api-client|config)/|(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc|turbo\.json|tsconfig\.base\.json|\.nvmrc|\.github/workflows/ci\.yml)$)' <<<"$changed"; then
+          if grep -qE '^(packages/(db|core|api-client|config)/|(package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|\.npmrc|turbo\.json|tsconfig\.base\.json|\.nvmrc|\.github/workflows/ci\.yml)$)' <<<"$changed"; then
             db=true
           fi
           echo "Supabase stack needed: $db"
@@ -227,7 +239,7 @@ jobs:
         if: steps.scope.outputs.full != 'true'
         run: pnpm turbo run test --filter=@keylow/config --filter=@keylow/design-export
       # Fails when the lockfile contains duplicates that a dedupe would remove. A lockfile change
-      # always makes a full run, so the other runs skip it.
+      # always makes a full run, and so does every push to main, so the other runs skip it.
       # The flag keeps the install pass that dedupe runs from triggering the prepare script.
       - name: Check the lockfile for duplicates
         if: steps.scope.outputs.full == 'true'
