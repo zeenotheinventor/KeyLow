@@ -97,3 +97,12 @@ export {
   TAB_BAR_LABEL,
   TAB_TITLES,
 } from "./shell";
+export {
+  DAY_COMPLETE_TOGGLE,
+  DAY_STEPPER,
+  MONTH_NAMES_LONG,
+  MONTH_NAMES_SHORT,
+  WEEKDAY_NAMES_SHORT,
+  describeDatePickerButton,
+  describeIncompleteDays,
+} from "./diaryDay";
