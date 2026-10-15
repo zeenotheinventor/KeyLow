@@ -20,6 +20,17 @@ export const DAY_COMPLETE_TOGGLE = {
 /** Written out here, not asked of the platform, so every device prints the same words. Sunday first. */
 export const WEEKDAY_NAMES_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
+/** Sunday first, like `WEEKDAY_NAMES_SHORT`. */
+export const WEEKDAY_NAMES_LONG = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+] as const;
+
 export const MONTH_NAMES_SHORT = [
   "Jan",
   "Feb",

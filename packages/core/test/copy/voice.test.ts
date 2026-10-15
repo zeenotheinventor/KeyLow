@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import * as copy from "../../src/copy";
+import { progressBars } from "../../src/diary/rules";
 import { edgeErrorCodeSchema } from "../../src/schemas";
 
 // Every function the copy module exports, called with representative arguments. The test below
@@ -9,6 +10,49 @@ const sampleCalls: Record<string, () => string[]> = {
   describeFoodSource: () => (["off", "cofid", "user"] as const).map(copy.describeFoodSource),
   describeBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeBasis),
   describeSpokenBasis: () => (["per_100g", "per_100ml"] as const).map(copy.describeSpokenBasis),
+  describeAddedFood: () => ["Banana", "Chicken breast, grilled"].map(copy.describeAddedFood),
+  describeCopiedFromYesterday: () => [1, 8].map(copy.describeCopiedFromYesterday),
+  describeTimeValue: () => [
+    copy.describeTimeValue("12:40", false),
+    copy.describeTimeValue("12:40", true),
+  ],
+  describeTimeRowName: () => [
+    copy.describeTimeRowName("12:40", false),
+    copy.describeTimeRowName("12:40", true),
+  ],
+  describeAddFoodAtHour: () => [copy.describeAddFoodAtHour("12:00")],
+  describeHourChip: () => [
+    copy.describeHourChip("08:00", false),
+    copy.describeHourChip("11:00", true),
+  ],
+  describeHourGroup: () => [0, 1, 2].map((count) => copy.describeHourGroup("08:00", count)),
+  describeWeekStripDay: () => [
+    copy.describeWeekStripDay("2026-10-15", { isToday: true, isSelected: true, isComplete: false }),
+    copy.describeWeekStripDay("2026-10-13", {
+      isToday: false,
+      isSelected: false,
+      isComplete: true,
+    }),
+  ],
+  describeWeekStripName: () => [
+    copy.describeWeekStripName("2026-10-12", true),
+    copy.describeWeekStripName("2026-10-12", false),
+  ],
+  describeProgressBar: () =>
+    progressBars(
+      { kcal: 2412, protein_g: 86, carbs_g: 129, fat_g: 19 },
+      { kcal: 2200, protein_g: 160, carbs_g: 0, fat_g: null },
+    ).map(copy.describeProgressBar),
+  describeProgressStrip: () => [
+    copy.describeProgressStrip(
+      progressBars(
+        { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 81 },
+        { kcal: 2200, protein_g: 160, carbs_g: 0, fat_g: 70 },
+      ),
+    ),
+  ],
+  describeCopiedEntriesToToday: () => [1, 8].map(copy.describeCopiedEntriesToToday),
+  describeMacroTotal: () => [0, 131, 2480].map(copy.describeMacroTotal),
   describeEnergy: () => [0, 1, 148, 2480, null].map(copy.describeEnergy),
   describeShareOfEnergy: () => [0, 32, 100].map(copy.describeShareOfEnergy),
   describeNutritionHeading: () =>
