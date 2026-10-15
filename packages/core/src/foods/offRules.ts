@@ -268,13 +268,44 @@ export function pickBrand(brands: string | undefined): string | null {
   return firstBrand === "" ? null : firstBrand;
 }
 
-/** The English name when it has text, else the product name, else undefined. */
+/** The longest food name, which the database also enforces (`foods_name_length_check`). */
+export const MAX_FOOD_NAME_LENGTH = 200;
+
+const isHighSurrogate = (codeUnit: number): boolean => codeUnit >= 0xd800 && codeUnit <= 0xdbff;
+
+/**
+ * Cuts a trimmed name to at most `MAX_FOOD_NAME_LENGTH` characters at the last word boundary, so no
+ * word is split, and drops the spaces and commas left at the cut. A name with no space in its first
+ * 200 characters is cut at 200, backing up one if that would split a character written as a
+ * surrogate pair. Returns undefined when nothing is left, such as for a name of only commas.
+ */
+export function capFoodName(name: string): string | undefined {
+  if (name.length <= MAX_FOOD_NAME_LENGTH) {
+    return name;
+  }
+  // One character past the limit shows whether the cut falls between two words.
+  const head = name.slice(0, MAX_FOOD_NAME_LENGTH + 1);
+  const lastWordStart = /\s/.test(head.charAt(MAX_FOOD_NAME_LENGTH))
+    ? MAX_FOOD_NAME_LENGTH
+    : head.search(/\s\S*$/);
+  const cutAt = lastWordStart > 0 ? lastWordStart : MAX_FOOD_NAME_LENGTH;
+  const cut = isHighSurrogate(head.charCodeAt(cutAt - 1)) ? cutAt - 1 : cutAt;
+  const capped = head.slice(0, cut).replace(/[\s,]+$/, "");
+  return capped === "" ? undefined : capped;
+}
+
+/**
+ * The English name when it has text, else the product name, else undefined. Each is capped by
+ * `capFoodName`, and one that nothing is left of is passed over like a missing name.
+ */
 export function pickName(names: {
   productNameEnglish: string | undefined;
   productName: string | undefined;
 }): string | undefined {
-  const candidates = [names.productNameEnglish, names.productName].map((name) => name?.trim());
-  return candidates.find((name) => name !== undefined && name !== "");
+  return [names.productNameEnglish, names.productName]
+    .map((name) => name?.trim())
+    .map((name) => (name === undefined || name === "" ? undefined : capFoodName(name)))
+    .find((name) => name !== undefined);
 }
 
 const LANGUAGE_PREFIX = /^[a-z]{2,3}:/;

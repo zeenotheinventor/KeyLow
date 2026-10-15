@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15.
 
 ## Context
 
@@ -473,3 +473,72 @@ M3's diary migration (KEY-181) sets the full column grants for `food_log_entries
 ### Consequences of Amendment 5
 
 M3's diary migration (KEY-181) creates `food_log_entries` with the time columns and index above and without `meal_slot`. KEY-183 (merged in #119) already takes `loggedAt` and `localDate` in place of a slot and drops the slot schema. KEY-184 is the one follow-on: it drops the slot helper and adds time formatting and copying a whole day, and it matches this amendment. Any further deviation from the frozen Decision, from Amendments 1 to 4 or from this amendment needs an Amendment 6 before the migration or code that implements it lands.
+
+## Amendment 6 (Food search: ranking, index use, lean rows, and database hardening, 2026-10-15)
+
+### Status
+
+Recorded on 2026-10-15 under KEY-64, KEY-59 and KEY-70. Implements Zee's ruling on the plausibility bounds for a food typed in by a person (KEY-70): at most 900 kcal and at most 100 g of each of protein, fat, carbohydrate, fibre, sugars and salt per 100 g or 100 ml, and saturated fat no more than fat. The remaining details are interpretations made for implementation. They are, in full:
+
+- the way the ranking is fixed (a cap on the trigram term, not a change to the matching), the first word bonus and its three sizes, and the tie-break order of fewer commas, then shorter, then name, then id;
+- that `search_foods` keeps its weights and that the score is rounded to four decimal places;
+- the security definer helper `search_food_candidate_ids`, its `rows 50` estimate, its being an RPC the API roles can call, and the `service_role` clause in its visibility filter;
+- the lean column list of `search_foods`, including `fibre_g` and `quality` although no list draws them yet;
+- the four default portion columns and the rule that the join sits in the invoker function;
+- the 200 character limit as a check constraint that counts characters, and the cut of Open Food Facts names to fit it;
+- the exact set of privileges revoked from `service_role`;
+- that the plausibility bounds are an input rule and not a row rule;
+- the wording of the "too large" form sentence, and that a saturated fat issue is shown in the form's summary because the form has no saturated fat field.
+
+Zee confirms them by approving the PR that carries this amendment. The frozen Decision text and Amendments 1 to 5 are unchanged. This amendment changes the return type of `search_foods` (from Amendment 1), adds one function, one check constraint and a narrowing of grants, and corrects two statements of Amendment 1 by restating them below.
+
+### Supersedes
+
+- Amendment 1's `search_foods` return shape ("every column of `foods` except `search`, then `score`") is replaced by the lean shape below. The ranking in the header of migration `20261007020200_search_foods.sql` is replaced by the ranking below, and its note that the gin indexes are not used under row level security (KEY-59) no longer holds. The migrations themselves are immutable and are not edited.
+- Two statements in Amendment 1 are wrong, and the text above is left as it was written:
+  - Amendment 1, "Privileges and RLS", says the Supabase CLI default ACL grants the API roles no DML on tables created by a migration. The live database showed the opposite: `service_role` held every table privilege, `TRUNCATE`, `REFERENCES` and `TRIGGER` included, which is why only `rate_limits` revoked them. The privileges are now narrowed as set out in "Privileges" below.
+  - Amendment 1, "`foods.quality` key set", says `carbs_convention` is `'eu'` by default. In the code the key is left absent unless a US label was seen (`resolveCarbs` in `offRules.ts`): absent means no US-specific handling happened, `'eu'` means a US label was converted by subtracting fibre, and `'us_total'` means a US label could not be converted because fibre was missing.
+
+### Ranking
+
+`search_foods` still scores a food as `ts_rank_cd` plus the trigram weight times `word_similarity`, plus the own food boost of 0.3 and the CoFID boost of 0.1, with those weights unchanged. Three things change:
+
+- The word being typed is a prefix, not a word. `word_similarity` scores a whole word higher than a longer word that starts with it (the closing trigram of "chick" is in "chick peas" and not in "chicken"), so "chick" returned chick peas before every chicken. The trigram term is now capped at what a food would score if every word matched and the last one only began with the query. The cap is computed from the query alone. Spelling variants stay below the cap and keep their order.
+- A name that begins with the word being typed is the better match. The first word of the name (the first run of letters and digits) earns a bonus against the query's last word, or only word: 0.2 when the two are the same word, 0.15 when they are the same by English stem ("onions" for "onion"), and 0.1 when the first word only starts with the query's word. Exact beats prefix, and both beat a match deeper in the name. This is KEY-64's own suggestion, "weight a match on the first word of the name". Without it, the cap alone left finished words tied and let the simplest name win, and "stew" lost "Stew, beef, homemade" to "Damsons, stewed". Measured on the full CoFID import, for each distinct first word (about 650 of them), the best rank of a food whose first word is exactly that word, against the ranking before this amendment: 135 better, the rest the same, none worse.
+- Equal scores are ordered by fewer commas in the name, then shorter name, then name, then id. This replaces the earlier name, then id. The score is rounded to four decimal places so floating point noise cannot hide a tie. `@keylow/api-client` keeps the order the function returns, and no longer sorts again by score and name, so the same order reaches both apps.
+
+The weights, with the first word bonuses, stay in the `weights` CTE of the function. The tsquery is built as before: the last word gets `:*`, every other word is a stemmed exact match, and no part of the query is parsed as tsquery syntax. On the CoFID data "chick" now returns foods named Chicken in its first three results. "chicken breast" still puts "Chicken breast/steak, coated, baked" first, because it is the only tied row with two commas and the others have three or more. That is accepted: it is a reasonable first result for that query.
+
+### Index use for an authenticated caller
+
+Under row level security the planner refuses an index condition whose operator is not leakproof, and neither `@@` on a `tsvector` nor `%>` from pg_trgm is, so `foods_search_idx` and `foods_name_trgm_idx` were never used by a signed-in caller. The fix is a function, not a policy change.
+
+`public.search_food_candidate_ids(search_phrase text, search_tsquery tsquery) returns setof uuid` is `security definer`, with `search_path = ''` and `row_security = off`. It returns the ids of live foods that match the tsquery or are word-similar to the phrase, so the planner can use both gin indexes. Its visibility filter mirrors `foods_select`: `owner_id is null or owner_id = auth.uid()`, with `deleted_at is null` added because search never returns a soft deleted food. It also lets the service role through, since the service role bypasses row level security everywhere else and `search_foods` has always shown it every live food. It tells the service role apart by `current_setting('role')`, which PostgREST and `set role` establish and a function cannot change. If `foods_select` changes, the filter changes with it.
+
+`search_foods` stays `security invoker` and reads the candidate rows again under the caller's row level security, so row level security still has the last word: a wrong id from the helper can only be dropped, never leak a row. Execute on the helper is revoked from `public` and `anon` and granted to `authenticated` and `service_role`. As a `public` function it is also an RPC, which returns only ids the caller could already see. Its row estimate is 50, because the default of 1,000 made the planner read the whole of `foods` in the outer query. Measured with `auto_explain` as an authenticated user for "chicken breast" on 2,893 foods: a bitmap `OR` of both gin indexes in the helper, then a `foods_pkey` lookup per candidate, in 6 to 7 ms and with no sequential scan.
+
+### Lean search rows
+
+`search_foods(q text, lim integer default 25)` now returns, in this order: `id`, `source`, `name`, `brand`, `basis`, `kcal`, `protein_g`, `fat_g`, `carbs_g`, `fibre_g`, `quality`, `default_portion_id`, `default_portion_label`, `default_portion_grams`, `default_portion_ml`, `score`. It no longer returns `source_ref`, `owner_id`, `barcode`, `density_g_per_ml`, `sat_fat_g`, `sugars_g`, `salt_g`, `micros`, `food_group`, `fetched_at`, `deleted_at` or `created_at`. A full food is read by id with `getFood`, which is unchanged. The reason is size: a row with `micros` averaged 2.3 KB on CoFID, and 25 rows of "chicken" came to about 90 KB. `fibre_g` and `quality` are kept although no result list draws them yet, for the review flag and the carbs convention.
+
+The default portion is the food's `food_portions` row with `is_default`, of which there is at most one (the unique index from Amendment 1). All four `default_portion_*` columns are null when the food has none, and `default_portion_grams` and `_ml` are mutually exclusive. The join is a left join in the invoker function, never in the definer helper, so `food_portions_select` applies and another user's portion cannot appear in a row.
+
+### `foods.name` length
+
+`foods` gets the check `foods_name_length_check`: `char_length(name) <= 200`, the same cap as `name` in `@keylow/core`. It counts characters, not bytes. The longest name in the seed and the full CoFID import is 91 characters, so no existing data is touched. The cap is the one `customFoodInputSchema` in `@keylow/core` already applies to a name typed by a person (the source of the number 200), and the check closes the gap that a direct API insert skipped it. It applies to Open Food Facts writes as well, so the OFF normaliser in core (`pickName`, through `capFoodName`) cuts a name to at most 200 characters before it is written: the name is trimmed, then cut at the last space at or before the 200th character, so no word is split, and any spaces or commas left at the cut are dropped. A name with no space in its first 200 characters is cut at 200, backing up one if that would split a character written as a surrogate pair. A name with nothing left after the cut, such as one made only of commas, is passed over like a missing name, and the normaliser tries the other name. A name of 200 characters or fewer is untouched.
+
+### Privileges
+
+`service_role` loses `TRUNCATE`, `REFERENCES` and `TRIGGER` on `foods`, `food_portions`, `food_source_data` and `import_runs`, and keeps `SELECT`, `INSERT`, `UPDATE` and `DELETE`. That is what `rate_limits` already does, and what the import scripts need. pgTAP asserts the exact privilege set per table.
+
+### Plausibility bounds on typed input
+
+A food a person types in or copies has plausible limits per 100 g or 100 ml: energy at most 900 kcal, each of protein, fat, carbohydrate, fibre, sugars and salt at most 100 g, and saturated fat no more than fat. They live in `customFoodInputSchema` in `@keylow/core`, through `MAX_KCAL_PER_100` and `MAX_GRAMS_PER_100` and the `kcalPer100InputSchema` and `gramsPer100InputSchema` in `nutrients.ts`. The saturated fat rule is a refinement whose issue sits on `sat_fat_g`.
+
+These are an input rule, not a row rule. They do not apply to `foodRowSchema`, `nutrientAmountSchema`, the diary entry and day total schemas, or the Open Food Facts and CoFID reads. A day's energy is far above 900, a source records what it records, and a bad source value is flagged by `quality` and not rejected, so a bound on a read would make one bad product throw on a barcode lookup. The form maps a nutrient over its limit to a new "too large" sentence on that field ("Energy cannot be more than 900 kcal per 100 g or 100 ml"). The form has no saturated fat, sugars or salt field, so an issue on those keys shows in the form's summary.
+
+One consequence is recorded, with the CoFID figures measured on the full import of 2,885 foods: energy peaks at exactly 900, so no CoFID food fails the energy bound. Five CoFID foods have carbohydrate above 100 g per 100 g (brown sugar 101.3, Demerara 104.5, icing 104.9, white 105 and peppermints 102.7), because CoFID states sugars as monosaccharide equivalents. Copying one of them asks the user to lower the carbohydrate, which is the accepted cost of the bound. One CoFID food (bananas, weighed with skin) has saturated fat of 0.03 against fat of 0, which a copy already drops under Amendment 2's rule, so it never reaches the new refinement.
+
+### Consequences of Amendment 6
+
+The migration `20261015180000_search_foods_ranking_and_index_use.sql` creates the helper, the check and the revokes, and replaces `search_foods`. `@keylow/api-client` parses the lean row as `FoodSearchHit` and no longer expects a whole food from the search. `getFood` and `listFoodPortions` are unchanged. Any further deviation from the frozen Decision, from Amendments 1 to 5 or from this amendment needs an Amendment 7 before the migration or code that implements it lands.

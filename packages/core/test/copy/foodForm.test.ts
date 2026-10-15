@@ -49,6 +49,12 @@ describe("describeNutrientProblem", () => {
     expect(describeNutrientProblem("kcal", "required")).toBe("Energy is required");
     expect(describeNutrientProblem("fat_g", "negative")).toBe("Fat cannot be negative");
     expect(describeNutrientProblem("protein_g", "required")).toBe("Protein is required");
+    expect(describeNutrientProblem("kcal", "too_large")).toBe(
+      "Energy cannot be more than 900 kcal per 100 g or 100 ml",
+    );
+    expect(describeNutrientProblem("fibre_g", "too_large")).toBe(
+      "Fibre cannot be more than 100 g per 100 g or 100 ml",
+    );
   });
 
   it.each([

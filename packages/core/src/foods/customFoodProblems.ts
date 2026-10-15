@@ -26,7 +26,11 @@ export type CustomFoodProblem =
   | { target: "name"; rule: "required" | "too_long" }
   | { target: "brand" }
   | { target: "barcode"; rule: BarcodeInvalidReason | "not_valid" }
-  | { target: "nutrient"; nutrient: FormNutrient; rule: "required" | "not_a_number" | "negative" }
+  | {
+      target: "nutrient";
+      nutrient: FormNutrient;
+      rule: "required" | "not_a_number" | "negative" | "too_large";
+    }
   | { target: "portion"; index: number; field: "label" | "amount" }
   | { target: "portions" }
   | { target: "form" };
@@ -46,6 +50,9 @@ function classifyNutrient(
 ): CustomFoodProblem {
   if (issue.code === "too_small") {
     return { target: "nutrient", nutrient, rule: "negative" };
+  }
+  if (issue.code === "too_big") {
+    return { target: "nutrient", nutrient, rule: "too_large" };
   }
   const isBlank = values[nutrient].trim() === "";
   return { target: "nutrient", nutrient, rule: isBlank ? "required" : "not_a_number" };

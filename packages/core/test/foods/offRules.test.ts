@@ -454,6 +454,65 @@ describe("pickName", () => {
   it("should be undefined when neither name has text", () => {
     expect(pickName({ productNameEnglish: " ", productName: undefined })).toBeUndefined();
   });
+
+  it("should cut a 250 character name at the last word that fits in 200", () => {
+    const longName = Array.from({ length: 50 }, () => "word").join(" ");
+
+    expect(longName).toHaveLength(249);
+    expect(pickName({ productNameEnglish: longName, productName: undefined })).toBe(
+      `${"word ".repeat(39)}word`,
+    );
+  });
+
+  it("should keep a name of exactly 200 characters whole", () => {
+    const name = `${"a".repeat(199)}b`;
+
+    expect(pickName({ productNameEnglish: name, productName: undefined })).toBe(name);
+  });
+
+  it("should drop the comma and spaces left at the cut", () => {
+    const name = `${"x".repeat(195)}, ${"yyyy".repeat(10)}`;
+
+    expect(pickName({ productNameEnglish: name, productName: undefined })).toBe("x".repeat(195));
+  });
+
+  it("should cut a name with no space in its first 200 characters at 200", () => {
+    const name = "z".repeat(250);
+
+    expect(pickName({ productNameEnglish: name, productName: undefined })).toBe("z".repeat(200));
+  });
+
+  it("should not leave half of a surrogate pair at the cut", () => {
+    const name = `${"a".repeat(199)}😀${"b".repeat(50)}`;
+    const picked = pickName({ productNameEnglish: name, productName: undefined });
+
+    expect(picked).toBe("a".repeat(199));
+    expect(picked?.length).toBe(199);
+  });
+
+  it("should keep a surrogate pair that fits whole", () => {
+    const name = `${"a".repeat(198)}😀${"b".repeat(50)}`;
+
+    expect(pickName({ productNameEnglish: name, productName: undefined })).toBe(
+      `${"a".repeat(198)}😀`,
+    );
+  });
+
+  it("should pass over a name that is only commas after the cut and use the next name", () => {
+    expect(pickName({ productNameEnglish: ",".repeat(250), productName: "Barre" })).toBe("Barre");
+  });
+
+  it("should be undefined when the only name is nothing but commas after the cut", () => {
+    expect(
+      pickName({ productNameEnglish: ",".repeat(250), productName: undefined }),
+    ).toBeUndefined();
+  });
+
+  it("should cut a name whose 201st character is a space after 200 characters", () => {
+    const name = `${"a".repeat(200)} ${"b".repeat(49)}`;
+
+    expect(pickName({ productNameEnglish: name, productName: undefined })).toBe("a".repeat(200));
+  });
 });
 
 describe("pickFoodGroup", () => {

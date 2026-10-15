@@ -22,6 +22,14 @@ const customFood = () =>
     portions: [],
   });
 
+// The ids of every food a user owns, read with the service role so row level security hides nothing.
+async function idsOwnedBy(ownerId: string): Promise<string[]> {
+  const owned = await adminClient().from("foods").select("id").eq("owner_id", ownerId);
+
+  expect(owned.error).toBeNull();
+  return (owned.data ?? []).map((food) => food.id);
+}
+
 describe("searchFoods against the local stack with real user JWTs", () => {
   let userA: TestUser;
   let userB: TestUser;
@@ -56,17 +64,21 @@ describe("searchFoods against the local stack with real user JWTs", () => {
   it("should return user A's own food first and never user B's", async () => {
     const hits = await searchFoods(userA.client, nameToken);
 
-    expect(hits[0]).toMatchObject({ id: foodOfA.id, owner_id: userA.id });
-    expect(hits.map((hit) => hit.id)).not.toContain(foodOfB.id);
-    expect(hits.every((hit) => hit.owner_id !== userB.id)).toBe(true);
+    expect(hits[0]).toMatchObject({ id: foodOfA.id, source: "user" });
+    const idsOfB = await idsOwnedBy(userB.id);
+
+    expect(idsOfB).toContain(foodOfB.id);
+    expect(hits.filter((hit) => idsOfB.includes(hit.id))).toEqual([]);
   });
 
   it("should return user B's own food first and never user A's", async () => {
     const hits = await searchFoods(userB.client, nameToken);
 
-    expect(hits[0]).toMatchObject({ id: foodOfB.id, owner_id: userB.id });
-    expect(hits.map((hit) => hit.id)).not.toContain(foodOfA.id);
-    expect(hits.every((hit) => hit.owner_id !== userA.id)).toBe(true);
+    expect(hits[0]).toMatchObject({ id: foodOfB.id, source: "user" });
+    const idsOfA = await idsOwnedBy(userA.id);
+
+    expect(idsOfA).toContain(foodOfA.id);
+    expect(hits.filter((hit) => idsOfA.includes(hit.id))).toEqual([]);
   });
 
   it("should match a half typed word and give the hit a positive score", async () => {
@@ -74,6 +86,36 @@ describe("searchFoods against the local stack with real user JWTs", () => {
 
     expect(hits[0]).toMatchObject({ id: foodOfA.id });
     expect(hits[0]?.score).toBeGreaterThan(0);
+  });
+
+  it("should return a food's default portion, and nulls for a food that has none", async () => {
+    const { food: foodWithPortion } = await createFood(
+      userA.client,
+      userA.id,
+      customFoodInputSchema.parse({
+        name: `${nameToken} portioned`,
+        basis: "per_100g",
+        kcal: 100,
+        protein_g: 1,
+        fat_g: 1,
+        carbs_g: 1,
+        portions: [{ label: "1 bar", grams: 60, isDefault: true }],
+      }),
+    );
+
+    const hits = await searchFoods(userA.client, nameToken);
+
+    expect(hits.find((hit) => hit.id === foodWithPortion.id)).toMatchObject({
+      default_portion_label: "1 bar",
+      default_portion_grams: 60,
+      default_portion_ml: null,
+    });
+    expect(hits.find((hit) => hit.id === foodOfA.id)).toMatchObject({
+      default_portion_id: null,
+      default_portion_label: null,
+      default_portion_grams: null,
+      default_portion_ml: null,
+    });
   });
 
   it("should return nothing for a query of one character", async () => {

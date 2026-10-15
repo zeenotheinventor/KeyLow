@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { nutrientAmountSchema } from "./nutrients";
+import { nutrientAmountSchema, gramsPer100InputSchema, kcalPer100InputSchema } from "./nutrients";
 import { FOOD_FORM } from "../copy/foodForm";
 import { normaliseBarcode } from "../foods/barcode";
 
@@ -98,31 +98,37 @@ const canonicalBarcodeSchema = z.string().transform((raw, context) => {
   return z.NEVER;
 });
 
-export const customFoodInputSchema = z.object({
-  name: z.string().trim().min(1).max(200),
-  // A blank brand normalises to undefined so it is never stored as "" where null belongs.
-  brand: z
-    .string()
-    .trim()
-    .transform((brand) => (brand === "" ? undefined : brand))
-    .optional(),
-  barcode: canonicalBarcodeSchema.optional(),
-  basis: nutrientBasisSchema,
-  density_g_per_ml: z.number().positive().optional(),
-  kcal: nutrientAmountSchema,
-  protein_g: nutrientAmountSchema,
-  fat_g: nutrientAmountSchema,
-  carbs_g: nutrientAmountSchema,
-  fibre_g: nutrientAmountSchema.optional(),
-  sat_fat_g: nutrientAmountSchema.optional(),
-  sugars_g: nutrientAmountSchema.optional(),
-  salt_g: nutrientAmountSchema.optional(),
-  portions: z
-    .array(customFoodPortionInputSchema)
-    .refine((portions) => portions.filter((portion) => portion.isDefault).length <= 1, {
-      message: FOOD_FORM.onlyOneDefaultPortion,
-    }),
-});
+export const customFoodInputSchema = z
+  .object({
+    name: z.string().trim().min(1).max(200),
+    // A blank brand normalises to undefined so it is never stored as "" where null belongs.
+    brand: z
+      .string()
+      .trim()
+      .transform((brand) => (brand === "" ? undefined : brand))
+      .optional(),
+    barcode: canonicalBarcodeSchema.optional(),
+    basis: nutrientBasisSchema,
+    density_g_per_ml: z.number().positive().optional(),
+    kcal: kcalPer100InputSchema,
+    protein_g: gramsPer100InputSchema,
+    fat_g: gramsPer100InputSchema,
+    carbs_g: gramsPer100InputSchema,
+    fibre_g: gramsPer100InputSchema.optional(),
+    sat_fat_g: nutrientAmountSchema.optional(),
+    sugars_g: gramsPer100InputSchema.optional(),
+    salt_g: gramsPer100InputSchema.optional(),
+    portions: z
+      .array(customFoodPortionInputSchema)
+      .refine((portions) => portions.filter((portion) => portion.isDefault).length <= 1, {
+        message: FOOD_FORM.onlyOneDefaultPortion,
+      }),
+  })
+  // A part cannot exceed its whole. The issue is on the saturated fat, the part that is wrong.
+  .refine((food) => food.sat_fat_g === undefined || food.sat_fat_g <= food.fat_g, {
+    message: "Saturated fat cannot be more than fat",
+    path: ["sat_fat_g"],
+  });
 
 export type FoodSource = z.infer<typeof foodSourceSchema>;
 export type NutrientBasis = z.infer<typeof nutrientBasisSchema>;

@@ -10,10 +10,12 @@
 -- The seeded codes below are the codes in data/cofid/subset.txt, which
 -- test/unit/seeds/cofidSubsetSeed.test.ts keeps in step with this list.
 --
--- Known gap, recorded and not asserted. "chick" matches the whole word "chick" in the chick pea foods
--- ahead of the prefix match "chicken", so its first chicken food comes at rank 11 on the seed alone
--- and at rank 22 on the full import, not in the top 10 the ticket asked for. Tuning search_foods
--- is not part of this ticket. The within 25 assertion below holds on both data sets.
+-- Ranking (KEY-64). "chick" is a half typed word, so it matches "chicken" and "chick peas" alike and
+-- the simpler name wins the tie: a chicken food is in the top 3 and ahead of every chick pea food.
+-- The assertions read the top of one search, so they hold on the subset and on the full import.
+-- "stew", "tart" and "onion" check the first word bonus (a food that begins with the typed word comes
+-- before one that has it deeper in its name). The subset has no Stew or Tart food, so those two
+-- assertions pass trivially there and are real on the full import; "onion" is real on both.
 --
 -- `supabase test db` runs this file as postgres inside a transaction that is rolled back, so nothing
 -- created here persists. The actor is entered with `set local role` plus the JWT claims that
@@ -21,7 +23,7 @@
 
 begin;
 
-select plan(6);
+select plan(13);
 
 create temporary table seeded_cofid_codes (code text primary key) on commit drop;
 insert into seeded_cofid_codes (code) values
@@ -121,9 +123,90 @@ select ok(
   exists (
     select 1
     from public.search_foods('kilojoule bar', 10) as result
-    where result.source = 'off' and result.source_ref = '2000000000039'
+    where result.source = 'off'
+      and result.id = (select f.id from public.foods f where f.source = 'off' and f.source_ref = '2000000000039')
   ),
   'a seeded Open Food Facts sample is found by its name'
+);
+
+select ok(
+  exists (
+    select 1
+    from public.search_foods('chick', 25) with ordinality as result
+    where result.ordinality <= 3 and result.name ilike 'chicken%'
+  ),
+  'the half typed word "chick" has a food named Chicken in its top 3'
+);
+
+select ok(
+  (
+    select min(result.ordinality) filter (where result.name ilike 'chicken%')
+      < coalesce(min(result.ordinality) filter (where result.name ilike '%chick peas%'), 1000)
+    from public.search_foods('chick', 25) with ordinality as result
+  ),
+  '"chick" puts a food named Chicken ahead of the chick peas'
+);
+
+select is(
+  (
+    select result.comma_count
+    from (
+      select
+        pg_catalog.char_length(r.name) - pg_catalog.char_length(replace(r.name, ',', '')) as comma_count,
+        r.ordinality,
+        r.score
+      from public.search_foods('chicken breast', 25) with ordinality as r
+    ) result
+    order by result.ordinality
+    limit 1
+  ),
+  (
+    select min(
+      pg_catalog.char_length(r.name) - pg_catalog.char_length(replace(r.name, ',', ''))
+    )
+    from public.search_foods('chicken breast', 25) r
+    where r.score = (select max(top.score) from public.search_foods('chicken breast', 25) top)
+  ),
+  'among the foods tied for the best score for "chicken breast", the first has the fewest commas'
+);
+
+select ok(
+  (
+    select result.name ilike 'onion%'
+    from public.search_foods('onion', 25) with ordinality as result
+    order by result.ordinality
+    limit 1
+  ),
+  'the first result for "onion" is a food that begins with onion, not one that has it deeper in its name'
+);
+
+select ok(
+  not exists (select 1 from public.foods where source = 'cofid' and name ilike 'tart,%')
+    or (
+      select result.name ilike 'tart%'
+      from public.search_foods('tart', 25) with ordinality as result
+      order by result.ordinality
+      limit 1
+    ),
+  'if the catalogue has a Tart food, the first result for "tart" begins with tart'
+);
+
+select ok(
+  not exists (select 1 from public.foods where source = 'cofid' and name ilike 'stew,%')
+    or exists (
+      select 1
+      from public.search_foods('stew', 25) with ordinality as result
+      where result.ordinality <= 10 and result.name ilike 'stew,%'
+    ),
+  'if the catalogue has a Stew food, it is in the top 10 for "stew"'
+);
+
+select ok(
+  (
+    select count(*) filter (where result.name ilike 'chicken%')
+    from public.search_foods('chick', 5) as result
+  ) = 5,
+  'the top 5 for "chick" are all foods named Chicken'
 );
 
 reset role;

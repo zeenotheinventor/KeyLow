@@ -11,11 +11,33 @@ type FoodPortionInsert = Database["public"]["Tables"]["food_portions"]["Insert"]
 // The generated `search` column is a database-only tsvector, so it is never selected.
 const FOOD_COLUMNS = Object.keys(foodRowSchema.shape).join(",");
 
-// Every `search_foods` column is typed non-null in the generated types, which is wrong for barcode,
-// brand, deleted_at and others, so rows are parsed instead of trusted.
-const foodSearchHitSchema = foodRowSchema.extend({ score: z.number() });
+// The lean row `search_foods` returns: what a result list draws and groups by, the food's default
+// portion (all four default_portion_* values are null when it has none) and the relevance score.
+// Every column is typed non-null in the generated types, which is wrong for brand, the nutrients and
+// the portion, so rows are parsed instead of trusted. A full food is read by id with `getFood`.
+const foodSearchHitSchema = foodRowSchema
+  .pick({
+    id: true,
+    source: true,
+    name: true,
+    brand: true,
+    basis: true,
+    kcal: true,
+    protein_g: true,
+    fat_g: true,
+    carbs_g: true,
+    fibre_g: true,
+    quality: true,
+  })
+  .extend({
+    default_portion_id: foodPortionSchema.shape.id.nullable(),
+    default_portion_label: z.string().nullable(),
+    default_portion_grams: foodPortionSchema.shape.grams,
+    default_portion_ml: foodPortionSchema.shape.ml,
+    score: z.number(),
+  });
 
-/** A food row with the relevance score the `search_foods` RPC ranked it by. */
+/** A row of the lean food search: the list fields, the default portion and the relevance score. */
 export type FoodSearchHit = z.infer<typeof foodSearchHitSchema>;
 
 // A barcode can sit on a few rows (the caller's own food and the shared ones), so a few are fetched
@@ -389,8 +411,7 @@ export async function searchFoods(
     throw repoError("search the foods", error);
   }
 
-  // The RPC already orders its rows. Sorting again is defensive, and stable for equal rows.
-  return data
-    .map((row) => foodSearchHitSchema.parse(row))
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  // The RPC's order is the ranking: score, then the simpler name (fewer commas, shorter, name, id).
+  // It is kept as it comes, because sorting again by score and name would undo that tie-break.
+  return data.map((row) => foodSearchHitSchema.parse(row));
 }

@@ -30,7 +30,27 @@ export function makePortion(overrides: Partial<FoodPortion> = {}): FoodPortion {
 }
 
 export function makeSearchHit(overrides: Partial<FoodSearchHit> = {}): FoodSearchHit {
-  return { ...makeFood(), score: 1, ...overrides };
+  const food = makeFood();
+
+  return {
+    id: food.id,
+    source: food.source,
+    name: food.name,
+    brand: food.brand,
+    basis: food.basis,
+    kcal: food.kcal,
+    protein_g: food.protein_g,
+    fat_g: food.fat_g,
+    carbs_g: food.carbs_g,
+    fibre_g: food.fibre_g,
+    quality: food.quality,
+    default_portion_id: null,
+    default_portion_label: null,
+    default_portion_grams: null,
+    default_portion_ml: null,
+    score: 1,
+    ...overrides,
+  };
 }
 
 export function makeOffCandidate(overrides: Partial<OffCandidate> = {}): OffCandidate {

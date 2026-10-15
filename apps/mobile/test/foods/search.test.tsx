@@ -49,15 +49,31 @@ const sharedFoodId = "55555555-5555-4555-8555-555555555555";
 const materialisedFoodId = "66666666-6666-4666-8666-666666666666";
 
 function hit(changes: Partial<FoodSearchHit>): FoodSearchHit {
-  return { ...foodFixture, score: 0.9, ...changes };
+  return {
+    id: foodFixture.id,
+    source: foodFixture.source,
+    name: foodFixture.name,
+    brand: foodFixture.brand,
+    basis: foodFixture.basis,
+    kcal: foodFixture.kcal,
+    protein_g: foodFixture.protein_g,
+    fat_g: foodFixture.fat_g,
+    carbs_g: foodFixture.carbs_g,
+    fibre_g: foodFixture.fibre_g,
+    quality: foodFixture.quality,
+    default_portion_id: null,
+    default_portion_label: null,
+    default_portion_grams: null,
+    default_portion_ml: null,
+    score: 0.9,
+    ...changes,
+  };
 }
 
 const ownHit = hit({});
 const coFidHit = hit({
   id: sharedFoodId,
   source: "cofid",
-  source_ref: "11-104",
-  owner_id: null,
   name: "Oats, rolled",
   brand: null,
   kcal: null,
@@ -315,7 +331,6 @@ describe("food search sheet", () => {
         source,
         name,
         brand: null,
-        owner_id: source === "user" ? foodFixture.owner_id : null,
       });
 
     it("should group by source in the frame's order, whatever order the search ranks them in", async () => {
@@ -431,7 +446,6 @@ describe("food search sheet", () => {
         name: `Oat meal ${index}`,
         brand: null,
         source: "cofid",
-        owner_id: null,
       });
 
     beforeEach(() => {

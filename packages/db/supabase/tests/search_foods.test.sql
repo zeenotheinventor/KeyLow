@@ -15,7 +15,7 @@
 
 begin;
 
-select plan(32);
+select plan(33);
 
 insert into auth.users (instance_id, id, aud, role, email) values
   ('00000000-0000-0000-0000-000000000000', '41000001-0000-4000-8000-00000000000a', 'authenticated', 'authenticated', 'search-foods-user-a@keylow.test'),
@@ -65,13 +65,15 @@ select is(
       unnest(p.proargnames, p.proargmodes) with ordinality as output (name, mode, position)
     where p.oid = 'public.search_foods(text, integer)'::regprocedure and output.mode = 't'
   ),
-  (
-    select array_agg(attname::text order by attnum) || array['score']
-    from pg_attribute
-    where attrelid = 'public.foods'::regclass and attnum > 0 and not attisdropped
-      and attname <> 'search'
-  ),
-  'search_foods returns every foods column except search, in table order, then score'
+  array['id', 'source', 'name', 'brand', 'basis', 'kcal', 'protein_g', 'fat_g', 'carbs_g', 'fibre_g', 'quality', 'default_portion_id', 'default_portion_label', 'default_portion_grams', 'default_portion_ml', 'score'],
+  'search_foods returns the lean list row: what a result list draws and groups by, the default portion, then the score'
+);
+
+select throws_ok(
+  $$ select micros from public.search_foods('chicken', 25) $$,
+  '42703',
+  'column "micros" does not exist',
+  'the returned rows carry no micros'
 );
 
 select throws_ok(
@@ -123,16 +125,16 @@ select is(
 
 select is(
   (
-    select (array_agg(r.source_ref order by r.score desc, r.name))[1]
+    select (array_agg(r.id order by r.score desc, r.name))[1]
     from public.search_foods('zorblax chicken breast', 50) r where r.id::text like '41000001-%'
   ),
-  'CF-KEY41-1',
+  '41000001-0000-4000-8000-000000000101'::uuid,
   'the CoFID chicken breast ranks first for "chicken breast"'
 );
 
 select ok(
-  (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.source_ref = 'CF-KEY41-1')
-    > (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.source_ref = 'OFF-KEY41-1'),
+  (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.id = '41000001-0000-4000-8000-000000000101')
+    > (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.id = '41000001-0000-4000-8000-000000000102'),
   'the CoFID chicken breast scores above the Open Food Facts chicken breast fillets'
 );
 
@@ -140,23 +142,23 @@ select ok(
   not exists (
     select 1
     from public.search_foods('zorblax chicken breast', 50) chickpeas
-    where chickpeas.source_ref = 'CF-KEY41-2'
-      and chickpeas.score >= (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.source_ref = 'CF-KEY41-1')
+    where chickpeas.id = '41000001-0000-4000-8000-000000000103'
+      and chickpeas.score >= (select r.score from public.search_foods('zorblax chicken breast', 50) r where r.id = '41000001-0000-4000-8000-000000000101')
   ),
   'chickpeas never rank at or above the CoFID chicken breast'
 );
 
 select is(
   (
-    select (array_agg(r.source_ref order by r.score desc, r.name))[array_length(array_agg(r.source_ref), 1)]
+    select (array_agg(r.id order by r.score desc, r.name))[array_length(array_agg(r.id), 1)]
     from public.search_foods('zorblax chicken', 50) r where r.id::text like '41000001-%'
   ),
-  'CF-KEY41-2',
+  '41000001-0000-4000-8000-000000000103'::uuid,
   'chickpeas rank last among the fixtures for "chicken"'
 );
 
 select ok(
-  exists (select 1 from public.search_foods('zorblax greek yoghurt', 50) r where r.source_ref = 'CF-KEY41-5'),
+  exists (select 1 from public.search_foods('zorblax greek yoghurt', 50) r where r.id = '41000001-0000-4000-8000-000000000106'),
   '"greek yoghurt" finds the CoFID "yogurt, Greek style, plain"'
 );
 
@@ -167,10 +169,10 @@ select ok(
 
 select is(
   (
-    select array_agg(coalesce(r.source_ref, 'own') order by r.score desc, r.name)
+    select array_agg(case when r.source = 'user' then 'own' else 'global' end order by r.score desc, r.name)
     from public.search_foods('zanzibar lentil', 50) r where r.id::text like '41000001-%'
   ),
-  array['own', 'CF-KEY41-6'],
+  array['own', 'global'],
   'the user''s own food ranks above an otherwise identical CoFID food'
 );
 
@@ -272,10 +274,10 @@ set local request.jwt.claims = '{"sub":"41000002-0000-4000-8000-00000000000a","r
 
 select is(
   (
-    select array_agg(coalesce(r.source_ref, 'own') order by r.score desc, r.name)
+    select array_agg(case when r.source = 'user' then 'own' else 'global' end order by r.score desc, r.name)
     from public.search_foods('zanzibar lentil', 50) r where r.id::text like '41000001-%'
   ),
-  array['CF-KEY41-6'],
+  array['global'],
   'user B sees the CoFID food but never user A''s food'
 );
 
@@ -286,10 +288,10 @@ set local role service_role;
 
 select is(
   (
-    select array_agg(coalesce(r.source_ref, 'own') order by coalesce(r.source_ref, 'own'))
+    select array_agg(case when r.source = 'user' then 'own' else 'global' end order by r.source)
     from public.search_foods('zanzibar lentil', 50) r where r.id::text like '41000001-%'
   ),
-  array['CF-KEY41-6', 'own'],
+  array['global', 'own'],
   'the service role can call search_foods and sees user A''s food as well'
 );
 

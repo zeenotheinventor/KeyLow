@@ -1,17 +1,29 @@
 import { buildOffCandidate } from "@keylow/core/testing";
 import { HttpResponse } from "msw";
 
-import { foodRow } from "./postgrest";
-
 import type { FoodSearchHit } from "../../src/repos/foods";
 import type { EdgeErrorCode, OffCandidate } from "@keylow/core/schemas";
 
 export const SEARCH_FOODS_URL = "http://127.0.0.1:54321/rest/v1/rpc/search_foods";
 export const OFF_SEARCH_URL = "http://127.0.0.1:54321/functions/v1/off-search";
 
-/** A row of the `search_foods` RPC: a food row plus the relevance score. */
+/** A row of the `search_foods` RPC: the lean list fields, no default portion unless given, and a score. */
 export const searchHitRow = (overrides: Partial<FoodSearchHit> = {}): FoodSearchHit => ({
-  ...foodRow(),
+  id: "22222222-2222-4222-8222-222222222222",
+  source: "user",
+  name: "Protein flapjack",
+  brand: null,
+  basis: "per_100g",
+  kcal: 410,
+  protein_g: 22,
+  fat_g: 14,
+  carbs_g: 45,
+  fibre_g: 6,
+  quality: {},
+  default_portion_id: null,
+  default_portion_label: null,
+  default_portion_grams: null,
+  default_portion_ml: null,
   score: 1,
   ...overrides,
 });

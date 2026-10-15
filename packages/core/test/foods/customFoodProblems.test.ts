@@ -111,6 +111,27 @@ describe("classifyCustomFoodIssues", () => {
       },
     );
 
+    it("should say energy above 900 is too large", () => {
+      expect(problemsFor({ kcal: "900.01" })).toEqual([
+        { target: "nutrient", nutrient: "kcal", rule: "too_large" },
+      ]);
+    });
+
+    it.each(["protein_g", "carbs_g", "fat_g", "fibre_g"] as const)(
+      "should say %s above 100 is too large",
+      (nutrient) => {
+        expect(problemsFor({ [nutrient]: "100.01" })).toEqual([
+          { target: "nutrient", nutrient, rule: "too_large" },
+        ]);
+      },
+    );
+
+    it("should send saturated fat above fat to the form, as the form has no saturated fat field", () => {
+      const issues = [{ code: "custom", path: ["sat_fat_g"] }];
+
+      expect(classifyCustomFoodIssues(issues, validValues)).toEqual([{ target: "form" }]);
+    });
+
     it.each(FORM_NUTRIENTS)("should say a negative %s is negative", (nutrient) => {
       expect(problemsFor({ [nutrient]: "-1" })).toEqual([
         { target: "nutrient", nutrient, rule: "negative" },
