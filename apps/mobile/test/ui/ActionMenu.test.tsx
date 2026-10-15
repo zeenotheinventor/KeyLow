@@ -137,11 +137,13 @@ describe("ActionMenu", () => {
       });
     });
 
-    it("should write a destructive item's label in the danger colour", async () => {
+    // The status colours are never small text in light, where they are too faint (Q14): the label falls back
+    // to the primary text colour and the danger colour stays on the icon, as a Badge does.
+    it("should write a destructive item's label in the danger colour in dark and in the primary text in light", async () => {
       await renderMenu({}, scheme);
 
       expect(screen.getByText("Delete day")).toHaveStyle({
-        color: resolvedColor(scheme, "danger"),
+        color: resolvedColor(scheme, scheme === "dark" ? "danger" : "text-primary"),
       });
     });
 
