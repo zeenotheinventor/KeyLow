@@ -59,6 +59,9 @@ export const storyManifest: Record<string, { states: string[] }> = {
   },
   Card: { states: ["Surface", "Raised", "Compact", "Rows"] },
   Checkbox: { states: ["Unticked", "Ticked", "WithLinks", "Disabled", "DisabledTicked"] },
+  ChipGroup: {
+    states: ["TwoChips", "FiveChipsScroll", "LongLabel", "OneSelected", "NoneSelected"],
+  },
   EmptyState: { states: ["NoResults", "YourFoodsEmpty", "WithoutAction", "Wide"] },
   ErrorState: { states: ["SearchFailed", "WithRetry", "WithAction"] },
   FoodRow: {

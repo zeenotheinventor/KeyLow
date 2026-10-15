@@ -10,6 +10,8 @@ export { Card } from "./Card";
 export type { CardLevel, CardPadding, CardProps } from "./Card";
 export { Checkbox, CheckboxLink } from "./Checkbox";
 export type { CheckboxLinkProps, CheckboxProps } from "./Checkbox";
+export { ChipGroup } from "./ChipGroup";
+export type { ChipGroupOption, ChipGroupProps } from "./ChipGroup";
 export { EmptyState } from "./EmptyState";
 export type { EmptyStateAction, EmptyStateProps } from "./EmptyState";
 export { ErrorState } from "./ErrorState";
