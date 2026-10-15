@@ -1,0 +1,156 @@
+[
+  {
+    "name": "a gram entry, density null",
+    "snapshot": {
+      "v": 1,
+      "kind": "food",
+      "ref": "00000000-0000-4000-8000-0000000000f1",
+      "name": "Oat flour",
+      "basis": "per_100g",
+      "per100": {
+        "kcal": 361.7,
+        "protein_g": 12.3,
+        "fat_g": 4.6,
+        "carbs_g": 68.1,
+        "fibre_g": 3.2,
+        "sat_fat_g": 1.1,
+        "sugars_g": 2.4,
+        "salt_g": 0.9
+      },
+      "density": null,
+      "quantity": 137,
+      "unit": "g",
+      "portion": null,
+      "resolvedGrams": 137,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 137,
+    "expectedNutrients": {
+      "kcal": 495.529,
+      "protein_g": 16.851000000000003,
+      "fat_g": 6.302,
+      "carbs_g": 93.297,
+      "fibre_g": 4.384,
+      "sat_fat_g": 1.5070000000000003,
+      "sugars_g": 3.2880000000000003,
+      "salt_g": 1.233
+    }
+  },
+  {
+    "name": "an ml entry on a per 100 g food, density null so 1.0 g/ml is assumed",
+    "snapshot": {
+      "v": 1,
+      "kind": "food",
+      "ref": "00000000-0000-4000-8000-0000000000f2",
+      "name": "Oat drink concentrate",
+      "basis": "per_100g",
+      "per100": {
+        "kcal": 361.7,
+        "protein_g": 12.3,
+        "fat_g": 4.6,
+        "carbs_g": 68.1,
+        "fibre_g": 3.2,
+        "sat_fat_g": 1.1,
+        "sugars_g": 2.4,
+        "salt_g": 0.9
+      },
+      "density": null,
+      "quantity": 250,
+      "unit": "ml",
+      "portion": null,
+      "resolvedGrams": 250,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 250,
+    "expectedNutrients": {
+      "kcal": 904.25,
+      "protein_g": 30.75,
+      "fat_g": 11.5,
+      "carbs_g": 170.25,
+      "fibre_g": 8,
+      "sat_fat_g": 2.75,
+      "sugars_g": 6,
+      "salt_g": 2.25
+    }
+  },
+  {
+    "name": "a portion entry in grams",
+    "snapshot": {
+      "v": 1,
+      "kind": "food",
+      "ref": "00000000-0000-4000-8000-0000000000f3",
+      "name": "Seeded loaf",
+      "basis": "per_100g",
+      "per100": {
+        "kcal": 361.7,
+        "protein_g": 12.3,
+        "fat_g": 4.6,
+        "carbs_g": 68.1,
+        "fibre_g": 3.2,
+        "sat_fat_g": 1.1,
+        "sugars_g": 2.4,
+        "salt_g": 0.9
+      },
+      "density": null,
+      "quantity": 2,
+      "unit": "portion",
+      "portion": {
+        "label": "Slice",
+        "grams": 36.5
+      },
+      "resolvedGrams": 73,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 73,
+    "expectedNutrients": {
+      "kcal": 264.041,
+      "protein_g": 8.979000000000001,
+      "fat_g": 3.3579999999999997,
+      "carbs_g": 49.712999999999994,
+      "fibre_g": 2.336,
+      "sat_fat_g": 0.803,
+      "sugars_g": 1.752,
+      "salt_g": 0.657
+    }
+  },
+  {
+    "name": "a portion entry in ml with an explicit density",
+    "snapshot": {
+      "v": 1,
+      "kind": "food",
+      "ref": "00000000-0000-4000-8000-0000000000f4",
+      "name": "Whole milk",
+      "basis": "per_100ml",
+      "per100": {
+        "kcal": 64.3,
+        "protein_g": 3.37,
+        "fat_g": 3.6,
+        "carbs_g": 4.7,
+        "fibre_g": null,
+        "sat_fat_g": 2.3,
+        "sugars_g": 4.7,
+        "salt_g": 0.1
+      },
+      "density": 1.03,
+      "quantity": 1.5,
+      "unit": "portion",
+      "portion": {
+        "label": "Glass",
+        "ml": 200
+      },
+      "resolvedGrams": 309,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 309,
+    "expectedNutrients": {
+      "kcal": 192.89999999999998,
+      "protein_g": 10.11,
+      "fat_g": 10.8,
+      "carbs_g": 14.100000000000001,
+      "fibre_g": null,
+      "sat_fat_g": 6.8999999999999995,
+      "sugars_g": 14.100000000000001,
+      "salt_g": 0.30000000000000004
+    }
+  }
+]
