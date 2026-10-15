@@ -1,33 +1,33 @@
 import { FOOD_FORM, describeNutritionHeading } from "@keylow/core/copy";
+import { REQUIRED_FOOD_NUTRIENTS } from "@keylow/core/foods";
 import { nutrientBasisSchema } from "@keylow/core/schemas";
 import { useId } from "react";
 
 import { DENSE_FRAME_CLASS_NAME } from "../denseField";
-import { REQUIRED_NUTRIENT_FIELDS } from "./requiredNutrients";
 
 import type { NutrientField, NutritionCardProps } from "./types";
 import type { NumericInputMacro } from "@/components/ui/NumericInput";
-import type { FoodFormNutrient } from "@keylow/core/copy";
 
 import { Card } from "@/components/ui/Card";
 import { NumericInput } from "@/components/ui/NumericInput";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 
 type NutrientFieldConfig = {
-  field: NutrientField;
-  nutrient: FoodFormNutrient;
+  nutrient: NutrientField;
   unit: string;
   macro?: NumericInputMacro;
 };
 
 // In the order the boards draw them. Carbohydrate comes before fat, as on the detail screen.
 const NUTRIENT_FIELDS: readonly NutrientFieldConfig[] = [
-  { field: "kcal", nutrient: "kcal", unit: "kcal" },
-  { field: "protein", nutrient: "protein_g", unit: "g", macro: "protein" },
-  { field: "carbs", nutrient: "carbs_g", unit: "g", macro: "carbs" },
-  { field: "fat", nutrient: "fat_g", unit: "g", macro: "fat" },
-  { field: "fibre", nutrient: "fibre_g", unit: "g" },
+  { nutrient: "kcal", unit: "kcal" },
+  { nutrient: "protein_g", unit: "g", macro: "protein" },
+  { nutrient: "carbs_g", unit: "g", macro: "carbs" },
+  { nutrient: "fat_g", unit: "g", macro: "fat" },
+  { nutrient: "fibre_g", unit: "g" },
 ];
+
+const REQUIRED_NUTRIENTS: ReadonlySet<NutrientField> = new Set(REQUIRED_FOOD_NUTRIENTS);
 
 const BASIS_OPTIONS = nutrientBasisSchema.options.map((basis) => ({
   value: basis,
@@ -67,23 +67,23 @@ export function NutritionCard({
           className="max-w-[320px]"
         />
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {NUTRIENT_FIELDS.map(({ field, nutrient, unit, macro }) => {
+          {NUTRIENT_FIELDS.map(({ nutrient, unit, macro }) => {
             const error = errors[nutrient];
-            const noteId = `${noteIdPrefix}-${field}`;
+            const noteId = `${noteIdPrefix}-${nutrient}`;
             const isNotGiven =
-              notGiven.includes(field) && values[field] === "" && error === undefined;
+              notGiven.includes(nutrient) && values[nutrient] === "" && error === undefined;
 
             return (
-              <div key={field} className="flex min-w-0 flex-col gap-1">
+              <div key={nutrient} className="flex min-w-0 flex-col gap-1">
                 <NumericInput
                   label={FOOD_FORM.nutrients[nutrient]}
                   unit={unit}
                   macro={macro}
-                  aria-required={REQUIRED_NUTRIENT_FIELDS.includes(field) ? "true" : undefined}
+                  aria-required={REQUIRED_NUTRIENTS.has(nutrient) ? "true" : undefined}
                   frameClassName={DENSE_FRAME_CLASS_NAME}
-                  value={values[field]}
+                  value={values[nutrient]}
                   onChange={(event) => {
-                    onChange(field, event.target.value);
+                    onChange(nutrient, event.target.value);
                   }}
                   error={error}
                   describedBy={isNotGiven ? noteId : undefined}

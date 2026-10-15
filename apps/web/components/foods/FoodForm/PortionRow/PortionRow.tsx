@@ -1,9 +1,9 @@
 import { FOOD_FORM, describePortionAmountField, describePortionField } from "@keylow/core/copy";
+import { amountUnit } from "@keylow/core/foods";
 import { iconStroke } from "@keylow/tokens";
 import { Trash2 } from "lucide-react";
 
 import { DENSE_FRAME_CLASS_NAME, DENSE_INPUT_CLASS_NAME } from "../denseField";
-import { amountUnit } from "../formValues";
 
 import type { PortionRowProps } from "./types";
 

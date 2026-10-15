@@ -1,6 +1,7 @@
 import type { CustomFoodValidationError } from "@keylow/api-client";
 import type { FoodFormNutrient } from "@keylow/core/copy";
-import type { Food, FoodPortion, NutrientBasis } from "@keylow/core/schemas";
+import type { FoodFormFields, PortionFormFields } from "@keylow/core/foods";
+import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 /** A food already saved by the user, with its portions, which the form edits instead of creating. */
 export type FoodFormExistingFood = { food: Food; portions: FoodPortion[] };
@@ -18,26 +19,10 @@ export type FoodFormProps = {
 };
 
 /** One portion as the form holds it. The amount is text until the form is validated. */
-export type PortionFormValues = {
-  key: string;
-  label: string;
-  amount: string;
-  isDefault: boolean;
-};
+export type PortionFormValues = PortionFormFields & { key: string };
 
 /** Every number is text while the user types, and only becomes a number when the form is validated. */
-export type FoodFormValues = {
-  name: string;
-  brand: string;
-  barcode: string;
-  basis: NutrientBasis;
-  kcal: string;
-  protein: string;
-  fat: string;
-  carbs: string;
-  fibre: string;
-  portions: PortionFormValues[];
-};
+export type FoodFormValues = FoodFormFields & { portions: PortionFormValues[] };
 
 /** What is wrong with one portion row: one sentence for the row, and which of its two fields to flag. */
 export type PortionError = { sentence: string; isLabelInvalid: boolean; isAmountInvalid: boolean };

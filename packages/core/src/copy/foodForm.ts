@@ -1,3 +1,5 @@
+import { amountUnit } from "../foods/foodForm";
+
 import type { BarcodeInvalidReason } from "../foods/barcode";
 import type { NutrientBasis } from "../schemas/food";
 
@@ -164,8 +166,6 @@ export const describePortionField = (
       return `Portion ${position} is the default`;
   }
 };
-
-const amountUnit = (basis: NutrientBasis): string => (basis === "per_100g" ? "g" : "ml");
 
 /** The name of a portion's amount field, with the unit that follows the basis. `position` counts from 1. */
 export const describePortionAmountField = (position: number, basis: NutrientBasis): string =>

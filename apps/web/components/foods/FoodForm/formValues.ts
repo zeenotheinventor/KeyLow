@@ -1,7 +1,7 @@
-import type { FoodFormExistingFood, FoodFormValues, PortionFormValues } from "./types";
-import type { NutrientBasis } from "@keylow/core/schemas";
+import { copyFormStart, foodToFormFields, portionToFormFields } from "@keylow/core/foods";
 
-const numberToText = (value: number | null) => (value === null ? "" : String(value));
+import type { FoodFormExistingFood, FoodFormValues, PortionFormValues } from "./types";
+import type { RequiredFoodNutrient } from "@keylow/core/foods";
 
 export const emptyFoodFormValues: FoodFormValues = {
   name: "",
@@ -9,12 +9,19 @@ export const emptyFoodFormValues: FoodFormValues = {
   barcode: "",
   basis: "per_100g",
   kcal: "",
-  protein: "",
-  fat: "",
-  carbs: "",
-  fibre: "",
+  protein_g: "",
+  fat_g: "",
+  carbs_g: "",
+  fibre_g: "",
   portions: [],
 };
+
+function savedPortions({ portions }: FoodFormExistingFood): PortionFormValues[] {
+  return portions.map((portion, index) => ({
+    key: `saved-${String(index)}`,
+    ...portionToFormFields(portion),
+  }));
+}
 
 export function foodFormValuesFrom(
   existing: FoodFormExistingFood | undefined,
@@ -24,61 +31,35 @@ export function foodFormValuesFrom(
     return { ...emptyFoodFormValues, barcode: scannedBarcode ?? "" };
   }
 
-  const { food, portions } = existing;
+  return { ...foodToFormFields(existing.food), portions: savedPortions(existing) };
+}
 
+export type FormStart = {
+  values: FoodFormValues;
+  /** The required nutrients that started blank on a copy, because the source did not give them. */
+  notGiven: readonly RequiredFoodNutrient[];
+  /** Whether the carbohydrate of a copied food was left blank because it included fibre. */
+  isCarbsIncludingFibre: boolean;
+};
+
+/** What the form starts with: a new food, the food being edited, or a copy of a food. */
+export function formStartFrom(
+  existing: FoodFormExistingFood | undefined,
+  copyOf: FoodFormExistingFood | undefined,
+  scannedBarcode: string | undefined,
+): FormStart {
+  if (existing !== undefined || copyOf === undefined) {
+    return {
+      values: foodFormValuesFrom(existing, scannedBarcode),
+      notGiven: [],
+      isCarbsIncludingFibre: false,
+    };
+  }
+
+  const { fields, notGiven, isCarbsIncludingFibre } = copyFormStart(copyOf.food);
   return {
-    name: food.name,
-    brand: food.brand ?? "",
-    barcode: food.barcode ?? "",
-    basis: food.basis,
-    kcal: numberToText(food.kcal),
-    protein: numberToText(food.protein_g),
-    fat: numberToText(food.fat_g),
-    carbs: numberToText(food.carbs_g),
-    fibre: numberToText(food.fibre_g),
-    portions: portions.map((portion, index) => ({
-      key: `saved-${String(index)}`,
-      label: portion.label,
-      amount: numberToText(portion.grams ?? portion.ml),
-      isDefault: portion.is_default,
-    })),
+    values: { ...fields, portions: savedPortions(copyOf) },
+    notGiven,
+    isCarbsIncludingFibre,
   };
-}
-
-export const amountUnit = (basis: NutrientBasis) => (basis === "per_100g" ? "g" : "ml");
-
-const optionalText = (text: string) => (text.trim() === "" ? undefined : text.trim());
-const optionalNumber = (text: string) => (text.trim() === "" ? undefined : Number(text));
-
-function withoutUndefined(fields: Record<string, unknown>) {
-  return Object.fromEntries(Object.entries(fields).filter(([, value]) => value !== undefined));
-}
-
-function portionInput(portion: PortionFormValues, basis: NutrientBasis) {
-  return withoutUndefined({
-    label: portion.label,
-    [basis === "per_100g" ? "grams" : "ml"]: optionalNumber(portion.amount),
-    isDefault: portion.isDefault,
-  });
-}
-
-/**
- * The shape `customFoodInputSchema` validates. Blank optional fields are left out, and a blank
- * required number is left out too so that it reads as missing rather than as zero. The density
- * is not on the form, so an existing food's value is passed through to avoid clearing it.
- */
-export function foodInputFrom(values: FoodFormValues, density: number | null) {
-  return withoutUndefined({
-    name: values.name,
-    brand: optionalText(values.brand),
-    barcode: optionalText(values.barcode),
-    basis: values.basis,
-    density_g_per_ml: density ?? undefined,
-    kcal: optionalNumber(values.kcal),
-    protein_g: optionalNumber(values.protein),
-    fat_g: optionalNumber(values.fat),
-    carbs_g: optionalNumber(values.carbs),
-    fibre_g: optionalNumber(values.fibre),
-    portions: values.portions.map((portion) => portionInput(portion, values.basis)),
-  });
 }

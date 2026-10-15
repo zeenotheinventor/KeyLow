@@ -12,18 +12,10 @@ import { normaliseBarcode } from "@keylow/core/foods";
 import type { FormErrors, FormIssue, FoodFormValues, PortionError } from "./types";
 import type { FoodFormNutrient } from "@keylow/core/copy";
 
-const NUTRIENT_FIELDS_BY_SCHEMA_KEY: Readonly<
-  Record<FoodFormNutrient, "kcal" | "protein" | "fat" | "carbs" | "fibre">
-> = {
-  kcal: "kcal",
-  protein_g: "protein",
-  fat_g: "fat",
-  carbs_g: "carbs",
-  fibre_g: "fibre",
-};
+const NUTRIENTS: readonly FoodFormNutrient[] = ["kcal", "protein_g", "fat_g", "carbs_g", "fibre_g"];
 
 const isNutrient = (key: unknown): key is FoodFormNutrient =>
-  typeof key === "string" && key in NUTRIENT_FIELDS_BY_SCHEMA_KEY;
+  NUTRIENTS.some((nutrient) => nutrient === key);
 
 function describeBarcodeProblem(barcode: string): string {
   const result = normaliseBarcode(barcode.trim());
@@ -60,7 +52,7 @@ export function formErrorsFrom(issues: FormIssue[], values: FoodFormValues): For
     } else if (head === "barcode") {
       errors.barcode ??= describeBarcodeProblem(values.barcode);
     } else if (isNutrient(head)) {
-      const text = values[NUTRIENT_FIELDS_BY_SCHEMA_KEY[head]];
+      const text = values[head];
       const problem =
         issue.code === "too_small" ? "negative" : text.trim() === "" ? "required" : "not_a_number";
       errors.nutrients[head] ??= describeNutrientProblem(head, problem);

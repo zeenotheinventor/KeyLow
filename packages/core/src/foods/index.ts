@@ -3,6 +3,23 @@ export { normaliseBarcode } from "./barcode";
 export type { BarcodeInvalidReason, BarcodeSymbology, NormaliseBarcodeResult } from "./barcode";
 export { carriedNutrients } from "./carriedNutrients";
 export type { CarriedNutrients } from "./carriedNutrients";
+export {
+  REQUIRED_FOOD_NUTRIENTS,
+  amountUnit,
+  copyFormStart,
+  customFoodInputFrom,
+  foodToFormFields,
+  parseFormNumber,
+  portionAmountKey,
+  portionToFormFields,
+} from "./foodForm";
+export type {
+  CopyFormStart,
+  FoodFormFields,
+  FoodFormFieldsWithPortions,
+  PortionFormFields,
+  RequiredFoodNutrient,
+} from "./foodForm";
 export { isFoodId } from "./isFoodId";
 export { OFF_FRESHNESS_MS, offFreshness } from "./freshness";
 export type { OffFreshness } from "./freshness";
