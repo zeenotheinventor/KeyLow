@@ -19,3 +19,4 @@ export const ABOUT_SCREEN = {
     terms: "Terms",
   },
 };
+// ci test, safe to delete
