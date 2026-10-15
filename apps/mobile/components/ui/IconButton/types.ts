@@ -33,7 +33,7 @@ export type IconButtonProps = {
   dimsWhenDisabled?: boolean;
   /** The haptic token to play when pressed. The design gives none of its own. */
   haptic?: HapticFeedbackName;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
   /** Layout from the caller, such as alignment and margins. */
   className?: string;
 };

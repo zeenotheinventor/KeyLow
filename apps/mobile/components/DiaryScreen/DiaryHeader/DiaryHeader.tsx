@@ -8,10 +8,17 @@ import type { DiaryHeaderProps } from "./types";
 
 /**
  * The top of the diary, as the board draws it: the title (Today, or the day) and two 44 point icon buttons,
- * the calendar and more. Both are drawn and not wired: the date picker and the menu with Copy yesterday
- * belong to the food log interactions ticket.
+ * the calendar, which opens the date picker, and more, which opens the menu with Copy yesterday. The
+ * buttons are drawn without a press while the diary has not yet got its time zone, because neither could
+ * act on a day yet.
  */
-export function DiaryHeader({ title, chooseDateLabel, moreLabel }: DiaryHeaderProps) {
+export function DiaryHeader({
+  title,
+  chooseDateLabel,
+  moreLabel,
+  onChooseDate,
+  onMore,
+}: DiaryHeaderProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -21,8 +28,8 @@ export function DiaryHeader({ title, chooseDateLabel, moreLabel }: DiaryHeaderPr
         <Text className="min-w-0 flex-1" role="heading" variant="h1">
           {title}
         </Text>
-        <IconButton icon="Calendar" label={chooseDateLabel} />
-        <IconButton icon="Ellipsis" label={moreLabel} />
+        <IconButton icon="Calendar" label={chooseDateLabel} onPress={onChooseDate} />
+        <IconButton icon="Ellipsis" label={moreLabel} onPress={onMore} />
       </View>
     </View>
   );

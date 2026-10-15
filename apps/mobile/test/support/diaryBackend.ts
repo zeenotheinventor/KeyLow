@@ -26,12 +26,22 @@ export const diaryBackend: {
   failingTables: Set<string>;
   /** Never answers the reads of this table, as a slow connection does. */
   hungTables: Set<string>;
+  /** Fails the writes (insert, update) to this table with a database error, and leaves its reads alone. */
+  failingWriteTables: Set<string>;
+  /** Never answers the writes to this table, as a slow connection does. Its reads are answered. */
+  hungWriteTables: Set<string>;
+  /** Fails the inserts into the entries from this one on, counting from 1, as a copy that stops part way does. */
+  failingInsertsFrom: number | null;
+  /** Fails the next this many updates of the entries. */
+  failingUpdates: number;
   /** Fails the read of the targets alone, so the terms acceptance still loads. */
   targetsReadFails: boolean;
   /** The bodies of the updates made to the profile. */
   saves: unknown[];
-  /** Every request made, as the table and its query string. */
-  requests: { table: string; search: string }[];
+  /** Every request made, as the table, its query string and its method. */
+  requests: { table: string; search: string; method: string }[];
+  /** The bodies of the writes to the diary tables, in the order they arrived, with the table and the method. */
+  writes: { table: string; method: string; search: string; body: unknown }[];
 } = {
   timezone: "Europe/London",
   terms: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
@@ -40,9 +50,14 @@ export const diaryBackend: {
   dayLogs: [],
   failingTables: new Set(),
   hungTables: new Set(),
+  failingWriteTables: new Set(),
+  hungWriteTables: new Set(),
+  failingInsertsFrom: null,
+  failingUpdates: 0,
   targetsReadFails: false,
   saves: [],
   requests: [],
+  writes: [],
 };
 
 export function resetDiaryBackend(): void {
@@ -61,9 +76,14 @@ export function resetDiaryBackend(): void {
   diaryBackend.dayLogs = [];
   diaryBackend.failingTables.clear();
   diaryBackend.hungTables.clear();
+  diaryBackend.failingWriteTables.clear();
+  diaryBackend.hungWriteTables.clear();
+  diaryBackend.failingInsertsFrom = null;
+  diaryBackend.failingUpdates = 0;
   diaryBackend.saves = [];
   diaryBackend.targetsReadFails = false;
   diaryBackend.requests = [];
+  diaryBackend.writes = [];
 }
 
 export const noTargets: Targets = {
@@ -261,6 +281,9 @@ function inDateFilter(search: URLSearchParams, localDate: unknown): boolean {
     if (operator === "gte") {
       return localDate >= value;
     }
+    if (operator === "lt") {
+      return localDate < value;
+    }
     return operator === "lte" ? localDate <= value : true;
   });
 }
@@ -299,11 +322,160 @@ function profileRow(select: string): Row {
   return diaryBackend.terms;
 }
 
+const WRITE_METHODS = new Set(["POST", "PATCH"]);
+
+function readBody(init?: RequestInit): unknown {
+  return typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined;
+}
+
+function fieldOf(source: unknown, key: string): unknown {
+  return typeof source === "object" && source !== null
+    ? Object.getOwnPropertyDescriptor(source, key)?.value
+    : undefined;
+}
+
+const isLive = (row: Row): boolean => (row["deleted_at"] ?? null) === null;
+
+/** The rows a write's filters pick: `id=eq.x`, `id=in.(x,y)`, `local_date=eq.d` and `deleted_at=is.null`. */
+function rowsPicked(rows: Row[], search: URLSearchParams): Row[] {
+  const id = search.get("id");
+  const localDate = search.get("local_date");
+  const ids = id?.startsWith("in.(")
+    ? id.slice(4, -1).split(",")
+    : id
+      ? [id.replace("eq.", "")]
+      : null;
+
+  return rows.filter(
+    (row) =>
+      (ids === null || ids.includes(String(row["id"]))) &&
+      (localDate === null || `eq.${String(row["local_date"])}` === localDate) &&
+      (search.get("deleted_at") !== "is.null" || isLive(row)),
+  );
+}
+
+// PostgREST answers a request for one object with the object, and with a 406 for any other count of rows.
+function answerRows(rows: Row[], init?: RequestInit, status = 200): Response {
+  if (!new Headers(init?.headers).get("Accept")?.includes("vnd.pgrst.object+json")) {
+    return jsonResponse(rows, status);
+  }
+  const [only] = rows;
+  if (rows.length === 1 && only !== undefined) {
+    return jsonResponse(only, status);
+  }
+
+  return jsonResponse(
+    {
+      code: "PGRST116",
+      message: "Cannot coerce the result to a single JSON object",
+      details: `The result contains ${rows.length} rows`,
+      hint: null,
+    },
+    406,
+  );
+}
+
+function writeEntries(init: RequestInit, search: URLSearchParams): Response {
+  const body = readBody(init);
+  if (init.method === "POST") {
+    const nutrients = fieldOf(body, "nutrients");
+    const row = {
+      ...(typeof body === "object" && body !== null ? body : {}),
+      ...databaseColumns(),
+      kcal: fieldOf(nutrients, "kcal") ?? null,
+      deleted_at: null,
+    };
+    diaryBackend.entries.push(row);
+
+    return answerRows([row], init, 201);
+  }
+  const picked = rowsPicked(diaryBackend.entries, search);
+  for (const row of picked) {
+    Object.assign(row, body);
+  }
+
+  return answerRows(
+    picked.map((row) => ({ id: row["id"] })),
+    init,
+  );
+}
+
+function writeDayLogs(init: RequestInit, search: URLSearchParams): Response {
+  const body = readBody(init);
+  if (init.method === "POST") {
+    const row = { note: null, ...(typeof body === "object" && body !== null ? body : {}) };
+    diaryBackend.dayLogs.push(row);
+
+    return answerRows([row], init, 201);
+  }
+  const picked = rowsPicked(diaryBackend.dayLogs, search);
+  for (const row of picked) {
+    Object.assign(row, body);
+  }
+
+  return answerRows(
+    picked.map((row) => ({ local_date: row["local_date"] })),
+    init,
+  );
+}
+
+// A write that is told to fail: every write to its table, an insert from the nth, or one of the next updates.
+function writeShouldFail(table: string, method: string): boolean {
+  if (diaryBackend.failingWriteTables.has(table)) {
+    return true;
+  }
+  const inserts = diaryBackend.writes.filter(
+    (write) => write.table === table && write.method === "POST",
+  ).length;
+  if (
+    table === "food_log_entries" &&
+    method === "POST" &&
+    diaryBackend.failingInsertsFrom !== null &&
+    inserts >= diaryBackend.failingInsertsFrom
+  ) {
+    return true;
+  }
+  if (table === "food_log_entries" && method === "PATCH" && diaryBackend.failingUpdates > 0) {
+    diaryBackend.failingUpdates -= 1;
+    return true;
+  }
+  return false;
+}
+
+function byTimeline(first: Row, second: Row): number {
+  return (
+    String(first["logged_at"]).localeCompare(String(second["logged_at"])) ||
+    String(first["created_at"]).localeCompare(String(second["created_at"])) ||
+    String(first["id"]).localeCompare(String(second["id"]))
+  );
+}
+
 async function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
   const table = pathname.split("/").pop() ?? "";
-  diaryBackend.requests.push({ table, search: searchParams.toString() });
+  const method = init?.method ?? "GET";
+  diaryBackend.requests.push({ table, search: searchParams.toString(), method });
+
+  const isDiaryWrite =
+    WRITE_METHODS.has(method) && (table === "food_log_entries" || table === "day_logs");
+  if (isDiaryWrite) {
+    diaryBackend.writes.push({
+      table,
+      method,
+      search: searchParams.toString(),
+      body: readBody(init),
+    });
+    if (diaryBackend.hungWriteTables.has(table)) {
+      return new Promise(() => undefined);
+    }
+    if (writeShouldFail(table, method)) {
+      return jsonResponse(
+        { code: "XX000", message: "raw database text", details: null, hint: null },
+        500,
+      );
+    }
+  }
 
   if (diaryBackend.hungTables.has(table)) {
     return new Promise(() => undefined);
@@ -334,15 +506,28 @@ async function fakeFetch(input: string | URL | Request, init?: RequestInit): Pro
       }
       return Promise.resolve(jsonResponse([profileRow(searchParams.get("select") ?? "")]));
     case "food_log_entries":
+      if (init !== undefined && isDiaryWrite) {
+        return Promise.resolve(writeEntries(init, searchParams));
+      }
       return Promise.resolve(
         jsonResponse(
-          diaryBackend.entries.filter((row) => inDateFilter(searchParams, row["local_date"])),
+          diaryBackend.entries
+            .filter((row) => inDateFilter(searchParams, row["local_date"]))
+            .filter((row) => searchParams.get("deleted_at") !== "is.null" || isLive(row))
+            .sort(byTimeline),
         ),
       );
     case "day_logs":
+      if (init !== undefined && isDiaryWrite) {
+        return Promise.resolve(writeDayLogs(init, searchParams));
+      }
       return Promise.resolve(
         jsonResponse(
-          diaryBackend.dayLogs.filter((row) => inDateFilter(searchParams, row["local_date"])),
+          diaryBackend.dayLogs
+            .filter((row) => inDateFilter(searchParams, row["local_date"]))
+            .filter(
+              (row) => searchParams.get("is_complete") !== "eq.true" || row["is_complete"] === true,
+            ),
         ),
       );
     case "day_totals":

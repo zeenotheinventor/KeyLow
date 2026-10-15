@@ -14,6 +14,17 @@ export type FoodLogProps = {
   isComplete: boolean;
   /** Yesterday has nothing to copy, as the empty day's card says. */
   isYesterdayEmpty: boolean;
+  /** A copy of yesterday is under way, as the empty day's button shows. */
+  isCopying: boolean;
   /** Called with the hour of the plus that was pressed. */
   onAddFood: (hour: number) => void;
+  /** Called with the entry whose row was deleted, by a swipe or by its Delete action. Rows cannot be deleted while offline. */
+  onDeleteEntry: (entry: LogEntry) => void;
+  /** Copies yesterday's whole day, from the empty day's button. */
+  onCopyYesterday: () => void;
+  /**
+   * Saves the day as complete or not, with the state the switch would move to. It rejects when the save
+   * fails, and the switch is then made new, so that its press cannot play the moment for a later sync.
+   */
+  onCompleteChange: (complete: boolean) => Promise<void>;
 };
