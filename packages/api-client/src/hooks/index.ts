@@ -1,8 +1,12 @@
 // TanStack Query hooks over the repos land here from M2 onward.
 export { useAcceptTerms } from "./useAcceptTerms";
+export type { DiaryReadOptions } from "./DiaryReadOptions";
+export { useCompleteDays } from "./useCompleteDays";
 export { useCreateFood } from "./useCreateFood";
 export { useDebouncedValue } from "./useDebouncedValue";
 export { useDeleteFood } from "./useDeleteFood";
+export { useDiaryDay } from "./useDiaryDay";
+export { useDiaryWeek } from "./useDiaryWeek";
 export { useFood } from "./useFood";
 export { useFoodByBarcode } from "./useFoodByBarcode";
 export type {
@@ -24,5 +28,6 @@ export { useFoodWithPortions } from "./useFoodWithPortions";
 export type { FoodWithPortionsState } from "./useFoodWithPortions";
 export { useMaterialiseOffProduct } from "./useMaterialiseOffProduct";
 export { useOwnFoods } from "./useOwnFoods";
+export { useRecentFoods } from "./useRecentFoods";
 export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useUpdateFood } from "./useUpdateFood";

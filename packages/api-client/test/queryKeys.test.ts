@@ -60,3 +60,36 @@ describe("keys.foods", () => {
     }
   });
 });
+
+describe("keys.diary", () => {
+  it("should expose the diary root key", () => {
+    expect(keys.diary.all).toEqual(["diary"]);
+  });
+
+  it("should build a day key scoped to the local date", () => {
+    expect(keys.diary.day("2026-10-15")).toEqual(["diary", "day", "2026-10-15"]);
+  });
+
+  it("should build a week key scoped to the Monday", () => {
+    expect(keys.diary.week("2026-10-12")).toEqual(["diary", "week", "2026-10-12"]);
+  });
+
+  it("should build a complete days key scoped to the month", () => {
+    expect(keys.diary.completeDays("2026-10")).toEqual(["diary", "complete-days", "2026-10"]);
+  });
+
+  it("should expose a key for the recent foods", () => {
+    expect(keys.diary.recentFoods).toEqual(["diary", "recent-foods"]);
+  });
+
+  it("should nest every diary key under the diary root so one invalidation covers them all", () => {
+    for (const key of [
+      keys.diary.day("2026-10-15"),
+      keys.diary.week("2026-10-12"),
+      keys.diary.completeDays("2026-10"),
+      keys.diary.recentFoods,
+    ]) {
+      expect(key.slice(0, 1)).toEqual(keys.diary.all);
+    }
+  });
+});

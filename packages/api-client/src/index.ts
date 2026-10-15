@@ -7,9 +7,12 @@ export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./
 export type { EdgeErrorKind } from "./errors";
 export {
   useAcceptTerms,
+  useCompleteDays,
   useCreateFood,
   useDebouncedValue,
   useDeleteFood,
+  useDiaryDay,
+  useDiaryWeek,
   useFood,
   useFoodByBarcode,
   useFoodPortions,
@@ -17,10 +20,12 @@ export {
   useFoodWithPortions,
   useMaterialiseOffProduct,
   useOwnFoods,
+  useRecentFoods,
   useTermsAcceptance,
   useUpdateFood,
 } from "./hooks";
 export type {
+  DiaryReadOptions,
   FoodByBarcodeError,
   FoodByBarcodeLookup,
   FoodByBarcodeResult,
@@ -38,15 +43,28 @@ export {
   acceptTerms,
   createFood,
   fetchOffProduct,
+  getDiaryDay,
+  getDiaryWeek,
   getFood,
   getFoodByBarcode,
   getMyTermsAcceptance,
+  listCompleteDays,
   listFoodPortions,
   listOwnFoods,
+  listRecentFoods,
   replaceFoodPortions,
   searchFoods,
   searchOff,
   softDeleteFood,
   updateFood,
 } from "./repos";
-export type { CreatedFood, FoodSearchHit } from "./repos";
+export type {
+  CreatedFood,
+  DayLog,
+  DayTotals,
+  DiaryDay,
+  DiaryWeekDay,
+  FoodSearchHit,
+  LogEntry,
+  RecentFood,
+} from "./repos";
