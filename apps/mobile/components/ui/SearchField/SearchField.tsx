@@ -3,9 +3,9 @@ import { useRef, useState } from "react";
 import { TextInput, View } from "react-native";
 
 import { useTheme } from "../../../lib/theme";
+import { useKeyboardLift } from "../../../lib/useKeyboardLift";
 import { Icon } from "../Icon";
 import { IconButton } from "../IconButton";
-import { useKeyboardLift } from "./useKeyboardLift";
 
 import type { SearchFieldProps } from "./types";
 

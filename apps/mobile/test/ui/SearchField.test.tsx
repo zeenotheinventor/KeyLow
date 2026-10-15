@@ -1,11 +1,12 @@
 import { themes } from "@keylow/tokens";
-import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
+import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { useState } from "react";
-import { Keyboard, Platform, View } from "react-native";
+import { Keyboard, Platform } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { IconButton, SearchField } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
+import { stubKeyboard, subscription } from "../support/keyboardStub";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
@@ -56,68 +57,6 @@ function drawings() {
 }
 
 const schemes: ThemeScheme[] = ["dark", "light"];
-
-type KeyboardListener = Parameters<typeof Keyboard.addListener>[1];
-
-// The keyboard's announcement, with the one edge the dock reads.
-const keyboardEvent = (screenY: number) => ({
-  duration: 0,
-  easing: "keyboard" as const,
-  endCoordinates: { screenX: 0, screenY, width: 390, height: 300 },
-});
-
-// What `Keyboard.addListener` hands back. A listener only ever calls `remove` on it, so that is all it
-// has, and the full emitter subscription is not built.
-function subscription(remove: () => void) {
-  return { remove } as ReturnType<typeof Keyboard.addListener>;
-}
-
-// Stands in for the keyboard and for the window the dock is measured in. The dock's bottom edge is
-// `dockBottom` points down the window, and the keyboard's top edge is `keyboardTop`.
-function stubKeyboard(dockBottom: number, { deferMeasure = false } = {}) {
-  const listeners = new Map<string, KeyboardListener>();
-  const unansweredMeasures: (() => void)[] = [];
-  jest.spyOn(Keyboard, "addListener").mockImplementation((eventName, listener) => {
-    listeners.set(eventName, listener);
-    return subscription(() => listeners.delete(eventName));
-  });
-  // Every view shares one mocked measure, on the class, so the dock's is the one set here. A real
-  // measure answers later, so `deferMeasure` holds the answers until the test lets them through.
-  jest
-    .spyOn(View.prototype, "measureInWindow")
-    .mockImplementation((callback: (...edges: number[]) => void) => {
-      const answer = () => {
-        callback(0, dockBottom - 64, 390, 64);
-      };
-      if (deferMeasure) {
-        unansweredMeasures.push(answer);
-      } else {
-        answer();
-      }
-    });
-  const showName = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-  const hideName = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-  const announce = (eventName: string, keyboardTop: number) =>
-    act(() => {
-      listeners.get(eventName)?.(keyboardEvent(keyboardTop));
-    });
-  return {
-    show: (keyboardTop: number) => announce(showName, keyboardTop),
-    hide: () => announce(hideName, 0),
-    // iOS also announces the keyboard changing height while it is shown.
-    changeFrame: (keyboardTop: number) => announce("keyboardWillChangeFrame", keyboardTop),
-    answerMeasures: () =>
-      act(() => {
-        // Answered newest first, as the slow ones can come back after the fast.
-        unansweredMeasures
-          .splice(0)
-          .reverse()
-          .forEach((answer) => {
-            answer();
-          });
-      }),
-  };
-}
 
 describe("SearchField", () => {
   let kitStyles: string;
