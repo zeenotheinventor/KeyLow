@@ -69,3 +69,41 @@ gh api repos/zeenotheinventor/KeyLow/branches/main/protection
 ```
 
 To change them, use `gh api -X PATCH repos/zeenotheinventor/KeyLow` for the merge options and `gh api -X PUT repos/zeenotheinventor/KeyLow/branches/main/protection` for the branch protection (it replaces the whole rule, so send every field), or use Settings on GitHub. Update this section in the same change.
+
+## Merging
+
+A pull request is merged by GitHub once `checks` is green, after the reviewer has approved. Nobody rebases it first, merges it by hand or deletes its branch, unless GitHub shows a conflict (see "New copy modules").
+
+1. The engineer runs `pnpm check:affected`, pushes, and opens the pull request with the QA section written at open time.
+2. CI runs the full gate in parallel. `checks` is the only required status.
+3. The reviewer approves. A blocking finding goes back to the engineer, and a pull request is never armed before approval.
+4. The orchestrator arms auto-merge:
+
+   ```sh
+   gh pr merge <n> --squash --auto
+   ```
+
+   Never add `--delete-branch` and never rebase onto `main` first. The repository setting deletes the branch after the merge (see "Repository settings"), and deleting it that way makes GitHub retarget stacked children to `main`. Deleting a parent branch through the API closed child pull request #110.
+
+5. GitHub merges when `checks` is green. A new push cancels the superseded run and keeps the arm. If a push after approval changes behaviour, run `gh pr merge <n> --disable-auto` first, and arm it again once the reviewer approves.
+6. After the merge, move the ticket to Done and check the push-to-`main` run.
+
+### Red main
+
+Branches need not be up to date, so two pull requests that pass alone can still break `main` together. Every merge to `main` gets a full run, and that run is the guard. If it goes red, stop arming other pull requests and open a fix pull request within the hour. Arm it as soon as it is approved. The orchestrator of the session that merged the breaking pull request owns it. Revert only if the fix is not obvious within that hour.
+
+### Stacked pull requests
+
+Arm the parent first. When it merges, GitHub deletes its branch and retargets the child to `main`. Merges are squashed, so the child still holds the parent's original commit and GitHub shows a conflict. Rebase the child onto `main` without that commit and force-push:
+
+```sh
+git fetch origin
+git rebase --onto origin/main <old parent tip> <child branch>
+git push --force-with-lease
+```
+
+The auto-merge arm stays on, and GitHub merges the child when `checks` is green. Dependent tickets still go in sequence.
+
+### New copy modules
+
+Two pull requests that each add a copy module both edit `packages/core/src/copy/index.ts`, and GitHub shows the second as conflicting until `main` is merged into it locally (see "Merge conflicts on shared files"). Merge `main` in, check each line is there once, push, and CI runs again.
