@@ -9,7 +9,7 @@ export type PortionAmount =
 export type PortionSelection = PortionAmount & {
   /** The Time row's time as `HH:mm`. */
   time: string;
-  /** The row still reads "Now": the person did not choose a time, so the moment of saving is the time. */
+  /** The row still reads "Now": the person did not choose a time, so the time is the moment the screen opened. */
   isNow: boolean;
 };
 

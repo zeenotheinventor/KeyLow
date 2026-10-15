@@ -1,4 +1,4 @@
-import { SNAPSHOT_VERSION } from "@keylow/core/diary";
+import { SNAPSHOT_VERSION, buildLogEntry } from "@keylow/core/diary";
 import { buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
@@ -11,13 +11,20 @@ import {
   mockGetFood,
   mockListFoodPortions,
   mockLogFood,
+  mockUseProfileTimeZone,
+  mockUseRecentFoods,
   profileTimeZone,
   recentFoods,
+  termsAccepted,
   resetApiClientMock,
   savedFoodId,
 } from "./support/apiClientMock";
 import { compileFoodSearchStyles } from "./support/foodSearchStyles";
-import { resetSearchApiClientMock, searchResult } from "./support/searchApiClientMock";
+import {
+  offCandidateFixture,
+  resetSearchApiClientMock,
+  searchResult,
+} from "./support/searchApiClientMock";
 import FoodSearchRoute from "../../app/foods/index";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
@@ -123,7 +130,15 @@ const oatsRecent: RecentFood = {
 
 // What the log stores for a tap, so Undo has an entry to remove.
 function storedEntry(id: string): LogEntry {
-  return { id, local_date: "2026-10-14" } as LogEntry;
+  const entry = buildLogEntry({
+    food: foodFixture,
+    quantity: 100,
+    unit: "g",
+    loggedAt: "2026-10-14T11:00:00.000Z",
+    localDate: "2026-10-14",
+  });
+
+  return { ...entry, id, created_at: "2026-10-14T11:00:01.000Z", kcal: 420 };
 }
 
 async function renderLogSearch(params: { day?: string; time?: string } = {}) {
@@ -209,22 +224,47 @@ describe("food search sheet in log mode", () => {
   });
 
   describe("before anything is typed", () => {
-    it("should offer Quick add, which only navigates, with the day and time carried on", async () => {
-      const user = await renderLogSearch();
-
-      await user.press(
-        screen.getByRole("button", { name: "Quick add, Calories and macros by hand" }),
-      );
-
-      expect(routerMock.push).toHaveBeenCalledWith("/foods/quick-add?day=2026-10-14&time=12%3A00");
-    });
-
     it("should say there is nothing recent when no food was ever logged", async () => {
       await renderLogSearch();
 
       expect(screen.getByText("Nothing recent")).toBeOnTheScreen();
       expect(screen.getByText("Foods you log appear here.")).toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: /Quick add/ })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /Quick add/ })).not.toBeOnTheScreen();
+    });
+
+    it("should say Recent could not be loaded, rather than leave the sheet blank", async () => {
+      recentFoods.current = { data: undefined, isPending: false, isError: true };
+      await renderLogSearch();
+
+      expect(screen.getByText("Couldn't load recent foods")).toBeOnTheScreen();
+      expect(screen.getByText("Check your connection and try again.")).toBeOnTheScreen();
+    });
+
+    describe("the terms gate", () => {
+      it("should read neither Recent nor the time zone while the Terms are not accepted", async () => {
+        termsAccepted.current = false;
+        await renderLogSearch();
+
+        expect(mockUseRecentFoods).toHaveBeenCalled();
+        expect(mockUseRecentFoods.mock.calls.every(([options]) => options?.enabled === false)).toBe(
+          true,
+        );
+        expect(mockUseProfileTimeZone).toHaveBeenCalled();
+        expect(
+          mockUseProfileTimeZone.mock.calls.every(([options]) => options?.enabled === false),
+        ).toBe(true);
+      });
+
+      it("should read both once the Terms are accepted", async () => {
+        await renderLogSearch();
+
+        expect(mockUseRecentFoods.mock.calls.every(([options]) => options?.enabled === true)).toBe(
+          true,
+        );
+        expect(
+          mockUseProfileTimeZone.mock.calls.every(([options]) => options?.enabled === true),
+        ).toBe(true);
+      });
     });
 
     describe("with recent foods", () => {
@@ -479,6 +519,73 @@ describe("food search sheet in log mode", () => {
 
       expect(mockLogFood).not.toHaveBeenCalled();
       expect(screen.getByText("Not saved. Check your connection and try again.")).toBeOnTheScreen();
+    });
+  });
+
+  describe("a drink with no portion", () => {
+    const milk = hit({ id: chickenId, name: "Milk", basis: "per_100ml", kcal: 46 });
+
+    it("should be named for 100 ml, and the plus should log 100 ml", async () => {
+      showResults([milk]);
+      const user = await renderLogSearch();
+      await type("mi");
+
+      await user.press(screen.getByRole("button", { name: "Add Milk, 100 ml" }));
+
+      expect(screen.getByRole("button", { name: /^Milk, 100 ml/ })).toBeOnTheScreen();
+      expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({ quantity: 100, unit: "ml" });
+    });
+  });
+
+  describe("when Undo fails", () => {
+    it("should say it could not undo, in its own words, and not that the food was not saved", async () => {
+      mockDeleteEntry.mockRejectedValue(new Error("network down"));
+      showResults([chicken]);
+      const user = await renderLogSearch();
+      await type("ch");
+      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
+
+      await user.press(screen.getByRole("button", { name: "Undo" }));
+
+      expect(screen.getByText("Couldn't undo. Try again.")).toBeOnTheScreen();
+      expect(
+        screen.queryByText("Not saved. Check your connection and try again."),
+      ).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("with a profile that has no time zone", () => {
+    it("should log in UTC", async () => {
+      profileTimeZone.current = { data: null, isPending: false, isError: false };
+      showResults([chicken]);
+      const user = await renderLogSearch();
+      await type("ch");
+
+      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
+
+      // 12:00 on the 14th in UTC, where London's summer time would make it 11:00 UTC.
+      expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({
+        loggedAt: "2026-10-14T12:00:00.000Z",
+        localDate: "2026-10-14",
+      });
+    });
+  });
+
+  describe("Open Food Facts results", () => {
+    it("should keep the per 100 g note above them, because their rows stay per 100 g", async () => {
+      Object.assign(searchResult, { local: [banana], off: [offCandidateFixture] });
+      await renderLogSearch();
+      await type("oat");
+
+      expect(screen.getByText("Values per 100 g unless marked")).toBeOnTheScreen();
+    });
+
+    it("should leave the note out when there are only servings", async () => {
+      showResults([banana]);
+      await renderLogSearch();
+      await type("ba");
+
+      expect(screen.queryByText("Values per 100 g unless marked")).not.toBeOnTheScreen();
     });
   });
 

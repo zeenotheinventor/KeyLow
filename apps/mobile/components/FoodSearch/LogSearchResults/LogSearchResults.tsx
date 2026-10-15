@@ -26,7 +26,6 @@ export function LogSearchResults({
           onOpen={(recent) => {
             logging.onOpenRecent(recent.foodId);
           }}
-          onQuickAdd={logging.onQuickAdd}
         />
       }
       logRows={{ addDisabled: !canAdd, onAdd: addHit }}

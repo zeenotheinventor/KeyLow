@@ -92,10 +92,10 @@ export default function PortionPickerRoute() {
   async function handleSubmit(selection: PortionSelection) {
     setIsSaving(true);
     setHasSaveError(false);
-    const { loggedAt, localDate } = selection.isNow
-      ? initial
-      : clockTimeOn(initial.localDate, selection.time, timeZone);
     try {
+      const { loggedAt, localDate } = selection.isNow
+        ? initial
+        : clockTimeOn(initial.localDate, selection.time, timeZone);
       await logFood.mutateAsync({
         food,
         quantity: selection.quantity,

@@ -43,7 +43,9 @@ export function TimeWheel({ label, count, value, onChange }: TimeWheelProps) {
     onChange(row);
   }
 
-  function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+  // A drag or a fling is taken where it ends. While a scroll the wheel started itself is running, its
+  // intermediate positions are not rows the person chose, so they are never read.
+  function handleScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const row = Math.min(
       count - 1,
       Math.max(0, Math.round(event.nativeEvent.contentOffset.y / rowHeight)),
@@ -67,7 +69,6 @@ export function TimeWheel({ label, count, value, onChange }: TimeWheelProps) {
       contentContainerClassName="py-[88px]"
       decelerationRate="fast"
       role="spinbutton"
-      scrollEventThrottle={16}
       showsVerticalScrollIndicator={false}
       snapToInterval={rowHeight}
       onAccessibilityAction={(event) => {
@@ -78,7 +79,8 @@ export function TimeWheel({ label, count, value, onChange }: TimeWheelProps) {
       onLayout={() => {
         scrollRef.current?.scrollTo({ y: valueRef.current * rowHeight, animated: false });
       }}
-      onScroll={handleScroll}
+      onMomentumScrollEnd={handleScrollEnd}
+      onScrollEndDrag={handleScrollEnd}
     >
       {Array.from({ length: count }, (_, row) => {
         const look = lookOf(row, value);

@@ -8,12 +8,15 @@ import {
   foodQuery,
   mockLogFood,
   mockUseFoodWithPortions,
+  mockUseProfileTimeZone,
+  mockUseRecentFoods,
   portionFixtures,
   portionsQuery,
   profileTimeZone,
   recentFoods,
   resetApiClientMock,
   savedFoodId,
+  termsAccepted,
 } from "./support/apiClientMock";
 import PortionPickerRoute from "../../app/foods/[id]/log";
 import { ToastProvider } from "../../components/ui";
@@ -256,11 +259,24 @@ describe("portion picker", () => {
 
     it("should name the amount field by its unit", async () => {
       const user = await renderPicker();
-      expect(screen.getByLabelText("Amount (portion)")).toBeOnTheScreen();
+      // The portion "1 bar" gives the noun "bar", as the board writes "medium" and "pot".
+      expect(screen.getByLabelText("Amount (bar)")).toBeOnTheScreen();
 
       await user.press(screen.getByRole("radio", { name: "g" }));
 
       expect(screen.getByLabelText("Amount (g)")).toBeOnTheScreen();
+    });
+
+    it("should say portion or portions when the label has no noun", async () => {
+      Object.assign(portionsQuery, {
+        data: [{ ...portionFixtures[0], label: "30 g", grams: 30 }],
+      });
+      const user = await renderPicker();
+      expect(screen.getByLabelText("Amount (portion)")).toBeOnTheScreen();
+
+      await typeAmount(user, "2");
+
+      expect(screen.getByLabelText("Amount (portions)")).toBeOnTheScreen();
     });
   });
 
@@ -479,6 +495,77 @@ describe("portion picker", () => {
         expect(screen.queryByRole("alert", { name: /Not saved/ })).not.toBeOnTheScreen();
         expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
       });
+    });
+  });
+
+  describe("the terms gate", () => {
+    it("should read neither the time zone nor Recent while the Terms are not accepted", async () => {
+      termsAccepted.current = false;
+      await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      expect(mockUseProfileTimeZone).toHaveBeenCalled();
+      expect(
+        mockUseProfileTimeZone.mock.calls.every(([options]) => options?.enabled === false),
+      ).toBe(true);
+      expect(mockUseRecentFoods).toHaveBeenCalled();
+      expect(mockUseRecentFoods.mock.calls.every(([options]) => options?.enabled === false)).toBe(
+        true,
+      );
+    });
+
+    it("should read both once the Terms are accepted", async () => {
+      await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      expect(
+        mockUseProfileTimeZone.mock.calls.every(([options]) => options?.enabled === true),
+      ).toBe(true);
+      expect(mockUseRecentFoods.mock.calls.every(([options]) => options?.enabled === true)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("a profile that has no time zone", () => {
+    beforeEach(() => {
+      profileTimeZone.current = { data: null, isPending: false, isError: false };
+    });
+
+    it("should read the time in UTC", async () => {
+      await renderPicker({ day: "2026-10-15" });
+
+      // 11:40 UTC, where London would read 12:40.
+      expect(timeRow("Time, now, 11:40, change")).toBeOnTheScreen();
+    });
+
+    it("should log in UTC", async () => {
+      const user = await renderPicker({ day: "2026-10-14", time: "12:00" });
+
+      await user.press(addButton());
+
+      expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({
+        loggedAt: "2026-10-14T12:00:00.000Z",
+        localDate: "2026-10-14",
+      });
+    });
+  });
+
+  describe("a food that is missing a value without being flagged", () => {
+    beforeEach(() => {
+      showFood({ ...foodFixture, carbs_g: null, quality: {} });
+    });
+
+    it("should be reviewed first like a flagged one: no Add, no Time row, and the gap named", async () => {
+      await renderPicker({ day: "2026-10-15" });
+
+      expect(screen.getByText("Needs review")).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "Carbohydrate is not given for this food. Copy it to your foods and fill the gap before you log it.",
+        ),
+      ).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Time/ })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Copy to your foods" })).toBeOnTheScreen();
     });
   });
 

@@ -89,7 +89,7 @@ describe("PortionPicker as a component", () => {
         initialAmount: { unit: "portion", quantity: 2, portion: box },
       });
 
-      expect(screen.getByLabelText("Amount (portions)")).toHaveDisplayValue("2");
+      expect(screen.getByLabelText("Amount (box of 6)")).toHaveDisplayValue("2");
       expect(screen.getByRole("radio", { name: "Box of 6", checked: true })).toBeOnTheScreen();
     });
   });

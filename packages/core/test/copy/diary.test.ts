@@ -389,6 +389,28 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
     ).toBe("1 medium (100 g)");
   });
 
+  it("should not write the size twice when the label already says it", () => {
+    expect(
+      describeLoggedAmount({
+        unit: "portion",
+        quantity: 1,
+        resolvedGrams: 30,
+        portion: { label: "30 g" },
+      }),
+    ).toBe("30 g");
+  });
+
+  it("should keep the size of several portions of a label that says one portion's size", () => {
+    expect(
+      describeLoggedAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 60,
+        portion: { label: "30 g" },
+      }),
+    ).toBe("2 × 30 g (60 g)");
+  });
+
   it("should write several portions as the count, a times sign, the label and the total grams", () => {
     expect(
       describeLoggedAmount({

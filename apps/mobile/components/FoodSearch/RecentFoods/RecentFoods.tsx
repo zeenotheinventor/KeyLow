@@ -1,5 +1,5 @@
 import { useRecentFoods } from "@keylow/api-client";
-import { RECENT_FOODS, describeLoggedAmount } from "@keylow/core/copy";
+import { LOG_SEARCH, RECENT_FOODS, describeLoggedAmount } from "@keylow/core/copy";
 import { nutrientsOfSnapshot } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import { describeMacros } from "@keylow/core/search";
@@ -17,8 +17,15 @@ import type { RecentFoodsProps } from "./types";
 export function RecentFoods({ addDisabled, onAdd, onOpen }: RecentFoodsProps) {
   const recent = useRecentFoods({ enabled: useReadsEnabled() });
 
-  if (recent.isError) {
-    return null;
+  if (recent.isError && recent.data === undefined) {
+    // A quiet line in place of the list, so the sheet is never blank.
+    return (
+      <EmptyState
+        body={LOG_SEARCH.recentFailed.body}
+        icon="CloudOff"
+        title={LOG_SEARCH.recentFailed.title}
+      />
+    );
   }
 
   if (recent.data === undefined) {

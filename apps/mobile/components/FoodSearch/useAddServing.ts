@@ -6,7 +6,8 @@ import {
   useProfileTimeZone,
   useSupabase,
 } from "@keylow/api-client";
-import { SAVE_FAILED_BANNER, LOG_SEARCH, describeAddedFood } from "@keylow/core/copy";
+import { LOG_SEARCH, SAVE_FAILED_BANNER, describeAddedFood } from "@keylow/core/copy";
+import { servingOfSearchHit } from "@keylow/core/search";
 import { useRef } from "react";
 
 import { amountLastLogged } from "../../lib/amountLastLogged";
@@ -29,17 +30,23 @@ export type AddServing = {
   addRecent: (recent: RecentFood) => void;
 };
 
-// The serving a result row shows: the default portion, else 100 of the food's basis.
+// The serving a result row shows, which core works out once for the row, the plus and the picker. If its
+// portion has been replaced since the search, the plus logs 100 of the food's basis instead.
 function servingOfHit(
   hit: FoodSearchHit,
   food: Food,
   portions: readonly FoodPortion[],
 ): LoggableAmount {
-  const portion = portions.find((candidate) => candidate.id === hit.default_portion_id);
+  const serving = servingOfSearchHit(hit);
+  const portion = portions.find((candidate) => candidate.id === serving.portionId);
 
-  return portion === undefined
+  if (portion !== undefined) {
+    return { quantity: serving.quantity, unit: "portion", portion };
+  }
+
+  return serving.unit === "portion"
     ? { quantity: 100, unit: food.basis === "per_100ml" ? "ml" : "g" }
-    : { quantity: 1, unit: "portion", portion };
+    : { quantity: serving.quantity, unit: serving.unit };
 }
 
 /**
@@ -94,7 +101,9 @@ export function useAddServing(context: LogContext): AddServing {
         icon: "Check",
         actionLabel: LOG_SEARCH.undo,
         onAction: () => {
-          deleteEntry.mutateAsync(entry).catch(notSaved);
+          deleteEntry.mutateAsync(entry).catch(() => {
+            toast.show({ message: LOG_SEARCH.undoFailed, tone: "danger", icon: "CircleAlert" });
+          });
         },
       });
     } catch {

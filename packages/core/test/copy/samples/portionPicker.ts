@@ -18,6 +18,14 @@ export const samples: Record<string, () => string[]> = {
     }),
   ],
   describePortionCount: () => [1, 2].map(copy.describePortionCount),
+  describePortionNoun: () => [
+    copy.describePortionNoun("1 medium (100 g)") ?? "",
+    copy.describePortionNoun("30 g") ?? "none",
+  ],
+  describePortionUnit: () => [
+    copy.describePortionUnit("1 bar", 1),
+    copy.describePortionUnit("30 g", 2),
+  ],
   describePortionWithSize: () => [
     copy.describePortionWithSize("1 medium", { amount: 100, unit: "g" }),
     copy.describePortionWithSize("30 g", { amount: 30, unit: "g" }),

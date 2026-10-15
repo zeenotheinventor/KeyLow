@@ -20,6 +20,13 @@ export const LOG_SEARCH = {
   title: "Log food",
   /** The toast's action after a plus: it removes the entry that plus logged. */
   undo: "Undo",
+  /** The toast when Undo could not remove the entry. */
+  undoFailed: "Couldn't undo. Try again.",
+  /** What Recent says when it could not be loaded, in place of its rows. */
+  recentFailed: {
+    title: "Couldn't load recent foods",
+    body: "Check your connection and try again.",
+  },
 };
 
 /** The heading of the per 100 list under the hero: "Per 100 g", or "Per 100 ml" for a drink. */
@@ -41,6 +48,11 @@ export type AmountBasisInput =
     };
 
 const squash = (text: string): string => text.replace(/\s+/g, "").toLowerCase();
+const escapeForPattern = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// The size is already said when the label holds it as a whole number: "30 g" says 30 g and "130 g" does not.
+const labelSays = (label: string, written: string): boolean =>
+  new RegExp(`(?:^|[^0-9.])${escapeForPattern(squash(written))}`).test(squash(label));
 
 /**
  * A portion with its size, such as "1 medium (100 g)" for the portion "1 medium". A label that already
@@ -52,7 +64,7 @@ export const describePortionWithSize = (
 ): string => {
   const written = `${formatGrams(size.amount)} ${size.unit}`;
 
-  return squash(label).includes(squash(written)) ? label : `${label} (${written})`;
+  return labelSays(label, written) ? label : `${label} (${written})`;
 };
 
 /**
@@ -76,6 +88,32 @@ export const describeAmountBasis = (input: AmountBasisInput): string => {
 /** The word after the amount field's value for a count of portions: "portion" for 1, "portions" otherwise. */
 export const describePortionCount = (quantity: number): string =>
   quantity === 1 ? "portion" : "portions";
+
+const MEASURE_PREFIX = /^(?:kg|mg|g|ml|cl|dl|l|fl\.?\s?oz|oz)\b\s*/i;
+const LEADING_COUNT = /^(?:\d+\s*\/\s*\d+|\d+(?:[.,]\d+)?|[\u00bc\u00bd\u00be])\s*/;
+const TRAILING_SIZE = /\s*\([^)]*\)\s*$/;
+const LONGEST_NOUN = 20;
+
+/**
+ * The noun a portion's name gives the amount field, as the portion boards draw it ("medium", "bar", "pot"):
+ * the label without its leading count, any measure that follows it and any size in brackets, so
+ * "1 medium (100 g)" gives "medium". A label that has no noun, such as "30 g", or one too long to sit
+ * beside a field, gives nothing.
+ */
+export const describePortionNoun = (label: string): string | undefined => {
+  const withoutSize = label.trim().replace(TRAILING_SIZE, "");
+  const withoutCount = withoutSize.replace(LEADING_COUNT, "");
+  const noun = withoutCount.replace(MEASURE_PREFIX, "").trim().toLowerCase();
+
+  return noun === "" || noun.length > LONGEST_NOUN ? undefined : noun;
+};
+
+/**
+ * What follows the amount field's value for a count of one portion: its noun when its name gives one,
+ * else "portion" or "portions" for the count.
+ */
+export const describePortionUnit = (label: string, quantity: number): string =>
+  describePortionNoun(label) ?? describePortionCount(quantity);
 
 /**
  * The line on the portion picker of a food opened from Recent: "Last logged 50 g, yesterday". `daysAgo` is

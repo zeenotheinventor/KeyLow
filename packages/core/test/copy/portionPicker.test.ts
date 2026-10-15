@@ -7,6 +7,8 @@ import {
   describeLastLogged,
   describePer100Heading,
   describePortionCount,
+  describePortionNoun,
+  describePortionUnit,
   describePortionWithSize,
   describeScannedCode,
 } from "../../src/copy";
@@ -18,6 +20,14 @@ describe("portion picker wording", () => {
     expect(PORTION_PICKER.unitLabel).toBe("Unit");
     expect(PORTION_PICKER.noAmountBasis).toBe("For this amount");
     expect(PORTION_PICKER.noValue).toBe("\u2013");
+  });
+
+  it("should say Undo failed in its own words, and what Recent says when it cannot load", () => {
+    expect(LOG_SEARCH.undoFailed).toBe("Couldn't undo. Try again.");
+    expect(LOG_SEARCH.recentFailed).toEqual({
+      title: "Couldn't load recent foods",
+      body: "Check your connection and try again.",
+    });
   });
 
   it("should title the search sheet for logging, with an Undo for the plus", () => {
@@ -102,6 +112,10 @@ describe("describePortionWithSize", () => {
     expect(describePortionWithSize("1 bar (45g)", { amount: 45, unit: "g" })).toBe("1 bar (45g)");
   });
 
+  it("should not take a label that says 130 g for one that says 30 g", () => {
+    expect(describePortionWithSize("130 g", { amount: 30, unit: "g" })).toBe("130 g (30 g)");
+  });
+
   it("should not take 130 g for a label that says 30 g", () => {
     expect(describePortionWithSize("30 g", { amount: 130, unit: "g" })).toBe("30 g (130 g)");
   });
@@ -115,5 +129,50 @@ describe("describeLastLogged", () => {
 
   it("should write any other day as the date it is given", () => {
     expect(describeLastLogged("50 g", 5, "Sat 10 Oct")).toBe("Last logged 50 g, Sat 10 Oct");
+  });
+});
+
+describe("describePortionNoun", () => {
+  it.each([
+    ["1 medium", "medium"],
+    ["1 medium (100 g)", "medium"],
+    ["1 slice", "slice"],
+    ["1 tbsp", "tbsp"],
+    ["1 cup", "cup"],
+    ["1 bar (45g)", "bar"],
+    ["1 serving", "serving"],
+    ["2 biscuits (30 g)", "biscuits"],
+    ["1/2 pot", "pot"],
+    ["1.5 slices", "slices"],
+    ["100 g serving", "serving"],
+    ["1 Pot", "pot"],
+    ["Slice", "slice"],
+  ])("should take the noun of %j to be %j", (label, noun) => {
+    expect(describePortionNoun(label)).toBe(noun);
+  });
+
+  it.each([
+    "30 g",
+    "100g",
+    "250 ml",
+    "1 oz",
+    "",
+    "   ",
+    "1",
+    "1 portion of the whole packet as sold",
+  ])("should find no noun in %j", (label) => {
+    expect(describePortionNoun(label)).toBeUndefined();
+  });
+});
+
+describe("describePortionUnit", () => {
+  it("should be the noun when the label gives one, whatever the count", () => {
+    expect(describePortionUnit("1 medium (100 g)", 1)).toBe("medium");
+    expect(describePortionUnit("1 medium (100 g)", 2)).toBe("medium");
+  });
+
+  it("should be portion or portions when the label gives no noun", () => {
+    expect(describePortionUnit("30 g", 1)).toBe("portion");
+    expect(describePortionUnit("30 g", 3)).toBe("portions");
   });
 });

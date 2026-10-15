@@ -92,7 +92,16 @@ export function SearchResults({
             }}
           />
           {off.length > 0 && (
-            <OpenFoodFactsGroup candidates={off} query={trimmedQuery} onOpenFood={onOpenFood} />
+            <>
+              {/* The live Open Food Facts rows stay per 100 g, so in the log search, where the rows above show
+                  servings, the note stands above them. */}
+              {logRows !== undefined && (
+                <Text className="-mb-2" tone="muted" variant="caption">
+                  {VALUES_PER_100_G_NOTE}
+                </Text>
+              )}
+              <OpenFoodFactsGroup candidates={off} query={trimmedQuery} onOpenFood={onOpenFood} />
+            </>
           )}
         </View>
       )}

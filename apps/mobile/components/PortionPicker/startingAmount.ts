@@ -1,4 +1,4 @@
-import { defaultServing } from "@keylow/core/diary";
+import { servingOfSearchHit } from "@keylow/core/search";
 
 import type { PortionAmount } from "./types";
 import type { ChipGroupOption } from "../ui";
@@ -28,8 +28,8 @@ export function unitOptions(
 
 /**
  * Where the amount field and the chips start: the amount the screen was given, or else the food's default
- * serving, which is one of the default portion, or 100 g (100 ml for a drink). That is the serving a row's
- * plus logs, so the two agree.
+ * serving, which is core's `servingOfSearchHit` for the food's default portion: one of that portion, or
+ * 100 g (100 ml for a drink). It is the serving a result row shows and its plus logs, so the three agree.
  */
 export function startingAmount(
   food: Food,
@@ -39,14 +39,14 @@ export function startingAmount(
   if (initialAmount !== undefined) {
     return { quantity: String(initialAmount.quantity), unitValue: unitValueOf(initialAmount) };
   }
-  const serving = defaultServing(food, portions);
-  if (serving.unit === "g" && food.basis === "per_100ml") {
-    // A drink with no portion starts at 100 ml, as its row in the search shows, where core's default is 100 g.
-    return { quantity: String(serving.quantity), unitValue: "ml" };
-  }
+  const portion = portions.find((candidate) => candidate.is_default);
+  const serving = servingOfSearchHit({
+    ...food,
+    default_portion_id: portion?.id ?? null,
+    default_portion_label: portion?.label ?? null,
+    default_portion_grams: portion?.grams ?? null,
+    default_portion_ml: portion?.ml ?? null,
+  });
 
-  return {
-    quantity: String(serving.quantity),
-    unitValue: serving.unit === "portion" ? serving.portion.id : serving.unit,
-  };
+  return { quantity: String(serving.quantity), unitValue: serving.portionId ?? serving.unit };
 }

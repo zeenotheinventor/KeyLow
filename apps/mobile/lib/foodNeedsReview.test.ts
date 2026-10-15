@@ -1,4 +1,4 @@
-import { foodNeedsReview } from "./foodNeedsReview";
+import { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
 
 const complete = {
   kcal: 95,
@@ -30,5 +30,28 @@ describe("foodNeedsReview", () => {
 
   it("should count a nutrient of 0 as given", () => {
     expect(foodNeedsReview({ ...complete, carbs_g: 0 })).toBe(false);
+  });
+});
+
+describe("missingFieldsOf", () => {
+  it("should be empty for a food with all its values", () => {
+    expect(missingFieldsOf(complete)).toEqual([]);
+  });
+
+  it("should name the nutrients that are null even when the source flagged none", () => {
+    expect(missingFieldsOf({ ...complete, carbs_g: null, kcal: null })).toEqual([
+      "kcal",
+      "carbs_g",
+    ]);
+  });
+
+  it("should keep the fields the source flagged, once each", () => {
+    expect(
+      missingFieldsOf({
+        ...complete,
+        carbs_g: null,
+        quality: { suspect: true, fields_missing: ["carbs_g", "fibre_g"] },
+      }),
+    ).toEqual(["carbs_g", "fibre_g"]);
   });
 });

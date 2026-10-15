@@ -2,8 +2,8 @@ import { SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
 import { formatCalories } from "@keylow/core/format";
 import { describeFoodRow, describeMacros, servingOfSearchHit } from "@keylow/core/search";
 
+import { foodNeedsReview } from "../../../lib/foodNeedsReview";
 import { FoodRow, GroupedList } from "../../ui";
-import { foodNeedsReview } from "../foodNeedsReview";
 
 import type { LocalFoodGroupsProps } from "./types";
 

@@ -5,14 +5,14 @@ import {
   PORTION_PICKER,
   SAVE_FAILED_BANNER,
   describeMissingValuesBeforeLogging,
-  describePortionCount,
+  describePortionUnit,
 } from "@keylow/core/copy";
-import { requiresConfirmation } from "@keylow/core/foods";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { foodNeedsReview, missingFieldsOf } from "../../lib/foodNeedsReview";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import {
   Badge,
@@ -69,11 +69,12 @@ export function PortionPicker({
 
   const { amount, hero } = previewAmount(food, portions, unitValue, quantityText);
   const options = unitOptions(food, portions);
-  const needsReview = requiresConfirmation(food);
+  const needsReview = foodNeedsReview(food);
+  const chosenPortion = portions.find((portion) => portion.id === unitValue);
   const unitSuffix =
-    unitValue === "g" || unitValue === "ml"
+    chosenPortion === undefined
       ? unitValue
-      : describePortionCount(amount?.quantity ?? 1);
+      : describePortionUnit(chosenPortion.label, amount?.quantity ?? 1);
   const chosenUnit = options.find((option) => option.value === unitValue);
 
   return (
@@ -100,7 +101,7 @@ export function PortionPicker({
             {needsReview ? (
               <Banner
                 body={describeMissingValuesBeforeLogging(
-                  food.quality.fields_missing ?? [],
+                  missingFieldsOf(food),
                   food.quality.carbs_convention,
                 )}
                 title={FOOD_REVIEW_BANNER.title}

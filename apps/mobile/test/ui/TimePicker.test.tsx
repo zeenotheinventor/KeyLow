@@ -185,10 +185,36 @@ describe("TimePicker", () => {
       expect(onChange).toHaveBeenCalledWith("12:40");
     });
 
-    it("should choose a row that is scrolled to", async () => {
+    it("should choose the row a fling comes to rest on", async () => {
       const { user, onChange } = await renderPicker({ initialTime: "09:05" });
 
-      await fireEvent.scroll(hours(), { nativeEvent: { contentOffset: { x: 0, y: 44 * 17 } } });
+      await fireEvent(hours(), "momentumScrollEnd", {
+        nativeEvent: { contentOffset: { x: 0, y: 44 * 17 } },
+      });
+      await user.press(screen.getByRole("button", { name: "Done" }));
+
+      expect(onChange).toHaveBeenCalledWith("17:05");
+    });
+
+    it("should choose the row a drag is let go on", async () => {
+      const { user, onChange } = await renderPicker({ initialTime: "09:05" });
+
+      await fireEvent(minutes(), "scrollEndDrag", {
+        nativeEvent: { contentOffset: { x: 0, y: 44 * 30 + 10 } },
+      });
+      await user.press(screen.getByRole("button", { name: "Done" }));
+
+      expect(onChange).toHaveBeenCalledWith("09:30");
+    });
+
+    it("should keep the row that was pressed when a scroll it started passes other rows", async () => {
+      const { user, onChange } = await renderPicker({ initialTime: "09:05" });
+
+      await user.press(within(hours()).getByRole("option", { name: "17" }));
+      // The animated scroll to the row reports the rows it passes on the way.
+      for (const row of [10, 12, 14, 16]) {
+        await fireEvent.scroll(hours(), { nativeEvent: { contentOffset: { x: 0, y: 44 * row } } });
+      }
       await user.press(screen.getByRole("button", { name: "Done" }));
 
       expect(onChange).toHaveBeenCalledWith("17:05");

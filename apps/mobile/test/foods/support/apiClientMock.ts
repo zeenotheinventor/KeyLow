@@ -68,6 +68,14 @@ export const mockDeleteEntry = jest.fn<Promise<void>, [LogEntry]>();
 export const recentFoods: { current: QueryState<RecentFood[]> } = {
   current: { data: [], isPending: false, isError: false },
 };
+// The options the two terms-gated reads were asked with, so a test can see whether they were enabled.
+export const mockUseProfileTimeZone = jest.fn<
+  QueryState<string | null>,
+  [{ enabled?: boolean }?]
+>();
+export const mockUseRecentFoods = jest.fn<QueryState<RecentFood[]>, [{ enabled?: boolean }?]>();
+// Whether the signed in account has accepted the current Terms, which a test turns off for the gate.
+export const termsAccepted = { current: true };
 export const mockUseFood = jest.fn<QueryState<Food | null>, [string | undefined]>();
 export const mockUseFoodPortions = jest.fn<QueryState<FoodPortion[]>, [string | undefined]>();
 export const mockUseFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
@@ -106,6 +114,11 @@ export function resetApiClientMock(): void {
   mockLogFood.mockReset();
   mockLogFood.mockResolvedValue({});
   profileTimeZone.current = { data: "Europe/London", isPending: false, isError: false };
+  termsAccepted.current = true;
+  mockUseProfileTimeZone.mockReset();
+  mockUseProfileTimeZone.mockImplementation(() => profileTimeZone.current);
+  mockUseRecentFoods.mockReset();
+  mockUseRecentFoods.mockImplementation(() => recentFoods.current);
   recentFoods.current = { data: [], isPending: false, isError: false };
   mockGetFood.mockReset();
   mockGetFood.mockResolvedValue(foodFixture);
@@ -133,8 +146,8 @@ export const mockApiClient = {
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
   useLogFood: () => ({ mutateAsync: mockLogFood }),
-  useProfileTimeZone: () => profileTimeZone.current,
-  useRecentFoods: () => recentFoods.current,
+  useProfileTimeZone: mockUseProfileTimeZone,
+  useRecentFoods: mockUseRecentFoods,
   useDeleteEntry: () => ({ mutateAsync: mockDeleteEntry }),
   useSupabase: () => ({}),
   getFood: mockGetFood,
@@ -147,7 +160,9 @@ export const mockApiClient = {
     isPending: false,
     isError: false,
     isFetching: false,
-    data: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
+    data: termsAccepted.current
+      ? { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION }
+      : null,
     refetch: jest.fn(),
   }),
 };

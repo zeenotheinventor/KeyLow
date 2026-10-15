@@ -6,8 +6,6 @@ export type FoodSearchScope = "all" | "own";
 /** What the sheet needs while food is being logged to a day, which is when it is opened with a `day`. */
 export type FoodSearchLogging = {
   context: LogContext;
-  /** Opens the quick add form. */
-  onQuickAdd: () => void;
   /** Opens the portion picker for a Recent food, filled in with the amount it was last logged with. */
   onOpenRecent: (foodId: string) => void;
 };
