@@ -230,6 +230,36 @@ describe("Input", () => {
     });
   });
 
+  describe("a required field", () => {
+    it("should be announced as required, without changing its name or drawing anything", async () => {
+      await renderInput({ required: true });
+
+      expect(screen.getByLabelText("Name")).toHaveProp("accessibilityHint", "Required");
+      expect(screen.queryByText("Required")).not.toBeOnTheScreen();
+    });
+
+    it("should be announced as required before what its helper says", async () => {
+      await renderInput({ required: true, helper: "As it appears on the pack" });
+
+      expect(screen.getByLabelText("Name")).toHaveProp(
+        "accessibilityHint",
+        "Required. As it appears on the pack",
+      );
+    });
+
+    it("should leave the announcement to the error, which already says so, while there is one", async () => {
+      await renderInput({ required: true, error: "Name is required" });
+
+      expect(screen.getByLabelText("Name")).toHaveProp("accessibilityHint", "Name is required");
+    });
+
+    it("should say nothing when the field is not required", async () => {
+      await renderInput();
+
+      expect(screen.getByLabelText("Name")).not.toHaveProp("accessibilityHint");
+    });
+  });
+
   describe("the missing note", () => {
     it("should show a note that the value is not given, with a warning icon", async () => {
       await renderInput({ missingNote: "Not given by the source" });

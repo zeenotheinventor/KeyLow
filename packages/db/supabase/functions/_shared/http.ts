@@ -45,7 +45,7 @@ export function error(
 }
 
 // Returns the response to send for a preflight request, or null when the request is not one.
-export function handlePreflight(request: Request): Response | null {
+function handlePreflight(request: Request): Response | null {
   if (request.method !== "OPTIONS") {
     return null;
   }

@@ -26,4 +26,9 @@ export type ErrorStateProps = {
   action?: ErrorStateAction | undefined;
   /** How far the words are from the sides: 24 points by default, 32 when wide, as the link error board draws it. */
   inset?: "default" | "wide" | undefined;
+  /**
+   * `fill`, the default, takes the height of its parent and sits in the middle of it. `section` takes only
+   * the height of its words, for an error among other content, such as the end of a list.
+   */
+  size?: "fill" | "section" | undefined;
 };

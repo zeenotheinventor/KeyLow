@@ -2,7 +2,7 @@ import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { listOwnFoods } from "../../src/repos/foods";
+import { OWN_FOODS_PAGE_SIZE, listOwnFoods } from "../../src/repos/foods";
 import { createTestClient } from "../createTestClient";
 import { REST_URL, foodRow, postgrestError, postgrestRows } from "../support/postgrest";
 
@@ -19,7 +19,7 @@ afterAll(() => {
 });
 
 describe("listOwnFoods", () => {
-  it("should ask for the live foods that have an owner, by name, at most 200 by default", async () => {
+  it("should ask for the live foods that have an owner, by name then id, one page of 50 by default", async () => {
     let requestUrl: URL | undefined;
     server.use(
       http.get(`${REST_URL}/foods`, ({ request }) => {
@@ -32,8 +32,10 @@ describe("listOwnFoods", () => {
 
     expect(requestUrl?.searchParams.get("owner_id")).toBe("not.is.null");
     expect(requestUrl?.searchParams.get("deleted_at")).toBe("is.null");
-    expect(requestUrl?.searchParams.get("order")).toBe("name.asc,created_at.asc");
-    expect(requestUrl?.searchParams.get("limit")).toBe("200");
+    expect(requestUrl?.searchParams.get("order")).toBe("name.asc,created_at.asc,id.asc");
+    expect(requestUrl?.searchParams.get("offset")).toBe("0");
+    expect(requestUrl?.searchParams.get("limit")).toBe(String(OWN_FOODS_PAGE_SIZE));
+    expect(OWN_FOODS_PAGE_SIZE).toBe(50);
   });
 
   it("should never ask for the database-only search column", async () => {
@@ -61,6 +63,21 @@ describe("listOwnFoods", () => {
 
     await listOwnFoods(createTestClient(), { limit: 10 });
 
+    expect(requestUrl?.searchParams.get("limit")).toBe("10");
+  });
+
+  it("should start the page after the foods it is told to skip", async () => {
+    let requestUrl: URL | undefined;
+    server.use(
+      http.get(`${REST_URL}/foods`, ({ request }) => {
+        requestUrl = new URL(request.url);
+        return postgrestRows(request, []);
+      }),
+    );
+
+    await listOwnFoods(createTestClient(), { limit: 10, offset: 30 });
+
+    expect(requestUrl?.searchParams.get("offset")).toBe("30");
     expect(requestUrl?.searchParams.get("limit")).toBe("10");
   });
 

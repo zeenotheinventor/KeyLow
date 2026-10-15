@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood } from "./support";
@@ -7,16 +7,50 @@ import type { Food } from "@keylow/core/schemas";
 
 import { FoodSearch } from "@/components/foods/FoodSearch";
 
+type Paging = {
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isFetchNextPageError: boolean;
+  fetchNextPage: () => void;
+};
+
 type OwnFoodsState =
   | { isPending: true; isError: false; data: undefined }
   | { isPending: false; isError: true; data: undefined }
-  | { isPending: false; isError: true; data: Food[] }
-  | { isPending: false; isError: false; data: Food[] };
+  | ({ isPending: false; isError: true; data: Food[] } & Partial<Paging>)
+  | ({ isPending: false; isError: false; data: Food[] } & Partial<Paging>);
 
 const { useOwnFoods, useFoodSearch } = vi.hoisted(() => ({
   useOwnFoods: vi.fn<() => OwnFoodsState>(),
   useFoodSearch: vi.fn(),
 }));
+
+// jsdom has no IntersectionObserver, so a test scrolls by telling the live observers what they see.
+const liveObservers = new Set<(entries: Array<{ isIntersecting: boolean }>) => void>();
+
+class FakeIntersectionObserver {
+  private readonly callback: (entries: Array<{ isIntersecting: boolean }>) => void;
+
+  constructor(callback: (entries: Array<{ isIntersecting: boolean }>) => void) {
+    this.callback = callback;
+  }
+
+  observe() {
+    liveObservers.add(this.callback);
+  }
+
+  disconnect() {
+    liveObservers.delete(this.callback);
+  }
+}
+
+function scrollToEndOfList() {
+  act(() => {
+    liveObservers.forEach((callback) => {
+      callback([{ isIntersecting: true }]);
+    });
+  });
+}
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
@@ -36,8 +70,8 @@ const ownFoods = [
   makeFood({ id: "d", name: "Overnight oats", kcal: 152 }),
 ];
 
-function showOwnFoods(foods: Food[]) {
-  useOwnFoods.mockReturnValue({ isPending: false, isError: false, data: foods });
+function showOwnFoods(foods: Food[], paging?: Paging) {
+  useOwnFoods.mockReturnValue({ isPending: false, isError: false, data: foods, ...paging });
 }
 
 function searchField() {
@@ -57,11 +91,14 @@ function listedNames() {
 describe("FoodSearch for your own foods", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.stubGlobal("IntersectionObserver", FakeIntersectionObserver);
     showOwnFoods(ownFoods);
   });
 
   afterEach(() => {
     cleanup();
+    liveObservers.clear();
+    vi.unstubAllGlobals();
   });
 
   it("should be titled Your foods, with a field to search them", () => {
@@ -194,5 +231,154 @@ describe("FoodSearch for your own foods", () => {
     fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
 
     expect(screen.getByRole("region", { name: "Barcode lookup" })).toBeTruthy();
+  });
+
+  describe("loading more as the list is scrolled", () => {
+    const more = (fetchNextPage = vi.fn(), changes: Partial<Paging> = {}): Paging => ({
+      hasNextPage: true,
+      isFetchingNextPage: false,
+      isFetchNextPageError: false,
+      fetchNextPage,
+      ...changes,
+    });
+
+    it("should load the next page when the end of the list comes into view", () => {
+      const fetchNextPage = vi.fn();
+      showOwnFoods(ownFoods, more(fetchNextPage));
+      render(<FoodSearch scope="own" />);
+
+      expect(fetchNextPage).not.toHaveBeenCalled();
+      scrollToEndOfList();
+
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not try to load more when every food is loaded", () => {
+      const fetchNextPage = vi.fn();
+      showOwnFoods(ownFoods, more(fetchNextPage, { hasNextPage: false }));
+      render(<FoodSearch scope="own" />);
+
+      scrollToEndOfList();
+
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should say more foods are loading, and not ask again, while a page is on its way", () => {
+      const fetchNextPage = vi.fn();
+      showOwnFoods(ownFoods, more(fetchNextPage, { isFetchingNextPage: true }));
+      render(<FoodSearch scope="own" />);
+
+      scrollToEndOfList();
+
+      expect(screen.getByRole("status").textContent).toBe("Loading more of your foods");
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should say nothing is loading when no page is on its way", () => {
+      showOwnFoods(ownFoods, more());
+      render(<FoodSearch scope="own" />);
+
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("should say the next page could not be loaded, keep the list, and try again when asked", () => {
+      const fetchNextPage = vi.fn();
+      showOwnFoods(ownFoods, more(fetchNextPage, { isFetchNextPageError: true }));
+      render(<FoodSearch scope="own" />);
+
+      scrollToEndOfList();
+
+      expect(fetchNextPage).not.toHaveBeenCalled();
+      expect(listedNames()).toHaveLength(4);
+      expect(
+        within(screen.getByRole("alert")).getByRole("heading", { name: "Search failed" }),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("should say the page is loading, not that it failed, while a retry is on its way", () => {
+      showOwnFoods(
+        ownFoods,
+        more(vi.fn(), { isFetchingNextPage: true, isFetchNextPageError: true }),
+      );
+      render(<FoodSearch scope="own" />);
+
+      expect(screen.getByRole("status").textContent).toBe("Loading more of your foods");
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("should keep paging when only a background refetch failed", () => {
+      const fetchNextPage = vi.fn();
+      useOwnFoods.mockReturnValue({
+        isPending: false,
+        isError: true,
+        data: ownFoods,
+        ...more(fetchNextPage),
+      });
+      render(<FoodSearch scope="own" />);
+
+      scrollToEndOfList();
+
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    describe("while the typed words match nothing so far", () => {
+      it("should keep loading, and not say no foods were found", () => {
+        const fetchNextPage = vi.fn();
+        showOwnFoods(ownFoods, more(fetchNextPage));
+        render(<FoodSearch scope="own" />);
+
+        type("zzqx");
+
+        expect(screen.queryByRole("heading", { name: "No foods found" })).toBeNull();
+        expect(screen.getByRole("status").textContent).toBe("Loading more of your foods");
+        scrollToEndOfList();
+        expect(fetchNextPage).toHaveBeenCalledTimes(1);
+      });
+
+      it("should ask for the page after each page that also matches nothing", () => {
+        const fetchNextPage = vi.fn();
+        showOwnFoods(ownFoods, more(fetchNextPage));
+        const { rerender } = render(<FoodSearch scope="own" />);
+        type("zzqx");
+        scrollToEndOfList();
+
+        showOwnFoods(ownFoods, more(fetchNextPage, { isFetchingNextPage: true }));
+        rerender(<FoodSearch scope="own" />);
+        showOwnFoods([...ownFoods, makeFood({ id: "e", name: "Pasta bake" })], more(fetchNextPage));
+        rerender(<FoodSearch scope="own" />);
+        scrollToEndOfList();
+
+        expect(fetchNextPage).toHaveBeenCalledTimes(2);
+        expect(screen.queryByRole("heading", { name: "No foods found" })).toBeNull();
+      });
+
+      it("should say no foods were found once the last page is loaded", () => {
+        showOwnFoods(ownFoods, more());
+        const { rerender } = render(<FoodSearch scope="own" />);
+        type("zzqx");
+
+        showOwnFoods(ownFoods, more(vi.fn(), { hasNextPage: false }));
+        rerender(<FoodSearch scope="own" />);
+
+        expect(screen.getByRole("heading", { level: 2, name: "No foods found" })).toBeTruthy();
+      });
+
+      it("should stop and offer to try again when a page could not be loaded", () => {
+        const fetchNextPage = vi.fn();
+        showOwnFoods(ownFoods, more(fetchNextPage, { isFetchNextPageError: true }));
+        render(<FoodSearch scope="own" />);
+
+        type("zzqx");
+        scrollToEndOfList();
+
+        expect(fetchNextPage).not.toHaveBeenCalled();
+        expect(screen.queryByRole("status")).toBeNull();
+        expect(screen.getByRole("alert")).toBeTruthy();
+        fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+        expect(fetchNextPage).toHaveBeenCalledTimes(1);
+      });
+    });
   });
 });

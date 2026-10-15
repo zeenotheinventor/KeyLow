@@ -1,5 +1,5 @@
 import { FOOD_FORM, describeNutritionHeading } from "@keylow/core/copy";
-import { customFoodInputFrom } from "@keylow/core/foods";
+import { REQUIRED_FOOD_NUTRIENTS, customFoodInputFrom } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
@@ -37,6 +37,9 @@ const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
 function withoutKeys(errors: FoodFormErrors, isRemoved: (key: string) => boolean): FoodFormErrors {
   return Object.fromEntries(Object.entries(errors).filter(([key]) => !isRemoved(key)));
 }
+
+const isRequiredNutrient = (name: NutrientFieldName) =>
+  REQUIRED_FOOD_NUTRIENTS.some((required) => required === name);
 
 const isPortionErrorKey = (key: string) => key === "portions" || key.includes(".");
 
@@ -77,6 +80,8 @@ export function FoodForm({
     return {
       error: errors[name],
       label: FOOD_FORM.nutrients[name],
+      // The note above the fields says which are required, so only a screen reader is told, per field.
+      required: isRequiredNutrient(name),
       missingNote:
         notGivenNutrients.includes(name) && values[name] === ""
           ? FOOD_FORM.nutrientNotGiven

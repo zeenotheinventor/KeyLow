@@ -37,6 +37,7 @@ export const SEARCH_STATUS = {
   searchingYourFoods: "Searching your foods",
   searchingOpenFoodFacts: "Searching Open Food Facts",
   addingProduct: "Adding to your foods",
+  loadingMoreOfYourFoods: "Loading more of your foods",
 };
 
 export const SEARCH_EMPTY = {

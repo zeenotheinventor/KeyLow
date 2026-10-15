@@ -72,6 +72,20 @@ describe("ErrorState", () => {
     jest.restoreAllMocks();
   });
 
+  describe("its size", () => {
+    it("should fill the height of its parent by default", async () => {
+      await renderErrorState();
+
+      expect(fadingView().parent).toHaveStyle({ flexGrow: 1 });
+    });
+
+    it("should take only the height of its words as a section", async () => {
+      await renderErrorState({ size: "section" });
+
+      expect(fadingView().parent).not.toHaveStyle({ flexGrow: 1 });
+    });
+  });
+
   describe("what it says", () => {
     it("should be an alert that reads the title and the sentence it is given", async () => {
       await renderErrorState();

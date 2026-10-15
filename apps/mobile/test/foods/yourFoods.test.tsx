@@ -4,7 +4,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { foodFixture, resetApiClientMock } from "./support/apiClientMock";
 import { compileFoodSearchStyles } from "./support/foodSearchStyles";
-import { renderSheet } from "./support/renderSheet";
+import { renderSheet, sheet } from "./support/renderSheet";
 import {
   mockUseFoodSearch,
   ownFoodsResult,
@@ -13,6 +13,7 @@ import {
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
+import type { OwnFoodsPaging } from "./support/searchApiClientMock";
 import type { Food } from "@keylow/core/schemas";
 
 jest.mock(
@@ -61,8 +62,25 @@ const boardFoods = [
   ownFood("d", "Overnight oats", { kcal: 152, protein_g: 6.1, carbs_g: 22, fat_g: 4.2 }),
 ];
 
-function showOwnFoods(foods: Food[]) {
-  ownFoodsResult.current = { isPending: false, isError: false, data: foods };
+function showOwnFoods(foods: Food[], paging?: OwnFoodsPaging) {
+  ownFoodsResult.current = { isPending: false, isError: false, data: foods, ...paging };
+}
+
+// Scrolls the list the way the device reports it: the list says how tall it is, then it is scrolled.
+// `element` is anything inside the list, since the event reaches the list the way a touch on it would.
+async function scrollList(
+  element: ReturnType<typeof screen.getByRole>,
+  offset: number,
+  contentHeight = 1000,
+) {
+  await fireEvent(element, "contentSizeChange", 400, contentHeight);
+  await fireEvent.scroll(element, {
+    nativeEvent: {
+      contentOffset: { x: 0, y: offset },
+      contentSize: { width: 400, height: contentHeight },
+      layoutMeasurement: { width: 400, height: 600 },
+    },
+  });
 }
 
 const field = () => screen.getByRole("searchbox", { name: "Search foods" });
@@ -287,6 +305,189 @@ describe("food search sheet for your own foods", () => {
         }),
       ).toBeOnTheScreen();
       expect(screen.queryByRole("heading", { name: "No foods yet" })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("loading more as the list is scrolled", () => {
+    const morePages = (fetchNextPage = jest.fn(), isFetchingNextPage = false) => ({
+      hasNextPage: true,
+      isFetchingNextPage,
+      isFetchNextPageError: false,
+      fetchNextPage,
+    });
+    // Scrolling is sent to a row, and reaches the list the way a touch on the row would.
+    const heading = () => screen.getByRole("heading", { name: "Your foods · Yours" });
+
+    it("should load the next page when the list is scrolled to its end", async () => {
+      const fetchNextPage = jest.fn();
+      showOwnFoods(boardFoods, morePages(fetchNextPage));
+      await renderOwnFoods();
+
+      await scrollList(heading(), 400);
+
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not load more while the end of the list is still far away", async () => {
+      const fetchNextPage = jest.fn();
+      showOwnFoods(boardFoods, morePages(fetchNextPage));
+      await renderOwnFoods();
+
+      await scrollList(heading(), 0, 5000);
+
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should not try to load more when every food is loaded", async () => {
+      const fetchNextPage = jest.fn();
+      showOwnFoods(boardFoods, { ...morePages(fetchNextPage), hasNextPage: false });
+      await renderOwnFoods();
+
+      await scrollList(heading(), 400);
+
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should say more foods are loading, and not ask again, while a page is on its way", async () => {
+      const fetchNextPage = jest.fn();
+      showOwnFoods(boardFoods, morePages(fetchNextPage, true));
+      await renderOwnFoods();
+
+      await scrollList(heading(), 400);
+
+      expect(screen.getByRole("status", { name: "Loading more of your foods" })).toBeOnTheScreen();
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should say nothing is loading when no page is on its way", async () => {
+      showOwnFoods(boardFoods, morePages());
+      await renderOwnFoods();
+
+      expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+    });
+
+    it("should not keep asking after loading the next page failed", async () => {
+      const fetchNextPage = jest.fn();
+      showOwnFoods(boardFoods, { ...morePages(fetchNextPage), isFetchNextPageError: true });
+      await renderOwnFoods();
+
+      await scrollList(heading(), 400);
+
+      expect(fetchNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should keep paging when only a background refetch failed", async () => {
+      const fetchNextPage = jest.fn();
+      ownFoodsResult.current = {
+        isPending: false,
+        isError: true,
+        data: boardFoods,
+        ...morePages(fetchNextPage),
+      };
+      await renderOwnFoods();
+
+      await scrollList(heading(), 400);
+
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("should say the page is loading, not that it failed, while a retry is on its way", async () => {
+      showOwnFoods(boardFoods, {
+        ...morePages(jest.fn(), true),
+        isFetchNextPageError: true,
+      });
+      await renderOwnFoods();
+
+      expect(screen.getByRole("status", { name: "Loading more of your foods" })).toBeOnTheScreen();
+      expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+    });
+
+    it("should say the next page could not be loaded at the end of the list, and try again when asked", async () => {
+      const fetchNextPage = jest.fn();
+      const user = await renderOwnFoods();
+      showOwnFoods(boardFoods, { ...morePages(fetchNextPage), isFetchNextPageError: true });
+      await screen.rerender(sheet());
+
+      expect(screen.getAllByRole("button", { name: /protein/ })).toHaveLength(4);
+      expect(screen.getByRole("alert")).toBeOnTheScreen();
+      expect(fetchNextPage).not.toHaveBeenCalled();
+      await user.press(screen.getByRole("button", { name: "Try again" }));
+
+      expect(fetchNextPage).toHaveBeenCalledTimes(1);
+    });
+
+    describe("while the typed words match nothing so far", () => {
+      it("should keep loading, and not say no foods were found, without any scrolling", async () => {
+        const fetchNextPage = jest.fn();
+        showOwnFoods(boardFoods, morePages(fetchNextPage));
+        await renderOwnFoods();
+
+        await fireEvent.changeText(field(), "zzqx");
+
+        expect(screen.queryByRole("heading", { name: "No foods found" })).not.toBeOnTheScreen();
+        expect(
+          screen.getByRole("status", { name: "Loading more of your foods" }),
+        ).toBeOnTheScreen();
+        expect(fetchNextPage).toHaveBeenCalledTimes(1);
+      });
+
+      it("should ask for the page after each page that also matches nothing", async () => {
+        const fetchNextPage = jest.fn();
+        showOwnFoods(boardFoods, morePages(fetchNextPage));
+        await renderOwnFoods();
+        await fireEvent.changeText(field(), "zzqx");
+        expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+        showOwnFoods(boardFoods, morePages(fetchNextPage, true));
+        await screen.rerender(sheet());
+        showOwnFoods([...boardFoods, ownFood("e", "Pasta bake")], morePages(fetchNextPage));
+        await screen.rerender(sheet());
+
+        expect(fetchNextPage).toHaveBeenCalledTimes(2);
+        expect(screen.queryByRole("heading", { name: "No foods found" })).not.toBeOnTheScreen();
+      });
+
+      it("should say no foods were found once the last page is loaded", async () => {
+        showOwnFoods(boardFoods, morePages());
+        await renderOwnFoods();
+        await fireEvent.changeText(field(), "zzqx");
+
+        showOwnFoods(boardFoods, { ...morePages(), hasNextPage: false });
+        await screen.rerender(sheet());
+
+        expect(screen.getByRole("heading", { name: "No foods found" })).toBeOnTheScreen();
+      });
+
+      it("should say the page is loading, not that it failed, while a retry is on its way", async () => {
+        showOwnFoods(boardFoods, {
+          ...morePages(jest.fn(), true),
+          isFetchNextPageError: true,
+        });
+        await renderOwnFoods();
+        await fireEvent.changeText(field(), "zzqx");
+
+        expect(
+          screen.getByRole("status", { name: "Loading more of your foods" }),
+        ).toBeOnTheScreen();
+        expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+      });
+
+      it("should stop and offer to try again when a page could not be loaded", async () => {
+        const fetchNextPage = jest.fn();
+        showOwnFoods(boardFoods, morePages(fetchNextPage));
+        const user = await renderOwnFoods();
+        await fireEvent.changeText(field(), "zzqx");
+        expect(fetchNextPage).toHaveBeenCalledTimes(1);
+
+        showOwnFoods(boardFoods, { ...morePages(fetchNextPage), isFetchNextPageError: true });
+        await screen.rerender(sheet());
+
+        expect(fetchNextPage).toHaveBeenCalledTimes(1);
+        expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+        expect(screen.getByRole("alert")).toBeOnTheScreen();
+        await user.press(screen.getByRole("button", { name: "Try again" }));
+        expect(fetchNextPage).toHaveBeenCalledTimes(2);
+      });
     });
   });
 });

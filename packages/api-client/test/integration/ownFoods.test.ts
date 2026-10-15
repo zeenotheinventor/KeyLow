@@ -11,7 +11,7 @@ import type { Food } from "@keylow/core/schemas";
 const RUN_ID = crypto.randomUUID();
 
 // The leading 0 sorts these rows ahead of every seeded food, so a filter that went missing would
-// show its rows inside the 200 foods a list returns instead of hiding them behind the cut.
+// show its rows inside the page of foods a list returns instead of hiding them behind the cut.
 const NAME_PREFIX = "0-key85";
 
 const customFood = (name: string) =>

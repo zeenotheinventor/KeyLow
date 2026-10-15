@@ -58,6 +58,7 @@ describe("search sheet sentences", () => {
       searchingYourFoods: "Searching your foods",
       searchingOpenFoodFacts: "Searching Open Food Facts",
       addingProduct: "Adding to your foods",
+      loadingMoreOfYourFoods: "Loading more of your foods",
     });
   });
 

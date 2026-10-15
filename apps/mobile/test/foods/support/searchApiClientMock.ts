@@ -27,10 +27,18 @@ export const offCandidateFixture: OffCandidate = buildOffCandidate({
   fibre_g: 0.8,
 });
 
+/** What the paged hook says about the pages after the first. A test leaves it out for a list that has them all. */
+export type OwnFoodsPaging = {
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  isFetchNextPageError: boolean;
+  fetchNextPage: () => void;
+};
+
 type OwnFoodsState =
   | { isPending: true; isError: false; data: undefined }
-  | { isPending: false; isError: true; data: Food[] | undefined }
-  | { isPending: false; isError: false; data: Food[] };
+  | ({ isPending: false; isError: true; data: Food[] | undefined } & Partial<OwnFoodsPaging>)
+  | ({ isPending: false; isError: false; data: Food[] } & Partial<OwnFoodsPaging>);
 
 export const mockMaterialiseOffProduct = jest.fn<Promise<Food>, [{ code: string }]>();
 export const mockUseFoodSearch = jest.fn<FoodSearchResult, [string]>();
