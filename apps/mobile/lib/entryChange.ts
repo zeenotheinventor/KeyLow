@@ -1,7 +1,7 @@
 import { formatClockTime } from "@keylow/core/dates";
+import { clockTimeOn } from "@keylow/core/diary";
 
 import { foodEntryForm } from "./entryForms";
-import { clockTimeOn } from "./loggedAt";
 
 import type { PortionSelection } from "../components/PortionPicker";
 import type { QuickAddSubmission } from "../components/QuickAddForm";

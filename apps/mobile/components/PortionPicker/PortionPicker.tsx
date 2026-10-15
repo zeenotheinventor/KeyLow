@@ -8,13 +8,19 @@ import {
   describeMissingValuesBeforeLogging,
   describePortionUnit,
 } from "@keylow/core/copy";
+import {
+  foodNeedsReview,
+  missingFieldsOf,
+  previewAmount,
+  startingAmount,
+  unitOptions,
+} from "@keylow/core/diary";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { dockBottomPadding } from "../../lib/dockBottomPadding";
-import { foodNeedsReview, missingFieldsOf } from "../../lib/foodNeedsReview";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import {
   Badge,
@@ -28,8 +34,6 @@ import {
   TimeRow,
 } from "../ui";
 import { PerHundredList } from "./PerHundredList";
-import { previewAmount } from "./previewAmount";
-import { startingAmount, unitOptions } from "./startingAmount";
 import { MacroHero } from "../FoodDetail/MacroHero";
 
 import type { PortionPickerProps } from "./types";

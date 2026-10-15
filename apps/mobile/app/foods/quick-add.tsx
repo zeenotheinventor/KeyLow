@@ -1,5 +1,6 @@
 import { useProfileTimeZone, useQuickAdd } from "@keylow/api-client";
 import { ADDED_TOAST, QUICK_ADD_FORM } from "@keylow/core/copy";
+import { clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 
@@ -7,7 +8,6 @@ import { EntryLoadState } from "../../components/EntryLoadState";
 import { QuickAddForm } from "../../components/QuickAddForm";
 import { useToast } from "../../components/ui";
 import { useIsOnline } from "../../lib/connectivity";
-import { clockTimeOn, openingLoggedAt } from "../../lib/loggedAt";
 import { readLogContext, useCloseFoodsSheet, useGoBackInFoodsSheet } from "../../lib/navigation";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
