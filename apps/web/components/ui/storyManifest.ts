@@ -131,6 +131,7 @@ export const storyManifest = {
   "ListRow/ListRow.stories.tsx": [
     "Default",
     "Action",
+    "WithIcon",
     "Plain",
     "Disabled",
     "Hover",

@@ -1,21 +1,21 @@
-import { ABOUT_SCREEN } from "@keylow/core/copy";
+import { ABOUT_SCREEN, LEGAL_URLS } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
-import { ScrollView, View } from "react-native";
+import { Linking, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { SheetHeader, Text } from "../ui";
+import { GroupedList, ListRow, SheetHeader, Text } from "../ui";
 import { DataSourceCredit } from "./DataSourceCredit";
 
 /**
  * The About screen, pushed from More: a stack header with Back, and the Data sources section, which
- * credits the datasets the app shows foods from, as their licences ask. No board draws it, so it is built
- * from the kit's header, text and card.
+ * credits the datasets the app shows foods from, as their licences ask, and the Legal list, which opens the
+ * Privacy Policy and the Terms in the browser. The About board draws both.
  */
 export function AboutScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { dataSources } = ABOUT_SCREEN;
+  const { dataSources, legal } = ABOUT_SCREEN;
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to More instead.
@@ -24,6 +24,11 @@ export function AboutScreen() {
     } else {
       router.replace("/(tabs)/more");
     }
+  }
+
+  function openInBrowser(url: string) {
+    // A device with no browser rejects, and there is nothing else to do about it, so the screen stays as it is.
+    Linking.openURL(url).catch(() => undefined);
   }
 
   return (
@@ -54,6 +59,25 @@ export function AboutScreen() {
           text={dataSources.off.text}
           url={dataSources.off.url}
         />
+        {/* The board puts 14 points between groups. 12 and 16 are equally near, so this is 16, as on the web page: the 8 of the gap plus 8. */}
+        <View className="mt-2">
+          <GroupedList title={legal.title}>
+            <ListRow
+              icon="Shield"
+              title={legal.privacy}
+              onPress={() => {
+                openInBrowser(LEGAL_URLS.privacy);
+              }}
+            />
+            <ListRow
+              icon="FileText"
+              title={legal.terms}
+              onPress={() => {
+                openInBrowser(LEGAL_URLS.terms);
+              }}
+            />
+          </GroupedList>
+        </View>
       </ScrollView>
     </View>
   );

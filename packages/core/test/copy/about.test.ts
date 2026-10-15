@@ -10,6 +10,14 @@ describe("the About screen copy", () => {
     expect(ABOUT_SCREEN.dataSources.title).toBe("Data sources");
   });
 
+  it("should pin the Legal group and its two rows as the About board draws them", () => {
+    expect(ABOUT_SCREEN.legal).toEqual({
+      title: "Legal",
+      privacy: "Privacy Policy",
+      terms: "Terms",
+    });
+  });
+
   it("should carry the CoFID Open Government Licence statement and its source address", () => {
     expect(ABOUT_SCREEN.dataSources.cofid.text).toContain(
       "Contains public sector information licensed under the Open Government Licence v3.0.",

@@ -16,6 +16,7 @@ const interactiveClasses =
 
 /** A row of a settings or menu list: a title, an optional subtitle and a chevron when it navigates. Put it inside a `GroupedList`. */
 export function ListRow({
+  icon: Icon,
   title,
   subtitle,
   href,
@@ -34,6 +35,11 @@ export function ListRow({
   );
   const content = (
     <>
+      {Icon !== undefined && (
+        <span className="flex h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised text-text-secondary">
+          <Icon aria-hidden className="size-5" strokeWidth={iconStroke} />
+        </span>
+      )}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="text-body-strong">{title}</span>
         {subtitle !== undefined && <span className="text-caption text-text-muted">{subtitle}</span>}

@@ -1,4 +1,4 @@
-import { ABOUT_SCREEN } from "@keylow/core/copy";
+import { ABOUT_SCREEN, LEGAL_PATHS } from "@keylow/core/copy";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -46,6 +46,35 @@ describe("About page", () => {
     expect(link.getAttribute("href")).toBe(credit.url);
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noopener noreferrer");
+  });
+
+  it("should have a Legal section after the Data sources section", () => {
+    render(<AboutPage />);
+
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((heading) => heading.textContent);
+    expect(headings).toEqual([dataSources.title, ABOUT_SCREEN.legal.title]);
+  });
+
+  it.each([
+    ["Privacy Policy", ABOUT_SCREEN.legal.privacy, LEGAL_PATHS.privacy],
+    ["Terms", ABOUT_SCREEN.legal.terms, LEGAL_PATHS.terms],
+  ])("should link the %s row to its page on the site", (_label, name, path) => {
+    render(<AboutPage />);
+
+    const legal = screen.getByRole("region", { name: ABOUT_SCREEN.legal.title });
+    expect(within(legal).getByRole("link", { name }).getAttribute("href")).toBe(path);
+  });
+
+  it("should list Privacy Policy before Terms", () => {
+    render(<AboutPage />);
+
+    const legal = screen.getByRole("region", { name: ABOUT_SCREEN.legal.title });
+    const names = within(legal)
+      .getAllByRole("link")
+      .map((link) => link.textContent);
+    expect(names).toEqual(["Privacy Policy", "Terms"]);
   });
 
   it("should pad top and bottom as the shell boards draw it", async () => {
