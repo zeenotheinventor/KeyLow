@@ -35,19 +35,24 @@ The design's keys are kept exactly, so the classes read as `text-text-primary`, 
 
 `themeVariables("dark")` and `themeVariables("light")` return the `--kl-*` values as plain data, for any consumer that cannot use the Tailwind plugin. `themePlugin` emits them on `:root` for dark and under `[data-theme="light"]` for light, together with `color-scheme`. Mobile does not use `themePlugin` or `[data-theme]`. Its `ThemeProvider` sets `themeVariables(scheme)` through nativewind `vars()` on its root view, for the scheme the app resolves from its own preference, and `apps/mobile/tailwind.config.js` emits only the dark set on `:root` as the fallback outside the provider.
 
+## Ink colours, camera colours and label-small
+
+`text-accent-ink` and `text-warning-ink` (`--accent-ink`, `--warning-ink`) are the design's coloured text that turns to primary text in light: lime and orange in dark, `text-primary` in light, so they are safe where the light-mode rule bans coloured small text. `bg-camera` and `bg-viewfinder-dim` (`--camera`, `--viewfinder-dim`) are the scan surface and the dim over it, the same in both themes. `text-label-small` is the 14 over 20 semibold type style (web nav, compact search field, Button sm, Switch label).
+
 ## Control sizes and the press scale
 
 The preset adds the design's control heights and touch target to the width and height scales, and the press scale to its scale steps, so a kit component names the token and not its number:
 
-| Class                                                         | Token                          | Value |
-| ------------------------------------------------------------- | ------------------------------ | ----- |
-| `h-control-sm`, `w-control-sm`, `min-h-control-sm`, ...       | `controlHeight.sm`             | 36 px |
-| `h-control-md`, `w-control-md`, `min-h-control-md`, ...       | `controlHeight.md`             | 44 px |
-| `h-control-lg`, `w-control-lg`, `min-h-control-lg`, ...       | `controlHeight.lg`             | 52 px |
-| `h-touch-target`, `w-touch-target`, `min-h-touch-target`, ... | `touchTarget`                  | 44 px |
-| `scale-press` (`active:scale-press`)                          | `pressScale` (`--press-scale`) | 0.96  |
+| Class                                                         | Token                                 | Value |
+| ------------------------------------------------------------- | ------------------------------------- | ----- |
+| `h-control-sm`, `w-control-sm`, `min-h-control-sm`, ...       | `controlHeight.sm`                    | 36 px |
+| `h-control-md`, `w-control-md`, `min-h-control-md`, ...       | `controlHeight.md`                    | 44 px |
+| `h-control-lg`, `w-control-lg`, `min-h-control-lg`, ...       | `controlHeight.lg`                    | 52 px |
+| `h-touch-target`, `w-touch-target`, `min-h-touch-target`, ... | `touchTarget`                         | 44 px |
+| `scale-press` (`active:scale-press`)                          | `pressScale` (`--press-scale`)        | 0.96  |
+| `scale-press-row` (`active:scale-press-row`)                  | `pressScaleRow` (`--press-scale-row`) | 0.985 |
 
-`h`, `w`, `min-h` and `min-w` each take all four sizes. Web and mobile read the same preset, so the class names are the same. `scale-press` is a static 0.96: reduced motion is handled where it is used (`motion-reduce:active:scale-100` on web, `reducedMotion.pressScale` in `usePressScale` on mobile), not by the variable. An app that merges class names with tailwind-merge must tell it these names are sizes: `controlSizes` and `scaleSteps` are exported for that, and `apps/web/lib/utils.ts` does it.
+`h`, `w`, `min-h` and `min-w` each take all four sizes. Web and mobile read the same preset, so the class names are the same. `scale-press` is a static 0.96 and `scale-press-row`, the list row's, a static 0.985: reduced motion is handled where it is used (`motion-reduce:active:scale-100` on web, `reducedMotion.pressScale` in `usePressScale` on mobile), not by the variable. An app that merges class names with tailwind-merge must tell it these names are sizes: `controlSizes` and `scaleSteps` are exported for that, and `apps/web/lib/utils.ts` does it.
 
 ## Plain CSS variables
 

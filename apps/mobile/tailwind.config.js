@@ -7,14 +7,12 @@ const plugin = require("tailwindcss/plugin");
 // the device scheme: "Match device" is resolved by the provider, from the native scheme that
 // `userInterfaceStyle: "automatic"` in app.json lets follow the device.
 //
-// Two of the variables are the proposed tokens the ThemeProvider adds (`--warning-ink` and the skeleton's
-// shine gradient), which `@keylow/tokens` does not have yet. Their dark values are here too, and the
-// ThemeProvider holds the same two rules for both schemes.
+// The skeleton's shine gradient is a proposed variable the ThemeProvider adds, which `@keylow/tokens`
+// does not have. Its dark value is here too, and the ThemeProvider holds the same rule for both schemes.
 const themeVariablesPlugin = plugin((api) => {
   api.addBase({
     ":root": {
       ...themeVariables("dark"),
-      "--kl-warning-ink": themes.dark.warning,
       "--kl-skeleton-shine-gradient": `linear-gradient(100deg, transparent, ${themes.dark["skeleton-shine"]}, transparent)`,
     },
   });
@@ -77,13 +75,14 @@ const skeletonShinePlugin = plugin((api) => {
 });
 
 // The dim over the camera outside the viewfinder's frame: the frame's own shadow, spread far enough to
-// cover the preview, which the camera view's parent clips. The design draws it as a black at 35 percent,
-// a value no token has, so it is written here once and not in a component. The value is a quoted string
-// so it reaches React Native as one: unquoted, NativeWind splits the shorthand into a list of numbers
-// that React Native does not read as a shadow.
+// cover the preview, which the camera view's parent clips. Its colour is the `viewfinder-dim` token, the
+// same in both themes, written with the spaces React Native's colour parser is given elsewhere. The value
+// is a quoted string so it reaches React Native as one: unquoted, NativeWind splits the shorthand into a
+// list of numbers that React Native does not read as a shadow.
+const viewfinderDim = themes.dark["viewfinder-dim"].replaceAll(",", ", ");
 const viewfinderDimPlugin = plugin((api) => {
   api.addUtilities({
-    ".viewfinder-dim": { "-rn-box-shadow": '"0 0 0 999px rgba(0, 0, 0, 0.35)"' },
+    ".viewfinder-dim": { "-rn-box-shadow": `"0 0 0 999px ${viewfinderDim}"` },
   });
 });
 
@@ -94,10 +93,6 @@ module.exports = {
   corePlugins: { fontWeight: false, fontVariantNumeric: false },
   theme: {
     extend: {
-      // `--kl-warning-ink` is set by the ThemeProvider. It is a whole colour, so it takes no opacity modifier.
-      // `camera` is the design's proposed `--camera`, the backdrop of the viewfinder before the preview
-      // shows: the dark background in both themes, which `@keylow/tokens` does not have as a token yet.
-      colors: { "warning-ink": "var(--kl-warning-ink)", camera: themes.dark.background },
       fontFamily: { sans: [geistWeights.normal.fontFamily] },
     },
   },

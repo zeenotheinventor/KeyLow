@@ -7,19 +7,11 @@ import { iconMap } from "./iconMap";
 import type { IconProps, IconTone } from "./types";
 import type { Theme } from "../../../lib/theme";
 
-// The design's `--accent-ink`: lime in dark, and the primary text colour in light where lime is too
-// faint for a thin glyph. It is a proposed token that `@keylow/tokens` does not have yet.
-function accentInk({ scheme, colors }: Theme): string {
-  return scheme === "dark" ? colors.accent : colors["text-primary"];
-}
-
 function toneColor(tone: IconTone, theme: Theme): string {
-  if (tone === "accent-ink") {
-    return accentInk(theme);
-  }
-
-  // The status glyphs are the colours themselves, where every other tone is a text or fill tone.
-  return tone === "warning" || tone === "danger"
+  // The ink and status glyphs are the colours themselves, where every other tone is a text or fill tone.
+  // `accent-ink` is the design's token: lime in dark, and the primary text colour in light where lime is
+  // too faint for a thin glyph.
+  return tone === "accent-ink" || tone === "warning" || tone === "danger"
     ? theme.colors[tone]
     : theme.colors[toneColorName[tone]];
 }

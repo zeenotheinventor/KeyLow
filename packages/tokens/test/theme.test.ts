@@ -40,6 +40,33 @@ describe("themes", () => {
   });
 });
 
+describe("the ink and camera colours", () => {
+  it("should turn the accent ink and warning ink to the primary text colour in light, where coloured small text is not used", () => {
+    expect(colors["accent-ink"]).toBe("#CCF249");
+    expect(lightColors["accent-ink"]).toBe("#0F131A");
+    expect(colors["warning-ink"]).toBe("#FF9F43");
+    expect(lightColors["warning-ink"]).toBe("#0F131A");
+    expect(lightColors["accent-ink"]).toBe(lightColors["text-primary"]);
+    expect(lightColors["warning-ink"]).toBe(lightColors["text-primary"]);
+  });
+
+  it("should keep the camera surface and the viewfinder dim the same in both themes", () => {
+    for (const palette of [colors, lightColors]) {
+      expect(palette.camera).toBe("#07090D");
+      expect(palette["viewfinder-dim"]).toBe("rgba(0,0,0,0.35)");
+    }
+  });
+
+  it("should emit them as theme variables, solid ones as channels and the dim whole", () => {
+    expect(themeVariables("dark")["--kl-accent-ink"]).toBe("204 242 73");
+    expect(themeVariables("light")["--kl-accent-ink"]).toBe("15 19 26");
+    expect(themeVariables("dark")["--kl-warning-ink"]).toBe("255 159 67");
+    expect(themeVariables("light")["--kl-warning-ink"]).toBe("15 19 26");
+    expect(themeVariables("light")["--kl-camera"]).toBe("7 9 13");
+    expect(themeVariables("light")["--kl-viewfinder-dim"]).toBe("rgba(0,0,0,0.35)");
+  });
+});
+
 describe("themeVariables", () => {
   const tokenValueFor = (scheme: "dark" | "light") =>
     customPropertiesUnder(scheme === "dark" ? ":root" : '[data-theme="light"]');

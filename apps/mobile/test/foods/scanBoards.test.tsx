@@ -191,9 +191,9 @@ describe("barcode scan boards", () => {
       it("should show the viewfinder on the camera backdrop with the hint beneath", async () => {
         await renderRoute(scheme);
 
-        // The camera backdrop is the dark background in both themes.
+        // The camera backdrop is the `camera` token, the same in both themes.
         expect(screen.getByLabelText("Barcode viewfinder")).toHaveStyle({
-          backgroundColor: themes.dark.background.toLowerCase(),
+          backgroundColor: resolvedColor(scheme, "camera"),
           overflow: "hidden",
         });
         expect(screen.getByRole("img", { name: "Barcode viewfinder" })).toBeOnTheScreen();

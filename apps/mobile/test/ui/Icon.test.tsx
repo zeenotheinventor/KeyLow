@@ -141,7 +141,7 @@ describe("Icon", () => {
     });
 
     // The design's `--accent-ink` is lime in dark and the primary text colour in light, because lime on a
-    // light surface is too faint for a thin glyph. It is a proposed token, so it is resolved here.
+    // light surface is too faint for a thin glyph. It is the `accent-ink` token.
     it("should take the accent ink tone as lime in dark and the primary text colour in light", async () => {
       await render(inScheme(scheme, <Icon label="Search" name="Search" tone="accent-ink" />));
 

@@ -50,6 +50,27 @@ describe("kilo-tokens.css", () => {
     );
   });
 
+  it("should hold the ink, camera, label-small and row press tokens with the design's literal values", () => {
+    expect(committedScopes[":root"]).toMatchObject({
+      "--accent-ink": "#CCF249",
+      "--warning-ink": "#FF9F43",
+      "--camera": "#07090D",
+      "--viewfinder-dim": "rgba(0,0,0,0.35)",
+      "--type-label-small-size": "14px",
+      "--type-label-small-line": "20px",
+      "--type-label-small-weight": "600",
+      "--type-label-small-tracking": "0",
+      "--press-scale-row": "0.985",
+    });
+    expect(committedScopes['[data-theme="light"]']).toMatchObject({
+      "--accent-ink": "#0F131A",
+      "--warning-ink": "#0F131A",
+      "--camera": "#07090D",
+      "--viewfinder-dim": "rgba(0,0,0,0.35)",
+    });
+    expect(committedScopes[reducedMotionScope]).toMatchObject({ "--press-scale-row": "1" });
+  });
+
   it("should keep the names the design system uses, such as --surface, --space-4 and --type-h2-size", () => {
     expect(committedScopes[":root"]).toMatchObject({
       "--surface": "#141821",

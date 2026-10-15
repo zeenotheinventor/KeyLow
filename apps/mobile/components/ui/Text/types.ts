@@ -2,8 +2,8 @@ import type { Tone } from "../tone";
 import type { TextProps as NativeTextProps } from "react-native";
 
 /**
- * The design system's seven type styles, and `label-small`, which is the 14 over 20 semibold the food form
- * boards draw on Remove and on Default. It is between the design system's sizes, so it follows the boards.
+ * The design system's eight type styles, including `label-small`, the 14 over 20 semibold the food form
+ * boards draw on Remove and on Default, and the web nav, the compact search field, Button sm and the Switch label.
  */
 export type TextVariant =
   | "display-numeral"
@@ -16,7 +16,7 @@ export type TextVariant =
   | "numeral-small";
 
 /**
- * A tone from the kit's text and fill tones, or `warning-ink`: the design's `--warning-ink`, which is
+ * A tone from the kit's text and fill tones, or `warning-ink`: the `--warning-ink` token, which is
  * the warning colour in dark and the primary text colour in light, where warning is too faint for text
  * (Q14). It is for the title and the action of a review notice.
  */

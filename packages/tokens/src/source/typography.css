@@ -35,6 +35,11 @@
 --type-caption-line:16px;
 --type-caption-weight:500;
 --type-caption-tracking:0.01em;
+/* label-small: web nav, compact search field, Button sm, Switch label */
+--type-label-small-size:14px;
+--type-label-small-line:20px;
+--type-label-small-weight:600;
+--type-label-small-tracking:0;
 /* numeral-small — trailing values, macro grams */
 --type-numeral-small-size:20px;
 --type-numeral-small-line:24px;

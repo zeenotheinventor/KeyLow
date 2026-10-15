@@ -22,6 +22,8 @@ export const colors = {
   "success-muted": "rgba(92,214,122,0.14)",
   "warning-muted": "rgba(255,159,67,0.14)",
   "danger-muted": "rgba(255,92,92,0.14)",
+  "accent-ink": "#CCF249",
+  "warning-ink": "#FF9F43",
   protein: "#6E9BFF",
   carbs: "#F2C14E",
   fat: "#E87EC0",
@@ -43,6 +45,8 @@ export const colors = {
   "focus-ring-offset": "#0B0E13",
   "skeleton-base": "#1C212C",
   "skeleton-shine": "rgba(255,255,255,0.07)",
+  camera: "#07090D",
+  "viewfinder-dim": "rgba(0,0,0,0.35)",
 };
 
 export const lightColors = {
@@ -66,6 +70,8 @@ export const lightColors = {
   "success-muted": "rgba(31,157,78,0.12)",
   "warning-muted": "rgba(199,106,0,0.12)",
   "danger-muted": "rgba(217,48,48,0.12)",
+  "accent-ink": "#0F131A",
+  "warning-ink": "#0F131A",
   protein: "#2F6BEA",
   carbs: "#B9800E",
   fat: "#C2399A",
@@ -87,6 +93,8 @@ export const lightColors = {
   "focus-ring-offset": "#EEF0F4",
   "skeleton-base": "#E4E7EC",
   "skeleton-shine": "rgba(255,255,255,0.7)",
+  camera: "#07090D",
+  "viewfinder-dim": "rgba(0,0,0,0.35)",
 };
 
 export const statusBarStyle = { dark: "light-content", light: "dark-content" };
@@ -155,6 +163,7 @@ export const fontSize = {
   body: ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "400" }],
   "body-strong": ["16px", { lineHeight: "24px", letterSpacing: "0", fontWeight: "600" }],
   caption: ["12px", { lineHeight: "16px", letterSpacing: "0.01em", fontWeight: "500" }],
+  "label-small": ["14px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "600" }],
   "numeral-small": ["20px", { lineHeight: "24px", letterSpacing: "-0.01em", fontWeight: "600" }],
 } satisfies Record<
   string,
@@ -193,10 +202,13 @@ export const motionScale = { distance: 1, skew: 1 };
 
 export const pressScale = 0.96;
 
+export const pressScaleRow = 0.985;
+
 export const reducedMotion = {
   distance: 0,
   skew: 0,
   pressScale: 1,
+  pressScaleRow: 1,
   timingFunction: { enter: "ease-out", spring: "ease-out", whip: "ease-out" },
 };
 
