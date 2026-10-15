@@ -42,8 +42,15 @@ permissions:
 # scripts, since pnpm only allows lefthook (onlyBuiltDependencies) to run one.
 
 jobs:
-  # Mirrors the local gate. `pnpm check` is the first check so that what passes here is what passes
-  # on a laptop. The extra checks come after it and are the ones the monorepo ADR lists.
+  # Mirrors the local gate, minus the web tests and web builds. KeyLow is mobile first, so this job
+  # runs `pnpm check:ci`, which is `pnpm check` with the @keylow/web test task left out. The web
+  # app is still formatted, linted and type-checked here, so a change to a shared package that
+  # breaks web still fails the pull request. What it skips is the web Vitest suite, the web
+  # Storybook build and the web app build. Vercel builds the web app (not Storybook) as its own
+  # check, but only when a pull request affects web (apps/web/vercel.json runs turbo-ignore), and it
+  # builds the branch head rather than the merge with main. `pnpm check` is unchanged and still
+  # runs the web tests, so run it locally for a web change. The extra checks come after the gate
+  # and are the ones the monorepo ADR lists.
   #
   # When a pull request changes something the Supabase stack, the Edge Functions or the integration
   # suites read, the same job also runs those against a real local stack. The stack starts in the
@@ -95,7 +102,6 @@ jobs:
             {
               echo "affected="
               echo "full=true"
-              echo "web=true"
               echo "mobile=true"
             } >> "$GITHUB_OUTPUT"
             exit 0
@@ -105,15 +111,12 @@ jobs:
           packages=$(jq -r '.packages.items[].name' "$RUNNER_TEMP/affected.json")
           echo "Affected packages:" $packages
           has() { grep -qx "$1" <<<"$packages"; }
-          web=false
           mobile=false
-          if has @keylow/web; then web=true; fi
           # The doctor gate is not a dependency of the app, but a change to it is tested by running it.
           if has @keylow/mobile || has @keylow/expo-doctor-gate; then mobile=true; fi
           {
             echo "affected=--affected"
             echo "full=false"
-            echo "web=$web"
             echo "mobile=$mobile"
           } >> "$GITHUB_OUTPUT"
       # Pinned to the CLI version used locally. The action also accepts "latest".
@@ -166,8 +169,11 @@ jobs:
           path: apps/mobile/node_modules/.cache/jest
           key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
           restore-keys: jest-${{ runner.os }}-
+      # `check:ci` is `pnpm check` for every package except @keylow/web, plus the web format, lint and
+      # type-check tasks, so it skips only the web tests (see the root package.json). The flag reaches
+      # both turbo runs inside the script.
       - name: Run the local gate
-        run: pnpm check ${{ steps.scope.outputs.affected }}
+        run: pnpm check:ci ${{ steps.scope.outputs.affected }}
       # The root format:check task belongs to no package, so --affected skips it. Prettier checks the
       # whole repository in seconds, so it runs here instead.
       - name: Check the formatting of the whole repository
@@ -180,19 +186,6 @@ jobs:
       - name: Run the repository-wide suites
         if: steps.scope.outputs.full != 'true'
         run: pnpm turbo run test --filter=@keylow/config --filter=@keylow/design-export
-      # Builds the web Storybook, so a broken story or a Storybook config that no longer matches Next
-      # fails the pull request.
-      - name: Build the web Storybook
-        if: steps.scope.outputs.web == 'true'
-        run: pnpm turbo run build-storybook --filter=@keylow/web
-      # Builds the web app the way Vercel does. `pnpm check` type-checks with tsc alone, and `next build`
-      # runs its own type-check and compile pass, which has failed on a pull request that passed the
-      # gate. Vercel's own build is not relied on for this, since it builds the branch head rather than
-      # the merge with main and its turbo-ignore can skip a multi-commit push. Every route is rendered
-      # on demand, so the build needs no Supabase environment variables.
-      - name: Build the web app
-        if: steps.scope.outputs.web == 'true'
-        run: pnpm turbo run build --filter=@keylow/web
       # Fails when the lockfile contains duplicates that a dedupe would remove. A lockfile change
       # always makes a full run, so the other runs skip it.
       # The flag keeps the install pass that dedupe runs from triggering the prepare script.
