@@ -1,3 +1,5 @@
+import "../support/gestureHandler";
+
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { ExpoRoot, router } from "expo-router";
 import { getMockContext } from "expo-router/testing-library";

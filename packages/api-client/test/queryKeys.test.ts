@@ -14,6 +14,11 @@ describe("keys.profiles", () => {
   it("should expose a key for the signed in user's terms acceptance, under the profiles root", () => {
     expect(keys.profiles.termsAcceptance).toEqual(["profiles", "terms-acceptance"]);
   });
+
+  it("should expose keys for the signed in user's targets and time zone, under the profiles root", () => {
+    expect(keys.profiles.targets).toEqual(["profiles", "targets"]);
+    expect(keys.profiles.timeZone).toEqual(["profiles", "time-zone"]);
+  });
 });
 
 describe("keys.foods", () => {

@@ -3,6 +3,8 @@ export const keys = {
     all: ["profiles"] as const,
     detail: (id: string) => ["profiles", id] as const,
     termsAcceptance: ["profiles", "terms-acceptance"] as const,
+    targets: ["profiles", "targets"] as const,
+    timeZone: ["profiles", "time-zone"] as const,
   },
   foods: {
     all: ["foods"] as const,
