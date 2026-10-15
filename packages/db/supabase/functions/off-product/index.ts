@@ -3,13 +3,16 @@
 // is returned at once and refreshed after the response. Fetching is limited per user and globally.
 //
 // Things to know when changing this file:
-// - PostgREST has no transaction, so a store is a sequence of writes and the cache read is not
-//   transactional. A reader can briefly see a fresh food with no portions while a refresh has
-//   deleted the old portions and not yet inserted the new ones. A transactional upsert function in
-//   the database is the follow-up that removes this.
-// - Simultaneous first lookups of one barcode all fetch and all write. The food upsert is idempotent.
-//   The portions insert of the losers collides on the one-default-portion index (23505), which means
-//   another writer already stored them, so the loser answers with what is stored.
+// - A store is one call to the database function `store_off_product`, which upserts the food,
+//   replaces its portions and upserts its raw data in one transaction (ADR 0003, Amendment 7). A
+//   reader sees the old product or the new one, never a food without its portions, and a store that
+//   fails halfway leaves the old product in place.
+// - Simultaneous first lookups of one barcode all fetch and all call it. The food upsert inside takes
+//   the row lock that makes the writers queue, so each one succeeds and the last to commit wins. No
+//   unique violation can come back from it. Each caller answers with what its own call stored, and
+//   the last writer replaces the portions, so a losing caller's response can carry portion ids that
+//   no longer exist. The old code had the same gap. It is accepted: concurrent first lookups of one
+//   barcode are rare in a personal app.
 // - A stale row is claimed before it is refreshed: one update moves `fetched_at` forward, only if it
 //   still has the value that was read. Only the request whose update changed a row refreshes, the
 //   rest answer from the cache. The consequence is accepted: a refresh that does not succeed (OFF is
@@ -37,6 +40,7 @@ import { offRequest } from "../_shared/off.ts";
 import { consume, readLimit } from "../_shared/rateLimit.ts";
 import { runInBackground } from "../_shared/runtime.ts";
 
+import type { OffProductResponse } from "../_shared/core.ts";
 import type { Database } from "../_shared/core/database.types.ts";
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -199,7 +203,7 @@ async function refreshProduct(service: Service, code: string): Promise<void> {
 async function fetchAndStoreProduct(
   service: Service,
   code: string,
-): Promise<({ ok: true } & StoredProduct) | Failed> {
+): Promise<({ ok: true } & OffProductResponse) | Failed> {
   const fetched = await fetchOffProduct(code);
   if (!fetched.ok) {
     return fetched;
@@ -213,13 +217,7 @@ async function fetchAndStoreProduct(
       failure: error("upstream_error", "Open Food Facts returned a product that cannot be used."),
     };
   }
-  const stored =
-    (await storeProduct(service, code, normalised, fetched.product)) ??
-    (await findCachedProduct(service, code));
-  if (stored === null) {
-    throw new Error(`The OFF product ${code} lost a write race and is not stored`);
-  }
-  return { ok: true, ...stored };
+  return { ok: true, ...(await storeProduct(service, code, normalised, fetched.product)) };
 }
 
 async function fetchOffProduct(code: string): Promise<{ ok: true; product: OffProduct } | Failed> {
@@ -266,78 +264,32 @@ function notFound(): Failed {
 
 type NormalisedProduct = Extract<ReturnType<typeof normaliseOffProduct>, { ok: true }>;
 
-const uniqueViolation = "23505";
-
-// PostgREST has no transaction, so the writes run in order: the food, its raw data, then the
-// portions (the old ones deleted before the new ones go in). Returns null when the portions insert
-// hits the one-default-portion index, which means another writer stored them first.
+// The whole store is one database call, so it either happens or does not. The database function
+// answers with the food and portions this call stored, which are parsed with the contract schema. A
+// later writer may have replaced those portions by the time the response is read.
 async function storeProduct(
   service: Service,
   code: string,
   normalised: NormalisedProduct,
   rawProduct: OffProduct,
-): Promise<StoredProduct | null> {
-  const { data: storedFood, error: foodError } = await service
-    .from("foods")
-    .upsert(
-      {
-        ...normalised.food,
-        source: "off",
-        source_ref: code,
-        owner_id: null,
-        fetched_at: new Date().toISOString(),
-      },
-      { onConflict: "source,source_ref" },
-    )
-    .select(foodColumns)
-    .single();
-  if (foodError !== null) {
-    throw new Error(`Storing the food failed: ${foodError.message}`);
+): Promise<OffProductResponse> {
+  const { data, error: storeError } = await service.rpc("store_off_product", {
+    p_food: { ...normalised.food, source: "off", source_ref: code },
+    p_portions: normalised.portions.map(({ label, grams, ml, isDefault }) => ({
+      label,
+      grams,
+      ml,
+      is_default: isDefault,
+    })),
+    p_raw: rawProduct,
+  });
+  if (storeError !== null) {
+    throw new Error(`Storing the product failed: ${storeError.message}`);
   }
-  const food = toOffFood(storedFood);
-
-  const { error: rawError } = await service
-    .from("food_source_data")
-    .upsert({ food_id: food.id, import_run_id: null, raw: rawProduct }, { onConflict: "food_id" });
-  if (rawError !== null) {
-    throw new Error(`Storing the raw OFF product failed: ${rawError.message}`);
-  }
-
-  const { error: deleteError } = await service
-    .from("food_portions")
-    .delete()
-    .eq("food_id", food.id);
-  if (deleteError !== null) {
-    throw new Error(`Removing the old portions failed: ${deleteError.message}`);
-  }
-  if (normalised.portions.length === 0) {
-    return { food, portions: [] };
-  }
-  const { data: portions, error: portionError } = await service
-    .from("food_portions")
-    .insert(
-      normalised.portions.map((portion, position) => ({
-        food_id: food.id,
-        owner_id: null,
-        label: portion.label,
-        grams: portion.grams,
-        ml: portion.ml,
-        is_default: portion.isDefault,
-        position,
-      })),
-    )
-    .select(portionColumns)
-    .order("position");
-  if (portionError?.code === uniqueViolation) {
-    return null;
-  }
-  if (portionError !== null) {
-    throw new Error(`Storing the portions failed: ${portionError.message}`);
-  }
-  return { food, portions };
+  return offProductResponseSchema.parse(data);
 }
 
 // Parsing with the contract schema means the function can never send a shape the client rejects.
-function respond({ food, portions }: StoredProduct): Response {
+function respond({ food, portions }: StoredProduct | OffProductResponse): Response {
   return json(offProductResponseSchema.parse({ food, portions }));
 }

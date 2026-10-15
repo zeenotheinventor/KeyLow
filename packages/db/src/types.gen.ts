@@ -458,6 +458,10 @@ export type Database = {
           source: Database["public"]["Enums"]["food_source"];
         }[];
       };
+      store_off_product: {
+        Args: { p_food: Json; p_portions: Json; p_raw: Json };
+        Returns: Json;
+      };
     };
     Enums: {
       food_source: "off" | "cofid" | "user";
