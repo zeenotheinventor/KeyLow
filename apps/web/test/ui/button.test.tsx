@@ -222,6 +222,8 @@ describe("Button", () => {
 
     it("should leave every other variant in its own colour", () => {
       render(
+        // The types refuse a tone on any variant but ghost. This is what a caller that got past them would get.
+        // @ts-expect-error tone belongs to the ghost variant
         <Button variant="secondary" tone="danger">
           Remove
         </Button>,

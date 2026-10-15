@@ -52,10 +52,14 @@ function focusedElement(): HTMLElement | null {
     : null;
 }
 
+// A control inside an open modal dialog is not a place to go back to: the dialog is closing with the row.
+const isInsideModal = (control: Element): boolean =>
+  control.closest('[aria-modal="true"]') !== null;
+
 /** The control to focus once `row` is gone: the first one after it, else the last one before it. */
 function controlBeside(row: Element): HTMLElement | null {
   const controls = Array.from(document.querySelectorAll<HTMLElement>(TABBABLE)).filter(
-    (control) => !row.contains(control) && isShown(control),
+    (control) => !row.contains(control) && !isInsideModal(control) && isShown(control),
   );
   const isAfterRow = (control: HTMLElement) =>
     (row.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0;
@@ -74,11 +78,11 @@ export function useKeyboardUndo(): KeyboardUndo {
   useEffect(listenToInputDevice, []);
 
   return {
-    afterRemovingRow: () => {
+    afterRemovingRow: ({ from } = {}) => {
       if (!lastInputWasKeyboard) {
         return {};
       }
-      const pressed = focusedElement();
+      const pressed = from ?? focusedElement();
       const row = pressed?.closest(ROW) ?? pressed;
 
       return { focusAction: { returnTo: row === null ? null : controlBeside(row) } };

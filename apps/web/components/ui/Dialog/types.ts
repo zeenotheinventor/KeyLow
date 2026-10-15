@@ -13,4 +13,9 @@ export type DialogProps = {
   leadingAction?: React.ReactNode;
   /** Classes for the panel, such as a height for a dialog that keeps one size through its steps. */
   className?: string;
+  /**
+   * Where focus goes when the dialog closes, for a dialog opened from inside another or from a control that
+   * will be gone. Without it focus returns to the element that was focused when the dialog opened.
+   */
+  returnFocusTo?: Element | null;
 };

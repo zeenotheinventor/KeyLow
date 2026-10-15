@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { diaryDay, foodEntry, quickEntry } from "./support";
@@ -17,8 +18,8 @@ type Api = {
   updateEntry: {
     mutateAsync: ReturnType<typeof vi.fn<(update: EntryUpdate) => Promise<LogEntry>>>;
   };
-  deleteEntry: { mutate: ReturnType<typeof vi.fn<(entry: LogEntry) => void>> };
-  restoreEntry: { mutate: ReturnType<typeof vi.fn<(entry: LogEntry) => void>> };
+  deleteEntry: { mutateAsync: ReturnType<typeof vi.fn<(entry: LogEntry) => Promise<void>>> };
+  restoreEntry: { mutateAsync: ReturnType<typeof vi.fn<(entry: LogEntry) => Promise<void>>> };
 };
 
 const api = vi.hoisted((): Api => ({
@@ -26,8 +27,8 @@ const api = vi.hoisted((): Api => ({
   entries: [],
   food: undefined,
   updateEntry: { mutateAsync: undefined as never },
-  deleteEntry: { mutate: undefined as never },
-  restoreEntry: { mutate: undefined as never },
+  deleteEntry: { mutateAsync: undefined as never },
+  restoreEntry: { mutateAsync: undefined as never },
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
@@ -76,7 +77,7 @@ function renderDialog(entry: LogEntry) {
   const onClose = vi.fn<() => void>();
   render(
     <ToastProvider>
-      <EditEntryDialog entryId={entry.id} date={TODAY} onClose={onClose} />
+      <EditEntryDialog entryId={entry.id} date={TODAY} opener={null} onClose={onClose} />
     </ToastProvider>,
   );
 
@@ -90,8 +91,8 @@ beforeEach(() => {
   api.timeZone = "UTC";
   api.food = loggedFood();
   api.updateEntry.mutateAsync = vi.fn((update: EntryUpdate) => Promise.resolve(update.entry));
-  api.deleteEntry.mutate = vi.fn<(entry: LogEntry) => void>();
-  api.restoreEntry.mutate = vi.fn<(entry: LogEntry) => void>();
+  api.deleteEntry.mutateAsync = vi.fn(() => Promise.resolve());
+  api.restoreEntry.mutateAsync = vi.fn(() => Promise.resolve());
 });
 
 afterEach(() => {
@@ -403,8 +404,8 @@ describe("the edit entry dialog for a logged food", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-      expect(api.deleteEntry.mutate).toHaveBeenCalledOnce();
-      expect(api.deleteEntry.mutate.mock.calls[0]?.[0]).toBe(entry);
+      expect(api.deleteEntry.mutateAsync).toHaveBeenCalledOnce();
+      expect(api.deleteEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
       expect(screen.getByText("Entry deleted")).toBeTruthy();
       expect(onClose).toHaveBeenCalledOnce();
     });
@@ -416,8 +417,8 @@ describe("the edit entry dialog for a logged food", () => {
 
       fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
-      expect(api.restoreEntry.mutate).toHaveBeenCalledOnce();
-      expect(api.restoreEntry.mutate.mock.calls[0]?.[0]).toBe(entry);
+      expect(api.restoreEntry.mutateAsync).toHaveBeenCalledOnce();
+      expect(api.restoreEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
     });
   });
 
@@ -428,12 +429,171 @@ describe("the edit entry dialog for a logged food", () => {
 
     render(
       <ToastProvider>
-        <EditEntryDialog entryId={entry.id} date={TODAY} onClose={onClose} />
+        <EditEntryDialog entryId={entry.id} date={TODAY} opener={null} onClose={onClose} />
       </ToastProvider>,
     );
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe("Delete by keyboard from the edit dialog", () => {
+  // The diary's rows, and the dialog opened from one row's Edit button, which is the opener.
+  function Diary({ entry, openFrom }: { entry: LogEntry; openFrom: "first" | "second" }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const edit = useRef<HTMLButtonElement>(null);
+    const row = (name: string) => (
+      <li>
+        <button
+          ref={name === `Edit ${openFrom}` ? edit : undefined}
+          type="button"
+          onClick={() => {
+            if (name === `Edit ${openFrom}`) {
+              setIsOpen(true);
+            }
+          }}
+        >
+          {name}
+        </button>
+      </li>
+    );
+
+    return (
+      <ToastProvider>
+        <ul>
+          {row("Edit first")}
+          {row("Edit second")}
+        </ul>
+        {isOpen && (
+          <EditEntryDialog
+            entryId={entry.id}
+            date={TODAY}
+            opener={edit.current}
+            onClose={() => {
+              setIsOpen(false);
+            }}
+          />
+        )}
+      </ToastProvider>
+    );
+  }
+
+  function openFromRow(openFrom: "first" | "second") {
+    const entry = chickenEntry();
+    api.entries = [entry];
+    render(<Diary entry={entry} openFrom={openFrom} />);
+    fireEvent.click(screen.getByRole("button", { name: `Edit ${openFrom}` }));
+  }
+
+  function deleteByKeyboard() {
+    fireEvent.keyDown(document, { key: "Enter" });
+    const remove = screen.getByRole("button", { name: "Delete" });
+    remove.focus();
+    fireEvent.click(remove);
+  }
+
+  it("should move focus to Undo", () => {
+    openFromRow("first");
+
+    deleteByKeyboard();
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+  });
+
+  it("should give focus to the next diary row, not a control in the closing dialog, when the toast is dismissed", () => {
+    openFromRow("first");
+    deleteByKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+    expect(screen.queryByRole("dialog", { name: "Edit entry" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit second" }));
+  });
+
+  it("should give focus to the row before when the row was the last, and not to a control in the dialog, which is after the diary", () => {
+    openFromRow("second");
+    deleteByKeyboard();
+
+    fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit first" }));
+  });
+
+  it("should leave focus alone after a pointer press", () => {
+    openFromRow("first");
+    const remove = screen.getByRole("button", { name: "Delete" });
+    fireEvent.pointerDown(remove);
+    remove.focus();
+
+    fireEvent.click(remove, { detail: 1 });
+
+    expect(screen.getByRole("button", { name: "Undo" })).not.toBe(document.activeElement);
+  });
+});
+
+describe("opening the edit dialog", () => {
+  it("should return focus to the control it was opened from when it closes", () => {
+    const entry = chickenEntry();
+    api.entries = [entry];
+    function Host() {
+      const [isOpen, setIsOpen] = useState(false);
+      const edit = useRef<HTMLButtonElement>(null);
+
+      return (
+        <ToastProvider>
+          <button
+            ref={edit}
+            type="button"
+            onClick={() => {
+              setIsOpen(true);
+            }}
+          >
+            Edit first
+          </button>
+          {isOpen && (
+            <EditEntryDialog
+              entryId={entry.id}
+              date={TODAY}
+              opener={edit.current}
+              onClose={() => {
+                setIsOpen(false);
+              }}
+            />
+          )}
+        </ToastProvider>
+      );
+    }
+    render(<Host />);
+    const trigger = screen.getByRole("button", { name: "Edit first" });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it("should put the cursor in the amount of a food entry", () => {
+    renderDialog(chickenEntry());
+
+    expect(document.activeElement).toBe(amount());
+  });
+
+  it("should save when Enter is pressed in the amount, as the Save button does", async () => {
+    const entry = chickenEntry();
+    const { onClose } = renderDialog(entry);
+    fireEvent.change(amount(), { target: { value: "200" } });
+
+    fireEvent.submit(amount());
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+      entry,
+      amount: { quantity: 200, unit: "g" },
+    });
   });
 });
 
@@ -507,6 +667,6 @@ describe("the edit entry dialog for a quick add", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(api.deleteEntry.mutate.mock.calls[0]?.[0]).toBe(entry);
+    expect(api.deleteEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
   });
 });

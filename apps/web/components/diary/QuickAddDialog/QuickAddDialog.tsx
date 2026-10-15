@@ -18,7 +18,7 @@ import {
 } from "@keylow/core/diary";
 import { iconStroke } from "@keylow/tokens";
 import { Check, TriangleAlert } from "lucide-react";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import type { QuickAddDialogProps } from "./types";
 
@@ -46,11 +46,13 @@ function enteredGrams(text: string): number | null {
  * which is information only: saving is allowed. The fields take digits and one point or comma, so a negative
  * or a malformed number cannot be typed.
  */
-export function QuickAddDialog({ request, onClose }: QuickAddDialogProps) {
+export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps) {
   const toast = useToast();
   const quickAdd = useQuickAdd();
   const { time, isNow, chooseTime, resolve } = useLoggingTime(request);
   const helperId = useId();
+  const formId = useId();
+  const caloriesField = useRef<HTMLInputElement>(null);
   const [kcalText, setKcalText] = useState("");
   const [proteinText, setProteinText] = useState("");
   const [carbsText, setCarbsText] = useState("");
@@ -59,6 +61,11 @@ export function QuickAddDialog({ request, onClose }: QuickAddDialogProps) {
   const [hasTouchedKcal, setHasTouchedKcal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [hasSaveError, setHasSaveError] = useState(false);
+
+  // The cursor starts in Calories, the one field that is needed.
+  useEffect(() => {
+    caloriesField.current?.focus();
+  }, []);
 
   const kcal = enteredGrams(kcalText);
   const protein = enteredGrams(proteinText);
@@ -131,6 +138,7 @@ export function QuickAddDialog({ request, onClose }: QuickAddDialogProps) {
     <Dialog
       open
       className={DIARY_DIALOG_CLASSES}
+      returnFocusTo={opener}
       title={QUICK_ADD_DIALOG.title}
       onClose={onClose}
       footer={
@@ -144,23 +152,29 @@ export function QuickAddDialog({ request, onClose }: QuickAddDialogProps) {
             {QUICK_ADD_DIALOG.cancel}
           </Button>
           <Button
-            type="button"
+            type="submit"
+            form={formId}
             disabled={!validated.ok}
             loading={isSaving}
             loadingLabel="Adding"
-            onClick={() => {
-              void handleAdd();
-            }}
           >
             {QUICK_ADD_DIALOG.add}
           </Button>
         </>
       }
     >
-      <div className="flex flex-col gap-3">
+      <form
+        id={formId}
+        className="flex flex-col gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleAdd();
+        }}
+      >
         {hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
         <div className="flex flex-col gap-1">
           <NumericInput
+            ref={caloriesField}
             label={QUICK_ADD_DIALOG.calories}
             unit="kcal"
             value={kcalText}
@@ -211,7 +225,7 @@ export function QuickAddDialog({ request, onClose }: QuickAddDialogProps) {
           }}
         />
         <TimeField value={time} isNow={isNow} onChange={chooseTime} />
-      </div>
+      </form>
     </Dialog>
   );
 }

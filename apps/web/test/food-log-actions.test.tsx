@@ -1,4 +1,4 @@
-import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AddFoodDialogProps } from "@/components/diary/AddFoodDialog";
@@ -12,8 +12,11 @@ const { pathname } = vi.hoisted(() => ({ pathname: { current: "/diary" } }));
 vi.mock("next/navigation", () => ({ usePathname: () => pathname.current }));
 
 vi.mock("@/components/diary/AddFoodDialog", () => ({
-  AddFoodDialog: ({ request, onClose }: AddFoodDialogProps) => (
-    <div role="dialog" aria-label="Add food">
+  AddFoodDialog: ({ request, opener, onClose, onQuickAdd }: AddFoodDialogProps) => (
+    <div role="dialog" aria-label="Add food" data-opener={opener?.textContent ?? "none"}>
+      <button type="button" onClick={onQuickAdd}>
+        Open quick add
+      </button>
       <p>{`Adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
       <button type="button" onClick={onClose}>
         Close the add dialog
@@ -23,8 +26,8 @@ vi.mock("@/components/diary/AddFoodDialog", () => ({
 }));
 
 vi.mock("@/components/diary/EditEntryDialog", () => ({
-  EditEntryDialog: ({ entryId, date, onClose }: EditEntryDialogProps) => (
-    <div role="dialog" aria-label="Edit entry">
+  EditEntryDialog: ({ entryId, date, opener, onClose }: EditEntryDialogProps) => (
+    <div role="dialog" aria-label="Edit entry" data-opener={opener?.textContent ?? "none"}>
       <p>{`Editing ${entryId} on ${date}`}</p>
       <button type="button" onClick={onClose}>
         Close the edit dialog
@@ -34,8 +37,8 @@ vi.mock("@/components/diary/EditEntryDialog", () => ({
 }));
 
 vi.mock("@/components/diary/QuickAddDialog", () => ({
-  QuickAddDialog: ({ request, onClose }: QuickAddDialogProps) => (
-    <div role="dialog" aria-label="Quick add">
+  QuickAddDialog: ({ request, opener, onClose }: QuickAddDialogProps) => (
+    <div role="dialog" aria-label="Quick add" data-opener={opener?.textContent ?? "none"}>
       <p>{`Quick adding on ${request.date}${request.time === undefined ? "" : ` at ${request.time}`}`}</p>
       <button type="button" onClick={onClose}>
         Close the quick add dialog
@@ -190,6 +193,103 @@ describe("FoodLogActionsProvider", () => {
 
       expect(screen.getAllByRole("dialog")).toHaveLength(1);
       expect(screen.getByRole("dialog", { name: "Quick add" })).toBeTruthy();
+    });
+  });
+
+  describe("the control a dialog was opened from", () => {
+    function Triggers() {
+      const { openAddFood, openEditEntry, setViewedDate } = useFoodLogActions();
+
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setViewedDate("2026-10-15");
+              openAddFood({ date: "2026-10-15", time: "12:00" });
+            }}
+          >
+            Hour plus
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              openEditEntry("entry-1");
+            }}
+          >
+            Edit row
+          </button>
+        </>
+      );
+    }
+
+    it("should hand the add dialog the control that was focused when it opened", () => {
+      render(
+        <FoodLogActionsProvider>
+          <Triggers />
+        </FoodLogActionsProvider>,
+      );
+      const plus = screen.getByRole("button", { name: "Hour plus" });
+      plus.focus();
+
+      fireEvent.click(plus);
+
+      expect(screen.getByRole("dialog", { name: "Add food" }).getAttribute("data-opener")).toBe(
+        "Hour plus",
+      );
+    });
+
+    it("should carry that control to quick add when it is opened from inside the add dialog", () => {
+      render(
+        <FoodLogActionsProvider>
+          <Triggers />
+        </FoodLogActionsProvider>,
+      );
+      const plus = screen.getByRole("button", { name: "Hour plus" });
+      plus.focus();
+      fireEvent.click(plus);
+      // Focus is inside the add dialog by now, as it is for a person.
+      const quickRow = screen.getByRole("button", { name: "Open quick add" });
+      quickRow.focus();
+
+      fireEvent.click(quickRow);
+
+      expect(screen.getByRole("dialog", { name: "Quick add" }).getAttribute("data-opener")).toBe(
+        "Hour plus",
+      );
+    });
+
+    it("should open quick add for the same day and hour as the add dialog", () => {
+      render(
+        <FoodLogActionsProvider>
+          <Triggers />
+        </FoodLogActionsProvider>,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Hour plus" }));
+
+      fireEvent.click(screen.getByRole("button", { name: "Open quick add" }));
+
+      expect(screen.getByText("Quick adding on 2026-10-15 at 12:00")).toBeTruthy();
+    });
+
+    it("should forget the control once the dialog is closed, so the next one has its own", () => {
+      render(
+        <FoodLogActionsProvider>
+          <Triggers />
+        </FoodLogActionsProvider>,
+      );
+      const plus = screen.getByRole("button", { name: "Hour plus" });
+      plus.focus();
+      fireEvent.click(plus);
+      fireEvent.click(screen.getByRole("button", { name: "Close the add dialog" }));
+      const edit = screen.getByRole("button", { name: "Edit row" });
+      edit.focus();
+
+      fireEvent.click(edit);
+
+      expect(screen.getByRole("dialog", { name: "Edit entry" }).getAttribute("data-opener")).toBe(
+        "Edit row",
+      );
     });
   });
 

@@ -244,6 +244,8 @@ function TimePickerPanel({ value, onApply, onClose, anchorRef }: PanelProps) {
       <div
         ref={panelRef}
         role="dialog"
+        // A press on blank space in the panel puts focus here, in the picker, so Escape still closes only the picker.
+        tabIndex={-1}
         aria-label={TIME_FIELD.pickerName}
         className={isAbove ? `${panelClasses} ${aboveClasses}` : panelClasses}
       >
@@ -298,7 +300,7 @@ function TimePickerPanel({ value, onApply, onClose, anchorRef }: PanelProps) {
             }}
           />
         </div>
-        <Button className="w-full" onClick={apply}>
+        <Button type="button" className="w-full" onClick={apply}>
           {TIME_FIELD.done}
         </Button>
       </div>

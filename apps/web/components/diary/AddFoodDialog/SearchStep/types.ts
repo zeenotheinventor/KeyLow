@@ -16,4 +16,6 @@ export type SearchStepProps = {
   onOpenFood: (foodId: string) => void;
   /** A press on a row's plus: log its serving at once. */
   onAddServing: (hit: FoodSearchHit) => void;
+  /** A press on the Quick add row, which the idle search offers: calories and macros by hand. */
+  onQuickAdd: () => void;
 };

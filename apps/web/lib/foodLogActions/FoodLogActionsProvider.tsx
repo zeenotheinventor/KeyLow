@@ -9,10 +9,14 @@ import { AddFoodDialog } from "@/components/diary/AddFoodDialog";
 import { EditEntryDialog } from "@/components/diary/EditEntryDialog";
 import { QuickAddDialog } from "@/components/diary/QuickAddDialog";
 
-// Each request gets its own number, so a request made while a dialog is open starts a fresh dialog.
-type OpenDialog =
-  | { kind: "add" | "quick"; request: AddFoodRequest; id: number }
-  | { kind: "edit"; entryId: string; date: string; id: number };
+// Each request gets its own number, so a request made while a dialog is open starts a fresh dialog. The
+// opener is the control that was focused when the first dialog opened, and it is carried across a switch
+// from one dialog to another, so closing the last one gives focus back to the diary and not to a dialog
+// that is gone.
+type OpenDialog = { opener: Element | null; id: number } & (
+  | { kind: "add" | "quick"; request: AddFoodRequest }
+  | { kind: "edit"; entryId: string; date: string }
+);
 
 const FoodLogActionsContext = createContext<FoodLogActions | undefined>(undefined);
 
@@ -39,17 +43,36 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
     () => ({
       openAddFood: (request) => {
         requestCount.current += 1;
-        setDialog({ kind: "add", request, id: requestCount.current });
+        const id = requestCount.current;
+        setDialog((current) => ({
+          kind: "add",
+          request,
+          id,
+          opener: current?.opener ?? document.activeElement,
+        }));
       },
       openQuickAdd: (request) => {
         requestCount.current += 1;
-        setDialog({ kind: "quick", request, id: requestCount.current });
+        const id = requestCount.current;
+        setDialog((current) => ({
+          kind: "quick",
+          request,
+          id,
+          opener: current?.opener ?? document.activeElement,
+        }));
       },
       openEditEntry: (entryId) => {
         // An entry is edited on the diary's day on view, so away from the diary there is nothing to edit.
         if (viewedDate !== undefined) {
           requestCount.current += 1;
-          setDialog({ kind: "edit", entryId, date: viewedDate, id: requestCount.current });
+          const id = requestCount.current;
+          setDialog((current) => ({
+            kind: "edit",
+            entryId,
+            date: viewedDate,
+            id,
+            opener: current?.opener ?? document.activeElement,
+          }));
         }
       },
       viewedDate,
@@ -66,16 +89,30 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
     <FoodLogActionsContext.Provider value={value}>
       {children}
       {dialog?.kind === "add" && (
-        <AddFoodDialog key={dialog.id} request={dialog.request} onClose={closeDialog} />
+        <AddFoodDialog
+          key={dialog.id}
+          request={dialog.request}
+          opener={dialog.opener}
+          onClose={closeDialog}
+          onQuickAdd={() => {
+            value.openQuickAdd(dialog.request);
+          }}
+        />
       )}
       {dialog?.kind === "quick" && (
-        <QuickAddDialog key={dialog.id} request={dialog.request} onClose={closeDialog} />
+        <QuickAddDialog
+          key={dialog.id}
+          request={dialog.request}
+          opener={dialog.opener}
+          onClose={closeDialog}
+        />
       )}
       {dialog?.kind === "edit" && (
         <EditEntryDialog
           key={dialog.id}
           entryId={dialog.entryId}
           date={dialog.date}
+          opener={dialog.opener}
           onClose={closeDialog}
         />
       )}

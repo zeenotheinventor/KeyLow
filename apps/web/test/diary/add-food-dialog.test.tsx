@@ -140,14 +140,15 @@ function entryFor(input: LogFoodInput): LogEntry {
 
 function renderDialog(request: AddFoodRequest = { date: "2026-10-15" }) {
   const onClose = vi.fn<() => void>();
+  const onQuickAdd = vi.fn<() => void>();
   render(
     <ToastProvider>
       <button type="button">Add food at 12:00</button>
-      <AddFoodDialog request={request} onClose={onClose} />
+      <AddFoodDialog request={request} opener={null} onClose={onClose} onQuickAdd={onQuickAdd} />
     </ToastProvider>,
   );
 
-  return { onClose };
+  return { onClose, onQuickAdd };
 }
 
 function search(text: string) {
@@ -231,6 +232,32 @@ describe("the add food dialog", () => {
       search("chicken");
 
       expect(api.searchQueries).toContain("chicken");
+    });
+  });
+
+  describe("the Quick add row", () => {
+    it("should be offered before anything is typed, with its caption", () => {
+      renderDialog();
+
+      expect(screen.getByRole("button", { name: /Quick add/ }).textContent).toContain(
+        "Calories and macros by hand",
+      );
+    });
+
+    it("should open quick add on a press", () => {
+      const { onQuickAdd } = renderDialog({ date: "2026-10-15", time: "12:00" });
+
+      fireEvent.click(screen.getByRole("button", { name: /Quick add/ }));
+
+      expect(onQuickAdd).toHaveBeenCalledOnce();
+    });
+
+    it("should give way to the results once something is typed", () => {
+      renderDialog();
+
+      search("chicken");
+
+      expect(screen.queryByRole("button", { name: /Quick add/ })).toBeNull();
     });
   });
 
@@ -401,6 +428,50 @@ describe("the add food dialog", () => {
       expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ loggedAt: "2026-10-15T11:00:00.000Z" }),
       );
+    });
+
+    it("should give a keyboard press the route to Undo: focus goes to it, and comes back to the plus", async () => {
+      renderDialog({ date: "2026-10-15", time: "12:00" });
+      search("rice");
+      const plus = addButton("Add Basmati rice, boiled, 100 g");
+      fireEvent.keyDown(document, { key: "Enter" });
+      plus.focus();
+
+      fireEvent.click(plus);
+      await screen.findByText("Added Basmati rice, boiled");
+
+      expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+
+      fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+      expect(document.activeElement).toBe(plus);
+    });
+
+    it("should keep the dialog open when Escape dismisses the toast", async () => {
+      const { onClose } = renderDialog({ date: "2026-10-15", time: "12:00" });
+      search("rice");
+      const plus = addButton("Add Basmati rice, boiled, 100 g");
+      fireEvent.keyDown(document, { key: "Enter" });
+      plus.focus();
+      fireEvent.click(plus);
+      await screen.findByText("Added Basmati rice, boiled");
+
+      fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should leave focus where it is after a pointer press", async () => {
+      renderDialog({ date: "2026-10-15", time: "12:00" });
+      search("rice");
+      const plus = addButton("Add Basmati rice, boiled, 100 g");
+      fireEvent.pointerDown(plus);
+      plus.focus();
+
+      fireEvent.click(plus, { detail: 1 });
+      await screen.findByText("Added Basmati rice, boiled");
+
+      expect(document.activeElement).toBe(plus);
     });
 
     it("should say Added with the food's name and leave the dialog open", async () => {

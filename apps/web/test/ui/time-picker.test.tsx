@@ -232,6 +232,46 @@ describe("TimePicker", () => {
     });
   });
 
+  describe("pressing blank space in the panel", () => {
+    it("should be able to take focus itself, so Escape after the press closes the picker and not the dialog", () => {
+      const onDialogClose = vi.fn<() => void>();
+      const { onClose } = (() => {
+        const onApply = vi.fn<(time: string) => void>();
+        const close = vi.fn<() => void>();
+        render(
+          <Dialog open title="Add food" onClose={onDialogClose}>
+            <TimePicker open value="12:40" onApply={onApply} onClose={close} />
+          </Dialog>,
+        );
+        return { onClose: close };
+      })();
+      const panel = screen.getByRole("dialog", { name: "Choose a time" });
+
+      // What a browser does for a press on blank space: focus goes to the nearest focusable ancestor.
+      panel.focus();
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+
+      expect(document.activeElement).toBe(panel);
+      expect(onClose).toHaveBeenCalledOnce();
+      expect(onDialogClose).not.toHaveBeenCalled();
+    });
+
+    it("should not submit a form around it when Done is pressed", () => {
+      const onSubmit = vi.fn((event: React.SyntheticEvent) => {
+        event.preventDefault();
+      });
+      render(
+        <form onSubmit={onSubmit}>
+          <TimePicker open value="12:40" onApply={() => undefined} onClose={() => undefined} />
+        </form>,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+  });
+
   describe("outside presses", () => {
     it("should close without applying when something else is pressed", () => {
       const { onApply, onClose } = renderPicker();

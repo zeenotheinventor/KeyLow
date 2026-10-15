@@ -23,7 +23,7 @@ import { useToast } from "@/components/ui/Toast";
  * search, where a row's plus logs its serving at once and the dialog stays open so several foods can be
  * added. A press on a row goes to the portion step, where Add logs the chosen amount and closes the dialog.
  */
-export function AddFoodDialog({ request, onClose }: AddFoodDialogProps) {
+export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodDialogProps) {
   const toast = useToast();
   const { time, isNow, chooseTime, resolve: resolveLoggedAt } = useLoggingTime(request);
   const [query, setQuery] = useState("");
@@ -69,6 +69,7 @@ export function AddFoodDialog({ request, onClose }: AddFoodDialogProps) {
     <Dialog
       open
       className={DIARY_DIALOG_CLASSES}
+      returnFocusTo={opener}
       onClose={onClose}
       title={ADD_FOOD_DIALOG.title}
       footer={
@@ -105,6 +106,7 @@ export function AddFoodDialog({ request, onClose }: AddFoodDialogProps) {
             searchRef={searchField}
             onOpenFood={setFoodId}
             onAddServing={addServing}
+            onQuickAdd={onQuickAdd}
           />
         ) : (
           <PortionStep

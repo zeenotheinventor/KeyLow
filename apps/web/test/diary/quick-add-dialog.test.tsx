@@ -34,7 +34,7 @@ function renderDialog(request: AddFoodRequest = { date: "2026-10-15" }) {
   const onClose = vi.fn<() => void>();
   render(
     <ToastProvider>
-      <QuickAddDialog request={request} onClose={onClose} />
+      <QuickAddDialog request={request} opener={null} onClose={onClose} />
     </ToastProvider>,
   );
 
@@ -113,6 +113,43 @@ describe("the quick add dialog", () => {
     });
   });
 
+  describe("focus and Enter", () => {
+    it("should put the cursor in Calories", () => {
+      renderDialog();
+
+      expect(document.activeElement).toBe(calories());
+    });
+
+    it("should add when the form is submitted with Enter and the calories are valid", async () => {
+      renderDialog();
+      type(calories(), "130");
+
+      fireEvent.submit(calories());
+
+      await waitFor(() => {
+        expect(api.quickAdd.mutateAsync).toHaveBeenCalledOnce();
+      });
+    });
+
+    it("should not add on Enter while the calories are not above 0", () => {
+      renderDialog();
+
+      fireEvent.submit(calories());
+
+      expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should not add when the time picker's Done is pressed", () => {
+      renderDialog();
+      type(calories(), "130");
+      fireEvent.click(screen.getByRole("button", { name: "Time 12:40" }));
+
+      fireEvent.click(screen.getByRole("button", { name: "Done" }));
+
+      expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
   describe("the line under Calories", () => {
     it("should say the macros are optional until one is given", () => {
       renderDialog();
@@ -153,7 +190,7 @@ describe("the quick add dialog", () => {
         expect(isWarning("Macros add up to 162 kcal")).toBe(false);
       });
 
-      it("should turn to the review colour, with an icon, just over 25 % above", () => {
+      it("should turn to the review colour just over 25 % above", () => {
         renderDialog();
         type(calories(), "130");
 
@@ -161,7 +198,6 @@ describe("the quick add dialog", () => {
         type(protein(), "40.75");
 
         expect(isWarning("Macros add up to 163 kcal")).toBe(true);
-        expect(line("Macros add up to 163 kcal").querySelector("svg")).toBeTruthy();
       });
 
       it("should stay plain at 25 % below the calories and warn just under that", () => {

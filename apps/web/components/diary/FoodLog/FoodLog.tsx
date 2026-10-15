@@ -9,8 +9,8 @@ import { DayCompleteToggle } from "@/components/ui/DayCompleteToggle";
 import { HourRow } from "@/components/ui/HourRow";
 
 /**
- * The hour-by-hour log: all 24 hours from 00:00, each an `HourRow` with a plus to add food at that hour and that hour's foods, and the Mark
- * day complete switch after 23:00. The hours sit directly in one container with nothing between them,
+ * The hour-by-hour log: all 24 hours from 00:00, each an `HourRow` with a plus to add food at that hour
+ * and that hour's foods, and the Mark day complete switch after 23:00. The hours sit directly in one container with nothing between them,
  * because each draws its own piece of the guide line. On a day with nothing logged the Nothing logged
  * yet card sits above 00:00. When it first appears the page scrolls once, so the first food's hour, or
  * the current hour when the day is empty, is near the top. Key it by the day, so a new day scrolls again,

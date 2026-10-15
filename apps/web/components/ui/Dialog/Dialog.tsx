@@ -76,6 +76,7 @@ export function Dialog({
   footer,
   leadingAction,
   className,
+  returnFocusTo,
 }: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [opener, setOpener] = useState<Element | null>(null);
@@ -89,6 +90,9 @@ export function Dialog({
     setOpener(document.activeElement);
   }
 
+  // Where focus goes on close: the element that was focused when it opened, unless the owner says another.
+  const focusTarget = returnFocusTo === undefined ? opener : returnFocusTo;
+
   useEffect(() => {
     const panel = panelRef.current;
     if (!open || panel === null) return;
@@ -100,9 +104,9 @@ export function Dialog({
     return () => {
       unlockPageScroll();
       openPanels.splice(openPanels.indexOf(panel), 1);
-      if (opener instanceof HTMLElement) opener.focus();
+      if (focusTarget instanceof HTMLElement) focusTarget.focus();
     };
-  }, [open, opener]);
+  }, [open, focusTarget]);
 
   useEffect(() => {
     const panel = panelRef.current;

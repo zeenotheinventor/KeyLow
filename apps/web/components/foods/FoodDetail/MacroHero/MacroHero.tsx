@@ -34,9 +34,7 @@ export function MacroHero({ food, amount }: MacroHeroProps) {
   const hasNameLine = amount?.name !== undefined;
 
   // The dialogs draw the numeral at 44 on 48 and its unit as a caption, the food page at 56 on 60.
-  const numeralClasses = hasNameLine
-    ? "text-[44px] font-semibold leading-[48px] tracking-[-0.03em]"
-    : "text-display-numeral";
+  const numeralClasses = hasNameLine ? "text-numeral-large" : "text-display-numeral";
   const unitClasses = hasNameLine
     ? "text-caption text-text-secondary"
     : "text-body-strong text-text-secondary";

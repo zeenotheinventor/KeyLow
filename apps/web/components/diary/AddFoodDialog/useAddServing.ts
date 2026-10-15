@@ -14,6 +14,7 @@ import type { FoodSearchHit } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 import { useToast } from "@/components/ui/Toast";
+import { useKeyboardUndo } from "@/lib/keyboardUndo";
 
 type LoggedAt = { loggedAt: Date; localDate: string };
 
@@ -47,6 +48,7 @@ export function useAddServing(resolveLoggedAt: () => LoggedAt): (hit: FoodSearch
   const toast = useToast();
   const logFood = useLogFood();
   const deleteEntry = useDeleteEntry();
+  const keyboardUndo = useKeyboardUndo();
   const inFlight = useRef(new Set<string>());
 
   async function add(hit: FoodSearchHit) {
@@ -54,6 +56,9 @@ export function useAddServing(resolveLoggedAt: () => LoggedAt): (hit: FoodSearch
       return;
     }
     inFlight.current.add(hit.id);
+    // Asked when the press arrives, while focus is still on the plus. The dialog's focus trap keeps Tab inside
+    // the dialog, so a keyboard user could not reach the toast's Undo within its wait without this route.
+    const keyboardRoute = keyboardUndo.afterPressingButton();
     try {
       const [food, portions] = await Promise.all([
         getFood(client, hit.id),
@@ -82,6 +87,7 @@ export function useAddServing(resolveLoggedAt: () => LoggedAt): (hit: FoodSearch
             toast.show({ message: LOG_SEARCH.undoFailed, tone: "danger", icon: CircleAlert });
           });
         },
+        ...keyboardRoute(),
       });
     } catch {
       // Not kept: the failure can quote the amount, which is health data.

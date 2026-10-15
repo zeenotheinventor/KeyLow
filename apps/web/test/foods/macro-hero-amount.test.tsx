@@ -88,6 +88,16 @@ describe("MacroHero with an amount", () => {
     expect(css).toMatch(/\.px-2\s*\{[^}]*padding-left: 8px/);
   });
 
+  it("should draw the numeral in the 44 on 48 dialog type token", async () => {
+    showHero(chicken);
+    const numeral = within(hero()).getByText("222");
+    const css = await compileUtilities(numeral.className);
+
+    expect(numeral.className).toContain("text-numeral-large");
+    expect(css).toMatch(/font-size: 44px/);
+    expect(css).toMatch(/line-height: 48px/);
+  });
+
   it("should put the pill at the end of the row below 700 px and first in the column above it", () => {
     showHero(chicken);
     const pill = within(hero()).getByText("86 %");

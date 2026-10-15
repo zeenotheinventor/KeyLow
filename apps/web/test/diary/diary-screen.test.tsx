@@ -80,11 +80,11 @@ const {
   openEditEntry: vi.fn<(entryId: string) => void>(),
   setViewedDate: vi.fn<(date: string | undefined) => void>(),
   deleteEntry: {
-    mutate: vi.fn<(entry: LogEntry, options: { onError: () => void }) => void>(),
+    mutateAsync: vi.fn<(entry: LogEntry) => Promise<void>>(),
     isPending: false,
   },
   restoreEntry: {
-    mutate: vi.fn<(entry: LogEntry, options: { onError: () => void }) => void>(),
+    mutateAsync: vi.fn<(entry: LogEntry) => Promise<void>>(),
     isPending: false,
   },
   copyDay: {
@@ -178,6 +178,8 @@ const tableOf = (hour: string) => screen.getByRole("table", { name: `Foods at ${
 
 beforeEach(() => {
   vi.resetAllMocks();
+  deleteEntry.mutateAsync.mockResolvedValue();
+  restoreEntry.mutateAsync.mockResolvedValue();
   // 11:20 on Thursday 15 October 2026, so the current hour is 11:00.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-15T11:20:00Z"));
@@ -397,7 +399,7 @@ describe("the diary screen", () => {
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
 
-      expect(deleteEntry.mutate).toHaveBeenCalledOnce();
+      expect(deleteEntry.mutateAsync).toHaveBeenCalledOnce();
       expect(screen.getByText("Entry deleted")).toBeTruthy();
       expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
     });
@@ -407,12 +409,12 @@ describe("the diary screen", () => {
       fireEvent.click(
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
-      const deleted = deleteEntry.mutate.mock.calls[0]?.[0];
+      const deleted = deleteEntry.mutateAsync.mock.calls[0]?.[0];
 
       fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
-      expect(restoreEntry.mutate).toHaveBeenCalledOnce();
-      expect(restoreEntry.mutate.mock.calls[0]?.[0]).toBe(deleted);
+      expect(restoreEntry.mutateAsync).toHaveBeenCalledOnce();
+      expect(restoreEntry.mutateAsync.mock.calls[0]?.[0]).toBe(deleted);
     });
 
     describe("by keyboard", () => {
@@ -440,7 +442,7 @@ describe("the diary screen", () => {
         fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
 
         expect(document.activeElement).toBe(
-          within(tableOf("08:00")).getByRole("button", { name: "Delete Semi-skimmed milk" }),
+          within(tableOf("08:00")).getByRole("button", { name: "Edit Semi-skimmed milk" }),
         );
       });
 
@@ -450,9 +452,9 @@ describe("the diary screen", () => {
 
         fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
-        expect(restoreEntry.mutate).toHaveBeenCalledOnce();
+        expect(restoreEntry.mutateAsync).toHaveBeenCalledOnce();
         expect(document.activeElement).toBe(
-          within(tableOf("08:00")).getByRole("button", { name: "Delete Semi-skimmed milk" }),
+          within(tableOf("08:00")).getByRole("button", { name: "Edit Semi-skimmed milk" }),
         );
       });
 
@@ -476,18 +478,15 @@ describe("the diary screen", () => {
       });
     });
 
-    it("should say so when a delete does not go through", () => {
+    it("should say so when a delete does not go through", async () => {
+      deleteEntry.mutateAsync.mockRejectedValue(new Error("RAW"));
       renderDiary();
+
       fireEvent.click(
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
-      const options = deleteEntry.mutate.mock.calls[0]?.[1];
 
-      act(() => {
-        options?.onError();
-      });
-
-      expect(screen.getByText("Something went wrong. Try again.")).toBeTruthy();
+      expect(await screen.findByText("Something went wrong. Try again.")).toBeTruthy();
     });
   });
 

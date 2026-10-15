@@ -119,7 +119,7 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       liveFood.data !== undefined &&
       liveFood.data !== null &&
       liveFood.data.deleted_at === null &&
-      foodChangedSinceLogged(snapshot, liveFood.data),
+      foodChangedSinceLogged(liveFood.data, snapshot),
     // A food that cannot be read at all is as good as deleted: there is nothing to update from.
     isFoodDeleted:
       snapshot !== undefined &&

@@ -1,6 +1,7 @@
 import { MIN_SEARCH_LENGTH, useFoodSearch } from "@keylow/api-client";
 import {
   ADD_FOOD_DIALOG,
+  DIARY_ACTIONS,
   SEARCH_EMPTY,
   SEARCH_FAILED_WEB,
   SEARCH_GROUP_HEADINGS,
@@ -16,17 +17,19 @@ import {
   groupFoodSearchResults,
   servingOfSearchHit,
 } from "@keylow/core/search";
-import { SearchX } from "lucide-react";
+import { SearchX, Zap } from "lucide-react";
 import { useState } from "react";
 
 import type { SearchStepProps } from "./types";
 import type { FoodSearchGroupKey, FoodSearchGroupLimits } from "@keylow/core/search";
 
 import { InlineStatus } from "@/components/foods/InlineStatus";
+import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { FoodRow } from "@/components/ui/FoodRow";
 import { GroupedList } from "@/components/ui/GroupedList";
+import { ListRow } from "@/components/ui/ListRow";
 import { SearchField } from "@/components/ui/SearchField";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { TimeField } from "@/components/ui/TimeField";
@@ -65,6 +68,7 @@ export function SearchStep({
   searchRef,
   onOpenFood,
   onAddServing,
+  onQuickAdd,
 }: SearchStepProps) {
   const trimmedQuery = query.trim();
   const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
@@ -80,7 +84,23 @@ export function SearchStep({
 
   const renderResults = () => {
     if (!isSearchable) {
-      return <p className="text-caption text-text-muted">{SEARCH_IDLE.hint}</p>;
+      // Before anything is typed the search offers Quick add, as the mobile search does (the web has no
+      // idle board, so it follows the mobile `log-search.idle` one).
+      return (
+        <>
+          <Card asChild padding="none">
+            <ul>
+              <ListRow
+                icon={Zap}
+                title={DIARY_ACTIONS.quickAdd}
+                subtitle={DIARY_ACTIONS.quickAddCaption}
+                onClick={onQuickAdd}
+              />
+            </ul>
+          </Card>
+          <p className="text-caption text-text-muted">{SEARCH_IDLE.hint}</p>
+        </>
+      );
     }
     if (localError !== null) {
       return (
