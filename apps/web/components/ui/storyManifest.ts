@@ -46,6 +46,7 @@ export const storyManifest = {
     "CountsUp",
     "ReducedMotion",
   ],
+  "ChipGroup/ChipGroup.stories.tsx": ["TwoChips", "FiveChipsWrap", "LongLabel", "Focused"],
   "Card/Card.stories.tsx": ["Surface", "Raised", "WithTitle", "Unpadded"],
   "DayStepper/DayStepper.stories.tsx": [
     "OnToday",
