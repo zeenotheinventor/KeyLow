@@ -396,10 +396,22 @@ describe("the diary screen", () => {
       routerMock.searchParams = { day: "2026-10-14" };
       await renderDiary();
 
+      // The title is the linked day from the first render, but the week strip waits for the first day to load.
       expect(await screen.findByRole("heading", { name: "Wed 14 Oct" })).toBeOnTheScreen();
       expect(
-        screen.getByRole("button", { name: "Wednesday 14 October", selected: true }),
+        await screen.findByRole("button", { name: "Wednesday 14 October", selected: true }),
       ).toBeOnTheScreen();
+    });
+
+    it("should show the day in the link as the title while the first day is still loading", async () => {
+      routerMock.searchParams = { day: "2026-10-14" };
+      diaryBackend.hungTables.add("food_log_entries");
+      await renderDiary();
+
+      expect(await screen.findByRole("heading", { name: "Wed 14 Oct" })).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", { name: "Wednesday 14 October", selected: true }),
+      ).not.toBeOnTheScreen();
     });
 
     it("should use the link up, clearing it, so choosing the tab again does not reset the day", async () => {
@@ -413,7 +425,9 @@ describe("the diary screen", () => {
     it("should go back to following today when the day in the link is today", async () => {
       routerMock.searchParams = { day: "2026-10-14" };
       queryClient = createDiaryQueryClient();
-      const tree = (
+      // A new element each time, because React skips an element it has already rendered, and the mocked router does
+      // not tell the screen that the link changed as the real one does.
+      const tree = () => (
         <ThemeProvider fixedPreference="dark">
           <KeyLowProvider client={diaryClient} queryClient={queryClient}>
             <ToastProvider>
@@ -422,15 +436,15 @@ describe("the diary screen", () => {
           </KeyLowProvider>
         </ThemeProvider>
       );
-      const { rerender } = await render(tree);
+      const { rerender } = await render(tree());
       await screen.findByRole("heading", { name: "Wed 14 Oct" });
 
       routerMock.searchParams = { day: "2026-10-15" };
-      await rerender(tree);
+      await rerender(tree());
 
       expect(await screen.findByRole("heading", { name: "Today" })).toBeOnTheScreen();
       expect(
-        screen.getByRole("button", { name: "Thursday 15 October, today", selected: true }),
+        await screen.findByRole("button", { name: "Thursday 15 October, today", selected: true }),
       ).toBeOnTheScreen();
     });
 

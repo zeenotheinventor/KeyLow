@@ -111,7 +111,7 @@ describe("the dashboard card and the diary", () => {
 
     expect(await screen.findByRole("heading", { name: "Today" })).toBeOnTheScreen();
     expect(
-      screen.getByRole("button", { name: "Thursday 15 October, today", selected: true }),
+      await screen.findByRole("button", { name: "Thursday 15 October, today", selected: true }),
     ).toBeOnTheScreen();
   });
 
