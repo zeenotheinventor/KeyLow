@@ -1,0 +1,61 @@
+name: Set up the workspace
+description: Installs pnpm, Node and the workspace dependencies, with the pnpm store restored from the cache.
+
+# Run actions/checkout first, a local action is read from the checked out files.
+#
+# The pnpm version comes from "packageManager" in the root package.json (pnpm/action-setup reads it
+# when no version input is given) and the Node version comes from .nvmrc.
+#
+# Installs use --ignore-scripts. LEFTHOOK=0 only disables running hooks, `lefthook install` still
+# writes them, so the flag is the way to skip the root "prepare" script. Nothing else needs install
+# scripts, since pnpm only allows lefthook (onlyBuiltDependencies) to run one.
+
+inputs:
+  save-store:
+    description: Save the pnpm store when the exact key was not restored. Only one job of a run should set this.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # Jest and Vitest size their workers from the cores they see, so the size of the runner is in the log.
+    - name: Show the runner size
+      shell: bash
+      run: |
+        nproc
+        free -g
+    - uses: pnpm/action-setup@v6
+    # No `cache: pnpm` here, because setup-node saves the store at the end of every job that missed,
+    # pull requests included. The steps below restore and save the store themselves, under the key
+    # setup-node uses (node-cache-<os>-<arch>-pnpm-<hash of the lockfile>). The key matches the
+    # store main already holds, and eas-update.yml and deploy-supabase.yml (push to main only)
+    # still use setup-node's cache under the same key. The architecture is x64 on ubuntu-latest.
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+    - name: Find the pnpm store
+      id: pnpm-store
+      shell: bash
+      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+    # Every run restores. The exact key is the store for this lockfile. The prefix falls back to the
+    # newest earlier store, and `pnpm install` fetches whatever the lockfile has beyond it.
+    - name: Restore the pnpm store
+      id: pnpm-store-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: node-cache-${{ runner.os }}-x64-pnpm-
+    - name: Install the dependencies
+      shell: bash
+      run: |
+        node --version
+        pnpm install --frozen-lockfile --ignore-scripts
+    # Only a push to main saves, and only when the exact key was not restored. Saving here, right
+    # after the install, keeps the store complete and out of reach of a later failing check.
+    - name: Save the pnpm store
+      if: inputs.save-store == 'true' && github.event_name == 'push' && steps.pnpm-store-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ${{ steps.pnpm-store.outputs.path }}
+        key: node-cache-${{ runner.os }}-x64-pnpm-${{ hashFiles('pnpm-lock.yaml') }}

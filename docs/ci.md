@@ -32,3 +32,13 @@ Several pull requests merge in parallel, so the files every feature used to edit
 
 - **`pnpm-lock.yaml`**: when two branches change dependencies, take either side and run `pnpm install`. pnpm repairs the lockfile. Commit the result.
 - **`packages/core/src/copy/index.ts`**: one `export *` line per copy module, so two pull requests that each add a new module conflict. `.gitattributes` marks it `merge=union`, which makes a local rebase or merge clean, but GitHub ignores `.gitattributes` when it works out mergeability. It shows both pull requests as conflicting until main is merged or rebased into the second one locally. Do that, check that both lines are there once each, and push.
+
+## CI runs the full gate as parallel jobs
+
+`.github/workflows/ci.yml` runs on every pull request and every push to `main`. `scope` decides what the change needs, then `core`, `functions`, `db`, `mobile`, `web` and `web-storybook` run in parallel, and `checks` collects their results. `checks` is the only required check, and the name `checks` is what branch protection lists.
+
+- A pull request runs only the jobs its change can affect, and inside them only the affected packages. A change outside `apps/`, `packages/` and `tools/` (root config, the lockfile, a workflow) and every push to `main` run everything. A job that is not needed shows as skipped, and `checks` counts a skipped job as passed. A failed or cancelled job fails `checks`.
+- The workflow has no `paths` filter and must never get one. A required check that is never reported blocks the pull request for good.
+- A new job is added to the `needs` list of `checks`, nothing else changes in the settings.
+- `scope` runs turbo through npx, so it needs no install and takes a few seconds.
+- `mobile-fingerprint.yml` is separate and is not a required check. It comments on pull requests and needs write access to them.

@@ -7,6 +7,11 @@
 //
 // The output is gitignored and easignored. Run this again after any change in packages/core
 // (`pnpm --filter @keylow/db bundle-core-for-deno`). It needs no network and no running stack.
+//
+// The declarations take about a minute and a half, because dts-bundle-generator type-checks core, and
+// only `deno check` reads them. `--skip-declarations` writes the rest, without the pragma that points
+// at the declarations, which is all `supabase functions serve` needs, so CI can serve the functions
+// without waiting for them. Do not run `deno check` on a bundle written that way.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -34,7 +39,7 @@ function writeIfChanged(path: string, content: string): void {
   writeFileSync(path, content);
 }
 
-async function bundleJavaScript(): Promise<void> {
+async function bundleJavaScript(withDeclarations: boolean): Promise<void> {
   const result = await build({
     entryPoints: [coreEntry],
     outfile: resolve(outputDirectory, "index.js"),
@@ -43,7 +48,11 @@ async function bundleJavaScript(): Promise<void> {
     format: "esm",
     platform: "neutral",
     target: "es2022",
-    banner: { js: `// @ts-self-types="./index.d.ts"\n${generatedNotice}` },
+    banner: {
+      js: withDeclarations
+        ? `// @ts-self-types="./index.d.ts"\n${generatedNotice}`
+        : generatedNotice,
+    },
   });
   for (const file of result.outputFiles) {
     writeIfChanged(file.path, file.text);
@@ -72,8 +81,11 @@ function copyDatabaseTypes(): void {
 
 try {
   mkdirSync(outputDirectory, { recursive: true });
-  await bundleJavaScript();
-  bundleDeclarations();
+  const withDeclarations = !process.argv.includes("--skip-declarations");
+  await bundleJavaScript(withDeclarations);
+  if (withDeclarations) {
+    bundleDeclarations();
+  }
   copyDatabaseTypes();
 } catch (error) {
   console.error("bundle-core-for-deno failed.");
