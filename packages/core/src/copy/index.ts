@@ -7,6 +7,8 @@ export {
   SIGN_IN_LINK_INVALID,
   SIGN_IN_LINK_NOT_VERIFIED,
   SIGN_IN_REFUSED,
+  SIGN_UP_ACCEPTANCE,
+  SIGN_UP_SCREEN,
   describeAuthError,
   describeCheckEmail,
 } from "./auth";

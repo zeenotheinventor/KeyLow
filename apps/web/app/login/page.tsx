@@ -1,7 +1,8 @@
-import { SIGN_IN_LINK_NOT_VERIFIED } from "@keylow/core/copy";
+import { AUTH_SCREEN, SIGN_IN_LINK_NOT_VERIFIED } from "@keylow/core/copy";
 
 import { LoginForm } from "./LoginForm";
 
+import { AuthSwitchLink } from "@/components/auth/AuthSwitchLink";
 import { Card } from "@/components/ui/Card";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 
@@ -20,6 +21,11 @@ export default async function LoginPage({
           <h1 className="text-h1">Sign in to Ki-Lo</h1>
         </div>
         <LoginForm linkError={error === undefined ? undefined : SIGN_IN_LINK_NOT_VERIFIED} />
+        <AuthSwitchLink
+          prompt={AUTH_SCREEN.signIn.footerPrompt}
+          linkLabel={AUTH_SCREEN.signIn.footerLink}
+          href="/sign-up"
+        />
       </Card>
     </main>
   );

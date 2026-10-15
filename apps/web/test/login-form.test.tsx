@@ -1,19 +1,19 @@
+import { TERMS_VERSION } from "@keylow/core/copy";
 import { AuthRetryableFetchError } from "@supabase/supabase-js";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "@/app/login/LoginForm";
 
-const { signInWithPassword, signUp, signInWithOAuth, push, refresh } = vi.hoisted(() => ({
+const { signInWithPassword, signInWithOAuth, push, refresh } = vi.hoisted(() => ({
   signInWithPassword: vi.fn(),
-  signUp: vi.fn(),
   signInWithOAuth: vi.fn(),
   push: vi.fn(),
   refresh: vi.fn(),
 }));
 
 vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({ auth: { signInWithPassword, signUp, signInWithOAuth } }),
+  createClient: () => ({ auth: { signInWithPassword, signInWithOAuth } }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -99,16 +99,6 @@ describe("LoginForm", () => {
         password: "short",
       });
     });
-
-    it("should show an error and not create an account when the password is shorter than 8 characters", () => {
-      render(<LoginForm />);
-      fillForm("ada@example.com", "short");
-
-      fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-
-      expect(screen.getByText("Password must be at least 8 characters")).toBeTruthy();
-      expect(signUp).not.toHaveBeenCalled();
-    });
   });
 
   describe("signing in", () => {
@@ -174,75 +164,8 @@ describe("LoginForm", () => {
     });
   });
 
-  describe("creating an account", () => {
-    it("should call signUp with the entered values and open the dashboard when a session is returned", async () => {
-      signUp.mockResolvedValue({ data: { session: { access_token: "token" } }, error: null });
-      render(<LoginForm />);
-      fillForm("ada@example.com", "password123");
-
-      fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-
-      await waitFor(() => {
-        expect(push).toHaveBeenCalledWith("/dashboard");
-      });
-      expect(signUp).toHaveBeenCalledWith({
-        email: "ada@example.com",
-        password: "password123",
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
-      });
-      expect(refresh).toHaveBeenCalled();
-    });
-
-    it("should tell the user to check their email, naming the address, when no session is returned", async () => {
-      signUp.mockResolvedValue({ data: { session: null }, error: null });
-      render(<LoginForm />);
-      fillForm("ada@example.com", "password123");
-
-      fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-
-      const notice = await screen.findByRole("status");
-      expect(notice.textContent).toBe(
-        "Check your emailOpen the confirmation link sent to ada@example.com to finish creating your account.",
-      );
-      expect(push).not.toHaveBeenCalled();
-    });
-
-    it("should show the fixed sentence when the account already exists", async () => {
-      signUp.mockResolvedValue({
-        data: { session: null },
-        error: { message: "User already registered", code: "user_already_exists" },
-      });
-      render(<LoginForm />);
-      fillForm("ada@example.com", "password123");
-
-      fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-
-      expect((await screen.findByRole("alert")).textContent).toBe(
-        "An account with this email already exists. Sign in instead.",
-      );
-      expect(screen.queryByText("User already registered")).toBeNull();
-    });
-
-    it("should clear the check-your-email notice when signing in again", async () => {
-      signUp.mockResolvedValue({ data: { session: null }, error: null });
-      signInWithPassword.mockResolvedValue({
-        data: {},
-        error: { message: "Email not confirmed", code: "email_not_confirmed" },
-      });
-      render(<LoginForm />);
-      fillForm("ada@example.com", "password123");
-      fireEvent.click(screen.getByRole("button", { name: "Create account" }));
-      await screen.findByRole("status");
-
-      fireEvent.click(screen.getByRole("button", { name: "Sign in" }));
-
-      await screen.findByRole("alert");
-      expect(screen.queryByRole("status")).toBeNull();
-    });
-  });
-
   describe("pending state", () => {
-    it("should show a spinner on Sign in and disable the other two buttons", async () => {
+    it("should show a spinner on Sign in and disable the Google button", async () => {
       signInWithPassword.mockReturnValue(new Promise(() => undefined));
       render(<LoginForm />);
       fillForm("ada@example.com", "password123");
@@ -251,9 +174,6 @@ describe("LoginForm", () => {
 
       const signingIn = await screen.findByRole("button", { name: "Signing in" });
       expect(signingIn.getAttribute("aria-busy")).toBe("true");
-      expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
-        true,
-      );
       expect(
         screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
       ).toBe(true);
@@ -268,9 +188,6 @@ describe("LoginForm", () => {
 
       expect((await screen.findByRole("alert")).textContent).toBe(GENERIC_ERROR);
       expect(screen.getByRole("button", { name: "Sign in" }).hasAttribute("disabled")).toBe(false);
-      expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
-        false,
-      );
     });
   });
 
@@ -309,6 +226,19 @@ describe("LoginForm", () => {
       });
     });
 
+    it("should clear a tick left over from the sign-up page before signing in with Google", async () => {
+      signInWithOAuth.mockResolvedValue({ data: {}, error: null });
+      document.cookie = `kl-terms-pending=${TERMS_VERSION}; path=/`;
+      render(<LoginForm />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Continue with Google" }));
+
+      await waitFor(() => {
+        expect(signInWithOAuth).toHaveBeenCalledTimes(1);
+      });
+      expect(document.cookie).not.toContain("kl-terms-pending");
+    });
+
     it("should show the generic sentence, not the server message, when Google sign-in fails", async () => {
       signInWithOAuth.mockResolvedValue({
         data: {},
@@ -322,7 +252,7 @@ describe("LoginForm", () => {
       expect(push).not.toHaveBeenCalled();
     });
 
-    it("should disable all three buttons while the Google request runs", async () => {
+    it("should disable Sign in while the Google request runs", async () => {
       signInWithOAuth.mockReturnValue(new Promise(() => undefined));
       render(<LoginForm />);
 
@@ -331,9 +261,6 @@ describe("LoginForm", () => {
       const opening = await screen.findByRole("button", { name: "Opening Google" });
       expect(opening.hasAttribute("disabled")).toBe(true);
       expect(screen.getByRole("button", { name: "Sign in" }).hasAttribute("disabled")).toBe(true);
-      expect(screen.getByRole("button", { name: "Create account" }).hasAttribute("disabled")).toBe(
-        true,
-      );
     });
 
     it("should show an error and enable the buttons again when the request throws", async () => {
@@ -346,6 +273,14 @@ describe("LoginForm", () => {
       expect(
         screen.getByRole("button", { name: "Continue with Google" }).hasAttribute("disabled"),
       ).toBe(false);
+    });
+  });
+
+  describe("sign-up", () => {
+    it("should not offer to create an account, which has a page of its own", () => {
+      render(<LoginForm />);
+
+      expect(screen.queryByRole("button", { name: "Create account" })).toBeNull();
     });
   });
 

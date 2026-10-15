@@ -36,3 +36,23 @@ export const Focused: Story = {
 export const Disabled: Story = { args: { disabled: true } };
 
 export const DisabledChecked: Story = { args: { disabled: true, defaultChecked: true } };
+
+// A sentence with links, as on the sign-up page. The box stays at the top as the text wraps.
+export const MultilineWithLinks: Story = {
+  args: {
+    multiline: true,
+    label: (
+      <>
+        I accept the <a href="/terms">Terms</a> and the <a href="/privacy">Privacy Policy</a>,
+        including storing my weight, food diary and body stats to run the app.
+      </>
+    ),
+  },
+  decorators: [
+    (Story) => (
+      <div className="max-w-xs">
+        <Story />
+      </div>
+    ),
+  ],
+};

@@ -9,6 +9,8 @@ import {
   SIGN_IN_LINK_INVALID,
   SIGN_IN_LINK_NOT_VERIFIED,
   SIGN_IN_REFUSED,
+  SIGN_UP_ACCEPTANCE,
+  SIGN_UP_SCREEN,
   describeAuthError,
   describeCheckEmail,
 } from "../../src/copy";
@@ -77,6 +79,31 @@ describe("the words on the sign in and sign up boards", () => {
   it("should pin the sign in link screen", () => {
     expect(AUTH_SCREEN.signingInLink).toBe("Signing you in");
     expect(AUTH_SCREEN.backToSignIn).toBe("Back to sign in");
+  });
+});
+
+describe("the words on the web sign up board", () => {
+  it("should pin the sign up page", () => {
+    expect(SIGN_UP_SCREEN).toEqual({
+      heading: "Create account",
+      caption: "Track intake and weigh-ins. The engine estimates the rest.",
+      emailPlaceholder: "you@example.com",
+      passwordPlaceholder: "At least 8 characters",
+      divider: "or",
+      submitLabel: "Create account",
+      footerPrompt: "Already have an account?",
+      footerLink: "Sign in",
+    });
+  });
+
+  it("should pin the acceptance statement, which reads as one sentence around two links", () => {
+    expect(SIGN_UP_ACCEPTANCE).toEqual({
+      beforeTerms: "I accept the ",
+      termsLink: "Terms",
+      betweenLinks: " and the ",
+      privacyLink: "Privacy Policy",
+      afterPrivacy: ", including storing my weight, food diary and body stats to run the app.",
+    });
   });
 });
 
