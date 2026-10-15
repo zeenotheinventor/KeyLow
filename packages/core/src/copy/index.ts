@@ -11,5 +11,6 @@ export * from "./foodRow";
 export * from "./foodSources";
 export * from "./legal";
 export * from "./nutrition";
+export * from "./portionPicker";
 export * from "./search";
 export * from "./shell";

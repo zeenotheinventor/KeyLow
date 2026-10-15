@@ -6,3 +6,5 @@ export { formatClockTime } from "./formatClockTime";
 export { instantAtLocalTime } from "./instantAtLocalTime";
 export { previousCalendarDay } from "./previousCalendarDay";
 export { clockHourOf } from "./clockHourOf";
+export { joinClockTime, parseClockTime } from "./clockTime";
+export type { ClockTime } from "./clockTime";

@@ -22,6 +22,13 @@ export type ButtonProps = {
    * main content, such as removing a portion. Every other variant keeps its own colour.
    */
   quiet?: boolean;
+  /**
+   * Ghost only: `danger` writes the label and icon in the danger colour on the plain background, with no
+   * fill and no visible border, for a destructive action that sits under the main one, such as Delete under
+   * Save. The filled `destructive` variant stays for an action that is the point of the view. Every other
+   * variant keeps its own colour.
+   */
+  tone?: "danger";
   /** Dims the button to 40 percent and stops it responding, with no motion. */
   disabled?: boolean;
   /** Keeps the label's width, hides it and shows a spinner. The button stops responding. */

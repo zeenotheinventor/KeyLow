@@ -10,4 +10,7 @@ export const storyStates = [
   "FullWidth",
   "Disabled",
   "Loading",
+  "GhostDestructive",
+  "GhostDestructiveLoading",
+  "GhostDestructiveDisabled",
 ];

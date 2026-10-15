@@ -9,4 +9,9 @@ export type MacroTileProps = {
   grams: number | null;
   /** A whole per cent of the food's energy, or null when it cannot be worked out. Never drawn for a missing macro. */
   share: number | null;
+  /**
+   * Draws a dash in place of the grams, for the portion picker while there is no valid amount. The tile is
+   * then named "Protein, no amount". Defaults to false.
+   */
+  isBlank?: boolean;
 };

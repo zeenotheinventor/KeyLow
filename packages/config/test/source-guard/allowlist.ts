@@ -45,6 +45,13 @@ export const allowlist: AllowlistEntry[] = [
   },
   {
     rule: "light-mode-coloured-text",
+    path: "apps/mobile/components/ui/Text/Text.tsx",
+    detail: "text-danger",
+    reason:
+      'The label of the ghost destructive Button (tone danger), which the M3 boards draw in the danger colour on the plain background in both schemes (design-canvas-m3 PortionScreen.dc.html, data-kilo "Button ghost destructive (proposed)", and the entry.* boards), with the icon in the same colour. KEY-205 builds it as the ticket and the boards ask. Same ruling as the field error: the boards win over the Q14 prose. Needs Zee\'s approval; if the design is ever changed so the label is not coloured in light, change the Text tone and delete this entry.',
+  },
+  {
+    rule: "light-mode-coloured-text",
     path: "apps/web/components/ui/Banner/Banner.tsx",
     detail: "text-warning",
     reason:

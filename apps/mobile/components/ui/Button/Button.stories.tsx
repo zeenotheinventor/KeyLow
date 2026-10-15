@@ -82,3 +82,31 @@ export const Loading: Story = {
     </>
   ),
 };
+
+// Delete under Save: the label and the icon in the danger colour on the plain background, large, with no
+// fill and no visible border. The filled Destructive variant stays for an action that is the point of a view.
+export const GhostDestructive: Story = {
+  args: { variant: "ghost", tone: "danger", size: "lg", icon: "Trash2", children: "Delete" },
+};
+
+export const GhostDestructiveLoading: Story = {
+  args: {
+    variant: "ghost",
+    tone: "danger",
+    size: "lg",
+    icon: "Trash2",
+    loading: true,
+    children: "Delete",
+  },
+};
+
+export const GhostDestructiveDisabled: Story = {
+  args: {
+    variant: "ghost",
+    tone: "danger",
+    size: "lg",
+    icon: "Trash2",
+    disabled: true,
+    children: "Delete",
+  },
+};
