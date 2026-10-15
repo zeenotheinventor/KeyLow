@@ -1,9 +1,10 @@
 import type { ChosenAmount } from "@keylow/core/diary";
+import type { SpoonPortion } from "@keylow/core/nutrition";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 import type { ReactNode } from "react";
 
 /** An amount of a food: a count of one of its portions, or grams, or millilitres. Core's, so the picker and its preview agree. */
-export type PortionAmount = ChosenAmount<FoodPortion>;
+export type PortionAmount = ChosenAmount<FoodPortion | SpoonPortion>;
 
 /** What the picker hands over when Add is pressed: the amount and the time the Time row shows. */
 export type PortionSelection = PortionAmount & {

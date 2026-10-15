@@ -35,7 +35,8 @@ export type BuildQuickEntryInput = EntryTiming & {
 
 /**
  * Builds a food entry ready to insert: the frozen snapshot, the nutrients scaled from it, the
- * resolved grams, and the `portion_id` of the portion when the unit is `portion` (null otherwise).
+ * resolved grams, and the `portion_id` of the portion when the unit is `portion` (null otherwise, and null
+ * for a spoon, which is not a database row).
  *
  * Throws a `RangeError` for a negative quantity or a `portion` unit without a valid portion.
  */

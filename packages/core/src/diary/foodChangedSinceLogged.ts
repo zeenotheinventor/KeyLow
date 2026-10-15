@@ -19,6 +19,14 @@ const sameNutrients = (first: NullableNutrients, second: NullableNutrients): boo
   nutrientKeys.every((key) => (first[key] ?? null) === (second[key] ?? null));
 
 /**
+ * A snapshot with no density was logged before the food had one to freeze, so only a density the food
+ * has of its own counts as a change: a density estimated from its group would otherwise flag every old
+ * entry. A snapshot with a density compares it with what a log would freeze now, own or estimated.
+ */
+const densityChanged = (food: Food, current: FoodSnapshot, snapshot: FoodSnapshot): boolean =>
+  snapshot.density === null ? food.density_g_per_ml !== null : current.density !== snapshot.density;
+
+/**
  * Whether the live food differs from what an entry's snapshot froze: its name, basis, density or any
  * nutrient the snapshot keeps. What a snapshot never keeps (brand, barcode, quality flags, micronutrients,
  * portions) does not count, since changing it cannot change the entry. It decides whether the entry
@@ -36,7 +44,7 @@ export const foodChangedSinceLogged = (food: Food, snapshot: FoodSnapshot): bool
   return (
     current.name !== snapshot.name ||
     current.basis !== snapshot.basis ||
-    current.density !== snapshot.density ||
+    densityChanged(food, current, snapshot) ||
     !sameNutrients(current.per100, snapshot.per100)
   );
 };
