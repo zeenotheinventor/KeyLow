@@ -9,10 +9,12 @@ import type { Food, FoodPortion } from "../schemas/food";
 /** The part of a portion an amount needs: its id (what a unit chip carries), its label and its size. */
 export type AmountPortion = Pick<FoodPortion, "id" | "label" | "grams" | "ml">;
 
-/** An amount of a food: a count of one of its portions, or grams, or millilitres. */
-export type ChosenAmount =
-  | { unit: "g" | "ml"; quantity: number }
-  | { unit: "portion"; quantity: number; portion: AmountPortion };
+/**
+ * An amount of a food: a count of one of its portions, or grams, or millilitres. The portion keeps the type
+ * the caller gave, so a screen that holds whole portions gets whole portions back.
+ */
+export type ChosenAmount<Portion extends AmountPortion = AmountPortion> =
+  { unit: "g" | "ml"; quantity: number } | { unit: "portion"; quantity: number; portion: Portion };
 
 /** The part of a food an amount is worked out from. A logged entry's snapshot gives the same, see `snapshotAsFood`. */
 export type AmountFood = Pick<
@@ -28,9 +30,9 @@ export type AmountSummary = {
 
 const NO_AMOUNT: AmountSummary = { caption: PORTION_PICKER.noAmountBasis, values: null };
 
-export type AmountPreview = {
+export type AmountPreview<Portion extends AmountPortion = AmountPortion> = {
   /** The amount the text and the chosen unit make, or null while it is not a number above 0. */
-  amount: ChosenAmount | null;
+  amount: ChosenAmount<Portion> | null;
   /** What the hero draws for it: the scaled values and the caption, or dashes with no amount. */
   hero: AmountSummary;
 };
@@ -41,11 +43,11 @@ function sizeOf(portion: AmountPortion): { amount: number; unit: "g" | "ml" } {
     : { amount: portion.grams, unit: "g" };
 }
 
-function amountOf(
+function amountOf<Portion extends AmountPortion>(
   unitValue: string,
-  portions: readonly AmountPortion[],
+  portions: readonly Portion[],
   quantity: number,
-): ChosenAmount | undefined {
+): ChosenAmount<Portion> | undefined {
   if (unitValue === "g" || unitValue === "ml") {
     return { unit: unitValue, quantity };
   }
@@ -72,12 +74,12 @@ function captionOf(amount: ChosenAmount): string {
  * and the entry agree. Text that is not a number above 0, a unit the food no longer has and an amount too
  * large to work out all give no amount and the dashes, never an error.
  */
-export function previewAmount(
+export function previewAmount<Portion extends AmountPortion>(
   food: AmountFood,
-  portions: readonly AmountPortion[],
+  portions: readonly Portion[],
   unitValue: string,
   quantityText: string,
-): AmountPreview {
+): AmountPreview<Portion> {
   const entered = parseFormNumber(quantityText);
   const quantity = validateQuantity(entered === undefined ? null : entered);
   if (!quantity.ok) {

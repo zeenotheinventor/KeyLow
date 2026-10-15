@@ -1,4 +1,4 @@
-import type { LogContext } from "../../lib/navigation";
+import type { LogContext } from "@keylow/core/diary";
 
 /** `own` is the sheet titled "Your foods", which lists and filters only the user's own foods. */
 export type FoodSearchScope = "all" | "own";

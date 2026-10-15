@@ -1,11 +1,6 @@
 import { isCalendarDay, parseClockTime } from "@keylow/core/dates";
 
-/**
- * Where food is being logged: the calendar day the diary shows and, when the food was added from an hour's
- * plus, that hour as `HH:mm`. These are the `day` and `time` query parameters the food sheet and the screens
- * it opens carry, with the names the diary sends. Log mode is on when `day` is present.
- */
-export type LogContext = { day: string; time?: string };
+import type { LogContext } from "@keylow/core/diary";
 
 type QueryParam = string | string[] | undefined;
 

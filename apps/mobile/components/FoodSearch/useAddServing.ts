@@ -7,18 +7,18 @@ import {
   useSupabase,
 } from "@keylow/api-client";
 import { LOG_SEARCH, SAVE_FAILED_BANNER, describeAddedFood } from "@keylow/core/copy";
+import { openingLoggedAt } from "@keylow/core/diary";
 import { servingOfSearchHit } from "@keylow/core/search";
 import { useRef } from "react";
 
 import { amountLastLogged } from "../../lib/amountLastLogged";
 import { useIsOnline } from "../../lib/connectivity";
-import { openingLoggedAt } from "../../lib/loggedAt";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { useToast } from "../ui";
 
 import type { LoggableAmount } from "../../lib/amountLastLogged";
-import type { LogContext } from "../../lib/navigation";
 import type { FoodSearchHit, RecentFood } from "@keylow/api-client";
+import type { LogContext } from "@keylow/core/diary";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 export type AddServing = {

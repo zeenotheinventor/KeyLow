@@ -11,6 +11,7 @@ import {
   describeScannedCode,
 } from "@keylow/core/copy";
 import { describeDay } from "@keylow/core/dates";
+import { clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
 import { isFoodId } from "@keylow/core/foods";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
@@ -20,7 +21,6 @@ import { PortionPicker } from "../../../components/PortionPicker";
 import { useToast } from "../../../components/ui";
 import { amountForPicker, amountLastLogged } from "../../../lib/amountLastLogged";
 import { useIsOnline } from "../../../lib/connectivity";
-import { clockTimeOn, openingLoggedAt } from "../../../lib/loggedAt";
 import { readLogContext, useCloseFoodsSheet, useGoBackInFoodsSheet } from "../../../lib/navigation";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 

@@ -44,6 +44,12 @@ describe("previewAmount", () => {
       expect(hero.values?.kcal).toBeCloseTo(148);
     });
 
+    it("should hand back the portion it was given, with every field the caller holds", () => {
+      const { amount } = previewAmount(chicken, [medium], "portion-medium", "1");
+
+      expect(amount?.unit === "portion" ? amount.portion.food_id : undefined).toBe(medium.food_id);
+    });
+
     it("should multiply the size by the count", () => {
       const { hero } = previewAmount(chicken, [medium], "portion-medium", "2");
 
