@@ -3,10 +3,13 @@ import type { TextProps as NativeTextProps } from "react-native";
 
 /**
  * The design system's eight type styles, including `label-small`, the 14 over 20 semibold the food form
- * boards draw on Remove and on Default, and the web nav, the compact search field, Button sm and the Switch label.
+ * boards draw on Remove and on Default, and the web nav, the compact search field, Button sm and the Switch
+ * label. A ninth, `ring-numeral`, is the display style at 44 over 48 that the diary canvas sets in the calorie
+ * ring. It is between the design system's sizes, so it follows the board.
  */
 export type TextVariant =
   | "display-numeral"
+  | "ring-numeral"
   | "h1"
   | "h2"
   | "body"

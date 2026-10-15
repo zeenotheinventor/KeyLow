@@ -32,6 +32,15 @@ const variants: {
     lineHeight: 60,
     letterSpacing: -1.68,
   },
+  // The calorie ring's numeral, which the diary canvas draws at 44 over 48 in the display style.
+  {
+    variant: "ring-numeral",
+    fontFamily: "Geist-SemiBold",
+    fontWeight: "600",
+    fontSize: 44,
+    lineHeight: 48,
+    letterSpacing: -1.32,
+  },
   {
     variant: "h1",
     fontFamily: "Geist-SemiBold",

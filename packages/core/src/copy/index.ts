@@ -21,6 +21,15 @@ export {
   TYPED_BARCODE_PROBLEMS,
   describeBarcodeRateLimit,
 } from "./barcode";
+export {
+  CALORIE_RING,
+  MACRO_NAMES,
+  describeCalorieRing,
+  describeEatenLine,
+  describeMacroBar,
+  describeMacroTarget,
+  describeTargetLine,
+} from "./diaryRing";
 export { GENERIC_ERROR, describeEdgeError, describeRateLimit } from "./errors";
 export {
   FOOD_FORM,

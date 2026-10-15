@@ -11,6 +11,7 @@ import type { TextProps, TextTone, TextVariant } from "./types";
 // The classes are written out so Tailwind sees them.
 const variantClassName: Record<TextVariant, string> = {
   "display-numeral": "text-display-numeral font-semibold tabular-nums",
+  "ring-numeral": "text-[44px] font-semibold leading-[48px] tracking-[-0.03em] tabular-nums",
   h1: "text-h1 font-semibold tabular-nums",
   h2: "text-h2 font-semibold tabular-nums",
   body: "text-body font-normal tabular-nums",
