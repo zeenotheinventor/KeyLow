@@ -117,4 +117,4 @@ Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design s
 - **Own foods** get an Edit action. Shared foods are never changed.
 - **Edit and copy loading, load error and not-found reuse `loading`, `error` and `not-found`** (orchestrator call, 2026-10-13). The food form has no boards of its own for those states.
 - **`quantity-proposal-m3` is not M2 scope.** MacroFactor pins a quantity field, unit chips and "Add" to detail. That needs logging, so it is drawn as an M3 proposal only.
-- **Not shown on purpose:** the barcode, saturated fat, sugars, salt and micronutrients, and a converted-from-kilojoules label (still a question for Zee).
+- **Not shown on purpose:** the barcode, saturated fat, sugars, salt and micronutrients, and a converted-from-kilojoules label (Zee, 2026-10-15: stays off, see ADR 0003 Amendment 2).
