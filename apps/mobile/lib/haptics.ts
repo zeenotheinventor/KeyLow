@@ -36,3 +36,4 @@ export const haptic = {
 
 /** The name of a haptic token, for a component that lets its caller choose the feedback. */
 export type HapticFeedbackName = keyof typeof haptic;
+// ci test, safe to delete
