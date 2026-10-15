@@ -28,6 +28,105 @@ export type Database = {
   };
   public: {
     Tables: {
+      day_logs: {
+        Row: {
+          completed_at: string | null;
+          created_at: string;
+          is_complete: boolean;
+          local_date: string;
+          note: string | null;
+          user_id: string;
+        };
+        Insert: {
+          completed_at?: string | null;
+          created_at?: string;
+          is_complete?: boolean;
+          local_date: string;
+          note?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          completed_at?: string | null;
+          created_at?: string;
+          is_complete?: boolean;
+          local_date?: string;
+          note?: string | null;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      food_log_entries: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          food_id: string | null;
+          id: string;
+          item_type: Database["public"]["Enums"]["log_item_type"];
+          kcal: number | null;
+          local_date: string;
+          logged_at: string;
+          nutrients: Json;
+          portion_id: string | null;
+          quantity: number | null;
+          recipe_id: string | null;
+          resolved_grams: number | null;
+          snapshot: Json;
+          unit: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          food_id?: string | null;
+          id?: string;
+          item_type: Database["public"]["Enums"]["log_item_type"];
+          kcal?: number | null;
+          local_date: string;
+          logged_at?: string;
+          nutrients: Json;
+          portion_id?: string | null;
+          quantity?: number | null;
+          recipe_id?: string | null;
+          resolved_grams?: number | null;
+          snapshot: Json;
+          unit?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          food_id?: string | null;
+          id?: string;
+          item_type?: Database["public"]["Enums"]["log_item_type"];
+          kcal?: number | null;
+          local_date?: string;
+          logged_at?: string;
+          nutrients?: Json;
+          portion_id?: string | null;
+          quantity?: number | null;
+          recipe_id?: string | null;
+          resolved_grams?: number | null;
+          snapshot?: Json;
+          unit?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "food_log_entries_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "food_log_entries_portion_id_fkey";
+            columns: ["portion_id"];
+            isOneToOne: false;
+            referencedRelation: "food_portions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       food_portions: {
         Row: {
           created_at: string;
@@ -336,6 +435,7 @@ export type Database = {
     };
     Enums: {
       food_source: "off" | "cofid" | "user";
+      log_item_type: "food" | "recipe" | "quick";
       nutrient_basis: "per_100g" | "per_100ml";
     };
     CompositeTypes: {
@@ -462,6 +562,7 @@ export const Constants = {
   public: {
     Enums: {
       food_source: ["off", "cofid", "user"],
+      log_item_type: ["food", "recipe", "quick"],
       nutrient_basis: ["per_100g", "per_100ml"],
     },
   },
