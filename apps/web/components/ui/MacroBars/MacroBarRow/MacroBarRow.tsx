@@ -4,8 +4,8 @@ import { formatDeltaGrams, formatGrams } from "@keylow/core/format";
 
 import type { MacroBarRowProps, MacroName } from "./types";
 
+import { overTargetOutlineOnSurface } from "@/components/ui/MacroProgressStrip";
 import { useWhipFill } from "@/lib/motion";
-import { warningInk } from "@/lib/theme/warningInk";
 import { cn } from "@/lib/utils";
 import { vars } from "@/lib/vars";
 
@@ -26,9 +26,8 @@ const barMotion = "transition-[width] duration-chart ease-whip motion-reduce:tra
 /** One macro: a colour mark and its name, the bar, then the grams eaten against the target. */
 export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRowProps) {
   const name = MACRO_NAMES[macro];
-  const { fillFraction, capFraction, isOver, overGrams } = barNumbers(eaten, target);
+  const { fillFraction, isOver, overGrams } = barNumbers(eaten, target);
   const filled = useWhipFill(fillFraction);
-  const capped = useWhipFill(capFraction);
 
   return (
     <div
@@ -48,7 +47,11 @@ export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRo
       </span>
       <span
         data-testid={`${macro}-bar`}
-        className={cn("relative overflow-hidden rounded-pill bg-border", compact ? "h-1.5" : "h-2")}
+        className={cn(
+          "relative overflow-hidden rounded-pill bg-border",
+          compact ? "h-1.5" : "h-2",
+          isOver && overTargetOutlineOnSurface[macro],
+        )}
       >
         <span
           data-testid={`${macro}-fill`}
@@ -61,16 +64,6 @@ export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRo
             barMotion,
           )}
         />
-        {isOver && (
-          <span
-            data-testid={`${macro}-cap`}
-            style={vars({ "--cap": `${capped * 100}%` })}
-            className={cn(
-              "absolute inset-y-0 right-0 w-[var(--cap)] bg-warning bg-[image:repeating-linear-gradient(-45deg,transparent_0_3px,theme(colors.surface.DEFAULT)_3px_4px)]",
-              barMotion,
-            )}
-          />
-        )}
       </span>
       <span
         className={cn(
@@ -81,7 +74,7 @@ export function MacroBarRow({ macro, eaten, target, index, compact }: MacroBarRo
         <span>{formatGrams(eaten)}</span>
         <span className="text-caption text-text-muted">{describeMacroTarget(target)}</span>
         {isOver && (
-          <span className={cn("text-caption", warningInk)}>{formatDeltaGrams(overGrams)}</span>
+          <span className="text-caption text-text-primary">{formatDeltaGrams(overGrams)}</span>
         )}
       </span>
     </div>

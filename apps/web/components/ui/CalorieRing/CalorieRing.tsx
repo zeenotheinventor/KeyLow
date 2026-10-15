@@ -11,18 +11,41 @@ import { useCountUp } from "./useCountUp";
 
 import type { CalorieRingProps } from "./types";
 
+import { overTargetRingStroke } from "@/components/ui/MacroProgressStrip";
 import { useWhipFill } from "@/lib/motion";
-import { warningInk } from "@/lib/theme/warningInk";
 import { cn } from "@/lib/utils";
 
 // The fills ease in with the whip curve over the chart duration, and sit still under reduced motion.
 const fillMotion =
   "transition-[stroke-dashoffset,stroke-dasharray] duration-chart ease-whip motion-reduce:transition-none";
 
+// Over target the ring takes two brighter outlines of its own colour (ruling 17): a 1 px gap beside the
+// stroke, then a 1.5 px line of the calories colour mixed 55 % with white, one outside and one inside.
+const outlineWidth = 1.5;
+const outlineOffset = 1.75;
+
+function captionOf({
+  hasTarget,
+  isOver,
+  label,
+}: {
+  hasTarget: boolean;
+  isOver: boolean;
+  label: string;
+}): string {
+  if (!hasTarget) {
+    return CALORIE_RING.eaten;
+  }
+
+  return isOver ? CALORIE_RING.overTarget : label;
+}
+
 /**
- * The diary's hero: the calories left as a display numeral inside a ring that fills eaten over target.
- * Past the target the ring keeps filling in warning on top, and never resets or turns to danger. The
- * numeral counts to a new value and flashes the accent as it lands. It is one image to a screen reader.
+ * The calories left as a display numeral inside a ring that fills eaten over target. Over target the
+ * ring is full and gains two outlines of its own colour mixed with white, one outside the stroke and
+ * one inside (ruling 17): no warning colour, and the numeral stays in the primary ink. A target of
+ * zero means none is set: the ring is empty and the numeral is the calories eaten. The numeral counts
+ * to a new value and flashes the accent as it lands. It is one image to a screen reader.
  */
 export function CalorieRing({
   eaten,
@@ -33,14 +56,15 @@ export function CalorieRing({
   estimate = true,
   className,
 }: CalorieRingProps) {
-  const { eatenFraction, overFraction, remainingCalories, isOver } = ringNumbers(eaten, target);
+  const { eatenFraction, remainingCalories, hasTarget, isOver } = ringNumbers(eaten, target);
   const isCompact = size < compactBelowSize;
   const centre = size / 2;
   const radius = (size - stroke) / 2;
   const circumference = ringCircumference(size, stroke);
+  const outerOutlineRadius = radius + stroke / 2 + outlineOffset;
+  const innerOutlineRadius = radius - stroke / 2 - outlineOffset;
 
   const eatenFilled = useWhipFill(eatenFraction);
-  const overFilled = useWhipFill(overFraction);
   const { value, arrivals } = useCountUp(remainingCalories);
 
   return (
@@ -54,7 +78,7 @@ export function CalorieRing({
         width={size}
         height={size}
         viewBox={`0 0 ${size} ${size}`}
-        className="block -rotate-90"
+        className="block -rotate-90 overflow-visible"
       >
         <circle
           data-testid="ring-track"
@@ -64,38 +88,36 @@ export function CalorieRing({
           strokeWidth={stroke}
           className="fill-none stroke-border"
         />
-        <circle
-          data-testid="ring-eaten-arc"
-          cx={centre}
-          cy={centre}
-          r={radius}
-          strokeWidth={stroke}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={circumference * (1 - eatenFilled)}
-          className={cn("fill-none stroke-calories", fillMotion)}
-        />
-        {overFraction > 0 && (
+        {eatenFraction > 0 && (
+          <circle
+            data-testid="ring-eaten-arc"
+            cx={centre}
+            cy={centre}
+            r={radius}
+            strokeWidth={stroke}
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={circumference * (1 - eatenFilled)}
+            className={cn("fill-none stroke-calories", fillMotion)}
+          />
+        )}
+        {isOver && (
           <>
             <circle
-              data-testid="ring-over-arc"
+              data-testid="ring-outer-outline"
               cx={centre}
               cy={centre}
-              r={radius}
-              strokeWidth={stroke}
-              strokeLinecap="round"
-              strokeDasharray={`${circumference * overFilled} ${circumference}`}
-              className={cn("fill-none stroke-warning", fillMotion)}
+              r={outerOutlineRadius}
+              strokeWidth={outlineWidth}
+              className={overTargetRingStroke}
             />
-            {/* A 2 pixel gap where the warning ends, so it reads against the calories beneath. */}
             <circle
+              data-testid="ring-inner-outline"
               cx={centre}
               cy={centre}
-              r={radius}
-              strokeWidth={stroke + 4}
-              strokeDasharray={`2 ${circumference}`}
-              strokeDashoffset={-circumference * overFilled + 1}
-              className={cn("fill-none stroke-background", fillMotion)}
+              r={innerOutlineRadius}
+              strokeWidth={outlineWidth}
+              className={overTargetRingStroke}
             />
           </>
         )}
@@ -105,18 +127,17 @@ export function CalorieRing({
           // A new key restarts the flash each time a count lands.
           key={arrivals}
           className={cn(
-            "font-semibold tabular-nums",
+            "font-semibold tabular-nums text-text-primary",
             isCompact ? "text-h1" : "text-[44px] leading-[48px] tracking-[-0.03em]",
-            isOver ? warningInk : "text-text-primary",
             arrivals > 0 && "animate-flash motion-reduce:animate-none",
           )}
         >
           {formatCalories(value)}
         </span>
-        <span className={cn("text-caption", isOver ? warningInk : "text-text-secondary")}>
-          {isOver ? CALORIE_RING.overTarget : label}
+        <span className="text-caption text-text-secondary">
+          {captionOf({ hasTarget, isOver, label })}
         </span>
-        {!isCompact && (
+        {!isCompact && hasTarget && (
           <span className="mt-0.5 flex flex-col text-caption leading-[15px] tabular-nums text-text-muted">
             <span>{describeEatenLine(eaten)}</span>
             <span>{describeTargetLine(target, estimate)}</span>

@@ -11,4 +11,5 @@ export const storyStates = [
   "LauncherCompact",
   "LauncherAdaptive",
   "LauncherFocused",
+  "LauncherDisabled",
 ];

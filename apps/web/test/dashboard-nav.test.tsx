@@ -1,4 +1,5 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { onlineManager } from "@tanstack/react-query";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
@@ -28,6 +29,7 @@ describe("DashboardNav", () => {
 
   afterEach(() => {
     cleanup();
+    onlineManager.setOnline(true);
   });
 
   it("should link the logo to the dashboard", () => {
@@ -113,6 +115,45 @@ describe("DashboardNav", () => {
       fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
 
       expect(push).toHaveBeenCalledExactlyOnceWith("/foods?panel=barcode");
+    });
+  });
+
+  describe("search while offline", () => {
+    beforeEach(() => {
+      onlineManager.setOnline(false);
+    });
+
+    it("should dim the launcher and say it is disabled, because a search cannot run offline", () => {
+      render(<DashboardNav />);
+
+      const launcher = screen.getByRole("button", { name: "Search for a food" });
+
+      expect(launcher.getAttribute("aria-disabled")).toBe("true");
+      expect(launcher.parentElement?.classList.contains("opacity-50")).toBe(true);
+    });
+
+    it("should not go to the foods page or add food, from the search or the barcode button", () => {
+      viewedDate.mockReturnValue("2026-10-14");
+      render(<DashboardNav />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Search for a food" }));
+      fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
+
+      expect(push).not.toHaveBeenCalled();
+      expect(openAddFood).not.toHaveBeenCalled();
+    });
+
+    it("should come back to full strength when the connection does", () => {
+      render(<DashboardNav />);
+
+      act(() => {
+        onlineManager.setOnline(true);
+      });
+
+      const launcher = screen.getByRole("button", { name: "Search for a food" });
+      expect(launcher.hasAttribute("aria-disabled")).toBe(false);
+      fireEvent.click(launcher);
+      expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
     });
   });
 

@@ -191,6 +191,80 @@ describe("SearchLauncher", () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  describe("disabled", () => {
+    const barcodeButton = { label: "Look up a barcode", onClick: vi.fn() };
+
+    it("should be dimmed to half, which reads the same in both themes", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} disabled />);
+
+      const frame = screen.getByRole("button", { name: "Search for a food" }).parentElement;
+
+      expect(frame?.classList.contains("opacity-50")).toBe(true);
+    });
+
+    it("should say it is disabled to assistive technology and stay in the tab order", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} disabled />);
+
+      const launcher = screen.getByRole("button", { name: "Search for a food" });
+
+      expect(launcher.getAttribute("aria-disabled")).toBe("true");
+      expect(launcher.hasAttribute("disabled")).toBe(false);
+    });
+
+    it("should not open the search when pressed", () => {
+      const onSearch = vi.fn();
+      render(<SearchLauncher label="Search for a food" onSearch={onSearch} disabled />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Search for a food" }));
+
+      expect(onSearch).not.toHaveBeenCalled();
+    });
+
+    it("should not open the barcode lookup either, and say so", () => {
+      barcodeButton.onClick.mockClear();
+      render(
+        <SearchLauncher
+          label="Search for a food"
+          onSearch={vi.fn()}
+          barcodeButton={barcodeButton}
+          disabled
+        />,
+      );
+
+      const barcode = screen.getByRole("button", { name: "Look up a barcode" });
+      fireEvent.click(barcode);
+
+      expect(barcode.getAttribute("aria-disabled")).toBe("true");
+      expect(barcodeButton.onClick).not.toHaveBeenCalled();
+    });
+
+    it("should show no hover or press overlay on a disabled barcode button", () => {
+      render(
+        <SearchLauncher
+          label="Search for a food"
+          onSearch={vi.fn()}
+          barcodeButton={barcodeButton}
+          disabled
+        />,
+      );
+
+      const { classList } = screen.getByRole("button", { name: "Look up a barcode" });
+
+      expect(classList.contains("hover:bg-transparent")).toBe(true);
+      expect(classList.contains("hover:bg-hover-overlay")).toBe(false);
+      expect(classList.contains("active:bg-press-overlay")).toBe(false);
+    });
+
+    it("should be full strength and enabled by default", () => {
+      render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} />);
+
+      const launcher = screen.getByRole("button", { name: "Search for a food" });
+
+      expect(launcher.hasAttribute("aria-disabled")).toBe(false);
+      expect(launcher.parentElement?.classList.contains("opacity-50")).toBe(false);
+    });
+  });
+
   describe("focus", () => {
     it("should keep the accent border and the ring in every theme, as the shell board draws it", () => {
       render(<SearchLauncher label="Search for a food" onSearch={vi.fn()} />);

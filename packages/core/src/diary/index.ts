@@ -1,4 +1,4 @@
-export { barNumbers, longestCapFraction } from "./barNumbers";
+export { barNumbers } from "./barNumbers";
 export type { BarNumbers } from "./barNumbers";
 export { buildLogEntry, buildQuickEntry } from "./buildLogEntry";
 export type { BuildLogEntryInput, BuildQuickEntryInput } from "./buildLogEntry";

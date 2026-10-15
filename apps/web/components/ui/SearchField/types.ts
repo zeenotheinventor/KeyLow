@@ -26,5 +26,7 @@ export type SearchLauncherProps = {
   onSearch: () => void;
   size?: SearchLauncherSize;
   barcodeButton?: BarcodeButton;
+  /** Dims the launcher and keeps it from opening anything, such as the search while offline. It stays focusable and says it is disabled. */
+  disabled?: boolean;
   className?: string;
 };

@@ -112,3 +112,15 @@ export const LauncherFocused: Story = {
     await userEvent.tab();
   },
 };
+
+// Offline the top bar's launcher is dimmed to half and opens nothing. It stays focusable.
+export const LauncherDisabled: Story = {
+  render: () => (
+    <SearchLauncher
+      label="Search for a food"
+      onSearch={() => undefined}
+      barcodeButton={barcodeButton}
+      disabled
+    />
+  ),
+};

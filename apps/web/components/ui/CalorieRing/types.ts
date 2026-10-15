@@ -1,7 +1,7 @@
 export type CalorieRingProps = {
   /** Calories eaten. Whole calories are drawn, so a fraction is rounded. */
   eaten: number;
-  /** The day's calorie target. */
+  /** The day's calorie target. Zero means none is set: an empty ring, the calories eaten as the numeral under "eaten", and no eaten or target lines. */
   target: number;
   /** The side of the square the ring is drawn in, in pixels. Under 180 it is compact: a smaller numeral and no eaten or target lines. Defaults to 200. */
   size?: number;

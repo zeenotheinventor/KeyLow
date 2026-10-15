@@ -57,14 +57,27 @@ const barcodeButtonSize = cva(
 
 const iconSize = { md: "size-5", sm: "size-4", adaptive: "size-5 lg:size-4" } as const;
 
-function BarcodeIconButton({ button, size }: { button: BarcodeButton; size: SearchLauncherSize }) {
+function BarcodeIconButton({
+  button,
+  size,
+  disabled = false,
+}: {
+  button: BarcodeButton;
+  size: SearchLauncherSize;
+  disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       aria-label={button.label}
       aria-expanded={button.expanded}
-      onClick={button.onClick}
-      className={barcodeButtonSize({ size })}
+      aria-disabled={disabled || undefined}
+      onClick={disabled ? undefined : button.onClick}
+      // A disabled button opens nothing, so it shows no hover or press overlay.
+      className={cn(
+        barcodeButtonSize({ size }),
+        disabled && "hover:bg-transparent active:bg-transparent",
+      )}
     >
       <ScanBarcode aria-hidden className={iconSize[size]} strokeWidth={iconStroke} />
     </button>
@@ -96,19 +109,28 @@ export function SearchField({
 }
 
 // The search field used as a button: it looks like the field but holds no input, because the
-// search itself happens on the foods page.
+// search itself happens on the foods page. Disabled it is dimmed to half and opens nothing, as a
+// search cannot run offline. It stays focusable, so a screen reader finds it and hears it is disabled.
 export function SearchLauncher({
   label,
   onSearch,
   size = "md",
   barcodeButton,
+  disabled = false,
   className,
 }: SearchLauncherProps) {
   return (
-    <div className={cn(searchFrame({ size, focusRing: "always" }), className)}>
+    <div
+      className={cn(
+        searchFrame({ size, focusRing: "always" }),
+        disabled && "opacity-50",
+        className,
+      )}
+    >
       <button
         type="button"
-        onClick={onSearch}
+        aria-disabled={disabled || undefined}
+        onClick={disabled ? undefined : onSearch}
         className={cn(
           "flex h-full min-w-0 flex-1 items-center gap-2 text-left text-text-muted outline-none",
           fieldText({ size }),
@@ -117,7 +139,9 @@ export function SearchLauncher({
         <Search aria-hidden className={cn("shrink-0", iconSize[size])} strokeWidth={iconStroke} />
         <span className="truncate">{label}</span>
       </button>
-      {barcodeButton !== undefined && <BarcodeIconButton button={barcodeButton} size={size} />}
+      {barcodeButton !== undefined && (
+        <BarcodeIconButton button={barcodeButton} size={size} disabled={disabled} />
+      )}
     </div>
   );
 }
