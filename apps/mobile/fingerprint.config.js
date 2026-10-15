@@ -1,4 +1,4 @@
-// Read by the @expo/fingerprint CLI (the mobile-fingerprint job in ci.yml) and by expo-updates when
+// Read by the @expo/fingerprint CLI (the mobile-fingerprint.yml workflow) and by expo-updates when
 // it resolves the `fingerprint` runtimeVersion policy for builds and `eas update`, so one file keeps
 // both on the same hash. expo-updates passes no skips of its own, so without this file the hash
 // covers every key of the Expo config.
