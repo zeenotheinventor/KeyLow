@@ -8,6 +8,7 @@ export type { EdgeErrorKind } from "./errors";
 export {
   useAcceptTerms,
   useCompleteDays,
+  useCopyDay,
   useCreateFood,
   useDebouncedValue,
   useDeleteEntry,
@@ -25,7 +26,9 @@ export {
   useQuickAdd,
   useRecentFoods,
   useRestoreEntry,
+  useSetDayComplete,
   useTermsAcceptance,
+  useUndoCopyDay,
   useUpdateEntry,
   useUpdateFood,
 } from "./hooks";
@@ -43,9 +46,11 @@ export type {
   UseFoodSearchOptions,
 } from "./hooks";
 export {
+  CopyDayPartialWriteError,
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,
   acceptTerms,
+  copyDay,
   createFood,
   fetchOffProduct,
   getDiaryDay,
@@ -63,12 +68,16 @@ export {
   restoreLogEntry,
   searchFoods,
   searchOff,
+  setDayComplete,
   softDeleteFood,
   softDeleteLogEntry,
+  undoCopyDay,
   updateFood,
   updateLogEntry,
 } from "./repos";
 export type {
+  CopiedDay,
+  CopyDayInput,
   CreatedFood,
   DayLog,
   DayTotals,
