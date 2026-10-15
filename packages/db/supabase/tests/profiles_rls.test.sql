@@ -9,7 +9,7 @@
 
 begin;
 
-select plan(18);
+select plan(19);
 
 -- Two users. The on_auth_user_created trigger creates both profiles rows.
 insert into auth.users (instance_id, id, aud, role, email) values
@@ -105,9 +105,40 @@ select results_eq(
 select throws_ok(
   $$update public.profiles set id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'$$,
   '42501',
-  'new row violates row-level security policy for table "profiles"',
+  'permission denied for table profiles',
   'user A cannot hand their row over to user B''s id'
 );
+
+-- The update grant no longer covers id, so the check above stops at the
+-- privilege and never reaches the policy. Grant it back inside this
+-- transaction (rolled back with the rest) so the policy's with-check is still
+-- asserted on its own. The select policy is also opened up for the moment,
+-- because Postgres applies it to the new row of an update too and it would
+-- raise the same error, hiding a missing with-check on the update policy.
+reset role;
+grant update (id) on public.profiles to authenticated;
+drop policy "profiles_select_own" on public.profiles;
+create policy "profiles_select_own" on public.profiles
+  for select to authenticated
+  using (true);
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated"}';
+
+select throws_ok(
+  $$update public.profiles set id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'$$,
+  '42501',
+  'new row violates row-level security policy for table "profiles"',
+  'the update policy''s with-check stops user A handing their row over to user B''s id'
+);
+
+reset role;
+revoke update (id) on public.profiles from authenticated;
+drop policy "profiles_select_own" on public.profiles;
+create policy "profiles_select_own" on public.profiles
+  for select to authenticated
+  using ((select auth.uid()) = id);
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated"}';
 
 select throws_ok(
   $$insert into public.profiles (id) values ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')$$,
