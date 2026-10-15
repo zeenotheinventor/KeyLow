@@ -2,7 +2,7 @@
 
 import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
 import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
-import { normaliseBarcode } from "@keylow/core/foods";
+import { customFoodInputFrom, normaliseBarcode } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { useRouter } from "next/navigation";
 import { useId, useRef, useState, type SubmitEvent } from "react";
@@ -10,8 +10,8 @@ import { useId, useRef, useState, type SubmitEvent } from "react";
 import { DetailsCard } from "./DetailsCard";
 import { FormActions } from "./FormActions";
 import { formErrorsFrom } from "./formErrors";
-import { foodFormValuesFrom, foodInputFrom } from "./formValues";
-import { NutritionCard, REQUIRED_NUTRIENT_FIELDS } from "./NutritionCard";
+import { formStartFrom } from "./formValues";
+import { NutritionCard } from "./NutritionCard";
 import { PortionsCard } from "./PortionsCard";
 
 import type { DetailsField } from "./DetailsCard";
@@ -66,17 +66,8 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
   const nextPortionKey = useRef(0);
 
   const startingFood = existing ?? copyOf;
-  // A US total carbohydrate includes fibre, so it is never copied. The user enters it without fibre.
-  const isCarbsIncludingFibre = copyOf?.food.quality.carbs_convention === "us_total";
-  const [startingValues] = useState<FoodFormValues>(() => {
-    const values = foodFormValuesFrom(startingFood, scannedBarcode);
-    return isCarbsIncludingFibre ? { ...values, carbs: "" } : values;
-  });
-  // On a copy, a required nutrient that starts blank is one the source did not give.
-  const [notGiven] = useState<readonly NutrientField[]>(() =>
-    copyOf === undefined
-      ? []
-      : REQUIRED_NUTRIENT_FIELDS.filter((field) => startingValues[field] === ""),
+  const [{ values: startingValues, notGiven, isCarbsIncludingFibre }] = useState(() =>
+    formStartFrom(existing, copyOf, scannedBarcode),
   );
   const [values, setValues] = useState<FoodFormValues>(startingValues);
   const [errors, setErrors] = useState<FormErrors | null>(null);
@@ -143,7 +134,7 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
 
   async function save() {
     const result = customFoodInputSchema.safeParse(
-      foodInputFrom(values, startingFood?.food.density_g_per_ml ?? null),
+      customFoodInputFrom(values, startingFood?.food.density_g_per_ml ?? null),
     );
 
     setSaveFailure(null);

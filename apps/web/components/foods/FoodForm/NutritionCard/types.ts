@@ -1,7 +1,8 @@
 import type { FoodFormValues, FormErrors } from "../types";
+import type { FoodFormNutrient } from "@keylow/core/copy";
 import type { NutrientBasis } from "@keylow/core/schemas";
 
-export type NutrientField = "kcal" | "protein" | "carbs" | "fat" | "fibre";
+export type NutrientField = FoodFormNutrient;
 
 export type NutritionCardProps = {
   basis: NutrientBasis;

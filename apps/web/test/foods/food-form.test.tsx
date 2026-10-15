@@ -291,6 +291,19 @@ describe("FoodForm", () => {
       ).toBeTruthy();
     });
 
+    it("should reject an exponent, which the form does not read as a number", () => {
+      renderForm();
+      fillRequiredFields();
+      typeInto(energy, "1e3");
+
+      save();
+
+      expect(createFood).not.toHaveBeenCalled();
+      expect(
+        screen.getByRole("textbox", { name: energy, description: "Energy must be a number" }),
+      ).toBeTruthy();
+    });
+
     it("should reject a name that is only spaces", () => {
       renderForm();
       fillRequiredFields();
@@ -373,6 +386,27 @@ describe("FoodForm", () => {
         portions: [],
       });
       expect(updateFood).not.toHaveBeenCalled();
+    });
+
+    it('should read a decimal comma as a decimal point, so "12,5" saves 12.5', async () => {
+      renderForm();
+      fillRequiredFields();
+      typeInto(protein, "12,5");
+      addPortion();
+      typeInto("Portion 1 label", "1 biscuit");
+      typeInto(portionAmount(1), "13,5");
+
+      save();
+
+      await waitFor(() => {
+        expect(createFood).toHaveBeenCalledTimes(1);
+      });
+      expect(createFood).toHaveBeenCalledWith(
+        expect.objectContaining({
+          protein_g: 12.5,
+          portions: [{ label: "1 biscuit", grams: 13.5, isDefault: false }],
+        }),
+      );
     });
 
     it("should leave blank optional fields out rather than sending empty strings or zero", async () => {
