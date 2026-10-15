@@ -12,7 +12,8 @@
     "dev:db": "pnpm --filter @keylow/db run dev:db",
     "format:check": "prettier --check .",
     "gen-types": "pnpm --filter @keylow/db run gen-types",
-    "mobile:dev": "git pull --ff-only && pnpm install && pnpm --filter @keylow/mobile start --clear"
+    "mobile:dev": "git pull --ff-only && pnpm install && pnpm --filter @keylow/mobile start --clear",
+    "storybook": "pnpm --filter @keylow/web run storybook"
   },
   "devDependencies": {
     "@keylow/config": "workspace:*",
