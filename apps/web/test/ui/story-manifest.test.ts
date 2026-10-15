@@ -9,6 +9,7 @@ import * as buttonStories from "@/components/ui/Button/Button.stories";
 import * as calorieRingStories from "@/components/ui/CalorieRing/CalorieRing.stories";
 import * as cardStories from "@/components/ui/Card/Card.stories";
 import * as checkboxStories from "@/components/ui/Checkbox/Checkbox.stories";
+import * as chipGroupStories from "@/components/ui/ChipGroup/ChipGroup.stories";
 import * as dayCompleteToggleStories from "@/components/ui/DayCompleteToggle/DayCompleteToggle.stories";
 import * as dayStepperStories from "@/components/ui/DayStepper/DayStepper.stories";
 import * as emptyStateStories from "@/components/ui/EmptyState/EmptyState.stories";
@@ -51,6 +52,7 @@ const storyModules: Record<string, object> = {
   "Button/Button.stories.tsx": buttonStories,
   "CalorieRing/CalorieRing.stories.tsx": calorieRingStories,
   "Card/Card.stories.tsx": cardStories,
+  "ChipGroup/ChipGroup.stories.tsx": chipGroupStories,
   "MacroBars/MacroBars.stories.tsx": macroBarsStories,
   "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
