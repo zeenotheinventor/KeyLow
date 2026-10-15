@@ -9,4 +9,5 @@ export const storyStates = [
   "ErrorShownElsewhere",
   "WithMissingNote",
   "Disabled",
+  "Locked",
 ];

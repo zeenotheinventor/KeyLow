@@ -118,3 +118,5 @@ export const WithMissingNote: Story = {
 };
 
 export const Disabled: Story = { args: { disabled: true, value: "165" } };
+
+export const Locked: Story = { args: { locked: true, value: "165" } };

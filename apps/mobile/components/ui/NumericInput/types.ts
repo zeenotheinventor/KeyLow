@@ -12,4 +12,6 @@ export type NumericInputProps = FieldFrameProps &
     unit?: string | undefined;
     /** Puts the macro's colour beside the label, as the food form draws Protein, Carbohydrate and Fat. */
     macro?: NumericInputMacro | undefined;
+    /** Shows a value the person cannot change, as `Input` does: the field sits on the surface, draws a lock and takes no typing. */
+    locked?: boolean | undefined;
   };

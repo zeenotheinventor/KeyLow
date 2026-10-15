@@ -12,6 +12,7 @@ import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { dockBottomPadding } from "../../lib/dockBottomPadding";
 import { foodNeedsReview, missingFieldsOf } from "../../lib/foodNeedsReview";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import {
@@ -31,10 +32,6 @@ import { startingAmount, unitOptions } from "./startingAmount";
 import { MacroHero } from "../FoodDetail/MacroHero";
 
 import type { PortionPickerProps } from "./types";
-
-// The boards leave 42 below the controls: the 34 of an iPhone's home indicator and 8. A taller navigation bar takes its own height.
-const MINIMUM_BOTTOM_INSET = 34;
-const BOTTOM_MARGIN = 8;
 
 /**
  * The page for changing the serving before a food is logged, as the portion boards draw it: the food's name
@@ -124,7 +121,7 @@ export function PortionPicker({
           <View
             className="gap-3 border-t border-border bg-surface-sheet px-4 pb-[var(--dock-bottom)] pt-4"
             style={vars({
-              "--dock-bottom": Math.max(insets.bottom, MINIMUM_BOTTOM_INSET) + BOTTOM_MARGIN,
+              "--dock-bottom": dockBottomPadding(insets.bottom),
             })}
           >
             <NumericInput

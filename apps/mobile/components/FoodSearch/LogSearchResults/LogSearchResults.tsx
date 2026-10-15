@@ -23,6 +23,7 @@ export function LogSearchResults({
         <LogIdle
           addDisabled={!canAdd}
           onAdd={addRecent}
+          onQuickAdd={logging.onQuickAdd}
           onOpen={(recent) => {
             logging.onOpenRecent(recent.foodId);
           }}
