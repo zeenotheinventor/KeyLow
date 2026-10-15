@@ -1,4 +1,4 @@
-import type { DiaryDay, Targets } from "@keylow/api-client";
+import type { DiaryDay, LogEntry, Targets } from "@keylow/api-client";
 
 export type DiaryDayContentProps = {
   day: DiaryDay;
@@ -11,8 +11,16 @@ export type DiaryDayContentProps = {
   isOnline: boolean;
   /** Yesterday has nothing to copy. */
   isYesterdayEmpty: boolean;
+  /** A copy of yesterday is under way. */
+  isCopying: boolean;
+  /** The last copy of yesterday failed: the error banner is shown. */
+  hasCopyFailed: boolean;
   /** The bars and the no-target banner open Targets. */
   onOpenTargets: () => void;
   /** Called with the hour of the plus that was pressed. */
   onAddFood: (hour: number) => void;
+  onDeleteEntry: (entry: LogEntry) => void;
+  onCopyYesterday: () => void;
+  /** Saves the day as complete or not. It rejects when the save fails. */
+  onCompleteChange: (complete: boolean) => Promise<void>;
 };

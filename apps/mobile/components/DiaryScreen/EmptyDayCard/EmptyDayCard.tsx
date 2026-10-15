@@ -7,10 +7,14 @@ import type { EmptyDayCardProps } from "./types";
 
 /**
  * The small card above 00:00 on a day with nothing logged: "Nothing logged yet", a hint, and a Copy
- * yesterday button. The button is drawn and not wired: its action is the food log interactions ticket's.
- * It is dimmed and says so when yesterday is empty too.
+ * yesterday button that copies yesterday's whole day. It is dimmed and says so when yesterday is empty too, and dimmed offline.
  */
-export function EmptyDayCard({ isYesterdayEmpty }: EmptyDayCardProps) {
+export function EmptyDayCard({
+  isYesterdayEmpty,
+  isOnline,
+  isCopying,
+  onCopyYesterday,
+}: EmptyDayCardProps) {
   return (
     <View className="mb-3">
       <Card aria-label={EMPTY_DAY.title}>
@@ -22,7 +26,14 @@ export function EmptyDayCard({ isYesterdayEmpty }: EmptyDayCardProps) {
             </Text>
           </View>
           <View className="gap-1">
-            <Button disabled={isYesterdayEmpty} fullWidth icon="Copy" variant="secondary">
+            <Button
+              disabled={isYesterdayEmpty || !isOnline}
+              fullWidth
+              icon="Copy"
+              loading={isCopying}
+              variant="secondary"
+              onPress={onCopyYesterday}
+            >
               {DIARY_ACTIONS.copyYesterday}
             </Button>
             {isYesterdayEmpty ? (

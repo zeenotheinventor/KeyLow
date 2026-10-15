@@ -37,7 +37,7 @@ const exitAnimation = {
  * It draws inside its parent, so a screen mounts it where the sheet should cover, and the parent sits
  * under a gesture handler root view.
  */
-export function BottomSheet({ open, onClose, title, children }: BottomSheetProps) {
+export function BottomSheet({ open, onClose, title, label, children }: BottomSheetProps) {
   const sheetRef = useRef<ComponentRef<typeof GorhomBottomSheet>>(null);
   const titleRef = useRef<View>(null);
   const { bottom: safeAreaBottom } = useSafeAreaInsets();
@@ -123,7 +123,7 @@ export function BottomSheet({ open, onClose, title, children }: BottomSheetProps
         <BottomSheetView>
           {/* The safe area is a runtime value no class can name, so it goes through a variable. */}
           <View
-            aria-label={title}
+            aria-label={title ?? label}
             aria-modal
             className="px-4 pb-[var(--sheet-bottom-padding)]"
             role="dialog"

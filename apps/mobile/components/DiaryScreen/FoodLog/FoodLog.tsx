@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { DayCompleteToggle, FoodRow, HourRow } from "../../ui";
@@ -17,7 +17,8 @@ const HOURS_PER_DAY = 24;
  * and no separator between them, because each row draws its own piece of the guide line and a gap would
  * break it. On a day with nothing logged the Nothing logged yet card sits above 00:00. When the hours have
  * all been measured the log scrolls once so the first food's hour, or the current hour when the day is
- * empty, is near the top. Key it by the day, so a new day scrolls again.
+ * empty, is near the top. Key it by the day, so a new day scrolls again, and so the day complete switch,
+ * which belongs to the day, is a new one for it.
  */
 export function FoodLog({
   hours,
@@ -27,12 +28,18 @@ export function FoodLog({
   isOnline,
   isComplete,
   isYesterdayEmpty,
+  isCopying,
   onAddFood,
+  onDeleteEntry,
+  onCopyYesterday,
+  onCompleteChange,
 }: FoodLogProps) {
   const scrollViewRef = useRef<ScrollView>(null);
   const listTop = useRef<number | null>(null);
   const hourTops = useRef(new Map<number, number>());
   const hasScrolled = useRef(false);
+  // The switch is made new after each save that failed, so a press that was never answered is forgotten.
+  const [failedSaves, setFailedSaves] = useState(0);
 
   const isEmpty = hours.every((group) => group.entries.length === 0);
   const startHour = hours.find((group) => group.entries.length > 0)?.hour ?? currentHour;
@@ -57,7 +64,14 @@ export function FoodLog({
 
   return (
     <ScrollView ref={scrollViewRef} className="flex-1" contentContainerClassName="px-4 pb-6 pt-2">
-      {isEmpty ? <EmptyDayCard isYesterdayEmpty={isYesterdayEmpty} /> : null}
+      {isEmpty ? (
+        <EmptyDayCard
+          isCopying={isCopying}
+          isOnline={isOnline}
+          isYesterdayEmpty={isYesterdayEmpty}
+          onCopyYesterday={onCopyYesterday}
+        />
+      ) : null}
       <View
         role="list"
         onLayout={(event) => {
@@ -84,14 +98,31 @@ export function FoodLog({
                 key={entry.id}
                 {...entryRowProps(entry, timeZone)}
                 layout="diary"
+                // A change needs a connection, so a row offers no delete offline.
+                onDelete={
+                  isOnline
+                    ? () => {
+                        onDeleteEntry(entry);
+                      }
+                    : undefined
+                }
                 onPress={() => undefined}
               />
             ))}
           </HourRow>
         ))}
       </View>
-      {/* Pressing the toggle is wired with the food log interactions. */}
-      <DayCompleteToggle className="mt-4" complete={isComplete} disabled={!isOnline} />
+      <DayCompleteToggle
+        key={failedSaves}
+        className="mt-4"
+        complete={isComplete}
+        disabled={!isOnline}
+        onChange={(complete) => {
+          onCompleteChange(complete).catch(() => {
+            setFailedSaves((count) => count + 1);
+          });
+        }}
+      />
     </ScrollView>
   );
 }

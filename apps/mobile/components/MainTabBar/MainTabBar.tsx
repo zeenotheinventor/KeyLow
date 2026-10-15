@@ -1,11 +1,12 @@
 import { ADD_FOOD_BUTTON_LABEL, SEARCH_LAUNCHER, TAB_BAR_LABEL } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
+import { useState } from "react";
 import { View } from "react-native";
 
 import { useIsOnline } from "../../lib/connectivity";
 import { foodSearchHref } from "../../lib/navigation";
 import { useViewedDay } from "../../lib/viewedDay";
-import { RouterTabBar, SearchLauncher } from "../ui";
+import { RouterTabBar, SearchLauncher, useToastClearance } from "../ui";
 
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 
@@ -18,6 +19,8 @@ const screensWithLauncher: readonly string[] = ["dashboard", "diary"];
  * food search sheet, which is the `foods` stack over the tabs. The scan control opens the scanner in it.
  * On the Diary they open it for the day on view (`?day=`), which means now on that day. Offline, the
  * launcher and the centre plus are dimmed and open nothing, because a food could not be logged.
+ * The launcher stands on the tab bar, so a toast would sit behind it: the bar measures the launcher and
+ * raises every toast by its height while it is drawn, whichever screen raises the toast.
  */
 export function MainTabBar(props: BottomTabBarProps) {
   const router = useRouter();
@@ -25,6 +28,9 @@ export function MainTabBar(props: BottomTabBarProps) {
   const hasLauncher = activeName !== undefined && screensWithLauncher.includes(activeName);
   const isOnline = useIsOnline();
   const viewedDay = useViewedDay();
+  const [launcherHeight, setLauncherHeight] = useState(0);
+
+  useToastClearance(hasLauncher ? launcherHeight : 0);
 
   function openSearch() {
     if (isOnline) {
@@ -35,15 +41,21 @@ export function MainTabBar(props: BottomTabBarProps) {
   return (
     <View className="bg-background">
       {hasLauncher ? (
-        <SearchLauncher
-          disabled={!isOnline}
-          label={SEARCH_LAUNCHER.label}
-          scanLabel={SEARCH_LAUNCHER.scanLabel}
-          onPress={openSearch}
-          onScanPress={() => {
-            router.push("/foods/scan");
+        <View
+          onLayout={(event) => {
+            setLauncherHeight(event.nativeEvent.layout.height);
           }}
-        />
+        >
+          <SearchLauncher
+            disabled={!isOnline}
+            label={SEARCH_LAUNCHER.label}
+            scanLabel={SEARCH_LAUNCHER.scanLabel}
+            onPress={openSearch}
+            onScanPress={() => {
+              router.push("/foods/scan");
+            }}
+          />
+        </View>
       ) : null}
       <RouterTabBar
         {...props}

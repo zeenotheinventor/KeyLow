@@ -42,9 +42,9 @@ export const Default: Story = {
   ),
 };
 
-// The date picker board has no title of its own: its contents carry the month.
+// The date picker board has no title of its own: its contents carry the month, and the sheet is named by its label.
 export const WithoutTitle: Story = {
-  args: { children: null },
+  args: { label: "Choose a date", children: null },
   render: (args) => (
     <BottomSheet {...args}>
       <Text variant="h2">October 2026</Text>

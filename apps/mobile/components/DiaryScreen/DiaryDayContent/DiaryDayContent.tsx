@@ -1,4 +1,4 @@
-import { NO_TARGET_BANNER, OFFLINE_BANNER } from "@keylow/core/copy";
+import { COPY_FAILED_BANNER, NO_TARGET_BANNER, OFFLINE_BANNER } from "@keylow/core/copy";
 import { groupEntriesByHour, progressBars, sumEntries } from "@keylow/core/diary";
 import { View } from "react-native";
 
@@ -9,7 +9,7 @@ import type { DiaryDayContentProps } from "./types";
 
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets), the banners for no
- * target and for offline, and the hour-by-hour log. The bars add up the entries on screen with core's
+ * target, for offline and for a copy that failed, and the hour-by-hour log. The bars add up the entries on screen with core's
  * `sumEntries`, so they always agree with the rows.
  */
 export function DiaryDayContent({
@@ -20,8 +20,13 @@ export function DiaryDayContent({
   isToday,
   isOnline,
   isYesterdayEmpty,
+  isCopying,
+  hasCopyFailed,
   onOpenTargets,
   onAddFood,
+  onDeleteEntry,
+  onCopyYesterday,
+  onCompleteChange,
 }: DiaryDayContentProps) {
   return (
     <>
@@ -41,6 +46,7 @@ export function DiaryDayContent({
         {isOnline ? null : (
           <Banner body={OFFLINE_BANNER.body} title={OFFLINE_BANNER.title} variant="offline" />
         )}
+        {hasCopyFailed ? <Banner sentence title={COPY_FAILED_BANNER} variant="error" /> : null}
       </View>
       <FoodLog
         // A new day is a new log, so it scrolls to its own first food.
@@ -48,11 +54,15 @@ export function DiaryDayContent({
         currentHour={currentHour}
         hours={groupEntriesByHour(day.entries, timeZone)}
         isComplete={day.dayLog?.is_complete ?? false}
+        isCopying={isCopying}
         isOnline={isOnline}
         isToday={isToday}
         isYesterdayEmpty={isYesterdayEmpty}
         timeZone={timeZone}
         onAddFood={onAddFood}
+        onCompleteChange={onCompleteChange}
+        onCopyYesterday={onCopyYesterday}
+        onDeleteEntry={onDeleteEntry}
       />
     </>
   );

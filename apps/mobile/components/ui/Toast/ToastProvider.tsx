@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { AccessibilityInfo, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -10,13 +18,19 @@ type CurrentToast = ToastOptions & { id: number };
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
+// Kept apart from `ToastContext`, so a screen that only raises toasts does not render again when the
+// clearance changes.
+const ToastClearanceContext = createContext<((points: number) => void) | undefined>(undefined);
+
 /**
  * Shows one toast at a time, above the tab bar. Mount it once, above every screen that shows one and
- * inside the safe area provider.
+ * inside the safe area provider. A screen with a bar standing on the tab bar raises every toast over it
+ * with `useToastClearance`.
  */
 export function ToastProvider({ children }: ToastProviderProps) {
   const [current, setCurrent] = useState<CurrentToast | undefined>(undefined);
   const lastId = useRef(0);
+  const [clearance, setClearance] = useState(0);
   const { bottom: bottomInset } = useSafeAreaInsets();
 
   // iOS has no live region, so every toast is spoken through the accessibility service, once per show,
@@ -38,6 +52,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     <Toast
       // A new toast is a new element, so it fades in again and gets its own full wait.
       key={id}
+      bottomClearance={clearance}
       bottomInset={bottomInset}
       {...options}
       onAction={() => {
@@ -55,10 +70,12 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   return (
     <ToastContext.Provider value={value}>
-      {children}
-      <View className="absolute inset-0" pointerEvents="box-none">
-        {current === undefined ? null : renderToast(current)}
-      </View>
+      <ToastClearanceContext.Provider value={setClearance}>
+        {children}
+        <View className="absolute inset-0" pointerEvents="box-none">
+          {current === undefined ? null : renderToast(current)}
+        </View>
+      </ToastClearanceContext.Provider>
     </ToastContext.Provider>
   );
 }
@@ -73,4 +90,25 @@ export function useToast(): ToastContextValue {
     throw new Error("useToast must be used inside a ToastProvider");
   }
   return context;
+}
+
+/**
+ * Raises every toast by `points` while the calling screen is mounted, and puts them back when it goes. For a
+ * screen with a bar standing on the tab bar, such as the diary's search dock, which a toast would sit behind.
+ * It is the provider's, not the toast's, because a toast is often raised from another screen, such as the
+ * portion picker saving and going back, and must still clear the bar of the screen it lands on. Pass the
+ * height of the bar as measured with `onLayout`, and 0 while it is not drawn.
+ */
+export function useToastClearance(points: number): void {
+  const setClearance = useContext(ToastClearanceContext);
+  if (setClearance === undefined) {
+    throw new Error("useToastClearance must be used inside a ToastProvider");
+  }
+
+  useEffect(() => {
+    setClearance(points);
+    return () => {
+      setClearance(0);
+    };
+  }, [points, setClearance]);
 }

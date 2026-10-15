@@ -12,6 +12,7 @@ import {
 import { ScrollView } from "react-native";
 
 import { DiaryScreen } from "../components/DiaryScreen";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import {
   createDiaryQueryClient,
@@ -56,7 +57,9 @@ async function renderDiary() {
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <DiaryScreen />
+        <ToastProvider>
+          <DiaryScreen />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );

@@ -52,6 +52,7 @@ function OpenToast({
   onClose,
   duration = defaultDuration,
   bottomInset = 0,
+  bottomClearance = 0,
 }: Omit<ToastProps, "open">) {
   const { scheme } = useTheme();
   const animatedStyle = useFadeInStyle();
@@ -85,7 +86,9 @@ function OpenToast({
   return (
     <View
       className={placementClassName}
-      style={vars({ "--toast-bottom": tabBarHeight + bottomInset + gapAboveTabBar })}
+      style={vars({
+        "--toast-bottom": tabBarHeight + bottomInset + gapAboveTabBar + bottomClearance,
+      })}
       onTouchCancel={() => {
         setIsTouched(false);
       }}

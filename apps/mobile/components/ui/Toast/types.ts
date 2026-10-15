@@ -23,6 +23,11 @@ export type ToastProps = {
    * `useSafeAreaInsets`, as it gives the tab bar its own. Defaults to 0.
    */
   bottomInset?: number | undefined;
+  /**
+   * Extra points to sit above the tab bar, for a bar that stands on it, such as the search dock. The
+   * provider fills this from `useToastClearance`. Defaults to 0.
+   */
+  bottomClearance?: number | undefined;
 };
 
 /** What a screen passes to `show`. The provider owns opening, closing and placement. */
