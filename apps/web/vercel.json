@@ -1,1 +1,4 @@
-{ "ignoreCommand": "npx turbo-ignore" }
+{
+  "git": { "deploymentEnabled": { "main": true, "**": false } },
+  "ignoreCommand": "npx turbo-ignore"
+}
