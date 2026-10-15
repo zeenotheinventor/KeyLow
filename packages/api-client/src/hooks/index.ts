@@ -37,6 +37,8 @@ export { useRecentFoods } from "./useRecentFoods";
 export { useRestoreEntry } from "./useRestoreEntry";
 export { useSetDayComplete } from "./useSetDayComplete";
 export { useProfileTimeZone } from "./useProfileTimeZone";
+export { useSyncTimeZone } from "./useSyncTimeZone";
+export type { UseSyncTimeZoneInput } from "./useSyncTimeZone";
 export { useTargets } from "./useTargets";
 export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useUndoCopyDay } from "./useUndoCopyDay";

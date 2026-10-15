@@ -29,6 +29,7 @@ export {
   useRestoreEntry,
   useSetDayComplete,
   useProfileTimeZone,
+  useSyncTimeZone,
   useTargets,
   useTermsAcceptance,
   useUndoCopyDay,
@@ -49,6 +50,7 @@ export type {
   UseFoodByBarcodeOptions,
   UseFoodByBarcodeReturn,
   UseFoodSearchOptions,
+  UseSyncTimeZoneInput,
 } from "./hooks";
 export {
   CopyDayPartialWriteError,
@@ -83,6 +85,7 @@ export {
   updateFood,
   updateLogEntry,
   updateMyTargets,
+  updateMyTimeZone,
 } from "./repos";
 export type {
   CopiedDay,
