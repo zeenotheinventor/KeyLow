@@ -131,6 +131,21 @@ describe("BottomSheet", () => {
       expect(screen.queryByLabelText("Log weight")).not.toBeOnTheScreen();
     });
 
+    it("should be named by its label, with no heading drawn, when it has a label and no title", async () => {
+      await renderSheet({ title: undefined, label: "Choose a date" });
+
+      const dialog = screen.getByLabelText("Choose a date");
+      expect(dialog).toHaveProp("role", "dialog");
+      expect(screen.queryByRole("heading")).not.toBeOnTheScreen();
+    });
+
+    it("should name the dialog by its title when it has both", async () => {
+      await renderSheet({ label: "Choose a date" });
+
+      expect(screen.getByLabelText("Log weight")).toHaveProp("role", "dialog");
+      expect(screen.queryByLabelText("Choose a date")).not.toBeOnTheScreen();
+    });
+
     it("should leave its controls reachable, which a grouped dialog would not", async () => {
       await renderSheet({ children: <Text role="button">Save</Text> });
 

@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, userEvent } from "@testing-library/reac
 import { AccessibilityInfo, Pressable, Text } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
-import { Toast, ToastProvider, useToast } from "../../components/ui";
+import { Toast, ToastProvider, useToast, useToastClearance } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -209,6 +209,22 @@ describe("Toast", () => {
         left: 16,
         right: 16,
       });
+    });
+  });
+
+  describe("clearance", () => {
+    it("should sit higher by the clearance it is given, for a bar such as the search dock", async () => {
+      await renderToast({ bottomInset: 34, bottomClearance: 57 });
+
+      expect(await screen.findByTestId("toast")).toHaveStyle({
+        bottom: tabBarHeight + 34 + 12 + 57,
+      });
+    });
+
+    it("should add nothing without a clearance", async () => {
+      await renderToast({ bottomInset: 34 });
+
+      expect(await screen.findByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 34 + 12 });
     });
   });
 
@@ -461,6 +477,106 @@ describe("ToastProvider", () => {
 
     await expect(render(<Screen toasts={{}} />)).rejects.toThrow(
       "useToast must be used inside a ToastProvider",
+    );
+  });
+});
+
+// A screen that holds the clearance while it is mounted, as a screen with a bar above the tab bar does.
+function ScreenWithBar({ height }: { height: number }) {
+  useToastClearance(height);
+  return null;
+}
+
+describe("useToastClearance", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    registerAppStyles(kitStyles);
+    setReduceMotion(false);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  // The default is the tab bar, the safe area under it (none in the mocked one) and 12 points.
+  const defaultBottom = tabBarHeight + 12;
+
+  function renderWithBar(bar: React.ReactNode) {
+    return render(
+      inScheme(
+        "dark",
+        <ToastProvider>
+          {bar}
+          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
+        </ToastProvider>,
+      ),
+    );
+  }
+
+  it("should raise every toast the provider shows by the height, whichever screen raises it", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await renderWithBar(<ScreenWithBar height={57} />);
+
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom + 57 });
+  });
+
+  it("should leave the toast where it was without the hook", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await renderWithBar(null);
+
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom });
+  });
+
+  it("should put the toast back when the screen that held the clearance goes", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const view = await renderWithBar(<ScreenWithBar height={57} />);
+    await view.rerender(
+      inScheme(
+        "dark",
+        <ToastProvider>
+          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
+        </ToastProvider>,
+      ),
+    );
+
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom });
+  });
+
+  it("should follow the height when it changes, as a bar measured again does", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const view = await renderWithBar(<ScreenWithBar height={57} />);
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+    await view.rerender(
+      inScheme(
+        "dark",
+        <ToastProvider>
+          <ScreenWithBar height={80} />
+          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
+        </ToastProvider>,
+      ),
+    );
+
+    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom + 80 });
+  });
+
+  it("should fail outside a provider, as useToast does", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(render(<ScreenWithBar height={57} />)).rejects.toThrow(
+      "useToastClearance must be used inside a ToastProvider",
     );
   });
 });

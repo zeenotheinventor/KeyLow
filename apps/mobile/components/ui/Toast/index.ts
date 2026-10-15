@@ -1,5 +1,5 @@
 export { Toast } from "./Toast";
-export { ToastProvider, useToast } from "./ToastProvider";
+export { ToastProvider, useToast, useToastClearance } from "./ToastProvider";
 export type {
   ToastContextValue,
   ToastOptions,

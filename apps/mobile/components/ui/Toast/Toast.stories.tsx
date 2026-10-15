@@ -81,6 +81,17 @@ export const AboveTabBar: Story = {
   args: { icon: "Trash2", actionLabel: "Undo", onAction: () => undefined },
 };
 
+// The diary boards put the toast's bottom edge at 152, above the search dock that stands on the tab bar: the
+// dock's height is the clearance.
+export const AboveSearchDock: Story = {
+  args: {
+    icon: "Trash2",
+    actionLabel: "Undo",
+    onAction: () => undefined,
+    bottomClearance: 57,
+  },
+};
+
 function ToastButtons() {
   const { show } = useToast();
   return (

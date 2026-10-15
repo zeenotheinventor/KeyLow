@@ -6,5 +6,6 @@ export const storyStates = [
   "MessageOnly",
   "LongMessage",
   "AboveTabBar",
+  "AboveSearchDock",
   "WithProvider",
 ];
