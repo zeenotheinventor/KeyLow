@@ -1,5 +1,7 @@
 /** The buttons under the form of a logged entry, as the entry boards draw them. */
 export const ENTRY_SCREEN = {
+  /** The title of the screen while its entry loads or cannot be shown. A loaded entry is titled by what it is. */
+  title: "Entry",
   saveAction: "Save",
   deleteAction: "Delete",
 };

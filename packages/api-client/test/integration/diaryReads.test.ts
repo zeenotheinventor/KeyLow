@@ -6,6 +6,7 @@ import { createTestUser, deleteCreatedTestUsers } from "./support/users";
 import {
   getDiaryDay,
   getDiaryWeek,
+  getLogEntry,
   listCompleteDays,
   listRecentFoods,
 } from "../../src/repos/diary";
@@ -284,6 +285,40 @@ describe("reading the diary against the local stack with real user JWTs", () => 
 
     it("should list nothing for user B", async () => {
       expect(await listRecentFoods(userB.client)).toEqual([]);
+    });
+  });
+  describe("an entry by its id", () => {
+    const day = "2026-10-26";
+    const ids: Record<string, string> = {};
+
+    beforeAll(async () => {
+      ids.live = await entryAt(oats, day, "08:00", 70);
+      ids.removed = await entryAt(oats, day, "09:00");
+      const removal = await userA.client
+        .from("food_log_entries")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", ids.removed);
+      expect(removal.error).toBeNull();
+    });
+
+    it("should read the user's own live entry", async () => {
+      const entry = await getLogEntry(userA.client, ids.live ?? "");
+
+      expect(entry).toMatchObject({
+        id: ids.live,
+        local_date: day,
+        item_type: "food",
+        food_id: oats.id,
+        snapshot: { kind: "food", quantity: 70, unit: "g" },
+      });
+    });
+
+    it("should read nothing for an entry the user deleted", async () => {
+      expect(await getLogEntry(userA.client, ids.removed ?? "")).toBeNull();
+    });
+
+    it("should read nothing of user A's entry for user B", async () => {
+      expect(await getLogEntry(userB.client, ids.live ?? "")).toBeNull();
     });
   });
 });

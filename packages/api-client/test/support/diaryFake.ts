@@ -22,7 +22,7 @@ const compareStored = (first: StoredEntry, second: StoredEntry) =>
  */
 export function installDiaryFake(server: SetupServer, seed: LogEntry[] = []) {
   const rows: StoredEntry[] = seed.map((entry) => ({ ...entry, deleted_at: null }));
-  const requests = { dayReads: 0, recentReads: 0, dayLogReads: 0, writes: 0 };
+  const requests = { dayReads: 0, recentReads: 0, dayLogReads: 0, entryReads: 0, writes: 0 };
   const control: {
     writeGate: Promise<void> | null;
     readGate: Promise<void> | null;
@@ -65,6 +65,14 @@ export function installDiaryFake(server: SetupServer, seed: LogEntry[] = []) {
             snapshot: row.snapshot,
             foods: { deleted_at: null },
           })),
+        );
+      }
+      const entryId = params.get("id")?.replace("eq.", "");
+      if (entryId !== undefined) {
+        requests.entryReads += 1;
+        return postgrestRows(
+          request,
+          live.filter((row) => row.id === entryId),
         );
       }
       requests.dayReads += 1;

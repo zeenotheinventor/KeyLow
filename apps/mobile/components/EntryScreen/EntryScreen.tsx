@@ -1,0 +1,72 @@
+import { useLogEntry, useProfileTimeZone } from "@keylow/api-client";
+import { ENTRY_SCREEN } from "@keylow/core/copy";
+import { isEntryId } from "@keylow/core/diary";
+import { useRouter } from "expo-router";
+
+import { FoodEntryForm } from "./FoodEntryForm";
+import { QuickEntryForm } from "./QuickEntryForm";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { EntryLoadState } from "../EntryLoadState";
+
+import type { EntryScreenProps } from "./types";
+
+/**
+ * What a diary row opens: a logged food or a quick add, by the entry's id. It waits for the entry and for
+ * the profile's time zone, which the time is read in, and draws the food's form or the quick add's. Nothing
+ * is read while the terms gate is up. Back, a save and a delete return to where the user came from.
+ */
+export function EntryScreen({ id }: EntryScreenProps) {
+  const router = useRouter();
+  const isReadEnabled = useReadsEnabled();
+  const isValidId = isEntryId(id);
+  const entry = useLogEntry(id, { enabled: isReadEnabled && isValidId });
+  const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled });
+
+  function leave() {
+    // A cold link to this screen has nothing before it, so the user goes to the diary instead.
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/diary");
+    }
+  }
+
+  function renderState(state: "loading" | "error" | "notFound") {
+    return (
+      <EntryLoadState
+        state={state}
+        title={ENTRY_SCREEN.title}
+        onBack={leave}
+        onRetry={() => {
+          void Promise.all([
+            entry.isError ? entry.refetch() : undefined,
+            profileTimeZone.isError ? profileTimeZone.refetch() : undefined,
+          ]);
+        }}
+      />
+    );
+  }
+
+  if (!isValidId) {
+    return renderState("notFound");
+  }
+  if ((entry.isError && entry.data === undefined) || profileTimeZone.isError) {
+    return renderState("error");
+  }
+  // An entry the cache already holds is not drawn while the terms gate is up: nothing of the diary is.
+  if (!isReadEnabled || entry.data === undefined || profileTimeZone.data === undefined) {
+    return renderState("loading");
+  }
+  if (entry.data === null) {
+    return renderState("notFound");
+  }
+
+  // A signed in user always has a profile row, which the database creates. If it is missing the day is UTC.
+  const timeZone = profileTimeZone.data ?? "UTC";
+
+  return entry.data.item_type === "food" ? (
+    <FoodEntryForm entry={entry.data} timeZone={timeZone} onLeave={leave} />
+  ) : (
+    <QuickEntryForm entry={entry.data} timeZone={timeZone} onLeave={leave} />
+  );
+}

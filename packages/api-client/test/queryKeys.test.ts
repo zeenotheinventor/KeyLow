@@ -94,8 +94,14 @@ describe("keys.diary", () => {
     expect(keys.diary.week("2026-10-12").slice(0, 2)).toEqual(keys.diary.weeks);
   });
 
+  it("should key one entry under the prefix of every entry key", () => {
+    expect(keys.diary.entries).toEqual(["diary", "entry"]);
+    expect(keys.diary.entry("entry-1")).toEqual(["diary", "entry", "entry-1"]);
+  });
+
   it("should nest every diary key under the diary root so one invalidation covers them all", () => {
     for (const key of [
+      keys.diary.entry("entry-1"),
       keys.diary.day("2026-10-15"),
       keys.diary.week("2026-10-12"),
       keys.diary.completeDays("2026-10"),

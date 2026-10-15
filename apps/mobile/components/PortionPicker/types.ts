@@ -1,4 +1,5 @@
 import type { Food, FoodPortion } from "@keylow/core/schemas";
+import type { ReactNode } from "react";
 
 /** An amount of a food: a count of one of its portions, or grams, or millilitres. */
 export type PortionAmount =
@@ -28,8 +29,19 @@ export type PortionPickerProps = {
   isSaving: boolean;
   /** Shows that the last Add was not saved. */
   hasSaveError: boolean;
+  /** False while the connection is lost: Add, Save and Delete stop responding. Defaults to true. */
+  isOnline?: boolean | undefined;
+  /**
+   * Draws the picker for a logged entry, which the food's own review does not apply to: Save in place of Add,
+   * with this Delete under it. The food is then the entry's own snapshot, and `time` is the entry's.
+   */
+  onDelete?: (() => void) | undefined;
+  /** A notice above the hero, such as the entry's "This food has changed" banner with its action. */
+  banner?: ReactNode;
+  /** A line of text above the hero, such as the entry's note that its food has been deleted. */
+  caption?: string | undefined;
   onSubmit: (selection: PortionSelection) => void;
-  /** Opens the copy form, for a food that has to be reviewed before its first log. */
-  onCopy: () => void;
+  /** Opens the copy form, for a food that has to be reviewed before its first log. A logged entry has none. */
+  onCopy?: (() => void) | undefined;
   onBack: () => void;
 };

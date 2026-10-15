@@ -1,5 +1,6 @@
 import {
   DIARY_PROBLEMS,
+  ENTRY_SCREEN,
   FOOD_FORM,
   FOOD_REVIEW_BANNER,
   PORTION_PICKER,
@@ -49,6 +50,10 @@ export function PortionPicker({
   note,
   isSaving,
   hasSaveError,
+  isOnline = true,
+  onDelete,
+  banner,
+  caption,
   onSubmit,
   onCopy,
   onBack,
@@ -66,7 +71,9 @@ export function PortionPicker({
 
   const { amount, hero } = previewAmount(food, portions, unitValue, quantityText);
   const options = unitOptions(food, portions);
-  const needsReview = foodNeedsReview(food);
+  const isEditing = onDelete !== undefined;
+  // A logged entry keeps the values it was saved with, so the food's own review does not apply to it.
+  const needsReview = !isEditing && foodNeedsReview(food);
   const chosenPortion = portions.find((portion) => portion.id === unitValue);
   const unitSuffix =
     chosenPortion === undefined
@@ -105,6 +112,7 @@ export function PortionPicker({
                 variant="review"
               />
             ) : null}
+            {banner}
             {hasSaveError ? <Banner sentence title={SAVE_FAILED_BANNER} variant="error" /> : null}
             {note === undefined ? null : (
               <View className="flex-row items-center gap-2">
@@ -113,6 +121,11 @@ export function PortionPicker({
                   {note}
                 </Text>
               </View>
+            )}
+            {caption === undefined ? null : (
+              <Text tone="secondary" variant="caption">
+                {caption}
+              </Text>
             )}
             <MacroHero amount={hero} food={food} />
             <PerHundredList food={food} />
@@ -138,7 +151,15 @@ export function PortionPicker({
               onChange={setUnitValue}
             />
             {needsReview ? (
-              <Button fullWidth icon="Copy" size="lg" variant="primary" onPress={onCopy}>
+              <Button
+                fullWidth
+                icon="Copy"
+                size="lg"
+                variant="primary"
+                onPress={() => {
+                  onCopy?.();
+                }}
+              >
                 {FOOD_REVIEW_BANNER.action}
               </Button>
             ) : (
@@ -151,20 +172,34 @@ export function PortionPicker({
                     setIsTimePickerOpen(true);
                   }}
                 />
-                <Button
-                  fullWidth
-                  disabled={amount === null}
-                  haptic="confirm"
-                  loading={isSaving}
-                  size="lg"
-                  onPress={() => {
-                    if (amount !== null) {
-                      onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
-                    }
-                  }}
-                >
-                  {PORTION_PICKER.addAction}
-                </Button>
+                <View className="gap-1">
+                  <Button
+                    fullWidth
+                    disabled={amount === null || !isOnline}
+                    haptic="confirm"
+                    loading={isSaving}
+                    size="lg"
+                    onPress={() => {
+                      if (amount !== null) {
+                        onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
+                      }
+                    }}
+                  >
+                    {isEditing ? ENTRY_SCREEN.saveAction : PORTION_PICKER.addAction}
+                  </Button>
+                  {isEditing ? (
+                    <Button
+                      disabled={!isOnline}
+                      fullWidth
+                      icon="Trash2"
+                      tone="danger"
+                      variant="ghost"
+                      onPress={onDelete}
+                    >
+                      {ENTRY_SCREEN.deleteAction}
+                    </Button>
+                  ) : null}
+                </View>
               </>
             )}
           </View>

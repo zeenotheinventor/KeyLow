@@ -468,7 +468,10 @@ function byTimeline(first: Row, second: Row): number {
   );
 }
 
-async function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+export async function fakeFetch(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
   const table = pathname.split("/").pop() ?? "";

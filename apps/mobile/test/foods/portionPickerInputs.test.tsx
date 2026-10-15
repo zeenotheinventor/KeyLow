@@ -2,6 +2,7 @@ import "react-native-gesture-handler/jestSetup";
 
 import { buildFoodPortion } from "@keylow/core/testing";
 import { render, screen, userEvent } from "@testing-library/react-native";
+import { Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { foodFixture, savedFoodId } from "./support/apiClientMock";
@@ -139,6 +140,112 @@ describe("PortionPicker as a component", () => {
       await user.press(screen.getByRole("button", { name: "Add" }));
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("offline", () => {
+    it("should turn Add off while the connection is lost", async () => {
+      await renderPicker({ isOnline: false });
+
+      expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    });
+
+    it("should have Add on while it is not said to be lost", async () => {
+      await renderPicker();
+
+      expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+    });
+  });
+
+  describe("for a logged entry", () => {
+    const onDelete = jest.fn();
+
+    beforeEach(() => {
+      onDelete.mockReset();
+    });
+
+    it("should offer Save with a Delete under it, in place of Add", async () => {
+      await renderPicker({ onDelete, isNow: false });
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+    });
+
+    it("should hand over the amount, the unit and the entry's own time on Save", async () => {
+      const { user, onSubmit } = await renderPicker({
+        onDelete,
+        isNow: false,
+        time: "12:40",
+        initialAmount: { unit: "g", quantity: 150 },
+      });
+
+      await user.press(screen.getByRole("button", { name: "Save" }));
+
+      expect(onSubmit).toHaveBeenCalledWith({
+        unit: "g",
+        quantity: 150,
+        time: "12:40",
+        isNow: false,
+      });
+    });
+
+    it("should delete when Delete is pressed", async () => {
+      const { user } = await renderPicker({ onDelete, isNow: false });
+
+      await user.press(screen.getByRole("button", { name: "Delete" }));
+
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep Save off for an amount that is not above 0", async () => {
+      const { user } = await renderPicker({
+        onDelete,
+        isNow: false,
+        initialAmount: { unit: "g", quantity: 150 },
+      });
+
+      await user.clear(screen.getByLabelText("Amount (g)"));
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
+    it("should turn Save and Delete off while the connection is lost", async () => {
+      await renderPicker({ onDelete, isNow: false, isOnline: false });
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    });
+
+    it("should not ask for a review of a food with a value missing, which an entry keeps as saved", async () => {
+      await renderPicker({
+        onDelete,
+        isNow: false,
+        food: { ...foodFixture, carbs_g: null },
+      });
+
+      expect(screen.queryByText("Needs review")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Copy to your foods" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: /^Time/ })).toBeOnTheScreen();
+    });
+  });
+
+  describe("a notice and a caption", () => {
+    it("should draw the banner it is given above the hero, and the caption under the note", async () => {
+      await renderPicker({
+        banner: <Text>Banner words</Text>,
+        caption: "Caption words",
+      });
+
+      expect(screen.getByText("Banner words")).toBeOnTheScreen();
+      expect(screen.getByText("Caption words")).toBeOnTheScreen();
+    });
+
+    it("should draw neither when there are none", async () => {
+      await renderPicker();
+
+      expect(screen.queryByText("Banner words")).not.toBeOnTheScreen();
     });
   });
 });

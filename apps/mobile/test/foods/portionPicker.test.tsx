@@ -1,5 +1,6 @@
 import "react-native-gesture-handler/jestSetup";
 import { SNAPSHOT_VERSION } from "@keylow/core/diary";
+import { onlineManager } from "@tanstack/react-query";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
@@ -299,6 +300,26 @@ describe("portion picker", () => {
       await user.press(addButton());
 
       expect(mockLogFood).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("offline", () => {
+    afterEach(() => {
+      onlineManager.setOnline(true);
+    });
+
+    it("should turn Add off while the connection is lost, and on again when it is back", async () => {
+      await renderPicker({ day: "2026-10-15" });
+
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+      expect(addButton()).toBeDisabled();
+
+      await act(() => {
+        onlineManager.setOnline(true);
+      });
+      expect(addButton()).toBeEnabled();
     });
   });
 
