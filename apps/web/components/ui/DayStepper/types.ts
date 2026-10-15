@@ -1,3 +1,5 @@
+import type { Ref } from "react";
+
 export type DayStepperProps = {
   /** The day on show. Only its calendar day in `timeZone` matters. */
   date: Date;
@@ -9,5 +11,12 @@ export type DayStepperProps = {
   onChange?: (date: Date) => void;
   /** Asked for when the label or the calendar button is pressed. */
   onPickDate?: () => void;
+  /** Gives the calendar button to a screen that opens a popover from it, so focus can go back to it. */
+  calendarButtonRef?: Ref<HTMLButtonElement>;
+  /**
+   * Whether the popover that `onPickDate` opens is open. Set it, true or false, and the calendar button
+   * says it opens a dialog and whether it is open. Leave it out when `onPickDate` opens nothing.
+   */
+  isPickerOpen?: boolean;
   className?: string;
 };

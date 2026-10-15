@@ -17,10 +17,11 @@ import type { WeekGridCellKind, WeekGridCellProps } from "./types";
 import { cn } from "@/lib/utils";
 
 // Below the large breakpoint a cell is a row of a list: the name, then the calories and the bar, then the
-// state. From it a cell is a card in a column. The middle and last groups dissolve at that width, so the
-// card's parts stack in the order the design draws them.
+// state. A row is 56 px of content plus its padding, as the design draws it (its box is the content box),
+// so it is 72 px high before its divider. From the large breakpoint a cell is a card in a column. The
+// middle and last groups dissolve at that width, so the card's parts stack in the order the design draws them.
 const cellClassName =
-  "grid min-h-[56px] grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-3 py-2 first:border-t-0 lg:flex lg:min-h-0 lg:flex-col lg:items-stretch lg:gap-2 lg:rounded-large lg:border lg:p-3 lg:shadow-card lg:first:border-t";
+  "box-content grid min-h-[56px] grid-cols-[72px_minmax(0,1fr)_auto] items-center gap-x-3 border-t border-border px-3 py-2 first:border-t-0 lg:flex lg:min-h-0 lg:flex-col lg:items-stretch lg:gap-2 lg:rounded-large lg:border lg:p-3 lg:shadow-card lg:first:border-t";
 
 // Each class is written out whole so Tailwind can see it.
 const kindClassNames = {
@@ -78,7 +79,7 @@ export function WeekGridCell({
           </>
         ) : (
           <>
-            <span className="flex flex-wrap items-baseline gap-x-1 tabular-nums">
+            <span className="flex items-baseline gap-1 tabular-nums">
               <span className="text-caption text-text-secondary lg:text-h2 lg:text-text-primary">
                 {formatCalories(totals.kcal)}
               </span>

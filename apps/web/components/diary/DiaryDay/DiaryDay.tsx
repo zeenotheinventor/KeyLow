@@ -13,6 +13,8 @@ import { useEffect, useState } from "react";
 import { DayHeader } from "../DayHeader";
 import { DiaryDayContent } from "../DiaryDayContent";
 import { DiaryLoading } from "../DiaryLoading";
+import { DiaryWeek } from "../DiaryWeek";
+import { WeekStepper } from "../WeekStepper";
 
 import type { DiaryDayProps } from "./types";
 import type { WeekStripWeekChange } from "@/components/ui/WeekStrip";
@@ -32,7 +34,8 @@ const TARGETS_HREF = "/more/targets";
  * week strip and, under it, the day. The day comes from the address, so it can be shared and the back
  * button steps through the days. Until the first day has loaded a skeleton stands in for the whole body.
  * After that the header and the strip stay on screen whatever the next day is doing, so a day that is
- * slow to load never leaves the person without a way to another day. The week view is KEY-212's.
+ * slow to load never leaves the person without a way to another day. The week view takes the body's place
+ * and the day stepper takes the title's place, and reads the week alone.
  */
 export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
   const router = useRouter();
@@ -54,9 +57,10 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
     };
   }, [viewedDate, setViewedDate]);
 
-  const dayQuery = useDiaryDay(viewedDate);
-  const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate);
-  const targetsQuery = useTargets();
+  // The week view reads the week and the targets itself, and has no use for the day.
+  const dayQuery = useDiaryDay(viewedDate, { enabled: view === "day" });
+  const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate, { enabled: view === "day" });
+  const targetsQuery = useTargets({ enabled: view === "day" });
 
   const day = dayQuery.data;
   const targets = targetsQuery.data;
@@ -144,6 +148,17 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
         title={describeDiaryTitle(instantAtLocalTime(viewedDate, NOON, 0, timeZone), now, timeZone)}
         today={today}
         view={view}
+        weekStepper={
+          <WeekStepper
+            selectedDate={viewedDate}
+            today={today}
+            now={now}
+            timeZone={timeZone}
+            onSelectDate={(localDate) => {
+              go(localDate, "week");
+            }}
+          />
+        }
         onSelectDate={(localDate) => {
           go(localDate, "day");
         }}
@@ -151,7 +166,11 @@ export function DiaryDay({ date, view, timeZone }: DiaryDayProps) {
           go(viewedDate, nextView);
         }}
       />
-      {view === "day" && <div className="flex flex-col gap-4 md:gap-5">{renderBody()}</div>}
+      {view === "day" ? (
+        <div className="flex flex-col gap-4 md:gap-5">{renderBody()}</div>
+      ) : (
+        <DiaryWeek viewedDate={viewedDate} today={today} timeZone={timeZone} />
+      )}
     </>
   );
 }

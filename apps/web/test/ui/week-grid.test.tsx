@@ -362,6 +362,15 @@ describe("WeekGrid", () => {
       expect(list.className).toContain("overflow-hidden");
     });
 
+    it("should be a row 56 px of content high with its padding around it, as the design draws it", async () => {
+      renderGrid();
+
+      const css = await compileUtilities(cellOf("Mon 12").className);
+
+      expect(css).toContain("box-sizing: content-box");
+      expect(css).toContain("min-height: 56px");
+    });
+
     it("should be a 44 px target for the date link and Copy to today", () => {
       renderGrid();
 

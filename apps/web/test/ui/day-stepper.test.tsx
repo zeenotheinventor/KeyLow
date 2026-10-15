@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { createRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { compileUtilities, reducedMotionRules } from "./compileUtilities";
@@ -129,6 +130,35 @@ describe("DayStepper", () => {
       expect(
         screen.getByRole("button", { name: "Today, 15 October. Choose a date" }).className,
       ).toContain("focus-visible:ring-2");
+    });
+  });
+
+  describe("a popover opened from the calendar button", () => {
+    it("should hand the calendar button to a screen that opens a popover from it", () => {
+      const calendarButtonRef = createRef<HTMLButtonElement>();
+      renderStepper({ calendarButtonRef });
+
+      expect(calendarButtonRef.current).toBe(screen.getByRole("button", { name: "Choose a date" }));
+    });
+
+    it("should say the popover is open or shut on the calendar button when the screen tells it", () => {
+      const { rerender } = renderStepper({ isPickerOpen: false });
+      const calendarButton = () => screen.getByRole("button", { name: "Choose a date" });
+
+      expect(calendarButton().getAttribute("aria-haspopup")).toBe("dialog");
+      expect(calendarButton().getAttribute("aria-expanded")).toBe("false");
+
+      rerender(<DayStepper date={today} today={today} timeZone="UTC" isPickerOpen />);
+
+      expect(calendarButton().getAttribute("aria-expanded")).toBe("true");
+    });
+
+    it("should say nothing of a popover when the screen has none", () => {
+      renderStepper();
+      const calendarButton = screen.getByRole("button", { name: "Choose a date" });
+
+      expect(calendarButton.getAttribute("aria-haspopup")).toBeNull();
+      expect(calendarButton.getAttribute("aria-expanded")).toBeNull();
     });
   });
 
