@@ -14,6 +14,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       variant,
       size,
       iconOnly,
+      tone,
       asChild = false,
       loading = false,
       loadingLabel = "Loading",
@@ -26,7 +27,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     // Only a button that was disabled on purpose is dimmed. A loading one is inert too, but it
     // stays at full strength, as the login-pending board draws it.
     const classes = cn(
-      buttonVariants({ variant, size, iconOnly, className }),
+      buttonVariants({ variant, size, iconOnly, tone, className }),
       disabled === true && "opacity-40",
     );
 

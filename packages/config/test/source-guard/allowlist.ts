@@ -52,6 +52,13 @@ export const allowlist: AllowlistEntry[] = [
   },
   {
     rule: "light-mode-coloured-text",
+    path: "apps/web/components/ui/Button/buttonVariants.ts",
+    detail: "text-danger",
+    reason:
+      'The label of the ghost destructive Button (tone danger), which the M3 boards draw in the danger colour on the plain background in both schemes (design-canvas-m3 WebDiaryScreen.dc.html, data-kilo "Button ghost destructive (proposed)"), with the icon in the same colour. It is the web twin of the mobile entry for the same button, with the same ruling: Zee approved the danger label in light mode. If the design is ever changed so the label is not coloured in light, change the variant and delete this entry.',
+  },
+  {
+    rule: "light-mode-coloured-text",
     path: "apps/web/components/ui/Banner/Banner.tsx",
     detail: "text-warning",
     reason:
