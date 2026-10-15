@@ -1,3 +1,4 @@
+import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { HttpResponse } from "msw";
 
 import type { Food, FoodPortion } from "@keylow/core/schemas";
@@ -8,45 +9,31 @@ export const AUTH_USER_URL = "http://127.0.0.1:54321/auth/v1/user";
 
 export const SIGNED_IN_USER_ID = "11111111-1111-4111-8111-111111111111";
 
-export const foodRow = (overrides: Partial<Food> = {}): Food => ({
-  id: "22222222-2222-4222-8222-222222222222",
-  source: "user",
-  source_ref: null,
-  owner_id: SIGNED_IN_USER_ID,
-  name: "Protein flapjack",
-  brand: null,
-  barcode: null,
-  basis: "per_100g",
-  density_g_per_ml: null,
-  kcal: 410,
-  protein_g: 22,
-  fat_g: 14,
-  sat_fat_g: null,
-  carbs_g: 45,
-  sugars_g: null,
-  fibre_g: 6,
-  salt_g: null,
-  micros: {},
-  quality: {},
-  food_group: null,
-  fetched_at: null,
-  deleted_at: null,
-  created_at: "2026-10-07T10:00:00.123456+00:00",
-  ...overrides,
-});
+export const foodRow = (overrides: Partial<Food> = {}): Food =>
+  buildFood({
+    id: "22222222-2222-4222-8222-222222222222",
+    owner_id: SIGNED_IN_USER_ID,
+    name: "Protein flapjack",
+    kcal: 410,
+    protein_g: 22,
+    fat_g: 14,
+    carbs_g: 45,
+    fibre_g: 6,
+    created_at: "2026-10-07T10:00:00.123456+00:00",
+    ...overrides,
+  });
 
-export const portionRow = (overrides: Partial<FoodPortion> = {}): FoodPortion => ({
-  id: "33333333-3333-4333-8333-333333333333",
-  food_id: "22222222-2222-4222-8222-222222222222",
-  owner_id: SIGNED_IN_USER_ID,
-  label: "1 bar",
-  grams: 60,
-  ml: null,
-  is_default: true,
-  position: 0,
-  created_at: "2026-10-07T10:00:00.123456+00:00",
-  ...overrides,
-});
+export const portionRow = (overrides: Partial<FoodPortion> = {}): FoodPortion =>
+  buildFoodPortion({
+    id: "33333333-3333-4333-8333-333333333333",
+    food_id: "22222222-2222-4222-8222-222222222222",
+    owner_id: SIGNED_IN_USER_ID,
+    label: "1 bar",
+    grams: 60,
+    is_default: true,
+    created_at: "2026-10-07T10:00:00.123456+00:00",
+    ...overrides,
+  });
 
 /**
  * Answers the way PostgREST does: a single object when the caller asked for one

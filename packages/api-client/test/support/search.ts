@@ -1,3 +1,4 @@
+import { buildOffCandidate } from "@keylow/core/testing";
 import { HttpResponse } from "msw";
 
 import { foodRow } from "./postgrest";
@@ -25,19 +26,18 @@ export const searchHitRows = (count: number): FoodSearchHit[] =>
     }),
   );
 
-export const offCandidate = (overrides: Partial<OffCandidate> = {}): OffCandidate => ({
-  code: "5000000000017",
-  name: "Chicken soup",
-  brand: "Test Brand",
-  basis: "per_100g",
-  kcal: 45,
-  protein_g: 2.5,
-  fat_g: 1.5,
-  carbs_g: 5,
-  fibre_g: 0.5,
-  quality: {},
-  ...overrides,
-});
+export const offCandidate = (overrides: Partial<OffCandidate> = {}): OffCandidate =>
+  buildOffCandidate({
+    code: "5000000000017",
+    name: "Chicken soup",
+    brand: "Test Brand",
+    kcal: 45,
+    protein_g: 2.5,
+    fat_g: 1.5,
+    carbs_g: 5,
+    fibre_g: 0.5,
+    ...overrides,
+  });
 
 /** The error body every Edge Function answers with. */
 export const edgeErrorResponse = (

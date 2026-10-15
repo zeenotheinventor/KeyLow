@@ -1,3 +1,5 @@
+import { buildOffCandidate } from "@keylow/core/testing";
+
 import { mockApiClient } from "./apiClientMock";
 
 import type { FoodSearchResult } from "@keylow/api-client";
@@ -13,7 +15,7 @@ export const idleSearch: FoodSearchResult = {
   localError: null,
 };
 
-export const offCandidateFixture: OffCandidate = {
+export const offCandidateFixture: OffCandidate = buildOffCandidate({
   code: "5000168001234",
   name: "Oat drink",
   brand: "Oatly",
@@ -23,8 +25,7 @@ export const offCandidateFixture: OffCandidate = {
   fat_g: 1.5,
   carbs_g: 6.7,
   fibre_g: 0.8,
-  quality: {},
-};
+});
 
 type OwnFoodsState =
   | { isPending: true; isError: false; data: undefined }

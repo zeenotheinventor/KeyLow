@@ -30,7 +30,7 @@ ESLint enforces the dependency rules for `src/` (`import-x/no-nodejs-modules` an
 | `src/engine/`    | Trend, expenditure and targets                                                   | Empty, filled in M6        |
 | `test/`          | Vitest tests, mirroring the `src/` folder structure                              |                            |
 
-Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/foods`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`, `@keylow/core/format`, `@keylow/core/copy`, `@keylow/core/search`), and `@keylow/core` re-exports the public surface.
+Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/foods`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`, `@keylow/core/format`, `@keylow/core/copy`, `@keylow/core/search`), and `@keylow/core` re-exports the public surface. The exception is `@keylow/core/testing` (`buildFood`, `buildFoodPortion`, `buildOffCandidate`): test builders that only test code imports, never shipped code, and the root export leaves it out.
 
 ## Formatting, copy and search presentation
 
