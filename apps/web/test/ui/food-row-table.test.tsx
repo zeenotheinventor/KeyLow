@@ -124,6 +124,32 @@ describe("FoodTable", () => {
   });
 });
 
+describe("FoodRow table, with values not given", () => {
+  it("should write a macro that is not given as a dash with no unit", () => {
+    renderTable({ macros: { protein: "5.6", carbs: null, fat: null, description: "unused" } });
+
+    const row = screen.getAllByRole("row")[1] as HTMLElement;
+    const cells = within(row).getAllByRole("cell");
+
+    expect(cells.map((cell) => cell.textContent)).toEqual([
+      "Porridge oats08:05 · 50 g",
+      "5.6 g",
+      "–",
+      "–",
+      "187 kcal",
+      "",
+    ]);
+  });
+
+  it("should write energy that is not given as a dash with no unit", () => {
+    renderTable({ energy: undefined });
+
+    const row = screen.getAllByRole("row")[1] as HTMLElement;
+
+    expect(within(row).getAllByRole("cell")[4]?.textContent).toBe("–");
+  });
+});
+
 describe("FoodRow table", () => {
   it("should be a row of cells", () => {
     renderTable();

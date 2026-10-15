@@ -25,15 +25,24 @@ const guideLineClassName =
  * break the guide line. The numbers are the web diary board's: a 20 px column and a 12 px gap for the
  * line and its node, a 28 px chip and a 44 px plus.
  */
-export function HourRow({ hour, label, foodCount, isNow = false, onAdd, children }: HourRowProps) {
+export function HourRow({
+  hour,
+  label,
+  foodCount,
+  isNow = false,
+  ref,
+  onAdd,
+  children,
+}: HourRowProps) {
   return (
     // The group carries a label because it names the hour for a screen reader, such as "08:00, 2 foods"
     // or "09:00, nothing logged", which is what the list of 24 hours is read as. A group is not a
     // widget, so the plus and the foods inside stay reachable on their own.
     <div
+      ref={ref}
       role="group"
       aria-label={describeHourGroup(label, foodCount)}
-      className="group/hour grid grid-cols-[20px_minmax(0,1fr)] gap-x-3"
+      className="group/hour grid scroll-mt-2 grid-cols-[20px_minmax(0,1fr)] gap-x-3"
     >
       <div aria-hidden className="relative">
         <span className={guideLineClassName} />

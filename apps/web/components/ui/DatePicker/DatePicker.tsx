@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 const panelClassName =
-  "w-[340px] max-w-full rounded-large border border-border bg-surface-sheet p-4 text-text-primary shadow-sheet";
+  "w-[340px] max-w-[calc(100vw-2rem)] rounded-large border border-border bg-surface-sheet p-4 text-text-primary shadow-sheet";
 
 /**
  * A month grid in a popover, Monday first, for choosing a day: a ring on today, a fill on the day on

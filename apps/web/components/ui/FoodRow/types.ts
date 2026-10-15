@@ -64,6 +64,18 @@ export type FoodLogRowProps = {
 };
 
 /**
+ * The macros of a table row. A value that is null is written as a dash with no unit, such as the
+ * macros of a quick add made with calories alone.
+ */
+export type FoodTableRowMacros = {
+  protein: string | null;
+  carbs: string | null;
+  fat: string | null;
+  /** Not used by the table, which writes the values in cells; it is the stacked row's sentence. */
+  description: string;
+};
+
+/**
  * A logged food at the wide width, one row of the diary's table: the name and the time and amount, then
  * protein, carbs, fat and energy in columns, and Edit and Delete buttons that show on hover and on focus
  * within the row. Put it inside an element with `role="table"`, under a `FoodTableHeader`.
@@ -73,10 +85,10 @@ export type FoodTableRowProps = {
   nameSegments: readonly FoodNameSegment[];
   /** The line under the name: the time and amount ("08:05 · 50 g"). It is one line. */
   caption?: string | undefined;
-  /** The energy, already formatted, in kcal. */
-  energy: string;
+  /** The energy, already formatted, in kcal. Leave it out for an entry that has none, and the cell is a dash. */
+  energy?: string | undefined;
   /** The macros as `formatGrams` writes them. The table adds the unit. */
-  macros: FoodRowMacros;
+  macros: FoodTableRowMacros;
   onEdit: () => void;
   onDelete: () => void;
   className?: string | undefined;

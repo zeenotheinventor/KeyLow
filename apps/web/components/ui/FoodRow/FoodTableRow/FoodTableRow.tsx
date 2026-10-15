@@ -47,12 +47,18 @@ export function FoodTableRow({
       </div>
       {macroColumns.map((macro) => (
         <div key={macro} role="cell" className="text-right text-body tabular-nums">
-          {`${macros[macro]} ${FOOD_ROW.gramUnit}`}
+          {macros[macro] === null ? FOOD_ROW.notGivenMark : `${macros[macro]} ${FOOD_ROW.gramUnit}`}
         </div>
       ))}
       <div role="cell" className="text-right tabular-nums">
-        <span className="text-body-strong">{energy}</span>{" "}
-        <span className="text-caption text-text-muted">{FOOD_ROW.energyUnit}</span>
+        {energy === undefined ? (
+          FOOD_ROW.notGivenMark
+        ) : (
+          <>
+            <span className="text-body-strong">{energy}</span>{" "}
+            <span className="text-caption text-text-muted">{FOOD_ROW.energyUnit}</span>
+          </>
+        )}
       </div>
       {/* The buttons are 44 px targets. The negative margin keeps them from making the row taller than its text. */}
       <div

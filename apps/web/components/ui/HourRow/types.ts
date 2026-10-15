@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
 export type HourRowProps = {
   /** The hour of the day, 0 to 23. `onAdd` is called with it. */
@@ -9,6 +9,8 @@ export type HourRowProps = {
   foodCount: number;
   /** The current hour: its chip carries an accent dot named "Current hour". Defaults to false. */
   isNow?: boolean;
+  /** The row's element, so the screen can scroll an hour into view. */
+  ref?: Ref<HTMLDivElement> | undefined;
   /** Called with the hour when the plus is pressed. */
   onAdd: (hour: number) => void;
   /**

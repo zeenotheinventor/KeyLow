@@ -28,6 +28,8 @@ describe("PageFrame", () => {
     ["shell", { phone: [24, 24], desktop: [40, 40] }],
     ["foodSearch", { phone: [20, 20], desktop: [32, 32] }],
     ["foodRecord", { phone: [16, 16], desktop: [24, 24] }],
+    ["diary", { phone: [16, 16], desktop: [24, 24] }],
+    ["targets", { phone: [16, 16], desktop: [32, 32] }],
   ] as const)(
     "should pad the %s family top and bottom as its boards draw it",
     async (variant, expected) => {

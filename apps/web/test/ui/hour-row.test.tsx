@@ -114,7 +114,9 @@ describe("HourRow", () => {
     it("should leave no gap or margin between hours", () => {
       renderHour();
 
-      expect(screen.getByRole("group").className).not.toMatch(/\b(m[tby]-|gap-\d|gap-y-|space-y-)/);
+      expect(screen.getByRole("group").className).not.toMatch(
+        /(^|\s)(m[tby]-|gap-\d|gap-y-|space-y-)/,
+      );
     });
   });
 

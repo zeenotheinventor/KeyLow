@@ -1,16 +1,18 @@
-import { BookOpen } from "lucide-react";
-
-import { ComingSoon } from "../ComingSoon";
 import { PageFrame } from "../PageFrame";
 
-export default function DiaryPage() {
+import { DiaryScreen } from "@/components/diary";
+import { parseDiaryDate, parseDiaryView } from "@/lib/diary";
+
+type DiaryPageProps = {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function DiaryPage({ searchParams }: DiaryPageProps) {
+  const { date, view } = await searchParams;
+
   return (
-    <PageFrame variant="shell">
-      <ComingSoon
-        title="Diary"
-        icon={BookOpen}
-        body="Your logged foods will appear here, day by day."
-      />
+    <PageFrame variant="diary">
+      <DiaryScreen date={parseDiaryDate(date)} view={parseDiaryView(view)} />
     </PageFrame>
   );
 }

@@ -6,5 +6,6 @@ export type {
   FoodRowLayout,
   FoodRowMacros,
   FoodRowProps,
+  FoodTableRowMacros,
   FoodTableRowProps,
 } from "./types";

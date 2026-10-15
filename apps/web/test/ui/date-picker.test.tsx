@@ -85,9 +85,7 @@ describe("DatePicker", () => {
 
   it("should put the 1st of October 2026 under Thursday", () => {
     renderPicker();
-    const firstRow = screen.getAllByRole("row")[1];
-
-    const cells = within(firstRow as HTMLElement).getAllByRole("gridcell");
+    const cells = screen.getAllByRole("gridcell").slice(0, 7);
 
     expect(cells.map((cellElement) => cellElement.textContent)).toEqual([
       "",

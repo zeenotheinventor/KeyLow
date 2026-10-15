@@ -3,9 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
 
-const { push, pathname } = vi.hoisted(() => ({
+const { push, pathname, openAddFood, viewedDate } = vi.hoisted(() => ({
   push: vi.fn(),
   pathname: vi.fn<() => string>(),
+  openAddFood: vi.fn<(request: { date: string; time?: string }) => void>(),
+  viewedDate: vi.fn<() => string | undefined>(),
+}));
+
+vi.mock("@/lib/foodLogActions", () => ({
+  useFoodLogActions: () => ({ openAddFood, viewedDate: viewedDate() }),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -17,6 +23,7 @@ describe("DashboardNav", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     pathname.mockReturnValue("/diary");
+    viewedDate.mockReturnValue(undefined);
   });
 
   afterEach(() => {
@@ -88,6 +95,16 @@ describe("DashboardNav", () => {
       fireEvent.click(screen.getByRole("button", { name: "Search for a food" }));
 
       expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
+    });
+
+    it("should open add food for the day on view, with no time, when the diary shows a day", () => {
+      viewedDate.mockReturnValue("2026-10-14");
+      render(<DashboardNav />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Search for a food" }));
+
+      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: "2026-10-14" });
+      expect(push).not.toHaveBeenCalled();
     });
 
     it("should go to the foods page with the barcode panel open from the barcode button", () => {
