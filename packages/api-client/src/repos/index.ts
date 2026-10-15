@@ -1,9 +1,9 @@
 // Plain async functions over SupabaseClient<Database> land here from M2 onward.
-export { getDiaryDay, getDiaryWeek, listCompleteDays, listRecentFoods } from "./diary";
+export { getDiaryDay, getDiaryWeek, getLogEntry, listCompleteDays, listRecentFoods } from "./diary";
 export type { DiaryDay, DiaryWeekDay, RecentFood } from "./diary";
 export { CopyDayPartialWriteError, copyDay, undoCopyDay } from "./diaryCopy";
 export type { CopiedDay, CopyDayInput } from "./diaryCopy";
-export type { DayLog, DayTotals, LogEntry } from "./diarySchemas";
+export type { DayLog, DayTotals, FoodLogEntry, LogEntry, QuickLogEntry } from "./diarySchemas";
 export { setDayComplete } from "./dayLogs";
 export {
   logFood,
@@ -12,7 +12,13 @@ export {
   softDeleteLogEntry,
   updateLogEntry,
 } from "./diaryWrites";
-export type { EntryTimeChange, EntryUpdate, LogFoodInput, LogQuickEntryInput } from "./diaryWrites";
+export type {
+  EntryTimeChange,
+  EntryUpdate,
+  LogFoodInput,
+  LogQuickEntryInput,
+  QuickEntryValues,
+} from "./diaryWrites";
 export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,

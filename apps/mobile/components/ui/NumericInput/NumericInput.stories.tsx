@@ -117,4 +117,9 @@ export const WithMissingNote: Story = {
   args: { missingNote: "Not given" },
 };
 
+// A note that asks the person to look again, such as macros that do not add up to the calories.
+export const WithWarningHelper: Story = {
+  args: { helper: "Macros add up to 311 kcal", helperTone: "warning", value: "165" },
+};
+
 export const Disabled: Story = { args: { disabled: true, value: "165" } };

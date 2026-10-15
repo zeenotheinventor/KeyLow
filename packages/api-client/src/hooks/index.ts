@@ -28,6 +28,7 @@ export type {
 } from "./useFoodSearch";
 export { useFoodWithPortions } from "./useFoodWithPortions";
 export type { FoodWithPortionsState } from "./useFoodWithPortions";
+export { useLogEntry } from "./useLogEntry";
 export { useLogFood } from "./useLogFood";
 export { useMaterialiseOffProduct } from "./useMaterialiseOffProduct";
 export { useOwnFoods } from "./useOwnFoods";

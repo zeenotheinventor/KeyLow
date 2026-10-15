@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import {
   getDiaryDay,
   getDiaryWeek,
+  getLogEntry,
   listCompleteDays,
   listRecentFoods,
 } from "../../src/repos/diary";
@@ -342,4 +343,66 @@ describe("listRecentFoods", () => {
       expect(recorded).toEqual([]);
     },
   );
+});
+
+describe("getLogEntry", () => {
+  it("should return the live entry with that id", async () => {
+    const entry = quickEntryRow();
+    answerWith({ entries: [entry] });
+
+    const found = await getLogEntry(createTestClient(), entry.id);
+
+    expect(found).toEqual(entry);
+  });
+
+  it("should ask for the entry by its id among the live entries", async () => {
+    answerWith({});
+
+    await getLogEntry(createTestClient(), "55555555-5555-4555-8555-555555555555");
+
+    const [request] = requestsTo("food_log_entries");
+    expect(request?.searchParams.get("id")).toBe("eq.55555555-5555-4555-8555-555555555555");
+    expect(request?.searchParams.get("deleted_at")).toBe("is.null");
+  });
+
+  it("should return null when there is no live entry with that id", async () => {
+    answerWith({ entries: [] });
+
+    expect(
+      await getLogEntry(createTestClient(), "55555555-5555-4555-8555-555555555555"),
+    ).toBeNull();
+  });
+
+  it("should throw without asking when the id is not an id", async () => {
+    answerWith({});
+
+    await expect(getLogEntry(createTestClient(), "not-an-id")).rejects.toThrow(RangeError);
+    expect(recorded).toEqual([]);
+  });
+
+  it("should throw an error that names the failed read when the database refuses", async () => {
+    server.use(
+      http.get(`${REST_URL}/food_log_entries`, () => postgrestError(500, "XX000", "unavailable")),
+    );
+
+    await expect(
+      getLogEntry(createTestClient(), "55555555-5555-4555-8555-555555555555"),
+    ).rejects.toThrow("Could not load the entry: unavailable");
+  });
+
+  it("should leave the entry values out of the error when the row has an unexpected shape", async () => {
+    const malformed = foodEntryRow({ quantity: -1 });
+    answerWith({ entries: [{ ...malformed, snapshot: { ...malformed.snapshot, name: 9 } }] });
+
+    let message = "";
+    try {
+      await getLogEntry(createTestClient(), malformed.id);
+    } catch (error) {
+      message = error instanceof Error ? error.message : "";
+    }
+
+    expect(message).toContain(malformed.id);
+    expect(message).not.toContain("Rolled oats");
+    expect(message).not.toContain("-1");
+  });
 });

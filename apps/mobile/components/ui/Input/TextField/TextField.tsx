@@ -45,6 +45,7 @@ export function TextField({
   labelHint,
   required = false,
   helper,
+  helperTone,
   error,
   errorShownElsewhere = false,
   missingNote,
@@ -145,9 +146,18 @@ export function TextField({
         {locked ? <Icon name="Lock" size="sm" tone="muted" /> : null}
       </View>
       {!isMessageDrawnHere ? null : errorText === undefined ? (
-        <Text key="helper" tone="muted" variant="caption">
-          {message}
-        </Text>
+        helperTone === "warning" ? (
+          <View key="helper" className="flex-row items-center gap-1">
+            <Icon name="TriangleAlert" size={16} tone="warning" />
+            <Text className="shrink" tone="warning-ink" variant="caption">
+              {message}
+            </Text>
+          </View>
+        ) : (
+          <Text key="helper" tone="muted" variant="caption">
+            {message}
+          </Text>
+        )
       ) : (
         // The key remounts the message when an error replaces the helper, so the alert is announced.
         <FieldError key="error">{message}</FieldError>

@@ -19,6 +19,7 @@ import { FoodLoadState } from "../../../components/FoodLoadState";
 import { PortionPicker } from "../../../components/PortionPicker";
 import { useToast } from "../../../components/ui";
 import { amountForPicker, amountLastLogged } from "../../../lib/amountLastLogged";
+import { useIsOnline } from "../../../lib/connectivity";
 import { clockTimeOn, openingLoggedAt } from "../../../lib/loggedAt";
 import { readLogContext, useCloseFoodsSheet, useGoBackInFoodsSheet } from "../../../lib/navigation";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
@@ -38,6 +39,7 @@ export default function PortionPickerRoute() {
   const closeSheet = useCloseFoodsSheet();
   const toast = useToast();
   const logFood = useLogFood();
+  const isOnline = useIsOnline();
   const { id, barcode, day, time, recent } = useLocalSearchParams<{
     id: string;
     barcode?: string;
@@ -119,6 +121,8 @@ export default function PortionPickerRoute() {
       food={food}
       hasSaveError={hasSaveError}
       isNow={logContext?.time === undefined}
+      isOnline={isOnline}
+      mode="add"
       isSaving={isSaving}
       initialAmount={lastAmount === undefined ? undefined : amountForPicker(lastAmount)}
       note={

@@ -39,6 +39,9 @@ export default function FoodSearchRoute() {
               onOpenRecent: (foodId) => {
                 router.push(withLogContext(`/foods/${foodId}/log`, logContext, { recent: "1" }));
               },
+              onQuickAdd: () => {
+                router.push(withLogContext("/foods/quick-add", logContext));
+              },
             }
       }
       onOpenFood={(foodId) => {

@@ -1,3 +1,4 @@
+import { useRouter } from "expo-router";
 import { useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
@@ -34,6 +35,7 @@ export function FoodLog({
   onCopyYesterday,
   onCompleteChange,
 }: FoodLogProps) {
+  const router = useRouter();
   const scrollViewRef = useRef<ScrollView>(null);
   const listTop = useRef<number | null>(null);
   const hourTops = useRef(new Map<number, number>());
@@ -93,7 +95,6 @@ export function FoodLog({
             }}
           >
             {group.entries.map((entry) => (
-              // Tapping a food is wired with the entry screen, which has no route yet.
               <FoodRow
                 key={entry.id}
                 {...entryRowProps(entry, timeZone)}
@@ -106,7 +107,10 @@ export function FoodLog({
                       }
                     : undefined
                 }
-                onPress={() => undefined}
+                // A food can be read offline, where the entry screen turns its changes off.
+                onPress={() => {
+                  router.push(`/entry/${entry.id}`);
+                }}
               />
             ))}
           </HourRow>

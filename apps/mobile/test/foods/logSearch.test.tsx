@@ -30,6 +30,7 @@ import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { expectTextsInOrder } from "../support/textsInOrder";
 
 import type { FoodSearchHit, LogEntry, RecentFood } from "@keylow/api-client";
 
@@ -229,7 +230,66 @@ describe("food search sheet in log mode", () => {
 
       expect(screen.getByText("Nothing recent")).toBeOnTheScreen();
       expect(screen.getByText("Foods you log appear here.")).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: /Quick add/ })).not.toBeOnTheScreen();
+    });
+
+    describe("the Quick add row", () => {
+      const quickAddRow = () =>
+        screen.getByRole("button", { name: "Quick add, Calories and macros by hand" });
+
+      it("should be offered when there is nothing recent", async () => {
+        await renderLogSearch();
+
+        expect(quickAddRow()).toBeOnTheScreen();
+        expect(screen.getByText("Calories and macros by hand")).toBeOnTheScreen();
+      });
+
+      it("should sit above Recent when there are recent foods", async () => {
+        recentFoods.current = { data: [oatsRecent], isPending: false, isError: false };
+        await renderLogSearch();
+
+        expectTextsInOrder(screen.getAllByText(/^(Quick add|Recent|Porridge oats)/), [
+          "Quick add",
+          "Recent · as last logged",
+          "Porridge oats",
+        ]);
+      });
+
+      it("should open the quick add form with the day and the hour the plus was pressed on", async () => {
+        const user = await renderLogSearch({ day: "2026-10-14", time: "12:00" });
+
+        await user.press(quickAddRow());
+
+        expect(routerMock.push).toHaveBeenCalledWith(
+          "/foods/quick-add?day=2026-10-14&time=12%3A00",
+        );
+      });
+
+      it("should open it with the day alone from the dock, which means now", async () => {
+        const user = await renderLogSearch({ day: "2026-10-15" });
+
+        await user.press(quickAddRow());
+
+        expect(routerMock.push).toHaveBeenCalledWith("/foods/quick-add?day=2026-10-15");
+      });
+
+      it("should go once something is typed, because the results are what the person asked for", async () => {
+        await renderLogSearch();
+
+        await type("banana");
+
+        expect(screen.queryByRole("button", { name: /^Quick add/ })).not.toBeOnTheScreen();
+      });
+
+      it("should stay pressable offline, because the form itself waits for a connection", async () => {
+        const user = await renderLogSearch();
+        await act(() => {
+          onlineManager.setOnline(false);
+        });
+
+        await user.press(quickAddRow());
+
+        expect(routerMock.push).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("should say Recent could not be loaded, rather than leave the sheet blank", async () => {

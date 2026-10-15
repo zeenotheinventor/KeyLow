@@ -26,6 +26,12 @@ export type FieldFrameProps = {
   required?: boolean | undefined;
   /** One short sentence under the field. An error replaces it. */
   helper?: string | undefined;
+  /**
+   * Draws the helper as a warning, with a warning triangle before it and the words in the warning ink, for a
+   * note that asks the person to look again, such as macros that do not add up to the calories. It is
+   * information only: the field stays valid. An error replaces it, and it draws nothing without a helper.
+   */
+  helperTone?: "warning" | undefined;
   /** Says what to do. Turns the border danger and is announced as an alert. Replaces the helper. */
   error?: string | undefined;
   /**

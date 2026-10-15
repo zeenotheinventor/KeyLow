@@ -1,4 +1,4 @@
-import { foodSnapshotSchema, weekOf } from "@keylow/core/diary";
+import { foodSnapshotSchema, isEntryId, weekOf } from "@keylow/core/diary";
 import { z } from "zod";
 
 import { ENTRY_COLUMNS, dateOfRow, idOfRow, parseRow, repoError } from "./diaryRows";
@@ -85,6 +85,32 @@ export async function getDiaryDay(
         ? null
         : parseRow(dayTotalsSchema, totals.data, "read the day's totals", dateOfRow),
   };
+}
+
+/**
+ * Loads one live (not deleted) entry by its id, for the screen that edits it. Resolves to null when the
+ * entry does not exist, is deleted or is not the caller's.
+ */
+export async function getLogEntry(
+  client: SupabaseClient<Database>,
+  id: string,
+): Promise<LogEntry | null> {
+  if (!isEntryId(id)) {
+    throw new RangeError("An entry id must be a UUID");
+  }
+
+  const { data, error } = await client
+    .from("food_log_entries")
+    .select(ENTRY_COLUMNS)
+    .eq("id", id)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  if (error) {
+    throw repoError("load the entry", error);
+  }
+
+  return data === null ? null : parseRow(logEntrySchema, data, "read the entry", idOfRow);
 }
 
 /** One day on the week strip: what `day_logs` and `day_totals` hold for it, each null when it has no row. */

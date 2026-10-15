@@ -8,6 +8,8 @@ export type FoodSearchLogging = {
   context: LogContext;
   /** Opens the portion picker for a Recent food, filled in with the amount it was last logged with. */
   onOpenRecent: (foodId: string) => void;
+  /** Opens the quick add form, from the Quick add row, with the day and time carried on. */
+  onQuickAdd: () => void;
 };
 
 export type FoodSearchProps = {

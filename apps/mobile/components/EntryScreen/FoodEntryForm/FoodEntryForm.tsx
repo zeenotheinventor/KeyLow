@@ -1,0 +1,89 @@
+import { useFood } from "@keylow/api-client";
+import { FOOD_CHANGED_BANNER, FOOD_DELETED_NOTICE } from "@keylow/core/copy";
+import { formatClockTime } from "@keylow/core/dates";
+import { foodChangedSinceLogged } from "@keylow/core/diary";
+
+import { useIsOnline } from "../../../lib/connectivity";
+import { foodEntryChange } from "../../../lib/entryChange";
+import { foodEntryForm } from "../../../lib/entryForms";
+import { useReadsEnabled } from "../../../lib/useReadsEnabled";
+import { useDeleteEntryWithUndo } from "../../DiaryScreen";
+import { PortionPicker } from "../../PortionPicker";
+import { Banner } from "../../ui";
+import { useEntrySave } from "../useEntrySave";
+
+import type { FoodEntryFormProps } from "./types";
+
+/**
+ * A logged food on the entry screen: the portion picker drawn from the entry's own snapshot, with Save and
+ * Delete. Changing the amount recomputes from the snapshot, never from the live food. When the live food
+ * differs from the snapshot a banner offers "Update to current food data", the one thing that changes the
+ * entry from the food. A food that has been deleted says so and offers no update; Save still works from
+ * the snapshot. Save writes only what changed, and nothing at all when nothing did.
+ */
+export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) {
+  const isOnline = useIsOnline();
+  const entrySave = useEntrySave(onLeave);
+  const deleteWithUndo = useDeleteEntryWithUndo();
+  // The live food is read unfiltered, so a deleted food still answers. A food that is not visible to the user
+  // (null) counts as gone, and a read that failed says nothing. Nothing is read while the terms gate is up, and
+  // a query with no id stays idle.
+  const liveFood = useFood(useReadsEnabled() ? entry.snapshot.ref : undefined);
+  const { food, portions, initialAmount } = foodEntryForm(entry);
+
+  const isFoodGone =
+    liveFood.data !== undefined && (liveFood.data === null || liveFood.data.deleted_at !== null);
+  const hasFoodChanged =
+    liveFood.data !== undefined &&
+    liveFood.data !== null &&
+    !isFoodGone &&
+    foodChangedSinceLogged(liveFood.data, entry.snapshot);
+
+  return (
+    <PortionPicker
+      banner={
+        hasFoodChanged ? (
+          <Banner
+            // Updating writes the entry, which needs a connection, so offline there is nothing to press.
+            action={
+              isOnline
+                ? {
+                    label: FOOD_CHANGED_BANNER.action,
+                    onPress: () => {
+                      void entrySave.update({ entry, useCurrentFoodData: true });
+                    },
+                  }
+                : undefined
+            }
+            body={FOOD_CHANGED_BANNER.body}
+            title={FOOD_CHANGED_BANNER.title}
+            variant="info"
+          />
+        ) : null
+      }
+      caption={isFoodGone ? FOOD_DELETED_NOTICE : undefined}
+      food={food}
+      // The picker keeps the amount and the unit it was opened with. When the entry's amount is no longer the
+      // same thing (an update to the current food can replace the portion it was logged with, or land on
+      // grams), the picker is opened afresh on the entry as it now is.
+      key={`${entry.snapshot.unit}:${entry.portion_id ?? ""}`}
+      hasSaveError={entrySave.hasSaveError}
+      initialAmount={initialAmount}
+      isNow={false}
+      isOnline={isOnline}
+      isSaving={entrySave.isSaving}
+      mode="edit"
+      portions={portions}
+      time={formatClockTime(new Date(entry.logged_at), timeZone)}
+      onBack={onLeave}
+      onDelete={() => {
+        deleteWithUndo(entry);
+        onLeave();
+      }}
+      onSubmit={(selection) => {
+        const change = foodEntryChange(entry, selection, timeZone);
+        void entrySave.save(change === null ? null : { entry, ...change });
+      }}
+    />
+  );
+}

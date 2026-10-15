@@ -2,6 +2,7 @@ import "react-native-gesture-handler/jestSetup";
 
 import { buildFoodPortion } from "@keylow/core/testing";
 import { render, screen, userEvent } from "@testing-library/react-native";
+import { Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { foodFixture, savedFoodId } from "./support/apiClientMock";
@@ -42,7 +43,10 @@ const box = buildFoodPortion({
   position: 1,
 });
 
-async function renderPicker(props: Partial<PortionPickerProps> = {}) {
+type AddProps = Extract<PortionPickerProps, { mode: "add" }>;
+type EditProps = Extract<PortionPickerProps, { mode: "edit" }>;
+
+async function renderPicker(props: Partial<Omit<AddProps, "mode">> = {}) {
   const onSubmit = jest.fn();
   const user = userEvent.setup();
   await render(
@@ -52,10 +56,34 @@ async function renderPicker(props: Partial<PortionPickerProps> = {}) {
         hasSaveError={false}
         isNow
         isSaving={false}
+        mode="add"
         portions={[bar, box]}
         time="12:40"
         onBack={() => undefined}
         onCopy={() => undefined}
+        onSubmit={onSubmit}
+        {...props}
+      />
+    </ThemeProvider>,
+  );
+  return { user, onSubmit };
+}
+
+async function renderEditPicker(props: Partial<Omit<EditProps, "mode">> = {}) {
+  const onSubmit = jest.fn();
+  const user = userEvent.setup();
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <PortionPicker
+        food={foodFixture}
+        hasSaveError={false}
+        isNow={false}
+        isSaving={false}
+        mode="edit"
+        portions={[bar, box]}
+        time="12:40"
+        onBack={() => undefined}
+        onDelete={() => undefined}
         onSubmit={onSubmit}
         {...props}
       />
@@ -139,6 +167,109 @@ describe("PortionPicker as a component", () => {
       await user.press(screen.getByRole("button", { name: "Add" }));
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("offline", () => {
+    it("should turn Add off while the connection is lost", async () => {
+      await renderPicker({ isOnline: false });
+
+      expect(screen.getByRole("button", { name: "Add" })).toBeDisabled();
+    });
+
+    it("should have Add on while it is not said to be lost", async () => {
+      await renderPicker();
+
+      expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+    });
+  });
+
+  describe("for a logged entry", () => {
+    const onDelete = jest.fn();
+
+    beforeEach(() => {
+      onDelete.mockReset();
+    });
+
+    it("should offer Save with a Delete under it, in place of Add", async () => {
+      await renderEditPicker({ onDelete });
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeEnabled();
+      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+    });
+
+    it("should hand over the amount, the unit and the entry's own time on Save", async () => {
+      const { user, onSubmit } = await renderEditPicker({
+        onDelete,
+        time: "12:40",
+        initialAmount: { unit: "g", quantity: 150 },
+      });
+
+      await user.press(screen.getByRole("button", { name: "Save" }));
+
+      expect(onSubmit).toHaveBeenCalledWith({
+        unit: "g",
+        quantity: 150,
+        time: "12:40",
+        isNow: false,
+      });
+    });
+
+    it("should delete when Delete is pressed", async () => {
+      const { user } = await renderEditPicker({ onDelete });
+
+      await user.press(screen.getByRole("button", { name: "Delete" }));
+
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep Save off for an amount that is not above 0", async () => {
+      const { user } = await renderEditPicker({
+        onDelete,
+        initialAmount: { unit: "g", quantity: 150 },
+      });
+
+      await user.clear(screen.getByLabelText("Amount (g)"));
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+    });
+
+    it("should turn Save and Delete off while the connection is lost", async () => {
+      await renderEditPicker({ onDelete, isOnline: false });
+
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled();
+    });
+
+    it("should not ask for a review of a food with a value missing, which an entry keeps as saved", async () => {
+      await renderEditPicker({
+        onDelete,
+        food: { ...foodFixture, carbs_g: null },
+      });
+
+      expect(screen.queryByText("Needs review")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Copy to your foods" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+      expect(screen.getByRole("button", { name: /^Time/ })).toBeOnTheScreen();
+    });
+  });
+
+  describe("a notice and a caption", () => {
+    it("should draw the banner it is given above the hero, and the caption under the note", async () => {
+      await renderEditPicker({
+        banner: <Text>Banner words</Text>,
+        caption: "Caption words",
+      });
+
+      expect(screen.getByText("Banner words")).toBeOnTheScreen();
+      expect(screen.getByText("Caption words")).toBeOnTheScreen();
+    });
+
+    it("should draw neither when there are none", async () => {
+      await renderEditPicker();
+
+      expect(screen.queryByText("Banner words")).not.toBeOnTheScreen();
     });
   });
 });

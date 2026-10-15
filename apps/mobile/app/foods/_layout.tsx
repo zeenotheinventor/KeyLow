@@ -22,6 +22,7 @@ export default function FoodsLayout() {
         <Stack.Screen name="new" />
         <Stack.Screen name="[id]/edit" />
         <Stack.Screen name="scan" />
+        <Stack.Screen name="quick-add" />
       </Stack>
     </>
   );

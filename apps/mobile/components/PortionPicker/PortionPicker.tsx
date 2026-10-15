@@ -1,5 +1,6 @@
 import {
   DIARY_PROBLEMS,
+  ENTRY_SCREEN,
   FOOD_FORM,
   FOOD_REVIEW_BANNER,
   PORTION_PICKER,
@@ -12,6 +13,7 @@ import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { dockBottomPadding } from "../../lib/dockBottomPadding";
 import { foodNeedsReview, missingFieldsOf } from "../../lib/foodNeedsReview";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import {
@@ -32,10 +34,6 @@ import { MacroHero } from "../FoodDetail/MacroHero";
 
 import type { PortionPickerProps } from "./types";
 
-// The boards leave 42 below the controls: the 34 of an iPhone's home indicator and 8. A taller navigation bar takes its own height.
-const MINIMUM_BOTTOM_INSET = 34;
-const BOTTOM_MARGIN = 8;
-
 /**
  * The page for changing the serving before a food is logged, as the portion boards draw it: the food's name
  * under a Back control, what the chosen amount comes to in the hero, the food's own values per 100 g, and at
@@ -43,19 +41,21 @@ const BOTTOM_MARGIN = 8;
  * picker keeps, and Add is the only part that belongs to adding: it hands them over with `onSubmit`. A food
  * that must be reviewed first has Copy to your foods in place of Add and no Time row.
  */
-export function PortionPicker({
-  food,
-  portions,
-  initialAmount,
-  time,
-  isNow,
-  note,
-  isSaving,
-  hasSaveError,
-  onSubmit,
-  onCopy,
-  onBack,
-}: PortionPickerProps) {
+export function PortionPicker(props: PortionPickerProps) {
+  const {
+    food,
+    portions,
+    initialAmount,
+    time,
+    isNow,
+    note,
+    isSaving,
+    hasSaveError,
+    isOnline = true,
+    onSubmit,
+    onBack,
+  } = props;
+  const isEditing = props.mode === "edit";
   const insets = useSafeAreaInsets();
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
@@ -69,7 +69,8 @@ export function PortionPicker({
 
   const { amount, hero } = previewAmount(food, portions, unitValue, quantityText);
   const options = unitOptions(food, portions);
-  const needsReview = foodNeedsReview(food);
+  // A logged entry keeps the values it was saved with, so the food's own review does not apply to it.
+  const needsReview = !isEditing && foodNeedsReview(food);
   const chosenPortion = portions.find((portion) => portion.id === unitValue);
   const unitSuffix =
     chosenPortion === undefined
@@ -108,6 +109,7 @@ export function PortionPicker({
                 variant="review"
               />
             ) : null}
+            {props.mode === "edit" ? props.banner : null}
             {hasSaveError ? <Banner sentence title={SAVE_FAILED_BANNER} variant="error" /> : null}
             {note === undefined ? null : (
               <View className="flex-row items-center gap-2">
@@ -117,6 +119,11 @@ export function PortionPicker({
                 </Text>
               </View>
             )}
+            {props.mode === "edit" && props.caption !== undefined ? (
+              <Text tone="secondary" variant="caption">
+                {props.caption}
+              </Text>
+            ) : null}
             <MacroHero amount={hero} food={food} />
             <PerHundredList food={food} />
           </ScrollView>
@@ -124,7 +131,7 @@ export function PortionPicker({
           <View
             className="gap-3 border-t border-border bg-surface-sheet px-4 pb-[var(--dock-bottom)] pt-4"
             style={vars({
-              "--dock-bottom": Math.max(insets.bottom, MINIMUM_BOTTOM_INSET) + BOTTOM_MARGIN,
+              "--dock-bottom": dockBottomPadding(insets.bottom),
             })}
           >
             <NumericInput
@@ -140,8 +147,8 @@ export function PortionPicker({
               value={chosenUnit === undefined ? null : unitValue}
               onChange={setUnitValue}
             />
-            {needsReview ? (
-              <Button fullWidth icon="Copy" size="lg" variant="primary" onPress={onCopy}>
+            {props.mode === "add" && needsReview ? (
+              <Button fullWidth icon="Copy" size="lg" variant="primary" onPress={props.onCopy}>
                 {FOOD_REVIEW_BANNER.action}
               </Button>
             ) : (
@@ -154,20 +161,34 @@ export function PortionPicker({
                     setIsTimePickerOpen(true);
                   }}
                 />
-                <Button
-                  fullWidth
-                  disabled={amount === null}
-                  haptic="confirm"
-                  loading={isSaving}
-                  size="lg"
-                  onPress={() => {
-                    if (amount !== null) {
-                      onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
-                    }
-                  }}
-                >
-                  {PORTION_PICKER.addAction}
-                </Button>
+                <View className="gap-1">
+                  <Button
+                    fullWidth
+                    disabled={amount === null || !isOnline}
+                    haptic="confirm"
+                    loading={isSaving}
+                    size="lg"
+                    onPress={() => {
+                      if (amount !== null) {
+                        onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
+                      }
+                    }}
+                  >
+                    {isEditing ? ENTRY_SCREEN.saveAction : PORTION_PICKER.addAction}
+                  </Button>
+                  {props.mode === "edit" ? (
+                    <Button
+                      disabled={!isOnline}
+                      fullWidth
+                      icon="Trash2"
+                      tone="danger"
+                      variant="ghost"
+                      onPress={props.onDelete}
+                    >
+                      {ENTRY_SCREEN.deleteAction}
+                    </Button>
+                  ) : null}
+                </View>
               </>
             )}
           </View>

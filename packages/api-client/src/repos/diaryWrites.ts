@@ -3,6 +3,7 @@ import {
   buildLogEntry,
   buildQuickEntry,
   logEntryInsertSchema,
+  quickLogEntryInsertSchema,
   recomputeEntry,
   refreshEntryFromFood,
 } from "@keylow/core/diary";
@@ -141,12 +142,21 @@ export function restoreLogEntry(client: SupabaseClient<Database>, id: string): P
 /** A new time for an entry: an ISO instant with an offset, and the profile's IANA time zone that decides which day it is. */
 export type EntryTimeChange = { loggedAt: string; timeZone: string };
 
+/** New values for a quick add: its calories, macros (null for one that is not given) and label (null for none). */
+export type QuickEntryValues = {
+  kcal: number;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  label: string | null;
+};
+
 /**
- * What to change on an entry. A food entry takes any of the three, at least one. A quick add has no
- * amount and no food, so it takes a time only (anything else is a compile error, and a
- * `RangeError` at run time for a caller that got past the types). When more than one is given they
- * apply in this order and are written together: the current food data first, then the amount (from
- * the refreshed snapshot), then the time.
+ * What to change on an entry. A food entry takes any of three, at least one: an amount, the current
+ * food data, a time. A quick add has no amount and no food, so it takes new values, a time, or both
+ * (anything else is a compile error, and a `RangeError` at run time for a caller that got past the
+ * types). When more than one is given they apply in this order and are written together: the current
+ * food data first, then the amount (from the refreshed snapshot), then the time.
  *
  * `entry` must be the latest row the diary returned (the cached one): an amount change rewrites the
  * snapshot and the nutrients from it, so a stale copy would write stale values back.
@@ -154,7 +164,9 @@ export type EntryTimeChange = { loggedAt: string; timeZone: string };
 export type EntryUpdate =
   | {
       entry: QuickLogEntry;
-      time: EntryTimeChange;
+      /** New calories, macros and label. Written as the whole `nutrients` object and `snapshot`, as a new quick add stores them. */
+      quick?: QuickEntryValues;
+      time?: EntryTimeChange;
       amount?: never;
       useCurrentFoodData?: never;
     }
@@ -166,6 +178,7 @@ export type EntryUpdate =
       useCurrentFoodData?: boolean;
       /** A new time. `local_date` is recomputed from it, so moving an entry across midnight moves it to the other day. */
       time?: EntryTimeChange;
+      quick?: never;
     };
 
 function timingColumns({ loggedAt, timeZone }: EntryTimeChange): EntryRow {
@@ -184,6 +197,30 @@ function foodColumns(entry: FoodLogEntry): EntryRow {
     snapshot: entry.snapshot,
     nutrients: entry.nutrients,
   };
+}
+
+/**
+ * The columns a quick add's new values change: its nutrients and its snapshot (which holds the label),
+ * built by the same function that builds a new quick add so the two cannot drift. The calories column
+ * is generated from the nutrients and is never written.
+ */
+function quickColumns(entry: QuickLogEntry, quick: QuickEntryValues): EntryRow {
+  const built = build("update the entry", () =>
+    buildQuickEntry({
+      localDate: entry.local_date,
+      loggedAt: entry.logged_at,
+      kcal: quick.kcal,
+      ...(quick.protein_g === null ? {} : { protein_g: quick.protein_g }),
+      ...(quick.fat_g === null ? {} : { fat_g: quick.fat_g }),
+      ...(quick.carbs_g === null ? {} : { carbs_g: quick.carbs_g }),
+      ...(quick.label === null ? {} : { label: quick.label }),
+    }),
+  );
+  if (!quickLogEntryInsertSchema.safeParse(built).success) {
+    throw new RangeError("Could not update the entry: the values of a quick add are not valid");
+  }
+
+  return { nutrients: built.nutrients, snapshot: built.snapshot };
 }
 
 async function currentFoodColumns(
@@ -221,19 +258,27 @@ export async function updateLogEntry(
   client: SupabaseClient<Database>,
   update: EntryUpdate,
 ): Promise<LogEntry> {
-  const { entry, amount, useCurrentFoodData, time } = update;
+  const { entry, amount, useCurrentFoodData, time, quick } = update;
   const changesFood = amount !== undefined || useCurrentFoodData === true;
-  if (!changesFood && time === undefined) {
-    throw new RangeError("An entry update needs an amount, a time or the current food data");
+  if (!changesFood && time === undefined && quick === undefined) {
+    throw new RangeError(
+      "An entry update needs an amount, a time, new values or the current food data",
+    );
+  }
+  // Widened, because the types already say a food has no quick values; this is for a caller past them.
+  const entryKind: string = entry.item_type;
+  if (quick !== undefined && entryKind !== "quick") {
+    throw new RangeError("Only a quick add has values of its own to change");
   }
 
-  // The pure parts first, so a bad time or a quick add fails before the food is read.
+  // The pure parts first, so a bad time or values fail before the food is read.
   const timing = time === undefined ? {} : timingColumns(time);
+  const quickValues = quick === undefined ? {} : quickColumns(entry, quick);
   const food = changesFood ? await currentFoodColumns(client, update) : {};
 
   const { data, error } = await client
     .from("food_log_entries")
-    .update({ ...food, ...timing })
+    .update({ ...food, ...quickValues, ...timing })
     .eq("id", entry.id)
     .is("deleted_at", null)
     .select(ENTRY_COLUMNS)

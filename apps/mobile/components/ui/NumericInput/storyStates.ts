@@ -8,5 +8,6 @@ export const storyStates = [
   "WithError",
   "ErrorShownElsewhere",
   "WithMissingNote",
+  "WithWarningHelper",
   "Disabled",
 ];
