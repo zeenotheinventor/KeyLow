@@ -40,6 +40,6 @@ food_code,label,grams,ml,is_default,position,weight_basis,fdc_id,fdc_description
 14-327,1 small,96,,false,0,flesh only,169097,"Oranges, raw, all commercial varieties","USDA FoodData Central, SR Legacy, FDC id 169097, portion ""1 small (2-3/8"" dia)"", release April 2018"
 14-327,1 medium,131,,true,1,flesh only,169097,"Oranges, raw, all commercial varieties","USDA FoodData Central, SR Legacy, FDC id 169097, portion ""1 fruit (2-5/8"" dia)"", release April 2018"
 14-327,1 large,184,,false,2,flesh only,169097,"Oranges, raw, all commercial varieties","USDA FoodData Central, SR Legacy, FDC id 169097, portion ""1 large (3-1/16"" dia)"", release April 2018"
-16-372,1 fillet,231,,true,0,flesh only,171955,"Fish, cod, Atlantic, raw","USDA FoodData Central, SR Legacy, FDC id 171955, portion ""1 fillet"", release April 2018"
-16-373,1 fillet,180,,true,0,flesh only,171956,"Fish, cod, Atlantic, cooked, dry heat","USDA FoodData Central, SR Legacy, FDC id 171956, portion ""1 fillet"", release April 2018"
+16-372,1 fillet,231,,false,0,flesh only,171955,"Fish, cod, Atlantic, raw","USDA FoodData Central, SR Legacy, FDC id 171955, portion ""1 fillet"", release April 2018"
+16-373,1 fillet,180,,false,0,flesh only,171956,"Fish, cod, Atlantic, cooked, dry heat","USDA FoodData Central, SR Legacy, FDC id 171956, portion ""1 fillet"", release April 2018"
 18-317,1 thigh,68,,true,0,"meat and skin, bone removed",173626,"Chicken, broilers or fryers, thigh, meat and skin, cooked, stewed","USDA FoodData Central, SR Legacy, FDC id 173626, portion ""1 thigh, bone removed"", release April 2018"

@@ -11,12 +11,17 @@ import type { PortionRow } from "../../../scripts/portions/portionRows";
 type TestFoods = { codes: [string, string]; ids: [string, string] };
 
 async function removeTestFoods(codes: readonly string[]): Promise<void> {
-  const { error } = await adminClient()
+  const { data, error } = await adminClient()
     .from("foods")
     .delete()
-    .in("source_ref", [...codes]);
+    .in("source_ref", [...codes])
+    .select("id");
   if (error) {
     throw new Error("Could not remove the test foods", { cause: error });
+  }
+  // A filter that matches nothing deletes nothing and returns no error, so the count is checked.
+  if (data.length !== codes.length) {
+    throw new Error(`Expected to remove ${codes.length} test foods, removed ${data.length}`);
   }
 }
 

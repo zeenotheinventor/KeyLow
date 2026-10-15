@@ -4,7 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 type Failure = { message: string } | null;
 
-// The message names the action, never a row: a row holds a food and a portion size.
+// The error names the action and appends PostgREST's own message (for example "permission denied" or "JWT expired"), which names no row values.
 function raiseOnFailure(error: Failure, action: string): void {
   if (error) {
     throw new Error(`Could not ${action}: ${error.message}`, { cause: error });
