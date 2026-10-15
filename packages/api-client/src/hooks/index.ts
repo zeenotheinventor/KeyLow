@@ -2,6 +2,7 @@
 export { useAcceptTerms } from "./useAcceptTerms";
 export type { DiaryReadOptions } from "./DiaryReadOptions";
 export { useCompleteDays } from "./useCompleteDays";
+export { useCopyDay } from "./useCopyDay";
 export { useCreateFood } from "./useCreateFood";
 export { useDebouncedValue } from "./useDebouncedValue";
 export { useDeleteEntry } from "./useDeleteEntry";
@@ -33,6 +34,8 @@ export { useOwnFoods } from "./useOwnFoods";
 export { useQuickAdd } from "./useQuickAdd";
 export { useRecentFoods } from "./useRecentFoods";
 export { useRestoreEntry } from "./useRestoreEntry";
+export { useSetDayComplete } from "./useSetDayComplete";
 export { useTermsAcceptance } from "./useTermsAcceptance";
+export { useUndoCopyDay } from "./useUndoCopyDay";
 export { useUpdateEntry } from "./useUpdateEntry";
 export { useUpdateFood } from "./useUpdateFood";
