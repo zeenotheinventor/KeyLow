@@ -28,4 +28,6 @@ export {
 } from "./foods";
 export type { CreatedFood, FoodSearchHit } from "./foods";
 export { fetchOffProduct, searchOff } from "./off";
+export { getMyTargets, getMyTimeZone, updateMyTargets } from "./targets";
+export type { Targets } from "./targets";
 export { acceptTerms, getMyTermsAcceptance } from "./terms";

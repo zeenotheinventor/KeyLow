@@ -26,6 +26,7 @@ export function TabBar({
   onSelect,
   addLabel,
   onAddPress,
+  addDisabled = false,
   label,
   bottomInset = 0,
   platform,
@@ -61,7 +62,7 @@ export function TabBar({
     >
       <View className="flex-row">
         {tabs.slice(0, addIndex).map(renderTab)}
-        <AddButton label={addLabel} onPress={onAddPress} />
+        <AddButton disabled={addDisabled} label={addLabel} onPress={onAddPress} />
         {tabs.slice(addIndex).map(renderTab)}
       </View>
       {idiom === "ios" && activeIndex >= 0 ? (

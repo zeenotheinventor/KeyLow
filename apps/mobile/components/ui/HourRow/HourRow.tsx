@@ -32,7 +32,9 @@ export function HourRow({
   const foods = positionedRows(children);
 
   return (
-    // Not `accessible`: the plus and the foods inside are buttons, which an accessible wrapper would fold away.
+    // The row carries a label because it names the hour group for a screen reader, such as "08:00, 2 foods" or
+    // "09:00, nothing logged", which is what a list of 24 hours is read as. It is not `accessible`, though:
+    // the plus and the foods inside are buttons, which an accessible wrapper would fold away.
     <View
       aria-label={describeHourGroup(label, foods.length)}
       className="ml-[6px] border-l border-border pl-[14px]"

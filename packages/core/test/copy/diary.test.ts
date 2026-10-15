@@ -24,7 +24,10 @@ import {
   describeAddedFood,
   describeCopiedEntriesToToday,
   describeCopiedFromYesterday,
+  describeEntryCaption,
+  describeMacroTargetField,
   describeHourChip,
+  describeLoggedAmount,
   describeHourGroup,
   describeMacroTotal,
   describeProgressBar,
@@ -119,6 +122,8 @@ describe("the field errors and helpers", () => {
       quantity: "Enter an amount above 0.",
       quickAddKcal: "Enter calories.",
       targetKcal: "Enter a target between 800 and 6,000 kcal.",
+      targetKcalRequired: "Enter a calorie target.",
+      targetKcalWhole: "Enter whole calories.",
     });
   });
 
@@ -357,5 +362,60 @@ describe("the progress strip", () => {
     expect(describeProgressStrip(progressBars(sampleDay, targets))).toBe(
       "Targets. Calories: 1,039 of 2,200 kilocalories. Protein: 86 of 160 grams. Carbohydrate: 129 of 220 grams. Fat: 19 of 70 grams",
     );
+  });
+});
+
+describe("describeLoggedAmount and describeEntryCaption", () => {
+  const none = { portion: null };
+
+  it.each([
+    [{ unit: "g", quantity: 50, resolvedGrams: 50, ...none }, "50 g"],
+    [{ unit: "ml", quantity: 200, resolvedGrams: 206, ...none }, "200 ml"],
+    [{ unit: "oz", quantity: 2, resolvedGrams: 56.7, ...none }, "2 oz"],
+    [{ unit: "fl_oz", quantity: 6.5, resolvedGrams: 192, ...none }, "6.5 fl oz"],
+    [{ unit: "g", quantity: 12.34, resolvedGrams: 12.34, ...none }, "12 g"],
+  ] as const)("should write a measured amount as the number and the unit, %#", (amount, text) => {
+    expect(describeLoggedAmount(amount)).toBe(text);
+  });
+
+  it("should write one portion as its label and the grams it came to", () => {
+    expect(
+      describeLoggedAmount({
+        unit: "portion",
+        quantity: 1,
+        resolvedGrams: 100,
+        portion: { label: "1 medium" },
+      }),
+    ).toBe("1 medium (100 g)");
+  });
+
+  it("should write several portions as the count, a times sign, the label and the total grams", () => {
+    expect(
+      describeLoggedAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 340,
+        portion: { label: "1 pot" },
+      }),
+    ).toBe("2 × 1 pot (340 g)");
+  });
+
+  it("should write a quick add as Quick add", () => {
+    expect(describeLoggedAmount(null)).toBe("Quick add");
+  });
+
+  it("should join the time and the amount with a middle dot", () => {
+    expect(describeEntryCaption("08:05", "50 g")).toBe("08:05 · 50 g");
+  });
+});
+
+describe("the Targets screen's copy", () => {
+  it("should name a macro field by the macro and its unit", () => {
+    expect(describeMacroTargetField("Protein")).toBe("Protein target in grams");
+  });
+
+  it("should ask for calories when they are blank, and for a range when they are out of it", () => {
+    expect(DIARY_PROBLEMS.targetKcalRequired).toBe("Enter a calorie target.");
+    expect(DIARY_PROBLEMS.targetKcal).toBe("Enter a target between 800 and 6,000 kcal.");
   });
 });

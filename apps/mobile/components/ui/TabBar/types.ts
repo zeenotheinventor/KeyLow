@@ -24,6 +24,8 @@ export type TabBarProps = {
   addLabel: string;
   /** The add button is an action and not a destination, so it never shows as selected and selects nothing. */
   onAddPress: () => void;
+  /** Dims the add button and stops it responding, such as while offline. Defaults to false. */
+  addDisabled?: boolean | undefined;
   /** Names the bar for a screen reader, such as "Main". */
   label: string;
   /** The safe area under the bar, which the bar adds below its own height. Defaults to 0. */

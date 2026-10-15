@@ -27,11 +27,15 @@ export {
   useRecentFoods,
   useRestoreEntry,
   useSetDayComplete,
+  useProfileTimeZone,
+  useTargets,
   useTermsAcceptance,
   useUndoCopyDay,
   useUpdateEntry,
   useUpdateFood,
+  useUpdateTargets,
 } from "./hooks";
+export { TargetsValidationError } from "./hooks";
 export type {
   DiaryReadOptions,
   FoodByBarcodeError,
@@ -57,7 +61,9 @@ export {
   getDiaryWeek,
   getFood,
   getFoodByBarcode,
+  getMyTargets,
   getMyTermsAcceptance,
+  getMyTimeZone,
   listCompleteDays,
   listFoodPortions,
   listOwnFoods,
@@ -74,6 +80,7 @@ export {
   undoCopyDay,
   updateFood,
   updateLogEntry,
+  updateMyTargets,
 } from "./repos";
 export type {
   CopiedDay,
@@ -90,4 +97,5 @@ export type {
   LogFoodInput,
   LogQuickEntryInput,
   RecentFood,
+  Targets,
 } from "./repos";

@@ -30,6 +30,9 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
 
+// Offline, as the diary's offline board draws the dock: at half strength, and neither control responds.
+export const Disabled: Story = { args: { disabled: true } };
+
 // As the Dashboard and Diary boards draw it: on the tab bar, above the safe area.
 export const AboveTabBar: Story = {
   render: (args) => (

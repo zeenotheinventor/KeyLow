@@ -42,6 +42,8 @@ type Story = StoryObj<typeof meta>;
 // The iOS idiom, as the tab-shell boards draw each tab selected: a 49 point bar with the accent underline.
 export const IosDashboard: Story = {};
 export const IosDiary: Story = { args: { activeKey: "diary" } };
+// Offline: the centre plus is dimmed to 40 percent and does nothing.
+export const IosAddDisabled: Story = { args: { activeKey: "diary", addDisabled: true } };
 export const IosRecipes: Story = { args: { activeKey: "recipes" } };
 export const IosMore: Story = { args: { activeKey: "more" } };
 

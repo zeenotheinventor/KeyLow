@@ -19,9 +19,9 @@ export type ValidTargets = {
   carbs_g: number | null;
 };
 
-export type TargetsProblems = MacroProblems & { kcal?: "required" | "out_of_range" };
+export type TargetsProblems = MacroProblems & { kcal?: "required" | "out_of_range" | "not_whole" };
 
-/** Calories are required and within 800 to 6,000. The macros are optional and 0 or more. */
+/** Calories are required, a whole number and within 800 to 6,000. The macros are optional and 0 or more. */
 export const validateTargets = (
   input: TargetsInput,
 ): ValidationResult<ValidTargets, TargetsProblems> => {
@@ -32,6 +32,9 @@ export const validateTargets = (
     problems.kcal = "required";
   } else if (kcal < TARGET_KCAL_MINIMUM || kcal > TARGET_KCAL_MAXIMUM) {
     problems.kcal = "out_of_range";
+  } else if (!Number.isInteger(kcal)) {
+    // The profile's target column is a whole number of calories, and the database refuses a fraction.
+    problems.kcal = "not_whole";
   }
 
   if (Object.keys(problems).length > 0 || !isUsableNumber(kcal)) {

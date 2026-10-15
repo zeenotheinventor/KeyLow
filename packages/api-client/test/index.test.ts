@@ -30,7 +30,10 @@ describe("the package index", () => {
     "useDiaryDay",
     "useDiaryWeek",
     "useRecentFoods",
+    "getMyTargets",
     "getMyTermsAcceptance",
+    "getMyTimeZone",
+    "updateMyTargets",
     "listOwnFoods",
     "softDeleteFood",
     "useAcceptTerms",
@@ -38,7 +41,11 @@ describe("the package index", () => {
     "useDeleteFood",
     "useFoodWithPortions",
     "useOwnFoods",
+    "useProfileTimeZone",
+    "useTargets",
     "useTermsAcceptance",
+    "useUpdateTargets",
+    "TargetsValidationError",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

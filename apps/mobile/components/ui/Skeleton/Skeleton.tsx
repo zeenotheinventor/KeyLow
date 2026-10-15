@@ -45,6 +45,51 @@ function SkeletonDetail() {
   );
 }
 
+// The food log as the loading board draws it: seven pills, four bars and five hours, the second and fourth
+// with a food under their chip. It carries the screen's 16 points at its sides.
+const dayBoneKeys = ["mo", "tu", "we", "th", "fr", "sa", "su"];
+const barBoneKeys = ["calories", "protein", "carbs", "fat"];
+const hourBones = [
+  { key: "first", hasFood: false },
+  { key: "second", hasFood: true },
+  { key: "third", hasFood: false },
+  { key: "fourth", hasFood: true },
+  { key: "fifth", hasFood: false },
+];
+
+function SkeletonDiary({ includesWeek }: { includesWeek: boolean }) {
+  return (
+    <View className="gap-3" testID="skeleton-diary">
+      {includesWeek ? (
+        <View className="flex-row gap-[6px] px-4">
+          {dayBoneKeys.map((key) => (
+            <SkeletonBone key={key} className="h-[56px] flex-1 rounded-pill" />
+          ))}
+        </View>
+      ) : null}
+      <View className="flex-row gap-2 px-4 pt-1">
+        {barBoneKeys.map((key, index) => (
+          <View key={key} className={`gap-[10px] ${index === 0 ? "flex-[1.5]" : "flex-1"}`}>
+            <SkeletonBone className="h-3" />
+            <SkeletonBone className="h-1" />
+          </View>
+        ))}
+      </View>
+      <View className="gap-3 px-4 py-2">
+        {hourBones.map(({ key, hasFood }) => (
+          <View key={key} className="gap-2">
+            <View className="flex-row items-center justify-between">
+              <SkeletonBone className="h-[28px] w-[64px] rounded-pill" />
+              <SkeletonBone className="h-[32px] w-[32px] rounded-pill" />
+            </View>
+            {hasFood ? <SkeletonBone className="ml-2 h-[64px] rounded-large" /> : null}
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -56,6 +101,9 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
   return (
     <Animated.View aria-hidden style={animatedStyle} testID="skeleton">
       {variant === "detail" ? <SkeletonDetail /> : null}
+      {variant === "diary" || variant === "diaryDay" ? (
+        <SkeletonDiary includesWeek={variant === "diary"} />
+      ) : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "group" ? (
         <View

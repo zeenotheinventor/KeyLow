@@ -1,4 +1,6 @@
+import { useTargets } from "@keylow/api-client";
 import { MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
+import { formatCalories } from "@keylow/core/format";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 
@@ -6,12 +8,16 @@ import { AppearanceSetting } from "../../components/AppearanceSetting";
 import { ScreenHeader } from "../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../components/ui";
 import { supabase } from "../../lib/supabase";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
-// The four sections of the `tab-shell.more` board. Your foods opens the search sheet in its own-foods mode,
+// The sections of the `tab-shell.more` board, with Nutrition between Food and Body. Your foods opens the search
+// sheet in its own-foods mode, Targets opens the Targets screen and shows the calorie target once one is set,
 // Weight waits for its screen, Appearance is set here, and Sign out is Account's one row. About is under
 // Settings and opens the About screen. No board draws it.
 export default function MoreRoute() {
   const router = useRouter();
+  const targets = useTargets({ enabled: useReadsEnabled() });
+  const kcalTarget = targets.data?.kcal ?? null;
 
   return (
     <View className="flex-1">
@@ -24,6 +30,18 @@ export default function MoreRoute() {
             title={MORE_SCREEN.food.yourFoods.title}
             onPress={() => {
               router.push("/foods?scope=own");
+            }}
+          />
+        </GroupedList>
+        <GroupedList title={MORE_SCREEN.nutrition.title}>
+          <ListRow
+            icon="Target"
+            subtitle={MORE_SCREEN.nutrition.targets.subtitle}
+            title={MORE_SCREEN.nutrition.targets.title}
+            unit={kcalTarget === null ? undefined : "kcal"}
+            value={kcalTarget === null ? undefined : formatCalories(kcalTarget)}
+            onPress={() => {
+              router.push("/targets");
             }}
           />
         </GroupedList>

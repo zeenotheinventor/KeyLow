@@ -1,3 +1,5 @@
+import "./support/gestureHandler";
+
 import { act, render, screen } from "@testing-library/react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { Text } from "react-native";
@@ -11,6 +13,11 @@ import { startOnLatestUpdate } from "../lib/updates";
 import type { UpdateOutcome } from "../lib/updates";
 
 // Metro compiles the stylesheet. Jest cannot read it.
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
 jest.mock("../global.css", () => ({}));
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,

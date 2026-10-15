@@ -1,0 +1,116 @@
+import { act, render, screen, userEvent } from "@testing-library/react-native";
+import { Text } from "react-native";
+
+import RootLayout from "../app/_layout";
+import { useToast } from "../components/ui";
+import { resetRouterMock } from "./support/expoRouterMock";
+import { compileKitStyles } from "./support/kitStyles";
+import { registerAppStyles } from "./support/nativeWindStyles";
+import { resetSupabaseMock } from "./support/supabaseMock";
+
+import type { ReactNode } from "react";
+
+// Metro compiles the stylesheet. Jest cannot read it.
+jest.mock("../global.css", () => ({}));
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+jest.mock("expo-status-bar", () => ({ StatusBar: () => null }));
+jest.mock("react-native-gesture-handler", () => {
+  const { View: GestureView } = jest.requireActual<typeof import("react-native")>("react-native");
+
+  return {
+    // Marks where the gesture root is, which draws nothing of its own.
+    GestureHandlerRootView: ({ children }: { children: ReactNode }) => (
+      <GestureView accessible aria-label="Gesture root">
+        {children}
+      </GestureView>
+    ),
+  };
+});
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
+
+// Stands for the navigator and for a screen in it, which shows a toast when asked.
+function ScreenThatShowsAToast() {
+  const toast = useToast();
+
+  return (
+    <Text
+      role="button"
+      onPress={() => {
+        toast.show({ message: "Targets saved" });
+      }}
+    >
+      Show toast
+    </Text>
+  );
+}
+function MockStack() {
+  return <ScreenThatShowsAToast />;
+}
+MockStack.Screen = function MockScreen() {
+  return null;
+};
+
+jest.mock("expo-router", () => ({
+  ...jest.requireActual<{ mockExpoRouter: object }>("./support/expoRouterMock").mockExpoRouter,
+  Stack: MockStack,
+}));
+jest.mock("../lib/supabase", () => ({
+  supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
+    .mockSupabaseClient,
+}));
+
+describe("the app root", () => {
+  let styles: string;
+
+  beforeAll(async () => {
+    styles = await compileKitStyles("", ["components/RootNavigator"]);
+  });
+
+  beforeEach(() => {
+    registerAppStyles(styles);
+    resetRouterMock();
+    resetSupabaseMock();
+  });
+
+  it("should show a toast that a screen asks for, because the toast provider is mounted", async () => {
+    const user = userEvent.setup();
+    await render(<RootLayout />);
+
+    await user.press(await screen.findByRole("button", { name: "Show toast" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+  });
+
+  it("should put the screens inside the gesture root, so a drag on a sheet is heard", async () => {
+    await render(<RootLayout />);
+
+    const screenButton = await screen.findByRole("button", { name: "Show toast" });
+
+    expect(screen.getByLabelText("Gesture root")).toContainElement(screenButton);
+  });
+
+  it("should let the toast go after its wait", async () => {
+    jest.useFakeTimers();
+    try {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      await render(<RootLayout />);
+      await user.press(await screen.findByRole("button", { name: "Show toast" }));
+      expect(await screen.findByRole("status")).toBeOnTheScreen();
+
+      await act(async () => {
+        await jest.advanceTimersByTimeAsync(5000);
+      });
+
+      expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+});

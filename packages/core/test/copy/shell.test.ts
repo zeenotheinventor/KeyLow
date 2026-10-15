@@ -42,6 +42,10 @@ describe("the tab shell copy", () => {
         title: "Food",
         yourFoods: { title: "Your foods", subtitle: "Foods you created or copied" },
       },
+      nutrition: {
+        title: "Nutrition",
+        targets: { title: "Targets", subtitle: "Set by you" },
+      },
       body: { title: "Body", weight: { title: "Weight", subtitle: "Coming soon" } },
       settings: {
         title: "Settings",

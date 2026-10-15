@@ -105,4 +105,24 @@ describe("validateTargets", () => {
       problems: { fat_g: "negative" },
     });
   });
+
+  it.each([2200.5, 800.1, 5999.9])("should refuse %s calories as not whole", (kcal) => {
+    expect(validateTargets({ kcal, ...noMacros })).toEqual({
+      ok: false,
+      problems: { kcal: "not_whole" },
+    });
+  });
+
+  it("should call a fraction outside the range out of range, not not whole", () => {
+    expect(validateTargets({ kcal: 799.5, ...noMacros })).toEqual({
+      ok: false,
+      problems: { kcal: "out_of_range" },
+    });
+  });
+
+  it("should allow a fractional macro, because the macro columns are numeric", () => {
+    expect(validateTargets({ kcal: 2200, protein_g: 150.5, fat_g: null, carbs_g: null }).ok).toBe(
+      true,
+    );
+  });
 });

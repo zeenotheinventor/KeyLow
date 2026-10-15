@@ -54,6 +54,9 @@ function barScale(): number | undefined {
   return animatedScale(barWrapper);
 }
 
+// The bar's box is three views up from its button: the press wrapper, the flexible slot, then the box.
+const barOf = (button: ReturnType<typeof screen.getByRole>) => button.parent?.parent?.parent;
+
 const schemes: ThemeScheme[] = ["dark", "light"];
 
 describe("SearchLauncher", () => {
@@ -72,6 +75,50 @@ describe("SearchLauncher", () => {
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
+  });
+
+  describe("when disabled", () => {
+    it("should disable both controls and press neither, as it is offline", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      const onScanPress = jest.fn();
+      await renderLauncher({ disabled: true, onPress, onScanPress });
+
+      await user.press(screen.getByRole("button", { name: "Search for a food" }));
+      await user.press(screen.getByRole("button", { name: "Scan barcode" }));
+
+      expect(screen.getByRole("button", { name: "Search for a food" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Scan barcode" })).toBeDisabled();
+      expect(onPress).not.toHaveBeenCalled();
+      expect(onScanPress).not.toHaveBeenCalled();
+    });
+
+    it("should draw the bar at half strength, as the offline board does", async () => {
+      await renderLauncher({ disabled: true });
+
+      expect(barOf(screen.getByRole("button", { name: "Search for a food" }))).toHaveStyle({
+        opacity: 0.5,
+      });
+    });
+
+    it("should dim the scan control once, with the bar, and not a second time on its own", async () => {
+      await renderLauncher({ disabled: true });
+      const scan = screen.getByRole("button", { name: "Scan barcode" });
+
+      // Half strength is the bar's alone. Dimmed by the button as well it would be 20 percent.
+      expect(scan).toBeDisabled();
+      expect(scan).not.toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(scan.parent?.parent?.parent).toHaveStyle({ opacity: 0.5 });
+    });
+
+    it("should be enabled and at full strength by default", async () => {
+      await renderLauncher();
+
+      expect(screen.getByRole("button", { name: "Search for a food" })).toBeEnabled();
+      expect(barOf(screen.getByRole("button", { name: "Search for a food" }))).not.toHaveStyle({
+        opacity: 0.5,
+      });
+    });
   });
 
   describe("behaviour", () => {

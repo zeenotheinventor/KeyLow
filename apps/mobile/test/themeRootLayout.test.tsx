@@ -1,3 +1,5 @@
+import "./support/gestureHandler";
+
 import { themes } from "@keylow/tokens";
 import { render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
@@ -13,6 +15,11 @@ import { resolvedColor } from "./support/themeColor";
 import type { ComponentType, ReactNode } from "react";
 
 // Metro compiles the stylesheet. Jest cannot read it.
+jest.mock(
+  "react-native-safe-area-context",
+  () =>
+    jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
+);
 jest.mock("../global.css", () => ({}));
 // The theme preference the app finds in storage, which a test changes to see the light scheme.
 let mockStoredPreference: string | null = null;
