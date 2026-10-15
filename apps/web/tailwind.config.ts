@@ -44,6 +44,14 @@ const config: Config = {
         },
         // The design system's kl-flash: the calorie ring's numeral lands in the accent and settles.
         flash: { from: { color: "theme(colors.accent.DEFAULT)" } },
+        // The design system's kl-toast-in at full distance: a toast cuts in from the corner at an
+        // angle and straightens as it settles. Reduced motion is a `motion-reduce:animate-none` on
+        // the toast, not a variable.
+        "toast-in": {
+          from: { opacity: "0", transform: "translate(40px, 12px) skewX(-12deg)" },
+          "60%": { opacity: "1", transform: "translate(-4px, 0) skewX(3deg)" },
+          to: { opacity: "1", transform: "none" },
+        },
       },
       animation: {
         skeleton: "shimmer 1400ms linear infinite, skeleton-in 160ms ease both",
@@ -51,6 +59,7 @@ const config: Config = {
         slash: `slash ${transitionDuration.flourish} ${transitionTimingFunction.exit} both`,
         punch: `punch ${transitionDuration.flourish} ${transitionTimingFunction.enter} both`,
         flash: `flash ${transitionDuration.flourish} ${transitionTimingFunction.exit} both`,
+        "toast-in": `toast-in ${transitionDuration.standard} ${transitionTimingFunction.enter} both`,
       },
     },
   },

@@ -29,6 +29,7 @@ import * as searchFieldStories from "@/components/ui/SearchField/SearchField.sto
 import * as segmentedControlStories from "@/components/ui/SegmentedControl/SegmentedControl.stories";
 import * as skeletonStories from "@/components/ui/Skeleton/Skeleton.stories";
 import { storyManifest } from "@/components/ui/storyManifest";
+import * as toastStories from "@/components/ui/Toast/Toast.stories";
 
 const storyModules: Record<string, object> = {
   "Banner/Banner.stories.tsx": bannerStories,
@@ -56,6 +57,7 @@ const storyModules: Record<string, object> = {
   "MacroBars/MacroBars.stories.tsx": macroBarsStories,
   "Input/Input.stories.tsx": inputStories,
   "SearchField/SearchField.stories.tsx": searchFieldStories,
+  "Toast/Toast.stories.tsx": toastStories,
 };
 
 const uiDirectory = join(__dirname, "../../components/ui");

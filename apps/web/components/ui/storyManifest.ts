@@ -196,4 +196,5 @@ export const storyManifest = {
     "Focused",
   ],
   "Skeleton/Skeleton.stories.tsx": ["Rows", "Text", "Block", "Custom"],
+  "Toast/Toast.stories.tsx": ["Neutral", "Success", "Warning", "Danger", "WithUndo"],
 } as const satisfies Record<string, readonly string[]>;
