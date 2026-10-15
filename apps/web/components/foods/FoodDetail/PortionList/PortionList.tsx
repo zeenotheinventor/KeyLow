@@ -1,5 +1,5 @@
 import { FOOD_DETAIL } from "@keylow/core/copy";
-import { formatGrams } from "@keylow/core/format";
+import { formatPortionAmount } from "@keylow/core/format";
 
 import type { PortionListProps } from "./types";
 import type { FoodPortion } from "@keylow/core/schemas";
@@ -7,12 +7,10 @@ import type { FoodPortion } from "@keylow/core/schemas";
 import { Badge } from "@/components/ui/Badge";
 import { GroupedList } from "@/components/ui/GroupedList";
 
-/** A portion is a weight or a volume, never both, so exactly one of the two is set. */
-function describeAmount({ grams, ml }: Pick<FoodPortion, "grams" | "ml">) {
-  if (grams !== null) {
-    return `${formatGrams(grams)} g`;
-  }
-  return ml === null ? "" : `${formatGrams(ml)} ml`;
+/** The amount as one string, such as "30 g", or nothing when the portion has neither a weight nor a volume. */
+function describeAmount(portion: FoodPortion) {
+  const amount = formatPortionAmount(portion);
+  return amount === null ? "" : `${amount.amount} ${amount.unit}`;
 }
 
 export function PortionList({ portions }: PortionListProps) {

@@ -49,7 +49,9 @@ export {
   FOOD_NUTRIENT_LABELS,
   describeMissingValues,
   describeNutritionHeading,
+  nutrientRows,
 } from "./foodDetail";
+export type { NutrientRow } from "./foodDetail";
 export { describeFoodSource } from "./foodSources";
 export {
   COMPANY_DETAILS,

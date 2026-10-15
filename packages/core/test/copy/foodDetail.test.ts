@@ -8,6 +8,7 @@ import {
   FOOD_NUTRIENT_LABELS,
   describeMissingValues,
   describeNutritionHeading,
+  nutrientRows,
 } from "../../src/copy";
 
 describe("food detail wording", () => {
@@ -96,5 +97,31 @@ describe("describeMissingValues", () => {
 
     expect(describeMissingValues([], undefined)).toBe(general);
     expect(describeMissingValues(["salt_g"], undefined)).toBe(general);
+  });
+});
+
+describe("nutrientRows", () => {
+  it("should write the rows in the order the boards draw them, with units", () => {
+    expect(
+      nutrientRows({ kcal: 2480, protein_g: 31.24, carbs_g: 12, fat_g: 7.5, fibre_g: 0 }),
+    ).toEqual([
+      { label: "Energy", value: "2,480 kcal" },
+      { label: "Protein", value: "31 g" },
+      { label: "Carbohydrate", value: "12 g" },
+      { label: "Fat", value: "7.5 g" },
+      { label: "Fibre", value: "0 g" },
+    ]);
+  });
+
+  it("should leave a value null when the source does not give it, never 0", () => {
+    expect(
+      nutrientRows({ kcal: null, protein_g: null, carbs_g: null, fat_g: null, fibre_g: null }),
+    ).toEqual([
+      { label: "Energy", value: null },
+      { label: "Protein", value: null },
+      { label: "Carbohydrate", value: null },
+      { label: "Fat", value: null },
+      { label: "Fibre", value: null },
+    ]);
   });
 });

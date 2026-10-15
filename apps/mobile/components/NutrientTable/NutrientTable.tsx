@@ -1,8 +1,7 @@
-import { describeNutritionHeading } from "@keylow/core/copy";
+import { describeNutritionHeading, nutrientRows } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { NutrientRow } from "./NutrientRow";
-import { nutrientRows } from "./nutrientRows";
 import { Card, Text } from "../ui";
 
 import type { NutrientTableProps } from "./types";
