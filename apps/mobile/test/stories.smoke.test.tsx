@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { composeStories, composeStory } from "@storybook/react";
 import { render, screen, waitFor } from "@testing-library/react-native";
+import { createElement, isValidElement } from "react";
 
 import * as previewModule from "../.rnstorybook/preview";
 
@@ -40,9 +41,99 @@ function isComposedStory(value: unknown): value is ComposedStory {
 
 const schemes: ThemeScheme[] = ["dark", "light"];
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// A story is an object, or a function with `args` set on it when it is written in the older style.
+function readArgs(story: unknown): unknown {
+  if (typeof story === "function" && "args" in story) {
+    return story.args;
+  }
+  return isRecord(story) ? story.args : undefined;
+}
+
+// The paths, such as `args.leading` or `args.items[1].icon`, of every React element found anywhere inside a
+// value. The values on the way down are tracked, so an arg that refers back to itself is skipped.
+function findElementPaths(value: unknown, valuePath: string, ancestors: Set<unknown>): string[] {
+  if (isValidElement(value)) {
+    return [valuePath];
+  }
+  if (typeof value !== "object" || value === null || ancestors.has(value)) {
+    return [];
+  }
+  ancestors.add(value);
+  const elementPaths = Array.isArray(value)
+    ? value.flatMap((item, index) => findElementPaths(item, `${valuePath}[${index}]`, ancestors))
+    : Object.entries(value).flatMap(([key, item]) =>
+        findElementPaths(item, `${valuePath}.${key}`, ancestors),
+      );
+  ancestors.delete(value);
+  return elementPaths;
+}
+
+function findElementArgs(storyFile: string, storyModule: Record<string, unknown>): string[] {
+  const { default: meta, ...stories } = storyModule;
+  const entries: [string, unknown][] = [
+    ["meta", readArgs(meta)],
+    ...Object.entries(stories).map(([storyName, story]): [string, unknown] => [
+      storyName,
+      readArgs(story),
+    ]),
+  ];
+  return entries.flatMap(([storyName, args]) =>
+    findElementPaths(args, "args", new Set()).map(
+      (elementPath) => `${storyFile} "${storyName}" has a React element at ${elementPath}`,
+    ),
+  );
+}
+
+describe("the element guard", () => {
+  const element = createElement("View");
+
+  it("should name the arg path of an element nested in an array and an object", () => {
+    const storyModule = { default: {}, Nested: { args: { items: [{ icon: element }] } } };
+
+    expect(findElementArgs("a.stories.tsx", storyModule)).toEqual([
+      'a.stories.tsx "Nested" has a React element at args.items[0].icon',
+    ]);
+  });
+
+  it("should read the args of a story written as a function", () => {
+    const functionStory = Object.assign(() => null, { args: { leading: element } });
+
+    expect(findElementArgs("a.stories.tsx", { default: {}, Legacy: functionStory })).toEqual([
+      'a.stories.tsx "Legacy" has a React element at args.leading',
+    ]);
+  });
+
+  it("should name the meta args without a trailing dot when the args are an element", () => {
+    expect(findElementArgs("a.stories.tsx", { default: { args: element } })).toEqual([
+      'a.stories.tsx "meta" has a React element at args',
+    ]);
+  });
+
+  it("should skip an arg that refers back to itself", () => {
+    const cyclic: Record<string, unknown> = { label: "Add" };
+    cyclic.self = cyclic;
+
+    expect(findElementArgs("a.stories.tsx", { default: { args: cyclic } })).toEqual([]);
+  });
+});
+
 describe("stories", () => {
   it("should find at least one story file", () => {
     expect(storyFiles.length).toBeGreaterThan(0);
+  });
+
+  // Storybook walks every arg to infer its type. A React element reaches a router context whose getters throw,
+  // which fails the whole story index on a device. Draw element content in `render` instead.
+  it("should keep React elements out of every story's args", () => {
+    const elementArgs = storyFiles.flatMap((storyFile) =>
+      findElementArgs(storyFile, jest.requireActual(path.join(componentsDirectory, storyFile))),
+    );
+
+    expect(elementArgs).toEqual([]);
   });
 
   describe.each(schemes)("in the %s scheme", (scheme) => {
