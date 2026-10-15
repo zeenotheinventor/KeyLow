@@ -79,4 +79,21 @@ describe("useRecentFoods", () => {
     expect(counter.requests).toBe(0);
     expect(result.current.fetchStatus).toBe("idle");
   });
+
+  it("should load once enabled turns true", async () => {
+    answerRecent();
+    const { wrapper } = createWrapper();
+
+    const { result, rerender } = renderHook(({ enabled }) => useRecentFoods({ enabled }), {
+      wrapper,
+      initialProps: { enabled: false },
+    });
+    expect(result.current.fetchStatus).toBe("idle");
+
+    rerender({ enabled: true });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+  });
 });

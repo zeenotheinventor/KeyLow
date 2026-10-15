@@ -15,9 +15,11 @@ const databaseColumns = {
  * not selected: the owner is the caller, recipes are not in the diary until M4, and deleted rows are
  * filtered out in the query.
  */
+export const foodLogEntrySchema = foodLogEntryInsertSchema.safeExtend(databaseColumns);
+export const quickLogEntrySchema = quickLogEntryInsertSchema.safeExtend(databaseColumns);
 export const logEntrySchema = z.discriminatedUnion("item_type", [
-  foodLogEntryInsertSchema.safeExtend(databaseColumns),
-  quickLogEntryInsertSchema.safeExtend(databaseColumns),
+  foodLogEntrySchema,
+  quickLogEntrySchema,
 ]);
 export type LogEntry = z.infer<typeof logEntrySchema>;
 export type FoodLogEntry = Extract<LogEntry, { item_type: "food" }>;

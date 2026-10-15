@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
+import { retryUnlessRangeError } from "./retryUnlessRangeError";
 import { getDiaryDay } from "../repos/diary";
 
 import type { DiaryReadOptions } from "./DiaryReadOptions";
@@ -18,5 +19,6 @@ export function useDiaryDay(localDate: string, { enabled = true }: DiaryReadOpti
     queryKey: keys.diary.day(localDate),
     queryFn: () => getDiaryDay(client, localDate),
     enabled,
+    retry: retryUnlessRangeError,
   });
 }

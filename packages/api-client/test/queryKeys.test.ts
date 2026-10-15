@@ -82,6 +82,13 @@ describe("keys.diary", () => {
     expect(keys.diary.recentFoods).toEqual(["diary", "recent-foods"]);
   });
 
+  it("should expose the prefix of every day key and of every week key, for invalidating them all", () => {
+    expect(keys.diary.days).toEqual(["diary", "day"]);
+    expect(keys.diary.weeks).toEqual(["diary", "week"]);
+    expect(keys.diary.day("2026-10-15").slice(0, 2)).toEqual(keys.diary.days);
+    expect(keys.diary.week("2026-10-12").slice(0, 2)).toEqual(keys.diary.weeks);
+  });
+
   it("should nest every diary key under the diary root so one invalidation covers them all", () => {
     for (const key of [
       keys.diary.day("2026-10-15"),
