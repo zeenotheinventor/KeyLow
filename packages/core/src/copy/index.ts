@@ -1,5 +1,6 @@
 export { ABOUT_SCREEN } from "./about";
 export {
+  ACCEPT_TERMS_SCREEN,
   AUTH_FIELD_PROBLEMS,
   AUTH_SCREEN,
   CHECK_EMAIL_TITLE,

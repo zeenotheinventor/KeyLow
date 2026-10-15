@@ -3,25 +3,21 @@
 import {
   CHECK_EMAIL_TITLE,
   GENERIC_ERROR,
-  LEGAL_PATHS,
-  SIGN_UP_ACCEPTANCE,
   SIGN_UP_SCREEN,
   TERMS_VERSION,
   describeCheckEmail,
 } from "@keylow/core/copy";
 import { Mail } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type SubmitEvent } from "react";
 
 import type { PendingAction } from "./types";
 
-import { authLinkClass } from "@/components/auth/authLink";
+import { AcceptanceCheckbox } from "@/components/auth/AcceptanceCheckbox";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { OrDivider } from "@/components/auth/OrDivider";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
-import { Checkbox } from "@/components/ui/Checkbox";
 import { TextField } from "@/components/ui/Input";
 import {
   describeFailure,
@@ -34,21 +30,6 @@ import {
   describeTermsPendingCookie,
 } from "@/lib/auth/termsPendingCookie";
 import { createClient } from "@/lib/supabase/client";
-
-// The links open a new tab so that the email and password already typed are not lost.
-const acceptanceLabel = (
-  <>
-    {SIGN_UP_ACCEPTANCE.beforeTerms}
-    <Link href={LEGAL_PATHS.terms} target="_blank" rel="noreferrer" className={authLinkClass}>
-      {SIGN_UP_ACCEPTANCE.termsLink}
-    </Link>
-    {SIGN_UP_ACCEPTANCE.betweenLinks}
-    <Link href={LEGAL_PATHS.privacy} target="_blank" rel="noreferrer" className={authLinkClass}>
-      {SIGN_UP_ACCEPTANCE.privacyLink}
-    </Link>
-    {SIGN_UP_ACCEPTANCE.afterPrivacy}
-  </>
-);
 
 export function SignUpForm() {
   const router = useRouter();
@@ -174,16 +155,13 @@ export function SignUpForm() {
         error={fieldErrors.password}
       />
 
-      <Checkbox
-        multiline
-        name="acceptTerms"
-        label={acceptanceLabel}
+      <AcceptanceCheckbox
         checked={hasAccepted}
-        onChange={(event) => {
-          if (!event.target.checked) {
+        onCheckedChange={(checked) => {
+          if (!checked) {
             clearGoogleAcceptance();
           }
-          setHasAccepted(event.target.checked);
+          setHasAccepted(checked);
         }}
       />
 
