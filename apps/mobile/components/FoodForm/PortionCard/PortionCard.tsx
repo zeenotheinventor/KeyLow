@@ -6,6 +6,7 @@ import {
   describePortionLabelField,
   describeRemovePortion,
 } from "@keylow/core/copy";
+import { amountUnit } from "@keylow/core/foods";
 import { View } from "react-native";
 
 import { Button, Card, FieldError, Input, NumericInput, Switch, Text } from "../../ui";
@@ -30,7 +31,7 @@ export function PortionCard({
   onDefaultChange,
   onRemove,
 }: PortionCardProps) {
-  const unit = basis === "per_100g" ? "g" : "ml";
+  const unit = amountUnit(basis);
 
   return (
     <Card aria-label={describePortionGroup(position)} padding={3} role="group">
