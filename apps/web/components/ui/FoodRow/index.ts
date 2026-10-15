@@ -1,2 +1,10 @@
 export { FoodRow } from "./FoodRow";
-export type { FoodNameSegment, FoodRowContent, FoodRowMacros, FoodRowProps } from "./types";
+export type {
+  FoodLogRowProps,
+  FoodNameSegment,
+  FoodRowContent,
+  FoodRowLayout,
+  FoodRowMacros,
+  FoodRowProps,
+  FoodTableRowProps,
+} from "./types";

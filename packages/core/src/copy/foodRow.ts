@@ -1,3 +1,4 @@
+import { FOOD_DETAIL } from "./foodDetail";
 import { spokenAmount } from "./spokenAmount";
 
 /** The words on a food row that no caller writes: the review flag and the swipe action. */
@@ -8,7 +9,22 @@ export const FOOD_ROW = {
   deleteAction: "Delete",
   /** The unit written after an energy on a row. */
   energyUnit: "kcal",
+  /** The heading of the food column of the diary table. The macro columns use `FOOD_MACRO_LABELS` and the energy one `energyUnit`. */
+  foodColumn: "Food",
+  /** The heading of the column of Edit and Delete buttons, which is not drawn and is read out. */
+  actionsColumn: "Actions",
+  /** The unit written after a macro in the diary table. */
+  gramUnit: "g",
+  /** The amount of a food logged with its energy alone, written after the time: "12:45 · Quick add". */
+  quickAdd: "Quick add",
 } as const;
+
+/** The name of a diary table row's edit button: "Edit Porridge oats". */
+export const describeEditFood = (foodName: string): string => `${FOOD_DETAIL.edit} ${foodName}`;
+
+/** The name of a diary table row's delete button: "Delete Porridge oats". */
+export const describeDeleteFood = (foodName: string): string =>
+  `${FOOD_ROW.deleteAction} ${foodName}`;
 
 /** The name of a row's add button: the food and the serving it logs, such as "Add Banana, 1 medium (100 g)". */
 export const describeAddFood = (foodName: string, serving?: string): string =>
