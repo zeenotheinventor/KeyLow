@@ -98,7 +98,7 @@ async function goBack() {
 
 const tabNames = ["Dashboard", "Diary", "Recipes", "More"];
 const launcher = () => screen.queryByRole("button", { name: "Search for a food" });
-const sheetHeading = () => screen.queryByRole("heading", { name: "Find food" });
+const sheetHeading = () => screen.queryByRole("heading", { name: "Log food" });
 const selectedTabs = (options: { hidden?: boolean } = {}) =>
   screen.queryAllByRole("tab", { selected: true, ...options });
 
@@ -174,7 +174,7 @@ describe("the tab shell", () => {
 
         await user.press(await screen.findByRole("button", { name: "Find food" }));
 
-        expect(await screen.findByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+        expect(await screen.findByRole("heading", { name: "Log food" })).toBeOnTheScreen();
         // The tabs are under the sheet now, so the screen reader is not offered them.
         expect(screen.getByRole("tab", { name, selected: true, hidden: true })).toBeOnTheScreen();
         expect(selectedTabs({ hidden: true })).toHaveLength(1);
@@ -197,7 +197,7 @@ describe("the tab shell", () => {
       const user = userEvent.setup();
       await renderApp("/recipes");
       await user.press(await screen.findByRole("button", { name: "Find food" }));
-      expect(await screen.findByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+      expect(await screen.findByRole("heading", { name: "Log food" })).toBeOnTheScreen();
 
       await goBack();
 
@@ -239,7 +239,7 @@ describe("the tab shell", () => {
       await renderApp("/dashboard");
 
       await user.press(await screen.findByRole("button", { name: "Search for a food" }));
-      expect(await screen.findByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+      expect(await screen.findByRole("heading", { name: "Log food" })).toBeOnTheScreen();
       await user.press(screen.getByRole("button", { name: "Close" }));
 
       expect(await screen.findByRole("heading", { name: "Dashboard" })).toBeOnTheScreen();
