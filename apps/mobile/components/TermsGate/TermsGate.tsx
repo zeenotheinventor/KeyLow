@@ -67,11 +67,14 @@ export function TermsGate({ onStateChange }: TermsGateProps) {
   });
   const acceptance = useTermsAcceptance();
 
+  // An acceptance that is already known stays the answer when a refetch fails (the app refetches it on
+  // every return to the foreground), so only a read that never produced one counts as an error.
+  const isAcceptanceUnknown = acceptance.data === undefined;
   const state = toTermsGateState({
     isHeld,
     isPending: acceptance.isPending,
-    isError: acceptance.isError,
-    isFetching: acceptance.isFetching,
+    isError: acceptance.isError && isAcceptanceUnknown,
+    isFetching: acceptance.isFetching && isAcceptanceUnknown,
     needsAcceptance: needsTermsAcceptance(acceptance.data ?? null, TERMS_VERSION),
   });
   useEffect(() => {
