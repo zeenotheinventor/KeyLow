@@ -236,3 +236,67 @@ describe("the edit dialog's chips", () => {
     });
   });
 });
+
+describe("pressing a different chip in the edit dialog", () => {
+  it("should open an entry on its own amount, before any chip is pressed", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "20");
+  });
+
+  it("should set an entry logged in grams to 1 when 1 tbsp is pressed, not read 20 tbsp", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+
+    expect(amountField("tbsp")).toHaveProperty("value", "1");
+    expect(
+      screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (15 ml, 14 g)" }),
+    ).toBeTruthy();
+  });
+
+  it("should set an entry logged in a portion to 100 when g is pressed, not read 2 g", () => {
+    renderDialog(
+      foodEntry({
+        date: TODAY,
+        time: "12:40",
+        name: "Banana",
+        quantity: 2,
+        unit: "portion",
+        kcal: 95,
+        protein: 1.2,
+        fat: 0.1,
+        carbs: 20.3,
+      }),
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "100");
+    expect(screen.getByRole("group", { name: "Energy and macros, For 100 g" })).toBeTruthy();
+  });
+
+  it("should keep the amount when the chip already chosen is pressed", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "20");
+  });
+
+  it("should save the amount the chip set", async () => {
+    const entry = oilEntry({ quantity: 20, unit: "g" });
+    renderDialog(entry);
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tsp" }));
+    save();
+
+    await waitFor(() => {
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+      entry,
+      amount: { quantity: 1, unit: "portion", portion: { label: "1 tsp", ml: 5 } },
+    });
+  });
+});

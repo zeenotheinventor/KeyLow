@@ -1,6 +1,7 @@
 import { useFood, useProfileTimeZone, useUpdateEntry } from "@keylow/api-client";
 import { formatClockTime } from "@keylow/core/dates";
 import {
+  amountOnUnitChange,
   clockTimeOn,
   entryPickerChoices,
   foodChangedSinceLogged,
@@ -179,7 +180,7 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       edit({ quantityText: text });
     },
     setUnitValue: (value) => {
-      edit({ unitValue: value });
+      edit({ unitValue: value, quantityText: amountOnUnitChange(unitValue, value, quantityText) });
     },
     setTime: (next) => {
       edit({ chosenTime: next });
