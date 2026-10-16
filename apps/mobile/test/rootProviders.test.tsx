@@ -5,6 +5,7 @@ import { Text } from "react-native";
 import RootLayout, { ErrorBoundary } from "../app/_layout";
 import { RootErrorScreen } from "../components/RootErrorScreen";
 import { useToast } from "../components/ui";
+import { feedFocusManager } from "../lib/connectivity";
 import { resetRouterMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -68,6 +69,11 @@ jest.mock("expo-router", () => ({
   ...jest.requireActual<{ mockExpoRouter: object }>("./support/expoRouterMock").mockExpoRouter,
   Stack: MockStack,
 }));
+// Whether the layout turns it on is what is asked. What it does once on is proved with the connectivity tests.
+jest.mock("../lib/connectivity", () => ({
+  ...jest.requireActual<typeof import("../lib/connectivity")>("../lib/connectivity"),
+  feedFocusManager: jest.fn(),
+}));
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -88,6 +94,10 @@ describe("the app root", () => {
 
   it("should export the root error screen as the layout's error boundary, so a failing route shows it", () => {
     expect(ErrorBoundary).toBe(RootErrorScreen);
+  });
+
+  it("should tell React Query when the app is in the foreground, as the layout loads, so a stale diary refetches on return", () => {
+    expect(feedFocusManager).toHaveBeenCalledTimes(1);
   });
 
   it("should show a toast that a screen asks for, because the toast provider is mounted", async () => {

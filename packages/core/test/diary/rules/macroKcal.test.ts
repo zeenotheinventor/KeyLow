@@ -24,6 +24,12 @@ describe("macroKcal", () => {
     expect(macroKcal(null, null, null)).toBe(0);
   });
 
+  it("should leave out a macro that is not a number, so the total is never NaN", () => {
+    expect(macroKcal(Number.NaN, 7, 15)).toBe(123);
+    expect(macroKcal(2, Number.NaN, Number.POSITIVE_INFINITY)).toBe(8);
+    expect(macroKcal(Number.NaN, Number.NaN, Number.NaN)).toBe(0);
+  });
+
   it("should keep the decimals", () => {
     expect(macroKcal(1.5, 0.5, 2.25)).toBe(19.5);
   });

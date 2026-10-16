@@ -247,6 +247,60 @@ describe("the quick add dialog", () => {
       expect(fat()).toHaveProperty("value", "2,5");
     });
 
+    it("should not allow Add for 1,200 calories, which is not 1.2, and log nothing", () => {
+      renderDialog();
+
+      type(calories(), "1,200");
+      fireEvent.submit(calories());
+
+      expect(add()).toHaveProperty("disabled", true);
+      expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should not allow Add for 1,200 in a macro, and log nothing", () => {
+      renderDialog();
+      type(calories(), "130");
+
+      type(protein(), "1,200");
+      fireEvent.submit(calories());
+
+      expect(add()).toHaveProperty("disabled", true);
+      expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should never write NaN in the line under Calories while a macro is not a number", () => {
+      renderDialog();
+      type(calories(), "130");
+
+      type(protein(), "1,200");
+
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.getByText("Macros add up to 0 kcal")).toBeTruthy();
+    });
+
+    it("should treat a lone point or comma in a macro as nothing typed yet, so Add stays allowed", () => {
+      renderDialog();
+      type(calories(), "130");
+
+      type(protein(), ",");
+
+      expect(add()).toHaveProperty("disabled", false);
+    });
+
+    it("should still read a decimal comma as a decimal point", async () => {
+      renderDialog();
+      type(calories(), "130");
+      type(protein(), "12,5");
+
+      fireEvent.click(add());
+
+      await waitFor(() => {
+        expect(api.quickAdd.mutateAsync).toHaveBeenCalledWith(
+          expect.objectContaining({ protein_g: 12.5 }),
+        );
+      });
+    });
+
     it("should not allow Add until the calories are above 0", () => {
       renderDialog();
 

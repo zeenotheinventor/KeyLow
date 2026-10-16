@@ -142,6 +142,39 @@ describe("TargetsForm", () => {
     });
   });
 
+  describe("a thousands separator", () => {
+    it("should refuse 1,200 calories, which is not 1.2, and write nothing", () => {
+      renderForm();
+
+      type(calories(), "1,200");
+      fireEvent.submit(calories());
+
+      expect(save()).toHaveProperty("disabled", true);
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should refuse 1,200 in a macro, and write nothing", () => {
+      renderForm();
+
+      type(protein(), "1,200");
+      fireEvent.submit(calories());
+
+      expect(save()).toHaveProperty("disabled", true);
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("a macro that is not a number", () => {
+    it("should never write NaN in the macro sum", () => {
+      renderForm();
+
+      type(protein(), "1,200");
+
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.getByText("Macros add up to 1,510 kcal")).toBeTruthy();
+    });
+  });
+
   describe("saving", () => {
     it("should save the numbers, say so in a toast and go back to More", async () => {
       renderForm();

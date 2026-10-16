@@ -12,10 +12,9 @@ import type { QuickAddDraft, QuickAddField, QuickAddTexts } from "./types";
 const NO_TEXTS: QuickAddTexts = { kcal: "", protein: "", carbs: "", fat: "", label: "" };
 
 // What the field holds as a number for core. A lone point or comma is a number not yet typed, so it is blank.
+// Any other text that is not a number, such as "1,200", stays NaN so that core refuses it.
 function enteredGrams(text: string): number | null {
-  const entered = enteredNumber(text);
-
-  return entered !== null && Number.isNaN(entered) ? null : entered;
+  return text === "." || text === "," ? null : enteredNumber(text);
 }
 
 /**

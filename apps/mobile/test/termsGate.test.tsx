@@ -1,5 +1,6 @@
-import { KeyLowProvider } from "@keylow/api-client";
+import { KeyLowProvider, keys } from "@keylow/api-client";
 import { ACCEPT_TERMS_SCREEN, GENERIC_ERROR, TERMS_VERSION } from "@keylow/core/copy";
+import { focusManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 
@@ -329,6 +330,45 @@ describe("the accept-to-continue gate", () => {
         jest.advanceTimersByTime(60_000);
       });
       expect(termsBackend.readCount).toBe(2);
+    });
+  });
+
+  describe("when an acceptance that is already known cannot be read again", () => {
+    afterEach(() => {
+      focusManager.setFocused(undefined);
+    });
+
+    it("should keep the app open when a refetch on return to the foreground fails", async () => {
+      termsBackend.row = currentAcceptance;
+      await renderSignedInGate();
+      expect(await screen.findByText("Protected content")).toBeOnTheScreen();
+      const readsBefore = termsBackend.readCount;
+      termsBackend.readFails = true;
+
+      await act(() => {
+        focusManager.setFocused(false);
+        focusManager.setFocused(true);
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryState(keys.profiles.termsAcceptance)?.status).toBe("error");
+      });
+      // Lets the screen draw what the failed read left behind.
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(termsBackend.readCount).toBeGreaterThan(readsBefore);
+      expect(screen.getByText("Protected content")).toBeOnTheScreen();
+      expect(screen.queryByRole("alert", { name: GENERIC_ERROR })).not.toBeOnTheScreen();
+    });
+
+    it("should still fail closed when the acceptance was never read", async () => {
+      termsBackend.readFails = true;
+
+      await renderSignedInGate();
+
+      expect(await screen.findByRole("alert", { name: GENERIC_ERROR })).toBeOnTheScreen();
+      expect(screen.queryByText("Protected content")).not.toBeOnTheScreen();
     });
   });
 

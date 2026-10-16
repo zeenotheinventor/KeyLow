@@ -119,6 +119,12 @@ describe("the diary screen", () => {
       expect(screen.getByRole("button", { name: "Sunday 18 October" })).toBeDisabled();
     });
 
+    it("should not say to swipe the strip, which only a past day does", async () => {
+      await renderLoadedDiary();
+
+      expect(screen.queryByText("Swipe the strip to change week")).not.toBeOnTheScreen();
+    });
+
     it("should draw the four bars from the day's foods against the targets, as one button named Targets", async () => {
       await renderLoadedDiary();
 
@@ -373,6 +379,28 @@ describe("the diary screen", () => {
       expect(
         screen.getByRole("button", { name: "Wednesday 14 October", selected: true }),
       ).toBeOnTheScreen();
+    });
+
+    it("should say to swipe the strip to change week, as the past day board does", async () => {
+      const user = userEvent.setup();
+      await renderLoadedDiary();
+
+      await user.press(screen.getByRole("button", { name: "Wednesday 14 October" }));
+      await screen.findByRole("heading", { name: "Wed 14 Oct" });
+
+      expect(screen.getByText("Swipe the strip to change week")).toBeOnTheScreen();
+    });
+
+    it("should stop saying it when today is pressed again", async () => {
+      const user = userEvent.setup();
+      await renderLoadedDiary();
+      await user.press(screen.getByRole("button", { name: "Wednesday 14 October" }));
+      await screen.findByRole("heading", { name: "Wed 14 Oct" });
+
+      await user.press(screen.getByRole("button", { name: "Thursday 15 October, today" }));
+
+      await screen.findByRole("heading", { name: "Today" });
+      expect(screen.queryByText("Swipe the strip to change week")).not.toBeOnTheScreen();
     });
 
     it("should read that day's entries, and mark no hour as now", async () => {

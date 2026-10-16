@@ -1,12 +1,24 @@
-import { onlineManager } from "@tanstack/react-query";
-import { act, renderHook } from "@testing-library/react-native";
+import { KeyLowProvider, useDiaryDay } from "@keylow/api-client";
+import { focusManager, onlineManager } from "@tanstack/react-query";
+import { act, renderHook, waitFor } from "@testing-library/react-native";
+import { AppState } from "react-native";
 
+import {
+  createDiaryQueryClient,
+  diaryBackend,
+  diaryClient,
+  resetDiaryBackend,
+  signInDiaryClient,
+} from "./support/diaryBackend";
 import { PROBE_INTERVAL_MS, PROBE_TIMEOUT_MS } from "../lib/connectivity/constants";
+import { feedFocusManager } from "../lib/connectivity/feedFocusManager";
 import { probeConnection } from "../lib/connectivity/probeConnection";
 import { useIsOnline } from "../lib/connectivity/useIsOnline";
 import { watchConnection } from "../lib/connectivity/watchConnection";
 
-import type { AppStateStatus } from "react-native";
+import type { QueryClient } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import type { AppStateStatus, NativeEventSubscription } from "react-native";
 
 describe("probeConnection", () => {
   it("should be online when the server answers, even with an error status, because it was reached", async () => {
@@ -197,5 +209,98 @@ describe("useIsOnline", () => {
       onlineManager.setOnline(true);
     });
     expect(result.current).toBe(true);
+  });
+});
+
+describe("feedFocusManager", () => {
+  const removeSubscription = jest.fn();
+  let appStateListeners: ((state: AppStateStatus) => void)[];
+  let queryClient: QueryClient;
+
+  const wrapper = ({ children }: { children: ReactNode }) => (
+    <KeyLowProvider client={diaryClient} queryClient={queryClient}>
+      {children}
+    </KeyLowProvider>
+  );
+  const renderDiaryDay = ({ enabled }: { enabled: boolean }) =>
+    renderHook(() => useDiaryDay("2026-10-15", { enabled }), { wrapper });
+  const changeAppState = (state: AppStateStatus) =>
+    act(() => {
+      appStateListeners.forEach((listener) => {
+        listener(state);
+      });
+    });
+
+  beforeEach(async () => {
+    resetDiaryBackend();
+    await signInDiaryClient();
+    // The sign in asked the fake server who the user is, which is not what the tests count.
+    diaryBackend.requests = [];
+    queryClient = createDiaryQueryClient();
+    appStateListeners = [];
+    removeSubscription.mockClear();
+    jest
+      .spyOn(AppState, "addEventListener")
+      .mockImplementation((_type, listener): NativeEventSubscription => {
+        appStateListeners.push(listener);
+        return { remove: removeSubscription };
+      });
+    feedFocusManager();
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    queryClient.clear();
+    // The browser's own listener, which the manager had before the app replaced it.
+    focusManager.setEventListener(() => undefined);
+    focusManager.setFocused(undefined);
+  });
+
+  it("should refetch a stale diary read once when the app comes back to the foreground", async () => {
+    const { result } = await renderDiaryDay({ enabled: true });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    const requestsPerRead = diaryBackend.requests.length;
+
+    await changeAppState("background");
+    await changeAppState("active");
+
+    await waitFor(() => {
+      expect(diaryBackend.requests).toHaveLength(requestsPerRead * 2);
+    });
+    expect(result.current.isFetching).toBe(false);
+  });
+
+  it("should not refetch when the app goes to the background", async () => {
+    const { result } = await renderDiaryDay({ enabled: true });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    const requestsAfterTheFirstRead = diaryBackend.requests.length;
+
+    await changeAppState("background");
+
+    expect(result.current.isFetching).toBe(false);
+    expect(diaryBackend.requests).toHaveLength(requestsAfterTheFirstRead);
+  });
+
+  it("should fetch nothing on return to the foreground while the reads are disabled, as under the terms gate", async () => {
+    await renderDiaryDay({ enabled: false });
+
+    await changeAppState("background");
+    await changeAppState("active");
+
+    expect(diaryBackend.requests).toHaveLength(0);
+  });
+
+  it("should remove its subscription to the app state when the last query goes", async () => {
+    const { unmount } = await renderDiaryDay({ enabled: true });
+    expect(appStateListeners).toHaveLength(1);
+    expect(removeSubscription).not.toHaveBeenCalled();
+
+    await unmount();
+
+    expect(removeSubscription).toHaveBeenCalledTimes(1);
   });
 });
