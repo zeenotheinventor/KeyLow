@@ -34,6 +34,8 @@ export { NUTRITION_ENGINE_VERSION, SNAPSHOT_VERSION } from "./versions";
 export * from "./rules";
 export { openingLoggedAt, clockTimeOn } from "./openingLoggedAt";
 export type { LogContext } from "./openingLoggedAt";
+export { pickerChoices } from "./pickerChoices";
+export type { PickerChoices, PickerFood } from "./pickerChoices";
 export { previewAmount } from "./previewAmount";
 export type {
   AmountFood,
@@ -44,6 +46,7 @@ export type {
 } from "./previewAmount";
 export {
   SNAPSHOT_PORTION_ID,
+  entryPickerChoices,
   snapshotAmountStart,
   snapshotAsFood,
   snapshotPortions,

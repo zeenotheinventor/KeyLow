@@ -34,7 +34,7 @@ export function unitOptions(
  */
 export function startingAmount(
   food: AmountFood,
-  portions: readonly (AmountPortion & { is_default: boolean })[],
+  portions: readonly (AmountPortion & { is_default?: boolean })[],
   initialAmount?: ChosenAmount,
 ): { quantity: string; unitValue: string } {
   if (initialAmount !== undefined) {

@@ -4,12 +4,19 @@ import { buildLogEntry } from "../../src/diary/buildLogEntry";
 import { previewAmount } from "../../src/diary/previewAmount";
 import {
   SNAPSHOT_PORTION_ID,
+  entryPickerChoices,
   snapshotAmountStart,
   snapshotAsFood,
   snapshotPortions,
 } from "../../src/diary/snapshotAmount";
 import { unitOptions } from "../../src/diary/startingAmount";
+import { SPOON_PORTIONS } from "../../src/nutrition/volume";
 import { buildFood, buildFoodPortion } from "../../src/testing";
+
+const [teaspoon, tablespoon] = SPOON_PORTIONS;
+if (teaspoon === undefined || tablespoon === undefined) {
+  throw new Error("The spoon portions must be a teaspoon and a tablespoon");
+}
 
 const when = { loggedAt: "2026-10-15T11:40:00+00:00", localDate: "2026-10-15" };
 const banana = buildFood({
@@ -142,5 +149,178 @@ describe("snapshotAmountStart", () => {
     }).snapshot;
 
     expect(snapshotAmountStart(drink)).toEqual({ quantity: "118.3", unitValue: "ml" });
+  });
+});
+
+describe("entryPickerChoices", () => {
+  const oil = buildFood({ density_g_per_ml: 0.92, kcal: 884, fat_g: 100 });
+  const spoonEntry = buildLogEntry({
+    food: oil,
+    quantity: 2,
+    unit: "portion",
+    portion: tablespoon,
+    ...when,
+  }).snapshot;
+
+  const countBy = (
+    choices: ReturnType<typeof entryPickerChoices>,
+    key: "value" | "label",
+    wanted: string,
+  ) => choices.options.filter((option) => option[key] === wanted).length;
+
+  describe("an entry logged in spoons", () => {
+    it("should show the spoon chip once, in the spoon's place, and start on it", () => {
+      const choices = entryPickerChoices(spoonEntry);
+
+      expect(choices.options).toEqual([
+        { value: "g", label: "g" },
+        { value: "ml", label: "ml" },
+        { value: "spoon-tsp", label: "1 tsp" },
+        { value: "spoon-tbsp", label: "1 tbsp" },
+      ]);
+      expect(countBy(choices, "value", "spoon-tbsp")).toBe(1);
+      expect(countBy(choices, "label", "1 tbsp")).toBe(1);
+      expect(snapshotAmountStart(spoonEntry)).toEqual({ quantity: "2", unitValue: "spoon-tbsp" });
+    });
+
+    it("should hold the spoon portions the hero works from, whose size is the entry's", () => {
+      const { portions } = entryPickerChoices(spoonEntry);
+      const { amount, hero } = previewAmount(
+        snapshotAsFood(spoonEntry),
+        portions,
+        "spoon-tbsp",
+        "3",
+      );
+
+      expect(portions).toContainEqual(tablespoon);
+      expect(amount).not.toBeNull();
+      expect(hero.caption).toBe("For 3 tbsp (45 ml, 41 g)");
+    });
+
+    it("should do the same for a teaspoon", () => {
+      const teaspoonEntry = buildLogEntry({
+        food: oil,
+        quantity: 1,
+        unit: "portion",
+        portion: teaspoon,
+        ...when,
+      }).snapshot;
+
+      expect(entryPickerChoices(teaspoonEntry).options.map((option) => option.value)).toEqual([
+        "g",
+        "ml",
+        "spoon-tsp",
+        "spoon-tbsp",
+      ]);
+      expect(snapshotAmountStart(teaspoonEntry).unitValue).toBe("spoon-tsp");
+    });
+
+    it("should offer the spoons of a per 100 ml food that has no density", () => {
+      const drinkEntry = buildLogEntry({
+        food: buildFood({ basis: "per_100ml", density_g_per_ml: null }),
+        quantity: 2,
+        unit: "portion",
+        portion: tablespoon,
+        ...when,
+      }).snapshot;
+
+      expect(entryPickerChoices(drinkEntry).options.map((option) => option.label)).toEqual([
+        "g",
+        "ml",
+        "1 tsp",
+        "1 tbsp",
+      ]);
+      expect(snapshotAmountStart(drinkEntry).unitValue).toBe("spoon-tbsp");
+    });
+  });
+
+  describe("a gram portion that shares a spoon's label", () => {
+    it("should keep two chips, its own and the spoon, and start on its own", () => {
+      const ownTablespoon = buildFoodPortion({ id: "portion-own", label: "1 tbsp", grams: 14 });
+      const entry = buildLogEntry({
+        food: oil,
+        quantity: 2,
+        unit: "portion",
+        portion: ownTablespoon,
+        ...when,
+      }).snapshot;
+
+      const choices = entryPickerChoices(entry);
+
+      expect(choices.options).toEqual([
+        { value: SNAPSHOT_PORTION_ID, label: "1 tbsp" },
+        { value: "g", label: "g" },
+        { value: "ml", label: "ml" },
+        { value: "spoon-tsp", label: "1 tsp" },
+        { value: "spoon-tbsp", label: "1 tbsp" },
+      ]);
+      expect(snapshotAmountStart(entry).unitValue).toBe(SNAPSHOT_PORTION_ID);
+    });
+  });
+
+  describe("an old entry", () => {
+    it("should give the chips unitOptions gives today for an entry logged in grams", () => {
+      expect(entryPickerChoices(inGrams).options).toEqual(
+        unitOptions(snapshotAsFood(inGrams), snapshotPortions(inGrams)),
+      );
+    });
+
+    it("should give the chips unitOptions gives today for an entry logged in a portion", () => {
+      expect(entryPickerChoices(inPortions).options).toEqual(
+        unitOptions(snapshotAsFood(inPortions), snapshotPortions(inPortions)),
+      );
+      expect(entryPickerChoices(inPortions).portions).toEqual(snapshotPortions(inPortions));
+    });
+
+    it("should give a drink in millilitres g, ml and the spoons", () => {
+      const drink = buildLogEntry({
+        food: buildFood({ basis: "per_100ml" }),
+        quantity: 250,
+        unit: "ml",
+        ...when,
+      }).snapshot;
+
+      expect(entryPickerChoices(drink).options.map((option) => option.label)).toEqual([
+        "g",
+        "ml",
+        "1 tsp",
+        "1 tbsp",
+      ]);
+    });
+
+    it("should keep the logged millilitre portion of a drink before g", () => {
+      const glass = buildFoodPortion({
+        id: "portion-glass",
+        label: "1 glass",
+        grams: null,
+        ml: 200,
+      });
+      const drink = buildLogEntry({
+        food: buildFood({ basis: "per_100ml" }),
+        quantity: 1,
+        unit: "portion",
+        portion: glass,
+        ...when,
+      }).snapshot;
+
+      expect(entryPickerChoices(drink).options.map((option) => option.label)).toEqual([
+        "1 glass",
+        "g",
+        "ml",
+        "1 tsp",
+        "1 tbsp",
+      ]);
+    });
+  });
+
+  it("should offer ml and the spoons of a food whose density the entry froze", () => {
+    const frozen = buildLogEntry({ food: oil, quantity: 100, unit: "g", ...when }).snapshot;
+
+    expect(entryPickerChoices(frozen).options.map((option) => option.label)).toEqual([
+      "g",
+      "ml",
+      "1 tsp",
+      "1 tbsp",
+    ]);
   });
 });

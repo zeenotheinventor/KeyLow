@@ -1,5 +1,8 @@
+import { choicesFor } from "./pickerChoices";
 import { GRAMS_PER_OUNCE, ML_PER_FLUID_OUNCE } from "../nutrition/units";
+import { spoonPortionWithLabel } from "../nutrition/volume";
 
+import type { PickerChoices } from "./pickerChoices";
 import type { AmountFood, AmountPortion } from "./previewAmount";
 import type { FoodSnapshot } from "./schemas";
 
@@ -39,10 +42,41 @@ export function snapshotPortions(snapshot: FoodSnapshot): AmountPortion[] {
   ];
 }
 
+/**
+ * The spoon an entry was logged in, if it was: a millilitre portion with a spoon's label and a spoon's size,
+ * the way `matchPortionOnFood` finds one. A gram portion that merely shares a spoon's label is not a spoon.
+ */
+const spoonOfSnapshot = (snapshot: FoodSnapshot) => {
+  const { portion } = snapshot;
+  if (portion === null || !("ml" in portion)) {
+    return undefined;
+  }
+  const spoon = spoonPortionWithLabel(portion.label);
+
+  return spoon?.ml === portion.ml ? spoon : undefined;
+};
+
+/**
+ * The chips of the dialog or screen that edits a logged entry, and the portions its hero works from, built from
+ * the entry's own snapshot and never from the live food. They follow the picker's order, with the logged
+ * portion in the food's place: the portion, g, then ml, 1 tsp and 1 tbsp. A snapshot has no food group, so the
+ * volume chips are offered when it holds a density or is measured per 100 ml (or was logged in spoons). An
+ * entry logged in spoons shows its spoon chip once, in the spoon's place; a gram portion with a spoon's label
+ * stays its own chip. An entry that has no density gets the chips it always did.
+ */
+export function entryPickerChoices(snapshot: FoodSnapshot): PickerChoices {
+  const spoon = spoonOfSnapshot(snapshot);
+  const isMeasuredByVolume =
+    snapshot.density !== null || snapshot.basis === "per_100ml" || spoon !== undefined;
+
+  return choicesFor(spoon === undefined ? snapshotPortions(snapshot) : [], isMeasuredByVolume);
+}
+
 const roundToTenth = (value: number): number => Math.round(value * 10) / 10;
 
 /**
- * Where the edit dialog's amount field and chips start: the logged amount, on the chip of its unit. The dialog
+ * Where the edit dialog's amount field and chips start: the logged amount, on the chip of its unit (a spoon
+ * entry's, on the spoon chip of `entryPickerChoices`). The dialog
  * offers portions, grams and millilitres, so an amount logged in ounces is shown as grams, and one in fluid
  * ounces as millilitres, to a tenth.
  */
@@ -62,7 +96,10 @@ export function snapshotAmountStart(snapshot: FoodSnapshot): {
         unitValue: "ml",
       };
     case "portion":
-      return { quantity: String(snapshot.quantity), unitValue: SNAPSHOT_PORTION_ID };
+      return {
+        quantity: String(snapshot.quantity),
+        unitValue: spoonOfSnapshot(snapshot)?.id ?? SNAPSHOT_PORTION_ID,
+      };
     default:
       return { quantity: String(snapshot.quantity), unitValue: snapshot.unit };
   }

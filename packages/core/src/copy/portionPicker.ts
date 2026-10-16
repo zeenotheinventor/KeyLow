@@ -85,6 +85,34 @@ export const describeAmountBasis = (input: AmountBasisInput): string => {
   return `For ${formatGrams(quantity)} × ${portionLabel} (${total})`;
 };
 
+export type VolumeBasisInput = { quantity: number; weightInGrams: number | null } & (
+  | { unit: "ml" }
+  | {
+      unit: "spoon";
+      /** The spoon as the picker names it, such as "1 tbsp". */
+      spoonLabel: string;
+      /** The volume of the whole amount, in millilitres: the count times the spoon's size. */
+      volumeMl: number;
+    }
+);
+
+/**
+ * The hero's caption for an amount measured by volume: "For 250 ml (258 g)", and for a spoon its
+ * millilitres first, "For 2 tbsp (30 ml, 28 g)". The weight is left out when the food has no density to
+ * work it out with, as for a drink measured per 100 ml: "For 250 ml", "For 2 tbsp (30 ml)". It is the
+ * weight itself and never "about" it, because a logged entry freezes the same figure.
+ */
+export const describeVolumeBasis = (input: VolumeBasisInput): string => {
+  const weight = input.weightInGrams === null ? [] : [`${formatGrams(input.weightInGrams)} g`];
+  const quantity = formatGrams(input.quantity);
+  if (input.unit === "ml") {
+    return `For ${quantity} ml${weight.length === 0 ? "" : ` (${weight.join(", ")})`}`;
+  }
+  const noun = describePortionUnit(input.spoonLabel, input.quantity);
+
+  return `For ${quantity} ${noun} (${[`${formatGrams(input.volumeMl)} ml`, ...weight].join(", ")})`;
+};
+
 /** The word after the amount field's value for a count of portions: "portion" for 1, "portions" otherwise. */
 export const describePortionCount = (quantity: number): string =>
   quantity === 1 ? "portion" : "portions";

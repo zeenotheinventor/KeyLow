@@ -17,6 +17,23 @@ export const samples: Record<string, () => string[]> = {
       portionSize: { amount: 45, unit: "g" },
     }),
   ],
+  describeVolumeBasis: () => [
+    copy.describeVolumeBasis({ unit: "ml", quantity: 250, weightInGrams: 258 }),
+    copy.describeVolumeBasis({
+      unit: "spoon",
+      quantity: 2,
+      spoonLabel: "1 tbsp",
+      volumeMl: 30,
+      weightInGrams: 28,
+    }),
+    copy.describeVolumeBasis({
+      unit: "spoon",
+      quantity: 1,
+      spoonLabel: "1 tsp",
+      volumeMl: 5,
+      weightInGrams: null,
+    }),
+  ],
   describePortionCount: () => [1, 2].map(copy.describePortionCount),
   describePortionNoun: () => [
     copy.describePortionNoun("1 medium (100 g)") ?? "",
