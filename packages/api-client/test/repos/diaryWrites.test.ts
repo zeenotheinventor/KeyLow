@@ -1,4 +1,4 @@
-import { buildFoodSnapshot } from "@keylow/core/diary";
+import { buildFoodSnapshot, entryQuantityChange } from "@keylow/core/diary";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { http } from "msw";
 import { setupServer } from "msw/node";
@@ -271,6 +271,31 @@ describe("updateLogEntry", () => {
       });
       expect(bodyOfUpdate()).not.toHaveProperty("logged_at");
       expect(bodyOfUpdate()).not.toHaveProperty("local_date");
+    });
+
+    it("should store another portion of the food with its id, label and grams, recomputed from the snapshot", async () => {
+      // No handler for the foods table: a read of the live food, whose values may differ, would fail.
+      answerEntryWrites([original]);
+      const large = buildFoodPortion({ id: portionRow().id, label: "1 large", grams: 140 });
+
+      await updateLogEntry(createTestClient(), {
+        entry: original,
+        amount: entryQuantityChange({ unit: "portion", quantity: 1, portion: large }),
+      });
+
+      expect(bodyOfUpdate()).toMatchObject({
+        quantity: 1,
+        unit: "portion",
+        portion_id: large.id,
+        resolved_grams: 140,
+        nutrients: { kcal: 280 },
+        snapshot: {
+          quantity: 1,
+          unit: "portion",
+          portion: { label: "1 large", grams: 140 },
+          per100: original.snapshot.per100,
+        },
+      });
     });
 
     it("should write only columns the update grant allows, on that entry", async () => {

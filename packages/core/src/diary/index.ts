@@ -44,6 +44,7 @@ export type {
   AmountSummary,
   ChosenAmount,
 } from "./previewAmount";
+export { entryQuantityChange } from "./entryQuantityChange";
 export {
   SNAPSHOT_PORTION_ID,
   entryPickerChoices,
@@ -51,6 +52,7 @@ export {
   snapshotAsFood,
   snapshotPortions,
 } from "./snapshotAmount";
+export type { LiveFoodPortions } from "./snapshotAmount";
 export { amountOnUnitChange, startingAmount, unitValueOf } from "./startingAmount";
 export type { UnitOption } from "./startingAmount";
 export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";

@@ -3,17 +3,22 @@ import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { oliveOil } from "./portionFoods";
+import { banana, oliveOil } from "./portionFoods";
 import { diaryDay, foodEntry } from "./support";
 
 import type { EntryUpdate, LogEntry } from "@keylow/api-client";
 import type { BuildLogEntryInput } from "@keylow/core/diary";
+import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 import { EditEntryDialog } from "@/components/diary/EditEntryDialog";
 import { ToastProvider } from "@/components/ui/Toast";
 
 type Api = {
   entries: LogEntry[];
+  /** The food as it is now: null when it cannot be read, deleted when it has a `deleted_at`. */
+  food: Food | null;
+  /** The food's portions as it has them now; undefined while they are not loaded. */
+  portions: FoodPortion[] | undefined;
   updateEntry: {
     mutateAsync: ReturnType<typeof vi.fn<(update: EntryUpdate) => Promise<LogEntry>>>;
   };
@@ -21,6 +26,8 @@ type Api = {
 
 const api = vi.hoisted((): Api => ({
   entries: [],
+  food: null,
+  portions: undefined,
   updateEntry: { mutateAsync: vi.fn<(update: EntryUpdate) => Promise<LogEntry>>() },
 }));
 
@@ -28,7 +35,11 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useProfileTimeZone: () => ({ data: "UTC" }),
   useDiaryDay: (date: string) => ({ data: diaryDay(date, api.entries) }),
-  useFood: () => ({ data: oliveOil.food }),
+  useFood: () => ({ data: api.food }),
+  // Idle, as the real hook is, until it is given a food.
+  useFoodPortions: (foodId: string | undefined) => ({
+    data: foodId === undefined ? undefined : api.portions,
+  }),
   useUpdateEntry: () => api.updateEntry,
   useDeleteEntry: () => ({ mutateAsync: () => Promise.resolve() }),
   useRestoreEntry: () => ({ mutateAsync: () => Promise.resolve() }),
@@ -59,16 +70,14 @@ function oilEntry(
 
 function renderDialog(entry: LogEntry) {
   api.entries = [entry];
+  const onClose = vi.fn<() => void>();
   render(
     <ToastProvider>
-      <EditEntryDialog
-        entryId={entry.id}
-        date={TODAY}
-        opener={null}
-        onClose={vi.fn<() => void>()}
-      />
+      <EditEntryDialog entryId={entry.id} date={TODAY} opener={null} onClose={onClose} />
     </ToastProvider>,
   );
+
+  return { onClose };
 }
 
 const chipNames = () => screen.getAllByRole("radio").map((chip) => chip.textContent);
@@ -78,6 +87,8 @@ const save = () => {
 };
 
 beforeEach(() => {
+  api.food = oliveOil.food;
+  api.portions = undefined;
   api.updateEntry.mutateAsync = vi.fn((update: EntryUpdate) => Promise.resolve(update.entry));
 });
 
@@ -298,5 +309,166 @@ describe("pressing a different chip in the edit dialog", () => {
       entry,
       amount: { quantity: 1, unit: "portion", portion: { label: "1 tsp", ml: 5 } },
     });
+  });
+});
+
+describe("the edit dialog's chips for a food that has portions", () => {
+  const [small, medium, large] = banana.portions;
+  if (small === undefined || medium === undefined || large === undefined) {
+    throw new Error("The banana must have a small, a medium and a large portion");
+  }
+  // The food has other numbers now than the entry was logged with: the entry keeps its own.
+  const bananaNow = { ...banana.food, kcal: 999 };
+
+  beforeEach(() => {
+    api.food = bananaNow;
+    api.portions = [large, small, medium];
+  });
+
+  const loggedAsGrams = () => oilEntry({ quantity: 120, unit: "g" }, banana.food);
+  const loggedAsMedium = (quantity = 1) =>
+    oilEntry({ quantity, unit: "portion", portion: medium }, banana.food);
+
+  it("should offer the portions in position order, then g, for an entry logged in grams, with g chosen", () => {
+    renderDialog(loggedAsGrams());
+
+    expect(chipNames()).toEqual(["1 small", "1 medium", "1 large", "g"]);
+    expect(screen.getByRole("radio", { name: "g", checked: true })).toBeTruthy();
+    expect(amountField("g")).toHaveProperty("value", "120");
+  });
+
+  it("should save the portion's id, label and grams when a portion is chosen", async () => {
+    const entry = loggedAsGrams();
+    renderDialog(entry);
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 medium" }));
+
+    expect(amountField("medium")).toHaveProperty("value", "1");
+    expect(
+      screen.getByRole("group", { name: "Energy and macros, For 1 medium (118 g)" }),
+    ).toBeTruthy();
+    save();
+    await waitFor(() => {
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+      entry,
+      amount: {
+        quantity: 1,
+        unit: "portion",
+        portion: { label: "1 medium", grams: 118 },
+        portionId: medium.id,
+      },
+    });
+  });
+
+  it("should work the chosen portion out from the entry's own values, not the food's now", () => {
+    renderDialog(loggedAsGrams());
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 large" }));
+
+    const hero = screen.getByRole("group", { name: "Energy and macros, For 1 large (136 g)" });
+    // 81 kcal per 100 g as logged: 136 g is 110, where the food's 999 would give 1,359.
+    expect(within(hero).getByText("110")).toBeTruthy();
+  });
+
+  it("should switch an entry logged as 1 medium to 1 large", async () => {
+    const entry = loggedAsMedium();
+    renderDialog(entry);
+    expect(screen.getAllByRole("radio", { name: "1 medium" })).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 large" }));
+    save();
+
+    await waitFor(() => {
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+      entry,
+      amount: {
+        quantity: 1,
+        unit: "portion",
+        portion: { label: "1 large", grams: 136 },
+        portionId: large.id,
+      },
+    });
+  });
+
+  it("should keep the entry's own portion, with its link, when only the count of it changes", async () => {
+    const entry = loggedAsMedium();
+    renderDialog(entry);
+
+    fireEvent.change(amountField("medium"), { target: { value: "2" } });
+    save();
+
+    await waitFor(() => {
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+      entry,
+      amount: { quantity: 2, unit: "portion" },
+    });
+  });
+
+  it("should send nothing when an entry logged in grams is saved as it was", async () => {
+    const { onClose } = renderDialog(loggedAsGrams());
+
+    save();
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("should send nothing when an entry logged in a portion is saved as it was", async () => {
+    const { onClose } = renderDialog(loggedAsMedium(2));
+
+    save();
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+  });
+
+  it("should show the portion the entry was logged with once, among the food's, when the food has lost it", () => {
+    api.portions = [small, large];
+    renderDialog(loggedAsMedium());
+
+    expect(chipNames()).toEqual(["1 medium", "1 small", "1 large", "g"]);
+    expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeTruthy();
+  });
+
+  it("should offer the entry's own chips while the food's portions are loading", () => {
+    api.portions = undefined;
+    renderDialog(loggedAsGrams());
+
+    expect(chipNames()).toEqual(["g"]);
+  });
+
+  it("should offer the entry's own chips, and still save, when the food has been deleted", async () => {
+    api.food = { ...bananaNow, deleted_at: "2026-10-15T13:00:00+00:00" };
+    const entry = loggedAsGrams();
+    renderDialog(entry);
+
+    expect(chipNames()).toEqual(["g"]);
+    fireEvent.change(amountField("g"), { target: { value: "200" } });
+    save();
+    await waitFor(() => {
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+      entry,
+      amount: { quantity: 200, unit: "g" },
+    });
+  });
+
+  it("should offer the entry's own chips when the food cannot be read", () => {
+    api.food = null;
+    renderDialog(loggedAsGrams());
+
+    expect(chipNames()).toEqual(["g"]);
   });
 });

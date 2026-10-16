@@ -37,6 +37,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   useProfileTimeZone: () => ({ data: api.timeZone }),
   useDiaryDay: (date: string): { data: DiaryDay } => ({ data: diaryDay(date, api.entries) }),
   useFood: () => ({ data: api.food }),
+  useFoodPortions: () => ({ data: undefined }),
   useUpdateEntry: () => api.updateEntry,
   useDeleteEntry: () => api.deleteEntry,
   useRestoreEntry: () => api.restoreEntry,

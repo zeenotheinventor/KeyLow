@@ -67,11 +67,12 @@ export function PortionPicker(props: PortionPickerProps) {
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
   const keyboardLift = useKeyboardLift(frameRef, Platform.OS === "android");
-  // An added food's chips come from the food and its portions; a logged entry's, from its own snapshot, which
-  // is also what its hero is worked out from. The hero gets the portions the chips came from.
+  // An added food's chips come from the food and its portions; a logged entry's, from its own snapshot and the
+  // food's portions, while its hero is worked out from the snapshot alone. The hero gets the portions the chips
+  // came from.
   const choices: PickerChoices =
     props.mode === "edit"
-      ? entryPickerChoices(props.snapshot)
+      ? entryPickerChoices(props.snapshot, props.livePortions)
       : pickerChoices(food, props.portions);
   const amountFood = props.mode === "edit" ? snapshotAsFood(props.snapshot) : food;
   const [start] = useState(() =>

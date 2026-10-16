@@ -1,4 +1,4 @@
-import type { ChosenAmount, FoodSnapshot } from "@keylow/core/diary";
+import type { ChosenAmount, FoodSnapshot, LiveFoodPortions } from "@keylow/core/diary";
 import type { SpoonPortion } from "@keylow/core/nutrition";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 import type { ReactNode } from "react";
@@ -48,13 +48,20 @@ type PortionPickerAddProps = PortionPickerBaseProps & {
 
 /**
  * The page for a logged entry, which the food's own review does not apply to: Save in place of Add, with a
- * Delete under it. The food is the entry's own snapshot, and `time` is the entry's. The amount, the chips and
- * the hero all work from `snapshot`, so a change to the live food or its portions never reaches them.
+ * Delete under it. The food is the entry's own snapshot, and `time` is the entry's. The amount and the hero
+ * work from `snapshot`, so a change to the live food never reaches them; the live food only decides which
+ * portions the chips offer.
  */
 type PortionPickerEditProps = PortionPickerBaseProps & {
   mode: "edit";
   /** What the entry was logged with. */
   snapshot: FoodSnapshot;
+  /**
+   * The food's portions as they are now, so the chips offer them beside the one the entry was logged with.
+   * Leave it out while they are not known, or when the food is deleted or cannot be read: the chips are then
+   * the entry's own.
+   */
+  livePortions?: LiveFoodPortions | undefined;
   onDelete: () => void;
   /** A notice above the hero, such as the entry's "This food has changed" banner with its action. */
   banner?: ReactNode;

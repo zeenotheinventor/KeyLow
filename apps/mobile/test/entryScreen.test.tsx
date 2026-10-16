@@ -26,6 +26,7 @@ import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 
+import type { FoodPortion } from "@keylow/core/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 
 // The entry screen on its route, against the fake database: what a diary row opens (a logged food or a quick
@@ -1058,6 +1059,177 @@ describe("the entry screen", () => {
       await user.press(screen.getByRole("radio", { name: "g" }));
 
       expect(amountField()).toHaveDisplayValue("100");
+    });
+  });
+
+  describe("a banana, whose food has portions", () => {
+    const BANANA_ENTRY_ID = "00000000-0000-4000-8000-0000000000cc";
+    // The food as it is now has other numbers than the entry was logged with: the entry keeps its own.
+    const liveBanana = buildFood({
+      id: "55555555-5555-4555-8555-555555555555",
+      name: "Banana",
+      kcal: 100,
+      protein_g: 1,
+      fat_g: 0,
+      carbs_g: 20,
+    });
+    const large = buildFoodPortion({
+      id: "66666666-6666-4666-8666-666666666663",
+      food_id: liveBanana.id,
+      label: "1 large",
+      grams: 140,
+      position: 2,
+    });
+    const small = buildFoodPortion({
+      id: "66666666-6666-4666-8666-666666666661",
+      food_id: liveBanana.id,
+      label: "1 small",
+      grams: 80,
+      position: 0,
+    });
+    const medium = buildFoodPortion({
+      id: "66666666-6666-4666-8666-666666666662",
+      food_id: liveBanana.id,
+      label: "1 medium",
+      grams: 100,
+      position: 1,
+      is_default: true,
+    });
+
+    const logged = (input: { quantity: number; unit: "g" | "portion"; portion?: FoodPortion }) => {
+      const entry = buildLogEntry({
+        food: liveBanana,
+        ...input,
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: BANANA_ENTRY_ID,
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+    };
+
+    beforeEach(() => {
+      entryBackend.foods = [{ ...liveBanana, kcal: 999 }];
+      // The rows come back in any order: the chips follow `position`.
+      entryBackend.foodPortions = [large, small, medium];
+    });
+
+    it("should offer the portions in position order, then g, on an entry logged in grams", async () => {
+      logged({ quantity: 120, unit: "g" });
+      await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByRole("heading", { name: "Banana" });
+
+      await screen.findByRole("radio", { name: "1 large" });
+
+      const chips = screen.getAllByRole("radio");
+      ["1 small", "1 medium", "1 large", "g"].forEach((name, index) => {
+        expect(chips[index]).toHaveAccessibleName(name);
+      });
+      expect(chips).toHaveLength(4);
+      expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+      expect(amountField()).toHaveDisplayValue("120");
+    });
+
+    it("should write the portion's id, label and grams, with the nutrients from the snapshot, when a portion is chosen", async () => {
+      logged({ quantity: 120, unit: "g" });
+      const user = await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByRole("heading", { name: "Banana" });
+
+      await user.press(await screen.findByRole("radio", { name: "1 medium" }));
+      expect(amountField()).toHaveDisplayValue("1");
+      expect(heroKcal("For 1 medium (100 g)").getByText("100")).toBeOnTheScreen();
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        quantity: 1,
+        unit: "portion",
+        portion_id: "66666666-6666-4666-8666-666666666662",
+        resolved_grams: 100,
+        nutrients: expect.objectContaining({ kcal: 100 }) as unknown,
+        snapshot: expect.objectContaining({
+          portion: { label: "1 medium", grams: 100 },
+          per100: expect.objectContaining({ kcal: 100 }) as unknown,
+        }) as unknown,
+      });
+    });
+
+    it("should switch an entry logged as 1 medium to 1 large", async () => {
+      logged({ quantity: 1, unit: "portion", portion: medium });
+      const user = await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByRole("heading", { name: "Banana" });
+      await screen.findByRole("radio", { name: "1 large" });
+      expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeOnTheScreen();
+      expect(screen.getAllByRole("radio", { name: "1 medium" })).toHaveLength(1);
+
+      await user.press(screen.getByRole("radio", { name: "1 large" }));
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        quantity: 1,
+        unit: "portion",
+        portion_id: "66666666-6666-4666-8666-666666666663",
+        resolved_grams: 140,
+        nutrients: expect.objectContaining({ kcal: 140 }) as unknown,
+      });
+    });
+
+    it("should write nothing when an entry logged in grams is saved as it was", async () => {
+      logged({ quantity: 120, unit: "g" });
+      const user = await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByRole("radio", { name: "1 large" });
+
+      await user.press(saveButton());
+
+      expect(updates()).toEqual([]);
+    });
+
+    it("should write nothing when an entry logged as a portion is saved as it was", async () => {
+      logged({ quantity: 2, unit: "portion", portion: medium });
+      const user = await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByRole("radio", { name: "1 large" });
+
+      await user.press(saveButton());
+
+      expect(updates()).toEqual([]);
+    });
+
+    it("should still show the portion the entry was logged with, once, when the food has lost it", async () => {
+      logged({ quantity: 1, unit: "portion", portion: medium });
+      entryBackend.foodPortions = [small, large];
+      await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByRole("radio", { name: "1 large" });
+
+      expect(screen.getAllByRole("radio", { name: "1 medium" })).toHaveLength(1);
+      expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeOnTheScreen();
+    });
+
+    it("should offer only g, and still save, when the food has been deleted", async () => {
+      logged({ quantity: 120, unit: "g" });
+      entryBackend.foods = [{ ...liveBanana, deleted_at: "2026-10-15T13:00:00+00:00" }];
+      const user = await renderEntry(BANANA_ENTRY_ID);
+      await screen.findByText(/has been deleted/);
+
+      expect(screen.getAllByRole("radio")).toHaveLength(1);
+
+      await user.clear(amountField());
+      await user.type(amountField(), "200");
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({ quantity: 200, unit: "g" });
     });
   });
 });
