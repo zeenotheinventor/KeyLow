@@ -9,10 +9,14 @@ vi.mock("@/components/foods/FoodSearch", () => ({
   FoodSearch: ({
     scope,
     startWithBarcodePanel,
+    day,
   }: {
     scope: string;
     startWithBarcodePanel: boolean;
-  }) => <p>{`scope ${scope}, barcode panel ${startWithBarcodePanel ? "open" : "closed"}`}</p>,
+    day?: string;
+  }) => (
+    <p>{`scope ${scope}, barcode panel ${startWithBarcodePanel ? "open" : "closed"}, day ${day ?? "none"}`}</p>
+  ),
 }));
 
 const query = (params: Record<string, string | string[]>) => ({
@@ -27,27 +31,42 @@ describe("FoodsPage", () => {
   it("should search every source with the barcode panel closed by default", async () => {
     render(await FoodsPage(query({})));
 
-    expect(screen.getByText("scope all, barcode panel closed")).toBeTruthy();
+    expect(screen.getByText("scope all, barcode panel closed, day none")).toBeTruthy();
   });
 
   it("should list only the user's own foods for scope=own", async () => {
     render(await FoodsPage(query({ scope: "own" })));
 
-    expect(screen.getByText("scope own, barcode panel closed")).toBeTruthy();
+    expect(screen.getByText("scope own, barcode panel closed, day none")).toBeTruthy();
   });
 
   it("should open the barcode panel when the top bar's barcode button asks for it", async () => {
     render(await FoodsPage(query({ panel: "barcode" })));
 
-    expect(screen.getByText("scope all, barcode panel open")).toBeTruthy();
+    expect(screen.getByText("scope all, barcode panel open, day none")).toBeTruthy();
   });
+
+  it("should pass the day the top bar carried to the barcode panel", async () => {
+    render(await FoodsPage(query({ panel: "barcode", day: "2026-10-14" })));
+
+    expect(screen.getByText("scope all, barcode panel open, day 2026-10-14")).toBeTruthy();
+  });
+
+  it.each([["2026-02-30"], ["yesterday"], ["2026-10-1"], [""], [["2026-10-14", "2026-10-13"]]])(
+    "should ignore a day that is not a calendar day: %j",
+    async (day) => {
+      render(await FoodsPage(query({ panel: "barcode", day })));
+
+      expect(screen.getByText("scope all, barcode panel open, day none")).toBeTruthy();
+    },
+  );
 
   it.each([{ scope: "everything" }, { scope: ["own", "all"] }, { panel: "other" }])(
     "should ignore a parameter it does not know: %j",
     async (params) => {
       render(await FoodsPage(query(params)));
 
-      expect(screen.getByText("scope all, barcode panel closed")).toBeTruthy();
+      expect(screen.getByText("scope all, barcode panel closed, day none")).toBeTruthy();
     },
   );
 

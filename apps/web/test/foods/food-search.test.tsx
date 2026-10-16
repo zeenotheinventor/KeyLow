@@ -15,24 +15,30 @@ type MaterialiseState = {
   variables: { code: string } | undefined;
 };
 
-const { useFoodSearch, useMaterialiseOffProduct, useFoodByBarcode, materialise, push } = vi.hoisted(
-  () => ({
-    useFoodSearch: vi.fn<(query: string) => FoodSearchResult>(),
-    useMaterialiseOffProduct: vi.fn(),
-    useFoodByBarcode: vi.fn<(code: string) => UseFoodByBarcodeReturn>(),
-    materialise: vi.fn<
-      (
-        variables: { code: string },
-        options: {
-          onSuccess: (food: Food) => void;
-          onError: () => void;
-          onSettled?: () => void;
-        },
-      ) => void
-    >(),
-    push: vi.fn<(href: string) => void>(),
-  }),
-);
+const {
+  useFoodSearch,
+  useMaterialiseOffProduct,
+  useFoodByBarcode,
+  materialise,
+  push,
+  openAddFood,
+} = vi.hoisted(() => ({
+  useFoodSearch: vi.fn<(query: string) => FoodSearchResult>(),
+  useMaterialiseOffProduct: vi.fn(),
+  useFoodByBarcode: vi.fn<(code: string) => UseFoodByBarcodeReturn>(),
+  materialise: vi.fn<
+    (
+      variables: { code: string },
+      options: {
+        onSuccess: (food: Food) => void;
+        onError: () => void;
+        onSettled?: () => void;
+      },
+    ) => void
+  >(),
+  push: vi.fn<(href: string) => void>(),
+  openAddFood: vi.fn<(request: { foodId?: string; date?: string }) => void>(),
+}));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
@@ -43,6 +49,10 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+}));
+
+vi.mock("@/lib/foodLogActions", () => ({
+  useFoodLogActions: () => ({ openAddFood }),
 }));
 
 const settled: FoodSearchResult = {
@@ -701,6 +711,42 @@ describe("FoodSearch", () => {
       fireEvent.click(button);
 
       expect(screen.queryByRole("region", { name: "Barcode lookup" })).toBeNull();
+    });
+
+    describe("a barcode that finds a food", () => {
+      beforeEach(() => {
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "found", food: makeFood({ id: "found-food" }) },
+          isLoading: false,
+          error: null,
+        });
+      });
+
+      function lookUpTypedBarcode() {
+        fireEvent.change(screen.getByRole("textbox", { name: "Barcode number" }), {
+          target: { value: "5000159484695" },
+        });
+        fireEvent.click(screen.getByRole("button", { name: "Look up" }));
+      }
+
+      it("should start adding that food to the day it was given", () => {
+        render(<FoodSearch startWithBarcodePanel day="2026-10-14" />);
+
+        lookUpTypedBarcode();
+
+        expect(openAddFood).toHaveBeenCalledExactlyOnceWith({
+          foodId: "found-food",
+          date: "2026-10-14",
+        });
+      });
+
+      it("should start adding it to today when no day was given", () => {
+        render(<FoodSearch startWithBarcodePanel />);
+
+        lookUpTypedBarcode();
+
+        expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ foodId: "found-food" });
+      });
     });
 
     it("should start open, with the barcode field focused, when asked to", () => {

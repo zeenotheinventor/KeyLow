@@ -5,7 +5,6 @@ import { TYPED_BARCODE_PROBLEMS } from "@keylow/core/copy";
 import { normaliseBarcode } from "@keylow/core/foods";
 import { iconStroke } from "@keylow/tokens";
 import { X } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
 
 import { BarcodeResult } from "./BarcodeResult";
@@ -16,14 +15,16 @@ import type { BarcodeInvalidReason } from "@keylow/core/foods";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { useFoodLogActions } from "@/lib/foodLogActions";
 
 /**
  * The panel behind the search field's barcode button. There is no camera on the web, so the
  * digits are typed. A code that is not a barcode is explained beside the field and looks nothing
- * up. A food that is found is opened.
+ * up. A food that is found opens the Add food dialog on its portion step, over the panel, as a
+ * search result does.
  */
-export function BarcodeLookup({ onClose }: BarcodeLookupProps) {
-  const router = useRouter();
+export function BarcodeLookup({ onClose, day }: BarcodeLookupProps) {
+  const { openAddFood } = useFoodLogActions();
   const idPrefix = useId();
   const inputId = `${idPrefix}-digits`;
   const problemId = `${idPrefix}-problem`;
@@ -45,9 +46,9 @@ export function BarcodeLookup({ onClose }: BarcodeLookupProps) {
   // Each submit is its own request, so looking the same code up again opens its food again.
   useEffect(() => {
     if (foundFoodId !== undefined) {
-      router.push(`/foods/${foundFoodId}`);
+      openAddFood({ foodId: foundFoodId, ...(day === undefined ? {} : { date: day }) });
     }
-  }, [foundFoodId, attempt, router]);
+  }, [foundFoodId, attempt, day, openAddFood]);
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -115,7 +116,7 @@ export function BarcodeLookup({ onClose }: BarcodeLookupProps) {
             {TYPED_BARCODE_PROBLEMS[problem]}
           </span>
         )}
-        {request !== null && <BarcodeResult {...lookup} />}
+        {request !== null && <BarcodeResult {...lookup} day={day} />}
       </section>
     </Card>
   );

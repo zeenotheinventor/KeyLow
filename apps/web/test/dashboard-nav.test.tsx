@@ -121,6 +121,15 @@ describe("DashboardNav", () => {
 
       expect(push).toHaveBeenCalledExactlyOnceWith("/foods?panel=barcode");
     });
+
+    it("should carry the day on view to the foods page, so a scanned food is added to it", () => {
+      viewedDate.mockReturnValue("2026-10-14");
+      render(<DashboardNav />);
+
+      fireEvent.click(screen.getByRole("button", { name: "Look up a barcode" }));
+
+      expect(push).toHaveBeenCalledExactlyOnceWith("/foods?panel=barcode&day=2026-10-14");
+    });
   });
 
   describe("search while offline", () => {

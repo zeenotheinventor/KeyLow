@@ -16,6 +16,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock("@/lib/foodLogActions", () => ({
+  useFoodLogActions: () => ({ openAddFoodOnNextPage: vi.fn() }),
+}));
+
 describe("NewFoodPage", () => {
   afterEach(() => {
     cleanup();

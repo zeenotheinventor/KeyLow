@@ -30,7 +30,7 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
   const isOnline = useIsOnline();
   const { time, isNow, chooseTime, resolve: resolveLoggedAt } = useLoggingTime(request);
   const [query, setQuery] = useState("");
-  const [foodId, setFoodId] = useState<string | undefined>(undefined);
+  const [foodId, setFoodId] = useState(request.foodId);
   const searchField = useRef<HTMLInputElement>(null);
   const amountField = useRef<HTMLInputElement>(null);
 

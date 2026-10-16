@@ -9,6 +9,8 @@ export type FoodFormExistingFood = { food: Food; portions: FoodPortion[] };
 export type FoodFormProps = {
   /** A barcode that came from a scan. It pre-fills the barcode field and cannot be changed. */
   scannedBarcode?: string | undefined;
+  /** Called with the new food's id once a create has saved, just before the form goes to the food's page. */
+  onCreated?: (foodId: string) => void;
   existing?: FoodFormExistingFood;
   /**
    * A food, usually a shared one, to start a new food from. Its details, nutrients and portions

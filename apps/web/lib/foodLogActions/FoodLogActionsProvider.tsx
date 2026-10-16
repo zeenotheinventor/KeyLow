@@ -18,6 +18,9 @@ type OpenDialog = { opener: Element | null; id: number } & (
   | { kind: "edit"; entryId: string; date: string }
 );
 
+// A request that waits for the page to change, with the number its dialog will have.
+type WaitingRequest = { request: AddFoodRequest; id: number };
+
 const FoodLogActionsContext = createContext<FoodLogActions | undefined>(undefined);
 
 /**
@@ -31,12 +34,19 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
   const [viewedDate, setViewedDate] = useState<string | undefined>(undefined);
   const [dialog, setDialog] = useState<OpenDialog | undefined>(undefined);
   const [dialogPathname, setDialogPathname] = useState(pathname);
+  const [waitingRequest, setWaitingRequest] = useState<WaitingRequest | undefined>(undefined);
   const requestCount = useRef(0);
 
-  // A dialog belongs to the page it was opened on, so going to another page closes it.
+  // A dialog belongs to the page it was opened on, so going to another page closes it. The one exception
+  // is a request that was made to open on the next page, which opens there instead.
   if (dialogPathname !== pathname) {
     setDialogPathname(pathname);
-    setDialog(undefined);
+    setWaitingRequest(undefined);
+    setDialog(
+      waitingRequest === undefined
+        ? undefined
+        : { kind: "add", request: waitingRequest.request, id: waitingRequest.id, opener: null },
+    );
   }
 
   const value = useMemo<FoodLogActions>(
@@ -50,6 +60,10 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
           id,
           opener: current?.opener ?? document.activeElement,
         }));
+      },
+      openAddFoodOnNextPage: (request) => {
+        requestCount.current += 1;
+        setWaitingRequest({ request, id: requestCount.current });
       },
       openQuickAdd: (request) => {
         requestCount.current += 1;
