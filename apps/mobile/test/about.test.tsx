@@ -45,6 +45,16 @@ jest.mock(
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 
+// The screen reads the device zone from Intl, so a test pins it. Without that the line depends on the runner.
+function setDeviceTimeZone(timeZone: string) {
+  jest.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockImplementation(() => ({
+    locale: "en-GB",
+    calendar: "gregory",
+    numberingSystem: "latn",
+    timeZone,
+  }));
+}
+
 async function renderAbout() {
   const user = userEvent.setup();
   await render(
@@ -61,6 +71,7 @@ describe("the About screen", () => {
     mockUpdatesState.isEnabled = true;
     mockUpdatesState.isEmbeddedLaunch = false;
     mockUpdatesState.createdAt = new Date("2026-10-15T10:00:00Z");
+    setDeviceTimeZone("UTC");
   });
 
   afterEach(() => {
@@ -214,10 +225,18 @@ describe("the About screen", () => {
       expect(screen.getByText("Version 1.0.0")).toBeOnTheScreen();
     });
 
-    it("should say on which day the running update was made", async () => {
+    it("should say on which day and at what time the running update was made", async () => {
       await renderAbout();
 
-      expect(screen.getByText("Updated 2026-10-15")).toBeOnTheScreen();
+      expect(screen.getByText("Updated 15 Oct 2026, 10:00")).toBeOnTheScreen();
+    });
+
+    it("should give the update time in the device time zone", async () => {
+      mockUpdatesState.createdAt = new Date("2026-10-15T23:30:00Z");
+      setDeviceTimeZone("Pacific/Auckland");
+      await renderAbout();
+
+      expect(screen.getByText("Updated 16 Oct 2026, 12:30")).toBeOnTheScreen();
     });
 
     it("should say Built in when the app runs the bundle it shipped with", async () => {

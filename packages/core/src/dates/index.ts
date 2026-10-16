@@ -3,6 +3,7 @@ export { addDays } from "./addDays";
 export { describeDay, describeDiaryTitle } from "./describeDay";
 export type { DayDescription } from "./describeDay";
 export { formatClockTime } from "./formatClockTime";
+export { formatDateTime } from "./formatDateTime";
 export { instantAtLocalTime } from "./instantAtLocalTime";
 export { previousCalendarDay } from "./previousCalendarDay";
 export { clockHourOf } from "./clockHourOf";

@@ -1,4 +1,4 @@
-import { toLocalDate } from "../dates";
+import { formatDateTime } from "../dates";
 
 /**
  * The product version both About screens show. A bump is this one line, and it ships with the next web deploy
@@ -34,7 +34,7 @@ type BuildLineInput = {
   timeZone: string;
 };
 
-/** `Built in` for the bundle inside the app, `Updated 2026-10-15` for an update, nothing when neither is known. */
+/** `Built in` for the bundle inside the app, `Updated 15 Oct 2026, 10:00` (device zone) for an update, nothing when neither is known. */
 export function formatBuildLine({
   isEnabled,
   isEmbeddedLaunch,
@@ -49,5 +49,5 @@ export function formatBuildLine({
     return "Built in";
   }
 
-  return createdAt === null ? null : `Updated ${toLocalDate(createdAt, timeZone)}`;
+  return createdAt === null ? null : `Updated ${formatDateTime(createdAt, timeZone)}`;
 }
