@@ -60,30 +60,36 @@ const loggedFood = (): Food =>
     owner_id: null,
   });
 
-function chickenEntry(): LogEntry {
-  return foodEntry({
-    date: TODAY,
-    time: "12:40",
-    name: chickenName,
-    quantity: 150,
-    unit: "g",
-    kcal: 150,
-    protein: 15,
-    fat: 7.5,
-    carbs: 30,
-  });
-}
+const chickenOptions = {
+  date: TODAY,
+  time: "12:40",
+  name: chickenName,
+  quantity: 150,
+  unit: "g",
+  kcal: 150,
+  protein: 15,
+  fat: 7.5,
+  carbs: 30,
+} as const;
+
+const chickenEntry = (): LogEntry => foodEntry(chickenOptions);
 
 function renderDialog(entry: LogEntry) {
   api.entries = [entry];
   const onClose = vi.fn<() => void>();
-  render(
+  const dialogTree = () => (
     <ToastProvider>
       <EditEntryDialog entryId={entry.id} date={TODAY} opener={null} onClose={onClose} />
-    </ToastProvider>,
+    </ToastProvider>
   );
+  const { rerender } = render(dialogTree());
 
-  return { onClose };
+  // The diary query refreshing after a write: the dialog reads the day again.
+  const refreshDiary = () => {
+    rerender(dialogTree());
+  };
+
+  return { onClose, refreshDiary };
 }
 
 const dialog = () => screen.getByRole("dialog", { name: "Edit entry" });
@@ -363,6 +369,37 @@ describe("the edit entry dialog for a logged food", () => {
       expect(
         await screen.findByText("Not saved. Check your connection and try again."),
       ).toBeTruthy();
+    });
+
+    it("should show the updated entry's own amount, not what was typed before the update", async () => {
+      const entry = chickenEntry();
+      const { refreshDiary } = renderDialog(entry);
+      api.updateEntry.mutateAsync = vi.fn((update: EntryUpdate) => {
+        api.entries = [{ ...foodEntry({ ...chickenOptions, quantity: 200 }), id: entry.id }];
+
+        return Promise.resolve(update.entry);
+      });
+
+      fireEvent.change(amount(), { target: { value: "3" } });
+      await act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Update to current food data" }));
+
+        return Promise.resolve();
+      });
+      refreshDiary();
+
+      expect(amount()).toHaveProperty("value", "200");
+    });
+
+    it("should keep what was typed when the update fails", async () => {
+      api.updateEntry.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW")));
+      renderDialog(chickenEntry());
+
+      fireEvent.change(amount(), { target: { value: "3" } });
+      fireEvent.click(screen.getByRole("button", { name: "Update to current food data" }));
+      await screen.findByText("Not saved. Check your connection and try again.");
+
+      expect(amount()).toHaveProperty("value", "3");
     });
   });
 

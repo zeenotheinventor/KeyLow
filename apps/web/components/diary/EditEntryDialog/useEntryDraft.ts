@@ -217,8 +217,9 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       });
     },
     updateToCurrentFood: async () => {
-      if (entry.item_type === "food") {
-        await write({ entry, useCurrentFoodData: true });
+      if (entry.item_type === "food" && (await write({ entry, useCurrentFoodData: true }))) {
+        // The entry now has the food's values, so what was typed against the old ones no longer applies.
+        setEdits(undefined);
       }
     },
   };
