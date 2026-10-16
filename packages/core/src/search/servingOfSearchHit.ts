@@ -26,7 +26,10 @@ export type SearchServing = {
   carbs_g: number | null;
 };
 
-const AMOUNT_OF_THE_BASIS = 100;
+/** The amount a serving or a chip starts at when it is 100 g or 100 ml. */
+export const AMOUNT_OF_THE_BASIS = 100;
+/** The amount a serving or a chip starts at when it is a portion or a spoon. */
+export const AMOUNT_OF_A_PORTION = 1;
 
 /**
  * The serving a result row of the food log search shows, its plus logs and the portion picker starts at:
@@ -52,7 +55,7 @@ export function servingOfSearchHit(hit: ServingSource): SearchServing {
   );
 
   return {
-    quantity: portionSize === undefined ? AMOUNT_OF_THE_BASIS : 1,
+    quantity: portionSize === undefined ? AMOUNT_OF_THE_BASIS : AMOUNT_OF_A_PORTION,
     unit: portionSize === undefined ? unit : "portion",
     portionId: portionSize === undefined ? null : hit.default_portion_id,
     caption:
