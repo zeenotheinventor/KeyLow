@@ -1,5 +1,5 @@
 import { SNAPSHOT_VERSION, buildLogEntry } from "@keylow/core/diary";
-import { buildFoodPortion } from "@keylow/core/testing";
+import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
@@ -368,6 +368,57 @@ describe("food search sheet in log mode", () => {
           }),
         );
       });
+    });
+  });
+
+  describe("with a food last logged in spoons", () => {
+    // 2 tbsp of olive oil, a density of 0.92 g/ml from its CoFID group.
+    const oil = buildFood({
+      id: savedFoodId,
+      name: "Oil, olive",
+      source: "cofid",
+      food_group: "OC",
+    });
+    const tablespoon = { id: "spoon-tbsp", label: "1 tbsp", grams: null, ml: 15 };
+    const oilRecent: RecentFood = {
+      foodId: savedFoodId,
+      entryId: "entry-oil",
+      loggedAt: "2026-10-14T07:05:00Z",
+      portionId: null,
+      snapshot: buildLogEntry({
+        food: oil,
+        quantity: 2,
+        unit: "portion",
+        portion: tablespoon,
+        loggedAt: "2026-10-14T07:05:00.000Z",
+        localDate: "2026-10-14",
+      }).snapshot,
+    };
+
+    beforeEach(() => {
+      recentFoods.current = { data: [oilRecent], isPending: false, isError: false };
+    });
+
+    it("should write the amount last logged as the count and the millilitres", async () => {
+      await renderLogSearch();
+
+      expect(
+        screen.getByRole("button", { name: /^Oil, olive, 2 tbsp \(30 ml\)/ }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should log the same spoons again when its plus is pressed", async () => {
+      const user = await renderLogSearch();
+
+      await user.press(screen.getByRole("button", { name: "Add Oil, olive, 2 tbsp (30 ml)" }));
+
+      expect(mockLogFood).toHaveBeenCalledWith(
+        expect.objectContaining({
+          quantity: 2,
+          unit: "portion",
+          portion: expect.objectContaining({ label: "1 tbsp", ml: 15 }) as unknown,
+        }),
+      );
     });
   });
 

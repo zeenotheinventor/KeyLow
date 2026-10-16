@@ -1,5 +1,7 @@
 import "react-native-gesture-handler/jestSetup";
-import { SNAPSHOT_VERSION } from "@keylow/core/diary";
+import { SNAPSHOT_VERSION, buildLogEntry } from "@keylow/core/diary";
+import { SPOON_PORTIONS } from "@keylow/core/nutrition";
+import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -695,6 +697,288 @@ describe("portion picker", () => {
       await renderPicker({ day: "2026-10-15" });
 
       expect(screen.queryByText(/Scanned/)).not.toBeOnTheScreen();
+    });
+  });
+});
+
+// Foods shaped like the rows of packages/db/data/portions/cofid-portions.csv and of CoFID itself. The oil's
+// group (OC) and the milk's (BAH) carry a density, so they can be measured by volume; the banana's and the
+// thigh's do not.
+const oil = buildFood({
+  id: savedFoodId,
+  name: "Oil, olive",
+  source: "cofid",
+  source_ref: "17-038",
+  food_group: "OC",
+  kcal: 899,
+  protein_g: 0,
+  fat_g: 99.9,
+  carbs_g: 0,
+});
+const milk = buildFood({
+  id: savedFoodId,
+  name: "Milk, semi-skimmed, pasteurised, average",
+  source: "cofid",
+  source_ref: "12-313",
+  food_group: "BAH",
+  kcal: 46,
+  protein_g: 3.5,
+  fat_g: 1.7,
+  carbs_g: 4.7,
+});
+const wine = buildFood({
+  id: savedFoodId,
+  name: "Wine, white, dry",
+  source: "cofid",
+  source_ref: "20-002",
+  food_group: "QC",
+  basis: "per_100ml",
+});
+const banana = buildFood({
+  id: savedFoodId,
+  name: "Bananas, flesh only",
+  source: "cofid",
+  source_ref: "14-318",
+  food_group: "FA",
+  kcal: 81,
+});
+const chickenThigh = buildFood({
+  id: savedFoodId,
+  name: "Chicken, thighs, casseroled, meat and skin",
+  source: "cofid",
+  source_ref: "18-317",
+  food_group: "MCA",
+});
+
+const cofidPortion = (label: string, grams: number, position: number, isDefault: boolean) =>
+  buildFoodPortion({
+    id: `portion-${position}`,
+    food_id: savedFoodId,
+    label,
+    grams,
+    ml: null,
+    is_default: isDefault,
+    position,
+  });
+const bananaPortions = [
+  cofidPortion("1 small", 101, 0, false),
+  cofidPortion("1 medium", 118, 1, true),
+  cofidPortion("1 large", 136, 2, false),
+];
+
+function expectChips(names: string[]) {
+  const chips = screen.getAllByRole("radio");
+  expect(chips).toHaveLength(names.length);
+  names.forEach((name, index) => {
+    expect(chips[index]).toHaveAccessibleName(name);
+  });
+}
+
+// What the repo stores for the call the screen made, built by the function the repo calls.
+function loggedEntry() {
+  const [input] = mockLogFood.mock.calls[0] ?? [];
+  if (input === undefined) {
+    throw new Error("Nothing was logged");
+  }
+  return buildLogEntry(input);
+}
+
+describe("the portion picker's unit chips", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers({ now: openedAt });
+    registerAppStyles(kitStyles);
+    resetRouterMock();
+    resetApiClientMock();
+    Object.assign(portionsQuery, { data: [] });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  describe("a food measured by volume with no portion of its own", () => {
+    beforeEach(() => {
+      showFood(oil);
+    });
+
+    it("should list g, ml, 1 tsp and 1 tbsp, in that order, and open on g", async () => {
+      await renderPicker();
+
+      expectChips(["g", "ml", "1 tsp", "1 tbsp"]);
+      expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+      expect(amountField()).toHaveDisplayValue("100");
+    });
+
+    it("should work 2 tbsp out in the hero with the grams it will log", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+      await typeAmount(user, "2");
+
+      expect(screen.getByLabelText("Amount (tbsp)")).toBeOnTheScreen();
+      expect(hero("For 2 tbsp (30 ml, 28 g)")).toBeOnTheScreen();
+      expect(within(hero("For 2 tbsp (30 ml, 28 g)")).getByText("248")).toBeOnTheScreen();
+    });
+
+    it("should log 2 tbsp as a portion of 15 ml with no portion row and the density it used", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+      await typeAmount(user, "2");
+
+      await user.press(addButton());
+
+      const entry = loggedEntry();
+      expect(entry).toMatchObject({
+        quantity: 2,
+        unit: "portion",
+        portion_id: null,
+        snapshot: { portion: { label: "1 tbsp", ml: 15 }, density: 0.92 },
+      });
+      expect(entry.resolved_grams).toBeCloseTo(27.6, 5);
+      expect(entry.nutrients.kcal).toBeCloseTo(248.124, 3);
+    });
+
+    it("should log a teaspoon as a portion of 5 ml", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+      await user.press(screen.getByRole("radio", { name: "1 tsp" }));
+
+      await user.press(addButton());
+
+      expect(loggedEntry()).toMatchObject({
+        quantity: 100,
+        unit: "portion",
+        portion_id: null,
+        snapshot: { portion: { label: "1 tsp", ml: 5 } },
+      });
+    });
+  });
+
+  describe("a drink with a density", () => {
+    beforeEach(() => {
+      showFood(milk);
+    });
+
+    it("should log 250 ml with the density it used", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+      await user.press(screen.getByRole("radio", { name: "ml" }));
+      await typeAmount(user, "250");
+
+      expect(hero("For 250 ml (258 g)")).toBeOnTheScreen();
+      await user.press(addButton());
+
+      const entry = loggedEntry();
+      expect(entry).toMatchObject({
+        quantity: 250,
+        unit: "ml",
+        portion_id: null,
+        snapshot: { density: 1.03 },
+      });
+      expect(entry.resolved_grams).toBeCloseTo(257.5, 5);
+    });
+  });
+
+  describe("a food measured per 100 ml", () => {
+    it("should show ml, 1 tsp and 1 tbsp after g", async () => {
+      showFood(wine);
+      await renderPicker();
+
+      expectChips(["g", "ml", "1 tsp", "1 tbsp"]);
+    });
+  });
+
+  describe("a food with natural portions", () => {
+    it("should open the banana on 1 medium, with its sizes in order, then g and nothing else", async () => {
+      showFood(banana);
+      Object.assign(portionsQuery, { data: [...bananaPortions].reverse() });
+      await renderPicker();
+
+      expectChips(["1 small", "1 medium", "1 large", "g"]);
+      expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeOnTheScreen();
+      expect(amountField()).toHaveDisplayValue("1");
+      expect(hero("For 1 medium (118 g)")).toBeOnTheScreen();
+      expect(screen.queryByRole("radio", { name: "ml" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("radio", { name: "1 tsp" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("radio", { name: "1 tbsp" })).not.toBeOnTheScreen();
+    });
+
+    it("should keep every chip of a food with many portions in the one row that scrolls sideways", async () => {
+      showFood(banana);
+      Object.assign(portionsQuery, {
+        data: [
+          cofidPortion("1 small", 38, 0, false),
+          cofidPortion("1 medium", 44, 1, false),
+          cofidPortion("1 large", 50, 2, true),
+          cofidPortion("1 extra large", 56, 3, false),
+        ],
+      });
+      await renderPicker();
+
+      expectChips(["1 small", "1 medium", "1 large", "1 extra large", "g"]);
+      expect(screen.getByRole("radio", { name: "1 large", checked: true })).toBeOnTheScreen();
+      const group = screen.getByLabelText("Unit");
+      expect(group).toHaveProp("horizontal", true);
+      expect(within(group).getAllByRole("radio")).toHaveLength(5);
+    });
+
+    it("should open the chicken thigh on 1 thigh", async () => {
+      showFood(chickenThigh);
+      Object.assign(portionsQuery, { data: [cofidPortion("1 thigh", 68, 0, true)] });
+      await renderPicker();
+
+      expectChips(["1 thigh", "g"]);
+      expect(screen.getByRole("radio", { name: "1 thigh", checked: true })).toBeOnTheScreen();
+      expect(amountField()).toHaveDisplayValue("1");
+    });
+
+    it("should put a volume food's own portion before g and the spoons", async () => {
+      showFood(oil);
+      Object.assign(portionsQuery, { data: [cofidPortion("1 bottle", 500, 0, true)] });
+      await renderPicker();
+
+      expectChips(["1 bottle", "g", "ml", "1 tsp", "1 tbsp"]);
+      expect(screen.getByRole("radio", { name: "1 bottle", checked: true })).toBeOnTheScreen();
+    });
+  });
+
+  describe("from Recent", () => {
+    it("should open on the spoon chip with its count and say what was last logged", async () => {
+      showFood(oil);
+      const tablespoon = SPOON_PORTIONS.find((spoon) => spoon.id === "spoon-tbsp");
+      const entry = buildLogEntry({
+        food: oil,
+        quantity: 2,
+        unit: "portion",
+        ...(tablespoon === undefined ? {} : { portion: tablespoon }),
+        loggedAt: "2026-10-14T07:05:00Z",
+        localDate: "2026-10-14",
+      });
+      recentFoods.current = {
+        data: [
+          {
+            foodId: savedFoodId,
+            entryId: "entry-oil",
+            loggedAt: "2026-10-14T07:05:00Z",
+            portionId: null,
+            snapshot: entry.snapshot,
+          },
+        ],
+        isPending: false,
+        isError: false,
+      };
+
+      await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      expect(amountField()).toHaveDisplayValue("2");
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
+      expect(screen.getByText("Last logged 2 tbsp (30 ml), yesterday")).toBeOnTheScreen();
+      expect(hero("For 2 tbsp (30 ml, 28 g)")).toBeOnTheScreen();
     });
   });
 });

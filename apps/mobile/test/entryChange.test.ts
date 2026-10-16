@@ -1,8 +1,9 @@
-import { breastEntry, chickenEntry, crispsEntry } from "./support/entries";
+import { breastEntry, chickenEntry, crispsEntry, oilEntry, tablespoon } from "./support/entries";
 import { foodEntryChange, quickEntryChange } from "../lib/entryChange";
 
 import type { PortionSelection } from "../components/PortionPicker";
 import type { QuickAddSubmission } from "../components/QuickAddForm";
+import type { SpoonPortion } from "@keylow/core/nutrition";
 
 // What Save writes: only what the person changed, so a save that changes nothing writes nothing and an edit of
 // the amount never moves the time (an entry's seconds keep it in its place among those at the same minute).
@@ -40,17 +41,8 @@ describe("foodEntryChange", () => {
       {
         unit: "portion",
         quantity: 3,
-        portion: {
-          id: "33333333-3333-4333-8333-333333333333",
-          food_id: "22222222-2222-4222-8222-222222222222",
-          owner_id: null,
-          label: "1 breast",
-          grams: 150,
-          ml: null,
-          is_default: true,
-          position: 0,
-          created_at: "2026-10-15T11:40:31+00:00",
-        },
+        // The picker names the entry's own portion by the id core gives it on the entry screen.
+        portion: { id: "snapshot-portion", label: "1 breast", grams: 150, ml: null },
         time: "12:40",
         isNow: false,
       },
@@ -101,6 +93,39 @@ describe("foodEntryChange", () => {
     });
 
     expect(foodEntryChange(entry, selection({ quantity: 141.7 }), London)).toBeNull();
+  });
+});
+
+describe("foodEntryChange for an entry logged in spoons", () => {
+  const teaspoon: SpoonPortion = { id: "spoon-tsp", label: "1 tsp", grams: null, ml: 5 };
+  const spoonSelection = (spoon: SpoonPortion, quantity: number): PortionSelection => ({
+    unit: "portion",
+    quantity,
+    portion: spoon,
+    time: "12:40",
+    isNow: false,
+  });
+
+  it("should be nothing at all when the spoon and the count are as logged", () => {
+    expect(foodEntryChange(oilEntry(), spoonSelection(tablespoon, 2), London)).toBeNull();
+  });
+
+  it("should write a changed count as the spoon's snapshot portion with no link to a portion", () => {
+    expect(foodEntryChange(oilEntry(), spoonSelection(tablespoon, 3), London)).toEqual({
+      amount: { quantity: 3, unit: "portion", portion: { label: "1 tbsp", ml: 15 } },
+    });
+  });
+
+  it("should write the other spoon when the count stays and the spoon changes", () => {
+    expect(foodEntryChange(oilEntry(), spoonSelection(teaspoon, 2), London)).toEqual({
+      amount: { quantity: 2, unit: "portion", portion: { label: "1 tsp", ml: 5 } },
+    });
+  });
+
+  it("should write grams when the person switches to g", () => {
+    expect(foodEntryChange(oilEntry(), selection({ quantity: 20 }), London)).toEqual({
+      amount: { quantity: 20, unit: "g" },
+    });
   });
 });
 
