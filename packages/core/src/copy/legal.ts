@@ -4,7 +4,7 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
  * The version of the Terms of Use and the Privacy Policy that people accept at sign-up. It is the date
  * the current wording took effect. A later version asks people to accept again.
  */
-export const TERMS_VERSION = "2026-10-15";
+export const TERMS_VERSION = "2026-10-16";
 
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {
@@ -91,7 +91,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "Why Ki-Lo uses it",
       paragraphs: [
         "Ki-Lo uses your information to run your food diary and the adaptive engine. The engine estimates your energy expenditure and sets your targets.",
-        "Your information is used for nothing else.",
+        "Your information is used for nothing else, apart from the error reports described under Who else handles your information.",
       ],
     },
     {
@@ -114,6 +114,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         "Supabase: the database and sign-in.",
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
+        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins or body stats, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ],
     },
@@ -132,7 +133,7 @@ export const PRIVACY_POLICY: LegalDocument = {
     {
       heading: "How long it is kept",
       paragraphs: [
-        "Your information is kept until you delete your account. After that, it is deleted.",
+        "Your information is kept until you delete your account. After that, it is deleted. Error reports are the one exception: they are kept for 30 days, so they can outlast a deleted account by up to 30 days.",
       ],
     },
     {
