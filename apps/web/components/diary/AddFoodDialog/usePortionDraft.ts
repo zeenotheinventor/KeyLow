@@ -1,5 +1,11 @@
 import { useFoodWithPortions, useLogFood } from "@keylow/api-client";
-import { foodNeedsReview, pickerChoices, previewAmount, startingAmount } from "@keylow/core/diary";
+import {
+  amountOnUnitChange,
+  foodNeedsReview,
+  pickerChoices,
+  previewAmount,
+  startingAmount,
+} from "@keylow/core/diary";
 import { useState } from "react";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
@@ -74,7 +80,12 @@ export function usePortionDraft(foodId: string | undefined): PortionDraft {
       setEdits({ ...ownEdits, foodId, quantityText: text });
     },
     setUnitValue: (value) => {
-      setEdits({ ...ownEdits, foodId, unitValue: value });
+      setEdits({
+        ...ownEdits,
+        foodId,
+        unitValue: value,
+        quantityText: amountOnUnitChange(unitValue, value, quantityText),
+      });
     },
     add: async ({ loggedAt, localDate }) => {
       const { amount } = preview;

@@ -288,3 +288,66 @@ describe("the add dialog's chips", () => {
     });
   });
 });
+
+describe("pressing a different chip", () => {
+  it("should set a food on g at 100 to 1 when 1 tbsp is pressed, not read 100 tbsp", () => {
+    openFood(oliveOil);
+    expect(amountField("g")).toHaveProperty("value", "100");
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+
+    expect(amountField("tbsp")).toHaveProperty("value", "1");
+    expect(
+      screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (15 ml, 14 g)" }),
+    ).toBeTruthy();
+  });
+
+  it("should set a spoon back to 100 when g is pressed", () => {
+    openFood(oliveOil);
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+    typeAmount("tbsp", "2");
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "100");
+  });
+
+  it("should set a banana on 1 medium to 100 when g is pressed, not read 1 g", () => {
+    openFood(banana);
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "100");
+    expect(screen.getByRole("group", { name: "Energy and macros, For 100 g" })).toBeTruthy();
+  });
+
+  it("should replace a typed amount, so 250 g does not become 250 tbsp", () => {
+    openFood(oliveOil);
+    typeAmount("g", "250");
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+
+    expect(amountField("tbsp")).toHaveProperty("value", "1");
+  });
+
+  it("should keep the amount when the chip already chosen is pressed", () => {
+    openFood(oliveOil);
+    typeAmount("g", "250");
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    expect(amountField("g")).toHaveProperty("value", "250");
+  });
+
+  it("should log the amount the chip set, not the one typed before it", async () => {
+    openFood(oliveOil);
+    typeAmount("g", "250");
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tsp" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    const entry = await loggedEntry();
+    expect(entry.unit).toBe("portion");
+    expect(entry.quantity).toBe(1);
+  });
+});

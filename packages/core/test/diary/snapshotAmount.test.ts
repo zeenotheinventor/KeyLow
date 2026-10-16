@@ -9,7 +9,6 @@ import {
   snapshotAsFood,
   snapshotPortions,
 } from "../../src/diary/snapshotAmount";
-import { unitOptions } from "../../src/diary/startingAmount";
 import { SPOON_PORTIONS } from "../../src/nutrition/volume";
 import { buildFood, buildFoodPortion } from "../../src/testing";
 
@@ -91,7 +90,7 @@ describe("snapshotPortions", () => {
 
 describe("what an entry's own snapshot lets the dialog offer", () => {
   it("should offer the snapshot's portion, then g", () => {
-    expect(unitOptions(snapshotAsFood(inPortions), snapshotPortions(inPortions))).toEqual([
+    expect(entryPickerChoices(inPortions).options).toEqual([
       { value: SNAPSHOT_PORTION_ID, label: "1 medium" },
       { value: "g", label: "g" },
     ]);
@@ -259,16 +258,15 @@ describe("entryPickerChoices", () => {
   });
 
   describe("an old entry", () => {
-    it("should give the chips unitOptions gives today for an entry logged in grams", () => {
-      expect(entryPickerChoices(inGrams).options).toEqual(
-        unitOptions(snapshotAsFood(inGrams), snapshotPortions(inGrams)),
-      );
+    it("should give g alone for an entry logged in grams, as it always did", () => {
+      expect(entryPickerChoices(inGrams).options).toEqual([{ value: "g", label: "g" }]);
     });
 
-    it("should give the chips unitOptions gives today for an entry logged in a portion", () => {
-      expect(entryPickerChoices(inPortions).options).toEqual(
-        unitOptions(snapshotAsFood(inPortions), snapshotPortions(inPortions)),
-      );
+    it("should give its portion, then g, for an entry logged in a portion, as it always did", () => {
+      expect(entryPickerChoices(inPortions).options).toEqual([
+        { value: SNAPSHOT_PORTION_ID, label: "1 medium" },
+        { value: "g", label: "g" },
+      ]);
       expect(entryPickerChoices(inPortions).portions).toEqual(snapshotPortions(inPortions));
     });
 

@@ -1,4 +1,9 @@
-import { servingOfSearchHit } from "../search/servingOfSearchHit";
+import { isSpoonPortionId } from "../nutrition/volume";
+import {
+  AMOUNT_OF_A_PORTION,
+  AMOUNT_OF_THE_BASIS,
+  servingOfSearchHit,
+} from "../search/servingOfSearchHit";
 
 import type { AmountFood, AmountPortion, ChosenAmount } from "./previewAmount";
 
@@ -11,25 +16,8 @@ export function unitValueOf(amount: ChosenAmount): string {
 }
 
 /**
- * The unit chips: the food's portions, then g, then ml where it applies, which is a food measured per
- * 100 ml or one that has a density.
- */
-export function unitOptions(
-  food: Pick<AmountFood, "basis" | "density_g_per_ml">,
-  portions: readonly AmountPortion[],
-): UnitOption[] {
-  const hasMillilitres = food.basis === "per_100ml" || food.density_g_per_ml !== null;
-
-  return [
-    ...portions.map((portion) => ({ value: portion.id, label: portion.label })),
-    { value: "g", label: "g" },
-    ...(hasMillilitres ? [{ value: "ml", label: "ml" }] : []),
-  ];
-}
-
-/**
- * Where the amount field and the chips start: the amount the screen was given, or else the food's default
- * serving, which is core's `servingOfSearchHit` for the food's default portion: one of that portion, or
+ * Where the amount field and the chips start: the amount the screen was given, if the picker offers its
+ * unit, or else the food's default serving, which is core's `servingOfSearchHit` for the food's default portion: one of that portion, or
  * 100 g (100 ml for a drink). It is the serving a result row shows and its plus logs, so the three agree.
  */
 export function startingAmount(
@@ -37,7 +25,7 @@ export function startingAmount(
   portions: readonly (AmountPortion & { is_default?: boolean })[],
   initialAmount?: ChosenAmount,
 ): { quantity: string; unitValue: string } {
-  if (initialAmount !== undefined) {
+  if (initialAmount !== undefined && isOffered(initialAmount, food, portions)) {
     return { quantity: String(initialAmount.quantity), unitValue: unitValueOf(initialAmount) };
   }
   const portion = portions.find((candidate) => candidate.is_default);
@@ -50,4 +38,40 @@ export function startingAmount(
   });
 
   return { quantity: String(serving.quantity), unitValue: serving.portionId ?? serving.unit };
+}
+
+// The picker offers g always, a portion when it is on the list, and ml for a food measured by volume, which is
+// a food per 100 ml or one whose spoons are on the list (see `pickerChoices`).
+function isOffered(
+  amount: ChosenAmount,
+  food: Pick<AmountFood, "basis">,
+  portions: readonly AmountPortion[],
+): boolean {
+  switch (amount.unit) {
+    case "g":
+      return true;
+    case "ml":
+      return food.basis === "per_100ml" || portions.some((portion) => isSpoonPortionId(portion.id));
+    case "portion":
+      return portions.some((portion) => portion.id === amount.portion.id);
+  }
+}
+
+/**
+ * The amount a unit chip starts at when it is pressed: 1 for a portion or a spoon, 100 for g or ml (the
+ * amounts `startingAmount` opens on). Pressing the chip already chosen keeps the amount as it is; changing
+ * to another never keeps what was typed, so no press can give 100 tbsp, 100 medium or 1 g.
+ */
+export function amountOnUnitChange(
+  previousUnitValue: string,
+  nextUnitValue: string,
+  quantityText: string,
+): string {
+  if (nextUnitValue === previousUnitValue) {
+    return quantityText;
+  }
+
+  return String(
+    nextUnitValue === "g" || nextUnitValue === "ml" ? AMOUNT_OF_THE_BASIS : AMOUNT_OF_A_PORTION,
+  );
 }
