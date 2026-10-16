@@ -1,7 +1,9 @@
+import { buildLogEntry } from "@keylow/core/diary";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { oliveOil } from "./portionFoods";
 import { diaryDay, noTargets, overTargetDay, quickEntry, sampleDay, targets } from "./support";
 
 import type { CopiedDay, DiaryDay, DiaryWeekDay, LogEntry, Targets } from "@keylow/api-client";
@@ -275,6 +277,53 @@ describe("the diary screen", () => {
       expect(
         within(table.getByRole("row", { name: /Banana/ })).getByText("08:10 · 1 medium (100 g)"),
       ).toBeTruthy();
+    });
+
+    describe("an amount logged in spoons", () => {
+      // The board's "2 tbsp (30 ml)" row: olive oil at 12:40, which the sample day has no entry of.
+      function showDayWithOil() {
+        const oil = buildLogEntry({
+          food: oliveOil.food,
+          quantity: 2,
+          unit: "portion",
+          portion: { id: "spoon-tbsp", label: "1 tbsp", grams: null, ml: 15 },
+          localDate: TODAY,
+          loggedAt: `${TODAY}T12:40:00+00:00`,
+        });
+        showDay(TODAY, [
+          ...sampleDay(TODAY),
+          {
+            ...oil,
+            id: "00000000-0000-4000-8000-0000000000bb",
+            created_at: "2026-10-15T12:40:30+00:00",
+            kcal: oil.nutrients.kcal,
+          },
+        ]);
+      }
+
+      it("should read its count and its volume only, on the table row", () => {
+        showDayWithOil();
+        renderDiary();
+
+        expect(
+          within(within(tableOf("12:00")).getByRole("row", { name: /Oil, olive/ })).getByText(
+            "12:40 · 2 tbsp (30 ml)",
+          ),
+        ).toBeTruthy();
+      });
+
+      it("should read the same on the stacked row", () => {
+        showDayWithOil();
+        renderDiary();
+
+        const stacked = within(screen.getByRole("region", { name: "Foods at 12:00" })).getByRole(
+          "list",
+        );
+
+        expect(within(stacked).getByRole("button", { name: /Oil, olive/ }).textContent).toContain(
+          "12:40 · 2 tbsp (30 ml)",
+        );
+      });
     });
 
     it("should write a quick add by its label", () => {

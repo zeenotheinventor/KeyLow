@@ -2,20 +2,28 @@ import { useFood, useProfileTimeZone, useUpdateEntry } from "@keylow/api-client"
 import { formatClockTime } from "@keylow/core/dates";
 import {
   clockTimeOn,
+  entryPickerChoices,
   foodChangedSinceLogged,
   previewAmount,
   snapshotAmountStart,
   snapshotAsFood,
-  snapshotPortions,
-  unitOptions,
 } from "@keylow/core/diary";
+import { spoonPortionOf } from "@keylow/core/nutrition";
 import { useState } from "react";
 
 import { quickEntryChange } from "./quickEntryChange";
 
 import type { QuickAddDraft, QuickAddTexts } from "@/components/diary/QuickAddFields";
 import type { EntryUpdate, LogEntry } from "@keylow/api-client";
-import type { AmountFood, AmountPortion, AmountPreview, UnitOption } from "@keylow/core/diary";
+import type {
+  AmountFood,
+  AmountPortion,
+  AmountPreview,
+  ChosenAmount,
+  EntryQuantityChange,
+  PickerChoices,
+  UnitOption,
+} from "@keylow/core/diary";
 
 import { useQuickAddDraft } from "@/components/diary/QuickAddFields";
 
@@ -58,6 +66,18 @@ const NO_FOOD: AmountFood = {
   fibre_g: null,
 };
 
+const NO_CHOICES: PickerChoices = { portions: [], options: [] };
+
+// A spoon is told to the entry by its size, as its snapshot keeps it. Any other portion is the entry's own, which it keeps with its link.
+function quantityChangeOf(amount: ChosenAmount): EntryQuantityChange {
+  const { quantity, unit } = amount;
+  const spoon = amount.unit === "portion" ? spoonPortionOf(amount.portion) : undefined;
+
+  return spoon === undefined
+    ? { quantity, unit }
+    : { quantity, unit, portion: { label: spoon.label, ml: spoon.ml } };
+}
+
 const numberText = (value: number | null): string => (value === null ? "" : String(value));
 
 // A quick add's saved numbers and label, as the fields hold them. A food entry has none.
@@ -96,11 +116,11 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
   const ownEdits = edits?.entryId === entry.id ? edits : undefined;
   const snapshot = entry.item_type === "food" ? entry.snapshot : undefined;
   const food = snapshot === undefined ? NO_FOOD : snapshotAsFood(snapshot);
-  const portions = snapshot === undefined ? [] : snapshotPortions(snapshot);
+  const choices = snapshot === undefined ? NO_CHOICES : entryPickerChoices(snapshot);
   const start = snapshot === undefined ? undefined : snapshotAmountStart(snapshot);
   const quantityText = ownEdits?.quantityText ?? start?.quantity ?? "";
   const unitValue = ownEdits?.unitValue ?? start?.unitValue ?? "g";
-  const preview = previewAmount(food, portions, unitValue, quantityText);
+  const preview = previewAmount(food, choices.portions, unitValue, quantityText);
   const entryClock = formatClockTime(new Date(entry.logged_at), timeZone);
   const time = ownEdits?.chosenTime ?? entryClock;
 
@@ -135,8 +155,8 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
 
   return {
     food,
-    portions,
-    unitOptions: unitOptions(food, portions),
+    portions: choices.portions,
+    unitOptions: choices.options,
     preview,
     quantityText,
     unitValue,
@@ -191,7 +211,7 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       }
       return write({
         entry,
-        ...(isAmountChanged ? { amount: { quantity: amount.quantity, unit: amount.unit } } : {}),
+        ...(isAmountChanged ? { amount: quantityChangeOf(amount) } : {}),
         ...(time === undefined ? {} : { time }),
       });
     },
