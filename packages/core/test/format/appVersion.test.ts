@@ -55,23 +55,35 @@ describe("formatBuildLine", () => {
     ).toBe("Built in");
   });
 
-  it("should give the date of an update", () => {
-    expect(
-      formatBuildLine({ isEnabled: true, isEmbeddedLaunch: false, createdAt, timeZone: "UTC" }),
-    ).toBe("Updated 2026-10-15");
-  });
-
-  it("should give the date in the given time zone", () => {
-    const justBeforeMidnightUtc = new Date("2026-10-15T23:30:00Z");
-
+  it.each([
+    ["the date and time of an update", "2026-10-15T10:00:00Z", "UTC", "Updated 15 Oct 2026, 10:00"],
+    [
+      "a zone ahead of UTC, where both the date and the time move",
+      "2026-10-15T23:30:00Z",
+      "Pacific/Auckland",
+      "Updated 16 Oct 2026, 12:30",
+    ],
+    [
+      "a zone behind UTC, where the date goes back across midnight",
+      "2026-10-16T01:15:00Z",
+      "America/Los_Angeles",
+      "Updated 15 Oct 2026, 18:15",
+    ],
+    [
+      "midnight, with no leading zero on the day",
+      "2026-10-06T00:05:00Z",
+      "UTC",
+      "Updated 6 Oct 2026, 00:05",
+    ],
+  ])("should give %s", (_case, instant, timeZone, expected) => {
     expect(
       formatBuildLine({
         isEnabled: true,
         isEmbeddedLaunch: false,
-        createdAt: justBeforeMidnightUtc,
-        timeZone: "Pacific/Auckland",
+        createdAt: new Date(instant),
+        timeZone,
       }),
-    ).toBe("Updated 2026-10-16");
+    ).toBe(expected);
   });
 
   it("should give nothing when updates are disabled", () => {
