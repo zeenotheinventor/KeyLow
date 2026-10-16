@@ -164,7 +164,9 @@ export function PortionPicker(props: PortionPickerProps) {
               value={quantityText}
               onChangeText={setQuantityText}
             />
+            {/* The row runs on past the dock's padding to the screen edge, so a chip cut off there says it scrolls. */}
             <ChipGroup
+              className="-mr-4"
               label={PORTION_PICKER.unitLabel}
               options={choices.options}
               value={chosenUnit === undefined ? null : unitValue}

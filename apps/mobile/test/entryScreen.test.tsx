@@ -135,7 +135,11 @@ describe("the entry screen", () => {
   let kitStyles: string;
 
   beforeAll(async () => {
-    kitStyles = await compileKitStyles("", ["components/QuickAddForm", "components/EntryScreen"]);
+    kitStyles = await compileKitStyles("", [
+      "components/QuickAddForm",
+      "components/EntryScreen",
+      "components/PortionPicker",
+    ]);
   });
 
   beforeEach(() => {
@@ -174,6 +178,13 @@ describe("the entry screen", () => {
       const chips = screen.getAllByRole("radio");
       expect(chips).toHaveLength(1);
       expect(chips[0]).toHaveAccessibleName("g");
+    });
+
+    it("should run the unit chip row to the screen edge, as the add screen does", async () => {
+      await renderEntry(CHICKEN_INDEX);
+      await findFoodEntry();
+
+      expect(screen.getByLabelText("Unit")).toHaveStyle({ marginRight: -16 });
     });
 
     it("should offer Save and a Delete, and no Add or meal", async () => {
