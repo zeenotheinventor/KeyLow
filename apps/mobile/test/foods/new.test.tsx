@@ -435,6 +435,78 @@ describe("new food screen", () => {
     });
   });
 
+  describe("where a save lands", () => {
+    const scannedCode = "5012345678900";
+
+    it("should open the portion picker for the new food after a create from a scan, carrying the day, the time and the code", async () => {
+      routerMock.searchParams = { barcode: scannedCode, day: "2026-10-14", time: "12:00" };
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(routerMock.replace).toHaveBeenCalledTimes(1);
+      expect(routerMock.replace).toHaveBeenCalledWith(
+        `/foods/${savedFoodId}/log?day=2026-10-14&time=12%3A00&barcode=${scannedCode}`,
+      );
+    });
+
+    it("should open the portion picker with only the code when the scan began outside log mode", async () => {
+      routerMock.searchParams = { barcode: scannedCode };
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(routerMock.replace).toHaveBeenCalledWith(
+        `/foods/${savedFoodId}/log?barcode=${scannedCode}`,
+      );
+    });
+
+    it("should leave out a day that is not a day, because that is no log mode", async () => {
+      routerMock.searchParams = { barcode: scannedCode, day: "tomorrow", time: "12:00" };
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(routerMock.replace).toHaveBeenCalledWith(
+        `/foods/${savedFoodId}/log?barcode=${scannedCode}`,
+      );
+    });
+
+    it("should still open the food's page after a plain New food, even when a day is in the link", async () => {
+      routerMock.searchParams = { day: "2026-10-14" };
+      const user = await renderForm();
+      await fillRequiredFields(user);
+
+      await save(user);
+
+      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
+    });
+
+    it("should open the portion picker after the retry of a partial save from a scan", async () => {
+      routerMock.searchParams = { barcode: scannedCode, day: "2026-10-14", time: "12:00" };
+      mockCreateFood.mockRejectedValue(
+        new FoodsPartialWriteError(savedFoodId, "portions failed", new Error("insert failed")),
+      );
+      const user = await renderForm();
+      await fillRequiredFields(user);
+      await save(user);
+      await screen.findByRole("alert", {
+        name: "Portions not saved Your food was saved but its portions were not. Save again to add them.",
+      });
+      expect(routerMock.replace).not.toHaveBeenCalled();
+
+      await user.press(screen.getByRole("button", { name: "Save" }));
+
+      expect(mockUpdateFood).toHaveBeenCalledTimes(1);
+      expect(routerMock.replace).toHaveBeenCalledWith(
+        `/foods/${savedFoodId}/log?day=2026-10-14&time=12%3A00&barcode=${scannedCode}`,
+      );
+    });
+  });
+
   describe("header", () => {
     it("should be headed New food, with Back and Close", async () => {
       await renderForm();

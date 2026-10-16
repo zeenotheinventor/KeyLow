@@ -51,7 +51,8 @@ const crisps = "5000159484695";
 
 const viewfinderLabel = "Barcode viewfinder";
 
-async function renderScanner() {
+async function renderScanner(params: Record<string, string> = {}) {
+  routerMock.searchParams = params;
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   await render(<ScanRoute />, { wrapper: DarkTheme });
   return user;
@@ -351,14 +352,14 @@ describe("scan screen", () => {
       expect(screen.getByText("Looking up the barcode")).toBeOnTheScreen();
     });
 
-    it("should replace the screen with the food when the barcode is found", async () => {
+    it("should replace the screen with the food's portion picker when the barcode is found", async () => {
       setLookupOutcome({ result: { status: "found", food: foodFixture } });
       await renderScanner();
 
       await scan("ean13", cola);
 
       expect(routerMock.replace).toHaveBeenCalledTimes(1);
-      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
+      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}/log?barcode=${cola}`);
       expect(screen.queryByLabelText(viewfinderLabel)).not.toBeOnTheScreen();
     });
 
@@ -382,6 +383,18 @@ describe("scan screen", () => {
       await user.press(screen.getByRole("button", { name: "Create food with this barcode" }));
 
       expect(routerMock.push).toHaveBeenCalledWith(`/foods/new?barcode=${cola}`);
+    });
+
+    it("should carry the day and the time on to the create form, so the new food is logged where the scan began", async () => {
+      setLookupOutcome({ result: { status: "not_found", code: cola } });
+      const user = await renderScanner({ day: "2026-10-14", time: "12:00" });
+
+      await scan("ean13", cola);
+      await user.press(screen.getByRole("button", { name: "Create food with this barcode" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith(
+        `/foods/new?day=2026-10-14&time=12%3A00&barcode=${cola}`,
+      );
     });
 
     it("should end the lookup when the create form takes focus, so nothing underneath reacts to it", async () => {

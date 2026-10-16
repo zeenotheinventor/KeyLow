@@ -76,6 +76,32 @@ async function renderScanner(params: Record<string, string>) {
   );
 }
 
+// The URL the scan replaced itself with, read back as the picker's route parameters.
+function openedPickerParams() {
+  const [href] = routerMock.replace.mock.calls[0] ?? [];
+  const url = new URL(href ?? "", "https://app.test");
+  return {
+    pathname: url.pathname,
+    params: {
+      id: url.pathname.split("/")[2] ?? "",
+      ...Object.fromEntries(url.searchParams.entries()),
+    },
+  };
+}
+
+// Scans the cola and opens the picker on the URL the scan replaced itself with.
+async function renderPickerFromScan() {
+  await scanCola();
+  routerMock.searchParams = openedPickerParams().params;
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <ToastProvider>
+        <PortionPickerRoute />
+      </ToastProvider>
+    </ThemeProvider>,
+  );
+}
+
 describe("barcode to log", () => {
   let kitStyles: string;
 
@@ -120,20 +146,22 @@ describe("barcode to log", () => {
       );
     });
 
-    it("should open the food as it always did when the sheet is not logging", async () => {
+    it("should open the portion picker on a hit outside log mode, carrying only the code", async () => {
       await renderScanner({});
 
       await scanCola();
 
-      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
+      expect(routerMock.replace).toHaveBeenCalledTimes(1);
+      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}/log?barcode=${cola}`);
     });
 
-    it("should open the food when the day is not a day, because that is no log mode", async () => {
+    it("should open the portion picker, not the food, when the day is not a day, because that is no log mode", async () => {
       await renderScanner({ day: "tomorrow" });
 
       await scanCola();
 
-      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}`);
+      expect(routerMock.replace).toHaveBeenCalledTimes(1);
+      expect(routerMock.replace).toHaveBeenCalledWith(`/foods/${savedFoodId}/log?barcode=${cola}`);
     });
   });
 
@@ -154,34 +182,12 @@ describe("barcode to log", () => {
       taps.length = 0;
     });
 
-    // The URL the scan replaced itself with, read back as the picker's route parameters.
-    function openedPickerParams() {
-      const [href] = routerMock.replace.mock.calls[0] ?? [];
-      const url = new URL(href ?? "", "https://app.test");
-      return {
-        pathname: url.pathname,
-        params: {
-          id: url.pathname.split("/")[2] ?? "",
-          ...Object.fromEntries(url.searchParams.entries()),
-        },
-      };
-    }
-
     it("should take at most three taps after the scan: confirm the portion and save, with no tap on the Time row", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       await renderScanner({ day: "2026-10-15" });
-      await scanCola();
-      const { pathname, params } = openedPickerParams();
-      expect(pathname).toBe(`/foods/${savedFoodId}/log`);
+      await renderPickerFromScan();
+      expect(openedPickerParams().pathname).toBe(`/foods/${savedFoodId}/log`);
 
-      routerMock.searchParams = params;
-      await render(
-        <ThemeProvider fixedPreference="dark">
-          <ToastProvider>
-            <PortionPickerRoute />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
       // Confirming the portion: the default one is already chosen, and pressing it keeps it.
       await pressCounted(user, "1 bar", "radio");
       await pressCounted(user, "Add", "button");
@@ -204,20 +210,74 @@ describe("barcode to log", () => {
     it("should need a single tap when the default portion is right", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       await renderScanner({ day: "2026-10-15" });
-      await scanCola();
-      routerMock.searchParams = openedPickerParams().params;
-      await render(
-        <ThemeProvider fixedPreference="dark">
-          <ToastProvider>
-            <PortionPickerRoute />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
+      await renderPickerFromScan();
 
       await pressCounted(user, "Add", "button");
 
       expect(taps).toEqual(["Add"]);
       expect(mockLogFood).toHaveBeenCalledTimes(1);
+    });
+
+    describe("outside log mode, which is the sheet from More or Your foods and a link", () => {
+      it.each([
+        ["no day", {}],
+        ["a day that is not a day", { day: "tomorrow" }],
+      ])(
+        "should log the default portion now, on today in the profile's zone, with %s",
+        async (_name, params) => {
+          const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+          await renderScanner(params);
+          await renderPickerFromScan();
+
+          expect(openedPickerParams().pathname).toBe(`/foods/${savedFoodId}/log`);
+          expect(screen.getByText(`Scanned ${cola}`)).toBeOnTheScreen();
+          await pressCounted(user, "Add", "button");
+
+          expect(taps).toEqual(["Add"]);
+          expect(mockLogFood).toHaveBeenCalledTimes(1);
+          expect(mockLogFood).toHaveBeenCalledWith(
+            expect.objectContaining({
+              food: foodFixture,
+              quantity: 1,
+              unit: "portion",
+              portion: portionFixtures[0],
+              loggedAt: "2026-10-15T11:40:30.000Z",
+              localDate: "2026-10-15",
+            }),
+          );
+          expect(await screen.findByText("Added")).toBeOnTheScreen();
+          expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+        },
+      );
+
+      it("should take at most three taps after the scan, none on the Time row, which says Now", async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        await renderScanner({});
+        await renderPickerFromScan();
+
+        await pressCounted(user, "1 bar", "radio");
+        await pressCounted(user, "Add", "button");
+
+        expect(taps.length).toBeLessThanOrEqual(3);
+        expect(taps).not.toContain("Time, now, 12:40, change");
+        expect(mockLogFood).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("from the dock on the Diary, viewing a past day", () => {
+      it("should log the default portion on that day, in one tap", async () => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        await renderScanner({ day: "2026-10-14" });
+        await renderPickerFromScan();
+
+        await pressCounted(user, "Add", "button");
+
+        expect(taps).toEqual(["Add"]);
+        expect(mockLogFood).toHaveBeenCalledTimes(1);
+        expect(mockLogFood).toHaveBeenCalledWith(
+          expect.objectContaining({ food: foodFixture, localDate: "2026-10-14" }),
+        );
+      });
     });
   });
 });
