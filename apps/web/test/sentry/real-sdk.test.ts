@@ -4,7 +4,12 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { initSentry } from "@/lib/sentry/init";
 
-const sentEnvelopes: unknown[] = [];
+type Envelope = [unknown, [{ type: string }, unknown][]];
+
+const sentEnvelopes: Envelope[] = [];
+
+const sentItems = () => sentEnvelopes.flatMap(([, items]) => items);
+const sentItemTypes = () => sentItems().map(([{ type }]) => type);
 
 // The real SDK with the real options from initSentry. Only the transport is swapped, for one that
 // keeps what would have been sent, so nothing leaves the test.
@@ -17,7 +22,7 @@ vi.mock("@sentry/nextjs", async (importOriginal) => {
             sdk.init({
               ...options,
               transport: () => ({
-                send: (envelope: unknown) => {
+                send: (envelope: Envelope) => {
                   sentEnvelopes.push(envelope);
                   return Promise.resolve({});
                 },
@@ -35,6 +40,8 @@ describe("what the real SDK sends", () => {
   beforeAll(() => {
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", "https://publickey@o1.ingest.de.sentry.io/2");
     vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production");
+    // A release is what makes the SDK send release health sessions, as the Vercel deploy has one.
+    vi.stubEnv("NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA", "724b803");
     initSentry();
   });
 
@@ -51,7 +58,18 @@ describe("what the real SDK sends", () => {
     await Sentry.flush(2000);
 
     expect(Sentry.getClient()).toBeDefined();
-    expect(sentEnvelopes).toHaveLength(1);
+    expect(sentItemTypes().filter((type) => type === "event")).toHaveLength(1);
+  });
+
+  it("should send nothing but events, so no release health session leaves", async () => {
+    Sentry.captureRequestError(
+      new Error("boom"),
+      { path: "/foods", method: "GET", headers: {} },
+      { routerKind: "App Router", routePath: "/foods", routeType: "render" },
+    );
+    await Sentry.flush(2000);
+
+    expect(new Set(sentItemTypes())).toEqual(new Set(["event"]));
   });
 
   it("should send neither a weight, a food name nor an encoded one, from a request error or a request", async () => {
@@ -83,7 +101,7 @@ describe("what the real SDK sends", () => {
     );
     await Sentry.flush(2000);
 
-    expect(sentEnvelopes).toHaveLength(1);
+    expect(sentItemTypes().filter((type) => type === "event")).toHaveLength(1);
     const payload = JSON.stringify(sentEnvelopes);
     expect(payload).not.toContain(WEIGHT);
     expect(payload).not.toContain(FOOD_NAME);

@@ -136,6 +136,16 @@ describe("scrubBreadcrumb", () => {
     expect(scrubbed?.data).toEqual({ url: "https://x.supabase.co/rest/v1/foods", method: "GET" });
   });
 
+  it.each(["navigation", "fetch"])(
+    "should drop the message of a kept %s breadcrumb, as any category could quote the user",
+    (category) => {
+      const scrubbed = scrubBreadcrumb({ category, message: `Opened ${FOOD_NAME}`, data: {} });
+
+      expect(scrubbed).not.toBeNull();
+      expect(scrubbed).not.toHaveProperty("message");
+    },
+  );
+
   it("should drop a click breadcrumb, whose message is named after the element's label", () => {
     expect(
       scrubBreadcrumb({

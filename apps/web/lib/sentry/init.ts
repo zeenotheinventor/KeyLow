@@ -2,6 +2,10 @@ import { init } from "@sentry/nextjs";
 
 import { scrubBreadcrumb, scrubEvent } from "./scrub";
 
+// Release health: with a release set, these send a `session` envelope (release, environment and
+// user agent) beside each error. Error reports do not need it, so less leaves the app.
+const SESSION_INTEGRATIONS = ["ProcessSession", "BrowserSession"];
+
 /**
  * Starts Sentry for whichever runtime calls it (browser, Node, edge), on the production deploy
  * only. With no DSN, or on any other environment (local dev, tests, CI, a preview), it does
@@ -23,6 +27,8 @@ export function initSentry() {
     release: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA,
     sendDefaultPii: false,
     tracesSampleRate: 0,
+    integrations: (defaults) =>
+      defaults.filter((integration) => !SESSION_INTEGRATIONS.includes(integration.name)),
     beforeSend: scrubEvent,
     beforeBreadcrumb: scrubBreadcrumb,
   });

@@ -42,7 +42,10 @@ describe("initSentry", () => {
 
     initSentry();
 
-    expect(init).toHaveBeenCalledExactlyOnceWith({
+    expect(init).toHaveBeenCalledOnce();
+    const { integrations, ...options } = vi.mocked(init).mock.calls[0]?.[0] ?? {};
+    expect(integrations).toBeTypeOf("function");
+    expect(options).toEqual({
       dsn: DSN,
       environment: "production",
       release: "724b803",
@@ -53,13 +56,16 @@ describe("initSentry", () => {
     });
   });
 
-  it("should add no integrations, so session replay is never on", () => {
+  it("should switch off release health sessions and add no replay", () => {
     vi.stubEnv("NEXT_PUBLIC_SENTRY_DSN", DSN);
     vi.stubEnv("NEXT_PUBLIC_VERCEL_ENV", "production");
 
     initSentry();
 
-    expect(vi.mocked(init).mock.calls[0]?.[0]).not.toHaveProperty("integrations");
-    expect(vi.mocked(init).mock.calls[0]?.[0]).not.toHaveProperty("replaysSessionSampleRate");
+    const options = vi.mocked(init).mock.calls[0]?.[0];
+    const defaults = [{ name: "Dedupe" }, { name: "ProcessSession" }, { name: "BrowserSession" }];
+    const kept = typeof options?.integrations === "function" ? options.integrations(defaults) : [];
+    expect(kept).toEqual([{ name: "Dedupe" }]);
+    expect(options).not.toHaveProperty("replaysSessionSampleRate");
   });
 });

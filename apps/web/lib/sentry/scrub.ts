@@ -30,14 +30,17 @@ const pickKeys = <TValue>(source: Record<string, TValue>, keys: readonly string[
 const withoutQueryString = (url: string) => url.split(/[?#]/)[0] ?? url;
 
 export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
-  const { category, data } = breadcrumb;
+  // The message goes from every breadcrumb that stays, whatever its category: any of them can quote the user.
+  const kept = { ...breadcrumb };
+  delete kept.message;
+  const { category, data } = kept;
 
   if (category !== undefined && BREADCRUMB_CATEGORIES_NEVER_SENT.has(category)) {
     return null;
   }
 
   if (data === undefined) {
-    return breadcrumb;
+    return kept;
   }
 
   if (BREADCRUMB_DATA_KEYS_THAT_CARRY_VALUES.some((key) => key in data)) {
@@ -52,7 +55,7 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
     }
   }
 
-  return { ...breadcrumb, data: scrubbedData };
+  return { ...kept, data: scrubbedData };
 }
 
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
