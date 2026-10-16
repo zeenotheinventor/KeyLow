@@ -8,6 +8,7 @@ import {
   canMeasureByVolume,
   densityForLogging,
   isSpoonPortionId,
+  spoonPortionOf,
 } from "../../src/nutrition/volume";
 import { buildFood } from "../../src/testing";
 
@@ -86,5 +87,23 @@ describe("densityForLogging", () => {
 
   it("should be null when there is neither", () => {
     expect(densityForLogging(buildFood({ density_g_per_ml: null }))).toBeNull();
+  });
+});
+
+describe("spoonPortionOf", () => {
+  it.each([
+    [{ label: "1 tsp", ml: 5 }, "spoon-tsp"],
+    [{ label: "1 tbsp", ml: 15 }, "spoon-tbsp"],
+  ])("should find the spoon for %j", (portion, id) => {
+    expect(spoonPortionOf(portion)?.id).toBe(id);
+  });
+
+  it.each([
+    ["a gram portion with a spoon's label", { label: "1 tbsp", ml: null }],
+    ["a portion with no millilitres given", { label: "1 tbsp" }],
+    ["a spoon's label with another size", { label: "1 tbsp", ml: 12 }],
+    ["a spoon's size with another label", { label: "1 glass", ml: 15 }],
+  ])("should find no spoon for %s", (_name, portion) => {
+    expect(spoonPortionOf(portion)).toBeUndefined();
   });
 });

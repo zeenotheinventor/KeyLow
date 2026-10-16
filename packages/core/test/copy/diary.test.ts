@@ -28,6 +28,7 @@ import {
   describeEntryCaption,
   describeMacroTargetField,
   describeHourChip,
+  describeLastLogged,
   describeLoggedAmount,
   describeHourGroup,
   describeMacroTotal,
@@ -421,6 +422,96 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
         portion: { label: "1 pot" },
       }),
     ).toBe("2 × 1 pot (340 g)");
+  });
+
+  describe("a spoon entry", () => {
+    const tablespoon = { label: "1 tbsp", ml: 15 };
+
+    it.each([
+      [2, 27.6, "2 tbsp (30 ml)"],
+      [1, 13.8, "1 tbsp (15 ml)"],
+      [0.5, 6.9, "0.5 tbsp (7.5 ml)"],
+    ])(
+      "should write %s of the tablespoon as the count and its volume only",
+      (quantity, grams, text) => {
+        expect(
+          describeLoggedAmount({
+            unit: "portion",
+            quantity,
+            resolvedGrams: grams,
+            portion: tablespoon,
+          }),
+        ).toBe(text);
+      },
+    );
+
+    it("should write a teaspoon the same way", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 3,
+          resolvedGrams: 13.8,
+          portion: { label: "1 tsp", ml: 5 },
+        }),
+      ).toBe("3 tsp (15 ml)");
+    });
+
+    it("should read the same through the last logged line", () => {
+      const amount = describeLoggedAmount({
+        unit: "portion",
+        quantity: 2,
+        resolvedGrams: 27.6,
+        portion: tablespoon,
+      });
+
+      expect(describeLastLogged(amount, 1, "Wed 14 Oct")).toBe(
+        "Last logged 2 tbsp (30 ml), yesterday",
+      );
+    });
+
+    it("should leave a gram portion that shares a spoon's label as grams", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 2,
+          resolvedGrams: 28,
+          portion: { label: "1 tbsp", grams: 14 },
+        }),
+      ).toBe("2 × 1 tbsp (28 g)");
+    });
+
+    it("should leave a millilitre portion that is not a spoon as it is", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 206,
+          portion: { label: "1 glass", ml: 200 },
+        }),
+      ).toBe("1 glass (206 g)");
+    });
+
+    it("should leave a spoon-labelled millilitre portion of another size as it is", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 12,
+          portion: { label: "1 tbsp", ml: 12 },
+        }),
+      ).toBe("1 tbsp (12 g)");
+    });
+
+    it("should still compile and read for a caller that gives the label alone", () => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity: 1,
+          resolvedGrams: 100,
+          portion: { label: "1 medium" },
+        }),
+      ).toBe("1 medium (100 g)");
+    });
   });
 
   it("should write a quick add as Quick add", () => {

@@ -1,7 +1,8 @@
-import { PORTION_PICKER, describeAmountBasis } from "../copy/portionPicker";
+import { PORTION_PICKER, describeAmountBasis, describeVolumeBasis } from "../copy/portionPicker";
 import { parseFormNumber } from "../foods/foodForm";
 import { scaleNutrients } from "../nutrition/scale";
 import { resolveQuantity } from "../nutrition/units";
+import { densityForLogging, spoonPortionOf } from "../nutrition/volume";
 import { validateQuantity } from "./rules/validateQuantity";
 
 import type { Food, FoodPortion } from "../schemas/food";
@@ -16,11 +17,16 @@ export type AmountPortion = Pick<FoodPortion, "id" | "label" | "grams" | "ml">;
 export type ChosenAmount<Portion extends AmountPortion = AmountPortion> =
   { unit: "g" | "ml"; quantity: number } | { unit: "portion"; quantity: number; portion: Portion };
 
-/** The part of a food an amount is worked out from. A logged entry's snapshot gives the same, see `snapshotAsFood`. */
+/**
+ * The part of a food an amount is worked out from. A logged entry's snapshot gives the same, see
+ * `snapshotAsFood`. A food row also gives its source and group, which a density estimate is made from, so a
+ * volume amount is worked out with the density a logged entry would freeze. A snapshot has already frozen it.
+ */
 export type AmountFood = Pick<
   Food,
   "basis" | "density_g_per_ml" | "kcal" | "protein_g" | "fat_g" | "carbs_g" | "fibre_g"
->;
+> &
+  Partial<Pick<Food, "source" | "source_ref" | "food_group">>;
 
 /** What an amount comes to: the values for it and the caption that says what it is, such as "For 150 g". Values are null while there is no valid amount. */
 export type AmountSummary = {
@@ -56,9 +62,48 @@ function amountOf<Portion extends AmountPortion>(
   return portion === undefined ? undefined : { unit: "portion", quantity, portion };
 }
 
-function captionOf(amount: ChosenAmount): string {
+// The density `buildLogEntry` freezes for the food, so the hero and the entry it makes agree to the digit.
+const densityOf = (food: AmountFood): number | null =>
+  densityForLogging({
+    density_g_per_ml: food.density_g_per_ml,
+    source: food.source ?? "user",
+    source_ref: food.source_ref ?? null,
+    food_group: food.food_group ?? null,
+  });
+
+function weightOf(amount: ChosenAmount, density: number | null): number | null {
+  if (density === null) {
+    return null;
+  }
+
+  return resolveQuantity(
+    { basis: "per_100g", density_g_per_ml: density },
+    amount.quantity,
+    amount.unit,
+    amount.unit === "portion" ? amount.portion : undefined,
+  ).amount;
+}
+
+function captionOf(amount: ChosenAmount, density: number | null): string {
+  if (amount.unit === "ml") {
+    return describeVolumeBasis({
+      unit: "ml",
+      quantity: amount.quantity,
+      weightInGrams: weightOf(amount, density),
+    });
+  }
   if (amount.unit !== "portion") {
     return describeAmountBasis(amount);
+  }
+  const spoon = spoonPortionOf(amount.portion);
+  if (spoon !== undefined) {
+    return describeVolumeBasis({
+      unit: "spoon",
+      quantity: amount.quantity,
+      spoonLabel: spoon.label,
+      volumeMl: amount.quantity * spoon.ml,
+      weightInGrams: weightOf(amount, density),
+    });
   }
   return describeAmountBasis({
     unit: "portion",
@@ -92,8 +137,9 @@ export function previewAmount<Portion extends AmountPortion>(
   }
 
   try {
+    const density = densityOf(food);
     const { amount: inBasisUnit } = resolveQuantity(
-      food,
+      { basis: food.basis, density_g_per_ml: density },
       amount.quantity,
       amount.unit,
       amount.unit === "portion" ? amount.portion : undefined,
@@ -111,7 +157,7 @@ export function previewAmount<Portion extends AmountPortion>(
 
     return {
       amount,
-      hero: { caption: captionOf(amount), values: { kcal, protein_g, carbs_g, fat_g } },
+      hero: { caption: captionOf(amount, density), values: { kcal, protein_g, carbs_g, fat_g } },
     };
   } catch (error) {
     // Core refuses an amount that overflows. The message quotes it, so it is not kept: the amount is health data.

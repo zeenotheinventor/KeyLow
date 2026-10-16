@@ -4,7 +4,11 @@ import { formatClockTime } from "../dates/formatClockTime";
 import { instantAtLocalTime } from "../dates/instantAtLocalTime";
 import { toLocalDate } from "../dates/toLocalDate";
 
-/** Where food is being logged: the calendar day the diary shows and, from an hour's plus, that hour as `HH:mm`. */
+/**
+ * Where food is being logged: the calendar day the diary shows and, from an hour's plus, that hour as `HH:mm`.
+ * The fields are the `day` and `time` query parameters of the route that opens the sheet. Log mode is on
+ * when `day` is present, so a route without it is not logging to a day at all.
+ */
 export type LogContext = { day: string; time?: string };
 
 type LoggedAt = { loggedAt: Date; localDate: string };

@@ -11,6 +11,7 @@ import {
   describePortionUnit,
   describePortionWithSize,
   describeScannedCode,
+  describeVolumeBasis,
 } from "../../src/copy";
 
 describe("portion picker wording", () => {
@@ -86,6 +87,65 @@ describe("describeAmountBasis", () => {
         portionSize: { amount: 200, unit: "ml" },
       }),
     ).toBe("For 1 glass (200 ml)");
+  });
+});
+
+describe("describeVolumeBasis", () => {
+  it("should write millilitres with the weight they come to", () => {
+    expect(describeVolumeBasis({ unit: "ml", quantity: 250, weightInGrams: 257.5 })).toBe(
+      "For 250 ml (258 g)",
+    );
+  });
+
+  it("should write millilitres alone when there is no weight to give", () => {
+    expect(describeVolumeBasis({ unit: "ml", quantity: 250, weightInGrams: null })).toBe(
+      "For 250 ml",
+    );
+  });
+
+  it("should write a spoon count with the millilitres it is, then the weight", () => {
+    expect(
+      describeVolumeBasis({
+        unit: "spoon",
+        quantity: 2,
+        spoonLabel: "1 tbsp",
+        volumeMl: 30,
+        weightInGrams: 27.6,
+      }),
+    ).toBe("For 2 tbsp (30 ml, 28 g)");
+    expect(
+      describeVolumeBasis({
+        unit: "spoon",
+        quantity: 1,
+        spoonLabel: "1 tsp",
+        volumeMl: 5,
+        weightInGrams: 5,
+      }),
+    ).toBe("For 1 tsp (5 ml, 5 g)");
+  });
+
+  it("should write a spoon count with the millilitres alone when there is no weight", () => {
+    expect(
+      describeVolumeBasis({
+        unit: "spoon",
+        quantity: 2,
+        spoonLabel: "1 tbsp",
+        volumeMl: 30,
+        weightInGrams: null,
+      }),
+    ).toBe("For 2 tbsp (30 ml)");
+  });
+
+  it("should round the way the diary does, a tenth below 10 and whole above", () => {
+    expect(
+      describeVolumeBasis({
+        unit: "spoon",
+        quantity: 1.5,
+        spoonLabel: "1 tsp",
+        volumeMl: 7.5,
+        weightInGrams: 6.9,
+      }),
+    ).toBe("For 1.5 tsp (7.5 ml, 6.9 g)");
   });
 });
 
@@ -166,6 +226,11 @@ describe("describePortionNoun", () => {
 });
 
 describe("describePortionUnit", () => {
+  it("should give the spoon noun after the amount field of a spoon", () => {
+    expect(describePortionUnit("1 tbsp", 2)).toBe("tbsp");
+    expect(describePortionUnit("1 tsp", 1)).toBe("tsp");
+  });
+
   it("should be the noun when the label gives one, whatever the count", () => {
     expect(describePortionUnit("1 medium (100 g)", 1)).toBe("medium");
     expect(describePortionUnit("1 medium (100 g)", 2)).toBe("medium");

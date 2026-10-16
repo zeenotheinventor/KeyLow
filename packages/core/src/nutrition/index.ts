@@ -6,6 +6,7 @@ export {
   canMeasureByVolume,
   densityForLogging,
   isSpoonPortionId,
+  spoonPortionOf,
   spoonPortionWithLabel,
 } from "./volume";
 export type { SpoonPortion } from "./volume";

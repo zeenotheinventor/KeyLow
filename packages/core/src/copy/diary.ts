@@ -1,9 +1,10 @@
 import { MONTH_NAMES_LONG, WEEKDAY_NAMES_LONG, WEEKDAY_NAMES_SHORT } from "./diaryDay";
 import { FOOD_ROW } from "./foodRow";
-import { describePortionWithSize } from "./portionPicker";
+import { describePortionUnit, describePortionWithSize } from "./portionPicker";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { TARGET_KCAL_MAXIMUM, TARGET_KCAL_MINIMUM } from "../diary/rules";
 import { formatCalories, formatGrams } from "../format/numbers";
+import { spoonPortionOf } from "../nutrition/volume";
 
 import type { ProgressBar } from "../diary/rules";
 import type { QuantityUnit } from "../nutrition/units";
@@ -217,8 +218,11 @@ export type LoggedAmount = {
   unit: QuantityUnit;
   quantity: number;
   resolvedGrams: number;
-  /** Set exactly when the unit is `portion`. */
-  portion: { label: string } | null;
+  /**
+   * Set exactly when the unit is `portion`. Its size is what tells a spoon from another portion, so a
+   * caller gives it whole (a snapshot's portion is already this shape). Without it a portion reads as grams.
+   */
+  portion: { label: string; ml?: number; grams?: number } | null;
 };
 
 const MEASURED_UNIT_NAMES = { g: "g", ml: "ml", oz: "oz", fl_oz: "fl oz" } as const;
@@ -226,7 +230,8 @@ const MEASURED_UNIT_NAMES = { g: "g", ml: "ml", oz: "oz", fl_oz: "fl oz" } as co
 /**
  * How much of a food an entry holds, as a diary row writes it after the time: "50 g", "200 ml" or, for a
  * portion, its label and the grams it came to ("1 medium (100 g)"). Several portions read "2 × 1 pot
- * (340 g)". A quick add (null) reads "Quick add".
+ * (340 g)". A spoon reads its count and its volume only, "2 tbsp (30 ml)", as a drink reads "200 ml".
+ * A quick add (null) reads "Quick add".
  */
 export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
   if (amount === null) {
@@ -235,6 +240,13 @@ export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
   if (amount.unit !== "portion" || amount.portion === null) {
     const unit = amount.unit === "portion" ? "g" : MEASURED_UNIT_NAMES[amount.unit];
     return `${formatGrams(amount.quantity)} ${unit}`;
+  }
+  const spoon = spoonPortionOf(amount.portion);
+  if (spoon !== undefined) {
+    const count = formatGrams(amount.quantity);
+    const volume = `${formatGrams(amount.quantity * spoon.ml)} ml`;
+
+    return `${count} ${describePortionUnit(spoon.label, amount.quantity)} (${volume})`;
   }
   // A label that already says its size, such as "30 g", is not given it twice.
   const portion = describePortionWithSize(amount.portion.label, {

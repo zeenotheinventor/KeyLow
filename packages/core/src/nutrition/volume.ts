@@ -26,6 +26,20 @@ export const SPOON_PORTIONS: readonly SpoonPortion[] = [
 export const spoonPortionWithLabel = (label: string): SpoonPortion | undefined =>
   SPOON_PORTIONS.find((portion) => portion.label === label);
 
+/**
+ * The spoon a portion is, if it is one: a millilitre portion with a spoon's label and that spoon's size. This
+ * is the one place that says so, so a logged entry, a row's wording and "log again" cannot disagree. A gram
+ * portion that merely shares a spoon's label is not a spoon, and neither is one of another size.
+ */
+export const spoonPortionOf = (portion: {
+  label: string;
+  ml?: number | null;
+}): SpoonPortion | undefined => {
+  const spoon = spoonPortionWithLabel(portion.label);
+
+  return spoon !== undefined && portion.ml === spoon.ml ? spoon : undefined;
+};
+
 export const isSpoonPortionId = (id: string): boolean =>
   SPOON_PORTIONS.some((portion) => portion.id === id);
 
