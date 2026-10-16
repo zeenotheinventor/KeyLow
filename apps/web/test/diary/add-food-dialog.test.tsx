@@ -755,6 +755,71 @@ describe("the add food dialog", () => {
     });
   });
 
+  describe("opening on a food", () => {
+    it("should open on that food's portion step, with no search step first", () => {
+      renderDialog({ foodId: CHICKEN_ID });
+
+      expect(screen.getByRole("radio", { name: "1 breast", checked: true })).toBeTruthy();
+      expect(screen.getByRole("textbox", { name: /^Amount/ })).toHaveProperty("value", "1");
+      expect(screen.queryByRole("searchbox")).toBeNull();
+    });
+
+    it("should read now on today, with the Time field saying Now, when the request names no day", () => {
+      renderDialog({ foodId: CHICKEN_ID });
+
+      expect(screen.getByRole("button", { name: "Time 12:40" })).toBeTruthy();
+      expect(screen.getByText("Now")).toBeTruthy();
+    });
+
+    it("should log the default portion now on today with one press on Add", async () => {
+      const { onClose } = renderDialog({ foodId: CHICKEN_ID });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledOnce();
+      });
+      expect(api.logFood.mutateAsync).toHaveBeenCalledExactlyOnceWith({
+        food: chicken,
+        quantity: 1,
+        unit: "portion",
+        portion: breast,
+        loggedAt: "2026-10-15T12:40:30.000Z",
+        localDate: "2026-10-15",
+      });
+      expect(await screen.findByText("Added")).toBeTruthy();
+    });
+
+    it("should log on the day of the request, at the current clock time", async () => {
+      renderDialog({ foodId: CHICKEN_ID, date: "2026-10-14" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      await waitFor(() => {
+        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logFood.mutateAsync.mock.calls[0]?.[0].localDate).toBe("2026-10-14");
+      expect(api.logFood.mutateAsync.mock.calls[0]?.[0].loggedAt).toBe("2026-10-14T12:40:00.000Z");
+    });
+
+    it("should go back to the search from the Results link, as on any portion step", () => {
+      renderDialog({ foodId: CHICKEN_ID });
+
+      fireEvent.click(screen.getByRole("button", { name: "Results" }));
+
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeTruthy();
+    });
+
+    it("should close on Cancel and Escape", () => {
+      const { onClose } = renderDialog({ foodId: CHICKEN_ID });
+
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(onClose).toHaveBeenCalledTimes(2);
+    });
+  });
+
   describe("focus", () => {
     it("should keep Tab inside the dialog", () => {
       renderDialog();

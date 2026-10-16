@@ -7,4 +7,6 @@ export type BarcodeLookupRequest = {
 export type BarcodeLookupProps = {
   /** Called when the user closes the panel. */
   onClose: () => void;
+  /** The day a found food is added to, `YYYY-MM-DD`. Left out, it is today. */
+  day?: string | undefined;
 };

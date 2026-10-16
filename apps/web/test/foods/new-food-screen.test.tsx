@@ -7,15 +7,22 @@ import type { CreatedFood, FoodWithPortionsState } from "@keylow/api-client";
 
 import { NewFoodScreen } from "@/app/(dashboard)/foods/new/NewFoodScreen";
 
-const { searchParameters, useFoodWithPortions, createFood, updateFood, replace } = vi.hoisted(
-  () => ({
-    searchParameters: { current: new URLSearchParams() },
-    useFoodWithPortions: vi.fn<(id: string) => FoodWithPortionsState>(),
-    createFood: vi.fn<(input: unknown) => Promise<CreatedFood>>(),
-    updateFood: vi.fn(),
-    replace: vi.fn<(href: string) => void>(),
-  }),
-);
+const {
+  searchParameters,
+  useFoodWithPortions,
+  createFood,
+  updateFood,
+  replace,
+  openAddFoodOnNextPage,
+} = vi.hoisted(() => ({
+  searchParameters: { current: new URLSearchParams() },
+  useFoodWithPortions: vi.fn<(id: string) => FoodWithPortionsState>(),
+  createFood: vi.fn<(input: unknown) => Promise<CreatedFood>>(),
+  updateFood: vi.fn(),
+  replace: vi.fn<(href: string) => void>(),
+  openAddFoodOnNextPage:
+    vi.fn<(request: { foodId: string; date?: string }, pathname: string) => void>(),
+}));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
@@ -27,6 +34,10 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
   useSearchParams: () => searchParameters.current,
+}));
+
+vi.mock("@/lib/foodLogActions", () => ({
+  useFoodLogActions: () => ({ openAddFoodOnNextPage }),
 }));
 
 const SOURCE_FOOD_ID = "55555555-5555-4555-8555-555555555555";
@@ -95,6 +106,97 @@ describe("NewFoodScreen", () => {
     render(<NewFoodScreen />);
 
     expect(screen.getByRole("textbox", { name: "Barcode" })).toHaveProperty("readOnly", false);
+  });
+
+  describe("creating a food from a scanned barcode", () => {
+    const scanned = "5000159484695";
+
+    function fillAndCreate() {
+      fireEvent.change(screen.getByRole("textbox", { name: "Name" }), {
+        target: { value: "Oat cakes" },
+      });
+      fireEvent.change(screen.getByRole("textbox", { name: energy }), { target: { value: "430" } });
+      fireEvent.change(screen.getByRole("textbox", { name: protein }), { target: { value: "10" } });
+      fireEvent.change(screen.getByRole("textbox", { name: carbohydrate }), {
+        target: { value: "56" },
+      });
+      fireEvent.change(screen.getByRole("textbox", { name: fat }), { target: { value: "18" } });
+      fireEvent.click(screen.getByRole("button", { name: "Create food" }));
+    }
+
+    beforeEach(() => {
+      createFood.mockResolvedValue({ food: makeFood({ id: CREATED_FOOD_ID }), portions: [] });
+    });
+
+    it("should open the add dialog on the new food, over its page, once it is saved", async () => {
+      searchParameters.current = new URLSearchParams({ barcode: scanned });
+      render(<NewFoodScreen />);
+
+      fillAndCreate();
+
+      await waitFor(() => {
+        expect(replace).toHaveBeenCalledWith(`/foods/${CREATED_FOOD_ID}`);
+      });
+      expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith(
+        { foodId: CREATED_FOOD_ID },
+        `/foods/${CREATED_FOOD_ID}`,
+      );
+      expect(openAddFoodOnNextPage.mock.invocationCallOrder[0]).toBeLessThan(
+        replace.mock.invocationCallOrder[0] ?? 0,
+      );
+    });
+
+    it("should add the new food to the day the barcode was looked up for", async () => {
+      searchParameters.current = new URLSearchParams({ barcode: scanned, day: "2026-10-12" });
+      render(<NewFoodScreen />);
+
+      fillAndCreate();
+
+      await waitFor(() => {
+        expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith(
+          { foodId: CREATED_FOOD_ID, date: "2026-10-12" },
+          `/foods/${CREATED_FOOD_ID}`,
+        );
+      });
+    });
+
+    it("should add it to today when the day is not a calendar day", async () => {
+      searchParameters.current = new URLSearchParams({ barcode: scanned, day: "2026-02-30" });
+      render(<NewFoodScreen />);
+
+      fillAndCreate();
+
+      await waitFor(() => {
+        expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith(
+          { foodId: CREATED_FOOD_ID },
+          `/foods/${CREATED_FOOD_ID}`,
+        );
+      });
+    });
+
+    it("should open no dialog when the food is made without a scanned barcode", async () => {
+      searchParameters.current = new URLSearchParams({ day: "2026-10-12" });
+      render(<NewFoodScreen />);
+
+      fillAndCreate();
+
+      await waitFor(() => {
+        expect(replace).toHaveBeenCalledWith(`/foods/${CREATED_FOOD_ID}`);
+      });
+      expect(openAddFoodOnNextPage).not.toHaveBeenCalled();
+    });
+
+    it("should open no dialog when the save fails", async () => {
+      searchParameters.current = new URLSearchParams({ barcode: scanned });
+      createFood.mockRejectedValueOnce(new Error("network down"));
+      render(<NewFoodScreen />);
+
+      fillAndCreate();
+
+      await screen.findByRole("alert");
+      expect(openAddFoodOnNextPage).not.toHaveBeenCalled();
+      expect(replace).not.toHaveBeenCalled();
+    });
   });
 
   describe("starting from an existing food", () => {

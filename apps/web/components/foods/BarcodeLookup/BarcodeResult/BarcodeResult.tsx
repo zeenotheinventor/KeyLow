@@ -13,7 +13,7 @@ import { InlineStatus } from "@/components/foods/InlineStatus";
 import { Banner } from "@/components/ui/Banner";
 
 /** What to show under the barcode field once a code has been looked up. Finding the food is shown here as "Opening the food" and the panel does the opening. */
-export function BarcodeResult({ result, isLoading, error }: BarcodeResultProps) {
+export function BarcodeResult({ result, isLoading, error, day }: BarcodeResultProps) {
   if (result?.status === "found") {
     return <InlineStatus size="small">{BARCODE_LOOKUP_PROGRESS.openingFood}</InlineStatus>;
   }
@@ -42,7 +42,7 @@ export function BarcodeResult({ result, isLoading, error }: BarcodeResultProps) 
           {BARCODE_NOT_FOUND.typedBody}
         </span>
         <Link
-          href={`/foods/new?barcode=${result.code}`}
+          href={`/foods/new?barcode=${result.code}${day === undefined ? "" : `&day=${day}`}`}
           className="inline-flex min-h-touch-target items-center gap-1.5 self-start rounded-small text-body-strong text-text-primary underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
         >
           {BARCODE_NOT_FOUND.action}

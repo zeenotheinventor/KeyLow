@@ -3,4 +3,6 @@ export type FoodSearchProps = {
   scope?: "all" | "own";
   /** Opens the barcode panel at once, as the top bar's barcode button asks. */
   startWithBarcodePanel?: boolean;
+  /** The day a food found by barcode is added to, `YYYY-MM-DD`. Left out, it is today. */
+  day?: string | undefined;
 };

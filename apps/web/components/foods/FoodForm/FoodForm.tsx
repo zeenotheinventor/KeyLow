@@ -66,7 +66,7 @@ function describeBanner(
       };
 }
 
-export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
+export function FoodForm({ scannedBarcode, onCreated, existing, copyOf }: FoodFormProps) {
   const router = useRouter();
   const createFood = useCreateFood();
   const updateFood = useUpdateFood();
@@ -159,6 +159,7 @@ export function FoodForm({ scannedBarcode, existing, copyOf }: FoodFormProps) {
         const created = await createFood.mutateAsync(
           copyOf === undefined ? result.data : withCarriedNutrients(copyOf.food, result.data),
         );
+        onCreated?.(created.food.id);
         router.replace(`/foods/${created.food.id}`);
       } else {
         await updateFood.mutateAsync({ id: existing.food.id, input: result.data });

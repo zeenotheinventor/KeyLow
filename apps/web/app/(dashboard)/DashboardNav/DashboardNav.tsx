@@ -59,6 +59,13 @@ export function DashboardNav() {
     openAddFood(viewedDate === undefined ? {} : { date: viewedDate });
   }
 
+  // The foods page is not the diary, so the day on view goes with the person, as it does for the search.
+  function startBarcodeLookup() {
+    router.push(
+      viewedDate === undefined ? FOODS_BARCODE_HREF : `${FOODS_BARCODE_HREF}&day=${viewedDate}`,
+    );
+  }
+
   useEffect(() => {
     if (!isMenuOpen) {
       return;
@@ -160,9 +167,7 @@ export function DashboardNav() {
             disabled={!isOnline}
             barcodeButton={{
               label: "Look up a barcode",
-              onClick: () => {
-                router.push(FOODS_BARCODE_HREF);
-              },
+              onClick: startBarcodeLookup,
             }}
             className={cn("lg:ml-auto lg:w-[320px]", isFoodPage && "max-lg:hidden")}
           />

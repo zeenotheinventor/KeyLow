@@ -1,13 +1,21 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeFood } from "./support";
+import { makeFood, makePortion } from "./support";
+import { foodEntry } from "../diary/support";
 
-import type { UseFoodByBarcodeOptions, UseFoodByBarcodeReturn } from "@keylow/api-client";
+import type {
+  LogFoodInput,
+  LogEntry,
+  UseFoodByBarcodeOptions,
+  UseFoodByBarcodeReturn,
+} from "@keylow/api-client";
 
 import { BarcodeLookup } from "@/components/foods/BarcodeLookup";
+import { ToastProvider } from "@/components/ui/Toast";
+import { FoodLogActionsProvider } from "@/lib/foodLogActions";
 
-const { useFoodByBarcode, push, router } = vi.hoisted(() => {
+const { useFoodByBarcode, push, router, logFood, foods } = vi.hoisted(() => {
   const push = vi.fn<(href: string) => void>();
   // One router object for every render, as the real router is, so only the attempt re-opens a food.
   return {
@@ -15,16 +23,27 @@ const { useFoodByBarcode, push, router } = vi.hoisted(() => {
       vi.fn<(code: string, options?: UseFoodByBarcodeOptions) => UseFoodByBarcodeReturn>(),
     push,
     router: { push },
+    logFood: { mutateAsync: vi.fn<(input: LogFoodInput) => Promise<LogEntry>>() },
+    foods: new Map<string, unknown>(),
   };
 });
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useFoodByBarcode,
+  useProfileTimeZone: () => ({ data: "UTC" }),
+  useFoodWithPortions: (id: string) => {
+    const found = foods.get(id);
+    return found === undefined ? { status: "notFound" } : { status: "ready", ...found };
+  },
+  useLogFood: () => logFood,
+  useDeleteEntry: () => ({ mutateAsync: vi.fn() }),
+  useSupabase: () => ({}),
 }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
+  usePathname: () => "/foods",
 }));
 
 const VALID_EAN_13 = "5000159484695";
@@ -35,8 +54,17 @@ const UPC_A_AS_STORED = "0036000291452";
 
 const idle: UseFoodByBarcodeReturn = { result: undefined, isLoading: false, error: null };
 
-function renderPanel(onClose = vi.fn<() => void>()) {
-  render(<BarcodeLookup onClose={onClose} />);
+// 12:40 on Thursday 15 October 2026 in UTC, so "now" is 12:40.
+const NOW = new Date("2026-10-15T12:40:30Z");
+
+function renderPanel(onClose = vi.fn<() => void>(), day?: string) {
+  render(
+    <ToastProvider>
+      <FoodLogActionsProvider>
+        <BarcodeLookup onClose={onClose} {...(day === undefined ? {} : { day })} />
+      </FoodLogActionsProvider>
+    </ToastProvider>,
+  );
   return onClose;
 }
 
@@ -50,11 +78,30 @@ function lookUp(digits: string) {
 describe("BarcodeLookup", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
     useFoodByBarcode.mockReturnValue(idle);
+    foods.clear();
+    logFood.mutateAsync.mockImplementation((input) =>
+      Promise.resolve(
+        foodEntry({
+          date: input.localDate,
+          time: "12:40",
+          name: input.food.name,
+          quantity: input.quantity,
+          unit: "portion",
+          kcal: 1,
+          protein: 1,
+          fat: 1,
+          carbs: 1,
+        }),
+      ),
+    );
   });
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   describe("the open panel", () => {
@@ -91,7 +138,7 @@ describe("BarcodeLookup", () => {
       });
 
       expect(useFoodByBarcode).toHaveBeenLastCalledWith("", { enabled: false });
-      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.queryByText("Looking up the barcode")).toBeNull();
     });
   });
 
@@ -182,45 +229,104 @@ describe("BarcodeLookup", () => {
       expect(button).toHaveProperty("disabled", true);
     });
 
-    it("should say it is opening the food, and open it, when it is found", () => {
-      useFoodByBarcode.mockReturnValue({
-        result: { status: "found", food: makeFood({ id: "found-food" }) },
-        isLoading: false,
-        error: null,
+    describe("a food that is found", () => {
+      const oatCakes = makeFood({ id: "found-food", name: "Oat cakes" });
+      const handful = makePortion({
+        id: "found-portion",
+        food_id: "found-food",
+        label: "1 handful",
+        grams: 30,
+        is_default: true,
       });
-      renderPanel();
 
-      lookUp(VALID_EAN_13);
-
-      expect(screen.getByText("Opening the food").getAttribute("role")).toBe("status");
-      expect(push).toHaveBeenCalledTimes(1);
-      expect(push).toHaveBeenCalledWith("/foods/found-food");
-    });
-
-    it("should open nothing before a code is submitted, whatever the lookup holds", () => {
-      useFoodByBarcode.mockReturnValue({
-        result: { status: "found", food: makeFood({ id: "found-food" }) },
-        isLoading: false,
-        error: null,
+      beforeEach(() => {
+        foods.set("found-food", { food: oatCakes, portions: [handful] });
+        useFoodByBarcode.mockReturnValue({
+          result: { status: "found", food: oatCakes },
+          isLoading: false,
+          error: null,
+        });
       });
-      renderPanel();
 
-      expect(push).not.toHaveBeenCalled();
-      expect(screen.queryByText("Opening the food")).toBeNull();
-    });
+      it("should say it is opening the food", () => {
+        renderPanel();
 
-    it("should open the food again when the same code is looked up a second time", () => {
-      useFoodByBarcode.mockReturnValue({
-        result: { status: "found", food: makeFood({ id: "found-food" }) },
-        isLoading: false,
-        error: null,
+        lookUp(VALID_EAN_13);
+
+        expect(screen.getByText("Opening the food").getAttribute("role")).toBe("status");
       });
-      renderPanel();
 
-      lookUp(VALID_EAN_13);
-      lookUp(VALID_EAN_13);
+      it("should open the Add food dialog on that food's portion step, and not the food's page", () => {
+        renderPanel();
 
-      expect(push).toHaveBeenCalledTimes(2);
+        lookUp(VALID_EAN_13);
+
+        expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
+        expect(screen.getByRole("radio", { name: "1 handful", checked: true })).toBeTruthy();
+        expect(screen.getByText("Now")).toBeTruthy();
+        expect(screen.queryByRole("searchbox")).toBeNull();
+        expect(push).not.toHaveBeenCalled();
+      });
+
+      it("should log the default portion now, today, with one press on Add after the lookup", async () => {
+        renderPanel();
+        lookUp(VALID_EAN_13);
+
+        fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+        await waitFor(() => {
+          expect(screen.queryByRole("dialog")).toBeNull();
+        });
+        expect(logFood.mutateAsync).toHaveBeenCalledExactlyOnceWith({
+          food: oatCakes,
+          quantity: 1,
+          unit: "portion",
+          portion: handful,
+          loggedAt: "2026-10-15T12:40:30.000Z",
+          localDate: "2026-10-15",
+        });
+        expect(await screen.findByText("Added")).toBeTruthy();
+      });
+
+      it("should log on the day it was given, at the current clock time", async () => {
+        renderPanel(undefined, "2026-10-12");
+        lookUp(VALID_EAN_13);
+
+        fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+        await waitFor(() => {
+          expect(logFood.mutateAsync).toHaveBeenCalledOnce();
+        });
+        expect(logFood.mutateAsync.mock.calls[0]?.[0].localDate).toBe("2026-10-12");
+        expect(logFood.mutateAsync.mock.calls[0]?.[0].loggedAt).toBe("2026-10-12T12:40:00.000Z");
+      });
+
+      it("should leave the panel where it was when the dialog is closed", () => {
+        renderPanel();
+        lookUp(VALID_EAN_13);
+
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+        expect(screen.queryByRole("dialog")).toBeNull();
+        expect(screen.getByRole("region", { name: "Barcode lookup" })).toBeTruthy();
+      });
+
+      it("should open nothing before a code is submitted, whatever the lookup holds", () => {
+        renderPanel();
+
+        expect(screen.queryByRole("dialog")).toBeNull();
+        expect(screen.queryByText("Opening the food")).toBeNull();
+      });
+
+      it("should open the dialog again when the same code is looked up a second time", () => {
+        renderPanel();
+        lookUp(VALID_EAN_13);
+        fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+        lookUp(VALID_EAN_13);
+
+        expect(screen.getByRole("dialog", { name: "Add food" })).toBeTruthy();
+      });
     });
 
     it("should say the code is not in Ki-Lo or Open Food Facts and offer to create a food with it", () => {
@@ -241,6 +347,21 @@ describe("BarcodeLookup", () => {
         screen.getByRole("link", { name: "Create food with this barcode" }).getAttribute("href"),
       ).toBe(`/foods/new?barcode=${UPC_A_AS_STORED}`);
       expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should carry the day in the link to create the food, so the new food is added to it", () => {
+      useFoodByBarcode.mockReturnValue({
+        result: { status: "not_found", code: VALID_EAN_13 },
+        isLoading: false,
+        error: null,
+      });
+      renderPanel(undefined, "2026-10-12");
+
+      lookUp(VALID_EAN_13);
+
+      expect(
+        screen.getByRole("link", { name: "Create food with this barcode" }).getAttribute("href"),
+      ).toBe(`/foods/new?barcode=${VALID_EAN_13}&day=2026-10-12`);
     });
 
     it("should say the lookup failed in an alert, without the raw text, and offer no food to create", () => {

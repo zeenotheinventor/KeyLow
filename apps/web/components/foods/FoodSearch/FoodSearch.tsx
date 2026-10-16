@@ -27,7 +27,7 @@ const WORDING = {
  * barcode lookup. The search opens with the cursor in the field, except on Your foods, where the
  * list is what the user came for.
  */
-export function FoodSearch({ scope = "all", startWithBarcodePanel = false }: FoodSearchProps) {
+export function FoodSearch({ scope = "all", startWithBarcodePanel = false, day }: FoodSearchProps) {
   const { title, fieldLabel } = WORDING[scope];
   const isOwnFoods = scope === "own";
   const fieldId = useId();
@@ -80,6 +80,7 @@ export function FoodSearch({ scope = "all", startWithBarcodePanel = false }: Foo
       </div>
       {isBarcodePanelOpen && (
         <BarcodeLookup
+          day={day}
           onClose={() => {
             setIsBarcodePanelOpen(false);
             field.current?.focus();

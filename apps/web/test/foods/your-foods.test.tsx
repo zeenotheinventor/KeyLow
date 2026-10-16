@@ -63,6 +63,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock("@/lib/foodLogActions", () => ({
+  useFoodLogActions: () => ({ openAddFood: vi.fn() }),
+}));
+
 const ownFoods = [
   makeFood({ id: "a", name: "Chicken breast, meal prep", kcal: 165 }),
   makeFood({ id: "b", name: "Cold brew coffee", basis: "per_100ml", kcal: 5 }),

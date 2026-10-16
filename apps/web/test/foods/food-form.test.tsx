@@ -1042,6 +1042,49 @@ describe("FoodForm", () => {
     });
   });
 
+  describe("telling the page a food was created", () => {
+    it("should call onCreated with the new food's id, just before going to the food", async () => {
+      const onCreated = vi.fn<(foodId: string) => void>();
+      renderForm({ onCreated });
+      fillRequiredFields();
+
+      save();
+
+      await waitFor(() => {
+        expect(replace).toHaveBeenCalledWith(`/foods/${CREATED_FOOD_ID}`);
+      });
+      expect(onCreated).toHaveBeenCalledExactlyOnceWith(CREATED_FOOD_ID);
+      expect(onCreated.mock.invocationCallOrder[0]).toBeLessThan(
+        replace.mock.invocationCallOrder[0] ?? 0,
+      );
+    });
+
+    it("should not call it when the save fails or only half works", async () => {
+      const onCreated = vi.fn<(foodId: string) => void>();
+      createFood.mockRejectedValueOnce(
+        new FoodsPartialWriteError(CREATED_FOOD_ID, "portions failed", new Error("boom")),
+      );
+      renderForm({ onCreated });
+      fillRequiredFields();
+
+      save();
+
+      await screen.findByRole("alert");
+      expect(onCreated).not.toHaveBeenCalled();
+      expect(replace).not.toHaveBeenCalled();
+    });
+
+    it("should not call it when the form has errors and nothing was saved", () => {
+      const onCreated = vi.fn<(foodId: string) => void>();
+      renderForm({ onCreated });
+
+      save();
+
+      expect(createFood).not.toHaveBeenCalled();
+      expect(onCreated).not.toHaveBeenCalled();
+    });
+  });
+
   describe("when saving fails", () => {
     it("should say the food could not be saved, never show the raw error, and let the user try again", async () => {
       createFood.mockRejectedValueOnce(new Error("Could not create the food: network down"));
