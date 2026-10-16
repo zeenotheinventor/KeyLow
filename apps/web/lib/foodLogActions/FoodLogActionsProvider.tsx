@@ -18,8 +18,8 @@ type OpenDialog = { opener: Element | null; id: number } & (
   | { kind: "edit"; entryId: string; date: string }
 );
 
-// A request that waits for the page to change, with the number its dialog will have.
-type WaitingRequest = { request: AddFoodRequest; id: number };
+// A request that waits for the page it was made for, with the number its dialog will have.
+type WaitingRequest = { request: AddFoodRequest; id: number; pathname: string };
 
 const FoodLogActionsContext = createContext<FoodLogActions | undefined>(undefined);
 
@@ -38,20 +38,23 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
   const requestCount = useRef(0);
 
   // A dialog belongs to the page it was opened on, so going to another page closes it. The one exception
-  // is a request that was made to open on the next page, which opens there instead.
+  // is a request that was made for the page now showing, which opens there instead. A request is for
+  // the next page change only, so a change to any other page drops it.
   if (dialogPathname !== pathname) {
     setDialogPathname(pathname);
     setWaitingRequest(undefined);
     setDialog(
-      waitingRequest === undefined
-        ? undefined
-        : { kind: "add", request: waitingRequest.request, id: waitingRequest.id, opener: null },
+      waitingRequest?.pathname === pathname
+        ? { kind: "add", request: waitingRequest.request, id: waitingRequest.id, opener: null }
+        : undefined,
     );
   }
 
-  const value = useMemo<FoodLogActions>(
+  // These only set state, so they keep their identity, and an effect that depends on one does not run
+  // again when the day on view changes.
+  const openers = useMemo(
     () => ({
-      openAddFood: (request) => {
+      openAddFood: (request: AddFoodRequest) => {
         requestCount.current += 1;
         const id = requestCount.current;
         setDialog((current) => ({
@@ -61,11 +64,11 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
           opener: current?.opener ?? document.activeElement,
         }));
       },
-      openAddFoodOnNextPage: (request) => {
+      openAddFoodOnNextPage: (request: AddFoodRequest, targetPathname: string) => {
         requestCount.current += 1;
-        setWaitingRequest({ request, id: requestCount.current });
+        setWaitingRequest({ request, id: requestCount.current, pathname: targetPathname });
       },
-      openQuickAdd: (request) => {
+      openQuickAdd: (request: AddFoodRequest) => {
         requestCount.current += 1;
         const id = requestCount.current;
         setDialog((current) => ({
@@ -75,6 +78,13 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
           opener: current?.opener ?? document.activeElement,
         }));
       },
+    }),
+    [],
+  );
+
+  const value = useMemo<FoodLogActions>(
+    () => ({
+      ...openers,
       openEditEntry: (entryId) => {
         // An entry is edited on the diary's day on view, so away from the diary there is nothing to edit.
         if (viewedDate !== undefined) {
@@ -92,7 +102,7 @@ export function FoodLogActionsProvider({ children }: FoodLogActionsProviderProps
       viewedDate,
       setViewedDate,
     }),
-    [viewedDate],
+    [openers, viewedDate],
   );
 
   function closeDialog() {

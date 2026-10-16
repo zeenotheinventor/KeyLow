@@ -24,7 +24,10 @@ export function NewFoodScreen() {
   // A plain new food ends on its own page.
   function addToDiaryIfScanned(foodId: string) {
     if (scannedBarcode !== undefined) {
-      openAddFoodOnNextPage({ foodId, ...(scannedDay === undefined ? {} : { date: scannedDay }) });
+      openAddFoodOnNextPage(
+        { foodId, ...(scannedDay === undefined ? {} : { date: scannedDay }) },
+        `/foods/${foodId}`,
+      );
     }
   }
 

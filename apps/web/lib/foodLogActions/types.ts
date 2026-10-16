@@ -23,11 +23,11 @@ export type FoodLogActions = {
   /** Opens the add food dialog for a day, with a time when an hour's plus was pressed. */
   openAddFood: (request: AddFoodRequest) => void;
   /**
-   * Opens the add food dialog on the page that is about to open, for a request made on a page that is
-   * going away, such as the form that has just created the food. The dialog opens when the page has changed
-   * and not before, and only that one dialog is carried over: any other dialog still closes with its page.
+   * Opens the add food dialog on the page at `pathname`, for a request made on a page that is going away,
+   * such as the form that has just created the food. The dialog opens when the page changes to that one.
+   * A change to any other page drops the request, and any other dialog still closes with its page.
    */
-  openAddFoodOnNextPage: (request: AddFoodRequest) => void;
+  openAddFoodOnNextPage: (request: AddFoodRequest, pathname: string) => void;
   /** Opens the quick add dialog for a day, with a time when an hour's plus was pressed. */
   openQuickAdd: (request: AddFoodRequest) => void;
   /** Opens the edit dialog for a logged entry on the day on view. Does nothing away from the diary. */

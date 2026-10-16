@@ -20,7 +20,8 @@ const {
   createFood: vi.fn<(input: unknown) => Promise<CreatedFood>>(),
   updateFood: vi.fn(),
   replace: vi.fn<(href: string) => void>(),
-  openAddFoodOnNextPage: vi.fn<(request: { foodId: string; date?: string }) => void>(),
+  openAddFoodOnNextPage:
+    vi.fn<(request: { foodId: string; date?: string }, pathname: string) => void>(),
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
@@ -136,7 +137,10 @@ describe("NewFoodScreen", () => {
       await waitFor(() => {
         expect(replace).toHaveBeenCalledWith(`/foods/${CREATED_FOOD_ID}`);
       });
-      expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith({ foodId: CREATED_FOOD_ID });
+      expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith(
+        { foodId: CREATED_FOOD_ID },
+        `/foods/${CREATED_FOOD_ID}`,
+      );
       expect(openAddFoodOnNextPage.mock.invocationCallOrder[0]).toBeLessThan(
         replace.mock.invocationCallOrder[0] ?? 0,
       );
@@ -149,10 +153,10 @@ describe("NewFoodScreen", () => {
       fillAndCreate();
 
       await waitFor(() => {
-        expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith({
-          foodId: CREATED_FOOD_ID,
-          date: "2026-10-12",
-        });
+        expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith(
+          { foodId: CREATED_FOOD_ID, date: "2026-10-12" },
+          `/foods/${CREATED_FOOD_ID}`,
+        );
       });
     });
 
@@ -163,7 +167,10 @@ describe("NewFoodScreen", () => {
       fillAndCreate();
 
       await waitFor(() => {
-        expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith({ foodId: CREATED_FOOD_ID });
+        expect(openAddFoodOnNextPage).toHaveBeenCalledExactlyOnceWith(
+          { foodId: CREATED_FOOD_ID },
+          `/foods/${CREATED_FOOD_ID}`,
+        );
       });
     });
 

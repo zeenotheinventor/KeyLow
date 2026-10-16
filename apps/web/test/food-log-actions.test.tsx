@@ -61,12 +61,27 @@ describe("FoodLogActionsProvider", () => {
     cleanup();
   });
 
+  describe("the actions", () => {
+    it("should keep the same openers when the diary's day on view changes", () => {
+      const { result } = renderHook(() => useFoodLogActions(), { wrapper });
+      const before = result.current;
+
+      act(() => {
+        result.current.setViewedDate("2026-10-15");
+      });
+
+      expect(result.current.openAddFood).toBe(before.openAddFood);
+      expect(result.current.openAddFoodOnNextPage).toBe(before.openAddFoodOnNextPage);
+      expect(result.current.openQuickAdd).toBe(before.openQuickAdd);
+    });
+  });
+
   describe("openAddFoodOnNextPage", () => {
     it("should open nothing until the page changes", () => {
       const { result } = renderHook(() => useFoodLogActions(), { wrapper });
 
       act(() => {
-        result.current.openAddFoodOnNextPage({ foodId: "food-1" });
+        result.current.openAddFoodOnNextPage({ foodId: "food-1" }, "/foods/food-1");
       });
 
       expect(screen.queryByRole("dialog")).toBeNull();
@@ -75,7 +90,10 @@ describe("FoodLogActionsProvider", () => {
     it("should open the add food dialog, on the request, once the page has changed", () => {
       const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
       act(() => {
-        result.current.openAddFoodOnNextPage({ foodId: "food-1", date: "2026-10-15" });
+        result.current.openAddFoodOnNextPage(
+          { foodId: "food-1", date: "2026-10-15" },
+          "/foods/food-1",
+        );
       });
 
       pathname.current = "/foods/food-1";
@@ -89,7 +107,7 @@ describe("FoodLogActionsProvider", () => {
     it("should open the dialog once only, so the next page change closes it as before", () => {
       const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
       act(() => {
-        result.current.openAddFoodOnNextPage({ foodId: "food-1" });
+        result.current.openAddFoodOnNextPage({ foodId: "food-1" }, "/foods/food-1");
       });
       pathname.current = "/foods/food-1";
       rerender();
@@ -97,6 +115,22 @@ describe("FoodLogActionsProvider", () => {
       pathname.current = "/diary";
       rerender();
 
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should drop the request when the person goes to another page than the one it was made for", () => {
+      pathname.current = "/foods/new";
+      const { result, rerender } = renderHook(() => useFoodLogActions(), { wrapper });
+      act(() => {
+        result.current.openAddFoodOnNextPage({ foodId: "food-1" }, "/foods/food-1");
+      });
+
+      pathname.current = "/diary";
+      rerender();
+      expect(screen.queryByRole("dialog")).toBeNull();
+
+      pathname.current = "/foods/food-1";
+      rerender();
       expect(screen.queryByRole("dialog")).toBeNull();
     });
 
