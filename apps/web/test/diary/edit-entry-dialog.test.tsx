@@ -92,6 +92,14 @@ function renderDialog(entry: LogEntry) {
   return { onClose, refreshDiary };
 }
 
+function chooseTime(hour: string) {
+  fireEvent.click(screen.getByRole("button", { name: "Time 12:40" }));
+  fireEvent.click(
+    within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: hour }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Done" }));
+}
+
 const dialog = () => screen.getByRole("dialog", { name: "Edit entry" });
 const amount = () => screen.getByRole("textbox", { name: /^Amount/ });
 
@@ -194,14 +202,6 @@ describe("the edit entry dialog for a logged food", () => {
   });
 
   describe("changing the time", () => {
-    function chooseTime(hour: string) {
-      fireEvent.click(screen.getByRole("button", { name: "Time 12:40" }));
-      fireEvent.click(
-        within(screen.getByRole("listbox", { name: "Hours" })).getByRole("option", { name: hour }),
-      );
-      fireEvent.click(screen.getByRole("button", { name: "Done" }));
-    }
-
     it("should save the new time on the entry's own day, in the profile's zone, and no amount", async () => {
       const entry = chickenEntry();
       const { onClose } = renderDialog(entry);
@@ -389,6 +389,28 @@ describe("the edit entry dialog for a logged food", () => {
       refreshDiary();
 
       expect(amount()).toHaveProperty("value", "200");
+    });
+
+    it("should keep a time changed before the update, as the update replaces only the amount", async () => {
+      const entry = chickenEntry();
+      const { refreshDiary } = renderDialog(entry);
+      api.updateEntry.mutateAsync = vi.fn((update: EntryUpdate) => {
+        api.entries = [{ ...foodEntry({ ...chickenOptions, quantity: 200 }), id: entry.id }];
+
+        return Promise.resolve(update.entry);
+      });
+
+      chooseTime("08");
+      fireEvent.change(amount(), { target: { value: "3" } });
+      await act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Update to current food data" }));
+
+        return Promise.resolve();
+      });
+      refreshDiary();
+
+      expect(amount()).toHaveProperty("value", "200");
+      expect(screen.getByRole("button", { name: "Time 08:40" })).toBeTruthy();
     });
 
     it("should keep what was typed when the update fails", async () => {
