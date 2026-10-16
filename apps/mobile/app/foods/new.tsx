@@ -6,6 +6,7 @@ import { CopyFoodForm } from "../../components/CopyFoodForm";
 import { emptyFoodFormValues } from "../../components/FoodForm";
 import { FoodLoadState } from "../../components/FoodLoadState";
 import { NewFoodForm } from "../../components/NewFoodForm";
+import { readLogContext } from "../../lib/navigation";
 
 // A repeated route parameter arrives as an array, so the first value is used. An empty one is none.
 function firstParameter(parameter: string | string[] | undefined): string | undefined {
@@ -14,9 +15,11 @@ function firstParameter(parameter: string | string[] | undefined): string | unde
 }
 
 export default function NewFoodRoute() {
-  const { barcode, from } = useLocalSearchParams<{
+  const { barcode, from, day, time } = useLocalSearchParams<{
     barcode?: string | string[];
     from?: string | string[];
+    day?: string | string[];
+    time?: string | string[];
   }>();
   const sourceFoodId = firstParameter(from);
   // A scanned barcode arrives as a route parameter. The form's schema canonicalises it on save.
@@ -37,6 +40,10 @@ export default function NewFoodRoute() {
       initialValues={{ ...emptyFoodFormValues, barcode: scannedBarcode ?? "" }}
       // A code that is not valid stays editable, or the user could not fix it.
       isBarcodeLocked={scannedBarcode !== undefined && normaliseBarcode(scannedBarcode).ok}
+      // A scan carries the day and the time it began on, so the new food opens its portion picker on them.
+      {...(scannedBarcode === undefined
+        ? {}
+        : { fromScan: { barcode: scannedBarcode, logContext: readLogContext({ day, time }) } })}
     />
   );
 }

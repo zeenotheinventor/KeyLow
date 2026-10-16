@@ -39,14 +39,12 @@ export default function ScanRoute() {
       ? lookup.result.food.id
       : undefined;
 
-  // Where a hit goes. While food is being logged (the sheet carries a day) it is the portion picker, with the
-  // day, the time and the scanned code carried on; otherwise it is the food.
+  // Where a hit goes: the portion picker, the page a search result opens, with the scanned code and, when the
+  // sheet carries them, the day and the time. With no day the picker opens on now, as it does for a search.
   const foundHref =
     foundFoodId === undefined || scan === undefined
       ? undefined
-      : logContext === undefined
-        ? `/foods/${foundFoodId}`
-        : withLogContext(`/foods/${foundFoodId}/log`, logContext, { barcode: scan.rawCode });
+      : withLogContext(`/foods/${foundFoodId}/log`, logContext, { barcode: scan.rawCode });
 
   // The stack keeps this screen mounted under the ones pushed over it, so a screen that is not in
   // focus never navigates: it could be the create form's save refreshing the lookup behind it.
@@ -94,7 +92,7 @@ export default function ScanRoute() {
           outcome={toScanOutcome(lookup)}
           onScanAgain={clearScan}
           onCreateFood={(code) => {
-            router.push(`/foods/new?barcode=${code}`);
+            router.push(withLogContext("/foods/new", logContext, { barcode: code }));
           }}
         />
       )}

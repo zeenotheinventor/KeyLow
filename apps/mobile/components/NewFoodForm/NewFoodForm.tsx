@@ -4,6 +4,7 @@ import { withCarriedNutrients } from "@keylow/core/foods";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 
+import { withLogContext } from "../../lib/navigation";
 import { FoodForm } from "../FoodForm";
 import { FoodFormScreen } from "../FoodFormScreen";
 
@@ -12,8 +13,8 @@ import type { CustomFoodInput } from "@keylow/core/schemas";
 
 /**
  * The New food screen: the form for a food of the user's own, under the sheet's header. Saving creates the
- * food and opens it. A save that wrote the food but not its portions turns the screen into an update of
- * that food, so saving again never makes a second one.
+ * food and opens it, or its portion picker when the form came from a scan. A save that wrote the food but
+ * not its portions turns the screen into an update of that food, so saving again never makes a second one.
  */
 export function NewFoodForm({
   initialValues,
@@ -23,6 +24,7 @@ export function NewFoodForm({
   notGivenNutrients,
   submitLabel,
   copiedFrom,
+  fromScan,
 }: NewFoodFormProps) {
   const router = useRouter();
   const createFood = useCreateFood();
@@ -31,12 +33,20 @@ export function NewFoodForm({
   // the user cannot create it a second time.
   const [partiallySavedFoodId, setPartiallySavedFoodId] = useState<string | undefined>(undefined);
 
+  function openSavedFood(id: string) {
+    router.replace(
+      fromScan === undefined
+        ? `/foods/${id}`
+        : withLogContext(`/foods/${id}/log`, fromScan.logContext, { barcode: fromScan.barcode }),
+    );
+  }
+
   async function create(input: CustomFoodInput) {
     try {
       const created = await createFood.mutateAsync(
         copiedFrom === undefined ? input : withCarriedNutrients(copiedFrom, input),
       );
-      router.replace(`/foods/${created.food.id}`);
+      openSavedFood(created.food.id);
     } catch (error) {
       if (error instanceof FoodsPartialWriteError) {
         setPartiallySavedFoodId(error.foodId);
@@ -47,7 +57,7 @@ export function NewFoodForm({
 
   async function update(id: string, input: CustomFoodInput) {
     await updateFood.mutateAsync({ id, input });
-    router.replace(`/foods/${id}`);
+    openSavedFood(id);
   }
 
   async function save(input: CustomFoodInput) {

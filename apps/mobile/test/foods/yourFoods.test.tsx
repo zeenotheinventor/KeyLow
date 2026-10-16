@@ -133,6 +133,14 @@ describe("food search sheet for your own foods", () => {
       expect(screen.getByRole("button", { name: "Create a food" })).toBeOnTheScreen();
     });
 
+    it("should open the scanner with no log context from the scan control, so a hit opens the add page for now", async () => {
+      const user = await renderOwnFoods();
+
+      await user.press(screen.getByRole("button", { name: "Scan barcode" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/foods/scan");
+    });
+
     it("should leave the field unfocused, since the list is what the user came for", async () => {
       await renderOwnFoods();
 
