@@ -18,8 +18,9 @@ export type LoggingTime = {
 /**
  * The time a new entry is logged at, for the dialogs that add one: the hour an hour's plus asked for, or the
  * moment the dialog opened ("Now", which does not move while it is open), on the day on view or, with no
- * day in the request, on today, until the person chooses another in the Time field. Everything is read in the profile's zone, as the diary reads its days
- * and hours. A signed in user always has a profile row, which the database creates. If it is missing the day is UTC.
+ * day in the request, on today, until the person chooses another in the Time field. Everything is read in
+ * the profile's zone, as the diary reads its days and hours. A signed in user always has a profile row,
+ * which the database creates. If it is missing the day is UTC.
  */
 export function useLoggingTime(request: AddFoodRequest): LoggingTime {
   const timeZone = useProfileTimeZone().data ?? "UTC";

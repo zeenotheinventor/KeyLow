@@ -44,10 +44,15 @@ function Providers() {
   );
 }
 
-// The diary tells the tab bar which day it shows, as the real one does once it knows its zone.
+// The diary tells the tab bar which day it shows, as the real one does once it knows its zone. A test turns
+// it off to be on the Diary tab before that has happened.
+let diaryReportsItsDay = true;
+
 function DiaryStandIn() {
   useEffect(() => {
-    setViewedDay("2026-10-14");
+    if (diaryReportsItsDay) {
+      setViewedDay("2026-10-14");
+    }
 
     return () => {
       setViewedDay(null);
@@ -182,6 +187,7 @@ describe("the tab bar's routes into food search", () => {
 
   beforeEach(() => {
     jest.useFakeTimers({ now: NOW, doNotFake: [...realTimers] });
+    diaryReportsItsDay = true;
     registerAppStyles(kitStyles);
     resetApiClientMock();
     zoneRead = { data: "Europe/London", isPending: false, isError: false };
@@ -253,6 +259,17 @@ describe("the tab bar's routes into food search", () => {
       await renderApp("/diary");
       await user.press(await screen.findByRole("tab", { name: "Dashboard" }));
       await screen.findByRole("heading", { name: "Dashboard screen" });
+
+      await user.press(plus());
+
+      expect(await screen.findByText("Search sheet day=2026-10-15 time=none")).toBeOnTheScreen();
+    });
+
+    it("should use today on the Diary before the diary has said which day it shows", async () => {
+      diaryReportsItsDay = false;
+      const user = userEvent.setup();
+      await renderApp("/diary");
+      await screen.findByRole("heading", { name: "Diary" });
 
       await user.press(plus());
 
