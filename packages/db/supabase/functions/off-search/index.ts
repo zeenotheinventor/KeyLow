@@ -31,6 +31,7 @@ import {
 } from "../_shared/core.ts";
 import { error, handle, json } from "../_shared/http.ts";
 import { offRequest } from "../_shared/off.ts";
+import { reportError } from "../_shared/report.ts";
 import { consume, readLimit } from "../_shared/rateLimit.ts";
 
 type OffCandidate = z.infer<typeof offCandidateSchema>;
@@ -101,6 +102,7 @@ async function searchOff(
   searchTerms: string,
 ): Promise<{ ok: true; products: unknown[] } | { ok: false; failure: Response }> {
   const result = await offRequest("/cgi/search.pl", {
+    functionName: "off-search",
     fields: offFields,
     searchParams: {
       search_terms: searchTerms,
@@ -118,7 +120,7 @@ async function searchOff(
     const answer = offSearchAnswerSchema.parse(await result.response.json());
     return { ok: true, products: answer.products };
   } catch (caught) {
-    console.error("off-search could not read the OFF answer", caught);
+    reportError("off-search", "upstream_error", caught);
     return {
       ok: false,
       failure: error("upstream_error", "Open Food Facts answered in an unexpected form."),

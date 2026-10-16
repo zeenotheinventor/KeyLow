@@ -1,5 +1,7 @@
 {
   "imports": {
+    "@sentry/deno": "npm:@sentry/deno@8.55.2",
+    "@std/assert": "jsr:@std/assert@1.0.19",
     "@supabase/supabase-js": "jsr:@supabase/supabase-js@2.117.2",
     "zod": "npm:zod@4.6"
   },
