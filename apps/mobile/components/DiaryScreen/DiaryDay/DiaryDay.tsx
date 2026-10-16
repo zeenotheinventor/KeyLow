@@ -1,5 +1,5 @@
 import { useDiaryDay, useDiaryWeek, useSetDayComplete, useTargets } from "@keylow/api-client";
-import { DIARY_LOAD_FAILED, DIARY_MORE_LABEL } from "@keylow/core/copy";
+import { DIARY_LOAD_FAILED, DIARY_MORE_LABEL, WEEK_SWIPE_HINT } from "@keylow/core/copy";
 import {
   clockHourOf,
   describeDiaryTitle,
@@ -16,7 +16,7 @@ import { useIsOnline } from "../../../lib/connectivity";
 import { foodSearchHref } from "../../../lib/navigation";
 import { useNow } from "../../../lib/useNow";
 import { setViewedDay } from "../../../lib/viewedDay";
-import { ErrorState, WeekStrip } from "../../ui";
+import { ErrorState, Text, WeekStrip } from "../../ui";
 import { DatePickerSheet } from "../DatePickerSheet";
 import { DiaryDayContent } from "../DiaryDayContent";
 import { DiaryFrame } from "../DiaryFrame";
@@ -195,6 +195,11 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
             onSelectDay={selectDay}
             onWeekChange={changeWeek}
           />
+          {viewedDate < today && (
+            <Text className="-mt-2 mb-2 text-center" tone="muted" variant="caption">
+              {WEEK_SWIPE_HINT}
+            </Text>
+          )}
           {renderDay()}
         </>
       )}

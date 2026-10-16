@@ -9,6 +9,9 @@ export const DAY_STEPPER = {
   tapToChange: "Tap to change",
 } as const;
 
+/** Under the week strip on a past day: the strip is changed by swiping it. */
+export const WEEK_SWIPE_HINT = "Swipe the strip to change week";
+
 /** The "mark the day complete" switch: its label and caption in each state. */
 export const DAY_COMPLETE_TOGGLE = {
   markComplete: "Mark day complete",
