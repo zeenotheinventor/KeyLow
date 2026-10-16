@@ -5,6 +5,7 @@ import { Providers } from "./Providers";
 
 import type { ReactNode } from "react";
 
+import { SentryUser } from "@/components/monitoring/SentryUser";
 import { createClient } from "@/lib/supabase/server";
 import { hasCurrentTermsAcceptance } from "@/lib/terms";
 
@@ -26,6 +27,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <Providers>
+      <SentryUser userId={user.id} />
       <DashboardNav />
       <main className="px-4 lg:px-8">{children}</main>
     </Providers>

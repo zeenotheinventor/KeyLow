@@ -9,6 +9,8 @@
     },
     "build": {
       "dependsOn": ["^build"],
+      "env": ["VERCEL_ENV", "VERCEL_GIT_COMMIT_SHA"],
+      "passThroughEnv": ["SENTRY_AUTH_TOKEN"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
     "build-storybook": {
