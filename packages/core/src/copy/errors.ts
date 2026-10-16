@@ -38,3 +38,11 @@ const EDGE_ERROR_SENTENCES: Readonly<Record<EdgeErrorCode, string>> = {
  */
 export const describeEdgeError = (kind: EdgeErrorCode | undefined): string =>
   kind === undefined ? GENERIC_ERROR : EDGE_ERROR_SENTENCES[kind];
+
+/**
+ * What the screen shown when a route fails to render offers beside "Try again". Its sentence is
+ * `GENERIC_ERROR`, never the failure itself, which can quote health data.
+ */
+export const ROOT_ERROR = {
+  diaryAction: "Go to the diary",
+};

@@ -222,6 +222,28 @@ describe("the entry screen", () => {
         expect(routerMock.back).toHaveBeenCalledTimes(1);
       });
 
+      it("should go back once when Back is pressed while the write is under way and the write then finishes", async () => {
+        diaryBackend.holdUpdates = true;
+        const user = await renderEntry(CHICKEN_INDEX);
+        await findFoodEntry();
+        await user.clear(amountField());
+        await user.type(amountField(), "200");
+        await user.press(saveButton());
+        await waitFor(() => {
+          expect(diaryBackend.heldUpdates).toHaveLength(1);
+        });
+
+        await user.press(screen.getByRole("button", { name: "Back" }));
+        await act(() => {
+          diaryBackend.heldUpdates[0]?.();
+        });
+
+        await waitFor(() => {
+          expect(updates()).toHaveLength(1);
+        });
+        expect(routerMock.back).toHaveBeenCalledTimes(1);
+      });
+
       it("should recompute a new amount from the entry's snapshot, never from the live food", async () => {
         // The live food now says 999 kcal per 100 g. The entry was logged at 100.
         entryBackend.foods = [{ ...loggedFood, kcal: 999 }];

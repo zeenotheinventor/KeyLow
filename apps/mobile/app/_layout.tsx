@@ -6,6 +6,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthGate } from "../components/AuthGate";
 import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
+import { RootErrorScreen } from "../components/RootErrorScreen";
 import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
 import { feedOnlineManager } from "../lib/connectivity";
@@ -22,6 +23,10 @@ holdSplashScreen();
 feedOnlineManager();
 
 const queryClient = createQueryClient();
+
+// Shown in place of the whole layout when a route fails to render, so a failure is a screen with a way out
+// and a line in the device log, never a blank one. It brings its own theme and safe area.
+export { RootErrorScreen as ErrorBoundary };
 
 // The gesture root is the outermost view, so a drag works anywhere below it. The safe area comes next, for the
 // screens and the toast. The toast provider sits inside the theme (the toast reads it) and the cache,
