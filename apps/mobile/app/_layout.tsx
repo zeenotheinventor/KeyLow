@@ -9,7 +9,7 @@ import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
 import { RootErrorScreen } from "../components/RootErrorScreen";
 import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
-import { feedOnlineManager } from "../lib/connectivity";
+import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
 import { readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
@@ -21,6 +21,10 @@ holdSplashScreen();
 
 // React Native has no online and offline events, so the queries are told whether the server can be reached.
 feedOnlineManager();
+
+// React Native has no window focus event either, so the queries are told when the app is back in the
+// foreground, and a stale one refetches. Reads that the terms gate keeps off stay off.
+feedFocusManager();
 
 const queryClient = createQueryClient();
 
