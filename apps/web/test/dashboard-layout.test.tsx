@@ -19,6 +19,10 @@ vi.mock("@/lib/supabase/server", () => ({
 
 vi.mock("next/navigation", () => ({ redirect }));
 
+vi.mock("@/components/monitoring/SentryUser", () => ({
+  SentryUser: ({ userId }: { userId: string }) => <p>Sentry user {userId}</p>,
+}));
+
 vi.mock("@/app/(dashboard)/DashboardNav", () => ({ DashboardNav: () => <nav /> }));
 
 vi.mock("@/app/(dashboard)/Providers", () => ({
@@ -101,6 +105,12 @@ describe("DashboardLayout", () => {
 
       expect(outcome).toBe("blocked");
     });
+  });
+
+  it("should tell Sentry which account is signed in", async () => {
+    render(await DashboardLayout({ children: <p>Page content</p> }));
+
+    expect(screen.getByText("Sentry user user-1")).toBeTruthy();
   });
 
   it("should put the page in the main landmark", async () => {
