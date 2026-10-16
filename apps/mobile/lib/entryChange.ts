@@ -1,6 +1,10 @@
 import { formatClockTime } from "@keylow/core/dates";
-import { clockTimeOn, snapshotAmountStart, unitValueOf } from "@keylow/core/diary";
-import { spoonPortionOf } from "@keylow/core/nutrition";
+import {
+  clockTimeOn,
+  entryQuantityChange,
+  snapshotAmountStart,
+  unitValueOf,
+} from "@keylow/core/diary";
 
 import type { PortionSelection } from "../components/PortionPicker";
 import type { QuickAddSubmission } from "../components/QuickAddForm";
@@ -40,26 +44,6 @@ function timeChange(
 }
 
 /**
- * The amount to write for what the picker handed over. A gram or millilitre amount is just that. A portion is
- * the entry's own unless it is a spoon: a spoon is not a database row, so it is written as the snapshot's
- * portion of its label and millilitres, with no link. The entry's own portion is not passed on, it is kept.
- */
-function amountChange(selection: PortionSelection): EntryQuantityChange {
-  if (selection.unit !== "portion") {
-    return { quantity: selection.quantity, unit: selection.unit };
-  }
-  const spoon = spoonPortionOf(selection.portion);
-
-  return spoon === undefined
-    ? { quantity: selection.quantity, unit: "portion" }
-    : {
-        quantity: selection.quantity,
-        unit: "portion",
-        portion: { label: spoon.label, ml: spoon.ml },
-      };
-}
-
-/**
  * What to write for a logged food from what the picker handed over, or null when nothing changed. The amount
  * is compared with where the picker started, on the chip it started on, so another unit at the same count
  * (a spoon in place of the portion, or 1 tsp in place of 1 tbsp) counts as a change.
@@ -74,7 +58,7 @@ export function foodEntryChange(
     unitValueOf(selection) !== start.unitValue || String(selection.quantity) !== start.quantity;
   const time = timeChange(entry, selection.time, timeZone);
   const change: FoodEntryChange = {
-    ...(isAmountChanged ? { amount: amountChange(selection) } : {}),
+    ...(isAmountChanged ? { amount: entryQuantityChange(selection) } : {}),
     ...(time === undefined ? {} : { time }),
   };
 

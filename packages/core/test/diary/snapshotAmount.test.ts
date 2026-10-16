@@ -322,3 +322,137 @@ describe("entryPickerChoices", () => {
     ]);
   });
 });
+
+describe("entryPickerChoices with the food's own portions", () => {
+  const small = buildFoodPortion({ id: "portion-small", label: "1 small", grams: 80, position: 0 });
+  const liveMedium = buildFoodPortion({
+    id: "portion-medium",
+    label: "1 medium",
+    grams: 100,
+    position: 1,
+    is_default: true,
+  });
+  const large = buildFoodPortion({
+    id: "portion-large",
+    label: "1 large",
+    grams: 140,
+    position: 2,
+  });
+  // The rows come back in any order: the chips follow `position`.
+  const bananaPortions = [large, small, liveMedium];
+  const labelsOf = (choices: ReturnType<typeof entryPickerChoices>) =>
+    choices.options.map((option) => option.label);
+
+  it("should offer an entry logged in grams the food's portions in position order, then g", () => {
+    const choices = entryPickerChoices(inGrams, {
+      portions: bananaPortions,
+      loggedPortionId: null,
+    });
+
+    expect(labelsOf(choices)).toEqual(["1 small", "1 medium", "1 large", "g"]);
+    expect(snapshotAmountStart(inGrams)).toEqual({ quantity: "150", unitValue: "g" });
+  });
+
+  it("should work out a chosen portion from the snapshot's values and the live portion's size", () => {
+    const { portions } = entryPickerChoices(inGrams, {
+      portions: bananaPortions,
+      loggedPortionId: null,
+    });
+    const { amount, hero } = previewAmount(snapshotAsFood(inGrams), portions, "portion-large", "1");
+
+    expect(amount).toMatchObject({ unit: "portion", quantity: 1 });
+    expect(hero.caption).toBe("For 1 large (140 g)");
+    expect(hero.values?.kcal).toBeCloseTo(133);
+  });
+
+  it("should show the logged portion once, as the entry's own chip in the live portion's place", () => {
+    const choices = entryPickerChoices(inPortions, {
+      portions: bananaPortions,
+      loggedPortionId: "portion-medium",
+    });
+
+    expect(choices.options).toEqual([
+      { value: "portion-small", label: "1 small" },
+      { value: SNAPSHOT_PORTION_ID, label: "1 medium" },
+      { value: "portion-large", label: "1 large" },
+      { value: "g", label: "g" },
+    ]);
+    expect(snapshotAmountStart(inPortions).unitValue).toBe(SNAPSHOT_PORTION_ID);
+  });
+
+  it("should keep the size the entry was logged with when the live portion was resized", () => {
+    const resized = buildFoodPortion({ ...liveMedium, grams: 118 });
+    const { portions } = entryPickerChoices(inPortions, {
+      portions: [small, resized, large],
+      loggedPortionId: "portion-medium",
+    });
+
+    expect(portions).toContainEqual({
+      id: SNAPSHOT_PORTION_ID,
+      label: "1 medium",
+      grams: 100,
+      ml: null,
+    });
+    expect(portions.filter((portion) => portion.label === "1 medium")).toHaveLength(1);
+  });
+
+  it("should still show the logged portion, first and once, when the food no longer has it", () => {
+    const choices = entryPickerChoices(inPortions, {
+      portions: [small, large],
+      loggedPortionId: "portion-deleted",
+    });
+
+    expect(labelsOf(choices)).toEqual(["1 medium", "1 small", "1 large", "g"]);
+    expect(choices.options[0]?.value).toBe(SNAPSHOT_PORTION_ID);
+  });
+
+  it("should add no volume chip for a food the entry froze no density for", () => {
+    expect(
+      labelsOf(entryPickerChoices(inGrams, { portions: bananaPortions, loggedPortionId: null })),
+    ).not.toContain("ml");
+  });
+
+  it("should put ml and the spoons after g when the entry froze a density", () => {
+    const oil = buildFood({ density_g_per_ml: 0.92 });
+    const frozen = buildLogEntry({ food: oil, quantity: 100, unit: "g", ...when }).snapshot;
+    const cup = buildFoodPortion({ id: "portion-cup", label: "1 cup", grams: null, ml: 240 });
+
+    expect(
+      labelsOf(entryPickerChoices(frozen, { portions: [cup], loggedPortionId: null })),
+    ).toEqual(["1 cup", "g", "ml", "1 tsp", "1 tbsp"]);
+  });
+
+  it("should show a spoon entry's chip once, with the food's portions before g", () => {
+    const oil = buildFood({ density_g_per_ml: 0.92 });
+    const spoonEntry = buildLogEntry({
+      food: oil,
+      quantity: 2,
+      unit: "portion",
+      portion: tablespoon,
+      ...when,
+    }).snapshot;
+    const cup = buildFoodPortion({ id: "portion-cup", label: "1 cup", grams: null, ml: 240 });
+
+    const choices = entryPickerChoices(spoonEntry, { portions: [cup], loggedPortionId: null });
+
+    expect(choices.options.map((option) => option.value)).toEqual([
+      "portion-cup",
+      "g",
+      "ml",
+      "spoon-tsp",
+      "spoon-tbsp",
+    ]);
+    expect(snapshotAmountStart(spoonEntry).unitValue).toBe("spoon-tbsp");
+  });
+
+  it("should give exactly today's chips when there are no live portions", () => {
+    expect(entryPickerChoices(inGrams, undefined)).toEqual(entryPickerChoices(inGrams));
+    expect(entryPickerChoices(inPortions, undefined)).toEqual(entryPickerChoices(inPortions));
+  });
+
+  it("should give a gram entry g alone when the food has no portions", () => {
+    expect(entryPickerChoices(inGrams, { portions: [], loggedPortionId: null }).options).toEqual([
+      { value: "g", label: "g" },
+    ]);
+  });
+});

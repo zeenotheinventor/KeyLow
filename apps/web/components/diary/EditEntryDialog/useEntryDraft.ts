@@ -1,15 +1,15 @@
-import { useFood, useProfileTimeZone, useUpdateEntry } from "@keylow/api-client";
+import { useFood, useFoodPortions, useProfileTimeZone, useUpdateEntry } from "@keylow/api-client";
 import { formatClockTime } from "@keylow/core/dates";
 import {
   amountOnUnitChange,
   clockTimeOn,
   entryPickerChoices,
+  entryQuantityChange,
   foodChangedSinceLogged,
   previewAmount,
   snapshotAmountStart,
   snapshotAsFood,
 } from "@keylow/core/diary";
-import { spoonPortionOf } from "@keylow/core/nutrition";
 import { useState } from "react";
 
 import { quickEntryChange } from "./quickEntryChange";
@@ -20,8 +20,6 @@ import type {
   AmountFood,
   AmountPortion,
   AmountPreview,
-  ChosenAmount,
-  EntryQuantityChange,
   PickerChoices,
   UnitOption,
 } from "@keylow/core/diary";
@@ -69,16 +67,6 @@ const NO_FOOD: AmountFood = {
 
 const NO_CHOICES: PickerChoices = { portions: [], options: [] };
 
-// A spoon is told to the entry by its size, as its snapshot keeps it. Any other portion is the entry's own, which it keeps with its link.
-function quantityChangeOf(amount: ChosenAmount): EntryQuantityChange {
-  const { quantity, unit } = amount;
-  const spoon = amount.unit === "portion" ? spoonPortionOf(amount.portion) : undefined;
-
-  return spoon === undefined
-    ? { quantity, unit }
-    : { quantity, unit, portion: { label: spoon.label, ml: spoon.ml } };
-}
-
 const numberText = (value: number | null): string => (value === null ? "" : String(value));
 
 // A quick add's saved numbers and label, as the fields hold them. A food entry has none.
@@ -99,10 +87,10 @@ function quickTexts(entry: LogEntry): QuickAddTexts {
 
 /**
  * The edit dialog's state for one entry. A food entry changes its amount (worked out from its own snapshot,
- * never the live food), its time, or all of its values at once ("Update to current food data"); a quick add
- * changes its calories, macros and label (written as a whole), its time, or both. What the person has typed
- * is kept apart from the entry and starts again for another entry. Nothing a failed save throws is kept: it
- * can quote the amount, which is health data.
+ * never the live food; the live food only adds its portions to the chips), its time, or all of its values
+ * at once ("Update to current food data"); a quick add changes its calories, macros and label (written as
+ * a whole), its time, or both. What the person has typed is kept apart from the entry and starts again for
+ * another entry. Nothing a failed save throws is kept: it can quote the amount, which is health data.
  */
 export function useEntryDraft(entry: LogEntry): EntryDraft {
   const timeZone = useProfileTimeZone().data ?? "UTC";
@@ -113,11 +101,23 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
   const [hasSaveError, setHasSaveError] = useState(false);
   const isFoodEntry = entry.item_type === "food";
   const liveFood = useFood(isFoodEntry ? entry.snapshot.ref : undefined);
+  // The food's portions are offered as chips only while the food is there to take them from.
+  const isFoodThere =
+    liveFood.data !== undefined && liveFood.data !== null && liveFood.data.deleted_at === null;
+  const livePortions = useFoodPortions(isFoodEntry && isFoodThere ? entry.snapshot.ref : undefined);
 
   const ownEdits = edits?.entryId === entry.id ? edits : undefined;
   const snapshot = entry.item_type === "food" ? entry.snapshot : undefined;
   const food = snapshot === undefined ? NO_FOOD : snapshotAsFood(snapshot);
-  const choices = snapshot === undefined ? NO_CHOICES : entryPickerChoices(snapshot);
+  const choices =
+    snapshot === undefined
+      ? NO_CHOICES
+      : entryPickerChoices(
+          snapshot,
+          livePortions.data === undefined
+            ? undefined
+            : { portions: livePortions.data, loggedPortionId: entry.portion_id },
+        );
   const start = snapshot === undefined ? undefined : snapshotAmountStart(snapshot);
   const quantityText = ownEdits?.quantityText ?? start?.quantity ?? "";
   const unitValue = ownEdits?.unitValue ?? start?.unitValue ?? "g";
@@ -212,7 +212,7 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       }
       return write({
         entry,
-        ...(isAmountChanged ? { amount: quantityChangeOf(amount) } : {}),
+        ...(isAmountChanged ? { amount: entryQuantityChange(amount) } : {}),
         ...(time === undefined ? {} : { time }),
       });
     },
