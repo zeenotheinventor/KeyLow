@@ -268,6 +268,16 @@ describe("the quick add dialog", () => {
       expect(api.quickAdd.mutateAsync).not.toHaveBeenCalled();
     });
 
+    it("should never write NaN in the line under Calories while a macro is not a number", () => {
+      renderDialog();
+      type(calories(), "130");
+
+      type(protein(), "1,200");
+
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.getByText("Macros add up to 0 kcal")).toBeTruthy();
+    });
+
     it("should treat a lone point or comma in a macro as nothing typed yet, so Add stays allowed", () => {
       renderDialog();
       type(calories(), "130");

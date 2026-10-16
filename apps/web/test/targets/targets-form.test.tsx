@@ -164,6 +164,17 @@ describe("TargetsForm", () => {
     });
   });
 
+  describe("a macro that is not a number", () => {
+    it("should never write NaN in the macro sum", () => {
+      renderForm();
+
+      type(protein(), "1,200");
+
+      expect(screen.queryByText(/NaN/)).toBeNull();
+      expect(screen.getByText("Macros add up to 1,510 kcal")).toBeTruthy();
+    });
+  });
+
   describe("saving", () => {
     it("should save the numbers, say so in a toast and go back to More", async () => {
       renderForm();

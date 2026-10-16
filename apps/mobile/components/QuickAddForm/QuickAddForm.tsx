@@ -38,10 +38,6 @@ const MACRO_FIELDS = [
 
 const NO_VALUES: QuickAddFormValues = { kcal: "", protein: "", carbs: "", fat: "", label: "" };
 
-// A number that cannot be added up counts as not given, so the helper never reads "NaN kcal".
-const finiteOrNull = (value: number | null): number | null =>
-  value !== null && Number.isFinite(value) ? value : null;
-
 /**
  * The quick add form, as the quick add boards draw it: calories, then protein, carbohydrate and fat in
  * grams, a label, the Time row and a note, with Add at the bottom. The helper under the calories says what
@@ -83,11 +79,9 @@ export function QuickAddForm(props: QuickAddFormProps) {
       : undefined;
   const hasMacro = [values.protein, values.carbs, values.fat].some((text) => text.trim() !== "");
   const macroNote = hasMacro
-    ? describeMacroTotal(
-        Math.round(macroKcal(finiteOrNull(protein), finiteOrNull(fat), finiteOrNull(carbs))),
-      )
+    ? describeMacroTotal(Math.round(macroKcal(protein, fat, carbs)))
     : MACROS_OPTIONAL;
-  const disagrees = macrosDisagreeWithCalories(finiteOrNull(kcal), protein, fat, carbs);
+  const disagrees = macrosDisagreeWithCalories(kcal, protein, fat, carbs);
 
   function change(field: keyof QuickAddFormValues, text: string) {
     setValues((current) => ({ ...current, [field]: text }));

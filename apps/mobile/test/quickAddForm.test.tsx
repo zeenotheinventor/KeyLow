@@ -342,6 +342,16 @@ describe("QuickAddForm", () => {
         expect(onSubmit).not.toHaveBeenCalled();
       });
 
+      it("should never write NaN in the helper while a macro is not a number", async () => {
+        const { user } = await renderCreate();
+        await user.type(calories(), "130");
+
+        await user.type(protein(), "1,200");
+
+        expect(screen.queryByText(/NaN/)).not.toBeOnTheScreen();
+        expect(screen.getByText("Macros add up to 0 kcal")).toBeOnTheScreen();
+      });
+
       it("should hand over a decimal comma as a decimal point", async () => {
         const { user, onSubmit } = await renderCreate();
         await user.type(calories(), "130");

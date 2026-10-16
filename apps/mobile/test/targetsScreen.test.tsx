@@ -240,6 +240,17 @@ describe("the Targets screen", () => {
       expect(diaryBackend.saves).toHaveLength(0);
     });
 
+    it("should never write NaN in the macro sum while a macro is not a number", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+
+      await user.clear(protein());
+      await user.type(protein(), "1,200");
+
+      expect(screen.queryByText(/NaN/)).not.toBeOnTheScreen();
+      expect(screen.getByText("Macros add up to 1,510 kcal")).toBeOnTheScreen();
+    });
+
     it("should ask for calories when the field is cleared, and disable Save", async () => {
       const user = userEvent.setup();
       await renderLoadedTargets();
