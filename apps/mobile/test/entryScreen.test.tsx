@@ -922,22 +922,42 @@ describe("the entry screen", () => {
       expect(lastUpdate()["resolved_grams"]).toBeCloseTo(41.4, 5);
     });
 
-    it("should write the teaspoon when the person changes the spoon and keeps the count", async () => {
+    it("should write one teaspoon when the person changes the spoon, because the chip sets the count to 1", async () => {
       const user = await renderEntry(OIL_ENTRY_ID);
       await findOilEntry();
 
       await user.press(screen.getByRole("radio", { name: "1 tsp" }));
+      expect(amountField()).toHaveDisplayValue("1");
       await user.press(saveButton());
 
       await waitFor(() => {
         expect(updates()).toHaveLength(1);
       });
       expect(lastUpdate()).toMatchObject({
-        quantity: 2,
+        quantity: 1,
         unit: "portion",
         portion_id: null,
         snapshot: expect.objectContaining({ portion: { label: "1 tsp", ml: 5 } }) as unknown,
       });
+    });
+
+    it("should set 100 when g is pressed, not read 2 g", async () => {
+      const user = await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(amountField()).toHaveDisplayValue("100");
+      expect(heroKcal("For 100 g").getByText("899")).toBeOnTheScreen();
+    });
+
+    it("should keep the count when the spoon already chosen is pressed", async () => {
+      const user = await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+
+      expect(amountField()).toHaveDisplayValue("2");
     });
 
     it("should write nothing when nothing was changed", async () => {
@@ -999,6 +1019,45 @@ describe("the entry screen", () => {
         expect(chips[index]).toHaveAccessibleName(name);
       });
       expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+    });
+
+    it("should set 1 when 1 tbsp is pressed, not read 50 tbsp", async () => {
+      const entry = buildLogEntry({
+        food: oilFood,
+        quantity: 50,
+        unit: "g",
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: "00000000-0000-4000-8000-0000000000bb",
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+      entryBackend.foods = [oilFood];
+      const user = await renderEntry("00000000-0000-4000-8000-0000000000bb");
+      await screen.findByRole("heading", { name: "Oil, olive" });
+      expect(amountField()).toHaveDisplayValue("50");
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+
+      expect(amountField()).toHaveDisplayValue("1");
+      expect(heroKcal("For 1 tbsp (15 ml, 14 g)").getByText("124")).toBeOnTheScreen();
+    });
+  });
+
+  describe("a food logged as a portion", () => {
+    it("should set 100 when g is pressed, not read 1 g", async () => {
+      const user = await renderEntry(2);
+      await screen.findByRole("heading", { name: "Banana" });
+      expect(amountField()).toHaveDisplayValue("1");
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(amountField()).toHaveDisplayValue("100");
     });
   });
 });

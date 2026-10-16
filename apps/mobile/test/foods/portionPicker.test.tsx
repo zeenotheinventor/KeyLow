@@ -845,18 +845,62 @@ describe("the portion picker's unit chips", () => {
       expect(entry.nutrients.kcal).toBeCloseTo(248.124, 3);
     });
 
-    it("should log a teaspoon as a portion of 5 ml", async () => {
+    it("should log a teaspoon as a portion of 5 ml, and one teaspoon because the chip sets the amount to 1", async () => {
       const user = await renderPicker({ day: "2026-10-15" });
       await user.press(screen.getByRole("radio", { name: "1 tsp" }));
 
       await user.press(addButton());
 
       expect(loggedEntry()).toMatchObject({
-        quantity: 100,
+        quantity: 1,
         unit: "portion",
         portion_id: null,
         snapshot: { portion: { label: "1 tsp", ml: 5 } },
       });
+    });
+  });
+
+  describe("pressing a different chip", () => {
+    it("should set a food on g at 100 to 1 when 1 tbsp is pressed, not read 100 tbsp", async () => {
+      showFood(oil);
+      const user = await renderPicker();
+      expect(amountField()).toHaveDisplayValue("100");
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+
+      expect(amountField()).toHaveDisplayValue("1");
+      expect(hero("For 1 tbsp (15 ml, 14 g)")).toBeOnTheScreen();
+    });
+
+    it("should set a banana on 1 medium to 100 when g is pressed, not read 1 g", async () => {
+      showFood(banana);
+      Object.assign(portionsQuery, { data: bananaPortions });
+      const user = await renderPicker();
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(amountField()).toHaveDisplayValue("100");
+      expect(hero("For 100 g")).toBeOnTheScreen();
+    });
+
+    it("should replace a typed amount, so 250 g does not become 250 tbsp", async () => {
+      showFood(oil);
+      const user = await renderPicker();
+      await typeAmount(user, "250");
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+
+      expect(amountField()).toHaveDisplayValue("1");
+    });
+
+    it("should keep the amount when the chip already chosen is pressed", async () => {
+      showFood(oil);
+      const user = await renderPicker();
+      await typeAmount(user, "250");
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(amountField()).toHaveDisplayValue("250");
     });
   });
 
@@ -979,6 +1023,68 @@ describe("the portion picker's unit chips", () => {
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
       expect(screen.getByText("Last logged 2 tbsp (30 ml), yesterday")).toBeOnTheScreen();
       expect(hero("For 2 tbsp (30 ml, 28 g)")).toBeOnTheScreen();
+    });
+
+    describe("a unit the food no longer offers", () => {
+      // The food was logged in spoons or ml while it could be measured by volume, and has since lost its density.
+      function lastLoggedAs(unit: "portion" | "ml", food = oil) {
+        const tablespoon = SPOON_PORTIONS.find((spoon) => spoon.id === "spoon-tbsp");
+        const entry = buildLogEntry({
+          food,
+          quantity: 2,
+          unit,
+          ...(unit === "portion" && tablespoon !== undefined ? { portion: tablespoon } : {}),
+          loggedAt: "2026-10-14T07:05:00Z",
+          localDate: "2026-10-14",
+        });
+        recentFoods.current = {
+          data: [
+            {
+              foodId: savedFoodId,
+              entryId: "entry-lost-density",
+              loggedAt: "2026-10-14T07:05:00Z",
+              portionId: null,
+              snapshot: entry.snapshot,
+            },
+          ],
+          isPending: false,
+          isError: false,
+        };
+      }
+
+      it("should open on the food's default portion, with a chip checked and a real hero, when its spoon is gone", async () => {
+        showFood(banana);
+        Object.assign(portionsQuery, { data: bananaPortions });
+        lastLoggedAs("portion");
+
+        await renderPicker({ day: "2026-10-15", recent: "1" });
+
+        expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeOnTheScreen();
+        expect(amountField()).toHaveDisplayValue("1");
+        expect(hero("For 1 medium (118 g)")).toBeOnTheScreen();
+      });
+
+      it("should open on 100 g when the spoon is gone and the food has no portion", async () => {
+        showFood(chickenThigh);
+        lastLoggedAs("portion");
+
+        await renderPicker({ day: "2026-10-15", recent: "1" });
+
+        expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+        expect(amountField()).toHaveDisplayValue("100");
+        expect(hero("For 100 g")).toBeOnTheScreen();
+      });
+
+      it("should open on 100 g when the last amount was in ml and the food can no longer be measured by volume", async () => {
+        showFood(chickenThigh);
+        lastLoggedAs("ml", milk);
+
+        await renderPicker({ day: "2026-10-15", recent: "1" });
+
+        expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
+        expect(amountField()).toHaveDisplayValue("100");
+        expect(hero("For 100 g")).toBeOnTheScreen();
+      });
     });
   });
 });

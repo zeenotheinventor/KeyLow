@@ -9,6 +9,7 @@ import {
   describePortionUnit,
 } from "@keylow/core/copy";
 import {
+  amountOnUnitChange,
   entryPickerChoices,
   foodNeedsReview,
   missingFieldsOf,
@@ -80,6 +81,11 @@ export function PortionPicker(props: PortionPickerProps) {
   );
   const [quantityText, setQuantityText] = useState(start.quantity);
   const [unitValue, setUnitValue] = useState(start.unitValue);
+  // A different chip starts at its own amount, so a typed 100 never reads as 100 tbsp or 1 as 1 g.
+  const chooseUnit = (next: string) => {
+    setQuantityText(amountOnUnitChange(unitValue, next, quantityText));
+    setUnitValue(next);
+  };
   const [chosenTime, setChosenTime] = useState(time);
   const [isTimeStillNow, setIsTimeStillNow] = useState(isNow);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
@@ -161,7 +167,7 @@ export function PortionPicker(props: PortionPickerProps) {
               label={PORTION_PICKER.unitLabel}
               options={choices.options}
               value={chosenUnit === undefined ? null : unitValue}
-              onChange={setUnitValue}
+              onChange={chooseUnit}
             />
             {props.mode === "add" && needsReview ? (
               <Button fullWidth icon="Copy" size="lg" variant="primary" onPress={props.onCopy}>
