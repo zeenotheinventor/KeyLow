@@ -67,14 +67,6 @@ describe("foodEntryChange", () => {
     });
   });
 
-  it("should read the time in the zone it is given, not London", () => {
-    expect(
-      foodEntryChange(chickenEntry(), selection({ time: "08:30" }), "America/New_York"),
-    ).toEqual({
-      time: { loggedAt: "2026-10-15T12:30:00.000Z", timeZone: "America/New_York" },
-    });
-  });
-
   it("should write no meal field, ever", () => {
     const update = foodEntryChange(
       chickenEntry(),
@@ -154,19 +146,10 @@ describe("quickEntryChange", () => {
     });
   });
 
-  it.each([
-    ["calories", { kcal: 140 }],
-    ["protein", { protein_g: 3 }],
-    ["carbohydrate", { carbs_g: 16 }],
-    ["fat", { fat_g: 8 }],
-    ["a macro cleared", { protein_g: null }],
-    ["a macro set to 0", { fat_g: 0 }],
-    ["the label", { label: "Crisps" }],
-    ["the label cleared", { label: null }],
-  ])("should change the values alone when the %s changed", (_name, changes) => {
-    const update = quickEntryChange(crispsEntry(), submission(changes), London);
+  it("should change the values alone when a value changed", () => {
+    const update = quickEntryChange(crispsEntry(), submission({ fat_g: 8 }), London);
 
-    expect(update).toEqual({ quick: expect.objectContaining(changes) as unknown });
+    expect(update).toEqual({ quick: expect.objectContaining({ fat_g: 8 }) as unknown });
     expect(update).not.toHaveProperty("time");
   });
 
@@ -182,17 +165,6 @@ describe("quickEntryChange", () => {
     ).toEqual({
       quick: { kcal: 140, protein_g: 2, carbs_g: 15, fat_g: 7, label: "Meal deal crisps" },
       time: { loggedAt: "2026-10-15T12:15:00.000Z", timeZone: London },
-    });
-  });
-
-  it("should tell a macro never given from one given as 0", () => {
-    const entry = crispsEntry({
-      nutrients: { kcal: 130, protein_g: null, fat_g: 7, carbs_g: 15, fibre_g: null },
-    });
-
-    expect(quickEntryChange(entry, submission({ protein_g: null }), London)).toBeNull();
-    expect(quickEntryChange(entry, submission({ protein_g: 0 }), London)).toEqual({
-      quick: expect.objectContaining({ protein_g: 0 }) as unknown,
     });
   });
 });

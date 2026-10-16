@@ -1,6 +1,6 @@
+import { amountInPickerUnits } from "./amountInPickerUnits";
 import { matchPortionOnFood } from "./matchPortionOnFood";
 import { choicesFor } from "./pickerChoices";
-import { GRAMS_PER_OUNCE, ML_PER_FLUID_OUNCE } from "../nutrition/units";
 import { spoonPortionOf } from "../nutrition/volume";
 
 import type { PickerChoices } from "./pickerChoices";
@@ -112,8 +112,6 @@ export function entryPickerChoices(snapshot: FoodSnapshot, live?: LiveFoodPortio
   return choicesFor(ownPortions, isMeasuredByVolume);
 }
 
-const roundToTenth = (value: number): number => Math.round(value * 10) / 10;
-
 /**
  * Where the edit dialog's amount field and chips start: the logged amount, on the chip of its unit (a spoon
  * entry's, on the spoon chip of `entryPickerChoices`). The dialog
@@ -124,23 +122,16 @@ export function snapshotAmountStart(snapshot: FoodSnapshot): {
   quantity: string;
   unitValue: string;
 } {
-  switch (snapshot.unit) {
-    case "oz":
-      return {
-        quantity: String(roundToTenth(snapshot.quantity * GRAMS_PER_OUNCE)),
-        unitValue: "g",
-      };
-    case "fl_oz":
-      return {
-        quantity: String(roundToTenth(snapshot.quantity * ML_PER_FLUID_OUNCE)),
-        unitValue: "ml",
-      };
-    case "portion":
-      return {
-        quantity: String(snapshot.quantity),
-        unitValue: spoonOfSnapshot(snapshot)?.id ?? SNAPSHOT_PORTION_ID,
-      };
-    default:
-      return { quantity: String(snapshot.quantity), unitValue: snapshot.unit };
+  if (snapshot.unit === "portion") {
+    return {
+      quantity: String(snapshot.quantity),
+      unitValue: spoonOfSnapshot(snapshot)?.id ?? SNAPSHOT_PORTION_ID,
+    };
   }
+  const { quantity, unit } = amountInPickerUnits({
+    quantity: snapshot.quantity,
+    unit: snapshot.unit,
+  });
+
+  return { quantity: String(quantity), unitValue: unit };
 }

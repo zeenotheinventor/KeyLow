@@ -2,17 +2,16 @@ import { useFood, useFoodPortions, useProfileTimeZone, useUpdateEntry } from "@k
 import { formatClockTime } from "@keylow/core/dates";
 import {
   amountOnUnitChange,
-  clockTimeOn,
+  changedQuickValues,
   entryPickerChoices,
   entryQuantityChange,
+  entryTimeChange,
   foodChangedSinceLogged,
   previewAmount,
   snapshotAmountStart,
   snapshotAsFood,
 } from "@keylow/core/diary";
 import { useState } from "react";
-
-import { quickEntryChange } from "./quickEntryChange";
 
 import type { QuickAddDraft, QuickAddTexts } from "@/components/diary/QuickAddFields";
 import type { EntryUpdate, LogEntry } from "@keylow/api-client";
@@ -143,17 +142,6 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
     }
   }
 
-  const timeChange = () => {
-    if (time === entryClock) {
-      return undefined;
-    }
-
-    return {
-      loggedAt: clockTimeOn(entry.local_date, time, timeZone).loggedAt.toISOString(),
-      timeZone,
-    };
-  };
-
   return {
     food,
     portions: choices.portions,
@@ -186,19 +174,19 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       edit({ chosenTime: next });
     },
     save: async () => {
-      const time = timeChange();
+      const timeUpdate = entryTimeChange(entry, time, timeZone);
       if (entry.item_type === "quick") {
         if (!quick.validated.ok) {
           return false;
         }
-        const values = quickEntryChange(entry, quick.validated.value);
-        if (values === undefined && time === undefined) {
+        const values = changedQuickValues(entry, quick.validated.value);
+        if (values === undefined && timeUpdate === undefined) {
           return true;
         }
         return write({
           entry,
           ...(values === undefined ? {} : { quick: values }),
-          ...(time === undefined ? {} : { time }),
+          ...(timeUpdate === undefined ? {} : { time: timeUpdate }),
         });
       }
       const { amount } = preview;
@@ -207,13 +195,13 @@ export function useEntryDraft(entry: LogEntry): EntryDraft {
       }
       const isAmountChanged =
         start !== undefined && (quantityText !== start.quantity || unitValue !== start.unitValue);
-      if (!isAmountChanged && time === undefined) {
+      if (!isAmountChanged && timeUpdate === undefined) {
         return true;
       }
       return write({
         entry,
         ...(isAmountChanged ? { amount: entryQuantityChange(amount) } : {}),
-        ...(time === undefined ? {} : { time }),
+        ...(timeUpdate === undefined ? {} : { time: timeUpdate }),
       });
     },
     updateToCurrentFood: async () => {

@@ -1,5 +1,4 @@
-import { matchPortionOnFood } from "@keylow/core/diary";
-import { GRAMS_PER_OUNCE, ML_PER_FLUID_OUNCE } from "@keylow/core/nutrition";
+import { amountInPickerUnits, matchPortionOnFood } from "@keylow/core/diary";
 
 import type { PortionAmount } from "../components/PortionPicker";
 import type { RecentFood } from "@keylow/api-client";
@@ -34,18 +33,7 @@ export function amountLastLogged(
   return { quantity: snapshot.quantity, unit: snapshot.unit };
 }
 
-const roundToTenth = (value: number): number => Math.round(value * 10) / 10;
-
 /** The same amount in the units the portion picker offers, which are portions, grams and millilitres. */
 export function amountForPicker(amount: LoggableAmount): PortionAmount {
-  switch (amount.unit) {
-    case "oz":
-      return { quantity: roundToTenth(amount.quantity * GRAMS_PER_OUNCE), unit: "g" };
-    case "fl_oz":
-      return { quantity: roundToTenth(amount.quantity * ML_PER_FLUID_OUNCE), unit: "ml" };
-    case "portion":
-      return amount;
-    default:
-      return { quantity: amount.quantity, unit: amount.unit };
-  }
+  return amount.unit === "portion" ? amount : amountInPickerUnits(amount);
 }

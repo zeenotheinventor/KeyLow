@@ -8,7 +8,7 @@ import {
 } from "@keylow/api-client";
 import { LOG_SEARCH, SAVE_FAILED_BANNER, describeAddedFood } from "@keylow/core/copy";
 import { openingLoggedAt } from "@keylow/core/diary";
-import { servingOfSearchHit } from "@keylow/core/search";
+import { servingOfHit } from "@keylow/core/search";
 import { useRef } from "react";
 
 import { amountLastLogged } from "../../lib/amountLastLogged";
@@ -29,25 +29,6 @@ export type AddServing = {
   /** Logs the amount a Recent food was last logged with. */
   addRecent: (recent: RecentFood) => void;
 };
-
-// The serving a result row shows, which core works out once for the row, the plus and the picker. If its
-// portion has been replaced since the search, the plus logs 100 of the food's basis instead.
-function servingOfHit(
-  hit: FoodSearchHit,
-  food: Food,
-  portions: readonly FoodPortion[],
-): LoggableAmount {
-  const serving = servingOfSearchHit(hit);
-  const portion = portions.find((candidate) => candidate.id === serving.portionId);
-
-  if (portion !== undefined) {
-    return { quantity: serving.quantity, unit: "portion", portion };
-  }
-
-  return serving.unit === "portion"
-    ? { quantity: 100, unit: food.basis === "per_100ml" ? "ml" : "g" }
-    : { quantity: serving.quantity, unit: serving.unit };
-}
 
 /**
  * The one-tap plus of the log search. A tap loads the whole food and its portions by id (a result row is
