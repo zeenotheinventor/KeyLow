@@ -57,3 +57,9 @@ export { amountOnUnitChange, startingAmount, unitValueOf } from "./startingAmoun
 export type { UnitOption } from "./startingAmount";
 export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
 export { isNumberBeingTyped } from "./isNumberBeingTyped";
+export { amountInPickerUnits } from "./amountInPickerUnits";
+export type { MeasuredAmount } from "./amountInPickerUnits";
+export { changedQuickValues } from "./changedQuickValues";
+export type { QuickValues } from "./changedQuickValues";
+export { entryTimeChange } from "./entryTimeChange";
+export type { EntryTimeChange } from "./entryTimeChange";

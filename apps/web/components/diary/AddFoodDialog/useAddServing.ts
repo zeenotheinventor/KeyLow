@@ -6,36 +6,16 @@ import {
   useSupabase,
 } from "@keylow/api-client";
 import { LOG_SEARCH, SAVE_FAILED_BANNER, describeAddedFood } from "@keylow/core/copy";
-import { servingOfSearchHit } from "@keylow/core/search";
+import { servingOfHit } from "@keylow/core/search";
 import { Check, CircleAlert } from "lucide-react";
 import { useRef } from "react";
 
 import type { FoodSearchHit } from "@keylow/api-client";
-import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 import { useToast } from "@/components/ui/Toast";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
 
 type LoggedAt = { loggedAt: Date; localDate: string };
-
-type Amount =
-  | { quantity: number; unit: "g" | "ml" }
-  | { quantity: number; unit: "portion"; portion: FoodPortion };
-
-// The serving a result row shows, which core works out once for the row, the plus and the picker. If its
-// portion has been replaced since the search, the plus logs 100 of the food's basis instead.
-function servingOfHit(hit: FoodSearchHit, food: Food, portions: readonly FoodPortion[]): Amount {
-  const serving = servingOfSearchHit(hit);
-  const portion = portions.find((candidate) => candidate.id === serving.portionId);
-
-  if (portion !== undefined) {
-    return { quantity: serving.quantity, unit: "portion", portion };
-  }
-
-  return serving.unit === "portion"
-    ? { quantity: 100, unit: food.basis === "per_100ml" ? "ml" : "g" }
-    : { quantity: serving.quantity, unit: serving.unit };
-}
 
 /**
  * The one-tap plus of the add dialog's search. A press loads the whole food and its portions by id (a result
