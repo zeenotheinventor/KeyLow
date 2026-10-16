@@ -1,10 +1,10 @@
 import { useFoodWithPortions, useLogFood } from "@keylow/api-client";
-import { foodNeedsReview, previewAmount, startingAmount, unitOptions } from "@keylow/core/diary";
+import { foodNeedsReview, pickerChoices, previewAmount, startingAmount } from "@keylow/core/diary";
 import { useState } from "react";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
-import type { AmountPreview, UnitOption } from "@keylow/core/diary";
-import type { Food, FoodPortion } from "@keylow/core/schemas";
+import type { AmountPortion, AmountPreview, UnitOption } from "@keylow/core/diary";
+import type { Food } from "@keylow/core/schemas";
 
 type Edits = { foodId: string; quantityText?: string; unitValue?: string };
 
@@ -14,7 +14,8 @@ export type PortionDraft =
   | {
       status: "ready";
       food: Food;
-      portions: readonly FoodPortion[];
+      /** Every portion an amount can be of: the food's own, then the spoons when the food is measured by volume. */
+      portions: readonly AmountPortion[];
       unitOptions: UnitOption[];
       preview: AmountPreview;
       quantityText: string;
@@ -49,18 +50,20 @@ export function usePortionDraft(foodId: string | undefined): PortionDraft {
     return loaded;
   }
 
-  const { food, portions } = loaded;
-  const start = startingAmount(food, portions);
+  const { food } = loaded;
+  // The chips and the amount are worked out from the one list, so a chip can never name a portion the preview lacks.
+  const choices = pickerChoices(food, loaded.portions);
+  const start = startingAmount(food, choices.portions);
   const ownEdits = edits?.foodId === foodId ? edits : undefined;
   const quantityText = ownEdits?.quantityText ?? start.quantity;
   const unitValue = ownEdits?.unitValue ?? start.unitValue;
-  const preview = previewAmount(food, portions, unitValue, quantityText);
+  const preview = previewAmount(food, choices.portions, unitValue, quantityText);
 
   return {
     status: "ready",
     food,
-    portions,
-    unitOptions: unitOptions(food, portions),
+    portions: choices.portions,
+    unitOptions: choices.options,
     preview,
     quantityText,
     unitValue,

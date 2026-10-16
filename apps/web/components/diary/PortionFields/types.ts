@@ -6,9 +6,9 @@ export type PortionFieldsProps = {
   name: string;
   /** The values the amount is worked out from: the food's own when adding, the entry's snapshot when editing. */
   food: AmountFood;
-  /** What the amount means in the hero and the amount field's suffix. */
+  /** Every portion an amount can be of, the spoons included: what the amount means in the hero and the amount field's suffix. */
   portions: readonly AmountPortion[];
-  /** The chips: the portions, then g, then ml where it applies. */
+  /** The chips, from core's `pickerChoices` or `entryPickerChoices`: the portions, then g, then ml and the spoons where the food is measured by volume. */
   unitOptions: readonly UnitOption[];
   /** What the text in the amount field and the chosen unit come to, from core's `previewAmount`. */
   preview: AmountPreview;
