@@ -21,7 +21,7 @@ type Api = {
 
 const api = vi.hoisted((): Api => ({
   entries: [],
-  updateEntry: { mutateAsync: undefined as never },
+  updateEntry: { mutateAsync: vi.fn<(update: EntryUpdate) => Promise<LogEntry>>() },
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
@@ -198,20 +198,38 @@ describe("the edit dialog's chips", () => {
       expect(within(hero).getByText("150")).toBeTruthy();
     });
 
+    function bananaEntry(): LogEntry {
+      return foodEntry({
+        date: TODAY,
+        time: "12:40",
+        name: "Banana",
+        quantity: 1,
+        unit: "portion",
+        kcal: 95,
+        protein: 1.2,
+        fat: 0.1,
+        carbs: 20.3,
+      });
+    }
+
+    it("should save a changed count of its own portion with no portion in the change, so the link is kept", async () => {
+      const entry = bananaEntry();
+      renderDialog(entry);
+
+      fireEvent.change(amountField("medium"), { target: { value: "2" } });
+      save();
+
+      await waitFor(() => {
+        expect(api.updateEntry.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.updateEntry.mutateAsync).toHaveBeenCalledWith({
+        entry,
+        amount: { quantity: 2, unit: "portion" },
+      });
+    });
+
     it("should show its portion then grams, and no spoon, for an entry logged in a portion", () => {
-      renderDialog(
-        foodEntry({
-          date: TODAY,
-          time: "12:40",
-          name: "Banana",
-          quantity: 1,
-          unit: "portion",
-          kcal: 95,
-          protein: 1.2,
-          fat: 0.1,
-          carbs: 20.3,
-        }),
-      );
+      renderDialog(bananaEntry());
 
       expect(chipNames()).toEqual(["1 medium", "g"]);
       expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeTruthy();
