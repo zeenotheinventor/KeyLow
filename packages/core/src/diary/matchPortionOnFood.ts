@@ -1,4 +1,4 @@
-import { spoonPortionWithLabel } from "../nutrition/volume";
+import { spoonPortionOf } from "../nutrition/volume";
 
 import type { SnapshotPortion } from "./schemas";
 import type { QuantityUnit } from "../nutrition/units";
@@ -36,8 +36,8 @@ export const matchPortionOnFood = (
   if (match !== undefined) {
     return { quantity: previous.quantity, unit: "portion", portion: match };
   }
-  const spoon = spoonPortionWithLabel(previous.portion.label);
-  if (spoon !== undefined && "ml" in previous.portion && previous.portion.ml === spoon.ml) {
+  const spoon = spoonPortionOf(previous.portion);
+  if (spoon !== undefined) {
     return { quantity: previous.quantity, unit: "portion", portion: spoon };
   }
   return "grams" in previous.portion

@@ -1,6 +1,6 @@
 import { choicesFor } from "./pickerChoices";
 import { GRAMS_PER_OUNCE, ML_PER_FLUID_OUNCE } from "../nutrition/units";
-import { spoonPortionWithLabel } from "../nutrition/volume";
+import { spoonPortionOf } from "../nutrition/volume";
 
 import type { PickerChoices } from "./pickerChoices";
 import type { AmountFood, AmountPortion } from "./previewAmount";
@@ -43,18 +43,10 @@ export function snapshotPortions(snapshot: FoodSnapshot): AmountPortion[] {
 }
 
 /**
- * The spoon an entry was logged in, if it was: a millilitre portion with a spoon's label and a spoon's size,
- * the way `matchPortionOnFood` finds one. A gram portion that merely shares a spoon's label is not a spoon.
+ * The spoon an entry was logged in, if it was (see `spoonPortionOf`).
  */
-const spoonOfSnapshot = (snapshot: FoodSnapshot) => {
-  const { portion } = snapshot;
-  if (portion === null || !("ml" in portion)) {
-    return undefined;
-  }
-  const spoon = spoonPortionWithLabel(portion.label);
-
-  return spoon?.ml === portion.ml ? spoon : undefined;
-};
+const spoonOfSnapshot = (snapshot: FoodSnapshot) =>
+  snapshot.portion === null ? undefined : spoonPortionOf(snapshot.portion);
 
 /**
  * The chips of the dialog or screen that edits a logged entry, and the portions its hero works from, built from

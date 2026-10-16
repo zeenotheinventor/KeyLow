@@ -4,7 +4,7 @@ import { describePortionUnit, describePortionWithSize } from "./portionPicker";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { TARGET_KCAL_MAXIMUM, TARGET_KCAL_MINIMUM } from "../diary/rules";
 import { formatCalories, formatGrams } from "../format/numbers";
-import { spoonPortionWithLabel } from "../nutrition/volume";
+import { spoonPortionOf } from "../nutrition/volume";
 
 import type { ProgressBar } from "../diary/rules";
 import type { QuantityUnit } from "../nutrition/units";
@@ -225,13 +225,6 @@ export type LoggedAmount = {
   portion: { label: string; ml?: number; grams?: number } | null;
 };
 
-// A spoon is a millilitre portion with a spoon's label and a spoon's size, as `matchPortionOnFood` finds one.
-const isSpoon = (portion: {
-  label: string;
-  ml?: number;
-}): portion is { label: string; ml: number } =>
-  portion.ml !== undefined && spoonPortionWithLabel(portion.label)?.ml === portion.ml;
-
 const MEASURED_UNIT_NAMES = { g: "g", ml: "ml", oz: "oz", fl_oz: "fl oz" } as const;
 
 /**
@@ -248,11 +241,12 @@ export const describeLoggedAmount = (amount: LoggedAmount | null): string => {
     const unit = amount.unit === "portion" ? "g" : MEASURED_UNIT_NAMES[amount.unit];
     return `${formatGrams(amount.quantity)} ${unit}`;
   }
-  if (isSpoon(amount.portion)) {
+  const spoon = spoonPortionOf(amount.portion);
+  if (spoon !== undefined) {
     const count = formatGrams(amount.quantity);
-    const volume = `${formatGrams(amount.quantity * amount.portion.ml)} ml`;
+    const volume = `${formatGrams(amount.quantity * spoon.ml)} ml`;
 
-    return `${count} ${describePortionUnit(amount.portion.label, amount.quantity)} (${volume})`;
+    return `${count} ${describePortionUnit(spoon.label, amount.quantity)} (${volume})`;
   }
   // A label that already says its size, such as "30 g", is not given it twice.
   const portion = describePortionWithSize(amount.portion.label, {

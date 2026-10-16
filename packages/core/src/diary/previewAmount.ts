@@ -2,7 +2,7 @@ import { PORTION_PICKER, describeAmountBasis, describeVolumeBasis } from "../cop
 import { parseFormNumber } from "../foods/foodForm";
 import { scaleNutrients } from "../nutrition/scale";
 import { resolveQuantity } from "../nutrition/units";
-import { densityForLogging, isSpoonPortionId } from "../nutrition/volume";
+import { densityForLogging, spoonPortionOf } from "../nutrition/volume";
 import { validateQuantity } from "./rules/validateQuantity";
 
 import type { Food, FoodPortion } from "../schemas/food";
@@ -95,12 +95,13 @@ function captionOf(amount: ChosenAmount, density: number | null): string {
   if (amount.unit !== "portion") {
     return describeAmountBasis(amount);
   }
-  if (isSpoonPortionId(amount.portion.id)) {
+  const spoon = spoonPortionOf(amount.portion);
+  if (spoon !== undefined) {
     return describeVolumeBasis({
       unit: "spoon",
       quantity: amount.quantity,
-      spoonLabel: amount.portion.label,
-      volumeMl: amount.quantity * (amount.portion.ml ?? 0),
+      spoonLabel: spoon.label,
+      volumeMl: amount.quantity * spoon.ml,
       weightInGrams: weightOf(amount, density),
     });
   }
