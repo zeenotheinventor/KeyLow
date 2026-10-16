@@ -18,7 +18,7 @@
 //   rest answer from the cache. The consequence is accepted: a refresh that does not succeed (OFF is
 //   down, the product has vanished, the global limit refused it) leaves the cached data in place
 //   with `fetched_at` advanced, so it is tried again after the next 90 days, not on every lookup.
-//   A claim that errors is logged and counts as not claimed, so a stale row is still served from the
+//   A claim that errors is reported and counts as not claimed, so a stale row is still served from the
 //   cache and the next lookup tries again.
 // - The row is stored under the barcode that was asked for (`source_ref`), and `barcode` is the code
 //   OFF reports for the product. They are equal for every normal product. If OFF reports another
@@ -37,6 +37,7 @@ import {
 } from "../_shared/core.ts";
 import { error, handle, json } from "../_shared/http.ts";
 import { offRequest } from "../_shared/off.ts";
+import { reportError } from "../_shared/report.ts";
 import { consume, readLimit } from "../_shared/rateLimit.ts";
 import { runInBackground } from "../_shared/runtime.ts";
 
@@ -163,7 +164,7 @@ async function claimRefresh(service: Service, food: FoodRow): Promise<boolean> {
     .select("id");
   if (claimError !== null) {
     // The cache can still answer, so a failed claim is not worth a 500. Nobody refreshes this time.
-    console.error(`off-product could not claim the refresh of ${food.source_ref}`, claimError);
+    reportError("off-product", "internal_error", claimError);
     return false;
   }
   return claimed.length > 0;
@@ -181,7 +182,7 @@ async function chargeLookup(userId: string): Promise<Response | null> {
 }
 
 // Server initiated, so it costs the global bucket only. It runs after the response, so it catches
-// and logs everything: nothing is left to answer for an error.
+// and reports everything: nothing is left to answer for an error.
 async function refreshProduct(service: Service, code: string): Promise<void> {
   try {
     const globalLimit = readLimit("OFF_PRODUCT_GLOBAL_PER_MIN", 80);
@@ -196,7 +197,7 @@ async function refreshProduct(service: Service, code: string): Promise<void> {
       );
     }
   } catch (caught) {
-    console.error(`off-product failed to refresh ${code}`, caught);
+    reportError("off-product", "internal_error", caught);
   }
 }
 
@@ -211,7 +212,7 @@ async function fetchAndStoreProduct(
   const normalised = normaliseOffProduct(fetched.product);
   if (!normalised.ok) {
     // OFF has the product, so this is not a not_found. It is data we cannot use.
-    console.error(`off-product cannot use the OFF product ${code}: ${normalised.reason}`);
+    reportError("off-product", "upstream_error", new Error(normalised.reason));
     return {
       ok: false,
       failure: error("upstream_error", "Open Food Facts returned a product that cannot be used."),
@@ -222,6 +223,7 @@ async function fetchAndStoreProduct(
 
 async function fetchOffProduct(code: string): Promise<{ ok: true; product: OffProduct } | Failed> {
   const result = await offRequest(`/api/v2/product/${code}`, {
+    functionName: "off-product",
     fields: offFields,
     acceptedStatuses: [404],
   });
@@ -237,7 +239,7 @@ async function fetchOffProduct(code: string): Promise<{ ok: true; product: OffPr
   try {
     answer = offAnswerSchema.parse(await response.json());
   } catch (caught) {
-    console.error(`off-product could not read the OFF answer for ${code}`, caught);
+    reportError("off-product", "upstream_error", caught);
     return {
       ok: false,
       failure: error("upstream_error", "Open Food Facts answered in an unexpected form."),
@@ -247,6 +249,11 @@ async function fetchOffProduct(code: string): Promise<{ ok: true; product: OffPr
     return notFound();
   }
   if (answer.product === undefined) {
+    reportError(
+      "off-product",
+      "upstream_error",
+      new Error("Open Food Facts answered without a product"),
+    );
     return {
       ok: false,
       failure: error("upstream_error", "Open Food Facts answered without a product."),

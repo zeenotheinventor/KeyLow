@@ -3,11 +3,14 @@
 // caller reads itself (a 404 for an unknown barcode, say) is listed in `acceptedStatuses`. Deferred to
 // the functions that use it: building paths, parsing bodies and retries.
 import { error } from "./http.ts";
+import { reportError } from "./report.ts";
 
 const defaultBaseUrl = "https://world.openfoodfacts.org";
 const defaultTimeoutMilliseconds = 5000;
 
 type OffFetchOptions = {
+  // The function making the call, named on the report when OFF fails.
+  functionName: string;
   // Query parameters other than `fields`.
   searchParams?: Record<string, string>;
   // The product fields to return. OFF sends whole documents unless asked for less.
@@ -61,14 +64,18 @@ export async function offRequest(path: string, options: OffFetchOptions): Promis
   try {
     response = await fetch(url, init);
   } catch (caught) {
-    console.error("Open Food Facts request failed", caught);
+    reportError(options.functionName, "upstream_error", caught);
     const message = isTimeout(caught)
       ? "Open Food Facts took too long to answer."
       : "Open Food Facts could not be reached.";
     return { ok: false, failure: error("upstream_error", message) };
   }
   if (!response.ok && !options.acceptedStatuses?.includes(response.status)) {
-    console.error(`Open Food Facts answered ${response.status} for ${url.pathname}`);
+    reportError(
+      options.functionName,
+      "upstream_error",
+      new Error("Open Food Facts answered with an error status"),
+    );
     await response.body?.cancel();
     return {
       ok: false,

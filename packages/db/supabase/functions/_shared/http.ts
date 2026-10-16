@@ -2,6 +2,7 @@
 // The error body and its codes are the @keylow/core contract, so the functions and the api-client
 // share one definition.
 import type { EdgeError, EdgeErrorCode } from "./core.ts";
+import { type ReportError, reportError } from "./report.ts";
 
 const statusByCode: Record<EdgeErrorCode, number> = {
   not_found: 404,
@@ -55,10 +56,12 @@ function handlePreflight(request: Request): Response | null {
 // Wraps a function's request handler. It answers the CORS preflight, and turns an uncaught throw
 // into a typed 500 that carries the CORS headers. Without it a throw reaches the browser as a plain
 // text 500 that the gateway sends without CORS headers, which the browser reports as a network error.
+// The throw is reported to Sentry once, without the request or the error's message (see report.ts).
 // Every function entry is `Deno.serve(handle("<function name>", async (request) => { ... }))`.
 export function handle(
   functionName: string,
   handler: (request: Request) => Response | Promise<Response>,
+  report: ReportError = reportError,
 ): (request: Request) => Promise<Response> {
   return async (request) => {
     const preflight = handlePreflight(request);
@@ -68,7 +71,7 @@ export function handle(
     try {
       return await handler(request);
     } catch (caught) {
-      console.error(`${functionName} failed`, caught);
+      report(functionName, "internal_error", caught);
       return error("internal_error", "Internal error");
     }
   };
