@@ -2,7 +2,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 import { Text } from "react-native";
 
-import RootLayout from "../app/_layout";
+import RootLayout, { ErrorBoundary } from "../app/_layout";
+import { RootErrorScreen } from "../components/RootErrorScreen";
 import { useToast } from "../components/ui";
 import { resetRouterMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
@@ -83,6 +84,10 @@ describe("the app root", () => {
     registerAppStyles(styles);
     resetRouterMock();
     resetSupabaseMock();
+  });
+
+  it("should export the root error screen as the layout's error boundary, so a failing route shows it", () => {
+    expect(ErrorBoundary).toBe(RootErrorScreen);
   });
 
   it("should show a toast that a screen asks for, because the toast provider is mounted", async () => {

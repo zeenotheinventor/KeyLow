@@ -2,6 +2,7 @@ import { useLogEntry, useProfileTimeZone } from "@keylow/api-client";
 import { ENTRY_SCREEN } from "@keylow/core/copy";
 import { isEntryId } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
+import { useRef } from "react";
 
 import { FoodEntryForm } from "./FoodEntryForm";
 import { QuickEntryForm } from "./QuickEntryForm";
@@ -13,7 +14,8 @@ import type { EntryScreenProps } from "./types";
 /**
  * What a diary row opens: a logged food or a quick add, by the entry's id. It waits for the entry and for
  * the profile's time zone, which the time is read in, and draws the food's form or the quick add's. Nothing
- * is read while the terms gate is up. Back, a save and a delete return to where the user came from.
+ * is read while the terms gate is up. Back, a save and a delete return to where the user came from, once: a second way out, such as a
+ * save that finishes after Back was pressed, would go back past it.
  */
 export function EntryScreen({ id }: EntryScreenProps) {
   const router = useRouter();
@@ -22,7 +24,13 @@ export function EntryScreen({ id }: EntryScreenProps) {
   const entry = useLogEntry(id, { enabled: isReadEnabled && isValidId });
   const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled });
 
+  const hasLeft = useRef(false);
+
   function leave() {
+    if (hasLeft.current) {
+      return;
+    }
+    hasLeft.current = true;
     // A cold link to this screen has nothing before it, so the user goes to the diary instead.
     if (router.canGoBack()) {
       router.back();
