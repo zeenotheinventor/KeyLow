@@ -787,7 +787,7 @@ describe("the portion picker's unit chips", () => {
   let kitStyles: string;
 
   beforeAll(async () => {
-    kitStyles = await compileKitStyles();
+    kitStyles = await compileKitStyles("", ["components/PortionPicker"]);
   });
 
   beforeEach(() => {
@@ -801,6 +801,32 @@ describe("the portion picker's unit chips", () => {
   afterEach(() => {
     jest.useRealTimers();
     jest.restoreAllMocks();
+  });
+
+  describe("the row's reach", () => {
+    // The board's chip row runs on past the dock's padding to the screen edge, so a chip cut off there is
+    // the hint that the row scrolls.
+    it("should run to the screen edge when the food has few chips", async () => {
+      showFood(oil);
+      await renderPicker();
+
+      expect(screen.getByLabelText("Unit")).toHaveStyle({ marginRight: -16 });
+    });
+
+    it("should run to the screen edge when the food has many chips", async () => {
+      showFood(banana);
+      Object.assign(portionsQuery, {
+        data: [
+          cofidPortion("1 small", 38, 0, false),
+          cofidPortion("1 medium", 44, 1, true),
+          cofidPortion("1 large", 50, 2, false),
+          cofidPortion("1 extra large", 56, 3, false),
+        ],
+      });
+      await renderPicker();
+
+      expect(screen.getByLabelText("Unit")).toHaveStyle({ marginRight: -16 });
+    });
   });
 
   describe("a food measured by volume with no portion of its own", () => {
