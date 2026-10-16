@@ -2,6 +2,7 @@ import "react-native-gesture-handler/jestSetup";
 
 import { KeyLowProvider, getDiaryDay, keys } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
+import { buildLogEntry } from "@keylow/core/diary";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import {
@@ -19,6 +20,7 @@ import EntryRoute from "../app/entry/[id]";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend, sampleDay } from "./support/diaryBackend";
+import { oilEntry, oilFood } from "./support/entries";
 import { entryBackend, entryClient, resetEntryBackend } from "./support/entryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
@@ -162,6 +164,15 @@ describe("the entry screen", () => {
       expect(screen.getByRole("button", { name: "Time, 12:40, change" })).toBeOnTheScreen();
       expect(screen.queryByText(/Now/)).not.toBeOnTheScreen();
       expect(heroKcal("For 150 g").getByText("150")).toBeOnTheScreen();
+    });
+
+    it("should offer only g for an entry logged before volumes, which holds no density", async () => {
+      await renderEntry(CHICKEN_INDEX);
+      await findFoodEntry();
+
+      const chips = screen.getAllByRole("radio");
+      expect(chips).toHaveLength(1);
+      expect(chips[0]).toHaveAccessibleName("g");
     });
 
     it("should offer Save and a Delete, and no Add or meal", async () => {
@@ -855,6 +866,139 @@ describe("the entry screen", () => {
       expect(
         await screen.findByRole("heading", { name: "Chicken breast, grilled" }),
       ).toBeOnTheScreen();
+    });
+  });
+
+  describe("a food logged in spoons", () => {
+    const OIL_ENTRY_ID = "00000000-0000-4000-8000-0000000000aa";
+    const OIL_UPDATE_FOOD = { ...oilFood, kcal: 800 };
+
+    async function findOilEntry() {
+      await screen.findByRole("heading", { name: "Oil, olive" });
+    }
+
+    beforeEach(() => {
+      diaryBackend.entries = [{ ...oilEntry({ id: OIL_ENTRY_ID }) }];
+      entryBackend.foods = [oilFood];
+    });
+
+    it("should open on the spoon chip once, with the count, in the add picker's order", async () => {
+      await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      const chips = screen.getAllByRole("radio");
+      ["g", "ml", "1 tsp", "1 tbsp"].forEach((name, index) => {
+        expect(chips[index]).toHaveAccessibleName(name);
+      });
+      expect(chips).toHaveLength(4);
+      const spoonChips = screen.getAllByRole("radio", { name: "1 tbsp" });
+      expect(spoonChips).toHaveLength(1);
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
+      expect(amountField()).toHaveDisplayValue("2");
+      expect(screen.getByLabelText("Amount (tbsp)")).toBeOnTheScreen();
+      expect(heroKcal("For 2 tbsp (30 ml, 28 g)").getByText("248")).toBeOnTheScreen();
+    });
+
+    it("should write a changed count as a portion of 15 ml with no portion row", async () => {
+      const user = await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      await user.clear(amountField());
+      await user.type(amountField(), "3");
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        quantity: 3,
+        unit: "portion",
+        portion_id: null,
+        snapshot: expect.objectContaining({
+          portion: { label: "1 tbsp", ml: 15 },
+          density: 0.92,
+        }) as unknown,
+      });
+      expect(lastUpdate()["resolved_grams"]).toBeCloseTo(41.4, 5);
+    });
+
+    it("should write the teaspoon when the person changes the spoon and keeps the count", async () => {
+      const user = await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      await user.press(screen.getByRole("radio", { name: "1 tsp" }));
+      await user.press(saveButton());
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        quantity: 2,
+        unit: "portion",
+        portion_id: null,
+        snapshot: expect.objectContaining({ portion: { label: "1 tsp", ml: 5 } }) as unknown,
+      });
+    });
+
+    it("should write nothing when nothing was changed", async () => {
+      const user = await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      await user.press(saveButton());
+
+      expect(updates()).toEqual([]);
+    });
+
+    it("should keep Update to current food data working, on the spoon", async () => {
+      entryBackend.foods = [OIL_UPDATE_FOOD];
+      const user = await renderEntry(OIL_ENTRY_ID);
+      await findOilEntry();
+
+      await user.press(await screen.findByRole("button", { name: "Update to current food data" }));
+
+      await waitFor(() => {
+        expect(updates()).toHaveLength(1);
+      });
+      expect(lastUpdate()).toMatchObject({
+        quantity: 2,
+        unit: "portion",
+        portion_id: null,
+        snapshot: expect.objectContaining({ portion: { label: "1 tbsp", ml: 15 } }) as unknown,
+      });
+      expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
+      await waitFor(() => {
+        expect(heroKcal("For 2 tbsp (30 ml, 28 g)").getByText("221")).toBeOnTheScreen();
+      });
+    });
+  });
+
+  describe("a food logged in grams that has a density", () => {
+    it("should offer ml and the spoons after g, with g chosen", async () => {
+      const entry = buildLogEntry({
+        food: oilFood,
+        quantity: 50,
+        unit: "g",
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: "00000000-0000-4000-8000-0000000000bb",
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+      entryBackend.foods = [oilFood];
+      await renderEntry("00000000-0000-4000-8000-0000000000bb");
+      await screen.findByRole("heading", { name: "Oil, olive" });
+
+      const chips = screen.getAllByRole("radio");
+      ["g", "ml", "1 tsp", "1 tbsp"].forEach((name, index) => {
+        expect(chips[index]).toHaveAccessibleName(name);
+      });
+      expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
     });
   });
 });

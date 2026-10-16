@@ -9,11 +9,14 @@ import {
   describePortionUnit,
 } from "@keylow/core/copy";
 import {
+  entryPickerChoices,
   foodNeedsReview,
   missingFieldsOf,
+  pickerChoices,
   previewAmount,
+  snapshotAmountStart,
+  snapshotAsFood,
   startingAmount,
-  unitOptions,
 } from "@keylow/core/diary";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
@@ -37,6 +40,7 @@ import { PerHundredList } from "./PerHundredList";
 import { MacroHero } from "../FoodDetail/MacroHero";
 
 import type { PortionPickerProps } from "./types";
+import type { PickerChoices } from "@keylow/core/diary";
 
 /**
  * The page for changing the serving before a food is logged, as the portion boards draw it: the food's name
@@ -48,8 +52,6 @@ import type { PortionPickerProps } from "./types";
 export function PortionPicker(props: PortionPickerProps) {
   const {
     food,
-    portions,
-    initialAmount,
     time,
     isNow,
     note,
@@ -64,23 +66,33 @@ export function PortionPicker(props: PortionPickerProps) {
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
   const keyboardLift = useKeyboardLift(frameRef, Platform.OS === "android");
-  const [start] = useState(() => startingAmount(food, portions, initialAmount));
+  // An added food's chips come from the food and its portions; a logged entry's, from its own snapshot, which
+  // is also what its hero is worked out from. The hero gets the portions the chips came from.
+  const choices: PickerChoices =
+    props.mode === "edit"
+      ? entryPickerChoices(props.snapshot)
+      : pickerChoices(food, props.portions);
+  const amountFood = props.mode === "edit" ? snapshotAsFood(props.snapshot) : food;
+  const [start] = useState(() =>
+    props.mode === "edit"
+      ? snapshotAmountStart(props.snapshot)
+      : startingAmount(food, choices.portions, props.initialAmount),
+  );
   const [quantityText, setQuantityText] = useState(start.quantity);
   const [unitValue, setUnitValue] = useState(start.unitValue);
   const [chosenTime, setChosenTime] = useState(time);
   const [isTimeStillNow, setIsTimeStillNow] = useState(isNow);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
-  const { amount, hero } = previewAmount(food, portions, unitValue, quantityText);
-  const options = unitOptions(food, portions);
+  const { amount, hero } = previewAmount(amountFood, choices.portions, unitValue, quantityText);
   // A logged entry keeps the values it was saved with, so the food's own review does not apply to it.
   const needsReview = !isEditing && foodNeedsReview(food);
-  const chosenPortion = portions.find((portion) => portion.id === unitValue);
+  const chosenPortion = choices.portions.find((portion) => portion.id === unitValue);
   const unitSuffix =
     chosenPortion === undefined
       ? unitValue
       : describePortionUnit(chosenPortion.label, amount?.quantity ?? 1);
-  const chosenUnit = options.find((option) => option.value === unitValue);
+  const chosenUnit = choices.options.find((option) => option.value === unitValue);
 
   return (
     <View className="flex-1 bg-background">
@@ -147,7 +159,7 @@ export function PortionPicker(props: PortionPickerProps) {
             />
             <ChipGroup
               label={PORTION_PICKER.unitLabel}
-              options={options}
+              options={choices.options}
               value={chosenUnit === undefined ? null : unitValue}
               onChange={setUnitValue}
             />

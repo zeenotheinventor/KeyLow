@@ -8,6 +8,7 @@ import { setUpTests } from "react-native-reanimated";
 import { foodFixture, savedFoodId } from "./support/apiClientMock";
 import { PortionPicker } from "../../components/PortionPicker";
 import { ThemeProvider } from "../../lib/theme";
+import { chickenEntry } from "../support/entries";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -80,7 +81,7 @@ async function renderEditPicker(props: Partial<Omit<EditProps, "mode">> = {}) {
         isNow={false}
         isSaving={false}
         mode="edit"
-        portions={[bar, box]}
+        snapshot={chickenEntry().snapshot}
         time="12:40"
         onBack={() => undefined}
         onDelete={() => undefined}
@@ -203,7 +204,6 @@ describe("PortionPicker as a component", () => {
       const { user, onSubmit } = await renderEditPicker({
         onDelete,
         time: "12:40",
-        initialAmount: { unit: "g", quantity: 150 },
       });
 
       await user.press(screen.getByRole("button", { name: "Save" }));
@@ -225,10 +225,7 @@ describe("PortionPicker as a component", () => {
     });
 
     it("should keep Save off for an amount that is not above 0", async () => {
-      const { user } = await renderEditPicker({
-        onDelete,
-        initialAmount: { unit: "g", quantity: 150 },
-      });
+      const { user } = await renderEditPicker({ onDelete });
 
       await user.clear(screen.getByLabelText("Amount (g)"));
 

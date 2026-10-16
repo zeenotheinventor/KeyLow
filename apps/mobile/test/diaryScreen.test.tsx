@@ -24,6 +24,7 @@ import {
   resetDiaryBackend,
   sampleDay,
 } from "./support/diaryBackend";
+import { oilEntry } from "./support/entries";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -165,6 +166,18 @@ describe("the diary screen", () => {
         within(screen.getByLabelText("12:00, 3 foods")).getByRole("button", {
           name: /^Meal deal crisps, 12:45 · Quick add/,
         }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should write a spoon entry's amount as its count and its millilitres", async () => {
+      diaryBackend.entries = [
+        ...sampleDay(),
+        { ...oilEntry({ id: "00000000-0000-4000-8000-0000000000aa" }) },
+      ];
+      await renderLoadedDiary();
+
+      expect(
+        screen.getByRole("button", { name: /^Oil, olive, 12:40 · 2 tbsp \(30 ml\)/ }),
       ).toBeOnTheScreen();
     });
 
