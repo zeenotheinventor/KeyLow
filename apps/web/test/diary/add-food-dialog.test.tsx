@@ -219,6 +219,14 @@ describe("the add food dialog", () => {
       expect(screen.getByRole("button", { name: "Time, now, 12:40, change" })).toBeTruthy();
     });
 
+    it("should open on today, with the Time field reading now, when the request names no day", () => {
+      api.timeZone = "Pacific/Auckland";
+      renderDialog({});
+
+      // 12:40 UTC is 01:40 on the 16th in Auckland, which is 13 hours ahead in October.
+      expect(screen.getByRole("button", { name: "Time, now, 01:40, change" })).toBeTruthy();
+    });
+
     it("should close on Cancel, and Escape", () => {
       const { onClose } = renderDialog();
 
@@ -388,6 +396,21 @@ describe("the add food dialog", () => {
       });
       expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
         expect.objectContaining({ loggedAt: "2026-10-14T12:40:00.000Z", localDate: "2026-10-14" }),
+      );
+    });
+
+    it("should log now, today in the profile's zone, when the request names no day", async () => {
+      api.timeZone = "Pacific/Auckland";
+      renderDialog({});
+      search("rice");
+
+      fireEvent.click(addButton("Add Basmati rice, boiled, 100 g"));
+
+      await waitFor(() => {
+        expect(api.logFood.mutateAsync).toHaveBeenCalledOnce();
+      });
+      expect(api.logFood.mutateAsync).toHaveBeenCalledWith(
+        expect.objectContaining({ loggedAt: "2026-10-15T12:40:30.000Z", localDate: "2026-10-16" }),
       );
     });
 

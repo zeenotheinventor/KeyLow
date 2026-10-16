@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
 
-/** What an add food request says: the day on view, and the time only when an hour's plus asked for one. */
+/**
+ * What an add food request says: the day on view, and the time only when an hour's plus asked for one.
+ * A request with neither is "now": today in the profile's zone, at the moment the dialog opens.
+ */
 export type AddFoodRequest = {
-  /** The day to log on, `YYYY-MM-DD`. */
-  date: string;
-  /** `HH:mm`, such as "12:00". Left out for "now on that day". */
+  /** The day to log on, `YYYY-MM-DD`. Left out for today in the profile's zone. */
+  date?: string;
+  /** `HH:mm`, such as "12:00". Left out for "now on that day". Read only with a `date`. */
   time?: string;
 };
 

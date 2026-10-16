@@ -7,7 +7,7 @@ import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
 const { push, pathname, openAddFood, viewedDate } = vi.hoisted(() => ({
   push: vi.fn(),
   pathname: vi.fn<() => string>(),
-  openAddFood: vi.fn<(request: { date: string; time?: string }) => void>(),
+  openAddFood: vi.fn<(request: { date?: string; time?: string }) => void>(),
   viewedDate: vi.fn<() => string | undefined>(),
 }));
 
@@ -91,13 +91,18 @@ describe("DashboardNav", () => {
   });
 
   describe("search", () => {
-    it("should go to the foods page from the search field", () => {
-      render(<DashboardNav />);
+    it.each(["/dashboard", "/recipes", "/more", "/foods/new", "/foods/abc/edit"])(
+      "should open add food for today, with no day, from the search field on %s",
+      (path) => {
+        pathname.mockReturnValue(path);
+        render(<DashboardNav />);
 
-      fireEvent.click(screen.getByRole("button", { name: "Search for a food" }));
+        fireEvent.click(screen.getByRole("button", { name: "Search for a food" }));
 
-      expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
-    });
+        expect(openAddFood).toHaveBeenCalledExactlyOnceWith({});
+        expect(push).not.toHaveBeenCalled();
+      },
+    );
 
     it("should open add food for the day on view, with no time, when the diary shows a day", () => {
       viewedDate.mockReturnValue("2026-10-14");
@@ -132,7 +137,7 @@ describe("DashboardNav", () => {
       expect(launcher.parentElement?.classList.contains("opacity-50")).toBe(true);
     });
 
-    it("should not go to the foods page or add food, from the search or the barcode button", () => {
+    it("should not add food or go to the foods page, from the search or the barcode button", () => {
       viewedDate.mockReturnValue("2026-10-14");
       render(<DashboardNav />);
 
@@ -153,7 +158,7 @@ describe("DashboardNav", () => {
       const launcher = screen.getByRole("button", { name: "Search for a food" });
       expect(launcher.hasAttribute("aria-disabled")).toBe(false);
       fireEvent.click(launcher);
-      expect(push).toHaveBeenCalledExactlyOnceWith("/foods");
+      expect(openAddFood).toHaveBeenCalledExactlyOnceWith({});
     });
   });
 
