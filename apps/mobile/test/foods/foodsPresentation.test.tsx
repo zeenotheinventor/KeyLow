@@ -158,7 +158,7 @@ describe("the food search sheet as a route", () => {
 
       await user.press(await screen.findByRole("button", { name: "Find food" }));
 
-      expect(await screen.findByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+      expect(await screen.findByRole("heading", { name: "Log food" })).toBeOnTheScreen();
       expect(modals()).toHaveLength(1);
     });
 

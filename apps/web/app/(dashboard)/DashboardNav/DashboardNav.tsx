@@ -53,13 +53,10 @@ export function DashboardNav() {
   const panel = useRef<HTMLElement>(null);
   const panelId = useId();
 
-  // On the diary the search adds food to the day on view, at now. Anywhere else it is the food search.
+  // The search always adds food: to the day on view on the diary, and to today, at now, on every other page.
+  // Browsing foods without logging is the Foods page, reached from More.
   function startSearch() {
-    if (viewedDate === undefined) {
-      router.push(FOODS_HREF);
-    } else {
-      openAddFood({ date: viewedDate });
-    }
+    openAddFood(viewedDate === undefined ? {} : { date: viewedDate });
   }
 
   useEffect(() => {
