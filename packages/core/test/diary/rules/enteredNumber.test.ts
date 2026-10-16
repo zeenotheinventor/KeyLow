@@ -15,6 +15,18 @@ describe("enteredNumber", () => {
     expect(enteredNumber("12,5")).toBe(12.5);
   });
 
+  it.each(["1,200", "1,000", "1e3", "0x10", "Infinity", ".", ","])(
+    "should read %s as NaN, never as another number, so validateTargets refuses it",
+    (text) => {
+      const entered = enteredNumber(text);
+
+      expect(entered).toBeNaN();
+      expect(
+        validateTargets({ kcal: entered, protein_g: null, fat_g: null, carbs_g: null }).ok,
+      ).toBe(false);
+    },
+  );
+
   it("should read text that is not a number as NaN, which validateTargets refuses", () => {
     const text = enteredNumber("abc");
 

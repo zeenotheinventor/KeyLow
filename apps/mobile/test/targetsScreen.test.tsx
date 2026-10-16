@@ -216,6 +216,30 @@ describe("the Targets screen", () => {
       },
     );
 
+    it("should refuse 1,200 calories, which is not 1.2, and write nothing", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+
+      await user.clear(calories());
+      await user.type(calories(), "1,200");
+      await user.press(save());
+
+      expect(save()).toBeDisabled();
+      expect(diaryBackend.saves).toHaveLength(0);
+    });
+
+    it("should refuse 1,200 in a macro, and write nothing", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+
+      await user.clear(protein());
+      await user.type(protein(), "1,200");
+      await user.press(save());
+
+      expect(save()).toBeDisabled();
+      expect(diaryBackend.saves).toHaveLength(0);
+    });
+
     it("should ask for calories when the field is cleared, and disable Save", async () => {
       const user = userEvent.setup();
       await renderLoadedTargets();

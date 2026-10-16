@@ -321,6 +321,37 @@ describe("QuickAddForm", () => {
         expect(addButton()).toBeDisabled();
       });
 
+      it("should keep Add off and hand over nothing for 1,200 calories, which is not 1.2", async () => {
+        const { user, onSubmit } = await renderCreate();
+
+        await user.type(calories(), "1,200");
+        await user.press(addButton());
+
+        expect(addButton()).toBeDisabled();
+        expect(onSubmit).not.toHaveBeenCalled();
+      });
+
+      it("should keep Add off and hand over nothing for 1,200 in a macro", async () => {
+        const { user, onSubmit } = await renderCreate();
+        await user.type(calories(), "130");
+
+        await user.type(protein(), "1,200");
+        await user.press(addButton());
+
+        expect(addButton()).toBeDisabled();
+        expect(onSubmit).not.toHaveBeenCalled();
+      });
+
+      it("should hand over a decimal comma as a decimal point", async () => {
+        const { user, onSubmit } = await renderCreate();
+        await user.type(calories(), "130");
+        await user.type(protein(), "12,5");
+
+        await user.press(addButton());
+
+        expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ protein_g: 12.5 }));
+      });
+
       it("should stay off while the connection is lost", async () => {
         const { user } = await renderCreate({ isOnline: false });
         await user.type(calories(), "130");
