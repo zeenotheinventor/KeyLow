@@ -400,7 +400,13 @@ describe("the dashboard screen", () => {
       await renderDashboard();
       await screen.findByText("Thursday 15 October");
 
-      expect(screen.getByTestId("skeleton", hidden)).toHaveStyle({ opacity: 0 });
+      // The This week card may be a skeleton beside it, depending on how soon its reads answer, so the
+      // Today card's is found inside its own status, and every skeleton drawn must start clear.
+      const todays = screen.getByRole("status", { name: "Loading today's nutrition" });
+      expect(within(todays).getByTestId("skeleton", hidden)).toHaveStyle({ opacity: 0 });
+      for (const skeleton of screen.getAllByTestId("skeleton", hidden)) {
+        expect(skeleton).toHaveStyle({ opacity: 0 });
+      }
     });
   });
 
