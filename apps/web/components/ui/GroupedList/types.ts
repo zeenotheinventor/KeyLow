@@ -5,6 +5,11 @@ export type GroupedListProps = {
   title: string;
   /** Where the group comes from, written after the title, such as "UK CoFID". */
   source?: string;
+  /**
+   * The section's name when it should read other than the title, such as "Your recipes, values per serving"
+   * for the title "Your recipes" and its caption. The title still heads the section.
+   */
+  label?: string;
   /** Offers the rows that are not shown. Nothing is offered when `hiddenCount` is 0. */
   seeMore?: { hiddenCount: number; onClick: () => void };
   /**

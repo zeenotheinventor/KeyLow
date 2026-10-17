@@ -268,6 +268,25 @@ export const Search: Story = {
   render: () => <FoodRow {...searchChicken} />,
 };
 
+// A recipe in the add dialog's results: the chef's hat tile, the name with the match in bold, the serving, the
+// stats line of one serving and the add button. The row opens nothing yet, so it has no chevron.
+export const SearchRecipe: Story = {
+  render: () => (
+    <FoodRow
+      layout="search"
+      nameSegments={[
+        { text: "Chicken", matched: true },
+        { text: " and rice", matched: false },
+      ]}
+      caption="1 serving (275 g)"
+      energy="374"
+      macros={{ protein: "32", carbs: "43", fat: "8.1" }}
+      recipeRowName="Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams"
+      onAdd={() => undefined}
+    />
+  ),
+};
+
 export const SearchLongTitle: Story = {
   render: () => (
     <FoodRow
