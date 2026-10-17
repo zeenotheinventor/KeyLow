@@ -63,6 +63,7 @@ export function FoodRow({
   onSwipedChange,
   onPress,
   openLabel,
+  isLoggedRecipe = false,
   trailing,
 }: FoodRowProps) {
   const { isFirst } = useGroupedRowPosition();
@@ -123,6 +124,28 @@ export function FoodRow({
     isDiary || layout === "recent" || matched || (isRecipe && !isNameMatched)
       ? "body-strong"
       : "body";
+  const title = (
+    <Text
+      className={isLoggedRecipe ? `${titleClassName} shrink` : titleClassName}
+      numberOfLines={isLoggedRecipe ? 1 : 2}
+    >
+      {nameSegments.map((segment, index) => (
+        <Text
+          // The segments are cut from one name, so their order never changes.
+          key={index}
+          className={titleClassName}
+          variant={titleVariant(segment.matched)}
+        >
+          {segment.text}
+        </Text>
+      ))}
+      {brand === undefined ? null : (
+        <Text className={titleClassName} tone="muted">
+          {` · ${brand}`}
+        </Text>
+      )}
+    </Text>
+  );
   const rowContent = (
     <>
       {isDiary ? null : (
@@ -131,23 +154,17 @@ export function FoodRow({
         </View>
       )}
       <View className={textColumnClassName[layout ?? "classic"]}>
-        <Text className={titleClassName} numberOfLines={2}>
-          {nameSegments.map((segment, index) => (
-            <Text
-              // The segments are cut from one name, so their order never changes.
-              key={index}
-              className={titleClassName}
-              variant={titleVariant(segment.matched)}
-            >
-              {segment.text}
-            </Text>
-          ))}
-          {brand === undefined ? null : (
-            <Text className={titleClassName} tone="muted">
-              {` · ${brand}`}
-            </Text>
-          )}
-        </Text>
+        {isLoggedRecipe ? (
+          // The board draws a logged recipe's name on one line, after a bare 16 point chef's hat.
+          <View className="flex-row items-center gap-[6px]">
+            <View className="shrink-0">
+              <Icon name="ChefHat" size="sm" tone="muted" />
+            </View>
+            {title}
+          </View>
+        ) : (
+          title
+        )}
         {isLog && caption !== undefined ? (
           <Text numberOfLines={1} tone="muted" variant="caption">
             {caption}

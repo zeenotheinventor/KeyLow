@@ -3,6 +3,7 @@ import {
   describeEntryCaption,
   describeLoggedAmount,
   describeRecipeLoggedAmount,
+  describeRecipeLoggedRowName,
 } from "@keylow/core/copy";
 import { formatClockTime } from "@keylow/core/dates";
 import { formatCalories } from "@keylow/core/format";
@@ -35,7 +36,8 @@ function nameAndAmount(entry: LogEntry): { name: string; amount: string } {
 
 /**
  * What a diary `FoodRow` is told about a logged entry, every text written by core: the food's or recipe's
- * name (a quick add's label, or "Quick add"), the caption of the time and amount, the energy and the macros. An entry
+ * name (a quick add's label, or "Quick add"), the caption of the time and amount, the energy and the macros. A
+ * recipe entry also says it is a recipe and names its row in one sentence. An entry
  * with a macro it does not know says "Needs review" in the macros' place, as a food missing one does.
  */
 export function entryRowProps(entry: LogEntry, timeZone: string) {
@@ -45,6 +47,12 @@ export function entryRowProps(entry: LogEntry, timeZone: string) {
   const kcal = entry.nutrients.kcal;
 
   return {
+    isLoggedRecipe: entry.item_type === "recipe",
+    // Only a recipe's row is named by one sentence: a food's is named by what it holds.
+    openLabel:
+      entry.item_type === "recipe"
+        ? describeRecipeLoggedRowName(clockTime, entry.snapshot)
+        : undefined,
     nameSegments: [{ text: name, matched: false }],
     caption: describeEntryCaption(clockTime, amount),
     energy: kcal === null ? undefined : formatCalories(kcal),

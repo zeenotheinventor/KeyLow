@@ -175,6 +175,45 @@ export const Diary: Story = {
   args: { ...chickenBreast, layout: "diary", onDelete: () => undefined },
 };
 
+// A logged food with nothing to open: plain text with no chevron, and still swipe to delete.
+export const DiaryNothingToOpen: Story = {
+  args: { ...chickenBreast, layout: "diary", onDelete: () => undefined },
+  // The meta gives every story a press, and its inferred type does not let a story take it away in `args`.
+  render: (args) => <FoodRow {...args} onPress={undefined} />,
+};
+
+// A logged recipe as the diary draws it: a chef's hat before a one line name, the serving, and nothing to open.
+export const DiaryRecipe: Story = {
+  args: {
+    layout: "diary",
+    isLoggedRecipe: true,
+    nameSegments: [{ text: "Chicken and rice", matched: false }],
+    openLabel:
+      "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+    caption: "18:00 · 1 serving (275 g)",
+    energy: "374",
+    macros: { protein: "32", carbs: "43", fat: "8.1", description: "" },
+    onDelete: () => undefined,
+  },
+  render: (args) => <FoodRow {...args} onPress={undefined} />,
+};
+
+// A long recipe name stays on one line and ends in an ellipsis, beside the hat.
+export const DiaryRecipeLongName: Story = {
+  ...DiaryRecipe,
+  args: {
+    ...DiaryRecipe.args,
+    openLabel:
+      "18:00, Slow cooked chicken and basmati rice with roasted peppers and lemon, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+    nameSegments: [
+      {
+        text: "Slow cooked chicken and basmati rice with roasted peppers and lemon",
+        matched: false,
+      },
+    ],
+  },
+};
+
 // The row after a swipe left: the danger Delete action, 88 points wide.
 export const Swiped: Story = {
   args: { ...chickenBreast, layout: "diary", onDelete: () => undefined, startsSwiped: true },
