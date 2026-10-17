@@ -417,3 +417,93 @@ describe("a stacked row with buttons at its end", () => {
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });
 });
+
+describe("FoodRow search, for a recipe", () => {
+  const recipeRowName =
+    "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+  const nameSegments = [
+    { text: "Chicken", matched: true },
+    { text: " and rice", matched: false },
+  ];
+
+  function renderRecipe(props: SearchRowOverrides = {}) {
+    render(
+      <ul>
+        <FoodRow
+          layout="search"
+          nameSegments={nameSegments}
+          caption="1 serving (275 g)"
+          energy="374"
+          macros={{ ...macros, protein: "32", carbs: "43", fat: "8.1" }}
+          recipeRowName={recipeRowName}
+          onAdd={() => undefined}
+          {...props}
+        />
+      </ul>,
+    );
+  }
+
+  it("should be named by the sentence it is given", () => {
+    renderRecipe();
+
+    expect(screen.getByRole("listitem", { name: recipeRowName })).toBeTruthy();
+  });
+
+  it("should draw the chef's hat tile, and not the food tile", () => {
+    renderRecipe();
+
+    const row = screen.getByRole("listitem", { name: recipeRowName });
+
+    expect(row.querySelector("svg.lucide-chef-hat")?.getAttribute("class")).toContain("size-5");
+    expect(row.querySelector("svg.lucide-utensils")).toBeNull();
+  });
+
+  it("should write the matched letters of the name semibold and the rest regular", () => {
+    renderRecipe();
+
+    expect(screen.getByText("Chicken").className).toContain("font-semibold");
+    expect(screen.getByText("and rice", { exact: false }).className).toContain("font-normal");
+  });
+
+  it("should write the serving and the stats line as a food row does", () => {
+    renderRecipe();
+
+    expect(screen.getByText("1 serving (275 g)")).toBeTruthy();
+    expect(screen.getByText("374")).toBeTruthy();
+    expect(screen.getByText("32 P")).toBeTruthy();
+  });
+
+  it("should have only the plus to press, and no chevron, when it opens nothing", () => {
+    renderRecipe();
+
+    const row = screen.getByRole("listitem", { name: recipeRowName });
+
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+    expect(row.querySelector("svg.lucide-chevron-right")).toBeNull();
+  });
+
+  it("should name the plus for the recipe and its serving, and log on a press of it", () => {
+    const onAdd = vi.fn<() => void>();
+    renderRecipe({ onAdd });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: describeAddFood("Chicken and rice", "1 serving (275 g)"),
+      }),
+    );
+
+    expect(onAdd).toHaveBeenCalledOnce();
+  });
+
+  it("should ignore a press on the plus while it is off", () => {
+    const onAdd = vi.fn<() => void>();
+    renderRecipe({ onAdd, addDisabled: true });
+
+    const plus = screen.getByRole("button", { name: /^Add Chicken and rice/ });
+    fireEvent.click(plus);
+    fireEvent.keyDown(plus, { key: "Enter" });
+
+    expect(plus.getAttribute("aria-disabled")).toBe("true");
+    expect(onAdd).not.toHaveBeenCalled();
+  });
+});

@@ -2,6 +2,8 @@ import { describeAddFood } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { ChefHat, ChevronRight, Plus, Utensils } from "lucide-react";
 
+import { RecipeName } from "../RecipeName";
+import { RecipeTile } from "../RecipeTile";
 import { interactiveClasses } from "../rowStates";
 import { StatsLine } from "../StatsLine";
 
@@ -72,17 +74,26 @@ export function FoodLogRow({
 
   const content = (
     <>
-      {isSearch && (
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-small bg-surface-raised text-text-secondary"
-        >
-          <Utensils className="size-5" strokeWidth={iconStroke} />
-        </span>
-      )}
+      {isSearch &&
+        (isRecipe ? (
+          <RecipeTile />
+        ) : (
+          <span
+            aria-hidden
+            className="flex size-9 shrink-0 items-center justify-center rounded-small bg-surface-raised text-text-secondary"
+          >
+            <Utensils className="size-5" strokeWidth={iconStroke} />
+          </span>
+        ))}
       <span className={textColumnClasses[layout]}>
-        {isRecipe ? (
-          // The board draws a recipe's name on one line, after a 16 px chef's hat.
+        {isRecipe && isSearch ? (
+          // A recipe in the search is drawn as the library draws it: the chef's hat is the tile, and the name
+          // keeps its matched letters semibold.
+          <span className="line-clamp-2 text-body">
+            <RecipeName nameSegments={nameSegments} />
+          </span>
+        ) : isRecipe ? (
+          // The board draws a logged recipe's name on one line, after a 16 px chef's hat.
           <span className="flex min-w-0 items-center gap-[6px] text-body-strong">
             <ChefHat
               aria-hidden

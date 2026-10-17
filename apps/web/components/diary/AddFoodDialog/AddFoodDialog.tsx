@@ -35,7 +35,7 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
   const amountField = useRef<HTMLInputElement>(null);
 
   const draft = usePortionDraft(foodId);
-  const addServing = useAddServing(resolveLoggedAt);
+  const { addHit, addRecipe } = useAddServing(resolveLoggedAt);
   const isPortionReady = draft.status === "ready";
 
   // The cursor starts where the step's work is: in the search, and in the amount once a food is chosen.
@@ -111,7 +111,8 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
             onTimeChange={chooseTime}
             searchRef={searchField}
             onOpenFood={setFoodId}
-            onAddServing={addServing}
+            onAddServing={addHit}
+            onAddRecipeServing={addRecipe}
             onQuickAdd={onQuickAdd}
           />
         ) : (

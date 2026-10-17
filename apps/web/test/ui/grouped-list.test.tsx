@@ -19,6 +19,23 @@ describe("GroupedList", () => {
     expect(screen.getByRole("region", { name: "Common foods" })).toBeTruthy();
   });
 
+  it("should be named by its label, when it has one, and still be headed by its title", () => {
+    render(
+      <GroupedList
+        title="Your recipes"
+        source="Per serving"
+        label="Your recipes, values per serving"
+      >
+        <ListRow title="Chicken and rice" />
+      </GroupedList>,
+    );
+
+    expect(screen.getByRole("region", { name: "Your recipes, values per serving" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { level: 2, name: /^Your recipes\s*· Per serving$/ }),
+    ).toBeTruthy();
+  });
+
   it("should head the section with a level two heading", () => {
     render(
       <GroupedList title="Common foods">

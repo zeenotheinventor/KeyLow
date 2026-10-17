@@ -64,13 +64,16 @@ type FoodLogRowContent = {
   brand?: string | undefined;
   /** The energy, already formatted, in kcal. Leave it out when the food has none. */
   energy?: string | undefined;
-  macros?: FoodRowMacros | undefined;
+  /** The three macros. The food log rows read the row's own name aloud, so a `description` is not needed. */
+  macros?: (FoodRowMacroValues & { description?: string | undefined }) | undefined;
   /** The line under the name: the time and amount ("08:05 · 50 g") or the serving ("1 breast (150 g)"). It is one line. */
   caption?: string | undefined;
   /**
    * Makes a `stacked` row a logged recipe's: a chef's hat before the name, which stays on one line, and
-   * this sentence as the row's name ("18:00, Chicken and rice, recipe, 1 serving 275 grams, ..."). Leave
-   * it out for a food.
+   * this sentence as the row's name ("18:00, Chicken and rice, recipe, 1 serving 275 grams, ..."). Makes a
+   * `search` row a recipe in the results: the chef's hat is its tile, the matched letters of the name are
+   * semibold and the rest regular, and the sentence names the row ("Chicken and rice, recipe, 1 serving 275
+   * grams, ..."). Leave it out for a food.
    */
   recipeRowName?: string | undefined;
   /** The food is missing a macro. The stats line says "Needs review" in place of the macros, and the add button gives way to a chevron. */

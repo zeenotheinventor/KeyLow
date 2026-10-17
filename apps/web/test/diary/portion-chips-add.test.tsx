@@ -49,6 +49,9 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     offError: null,
     localError: null,
   }),
+  // The recipes are the recipes tests' business: here the search finds nothing and nothing is logged.
+  useRecipeSearch: () => ({ recipes: [], isLoading: false, isDebouncing: false, error: null }),
+  useLogRecipeServing: () => ({ mutateAsync: () => Promise.reject(new Error("not used")) }),
   useFoodWithPortions: (id: string) => {
     const food = api.foods.get(id);
     return food === undefined

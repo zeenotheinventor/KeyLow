@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 export function GroupedList({
   title,
   source,
+  label,
   seeMore,
   headerSize = "default",
   notice,
@@ -18,7 +19,11 @@ export function GroupedList({
   const titleId = useId();
 
   return (
-    <section aria-labelledby={titleId} className={cn("flex flex-col gap-2", className)}>
+    <section
+      aria-label={label}
+      aria-labelledby={label === undefined ? titleId : undefined}
+      className={cn("flex flex-col gap-2", className)}
+    >
       <div
         className={cn(
           "flex items-center justify-between gap-2 px-1",

@@ -4,6 +4,7 @@ export { buildLogEntry, buildQuickEntry } from "./buildLogEntry";
 export type { BuildLogEntryInput, BuildQuickEntryInput } from "./buildLogEntry";
 export { buildRecipeLogEntry } from "./buildRecipeLogEntry";
 export type { BuildRecipeLogEntryInput } from "./buildRecipeLogEntry";
+export { canLogRecipe } from "./canLogRecipe";
 export { previewRecipeAmount, recipeAmountStart } from "./previewRecipeAmount";
 export type { RecipeAmountValues } from "./previewRecipeAmount";
 export { recomputeRecipeEntry } from "./recomputeRecipeEntry";

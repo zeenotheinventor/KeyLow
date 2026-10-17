@@ -20,7 +20,11 @@ import {
 import { SearchX, Zap } from "lucide-react";
 import { useState } from "react";
 
-import type { SearchStepProps } from "./types";
+import { RecipeLogGroup } from "./RecipeLogGroup";
+import { NO_RECIPES, useRecipesToLog } from "./useRecipesToLog";
+
+import type { LogSearchStepProps, SearchStepProps } from "./types";
+import type { RecipeSummary } from "@keylow/api-client";
 import type { FoodSearchGroupKey, FoodSearchGroupLimits } from "@keylow/core/search";
 
 import { InlineStatus } from "@/components/foods/InlineStatus";
@@ -58,11 +62,33 @@ function limitsFor(
  * The add dialog's first step: the search field with the Time field beside it, and under them the foods
  * found, each with the serving its one-tap plus logs. The rows keep the database's ranking order. A row
  * shows the food's serving and the values for that serving, a food with a missing value shows Needs review
- * and a chevron in place of the plus, and a press on the row goes to the portion step. In `ingredient` mode,
- * a recipe's, there is no Time field, no plus and no Quick add row: a press on a row is the only way on.
+ * and a chevron in place of the plus, and a press on the row goes to the portion step. The user's recipes
+ * that match come first, in their own group, each with a plus that logs one serving. In `ingredient` mode,
+ * a recipe's, there is no Time field, no plus, no Quick add row and no recipes (a recipe is not an
+ * ingredient of itself): a press on a row is the only way on.
  */
 export function SearchStep(props: SearchStepProps) {
-  const { query, onQueryChange, searchRef, onOpenFood } = props;
+  return props.mode === "ingredient" ? (
+    <SearchStepView {...props} recipes={NO_RECIPES} isSearchingRecipes={false} />
+  ) : (
+    <LogSearchStep {...props} />
+  );
+}
+
+// Only here are the recipes searched, so an ingredient search never asks for them.
+function LogSearchStep(props: LogSearchStepProps) {
+  const { recipes, isSearching } = useRecipesToLog(props.query);
+
+  return <SearchStepView {...props} recipes={recipes} isSearchingRecipes={isSearching} />;
+}
+
+type RecipeResults = {
+  recipes: readonly RecipeSummary[];
+  isSearchingRecipes: boolean;
+};
+
+function SearchStepView(props: SearchStepProps & RecipeResults) {
+  const { query, onQueryChange, searchRef, onOpenFood, recipes } = props;
   const isOnline = useIsOnline();
   const trimmedQuery = query.trim();
   const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
@@ -72,7 +98,7 @@ export function SearchStep(props: SearchStepProps) {
   const [expansion, setExpansion] = useState<Expansion>({ query: "", groups: [] });
 
   const isSearchable = trimmedQuery.length >= MIN_SEARCH_LENGTH;
-  const isSearching = isDebouncing || isLoadingLocal;
+  const isSearching = isDebouncing || isLoadingLocal || props.isSearchingRecipes;
   const expanded = expansion.query === trimmedQuery ? expansion.groups : [];
   const groups = groupFoodSearchResults(local, { limit: limitsFor(expanded, local.length) });
 
@@ -103,7 +129,7 @@ export function SearchStep(props: SearchStepProps) {
         <ErrorState size="section" title={SEARCH_FAILED_WEB.title} body={SEARCH_FAILED_WEB.body} />
       );
     }
-    if (isSearching && local.length === 0) {
+    if (isSearching && local.length === 0 && recipes.length === 0) {
       return (
         <>
           <InlineStatus>{SEARCH_STATUS.searchingYourFoods}</InlineStatus>
@@ -111,7 +137,7 @@ export function SearchStep(props: SearchStepProps) {
         </>
       );
     }
-    if (local.length === 0) {
+    if (local.length === 0 && recipes.length === 0) {
       return (
         <EmptyState
           icon={SearchX}
@@ -129,6 +155,14 @@ export function SearchStep(props: SearchStepProps) {
         aria-busy={isSearching || undefined}
         className={cn("flex flex-col gap-3", isSearching && "opacity-50")}
       >
+        {props.mode !== "ingredient" && recipes.length > 0 && (
+          <RecipeLogGroup
+            recipes={recipes}
+            query={trimmedQuery}
+            addDisabled={!isOnline}
+            onAdd={props.onAddRecipeServing}
+          />
+        )}
         {groups.map((group) => {
           const { title, caption } = SEARCH_GROUP_HEADINGS[group.key];
 
