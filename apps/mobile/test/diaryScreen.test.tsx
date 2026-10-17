@@ -20,6 +20,7 @@ import {
   diaryClient,
   foodEntry,
   noTargets,
+  recipeEntry,
   requestsTo,
   resetDiaryBackend,
   sampleDay,
@@ -185,6 +186,59 @@ describe("the diary screen", () => {
       expect(
         screen.getByRole("button", { name: /^Oil, olive, 12:40 · 2 tbsp \(30 ml\)/ }),
       ).toBeOnTheScreen();
+    });
+
+    describe("a recipe entry in the day", () => {
+      // The golden serving at 18:00 London on the day of the boards: 374.2 kcal and 275 g.
+      beforeEach(() => {
+        diaryBackend.entries = [
+          ...sampleDay(),
+          recipeEntry({ date: "2026-10-15", utcTime: "17:00" }),
+        ];
+      });
+
+      it("should list every entry of the day once, the recipe among them", async () => {
+        await renderLoadedDiary();
+
+        for (const name of [
+          /^Porridge oats, /,
+          /^Semi-skimmed milk, /,
+          /^Banana, /,
+          /^Chicken breast, grilled, /,
+          /^Basmati rice, boiled, /,
+          /^Meal deal crisps, /,
+          /^Greek yoghurt 0% fat, /,
+          /^Chicken and rice, /,
+        ]) {
+          expect(screen.getAllByLabelText(name)).toHaveLength(1);
+        }
+        expect(screen.getByLabelText("18:00, 1 food")).toBeOnTheScreen();
+      });
+
+      it("should write the recipe's name, then the time and the serving it came to", async () => {
+        await renderLoadedDiary();
+
+        const row = within(screen.getByLabelText("18:00, 1 food")).getByLabelText(
+          /^Chicken and rice, 18:00 · 1 serving \(275 g\), 374 kilocalories/,
+        );
+
+        expect(within(row).getByText("Chicken and rice")).toBeOnTheScreen();
+        expect(within(row).getByText("18:00 · 1 serving (275 g)")).toBeOnTheScreen();
+      });
+
+      it("should be plain text, not a button, since there is nothing to open yet", async () => {
+        await renderLoadedDiary();
+
+        expect(screen.queryByRole("button", { name: /^Chicken and rice, / })).not.toBeOnTheScreen();
+      });
+
+      it("should add the serving to the day's bars: 1,413 of 2,200 kcal", async () => {
+        await renderLoadedDiary();
+
+        expect(strip()).toHaveAccessibleName(
+          "Targets. Calories: 1,413 of 2,200 kilocalories. Protein: 118 of 160 grams. Carbohydrate: 168 of 220 grams. Fat: 27 of 70 grams",
+        );
+      });
     });
 
     it("should mark the current hour as now, and no other", async () => {

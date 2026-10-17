@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { useDiaryDay } from "../../src/hooks/useDiaryDay";
 import { useDiaryWeek } from "../../src/hooks/useDiaryWeek";
@@ -71,30 +71,40 @@ describe("useLogRecipeServing", () => {
     expect(requests.inserts).toBe(0);
   });
 
-  it("should write no query data itself, not the day and not the entry", async () => {
-    const fake = installDiaryFake(server, [foodEntryRow({ local_date: RECIPE_DAY })]);
+  it("should put the stored row in its day at once, in time order, while the days are still being read again", async () => {
+    const breakfast = foodEntryRow({ local_date: RECIPE_DAY });
+    const fake = installDiaryFake(server, [breakfast]);
     answerRecipeInsert("stored");
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(
       () => ({ day: useDiaryDay(RECIPE_DAY), log: useLogRecipeServing() }),
-      {
-        wrapper,
-      },
+      { wrapper },
     );
     await waitFor(() => {
       expect(result.current.day.isSuccess).toBe(true);
     });
-    const dayBefore = queryClient.getQueryData(keys.diary.day(RECIPE_DAY));
-    const writeToCache = vi.spyOn(queryClient, "setQueryData");
-    const writeToCaches = vi.spyOn(queryClient, "setQueriesData");
     const releaseReads = fake.holdReads();
 
-    await act(() => result.current.log.mutateAsync(servingInput));
+    const stored = await act(() => result.current.log.mutateAsync(servingInput));
 
-    expect(writeToCache).not.toHaveBeenCalled();
-    expect(writeToCaches).not.toHaveBeenCalled();
-    expect(queryClient.getQueryData(keys.diary.day(RECIPE_DAY))).toBe(dayBefore);
+    expect(queryClient.getQueryData(keys.diary.day(RECIPE_DAY))).toMatchObject({
+      entries: [{ id: breakfast.id }, { id: stored.id, item_type: "recipe" }],
+    });
     releaseReads();
+  });
+
+  it("should put the stored row in the entry that is open on its own", async () => {
+    installDiaryFake(server);
+    answerRecipeInsert("stored");
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData(keys.diary.entry(recipeEntryRow().id), null);
+    const { result } = renderHook(() => useLogRecipeServing(), { wrapper });
+
+    await act(() => result.current.mutateAsync(servingInput));
+
+    expect(queryClient.getQueryData(keys.diary.entry(recipeEntryRow().id))).toEqual(
+      recipeEntryRow(),
+    );
   });
 
   it("should refresh the day and the week once the insert settles", async () => {

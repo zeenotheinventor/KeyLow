@@ -5,7 +5,15 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { oliveOil } from "./portionFoods";
-import { diaryDay, noTargets, overTargetDay, quickEntry, sampleDay, targets } from "./support";
+import {
+  diaryDay,
+  noTargets,
+  overTargetDay,
+  quickEntry,
+  recipeEntry,
+  sampleDay,
+  targets,
+} from "./support";
 
 import type { CopiedDay, DiaryDay, DiaryWeekDay, LogEntry, Targets } from "@keylow/api-client";
 
@@ -407,6 +415,90 @@ describe("the diary screen", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add food at 08:00" }));
 
       expect(openAddFood).toHaveBeenCalledExactlyOnceWith({ date: "2026-10-14", time: "08:00" });
+    });
+  });
+
+  describe("a recipe entry in the day", () => {
+    // The golden serving at 18:00 on the day of the boards: 374.2 kcal and 275 g.
+    function showDayWithRecipe() {
+      showDay(TODAY, [...sampleDay(TODAY), recipeEntry({ date: TODAY, time: "18:00" })]);
+    }
+
+    it("should list every entry of the day once, the recipe among them", () => {
+      showDayWithRecipe();
+      renderDiary();
+
+      for (const name of [
+        "Porridge oats",
+        "Semi-skimmed milk",
+        "Banana",
+        "Chicken breast, grilled",
+        "Basmati rice, boiled",
+        "Meal deal crisps",
+        "Greek yoghurt 0% fat",
+        "Chicken and rice",
+      ]) {
+        expect(screen.getAllByRole("row", { name: new RegExp(name) })).toHaveLength(1);
+      }
+      expect(screen.getByRole("group", { name: "18:00, 1 food" })).toBeTruthy();
+    });
+
+    it("should write the recipe's name with the time and the serving it came to, on the table row", () => {
+      showDayWithRecipe();
+      renderDiary();
+
+      const row = within(tableOf("18:00")).getByRole("row", { name: /Chicken and rice/ });
+
+      expect(within(row).getByText("18:00 · 1 serving (275 g)")).toBeTruthy();
+      expect(within(row).getByText("374")).toBeTruthy();
+    });
+
+    it("should write the same on the stacked row, as plain text with no button", () => {
+      showDayWithRecipe();
+      renderDiary();
+
+      const stacked = within(screen.getByRole("region", { name: "Foods at 18:00" })).getByRole(
+        "list",
+      );
+
+      expect(within(stacked).getByText("Chicken and rice")).toBeTruthy();
+      expect(within(stacked).getByText("18:00 · 1 serving (275 g)")).toBeTruthy();
+      expect(within(stacked).queryByRole("button")).toBeNull();
+    });
+
+    it("should add the serving to the day's bars: 1,413 of 2,200 kcal", () => {
+      showDayWithRecipe();
+      renderDiary();
+
+      expect(strip().getAttribute("aria-label")).toContain("Calories: 1,413 of 2,200 kilocalories");
+    });
+
+    it("should open nothing when its row is pressed, and offer no Edit", () => {
+      showDayWithRecipe();
+      renderDiary();
+      const table = within(tableOf("18:00"));
+      const stacked = within(screen.getByRole("region", { name: "Foods at 18:00" })).getByRole(
+        "list",
+      );
+
+      fireEvent.click(table.getByRole("row", { name: /Chicken and rice/ }));
+      fireEvent.click(within(stacked).getByText("Chicken and rice"));
+
+      expect(openEditEntry).not.toHaveBeenCalled();
+      expect(table.queryByRole("button", { name: "Edit Chicken and rice" })).toBeNull();
+    });
+
+    it("should still delete it from its Delete button, with the entry the diary holds", () => {
+      showDayWithRecipe();
+      renderDiary();
+      const recipe = entryOnShow(7);
+
+      fireEvent.click(
+        within(tableOf("18:00")).getByRole("button", { name: "Delete Chicken and rice" }),
+      );
+
+      expect(recipe?.item_type).toBe("recipe");
+      expect(deleteEntry.mutateAsync).toHaveBeenCalledExactlyOnceWith(recipe);
     });
   });
 

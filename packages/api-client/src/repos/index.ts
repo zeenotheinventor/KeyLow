@@ -3,7 +3,14 @@ export { getDiaryDay, getDiaryWeek, getLogEntry, listCompleteDays, listRecentFoo
 export type { DiaryDay, DiaryWeekDay, RecentFood } from "./diary";
 export { CopyDayPartialWriteError, copyDay, undoCopyDay } from "./diaryCopy";
 export type { CopiedDay, CopyDayInput } from "./diaryCopy";
-export type { DayLog, DayTotals, FoodLogEntry, LogEntry, QuickLogEntry } from "./diarySchemas";
+export type {
+  DayLog,
+  DayTotals,
+  FoodLogEntry,
+  LogEntry,
+  QuickLogEntry,
+  RecipeLogEntry,
+} from "./diarySchemas";
 export { setDayComplete } from "./dayLogs";
 export {
   logFood,
@@ -47,7 +54,7 @@ export type {
   RecipeSummary,
 } from "./recipes";
 export { logRecipe } from "./recipeEntries";
-export type { LogRecipeInput, RecipeLogEntry } from "./recipeEntries";
+export type { LogRecipeInput } from "./recipeEntries";
 export { applyRecipeRefresh } from "./recipeWrites";
 export { previewRecipeRefresh } from "./recipes";
 export type { RecipeRefreshDiff } from "./recipes";

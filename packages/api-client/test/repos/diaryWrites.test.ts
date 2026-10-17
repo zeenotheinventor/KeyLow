@@ -1,4 +1,4 @@
-import { buildFoodSnapshot, entryQuantityChange } from "@keylow/core/diary";
+import { buildFoodSnapshot, entryQuantityChange, recomputeRecipeEntry } from "@keylow/core/diary";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { http } from "msw";
 import { setupServer } from "msw/node";
@@ -15,6 +15,9 @@ import {
 import { createTestClient } from "../createTestClient";
 import { FOOD_ID, foodEntryRow, quickEntryRow } from "../support/diary";
 import { REST_URL, foodRow, portionRow, postgrestError, postgrestRows } from "../support/postgrest";
+import { RECIPE_DAY, RECIPE_ID, goldenYieldRecipe, recipeEntryRow } from "../support/recipeEntries";
+
+import type { BuildRecipeLogEntryInput } from "@keylow/core/diary";
 
 type Recorded = { method: string; url: URL; body: unknown };
 
@@ -626,6 +629,162 @@ describe("updateLogEntry", () => {
       await expect(
         // @ts-expect-error A quick add takes its values or a time only; the run time guard is for callers past the types.
         updateLogEntry(createTestClient(), { entry: quickEntryRow(), useCurrentFoodData: true }),
+      ).rejects.toThrow(RangeError);
+      expect(recorded).toEqual([]);
+    });
+  });
+
+  describe("a recipe entry", () => {
+    const loggedAt = "2026-10-15T17:00:00.000Z";
+    const golden = (amount: Pick<BuildRecipeLogEntryInput, "quantity" | "unit">) =>
+      recipeEntryRow({
+        recipe: goldenYieldRecipe,
+        ...amount,
+        loggedAt,
+        localDate: RECIPE_DAY,
+      });
+    const oneServing = golden({ quantity: 1, unit: "serving" });
+
+    it("should store the amounts the golden recipe gives: 561.3 kcal for 1.5 servings, 408.2 kcal for 300 g", async () => {
+      answerEntryWrites([oneServing]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        amount: { quantity: 1.5, unit: "serving" },
+      });
+      await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        amount: { quantity: 300, unit: "g" },
+      });
+
+      const [servings, grams] = writesTo("food_log_entries").map(({ body }) =>
+        z.object({ nutrients: z.object({ kcal: z.number() }) }).parse(body),
+      );
+      expect(oneServing.nutrients.kcal).toBeCloseTo(374.2, 1);
+      expect(servings?.nutrients.kcal).toBeCloseTo(561.3, 1);
+      expect(grams?.nutrients.kcal).toBeCloseTo(408.2, 1);
+    });
+
+    it("should write exactly what core's recomputeRecipeEntry gives from the entry's own snapshot", async () => {
+      answerEntryWrites([oneServing]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        amount: { quantity: 1.5, unit: "serving" },
+      });
+
+      const rebuilt = recomputeRecipeEntry(oneServing, { quantity: 1.5, unit: "serving" });
+      expect(bodyOfUpdate()).toEqual({
+        quantity: 1.5,
+        unit: "serving",
+        resolved_grams: (1.5 * 1100) / 4,
+        snapshot: rebuilt.snapshot,
+        nutrients: rebuilt.nutrients,
+      });
+    });
+
+    it("should keep the frozen recipe in the snapshot, whatever the live recipe is now", async () => {
+      // No handler for the recipes tables: a read of the live recipe would fail the run.
+      answerEntryWrites([oneServing]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        amount: { quantity: 300, unit: "g" },
+      });
+
+      expect(bodyOfUpdate()).toMatchObject({
+        snapshot: {
+          ref: RECIPE_ID,
+          name: oneServing.snapshot.name,
+          servings: 4,
+          yieldGrams: 1100,
+          effectiveGrams: 1100,
+          total: oneServing.snapshot.total,
+          quantity: 300,
+          unit: "g",
+        },
+      });
+    });
+
+    it("should write only columns the update grant allows, never the recipe id", async () => {
+      answerEntryWrites([oneServing]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        amount: { quantity: 2, unit: "serving" },
+        time: { loggedAt: "2026-10-15T18:30:00.000Z", timeZone: "UTC" },
+      });
+
+      expect(Object.keys(bodyOfUpdate()).filter((key) => !grantedColumns.includes(key))).toEqual(
+        [],
+      );
+      const [write] = writesTo("food_log_entries");
+      expect(write?.method).toBe("PATCH");
+      expect(write?.url.searchParams.get("id")).toBe(`eq.${oneServing.id}`);
+      expect(write?.url.searchParams.get("deleted_at")).toBe("is.null");
+    });
+
+    it("should change the time alone and leave the amount columns out", async () => {
+      answerEntryWrites([oneServing]);
+
+      await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        time: { loggedAt: "2026-10-16T00:15:00.000Z", timeZone: "UTC" },
+      });
+
+      expect(bodyOfUpdate()).toEqual({
+        logged_at: "2026-10-16T00:15:00.000Z",
+        local_date: "2026-10-16",
+      });
+    });
+
+    it("should return the stored recipe row", async () => {
+      const stored = golden({ quantity: 1.5, unit: "serving" });
+      answerEntryWrites([stored]);
+
+      expect(
+        await updateLogEntry(createTestClient(), {
+          entry: oneServing,
+          amount: { quantity: 1.5, unit: "serving" },
+        }),
+      ).toEqual(stored);
+    });
+
+    it("should throw a RangeError without asking, and without the amount in the message, for a negative amount", async () => {
+      answerEntryWrites([oneServing]);
+
+      const failure = await updateLogEntry(createTestClient(), {
+        entry: oneServing,
+        amount: { quantity: -7.25, unit: "serving" },
+      }).catch((error: unknown) => error);
+
+      expect(failure).toBeInstanceOf(RangeError);
+      expect(failure).toHaveProperty(
+        "message",
+        "Could not update the entry: the amount or the recipe is not valid",
+      );
+      expect(recorded).toEqual([]);
+    });
+
+    it("should throw without asking for the current food data, which a recipe entry has no counterpart of", async () => {
+      answerEntryWrites([oneServing]);
+
+      await expect(
+        // @ts-expect-error There is no "update to the current recipe"; the run time guard is for callers past the types.
+        updateLogEntry(createTestClient(), { entry: oneServing, useCurrentFoodData: true }),
+      ).rejects.toThrow(RangeError);
+      expect(recorded).toEqual([]);
+    });
+
+    it("should throw without asking for quick values on a recipe entry", async () => {
+      answerEntryWrites([oneServing]);
+
+      await expect(
+        // @ts-expect-error A recipe entry has no quick values; the run time guard is for callers past the types.
+        updateLogEntry(createTestClient(), {
+          entry: oneServing,
+          quick: { kcal: 10, protein_g: null, carbs_g: null, fat_g: null, label: null },
+        }),
       ).rejects.toThrow(RangeError);
       expect(recorded).toEqual([]);
     });

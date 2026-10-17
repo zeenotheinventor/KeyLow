@@ -1,4 +1,6 @@
 import { buildRecipeLogEntry } from "@keylow/core/diary";
+import { computeRecipe } from "@keylow/core/recipes";
+import { buildChickenAndRiceRecipe } from "@keylow/core/testing";
 
 import { RECIPE_ID, recipeSummaryRow } from "./recipes";
 
@@ -6,6 +8,18 @@ import type { BuildRecipeLogEntryInput } from "@keylow/core/diary";
 
 /** The recipe the entry tests log: a four serving recipe with no yield, so its cooked weight is its raw weight. */
 export const loggableRecipe = recipeSummaryRow();
+
+/** The golden recipe with its cooked weight measured: 1,100 g in four servings, so a serving is 275 g and 374.2 kcal. */
+const goldenRecipe = buildChickenAndRiceRecipe({ yieldGrams: 1100 });
+export const goldenYieldRecipe = {
+  ...recipeSummaryRow(),
+  yield_grams: 1100,
+  computed: computeRecipe({
+    servings: goldenRecipe.servings,
+    yieldGrams: goldenRecipe.yieldGrams,
+    ingredients: goldenRecipe.ingredients,
+  }),
+};
 
 export const RECIPE_DAY = "2026-10-15";
 

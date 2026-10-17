@@ -12,6 +12,7 @@ import {
   createDiaryQueryClient,
   diaryBackend,
   diaryClient,
+  recipeEntry,
   resetDiaryBackend,
   sampleDay,
 } from "./support/diaryBackend";
@@ -116,5 +117,15 @@ describe("tapping a food in the diary", () => {
     await user.press(screen.getByRole("button", { name: /^Chicken breast, grilled/ }));
 
     expect(routerMock.push).toHaveBeenCalledWith(`/entry/${idOfEntry(CHICKEN_INDEX)}`);
+  });
+
+  it("should open nothing when a recipe entry is pressed, and not fail", async () => {
+    diaryBackend.entries = [...sampleDay(), recipeEntry({ date: "2026-10-15", utcTime: "17:00" })];
+    const user = await renderLoadedDiary();
+
+    await user.press(screen.getByLabelText(/^Chicken and rice, 18:00/));
+
+    expect(routerMock.push).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/^Chicken and rice, 18:00/)).toBeOnTheScreen();
   });
 });

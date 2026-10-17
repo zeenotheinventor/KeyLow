@@ -3,7 +3,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { diaryDay, foodEntry, quickEntry } from "./support";
+import { diaryDay, foodEntry, quickEntry, recipeEntry } from "./support";
 import { makeFood } from "../foods/support";
 
 import type { DiaryDay, EntryUpdate, LogEntry } from "@keylow/api-client";
@@ -114,6 +114,18 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   onlineManager.setOnline(true);
+});
+
+describe("the edit entry dialog for a recipe entry", () => {
+  it("should draw nothing and close at once, since a recipe entry has no edit dialog yet", async () => {
+    const { onClose } = renderDialog(recipeEntry({ date: TODAY, time: "18:00" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+    expect(api.updateEntry.mutateAsync).not.toHaveBeenCalled();
+  });
 });
 
 describe("the edit entry dialog for a logged food", () => {

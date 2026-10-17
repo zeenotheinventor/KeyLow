@@ -1,10 +1,12 @@
-import type { PostgrestError } from "@supabase/supabase-js";
+import type { DiaryInsert } from "./diarySchemas";
+import type { Database } from "../database.types";
+import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 import type { z } from "zod";
 
 // The diary holds health data. Nothing in these helpers puts a value of an entry, a note or a total
 // in an error: a failure names the action, a row id and the field paths, never what the row held.
 
-/** The `food_log_entries` columns a diary read returns. `user_id`, `recipe_id` and `deleted_at` are left out. */
+/** The `food_log_entries` columns a diary read returns. `user_id` and `deleted_at` are left out. */
 export const ENTRY_COLUMNS = [
   "id",
   "local_date",
@@ -19,7 +21,24 @@ export const ENTRY_COLUMNS = [
   "snapshot",
   "nutrients",
   "kcal",
+  "recipe_id",
 ].join(",");
+
+/**
+ * Starts the insert of an entry of any kind. Each case narrows the union so it type-checks against the
+ * generated insert type, and all three give the same builder, so the caller chains its own `select`.
+ */
+export function insertDiaryEntry(client: SupabaseClient<Database>, entry: DiaryInsert) {
+  const table = client.from("food_log_entries");
+  switch (entry.item_type) {
+    case "food":
+      return table.insert(entry);
+    case "quick":
+      return table.insert(entry);
+    case "recipe":
+      return table.insert(entry);
+  }
+}
 
 export const repoError = (action: string, cause: PostgrestError) =>
   new Error(`Could not ${action}: ${cause.message}`, { cause });

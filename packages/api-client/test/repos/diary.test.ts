@@ -10,8 +10,9 @@ import {
   listRecentFoods,
 } from "../../src/repos/diary";
 import { createTestClient } from "../createTestClient";
-import { FOOD_ID, dayLogRow, dayTotalsRow, foodEntryRow, quickEntryRow } from "../support/diary";
+import { dayLogRow, dayTotalsRow, foodEntryRow, quickEntryRow } from "../support/diary";
 import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
+import { RECIPE_DAY, RECIPE_ID, recipeEntryRow } from "../support/recipeEntries";
 
 const recorded: URL[] = [];
 
@@ -106,13 +107,74 @@ describe("getDiaryDay", () => {
     expect(recorded).toEqual([]);
   });
 
-  it("should name item_type when a row is a recipe, which the diary does not read until M4", async () => {
-    // Recipes in the diary are M4 (KEY-3 scope): until then a `recipe` row is a shape the read
-    // refuses loudly instead of dropping it, so a day never silently loses an entry.
-    const recipe = { ...foodEntryRow(), item_type: "recipe", food_id: null, recipe_id: FOOD_ID };
-    answerWith({ entries: [recipe] });
+  it("should read a day holding a food, a quick add and a recipe entry in timeline order, all three parsed", async () => {
+    const breakfast = foodEntryRow({ logged_at: "2026-10-15T08:30:00+00:00" });
+    const dinner = recipeEntryRow();
+    const cake = quickEntryRow({ logged_at: "2026-10-15T15:00:00+00:00" });
+    answerWith({ entries: [breakfast, dinner, cake], dayTotals: [dayTotalsRow()] });
 
-    await expect(getDiaryDay(createTestClient(), "2026-10-15")).rejects.toThrow(/item_type/);
+    const day = await getDiaryDay(createTestClient(), RECIPE_DAY);
+
+    expect(day.entries).toEqual([breakfast, dinner, cake]);
+    expect(day.entries.map(({ item_type }) => item_type)).toEqual(["food", "recipe", "quick"]);
+  });
+
+  it("should keep the recipe id and the frozen recipe snapshot of a recipe entry", async () => {
+    const dinner = recipeEntryRow();
+    answerWith({ entries: [dinner] });
+
+    const [entry] = (await getDiaryDay(createTestClient(), RECIPE_DAY)).entries;
+
+    expect(entry).toMatchObject({
+      item_type: "recipe",
+      recipe_id: RECIPE_ID,
+      food_id: null,
+      snapshot: { kind: "recipe", ref: RECIPE_ID, name: "Chicken and rice", servings: 4 },
+    });
+  });
+
+  it("should ask for the recipe_id column, so a recipe entry parses", async () => {
+    answerWith({});
+
+    await getDiaryDay(createTestClient(), RECIPE_DAY);
+
+    const [request] = requestsTo("food_log_entries");
+    expect(request?.searchParams.get("select")?.split(",")).toContain("recipe_id");
+  });
+
+  it("should read a food row that carries a null recipe_id as the food it always was", async () => {
+    const breakfast = foodEntryRow();
+    answerWith({ entries: [{ ...breakfast, recipe_id: null }] });
+
+    const day = await getDiaryDay(createTestClient(), RECIPE_DAY);
+
+    expect(day.entries).toEqual([breakfast]);
+  });
+
+  it("should name the id and the field paths only when a recipe entry does not parse", async () => {
+    const dinner = recipeEntryRow();
+    answerWith({
+      entries: [{ ...dinner, snapshot: { ...dinner.snapshot, name: 9, servings: "four" } }],
+    });
+
+    let message = "";
+    try {
+      await getDiaryDay(createTestClient(), RECIPE_DAY);
+    } catch (error) {
+      message = error instanceof Error ? error.message : "";
+    }
+
+    expect(message).toContain(dinner.id);
+    expect(message).toContain("snapshot.name");
+    expect(message).toContain("snapshot.servings");
+    expect(message).not.toContain("four");
+    expect(message).not.toContain("Chicken and rice");
+  });
+
+  it("should still refuse a row whose item_type is not one of the three kinds", async () => {
+    answerWith({ entries: [{ ...foodEntryRow(), item_type: "meal" }] });
+
+    await expect(getDiaryDay(createTestClient(), RECIPE_DAY)).rejects.toThrow(/item_type/);
   });
 
   it("should throw an error that names the failed read when the database refuses", async () => {
@@ -353,6 +415,13 @@ describe("getLogEntry", () => {
     const found = await getLogEntry(createTestClient(), entry.id);
 
     expect(found).toEqual(entry);
+  });
+
+  it("should return a recipe entry, whole", async () => {
+    const dinner = recipeEntryRow();
+    answerWith({ entries: [dinner] });
+
+    expect(await getLogEntry(createTestClient(), dinner.id)).toEqual(dinner);
   });
 
   it("should ask for the entry by its id among the live entries", async () => {

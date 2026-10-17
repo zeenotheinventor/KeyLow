@@ -1,4 +1,9 @@
-import { foodLogEntryInsertSchema, quickLogEntryInsertSchema } from "@keylow/core/diary";
+import {
+  foodLogEntryInsertSchema,
+  logEntryInsertSchema,
+  quickLogEntryInsertSchema,
+  recipeLogEntryInsertSchema,
+} from "@keylow/core/diary";
 import { nutrientsSchema } from "@keylow/core/schemas";
 import { z } from "zod";
 
@@ -11,28 +16,26 @@ const databaseColumns = {
 };
 
 /**
- * A live `food_log_entries` row as the diary reads it. `user_id`, `recipe_id` and `deleted_at` are
- * not selected: the owner is the caller, recipes are not in the diary until M4, and deleted rows are
- * filtered out in the query.
+ * A live `food_log_entries` row as the diary reads it: a food, a quick add or a recipe entry. `user_id`
+ * and `deleted_at` are not selected: the owner is the caller, and deleted rows are filtered out in the
+ * query. `recipe_id` is selected and kept by the recipe member only, so the parse drops it from the
+ * food and quick rows, which hold null.
  */
 export const foodLogEntrySchema = foodLogEntryInsertSchema.safeExtend(databaseColumns);
 export const quickLogEntrySchema = quickLogEntryInsertSchema.safeExtend(databaseColumns);
+export const recipeLogEntrySchema = recipeLogEntryInsertSchema.safeExtend(databaseColumns);
 export const logEntrySchema = z.discriminatedUnion("item_type", [
   foodLogEntrySchema,
   quickLogEntrySchema,
+  recipeLogEntrySchema,
 ]);
 export type LogEntry = z.infer<typeof logEntrySchema>;
 export type FoodLogEntry = Extract<LogEntry, { item_type: "food" }>;
 export type QuickLogEntry = Extract<LogEntry, { item_type: "quick" }>;
+export type RecipeLogEntry = Extract<LogEntry, { item_type: "recipe" }>;
 
-/**
- * What the diary inserts: a food or a quick add. Core's `logEntryInsertSchema` also holds the recipe
- * entry (KEY-286), which nothing writes until the diary can read one, so the writes are narrowed here.
- */
-export const diaryInsertSchema = z.discriminatedUnion("item_type", [
-  foodLogEntryInsertSchema,
-  quickLogEntryInsertSchema,
-]);
+/** What the diary inserts: a food, a quick add or a recipe entry (a day copy writes all three). */
+export const diaryInsertSchema = logEntryInsertSchema;
 export type DiaryInsert = z.infer<typeof diaryInsertSchema>;
 
 /** What `day_logs` says about a day. A day with no row is not complete. */
