@@ -13,6 +13,7 @@ import { Copy } from "lucide-react";
 import type { DiaryWeekProps } from "./types";
 import type { WeekGridDay } from "@/components/ui/WeekGrid";
 
+import { takeBackPartialCopy } from "@/components/diary/takeBackPartialCopy";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
@@ -26,8 +27,9 @@ const WEEK_ROWS = 8;
 /**
  * The week view: the week that holds the day on view, as a heading and the week grid, Monday to Sunday
  * and their Average. A day's date opens it in the day view. Copy to today copies a past day, whole,
- * into today, and offers Undo, which a keyboard user reaches by focus. The header, with the day
- * stepper, is the screen's. A refresh that fails while the week is on screen leaves the week where it is.
+ * into today, and offers Undo, which a keyboard user reaches by focus, and a copy that fails part way takes
+ * back what it wrote. The header, with the day stepper, is the screen's. A refresh that fails while the week
+ * is on screen leaves the week where it is.
  */
 export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
   const toast = useToast();
@@ -52,17 +54,23 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
       { from, to: today, timeZone },
       {
         onSuccess: (copied) => {
-          toast.show({
-            message: describeCopiedEntriesToToday(copied.count),
-            icon: Copy,
-            actionLabel: UNDO_LABEL,
-            onAction: () => {
-              undoCopyDay.mutate(copied, { onError: showFailure });
-            },
-            ...keyboardRoute(),
-          });
+          // The day had nothing to copy, and the grid offers Copy to today only on a day with entries.
+          if (copied.count > 0) {
+            toast.show({
+              message: describeCopiedEntriesToToday(copied.count),
+              icon: Copy,
+              actionLabel: UNDO_LABEL,
+              onAction: () => {
+                undoCopyDay.mutate(copied, { onError: showFailure });
+              },
+              ...keyboardRoute(),
+            });
+          }
         },
-        onError: showFailure,
+        onError: (error) => {
+          showFailure();
+          takeBackPartialCopy(error, today, undoCopyDay.mutate);
+        },
       },
     );
   }

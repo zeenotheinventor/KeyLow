@@ -460,7 +460,7 @@ describe("the edit entry dialog for a logged food", () => {
   });
 
   describe("Delete", () => {
-    it("should delete the entry at once with the diary's own handler, offer Undo and close", () => {
+    it("should delete the entry at once with the diary's own handler, offer Undo and close", async () => {
       const entry = chickenEntry();
       const { onClose } = renderDialog(entry);
 
@@ -468,16 +468,16 @@ describe("the edit entry dialog for a logged food", () => {
 
       expect(api.deleteEntry.mutateAsync).toHaveBeenCalledOnce();
       expect(api.deleteEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
-      expect(screen.getByText("Entry deleted")).toBeTruthy();
+      expect(await screen.findByText("Entry deleted")).toBeTruthy();
       expect(onClose).toHaveBeenCalledOnce();
     });
 
-    it("should put the same entry back on Undo", () => {
+    it("should put the same entry back on Undo", async () => {
       const entry = chickenEntry();
       renderDialog(entry);
       fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
 
       expect(api.restoreEntry.mutateAsync).toHaveBeenCalledOnce();
       expect(api.restoreEntry.mutateAsync.mock.calls[0]?.[0]).toBe(entry);
@@ -555,34 +555,44 @@ describe("Delete by keyboard from the edit dialog", () => {
     fireEvent.click(remove);
   }
 
-  it("should move focus to Undo", () => {
+  // The toast takes focus in an effect, a moment after it is drawn.
+  async function findUndoHoldingFocus() {
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    await waitFor(() => {
+      expect(document.activeElement).toBe(undo);
+    });
+
+    return undo;
+  }
+
+  it("should move focus to Undo", async () => {
     openFromRow("first");
 
     deleteByKeyboard();
 
-    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+    expect(await findUndoHoldingFocus()).toBe(document.activeElement);
   });
 
-  it("should give focus to the next diary row, not a control in the closing dialog, when the toast is dismissed", () => {
+  it("should give focus to the next diary row, not a control in the closing dialog, when the toast is dismissed", async () => {
     openFromRow("first");
     deleteByKeyboard();
 
-    fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+    fireEvent.keyDown(await findUndoHoldingFocus(), { key: "Escape" });
 
     expect(screen.queryByRole("dialog", { name: "Edit entry" })).toBeNull();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit second" }));
   });
 
-  it("should give focus to the row before when the row was the last, and not to a control in the dialog, which is after the diary", () => {
+  it("should give focus to the row before when the row was the last, and not to a control in the dialog, which is after the diary", async () => {
     openFromRow("second");
     deleteByKeyboard();
 
-    fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+    fireEvent.keyDown(await findUndoHoldingFocus(), { key: "Escape" });
 
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Edit first" }));
   });
 
-  it("should leave focus alone after a pointer press", () => {
+  it("should leave focus alone after a pointer press", async () => {
     openFromRow("first");
     const remove = screen.getByRole("button", { name: "Delete" });
     fireEvent.pointerDown(remove);
@@ -590,7 +600,7 @@ describe("Delete by keyboard from the edit dialog", () => {
 
     fireEvent.click(remove, { detail: 1 });
 
-    expect(screen.getByRole("button", { name: "Undo" })).not.toBe(document.activeElement);
+    expect(await screen.findByRole("button", { name: "Undo" })).not.toBe(document.activeElement);
   });
 });
 

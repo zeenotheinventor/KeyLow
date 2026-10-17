@@ -1,6 +1,7 @@
+import { CopyDayPartialWriteError } from "@keylow/api-client";
 import { buildLogEntry } from "@keylow/core/diary";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { oliveOil } from "./portionFoods";
@@ -95,13 +96,13 @@ const {
       vi.fn<
         (
           input: { from: string; to: string; timeZone: string },
-          options: { onSuccess: (copied: CopiedDay) => void; onError: () => void },
+          options: { onSuccess: (copied: CopiedDay) => void; onError: (error: Error) => void },
         ) => void
       >(),
     isPending: false,
   },
   undoCopyDay: {
-    mutate: vi.fn<(copied: CopiedDay, options: { onError: () => void }) => void>(),
+    mutate: vi.fn<(copied: CopiedDay, options?: { onError: () => void }) => void>(),
     isPending: false,
   },
   setDayComplete: {
@@ -452,7 +453,7 @@ describe("the diary screen", () => {
       expect(remove.parentElement?.className).toContain("group-hover/row:opacity-100");
     });
 
-    it("should delete at once and offer Undo", () => {
+    it("should ask for the delete at once", () => {
       renderDiary();
 
       fireEvent.click(
@@ -460,18 +461,41 @@ describe("the diary screen", () => {
       );
 
       expect(deleteEntry.mutateAsync).toHaveBeenCalledOnce();
-      expect(screen.getByText("Entry deleted")).toBeTruthy();
+    });
+
+    it("should say Entry deleted, with Undo, once the delete is saved and not before", async () => {
+      let finishSaving: () => void = () => undefined;
+      deleteEntry.mutateAsync.mockReturnValue(
+        new Promise<void>((resolve) => {
+          finishSaving = resolve;
+        }),
+      );
+      renderDiary();
+
+      fireEvent.click(
+        within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
+      );
+
+      expect(screen.queryByText("Entry deleted")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+
+      await act(async () => {
+        finishSaving();
+        await Promise.resolve();
+      });
+
+      expect(await screen.findByText("Entry deleted")).toBeTruthy();
       expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
     });
 
-    it("should bring the entry back with Undo", () => {
+    it("should bring the entry back with Undo", async () => {
       renderDiary();
       fireEvent.click(
         within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
       );
       const deleted = deleteEntry.mutateAsync.mock.calls[0]?.[0];
 
-      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+      fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
 
       expect(restoreEntry.mutateAsync).toHaveBeenCalledOnce();
       expect(restoreEntry.mutateAsync.mock.calls[0]?.[0]).toBe(deleted);
@@ -487,30 +511,40 @@ describe("the diary screen", () => {
         fireEvent.click(deletePorridge());
       }
 
-      it("should move focus to Undo", () => {
+      // The toast takes focus in an effect, a moment after it is drawn.
+      async function findUndoHoldingFocus() {
+        const undo = await screen.findByRole("button", { name: "Undo" });
+        await waitFor(() => {
+          expect(document.activeElement).toBe(undo);
+        });
+
+        return undo;
+      }
+
+      it("should move focus to Undo once the delete is saved", async () => {
         renderDiary();
 
         pressDeleteWithKeyboard();
 
-        expect(document.activeElement).toBe(screen.getByRole("button", { name: "Undo" }));
+        expect(await findUndoHoldingFocus()).toBe(document.activeElement);
       });
 
-      it("should give focus to the next row when the toast is dismissed", () => {
+      it("should give focus to the next row when the toast is dismissed", async () => {
         renderDiary();
         pressDeleteWithKeyboard();
 
-        fireEvent.keyDown(screen.getByRole("button", { name: "Undo" }), { key: "Escape" });
+        fireEvent.keyDown(await findUndoHoldingFocus(), { key: "Escape" });
 
         expect(document.activeElement).toBe(
           within(tableOf("08:00")).getByRole("button", { name: "Edit Semi-skimmed milk" }),
         );
       });
 
-      it("should give focus to the next row when Undo is pressed, and bring the entry back", () => {
+      it("should give focus to the next row when Undo is pressed, and bring the entry back", async () => {
         renderDiary();
         pressDeleteWithKeyboard();
 
-        fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+        fireEvent.click(await findUndoHoldingFocus());
 
         expect(restoreEntry.mutateAsync).toHaveBeenCalledOnce();
         expect(document.activeElement).toBe(
@@ -518,22 +552,24 @@ describe("the diary screen", () => {
         );
       });
 
-      it("should announce the toast once", () => {
+      it("should announce the toast once", async () => {
         renderDiary();
 
         pressDeleteWithKeyboard();
 
+        await screen.findByText("Entry deleted");
         expect(screen.getAllByText("Entry deleted")).toHaveLength(1);
         expect(screen.getAllByRole("status")).toHaveLength(1);
       });
 
-      it("should leave focus alone after a pointer press", () => {
+      it("should leave focus alone after a pointer press", async () => {
         renderDiary();
         fireEvent.pointerDown(deletePorridge());
         deletePorridge().focus();
 
         fireEvent.click(deletePorridge(), { detail: 1 });
 
+        await screen.findByText("Entry deleted");
         expect(document.activeElement).toBe(deletePorridge());
       });
     });
@@ -547,6 +583,35 @@ describe("the diary screen", () => {
       );
 
       expect(await screen.findByText("Something went wrong. Try again.")).toBeTruthy();
+    });
+
+    it("should say only that, never Entry deleted or Undo, when a delete does not go through", async () => {
+      let failSaving: () => void = () => undefined;
+      deleteEntry.mutateAsync.mockReturnValue(
+        new Promise<void>((_resolve, reject) => {
+          failSaving = () => {
+            reject(new Error("RAW"));
+          };
+        }),
+      );
+      renderDiary();
+
+      fireEvent.click(
+        within(tableOf("08:00")).getByRole("button", { name: "Delete Porridge oats" }),
+      );
+
+      // While the save is on its way the entry is not yet deleted, so there is nothing to undo.
+      expect(screen.queryByText("Entry deleted")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+
+      await act(async () => {
+        failSaving();
+        await Promise.resolve();
+      });
+
+      expect(await screen.findByText("Something went wrong. Try again.")).toBeTruthy();
+      expect(screen.queryByText("Entry deleted")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     });
   });
 
@@ -812,9 +877,9 @@ describe("the diary screen", () => {
       expect(undoCopyDay.mutate.mock.calls[0]?.[0]).toBe(copied);
     });
 
-    it("should say when the copy failed", () => {
+    it("should confirm a single entry with its count too", () => {
       copyDay.mutate.mockImplementation((_input, options) => {
-        options.onError();
+        options.onSuccess({ localDate: TODAY, count: 1, entryIds: ["a"] });
       });
       renderDiary();
 
@@ -822,6 +887,73 @@ describe("the diary screen", () => {
         fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
       });
 
+      expect(screen.getByText("Copied 1 entry from yesterday")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+    });
+
+    it("should show no toast and no Undo when yesterday had nothing to copy", () => {
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onSuccess({ localDate: TODAY, count: 0, entryIds: [] });
+      });
+      renderDiary();
+
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
+      });
+
+      expect(screen.queryByText(/^Copied/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    });
+
+    it("should say when the copy failed", () => {
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onError(new Error("RAW"));
+      });
+      renderDiary();
+
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
+      });
+
+      expect(screen.getByRole("alert").textContent).toBe(
+        "Not copied. Check your connection and try again.",
+      );
+    });
+
+    it("should take nothing back when the copy fails with nothing written", () => {
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onError(new Error("RAW"));
+      });
+      renderDiary();
+
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
+      });
+
+      expect(undoCopyDay.mutate).not.toHaveBeenCalled();
+    });
+
+    it("should take back the copies already written when the copy fails part way, and say it failed", () => {
+      const partialWrite = new CopyDayPartialWriteError(
+        ["a", "b"],
+        "Copied 2 of 3",
+        new Error("RAW"),
+      );
+      copyDay.mutate.mockImplementation((_input, options) => {
+        options.onError(partialWrite);
+      });
+      renderDiary();
+
+      act(() => {
+        fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
+      });
+
+      expect(undoCopyDay.mutate).toHaveBeenCalledOnce();
+      expect(undoCopyDay.mutate).toHaveBeenCalledWith({
+        localDate: TODAY,
+        count: 2,
+        entryIds: ["a", "b"],
+      });
       expect(screen.getByRole("alert").textContent).toBe(
         "Not copied. Check your connection and try again.",
       );

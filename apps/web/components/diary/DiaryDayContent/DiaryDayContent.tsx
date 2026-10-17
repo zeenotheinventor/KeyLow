@@ -14,6 +14,7 @@ import { FoodLog } from "../FoodLog";
 
 import type { DiaryDayContentProps } from "./types";
 
+import { takeBackPartialCopy } from "@/components/diary/takeBackPartialCopy";
 import { Banner } from "@/components/ui/Banner";
 import { MacroProgressStrip } from "@/components/ui/MacroProgressStrip";
 import { useToast } from "@/components/ui/Toast";
@@ -25,8 +26,9 @@ import { useIsOnline } from "@/lib/useIsOnline";
 /**
  * A loaded day under the week strip: the four progress bars (one button to Targets) and the hour-by-hour
  * log, and everything that changes the day. The bars add up the entries on screen with core's `sumEntries`,
- * so they always agree with the rows. Delete is immediate and offers Undo. Copy yesterday copies the whole
- * day and offers Undo too, which a keyboard user reaches by focus. The complete switch marks the day at
+ * so they always agree with the rows. Delete is immediate and offers Undo once it is saved. Copy yesterday
+ * copies the whole day and offers Undo too (when it copied anything), which a keyboard user reaches by
+ * focus, and a copy that fails part way takes back what it wrote. The complete switch marks the day at
  * once. An hour's plus opens the add dialog at that hour, and a row's Edit opens the edit dialog. All of
  * these need a connection: offline, a notice says so and they are off.
  */
@@ -85,19 +87,23 @@ export function DiaryDayContent({
       { from: yesterday, to: day.localDate, timeZone },
       {
         onSuccess: (copied) => {
-          toast.show({
-            message: describeCopiedFromYesterday(copied.count),
-            icon: Copy,
-            actionLabel: UNDO_LABEL,
-            onAction: () => {
-              isCopyUndone.current = true;
-              undoCopyDay.mutate(copied, { onError: showFailure });
-            },
-            ...keyboardRoute(),
-          });
+          // Yesterday had nothing to copy, which the empty day's card already says.
+          if (copied.count > 0) {
+            toast.show({
+              message: describeCopiedFromYesterday(copied.count),
+              icon: Copy,
+              actionLabel: UNDO_LABEL,
+              onAction: () => {
+                isCopyUndone.current = true;
+                undoCopyDay.mutate(copied, { onError: showFailure });
+              },
+              ...keyboardRoute(),
+            });
+          }
         },
-        onError: () => {
+        onError: (error) => {
           setHasCopyFailed(true);
+          takeBackPartialCopy(error, day.localDate, undoCopyDay.mutate);
         },
       },
     );
