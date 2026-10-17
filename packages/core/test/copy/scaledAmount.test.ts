@@ -226,6 +226,18 @@ describe("describeScaledAmount at an exact half", () => {
   it("should not move a value that is not at a half", () => {
     expect(scaledTo(inGrams(13.4), 13, 3)).toBe("58 g");
   });
+
+  it("should write 4.1 tbsp as 62 ml, where 4.1 × 15 ml is exactly 61.5, although describeLoggedAmount writes 61", () => {
+    // 4.1 * 15 is 61.49999999999999 in floating point, so describeLoggedAmount rounds the half down.
+    expect(
+      describeScaledAmount({
+        unit: "portion",
+        quantity: 4.1,
+        resolvedGrams: 61.5,
+        portion: { label: tablespoon.label, ml: tablespoon.ml },
+      }),
+    ).toBe("4.1 tbsp (62 ml)");
+  });
 });
 
 describe("describeScaledAmount properties", () => {
@@ -240,6 +252,29 @@ describe("describeScaledAmount properties", () => {
     { label: "30 g" },
     { label: tablespoon.label, ml: tablespoon.ml },
   );
+
+  // describeScaledAmount rounds a half up on purpose, while describeLoggedAmount reads 4.1 × 15 ml (exactly
+  // 61.5) as 61.4999... and rounds it down. The two agree everywhere except at such a half, so an amount
+  // with a displayed number within a hair of one is left out; the half itself is pinned above.
+  const HALF_TOLERANCE_IN_DISPLAY_STEPS = 1e-4;
+  const isNearRoundingHalf = (value: number): boolean => {
+    const stepsPerUnit = value < 10 ? 10 : 1;
+    const steps = value * stepsPerUnit;
+
+    return Math.abs(steps - Math.floor(steps) - 0.5) < HALF_TOLERANCE_IN_DISPLAY_STEPS;
+  };
+  const displayedNumbersOf = (amount: LoggedAmount): number[] => {
+    if (amount.portion === null) {
+      return [amount.quantity];
+    }
+    if (amount.portion.ml !== undefined) {
+      return [amount.quantity, amount.quantity * amount.portion.ml];
+    }
+
+    return [amount.quantity, amount.resolvedGrams];
+  };
+  const hasNoNumberNearARoundingHalf = (amount: LoggedAmount): boolean =>
+    !displayedNumbersOf(amount).some(isNearRoundingHalf);
 
   const measuredAmounts = fc
     .tuple(fc.constantFrom("g", "ml", "oz", "fl_oz"), belowAThousand)
@@ -260,9 +295,12 @@ describe("describeScaledAmount properties", () => {
 
   it("should read as describeLoggedAmount at factor 1 for amounts below 1,000 with at most 1 decimal", () => {
     fc.assert(
-      fc.property(fc.oneof(measuredAmounts, portionAmounts), (amount) => {
-        expect(describeScaledAmount(amount)).toBe(describeLoggedAmount(amount));
-      }),
+      fc.property(
+        fc.oneof(measuredAmounts, portionAmounts).filter(hasNoNumberNearARoundingHalf),
+        (amount) => {
+          expect(describeScaledAmount(amount)).toBe(describeLoggedAmount(amount));
+        },
+      ),
     );
   });
 
