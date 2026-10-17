@@ -1,4 +1,5 @@
 import { GENERIC_ERROR, RETRY_LABEL, ROOT_ERROR } from "@keylow/core/copy";
+import { captureException } from "@sentry/react-native";
 import { useRouter } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { vars } from "nativewind";
@@ -46,11 +47,13 @@ function RootErrorBody({ retry }: Pick<RootErrorScreenProps, "retry">) {
  * its `ErrorBoundary`: the fixed sentence "Something went wrong. Try again.", a Try again button that draws the
  * route again, and a button to the diary. The root layout is replaced when this shows, and its theme and safe
  * area with it, so the screen brings its own, with the theme read from storage as the layout reads it. The
- * error is logged with `console.error` for the device log and never shown, because it can quote health data.
+ * error is logged with `console.error` for the device log and reported to Sentry, which sends its type and
+ * stack but never its message (see `scrubEvent`). It is never shown, because it can quote health data.
  */
 export function RootErrorScreen({ error, retry }: RootErrorScreenProps) {
   useEffect(() => {
     console.error(error);
+    captureException(error);
   }, [error]);
 
   return (

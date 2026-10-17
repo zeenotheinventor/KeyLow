@@ -80,7 +80,15 @@
           "background": false
         }
       ],
-      "expo-system-ui"
+      "expo-system-ui",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://de.sentry.io/",
+          "organization": "sojisoft-limited",
+          "project": "keylow-mobile"
+        }
+      ]
     ],
     "extra": {
       "eas": {

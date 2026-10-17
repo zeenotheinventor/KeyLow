@@ -37,6 +37,7 @@ describe("app.config.ts", () => {
         slug: "given-app",
         ios: { bundleIdentifier: "com.example.given" },
         android: { package: "com.sojisoft.keylow.dev", versionCode: 7 },
+        extra: { appVariant: "development" },
       });
     });
 
@@ -83,13 +84,21 @@ describe("app.config.ts", () => {
       expect(withAppVariant(expo, "development").ios).toEqual(expo.ios);
     });
 
-    it("should change nothing except the name and the Android package", () => {
+    it("should tell the app its variant, which Sentry reports as the environment, and keep the rest of extra", () => {
+      expect(withAppVariant(expo, "development").extra).toEqual({
+        ...expo.extra,
+        appVariant: "development",
+      });
+    });
+
+    it("should change nothing except the name, the Android package and the variant", () => {
       const config = withAppVariant(expo, "development");
 
       expect({
         ...config,
         name: expo.name,
         android: { ...config.android, package: expo.android.package },
+        extra: expo.extra,
       }).toEqual(expo);
     });
 

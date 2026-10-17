@@ -1,6 +1,7 @@
 import "../global.css";
 
 import { KeyLowProvider } from "@keylow/api-client";
+import { wrap } from "@sentry/react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -11,9 +12,14 @@ import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
+import { initSentry } from "../lib/sentry/init";
 import { readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
 import { holdSplashScreen } from "../lib/updates";
+
+// Starts error reporting as the module loads, so an error while the app starts is reported too. It does
+// nothing in development or without a DSN.
+initSentry();
 
 // Runs as the module loads, before the splash screen could be hidden. `useHideSplashAfterUpdateCheck` lets
 // it go.
@@ -36,7 +42,8 @@ export { RootErrorScreen as ErrorBoundary };
 // screens and the toast. The toast provider sits inside the theme (the toast reads it) and the cache,
 // and around the navigator, so a screen of any route can show one. The stored diary cache is read inside
 // the query provider and around the sign-in gate, so the gate's own read finds the stored acceptance.
-export default function RootLayout() {
+// Sentry wraps the whole layout, so a failure in it is reported.
+function RootLayout() {
   return (
     <GestureHandlerRootView className="flex-1">
       <SafeAreaProvider>
@@ -55,3 +62,5 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+
+export default wrap(RootLayout);

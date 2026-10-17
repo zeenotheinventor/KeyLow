@@ -1,8 +1,8 @@
 const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withStorybook } = require("@storybook/react-native/metro/withStorybook");
-const { getDefaultConfig } = require("expo/metro-config");
 const { withNativeWind } = require("nativewind/metro");
 
 const projectRoot = __dirname;
@@ -23,7 +23,9 @@ execFileSync(
   { stdio: "inherit" },
 );
 
-const config = getDefaultConfig(projectRoot);
+// The Expo default config with Sentry's debug ids added to every bundle and source map, so a stack from
+// an update or a build maps back to the source.
+const config = getSentryExpoConfig(projectRoot);
 
 config.watchFolders = [workspaceRoot];
 config.resolver.nodeModulesPaths = [

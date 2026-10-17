@@ -3,6 +3,7 @@ import { useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 
+import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
 import { DeviceTimeZoneSync } from "../DeviceTimeZoneSync";
 import { SessionCover } from "../SessionCover";
@@ -24,6 +25,14 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
   useEffect(() => {
     let isCancelled = false;
     let hasSupabaseAnswered = false;
+    // The account Sentry was last told about, so a refreshed session, which repeats it, is not told again.
+    let identifiedUserId: string | null = null;
+    const identify = (userId: string | null) => {
+      if (userId !== identifiedUserId) {
+        identifiedUserId = userId;
+        identifyUser(userId);
+      }
+    };
 
     // A stored session whose access token has expired is refreshed as it is read. With no connection that
     // refresh is tried for about 25 seconds, and then Supabase answers with no session and a network error,
@@ -40,6 +49,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
       .catch(() => null)
       .then((userId) => {
         if (!isCancelled && !hasSupabaseAnswered && userId !== null) {
+          identify(userId);
           setIsSignedIn(true);
           setIsSessionLoaded(true);
         }
@@ -48,6 +58,13 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
     void supabase.auth.getSession().then(({ data, error }) => {
       if (!isCancelled) {
         hasSupabaseAnswered = true;
+        // A lost connection leaves the stored account signed in, so it stays known. Any other answer with no
+        // session means the stored account is not signed in.
+        if (data.session !== null) {
+          identify(data.session.user.id);
+        } else if (!isAuthRetryableFetchError(error)) {
+          identify(null);
+        }
         setIsSignedIn(data.session !== null || isAuthRetryableFetchError(error));
         setIsSessionLoaded(true);
       }
@@ -59,6 +76,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
       if (event === "INITIAL_SESSION" && nextSession === null) {
         return;
       }
+      identify(nextSession?.user.id ?? null);
       setIsSignedIn(nextSession !== null);
     });
 
