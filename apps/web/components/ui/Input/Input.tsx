@@ -38,6 +38,7 @@ function Field({
   invalid,
   describedBy: extraDescribedBy,
   disabled,
+  hideLabel,
   children,
 }: FieldProps) {
   const generatedId = React.useId();
@@ -64,6 +65,7 @@ function Field({
       htmlFor={fieldId}
       className={cn(
         "flex items-center gap-1.5 text-caption text-text-secondary",
+        hideLabel === true && "sr-only",
         mutedWhenDisabled,
       )}
     >
