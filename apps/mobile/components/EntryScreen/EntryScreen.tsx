@@ -2,7 +2,7 @@ import { useLogEntry, useProfileTimeZone } from "@keylow/api-client";
 import { ENTRY_SCREEN } from "@keylow/core/copy";
 import { isEntryId } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { FoodEntryForm } from "./FoodEntryForm";
 import { QuickEntryForm } from "./QuickEntryForm";
@@ -10,6 +10,7 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { EntryLoadState } from "../EntryLoadState";
 
 import type { EntryScreenProps } from "./types";
+import type { LogEntry } from "@keylow/api-client";
 
 /**
  * What a diary row opens: a logged food or a quick add, by the entry's id. It waits for the entry and for
@@ -25,12 +26,19 @@ export function EntryScreen({ id }: EntryScreenProps) {
   const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled });
 
   const hasLeft = useRef(false);
+  // The entry on screen when the screen started to leave. A delete from this screen marks the entry gone in
+  // the cache while the screen is still up for the way out, and it keeps showing this entry, not "Entry not found".
+  const [entryLeftWith, setEntryLeftWith] = useState<LogEntry | null>(null);
+  const shownEntry = entry.data === null && entryLeftWith !== null ? entryLeftWith : entry.data;
 
   function leave() {
     if (hasLeft.current) {
       return;
     }
     hasLeft.current = true;
+    if (entry.data !== undefined && entry.data !== null) {
+      setEntryLeftWith(entry.data);
+    }
     // A cold link to this screen has nothing before it, so the user goes to the diary instead.
     if (router.canGoBack()) {
       router.back();
@@ -62,19 +70,19 @@ export function EntryScreen({ id }: EntryScreenProps) {
     return renderState("error");
   }
   // An entry the cache already holds is not drawn while the terms gate is up: nothing of the diary is.
-  if (!isReadEnabled || entry.data === undefined || profileTimeZone.data === undefined) {
+  if (!isReadEnabled || shownEntry === undefined || profileTimeZone.data === undefined) {
     return renderState("loading");
   }
-  if (entry.data === null) {
+  if (shownEntry === null) {
     return renderState("notFound");
   }
 
   // A signed in user always has a profile row, which the database creates. If it is missing the day is UTC.
   const timeZone = profileTimeZone.data ?? "UTC";
 
-  return entry.data.item_type === "food" ? (
-    <FoodEntryForm entry={entry.data} timeZone={timeZone} onLeave={leave} />
+  return shownEntry.item_type === "food" ? (
+    <FoodEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />
   ) : (
-    <QuickEntryForm entry={entry.data} timeZone={timeZone} onLeave={leave} />
+    <QuickEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />
   );
 }

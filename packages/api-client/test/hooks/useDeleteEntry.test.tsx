@@ -6,6 +6,7 @@ import { useDeleteEntry } from "../../src/hooks/useDeleteEntry";
 import { useDiaryDay } from "../../src/hooks/useDiaryDay";
 import { useRecentFoods } from "../../src/hooks/useRecentFoods";
 import { keys } from "../../src/queryKeys";
+import { getLogEntry } from "../../src/repos/diary";
 import { foodEntryRow } from "../support/diary";
 import { installDiaryFake } from "../support/diaryFake";
 import { createWrapper } from "../support/wrapper";
@@ -119,6 +120,88 @@ describe("useDeleteEntry", () => {
       entries: [{ id: breakfast.id }, { id: lunch.id }],
     });
     releaseReads();
+  });
+
+  describe("the entry that was opened on its own", () => {
+    it("should be gone from the cache at once, while the request is still on its way", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      const releaseWrites = fake.holdWrites();
+
+      act(() => {
+        result.current.remove.mutate(breakfast);
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toBeNull();
+      });
+      expect(result.current.remove.isPending).toBe(true);
+      releaseWrites();
+      await waitFor(() => {
+        expect(result.current.remove.isSuccess).toBe(true);
+      });
+    });
+
+    it("should not let a read of the entry that was already on its way bring it back", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { client, queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      const releaseReads = fake.holdReads();
+      act(() => {
+        void queryClient.query({
+          queryKey: keys.diary.entry(breakfast.id),
+          queryFn: () => getLogEntry(client, breakfast.id),
+          staleTime: 0,
+        });
+      });
+      // The read reaches the table while the entry is still there.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      await act(() => result.current.remove.mutateAsync(breakfast));
+      // The old read lands now, with the entry in it.
+      releaseReads();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toBeNull();
+    });
+
+    it("should leave the other entry that was opened alone", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      queryClient.setQueryData(keys.diary.entry(lunch.id), lunch);
+
+      await act(() => result.current.remove.mutateAsync(breakfast));
+
+      expect(queryClient.getQueryData(keys.diary.entry(lunch.id))).toEqual(lunch);
+    });
+
+    it("should not be added to the cache when it was never opened", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+
+      await act(() => result.current.remove.mutateAsync(breakfast));
+
+      expect(queryClient.getQueryCache().find({ queryKey: keys.diary.entry(breakfast.id) })).toBe(
+        undefined,
+      );
+    });
+
+    it("should be back in the cache when the request fails", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      fake.failWrites();
+      const releaseReads = fake.holdReads();
+
+      await act(async () => {
+        await result.current.remove.mutateAsync(breakfast).catch(() => undefined);
+      });
+
+      expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toEqual(breakfast);
+      releaseReads();
+    });
   });
 
   it("should refresh the day and the recent foods, so the food falls out of the recent list", async () => {

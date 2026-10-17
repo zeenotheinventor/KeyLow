@@ -44,6 +44,8 @@ const renderDay = async () => {
   await waitFor(() => {
     expect(hook.result.current.day.isSuccess).toBe(true);
   });
+  // The entry was opened on its own before it was deleted, so the cache holds it under its own key too.
+  rendered.queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
   await act(() => hook.result.current.remove.mutateAsync(breakfast));
   await waitFor(() => {
     expect(hook.result.current.day.data?.entries).toHaveLength(1);
@@ -97,6 +99,38 @@ describe("useRestoreEntry", () => {
 
     expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({
       entries: [{ id: lunch.id }],
+    });
+  });
+
+  describe("the entry that was opened on its own", () => {
+    it("should be back in the cache at once, while the request is on its way", async () => {
+      const { fake, queryClient, result } = await renderDay();
+      expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toBeNull();
+      const releaseWrites = fake.holdWrites();
+
+      act(() => {
+        result.current.restore.mutate(breakfast);
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toEqual(breakfast);
+      });
+      releaseWrites();
+      await waitFor(() => {
+        expect(result.current.restore.isSuccess).toBe(true);
+      });
+    });
+
+    it("should be gone from the cache again when the request fails", async () => {
+      const { fake, queryClient, result } = await renderDay();
+      fake.failWrites();
+      fake.holdReads();
+
+      await act(async () => {
+        await result.current.restore.mutateAsync(breakfast).catch(() => undefined);
+      });
+
+      expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toBeNull();
     });
   });
 
