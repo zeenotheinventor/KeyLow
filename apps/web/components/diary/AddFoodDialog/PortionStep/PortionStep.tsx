@@ -3,6 +3,7 @@ import {
   FOOD_DETAIL,
   FOOD_NOT_FOUND,
   FOOD_NOT_LOADED,
+  FOOD_REVIEW_ACTION_IN_NEW_TAB,
   FOOD_REVIEW_BANNER,
   SAVE_FAILED_BANNER,
   describeMissingValuesBeforeLogging,
@@ -22,16 +23,16 @@ import { Skeleton } from "@/components/ui/Skeleton";
 
 /**
  * The add dialog's second step, for the food a row opened: a Results link, then what the chosen amount
- * comes to, the amount, its unit and the Time field. A food that has to be reviewed first says so, with a
- * way to copy it to the person's own foods, and cannot be added from here.
+ * comes to, the amount, its unit and the Time field (an ingredient has none). A food that has to be
+ * reviewed first says so, with a way to copy it to the person's own foods, and cannot be added from here.
  */
 export function PortionStep({
   draft,
-  time,
-  isNow,
-  onTimeChange,
+  hasSaveError = false,
+  opensReviewInNewTab = false,
   onBack,
   amountRef,
+  ...timeProps
 }: PortionStepProps) {
   const back = (
     <Button
@@ -83,16 +84,22 @@ export function PortionStep({
         onQuantityChange={draft.setQuantityText}
         onUnitChange={draft.setUnitValue}
         amountRef={amountRef}
-        time={time}
-        isNow={isNow}
-        onTimeChange={onTimeChange}
+        {...timeProps}
         notice={
           <>
             {draft.needsReview && (
               <Banner
                 tone="review"
                 title={FOOD_REVIEW_BANNER.title}
-                action={{ label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${food.id}` }}
+                action={
+                  opensReviewInNewTab
+                    ? {
+                        label: FOOD_REVIEW_ACTION_IN_NEW_TAB,
+                        href: `/foods/new?from=${food.id}`,
+                        newTab: true,
+                      }
+                    : { label: FOOD_REVIEW_BANNER.action, href: `/foods/new?from=${food.id}` }
+                }
               >
                 {describeMissingValuesBeforeLogging(
                   missingFieldsOf(food),
@@ -100,7 +107,7 @@ export function PortionStep({
                 )}
               </Banner>
             )}
-            {draft.hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
+            {hasSaveError && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
           </>
         }
       />

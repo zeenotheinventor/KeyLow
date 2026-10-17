@@ -62,4 +62,26 @@ describe("FoodTable with the ingredient variant", () => {
         .map((cell) => cell.textContent),
     ).toEqual(["Onions, raw", "1 medium (110 g)", "–", "8.8 g", "0.1 g", "–", ""]);
   });
+
+  it("should put the row's buttons in the last cell, hidden until hover or focus", () => {
+    renderIngredients({ actions: <button type="button">Edit Onions, raw</button> });
+    const row = screen.getByRole("row", { name: /Onions, raw/ });
+    const cells = within(row).getAllByRole("cell");
+    const actionsCell = cells[cells.length - 1];
+
+    expect(
+      within(actionsCell ?? row).getByRole("button", { name: "Edit Onions, raw" }),
+    ).toBeTruthy();
+    expect(actionsCell?.className).toContain("opacity-0");
+    expect(actionsCell?.className).toContain("group-hover/row:opacity-100");
+    expect(actionsCell?.className).toContain("group-focus-within/row:opacity-100");
+  });
+
+  it("should leave the last cell as it was with no buttons", () => {
+    renderIngredients();
+    const row = screen.getByRole("row", { name: /Onions, raw/ });
+    const cells = within(row).getAllByRole("cell");
+
+    expect(cells[cells.length - 1]?.className).not.toContain("opacity-0");
+  });
 });

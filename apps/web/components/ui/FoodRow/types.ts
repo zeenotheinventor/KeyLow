@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 /** A part of the food's name. Matched parts are the ones that match the search. */
 export type FoodNameSegment = { text: string; matched: boolean };
 
@@ -44,8 +46,20 @@ export type FoodRowLayout = "stacked" | "search";
  * and amount, the stats line and a chevron. `search` is a result: the food icon tile, the serving,
  * the stats line and a trailing add button. Leave `layout` out for the M2 row.
  */
-export type FoodLogRowProps = {
-  layout: FoodRowLayout;
+export type FoodLogRowProps = FoodLogRowContent &
+  (
+    | {
+        layout: "stacked";
+        /**
+         * The row's own buttons, such as a recipe ingredient's Edit and Remove, stacked at its end, with the
+         * row's text to the left of them. They are not part of the row's press.
+         */
+        actions?: ReactNode | undefined;
+      }
+    | { layout: Exclude<FoodRowLayout, "stacked">; actions?: never }
+  );
+
+type FoodLogRowContent = {
   nameSegments: readonly FoodNameSegment[];
   brand?: string | undefined;
   /** The energy, already formatted, in kcal. Leave it out when the food has none. */
@@ -158,7 +172,8 @@ export type RecipeTableRowProps = {
 /**
  * An ingredient of a recipe at the wide width, one row of the table that `FoodTable` draws with its
  * `ingredient` variant: the food's name, the amount it is used in, then protein, carbs, fat and energy for
- * that amount, and an actions cell that is empty until a screen has something to put in it.
+ * that amount, and an actions cell that is empty until a screen has something to put in it. The actions show
+ * on hover and on keyboard focus within the row, and always where there is no hover, as the diary's do.
  */
 export type IngredientTableRowProps = {
   layout: "ingredientTable";
@@ -169,6 +184,8 @@ export type IngredientTableRowProps = {
   energy?: string | undefined;
   /** The macros for the amount as `formatGrams` writes them. The table adds the unit. */
   macros: FoodTableRowMacros;
+  /** The row's buttons, such as Edit and Remove, side by side in the last cell. Leave it out and the cell is empty. */
+  actions?: ReactNode | undefined;
   className?: string | undefined;
 };
 

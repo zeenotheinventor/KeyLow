@@ -9,13 +9,16 @@ const macroColumns = ["protein", "carbs", "fat"] as const;
 
 /**
  * An ingredient at the wide width: the columns the `FoodTableHeader` heads with its `ingredient` variant.
- * The last cell is for the row's buttons and is empty until a screen gives it some.
+ * The last cell is for the row's buttons and is empty until a screen gives it some. They show on hover and
+ * on keyboard focus within the row, and always where there is no hover, as on a touch screen. They are
+ * transparent until then, not hidden, so the keyboard can still reach them.
  */
 export function IngredientTableRow({
   nameSegments,
   amount,
   energy,
   macros,
+  actions,
   className,
 }: IngredientTableRowProps) {
   const name = nameSegments.map((segment) => segment.text).join("");
@@ -25,7 +28,9 @@ export function IngredientTableRow({
       role="row"
       className={cn(
         // The board's rows set a minimum height and padding on a content box.
-        "box-content min-h-[52px] border-t border-border py-2",
+        "group/row box-content min-h-[52px] border-t border-border py-2",
+        actions !== undefined &&
+          "transition-colors duration-quick hover:bg-hover-overlay focus-within:bg-hover-overlay",
         ingredientTableColumnsClassName,
         className,
       )}
@@ -61,7 +66,16 @@ export function IngredientTableRow({
           </>
         )}
       </div>
-      <div role="cell" />
+      <div
+        role="cell"
+        className={cn(
+          "flex justify-end gap-0.5",
+          actions !== undefined &&
+            "opacity-0 transition-opacity duration-quick group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none",
+        )}
+      >
+        {actions}
+      </div>
     </div>
   );
 }

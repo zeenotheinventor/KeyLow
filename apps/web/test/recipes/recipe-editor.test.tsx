@@ -168,7 +168,7 @@ describe("RecipeEditor", () => {
       ).toBeTruthy();
     });
 
-    it("should list the ingredients, read only, with the amount and what it comes to", () => {
+    it("should list the ingredients with the amount and what it comes to", () => {
       showEditor({ existing: chickenAndRice });
       const table = screen.getByRole("table", { name: "Ingredients" });
 
@@ -190,13 +190,12 @@ describe("RecipeEditor", () => {
         ["Dry rice", "200 g"],
         ["Olive oil", "20 g"],
       ]);
-      expect(screen.queryByRole("button", { name: /^(Edit|Remove)/ })).toBeNull();
     });
 
     it("should have no action buttons: refresh, duplicate and archive are the view's", () => {
       showEditor({ existing: chickenAndRice });
 
-      for (const name of ["Refresh ingredients", "Duplicate", "Archive", "Add ingredient"]) {
+      for (const name of ["Refresh ingredients", "Duplicate", "Archive"]) {
         expect(screen.queryByRole("button", { name })).toBeNull();
       }
     });

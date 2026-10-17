@@ -117,6 +117,7 @@ export function AddFoodDialog({ request, opener, onClose, onQuickAdd }: AddFoodD
         ) : (
           <PortionStep
             draft={draft}
+            hasSaveError={draft.status === "ready" && draft.hasSaveError}
             time={time}
             isNow={isNow}
             onTimeChange={chooseTime}

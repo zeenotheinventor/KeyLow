@@ -55,22 +55,14 @@ function limitsFor(
 }
 
 /**
- * The add dialog's first step: the search field with the Time field beside it, and under them the foods found,
- * each with the serving its one-tap plus logs. The rows keep the database's ranking order. A row shows the
- * food's serving and the values for that serving, a food with a missing value shows Needs review and a
- * chevron in place of the plus, and a press on the row goes to the portion step.
+ * The add dialog's first step: the search field with the Time field beside it, and under them the foods
+ * found, each with the serving its one-tap plus logs. The rows keep the database's ranking order. A row
+ * shows the food's serving and the values for that serving, a food with a missing value shows Needs review
+ * and a chevron in place of the plus, and a press on the row goes to the portion step. In `ingredient` mode,
+ * a recipe's, there is no Time field, no plus and no Quick add row: a press on a row is the only way on.
  */
-export function SearchStep({
-  query,
-  onQueryChange,
-  time,
-  isNow,
-  onTimeChange,
-  searchRef,
-  onOpenFood,
-  onAddServing,
-  onQuickAdd,
-}: SearchStepProps) {
+export function SearchStep(props: SearchStepProps) {
+  const { query, onQueryChange, searchRef, onOpenFood } = props;
   const isOnline = useIsOnline();
   const trimmedQuery = query.trim();
   const { local, isLoadingLocal, isDebouncing, localError } = useFoodSearch(
@@ -87,19 +79,21 @@ export function SearchStep({
   const renderResults = () => {
     if (!isSearchable) {
       // Before anything is typed the search offers Quick add, as the mobile search does (the web has no
-      // idle board, so it follows the mobile `log-search.idle` one).
+      // idle board, so it follows the mobile `log-search.idle` one). An ingredient search has none.
       return (
         <>
-          <Card asChild padding="none">
-            <ul>
-              <ListRow
-                icon={Zap}
-                title={DIARY_ACTIONS.quickAdd}
-                subtitle={DIARY_ACTIONS.quickAddCaption}
-                onClick={onQuickAdd}
-              />
-            </ul>
-          </Card>
+          {props.mode !== "ingredient" && (
+            <Card asChild padding="none">
+              <ul>
+                <ListRow
+                  icon={Zap}
+                  title={DIARY_ACTIONS.quickAdd}
+                  subtitle={DIARY_ACTIONS.quickAddCaption}
+                  onClick={props.onQuickAdd}
+                />
+              </ul>
+            </Card>
+          )}
           <p className="text-caption text-text-muted">{SEARCH_IDLE.hint}</p>
         </>
       );
@@ -173,10 +167,14 @@ export function SearchStep({
                     onClick={() => {
                       onOpenFood(hit.id);
                     }}
-                    addDisabled={!isOnline}
-                    onAdd={() => {
-                      onAddServing(hit);
-                    }}
+                    {...(props.mode === "ingredient"
+                      ? {}
+                      : {
+                          addDisabled: !isOnline,
+                          onAdd: () => {
+                            props.onAddServing(hit);
+                          },
+                        })}
                   />
                 );
               })}
@@ -201,7 +199,9 @@ export function SearchStep({
             onQueryChange(event.target.value);
           }}
         />
-        <TimeField compact value={time} isNow={isNow} onChange={onTimeChange} />
+        {props.mode !== "ingredient" && (
+          <TimeField compact value={props.time} isNow={props.isNow} onChange={props.onTimeChange} />
+        )}
       </div>
       {renderResults()}
     </>
