@@ -16,7 +16,8 @@ const dotClasses = {
 /**
  * One macro of the energy card: its name, its amount in grams and its share of the energy. In the
  * `amount` variant the tile is a row below 700 px, with the value, the name and the share pill at the
- * end, and a column from 700 px with the pill first, as the dialogs' boards draw it.
+ * end, and a column from 700 px with the pill first, as the dialogs' boards draw it. The `row` variant is
+ * that row at every width.
  */
 export function MacroTile({
   label,
@@ -26,14 +27,18 @@ export function MacroTile({
   variant = "detail",
   isBlank = false,
 }: MacroTileProps) {
-  const isAmount = variant === "amount";
+  const isAmount = variant !== "detail";
+  const isRow = variant === "row";
 
   return (
     <div
       className={cn(
         "rounded-medium bg-surface-raised px-3",
         isAmount
-          ? "flex flex-row items-center gap-3 py-2 min-[700px]:flex-col min-[700px]:items-stretch min-[700px]:gap-1"
+          ? cn(
+              "flex flex-row items-center gap-3 py-2",
+              !isRow && "min-[700px]:flex-col min-[700px]:items-stretch min-[700px]:gap-1",
+            )
           : "flex flex-col gap-1 py-[10px]",
       )}
     >
@@ -50,6 +55,8 @@ export function MacroTile({
         className={cn(
           "text-numeral-small",
           isAmount && "order-1",
+          // The rows of a narrow card line their labels up.
+          isRow && "min-w-[52px]",
           grams === null || isBlank ? "text-text-muted" : "text-text-primary",
         )}
       >
@@ -59,7 +66,12 @@ export function MacroTile({
         <dd className="text-caption text-text-muted">{describeShareOfEnergy(share)}</dd>
       )}
       {share !== null && !isBlank && isAmount && (
-        <dd className="order-3 ml-auto min-[700px]:order-none min-[700px]:ml-0 min-[700px]:self-start">
+        <dd
+          className={cn(
+            "order-3 ml-auto",
+            !isRow && "min-[700px]:order-none min-[700px]:ml-0 min-[700px]:self-start",
+          )}
+        >
           <Badge className="border-border">
             {formatEnergyShare(share)}
             <span className="sr-only"> of energy</span>

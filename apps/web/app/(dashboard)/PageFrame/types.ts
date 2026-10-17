@@ -7,8 +7,10 @@ import type { ReactNode } from "react";
  * - foodRecord: a food's detail, new and edit screens (docs/design/web-food)
  * - diary: the food log (the web-diary boards)
  * - targets: the Targets page (the web-targets boards)
+ * - recipeEditor: the recipe editor (the web-recipe-editor boards)
  */
-export type PageFrameVariant = "shell" | "foodSearch" | "foodRecord" | "diary" | "targets";
+export type PageFrameVariant =
+  "shell" | "foodSearch" | "foodRecord" | "diary" | "targets" | "recipeEditor";
 
 export type PageFrameProps = {
   variant: PageFrameVariant;

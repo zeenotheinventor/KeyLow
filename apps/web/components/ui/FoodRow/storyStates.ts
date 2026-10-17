@@ -31,4 +31,5 @@ export const storyStates = [
   "RecipeMatched",
   "RecipeLongTitle",
   "RecipeTable",
+  "IngredientTable",
 ];

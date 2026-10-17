@@ -504,3 +504,29 @@ export const RecipeTable: Story = {
     </div>
   ),
 };
+
+export const IngredientTable: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <div className="max-w-5xl p-6">
+      <Card padding="none">
+        <FoodTable variant="ingredient" label="Ingredients">
+          <FoodRow
+            layout="ingredientTable"
+            nameSegments={[{ text: "Onions, raw", matched: false }]}
+            amount="1 medium (110 g)"
+            energy="39"
+            macros={{ protein: "1.1", carbs: "8.8", fat: "0.1" }}
+          />
+          <FoodRow
+            layout="ingredientTable"
+            nameSegments={[{ text: "Milk, semi-skimmed, pasteurised, average", matched: false }]}
+            amount="100 ml"
+            energy="47"
+            macros={{ protein: "3.6", carbs: "4.8", fat: "1.8" }}
+          />
+        </FoodTable>
+      </Card>
+    </div>
+  ),
+};

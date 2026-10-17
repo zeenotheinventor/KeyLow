@@ -9,6 +9,7 @@ const VERTICAL_PADDING_CLASSES: Record<PageFrameVariant, string> = {
   foodRecord: "py-4 lg:py-6",
   diary: "py-4 lg:py-6",
   targets: "py-4 lg:py-8",
+  recipeEditor: "py-4 lg:py-6",
 };
 
 export function PageFrame({ variant, children }: PageFrameProps) {

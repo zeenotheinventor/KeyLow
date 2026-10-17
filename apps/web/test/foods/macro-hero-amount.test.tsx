@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { makeFood } from "./support";
 import { compileUtilities } from "../ui/compileUtilities";
 
-import type { MacroHeroAmount } from "@/components/foods/FoodDetail/MacroHero";
+import type { MacroHeroAmount, MacroHeroRegion } from "@/components/foods/FoodDetail/MacroHero";
 
 import { MacroHero } from "@/components/foods/FoodDetail/MacroHero";
 
@@ -162,5 +162,74 @@ describe("MacroHero without an amount", () => {
     expect(screen.getByRole("region", { name: "Energy and macros" })).toBeTruthy();
     expect(screen.queryByRole("group", { name: /Energy and macros/ })).toBeNull();
     expect(screen.getByText("per 100 g")).toBeTruthy();
+  });
+});
+
+describe("MacroHero as a named region", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  const perServing: MacroHeroAmount & { region: MacroHeroRegion } = {
+    caption: "Per serving (275 g)",
+    values: { kcal: 374, protein_g: 32, carbs_g: 43, fat_g: 8.1 },
+    region: {
+      name: "Per serving",
+      footnote: "Per 100 g cooked: 136 kcal",
+      announcement: "374 kilocalories per serving, protein 32 grams",
+    },
+  };
+
+  function showRegion(amount: MacroHeroAmount & { region: MacroHeroRegion } = perServing) {
+    render(<MacroHero amount={amount} />);
+    return screen.getByRole("region", { name: "Per serving" });
+  }
+
+  it("should be a region with the name it is given", () => {
+    showRegion();
+
+    expect(screen.queryByRole("group")).toBeNull();
+  });
+
+  it("should write the caption on the right of the numeral, and the footnote under the macros", () => {
+    const region = showRegion();
+
+    expect(within(region).getByText("374")).toBeTruthy();
+    expect(within(region).getByText("Per serving (275 g)")).toBeTruthy();
+    expect(within(region).getByText("Per 100 g cooked: 136 kcal")).toBeTruthy();
+  });
+
+  it("should say the shares are estimates only when it has no footnote of its own", () => {
+    const region = showRegion();
+
+    expect(within(region).queryByText("Shares of energy are estimates")).toBeNull();
+  });
+
+  it("should announce its text politely", () => {
+    const region = showRegion();
+
+    expect(within(region).getByRole("status").textContent).toBe(
+      "374 kilocalories per serving, protein 32 grams",
+    );
+  });
+
+  it("should draw the macros as rows at every width, with the share pill at the end", () => {
+    const region = showRegion();
+    const pill = within(region).getByText("34 %");
+
+    expect(pill.closest("dd")?.className).not.toContain("min-[700px]");
+    expect(within(region).getByText("32 g").closest("div")?.className).not.toContain("min-[700px]");
+  });
+
+  it("should show dashes and no footnote while there is nothing to work out", () => {
+    const region = showRegion({
+      caption: "Per serving",
+      values: null,
+      region: { name: "Per serving", announcement: "" },
+    });
+
+    expect(within(region).getAllByText("–")).toHaveLength(4);
+    expect(within(region).getByText("Per serving")).toBeTruthy();
+    expect(within(region).queryByText(/Per 100 g/)).toBeNull();
   });
 });

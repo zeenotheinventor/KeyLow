@@ -9,6 +9,7 @@ export type {
   FoodRowProps,
   FoodTableRowMacros,
   FoodTableRowProps,
+  IngredientTableRowProps,
   RecipeRowProps,
   RecipeTableRowProps,
 } from "./types";

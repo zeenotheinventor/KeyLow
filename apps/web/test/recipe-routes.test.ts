@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { newRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
+import { editRecipePath, newRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
 
 describe("recipeRoutes", () => {
   it("should lead to the library at /recipes", () => {
@@ -21,6 +21,12 @@ describe("recipeRoutes", () => {
 
   it("should leave out the name parameter when the name is blank", () => {
     expect(newRecipePath("   ")).toBe("/recipes/new");
+  });
+
+  it("should lead to the editor of a saved recipe at /recipes/<id>/edit", () => {
+    expect(editRecipePath("11111111-1111-4111-8111-111111111111")).toBe(
+      "/recipes/11111111-1111-4111-8111-111111111111/edit",
+    );
   });
 
   // Until the recipe view exists, a row opens the editor. The recipe view ticket repoints this.

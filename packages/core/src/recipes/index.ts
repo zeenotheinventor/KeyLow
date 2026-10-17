@@ -51,6 +51,7 @@ export {
   replaceIngredient,
   restoreIngredient,
 } from "./ingredientList";
+export { isRecipeId } from "./isRecipeId";
 export { recipeCardOf } from "./recipeCard";
 export type { RecipeCard } from "./recipeCard";
 export { enteredViewServings, stepViewServings } from "./viewServings";
