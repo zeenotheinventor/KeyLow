@@ -89,5 +89,23 @@ type PortionPickerEditIngredientProps = PortionPickerBaseProps & {
   onRemove: () => void;
 };
 
+/**
+ * The amount step of a food about to join a recipe (the picker's add-ingredient mode): the page for a food
+ * about to be logged, from the food as it is now, with no Time row and nothing saved. "Add to recipe" hands
+ * the amount over. A food that must be reviewed first shows the review banner and cannot be added, and offers
+ * no Copy to your foods: that form would take the person away from the recipe, whose draft is unsaved.
+ */
+type PortionPickerAddIngredientProps = PortionPickerBaseProps & {
+  mode: "add-ingredient";
+  /** The food's own portions. The picker adds g and, for a food measured by volume, ml and the spoons. */
+  portions: readonly FoodPortion[];
+  /** Starts the amount at this instead of the food's default serving, such as the amount last logged. */
+  initialAmount?: PortionAmount | undefined;
+  onSubmit: (amount: ChosenAmount) => void;
+};
+
 export type PortionPickerProps =
-  PortionPickerAddProps | PortionPickerEditProps | PortionPickerEditIngredientProps;
+  | PortionPickerAddProps
+  | PortionPickerEditProps
+  | PortionPickerAddIngredientProps
+  | PortionPickerEditIngredientProps;

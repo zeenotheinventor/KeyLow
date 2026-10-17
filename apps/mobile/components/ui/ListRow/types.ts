@@ -1,5 +1,6 @@
 import type { IconName } from "../Icon";
-import type { ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
+import type { View } from "react-native";
 
 type ListRowBaseProps = {
   /** A leading icon, by name, in a small tile. */
@@ -20,6 +21,13 @@ type ListRowBaseProps = {
 export type ListRowToPressProps = ListRowBaseProps & {
   /** A row without it goes nowhere: it is drawn as plain information, with no press feedback. */
   onPress?: (() => void) | undefined;
+  /**
+   * `footer` is the row that closes a card of rows with an action, such as the recipe editor's Add ingredient:
+   * its icon bare and not in a tile, a 52 point row, no subtitle and no chevron. Leave it out for the usual row.
+   */
+  variant?: "footer" | undefined;
+  /** The row's button, so a screen can move a screen reader's focus to it. */
+  ref?: Ref<View> | undefined;
   children?: undefined;
 };
 
@@ -31,6 +39,8 @@ export type ListRowToPressProps = ListRowBaseProps & {
  */
 export type ListRowWithControlProps = ListRowBaseProps & {
   onPress?: undefined;
+  variant?: undefined;
+  ref?: undefined;
   children?: ReactNode;
 };
 

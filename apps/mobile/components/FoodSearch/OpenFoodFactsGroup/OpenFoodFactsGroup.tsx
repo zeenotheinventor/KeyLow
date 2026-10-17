@@ -37,7 +37,12 @@ function AddFailureBanner({ error }: { error: unknown }) {
  * The live Open Food Facts results. Choosing one saves it as a food, once, and opens the food. While
  * it is saved its row is busy and the others wait. A failure is said in the group, above the rows.
  */
-export function OpenFoodFactsGroup({ candidates, query, onOpenFood }: OpenFoodFactsGroupProps) {
+export function OpenFoodFactsGroup({
+  candidates,
+  query,
+  releasesOnOpen = false,
+  onOpenFood,
+}: OpenFoodFactsGroupProps) {
   const materialiseOffProduct = useMaterialiseOffProduct();
   const [pendingCode, setPendingCode] = useState<string | undefined>(undefined);
   const [failure, setFailure] = useState<AddFailure | undefined>(undefined);
@@ -65,8 +70,12 @@ export function OpenFoodFactsGroup({ candidates, query, onOpenFood }: OpenFoodFa
       return;
     }
     // The guard and the busy row stay while the food opens, so a second tap cannot add and open it again.
-    // Coming back to the sheet releases them.
+    // Coming back to the sheet releases them, unless the food opens over the sheet itself.
     onOpenFood(food.id);
+    if (releasesOnOpen) {
+      isAdding.current = false;
+      setPendingCode(undefined);
+    }
   }
 
   // The food opens over the sheet, which loses focus. Coming back gives it focus and releases the row.

@@ -51,15 +51,16 @@ import type { PickerChoices } from "@keylow/core/diary";
  * picker keeps, and Add is the only part that belongs to adding: it hands them over with `onSubmit`. A food
  * that must be reviewed first has Copy to your foods in place of Add and no Time row. An ingredient already in
  * a recipe has the logged entry's page without the Time row, with Save and Remove from recipe: nothing is
- * logged or saved, so it works offline.
+ * logged or saved, so it works offline. A food about to join a recipe has the add page without the Time row,
+ * with the food's source under the title and Add to recipe; a food that must be reviewed first cannot be added.
  */
 export function PortionPicker(props: PortionPickerProps) {
   const { food, onBack } = props;
   // The pages that log a food at a time. An ingredient's amount step is not one.
-  const logging = props.mode === "edit-ingredient" ? undefined : props;
+  const logging = props.mode === "add" || props.mode === "edit" ? props : undefined;
   const isOnline = logging?.isOnline ?? true;
   // A logged entry and an ingredient are worked from the snapshot they were saved with.
-  const isFromSnapshot = props.mode !== "add";
+  const isFromSnapshot = props.mode === "edit" || props.mode === "edit-ingredient";
   const insets = useSafeAreaInsets();
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
@@ -68,12 +69,13 @@ export function PortionPicker(props: PortionPickerProps) {
   // food's portions, while its hero is worked out from the snapshot alone. The hero gets the portions the chips
   // came from.
   const choices: PickerChoices =
-    props.mode === "add"
+    props.mode === "add" || props.mode === "add-ingredient"
       ? pickerChoices(food, props.portions)
       : entryPickerChoices(props.snapshot, props.livePortions);
-  const amountFood = props.mode === "add" ? food : snapshotAsFood(props.snapshot);
+  const amountFood =
+    props.mode === "add" || props.mode === "add-ingredient" ? food : snapshotAsFood(props.snapshot);
   const [start] = useState(() =>
-    props.mode === "add"
+    props.mode === "add" || props.mode === "add-ingredient"
       ? startingAmount(food, choices.portions, props.initialAmount)
       : snapshotAmountStart(props.snapshot),
   );
@@ -141,6 +143,11 @@ export function PortionPicker(props: PortionPickerProps) {
                 </Text>
               </View>
             )}
+            {props.mode === "add-ingredient" ? (
+              <View className="flex-row">
+                <Badge kind="source" source={food.source} />
+              </View>
+            ) : null}
             {props.mode === "edit" && props.caption !== undefined ? (
               <Text tone="secondary" variant="caption">
                 {props.caption}
@@ -190,7 +197,11 @@ export function PortionPicker(props: PortionPickerProps) {
                 <View className="gap-1">
                   <Button
                     fullWidth
-                    disabled={amount === null || !isOnline}
+                    disabled={
+                      amount === null ||
+                      !isOnline ||
+                      (props.mode === "add-ingredient" && needsReview)
+                    }
                     haptic="confirm"
                     loading={logging?.isSaving ?? false}
                     size="lg"
@@ -198,14 +209,18 @@ export function PortionPicker(props: PortionPickerProps) {
                       if (amount === null) {
                         return;
                       }
-                      if (props.mode === "edit-ingredient") {
+                      if (props.mode === "edit-ingredient" || props.mode === "add-ingredient") {
                         props.onSubmit(amount);
                       } else {
                         props.onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
                       }
                     }}
                   >
-                    {isFromSnapshot ? ENTRY_SCREEN.saveAction : PORTION_PICKER.addAction}
+                    {isFromSnapshot
+                      ? ENTRY_SCREEN.saveAction
+                      : props.mode === "add-ingredient"
+                        ? RECIPE_EDITOR.addToRecipe
+                        : PORTION_PICKER.addAction}
                   </Button>
                   {props.mode === "edit" ? (
                     <Button

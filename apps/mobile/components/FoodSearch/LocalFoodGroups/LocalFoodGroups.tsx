@@ -1,4 +1,4 @@
-import { SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
+import { SEARCH_GROUP_HEADINGS, describeChooseAmountRowName } from "@keylow/core/copy";
 import { foodNeedsReview } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import { describeFoodRow, describeMacros, servingOfSearchHit } from "@keylow/core/search";
@@ -12,6 +12,7 @@ export function LocalFoodGroups({
   groups,
   query,
   logRows,
+  choosesAmount = false,
   onSeeMore,
   onOpenFood,
 }: LocalFoodGroupsProps) {
@@ -34,11 +35,12 @@ export function LocalFoodGroups({
           const open = () => {
             onOpenFood(food.id);
           };
-          if (logRows === undefined) {
+          if (logRows === undefined && !choosesAmount) {
             return <FoodRow key={food.id} {...describeFoodRow(food, query)} onPress={open} />;
           }
-          // The rows come in the database's ranking and are drawn in it. The row shows one serving, and
-          // its plus logs that serving.
+          // The rows come in the database's ranking and are drawn in it. The row shows one serving. In the log
+          // search its plus logs that serving; in the ingredient search the row only opens the amount step,
+          // because the amount matters in a recipe, and a screen reader is told so.
           const { nameSegments, brand } = describeFoodRow(food, query);
           const serving = servingOfSearchHit(food);
           const macros = describeMacros(serving);
@@ -46,7 +48,7 @@ export function LocalFoodGroups({
           return (
             <FoodRow
               key={food.id}
-              addDisabled={logRows.addDisabled}
+              addDisabled={logRows?.addDisabled}
               brand={brand}
               caption={serving.caption}
               energy={serving.kcal === null ? undefined : formatCalories(serving.kcal)}
@@ -59,9 +61,21 @@ export function LocalFoodGroups({
               }}
               nameSegments={nameSegments}
               needsReview={foodNeedsReview(food)}
-              onAdd={() => {
-                logRows.onAdd(food);
-              }}
+              openLabel={
+                choosesAmount
+                  ? describeChooseAmountRowName(food.name, serving.caption, {
+                      brand,
+                      needsReview: foodNeedsReview(food),
+                    })
+                  : undefined
+              }
+              onAdd={
+                logRows === undefined
+                  ? undefined
+                  : () => {
+                      logRows.onAdd(food);
+                    }
+              }
               onPress={open}
             />
           );

@@ -39,7 +39,7 @@ const names = (draft: RecipeDraft) =>
   draft.ingredients.map((ingredient) => ingredient.snapshot.name);
 
 // A screen holding a draft, with a button for each thing the hook does and one for an edit made elsewhere,
-// such as adding an ingredient, which a later ticket gives the editor.
+// such as another screen adding an ingredient.
 function Harness({ start }: { start: RecipeDraft }) {
   const [draft, setDraft] = useState(start);
   const edits = useIngredientEdits(draft.ingredients, setDraft);
@@ -69,6 +69,13 @@ function Harness({ start }: { start: RecipeDraft }) {
         }}
       >
         Replace first
+      </Text>
+      <Text
+        onPress={() => {
+          edits.add(ingredientNamed("Added"));
+        }}
+      >
+        Add one
       </Text>
       <Text
         onPress={() => {
@@ -130,6 +137,14 @@ describe("useIngredientEdits", () => {
     expect(screen.getByLabelText("Amount of the first")).toHaveTextContent("250");
   });
 
+  it("should add the ingredient at the end", async () => {
+    const user = await showHarness(three());
+
+    await user.press(screen.getByText("Add one"));
+
+    expect(inTheDraft()).toHaveTextContent("Eggs, Milk, Oil, Added");
+  });
+
   it("should remove the ingredient at once and say so with an Undo", async () => {
     const user = await showHarness(three());
 
@@ -186,6 +201,15 @@ describe("useIngredientEdits", () => {
       expect(count()).toHaveTextContent(String(MAX_RECIPE_INGREDIENTS));
       expect(inTheDraft()).not.toHaveTextContent(/Food 1,/);
       expect(screen.getByText("Up to 100 ingredients")).toBeOnTheScreen();
+    });
+
+    it("should add nothing, and not throw, to a list that is full", async () => {
+      const user = await showHarness(full());
+
+      await user.press(screen.getByText("Add one"));
+
+      expect(count()).toHaveTextContent(String(MAX_RECIPE_INGREDIENTS));
+      expect(inTheDraft()).not.toHaveTextContent(/Added/);
     });
 
     it("should still put the ingredient back when there is room", async () => {

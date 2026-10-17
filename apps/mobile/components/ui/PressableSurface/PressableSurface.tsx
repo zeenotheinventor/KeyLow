@@ -27,6 +27,7 @@ export function PressableSurface({
   accessibilityActions,
   onAccessibilityAction,
   onPress,
+  ref,
   className = "",
 }: PressableSurfaceProps) {
   const { animatedStyle, isPressed, pressHandlers, resetPress } = usePressScale(pressScale);
@@ -62,6 +63,7 @@ export function PressableSurface({
         className={className}
         disabled={isInert}
         hitSlop={hitSlop}
+        ref={ref}
         role={role}
         onAccessibilityAction={onAccessibilityAction}
         onPress={handlePress}

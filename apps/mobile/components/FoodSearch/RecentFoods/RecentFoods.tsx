@@ -59,9 +59,13 @@ export function RecentFoods({ addDisabled, onAdd, onOpen }: RecentFoodsProps) {
               description: macros.accessibleDescription,
             }}
             nameSegments={[{ text: snapshot.name, matched: false }]}
-            onAdd={() => {
-              onAdd(food);
-            }}
+            onAdd={
+              onAdd === undefined
+                ? undefined
+                : () => {
+                    onAdd(food);
+                  }
+            }
             onPress={() => {
               onOpen(food);
             }}

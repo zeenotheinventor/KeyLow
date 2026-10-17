@@ -43,6 +43,13 @@ export const samples: Record<string, () => string[]> = {
   describeIngredientRowName: () => [
     copy.describeIngredientRowName("Onions, raw", "1 medium (110 g)"),
   ],
+  describeChooseAmountRowName: () => [
+    copy.describeChooseAmountRowName("Spinach, baby, raw", "100 g"),
+    copy.describeChooseAmountRowName("Protein bar", "1 bar (60 g)", {
+      brand: "Barebells",
+      needsReview: true,
+    }),
+  ],
   describeStepTitle: () => [copy.describeStepTitle(3)],
   describeStepTextName: () => [copy.describeStepTextName(3)],
   describeStepLength: () => [

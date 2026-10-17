@@ -8,6 +8,7 @@ import {
   SAVE_FAILED_BANNER,
 } from "@keylow/core/copy";
 import {
+  MAX_RECIPE_INGREDIENTS,
   isRecipeDraftChanged,
   newRecipeDraft,
   recipeCardOf,
@@ -36,6 +37,7 @@ import { recipePath, recipesPath } from "../../lib/recipeRoutes";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { useSettledValue } from "../../lib/useSettledValue";
+import { AddIngredientSheet } from "../AddIngredientSheet";
 import { DiscardRecipeSheet } from "../DiscardRecipeSheet";
 import { IngredientAmountStep } from "../IngredientAmountStep";
 import { PerServingCard } from "../PerServingCard";
@@ -45,15 +47,25 @@ import { Banner, Button, SheetHeader, useToast, useToastAboveBar } from "../ui";
 
 import type { ProblemSentences } from "./problemSentences";
 import type { RecipeEditorProps } from "./types";
+import type { ChosenFood } from "../AddIngredientSheet";
 import type { RecipeDetailsField } from "../RecipeDetailsFields";
 import type { RecipeDraft, RecipeIngredient } from "@keylow/core/recipes";
-import type { HostInstance, TextInput } from "react-native";
+import type {
+  HostInstance,
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  TextInput,
+} from "react-native";
 
 // How long typing has to stop before the Per serving card follows it, and so before it is read out.
 const CARD_FOLLOWS_TYPING_AFTER_MS = 500;
 
 // How far above the top of the scroll view a field is left when Save scrolls to it.
 const ROOM_ABOVE_PROBLEM = 16;
+
+// How far above the bottom of the scroll view the end of the Ingredients is left after one is added.
+const ROOM_BELOW_INGREDIENTS = 16;
 
 type SaveStatus = "idle" | "saving" | "created";
 
@@ -62,8 +74,8 @@ type Exit = { href: string; how: "dismiss" | "replace" };
 
 /**
  * The recipe editor: the details, the ingredients (each opens its amount step, in a page over the editor so
- * the draft and the scroll place stay where they are, and each can be removed with an Undo) and the Per
- * serving card, which follows the servings, the cooked weight and the ingredients once typing stops. Save is always pressable (but
+ * the draft and the scroll place stay where they are, and each can be removed with an Undo; Add ingredient
+ * opens the food search over the editor the same way) and the Per serving card, which follows the servings, the cooked weight and the ingredients once typing stops. Save is always pressable (but
  * offline), and a failed one says what to fix, field by field, scrolls to the first and moves focus to it.
  * Leaving with changes asks first, by the header's Back or Close, the Android back button and the iOS swipe
  * back alike. It holds no sums of its own: the card, the checks, the sentences and what counts as a change
@@ -93,6 +105,13 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     null,
   );
   const stepCount = useRef(0);
+  // The food search for a new ingredient, over the editor, and the food whose amount step it has open.
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [chosenFood, setChosenFood] = useState<ChosenFood | undefined>(undefined);
+  const shouldFocusAddRow = useRef(false);
+  const shouldScrollToAdded = useRef(false);
+  const scrollOffset = useRef(0);
+  const scrollViewportHeight = useRef(0);
   const [dockHeight, setDockHeight] = useState(0);
   const shouldFocusIngredientsHeading = useRef(false);
 
@@ -104,6 +123,8 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const cookedWeightField = useRef<TextInput>(null);
   const ingredientsSection = useRef<View>(null);
   const ingredientsHeading = useRef<View>(null);
+  const addIngredientRow = useRef<View>(null);
+  const ingredientLimitCaption = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
   const keyboardLift = useKeyboardLift(frameRef, Platform.OS === "android");
   const trackScrollOffset = useScrollFocusedInputIntoView(scrollViewRef, keyboardLift);
@@ -115,6 +136,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const isNewRecipe = existing === undefined;
   const isChanged = isRecipeDraftChanged(baseline, draft);
   const isLocked = saveStatus !== "idle";
+  const isFull = draft.ingredients.length >= MAX_RECIPE_INGREDIENTS;
 
   const validation = validateRecipeDraft(draft);
   const sentences = problemSentences(validation.ok ? [] : validation.problems);
@@ -127,19 +149,31 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
 
   const card = recipeCardOf(useSettledValue(draft, CARD_FOLLOWS_TYPING_AFTER_MS));
   const openedIngredient = openStep === null ? undefined : openStep.ingredient;
+  // A page over the editor: an ingredient's amount step, or the search for a new one.
+  const isEditorCovered = openedIngredient !== undefined || isAddOpen;
 
   const backHref = existing === undefined ? recipesPath() : recipePath(existing.id);
 
   // The Android back button, the iOS swipe back and the header all end here when changes would be lost, and
   // a save under way is not interrupted. Saving and discarding both leave nothing changed, so the hold is
   // already lifted when the way out runs. With an amount step open, the way back closes the step.
-  usePreventRemove(isChanged || saveStatus === "saving" || openedIngredient !== undefined, () => {
-    if (openedIngredient !== undefined) {
-      closeIngredient();
-    } else if (!isLocked) {
-      setIsDiscardOpen(true);
-    }
-  });
+  usePreventRemove(
+    isChanged || saveStatus === "saving" || openedIngredient !== undefined || isAddOpen,
+    () => {
+      if (isAddOpen) {
+        // The way back steps back: from the amount step to the results, and from the results to the editor.
+        if (chosenFood === undefined) {
+          closeAddIngredient();
+        } else {
+          setChosenFood(undefined);
+        }
+      } else if (openedIngredient !== undefined) {
+        closeIngredient();
+      } else if (!isLocked) {
+        setIsDiscardOpen(true);
+      }
+    },
+  );
 
   // A screen reader is taken back to the Ingredients heading once the editor is there to be focused, since
   // the row that was pressed may be gone.
@@ -149,6 +183,24 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       focusIngredientsHeading();
     }
   }, [openStep]);
+
+  // Once the search has closed, a screen reader is taken back to the row that opened it, as the opener gets
+  // focus back. The most a recipe holds turns that row off, so focus goes to the line that says why. A
+  // Close and an Add both end here, and an Add also scrolls to the ingredient it put at the end.
+  useEffect(() => {
+    if (isAddOpen || !shouldFocusAddRow.current) {
+      return;
+    }
+    shouldFocusAddRow.current = false;
+    const target = isFull ? ingredientLimitCaption.current : addIngredientRow.current;
+    if (target !== null) {
+      AccessibilityInfo.sendAccessibilityEvent(target, "focus");
+    }
+    if (shouldScrollToAdded.current) {
+      shouldScrollToAdded.current = false;
+      scrollToEndOfIngredients();
+    }
+  }, [isAddOpen, isFull]);
 
   // The way out runs after the render that lifted the hold, or the navigator would still refuse it. A new
   // `exit` each time, so a way out that led nowhere (the editor's own page) can be asked for again.
@@ -183,6 +235,30 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     toast.dismiss();
     stepCount.current += 1;
     setOpenStep({ ingredient, id: stepCount.current });
+  }
+
+  function openAddIngredient() {
+    if (isLocked) {
+      return;
+    }
+    // A field that still holds the keyboard would keep it up under the search, and a toast would cover the
+    // search and offer an Undo that changes the list behind it.
+    Keyboard.dismiss();
+    toast.dismiss();
+    setChosenFood(undefined);
+    setIsAddOpen(true);
+  }
+
+  function closeAddIngredient() {
+    shouldFocusAddRow.current = true;
+    setChosenFood(undefined);
+    setIsAddOpen(false);
+  }
+
+  function addIngredientToDraft(ingredient: RecipeIngredient) {
+    ingredientEdits.add(ingredient);
+    shouldScrollToAdded.current = true;
+    closeAddIngredient();
   }
 
   function closeIngredient() {
@@ -228,6 +304,36 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       },
       () => undefined,
     );
+  }
+
+  // Scrolls just far enough forward that the end of the Ingredients, where the new ingredient now sits above
+  // the Add ingredient row, is in view. An end that is in view already is left where it is.
+  function scrollToEndOfIngredients() {
+    const scrollView = scrollViewRef.current;
+    const content = contentRef.current;
+    const section = ingredientsSection.current;
+    if (scrollView === null || content === null || section === null) {
+      return;
+    }
+    section.measureLayout(
+      content,
+      (_left, top, _width, height) => {
+        const y = top + height - scrollViewportHeight.current + ROOM_BELOW_INGREDIENTS;
+        if (scrollViewportHeight.current > 0 && y > scrollOffset.current) {
+          scrollView.scrollTo({ y, animated: false });
+        }
+      },
+      () => undefined,
+    );
+  }
+
+  function trackScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
+    scrollOffset.current = event.nativeEvent.contentOffset.y;
+    trackScrollOffset(event);
+  }
+
+  function trackViewport(event: LayoutChangeEvent) {
+    scrollViewportHeight.current = event.nativeEvent.layout.height;
   }
 
   function focusFirstProblem(found: ProblemSentences) {
@@ -315,9 +421,9 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       {/* The editor stays where it is under the amount step, so the draft, the scroll place and the fields
           are all as they were when the step closes. A screen reader cannot reach it meanwhile. */}
       <View
-        aria-hidden={openedIngredient !== undefined}
+        aria-hidden={isEditorCovered}
         className="flex-1"
-        importantForAccessibility={openedIngredient === undefined ? "auto" : "no-hide-descendants"}
+        importantForAccessibility={isEditorCovered ? "no-hide-descendants" : "auto"}
       >
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -360,7 +466,8 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
               className="flex-1"
               keyboardShouldPersistTaps="handled"
               scrollEventThrottle={16}
-              onScroll={trackScrollOffset}
+              onLayout={trackViewport}
+              onScroll={trackScroll}
             >
               <View ref={contentRef} className="gap-6 px-4 pb-6 pt-1">
                 <PerServingCard card={card} />
@@ -378,6 +485,10 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
                   problems={shownSentences.ingredients}
                   headingRef={ingredientsHeading}
                   sectionRef={ingredientsSection}
+                  addRowRef={addIngredientRow}
+                  isLocked={isLocked}
+                  limitRef={ingredientLimitCaption}
+                  onAdd={openAddIngredient}
                   onOpen={openIngredientStep}
                   onRemove={removeIngredientAt}
                 />
@@ -416,6 +527,19 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
           />
         </KeyboardAvoidingView>
       </View>
+      {isAddOpen ? (
+        <View accessibilityViewIsModal className="absolute inset-0 bg-background">
+          <AddIngredientSheet
+            chosen={chosenFood}
+            onAdd={addIngredientToDraft}
+            onBackToResults={() => {
+              setChosenFood(undefined);
+            }}
+            onChoose={setChosenFood}
+            onClose={closeAddIngredient}
+          />
+        </View>
+      ) : null}
       {openStep === null ? null : (
         <View accessibilityViewIsModal className="absolute inset-0 bg-background">
           <IngredientAmountStep

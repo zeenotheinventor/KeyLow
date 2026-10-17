@@ -13,6 +13,8 @@ const directories = [
   "components/RecipeDetailsFields",
   "components/RecipeIngredientsSection",
   "components/IngredientAmountStep",
+  "components/AddIngredientSheet",
+  "components/AddIngredientAmountStep",
   "components/PerServingCard",
   "components/DiscardRecipeSheet",
   "app/recipes",

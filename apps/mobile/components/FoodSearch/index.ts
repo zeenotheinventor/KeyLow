@@ -1,2 +1,7 @@
 export { FoodSearch } from "./FoodSearch";
-export type { FoodSearchLogging, FoodSearchProps, FoodSearchScope } from "./types";
+export type {
+  FoodSearchIngredient,
+  FoodSearchLogging,
+  FoodSearchProps,
+  FoodSearchScope,
+} from "./types";

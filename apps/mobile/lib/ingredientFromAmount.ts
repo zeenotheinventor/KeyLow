@@ -23,6 +23,10 @@ const inputOf = (amount: ChosenAmount) => ({
   ...(amount.unit === "portion" ? { portion: amount.portion } : {}),
 });
 
+/** An ingredient of `amount` of `food`, with the food's values as they are now frozen into it. */
+export const newIngredient = (food: Food, amount: ChosenAmount): RecipeIngredient =>
+  buildRecipeIngredient(food, inputOf(amount));
+
 /**
  * The ingredient with the amount the amount step handed over. The food's values stay the ones it was added
  * with, so a food edited since changes nothing here (only Refresh ingredients moves them), as an edited diary
@@ -38,7 +42,7 @@ export function ingredientWithAmount(
     return ingredient;
   }
 
-  const rebuilt = buildRecipeIngredient(frozenFoodOf(ingredient), inputOf(amount));
+  const rebuilt = newIngredient(frozenFoodOf(ingredient), amount);
 
   return amount.unit === "portion" && amount.portion.id === SNAPSHOT_PORTION_ID
     ? { ...rebuilt, portion_id: ingredient.portion_id }
