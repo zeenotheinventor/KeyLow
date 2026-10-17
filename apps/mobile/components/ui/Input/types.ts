@@ -16,6 +16,11 @@ export type FieldFrameProps = {
    * portion's amount. Defaults to the label.
    */
   accessibilityLabel?: string | undefined;
+  /**
+   * Draws no visible label, for a field whose label sits beside it on the screen, as the servings
+   * stepper's does. The label is still the field's accessible name.
+   */
+  labelHidden?: boolean | undefined;
   /** A short note at the end of the label's line, such as "Required". */
   labelHint?: string | undefined;
   /**
@@ -64,6 +69,17 @@ export type FieldTextProps = Pick<
   | "maxLength"
   | "returnKeyType"
 >;
+
+/**
+ * Makes a field an adjustable for a screen reader, which steps its value up and down with a swipe, as the
+ * buttons beside it do. The field holds no rules: the caller decides what a step does.
+ */
+export type FieldAdjustment = {
+  /** What a screen reader reads as the field's value, such as "6 servings". */
+  valueText: string;
+  /** Asked for on a swipe up (1) or a swipe down (-1). */
+  onStep: (direction: 1 | -1) => void;
+};
 
 export type InputProps = FieldFrameProps &
   FieldTextProps &

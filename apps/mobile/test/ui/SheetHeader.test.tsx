@@ -198,6 +198,129 @@ describe("SheetHeader", () => {
     });
   });
 
+  describe("with two trailing controls, as the recipe view has Edit and More", () => {
+    const editAndMore = [
+      { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
+      { icon: "Ellipsis", label: "More", onPress: () => undefined },
+    ] as const;
+
+    it("should draw both controls after the title, each reachable by its name", async () => {
+      await renderHeader({ ...stackHeader, title: "Chicken and rice", trailing: editAndMore });
+
+      expect(screen.getByRole("heading", { name: "Chicken and rice" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Edit Chicken and rice" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "More" })).toBeOnTheScreen();
+      expect(screen.getAllByRole("button")).toHaveLength(3);
+    });
+
+    it("should draw the pair in the sheet header's look: 20 point icons in raised, bordered buttons", async () => {
+      await renderHeader({ ...searchHeader, title: "Chicken and rice", trailing: editAndMore });
+
+      expect(drawings()).toHaveLength(3);
+      for (const drawing of drawings()) {
+        expect(drawing).toHaveProp("width", iconSize.md);
+      }
+      for (const name of ["Edit Chicken and rice", "More"]) {
+        expect(screen.getByRole("button", { name })).toHaveStyle({
+          height: controlHeight.md,
+          width: touchTarget,
+          borderWidth: 1,
+        });
+      }
+    });
+
+    it("should call the handler of the control that is pressed", async () => {
+      const user = userEvent.setup();
+      const onEdit = jest.fn();
+      const onMore = jest.fn();
+      await renderHeader({
+        ...stackHeader,
+        trailing: [
+          { icon: "Pencil", label: "Edit Chicken and rice", onPress: onEdit },
+          { icon: "Ellipsis", label: "More", onPress: onMore },
+        ],
+      });
+
+      await user.press(screen.getByRole("button", { name: "More" }));
+      expect(onMore).toHaveBeenCalledTimes(1);
+      expect(onEdit).not.toHaveBeenCalled();
+
+      await user.press(screen.getByRole("button", { name: "Edit Chicken and rice" }));
+      expect(onEdit).toHaveBeenCalledTimes(1);
+    });
+
+    it("should sit the two controls side by side with 8 points between them, 44 points each", async () => {
+      await renderHeader({ ...stackHeader, trailing: editAndMore });
+
+      expect(screen.getByTestId("sheet-header-trailing")).toHaveStyle({
+        flexDirection: "row",
+        columnGap: 8,
+      });
+      for (const name of ["Edit Chicken and rice", "More"]) {
+        expect(screen.getByRole("button", { name })).toHaveStyle({
+          height: controlHeight.md,
+          width: touchTarget,
+        });
+      }
+    });
+
+    it("should not draw the empty slot, because the controls fill it", async () => {
+      await renderHeader({ ...stackHeader, trailing: editAndMore });
+
+      expect(screen.queryByTestId("sheet-header-empty-slot")).not.toBeOnTheScreen();
+    });
+
+    it("should keep a long title to one line, truncated, in the space the controls leave", async () => {
+      const title = "Slow cooked chicken and rice with spinach and a very long name";
+      await renderHeader({ ...stackHeader, title, trailing: editAndMore });
+
+      const heading = screen.getByRole("heading", { name: title });
+      expect(heading).toHaveProp("numberOfLines", 1);
+      expect(heading).toHaveStyle({ flexGrow: 1, textAlign: "center" });
+    });
+
+    it("should say a disabled control is disabled and not call its handler", async () => {
+      const user = userEvent.setup();
+      const onEdit = jest.fn();
+      const onMore = jest.fn();
+      await renderHeader({
+        ...stackHeader,
+        trailing: [
+          { icon: "Pencil", label: "Edit Chicken and rice", disabled: true, onPress: onEdit },
+          { icon: "Ellipsis", label: "More", disabled: true, onPress: onMore },
+        ],
+      });
+
+      const edit = screen.getByRole("button", { name: "Edit Chicken and rice" });
+      expect(edit).toBeDisabled();
+      // NativeWind hands the opacity over as a 32 bit float.
+      expect(edit).toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(screen.getByRole("button", { name: "More" })).toBeDisabled();
+
+      await user.press(edit);
+      await user.press(screen.getByRole("button", { name: "More" }));
+      expect(onEdit).not.toHaveBeenCalled();
+      expect(onMore).not.toHaveBeenCalled();
+    });
+
+    it("should leave a control that is not disabled enabled", async () => {
+      await renderHeader({ ...stackHeader, trailing: editAndMore });
+
+      expect(screen.getByRole("button", { name: "More" })).toBeEnabled();
+    });
+  });
+
+  it("should disable a single trailing control too", async () => {
+    const onPress = jest.fn();
+    await renderHeader({
+      ...searchHeader,
+      trailing: { icon: "Plus", label: "Create a food", disabled: true, onPress },
+    });
+
+    expect(screen.getByRole("button", { name: "Create a food" })).toBeDisabled();
+  });
+
   it("should keep a long title to one line", async () => {
     await renderHeader({ ...searchHeader, title: "A very long name for a food somebody saved" });
 

@@ -39,9 +39,10 @@ const variants = {
 >;
 
 /**
- * The top of a sheet: a control at the left, a centred title and an optional control at the right. The
- * screen gives the top inset and the header gives the 12 points under it, as the search field's dock
- * gives the 12 above the bottom inset.
+ * The top of a sheet: a control at the left, a centred title and an optional control at the right, or two.
+ * The screen gives the top inset and the header gives the 12 points under it, as the search field's dock
+ * gives the 12 above the bottom inset. With two controls on the right the title is centred in the space
+ * between the left control and the pair.
  */
 export function SheetHeader({
   variant = "sheet",
@@ -57,6 +58,8 @@ export function SheetHeader({
       <IconButton
         icon={control.icon}
         iconSize={iconSize}
+        disabled={control.disabled ?? false}
+        key={control.label}
         label={control.label}
         variant={look.buttonVariant}
         onPress={control.onPress}
@@ -81,8 +84,12 @@ export function SheetHeader({
       {trailing === undefined ? (
         // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
         <View className="w-touch-target" testID="sheet-header-empty-slot" />
-      ) : (
+      ) : "icon" in trailing ? (
         renderControl(trailing, look.trailingIconSize)
+      ) : (
+        <View className="shrink-0 flex-row gap-2" testID="sheet-header-trailing">
+          {trailing.map((control) => renderControl(control, look.trailingIconSize))}
+        </View>
       )}
     </View>
   );

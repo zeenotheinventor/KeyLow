@@ -9,6 +9,7 @@ import { FieldError } from "../FieldError";
 
 import type { FieldMacro, TextFieldProps } from "./types";
 import type { InputDensity } from "../types";
+import type { TextInputProps } from "react-native";
 
 // The classes are written out so Tailwind sees them. The food form boards draw the box 12 across, with
 // 6 between the digits and the unit and 8 between a value and its lock. The sign in boards draw 16 across
@@ -26,6 +27,12 @@ const macroMarkClassName: Record<FieldMacro, string> = {
   fat: "bg-fat",
 };
 
+const alignClassName = {
+  left: "",
+  right: "text-right",
+  center: "text-center",
+} satisfies Record<NonNullable<TextFieldProps["align"]>, string>;
+
 // A field's text and its box give way to large text only so far, because the box is the design's 44
 // points and the text has only the box to live in.
 const maxFontSizeMultiplier = 1.5;
@@ -41,6 +48,7 @@ function nonEmpty(text: string | undefined): string | undefined {
  */
 export function TextField({
   label,
+  labelHidden = false,
   accessibilityLabel,
   labelHint,
   required = false,
@@ -55,6 +63,8 @@ export function TextField({
   unit,
   macro,
   align = "left",
+  strongValue = false,
+  adjustable,
   value,
   onChangeText,
   onBlur,
@@ -83,39 +93,64 @@ export function TextField({
   ].filter((part) => part !== undefined);
   const accessibilityHint = hintParts.length === 0 ? undefined : hintParts.join(". ");
 
+  // The swipe up and down of a screen reader's increment and decrement, handed to the screen as a step.
+  const adjustableProps: TextInputProps | undefined =
+    adjustable === undefined
+      ? undefined
+      : {
+          accessibilityRole: "adjustable",
+          accessibilityValue: { text: adjustable.valueText },
+          accessibilityActions: [{ name: "increment" }, { name: "decrement" }],
+          onAccessibilityAction: ({ nativeEvent }) => {
+            if (nativeEvent.actionName === "increment") {
+              adjustable.onStep(1);
+            } else if (nativeEvent.actionName === "decrement") {
+              adjustable.onStep(-1);
+            }
+          },
+        };
+
   const borderClassName =
     errorText !== undefined ? "border-danger" : isFocused ? "border-accent" : "border-border";
   const fillClassName = locked || disabled ? "bg-surface" : "bg-surface-raised";
 
   return (
     <View className={`gap-1 ${disabled ? "opacity-50" : ""}`}>
-      <View className="flex-row items-center justify-between gap-1">
-        <View className="min-w-0 shrink flex-row items-center gap-[6px]">
-          {macro === undefined ? null : (
-            <View aria-hidden className={`h-2 w-2 rounded-[2px] ${macroMarkClassName[macro]}`} />
+      {labelHidden && hint === undefined ? null : (
+        <View className="flex-row items-center justify-between gap-1">
+          {labelHidden ? null : (
+            <View className="min-w-0 shrink flex-row items-center gap-[6px]">
+              {macro === undefined ? null : (
+                <View
+                  aria-hidden
+                  className={`h-2 w-2 rounded-[2px] ${macroMarkClassName[macro]}`}
+                />
+              )}
+              {/* It shrinks to the column it is in, and wraps there, so a long label at large text stays under its own field. */}
+              <Text className="shrink" tone="secondary" variant="caption">
+                {label}
+              </Text>
+            </View>
           )}
-          {/* It shrinks to the column it is in, and wraps there, so a long label at large text stays under its own field. */}
-          <Text className="shrink" tone="secondary" variant="caption">
-            {label}
-          </Text>
+          {hint === undefined ? null : (
+            <Text tone="muted" variant="caption">
+              {hint}
+            </Text>
+          )}
         </View>
-        {hint === undefined ? null : (
-          <Text tone="muted" variant="caption">
-            {hint}
-          </Text>
-        )}
-      </View>
+      )}
       <View
         className={`min-h-control-md flex-row items-center rounded-medium border ${boxSpacingClassName(density, unit !== undefined)} ${borderClassName} ${fillClassName}`}
       >
         <TextInput
           {...keyboardProps}
+          {...adjustableProps}
           accessibilityHint={accessibilityHint}
           // Left off unless disabled: on Android the accessibility state is applied after `editable`, so
           // `aria-disabled={false}` would turn a locked field's input back on.
           aria-disabled={disabled ? true : undefined}
           aria-label={accessibilityLabel ?? (unit === undefined ? label : `${label} (${unit})`)}
-          className={`min-h-10 min-w-0 flex-1 p-0 text-body font-normal tabular-nums text-text-primary ${align === "right" ? "text-right" : ""}`}
+          className={`min-h-10 min-w-0 flex-1 p-0 tabular-nums text-text-primary ${strongValue ? "text-body-strong font-semibold" : "text-body font-normal"} ${alignClassName[align]}`}
           cursorColor={colors["text-primary"]}
           // `readOnly` is left out because React Native lets it override `editable` even when it is false.
           editable={!disabled && !locked}

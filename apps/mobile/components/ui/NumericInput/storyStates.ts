@@ -10,4 +10,5 @@ export const storyStates = [
   "WithMissingNote",
   "WithWarningHelper",
   "Disabled",
+  "WholeNumberBesideLabel",
 ];

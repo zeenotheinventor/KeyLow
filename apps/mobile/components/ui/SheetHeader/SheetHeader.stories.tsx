@@ -51,3 +51,39 @@ export const Scanner: Story = {
     trailing: close,
   },
 };
+
+const editAndMore = [
+  { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
+  { icon: "Ellipsis", label: "More", onPress: () => undefined },
+] as const;
+
+// The recipe view: Back, the recipe's name and two controls. The component board draws the raised
+// controls and the large title of the sheet header.
+export const TwoControls: Story = {
+  args: { title: "Chicken and rice", leading: back, trailing: editAndMore },
+};
+
+export const TwoControlsStack: Story = {
+  args: { variant: "stack", title: "Chicken and rice", leading: back, trailing: editAndMore },
+};
+
+// Offline, the recipe view keeps both controls and dims them.
+export const TwoControlsDisabled: Story = {
+  args: {
+    title: "Chicken and rice",
+    leading: back,
+    trailing: [
+      { ...editAndMore[0], disabled: true },
+      { ...editAndMore[1], disabled: true },
+    ],
+  },
+};
+
+// The title stays on one line, truncated, in the space the controls leave.
+export const LongTitle: Story = {
+  args: {
+    title: "Slow cooked chicken and rice with spinach and a very long name",
+    leading: back,
+    trailing: editAndMore,
+  },
+};
