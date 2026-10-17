@@ -96,10 +96,17 @@ The goal questionnaire writes `training_goals`. `muscle_priority` is derived in 
 
 ### The body map: 2D first, 3D behind the same interface
 
-One renderer contract on both apps: `BodyMap({ values: Record<MuscleId, number>, scale: 'heat' | 'volume' | 'gap', onSelect })`. The screen shows the map in three modes from the same component: **Actual**, **Projected**, and side by side (two maps, one actual, one projected, sharing rotation in 3D), plus a day-of-week scrubber for heat. Both the 2D and the 3D renderer support every mode.
+One renderer contract on both apps: `BodyMap({ values: Record<MuscleId, number>, scale: 'heat' | 'volume' | 'gap', view: 'actual' | 'projected', onToggleView, onSelect })`. The screen shows the map in three modes from the same component: **Actual**, **Projected**, and side by side (two maps, one actual, one projected, sharing rotation in 3D), plus a day-of-week scrubber for heat. Both the 2D and the 3D renderer support every mode.
+
+Gestures, the same on both renderers and both apps:
+
+- **Tap the model** toggles between Actual and Projected, with a short cross-fade and a label on the map naming the view now shown. In side by side both views are already showing, so a tap there does not change the view.
+- **Long-press a muscle** opens its detail sheet (`onSelect`). A tap is reserved for the toggle, so selection never fights it.
+- **Drag** rotates in 3D. A touch that moves past a small threshold is a drag, never a tap, so rotating never toggles the view.
+- The toggle also exists as a visible control next to the map (`accessibilityRole="button"`, named for the view it switches to). Screen-reader users and keyboard users on web use it, and every muscle stays selectable from a list in the detail sheet, so no action depends on a gesture alone.
 
 1. **2D (first):** a front and back SVG with one path per muscle id, drawn with `react-native-svg` on mobile and inline SVG on web. Ships with the heat model and proves the logging loop.
-2. **3D (later):** `@react-three/fiber` with `drei` on web, and `@react-three/fiber/native` with `expo-gl` on mobile (the dev client allows the native module). The asset is a glTF binary of about 2 to 4 MB, male and female, each muscle a mesh named by its id. A Blender script in `tools/body-model` turns the source model into that file: decimate, rename, Draco or meshopt compression. Each muscle's material colour and emissive intensity follow its value on the scale. If draw calls become a problem, the fallback is one merged mesh with a per-vertex muscle id attribute and a shader that reads a uniform array of values. Tapping a muscle raycasts to its id and opens the same detail sheet as the 2D map.
+2. **3D (later):** `@react-three/fiber` with `drei` on web, and `@react-three/fiber/native` with `expo-gl` on mobile (the dev client allows the native module). The asset is a glTF binary of about 2 to 4 MB, male and female, each muscle a mesh named by its id. A Blender script in `tools/body-model` turns the source model into that file: decimate, rename, Draco or meshopt compression. Each muscle's material colour and emissive intensity follow its value on the scale. If draw calls become a problem, the fallback is one merged mesh with a per-vertex muscle id attribute and a shader that reads a uniform array of values. A long-press raycasts to the muscle's id and opens the same detail sheet as the 2D map; a tap toggles the view as above.
 
 Two colour scales: `heat` is sequential (neutral at rest, through amber, to red at full heat, with a matching glow); `volume` is diverging (blue under, green productive, red over). `gap` is diverging around the plan (blue behind plan, neutral on plan, amber ahead of plan). The colours come from `@keylow/tokens` and are checked for contrast in light and dark.
 
