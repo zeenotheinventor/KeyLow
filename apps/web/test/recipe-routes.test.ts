@@ -29,10 +29,9 @@ describe("recipeRoutes", () => {
     );
   });
 
-  // Until the recipe view exists, a row opens the editor. The recipe view ticket repoints this.
-  it("should open a recipe in its editor for now", () => {
+  it("should open a recipe in its view at /recipes/<id>", () => {
     expect(recipePath("11111111-1111-4111-8111-111111111111")).toBe(
-      "/recipes/11111111-1111-4111-8111-111111111111/edit",
+      "/recipes/11111111-1111-4111-8111-111111111111",
     );
   });
 });

@@ -22,7 +22,7 @@ import type { RecipeDraft } from "@keylow/core/recipes";
 
 import { RecipeEditor, RecipeEditorScreen } from "@/components/recipes";
 import { ToastProvider } from "@/components/ui/Toast";
-import { editRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
+import { recipePath, recipesPath } from "@/lib/recipeRoutes";
 
 const { recipeState, useRecipe, createRecipe, updateRecipe, router, startingDraft } = vi.hoisted(
   () => {
@@ -151,7 +151,7 @@ describe("RecipeEditor", () => {
 
       expect(screen.getByRole("heading", { level: 1, name: "Chicken and rice" })).toBeTruthy();
       expect(screen.getByRole("link", { name: "Chicken and rice" }).getAttribute("href")).toBe(
-        recipePath(RECIPE_ID),
+        `/recipes/${RECIPE_ID}`,
       );
     });
 
@@ -386,7 +386,7 @@ describe("RecipeEditor", () => {
       };
     }
 
-    it("should save the change once, go to the recipe's path and say Recipe saved", async () => {
+    it("should save the change once, go back to the recipe's view and say Recipe saved on it", async () => {
       updateRecipe.mockImplementation((save: Parameters<typeof savedFrom>[0]) =>
         Promise.resolve(savedFrom(save)),
       );
@@ -396,7 +396,7 @@ describe("RecipeEditor", () => {
       fireEvent.click(saveButton());
 
       await waitFor(() => {
-        expect(router.replace).toHaveBeenCalledWith(recipePath(RECIPE_ID));
+        expect(router.replace).toHaveBeenCalledWith(`/recipes/${RECIPE_ID}`);
       });
       expect(updateRecipe).toHaveBeenCalledOnce();
       expect(updateRecipe).toHaveBeenCalledWith({
@@ -430,7 +430,7 @@ describe("RecipeEditor", () => {
       expect(router.push).toHaveBeenCalledWith(recipePath(RECIPE_ID));
     });
 
-    it("should create a new recipe once it has an ingredient, and open the new recipe's path", async () => {
+    it("should create a new recipe once it has an ingredient, and open its view with Recipe saved", async () => {
       startingDraft.current = {
         ...newRecipeDraft(),
         name: "Chicken and rice",
@@ -444,7 +444,7 @@ describe("RecipeEditor", () => {
       fireEvent.click(saveButton());
 
       await waitFor(() => {
-        expect(router.replace).toHaveBeenCalledWith(recipePath(RECIPE_ID));
+        expect(router.replace).toHaveBeenCalledWith(`/recipes/${RECIPE_ID}`);
       });
       expect(createRecipe).toHaveBeenCalledOnce();
       expect(updateRecipe).not.toHaveBeenCalled();
@@ -717,7 +717,6 @@ describe("RecipeEditorScreen", () => {
     showScreen();
 
     expect(screen.getByRole("heading", { level: 1, name: "Chicken and rice" })).toBeTruthy();
-    expect(editRecipePath(RECIPE_ID)).toBe(recipePath(RECIPE_ID));
   });
 
   it("should start the editor afresh for another recipe, and not carry what was typed over", () => {

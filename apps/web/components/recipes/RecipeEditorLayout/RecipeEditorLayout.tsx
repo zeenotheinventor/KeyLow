@@ -20,9 +20,11 @@ export function RecipeEditorLayout({
       </div>
       <div className="flex min-w-0 flex-col gap-3 max-lg:contents lg:sticky lg:top-6 lg:col-start-2 lg:row-start-1">
         <div className="max-lg:order-1">{summary}</div>
-        <div className="flex flex-col gap-3 max-lg:sticky max-lg:bottom-0 max-lg:order-3 max-lg:-mx-4 max-lg:border-t max-lg:border-border max-lg:bg-surface-sheet max-lg:px-4 max-lg:pb-4 max-lg:pt-3">
-          {actions}
-        </div>
+        {actions !== undefined && (
+          <div className="flex flex-col gap-3 max-lg:sticky max-lg:bottom-0 max-lg:order-3 max-lg:-mx-4 max-lg:border-t max-lg:border-border max-lg:bg-surface-sheet max-lg:px-4 max-lg:pb-4 max-lg:pt-3">
+            {actions}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -93,9 +93,9 @@ describe("RecipeLibrary", () => {
 
       expect(
         screen.getByRole("link", { name: openLabels.chickenAndRice }).getAttribute("href"),
-      ).toBe("/recipes/00000000-0000-4000-8000-000000000002/edit");
+      ).toBe("/recipes/00000000-0000-4000-8000-000000000002");
       expect(screen.getByRole("link", { name: "Chicken and rice" }).getAttribute("href")).toBe(
-        "/recipes/00000000-0000-4000-8000-000000000002/edit",
+        "/recipes/00000000-0000-4000-8000-000000000002",
       );
     });
 
