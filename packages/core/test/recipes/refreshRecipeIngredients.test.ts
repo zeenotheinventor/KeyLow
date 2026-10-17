@@ -17,8 +17,10 @@ if (tablespoon === undefined) {
   throw new Error("The spoon portions must include a tablespoon");
 }
 
+const noPortions: readonly FoodPortion[] = [];
+
 const liveFoods = (...foods: readonly Food[]): RefreshableFoods =>
-  new Map(foods.map((food) => [food.id, { food, portions: [] as readonly FoodPortion[] }]));
+  new Map(foods.map((food) => [food.id, { food, portions: noPortions }]));
 
 const recipe = buildChickenAndRiceRecipe();
 const { chicken, rice, oil } = recipe.foods;
@@ -129,6 +131,7 @@ describe("refreshRecipeIngredients", () => {
         changed: true,
         foodGone: false,
         name: { before: "Chicken breast", after: "Chicken breast" },
+        basis: { before: "per_100g", after: "per_100g" },
         per100Changes: [
           { nutrient: "kcal", before: 120, after: 110 },
           { nutrient: "protein_g", before: 22.5, after: 25 },
@@ -167,6 +170,19 @@ describe("refreshRecipeIngredients", () => {
       name: { before: "Chicken breast", after: "Chicken breast fillets" },
       per100Changes: [],
     });
+  });
+
+  it("should report a basis that flipped, so the numbers are not read across bases", () => {
+    const result = refreshRecipeIngredients({
+      ...recipeOf(recipe.ingredients),
+      foods: liveFoods({ ...chicken, basis: "per_100ml", density_g_per_ml: 1 }, rice, oil),
+    });
+
+    expect(result.changes[0]).toMatchObject({
+      changed: true,
+      basis: { before: "per_100g", after: "per_100ml" },
+    });
+    expect(result.changes[1]?.basis).toStrictEqual({ before: "per_100g", after: "per_100g" });
   });
 
   it("should report a value that was added or dropped as a change from or to null", () => {
@@ -299,6 +315,41 @@ describe("refreshRecipeIngredients", () => {
     });
   });
 
+  describe("a change to a portion alone", () => {
+    const bread = buildFood({
+      id: "00000000-0000-4000-8000-0000000000b2",
+      name: "Bread",
+      kcal: 250,
+    });
+    const slice = buildFoodPortion({
+      id: "00000000-0000-4000-8000-0000000000c2",
+      food_id: bread.id,
+      label: "Slice",
+      grams: 40,
+    });
+    const twoSlices = buildRecipeIngredient(bread, {
+      quantity: 2,
+      unit: "portion",
+      portion: slice,
+    });
+
+    it.each([
+      ["resized", [{ ...slice, grams: 50 }]],
+      ["removed", noPortions],
+    ])("should not count a portion that was %s as a change", (_name, portions) => {
+      const result = refreshRecipeIngredients({
+        servings: 2,
+        yieldGrams: null,
+        ingredients: [twoSlices],
+        foods: new Map([[bread.id, { food: bread, portions }]]),
+      });
+
+      expect(result.hasChanges).toBe(false);
+      expect(result.ingredients[0]).toBe(twoSlices);
+      expect(result.changes[0]).toMatchObject({ changed: false, portionFellBack: false });
+    });
+  });
+
   describe("a food that is gone", () => {
     const editedChicken = buildFood({ ...chicken, kcal: 110 });
 
@@ -352,7 +403,7 @@ describe("refreshRecipeIngredients", () => {
 
   describe("bad input", () => {
     it("should refuse a food filed under the wrong id, without quoting anything", () => {
-      const wrong = new Map([[chicken.id, { food: rice, portions: [] as readonly FoodPortion[] }]]);
+      const wrong = new Map([[chicken.id, { food: rice, portions: noPortions }]]);
       const attempt = () =>
         refreshRecipeIngredients({
           ...recipeOf(recipe.ingredients),
@@ -362,6 +413,22 @@ describe("refreshRecipeIngredients", () => {
       expect(attempt).toThrow(RangeError);
       expect(attempt).toThrow(/^[^\d]*$/u);
       expect(attempt).not.toThrow(/Chicken|Dry rice/u);
+    });
+
+    it("should refuse a look-alike food with another id, which would otherwise look unchanged", () => {
+      const lookAlike = buildFood({ ...chicken, id: "00000000-0000-4000-8000-0000000000a9" });
+      const attempt = () =>
+        refreshRecipeIngredients({
+          ...recipeOf(recipe.ingredients),
+          foods: new Map([
+            ...liveFoods(rice, oil),
+            [chicken.id, { food: lookAlike, portions: noPortions }],
+          ]),
+        });
+
+      expect(attempt).toThrow(RangeError);
+      expect(attempt).toThrow(/^[^\d]*$/u);
+      expect(attempt).not.toThrow(/Chicken/u);
     });
 
     it("should refuse servings that are not above 0, as computeRecipe does", () => {

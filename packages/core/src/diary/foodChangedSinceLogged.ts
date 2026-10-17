@@ -4,7 +4,8 @@ import type { FoodSnapshot } from "./schemas";
 import type { Food } from "../schemas/food";
 import type { NullableNutrients } from "../schemas/nutrients";
 
-const nutrientKeys = [
+/** The nutrients a snapshot keeps in `per100`, in the order a diff lists them. */
+export const snapshotNutrientKeys = [
   "kcal",
   "protein_g",
   "fat_g",
@@ -16,7 +17,7 @@ const nutrientKeys = [
 ] as const;
 
 const sameNutrients = (first: NullableNutrients, second: NullableNutrients): boolean =>
-  nutrientKeys.every((key) => (first[key] ?? null) === (second[key] ?? null));
+  snapshotNutrientKeys.every((key) => (first[key] ?? null) === (second[key] ?? null));
 
 /**
  * A snapshot with no density was logged before the food had one to freeze, so only a density the food

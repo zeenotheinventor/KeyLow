@@ -1,5 +1,5 @@
 import { computeRecipe } from "./computeRecipe";
-import { foodChangedSinceLogged } from "../diary/foodChangedSinceLogged";
+import { foodChangedSinceLogged, snapshotNutrientKeys } from "../diary/foodChangedSinceLogged";
 import { foodEntryFields } from "../diary/foodEntryFields";
 import { refreshSnapshotFromFood } from "../diary/refreshSnapshotFromFood";
 import { nutrientsOfSnapshot } from "../diary/snapshotQuantity";
@@ -51,6 +51,8 @@ export type RecipeIngredientChange = {
   /** True when the food is missing or soft deleted, so the ingredient was kept as it was. */
   foodGone: boolean;
   name: BeforeAndAfter<string>;
+  /** The basis of the per 100 values, so a screen can head them "Per 100 g" or "Per 100 ml" and see a flip. */
+  basis: BeforeAndAfter<FoodSnapshot["basis"]>;
   /** The per 100 values that differ, in a fixed order. Empty when none did. */
   per100Changes: Per100Change[];
   /** The ingredient's own calories, so for the amount in the recipe. Null when its food gives none. */
@@ -79,19 +81,8 @@ export type RefreshedRecipeIngredients<Ingredient extends RecipeIngredient> = {
   hasChanges: boolean;
 };
 
-const per100Keys: readonly NutrientKey[] = [
-  "kcal",
-  "protein_g",
-  "fat_g",
-  "carbs_g",
-  "fibre_g",
-  "sat_fat_g",
-  "sugars_g",
-  "salt_g",
-];
-
 const per100ChangesBetween = (before: FoodSnapshot, after: FoodSnapshot): Per100Change[] =>
-  per100Keys.flatMap((nutrient) => {
+  snapshotNutrientKeys.flatMap((nutrient) => {
     const valueBefore = before.per100[nutrient] ?? null;
     const valueAfter = after.per100[nutrient] ?? null;
     return valueBefore === valueAfter ? [] : [{ nutrient, before: valueBefore, after: valueAfter }];
@@ -113,6 +104,7 @@ const describeChange = (
   foodId: before.food_id,
   ...flags,
   name: { before: before.snapshot.name, after: after.snapshot.name },
+  basis: { before: before.snapshot.basis, after: after.snapshot.basis },
   per100Changes: per100ChangesBetween(before.snapshot, after.snapshot),
   kcal: {
     before: nutrientsOfSnapshot(before.snapshot).kcal,
