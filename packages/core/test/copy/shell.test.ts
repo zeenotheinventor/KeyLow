@@ -31,7 +31,6 @@ describe("the tab shell copy", () => {
     expect(COMING_SOON_TITLE).toBe("Coming soon");
     expect(PLACEHOLDER_BODIES).toEqual({
       diary: "Your logged foods will appear here, day by day.",
-      recipes: "Your recipes will appear here.",
     });
   });
 

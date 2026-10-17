@@ -1,13 +1,5 @@
-import { PLACEHOLDER_BODIES, TAB_TITLES } from "@keylow/core/copy";
-
-import { PlaceholderScreen } from "../../components/PlaceholderScreen";
+import { RecipeLibrary } from "../../components/RecipeLibrary";
 
 export default function RecipesRoute() {
-  return (
-    <PlaceholderScreen
-      body={PLACEHOLDER_BODIES.recipes}
-      icon="ChefHat"
-      title={TAB_TITLES.recipes}
-    />
-  );
+  return <RecipeLibrary />;
 }
