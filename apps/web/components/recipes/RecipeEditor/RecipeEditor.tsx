@@ -98,7 +98,9 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
 
   const ingredientEdits = useIngredientEdits(draft.ingredients, setDraft);
   const { dialog } = ingredientEdits;
-  const editedIngredient = dialog?.kind === "edit" ? draft.ingredients[dialog.position] : undefined;
+  // Where the edited ingredient is now, which an Undo can have moved since the dialog opened.
+  const editedPosition =
+    dialog?.kind === "edit" ? draft.ingredients.indexOf(dialog.ingredient) : -1;
 
   const card = recipeCardOf(useSettledValue(draft, CARD_FOLLOWS_TYPING_AFTER_MS));
 
@@ -232,7 +234,10 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
             <>
               <Button
                 type="submit"
-                className={cn("w-full max-lg:h-control-lg", !isOnline && "opacity-40")}
+                className={cn(
+                  "w-full max-lg:h-control-lg",
+                  !isOnline && "opacity-40 aria-disabled:pointer-events-none",
+                )}
                 loading={saveStatus !== "idle"}
                 loadingLabel={FOOD_FORM.saving}
                 // An offline Save stays in the tab order, dimmed and not disabled, and the banner says why.
@@ -278,18 +283,16 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
           onAdd={ingredientEdits.add}
         />
       )}
-      {dialog?.kind === "edit" && editedIngredient !== undefined && (
+      {dialog?.kind === "edit" && editedPosition !== -1 && (
         <EditIngredientDialog
-          // Another ingredient is another dialog, so what was typed for one is not carried to the next.
-          key={dialog.position}
-          ingredient={editedIngredient}
+          ingredient={dialog.ingredient}
           opener={dialog.opener}
           onClose={ingredientEdits.close}
           onSave={(ingredient) => {
-            ingredientEdits.replace(dialog.position, ingredient);
+            ingredientEdits.replace(editedPosition, ingredient);
           }}
           onRemove={() => {
-            ingredientEdits.remove(dialog.position, dialog.opener);
+            ingredientEdits.remove(editedPosition, dialog.opener);
           }}
         />
       )}

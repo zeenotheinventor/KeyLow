@@ -1,12 +1,10 @@
-import { ChefHat } from "lucide-react";
-
-import { ComingSoon } from "../ComingSoon";
-import { PageFrame } from "../PageFrame";
+import { PageFrame } from "@/app/(dashboard)/PageFrame";
+import { RecipeLibrary } from "@/components/recipes";
 
 export default function RecipesPage() {
   return (
-    <PageFrame variant="shell">
-      <ComingSoon title="Recipes" icon={ChefHat} body="Your recipes will appear here." />
+    <PageFrame variant="diary">
+      <RecipeLibrary />
     </PageFrame>
   );
 }

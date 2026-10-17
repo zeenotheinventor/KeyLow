@@ -99,8 +99,10 @@ function store(recipe: SavedRecipe) {
 
 async function showRecipe(recipe: SavedRecipe = chickenAndRice) {
   store(recipe);
-  renderWithRecipeView(<RecipeViewScreen id={recipe.id} />);
+  const { push } = renderWithRecipeView(<RecipeViewScreen id={recipe.id} />);
   await screen.findByRole("heading", { level: 1, name: recipe.name });
+
+  return { push };
 }
 
 const servingsField = () => screen.getByRole<HTMLInputElement>("spinbutton", { name: "Servings" });
@@ -373,6 +375,32 @@ describe("RecipeViewScreen", () => {
       expect(screen.queryByRole("button", { name: /^Back to / })).toBeNull();
     });
 
+    it("should follow the recipe's servings when they change after its own were typed back", async () => {
+      await showRecipe({ ...chickenAndRice, servings: 2.5, yield_grams: 550 });
+      fireEvent.click(plusButton());
+      type(servingsField(), "2.5");
+
+      // The recipe is edited elsewhere, and the page reads it again when the person comes back to it.
+      store({ ...chickenAndRice, servings: 3, yield_grams: 660 });
+      act(() => {
+        window.dispatchEvent(new Event("visibilitychange"));
+      });
+
+      expect(await screen.findByText("Makes 3 · 660 g cooked")).toBeTruthy();
+      expect(servingsField().getAttribute("aria-valuenow")).toBe("3");
+      expect(screen.queryByRole("button", { name: /^Back to / })).toBeNull();
+    });
+
+    it("should say the recipe's own fractional servings once typing stops", async () => {
+      await showRecipe({ ...chickenAndRice, servings: 2.5, yield_grams: 550 });
+      fireEvent.click(plusButton());
+      type(servingsField(), "2.5");
+
+      expect(
+        await screen.findByText("Ingredients for 2.5 servings, 550 grams cooked"),
+      ).toBeTruthy();
+    });
+
     it("should only read: nothing is saved or sent while the servings change", async () => {
       await showRecipe();
 
@@ -410,6 +438,37 @@ describe("RecipeViewScreen", () => {
       fireEvent.click(plusButton());
 
       expect(amountOf("Chicken breast, 625 g")).toBeTruthy();
+    });
+  });
+
+  describe("offline Edit", () => {
+    const offlineEdit = async () => {
+      const { push } = await showRecipe();
+      act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      return {
+        push,
+        edit: screen.getByRole("button", { name: describeEditRecipe("Chicken and rice") }),
+      };
+    };
+
+    it("should take no pointer, so it shows no hover or press feedback", async () => {
+      const { edit } = await offlineEdit();
+
+      expect(edit.classList.contains("aria-disabled:pointer-events-none")).toBe(true);
+    });
+
+    it("should go nowhere when pressed with the pointer or the keyboard", async () => {
+      const { push, edit } = await offlineEdit();
+
+      fireEvent.click(edit);
+      fireEvent.keyDown(edit, { key: "Enter" });
+      fireEvent.keyDown(edit, { key: " " });
+
+      expect(push).not.toHaveBeenCalled();
+      expect(screen.getByRole("heading", { level: 1, name: "Chicken and rice" })).toBeTruthy();
     });
   });
 

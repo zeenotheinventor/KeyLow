@@ -19,7 +19,9 @@ export function renderWithRouter(ui: ReactElement) {
     prefetch: vi.fn().mockResolvedValue(undefined),
   } as unknown as NextRouter;
 
-  render(<RouterContext.Provider value={router}>{ui}</RouterContext.Provider>);
+  const { container } = render(
+    <RouterContext.Provider value={router}>{ui}</RouterContext.Provider>,
+  );
 
-  return { push };
+  return { push, container };
 }

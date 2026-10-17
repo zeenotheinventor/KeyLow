@@ -669,6 +669,35 @@ describe("removing an ingredient", () => {
     expect(ingredientNames()).toEqual(["Chicken breast", "Dry rice", "Olive oil"]);
   });
 
+  describe("while the Edit ingredient dialog is open on another ingredient", () => {
+    // Dry rice is removed, so Olive oil moves up to where Dry rice was. Undo then puts Dry rice back above it.
+    const openOliveOilThenUndo = () => {
+      showEditor();
+      fireEvent.click(removeButton("Dry rice"));
+      fireEvent.click(table().getByRole("button", { name: "Edit Olive oil" }));
+      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    };
+
+    it("should save the new amount onto the ingredient the dialog was opened on", () => {
+      openOliveOilThenUndo();
+
+      typeAmount("30");
+      fireEvent.click(inDialog().getByRole("button", { name: "Save" }));
+
+      expect(ingredientNames()).toEqual(["Chicken breast", "Dry rice", "Olive oil"]);
+      expect(amountOf("Dry rice")).toBe("200 g");
+      expect(amountOf("Olive oil")).toBe("30 g");
+    });
+
+    it("should remove the ingredient the dialog was opened on", () => {
+      openOliveOilThenUndo();
+
+      fireEvent.click(inDialog().getByRole("button", { name: RECIPE_EDITOR.removeFromRecipe }));
+
+      expect(ingredientNames()).toEqual(["Chicken breast", "Dry rice"]);
+    });
+  });
+
   it("should remove offline, since it only changes the draft", () => {
     onlineManager.setOnline(false);
     showEditor();
