@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { QueryClient } from "@tanstack/react-query";
 
 import type { Database } from "@keylow/api-client";
+import type { RecipeComputed } from "@keylow/core/recipes";
 
 type Row = Record<string, unknown>;
 
@@ -207,6 +208,19 @@ export function quickEntry(options: {
 }
 
 /**
+ * The golden recipe's nutrients as the boards write them: 1,496.8 kcal, 126.5 g protein, 170.2 g carbohydrate
+ * and 32.5 g fat, which a serving of four takes to 374 kcal, 32 g, 43 g and 8.1 g. The builder's own ingredients
+ * come to the same energy and protein and less carbohydrate and fat.
+ */
+export const boardRecipeTotal: RecipeComputed["total"] = {
+  kcal: 1496.8,
+  protein_g: 126.5,
+  carbs_g: 170.2,
+  fat_g: 32.5,
+  fibre_g: null,
+};
+
+/**
  * A serving of the golden recipe (500 g chicken, 200 g rice and 20 g oil, in four servings with a measured
  * 1,100 g) as the database returns it: "Chicken and rice", 275 g and 374.2 kcal for one serving.
  */
@@ -215,6 +229,8 @@ export function recipeEntry(options: {
   utcTime: string;
   quantity?: number;
   unit?: "serving" | "g";
+  /** The whole recipe's nutrients, when a test needs the boards' (see `boardRecipeTotal`) over the ingredients'. */
+  total?: RecipeComputed["total"];
 }): Row {
   const golden = buildChickenAndRiceRecipe({ yieldGrams: 1100 });
   const entry = buildRecipeLogEntry({
@@ -223,11 +239,14 @@ export function recipeEntry(options: {
       name: "Chicken and rice",
       servings: golden.servings,
       yield_grams: golden.yieldGrams,
-      computed: computeRecipe({
-        servings: golden.servings,
-        yieldGrams: golden.yieldGrams,
-        ingredients: golden.ingredients,
-      }),
+      computed: {
+        ...computeRecipe({
+          servings: golden.servings,
+          yieldGrams: golden.yieldGrams,
+          ingredients: golden.ingredients,
+        }),
+        ...(options.total === undefined ? {} : { total: options.total }),
+      },
     },
     quantity: options.quantity ?? 1,
     unit: options.unit ?? "serving",

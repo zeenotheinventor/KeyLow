@@ -123,9 +123,9 @@ describe("tapping a food in the diary", () => {
     diaryBackend.entries = [...sampleDay(), recipeEntry({ date: "2026-10-15", utcTime: "17:00" })];
     const user = await renderLoadedDiary();
 
-    await user.press(screen.getByLabelText(/^Chicken and rice, 18:00/));
+    await user.press(screen.getByLabelText(/^18:00, Chicken and rice, recipe, /));
 
     expect(routerMock.push).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/^Chicken and rice, 18:00/)).toBeOnTheScreen();
+    expect(screen.getByLabelText(/^18:00, Chicken and rice, recipe, /)).toBeOnTheScreen();
   });
 });

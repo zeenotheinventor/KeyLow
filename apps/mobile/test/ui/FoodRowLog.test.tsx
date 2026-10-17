@@ -423,6 +423,89 @@ describe("FoodRow in the food log", () => {
     });
   });
 
+  describe("a logged recipe", () => {
+    // What the diary hands a recipe entry: core writes the row's name, and the row has nothing to open yet.
+    const chickenAndRiceName =
+      "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+    const chickenAndRice: FoodRowProps = {
+      layout: "diary",
+      isLoggedRecipe: true,
+      nameSegments: [{ text: "Chicken and rice", matched: false }],
+      openLabel: chickenAndRiceName,
+      caption: "18:00 · 1 serving (275 g)",
+      energy: "374",
+      macros: { protein: "32", carbs: "43", fat: "8.1", description: "" },
+      onPress: undefined,
+      onAdd: undefined,
+    };
+
+    it("should be named by the sentence it is given, and not be a button", async () => {
+      await renderRow(chickenAndRice);
+
+      expect(screen.getByLabelText(chickenAndRiceName)).toBeOnTheScreen();
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should write the name on one line, the time and serving, then the values of the amount", async () => {
+      await renderRow(chickenAndRice);
+
+      // The words are the title's inner text, which the title itself clamps.
+      expect(screen.getByText("Chicken and rice").parent).toHaveProp("numberOfLines", 1);
+      expect(screen.getByText("18:00 · 1 serving (275 g)")).toBeOnTheScreen();
+      expect(screen.getByText("374")).toBeOnTheScreen();
+      expect(screen.getByText("32 P")).toBeOnTheScreen();
+      expect(screen.getByText("43 C")).toBeOnTheScreen();
+      expect(screen.getByText("8.1 F")).toBeOnTheScreen();
+    });
+
+    it("should draw a chef's hat before the name and no chevron", async () => {
+      await renderRow(chickenAndRice);
+
+      // The hat and the flame on the stats line.
+      expect(drawings()).toHaveLength(2);
+    });
+
+    it("should set the 16 point hat 6 points before the name, centred on it and shrinkable", async () => {
+      await renderRow(chickenAndRice);
+
+      expect(viewsDrawn({ alignItems: "center", columnGap: 6, flexDirection: "row" })).toHaveLength(
+        1,
+      );
+      expect(screen.getByText("Chicken and rice").parent).toHaveStyle({ flexShrink: 1 });
+    });
+
+    it.each(schemes)(
+      "should draw the hat 16 points square in the muted ink in the %s scheme",
+      async (scheme) => {
+        await renderRow(chickenAndRice, scheme);
+
+        // The hat comes first in the row and the flame on the stats line second.
+        const [hat] = drawings();
+        expect(hat).toHaveProp("stroke", themes[scheme]["text-muted"]);
+        expect(hat).toHaveProp("width", 16);
+        expect(hat).toHaveProp("height", 16);
+      },
+    );
+
+    it("should keep the name of a logged food on two lines, with no hat", async () => {
+      await renderDiaryRow({ onPress: undefined });
+
+      expect(screen.getByText("Chicken breast, grilled").parent).toHaveProp("numberOfLines", 2);
+      expect(drawings()).toHaveLength(1);
+    });
+
+    it("should still offer Delete as an accessibility action, which calls onDelete", async () => {
+      const onDelete = jest.fn();
+      await renderRow({ ...chickenAndRice, onDelete });
+      const row = screen.getByLabelText(chickenAndRiceName);
+
+      expect(row).toHaveProp("accessibilityActions", [{ name: "delete", label: "Delete" }]);
+      await fireEvent(row, "accessibilityAction", { nativeEvent: { actionName: "delete" } });
+
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("swipe to delete", () => {
     it("should offer Delete as an accessibility action on the row, which calls onDelete", async () => {
       const onDelete = jest.fn();

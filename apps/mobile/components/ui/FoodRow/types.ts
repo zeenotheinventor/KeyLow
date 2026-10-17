@@ -72,11 +72,17 @@ export type FoodRowProps = {
    */
   onPress?: (() => void) | undefined;
   /**
-   * Names the row's button in place of the words the row writes from its parts, for a `recipe` row whose
-   * screen spells the serving and the values out, such as "Chicken and rice, 1 serving 275 grams, makes 4,
-   * 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, open".
+   * Names the row in place of the words the row writes from its parts, for a `recipe` row or a logged recipe
+   * whose screen spells the serving and the values out, such as "Chicken and rice, 1 serving 275 grams,
+   * makes 4, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, open" or "18:00,
+   * Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, ...".
    */
   openLabel?: string | undefined;
+  /**
+   * A `diary` row for a logged recipe: a 16 point muted chef's hat before the title, which stays on one
+   * line. Name the row with `openLabel`. Leave it out for a food or a quick add.
+   */
+  isLoggedRecipe?: boolean | undefined;
   /**
    * A `recipe` row's own control at its trailing edge, beside the row and not inside it, so pressing it does
    * not press the row. The row menu ticket puts the More button here. Leave it out for none.

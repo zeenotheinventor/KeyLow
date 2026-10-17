@@ -19,6 +19,7 @@ import {
   diaryBackend,
   diaryClient,
   foodEntry,
+  boardRecipeTotal,
   noTargets,
   recipeEntry,
   requestsTo,
@@ -189,11 +190,14 @@ describe("the diary screen", () => {
     });
 
     describe("a recipe entry in the day", () => {
-      // The golden serving at 18:00 London on the day of the boards: 374.2 kcal and 275 g.
+      // One serving of the golden recipe at 18:00 London on the day of the boards, with the boards' nutrients.
+      const servingName =
+        "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+
       beforeEach(() => {
         diaryBackend.entries = [
           ...sampleDay(),
-          recipeEntry({ date: "2026-10-15", utcTime: "17:00" }),
+          recipeEntry({ date: "2026-10-15", utcTime: "17:00", total: boardRecipeTotal }),
         ];
       });
 
@@ -208,35 +212,99 @@ describe("the diary screen", () => {
           /^Basmati rice, boiled, /,
           /^Meal deal crisps, /,
           /^Greek yoghurt 0% fat, /,
-          /^Chicken and rice, /,
+          /^18:00, Chicken and rice, recipe, /,
         ]) {
           expect(screen.getAllByLabelText(name)).toHaveLength(1);
         }
         expect(screen.getByLabelText("18:00, 1 food")).toBeOnTheScreen();
       });
 
-      it("should write the recipe's name, then the time and the serving it came to", async () => {
+      it("should name the row by when, what, that it is a recipe, the serving and the values", async () => {
         await renderLoadedDiary();
 
-        const row = within(screen.getByLabelText("18:00, 1 food")).getByLabelText(
-          /^Chicken and rice, 18:00 · 1 serving \(275 g\), 374 kilocalories/,
-        );
+        expect(
+          within(screen.getByLabelText("18:00, 1 food")).getByLabelText(servingName),
+        ).toBeOnTheScreen();
+      });
+
+      it("should write the recipe's name on one line, then the time and the serving it came to", async () => {
+        await renderLoadedDiary();
+
+        const row = screen.getByLabelText(servingName);
 
         expect(within(row).getByText("Chicken and rice")).toBeOnTheScreen();
         expect(within(row).getByText("18:00 · 1 serving (275 g)")).toBeOnTheScreen();
       });
 
+      it("should write the values of the serving on the stats line: 374 kcal, 32 P, 43 C, 8.1 F", async () => {
+        await renderLoadedDiary();
+
+        const row = screen.getByLabelText(servingName);
+
+        expect(within(row).getByText("374")).toBeOnTheScreen();
+        expect(within(row).getByText("kcal")).toBeOnTheScreen();
+        expect(within(row).getByText("32 P")).toBeOnTheScreen();
+        expect(within(row).getByText("43 C")).toBeOnTheScreen();
+        expect(within(row).getByText("8.1 F")).toBeOnTheScreen();
+      });
+
       it("should be plain text, not a button, since there is nothing to open yet", async () => {
         await renderLoadedDiary();
 
-        expect(screen.queryByRole("button", { name: /^Chicken and rice, / })).not.toBeOnTheScreen();
+        expect(
+          screen.queryByRole("button", { name: /Chicken and rice, recipe/ }),
+        ).not.toBeOnTheScreen();
       });
 
       it("should add the serving to the day's bars: 1,413 of 2,200 kcal", async () => {
         await renderLoadedDiary();
 
         expect(strip()).toHaveAccessibleName(
-          "Targets. Calories: 1,413 of 2,200 kilocalories. Protein: 118 of 160 grams. Carbohydrate: 168 of 220 grams. Fat: 27 of 70 grams",
+          "Targets. Calories: 1,413 of 2,200 kilocalories. Protein: 118 of 160 grams. Carbohydrate: 172 of 220 grams. Fat: 27 of 70 grams",
+        );
+      });
+
+      it("should write 1.5 servings with the grams they come to", async () => {
+        diaryBackend.entries = [
+          ...sampleDay(),
+          recipeEntry({
+            date: "2026-10-15",
+            utcTime: "17:00",
+            quantity: 1.5,
+            total: boardRecipeTotal,
+          }),
+        ];
+        await renderLoadedDiary();
+
+        expect(
+          screen.getByLabelText(/^18:00, Chicken and rice, recipe, 1.5 servings 413 grams, /),
+        ).toBeOnTheScreen();
+        expect(screen.getByText("18:00 · 1.5 servings (413 g)")).toBeOnTheScreen();
+      });
+
+      it("should write a recipe logged by grams with the values of those grams", async () => {
+        diaryBackend.entries = [
+          ...sampleDay(),
+          recipeEntry({
+            date: "2026-10-15",
+            utcTime: "17:00",
+            quantity: 300,
+            unit: "g",
+            total: boardRecipeTotal,
+          }),
+        ];
+        await renderLoadedDiary();
+
+        const row = screen.getByLabelText(
+          "18:00, Chicken and rice, recipe, 300 grams, 408 kilocalories, protein 35 grams, carbohydrate 46 grams, fat 8.9 grams",
+        );
+        expect(within(row).getByText("18:00 · 300 g")).toBeOnTheScreen();
+        expect(within(row).getByText("408")).toBeOnTheScreen();
+        expect(within(row).getByText("35 P")).toBeOnTheScreen();
+        expect(within(row).getByText("46 C")).toBeOnTheScreen();
+        expect(within(row).getByText("8.9 F")).toBeOnTheScreen();
+        expect(strip()).toHaveAccessibleName(
+          "Targets. Calories: 1,447 of 2,200 kilocalories. Protein: 121 of 160 grams. Carbohydrate: 176 of 220 grams. Fat: 28 of 70 grams",
         );
       });
     });

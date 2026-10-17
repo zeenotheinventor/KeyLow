@@ -21,7 +21,9 @@ import {
   createDiaryQueryClient,
   diaryBackend,
   diaryClient,
+  boardRecipeTotal,
   foodEntry,
+  recipeEntry,
   requestsTo,
   resetDiaryBackend,
   sampleDay,
@@ -147,6 +149,28 @@ describe("the diary's actions", () => {
         screen.queryByRole("button", { name: /^Chicken breast, grilled/ }),
       ).not.toBeOnTheScreen();
       expect(captions()).toHaveLength(6);
+    });
+
+    it("should delete a logged recipe on its Delete action, and put it back on Undo", async () => {
+      const user = userEvent.setup();
+      diaryBackend.entries = [
+        ...sampleDay(),
+        recipeEntry({ date: today, utcTime: "17:00", total: boardRecipeTotal }),
+      ];
+      await renderLoadedDiary();
+      const recipeName = /^18:00, Chicken and rice, recipe, /;
+
+      await fireEvent(screen.getByLabelText(recipeName), "accessibilityAction", {
+        nativeEvent: { actionName: "delete" },
+      });
+
+      expect(await screen.findByRole("status", { name: "Entry deleted" })).toBeOnTheScreen();
+      expect(screen.queryByLabelText(recipeName)).not.toBeOnTheScreen();
+
+      await user.press(screen.getByRole("button", { name: "Undo" }));
+
+      expect(await screen.findByLabelText(recipeName)).toBeOnTheScreen();
+      expect(screen.getByText("18:00 · 1 serving (275 g)")).toBeOnTheScreen();
     });
 
     it("should delete exactly that entry and no other", async () => {
