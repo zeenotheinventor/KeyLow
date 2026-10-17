@@ -7,14 +7,17 @@ export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./
 export type { EdgeErrorKind } from "./errors";
 export {
   useAcceptTerms,
+  useArchiveRecipe,
   useCompleteDays,
   useCopyDay,
   useCreateFood,
+  useCreateRecipe,
   useDebouncedValue,
   useDeleteEntry,
   useDeleteFood,
   useDiaryDay,
   useDiaryWeek,
+  useDuplicateRecipe,
   useFood,
   useFoodByBarcode,
   useFoodPortions,
@@ -38,6 +41,7 @@ export {
   useUndoCopyDay,
   useUpdateEntry,
   useUpdateFood,
+  useUpdateRecipe,
   useUpdateTargets,
 } from "./hooks";
 export { TargetsValidationError } from "./hooks";
@@ -67,6 +71,8 @@ export {
   acceptTerms,
   copyDay,
   createFood,
+  createRecipe,
+  duplicateRecipe,
   fetchOffProduct,
   getDiaryDay,
   getDiaryWeek,
@@ -90,6 +96,7 @@ export {
   searchOff,
   searchRecipes,
   setDayComplete,
+  setRecipeArchived,
   softDeleteFood,
   softDeleteLogEntry,
   undoCopyDay,
@@ -97,6 +104,7 @@ export {
   updateLogEntry,
   updateMyTargets,
   updateMyTimeZone,
+  updateRecipe,
 } from "./repos";
 export type {
   CopiedDay,
@@ -106,6 +114,7 @@ export type {
   DayTotals,
   DiaryDay,
   DiaryWeekDay,
+  DuplicateRecipeInput,
   EntryTimeChange,
   EntryUpdate,
   FoodLogEntry,
@@ -118,7 +127,9 @@ export type {
   RecentFood,
   RecipeDetail,
   RecipeListOptions,
+  RecipeSave,
   RecipeSearchOptions,
   RecipeSummary,
+  RecipeUpdate,
   Targets,
 } from "./repos";

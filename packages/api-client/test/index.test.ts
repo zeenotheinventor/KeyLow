@@ -54,6 +54,14 @@ describe("the package index", () => {
     "useRecipe",
     "useRecipes",
     "useRecipeSearch",
+    "createRecipe",
+    "updateRecipe",
+    "setRecipeArchived",
+    "duplicateRecipe",
+    "useCreateRecipe",
+    "useUpdateRecipe",
+    "useArchiveRecipe",
+    "useDuplicateRecipe",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

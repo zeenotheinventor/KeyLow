@@ -15,14 +15,14 @@ import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 // failure here names the action and the error code only, and the cause holds the code and nothing
 // else. A row that does not parse is reported by its id and the paths of the fields that failed.
 
-const LIBRARY_COLUMNS = "id,name,servings,yield_grams,is_archived,computed";
+export const LIBRARY_COLUMNS = "id,name,servings,yield_grams,is_archived,computed";
 const INGREDIENT_COLUMNS = "position,food_id,quantity,unit,portion_id,resolved_grams,snapshot";
 const RECIPE_COLUMNS = `${LIBRARY_COLUMNS},instructions,recipe_ingredients(${INGREDIENT_COLUMNS})`;
 
 const DEFAULT_SEARCH_LIMIT = 25;
 const MAX_SEARCH_LIMIT = 50;
 
-const repoError = (action: string, cause: PostgrestError) =>
+export const recipeRepoError = (action: string, cause: PostgrestError) =>
   new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 const recipeSummarySchema = recipeSchema
@@ -62,8 +62,11 @@ export type RecipeSearchOptions = RecipeListOptions & {
   limit?: number;
 };
 
+export const recipeSummaryOf = (row: unknown, action: string): RecipeSummary =>
+  parseRow(recipeSummarySchema, row, action, idOfRow);
+
 const summariesOf = (rows: readonly unknown[], action: string): RecipeSummary[] =>
-  rows.map((row) => parseRow(recipeSummarySchema, row, action, idOfRow));
+  rows.map((row) => recipeSummaryOf(row, action));
 
 /**
  * The signed in user's recipe library, by name and then id (ADR 0003, Amendment 8). Row level security
@@ -80,7 +83,7 @@ export async function listRecipes(
     .order("id", { ascending: true });
 
   if (error) {
-    throw repoError("load your recipes", error);
+    throw recipeRepoError("load your recipes", error);
   }
 
   return summariesOf(data, "load your recipes");
@@ -103,7 +106,7 @@ export async function getRecipe(
     .maybeSingle();
 
   if (error) {
-    throw repoError("load the recipe", error);
+    throw recipeRepoError("load the recipe", error);
   }
 
   return data === null ? null : parseRow(recipeDetailSchema, data, "load the recipe", idOfRow);
@@ -146,7 +149,7 @@ export async function searchRecipes(
     .limit(Math.min(MAX_SEARCH_LIMIT, Math.max(1, Math.trunc(limit))));
 
   if (error) {
-    throw repoError("search your recipes", error);
+    throw recipeRepoError("search your recipes", error);
   }
 
   return summariesOf(data, "search your recipes");
