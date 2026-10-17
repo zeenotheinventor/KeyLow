@@ -1,7 +1,14 @@
-import { breastEntry, chickenEntry, crispsEntry, oilEntry, tablespoon } from "./support/entries";
-import { foodEntryChange, quickEntryChange } from "../lib/entryChange";
+import {
+  breastEntry,
+  chickenEntry,
+  crispsEntry,
+  goldenRecipeEntry,
+  oilEntry,
+  tablespoon,
+} from "./support/entries";
+import { foodEntryChange, quickEntryChange, recipeEntryChange } from "../lib/entryChange";
 
-import type { PortionSelection } from "../components/PortionPicker";
+import type { PortionSelection, RecipeSelection } from "../components/PortionPicker";
 import type { QuickAddSubmission } from "../components/QuickAddForm";
 import type { SpoonPortion } from "@keylow/core/nutrition";
 
@@ -165,6 +172,51 @@ describe("quickEntryChange", () => {
     ).toEqual({
       quick: { kcal: 140, protein_g: 2, carbs_g: 15, fat_g: 7, label: "Meal deal crisps" },
       time: { loggedAt: "2026-10-15T12:15:00.000Z", timeZone: London },
+    });
+  });
+});
+
+describe("recipeEntryChange", () => {
+  const recipeSelection = (overrides: Partial<RecipeSelection> = {}): RecipeSelection => ({
+    quantity: 1,
+    unit: "serving",
+    time: "18:00",
+    isNow: false,
+    ...overrides,
+  });
+
+  it("should be nothing at all when the amount and the time are as logged", () => {
+    expect(recipeEntryChange(goldenRecipeEntry(), recipeSelection(), London)).toBeNull();
+  });
+
+  it("should change the amount alone when only the servings changed", () => {
+    expect(
+      recipeEntryChange(goldenRecipeEntry(), recipeSelection({ quantity: 1.5 }), London),
+    ).toEqual({ amount: { quantity: 1.5, unit: "serving" } });
+  });
+
+  it("should change the unit with the amount, though the count is the same", () => {
+    expect(recipeEntryChange(goldenRecipeEntry(), recipeSelection({ unit: "g" }), London)).toEqual({
+      amount: { quantity: 1, unit: "g" },
+    });
+  });
+
+  it("should change the time alone when only the time changed, on the entry's own day, in the profile's zone", () => {
+    expect(
+      recipeEntryChange(goldenRecipeEntry(), recipeSelection({ time: "19:30" }), London),
+    ).toEqual({ time: { loggedAt: "2026-10-15T18:30:00.000Z", timeZone: London } });
+  });
+
+  it("should write the amount and the time together when both changed", () => {
+    expect(
+      recipeEntryChange(
+        goldenRecipeEntry(),
+        recipeSelection({ quantity: 300, unit: "g", time: "19:30" }),
+        London,
+      ),
+    ).toEqual({
+      amount: { quantity: 300, unit: "g" },
+      time: { loggedAt: "2026-10-15T18:30:00.000Z", timeZone: London },
     });
   });
 });

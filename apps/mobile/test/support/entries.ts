@@ -1,7 +1,9 @@
-import { buildLogEntry, buildQuickEntry } from "@keylow/core/diary";
+import { buildLogEntry, buildQuickEntry, buildRecipeLogEntry } from "@keylow/core/diary";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 
-import type { FoodLogEntry, QuickLogEntry } from "@keylow/api-client";
+import { boardRecipeTotal, goldenLoggableRecipe } from "./diaryBackend";
+
+import type { FoodLogEntry, QuickLogEntry, RecipeLogEntry } from "@keylow/api-client";
 import type { SpoonPortion } from "@keylow/core/nutrition";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
@@ -93,6 +95,24 @@ export function crispsEntry(overrides: Partial<QuickLogEntry> = {}): QuickLogEnt
     ...columns,
     id: "00000000-0000-4000-8000-000000000002",
     kcal: 130,
+    ...overrides,
+  };
+}
+
+/** One serving of the golden recipe at 18:00 London on Thursday 15 October 2026, with the boards' totals: 374 kcal. */
+export function goldenRecipeEntry(overrides: Partial<RecipeLogEntry> = {}): RecipeLogEntry {
+  const entry = buildRecipeLogEntry({
+    recipe: goldenLoggableRecipe(boardRecipeTotal),
+    quantity: 1,
+    unit: "serving",
+    localDate: "2026-10-15",
+    loggedAt: "2026-10-15T17:00:00+00:00",
+  });
+  return {
+    ...entry,
+    ...columns,
+    id: "00000000-0000-4000-8000-000000000003",
+    kcal: entry.nutrients.kcal,
     ...overrides,
   };
 }

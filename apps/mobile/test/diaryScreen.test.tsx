@@ -248,12 +248,10 @@ describe("the diary screen", () => {
         expect(within(row).getByText("8.1 F")).toBeOnTheScreen();
       });
 
-      it("should be plain text, not a button, since there is nothing to open yet", async () => {
+      it("should be a button that opens the entry, named by the same sentence", async () => {
         await renderLoadedDiary();
 
-        expect(
-          screen.queryByRole("button", { name: /Chicken and rice, recipe/ }),
-        ).not.toBeOnTheScreen();
+        expect(screen.getByRole("button", { name: servingName })).toBeOnTheScreen();
       });
 
       it("should add the serving to the day's bars: 1,413 of 2,200 kcal", async () => {

@@ -33,7 +33,7 @@ const withoutUnknownOptionals = (sum: ReturnType<typeof sumEntries>): NullableNu
 };
 
 /** Changes every known value and leaves a null as null and an absent optional key absent. */
-const mapNutrients = (
+export const mapNutrients = (
   nutrients: NullableNutrients,
   change: (value: number) => number,
 ): NullableNutrients => {

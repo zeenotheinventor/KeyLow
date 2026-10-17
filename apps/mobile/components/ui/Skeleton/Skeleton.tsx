@@ -54,6 +54,26 @@ function SkeletonRecipeRow({ index }: { index: number }) {
   );
 }
 
+// How wide the name's bone is on each row of the entry screen's loading board. The classes are written out so
+// Tailwind sees them.
+const entryNameWidthClassNames = ["w-[62%]", "w-[48%]"];
+
+// A row as the entry screen's loading board draws it: a name over a shorter line, 64 points tall, with no tile
+// and nothing at the end, and the hairline above every row after the first.
+function SkeletonEntryRow({ index }: { index: number }) {
+  const nameWidthClassName = entryNameWidthClassNames[index % entryNameWidthClassNames.length];
+
+  return (
+    <View
+      className={`min-h-[64px] justify-center gap-2 px-4 py-3 ${index === 0 ? "" : "border-t border-border"}`}
+      testID="skeleton-entry-row"
+    >
+      <SkeletonBone className={`h-[14px] ${nameWidthClassName}`} />
+      <SkeletonBone className="h-[10px] w-[40%]" />
+    </View>
+  );
+}
+
 // A food's page as the loading board draws it: the name on two lines, the source as a pill, and the
 // two cards under them. Its sides are the screen's, so it gives none of its own.
 function SkeletonDetail() {
@@ -283,6 +303,16 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
         >
           {Array.from({ length: rows }, (_, index) => (
             <SkeletonRecipeRow key={index} index={index} />
+          ))}
+        </View>
+      ) : null}
+      {variant === "entryGroup" ? (
+        <View
+          className="overflow-hidden rounded-large border border-border bg-surface elevation-card"
+          testID="skeleton-card"
+        >
+          {Array.from({ length: rows }, (_, index) => (
+            <SkeletonEntryRow key={index} index={index} />
           ))}
         </View>
       ) : null}

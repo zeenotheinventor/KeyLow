@@ -17,17 +17,23 @@ export function EntryLoadState({ state, title, onBack, onRetry }: EntryLoadState
 
   function renderBody() {
     if (state === "error") {
-      return <ErrorState retry={{ label: RETRY_LABEL, onPress: onRetry }} title={GENERIC_ERROR} />;
+      return (
+        <View className="flex-1 pb-[160px]">
+          <ErrorState retry={{ label: RETRY_LABEL, onPress: onRetry }} title={GENERIC_ERROR} />
+        </View>
+      );
     }
     if (state === "notFound") {
       return (
-        <EmptyState body={ENTRY_NOT_FOUND.body} icon="SearchX" title={ENTRY_NOT_FOUND.title} />
+        <View className="flex-1 pb-[160px]">
+          <EmptyState body={ENTRY_NOT_FOUND.body} icon="SearchX" title={ENTRY_NOT_FOUND.title} />
+        </View>
       );
     }
 
     return (
-      <View accessible aria-label={title} aria-live="polite" className="px-4 pt-2" role="status">
-        <Skeleton rows={2} variant="group" />
+      <View accessible aria-label={title} aria-live="polite" className="px-4 py-1" role="status">
+        <Skeleton rows={2} variant="entryGroup" />
       </View>
     );
   }

@@ -6,18 +6,22 @@ import {
   unitValueOf,
 } from "@keylow/core/diary";
 
-import type { PortionSelection } from "../components/PortionPicker";
+import type { PortionSelection, RecipeSelection } from "../components/PortionPicker";
 import type { QuickAddSubmission } from "../components/QuickAddForm";
 import type {
   EntryTimeChange,
   FoodLogEntry,
   QuickEntryValues,
   QuickLogEntry,
+  RecipeLogEntry,
 } from "@keylow/api-client";
-import type { EntryQuantityChange } from "@keylow/core/diary";
+import type { EntryQuantityChange, RecipeAmount } from "@keylow/core/diary";
 
 /** What a save of a logged food writes: the amount, the time, or both. */
 export type FoodEntryChange = { amount?: EntryQuantityChange; time?: EntryTimeChange };
+
+/** What a save of a logged recipe writes: the number of servings or grams, the time, or both. */
+export type RecipeEntryChange = { amount?: RecipeAmount; time?: EntryTimeChange };
 
 /** What a save of a logged quick add writes: its values, its time, or both. */
 export type QuickEntryChange = { quick?: QuickEntryValues; time?: EntryTimeChange };
@@ -58,6 +62,25 @@ export function quickEntryChange(
   const time = entryTimeChange(entry, submission.time, timeZone);
   const change: QuickEntryChange = {
     ...(quick === undefined ? {} : { quick }),
+    ...(time === undefined ? {} : { time }),
+  };
+
+  return Object.keys(change).length === 0 ? null : change;
+}
+
+/**
+ * What to write for a logged recipe from what the picker handed over, or null when the amount, the unit and
+ * the time are all as logged. The unit counts: 1 serving and 1 g are different amounts.
+ */
+export function recipeEntryChange(
+  entry: RecipeLogEntry,
+  selection: RecipeSelection,
+  timeZone: string,
+): RecipeEntryChange | null {
+  const isAmountChanged = selection.unit !== entry.unit || selection.quantity !== entry.quantity;
+  const time = entryTimeChange(entry, selection.time, timeZone);
+  const change: RecipeEntryChange = {
+    ...(isAmountChanged ? { amount: { quantity: selection.quantity, unit: selection.unit } } : {}),
     ...(time === undefined ? {} : { time }),
   };
 

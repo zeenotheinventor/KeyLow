@@ -19,12 +19,7 @@ import { setUpTests } from "react-native-reanimated";
 import EntryRoute from "../app/entry/[id]";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
-import {
-  createDiaryQueryClient,
-  diaryBackend,
-  recipeEntry,
-  sampleDay,
-} from "./support/diaryBackend";
+import { createDiaryQueryClient, diaryBackend, sampleDay } from "./support/diaryBackend";
 import { oilEntry, oilFood } from "./support/entries";
 import { entryBackend, entryClient, resetEntryBackend } from "./support/entryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
@@ -872,15 +867,6 @@ describe("the entry screen", () => {
 
       expect(await screen.findByText("Entry not found")).toBeOnTheScreen();
       expect(screen.getByText("It may have been deleted.")).toBeOnTheScreen();
-    });
-
-    it("should say so for a recipe entry, which has no screen yet, and not draw a quick add form", async () => {
-      diaryBackend.entries = [...sampleDay(), recipeEntry({ date: DAY, utcTime: "17:00" })];
-      await renderEntry(diaryBackend.entries.length - 1);
-
-      expect(await screen.findByText("Entry not found")).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: "Save" })).not.toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeOnTheScreen();
     });
 
     it("should say so for an entry that was deleted, opened by its link", async () => {

@@ -49,6 +49,8 @@ setUpTests();
 // The rows of `sampleDay`, in the order it lists them.
 const CHICKEN_INDEX = 3;
 const CRISPS_INDEX = 5;
+// A recipe entry is added after the rows of `sampleDay`.
+const RECIPE_INDEX = sampleDay().length;
 const idOfEntry = (index: number) => String(diaryBackend.entries[index]?.["id"]);
 
 let queryClient: QueryClient;
@@ -119,13 +121,25 @@ describe("tapping a food in the diary", () => {
     expect(routerMock.push).toHaveBeenCalledWith(`/entry/${idOfEntry(CHICKEN_INDEX)}`);
   });
 
-  it("should open nothing when a recipe entry is pressed, and not fail", async () => {
+  it("should open the entry screen for a logged recipe, which is pressable now", async () => {
     diaryBackend.entries = [...sampleDay(), recipeEntry({ date: "2026-10-15", utcTime: "17:00" })];
     const user = await renderLoadedDiary();
 
-    await user.press(screen.getByLabelText(/^18:00, Chicken and rice, recipe, /));
+    await user.press(screen.getByRole("button", { name: /^18:00, Chicken and rice, recipe, / }));
 
-    expect(routerMock.push).not.toHaveBeenCalled();
-    expect(screen.getByLabelText(/^18:00, Chicken and rice, recipe, /)).toBeOnTheScreen();
+    expect(routerMock.push).toHaveBeenCalledTimes(1);
+    expect(routerMock.push).toHaveBeenCalledWith(`/entry/${idOfEntry(RECIPE_INDEX)}`);
+  });
+
+  it("should open a logged recipe offline too, where it can be read but not changed", async () => {
+    diaryBackend.entries = [...sampleDay(), recipeEntry({ date: "2026-10-15", utcTime: "17:00" })];
+    const user = await renderLoadedDiary();
+    await act(() => {
+      onlineManager.setOnline(false);
+    });
+
+    await user.press(screen.getByRole("button", { name: /^18:00, Chicken and rice, recipe, / }));
+
+    expect(routerMock.push).toHaveBeenCalledWith(`/entry/${idOfEntry(RECIPE_INDEX)}`);
   });
 });

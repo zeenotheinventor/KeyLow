@@ -107,15 +107,10 @@ export function FoodLog({
                       }
                     : undefined
                 }
-                // A food can be read offline, where the entry screen turns its changes off. A recipe entry has
-                // no screen yet, so its row has nothing to press.
-                onPress={
-                  entry.item_type === "recipe"
-                    ? undefined
-                    : () => {
-                        router.push(`/entry/${entry.id}`);
-                      }
-                }
+                // An entry can be read offline, where the entry screen turns its changes off.
+                onPress={() => {
+                  router.push(`/entry/${entry.id}`);
+                }}
               />
             ))}
           </HourRow>
