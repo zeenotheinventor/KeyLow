@@ -81,7 +81,10 @@ export function FoodRow({
   const spokenEnergy =
     isBusy || energy === undefined ? undefined : `${energy} ${FOOD_ROW.energyUnit}`;
   const showsAdd =
-    (layout === "search" || layout === "recent") && onAdd !== undefined && !needsReview && !isBusy;
+    (layout === "search" || layout === "recent" || isRecipe) &&
+    onAdd !== undefined &&
+    !needsReview &&
+    !isBusy;
   const canDelete = isDiary && onDelete !== undefined && !isBusy;
 
   // The line under the title says what is happening, or gives the macros, or says why there are none.
@@ -201,7 +204,7 @@ export function FoodRow({
   const divider = isFirst ? "" : "border-t border-border";
   const dimmed = disabled && !isBusy ? "opacity-50" : "";
   const rowClassKey =
-    isRecipe && hasTrailing
+    isRecipe && (hasTrailing || showsAdd)
       ? "recipeWithTrailing"
       : isIngredient && hasTrailing
         ? "ingredientWithTrailing"

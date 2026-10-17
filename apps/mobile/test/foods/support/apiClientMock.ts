@@ -7,7 +7,9 @@ import type {
   FoodWithPortionsState,
   LogEntry,
   LogFoodInput,
+  LogRecipeInput,
   RecentFood,
+  RecipeLogEntry,
 } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
@@ -56,6 +58,8 @@ export const mockCreateFood = jest.fn<Promise<CreatedFood>, [unknown]>();
 export const mockUpdateFood = jest.fn<Promise<Food>, [{ id: string; input: unknown }]>();
 // What logging a food resolves to is not read by the screens, so a test only looks at what it was called with.
 export const mockLogFood = jest.fn<Promise<unknown>, [LogFoodInput]>();
+// Logging a serving of a recipe resolves to the stored row, whose id Undo removes.
+export const mockLogRecipe = jest.fn<Promise<RecipeLogEntry>, [LogRecipeInput]>();
 // The profile's time zone, which the picker reads the time in. A test changes `profileTimeZone` for a case.
 export const profileTimeZone: { current: QueryState<string | null> } = {
   current: { data: "Europe/London", isPending: false, isError: false },
@@ -113,6 +117,7 @@ export function resetApiClientMock(): void {
   mockUpdateFood.mockReset();
   mockLogFood.mockReset();
   mockLogFood.mockResolvedValue({});
+  mockLogRecipe.mockReset();
   profileTimeZone.current = { data: "Europe/London", isPending: false, isError: false };
   termsAccepted.current = true;
   mockUseProfileTimeZone.mockReset();
@@ -146,6 +151,7 @@ export const mockApiClient = {
   useCreateFood: () => ({ mutateAsync: mockCreateFood }),
   useUpdateFood: () => ({ mutateAsync: mockUpdateFood }),
   useLogFood: () => ({ mutateAsync: mockLogFood }),
+  useLogRecipeServing: () => ({ mutateAsync: mockLogRecipe }),
   useProfileTimeZone: mockUseProfileTimeZone,
   useRecentFoods: mockUseRecentFoods,
   useDeleteEntry: () => ({ mutateAsync: mockDeleteEntry }),

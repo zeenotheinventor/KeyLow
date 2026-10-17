@@ -160,4 +160,56 @@ describe("FoodRow as a recipe row", () => {
       expect(screen.getAllByRole("button")).toHaveLength(1);
     });
   });
+
+  describe("the add button of a result that logs one serving", () => {
+    const searchResult: Partial<FoodRowProps> = {
+      caption: "1 serving (275 g)",
+      openLabel:
+        "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+      onPress: undefined,
+    };
+
+    it("should add one serving from a button named for the recipe and the serving", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onAdd = jest.fn();
+      await renderRecipeRow({ ...searchResult, onAdd });
+
+      await user.press(
+        screen.getByRole("button", { name: "Add Chicken and rice, 1 serving (275 g)" }),
+      );
+
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not be a button itself, with no chevron, while it opens nothing", async () => {
+      await renderRecipeRow({ ...searchResult, onAdd: jest.fn() });
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getByLabelText(searchResult.openLabel ?? "")).toBeOnTheScreen();
+      // The recipe tile and the flame in front of the energy are all that is drawn, plus the plus.
+      expect(drawings()).toHaveLength(3);
+    });
+
+    it("should dim the button and stop it responding when adding is disabled", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onAdd = jest.fn();
+      await renderRecipeRow({ ...searchResult, onAdd, addDisabled: true });
+
+      await user.press(screen.getByRole("button", { name: /^Add Chicken and rice/ }));
+
+      expect(onAdd).not.toHaveBeenCalled();
+    });
+
+    it("should sit 4 points from the edge, as a control beside the row does", async () => {
+      await renderRecipeRow({ ...searchResult, onAdd: jest.fn() });
+
+      expect(viewsDrawn({ minHeight: 60, paddingLeft: 12, paddingRight: 4 })).toHaveLength(1);
+    });
+
+    it("should give way to nothing when the recipe needs review, as a food does", async () => {
+      await renderRecipeRow({ ...searchResult, onAdd: jest.fn(), needsReview: true });
+
+      expect(screen.queryByRole("button", { name: /^Add / })).not.toBeOnTheScreen();
+    });
+  });
 });

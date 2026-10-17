@@ -61,8 +61,10 @@ export function SearchResults({
     return <ErrorState body={SEARCH_FAILED_MOBILE.body} title={SEARCH_FAILED_MOBILE.title} />;
   }
 
-  const isSearching = isDebouncing || isLoadingLocal;
-  const hasRows = local.length > 0 || off.length > 0;
+  // The recipes of the log search are looked for beside the foods, and count as results and as searching.
+  const recipeRows = logRows?.recipes?.rows ?? [];
+  const isSearching = isDebouncing || isLoadingLocal || (logRows?.recipes?.isSearching ?? false);
+  const hasRows = local.length > 0 || off.length > 0 || recipeRows.length > 0;
   // Rows that show a serving say where the values are per 100 g only for the live Open Food Facts ones.
   const showsServings = logRows !== undefined || choosesAmount;
   const expanded = expansion.query === trimmedQuery ? expansion.groups : [];

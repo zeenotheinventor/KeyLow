@@ -323,6 +323,22 @@ export const RecipeWithMore: Story = {
   ),
 };
 
+// A recipe in the log search (log-search results-with-recipes): the serving, and a plus that logs it. The row
+// opens nothing until the amount step, so it is plain text and only the plus acts.
+export const RecipeSearchResult: Story = {
+  args: {
+    ...chickenAndRice,
+    nameSegments: [
+      { text: "Chicken", matched: true },
+      { text: " and rice", matched: false },
+    ],
+    caption: "1 serving (275 g)",
+    openLabel:
+      "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+    onAdd: () => undefined,
+  },
+};
+
 // An ingredient of the recipe editor (recipe-editor.ingredients): the amount it is used in, and what that comes to.
 export const Ingredient: Story = {
   args: {

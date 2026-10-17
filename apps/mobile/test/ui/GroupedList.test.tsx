@@ -110,6 +110,13 @@ describe("GroupedList", () => {
       expect(within(list).getAllByRole("button")).toHaveLength(3);
     });
 
+    it("should name the list by its label, when it has one, and keep the title as the heading", async () => {
+      await renderList({ title: "Your recipes", label: "Your recipes, values per serving" });
+
+      expect(screen.getByLabelText("Your recipes, values per serving")).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: /^Your recipes/ })).toBeOnTheScreen();
+    });
+
     it("should expose each row as a list item, keeping the row's own button role", async () => {
       await renderList();
 

@@ -16,6 +16,7 @@ import type { GroupedListProps } from "./types";
 export function GroupedList({
   title,
   hidesTitle = false,
+  label,
   source,
   seeMore,
   notice,
@@ -47,7 +48,7 @@ export function GroupedList({
       )}
       {notice}
       {/* The rows bring their own padding, so the card has none. */}
-      <Card aria-label={title} padding={0} role="list">
+      <Card aria-label={label ?? title} padding={0} role="list">
         {rows.map((row) => (
           <GroupedRowPositionContext key={row.key} value={row.position}>
             {/* Not `accessible`: the row inside is a button, which an accessible wrapper would fold away. */}

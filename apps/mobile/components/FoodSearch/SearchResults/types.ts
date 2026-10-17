@@ -1,4 +1,4 @@
-import type { FoodSearchHit } from "@keylow/api-client";
+import type { FoodSearchHit, RecipeSummary } from "@keylow/api-client";
 import type { FoodSearchGroupKey } from "@keylow/core/search";
 import type { ReactNode } from "react";
 
@@ -19,10 +19,21 @@ export type SearchResultsProps = {
   choosesAmount?: boolean | undefined;
 };
 
+/** The user's recipes that match, drawn as the first group of the log search with a plus that logs one serving. */
+export type LogRecipes = {
+  /** The recipes that can be logged, in the order the search returned them. */
+  rows: readonly RecipeSummary[];
+  /** True while the recipes on show may not be the answer yet, so "No foods found" is not said. */
+  isSearching: boolean;
+  onAdd: (recipe: RecipeSummary) => void;
+};
+
 export type LogRows = {
   /** Dims every plus and stops it responding, such as while offline. */
   addDisabled: boolean;
   onAdd: (food: FoodSearchHit) => void;
+  /** Leave it out for a log search that offers no recipes. */
+  recipes?: LogRecipes | undefined;
 };
 
 /** The groups the user has opened with "See N more", and the query they were opened for. */
