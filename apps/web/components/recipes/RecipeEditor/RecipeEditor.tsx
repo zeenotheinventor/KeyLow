@@ -24,6 +24,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { problemSentences } from "./problemSentences";
 import { useIngredientEdits } from "./useIngredientEdits";
+import { useStepEdits } from "./useStepEdits";
 import { AddIngredientDialog } from "../AddIngredientDialog";
 import { DiscardRecipeDialog } from "../DiscardRecipeDialog";
 import { EditIngredientDialog } from "../EditIngredientDialog";
@@ -32,6 +33,7 @@ import { RecipeDetailsCard } from "../RecipeDetailsCard";
 import { RecipeEditorFrame } from "../RecipeEditorFrame";
 import { RecipeEditorLayout } from "../RecipeEditorLayout";
 import { RecipeIngredientsCard } from "../RecipeIngredientsCard";
+import { RecipeStepsCard } from "../RecipeStepsCard";
 
 import type { ProblemSentences } from "./problemSentences";
 import type { RecipeEditorProps } from "./types";
@@ -55,9 +57,10 @@ type SaveStatus = "idle" | "saving" | "created";
 
 /**
  * The recipe editor: the details, the ingredients (added, edited and removed in place, with an Undo for a
- * removal) and the Per serving card, which follows the ingredients, the servings and the cooked weight once
- * typing stops. Save is always pressable, and a
- * failed one says what to fix, field by field, and moves focus to the first. Leaving with changes asks
+ * removal), the Instructions (steps written in place, moved up and down and removed with an Undo) and the
+ * Per serving card, which follows the ingredients, the servings and the cooked weight once typing stops.
+ * Save is always pressable, and a failed one says what to fix, field by field, and moves focus to the first.
+ * A step still open when Save is pressed is kept first, as Done would. Leaving with changes asks
  * first. It holds no sums of its own: the card, the checks, the sentences and what counts as a change are
  * core's.
  */
@@ -82,9 +85,13 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const servingsField = useRef<HTMLInputElement>(null);
   const cookedWeightField = useRef<HTMLInputElement>(null);
   const ingredientsCard = useRef<HTMLElement>(null);
+  const stepTextArea = useRef<HTMLTextAreaElement>(null);
+
+  const stepEdits = useStepEdits(draft.steps, setDraft, stepTextArea);
 
   const isNewRecipe = existing === undefined;
-  const isChanged = isRecipeDraftChanged(baseline, draft);
+  // A step that is open and has been written in is a change too, since leaving would lose it.
+  const isChanged = isRecipeDraftChanged(baseline, { ...draft, steps: stepEdits.stepsWithEdit });
   const isLocked = saveStatus !== "idle";
 
   const validation = validateRecipeDraft(draft);
@@ -141,10 +148,15 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     if (isSavingNow.current || !isOnline) {
       return;
     }
+    // A step that is open is kept first, as Done would. One too long to keep stops the Save.
+    const settledSteps = stepEdits.settle();
+    if (settledSteps === null) {
+      return;
+    }
     setHasTriedToSave(true);
     setHasSaveFailed(false);
 
-    const result = validateRecipeDraft(draft);
+    const result = validateRecipeDraft({ ...draft, steps: settledSteps });
     if (!result.ok) {
       focusFirstProblem(problemSentences(result.problems));
       return;
@@ -274,6 +286,20 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
             onEdit={ingredientEdits.openEdit}
             onRemove={ingredientEdits.remove}
           />
+          <RecipeStepsCard
+            steps={draft.steps}
+            edit={stepEdits.edit}
+            textAreaRef={stepTextArea}
+            isLocked={isLocked}
+            onOpenEdit={stepEdits.openEdit}
+            onOpenAdd={stepEdits.openAdd}
+            onChangeText={stepEdits.changeText}
+            onDone={stepEdits.done}
+            onCancel={stepEdits.cancel}
+            onMoveUp={stepEdits.moveUp}
+            onMoveDown={stepEdits.moveDown}
+            onRemove={stepEdits.remove}
+          />
         </RecipeEditorLayout>
       </form>
       {dialog?.kind === "add" && (
@@ -305,6 +331,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
         onDiscard={() => {
           // Going to the page the editor is already on does not remount it, so the draft is put back by hand.
           setDraft(baseline);
+          stepEdits.cancel();
           setHasTriedToSave(false);
           setHasSaveFailed(false);
           setLeaveTo(null);
