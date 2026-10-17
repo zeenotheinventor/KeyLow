@@ -56,6 +56,32 @@ export const quickSnapshotSchema = z.object({
   label: z.string().min(1).nullable(),
 });
 
+/** The two ways a recipe is logged: a number of its servings, or grams of its cooked weight. */
+export const recipeEntryUnitSchema = z.enum(["serving", "g"]);
+
+/**
+ * What a recipe looked like when it was logged (ADR 0003, Amendment 8), so the entry never changes when
+ * the recipe does. It freezes the totals and not the ingredients, and `effectiveGrams` is the cooked
+ * weight the grams are measured against. A recipe has no portion and no density. There are no
+ * micronutrients.
+ */
+export const recipeSnapshotSchema = z.object({
+  v: z.literal(SNAPSHOT_VERSION),
+  kind: z.literal("recipe"),
+  /** The id of the recipe the snapshot was taken from. */
+  ref: rowIdSchema,
+  name: z.string(),
+  servings: z.number().positive(),
+  /** Null when the recipe had no measured cooked weight. */
+  yieldGrams: z.number().positive().nullable(),
+  effectiveGrams: z.number().positive(),
+  total: nutrientsSchema,
+  quantity: z.number().nonnegative(),
+  unit: recipeEntryUnitSchema,
+  resolvedGrams: z.number().nonnegative(),
+  engineVersion: z.number().int().positive().max(NUTRITION_ENGINE_VERSION),
+});
+
 /**
  * When an entry was logged: the instant (`logged_at`, with an offset) and the calendar day it
  * belongs to in the profile's time zone (`local_date`). The diary is a timeline by time.
@@ -100,14 +126,35 @@ export const quickLogEntryInsertSchema = z.object({
   nutrients: nutrientsSchema,
 });
 
+/**
+ * A recipe entry names its recipe in `recipe_id` and has no food and no portion. Its quantity columns
+ * repeat the snapshot, as a food's do.
+ */
+export const recipeLogEntryInsertSchema = z.object({
+  ...entryTimingShape,
+  item_type: z.literal("recipe"),
+  food_id: z.null(),
+  recipe_id: rowIdSchema,
+  quantity: z.number().nonnegative(),
+  unit: recipeEntryUnitSchema,
+  portion_id: z.null(),
+  resolved_grams: z.number().nonnegative(),
+  snapshot: recipeSnapshotSchema,
+  nutrients: nutrientsSchema,
+});
+
 export const logEntryInsertSchema = z.discriminatedUnion("item_type", [
   foodLogEntryInsertSchema,
   quickLogEntryInsertSchema,
+  recipeLogEntryInsertSchema,
 ]);
 
 export type FoodLogEntryInsert = z.infer<typeof foodLogEntryInsertSchema>;
 export type QuickLogEntryInsert = z.infer<typeof quickLogEntryInsertSchema>;
+export type RecipeLogEntryInsert = z.infer<typeof recipeLogEntryInsertSchema>;
 export type LogEntryInsert = z.infer<typeof logEntryInsertSchema>;
 export type SnapshotPortion = z.infer<typeof snapshotPortionSchema>;
 export type FoodSnapshot = z.infer<typeof foodSnapshotSchema>;
 export type QuickSnapshot = z.infer<typeof quickSnapshotSchema>;
+export type RecipeSnapshot = z.infer<typeof recipeSnapshotSchema>;
+export type RecipeEntryUnit = z.infer<typeof recipeEntryUnitSchema>;

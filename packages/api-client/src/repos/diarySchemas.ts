@@ -25,6 +25,16 @@ export type LogEntry = z.infer<typeof logEntrySchema>;
 export type FoodLogEntry = Extract<LogEntry, { item_type: "food" }>;
 export type QuickLogEntry = Extract<LogEntry, { item_type: "quick" }>;
 
+/**
+ * What the diary inserts: a food or a quick add. Core's `logEntryInsertSchema` also holds the recipe
+ * entry (KEY-286), which nothing writes until the diary can read one, so the writes are narrowed here.
+ */
+export const diaryInsertSchema = z.discriminatedUnion("item_type", [
+  foodLogEntryInsertSchema,
+  quickLogEntryInsertSchema,
+]);
+export type DiaryInsert = z.infer<typeof diaryInsertSchema>;
+
 /** What `day_logs` says about a day. A day with no row is not complete. */
 export const dayLogSchema = z.object({
   local_date: z.iso.date(),

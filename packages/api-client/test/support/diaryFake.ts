@@ -1,8 +1,8 @@
-import { logEntryInsertSchema } from "@keylow/core/diary";
 import { http } from "msw";
 import { z } from "zod";
 
 import { REST_URL, postgrestError, postgrestRows } from "./postgrest";
+import { diaryInsertSchema } from "../../src/repos/diarySchemas";
 
 import type { LogEntry } from "../../src/repos/diarySchemas";
 import type { SetupServer } from "msw/node";
@@ -97,7 +97,7 @@ export function installDiaryFake(server: SetupServer, seed: LogEntry[] = []) {
       if (control.failWrites) {
         return postgrestError(500, "XX000", "unavailable");
       }
-      const body = logEntryInsertSchema.parse(await request.json());
+      const body = diaryInsertSchema.parse(await request.json());
       const stored: StoredEntry = {
         ...body,
         id: crypto.randomUUID(),

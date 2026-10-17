@@ -2,7 +2,6 @@ import { toLocalDate } from "@keylow/core/dates";
 import {
   buildLogEntry,
   buildQuickEntry,
-  logEntryInsertSchema,
   quickLogEntryInsertSchema,
   recomputeEntry,
   refreshEntryFromFood,
@@ -10,16 +9,20 @@ import {
 import { z } from "zod";
 
 import { ENTRY_COLUMNS, idOfRow, parseRow, repoError } from "./diaryRows";
-import { foodLogEntrySchema, logEntrySchema, quickLogEntrySchema } from "./diarySchemas";
+import {
+  diaryInsertSchema,
+  foodLogEntrySchema,
+  logEntrySchema,
+  quickLogEntrySchema,
+} from "./diarySchemas";
 import { getFood, listFoodPortions } from "./foods";
 
-import type { FoodLogEntry, LogEntry, QuickLogEntry } from "./diarySchemas";
+import type { DiaryInsert, FoodLogEntry, LogEntry, QuickLogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";
 import type {
   BuildLogEntryInput,
   BuildQuickEntryInput,
   EntryQuantityChange,
-  LogEntryInsert,
 } from "@keylow/core/diary";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -53,12 +56,12 @@ function build<Built>(action: string, builder: () => Built): Built {
 
 async function insertEntry<Schema extends z.ZodType<LogEntry>>(
   client: SupabaseClient<Database>,
-  entry: LogEntryInsert,
+  entry: DiaryInsert,
   stored: Schema,
   action: string,
 ): Promise<z.output<Schema>> {
   // The builders store the time and the day as given, so a malformed one is caught here, before any request.
-  parseRow(logEntryInsertSchema, entry, action, () => "(new)");
+  parseRow(diaryInsertSchema, entry, action, () => "(new)");
 
   // Narrow the union so each branch type-checks against the generated insert type.
   const table = client.from("food_log_entries");

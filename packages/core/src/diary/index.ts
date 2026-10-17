@@ -2,6 +2,13 @@ export { barNumbers } from "./barNumbers";
 export type { BarNumbers } from "./barNumbers";
 export { buildLogEntry, buildQuickEntry } from "./buildLogEntry";
 export type { BuildLogEntryInput, BuildQuickEntryInput } from "./buildLogEntry";
+export { buildRecipeLogEntry } from "./buildRecipeLogEntry";
+export type { BuildRecipeLogEntryInput } from "./buildRecipeLogEntry";
+export { previewRecipeAmount, recipeAmountStart } from "./previewRecipeAmount";
+export type { RecipeAmountValues } from "./previewRecipeAmount";
+export { recomputeRecipeEntry } from "./recomputeRecipeEntry";
+export { nutrientsOfRecipeSnapshot } from "./recipeSnapshotQuantity";
+export type { FrozenRecipe, LoggableRecipe, RecipeAmount } from "./recipeSnapshotQuantity";
 export { buildFoodSnapshot } from "./buildFoodSnapshot";
 export type { FoodSnapshotInput } from "./buildFoodSnapshot";
 export { foodChangedSinceLogged } from "./foodChangedSinceLogged";
@@ -20,6 +27,9 @@ export {
   logEntryInsertSchema,
   quickLogEntryInsertSchema,
   quickSnapshotSchema,
+  recipeEntryUnitSchema,
+  recipeLogEntryInsertSchema,
+  recipeSnapshotSchema,
   snapshotPortionSchema,
 } from "./schemas";
 export type {
@@ -28,6 +38,9 @@ export type {
   LogEntryInsert,
   QuickLogEntryInsert,
   QuickSnapshot,
+  RecipeEntryUnit,
+  RecipeLogEntryInsert,
+  RecipeSnapshot,
   SnapshotPortion,
 } from "./schemas";
 export { NUTRITION_ENGINE_VERSION, SNAPSHOT_VERSION } from "./versions";
