@@ -50,6 +50,17 @@ export function removeEntryFromDay(queryClient: QueryClient, localDate: string, 
 }
 
 /**
+ * Marks an entry as gone in the cache of its own screen, which is what a read of an entry that was
+ * deleted resolves to. The cache of a phone is kept on it, so a deleted entry must not stay in it
+ * while its day no longer holds it. An entry that was never opened is not cached, and stays so.
+ */
+export function markEntryGone(queryClient: QueryClient, id: string): void {
+  queryClient.setQueriesData<LogEntry | null>({ queryKey: keys.diary.entry(id) }, (open) =>
+    open === undefined ? undefined : null,
+  );
+}
+
+/**
  * Marks every cached day, every open entry, every cached week and the recent foods stale, so the ones on screen
  * refetch (a write changes the entries, the totals on the week strip and the "last logged" amounts).
  * The complete days are left alone: no entry write changes whether a day is complete. It does not

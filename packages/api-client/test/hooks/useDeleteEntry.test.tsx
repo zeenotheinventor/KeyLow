@@ -121,6 +121,65 @@ describe("useDeleteEntry", () => {
     releaseReads();
   });
 
+  describe("the entry that was opened on its own", () => {
+    it("should be gone from the cache at once, while the request is still on its way", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      const releaseWrites = fake.holdWrites();
+
+      act(() => {
+        result.current.remove.mutate(breakfast);
+      });
+
+      await waitFor(() => {
+        expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toBeNull();
+      });
+      expect(result.current.remove.isPending).toBe(true);
+      releaseWrites();
+      await waitFor(() => {
+        expect(result.current.remove.isSuccess).toBe(true);
+      });
+    });
+
+    it("should leave the other entry that was opened alone", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      queryClient.setQueryData(keys.diary.entry(lunch.id), lunch);
+
+      await act(() => result.current.remove.mutateAsync(breakfast));
+
+      expect(queryClient.getQueryData(keys.diary.entry(lunch.id))).toEqual(lunch);
+    });
+
+    it("should not be added to the cache when it was never opened", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+
+      await act(() => result.current.remove.mutateAsync(breakfast));
+
+      expect(queryClient.getQueryCache().find({ queryKey: keys.diary.entry(breakfast.id) })).toBe(
+        undefined,
+      );
+    });
+
+    it("should be back in the cache when the request fails", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      fake.failWrites();
+      const releaseReads = fake.holdReads();
+
+      await act(async () => {
+        await result.current.remove.mutateAsync(breakfast).catch(() => undefined);
+      });
+
+      expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toEqual(breakfast);
+      releaseReads();
+    });
+  });
+
   it("should refresh the day and the recent foods, so the food falls out of the recent list", async () => {
     const fake = installDiaryFake(server, [breakfast]);
     const { result } = await renderDay(fake);
