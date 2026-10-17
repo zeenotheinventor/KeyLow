@@ -13,8 +13,11 @@ export const newRecipePath = (name?: string): string => {
     : `${recipesPath()}/new?${NEW_RECIPE_NAME_PARAMETER}=${encodeURIComponent(trimmedName)}`;
 };
 
+/** The editor for a saved recipe. */
+export const editRecipePath = (id: string): string => `${recipesPath()}/${id}/edit`;
+
 /**
- * The screen a library row opens. The recipe view will be at `/recipes/<id>`, but until it exists the row
- * opens the editor at `/recipes/<id>/edit`. The recipe view ticket changes this one line.
+ * The screen a library row opens, and where the editor's Back and Save lead. The recipe view will be at
+ * `/recipes/<id>`, but until it exists this is the editor. The recipe view ticket changes this one line.
  */
-export const recipePath = (id: string): string => `${recipesPath()}/${id}/edit`;
+export const recipePath = (id: string): string => editRecipePath(id);

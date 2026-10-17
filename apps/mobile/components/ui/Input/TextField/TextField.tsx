@@ -59,6 +59,7 @@ export function TextField({
   missingNote,
   disabled = false,
   density = "comfortable",
+  inputRef,
   locked = false,
   unit,
   macro,
@@ -156,6 +157,7 @@ export function TextField({
           editable={!disabled && !locked}
           maxFontSizeMultiplier={maxFontSizeMultiplier}
           placeholder={placeholder}
+          ref={inputRef}
           placeholderTextColor={colors["text-muted"]}
           value={value}
           onBlur={(event) => {

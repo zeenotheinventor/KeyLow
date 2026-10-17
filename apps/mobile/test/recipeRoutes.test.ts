@@ -1,5 +1,6 @@
 import {
   NEW_RECIPE_NAME_PARAMETER,
+  editRecipePath,
   newRecipePath,
   recipePath,
   recipesPath,
@@ -26,6 +27,12 @@ describe("where the recipe library leads", () => {
   it("should leave out a word that is only spaces, and trim the ends of one that is not", () => {
     expect(newRecipePath("   ")).toBe("/recipes/new");
     expect(newRecipePath("  pasta ")).toBe("/recipes/new?name=pasta");
+  });
+
+  it("should lead to the editor of a saved recipe at /recipes/<id>/edit", () => {
+    expect(editRecipePath("0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11")).toBe(
+      "/recipes/0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11/edit",
+    );
   });
 
   it("should open a recipe on the editor until the recipe view exists", () => {

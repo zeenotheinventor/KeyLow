@@ -37,7 +37,14 @@ const exitAnimation = {
  * It draws inside its parent, so a screen mounts it where the sheet should cover, and the parent sits
  * under a gesture handler root view.
  */
-export function BottomSheet({ open, onClose, title, label, children }: BottomSheetProps) {
+export function BottomSheet({
+  open,
+  onClose,
+  title,
+  isTitleCentred = false,
+  label,
+  children,
+}: BottomSheetProps) {
   const sheetRef = useRef<ComponentRef<typeof GorhomBottomSheet>>(null);
   const titleRef = useRef<View>(null);
   const { bottom: safeAreaBottom } = useSafeAreaInsets();
@@ -134,7 +141,9 @@ export function BottomSheet({ open, onClose, title, label, children }: BottomShe
               // The view carries the heading role and takes the screen reader's focus, because the kit's
               // Text takes no ref. Its words are read as the heading's name.
               <View ref={titleRef} accessible className="mb-3" role="heading">
-                <Text variant="h2">{title}</Text>
+                <Text className={isTitleCentred ? "text-center" : ""} variant="h2">
+                  {title}
+                </Text>
               </View>
             )}
             {children}

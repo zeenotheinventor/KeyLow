@@ -29,6 +29,7 @@ const rowClassName = {
   recipe: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-3",
   // A recipe row with a control of its own beside it draws as the board does, 4 points from the control.
   recipeWithTrailing: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-1",
+  ingredient: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-3",
 } as const;
 
 // The gap between the title, the serving and the stats: 4 points, and 2 on a diary row.
@@ -38,6 +39,7 @@ const textColumnClassName = {
   recent: "min-w-0 flex-1 gap-1",
   diary: "min-w-0 flex-1 gap-[2px]",
   recipe: "min-w-0 flex-1 gap-1",
+  ingredient: "min-w-0 flex-1 gap-1",
 } as const;
 
 const deleteAction = { name: "delete", label: FOOD_ROW.deleteAction } as const;
@@ -70,6 +72,7 @@ export function FoodRow({
   const isBusy = busyLabel !== undefined;
   const isDiary = layout === "diary";
   const isRecipe = layout === "recipe";
+  const isIngredient = layout === "ingredient";
   const hasTrailing = trailing !== undefined && trailing !== null;
   const isLog = layout !== undefined;
   const name = nameSegments.map((segment) => segment.text).join("");
@@ -117,11 +120,12 @@ export function FoodRow({
       .filter(Boolean)
       .join(", ");
 
-  // A diary row and a Recent row write the whole name in semibold, because nothing is matched on either.
-  // A recipe row does the same until the search matches it, and then only the match is semibold.
+  // A diary row, a Recent row and an ingredient row write the whole name in semibold, because nothing is
+  // matched on any of them. A recipe row does the same until the search matches it, and then only the match
+  // is semibold.
   const isNameMatched = nameSegments.some((segment) => segment.matched);
   const titleVariant = (matched: boolean) =>
-    isDiary || layout === "recent" || matched || (isRecipe && !isNameMatched)
+    isDiary || isIngredient || layout === "recent" || matched || (isRecipe && !isNameMatched)
       ? "body-strong"
       : "body";
   const title = (

@@ -71,6 +71,18 @@ export const Tall: Story = {
   ),
 };
 
+// The discard sheet board: a centred title over a centred line and two buttons.
+export const CentredTitle: Story = {
+  args: { title: "Discard changes?", isTitleCentred: true, children: null },
+  render: (args) => (
+    <BottomSheet {...args}>
+      <Text className="text-center" tone="secondary">
+        Your changes to this recipe will not be saved.
+      </Text>
+    </BottomSheet>
+  ),
+};
+
 export const Closed: Story = { args: { open: false, title: "Log weight" } };
 
 function OpenAndClose() {

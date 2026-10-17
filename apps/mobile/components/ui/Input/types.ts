@@ -1,4 +1,5 @@
-import type { TextInputProps } from "react-native";
+import type { Ref } from "react";
+import type { TextInput, TextInputProps } from "react-native";
 
 /**
  * How much room the field's box gives its contents. `comfortable` is the design system card's, with 16
@@ -55,6 +56,8 @@ export type FieldFrameProps = {
   disabled?: boolean | undefined;
   /** Defaults to `comfortable`, and to `compact` for a `NumericInput`. */
   density?: InputDensity | undefined;
+  /** The text input itself, for a screen that moves focus to the field, such as the first one a failed save found wrong. */
+  inputRef?: Ref<TextInput> | undefined;
 };
 
 /** What a field hands on to its text input. Only what a screen has needed so far. */

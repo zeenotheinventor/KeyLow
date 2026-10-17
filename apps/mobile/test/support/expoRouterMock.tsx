@@ -10,6 +10,7 @@ const noSearchParams: Record<string, string | string[]> = {};
 export const routerMock = {
   push: jest.fn<undefined, [string]>(),
   replace: jest.fn<undefined, [string]>(),
+  dismissTo: jest.fn<undefined, [string]>(),
   setParams: jest.fn<undefined, [Record<string, string | undefined>]>(),
   back: jest.fn<undefined, []>(),
   // Goes back in the navigator above the screen's own, which is how a screen closes the whole sheet it is in.
@@ -28,6 +29,7 @@ export const routerMock = {
 export function resetRouterMock(): void {
   routerMock.push.mockReset();
   routerMock.replace.mockReset();
+  routerMock.dismissTo.mockReset();
   routerMock.setParams.mockReset();
   routerMock.back.mockReset();
   routerMock.parentGoBack.mockReset();
@@ -45,6 +47,7 @@ export function resetRouterMock(): void {
 // The real useRouter returns one stable object, so effects that depend on it do not rerun.
 const router = {
   replace: routerMock.replace,
+  dismissTo: routerMock.dismissTo,
   setParams: routerMock.setParams,
   push: routerMock.push,
   back: routerMock.back,

@@ -11,7 +11,7 @@ export type FoodRowMacros = {
 };
 
 /** The M2 row has no layout of its own. The food log has these three. */
-export type FoodRowLayout = "search" | "recent" | "diary" | "recipe";
+export type FoodRowLayout = "search" | "recent" | "diary" | "recipe" | "ingredient";
 
 /**
  * A food on the search and Your foods lists. Every text is given already written: the row never
@@ -40,8 +40,10 @@ export type FoodRowProps = {
    * logged for a serving, 56 points tall and the whole name in semibold. `diary` is a logged food: no
    * tile, the time and amount, a trailing chevron and, with `onDelete`, swipe to delete. `recipe` is a
    * recipe in the library: the ChefHat tile, the serving and the yield under the title, the values of one
-   * serving on the stats line, no chevron and a `trailing` slot for the row's menu. Leave it out for the
-   * M2 row.
+   * serving on the stats line, no chevron and a `trailing` slot for the row's menu. `ingredient` is an
+   * ingredient of a recipe: the food icon tile, the whole name in semibold over two lines, the amount it is
+   * used in under it and the stats line of that amount, with no chevron and nothing to press. Leave it out
+   * for the M2 row.
    */
   layout?: FoodRowLayout | undefined;
   /**
