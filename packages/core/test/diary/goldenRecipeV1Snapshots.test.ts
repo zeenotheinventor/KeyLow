@@ -11,8 +11,9 @@ import goldenEntries from "../fixtures/diary/goldenRecipeV1Snapshots.json";
 import type { RecipeLogEntryInsert } from "../../src/diary";
 
 /*
- * Five stored recipe snapshots at v1. The nutrients and grams were worked out by hand-written arithmetic in
- * the order ADR 0003, Amendment 8 fixes, not by the code under test. They must never change: they prove an
+ * Seven stored recipe snapshots at v1. The nutrients and grams were worked out by hand-written arithmetic in
+ * the order ADR 0003, Amendment 8 fixes, not by the code under test. The last two are chosen so that the
+ * other orders of the same arithmetic differ in the last digit. They must never change: they prove an
  * entry logged today still gives exactly the same numbers when the maths is touched later. This file is
  * the recipe counterpart of goldenV1Snapshots.json, which is not touched.
  */

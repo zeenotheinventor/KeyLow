@@ -87,6 +87,36 @@ describe("buildRecipeLogEntry", () => {
   });
 
   describe("the evaluation order", () => {
+    // Worked out outside the code: (1.1 * 1100) / 2.5 is exactly 484, and 1.1 * (1100 / 2.5) is 484.00000000000006.
+    const recipeOfTwoAndAHalfServings: LoggableRecipe = {
+      id: recipeId,
+      name: "Evaluation order",
+      servings: 2.5,
+      yield_grams: 1100,
+      computed: {
+        effectiveGrams: 1100,
+        total: { kcal: 290, protein_g: 122.7, fat_g: 232.9, carbs_g: 276.9, fibre_g: 144.7 },
+      },
+    };
+
+    it("should resolve grams by serving as (quantity x cooked weight) / servings", () => {
+      const entry = build({ recipe: recipeOfTwoAndAHalfServings, quantity: 1.1, unit: "serving" });
+
+      expect(entry.resolved_grams).toBe(484);
+      expect(entry.snapshot.resolvedGrams).toBe(484);
+    });
+
+    it("should scale a serving's nutrients as (total x quantity) / servings", () => {
+      const { nutrients } = build({
+        recipe: recipeOfTwoAndAHalfServings,
+        quantity: 1.1,
+        unit: "serving",
+      });
+
+      expect(nutrients.kcal).toBe(127.6);
+      expect(nutrients.protein_g).toBe(53.988000000000014);
+    });
+
     it("should scale by serving as (total x quantity) / servings", () => {
       const recipe = chickenAndRice({ servings: 3, yieldGrams: 1034.7 });
       const { total } = recipe.computed;

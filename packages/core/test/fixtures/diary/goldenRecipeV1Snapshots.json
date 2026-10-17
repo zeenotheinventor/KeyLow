@@ -165,5 +165,67 @@
       "sugars_g": 5.154665965281431,
       "salt_g": 0.8065123619147816
     }
+  },
+  {
+    "name": "1.1 servings of a recipe of 2.5 servings and 1100 g, where (quantity x cooked weight) / servings is 484 and quantity x (cooked weight / servings) is not",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b4",
+      "name": "Evaluation order by serving",
+      "servings": 2.5,
+      "yieldGrams": 1100,
+      "effectiveGrams": 1100,
+      "total": {
+        "kcal": 290,
+        "protein_g": 122.7,
+        "fat_g": 232.9,
+        "carbs_g": 276.9,
+        "fibre_g": 144.7
+      },
+      "quantity": 1.1,
+      "unit": "serving",
+      "resolvedGrams": 484,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 484,
+    "expectedNutrients": {
+      "kcal": 127.6,
+      "protein_g": 53.988000000000014,
+      "fat_g": 102.47600000000003,
+      "carbs_g": 121.83599999999998,
+      "fibre_g": 63.66799999999999
+    }
+  },
+  {
+    "name": "333.3 g of a recipe of 1100 g, where (total x grams) / cooked weight and total x (grams / cooked weight) differ in the last digit",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b5",
+      "name": "Evaluation order by grams",
+      "servings": 2.5,
+      "yieldGrams": 1100,
+      "effectiveGrams": 1100,
+      "total": {
+        "kcal": 173.1,
+        "protein_g": 182.3,
+        "fat_g": 196.6,
+        "carbs_g": 200.8,
+        "fibre_g": 204.6
+      },
+      "quantity": 333.3,
+      "unit": "g",
+      "resolvedGrams": 333.3,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 333.3,
+    "expectedNutrients": {
+      "kcal": 52.4493,
+      "protein_g": 55.236900000000006,
+      "fat_g": 59.5698,
+      "carbs_g": 60.8424,
+      "fibre_g": 61.99380000000001
+    }
   }
 ]
