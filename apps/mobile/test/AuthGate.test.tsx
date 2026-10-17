@@ -1,5 +1,6 @@
 import { KeyLowProvider } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
+import { setUser } from "@sentry/react-native";
 import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
 import { act, cleanup, render, screen } from "@testing-library/react-native";
 import { Text } from "react-native";
@@ -39,12 +40,14 @@ jest.mock("../lib/supabase", () => ({
 let queryClient: QueryClient;
 
 // A signed in user in these tests has accepted the current Terms, so the terms gate has nothing to say.
-async function renderGate() {
+async function renderGate(
+  readStoredUserId: () => Promise<string | null> = () => Promise.resolve(null),
+) {
   queryClient = createTestQueryClient();
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={termsClient} queryClient={queryClient}>
-        <AuthGate>
+        <AuthGate readStoredUserId={readStoredUserId}>
           <Text>Protected content</Text>
         </AuthGate>
       </KeyLowProvider>
@@ -194,6 +197,111 @@ describe("AuthGate", () => {
     });
 
     expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+  });
+
+  describe("the user Sentry reports errors for", () => {
+    beforeEach(() => {
+      jest.mocked(setUser).mockClear();
+    });
+
+    it("should be the signed in account's id, and nothing else about them", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: { ...fakeSession, user: { ...fakeSession.user, email: "a@b.com" } } },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "diary"];
+
+      await renderGate();
+
+      expect(setUser).toHaveBeenCalledWith({ id: "user-id" });
+      expect(JSON.stringify(jest.mocked(setUser).mock.calls)).not.toContain("a@b.com");
+    });
+
+    it("should be the stored account's id while Supabase has not answered", async () => {
+      mockSupabaseClient.auth.getSession.mockReturnValue(new Promise(() => undefined));
+      routerMock.segments = ["(tabs)", "diary"];
+
+      await renderGate(() => Promise.resolve("stored-user-id"));
+
+      expect(setUser).toHaveBeenCalledWith({ id: "stored-user-id" });
+    });
+
+    it("should be the account that signs in", async () => {
+      routerMock.segments = ["(auth)", "sign-in"];
+      await renderGate();
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_IN", fakeSession);
+      });
+
+      expect(setUser).toHaveBeenCalledWith({ id: "user-id" });
+    });
+
+    // Supabase answers after the stored id is read, as it does while it tries to refresh an expired token.
+    type SessionAnswer = Awaited<ReturnType<typeof mockSupabaseClient.auth.getSession>>;
+    async function renderWithStoredAccountThenAnswer(answer: SessionAnswer) {
+      let answerSession: (answer: SessionAnswer) => void = () => undefined;
+      mockSupabaseClient.auth.getSession.mockReturnValue(
+        new Promise<SessionAnswer>((resolve) => {
+          answerSession = resolve;
+        }),
+      );
+      routerMock.segments = ["(tabs)", "diary"];
+      await renderGate(() => Promise.resolve("stored-user-id"));
+      expect(setUser).toHaveBeenCalledWith({ id: "stored-user-id" });
+
+      await act(() => {
+        answerSession(answer);
+      });
+    }
+
+    it("should be cleared when Supabase finds no session for the stored account", async () => {
+      await renderWithStoredAccountThenAnswer({
+        data: { session: null },
+        error: new AuthApiError("Invalid Refresh Token", 400, "refresh_token_not_found"),
+      });
+
+      expect(setUser).toHaveBeenLastCalledWith(null);
+    });
+
+    it("should be kept when Supabase cannot be reached, which leaves the stored account signed in", async () => {
+      await renderWithStoredAccountThenAnswer({
+        data: { session: null },
+        error: new AuthRetryableFetchError("Network request failed", 0),
+      });
+
+      expect(setUser).not.toHaveBeenCalledWith(null);
+    });
+
+    it("should be set once for the account, however many times its session is refreshed", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: fakeSession },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "more"];
+      await renderGate();
+
+      await act(() => {
+        emitAuthStateChange("TOKEN_REFRESHED", fakeSession);
+      });
+
+      expect(setUser).toHaveBeenCalledTimes(1);
+    });
+
+    it("should be cleared when the user signs out", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: fakeSession },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "more"];
+      await renderGate();
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+      });
+
+      expect(setUser).toHaveBeenLastCalledWith(null);
+    });
   });
 
   describe("the Storybook route", () => {
