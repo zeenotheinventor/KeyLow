@@ -1,3 +1,4 @@
+import { tabBarHeight } from "@keylow/tokens";
 import {
   createContext,
   useCallback,
@@ -41,7 +42,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
     lastId.current += 1;
     setCurrent({ ...options, id: lastId.current });
   }, []);
-  const value = useMemo(() => ({ show }), [show]);
+  const dismiss = useCallback(() => {
+    setCurrent(undefined);
+  }, []);
+  const value = useMemo(() => ({ show, dismiss }), [show, dismiss]);
 
   // Closes only the toast it was made for, so a toast that has replaced it is left alone.
   const closeToast = (id: number) => {
@@ -111,4 +115,16 @@ export function useToastClearance(points: number): void {
       setClearance(0);
     };
   }, [points, setClearance]);
+}
+
+/**
+ * Raises every toast to sit above a bar of `points` standing on the bottom edge of a screen that has no tab
+ * bar under it, such as the recipe editor's Save dock: 12 points above the bar, as it would be above the tab
+ * bar. Pass the height of the bar as measured with `onLayout`, and 0 while it is not measured.
+ */
+export function useToastAboveBar(points: number): void {
+  const { bottom: bottomInset } = useSafeAreaInsets();
+
+  // The toast is placed above the tab bar and the safe area, which this screen does not have.
+  useToastClearance(points === 0 ? 0 : points - tabBarHeight - bottomInset);
 }

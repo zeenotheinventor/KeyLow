@@ -34,6 +34,7 @@ export function IconButton({
   label,
   variant = "secondary",
   size = "md",
+  tone = "primary",
   disabled = false,
   dimsWhenDisabled = true,
   haptic,
@@ -41,7 +42,7 @@ export function IconButton({
   className = "",
 }: IconButtonProps) {
   const isRing = variant === "ring";
-  const glyph = <Icon name={icon} size={iconSize} tone={isRing ? "secondary" : "primary"} />;
+  const glyph = <Icon name={icon} size={iconSize} tone={isRing ? "secondary" : tone} />;
 
   return (
     <View className={className}>

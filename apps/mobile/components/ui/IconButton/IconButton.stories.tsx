@@ -34,6 +34,11 @@ export const Ring: Story = {
   args: { variant: "ring", icon: "Plus", label: "Add Banana, 1 medium (100 g)" },
 };
 
+// The X on an ingredient row: a ghost control with the glyph in secondary text.
+export const Quiet: Story = {
+  args: { variant: "ghost", tone: "secondary", label: "Remove Onions, raw" },
+};
+
 export const Disabled: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">

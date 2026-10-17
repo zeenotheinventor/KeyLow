@@ -334,6 +334,29 @@ export const Ingredient: Story = {
   },
 };
 
+// An ingredient that opens its amount, with the X beside it that removes it (recipe-editor.ingredients).
+export const IngredientWithRemove: Story = {
+  args: {
+    ...Ingredient.args,
+    openLabel: "Milk, semi-skimmed, pasteurised, average, 100 ml, change amount",
+    onPress: () => undefined,
+  },
+  render: (args) => (
+    <FoodRow
+      {...args}
+      trailing={
+        <IconButton
+          className="mr-1"
+          icon="X"
+          label="Remove Milk, semi-skimmed, pasteurised, average"
+          tone="secondary"
+          variant="ghost"
+        />
+      }
+    />
+  ),
+};
+
 // A food that does not give all three macros says it needs review in their place.
 export const IngredientNeedsReview: Story = {
   args: { ...Ingredient.args, needsReview: true, macros: undefined },

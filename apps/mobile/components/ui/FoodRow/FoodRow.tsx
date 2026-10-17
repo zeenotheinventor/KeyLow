@@ -30,6 +30,8 @@ const rowClassName = {
   // A recipe row with a control of its own beside it draws as the board does, 4 points from the control.
   recipeWithTrailing: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-1",
   ingredient: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-3",
+  // An ingredient with its remove control beside it, 4 points from the control as the board draws it.
+  ingredientWithTrailing: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-1",
 } as const;
 
 // The gap between the title, the serving and the stats: 4 points, and 2 on a diary row.
@@ -188,7 +190,7 @@ export function FoodRow({
               </Text>
             </View>
           )}
-          {showsAdd || isRecipe || onPress === undefined ? null : (
+          {showsAdd || isRecipe || isIngredient || onPress === undefined ? null : (
             <Icon name="ChevronRight" size="sm" tone="muted" />
           )}
         </>
@@ -198,7 +200,12 @@ export function FoodRow({
 
   const divider = isFirst ? "" : "border-t border-border";
   const dimmed = disabled && !isBusy ? "opacity-50" : "";
-  const rowClassKey = isRecipe && hasTrailing ? "recipeWithTrailing" : (layout ?? "classic");
+  const rowClassKey =
+    isRecipe && hasTrailing
+      ? "recipeWithTrailing"
+      : isIngredient && hasTrailing
+        ? "ingredientWithTrailing"
+        : (layout ?? "classic");
   const rowClasses = `${rowClassName[rowClassKey]} ${layout === undefined ? divider : ""} ${dimmed}`;
   const actions = canDelete ? [deleteAction] : undefined;
   const onAction: PressableProps["onAccessibilityAction"] = canDelete
@@ -263,7 +270,7 @@ export function FoodRow({
           onPress={onAdd}
         />
       ) : null}
-      {isRecipe ? trailing : null}
+      {isRecipe || isIngredient ? trailing : null}
     </View>
   );
 }

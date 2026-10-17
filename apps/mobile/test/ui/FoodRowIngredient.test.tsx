@@ -1,11 +1,12 @@
-import { render, screen } from "@testing-library/react-native";
+import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { FoodRow } from "../../components/ui";
+import { FoodRow, IconButton } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { FoodRowProps } from "../../components/ui";
 
@@ -34,6 +35,13 @@ async function renderIngredient(props: Partial<FoodRowProps> = {}) {
   );
 }
 
+const onionsName = "Onions, raw, 1 medium (110 g), change amount";
+
+// Icons are decoration and have no role to query by, so their drawings are counted.
+function drawings() {
+  return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
+}
+
 describe("FoodRow as an ingredient row", () => {
   let kitStyles: string;
 
@@ -42,11 +50,13 @@ describe("FoodRow as an ingredient row", () => {
   });
 
   beforeEach(() => {
+    jest.useFakeTimers();
     registerAppStyles(kitStyles);
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
@@ -74,5 +84,46 @@ describe("FoodRow as an ingredient row", () => {
     await renderIngredient();
 
     expect(screen.getByText("Onions, raw")).toHaveStyle({ fontWeight: "600" });
+  });
+  describe("when it opens the amount step", () => {
+    it("should be a button named by the sentence it is given, which opens the ingredient when pressed", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      await renderIngredient({ openLabel: onionsName, onPress });
+
+      await user.press(screen.getByRole("button", { name: onionsName }));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+    });
+
+    it("should end without a chevron, as the board draws it", async () => {
+      await renderIngredient({ openLabel: onionsName, onPress: () => undefined });
+
+      // The tile's food and the flame.
+      expect(drawings()).toHaveLength(2);
+    });
+
+    it("should be 4 points from a control beside it, which does not press the row", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      const onRemove = jest.fn();
+      await renderIngredient({
+        openLabel: onionsName,
+        onPress,
+        trailing: <IconButton icon="X" label="Remove Onions, raw" onPress={onRemove} />,
+      });
+
+      await user.press(screen.getByRole("button", { name: "Remove Onions, raw" }));
+
+      expect(onRemove).toHaveBeenCalledTimes(1);
+      expect(onPress).not.toHaveBeenCalled();
+      expect(viewsDrawn({ minHeight: 60, paddingLeft: 12, paddingRight: 4 })).toHaveLength(1);
+    });
+
+    it("should be 12 points from the edge when there is no control beside it", async () => {
+      await renderIngredient({ openLabel: onionsName, onPress: () => undefined });
+
+      expect(viewsDrawn({ minHeight: 60, paddingLeft: 12, paddingRight: 12 })).toHaveLength(1);
+    });
   });
 });

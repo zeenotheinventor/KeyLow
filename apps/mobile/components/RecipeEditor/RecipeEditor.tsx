@@ -18,10 +18,18 @@ import { useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { vars } from "nativewind";
 import { useEffect, useRef, useState } from "react";
-import { AccessibilityInfo, KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
+import {
+  AccessibilityInfo,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { problemSentences } from "./problemSentences";
+import { useIngredientEdits } from "./useIngredientEdits";
 import { useIsOnline } from "../../lib/connectivity";
 import { dockBottomPadding } from "../../lib/dockBottomPadding";
 import { recipePath, recipesPath } from "../../lib/recipeRoutes";
@@ -29,15 +37,16 @@ import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { useSettledValue } from "../../lib/useSettledValue";
 import { DiscardRecipeSheet } from "../DiscardRecipeSheet";
+import { IngredientAmountStep } from "../IngredientAmountStep";
 import { PerServingCard } from "../PerServingCard";
 import { RecipeDetailsFields } from "../RecipeDetailsFields";
 import { RecipeIngredientsSection } from "../RecipeIngredientsSection";
-import { Banner, Button, SheetHeader, useToast } from "../ui";
+import { Banner, Button, SheetHeader, useToast, useToastAboveBar } from "../ui";
 
 import type { ProblemSentences } from "./problemSentences";
 import type { RecipeEditorProps } from "./types";
 import type { RecipeDetailsField } from "../RecipeDetailsFields";
-import type { RecipeDraft } from "@keylow/core/recipes";
+import type { RecipeDraft, RecipeIngredient } from "@keylow/core/recipes";
 import type { HostInstance, TextInput } from "react-native";
 
 // How long typing has to stop before the Per serving card follows it, and so before it is read out.
@@ -52,8 +61,9 @@ type SaveStatus = "idle" | "saving" | "created";
 type Exit = { href: string; how: "dismiss" | "replace" };
 
 /**
- * The recipe editor: the details, the ingredients (read only until they can be added) and the Per serving
- * card, which follows the servings and the cooked weight once typing stops. Save is always pressable (but
+ * The recipe editor: the details, the ingredients (each opens its amount step, in a page over the editor so
+ * the draft and the scroll place stay where they are, and each can be removed with an Undo) and the Per
+ * serving card, which follows the servings, the cooked weight and the ingredients once typing stops. Save is always pressable (but
  * offline), and a failed one says what to fix, field by field, scrolls to the first and moves focus to it.
  * Leaving with changes asks first, by the header's Back or Close, the Android back button and the iOS swipe
  * back alike. It holds no sums of its own: the card, the checks, the sentences and what counts as a change
@@ -77,6 +87,14 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
   const [exit, setExit] = useState<Exit | null>(null);
   const isSavingNow = useRef(false);
+  // The ingredient whose amount step is open, if one is. It is held as the ingredient and not as its place,
+  // because the list can change under the step (an Undo puts a removed ingredient back above it).
+  const [openStep, setOpenStep] = useState<{ ingredient: RecipeIngredient; id: number } | null>(
+    null,
+  );
+  const stepCount = useRef(0);
+  const [dockHeight, setDockHeight] = useState(0);
+  const shouldFocusIngredientsHeading = useRef(false);
 
   const frameRef = useRef<View>(null);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -89,6 +107,10 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
   const keyboardLift = useKeyboardLift(frameRef, Platform.OS === "android");
   const trackScrollOffset = useScrollFocusedInputIntoView(scrollViewRef, keyboardLift);
+
+  const ingredientEdits = useIngredientEdits(draft.ingredients, setDraft);
+  // Toasts sit above the pinned Save, as the board draws them, and not above a tab bar this screen has not.
+  useToastAboveBar(dockHeight);
 
   const isNewRecipe = existing === undefined;
   const isChanged = isRecipeDraftChanged(baseline, draft);
@@ -104,17 +126,29 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     shownSentences.ingredients.length > 0;
 
   const card = recipeCardOf(useSettledValue(draft, CARD_FOLLOWS_TYPING_AFTER_MS));
+  const openedIngredient = openStep === null ? undefined : openStep.ingredient;
 
   const backHref = existing === undefined ? recipesPath() : recipePath(existing.id);
 
   // The Android back button, the iOS swipe back and the header all end here when changes would be lost, and
   // a save under way is not interrupted. Saving and discarding both leave nothing changed, so the hold is
-  // already lifted when the way out runs.
-  usePreventRemove(isChanged || saveStatus === "saving", () => {
-    if (!isLocked) {
+  // already lifted when the way out runs. With an amount step open, the way back closes the step.
+  usePreventRemove(isChanged || saveStatus === "saving" || openedIngredient !== undefined, () => {
+    if (openedIngredient !== undefined) {
+      closeIngredient();
+    } else if (!isLocked) {
       setIsDiscardOpen(true);
     }
   });
+
+  // A screen reader is taken back to the Ingredients heading once the editor is there to be focused, since
+  // the row that was pressed may be gone.
+  useEffect(() => {
+    if (openStep === null && shouldFocusIngredientsHeading.current) {
+      shouldFocusIngredientsHeading.current = false;
+      focusIngredientsHeading();
+    }
+  }, [openStep]);
 
   // The way out runs after the render that lifted the hold, or the navigator would still refuse it. A new
   // `exit` each time, so a way out that led nowhere (the editor's own page) can be asked for again.
@@ -128,6 +162,53 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       router.dismissTo(exit.href);
     }
   }, [exit, router]);
+
+  function focusIngredientsHeading() {
+    if (ingredientsHeading.current !== null) {
+      AccessibilityInfo.sendAccessibilityEvent(ingredientsHeading.current, "focus");
+    }
+  }
+
+  function openIngredientStep(position: number) {
+    if (isLocked) {
+      return;
+    }
+    const ingredient = draft.ingredients[position];
+    if (ingredient === undefined) {
+      return;
+    }
+    // A field that still holds the keyboard would keep it up under the page, and a toast would cover the
+    // page's controls and offer an Undo that changes the list behind it.
+    Keyboard.dismiss();
+    toast.dismiss();
+    stepCount.current += 1;
+    setOpenStep({ ingredient, id: stepCount.current });
+  }
+
+  function closeIngredient() {
+    shouldFocusIngredientsHeading.current = true;
+    setOpenStep(null);
+  }
+
+  // What the open step does to the list, by where its ingredient is by then. One that is no longer in the
+  // list leaves nothing to change, so the step just closes.
+  function changeOpenIngredient(change: (position: number) => void) {
+    const position =
+      openedIngredient === undefined ? -1 : draft.ingredients.indexOf(openedIngredient);
+    if (position !== -1) {
+      change(position);
+    }
+    closeIngredient();
+  }
+
+  function removeIngredientAt(position: number) {
+    if (isLocked) {
+      return;
+    }
+    // Focus goes first, so the toast's announcement is the last thing a screen reader says.
+    focusIngredientsHeading();
+    ingredientEdits.remove(position);
+  }
 
   function changeField(field: RecipeDetailsField, text: string) {
     setDraft((current) => ({ ...current, [field]: text }));
@@ -164,9 +245,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     } else if (found.ingredients.length > 0) {
       scrollTo(ingredientsSection.current);
       // There is no field to focus, so a screen reader is taken to the heading the sentence sits under.
-      if (ingredientsHeading.current !== null) {
-        AccessibilityInfo.sendAccessibilityEvent(ingredientsHeading.current, "focus");
-      }
+      focusIngredientsHeading();
     }
   }
 
@@ -233,97 +312,128 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
 
   return (
     <View className="flex-1 bg-background">
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      {/* The editor stays where it is under the amount step, so the draft, the scroll place and the fields
+          are all as they were when the step closes. A screen reader cannot reach it meanwhile. */}
+      <View
+        aria-hidden={openedIngredient !== undefined}
         className="flex-1"
+        importantForAccessibility={openedIngredient === undefined ? "auto" : "no-hide-descendants"}
       >
-        {/* The insets and the keyboard's cover are runtime values no class can name, so they go through variables. */}
-        <View
-          ref={frameRef}
-          className="flex-1 pb-[var(--keyboard-lift)] pt-[var(--inset-top)]"
-          style={vars({ "--inset-top": insets.top, "--keyboard-lift": keyboardLift })}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          className="flex-1"
         >
-          <SheetHeader
-            leading={{
-              icon: isNewRecipe ? "X" : "ChevronLeft",
-              label: isNewRecipe ? FOOD_FORM.close : FOOD_FORM.back,
-              disabled: isLocked,
-              onPress: leave,
-            }}
-            title={isNewRecipe ? RECIPE_EDITOR.newTitle : baseline.name}
-          />
-          {hasShownProblem || hasSaveFailed || !isOnline ? (
-            <View className="gap-2 px-4 pb-3">
-              {hasShownProblem ? (
-                <Banner sentence title={FOOD_FORM.validationSummary} variant="error" />
-              ) : null}
-              {hasSaveFailed ? (
-                <Banner sentence title={SAVE_FAILED_BANNER} variant="error" />
-              ) : null}
-              {isOnline ? null : (
-                <Banner
-                  body={RECIPE_EDITOR.offlineEditingBody}
-                  title={OFFLINE_BANNER.title}
-                  variant="offline"
-                />
-              )}
-            </View>
-          ) : null}
-          <ScrollView
-            ref={scrollViewRef}
-            className="flex-1"
-            keyboardShouldPersistTaps="handled"
-            scrollEventThrottle={16}
-            onScroll={trackScrollOffset}
-          >
-            <View ref={contentRef} className="gap-6 px-4 pb-6 pt-1">
-              <PerServingCard card={card} />
-              <RecipeDetailsFields
-                cookedWeightRef={cookedWeightField}
-                draft={draft}
-                errors={shownSentences}
-                isLocked={isLocked}
-                nameRef={nameField}
-                servingsRef={servingsField}
-                onChange={changeField}
-              />
-              <RecipeIngredientsSection
-                ingredients={draft.ingredients}
-                problems={shownSentences.ingredients}
-                headingRef={ingredientsHeading}
-                sectionRef={ingredientsSection}
-              />
-            </View>
-          </ScrollView>
-          {/* The dock is the sheet's surface under a hairline, with the board's 42 below its button. It is a
-              sibling of the list, so the list ends above it and nothing scrolls under Save. */}
+          {/* The insets and the keyboard's cover are runtime values no class can name, so they go through variables. */}
           <View
-            className="border-t border-border bg-surface-sheet px-4 pb-[var(--dock-bottom)] pt-4"
-            style={vars({ "--dock-bottom": dockBottomPadding(insets.bottom) })}
+            ref={frameRef}
+            className="flex-1 pb-[var(--keyboard-lift)] pt-[var(--inset-top)]"
+            style={vars({ "--inset-top": insets.top, "--keyboard-lift": keyboardLift })}
           >
-            <Button
-              fullWidth
-              disabled={!isOnline}
-              haptic="confirm"
-              loading={isLocked}
-              size="lg"
-              onPress={() => {
-                void save();
+            <SheetHeader
+              leading={{
+                icon: isNewRecipe ? "X" : "ChevronLeft",
+                label: isNewRecipe ? FOOD_FORM.close : FOOD_FORM.back,
+                disabled: isLocked,
+                onPress: leave,
+              }}
+              title={isNewRecipe ? RECIPE_EDITOR.newTitle : baseline.name}
+            />
+            {hasShownProblem || hasSaveFailed || !isOnline ? (
+              <View className="gap-2 px-4 pb-3">
+                {hasShownProblem ? (
+                  <Banner sentence title={FOOD_FORM.validationSummary} variant="error" />
+                ) : null}
+                {hasSaveFailed ? (
+                  <Banner sentence title={SAVE_FAILED_BANNER} variant="error" />
+                ) : null}
+                {isOnline ? null : (
+                  <Banner
+                    body={RECIPE_EDITOR.offlineEditingBody}
+                    title={OFFLINE_BANNER.title}
+                    variant="offline"
+                  />
+                )}
+              </View>
+            ) : null}
+            <ScrollView
+              ref={scrollViewRef}
+              className="flex-1"
+              keyboardShouldPersistTaps="handled"
+              scrollEventThrottle={16}
+              onScroll={trackScrollOffset}
+            >
+              <View ref={contentRef} className="gap-6 px-4 pb-6 pt-1">
+                <PerServingCard card={card} />
+                <RecipeDetailsFields
+                  cookedWeightRef={cookedWeightField}
+                  draft={draft}
+                  errors={shownSentences}
+                  isLocked={isLocked}
+                  nameRef={nameField}
+                  servingsRef={servingsField}
+                  onChange={changeField}
+                />
+                <RecipeIngredientsSection
+                  ingredients={draft.ingredients}
+                  problems={shownSentences.ingredients}
+                  headingRef={ingredientsHeading}
+                  sectionRef={ingredientsSection}
+                  onOpen={openIngredientStep}
+                  onRemove={removeIngredientAt}
+                />
+              </View>
+            </ScrollView>
+            {/* The dock is the sheet's surface under a hairline, with the board's 42 below its button. It is a
+              sibling of the list, so the list ends above it and nothing scrolls under Save. */}
+            <View
+              className="border-t border-border bg-surface-sheet px-4 pb-[var(--dock-bottom)] pt-4"
+              style={vars({ "--dock-bottom": dockBottomPadding(insets.bottom) })}
+              onLayout={(event) => {
+                setDockHeight(event.nativeEvent.layout.height);
               }}
             >
-              {ENTRY_SCREEN.saveAction}
-            </Button>
+              <Button
+                fullWidth
+                disabled={!isOnline}
+                haptic="confirm"
+                loading={isLocked}
+                size="lg"
+                onPress={() => {
+                  void save();
+                }}
+              >
+                {ENTRY_SCREEN.saveAction}
+              </Button>
+            </View>
           </View>
+          <DiscardRecipeSheet
+            isNewRecipe={isNewRecipe}
+            open={isDiscardOpen}
+            onDiscard={discard}
+            onKeepEditing={() => {
+              setIsDiscardOpen(false);
+            }}
+          />
+        </KeyboardAvoidingView>
+      </View>
+      {openStep === null ? null : (
+        <View accessibilityViewIsModal className="absolute inset-0 bg-background">
+          <IngredientAmountStep
+            // Another ingredient is another page, so the amount and the unit start afresh.
+            key={openStep.id}
+            ingredient={openStep.ingredient}
+            onBack={closeIngredient}
+            onRemove={() => {
+              changeOpenIngredient(ingredientEdits.remove);
+            }}
+            onSave={(ingredient) => {
+              changeOpenIngredient((position) => {
+                ingredientEdits.replace(position, ingredient);
+              });
+            }}
+          />
         </View>
-        <DiscardRecipeSheet
-          isNewRecipe={isNewRecipe}
-          open={isDiscardOpen}
-          onDiscard={discard}
-          onKeepEditing={() => {
-            setIsDiscardOpen(false);
-          }}
-        />
-      </KeyboardAvoidingView>
+      )}
     </View>
   );
 }

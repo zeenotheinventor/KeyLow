@@ -42,7 +42,8 @@ export type FoodRowProps = {
    * recipe in the library: the ChefHat tile, the serving and the yield under the title, the values of one
    * serving on the stats line, no chevron and a `trailing` slot for the row's menu. `ingredient` is an
    * ingredient of a recipe: the food icon tile, the whole name in semibold over two lines, the amount it is
-   * used in under it and the stats line of that amount, with no chevron and nothing to press. Leave it out
+   * used in under it and the stats line of that amount, with no chevron. It is plain text until it has an
+   * `onPress` (which opens the amount step), and a `trailing` slot for its remove control. Leave it out
    * for the M2 row.
    */
   layout?: FoodRowLayout | undefined;
@@ -77,7 +78,8 @@ export type FoodRowProps = {
    * Names the row in place of the words the row writes from its parts, for a `recipe` row or a logged recipe
    * whose screen spells the serving and the values out, such as "Chicken and rice, 1 serving 275 grams,
    * makes 4, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, open" or "18:00,
-   * Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, ...".
+   * Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, ...", or an `ingredient` row that
+   * opens the amount step, such as "Onions, raw, 1 medium (110 g), change amount".
    */
   openLabel?: string | undefined;
   /**
@@ -86,8 +88,8 @@ export type FoodRowProps = {
    */
   isLoggedRecipe?: boolean | undefined;
   /**
-   * A `recipe` row's own control at its trailing edge, beside the row and not inside it, so pressing it does
-   * not press the row. The row menu ticket puts the More button here. Leave it out for none.
+   * A `recipe` or `ingredient` row's own control at its trailing edge, beside the row and not inside it, so
+   * pressing it does not press the row: the recipe's More button, or the ingredient's X. Leave it out for none.
    */
   trailing?: ReactNode;
 };
