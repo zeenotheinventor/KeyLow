@@ -18,3 +18,14 @@ export { buildRecipeIngredient } from "./buildRecipeIngredient";
 export type { RecipeIngredientInput } from "./buildRecipeIngredient";
 export { computeRecipe } from "./computeRecipe";
 export type { ComputeRecipeInput } from "./computeRecipe";
+export {
+  addStep,
+  editStep,
+  moveStep,
+  moveStepDown,
+  moveStepUp,
+  normaliseSteps,
+  removeStep,
+} from "./steps";
+export { validateRecipeDraft } from "./validateRecipeDraft";
+export type { CleanRecipeDraft, RecipeDraft, RecipeDraftProblem } from "./validateRecipeDraft";
