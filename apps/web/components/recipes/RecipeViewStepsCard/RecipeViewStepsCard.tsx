@@ -3,7 +3,7 @@ import { iconStroke } from "@keylow/tokens";
 import { Info } from "lucide-react";
 import { useId } from "react";
 
-import { RecipeViewStepRow } from "../RecipeViewStepRow";
+import { StepRow } from "../StepRow";
 
 import type { RecipeViewStepsCardProps } from "./types";
 
@@ -37,7 +37,7 @@ export function RecipeViewStepsCard({ steps, servingsNote }: RecipeViewStepsCard
         <ol>
           {steps.map((text, position) => (
             // Two steps can say the same thing, so the place in the method is the identity.
-            <RecipeViewStepRow key={position} number={position + 1} text={text} />
+            <StepRow key={position} number={position + 1} text={text} />
           ))}
         </ol>
       </section>

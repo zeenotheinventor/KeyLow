@@ -54,6 +54,8 @@ export type ToastOptions = Pick<
 export type ToastContextValue = {
   /** Shows a toast. One shows at a time, so a new toast replaces the current one. */
   show: (options: ToastOptions) => void;
+  /** Takes the current toast down, such as an Undo that a later change on the screen would make wrong. */
+  dismiss: () => void;
 };
 
 export type ToastProviderProps = {

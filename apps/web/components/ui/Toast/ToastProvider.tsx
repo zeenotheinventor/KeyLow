@@ -19,7 +19,10 @@ export function ToastProvider({ children }: ToastProviderProps) {
     lastId.current += 1;
     setCurrent({ ...options, id: lastId.current });
   }, []);
-  const value = useMemo(() => ({ show }), [show]);
+  const dismiss = useCallback(() => {
+    setCurrent(undefined);
+  }, []);
+  const value = useMemo(() => ({ show, dismiss }), [show, dismiss]);
 
   // Closes only the toast it was made for, so a toast that has replaced it is left alone.
   const closeToast = (id: number) => {
@@ -57,8 +60,9 @@ export function ToastProvider({ children }: ToastProviderProps) {
 }
 
 /**
- * Gives a screen `show`. A toast's action is a shortcut: never make it the only way to recover
- * from an action, because a keyboard user may not reach the toast within its 5 s wait.
+ * Gives a screen `show`, and `dismiss` for a toast whose action would no longer mean what it said.
+ * A toast's action is a shortcut: never make it the only way to recover from an action, because a
+ * keyboard user may not reach the toast within its 5 s wait.
  */
 export function useToast(): ToastContextValue {
   const context = useContext(ToastContext);

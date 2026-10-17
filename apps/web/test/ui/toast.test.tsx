@@ -610,6 +610,29 @@ describe("ToastProvider", () => {
     expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
   });
 
+  it("should take the current toast down when dismiss is called", () => {
+    function Dismisser() {
+      const { dismiss } = useToast();
+      return (
+        <button type="button" onClick={dismiss}>
+          Dismiss
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Trigger options={{ message: "Step removed", actionLabel: "Undo" }} />
+        <Dismisser />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(region().textContent).toBe("");
+  });
+
   it("should fail clearly when used outside a provider", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
