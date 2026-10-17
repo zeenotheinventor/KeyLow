@@ -125,6 +125,13 @@ export type Database = {
             referencedRelation: "food_portions";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "food_log_entries_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          },
         ];
       };
       food_portions: {
@@ -405,6 +412,106 @@ export type Database = {
         };
         Relationships: [];
       };
+      recipe_ingredients: {
+        Row: {
+          created_at: string;
+          food_id: string;
+          id: string;
+          owner_id: string;
+          portion_id: string | null;
+          position: number;
+          quantity: number;
+          recipe_id: string;
+          resolved_grams: number;
+          snapshot: Json;
+          unit: string;
+        };
+        Insert: {
+          created_at?: string;
+          food_id: string;
+          id?: string;
+          owner_id?: string;
+          portion_id?: string | null;
+          position: number;
+          quantity: number;
+          recipe_id: string;
+          resolved_grams: number;
+          snapshot: Json;
+          unit: string;
+        };
+        Update: {
+          created_at?: string;
+          food_id?: string;
+          id?: string;
+          owner_id?: string;
+          portion_id?: string | null;
+          position?: number;
+          quantity?: number;
+          recipe_id?: string;
+          resolved_grams?: number;
+          snapshot?: Json;
+          unit?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "recipe_ingredients_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recipe_ingredients_portion_id_fkey";
+            columns: ["portion_id"];
+            isOneToOne: false;
+            referencedRelation: "food_portions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "recipe_ingredients_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      recipes: {
+        Row: {
+          computed: Json;
+          created_at: string;
+          id: string;
+          instructions: string[];
+          is_archived: boolean;
+          name: string;
+          owner_id: string;
+          servings: number;
+          yield_grams: number | null;
+        };
+        Insert: {
+          computed: Json;
+          created_at?: string;
+          id?: string;
+          instructions?: string[];
+          is_archived?: boolean;
+          name: string;
+          owner_id?: string;
+          servings: number;
+          yield_grams?: number | null;
+        };
+        Update: {
+          computed?: Json;
+          created_at?: string;
+          id?: string;
+          instructions?: string[];
+          is_archived?: boolean;
+          name?: string;
+          owner_id?: string;
+          servings?: number;
+          yield_grams?: number | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       day_totals: {
@@ -432,6 +539,14 @@ export type Database = {
           allowed: boolean;
           retry_after_seconds: number;
         }[];
+      };
+      recipe_instructions_are_valid: {
+        Args: { steps: string[] };
+        Returns: boolean;
+      };
+      save_recipe: {
+        Args: { p_ingredients: Json; p_recipe: Json; p_recipe_id: string };
+        Returns: string;
       };
       search_food_candidate_ids: {
         Args: { search_phrase: string; search_tsquery: unknown };
