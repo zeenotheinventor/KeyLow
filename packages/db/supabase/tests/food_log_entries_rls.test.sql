@@ -21,7 +21,7 @@ insert into auth.users (instance_id, id, aud, role, email) values
   ('00000000-0000-0000-0000-000000000000', '18100000-0000-4000-8000-00000000000b', 'authenticated', 'authenticated', 'key181-user-b@keylow.test');
 
 -- Fixtures, inserted as postgres so row level security does not apply: one
--- food with a portion, and one entry for each user.
+-- food with a portion, a recipe, and one entry for each user.
 insert into public.foods (id, source, source_ref, owner_id, name, basis) values
   ('18100000-0000-4000-8000-000000000101', 'cofid', 'KEY181-FOOD-1', null, 'key181-oats', 'per_100g'),
   ('18100000-0000-4000-8000-0000000001a1', 'user', null, '18100000-0000-4000-8000-00000000000a', 'key181-a-private-food', 'per_100g'),
@@ -32,6 +32,10 @@ insert into public.food_portions (id, food_id, owner_id, label, grams) values
   ('18100000-0000-4000-8000-000000000202', '18100000-0000-4000-8000-000000000101', null, 'key181-global-spoon', 10),
   ('18100000-0000-4000-8000-0000000002a1', '18100000-0000-4000-8000-0000000001a1', '18100000-0000-4000-8000-00000000000a', 'key181-a-slice', 30),
   ('18100000-0000-4000-8000-0000000002b1', '18100000-0000-4000-8000-0000000001b1', '18100000-0000-4000-8000-00000000000b', 'key181-b-slice', 30);
+
+-- A recipe for user A, which the recipe entries below point at now that recipe_id has a foreign key.
+insert into public.recipes (id, owner_id, name, servings, computed) values
+  ('18100000-0000-4000-8000-0000000000f1', '18100000-0000-4000-8000-00000000000a', 'key181-a-recipe', 1, '{}');
 
 insert into public.food_log_entries (id, user_id, local_date, logged_at, item_type, food_id, quantity, unit, portion_id, resolved_grams, snapshot, nutrients) values
   ('18100000-0000-4000-8000-0000000003a1', '18100000-0000-4000-8000-00000000000a', '2026-10-15', '2026-10-15 08:05:00+00', 'food', '18100000-0000-4000-8000-000000000101', 1, 'portion', '18100000-0000-4000-8000-000000000201', 40, '{"kind":"food","name":"key181-oats"}', '{"kcal":150,"protein_g":5,"fat_g":3,"carbs_g":25,"fibre_g":4}'),
@@ -181,7 +185,7 @@ select throws_ok(
 );
 select lives_ok(
   $$insert into public.food_log_entries (user_id, local_date, item_type, recipe_id, snapshot, nutrients) values ('18100000-0000-4000-8000-00000000000a', '2026-10-15', 'recipe', '18100000-0000-4000-8000-0000000000f1', '{}', '{"kcal":1,"protein_g":1,"fat_g":1,"carbs_g":1,"fibre_g":1}')$$,
-  'a recipe entry with a recipe_id is accepted, recipe_id has no foreign key until M4'
+  'a recipe entry with the recipe_id of an existing recipe is accepted'
 );
 
 -- Defaults: logged_at is the transaction time when the client sends none.
