@@ -100,6 +100,16 @@ The source model is a human decision taken before the 3D milestone starts: Z-Ana
 
 The heat model, volume status and suggestions are code, not model output. Training coaching (explaining why a session was suggested, tips, answering "am I overtraining my shoulders") is a later extension of the M8 assistant and follows its rules: behind the consent toggle, with evals in CI, cost caps, and no data from one account reaching another. It follows the M9 rule too: the model may propose, and core computes and verifies. The assistant reads `muscleState` and the suggestion's reasons through tools. It never invents a number.
 
+### Compatibility with the nutrition side
+
+Training is a separate Linear project from KeyLow v1 but the same product, account and codebase, and it is meant to build on nutrition. These rules keep the two compatible:
+
+- **One app, one account, one profile.** Training lives in the existing apps (a new tab or section), the existing auth and the existing `profiles` row. It reads `weight_unit` for load display and `timezone` for `local_date`. It does not add a second profile or a separate onboarding; the goal questionnaire is a step that can run after or alongside M6 onboarding.
+- **Same packages, same rules.** `@keylow/core` (pure, no platform deps, runs in RN and Deno), `@keylow/api-client` (repos and TanStack Query hooks with the shared query-key factory), `@keylow/tokens` for every colour, `@keylow/core/copy` for strings. Loads are stored in kg, the same way weights are stored in kg and energy in kcal.
+- **Training never edits the energy maths.** The M6 engine estimates expenditure from intake and weigh-ins, so training is already reflected in it. Logged workouts do not add "exercise calories" to targets and do not change `keylow-engine-v1` inputs. Any later link (for example a training-day calorie offset through the existing `dow_offsets_kcal`) goes through the program screen as a user choice and a new engine or program decision, never an implicit coupling.
+- **Where the two meet, by design.** A strength or hypertrophy goal can suggest a program goal and `protein_g_per_kg` for M6 to use (the user confirms; nutrition stays the owner of targets). The dashboard can show a training card next to the nutrition ones. The M8 assistant gets training tools beside its diary and weight tools, under the same consent, eval and cost rules.
+- **Data lifecycle is shared.** Training tables cascade from `auth.users`, join the M7 data export, and are removed by the same account deletion.
+
 ### Health data
 
 Training logs are health data under the project's Working conventions: no exercise name, load, reps or muscle value in logs, error reports or analytics (ids and counts only). Training tables are in the data export and are removed by account deletion.
