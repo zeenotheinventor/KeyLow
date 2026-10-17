@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16.
 
 ## Context
 
@@ -17,7 +17,7 @@ The following, transcribed verbatim from the document's Data model (Supabase Pos
 - `foods` (source off|cofid|user, source_ref, owner_id null for global, name, brand, barcode digits-only, basis per_100g|per_100ml, density_g_per_ml, kcal, protein_g, fat_g, sat_fat_g, carbs_g EU-style, sugars_g, fibre_g, salt_g, micros jsonb, quality jsonb {kcal_derived, suspect, fields_missing}, food_group, fetched_at, search tsvector, deleted_at); unique `(source, source_ref)` for non-user rows; gin on search and `name gin_trgm_ops`; check `(source='user') = (owner_id is not null)`
 - `food_portions` (food_id, owner_id denormalised for RLS, label, grams or ml, is_default, position)
 - `food_source_data` (food_id, import_run_id, raw jsonb) and `import_runs` (source, label, file_sha256, started/finished, row_count): service role only
-- `recipes` (owner_id, name, servings > 0, yield_grams nullable, notes, computed jsonb cache, is_archived)
+- `recipes` (owner_id, name, servings > 0, yield_grams nullable, notes, computed jsonb cache, is_archived) (superseded in part by Amendment 8: `notes` is dropped and `instructions text[]` takes its place)
 - `recipe_ingredients` (recipe_id, owner_id, position, food_id, quantity, unit, portion_id, resolved_grams, snapshot jsonb); sub-recipes deferred
 - `food_log_entries` (user_id, local_date, meal_slot breakfast|lunch|dinner|snack, logged_at, item_type food|recipe|quick, food_id, recipe_id, quantity, unit, portion_id, resolved_grams, snapshot jsonb, nutrients jsonb, kcal generated, deleted_at); indexes on `(user_id, local_date)`, `(user_id, logged_at desc)`, `(user_id, food_id)` (superseded in part by Amendment 5: `meal_slot` is dropped, and the `(user_id, local_date)` index is replaced by `(user_id, local_date, logged_at)`)
 - `day_logs` (user_id, local_date, is_complete, completed_at, note), PK `(user_id, local_date)`
@@ -602,3 +602,288 @@ Replacing the portions by delete and insert and not by a diff means the portion 
 ### Consequences of Amendment 7
 
 The migration `20261015190000_store_off_product.sql` creates the function and its grants. The `off-product` Edge Function calls it through `.rpc` and no longer treats `23505` as a lost race or re-reads the cache after a store: a failed store is an error (500 `internal_error`), and nothing is half written. `packages/db/src/types.gen.ts` gains `store_off_product`. Any further deviation from the frozen Decision, from Amendments 1 to 6 or from this amendment needs an Amendment 8 before the migration or code that implements it lands.
+
+## Amendment 8 (Recipes, 2026-10-16)
+
+### Status
+
+Recorded on 2026-10-16 under KEY-282. Implements Zee's rulings of 2026-10-16 on KEY-4 (the recipes brief). Creating or editing a recipe covers adding the foods and writing the instructions. The instructions are ordered text steps, stored on the recipe as an ordered list, `instructions text[]`, and the frozen `notes` column is dropped. Those are rulings. The recipe log entry is the part the M3 handoff asked to be decided here. The remaining details are interpretations made for implementation. They are, in full:
+
+- the numbers in "The numbers" below (name, servings, yield, step, ingredient and ingredient amount bounds), and that a blank step is refused by the database and dropped by the editors.
+- that a recipe may be stored with no instructions and with no ingredients, although the editors require at least one ingredient.
+- that `recipes.computed` is `not null` with no default, the shape of the cache, and what a recipe with no ingredients computes to.
+- that `recipe_ingredients` has no `update` grant, because ingredients are replaced as a whole, and that the database has no list of units.
+- the name `save_recipe`, its argument names and JSON shapes, that keys it does not know are ignored and `position` is assigned from the array index, the error codes `22023` and `P0002`, that `execute` is held by `authenticated` alone, and that the database always chooses a new recipe's id.
+- the content of the recipe snapshot, its two units (`serving` and `g`), that its `effectiveGrams` is above 0, that a recipe is logged from its `computed` cache, and that neither `SNAPSHOT_VERSION` nor `NUTRITION_ENGINE_VERSION` moves.
+- the `no action` rule on `food_log_entries.recipe_id`, the partial index, the change to the insert policy, and the fallback to a deferred constraint if the account deletion proof fails.
+- that `service_role` gets no privileges on the two new tables.
+- that recipe name search is an `ilike` through PostgREST with no new function.
+- the export and account deletion contract recorded for M7.
+
+Zee confirms them by approving the PR that carries this amendment. Amendments 1 to 7 are unchanged. The frozen Decision text is unchanged except for one inline note on the `recipes` line, which "Supersedes" explains. This amendment drops one column that the frozen `recipes` line names and adds one it does not, adds one function, one foreign key and one snapshot kind, and changes one policy. It adds no table, because the frozen Decision already names both. Amendment 1's `id` and `created_at` columns apply to both tables, as they do to every new table.
+
+### Supersedes
+
+The frozen `recipes` line in the Decision changes in one way:
+
+- `notes` is dropped. `instructions text[]` takes its place (see "Instructions").
+
+Nothing else on that line or on the `recipe_ingredients` line changes. The `recipes` line carries an inline note pointing here, and the rest of the Decision is untouched.
+
+The reason is the same shape as Amendment 5's for `meal_slot`, with a replacement. `notes` was a placeholder for free text on a recipe. Zee's ruling asks for ordered steps, and a second free text field beside them would give the editor two places for one purpose, so a user would put the method in one or the other and the screens would have to decide which to show. Nothing writes `notes`, because no `recipes` table exists in any database yet (no migration creates it, and the diary migration says as much for `recipe_id`). So no data is migrated and nothing needs a migration to remove the column. If a note on a recipe is wanted later, it is a new column and a later amendment. Nothing earlier in this ADR refers to the `notes` column of `recipes`, so no other text needs a note.
+
+### The numbers
+
+Every bound this amendment sets for recipes is in this table, so that core and the migration use the same ones.
+
+| What                        | Rule                                                  |
+| --------------------------- | ----------------------------------------------------- |
+| Recipe name                 | Not blank, at most 200 characters.                    |
+| Servings                    | Greater than 0, at most 1,000. Fractions are allowed. |
+| Yield (`yield_grams`)       | Null, or greater than 0 and at most 100,000.          |
+| Instruction steps           | At most 50 steps in a recipe.                         |
+| One step                    | Not null, not blank, at most 1,000 characters.        |
+| Ingredients                 | At most 100 in a recipe.                              |
+| Ingredient `quantity`       | Greater than 0.                                       |
+| Ingredient `resolved_grams` | Greater than 0, at most 100,000.                      |
+
+- Lengths count characters, not bytes, as `foods_name_length_check` does in Amendment 6. The 200 for a name is that check's number, so a recipe name and a food name read alike.
+- Blank means empty or only whitespace. The editors trim a name and every step before saving and drop blank steps (KEY-285). The database does not trim. It refuses blank text and text over the length, so a client other than the app cannot store what the app would never send.
+- The ingredient count has a maximum and no minimum in the database. A recipe with no ingredients can be stored, because a client must not be locked out by a rule only the editors enforce (the argument of Amendment 4), and the editors require at least one.
+- Unlike the bounds in Amendment 6, these are row rules and not only input rules. Amendment 6 left a bound off the stored food because a source records what it records. A recipe row is only ever typed by its owner, so there is no source to be tolerant of, and a bound on the row stops a direct API write from skipping it.
+- The sizes are generous for a home recipe and keep the longest possible row (50 steps of 1,000 characters and 100 ingredient snapshots) well under a megabyte.
+- Core exports each number as a constant from `@keylow/core/recipes` (KEY-284) and the migration (KEY-283) writes the same numbers into its checks and into `save_recipe`. If they ever differ, this table wins.
+
+### Instructions
+
+Answer: `recipes.instructions text[] not null default '{}'`. Step order is array order, so the first element is step 1. The whole list is replaced when a recipe is saved, so adding, editing, deleting and moving a step are all the same write: the editors build the new list (KEY-285) and `save_recipe` stores it. There is no per-step id, because M4 has no timers and no link from a step to an ingredient (Zee's ruling), so nothing refers to a single step. A recipe may have no steps, because the ruling asks that the editor can hold instructions and does not make them required.
+
+A step is a line of text that is not null, not blank and at most 1,000 characters, and a recipe has at most 50 (see "The numbers"). A blank step is not stored. The editors drop blank steps when saving, and the database refuses one rather than dropping it, in the spirit of Amendment 7: a function that repaired its input would hide a client bug. A `check` cannot hold a subquery, so how the per-step checks are written (for example through an immutable helper function) is the migration's call. The bounds are the contract.
+
+Why not a `recipe_steps` table. A table was considered and rejected for M4. It would need its own `owner_id`, its own policies and grants, a rewrite of the positions on every reorder (with a unique position that a naive move would collide with), and its own cascade and export handling, all for a feature that never addresses a single row. Why not a `jsonb` array. It has no advantage over `text[]`: it holds anything, so every element needs a type check, and a `text[]` already arrives and leaves PostgREST as a plain array of strings. If steps later gain timers or links to ingredients, they move to a table in a later amendment, and the move is a one-off read of the array.
+
+Implemented by KEY-283 (the column and its checks), KEY-284 (the shape and the bounds as constants) and KEY-285 (the step operations and `normaliseSteps`).
+
+### `recipes`
+
+| Column         | Definition                                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner_id`     | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. The RLS with-check rejects any value but the caller's.                                               |
+| `name`         | `text not null`, not blank, at most 200 characters.                                                                                                                                   |
+| `servings`     | `numeric not null`, greater than 0 and at most 1,000. Fractional servings are allowed: a batch that makes 2.5 servings is a normal thing to say, and the maths divides by it as by 4. |
+| `yield_grams`  | `numeric`, nullable. Null means no measured cooked weight. When present, greater than 0 and at most 100,000.                                                                          |
+| `instructions` | `text[] not null default '{}'`, as in "Instructions".                                                                                                                                 |
+| `computed`     | `jsonb not null`, with a check that it is an object. No default: a recipe is always saved with its cache. The shape is in "The `computed` cache".                                     |
+| `is_archived`  | `boolean not null default false`.                                                                                                                                                     |
+
+- Indexes: a plain `(owner_id, name)`, which serves the library (the caller's recipes in name order) and gives the cascade from `auth.users` an index on the referencing column, for the reason Amendment 2 gives for `portion_id`. The trigram index is in "Name search".
+- A recipe is archived, never deleted. `is_archived` is set and cleared by a plain column update. An archived recipe stays readable, keeps its ingredients and stays referenced by the log entries that point at it. Row level security does not filter it. The library does, as the clients filter `deleted_at` on foods (Amendment 1).
+- The library lists the caller's recipes by name, then `id`. Amendment 1 says no table has `updated_at`, so there is no "recently edited" order. If the approved M4 boards (KEY-292) ask for one, that is a later amendment that adds the column, not a silent addition.
+- `owner_id` references `auth.users` with `on delete cascade`, so deleting the account deletes the recipes, and through them the ingredients.
+
+Implemented by KEY-283.
+
+### `recipe_ingredients`
+
+| Column           | Definition                                                                                                                                                                                                                                      |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `recipe_id`      | `uuid not null references public.recipes (id) on delete cascade`. The frozen line names it.                                                                                                                                                     |
+| `owner_id`       | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. A denormalised copy of the recipe's `owner_id` for RLS, as `food_portions` has. The policy requires that it is the caller and that the recipe is the caller's. |
+| `position`       | `integer not null`, at least 0. Unique with `recipe_id`.                                                                                                                                                                                        |
+| `food_id`        | `uuid not null references public.foods (id)`, with no cascade.                                                                                                                                                                                  |
+| `quantity`       | `numeric not null`, greater than 0.                                                                                                                                                                                                             |
+| `unit`           | `text not null`. The unit is one of core's `quantityUnitSchema` (`g`, `ml`, `oz`, `fl_oz`, `portion`). Core validates it, as for log entries, and the database has no list of its own.                                                          |
+| `portion_id`     | `uuid references public.food_portions (id) on delete set null`, with a plain index, exactly as Amendment 2 specifies for this table. Set only for the `portion` unit and only for a portion that is a table row. A spoon has `portion_id` null. |
+| `resolved_grams` | `numeric not null`, greater than 0 and at most 100,000.                                                                                                                                                                                         |
+| `snapshot`       | `jsonb not null`, with a check that it is an object.                                                                                                                                                                                            |
+
+- `snapshot` is a `FoodSnapshot` exactly as `foodSnapshotSchema` in core defines it: kind `food`, `ref` the id of the food, built by `buildFoodSnapshot`. The ingredient therefore freezes the food's `per100`, its basis, the portion it was added with and the density that `densityForLogging` froze (the food's own, else the estimate for its group). A spoon ingredient has `portion_id` null and the snapshot portion `{ label, ml }`, as a log entry has. The snapshot's `quantity`, `unit`, `portion` and `resolvedGrams` repeat the columns, and core builds both from the same snapshot, as `foodEntryFields` does for entries. Amendment 2's `portion` rules apply unchanged.
+- The freeze is the second invariant of the recipes brief. A later edit of the food, an Open Food Facts refresh or a retune of the density table never changes a stored ingredient. The only path by which a changed food reaches a recipe is "Refresh ingredients" (KEY-287 builds the new rows and the diff, KEY-290 saves them), which replaces the ingredients through `save_recipe` like any other edit.
+- `food_id` has no cascade, the rule of `food_log_entries.food_id`. A custom food is soft deleted (Amendment 2, "Soft delete and `getFood`"), so an ingredient still resolves it. A plain index on `food_id` keeps the foreign key check from scanning the table when a user's foods go with their account, the reason Amendment 2 gives for `portion_id`.
+- `position` is unique within a recipe through `unique (recipe_id, position)`. `save_recipe` assigns it from the index in the array, starting at 0, so a caller can neither repeat nor skip one. That index also serves reading a recipe's ingredients in order and the cascade from `recipes`.
+- Ingredients are replaced as a whole on every save: the recipe's rows are deleted and the sent rows inserted. Their `id` is new each time, so nothing may reference an ingredient's id.
+- A recipe has at most 100 ingredients (see "The numbers").
+
+Implemented by KEY-283 (the table), KEY-284 (the shape and `buildRecipeIngredient`) and KEY-287 (the refresh).
+
+### Saving a recipe is one transaction
+
+Answer: a `security invoker` function, `public.save_recipe(p_recipe_id uuid, p_recipe jsonb, p_ingredients jsonb) returns uuid`. It creates the recipe when `p_recipe_id` is null and otherwise replaces the name, servings, yield, instructions, cache and ingredients of the caller's recipe, all or nothing.
+
+Why a function. PostgREST has no transaction between calls, and a save writes the recipe row, replaces the ingredients and writes the cache. As separate requests each step has a failure that code in the client can only soften. An ingredient insert that fails after the delete leaves the recipe with no ingredients under a cache that describes the old ones. A reader between the calls sees half a recipe. Two devices saving at once can interleave and end with one device's ingredients under the other's cache. Amendment 7 made the same argument for the Open Food Facts store. The fallback, separate writes with a partial-write error as `copyDay` has (`CopyDayPartialWriteError`), is rejected. A half-copied day is still a set of valid entries. A recipe with half its ingredients is wrong data that its own cache contradicts, and the user would see a total that is not the sum of what is listed.
+
+The function:
+
+- is `language plpgsql volatile`, `security invoker`, with `set search_path = ''` and every name schema-qualified. It does not turn row level security off, so every policy in "Privileges and row level security" applies to its writes. The caller can only touch their own recipe, can only name foods and portions they can see, and a failed policy or constraint rolls back the whole call.
+- takes `p_recipe` as an object with the keys `name`, `servings`, `yield_grams`, `instructions` (an array of strings) and `computed` (an object), and `p_ingredients` as an array of objects with the keys `food_id`, `quantity`, `unit`, `portion_id`, `resolved_grams` and `snapshot`, in the order they are to be listed. Keys the function does not know, among them `id`, `owner_id`, `is_archived`, `created_at`, `recipe_id` and `position`, are ignored, so a caller cannot set them. `is_archived` is neither read nor changed: a new recipe starts live and archiving stays a plain column update.
+- refuses with `22023` (`invalid_parameter_value`), before anything is written: a `p_recipe` that is not an object, a `p_ingredients` that is not an array (a null counts as the wrong type), an ingredient that is not an object, a `computed` that is not an object, a name, a servings value or a yield outside "The numbers", an `instructions` that is not an array of strings, more than 50 steps or a null, blank or over-long step, and more than 100 ingredients. Each message states the rule and quotes no value, for example "a recipe has at most 50 steps".
+- creates when `p_recipe_id` is null. The owner is the caller (the column default) and the database chooses the id, which is returned. A client never picks the id of a new recipe, so an id cannot be used to probe whether another user's recipe exists.
+- updates when `p_recipe_id` is given. The update of the recipe row is the first write, with the caller's row level security. If it matches no row, because the recipe does not exist or is not the caller's (row level security makes the two look the same), the function raises `P0002` (`no_data_found`) and nothing else is written.
+- then deletes the recipe's ingredients, inserts the sent ones with `position` the index in the array, and returns the recipe's id.
+- is serialised per recipe by the row lock that first update takes. A second save of the same recipe waits, then replaces what the first wrote, and the last to commit wins. There is no optimistic concurrency, as for custom foods. As in Amendment 7, a constraint on the code follows: the update of the recipe row must stay the first write of the function.
+
+`execute` is revoked from `public`, `anon` and `service_role` and granted to `authenticated` alone, as Amendment 3 does for `accept_terms`: the function acts on the caller and `service_role` has none.
+
+Archive and unarchive stay plain column updates on `is_archived`. Duplicate is a client-side copy saved through the same function with a null `p_recipe_id`: the copy carries the stored ingredient snapshots as they are (frozen values stay frozen, and only a refresh moves them), the servings, the yield, the steps and the cache, and takes a name from the caller because the wording of "copy" is screen copy.
+
+A table check that fails still puts the failing row in the detail of the Postgres error, and no function can remove that. The function checks everything a person types before it writes (the list above), so a step, a name or a figure does not reach a table check. A malformed ingredient row can, but core builds those rows, so only a hand-made call gets that far. The rule that no recipe value reaches a log is held at the client: an error from a recipe read or write carries the action and the code only (see "Health data").
+
+Implemented by KEY-283 (the function and its pgTAP), KEY-289 (the repo calls it, and nothing else writes a recipe and its ingredients) and KEY-290 (the refresh saves through it).
+
+### The `computed` cache
+
+Answer: `recipes.computed` is written by the client with the recipe, computed by core `computeRecipe` at write time (the build plan's rule is that anything with a branch lives in core), in the same transaction as the ingredient change through `save_recipe`, so from the app it is never stale. The api-client repo computes it from the ingredients it is given and never accepts a cache from a caller (KEY-289). The database does not recompute or verify it. A hand-made call can store any cache for its own recipe. That is accepted, as it is for `nutrients` on a log entry: it is the owner's own data, and a log entry freezes its own copy of the figures it uses.
+
+Its shape is a JSON object with these keys, named as the keys of a snapshot are:
+
+| Key              | Value                                                                                                        |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| `total`          | The nutrients of the whole recipe, in the `nutrientsSchema` key set.                                         |
+| `perServing`     | `total` divided by `servings`.                                                                               |
+| `per100g`        | `total` divided by `effectiveGrams`, times 100.                                                              |
+| `totalGrams`     | The raw total: the sum of the ingredients' `resolved_grams`.                                                 |
+| `effectiveGrams` | `yield_grams` when it is set, otherwise `totalGrams`.                                                        |
+| `engineVersion`  | `NUTRITION_ENGINE_VERSION` at the time of the write. It is the version of the maths, as it is on a snapshot. |
+
+- An ingredient's numbers come from `nutrientsOfSnapshot` of its own snapshot, so the cache is rebuilt from stored snapshots and never from a live food.
+- Nothing is rounded. Only the screens round.
+- The five required nutrient keys are always written, null when unknown. `sat_fat_g`, `sugars_g` and `salt_g` are written only when the sum has a value (Amendment 2's rule for an optional key).
+- The null rule is the `day_totals` rule (KEY-182) and core `sumEntries`. A null nutrient on an ingredient is skipped in the sum, and a total is null only when every ingredient leaves it null. This is not `sumNutrients`, which makes the whole sum unknown when any term is. Consequently a total over ingredients that only partly record a nutrient is a floor for it, not an exact figure, as a day's total is. `perServing` and `per100g` keep a null as null.
+- A recipe with no ingredients computes to: `totalGrams` 0, `effectiveGrams` the yield or 0, and `total`, `perServing` and `per100g` with every required key null. `per100g` is also null whenever `effectiveGrams` is 0, so the maths never divides by 0 and never produces `NaN` or `Infinity`. The database stores such a recipe. It cannot be logged, because a recipe snapshot needs an `effectiveGrams` above 0.
+- The worked example is the chicken, rice and oil golden: 500 g chicken, 200 g dry rice and 20 g oil total 1496.8 kcal and 720 g raw. With a yield of 1,100 g and 4 servings, that is 374.2 kcal per serving and 136.0727 kcal per 100 g. With no yield, `effectiveGrams` is 720 and 275 g comes to 571.694 kcal (1496.8 × 275 / 720, corrected by Zee on 2026-10-16 from 571.8).
+
+Implemented by KEY-284 (the shape, `computeRecipe` and the golden) and KEY-289 (the write).
+
+### The recipe log entry snapshot
+
+Answer: a new snapshot kind, `recipe`, at `v` 1, for `item_type = 'recipe'`. It freezes these fields, and only these:
+
+| Field            | Value                                                                                                                           |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `v`              | `SNAPSHOT_VERSION`, which is 1.                                                                                                 |
+| `kind`           | `recipe`.                                                                                                                       |
+| `ref`            | The id of the recipe the snapshot was taken from.                                                                               |
+| `name`           | The recipe's name.                                                                                                              |
+| `servings`       | The recipe's servings.                                                                                                          |
+| `yieldGrams`     | The recipe's yield, or null when it had none.                                                                                   |
+| `effectiveGrams` | The recipe's `effectiveGrams`, greater than 0.                                                                                  |
+| `total`          | The recipe's total nutrients, in the `nutrientsSchema` key set. One serving is therefore exactly `total` divided by `servings`. |
+| `quantity`       | The amount logged, 0 or more.                                                                                                   |
+| `unit`           | `serving` or `g`.                                                                                                               |
+| `resolvedGrams`  | The grams the amount comes to.                                                                                                  |
+| `engineVersion`  | `NUTRITION_ENGINE_VERSION` at the time of logging, as on a food snapshot.                                                       |
+
+- There is no `portion` and no `density`. A recipe has neither: its grams are cooked weight.
+- The entry freezes the totals and not the recipe. It does not freeze the ingredient list, the ingredients' own figures, the instructions, `totalGrams`, `perServing` or `per100g`. The entry only needs the nutrients, the rest is either derivable from `total` or none of the diary's business, and leaving the ingredients and steps out keeps a user's cooking habits out of the diary row.
+- The entry's totals are read from the recipe's `computed` cache, which the user saw when they chose the amount. What the screen showed is what is logged, and logging needs one row and not the ingredients.
+- Logging is by serving (unit `serving`, the quantity a number of servings) or by grams of cooked weight (unit `g`, `resolvedGrams` = the grams). These are the only two ways in M4. By serving, `resolvedGrams` is (quantity × `effectiveGrams`) / `servings`. The entry's `nutrients` are computed per nutrient key as (`total` × quantity) / `servings` for a serving and (`total` × grams) / `effectiveGrams` for grams, with nothing rounded. The evaluation order is part of the contract, because floating point makes the two orders differ in the last digits and the immutability contract promises bit-for-bit equality: core's one function evaluates in exactly that order, and the golden fixtures are generated with it. The `nutrients` carry the five required keys, plus `sat_fat_g`, `sugars_g` and `salt_g` when `total` has them, and never micronutrients (Amendment 2).
+- The `nutrients` are rebuildable from the snapshot alone, bit for bit, as a food entry's are: no recipe row is read, and changing an entry's quantity or unit recomputes from its own snapshot and never from the live recipe. That is the immutability contract. One function in core builds, recomputes and previews, so the screen's number and the stored number agree to the digit.
+- The entry row has `item_type = 'recipe'`, `recipe_id` the recipe's id, and `food_id` and `portion_id` null. The `food_log_entries_item_type_ids` check on main already requires exactly this for a recipe (`recipe_id is not null and food_id is null`). The columns `quantity`, `unit` and `resolved_grams` repeat the snapshot, as they do for a food.
+- Editing the recipe later changes nothing about an entry already logged, and neither does archiving it. The entry keeps its frozen name and figures. Recipes are not deleted, so there is no case where a recipe vanishes.
+
+`SNAPSHOT_VERSION` does not move. The `quick` kind was added at version 1 without a bump, so a new kind at version 1 is the precedent. `v` describes the shape of one kind, existing version 1 snapshots parse exactly as before, and no existing shape changes. `NUTRITION_ENGINE_VERSION` stays 1 for the same reason: the maths from a snapshot to its nutrients is unchanged for the kinds that exist, and the recipe snapshot records the same constant. `packages/core/test/fixtures/diary/goldenV1Snapshots.json` is untouched, and a PR that carries any change to it is wrong. A new golden fixture file for recipe snapshots is added instead (KEY-286 names it `goldenRecipeV1Snapshots.json`, beside the old one), with a test that rebuilds each entry's `nutrients` from its stored snapshot.
+
+The unit is a separate two value enum of the recipe snapshot. `quantityUnitSchema` for foods stays as it is, with no `serving` in it (its comment says recipe servings are resolved elsewhere). Amendment 2 lists `serving` among the units that leave a food's `portion` null, which the code never carries, and this amendment does not edit that sentence.
+
+Reads must learn the kind before any client writes it. Today core's `logEntryInsertSchema` is a union of food and quick, the api-client's `logEntrySchema` is built from it, the diary read does not select `recipe_id`, and the apps treat any entry that is not a food as a quick add. A recipe entry in a day would fail that day's parse. So core adds the kind (KEY-286) without widening what the api-client reads, the write hook (KEY-291) is exported and unused, and no client writes a recipe entry in any build whose diary cannot read one. The read support lands with the first diary screen slice, after the M4 canvas (KEY-292) is approved.
+
+Implemented by KEY-286 (the schema, the entry builder, the recompute, the preview and the new golden file) and KEY-291 (the write).
+
+### `food_log_entries.recipe_id`: foreign key, index and on-delete rule
+
+Today `recipe_id` is a plain nullable uuid with no foreign key, and the diary migration says the M4 migration adds the constraint and the index when it creates `recipes`. Answer:
+
+- `foreign key (recipe_id) references public.recipes (id)` with the default `no action` rule.
+- A partial index on `food_log_entries (recipe_id) where recipe_id is not null`. Most rows are foods, so most rows have no recipe, and Postgres does not index the referencing side of a foreign key. The foreign key check does a lookup on `recipe_id = $1`, which this index serves.
+- Nothing writes `recipe_id` today, so the count of rows with a non-null value should be 0. The migration checks the count before adding the constraint and reports it in its PR, because a non-zero count would make the constraint fail the deploy.
+- `recipe_id` stays insert only: it is in the insert grant and not in the update grant, as on main. An entry never changes its recipe.
+
+Why `no action`, with the others set aside:
+
+- `on delete cascade` would delete diary history if a recipe row were ever removed. A log entry is a frozen record that must outlive its recipe, so removing a recipe must never take entries with it.
+- `on delete set null` would turn a recipe entry into a row with no recipe, which `food_log_entries_item_type_ids` refuses. The delete would fail on that check, with a confusing error, and the rule would only pretend to clear the link.
+- Nothing in the app deletes a recipe. Recipes are archived, and there is no `delete` grant (see "Privileges and row level security"). So the rule matters only for two things: a stray manual delete, which should be refused, and account deletion, which has to succeed.
+- `restrict` is the same refusal for a stray delete, and cannot be deferred. It is not chosen because it is no safer than the default and gives the migration no way to defer the check if it ever has to.
+- `no action` is the default, refuses a delete of a referenced recipe, and is the one rule that can be made `deferrable` without changing the foreign key's meaning. It was checked on PostgreSQL 17.6 in a model of this schema (users, recipes and entries, with the cascades in either order): deleting a user with a recipe and an entry on it succeeded under `no action`, under `deferrable initially deferred` and under `restrict`. Postgres queues every foreign key check and runs it after the cascade actions, which is why account deletion works. The pgTAP proof below confirms it on the real tables.
+
+The model is not the real schema, so the migration proves it again on the real tables. The proof is a pgTAP assertion in KEY-283, in `packages/db/supabase/tests/recipes_rls.test.sql`: deleting an auth user who has recipes, ingredients and recipe log entries succeeds and leaves none of them. A throwaway user is used, in the style of the cascade check in `food_provenance_rls.test.sql`, and that user also has a custom food that one of their entries references, because the same question exists today for `food_log_entries.food_id` and a user's own foods. No test on main covers that case: the cascade check there deletes a user with foods and no entries. On main the entries' `user_id` cascade is created before `recipes` exists, so the proof exercises the entries-first order and is a regression guard. `deferrable initially deferred` stays a pre-authorised fallback only, not the rule: if the proof fails for `recipe_id`, the migration declares the foreign key that way, which moves the check to the end of the transaction, when every cascade has run. Nothing else in this section changes, and the PR says so. If it fails for `food_id`, that is reported and fixed on its own ticket and not folded into the recipes migration.
+
+The insert policy gains a term. A foreign key is checked without row level security, so on its own it would let a user log against another user's recipe id. With `no action`, that entry would also block the other user's account deletion, because their cascade could not remove an entry owned by someone else, and a success against a failure would tell anyone whether a given id exists. This is the reason Amendment 2 and the diary migration give for `food_id` and `portion_id`. `food_log_entries_insert_own` therefore adds `recipe_id is null or exists (select 1 from public.recipes r where r.id = food_log_entries.recipe_id)`, to the terms it has. The subquery runs as the caller under the owner-only `recipes` policy, so only the caller's own recipes pass, and an id that does not exist fails the same way as one that is not theirs. The policy does not look at `is_archived`: archiving is a library filter and not a ban on logging. The update policy is unchanged because `recipe_id` is not updatable. A policy cannot be extended in place, so the migration replaces its expression with the existing terms plus this one.
+
+Implemented by KEY-283.
+
+### Privileges and row level security
+
+Baseline, in the style of the diary migration: `revoke all` on both tables from `anon`, `authenticated` and `service_role`, then explicit column grants to `authenticated`. `anon` gets nothing. `service_role` gets nothing either, because nothing server side reads or writes recipes yet (M7's export decides what it needs, and grants it then). RLS is enabled on both tables.
+
+`recipes`:
+
+- `select` on all columns.
+- `insert` on `owner_id`, `name`, `servings`, `yield_grams`, `instructions` and `computed`. `is_archived` is not insertable, so a new recipe starts live.
+- `update` on `name`, `servings`, `yield_grams`, `instructions`, `computed` and `is_archived`. An update never changes `owner_id`, `id` or `created_at`.
+- No `delete`. A recipe is archived, never deleted. Account deletion cascades regardless of grants, because a foreign key action does not run as the caller.
+
+`recipe_ingredients`:
+
+- `select` on all columns.
+- `insert` on `recipe_id`, `owner_id`, `position`, `food_id`, `quantity`, `unit`, `portion_id`, `resolved_grams` and `snapshot`.
+- `delete`, because ingredients are replaced as a whole.
+- No `update`. A stored ingredient is never edited in place, so its frozen snapshot cannot be rewritten by a stray update. A refresh or an edit replaces the rows through `save_recipe`.
+
+Policies, as predicates, all for `authenticated` and all using `(select auth.uid())`:
+
+- `recipes_select_own`: using `owner_id = (select auth.uid())`.
+- `recipes_insert_own`: with check `owner_id = (select auth.uid())`.
+- `recipes_update_own`: using and with check `owner_id = (select auth.uid())`.
+- `recipe_ingredients_select_own`: using `owner_id = (select auth.uid())`.
+- `recipe_ingredients_insert_own`: with check `owner_id = (select auth.uid())`, and the recipe is the caller's (`exists (select 1 from public.recipes r where r.id = recipe_ingredients.recipe_id and r.owner_id = (select auth.uid()))`), and the food is visible to the caller (`exists (select 1 from public.foods f where f.id = recipe_ingredients.food_id)`), and the portion, when set, is visible to the caller (`portion_id is null or exists (select 1 from public.food_portions p where p.id = recipe_ingredients.portion_id)`). The `exists` subqueries run under the `foods`, `food_portions` and `recipes` policies, so only global rows and the caller's own pass, and an id that does not exist fails the same way as one that is not theirs. Without them a foreign key, which is checked without row level security, would let a user build a recipe on another user's private food, and the ingredient would then block that user's account deletion.
+- `recipe_ingredients_delete_own`: using `owner_id = (select auth.uid())`.
+
+There is no `delete` policy on `recipes`, because there is no grant. `save_recipe` is `security invoker`, so every predicate above applies to it. A column added later is not writable by clients until a migration grants it, the rule of Amendments 3 and 4.
+
+Implemented by KEY-283, with pgTAP asserting every policy and the exact privilege set per table.
+
+### Name search
+
+Answer: a `gin (name extensions.gin_trgm_ops)` index on `recipes.name` (`pg_trgm` lives in the `extensions` schema and `foods` already uses it), and a case-insensitive `ilike` over the caller's own rows through PostgREST, with `%`, `_` and the escape character escaped by the client so that they match literally. There is no new search function and no RPC, so the api-client does not invent one. The table is per user and small, and row level security already scopes it to the caller.
+
+The trigram index is not guaranteed to be used by a signed-in caller. Amendment 6 found that under row level security the planner refuses an index condition whose operator is not leakproof, and `ilike` may fall under the same restriction. That is not measured here and does not matter at this size, because the `(owner_id, name)` index narrows the read to the caller's own recipes before the pattern is applied. If a measured need ever appears, the answer is Amendment 6's helper pattern, in a later amendment.
+
+Implemented by KEY-283 (the index) and KEY-288 (the query and the escaping).
+
+### Health data
+
+A recipe reveals dietary habits. Recipe and ingredient values and step text never appear in a log, an error report or an analytics event. Only ids and counts do. That covers a recipe's name, its ingredients, their amounts, the steps and every nutrient figure. The rule binds the code we write. PostgreSQL's own error log, and so the Supabase logs, can hold a failing row in the DETAIL of a check constraint violation ("Failing row contains ..."), which no client can prevent. That is why `save_recipe` checks every typed field before any write and refuses with value-free messages. The rule has three parts:
+
+- `save_recipe` raises no `notice` or `warning` that quotes a value, and its own errors state the rule and not the value (see its section).
+- No client code reads, logs or reports the message or detail of a database error from a recipe read or write. An error carries the action and the code only, which is how `targets.ts` builds its errors and what KEY-273 proposes as the shared helper (KEY-288 and KEY-289).
+- Core's thrown errors state the rule and not the value (KEY-284 to KEY-287).
+
+### Export and account deletion
+
+There is no data export and no in-app account deletion today. Verified on main on 2026-10-16: the Privacy Policy and the Terms in `packages/core/src/copy/legal.ts` say that both are done by email for now and that the in-app versions "are on the way". The build lives in M7 (KEY-7, Settings: "export my data" and "delete account"). M4 builds neither screen. This amendment records the contract M7 will use:
+
+- Export includes the user's recipes, ingredients and instructions: every column of their `recipes` rows (including `instructions` and `computed`) and of their `recipe_ingredients` rows in `position` order (including `snapshot`), together with their log entries and the recipe snapshots in them. The `service_role` grant that an export path needs is M7's to add.
+- Account deletion works through the `on delete cascade` foreign keys from `auth.users`: `recipes.owner_id`, `recipe_ingredients.owner_id` and `recipe_ingredients.recipe_id` on the new tables, and `food_log_entries.user_id` on the diary. It needs no code, and it is the case the pgTAP proof in "`food_log_entries.recipe_id`" covers.
+- The Privacy Policy already lists "Your custom foods and recipes", so no policy copy changes.
+
+Implemented by KEY-283 (the cascades and their proof). The screens are KEY-7's.
+
+### Sub-recipes
+
+Sub-recipes (a recipe used as an ingredient) stay deferred, as the frozen `recipe_ingredients` line says, and belong to Housekeeping. Nothing in the schema anticipates them: `food_id` stays `not null`, and there is no second foreign key column on an ingredient.
+
+### Implemented by
+
+- KEY-283, the migration: `recipes` and `recipe_ingredients` with their checks and indexes, the trigram index, the foreign key and partial index on `food_log_entries.recipe_id`, the extended insert policy, the grants and policies, `save_recipe`, pgTAP (every policy, the exact privileges, the bounds, the atomic save and the account deletion proof) and the regenerated `packages/db/src/types.gen.ts`.
+- KEY-284, core shapes and maths: the recipe, ingredient row and `computed` shapes, the numbers in "The numbers" as exported constants, `buildRecipeIngredient`, `computeRecipe` and the golden (with 571.694).
+- KEY-285, core editor rules: the step operations, `normaliseSteps` and `validateRecipeDraft`, using those constants.
+- KEY-286, core recipe log entry: the recipe snapshot and entry schemas, the builder, the recompute, the amount start and preview, and the new golden fixture file. `goldenV1Snapshots.json` is untouched.
+- KEY-287, core refresh: the new ingredient rows from the current foods and the before and after diff.
+- KEY-288, api-client reads: the library list in name order, one recipe with its ingredients and steps, and the name search without a function.
+- KEY-289, api-client writes: create, edit, archive and duplicate through `save_recipe`, with the cache computed by `computeRecipe`.
+- KEY-290, api-client refresh: preview and apply, saved through `save_recipe`.
+- KEY-291, api-client log a serving: the write path only, unused by a screen until the diary reads recipe entries.
+- KEY-7 (M7), outside this amendment: the export and delete account screens.
+
+Any further deviation from the frozen Decision, from Amendments 1 to 7 or from this amendment needs an Amendment 9 before the migration or code that implements it lands.
