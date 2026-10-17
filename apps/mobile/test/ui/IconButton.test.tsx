@@ -1,6 +1,7 @@
 import { controlHeight, iconSize, themes, touchTarget } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
+import { createRef } from "react";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
@@ -14,6 +15,7 @@ import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { IconButtonProps } from "../../components/ui";
 import type { ThemeScheme } from "@keylow/tokens";
+import type { View } from "react-native";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -80,6 +82,13 @@ describe("IconButton", () => {
     await renderIconButton({ label: "Create a food", icon: "Plus" });
 
     expect(screen.getByRole("button", { name: "Create a food" })).toBeOnTheScreen();
+  });
+
+  it("should hand its button to a ref, so a screen reader's focus can be sent to it", async () => {
+    const ref = createRef<View>();
+    await renderIconButton({ ref });
+
+    expect(ref.current).not.toBeNull();
   });
 
   it("should call onPress when pressed", async () => {

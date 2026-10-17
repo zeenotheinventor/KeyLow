@@ -1,2 +1,2 @@
 export { StepRow } from "./StepRow";
-export type { StepRowProps } from "./types";
+export type { StepRowProps, StepRowReorder } from "./types";

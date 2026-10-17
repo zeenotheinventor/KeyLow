@@ -8,6 +8,12 @@ export type BottomSheetProps = {
    * when the screen closes the sheet itself.
    */
   onClose: () => void;
+  /**
+   * Whether a drag down can close the sheet. A screen that cannot close it yet, such as one with an
+   * edit it would have to drop, turns this off and ignores `onClose` from the dim, the screen reader's
+   * escape and the back button. Defaults to true.
+   */
+  isDismissible?: boolean | undefined;
   /** Sets the sheet's heading and its accessible name. Leave it out when the contents have their own. */
   title?: string | undefined;
   /** Centres the title, as the discard sheet's board draws it. Defaults to the start of the line. */

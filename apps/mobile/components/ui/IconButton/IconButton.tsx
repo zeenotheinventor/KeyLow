@@ -39,6 +39,7 @@ export function IconButton({
   dimsWhenDisabled = true,
   haptic,
   onPress,
+  ref,
   className = "",
 }: IconButtonProps) {
   const isRing = variant === "ring";
@@ -54,6 +55,7 @@ export function IconButton({
         // is the touch target itself and needs none.
         hitSlop={isRing ? undefined : (touchTarget - controlHeight[size]) / 2}
         label={label}
+        ref={ref}
         onPress={onPress}
       >
         {isRing ? <View className={ringCircleClassName}>{glyph}</View> : glyph}
