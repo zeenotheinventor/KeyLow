@@ -23,6 +23,8 @@ export const diaryBackend: {
   targets: Targets;
   entries: Row[];
   dayLogs: Row[];
+  /** The `day_totals` rows, which the week's read returns for the days it asks for. Empty by default. */
+  dayTotals: Row[];
   /** Fails the reads of this table with a database error. */
   failingTables: Set<string>;
   /** Never answers the reads of this table, as a slow connection does. */
@@ -42,6 +44,10 @@ export const diaryBackend: {
   failingUpdates: number;
   /** Fails the read of the targets alone, so the terms acceptance still loads. */
   targetsReadFails: boolean;
+  /** Fails the reads of a whole week (`day_totals` over a range of days) alone, so the day's own reads still answer. */
+  weekReadsFail: boolean;
+  /** Never answers the reads of a whole week alone, as a slow connection does. */
+  weekReadsHang: boolean;
   /** Fails the read of the profile's time zone alone, so the terms acceptance still loads. */
   timeZoneReadFails: boolean;
   /** The bodies of the updates made to the profile. */
@@ -56,6 +62,7 @@ export const diaryBackend: {
   targets: { target_kcal: 2200, target_protein_g: 160, target_carbs_g: 220, target_fat_g: 70 },
   entries: [],
   dayLogs: [],
+  dayTotals: [],
   failingTables: new Set(),
   hungTables: new Set(),
   failingWriteTables: new Set(),
@@ -67,6 +74,8 @@ export const diaryBackend: {
   failingUpdates: 0,
   targetsReadFails: false,
   timeZoneReadFails: false,
+  weekReadsFail: false,
+  weekReadsHang: false,
   saves: [],
   requests: [],
   writes: [],
@@ -86,6 +95,7 @@ export function resetDiaryBackend(): void {
   };
   diaryBackend.entries = [];
   diaryBackend.dayLogs = [];
+  diaryBackend.dayTotals = [];
   diaryBackend.failingTables.clear();
   diaryBackend.hungTables.clear();
   diaryBackend.failingWriteTables.clear();
@@ -98,6 +108,8 @@ export function resetDiaryBackend(): void {
   diaryBackend.saves = [];
   diaryBackend.targetsReadFails = false;
   diaryBackend.timeZoneReadFails = false;
+  diaryBackend.weekReadsFail = false;
+  diaryBackend.weekReadsHang = false;
   diaryBackend.requests = [];
   diaryBackend.writes = [];
 }
@@ -305,6 +317,30 @@ export function sampleDay(date = "2026-10-15"): Row[] {
       carbs: 6.5,
     }),
   ];
+}
+
+/** A `day_totals` row as the view returns it: the four nutrients the week reads, and the rest null. */
+export function dayTotalsRow(
+  localDate: string,
+  [kcal, protein, carbs, fat]: [number, number, number, number],
+): Row {
+  return {
+    local_date: localDate,
+    entry_count: 5,
+    kcal,
+    protein_g: protein,
+    carbs_g: carbs,
+    fat_g: fat,
+    fibre_g: null,
+    sat_fat_g: null,
+    sugars_g: null,
+    salt_g: null,
+  };
+}
+
+/** A `day_logs` row for a day marked complete. */
+export function completeDayLog(localDate: string): Row {
+  return { local_date: localDate, is_complete: true, completed_at: null, note: null };
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -534,6 +570,19 @@ export async function fakeFetch(
     }
   }
 
+  // A week is read as a range of days, where a day is read by its date alone.
+  const isWeekRead =
+    table === "day_totals" &&
+    searchParams.getAll("local_date").some((condition) => condition.startsWith("gte."));
+  if (isWeekRead && diaryBackend.weekReadsHang) {
+    return new Promise(() => undefined);
+  }
+  if (isWeekRead && diaryBackend.weekReadsFail) {
+    return Promise.resolve(
+      jsonResponse({ code: "XX000", message: "raw database text", details: null, hint: null }, 500),
+    );
+  }
+
   if (diaryBackend.hungTables.has(table)) {
     return new Promise(() => undefined);
   }
@@ -594,7 +643,11 @@ export async function fakeFetch(
         ),
       );
     case "day_totals":
-      return Promise.resolve(jsonResponse([]));
+      return Promise.resolve(
+        jsonResponse(
+          diaryBackend.dayTotals.filter((row) => inDateFilter(searchParams, row["local_date"])),
+        ),
+      );
     default:
       return Promise.resolve(jsonResponse({ message: "unexpected request" }, 404));
   }

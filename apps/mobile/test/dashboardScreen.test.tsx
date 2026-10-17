@@ -400,7 +400,13 @@ describe("the dashboard screen", () => {
       await renderDashboard();
       await screen.findByText("Thursday 15 October");
 
-      expect(screen.getByTestId("skeleton", hidden)).toHaveStyle({ opacity: 0 });
+      // The This week card may be a skeleton beside it, depending on how soon its reads answer, so the
+      // Today card's is found inside its own status, and every skeleton drawn must start clear.
+      const todays = screen.getByRole("status", { name: "Loading today's nutrition" });
+      expect(within(todays).getByTestId("skeleton", hidden)).toHaveStyle({ opacity: 0 });
+      for (const skeleton of screen.getAllByTestId("skeleton", hidden)) {
+        expect(skeleton).toHaveStyle({ opacity: 0 });
+      }
     });
   });
 
@@ -448,7 +454,12 @@ describe("the dashboard screen", () => {
       const dayReads = requestsTo("food_log_entries");
 
       diaryBackend.targetsReadFails = false;
-      await user.press(screen.getByRole("button", { name: "Try again" }));
+      // The targets are the This week card's too, so it shows its own Try again under the Today card's.
+      const [todaysRetry] = screen.getAllByRole("button", { name: "Try again" });
+      if (todaysRetry === undefined) {
+        throw new Error("The Today card has no Try again");
+      }
+      await user.press(todaysRetry);
       await card();
 
       expect(requestsTo("food_log_entries")).toBe(dayReads);

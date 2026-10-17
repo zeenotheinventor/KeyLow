@@ -1,14 +1,17 @@
-import { DASHBOARD_LOADING_NAME, OFFLINE_BANNER } from "@keylow/core/copy";
-import { ScrollView, View } from "react-native";
+import { OFFLINE_BANNER } from "@keylow/core/copy";
+import { ScrollView } from "react-native";
 
-import { Banner, Skeleton } from "../../ui";
+import { Banner } from "../../ui";
+import { ThisWeekLoading } from "../ThisWeekLoading";
+import { TodayLoading } from "../TodayLoading";
 
 import type { DashboardLoadingProps } from "./types";
 
 /**
- * What the dashboard shows while today loads: the offline notice when the phone is offline (a load then
- * waits for the connection, and the notice says why), over the card's skeleton. The skeleton is hidden
- * from screen readers, so the status around it says what is loading.
+ * What the dashboard shows while today is not known: the offline notice when the phone is offline (a
+ * load then waits for the connection, and the notice says why), over the Today card's skeleton and the
+ * This week card's, which are both waiting for the profile's time zone. Each skeleton is hidden from
+ * screen readers, so the status around it says what is loading.
  */
 export function DashboardLoading({ isOnline }: DashboardLoadingProps) {
   return (
@@ -16,9 +19,8 @@ export function DashboardLoading({ isOnline }: DashboardLoadingProps) {
       {isOnline ? null : (
         <Banner body={OFFLINE_BANNER.body} title={OFFLINE_BANNER.title} variant="offline" />
       )}
-      <View accessible aria-label={DASHBOARD_LOADING_NAME} role="status">
-        <Skeleton variant="nutritionCard" />
-      </View>
+      <TodayLoading />
+      <ThisWeekLoading />
     </ScrollView>
   );
 }

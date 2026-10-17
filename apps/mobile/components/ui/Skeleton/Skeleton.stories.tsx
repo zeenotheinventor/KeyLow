@@ -38,3 +38,6 @@ export const DiaryDay: Story = { args: { variant: "diaryDay" } };
 
 // The dashboard's nutrition card while it loads: the title, a 200 point ring, three bar rows and a caption.
 export const NutritionCard: Story = { args: { variant: "nutritionCard" } };
+
+// The dashboard's This week card while it loads: the title, a value line, the 8 point bar, a caption and seven circles.
+export const ThisWeekCard: Story = { args: { variant: "thisWeekCard" } };
