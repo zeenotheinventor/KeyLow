@@ -1,9 +1,7 @@
-import { buildFoodSnapshot } from "./buildFoodSnapshot";
 import { foodEntryFields } from "./foodEntryFields";
-import { matchPortionOnFood } from "./matchPortionOnFood";
+import { refreshSnapshotFromFood } from "./refreshSnapshotFromFood";
 import { withQuantity } from "./snapshotQuantity";
 
-import type { FoodSnapshotInput } from "./buildFoodSnapshot";
 import type { FoodLogEntryInsert, SnapshotPortion } from "./schemas";
 import type { QuantityUnit } from "../nutrition/units";
 import type { Food, FoodPortion } from "../schemas/food";
@@ -55,23 +53,6 @@ export const refreshEntryFromFood = <Entry extends FoodLogEntryInsert>(
   food: Food,
   portions: readonly FoodPortion[],
 ): Entry => {
-  if (food.id !== entry.snapshot.ref) {
-    throw new RangeError("The food is not the one this entry was logged from");
-  }
-  const { snapshot } = entry;
-  const matched =
-    snapshot.unit === "portion" && snapshot.portion !== null
-      ? matchPortionOnFood(
-          { quantity: snapshot.quantity, portionId: entry.portion_id, portion: snapshot.portion },
-          portions,
-        )
-      : undefined;
-  const input: FoodSnapshotInput =
-    matched === undefined
-      ? { quantity: snapshot.quantity, unit: snapshot.unit }
-      : matched.unit === "portion"
-        ? { quantity: matched.quantity, unit: matched.unit, portion: matched.portion }
-        : { quantity: matched.quantity, unit: matched.unit };
-  const refreshed = buildFoodSnapshot(food, input);
-  return { ...entry, ...foodEntryFields(refreshed, matched?.portion?.id ?? null) };
+  const refreshed = refreshSnapshotFromFood(entry.snapshot, entry.portion_id, food, portions);
+  return { ...entry, ...foodEntryFields(refreshed.snapshot, refreshed.portionId) };
 };
