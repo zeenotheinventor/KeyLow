@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, screen, within } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  boardWeek,
   diaryDay,
   noTargets,
   overTargetDay,
@@ -53,6 +54,8 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
       }
     );
   },
+  // This file is about the Today card, so the week beside it is always there. The card has its own file.
+  useDiaryWeek: () => ({ data: boardWeek, isError: false, refetch: () => Promise.resolve() }),
   useTargets: () => backend.targets,
 }));
 
@@ -407,7 +410,13 @@ describe("the dashboard screen", () => {
       backend.targets = { data: undefined, isError: true, refetch: refetchTargets };
       renderDashboard();
 
-      fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+      // The targets are the This week card's too, so it shows its own error beside Today's.
+      const weekRegion = screen.getByRole("region", { name: "This week" });
+      const [todaysRetry] = screen
+        .getAllByRole("button", { name: "Try again" })
+        .filter((button) => !weekRegion.contains(button));
+      expect(todaysRetry).toBeDefined();
+      fireEvent.click(todaysRetry ?? weekRegion);
 
       expect(refetchTargets).toHaveBeenCalledOnce();
       expect(refetchDay).not.toHaveBeenCalled();
