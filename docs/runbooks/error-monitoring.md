@@ -68,7 +68,7 @@ The app checks for an update at launch and holds the splash screen for up to 5 s
 
 ### Required before the web and mobile DSNs are set
 
-Two settings keep the IP address out of Sentry. Sentry works out the IP address (and a rough location from it) when an event arrives, even though the apps send none, and the Privacy Policy says Sentry does not keep it. Turn both on before `NEXT_PUBLIC_SENTRY_DSN` and `EXPO_PUBLIC_SENTRY_DSN` are set anywhere:
+Two settings keep the IP address out of Sentry. Sentry works out the IP address (and a rough location from it) when an event arrives, even though the apps send none, and the Privacy Policy says Sentry does not keep it. Both were turned on for the organisation on 17 October 2026, together with server-side data scrubbing and the default scrubbers (passwords, card numbers), which also cover native crashes that skip the apps' own scrubbers. If they are ever switched off, turn them back on before any DSN is set:
 
 1. **Prevent Storing of IP Addresses.** In Sentry, **Settings**, then **Security & Privacy**, for the organisation `sojisoft-limited`, switch on "Prevent Storing of IP Addresses". It can also be set per project, under the project's **Settings**, **Security & Privacy**. Set it on all three projects if you do not set it on the organisation.
 2. **An Advanced Data Scrubbing rule** that removes the rough location Sentry derived from the IP address. Under the same **Security & Privacy** page, open **Advanced Data Scrubbing**, add a rule, and set it to `[Remove] [Anything] from [$user.geo.**]`.
@@ -77,9 +77,8 @@ Check both are on by opening a test event after the DSN is set and confirming th
 
 ### Alerts
 
-- **What exists today.** Each of the three projects has one default rule, "Send a notification for high priority issues". It fires on a new high-priority issue, or on an existing issue escalating to high priority, and emails the issue owners (active members if there are no owners). Check it at the project's **Alerts** page, under **Alert Rules**. There is no rule for every new issue, so a new issue Sentry does not rate high priority sends no email.
-- **Add an "every new issue" rule.** In the project, go to **Alerts**, then create an alert, issue alert type. Set the condition to "A new issue is created" and the action to send an email (to the team or to members). Do this for each of the three projects.
-- **Weekly report.** A summary of the week's errors is a per-user setting. Turn it on at **User settings**, then **Notifications**, then **Weekly Reports**, and check it is on for the organisation `sojisoft-limited`.
+- **Every new issue emails.** Each of the three projects has one rule, "Email on every new or high priority issue". It fires when a new issue is created, when a new high-priority issue appears, or when an existing issue escalates to high priority, and emails the issue owners (active members if there are no owners). One rule per project means one email per new issue. Check it at the project's **Alerts** page, under **Alert Rules**.
+- **Weekly report.** A summary of the week's errors is a per-user setting, on for Zee for all three projects. Check it at **User settings**, then **Notifications**, then **Weekly Reports**, for the organisation `sojisoft-limited`.
 
 If the alerts stop coming:
 

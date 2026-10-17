@@ -68,7 +68,7 @@ These two settings are required, and must be on before the web and mobile DSNs a
 1. **Prevent Storing of IP Addresses.** In Sentry, organisation `sojisoft-limited`, **Settings**, **Security & Privacy**, switch on "Prevent Storing of IP Addresses". It can instead be set in each of the three projects (project **Settings**, **Security & Privacy**).
 2. **An Advanced Data Scrubbing rule**, on the same **Security & Privacy** page: `[Remove] [Anything] from [$user.geo.**]`. It removes the rough location Sentry derives from the IP address.
 
-Zee turns these on. Until he does, the Privacy Policy line about the IP address is not true, so the DSNs wait.
+Both were turned on for the organisation on 17 October 2026, together with server-side data scrubbing and the default scrubbers, which also cover native crashes that skip the apps' own scrubbers. The Privacy Policy line about the IP address depends on them, so they stay on.
 
 ### Retention
 
@@ -76,7 +76,7 @@ Events are kept for 30 days on the Developer plan (checked on KEY-278 on 2026-10
 
 ### Alerts
 
-Each project has Sentry's default rule, "Send a notification for high priority issues". It emails the issue owners (active members if there are none) when a new high-priority issue appears or an existing issue escalates to high priority. There is no rule for every new issue, so an issue Sentry does not rate high priority sends no email. Adding an "every new issue" rule (a "A new issue is created" condition with an email action) and turning on the weekly report (a per-user setting under User settings, Notifications) are pending a decision. The runbook says how to do both. There is no paging and no custom alert tuning.
+Each project has one rule, "Email on every new or high priority issue": Sentry's default high-priority rule with a "new issue is created" condition added, so every new issue sends one email to the issue owners (active members if there are none), as do issues that become high priority. The weekly report (a per-user setting under User settings, Notifications) is on. There is no paging and no custom alert tuning.
 
 ## Consequences
 
