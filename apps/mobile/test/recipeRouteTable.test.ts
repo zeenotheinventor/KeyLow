@@ -1,7 +1,13 @@
 import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
-import { editRecipePath, newRecipePath, recipePath, recipesPath } from "../lib/recipeRoutes";
+import {
+  editRecipePath,
+  newRecipePath,
+  recipePath,
+  recipesPath,
+  refreshRecipePath,
+} from "../lib/recipeRoutes";
 
 // Every address a recipe screen sends the user to must be a file under app/, or the control that leads there
 // opens the not-found screen. This is the table a later rename has to keep true.
@@ -66,6 +72,10 @@ describe("the recipe addresses and the screens under app/", () => {
 
   it("should open the editor of a saved recipe at its edit address", () => {
     expect(routeFileFor(editRecipePath(SOME_RECIPE_ID))).toBe("recipes/[id]/edit.tsx");
+  });
+
+  it("should open the refresh of a saved recipe's ingredients at its refresh address", () => {
+    expect(routeFileFor(refreshRecipePath(SOME_RECIPE_ID))).toBe("recipes/[id]/refresh.tsx");
   });
 
   it("should open no screen at an address nothing is built for", () => {

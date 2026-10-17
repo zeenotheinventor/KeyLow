@@ -27,6 +27,7 @@ const tones: IconTone[] = ["primary", "secondary", "muted"];
 const names: IconName[] = [
   "Apple",
   "Archive",
+  "ArrowRight",
   "BookOpen",
   "Calendar",
   "Camera",
@@ -56,6 +57,7 @@ const names: IconName[] = [
   "Pencil",
   "Plus",
   "RefreshCcw",
+  "RefreshCw",
   "RotateCcw",
   "RotateCw",
   "Scale",

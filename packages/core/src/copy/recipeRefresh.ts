@@ -1,9 +1,14 @@
 import { describeLoggedAmount } from "./diary";
+import { FOOD_NUTRIENT_LABELS } from "./foodDetail";
 import { NOT_GIVEN } from "./nutrition";
 import { spokenAmount } from "./spokenAmount";
 import { formatCalories, formatGrams } from "../format/numbers";
 
-import type { BeforeAndAfter, IngredientAmount } from "../recipes/refreshRecipeIngredients";
+import type {
+  BeforeAndAfter,
+  IngredientAmount,
+  Per100Change,
+} from "../recipes/refreshRecipeIngredients";
 
 /**
  * The words of "Refresh ingredients" (brief 22). Its title and its action are `RECIPE_ACTIONS.refresh`, the
@@ -35,6 +40,21 @@ export const REFRESH = {
   loadFailed: "Couldn't check your foods",
   /** The per serving card as a region. */
   perServingRegionName: "Per serving, before and after",
+};
+
+/**
+ * The label of each per 100 value a refresh can list on a changed ingredient, in the words of the food
+ * screens. Saturated fat, sugars and salt have no row on those screens, so their words are here.
+ */
+export const REFRESH_PER_100_LABELS: Readonly<Record<Per100Change["nutrient"], string>> = {
+  kcal: FOOD_NUTRIENT_LABELS.energy,
+  protein_g: FOOD_NUTRIENT_LABELS.protein,
+  fat_g: FOOD_NUTRIENT_LABELS.fat,
+  carbs_g: FOOD_NUTRIENT_LABELS.carbohydrate,
+  fibre_g: FOOD_NUTRIENT_LABELS.fibre,
+  sat_fat_g: "Saturated fat",
+  sugars_g: "Sugars",
+  salt_g: "Salt",
 };
 
 /** What a value counts: energy is written in whole kilocalories, the rest in grams as every gram is. */

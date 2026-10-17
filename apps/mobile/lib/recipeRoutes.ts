@@ -19,5 +19,8 @@ export const editRecipePath = (id: string): string => `${recipesPath()}/${id}/ed
 /** The recipe view, the screen a library row opens and where the editor's Back and Save lead. */
 export const recipePath = (id: string): string => `${recipesPath()}/${id}`;
 
+/** The screen that shows what "Refresh ingredients" would change in a saved recipe, pushed over its view. */
+export const refreshRecipePath = (id: string): string => `${recipesPath()}/${id}/refresh`;
+
 /** The archived recipes, a screen pushed inside the Recipes tab so the tab bar stays. */
 export const archivedRecipesPath = (): string => `${recipesPath()}/archived`;
