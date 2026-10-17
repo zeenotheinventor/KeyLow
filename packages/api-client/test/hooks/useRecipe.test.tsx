@@ -91,6 +91,23 @@ describe("useRecipe", () => {
     expect(requests).toBe(0);
   });
 
+  it.each([undefined, ""])("should make no request while the id is %j", async (id) => {
+    let requests = 0;
+    server.use(
+      http.get(`${REST_URL}/recipes`, ({ request }) => {
+        requests += 1;
+        return postgrestRows(request, [recipeDetailRow()]);
+      }),
+    );
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useRecipe(id), { wrapper });
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(result.current).toEqual({ status: "loading" });
+    expect(requests).toBe(0);
+  });
+
   it("should be an error that names the action and the code only", async () => {
     server.use(
       http.get(`${REST_URL}/recipes`, () => postgrestError(500, "XX000", "database unavailable")),

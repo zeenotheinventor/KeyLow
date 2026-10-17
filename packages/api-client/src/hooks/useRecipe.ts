@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { skipToken, useQuery } from "@tanstack/react-query";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
@@ -23,16 +23,20 @@ export type RecipeState =
  * error. `error` is only taken when there is no recipe to show yet, so a failed background refetch
  * never replaces a recipe the user is looking at. Key `keys.recipes.detail(id)`.
  *
- * `enabled` is the same option the diary reads take: false makes no request at all, and the state is
- * `loading` while nothing has been asked. The mobile app passes `useReadsEnabled()` from the screens,
- * since the `(tabs)` stay mounted under the terms gate.
+ * Nothing is asked while `id` is undefined or empty, and the state is `loading`. `enabled` is the same
+ * option the diary reads take: false makes no request at all, and the state is `loading` while
+ * nothing has been asked. The mobile app passes `useReadsEnabled()` from the screens, since the
+ * `(tabs)` stay mounted under the terms gate.
  */
-export function useRecipe(id: string, { enabled = true }: DiaryReadOptions = {}): RecipeState {
+export function useRecipe(
+  id: string | undefined,
+  { enabled = true }: DiaryReadOptions = {},
+): RecipeState {
   const client = useSupabase();
 
   const recipe = useQuery({
-    queryKey: keys.recipes.detail(id),
-    queryFn: () => getRecipe(client, id),
+    queryKey: keys.recipes.detail(id ?? ""),
+    queryFn: id ? () => getRecipe(client, id) : skipToken,
     enabled,
   });
 

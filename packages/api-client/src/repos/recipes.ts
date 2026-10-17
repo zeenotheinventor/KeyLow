@@ -121,8 +121,9 @@ const escapeLikePattern = (text: string): string =>
 /**
  * The user's recipes whose name contains `query`, ignoring case, in the library's order. This is an
  * `ilike` over the caller's own rows through PostgREST (ADR 0003, Amendment 8), with `%` and `_` in
- * the query escaped so they match literally (a `*` is the one exception, see `escapeLikePattern`). A query shorter than `MIN_SEARCH_LENGTH` once trimmed
- * is answered with no recipes and no request. `limit` is kept between 1 and 50.
+ * the query escaped so they match literally (a `*` is the exception, see `escapeLikePattern`). A
+ * query shorter than `MIN_SEARCH_LENGTH` once trimmed is answered with no recipes and no request.
+ * `limit` is kept between 1 and 50.
  */
 export async function searchRecipes(
   client: SupabaseClient<Database>,

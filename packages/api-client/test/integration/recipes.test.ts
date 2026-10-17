@@ -285,13 +285,14 @@ describe("reading and searching recipes against the local stack with real user J
     // PostgREST reads * as % in an ilike value and cannot escape it, so the client sends _ in its place.
     // The star then finds a name that has one, but never stands for a run of characters.
     it("should match an asterisk as one character and never as a run of them", async () => {
-      await writeRecipe(userA, { name: nameOf("5*3") });
-      await writeRecipe(userA, { name: nameOf("5-and-3") });
+      // Letters that are neither hex digits nor in the prefix, so no run id can make every name match.
+      await writeRecipe(userA, { name: nameOf("Pie*Sauce") });
+      await writeRecipe(userA, { name: nameOf("Pie-and-Sauce") });
 
-      const found = await searchRecipes(userA.client, "5*3");
+      const found = await searchRecipes(userA.client, "Pie*Sauce");
 
-      expect(namesOf(found)).toContain(nameOf("5*3"));
-      expect(namesOf(found)).not.toContain(nameOf("5-and-3"));
+      expect(namesOf(found)).toContain(nameOf("Pie*Sauce"));
+      expect(namesOf(found)).not.toContain(nameOf("Pie-and-Sauce"));
     });
 
     it("should match a name with commas, brackets and quotes", async () => {
