@@ -136,3 +136,7 @@ export type {
 export { useLogRecipeServing } from "./hooks";
 export { logRecipe } from "./repos";
 export type { LogRecipeInput, RecipeLogEntry } from "./repos";
+export { useRecipeRefreshPreview, useRefreshRecipeIngredients } from "./hooks";
+export type { RecipeRefreshPreviewState } from "./hooks";
+export { applyRecipeRefresh, previewRecipeRefresh } from "./repos";
+export type { RecipeRefreshDiff } from "./repos";

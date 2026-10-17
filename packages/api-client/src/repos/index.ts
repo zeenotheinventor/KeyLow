@@ -48,3 +48,6 @@ export type {
 } from "./recipes";
 export { logRecipe } from "./recipeEntries";
 export type { LogRecipeInput, RecipeLogEntry } from "./recipeEntries";
+export { applyRecipeRefresh } from "./recipeWrites";
+export { previewRecipeRefresh } from "./recipes";
+export type { RecipeRefreshDiff } from "./recipes";

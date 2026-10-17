@@ -60,3 +60,6 @@ export { useUpdateFood } from "./useUpdateFood";
 export { useUpdateRecipe } from "./useUpdateRecipe";
 export { TargetsValidationError, useUpdateTargets } from "./useUpdateTargets";
 export { useLogRecipeServing } from "./useLogRecipeServing";
+export { useRecipeRefreshPreview } from "./useRecipeRefreshPreview";
+export type { RecipeRefreshPreviewState } from "./useRecipeRefreshPreview";
+export { useRefreshRecipeIngredients } from "./useRefreshRecipeIngredients";

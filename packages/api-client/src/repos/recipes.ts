@@ -1,14 +1,20 @@
 import {
   recipeComputedSchema,
   recipeSchema,
+  refreshRecipeIngredients,
   storedRecipeIngredientSchema,
 } from "@keylow/core/recipes";
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
-import { MIN_SEARCH_LENGTH } from "./foods";
+import { MIN_SEARCH_LENGTH, getFood, listFoodPortions } from "./foods";
 
 import type { Database } from "../database.types";
+import type {
+  RefreshableFoods,
+  RefreshedRecipeIngredients,
+  StoredRecipeIngredient,
+} from "@keylow/core/recipes";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 // A recipe is health data, and the database's own message and details can quote a failing row. So a
@@ -153,4 +159,86 @@ export async function searchRecipes(
   }
 
   return summariesOf(data, "search your recipes");
+}
+
+/**
+ * What "Refresh ingredients" would change, as core works it out (`refreshRecipeIngredients`): the new
+ * ingredient rows, the recipe's totals before and after, and what changed for each ingredient.
+ */
+export type RecipeRefreshDiff = RefreshedRecipeIngredients<StoredRecipeIngredient>;
+
+const errorCodeOf = (error: unknown): string =>
+  error instanceof Error &&
+  typeof error.cause === "object" &&
+  error.cause !== null &&
+  "code" in error.cause &&
+  typeof error.cause.code === "string"
+    ? error.cause.code
+    : "unknown";
+
+/**
+ * Reads every distinct food of the recipe once, with its portions, all in flight together. The food
+ * read is `getFood`, which does not filter on `deleted_at` (ADR 0003, Amendment 2), so a food that was
+ * soft deleted since still arrives, and core reports it as gone. A food the user cannot see is left
+ * out of the map, which core treats the same way. A failed read fails them all: a diff over some of the
+ * foods would show a recipe as unchanged when it was not looked at. The foods' own errors quote the
+ * database's message, so a failure is reported by the action and the code only.
+ */
+async function readFoodsOf(
+  client: SupabaseClient<Database>,
+  ingredients: readonly StoredRecipeIngredient[],
+): Promise<RefreshableFoods> {
+  const foodIds = [...new Set(ingredients.map(({ food_id }) => food_id))];
+  try {
+    const found = await Promise.all(
+      foodIds.map(async (id) => {
+        const [food, portions] = await Promise.all([
+          getFood(client, id),
+          listFoodPortions(client, id),
+        ]);
+        return food === null ? null : ([id, { food, portions }] as const);
+      }),
+    );
+    return new Map(found.filter((entry) => entry !== null));
+  } catch (error) {
+    throw new Error(`Could not load the foods of the recipe (${errorCodeOf(error)})`, {
+      cause: { code: errorCodeOf(error) },
+    });
+  }
+}
+
+/**
+ * Reads a recipe and the current food of each ingredient, and works out the refresh. Null when the
+ * recipe is not visible to the user. This only reads: it is what the preview shows and what an apply
+ * saves, so the two cannot disagree about what a refresh is.
+ */
+export async function readRecipeRefresh(
+  client: SupabaseClient<Database>,
+  recipeId: string,
+): Promise<{ recipe: RecipeDetail; diff: RecipeRefreshDiff } | null> {
+  const recipe = await getRecipe(client, recipeId);
+  if (recipe === null) {
+    return null;
+  }
+
+  const foods = await readFoodsOf(client, recipe.ingredients);
+  const diff = refreshRecipeIngredients({
+    servings: recipe.servings,
+    yieldGrams: recipe.yield_grams,
+    ingredients: recipe.ingredients,
+    foods,
+  });
+  return { recipe, diff };
+}
+
+/**
+ * The before and after of "Refresh ingredients" for one recipe, without writing anything. Each
+ * ingredient is compared with its food as it is now, and a food that changed only in a portion does
+ * not count (as for a diary entry). Null when the recipe is not visible to the user.
+ */
+export async function previewRecipeRefresh(
+  client: SupabaseClient<Database>,
+  recipeId: string,
+): Promise<RecipeRefreshDiff | null> {
+  return (await readRecipeRefresh(client, recipeId))?.diff ?? null;
 }
