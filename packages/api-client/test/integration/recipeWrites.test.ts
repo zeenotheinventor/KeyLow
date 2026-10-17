@@ -453,6 +453,10 @@ describe("writing recipes against the local stack with real user JWTs", () => {
         }),
       );
       const before = await getRecipe(userA.client, created.id);
+      expect(before?.ingredients.map(({ portion_id }) => portion_id)).toEqual([
+        null,
+        onlyPortionOf(dough).id,
+      ]);
 
       await updateFood(
         userA.client,
@@ -465,8 +469,9 @@ describe("writing recipes against the local stack with real user JWTs", () => {
 
       const after = await getRecipe(userA.client, created.id);
       expect(after?.computed).toEqual(before?.computed);
-      // Editing a food replaces its portions with new ids, so the portion link is cleared by the
-      // database. The snapshot, the amounts and the grams are what the freeze is about.
+      // Editing a food replaces its portions with new ids, so the database clears the portion link
+      // (Amendment 2, set null). The snapshot, the amounts and the grams are what the freeze is about.
+      expect(after?.ingredients.map(({ portion_id }) => portion_id)).toEqual([null, null]);
       expect(
         after?.ingredients.map(({ snapshot, quantity, unit, resolved_grams }) => ({
           snapshot,

@@ -16,8 +16,9 @@ import type { RecipeUpdate } from "../repos/recipeWrites";
  * Two devices saving one recipe at once: the last save wins, with no check for a change since the
  * recipe was read, as for custom foods. Do not add optimistic concurrency here.
  *
- * The hook is not re-entrant: a second press of Save while the first is pending joins it and resolves
- * to the same recipe. The stored recipe replaces the cached one, and the recipes queries are
+ * The hook is not re-entrant: a second press of Save with the same input while the first is
+ * pending joins it and resolves to the same recipe. A different input is a different edit and runs
+ * after the pending save settles, so the last save wins. The stored recipe replaces the cached one, and the recipes queries are
  * refreshed after, also after a failure. Nothing in the diary is touched, so an entry logged from this
  * recipe keeps its frozen figures.
  */

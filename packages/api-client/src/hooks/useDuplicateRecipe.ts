@@ -13,8 +13,9 @@ import type { DuplicateRecipeInput } from "../repos/recipeWrites";
  * values stay frozen, and only "Refresh ingredients" moves a recipe onto current food data. The
  * original is not touched. Needs a connection: there is no offline queue.
  *
- * The hook is not re-entrant: a second press while the first is pending joins it and resolves to the
- * same copy, so it never makes two. The copy is put in the cache under its own detail key, and the
+ * The hook is not re-entrant: a second press with the same input while the first is pending
+ * joins it and resolves to the same copy, so it never makes two. A different input runs after the
+ * pending one settles. The copy is put in the cache under its own detail key, and the
  * recipes queries are refreshed after, also after a failure. Nothing in the diary is touched.
  */
 export function useDuplicateRecipe() {
