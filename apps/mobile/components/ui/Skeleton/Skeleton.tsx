@@ -68,6 +68,59 @@ function SkeletonDetail() {
   );
 }
 
+// The recipe view as its loading board draws it: the Per serving card as a numeral bar, a caption bar and
+// three tiles, the Servings card as a label bar over a stepper-sized bar, and a card of three rows. Its
+// sides are the screen's, so it gives none of its own.
+const recipeViewNameWidthClassNames = ["w-[68%]", "w-[52%]", "w-[74%]"];
+const recipeViewTileKeys = ["first", "second", "third"];
+
+function SkeletonRecipeView() {
+  return (
+    <View className="gap-6" testID="skeleton-recipe-view">
+      <Card>
+        <View className="gap-3">
+          <View className="flex-row items-center justify-between">
+            <SkeletonBone className="h-10 w-28" />
+            <SkeletonBone className="h-3 w-24" />
+          </View>
+          <View className="flex-row gap-2">
+            {recipeViewTileKeys.map((key) => (
+              <SkeletonBone key={key} className="h-[82px] flex-1 rounded-medium" />
+            ))}
+          </View>
+          <SkeletonBone className="h-3 w-[150px]" />
+        </View>
+      </Card>
+      <Card padding={0}>
+        <View className="gap-3 px-4 py-3">
+          <View className="flex-row items-center justify-between">
+            <SkeletonBone className="h-[14px] w-[72px]" />
+            <SkeletonBone className="h-touch-target w-[176px] rounded-medium" />
+          </View>
+          <SkeletonBone className="h-3 w-40" />
+        </View>
+      </Card>
+      <View
+        className="overflow-hidden rounded-large border border-border bg-surface elevation-card"
+        testID="skeleton-card"
+      >
+        {[0, 1, 2].map((index) => (
+          <View
+            key={index}
+            className={`min-h-[60px] flex-row items-center gap-3 px-3 py-2 ${index === 0 ? "" : "border-t border-border"}`}
+          >
+            <SkeletonBone className="h-control-sm w-control-sm shrink-0" />
+            <View className="flex-1 gap-2">
+              <SkeletonBone className={`h-[14px] ${recipeViewNameWidthClassNames[index]}`} />
+              <SkeletonBone className="h-[10px] w-[45%]" />
+            </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 // The food log as the loading board draws it: seven pills, four bars and five hours, the second and fourth
 // with a food under their chip. It carries the screen's 16 points at its sides.
 const dayBoneKeys = ["mo", "tu", "we", "th", "fr", "sa", "su"];
@@ -179,6 +232,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
   return (
     <Animated.View aria-hidden style={animatedStyle} testID="skeleton">
       {variant === "detail" ? <SkeletonDetail /> : null}
+      {variant === "recipeView" ? <SkeletonRecipeView /> : null}
       {variant === "diary" || variant === "diaryDay" ? (
         <SkeletonDiary includesWeek={variant === "diary"} />
       ) : null}

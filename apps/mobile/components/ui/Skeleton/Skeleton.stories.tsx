@@ -30,6 +30,9 @@ export const Group: Story = { args: { variant: "group" } };
 // A card of four recipe rows, as the recipe library's loading board draws them.
 export const RecipeGroup: Story = { args: { variant: "recipeGroup", rows: 4 } };
 
+// The recipe view while it loads: the Per serving and Servings cards as blocks, then three rows.
+export const RecipeView: Story = { args: { variant: "recipeView" } };
+
 // A food's page, as the food boards draw it while the food loads.
 export const Detail: Story = { args: { variant: "detail" } };
 

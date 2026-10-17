@@ -1,7 +1,8 @@
 import { controlHeight, iconSize, touchTarget } from "@keylow/tokens";
 import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { impactAsync } from "expo-haptics";
-import { AccessibilityInfo } from "react-native";
+import { createRef } from "react";
+import { AccessibilityInfo, TextInput } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { ServingsStepper } from "../../components/ui";
@@ -122,6 +123,17 @@ describe("ServingsStepper", () => {
       await fireEvent(field(), "blur");
 
       expect(onBlur).toHaveBeenCalledTimes(1);
+    });
+
+    it("should hand the field to a caller that asks for it, so focus can be moved there", async () => {
+      const fieldRef = createRef<TextInput>();
+      await renderStepper({ fieldRef });
+
+      const focus = jest.spyOn(TextInput.prototype, "focus");
+
+      expect(fieldRef.current).not.toBeNull();
+      fieldRef.current?.focus();
+      expect(focus).toHaveBeenCalledTimes(1);
     });
 
     it("should do nothing about a number it is given, because it holds no rules", async () => {

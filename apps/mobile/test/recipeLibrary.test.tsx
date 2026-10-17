@@ -133,14 +133,14 @@ describe("the recipe library screen", () => {
   });
 
   describe("where it leads", () => {
-    it("should open the recipe's editor from a row, until the recipe view exists", async () => {
+    it("should open the recipe's view from a row", async () => {
       const user = await renderLibrary();
       await library();
 
       await user.press(screen.getByRole("button", { name: /^Chicken and rice,/ }));
 
       expect(routerMock.push).toHaveBeenCalledTimes(1);
-      expect(routerMock.push).toHaveBeenCalledWith(`/recipes/${sampleRecipes[1]?.id}/edit`);
+      expect(routerMock.push).toHaveBeenCalledWith(`/recipes/${sampleRecipes[1]?.id}`);
     });
 
     it("should open the new recipe editor from the header", async () => {
@@ -239,7 +239,7 @@ describe("the recipe library screen", () => {
       expect(openButtons()).toHaveLength(5);
       expect(screen.getByRole("button", { name: "New recipe" })).toBeDisabled();
       await user.press(screen.getByRole("button", { name: /^Beef chilli,/ }));
-      expect(routerMock.push).toHaveBeenCalledWith(`/recipes/${sampleRecipes[0]?.id}/edit`);
+      expect(routerMock.push).toHaveBeenCalledWith(`/recipes/${sampleRecipes[0]?.id}`);
     });
 
     it("should treat archived recipes alone in memory as nothing in memory, not as No recipes yet", async () => {
