@@ -11,6 +11,7 @@ import {
   STEP_SHEET,
   describeCookedWeightHelper,
   describeCountSuffix,
+  describeChooseAmountRowName,
   describeCountedHeading,
   describeEditStep,
   describeIngredientRowName,
@@ -321,6 +322,26 @@ describe("the names of the ingredient controls", () => {
   it("should name the row that opens the amount step, as the board does", () => {
     expect(describeIngredientRowName("Onions, raw", "1 medium (110 g)")).toBe(
       "Onions, raw, 1 medium (110 g), change amount",
+    );
+  });
+});
+
+describe("the name of an ingredient search row", () => {
+  it("should name the food, its serving and what the row does, as the brief does", () => {
+    expect(describeChooseAmountRowName("Spinach, baby, raw", "100 g")).toBe(
+      "Spinach, baby, raw, 100 g, choose amount",
+    );
+  });
+
+  it("should put a brand after the name", () => {
+    expect(describeChooseAmountRowName("Protein bar", "1 bar (60 g)", { brand: "Barebells" })).toBe(
+      "Protein bar, Barebells, 1 bar (60 g), choose amount",
+    );
+  });
+
+  it("should say a food needs review before it says what the row does", () => {
+    expect(describeChooseAmountRowName("Mystery bar", "100 g", { needsReview: true })).toBe(
+      "Mystery bar, 100 g, Needs review, choose amount",
     );
   });
 });

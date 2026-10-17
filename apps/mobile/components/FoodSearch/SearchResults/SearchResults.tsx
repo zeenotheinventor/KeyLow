@@ -43,6 +43,7 @@ export function SearchResults({
   onCreateFood,
   idleContent,
   logRows,
+  choosesAmount = false,
 }: SearchResultsProps) {
   const trimmedQuery = query.trim();
   const { local, off, isLoadingLocal, isLoadingOff, isDebouncing, offError, localError } =
@@ -62,6 +63,8 @@ export function SearchResults({
 
   const isSearching = isDebouncing || isLoadingLocal;
   const hasRows = local.length > 0 || off.length > 0;
+  // Rows that show a serving say where the values are per 100 g only for the live Open Food Facts ones.
+  const showsServings = logRows !== undefined || choosesAmount;
   const expanded = expansion.query === trimmedQuery ? expansion.groups : [];
   const groups = groupFoodSearchResults(local, { limit: limitsFor(expanded, local.length) });
 
@@ -69,7 +72,7 @@ export function SearchResults({
     <>
       {isSearching && <SearchStatus label={SEARCH_STATUS.searchingYourFoods} />}
       {isSearching && !hasRows && <Skeleton variant="group" />}
-      {hasRows && logRows === undefined && (
+      {hasRows && !showsServings && (
         <Text className="-mb-2" tone="muted" variant="caption">
           {VALUES_PER_100_G_NOTE}
         </Text>
@@ -84,6 +87,7 @@ export function SearchResults({
         >
           <LocalFoodGroups
             groups={groups}
+            choosesAmount={choosesAmount}
             logRows={logRows}
             query={trimmedQuery}
             onOpenFood={onOpenFood}
@@ -95,12 +99,17 @@ export function SearchResults({
             <>
               {/* The live Open Food Facts rows stay per 100 g, so in the log search, where the rows above show
                   servings, the note stands above them. */}
-              {logRows !== undefined && (
+              {showsServings && (
                 <Text className="-mb-2" tone="muted" variant="caption">
                   {VALUES_PER_100_G_NOTE}
                 </Text>
               )}
-              <OpenFoodFactsGroup candidates={off} query={trimmedQuery} onOpenFood={onOpenFood} />
+              <OpenFoodFactsGroup
+                candidates={off}
+                query={trimmedQuery}
+                releasesOnOpen={choosesAmount}
+                onOpenFood={onOpenFood}
+              />
             </>
           )}
         </View>
@@ -109,7 +118,11 @@ export function SearchResults({
       {offError !== null && <OpenFoodFactsNotice error={offError} />}
       {!isSearching && !isLoadingOff && !hasRows && (
         <EmptyState
-          action={{ label: SEARCH_EMPTY.action, icon: "Plus", onPress: onCreateFood }}
+          action={
+            onCreateFood === undefined
+              ? undefined
+              : { label: SEARCH_EMPTY.action, icon: "Plus", onPress: onCreateFood }
+          }
           body={SEARCH_EMPTY.body}
           icon="SearchX"
           title={SEARCH_EMPTY.title}

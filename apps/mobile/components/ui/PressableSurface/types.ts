@@ -1,6 +1,6 @@
 import type { HapticFeedbackName } from "../../../lib/haptics";
-import type { ReactNode } from "react";
-import type { PressableProps } from "react-native";
+import type { ReactNode, Ref } from "react";
+import type { PressableProps, View } from "react-native";
 
 export type PressableSurfaceProps = {
   children: ReactNode;
@@ -28,6 +28,8 @@ export type PressableSurfaceProps = {
   accessibilityActions?: PressableProps["accessibilityActions"] | undefined;
   onAccessibilityAction?: PressableProps["onAccessibilityAction"] | undefined;
   onPress?: (() => void) | undefined;
+  /** The pressable itself, so a screen can move a screen reader's focus to it. */
+  ref?: Ref<View> | undefined;
   /** Classes for the pressable itself: its size, fill, border and layout. The press scale sits outside them. */
   className?: string;
 };

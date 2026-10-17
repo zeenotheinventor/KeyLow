@@ -8,6 +8,8 @@ export type LocalFoodGroupsProps = {
   query: string;
   /** Draws each row as a serving with a plus, as the log search does. */
   logRows?: LogRows | undefined;
+  /** Draws each row as a serving that opens the amount step, with a chevron and no plus, as the ingredient search does. */
+  choosesAmount?: boolean | undefined;
   onSeeMore: (key: FoodSearchGroupKey) => void;
   onOpenFood: (foodId: string) => void;
 };

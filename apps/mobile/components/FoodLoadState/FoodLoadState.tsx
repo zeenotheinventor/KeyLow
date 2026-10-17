@@ -6,7 +6,8 @@ import { EmptyState, ErrorState, Skeleton, Text } from "../ui";
 
 import type { FoodLoadStateProps } from "./types";
 
-function LoadStateBody({ state }: FoodLoadStateProps) {
+/** The body of those states alone, for a screen that draws its own header, such as the recipe editor's add ingredient step. */
+export function FoodLoadStateBody({ state }: FoodLoadStateProps) {
   if (state === "error") {
     // The boards lift the words 96 points off the bottom, so they sit above the middle of the screen. 96 is
     // a board measure and not a step of the spacing scale, so it is written as it is drawn.
@@ -54,7 +55,7 @@ function LoadStateBody({ state }: FoodLoadStateProps) {
 export function FoodLoadState({ state }: FoodLoadStateProps) {
   return (
     <FoodFormScreen isTitleHeading={false} title={FOOD_DETAIL.title}>
-      <LoadStateBody state={state} />
+      <FoodLoadStateBody state={state} />
     </FoodFormScreen>
   );
 }

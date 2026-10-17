@@ -19,18 +19,24 @@ export function ListRow({
   chevron = true,
   onPress,
   disabled = false,
+  variant,
+  ref,
   children,
 }: ListRowProps) {
+  const isFooter = variant === "footer";
   const { isFirst } = useGroupedRowPosition();
   const trailingValue = value === undefined ? undefined : [value, unit].filter(Boolean).join(" ");
   const label = [title, subtitle, trailingValue].filter(Boolean).join(", ");
   const separatorClassName = isFirst ? "" : "border-t border-border";
   const dimClassName = disabled ? "opacity-50" : "";
-  const rowClassName = `min-h-[56px] flex-row items-center gap-3 px-3 py-2 ${separatorClassName} ${dimClassName}`;
+  const sizeClassName = isFooter ? "min-h-[52px] px-4" : "min-h-[56px] px-3";
+  const rowClassName = `${sizeClassName} flex-row items-center gap-3 py-2 ${separatorClassName} ${dimClassName}`;
 
   const contents = (
     <>
-      {icon === undefined ? null : (
+      {icon === undefined ? null : isFooter ? (
+        <Icon name={icon} />
+      ) : (
         <View className="h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised">
           <Icon name={icon} tone="secondary" />
         </View>
@@ -55,7 +61,7 @@ export function ListRow({
           )}
         </View>
       )}
-      {chevron && onPress !== undefined ? (
+      {chevron && !isFooter && onPress !== undefined ? (
         <Icon name="ChevronRight" size="sm" tone="muted" />
       ) : null}
     </>
@@ -94,6 +100,7 @@ export function ListRow({
       disabled={disabled}
       label={label}
       pressScale={rowPressScale}
+      ref={ref}
       onPress={onPress}
     >
       {contents}

@@ -6,11 +6,17 @@ export type SearchResultsProps = {
   /** What the user has typed, untrimmed. */
   query: string;
   onOpenFood: (foodId: string) => void;
-  onCreateFood: () => void;
+  /** Offers to create a food when nothing is found. Leave it out where creating one would leave the screen, such as a recipe's ingredient search. */
+  onCreateFood?: (() => void) | undefined;
   /** Takes the place of the "Search for a food" state before anything is typed, such as Quick add and Recent. */
   idleContent?: ReactNode;
   /** Draws the local rows as servings with a plus that logs one at once, as the log search does. */
   logRows?: LogRows | undefined;
+  /**
+   * Draws the local rows as servings that all open the amount step, with a chevron and no plus, as the ingredient
+   * search does. The live Open Food Facts rows stay per 100 g.
+   */
+  choosesAmount?: boolean | undefined;
 };
 
 export type LogRows = {

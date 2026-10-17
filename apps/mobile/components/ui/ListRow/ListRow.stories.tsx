@@ -54,6 +54,11 @@ export const Disabled: Story = {
   args: { icon: "ScanBarcode", title: "Weight", subtitle: "Coming soon", disabled: true },
 };
 
+// The recipe editor's Add ingredient row, which closes a card of rows: the icon bare, no chevron.
+export const Footer: Story = {
+  args: { icon: "Plus", title: "Add ingredient", variant: "footer", onPress: () => undefined },
+};
+
 type Appearance = "dark" | "light" | "system";
 
 // A choice is kept by the screen that holds it, so the story keeps it too and a press moves it.

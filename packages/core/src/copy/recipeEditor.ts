@@ -201,6 +201,26 @@ export const describeRemoveIngredient = (foodName: string): string =>
 export const describeIngredientRowName = (foodName: string, amount: string): string =>
   `${foodName}, ${amount}, change amount`;
 
+/**
+ * The name of a result row in the ingredient search, which opens the amount step: "Spinach, baby, raw, 100 g,
+ * choose amount". A branded food's brand follows its name, and a food that must be reviewed says so before the
+ * words that say what the row does.
+ */
+export const describeChooseAmountRowName = (
+  foodName: string,
+  serving: string,
+  details: { brand?: string | undefined; needsReview?: boolean | undefined } = {},
+): string =>
+  [
+    foodName,
+    details.brand,
+    serving,
+    details.needsReview === true ? FOOD_ROW.needsReview : undefined,
+    "choose amount",
+  ]
+    .filter((part) => part !== undefined)
+    .join(", ");
+
 /** The title of the step sheet, and the first words of a step's names. A step's place counts from 1. */
 export const describeStepTitle = (position: number): string => `Step ${position}`;
 
