@@ -13,8 +13,8 @@ const macroColumns = ["protein", "carbs", "fat"] as const;
 
 /**
  * A recipe at the wide width: the columns the `FoodTableHeader` heads with its `recipe` variant. The name
- * is the link that opens the recipe. The last cell is for the row's buttons and is empty until a screen
- * gives it some.
+ * is the link that opens the recipe, or plain text when the row has no `href`. The last cell is for the
+ * row's buttons and is empty until a screen gives it some.
  */
 export function RecipeTableRow({
   nameSegments,
@@ -23,6 +23,7 @@ export function RecipeTableRow({
   servings,
   energy,
   macros,
+  actions,
   className,
 }: RecipeTableRowProps) {
   return (
@@ -38,12 +39,18 @@ export function RecipeTableRow({
       <div role="cell" className="flex min-w-0 items-center gap-3">
         <RecipeTile />
         <span className="flex min-w-0 flex-col">
-          <Link
-            href={href}
-            className="line-clamp-2 rounded-small text-body text-text-primary no-underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
-          >
-            <RecipeName nameSegments={nameSegments} />
-          </Link>
+          {href === undefined ? (
+            <span className="line-clamp-2 text-body text-text-primary">
+              <RecipeName nameSegments={nameSegments} />
+            </span>
+          ) : (
+            <Link
+              href={href}
+              className="line-clamp-2 rounded-small text-body text-text-primary no-underline outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+            >
+              <RecipeName nameSegments={nameSegments} />
+            </Link>
+          )}
           <span className="truncate text-caption tabular-nums text-text-muted">
             {servingCaption}
           </span>
@@ -77,7 +84,9 @@ export function RecipeTableRow({
           </>
         )}
       </div>
-      <div role="cell" />
+      <div role="cell" className="flex justify-end gap-1">
+        {actions}
+      </div>
     </div>
   );
 }

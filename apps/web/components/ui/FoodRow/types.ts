@@ -127,37 +127,48 @@ export type FoodTableRowProps = {
   className?: string | undefined;
 };
 
-/**
- * A recipe in the library at the narrow width: the chef's hat tile, the name with the matched letters in
- * bold, the serving and what it makes under it, and the stats line of one serving. The whole row is a link
- * to the recipe. Put it inside a `GroupedList` or any `ul`.
- */
-export type RecipeRowProps = {
+type RecipeRowContent = {
   layout: "recipe";
   nameSegments: readonly FoodNameSegment[];
-  /** Where the recipe opens. */
-  href: string;
-  /** The name of the link, with the serving, what it makes and the values read in words. */
-  openLabel: string;
   /** The line under the name: "1 serving (275 g) · makes 4". It is one line. */
   caption: string;
   /** The energy of one serving, already formatted, in kcal. */
   energy?: string | undefined;
   /** The macros of one serving. Without them the stats line says "Needs review". */
   macros?: FoodRowMacroValues | undefined;
+  /** The row's own buttons, such as Duplicate and Archive, at its end. They are not part of the link. */
+  actions?: ReactNode | undefined;
   className?: string | undefined;
 };
 
 /**
+ * A recipe in the library at the narrow width: the chef's hat tile, the name with the matched letters in
+ * bold, the serving and what it makes under it, and the stats line of one serving. The whole row is a link
+ * to the recipe, with the row's `actions` beside it. A recipe that cannot be opened, such as an archived
+ * one, is given no `href` and the row is plain text. Put it inside a `GroupedList` or any `ul`.
+ */
+export type RecipeRowProps = RecipeRowContent &
+  (
+    | {
+        /** Where the recipe opens. */
+        href: string;
+        /** The name of the link, with the serving, what it makes and the values read in words. */
+        openLabel: string;
+      }
+    | { href?: never; openLabel?: never }
+  );
+
+/**
  * A recipe in the library at the wide width, one row of the table that `FoodTable` draws with its `recipe`
  * variant: the name as a link and the serving under it, then servings, protein, carbs, fat and energy, and
- * an actions cell that is empty until a screen has something to put in it.
+ * an actions cell that is empty until a screen has something to put in it. A recipe that cannot be opened,
+ * such as an archived one, is given no `href` and its name is plain text.
  */
 export type RecipeTableRowProps = {
   layout: "recipeTable";
   nameSegments: readonly FoodNameSegment[];
-  /** Where the recipe opens. */
-  href: string;
+  /** Where the recipe opens. Leave it out and the name is not a link. */
+  href?: string | undefined;
   /** The line under the name: "1 serving (275 g)". It is one line. */
   servingCaption: string;
   /** How many servings the recipe makes, already formatted. */
@@ -166,6 +177,8 @@ export type RecipeTableRowProps = {
   energy?: string | undefined;
   /** The macros of one serving as `formatGrams` writes them. The table adds the unit. */
   macros: FoodTableRowMacros;
+  /** The row's buttons, such as Duplicate and Archive, side by side in the last cell. Leave it out and the cell is empty. */
+  actions?: ReactNode | undefined;
   className?: string | undefined;
 };
 

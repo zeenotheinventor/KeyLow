@@ -1,3 +1,6 @@
+export { ArchivedRecipes } from "./ArchivedRecipes";
+export { ArchivedRecipesView } from "./ArchivedRecipesView";
+export type { ArchivedRecipesViewProps } from "./ArchivedRecipesView";
 export { RecipeLibrary } from "./RecipeLibrary";
 export { RecipeLibraryView } from "./RecipeLibraryView";
 export type { RecipeLibraryViewProps } from "./RecipeLibraryView";

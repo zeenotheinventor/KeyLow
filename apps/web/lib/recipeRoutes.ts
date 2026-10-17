@@ -4,6 +4,9 @@ export const NEW_RECIPE_NAME_PARAMETER = "name";
 /** The recipe library. */
 export const recipesPath = (): string => "/recipes";
 
+/** The recipes the user has put away, where each can be restored. */
+export const archivedPath = (): string => `${recipesPath()}/archived`;
+
 /** The editor for a new recipe. A typed name is carried to it as `NEW_RECIPE_NAME_PARAMETER`. */
 export const newRecipePath = (name?: string): string => {
   const trimmedName = name?.trim() ?? "";

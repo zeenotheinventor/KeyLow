@@ -3,7 +3,13 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { editRecipePath, newRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
+import {
+  archivedPath,
+  editRecipePath,
+  newRecipePath,
+  recipePath,
+  recipesPath,
+} from "@/lib/recipeRoutes";
 
 describe("recipeRoutes", () => {
   it("should lead to the library at /recipes", () => {
@@ -30,6 +36,10 @@ describe("recipeRoutes", () => {
     expect(editRecipePath("11111111-1111-4111-8111-111111111111")).toBe(
       "/recipes/11111111-1111-4111-8111-111111111111/edit",
     );
+  });
+
+  it("should lead to the archived recipes at /recipes/archived", () => {
+    expect(archivedPath()).toBe("/recipes/archived");
   });
 
   it("should open a recipe in its view at /recipes/<id>", () => {
@@ -73,6 +83,7 @@ function isServed(href: string): boolean {
 describe("the recipe routes in the route table", () => {
   it.each([
     ["the library", recipesPath()],
+    ["the archived recipes", archivedPath()],
     ["the new recipe editor", newRecipePath()],
     ["the new recipe editor with a typed name", newRecipePath("pasta")],
     ["the recipe view", recipePath(SAMPLE_RECIPE_ID)],

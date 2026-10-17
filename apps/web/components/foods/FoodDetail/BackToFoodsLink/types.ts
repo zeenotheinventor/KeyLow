@@ -9,4 +9,6 @@ export type BackToFoodsLinkProps = {
   onClick?: React.MouseEventHandler<HTMLAnchorElement>;
   /** `accent` is the recipe pages' link: the accent ink, a 44 px target and an 18 px chevron. */
   tone?: "quiet" | "accent";
+  /** The link's element, for a screen that hands focus to it. */
+  ref?: React.Ref<HTMLAnchorElement>;
 };

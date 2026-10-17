@@ -26,6 +26,9 @@ afterEach(() => {
   cleanup();
 });
 
+// The last cell of a row holds its two buttons.
+const ACTIONS = "DuplicateArchive";
+
 const openLabels = {
   beefChilli:
     "Beef chilli, 1 serving 350 grams, makes 6, 412 kilocalories, protein 34 grams, carbohydrate 31 grams, fat 16 grams, open",
@@ -37,6 +40,9 @@ async function showLibrary() {
   renderWithRecipes(<RecipeLibrary />);
   return screen.findByRole("table", { name: "Recipes" });
 }
+
+// The page has other live regions, such as the toasts', so the library's is found among them by its words.
+const statusTexts = () => screen.getAllByRole("status").map((status) => status.textContent);
 
 const searchBox = () => screen.getByRole("searchbox", { name: RECIPES_LIBRARY.searchPlaceholder });
 
@@ -66,10 +72,18 @@ describe("RecipeLibrary", () => {
             .map((cell) => cell.textContent),
         ),
       ).toEqual([
-        ["Beef chilli1 serving (350 g)", "6", "34 g", "31 g", "16 g", "412 kcal", ""],
-        ["Chicken and rice1 serving (275 g)", "4", "32 g", "43 g", "8.1 g", "374 kcal", ""],
-        ["Lentil and tomato soup1 serving (400 g)", "4", "15 g", "36 g", "3.2 g", "238 kcal", ""],
-        ["Overnight oats1 serving (290 g)", "1", "20 g", "52 g", "11 g", "389 kcal", ""],
+        ["Beef chilli1 serving (350 g)", "6", "34 g", "31 g", "16 g", "412 kcal", ACTIONS],
+        ["Chicken and rice1 serving (275 g)", "4", "32 g", "43 g", "8.1 g", "374 kcal", ACTIONS],
+        [
+          "Lentil and tomato soup1 serving (400 g)",
+          "4",
+          "15 g",
+          "36 g",
+          "3.2 g",
+          "238 kcal",
+          ACTIONS,
+        ],
+        ["Overnight oats1 serving (290 g)", "1", "20 g", "52 g", "11 g", "389 kcal", ACTIONS],
         [
           "Spinach and cheddar frittata1 serving (155 g)",
           "4",
@@ -77,7 +91,7 @@ describe("RecipeLibrary", () => {
           "3.5 g",
           "16 g",
           "217 kcal",
-          "",
+          ACTIONS,
         ],
       ]);
     });
@@ -114,11 +128,11 @@ describe("RecipeLibrary", () => {
       expect(screen.getByRole("list", { name: "Recipes" }).className).toContain("lg:hidden");
     });
 
-    it("should not show archived recipes, nor a link to them", async () => {
+    it("should not list the archived recipes", async () => {
       await showLibrary();
 
       expect(screen.queryByText("Turkey meatballs")).toBeNull();
-      expect(screen.queryByRole("link", { name: /Archived recipes/ })).toBeNull();
+      expect(screen.queryByText("Veggie chilli")).toBeNull();
     });
 
     it("should agree with core on the energy and protein of the golden recipe", async () => {
@@ -146,6 +160,54 @@ describe("RecipeLibrary", () => {
       expect(cells[1]?.textContent).toBe("4");
       expect(cells[2]?.textContent).toBe("32 g");
       expect(cells[5]?.textContent).toBe("374 kcal");
+    });
+  });
+
+  describe("the link to the archived recipes", () => {
+    it("should count the archived recipes in its words and name, and go to the archived page", async () => {
+      await showLibrary();
+
+      const link = screen.getByRole("link", { name: "Archived recipes, 2" });
+      expect(link.textContent).toBe("Archived recipes (2)");
+      expect(link.getAttribute("href")).toBe("/recipes/archived");
+    });
+
+    it("should sit under the table", async () => {
+      const table = await showLibrary();
+
+      const link = screen.getByRole("link", { name: "Archived recipes, 2" });
+      expect(table.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should be left out while a search is typed, and come back when it is cleared", async () => {
+      await showLibrary();
+
+      typeInSearch("chi");
+      expect(screen.queryByRole("link", { name: /Archived recipes/ })).toBeNull();
+
+      typeInSearch("");
+      expect(screen.getByRole("link", { name: "Archived recipes, 2" })).toBeTruthy();
+    });
+
+    it("should be left out when nothing is archived", async () => {
+      recipesBackend.rows = [...sampleRecipes];
+      await showLibrary();
+
+      expect(screen.queryByRole("link", { name: /Archived recipes/ })).toBeNull();
+    });
+
+    it("should be left out while the recipes load and when they cannot be loaded", async () => {
+      recipesBackend.hangs = true;
+      renderWithRecipes(<RecipeLibrary />);
+      await screen.findByRole("status", { name: RECIPES_LOADING_LABEL });
+      expect(screen.queryByRole("link", { name: /Archived recipes/ })).toBeNull();
+      cleanup();
+
+      recipesBackend.hangs = false;
+      recipesBackend.fails = true;
+      renderWithRecipes(<RecipeLibrary />);
+      await screen.findByRole("heading", { name: RECIPES_LOAD_FAILED.title });
+      expect(screen.queryByRole("link", { name: /Archived recipes/ })).toBeNull();
     });
   });
 
@@ -191,7 +253,7 @@ describe("RecipeLibrary", () => {
       typeInSearch("chi");
 
       await waitFor(() => {
-        expect(screen.getByRole("status").textContent).toBe("2 recipes");
+        expect(statusTexts()).toContain("2 recipes");
       });
     });
 
@@ -201,14 +263,14 @@ describe("RecipeLibrary", () => {
       typeInSearch("oats");
 
       await waitFor(() => {
-        expect(screen.getByRole("status").textContent).toBe("1 recipe");
+        expect(statusTexts()).toContain("1 recipe");
       });
     });
 
     it("should say nothing while nothing is typed", async () => {
       await showLibrary();
 
-      expect(screen.getByRole("status").textContent).toBe("");
+      expect(statusTexts().every((text) => text === "")).toBe(true);
     });
 
     it("should offer to clear the search, which empties the field and brings every recipe back", async () => {
@@ -265,13 +327,20 @@ describe("RecipeLibrary", () => {
       expect(screen.getAllByRole("link", { name: RECIPES_LIBRARY.newRecipe })).toHaveLength(2);
     });
 
-    it("should still invite the first recipe when every recipe is archived", async () => {
+    it("should still invite the first recipe when every recipe is archived, with the link to them under it", async () => {
       recipesBackend.rows = [...archivedSampleRecipes];
       renderWithRecipes(<RecipeLibrary />);
 
-      expect(
-        await screen.findByRole("heading", { level: 2, name: RECIPES_EMPTY.title }),
-      ).toBeTruthy();
+      const title = await screen.findByRole("heading", { level: 2, name: RECIPES_EMPTY.title });
+      const link = screen.getByRole("link", { name: "Archived recipes, 2" });
+      expect(title.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it("should not offer the archived recipes when there are none", async () => {
+      recipesBackend.rows = [];
+      renderWithRecipes(<RecipeLibrary />);
+
+      await screen.findByRole("heading", { level: 2, name: RECIPES_EMPTY.title });
       expect(screen.queryByRole("link", { name: /Archived recipes/ })).toBeNull();
     });
   });

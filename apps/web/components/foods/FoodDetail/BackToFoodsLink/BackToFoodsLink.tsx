@@ -26,9 +26,11 @@ export function BackToFoodsLink({
   href = FOODS_HREF,
   onClick,
   tone = "quiet",
+  ref,
 }: BackToFoodsLinkProps) {
   return (
     <Link
+      ref={ref}
       href={href}
       {...(onClick === undefined ? {} : { onClick })}
       className={cn(
