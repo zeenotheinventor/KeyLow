@@ -1,4 +1,4 @@
-import { keys, useRecipe } from "@keylow/api-client";
+import { keys, useRecipe, useRecipes } from "@keylow/api-client";
 import { isRecipeId } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -16,6 +16,7 @@ import type { RecipeViewScreenProps } from "./types";
  * states of the screen around it. A link that cannot be a recipe is not asked about, and nothing is read
  * while the terms gate is up. Offline with nothing in memory is the failed state, since a read that cannot
  * be made never finishes. The text of a failure is never shown, and an archived recipe opens like a live one.
+ * It also keeps the library read, so a copy made from the view is named among the recipes there already are.
  */
 export function RecipeViewScreen({ id }: RecipeViewScreenProps) {
   const router = useRouter();
@@ -24,6 +25,9 @@ export function RecipeViewScreen({ id }: RecipeViewScreenProps) {
   const isReadEnabled = useReadsEnabled();
   const isKnownToBeMissing = !isRecipeId(id);
   const state = useRecipe(isKnownToBeMissing ? undefined : id, { enabled: isReadEnabled });
+  // The view's Duplicate names the copy from the names in the library, archived ones included, which the
+  // actions read from this one query's cache. The view never draws it.
+  useRecipes({ archived: true, enabled: isReadEnabled && !isKnownToBeMissing });
 
   function goBack() {
     // A cold link to this screen has nothing before it, so the user goes to the library instead.

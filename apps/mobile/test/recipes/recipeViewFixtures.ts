@@ -14,6 +14,7 @@ const preambleNames = ["Chicken breast fillets", "Long grain rice", "Olive oil"]
 export const chickenAndRiceRecipe: RecipeViewRecipe = {
   id: CHICKEN_AND_RICE_ID,
   name: "Chicken and rice",
+  is_archived: false,
   servings: 4,
   yield_grams: 1100,
   instructions: [
@@ -48,6 +49,7 @@ const mediumOnion = buildFoodPortion({
 export const frittataRecipe: RecipeViewRecipe = {
   id: FRITTATA_ID,
   name: "Spinach and cheddar frittata",
+  is_archived: false,
   servings: 4,
   yield_grams: 620,
   instructions: ["Heat the oven to 200 °C (fan 180 °C).", "Fry the onion in the oil."],
