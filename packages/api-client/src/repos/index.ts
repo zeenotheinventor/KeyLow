@@ -37,3 +37,10 @@ export { fetchOffProduct, searchOff } from "./off";
 export { getMyTargets, getMyTimeZone, updateMyTargets, updateMyTimeZone } from "./targets";
 export type { Targets } from "./targets";
 export { acceptTerms, getMyTermsAcceptance } from "./terms";
+export { getRecipe, listRecipes, searchRecipes } from "./recipes";
+export type {
+  RecipeDetail,
+  RecipeListOptions,
+  RecipeSearchOptions,
+  RecipeSummary,
+} from "./recipes";
