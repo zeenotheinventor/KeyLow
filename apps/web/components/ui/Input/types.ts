@@ -36,6 +36,8 @@ export type FieldProps = {
   invalid?: boolean | undefined;
   describedBy?: string | undefined;
   disabled?: boolean | undefined;
+  /** Keeps the label for a screen reader and takes it off the screen, for a field whose visible name sits elsewhere. */
+  hideLabel?: boolean | undefined;
   /** Draws the control from the props that tie it to the label and the message. */
   children: (control: FieldControlProps) => React.ReactNode;
 };

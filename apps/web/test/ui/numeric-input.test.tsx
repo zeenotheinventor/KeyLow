@@ -244,4 +244,38 @@ describe("NumericInput", () => {
       expect(screen.getByText("Amount").querySelector("span")).toBeNull();
     });
   });
+
+  describe("with a hidden label", () => {
+    it("should keep the label as the field's name", () => {
+      render(<NumericInput label="Servings" hideLabel />);
+
+      expect(screen.getByRole("textbox", { name: "Servings" })).toBeTruthy();
+    });
+
+    it("should take the label off the screen", async () => {
+      render(<NumericInput label="Servings" hideLabel />);
+
+      const css = await compileUtilities(screen.getByText("Servings").className);
+
+      expect(css).toMatch(/\.sr-only\s*\{[^}]*position: absolute/);
+    });
+
+    it("should show the label by default", async () => {
+      render(<NumericInput label="Servings" />);
+
+      const css = await compileUtilities(screen.getByText("Servings").className);
+
+      expect(css).not.toMatch(/\.sr-only/);
+    });
+  });
+
+  describe("with the number pad", () => {
+    it("should ask for the number pad when told", () => {
+      render(<NumericInput label="Servings" inputMode="numeric" />);
+
+      expect(screen.getByRole("textbox", { name: "Servings" }).getAttribute("inputmode")).toBe(
+        "numeric",
+      );
+    });
+  });
 });

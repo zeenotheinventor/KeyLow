@@ -28,6 +28,7 @@ export function NumericInput({
   unit,
   macro,
   disabled,
+  hideLabel,
   className,
   frameClassName,
   placeholder = "0",
@@ -57,6 +58,7 @@ export function NumericInput({
       invalid={invalid}
       describedBy={describedBy}
       disabled={disabled}
+      hideLabel={hideLabel}
     >
       {(control) => (
         <div
