@@ -61,19 +61,32 @@ export const ARCHIVED_RECIPES = {
   empty: "Nothing archived",
 };
 
-/** The row menu on mobile and the row buttons on web. */
+/**
+ * The row menu on mobile and the row buttons on web, which are also the recipe view's: the view has no
+ * "save first" variant, because it never has unsaved changes.
+ */
 export const RECIPE_ACTIONS = {
+  /** Opens the refresh screen of brief 22. */
+  refresh: "Refresh ingredients",
+  refreshCaption: "Check your foods for changes",
   duplicate: "Duplicate",
   duplicateCaption: "Makes a copy you can change",
   archive: "Archive",
   archiveCaption: "Hidden until you restore it",
 };
 
-/** The toasts of the library. Archived and duplicated take Undo, which is `UNDO_LABEL`. */
+/**
+ * The toasts of the recipe screens. Archived, duplicated and the two removals take Undo, which is
+ * `UNDO_LABEL`. Saved and refreshed take no action.
+ */
 export const RECIPE_TOASTS = {
   archived: "Recipe archived",
   duplicated: "Recipe duplicated",
   restored: "Recipe restored",
+  saved: "Recipe saved",
+  ingredientRemoved: "Ingredient removed",
+  stepRemoved: "Step removed",
+  refreshed: "Ingredients refreshed",
 };
 
 /** What a library row reads: the servings, the weight of the dish and the values of one serving. */

@@ -91,6 +91,8 @@ describe("the library and archive strings", () => {
       empty: "Nothing archived",
     });
     expect(RECIPE_ACTIONS).toEqual({
+      refresh: "Refresh ingredients",
+      refreshCaption: "Check your foods for changes",
       duplicate: "Duplicate",
       duplicateCaption: "Makes a copy you can change",
       archive: "Archive",
@@ -100,6 +102,10 @@ describe("the library and archive strings", () => {
       archived: "Recipe archived",
       duplicated: "Recipe duplicated",
       restored: "Recipe restored",
+      saved: "Recipe saved",
+      ingredientRemoved: "Ingredient removed",
+      stepRemoved: "Step removed",
+      refreshed: "Ingredients refreshed",
     });
   });
 

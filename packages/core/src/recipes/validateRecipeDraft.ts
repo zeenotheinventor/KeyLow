@@ -6,6 +6,7 @@ import {
   MAX_RECIPE_STEP_LENGTH,
   MAX_RECIPE_YIELD_GRAMS,
 } from "./bounds";
+import { characterCount } from "./characterCount";
 import { recipeIngredientSchema } from "./schemas";
 import { normaliseSteps } from "./steps";
 import { enteredNumber } from "../diary/rules/enteredNumber";
@@ -50,9 +51,6 @@ export type CleanRecipeDraft = {
   /** Trimmed, with the blank steps dropped. */
   steps: string[];
 };
-
-/** Characters as the database counts them: code points, so an emoji is one and not two. */
-const characterCount = (text: string): number => Array.from(text).length;
 
 type NumberProblem = "invalid" | "too_large" | null;
 
