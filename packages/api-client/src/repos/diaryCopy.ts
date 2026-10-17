@@ -1,13 +1,12 @@
 import { formatClockTime, instantAtLocalTime, toLocalDate } from "@keylow/core/dates";
-import { logEntryInsertSchema } from "@keylow/core/diary";
 import { z } from "zod";
 
 import { getDiaryDay } from "./diary";
 import { repoError } from "./diaryRows";
+import { diaryInsertSchema } from "./diarySchemas";
 
-import type { LogEntry } from "./diarySchemas";
+import type { DiaryInsert, LogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";
-import type { LogEntryInsert } from "@keylow/core/diary";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 // These are health data. Nothing here puts a food, an amount or a nutrient value in an error: a
@@ -60,7 +59,7 @@ function assertLocalDate(localDate: string): void {
  * with the insert schema of core also drops the columns a client may not insert (the id, the
  * creation time and the generated `kcal`), since the database fills those in.
  */
-function copyOnto(entry: LogEntry, to: string, timeZone: string): LogEntryInsert {
+function copyOnto(entry: LogEntry, to: string, timeZone: string): DiaryInsert {
   const [hour = 0, minute = 0] = formatClockTime(new Date(entry.logged_at), timeZone)
     .split(":")
     .map(Number);
@@ -71,7 +70,7 @@ function copyOnto(entry: LogEntry, to: string, timeZone: string): LogEntryInsert
     instantAtLocalTime(to, hour, minute, timeZone).getTime() + secondsOfSource,
   );
 
-  const result = logEntryInsertSchema.safeParse({
+  const result = diaryInsertSchema.safeParse({
     ...entry,
     local_date: toLocalDate(loggedAt, timeZone),
     logged_at: loggedAt.toISOString(),
@@ -87,7 +86,7 @@ function copyOnto(entry: LogEntry, to: string, timeZone: string): LogEntryInsert
 
 async function insertCopy(
   client: SupabaseClient<Database>,
-  copy: LogEntryInsert,
+  copy: DiaryInsert,
 ): Promise<{ id: string } | { error: PostgrestError }> {
   const table = client.from("food_log_entries");
   // Narrow the union so each branch type-checks against the generated insert type.

@@ -1,0 +1,231 @@
+[
+  {
+    "name": "one serving of four, with a yield of 1100 g",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b1",
+      "name": "Chicken and rice",
+      "servings": 4,
+      "yieldGrams": 1100,
+      "effectiveGrams": 1100,
+      "total": {
+        "kcal": 1496.8,
+        "protein_g": 126.5,
+        "fat_g": 32,
+        "carbs_g": 156,
+        "fibre_g": 4
+      },
+      "quantity": 1,
+      "unit": "serving",
+      "resolvedGrams": 275,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 275,
+    "expectedNutrients": {
+      "kcal": 374.2,
+      "protein_g": 31.625,
+      "fat_g": 8,
+      "carbs_g": 39,
+      "fibre_g": 1
+    }
+  },
+  {
+    "name": "275 g of the cooked weight, with a yield of 1100 g",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b1",
+      "name": "Chicken and rice",
+      "servings": 4,
+      "yieldGrams": 1100,
+      "effectiveGrams": 1100,
+      "total": {
+        "kcal": 1496.8,
+        "protein_g": 126.5,
+        "fat_g": 32,
+        "carbs_g": 156,
+        "fibre_g": 4
+      },
+      "quantity": 275,
+      "unit": "g",
+      "resolvedGrams": 275,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 275,
+    "expectedNutrients": {
+      "kcal": 374.2,
+      "protein_g": 31.625,
+      "fat_g": 8,
+      "carbs_g": 39,
+      "fibre_g": 1
+    }
+  },
+  {
+    "name": "275 g of a recipe with no yield, so the raw weight of 720 g is the cooked weight",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b2",
+      "name": "Chicken and rice, no yield",
+      "servings": 4,
+      "yieldGrams": null,
+      "effectiveGrams": 720,
+      "total": {
+        "kcal": 1496.8,
+        "protein_g": 126.5,
+        "fat_g": 32,
+        "carbs_g": 156,
+        "fibre_g": 4
+      },
+      "quantity": 275,
+      "unit": "g",
+      "resolvedGrams": 275,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 275,
+    "expectedNutrients": {
+      "kcal": 571.6944444444445,
+      "protein_g": 48.31597222222222,
+      "fat_g": 12.222222222222221,
+      "carbs_g": 59.583333333333336,
+      "fibre_g": 1.5277777777777777
+    }
+  },
+  {
+    "name": "one and a half servings of a recipe of 2.5 servings, with optional nutrients and an unknown protein",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b3",
+      "name": "Lentil bake",
+      "servings": 2.5,
+      "yieldGrams": 950.5,
+      "effectiveGrams": 950.5,
+      "total": {
+        "kcal": 823.45,
+        "protein_g": null,
+        "fat_g": 31.2,
+        "carbs_g": 96.8,
+        "fibre_g": 7.1,
+        "sat_fat_g": 9.3,
+        "sugars_g": 14.7,
+        "salt_g": 2.3
+      },
+      "quantity": 1.5,
+      "unit": "serving",
+      "resolvedGrams": 570.3,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 570.3,
+    "expectedNutrients": {
+      "kcal": 494.07000000000005,
+      "protein_g": null,
+      "fat_g": 18.72,
+      "carbs_g": 58.08,
+      "fibre_g": 4.26,
+      "sat_fat_g": 5.58,
+      "sugars_g": 8.819999999999999,
+      "salt_g": 1.38
+    }
+  },
+  {
+    "name": "333.3 g of the same recipe, with optional nutrients and an unknown protein",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b3",
+      "name": "Lentil bake",
+      "servings": 2.5,
+      "yieldGrams": 950.5,
+      "effectiveGrams": 950.5,
+      "total": {
+        "kcal": 823.45,
+        "protein_g": null,
+        "fat_g": 31.2,
+        "carbs_g": 96.8,
+        "fibre_g": 7.1,
+        "sat_fat_g": 9.3,
+        "sugars_g": 14.7,
+        "salt_g": 2.3
+      },
+      "quantity": 333.3,
+      "unit": "g",
+      "resolvedGrams": 333.3,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 333.3,
+    "expectedNutrients": {
+      "kcal": 288.7489584429248,
+      "protein_g": null,
+      "fat_g": 10.940515518148343,
+      "carbs_g": 33.943650710152546,
+      "fibre_g": 2.489668595476065,
+      "sat_fat_g": 3.261115202524987,
+      "sugars_g": 5.154665965281431,
+      "salt_g": 0.8065123619147816
+    }
+  },
+  {
+    "name": "1.1 servings of a recipe of 2.5 servings and 1100 g, where (quantity x cooked weight) / servings is 484 and quantity x (cooked weight / servings) is not",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b4",
+      "name": "Evaluation order by serving",
+      "servings": 2.5,
+      "yieldGrams": 1100,
+      "effectiveGrams": 1100,
+      "total": {
+        "kcal": 290,
+        "protein_g": 122.7,
+        "fat_g": 232.9,
+        "carbs_g": 276.9,
+        "fibre_g": 144.7
+      },
+      "quantity": 1.1,
+      "unit": "serving",
+      "resolvedGrams": 484,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 484,
+    "expectedNutrients": {
+      "kcal": 127.6,
+      "protein_g": 53.988000000000014,
+      "fat_g": 102.47600000000003,
+      "carbs_g": 121.83599999999998,
+      "fibre_g": 63.66799999999999
+    }
+  },
+  {
+    "name": "333.3 g of a recipe of 1100 g, where (total x grams) / cooked weight and total x (grams / cooked weight) differ in the last digit",
+    "snapshot": {
+      "v": 1,
+      "kind": "recipe",
+      "ref": "00000000-0000-4000-8000-0000000000b5",
+      "name": "Evaluation order by grams",
+      "servings": 2.5,
+      "yieldGrams": 1100,
+      "effectiveGrams": 1100,
+      "total": {
+        "kcal": 173.1,
+        "protein_g": 182.3,
+        "fat_g": 196.6,
+        "carbs_g": 200.8,
+        "fibre_g": 204.6
+      },
+      "quantity": 333.3,
+      "unit": "g",
+      "resolvedGrams": 333.3,
+      "engineVersion": 1
+    },
+    "expectedResolvedGrams": 333.3,
+    "expectedNutrients": {
+      "kcal": 52.4493,
+      "protein_g": 55.236900000000006,
+      "fat_g": 59.5698,
+      "carbs_g": 60.8424,
+      "fibre_g": 61.99380000000001
+    }
+  }
+]
