@@ -1,0 +1,113 @@
+# 0005: Workout tracking, muscle heat model and body map, keylow-training-v1
+
+## Status
+
+Proposed, 2026-10-17. Accepted when Zee approves the pull request that carries it.
+
+## Context
+
+Ki-Lo gains a second pillar next to nutrition: a workout tracker. The user logs sessions and sets, sees a body map where each muscle glows hotter the more recently and heavily it was trained and cools down as it recovers, sees whether each muscle is under- or overtrained this week, and gets a suggested next session that serves their goal (for example a V-taper, which puts side delts and lats first, or strength, which puts the main lifts first). The user can also ignore suggestions and run their own routine on the days they pick.
+
+The shape follows the nutrition side on purpose: raw logs in Postgres, pure versioned maths in `@keylow/core`, and the screens only draw what core returns. This ADR fixes that shape, the muscle list, the heat and volume model, and the rendering path, so the milestones that build them do not renegotiate them. It implements nothing.
+
+The tables here are new. ADR 0003 freezes the nutrition schema only; these tables follow its conventions (Amendment 1 surrogate and audit columns, owner-only RLS with `(select auth.uid())`, pgTAP for every policy, cascade from `auth.users`).
+
+## Decision
+
+### The muscle list is the contract
+
+A fixed list of muscle ids, seeded by migration, global and read-only. The same ids name the regions of the 2D body map and the meshes of the 3D model, so the database, core and the renderer meet on them. The list is finer than most exercise databases where aesthetics need it (three delt heads, upper and lower chest, two glute regions):
+
+| Group     | Ids                                                                                |
+| --------- | ---------------------------------------------------------------------------------- |
+| Chest     | `chest_upper`, `chest_lower`                                                       |
+| Shoulders | `delt_front`, `delt_side`, `delt_rear`                                             |
+| Back      | `lats`, `traps_upper`, `traps_mid` (mid and lower traps, rhomboids), `lower_back`  |
+| Arms      | `biceps` (with brachialis), `triceps`, `forearms`                                  |
+| Core      | `abs`, `obliques`                                                                  |
+| Legs      | `glute_max`, `glute_med`, `quads`, `hamstrings`, `adductors`, `calves`, `tibialis` |
+| Neck      | `neck`                                                                             |
+
+Left and right are one muscle in v1: a unilateral set counts for the muscle once per side performed. Adding or splitting an id is a new list version, never an edit in place.
+
+### Tables
+
+- `muscles` (id text pk, group, size_class small|medium|large, position): global, seeded.
+- `exercises` (owner_id null for global, name, equipment, mechanic compound|isolation, source, source_ref, deleted_at): like `foods`, with user-owned rows writable only by their owner.
+- `exercise_muscles` (exercise_id, owner_id denormalised for RLS, muscle_id, role primary|secondary|stabiliser, weight numeric 0..1): the per-muscle share of a set. Bench press is `chest_lower 1.0, chest_upper 0.6, delt_front 0.5, triceps 0.5`. Every exercise has at least one primary muscle.
+- `workout_sessions` (user_id, started_at, ended_at, local_date, tz, routine_day_id null, note, deleted_at).
+- `workout_sets` (session_id, user_id, exercise_id, position, set_type warmup|working|drop|failure, reps, load_kg, rir null, rpe null, performed_at, snapshot jsonb, deleted_at). `snapshot` freezes the exercise's muscle map at log time, the same rule as food snapshots: editing an exercise's muscles never rewrites past heat.
+- `routines` (user_id, name, is_archived) and `routine_days` (routine_id, weekday null, position, name) and `routine_exercises` (routine_day_id, exercise_id, position, target_sets, rep_min, rep_max, target_rir).
+- `training_goals` (user_id, goal aesthetic|strength|hybrid, focus text[], days_per_week, session_minutes, equipment text[], experience beginner|intermediate|advanced, muscle_priority jsonb, answered_at): one current row per user, history kept like `targets`.
+
+The global exercise library is imported the CoFID way: a script in `packages/db/scripts`, a curated CSV in `packages/db/data/exercises/`, raw rows kept in a service-role table. The starting source is free-exercise-db (public domain), re-mapped by hand from its coarse groups onto the muscle list above and reviewed before import. wger (CC-BY-SA) is a secondary reference only and is not bulk-imported, to keep the share-alike licence out of the data.
+
+### The heat model (pure, versioned)
+
+Everything lives in `packages/core/src/training/**` under the ADR 0002 purity rule: no IO, no `Date.now()`, no randomness; `now` is an argument. Every tunable is in one `TrainingParams` object with `version: 'keylow-training-v1'`.
+
+Stimulus of one set on muscle `m`:
+
+```
+s = weight_m × effort(set)
+effort = 0 for a warm-up; 1 when rir ≤ 3 (or rpe ≥ 7, or rir unknown on a working set); 0.5 when rir is 4 or 5; 0.25 above 5
+```
+
+Acute fatigue and heat:
+
+```
+F_m(t)    = Σ s_j · exp(−(t − t_j) / τ_m)       over the sets of the last 14 days
+heat_m    = clamp(F_m / C_m, 0, 1)
+ready_at  = t + τ_m · ln(F_m / θ)  when F_m > θ, else now
+```
+
+Because fatigue decays exponentially from a dose-sized peak, more volume means a longer time to recovery with no extra rule.
+
+Chronic load: `weeklySets_m` is the effort-weighted set count of the last 7 days, compared with volume landmarks `MEV_m ≤ MAV_m ≤ MRV_m` to give `under | maintaining | productive | over`.
+
+Starting values, by size class (to be tuned; they are a starting point, not settled physiology):
+
+| Size class | Muscles                                                                 | τ (h) | C (sets) | MEV | MAV      | MRV |
+| ---------- | ----------------------------------------------------------------------- | ----- | -------- | --- | -------- | --- |
+| small      | delts, biceps, triceps, forearms, calves, tibialis, neck, abs, obliques | 24    | 8        | 6   | 10 to 16 | 22  |
+| medium     | chest, lats, traps, glute_med, adductors                                | 32    | 10       | 8   | 12 to 18 | 22  |
+| large      | quads, hamstrings, glute_max, lower_back                                | 40    | 10       | 6   | 10 to 16 | 20  |
+
+`θ = 0.25 × C_m`. A per-muscle override map exists in the params for when one muscle needs to differ from its class.
+
+Functions: `muscleState(sets, now, params)` returns `{ heat, readyAt, weeklySets, volumeStatus }` per muscle id; `weeklyVolume(sets, asOf, params)`; `suggestSession(state, goals, library, constraints, params)`.
+
+It runs on the client. The input is a few hundred sets at most, so unlike the nutrition check-in there is no Edge Function and nothing derived is persisted. A daily snapshot table can be added later if history charts need it.
+
+### Goals and suggestions
+
+The goal questionnaire writes `training_goals`. `muscle_priority` is derived in core from the answers through preset maps, versioned with the params: `aesthetic` with `v_taper` raises `delt_side`, `lats` and `chest_upper` and lowers direct `obliques` work; `strength` raises the muscles of the squat, bench, deadlift and overhead press and switches rep targets to lower ranges with load progression.
+
+`suggestSession` is deterministic. It scores each muscle as `priority × max(0, MAV_low − weeklySets) × (1 − heat)`, then greedily picks exercises from the library that cover the top-scoring muscles. It skips exercises whose primary muscles are hot (heat above a params threshold) and stays inside the session's minutes and equipment. When the day has a planned routine day, it keeps the plan and only swaps or adds exercises. Every suggestion carries its reasons as data (muscle ids and the numbers behind them), so the screen and any later assistant can explain it without recomputing.
+
+### The body map: 2D first, 3D behind the same interface
+
+One renderer contract on both apps: `BodyMap({ values: Record<MuscleId, number>, scale: 'heat' | 'volume', onSelect })`.
+
+1. **2D (first):** a front and back SVG with one path per muscle id, drawn with `react-native-svg` on mobile and inline SVG on web. Ships with the heat model and proves the logging loop.
+2. **3D (later):** `@react-three/fiber` with `drei` on web, and `@react-three/fiber/native` with `expo-gl` on mobile (the dev client allows the native module). The asset is a glTF binary of about 2 to 4 MB, male and female, each muscle a mesh named by its id. A Blender script in `tools/body-model` turns the source model into that file: decimate, rename, Draco or meshopt compression. Each muscle's material colour and emissive intensity follow its value on the scale. If draw calls become a problem, the fallback is one merged mesh with a per-vertex muscle id attribute and a shader that reads a uniform array of values. Tapping a muscle raycasts to its id and opens the same detail sheet as the 2D map.
+
+Two colour scales: `heat` is sequential (neutral at rest, through amber, to red at full heat, with a matching glow); `volume` is diverging (blue under, green productive, red over). The colours come from `@keylow/tokens` and are checked for contrast in light and dark.
+
+The source model is a human decision taken before the 3D milestone starts: Z-Anatomy or BodyParts3D (free, CC-BY-SA, attribution on the About screen, heavy cleanup) or a licensed commercial model whose licence allows bundling in an app.
+
+### Claude's role
+
+The heat model, volume status and suggestions are code, not model output. Training coaching (explaining why a session was suggested, tips, answering "am I overtraining my shoulders") is a later extension of the M8 assistant and follows its rules: behind the consent toggle, with evals in CI, cost caps, and no data from one account reaching another. It follows the M9 rule too: the model may propose, and core computes and verifies. The assistant reads `muscleState` and the suggestion's reasons through tools. It never invents a number.
+
+### Health data
+
+Training logs are health data under the project's Working conventions: no exercise name, load, reps or muscle value in logs, error reports or analytics (ids and counts only). Training tables are in the data export and are removed by account deletion.
+
+## Consequences
+
+- The training milestones implement the tables, `packages/core/src/training/**` and the `BodyMap` contract above without renegotiating them. The column lists here are a forward contract in the same sense as ADR 0003.
+- A change to `TrainingParams` values or the preset priority maps is a new version, not an edit of `keylow-training-v1`.
+- The muscle id list is shared by the database seed, core, the SVG and the 3D asset. Changing it means a new list version and a matching asset update.
+- The 2D map ships before the 3D model, so the 3D work is a renderer swap and never blocks the tracker.
+- Choosing the 3D source model and its licence is a human decision recorded before the 3D milestone starts.
