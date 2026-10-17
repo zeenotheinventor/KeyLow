@@ -3,9 +3,11 @@
 import { useProfileTimeZone } from "@keylow/api-client";
 import { DASHBOARD_LOAD_FAILED } from "@keylow/core/copy";
 
+import { DashboardBanners } from "../DashboardBanners";
 import { DashboardFrame } from "../DashboardFrame";
 import { DashboardLoading } from "../DashboardLoading";
 import { DashboardToday } from "../DashboardToday";
+import { ThisWeekLoading } from "../ThisWeekLoading";
 
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useIsOnline } from "@/lib/useIsOnline";
@@ -38,8 +40,12 @@ export function DashboardScreen() {
 
   if (timeZone.data === undefined) {
     return (
-      <DashboardFrame>
-        <DashboardLoading isOnline={isOnline} />
+      // Which day today is, and so which week, is not known yet: both cards are skeletons.
+      <DashboardFrame
+        banners={<DashboardBanners isOnline={isOnline} hasNoTarget={false} />}
+        aside={<ThisWeekLoading />}
+      >
+        <DashboardLoading />
       </DashboardFrame>
     );
   }

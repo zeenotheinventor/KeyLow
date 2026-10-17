@@ -1,35 +1,29 @@
 import { useDiaryDay, useTargets } from "@keylow/api-client";
-import {
-  DASHBOARD_LOAD_FAILED,
-  NO_TARGET_BANNER,
-  OFFLINE_BANNER,
-  describeDateInWords,
-} from "@keylow/core/copy";
+import { DASHBOARD_LOAD_FAILED, describeDateInWords } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { sumEntries } from "@keylow/core/diary";
-import { WifiOff } from "lucide-react";
 import { useState } from "react";
 
+import { DashboardBanners } from "../DashboardBanners";
 import { DashboardFrame } from "../DashboardFrame";
 import { DashboardLoading } from "../DashboardLoading";
+import { DashboardWeek } from "../DashboardWeek";
 import { NutritionCard } from "../NutritionCard";
 
 import type { DashboardTodayProps } from "./types";
 import type { DiaryDay } from "@keylow/api-client";
 
-import { Banner } from "@/components/ui/Banner";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { useNow } from "@/lib/useNow";
-
-const TARGETS_HREF = "/more/targets";
 
 /**
  * Today's card, once the profile's time zone is known: today's entries (the same query the diary reads,
  * so the two share the cache and agree) and the targets, added up by core. The dashboard layout has
  * already sent anyone who has not accepted the current Terms to the accept page, so every read here is
  * behind the terms gate. The header stays whatever the card is doing: a skeleton while it loads, the
- * offline notice over it when offline, and an error state with Try again in its place when a read failed.
+ * offline notice over the page when offline, and an error state with Try again in its place when a read
+ * failed. The This week card sits in the second column and reads, loads and fails on its own.
  */
 export function DashboardToday({ timeZone }: DashboardTodayProps) {
   const isOnline = useIsOnline();
@@ -53,13 +47,14 @@ export function DashboardToday({ timeZone }: DashboardTodayProps) {
     ]);
   }
 
+  // A refetch that fails keeps what is cached on screen: only a read that never produced data is a failure.
+  // A new day that fails while the last day is still shown is one too.
+  const hasFailed =
+    (dayQuery.isError && dayQuery.data === undefined) ||
+    (targetsQuery.isError && targets === undefined);
+
   function renderBody() {
-    // A refetch that fails keeps what is cached on screen: only a read that never produced data is a failure.
-    // A new day that fails while the last day is still shown is one too.
-    if (
-      (dayQuery.isError && dayQuery.data === undefined) ||
-      (targetsQuery.isError && targets === undefined)
-    ) {
+    if (hasFailed) {
       return (
         <ErrorState
           title={DASHBOARD_LOAD_FAILED.title}
@@ -71,29 +66,26 @@ export function DashboardToday({ timeZone }: DashboardTodayProps) {
       );
     }
     if (day === undefined || targets === undefined) {
-      return <DashboardLoading isOnline={isOnline} />;
+      return <DashboardLoading />;
     }
 
-    return (
-      <>
-        {targets.kcal === null && (
-          <Banner
-            title={NO_TARGET_BANNER.title}
-            action={{ label: NO_TARGET_BANNER.action, href: TARGETS_HREF }}
-            actionPlacement="below"
-          >
-            {NO_TARGET_BANNER.body}
-          </Banner>
-        )}
-        {isOnline ? null : (
-          <Banner title={OFFLINE_BANNER.title} icon={WifiOff}>
-            {OFFLINE_BANNER.body}
-          </Banner>
-        )}
-        <NutritionCard totals={sumEntries(day.entries)} targets={targets} />
-      </>
-    );
+    return <NutritionCard totals={sumEntries(day.entries)} targets={targets} />;
   }
 
-  return <DashboardFrame eyebrow={describeDateInWords(today)}>{renderBody()}</DashboardFrame>;
+  return (
+    <DashboardFrame
+      eyebrow={describeDateInWords(today)}
+      banners={
+        hasFailed ? null : (
+          <DashboardBanners
+            isOnline={isOnline}
+            hasNoTarget={day !== undefined && targets?.kcal === null}
+          />
+        )
+      }
+      aside={<DashboardWeek today={today} />}
+    >
+      {renderBody()}
+    </DashboardFrame>
+  );
 }

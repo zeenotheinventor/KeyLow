@@ -2,7 +2,7 @@ import { buildLogEntry, buildQuickEntry, buildRecipeLogEntry } from "@keylow/cor
 import { computeRecipe } from "@keylow/core/recipes";
 import { buildChickenAndRiceRecipe, buildFood } from "@keylow/core/testing";
 
-import type { DiaryDay, LogEntry, Targets } from "@keylow/api-client";
+import type { DayTotals, DiaryDay, DiaryWeekDay, LogEntry, Targets } from "@keylow/api-client";
 
 const FOOD_ID = "22222222-2222-4222-8222-222222222222";
 let entryCount = 0;
@@ -235,3 +235,61 @@ export function diaryDay(localDate: string, entries: LogEntry[], isComplete = fa
     totals: null,
   };
 }
+
+function totalsOf(
+  localDate: string,
+  [kcal, protein, carbs, fat]: [number, number, number, number],
+): DayTotals {
+  return {
+    local_date: localDate,
+    entry_count: 5,
+    kcal,
+    protein_g: protein,
+    carbs_g: carbs,
+    fat_g: fat,
+    fibre_g: null,
+    sat_fat_g: null,
+    sugars_g: null,
+    salt_g: null,
+  };
+}
+
+/** A day of a week as `useDiaryWeek` returns it: totals as [kcal, protein, carbs, fat], or null for a day with none. */
+export function weekDay(
+  localDate: string,
+  totals: [number, number, number, number] | null,
+  isComplete = false,
+): DiaryWeekDay {
+  return {
+    localDate,
+    totals: totals === null ? null : totalsOf(localDate, totals),
+    dayLog: isComplete
+      ? { local_date: localDate, is_complete: true, completed_at: null, note: null }
+      : null,
+  };
+}
+
+// The week on the web diary board: Monday 12 to Sunday 18 October 2026, today Thursday the 15th.
+export const boardWeek = [
+  weekDay("2026-10-12", [2140, 158, 214, 66], true),
+  weekDay("2026-10-13", [2260, 149, 231, 74], true),
+  weekDay("2026-10-14", [1286, 111, 129, 35]),
+  weekDay("2026-10-15", [1039, 86, 129, 19]),
+  weekDay("2026-10-16", null),
+  weekDay("2026-10-17", null),
+  weekDay("2026-10-18", null),
+];
+
+// The dashboard's over-target week: Wednesday is 2,988 and today 2,412, so the average is 2,450.
+export const overTargetWeek = [
+  weekDay("2026-10-12", [2140, 158, 214, 66], true),
+  weekDay("2026-10-13", [2260, 149, 231, 74], true),
+  weekDay("2026-10-14", [2988, 111, 129, 35]),
+  weekDay("2026-10-15", [2412, 86, 129, 19]),
+  weekDay("2026-10-16", null),
+  weekDay("2026-10-17", null),
+  weekDay("2026-10-18", null),
+];
+
+/** The same week with nothing logged on any day. */
+export const emptyWeek = boardWeek.map((day) => weekDay(day.localDate, null));

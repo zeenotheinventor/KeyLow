@@ -3,10 +3,10 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { diaryDay, targets } from "./support";
+import { boardWeek, diaryDay, targets, weekDay } from "./support";
 import { renderWithRouter } from "../ui/appRouter";
 
-import type { CopiedDay, DayTotals, DiaryDay, DiaryWeekDay, Targets } from "@keylow/api-client";
+import type { CopiedDay, DiaryDay, DiaryWeekDay, Targets } from "@keylow/api-client";
 
 import { DiaryScreen } from "@/components/diary";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -111,49 +111,6 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 }));
 
 const TODAY = "2026-10-15";
-
-function totalsOf(
-  localDate: string,
-  [kcal, protein, carbs, fat]: [number, number, number, number],
-): DayTotals {
-  return {
-    local_date: localDate,
-    entry_count: 5,
-    kcal,
-    protein_g: protein,
-    carbs_g: carbs,
-    fat_g: fat,
-    fibre_g: null,
-    sat_fat_g: null,
-    sugars_g: null,
-    salt_g: null,
-  };
-}
-
-function weekDay(
-  localDate: string,
-  totals: [number, number, number, number] | null,
-  isComplete = false,
-): DiaryWeekDay {
-  return {
-    localDate,
-    totals: totals === null ? null : totalsOf(localDate, totals),
-    dayLog: isComplete
-      ? { local_date: localDate, is_complete: true, completed_at: null, note: null }
-      : null,
-  };
-}
-
-// The week on the web diary board: Monday 12 to Sunday 18 October 2026, today Thursday the 15th.
-const boardWeek = [
-  weekDay("2026-10-12", [2140, 158, 214, 66], true),
-  weekDay("2026-10-13", [2260, 149, 231, 74], true),
-  weekDay("2026-10-14", [1286, 111, 129, 35]),
-  weekDay("2026-10-15", [1039, 86, 129, 19]),
-  weekDay("2026-10-16", null),
-  weekDay("2026-10-17", null),
-  weekDay("2026-10-18", null),
-];
 
 // The week before it, Monday 5 to Sunday 11 October, every day past.
 const earlierWeek = [5, 6, 7, 8, 9, 10, 11].map((day) =>

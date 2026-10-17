@@ -18,7 +18,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { WeekGrid } from "@/components/ui/WeekGrid";
-import { diaryHref } from "@/lib/diary";
+import { diaryHref, weekDayTotals } from "@/lib/diary";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
 import { useIsOnline } from "@/lib/useIsOnline";
 
@@ -98,18 +98,9 @@ export function DiaryWeek({ viewedDate, today, timeZone }: DiaryWeekProps) {
     return <Skeleton variant="rows" count={WEEK_ROWS} label={DIARY_LOADING_LABEL} />;
   }
 
-  // A nutrient no entry gave a value for reads as 0, as it does on the day's bars.
   const days: WeekGridDay[] = week.map((day) => ({
     localDate: day.localDate,
-    totals:
-      day.totals === null
-        ? null
-        : {
-            kcal: day.totals.kcal ?? 0,
-            protein_g: day.totals.protein_g ?? 0,
-            carbs_g: day.totals.carbs_g ?? 0,
-            fat_g: day.totals.fat_g ?? 0,
-          },
+    totals: weekDayTotals(day.totals),
     isComplete: day.dayLog?.is_complete ?? false,
   }));
   const title = describeWeekGridTitle(monday);
