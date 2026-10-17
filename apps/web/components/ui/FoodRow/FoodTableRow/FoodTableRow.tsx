@@ -1,6 +1,6 @@
 import { FOOD_ROW, NOT_GIVEN, describeDeleteFood, describeEditFood } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
-import { Pencil, Trash2 } from "lucide-react";
+import { ChefHat, Pencil, Trash2 } from "lucide-react";
 
 import type { FoodTableRowProps } from "../types";
 
@@ -24,6 +24,7 @@ export function FoodTableRow({
   caption,
   energy,
   macros,
+  recipeRowName,
   onEdit,
   onDelete,
   deleteDisabled = false,
@@ -34,6 +35,7 @@ export function FoodTableRow({
   return (
     <div
       role="row"
+      aria-label={recipeRowName}
       className={cn(
         "group/row min-h-[52px] border-t border-border py-2 transition-colors duration-quick hover:bg-hover-overlay focus-within:bg-hover-overlay",
         foodTableColumnsClassName,
@@ -41,7 +43,19 @@ export function FoodTableRow({
       )}
     >
       <div role="cell" className="flex min-w-0 flex-col">
-        <span className="line-clamp-2 text-body-strong">{name}</span>
+        {recipeRowName === undefined ? (
+          <span className="line-clamp-2 text-body-strong">{name}</span>
+        ) : (
+          // The board draws a recipe's name on one line, after a 16 px chef's hat.
+          <span className="flex min-w-0 items-center gap-[6px] text-body-strong">
+            <ChefHat
+              aria-hidden
+              className="size-4 shrink-0 text-text-muted"
+              strokeWidth={iconStroke}
+            />
+            <span className="truncate">{name}</span>
+          </span>
+        )}
         {caption !== undefined && (
           <span className="truncate text-caption tabular-nums text-text-muted">{caption}</span>
         )}

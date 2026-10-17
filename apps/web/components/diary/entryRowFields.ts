@@ -3,6 +3,7 @@ import {
   describeEntryCaption,
   describeLoggedAmount,
   describeRecipeLoggedAmount,
+  describeRecipeLoggedRowName,
 } from "@keylow/core/copy";
 import { formatClockTime } from "@keylow/core/dates";
 import { formatCalories } from "@keylow/core/format";
@@ -35,7 +36,7 @@ function nameAndAmount(entry: LogEntry): { name: string; amount: string } {
 
 /**
  * What a diary row is told about a logged entry, every text written by core: the food's or recipe's name
- * (a quick add's label, or "Quick add"), the caption of the time and amount, the energy and the macros. A value
+ * (a quick add's label, or "Quick add"), the caption of the time and amount, a recipe's row name, the energy and the macros. A value
  * the entry does not have is null (or undefined for the energy), and the rows say so in their own way.
  */
 export function entryRowFields(entry: LogEntry, timeZone: string) {
@@ -43,11 +44,17 @@ export function entryRowFields(entry: LogEntry, timeZone: string) {
   const { protein, carbs, fat, accessibleDescription } = describeMacros(entry.nutrients);
   const kcal = entry.nutrients.kcal;
   const hasAllMacros = protein !== null && carbs !== null && fat !== null;
+  const clockTime = formatClockTime(new Date(entry.logged_at), timeZone);
 
   return {
     name,
     nameSegments: [{ text: name, matched: false }],
-    caption: describeEntryCaption(formatClockTime(new Date(entry.logged_at), timeZone), amount),
+    caption: describeEntryCaption(clockTime, amount),
+    // Only a recipe entry has one: the rows of a food are named by what they hold.
+    recipeRowName:
+      entry.item_type === "recipe"
+        ? describeRecipeLoggedRowName(clockTime, entry.snapshot)
+        : undefined,
     energy: kcal === null ? undefined : formatCalories(kcal),
     // The table writes a dash for a macro that is not given, one at a time.
     cells: { protein, carbs, fat },

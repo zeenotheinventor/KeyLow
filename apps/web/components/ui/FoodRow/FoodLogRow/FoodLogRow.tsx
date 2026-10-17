@@ -1,6 +1,6 @@
 import { describeAddFood } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
-import { ChevronRight, Plus, Utensils } from "lucide-react";
+import { ChefHat, ChevronRight, Plus, Utensils } from "lucide-react";
 
 import { interactiveClasses } from "../rowStates";
 import { StatsLine } from "../StatsLine";
@@ -33,6 +33,7 @@ export function FoodLogRow({
   caption,
   energy,
   macros,
+  recipeRowName,
   needsReview = false,
   disabled = false,
   className,
@@ -42,6 +43,7 @@ export function FoodLogRow({
 }: FoodLogRowProps) {
   const name = nameSegments.map((segment) => segment.text).join("");
   const isSearch = layout === "search";
+  const isRecipe = recipeRowName !== undefined;
   const showsAdd = isSearch && onAdd !== undefined && !needsReview;
   const isAddInert = addDisabled || disabled;
 
@@ -71,10 +73,22 @@ export function FoodLogRow({
         </span>
       )}
       <span className={textColumnClasses[layout]}>
-        <span className={cn("line-clamp-2", isSearch ? "text-body" : "text-body-strong")}>
-          {title}
-          {brand !== undefined && <span className="text-text-muted"> · {brand}</span>}
-        </span>
+        {isRecipe ? (
+          // The board draws a recipe's name on one line, after a 16 px chef's hat.
+          <span className="flex min-w-0 items-center gap-[6px] text-body-strong">
+            <ChefHat
+              aria-hidden
+              className="size-4 shrink-0 text-text-muted"
+              strokeWidth={iconStroke}
+            />
+            <span className="truncate">{name}</span>
+          </span>
+        ) : (
+          <span className={cn("line-clamp-2", isSearch ? "text-body" : "text-body-strong")}>
+            {title}
+            {brand !== undefined && <span className="text-text-muted"> · {brand}</span>}
+          </span>
+        )}
         {caption !== undefined && (
           <span className="truncate text-caption tabular-nums text-text-muted">{caption}</span>
         )}
@@ -116,7 +130,10 @@ export function FoodLogRow({
   );
 
   return (
-    <li className={cn("flex items-center", disabled && "opacity-50", className)}>
+    <li
+      aria-label={recipeRowName}
+      className={cn("flex items-center", disabled && "opacity-50", className)}
+    >
       {row}
       {showsAdd && (
         <Button

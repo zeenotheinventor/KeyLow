@@ -166,6 +166,85 @@ describe("FoodRow table, without an edit to open", () => {
   });
 });
 
+const recipeRowName =
+  "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+
+const chickenAndRice: FoodTableRowProps = {
+  layout: "table",
+  nameSegments: [{ text: "Chicken and rice", matched: false }],
+  caption: "18:00 · 1 serving (275 g)",
+  energy: "374",
+  macros: { protein: "32", carbs: "43", fat: "8.1" },
+  recipeRowName,
+  onDelete: () => undefined,
+};
+
+function renderRecipe(props: Partial<FoodTableRowProps> = {}) {
+  render(
+    <FoodTable label="Foods at 18:00">
+      <FoodRow {...chickenAndRice} {...props} />
+    </FoodTable>,
+  );
+}
+
+describe("FoodRow table, for a logged recipe", () => {
+  it("should be named by the sentence it is given, not by its cells", () => {
+    renderRecipe();
+
+    expect(screen.getByRole("row", { name: recipeRowName })).toBeTruthy();
+  });
+
+  it("should put the chef's hat before the name, in the name cell", () => {
+    renderRecipe();
+
+    const [nameCell] = within(screen.getByRole("row", { name: recipeRowName })).getAllByRole(
+      "cell",
+    );
+
+    expect(nameCell?.querySelector("svg.lucide-chef-hat")).not.toBeNull();
+    expect(nameCell?.textContent).toBe("Chicken and rice18:00 · 1 serving (275 g)");
+  });
+
+  it("should draw the hat 16 px and muted, as a mark and not a tile", () => {
+    renderRecipe();
+
+    const hat = screen.getAllByRole("cell")[0]?.querySelector("svg.lucide-chef-hat");
+
+    expect(hat?.getAttribute("class")).toContain("size-4");
+    expect(hat?.getAttribute("class")).toContain("text-text-muted");
+    expect(hat?.getAttribute("aria-hidden")).toBe("true");
+  });
+
+  it("should keep the name to one line, ending in an ellipsis", async () => {
+    renderRecipe();
+
+    const name = screen.getByText("Chicken and rice");
+
+    expect(await compiled(name.className)).toContain("text-overflow: ellipsis");
+  });
+
+  it("should write the caption and the values as a food row does", () => {
+    renderRecipe();
+
+    const cells = within(screen.getByRole("row", { name: recipeRowName })).getAllByRole("cell");
+
+    expect(cells.slice(1, 5).map((cell) => cell.textContent)).toEqual([
+      "32 g",
+      "43 g",
+      "8.1 g",
+      "374 kcal",
+    ]);
+  });
+
+  it("should draw no chef's hat on a food, and name it by its cells", () => {
+    renderTable();
+
+    const row = screen.getByRole("row", { name: /Porridge oats/ });
+
+    expect(row.querySelector("svg.lucide-chef-hat")).toBeNull();
+  });
+});
+
 describe("FoodRow table", () => {
   it("should be a row of cells", () => {
     renderTable();

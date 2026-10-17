@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { oliveOil } from "./portionFoods";
 import {
+  boardRecipeTotal,
   diaryDay,
   noTargets,
   overTargetDay,
@@ -499,6 +500,113 @@ describe("the diary screen", () => {
 
       expect(recipe?.item_type).toBe("recipe");
       expect(deleteEntry.mutateAsync).toHaveBeenCalledExactlyOnceWith(recipe);
+    });
+
+    // The three amounts of the boards: by the serving, by grams, and by one and a half servings.
+    it.each([
+      {
+        amount: { quantity: 1, unit: "serving" as const },
+        caption: "18:00 · 1 serving (275 g)",
+        cells: ["32 g", "43 g", "8.1 g", "374 kcal"],
+        stats: ["374", "32 P", "43 C", "8.1 F"],
+        name: "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+      },
+      {
+        amount: { quantity: 300, unit: "g" as const },
+        caption: "18:00 · 300 g",
+        cells: ["35 g", "46 g", "8.9 g", "408 kcal"],
+        stats: ["408", "35 P", "46 C", "8.9 F"],
+        name: "18:00, Chicken and rice, recipe, 300 grams, 408 kilocalories, protein 35 grams, carbohydrate 46 grams, fat 8.9 grams",
+      },
+      {
+        amount: { quantity: 1.5, unit: "serving" as const },
+        caption: "18:00 · 1.5 servings (413 g)",
+        cells: ["47 g", "64 g", "12 g", "561 kcal"],
+        stats: ["561", "47 P", "64 C", "12 F"],
+        name: "18:00, Chicken and rice, recipe, 1.5 servings 413 grams, 561 kilocalories, protein 47 grams, carbohydrate 64 grams, fat 12 grams",
+      },
+    ])(
+      "should read $caption on both rows, named in words",
+      ({ amount, caption, cells, stats, name }) => {
+        showDay(TODAY, [
+          ...sampleDay(TODAY),
+          recipeEntry({ date: TODAY, time: "18:00", total: boardRecipeTotal, ...amount }),
+        ]);
+        renderDiary();
+
+        const tableRow = within(tableOf("18:00")).getByRole("row", { name });
+        const [nameCell, ...valueCells] = within(tableRow).getAllByRole("cell");
+        const stacked = within(screen.getByRole("region", { name: "Foods at 18:00" })).getByRole(
+          "listitem",
+          { name },
+        );
+
+        expect(nameCell?.textContent).toBe(`Chicken and rice${caption}`);
+        expect(valueCells.slice(0, 4).map((cell) => cell.textContent)).toEqual(cells);
+        expect(within(stacked).getByText(caption)).toBeTruthy();
+        for (const stat of stats) {
+          expect(within(stacked).getByText(stat)).toBeTruthy();
+        }
+      },
+    );
+
+    it("should be the only row at 18:00 that carries the chef's hat", () => {
+      showDayWithRecipe();
+      renderDiary();
+
+      expect(tableOf("18:00").querySelectorAll("svg.lucide-chef-hat")).toHaveLength(1);
+      expect(tableOf("08:00").querySelector("svg.lucide-chef-hat")).toBeNull();
+      expect(tableOf("12:00").querySelector("svg.lucide-chef-hat")).toBeNull();
+    });
+
+    it("should add the serving to every bar of the sample day: 1,413 kcal, P 118, C 172, F 27", () => {
+      showDay(TODAY, [
+        ...sampleDay(TODAY),
+        recipeEntry({ date: TODAY, time: "18:00", total: boardRecipeTotal }),
+      ]);
+      renderDiary();
+
+      expect(strip().getAttribute("aria-label")).toBe(
+        "Targets. Calories: 1,413 of 2,200 kilocalories. Protein: 118 of 160 grams. Carbohydrate: 172 of 220 grams. Fat: 27 of 70 grams",
+      );
+    });
+
+    it("should bring the recipe back with Undo after its Delete", async () => {
+      showDayWithRecipe();
+      renderDiary();
+      const recipe = entryOnShow(7);
+
+      fireEvent.click(
+        within(tableOf("18:00")).getByRole("button", { name: "Delete Chicken and rice" }),
+      );
+      fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
+
+      expect(restoreEntry.mutateAsync).toHaveBeenCalledExactlyOnceWith(recipe);
+    });
+
+    it("should look the same once Copy yesterday has copied it onto an empty day", () => {
+      showDay(TODAY, []);
+      showDay("2026-10-14", [
+        recipeEntry({ date: "2026-10-14", time: "18:00", total: boardRecipeTotal }),
+      ]);
+      const view = renderDiary();
+      const copied: CopiedDay = { localDate: TODAY, count: 1, entryIds: ["a"] };
+
+      fireEvent.click(screen.getByRole("button", { name: "Copy yesterday" }));
+      act(() => {
+        showDay(TODAY, [recipeEntry({ date: TODAY, time: "18:00", total: boardRecipeTotal })]);
+        copyDay.mutate.mock.calls[0]?.[1].onSuccess(copied);
+      });
+      act(() => {
+        view.redraw();
+      });
+
+      const row = within(tableOf("18:00")).getByRole("row", {
+        name: "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+      });
+      expect(within(row).getByText("18:00 · 1 serving (275 g)")).toBeTruthy();
+      expect(row.querySelector("svg.lucide-chef-hat")).not.toBeNull();
+      expect(within(row).queryByRole("button", { name: "Edit Chicken and rice" })).toBeNull();
     });
   });
 

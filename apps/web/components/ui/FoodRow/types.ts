@@ -53,6 +53,12 @@ export type FoodLogRowProps = {
   macros?: FoodRowMacros | undefined;
   /** The line under the name: the time and amount ("08:05 · 50 g") or the serving ("1 breast (150 g)"). It is one line. */
   caption?: string | undefined;
+  /**
+   * Makes a `stacked` row a logged recipe's: a chef's hat before the name, which stays on one line, and
+   * this sentence as the row's name ("18:00, Chicken and rice, recipe, 1 serving 275 grams, ..."). Leave
+   * it out for a food.
+   */
+  recipeRowName?: string | undefined;
   /** The food is missing a macro. The stats line says "Needs review" in place of the macros, and the add button gives way to a chevron. */
   needsReview?: boolean | undefined;
   /** Dims the row and stops it, and its add button, responding. */
@@ -93,6 +99,12 @@ export type FoodTableRowProps = {
   energy?: string | undefined;
   /** The macros as `formatGrams` writes them. The table adds the unit. */
   macros: FoodTableRowMacros;
+  /**
+   * Makes the row a logged recipe's: a chef's hat before the name, which stays on one line, and this
+   * sentence as the row's name ("18:00, Chicken and rice, recipe, 1 serving 275 grams, ..."). Leave it
+   * out for a food and the row is named by its cells.
+   */
+  recipeRowName?: string | undefined;
   /** Shows the Edit button. Leave it out when there is no edit to open yet, and only Delete is drawn. */
   onEdit?: (() => void) | undefined;
   onDelete: () => void;
