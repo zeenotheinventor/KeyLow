@@ -1,6 +1,8 @@
-import { FOOD_MACRO_LABELS, FOOD_ROW } from "@keylow/core/copy";
+import { FOOD_MACRO_LABELS, FOOD_ROW, RECIPES_TABLE } from "@keylow/core/copy";
 
-import { foodTableColumnsClassName } from "./columns";
+import { foodTableColumnsClassName, recipeTableColumnsClassName } from "./columns";
+
+import type { FoodTableHeaderProps } from "./types";
 
 import { cn } from "@/lib/utils";
 
@@ -15,18 +17,26 @@ const macroColumns = [
  * The column headings of an hour's foods at the wide width: Food, a coloured dot with each macro, and
  * kcal, and a heading for the actions that is only read out. `FoodTable` puts it above the rows; use
  * this directly only to compose a table of your own, as the first row inside its `role="table"`. It is
- * hidden at the narrow width, where the stacked rows take over.
+ * hidden at the narrow width, where the stacked rows take over. The `recipe` variant heads the recipe
+ * library's table: Recipe and Servings in place of Food.
  */
-export function FoodTableHeader() {
+export function FoodTableHeader({ variant = "food" }: FoodTableHeaderProps) {
+  const isRecipe = variant === "recipe";
+
   return (
     <div
       role="row"
       className={cn(
-        foodTableColumnsClassName,
+        isRecipe ? recipeTableColumnsClassName : foodTableColumnsClassName,
         "pb-1 pt-2 text-caption text-text-muted max-md:hidden",
       )}
     >
-      <span role="columnheader">{FOOD_ROW.foodColumn}</span>
+      <span role="columnheader">{isRecipe ? RECIPES_TABLE.recipe : FOOD_ROW.foodColumn}</span>
+      {isRecipe && (
+        <span role="columnheader" className="text-right">
+          {RECIPES_TABLE.servings}
+        </span>
+      )}
       {macroColumns.map(({ label, dotClassName }) => (
         <span key={label} role="columnheader" className="flex items-center justify-end gap-[6px]">
           <span aria-hidden className={cn("size-[6px] shrink-0 rounded-[2px]", dotClassName)} />

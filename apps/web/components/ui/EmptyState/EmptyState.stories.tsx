@@ -35,6 +35,16 @@ export const WithLinkAction: Story = {
   args: { action: { label: "Create a food", icon: Plus, href: "/foods/new" } },
 };
 
+// The first thing to do on a page that has nothing yet, such as the first recipe, is a primary button.
+export const PrimaryAction: Story = {
+  args: {
+    icon: ChefHat,
+    title: "No recipes yet",
+    body: "Add the foods and the method once, then log it by the serving.",
+    action: { label: "New recipe", icon: Plus, variant: "primary", href: "/recipes/new" },
+  },
+};
+
 // A part of a page, such as the failed search on the foods page.
 export const Section: Story = { args: { size: "section" } };
 

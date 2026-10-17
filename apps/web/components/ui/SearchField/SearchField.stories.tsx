@@ -51,6 +51,18 @@ export const WithoutBarcode: Story = {
   render: () => <SearchField label="Search foods" placeholder="Name or brand" />,
 };
 
+// The clear button shows once the field holds text. A screen that wants one passes it.
+export const WithClear: Story = {
+  render: () => (
+    <SearchField
+      label="Search recipes"
+      value="chi"
+      onChange={() => undefined}
+      clear={{ label: "Clear search", onClick: () => undefined }}
+    />
+  ),
+};
+
 export const Disabled: Story = { args: { disabled: true } };
 
 export const Compact: Story = {

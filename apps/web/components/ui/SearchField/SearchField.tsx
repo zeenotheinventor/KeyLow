@@ -1,9 +1,10 @@
 import { iconStroke } from "@keylow/tokens";
 import { cva } from "class-variance-authority";
-import { ScanBarcode, Search } from "lucide-react";
+import { CircleX, ScanBarcode, Search } from "lucide-react";
 
 import type {
   BarcodeButton,
+  ClearButton,
   SearchFieldProps,
   SearchLauncherProps,
   SearchLauncherSize,
@@ -84,10 +85,32 @@ function BarcodeIconButton({
   );
 }
 
+// The clear button is 36 px square, as the recipes boards draw it, and sits inside the field's right padding.
+function ClearIconButton({
+  button,
+  disabled,
+}: {
+  button: ClearButton;
+  disabled: boolean | undefined;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={button.label}
+      disabled={disabled}
+      onClick={button.onClick}
+      className="flex size-9 shrink-0 items-center justify-center rounded-small text-text-secondary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay focus-visible:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring"
+    >
+      <CircleX aria-hidden className="size-5" strokeWidth={iconStroke} />
+    </button>
+  );
+}
+
 export function SearchField({
   label,
   size = "md",
   barcodeButton,
+  clear,
   className,
   ...inputProps
 }: SearchFieldProps) {
@@ -103,6 +126,9 @@ export function SearchField({
         )}
         {...inputProps}
       />
+      {clear !== undefined && typeof inputProps.value === "string" && inputProps.value !== "" && (
+        <ClearIconButton button={clear} disabled={inputProps.disabled} />
+      )}
       {barcodeButton !== undefined && <BarcodeIconButton button={barcodeButton} size={size} />}
     </div>
   );

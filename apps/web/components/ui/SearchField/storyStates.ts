@@ -5,6 +5,7 @@ export const storyStates = [
   "BarcodeFocused",
   "BarcodeOpen",
   "WithoutBarcode",
+  "WithClear",
   "Disabled",
   "Compact",
   "Launcher",

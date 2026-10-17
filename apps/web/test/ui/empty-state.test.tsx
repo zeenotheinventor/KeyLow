@@ -198,3 +198,41 @@ describe("ErrorState", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 });
+
+describe("EmptyState action variant", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("should draw the action as a secondary button unless told otherwise", () => {
+    render(
+      <EmptyState
+        icon={SearchX}
+        title="No foods found"
+        action={{ label: "Create", onClick: () => undefined }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Create" }).className).toContain("bg-surface-raised");
+  });
+
+  it("should draw the action as a primary button when asked, as a button or a link", () => {
+    renderWithRouter(
+      <>
+        <EmptyState
+          icon={SearchX}
+          title="No recipes yet"
+          action={{ label: "New recipe", variant: "primary", onClick: () => undefined }}
+        />
+        <EmptyState
+          icon={SearchX}
+          title="No recipes yet"
+          action={{ label: "Go", variant: "primary", href: "/recipes/new" }}
+        />
+      </>,
+    );
+
+    expect(screen.getByRole("button", { name: "New recipe" }).className).toContain("bg-accent");
+    expect(screen.getByRole("link", { name: "Go" }).className).toContain("bg-accent");
+  });
+});

@@ -27,4 +27,8 @@ export const storyStates = [
   "TableHover",
   "TableFocused",
   "TableDeleteDisabled",
+  "Recipe",
+  "RecipeMatched",
+  "RecipeLongTitle",
+  "RecipeTable",
 ];

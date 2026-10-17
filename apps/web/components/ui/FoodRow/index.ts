@@ -4,8 +4,11 @@ export type {
   FoodNameSegment,
   FoodRowContent,
   FoodRowLayout,
+  FoodRowMacroValues,
   FoodRowMacros,
   FoodRowProps,
   FoodTableRowMacros,
   FoodTableRowProps,
+  RecipeRowProps,
+  RecipeTableRowProps,
 } from "./types";
