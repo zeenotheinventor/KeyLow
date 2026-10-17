@@ -322,6 +322,28 @@ describe("IconButton", () => {
     );
   });
 
+  describe("tone", () => {
+    it.each(schemes)(
+      "should draw the glyph in primary text unless asked for secondary, in the %s scheme",
+      async (scheme) => {
+        await renderIconButton({ variant: "ghost" }, scheme);
+
+        await screen.findByRole("button", { name: "Close" });
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-primary"]);
+      },
+    );
+
+    it.each(schemes)(
+      "should draw the glyph in secondary text when asked, on any variant, in the %s scheme",
+      async (scheme) => {
+        await renderIconButton({ variant: "ghost", tone: "secondary" }, scheme);
+
+        await screen.findByRole("button", { name: "Close" });
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-secondary"]);
+      },
+    );
+  });
+
   describe.each(schemes)("in the %s scheme", (scheme) => {
     it("should draw the secondary variant on a raised surface with a border", async () => {
       await renderIconButton({ variant: "secondary" }, scheme);

@@ -3,7 +3,13 @@ import { act, fireEvent, render, screen, userEvent } from "@testing-library/reac
 import { AccessibilityInfo, Pressable, Text } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
-import { Toast, ToastProvider, useToast, useToastClearance } from "../../components/ui";
+import {
+  Toast,
+  ToastProvider,
+  useToast,
+  useToastAboveBar,
+  useToastClearance,
+} from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -578,5 +584,131 @@ describe("useToastClearance", () => {
     await expect(render(<ScreenWithBar height={57} />)).rejects.toThrow(
       "useToastClearance must be used inside a ToastProvider",
     );
+  });
+});
+
+// A screen with no tab bar and a bar of its own standing on its bottom edge, such as the recipe editor's Save dock.
+function ScreenWithBottomBar({ height }: { height: number }) {
+  useToastAboveBar(height);
+  return null;
+}
+
+describe("useToastAboveBar", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    registerAppStyles(kitStyles);
+    setReduceMotion(false);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  function renderWithBottomBar(height: number) {
+    return render(
+      inScheme(
+        "dark",
+        <ToastProvider>
+          <ScreenWithBottomBar height={height} />
+          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
+        </ToastProvider>,
+      ),
+    );
+  }
+
+  it("should sit 12 points above the bar when the screen has no tab bar under it", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await renderWithBottomBar(111);
+
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: 111 + 12 });
+  });
+
+  it("should leave the toast where it was while the bar is not measured", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await renderWithBottomBar(0);
+
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 12 });
+  });
+});
+
+// A screen with a button that takes the toast down, as opening a page over the screen does.
+function DismissScreen() {
+  const { show, dismiss } = useToast();
+  return (
+    <>
+      <ToastButton
+        name="Delete"
+        options={{ message: "Entry deleted", actionLabel: "Undo", onAction: () => undefined }}
+        show={show}
+      />
+      <Pressable role="button" onPress={dismiss}>
+        <Text>Open page</Text>
+      </Pressable>
+    </>
+  );
+}
+
+describe("dismiss", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    registerAppStyles(kitStyles);
+    setReduceMotion(false);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("should take the toast and its action down at once", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await render(
+      inScheme(
+        "dark",
+        <ToastProvider>
+          <DismissScreen />
+        </ToastProvider>,
+      ),
+    );
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+    expect(screen.getByText("Entry deleted")).toBeOnTheScreen();
+
+    await user.press(screen.getByRole("button", { name: "Open page" }));
+
+    expect(screen.queryByText("Entry deleted")).not.toBeOnTheScreen();
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeOnTheScreen();
+  });
+
+  it("should do nothing when there is no toast", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await render(
+      inScheme(
+        "dark",
+        <ToastProvider>
+          <DismissScreen />
+        </ToastProvider>,
+      ),
+    );
+
+    await user.press(screen.getByRole("button", { name: "Open page" }));
+
+    expect(screen.queryByTestId("toast")).not.toBeOnTheScreen();
   });
 });

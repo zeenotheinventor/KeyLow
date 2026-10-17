@@ -12,6 +12,7 @@ const directories = [
   "components/RecipeLoadState",
   "components/RecipeDetailsFields",
   "components/RecipeIngredientsSection",
+  "components/IngredientAmountStep",
   "components/PerServingCard",
   "components/DiscardRecipeSheet",
   "app/recipes",
@@ -20,6 +21,7 @@ const directories = [
 const sourceFiles = [
   "lib/recipeRoutes.ts",
   "lib/useSettledValue.ts",
+  "lib/ingredientFromAmount.ts",
   ...directories.flatMap((directory) =>
     readdirSync(directory, { encoding: "utf8" })
       .filter((file) => /\.tsx?$/.test(file))

@@ -1,19 +1,26 @@
-import { RECIPE_EDITOR, describeCountSuffix } from "@keylow/core/copy";
+import {
+  RECIPE_EDITOR,
+  describeCountSuffix,
+  describeIngredientRowName,
+  describeRemoveIngredient,
+} from "@keylow/core/copy";
 import { View } from "react-native";
 
-import { FieldError, FoodRow, GroupedList, Text } from "../ui";
+import { FieldError, FoodRow, GroupedList, IconButton, Text } from "../ui";
 import { ingredientRowFields } from "./ingredientRowFields";
 
 import type { RecipeIngredientsSectionProps } from "./types";
 
 /**
- * The Ingredients section of the recipe editor, read only until ingredients can be added: the heading with
- * its count, the line under it (the empty line, or what is wrong with the ingredients after a failed Save),
- * and a card of rows, each with the amount and what it comes to.
+ * The Ingredients section of the recipe editor: the heading with its count, the line under it (the empty
+ * line, or what is wrong with the ingredients after a failed Save), and a card of rows, each with the amount
+ * and what it comes to. A row opens the ingredient's amount step, and the X beside it removes it at once.
  */
 export function RecipeIngredientsSection({
   ingredients,
   problems,
+  onOpen,
+  onRemove,
   sectionRef,
   headingRef,
 }: RecipeIngredientsSectionProps) {
@@ -52,6 +59,22 @@ export function RecipeIngredientsSection({
               macros={row.macros}
               nameSegments={row.nameSegments}
               needsReview={row.macros === undefined}
+              openLabel={describeIngredientRowName(row.name, row.amount)}
+              trailing={
+                <IconButton
+                  className="mr-1"
+                  icon="X"
+                  label={describeRemoveIngredient(row.name)}
+                  tone="secondary"
+                  variant="ghost"
+                  onPress={() => {
+                    onRemove(position);
+                  }}
+                />
+              }
+              onPress={() => {
+                onOpen(position);
+              }}
             />
           ))}
         </GroupedList>

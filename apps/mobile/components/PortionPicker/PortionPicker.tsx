@@ -4,6 +4,7 @@ import {
   FOOD_FORM,
   FOOD_REVIEW_BANNER,
   PORTION_PICKER,
+  RECIPE_EDITOR,
   SAVE_FAILED_BANNER,
   describeMissingValuesBeforeLogging,
   describePortionUnit,
@@ -48,21 +49,17 @@ import type { PickerChoices } from "@keylow/core/diary";
  * under a Back control, what the chosen amount comes to in the hero, the food's own values per 100 g, and at
  * the bottom the amount, its unit, the Time row and Add. The amount, the unit and the time are inputs the
  * picker keeps, and Add is the only part that belongs to adding: it hands them over with `onSubmit`. A food
- * that must be reviewed first has Copy to your foods in place of Add and no Time row.
+ * that must be reviewed first has Copy to your foods in place of Add and no Time row. An ingredient already in
+ * a recipe has the logged entry's page without the Time row, with Save and Remove from recipe: nothing is
+ * logged or saved, so it works offline.
  */
 export function PortionPicker(props: PortionPickerProps) {
-  const {
-    food,
-    time,
-    isNow,
-    note,
-    isSaving,
-    hasSaveError,
-    isOnline = true,
-    onSubmit,
-    onBack,
-  } = props;
-  const isEditing = props.mode === "edit";
+  const { food, onBack } = props;
+  // The pages that log a food at a time. An ingredient's amount step is not one.
+  const logging = props.mode === "edit-ingredient" ? undefined : props;
+  const isOnline = logging?.isOnline ?? true;
+  // A logged entry and an ingredient are worked from the snapshot they were saved with.
+  const isFromSnapshot = props.mode !== "add";
   const insets = useSafeAreaInsets();
   const frameRef = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
@@ -71,14 +68,14 @@ export function PortionPicker(props: PortionPickerProps) {
   // food's portions, while its hero is worked out from the snapshot alone. The hero gets the portions the chips
   // came from.
   const choices: PickerChoices =
-    props.mode === "edit"
-      ? entryPickerChoices(props.snapshot, props.livePortions)
-      : pickerChoices(food, props.portions);
-  const amountFood = props.mode === "edit" ? snapshotAsFood(props.snapshot) : food;
+    props.mode === "add"
+      ? pickerChoices(food, props.portions)
+      : entryPickerChoices(props.snapshot, props.livePortions);
+  const amountFood = props.mode === "add" ? food : snapshotAsFood(props.snapshot);
   const [start] = useState(() =>
-    props.mode === "edit"
-      ? snapshotAmountStart(props.snapshot)
-      : startingAmount(food, choices.portions, props.initialAmount),
+    props.mode === "add"
+      ? startingAmount(food, choices.portions, props.initialAmount)
+      : snapshotAmountStart(props.snapshot),
   );
   const [quantityText, setQuantityText] = useState(start.quantity);
   const [unitValue, setUnitValue] = useState(start.unitValue);
@@ -87,13 +84,13 @@ export function PortionPicker(props: PortionPickerProps) {
     setQuantityText(amountOnUnitChange(unitValue, next, quantityText));
     setUnitValue(next);
   };
-  const [chosenTime, setChosenTime] = useState(time);
-  const [isTimeStillNow, setIsTimeStillNow] = useState(isNow);
+  const [chosenTime, setChosenTime] = useState(logging?.time ?? "");
+  const [isTimeStillNow, setIsTimeStillNow] = useState(logging?.isNow ?? false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
   const { amount, hero } = previewAmount(amountFood, choices.portions, unitValue, quantityText);
   // A logged entry keeps the values it was saved with, so the food's own review does not apply to it.
-  const needsReview = !isEditing && foodNeedsReview(food);
+  const needsReview = !isFromSnapshot && foodNeedsReview(food);
   const chosenPortion = choices.portions.find((portion) => portion.id === unitValue);
   const unitSuffix =
     chosenPortion === undefined
@@ -133,12 +130,14 @@ export function PortionPicker(props: PortionPickerProps) {
               />
             ) : null}
             {props.mode === "edit" ? props.banner : null}
-            {hasSaveError ? <Banner sentence title={SAVE_FAILED_BANNER} variant="error" /> : null}
-            {note === undefined ? null : (
+            {logging?.hasSaveError === true ? (
+              <Banner sentence title={SAVE_FAILED_BANNER} variant="error" />
+            ) : null}
+            {logging?.note === undefined ? null : (
               <View className="flex-row items-center gap-2">
                 <Badge kind="source" source={food.source} />
                 <Text tone="muted" variant="caption">
-                  {note}
+                  {logging.note}
                 </Text>
               </View>
             )}
@@ -178,28 +177,35 @@ export function PortionPicker(props: PortionPickerProps) {
               </Button>
             ) : (
               <>
-                <TimeRow
-                  isNow={isTimeStillNow}
-                  open={isTimePickerOpen}
-                  time={chosenTime}
-                  onPress={() => {
-                    setIsTimePickerOpen(true);
-                  }}
-                />
+                {logging === undefined ? null : (
+                  <TimeRow
+                    isNow={isTimeStillNow}
+                    open={isTimePickerOpen}
+                    time={chosenTime}
+                    onPress={() => {
+                      setIsTimePickerOpen(true);
+                    }}
+                  />
+                )}
                 <View className="gap-1">
                   <Button
                     fullWidth
                     disabled={amount === null || !isOnline}
                     haptic="confirm"
-                    loading={isSaving}
+                    loading={logging?.isSaving ?? false}
                     size="lg"
                     onPress={() => {
-                      if (amount !== null) {
-                        onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
+                      if (amount === null) {
+                        return;
+                      }
+                      if (props.mode === "edit-ingredient") {
+                        props.onSubmit(amount);
+                      } else {
+                        props.onSubmit({ ...amount, time: chosenTime, isNow: isTimeStillNow });
                       }
                     }}
                   >
-                    {isEditing ? ENTRY_SCREEN.saveAction : PORTION_PICKER.addAction}
+                    {isFromSnapshot ? ENTRY_SCREEN.saveAction : PORTION_PICKER.addAction}
                   </Button>
                   {props.mode === "edit" ? (
                     <Button
@@ -213,22 +219,35 @@ export function PortionPicker(props: PortionPickerProps) {
                       {ENTRY_SCREEN.deleteAction}
                     </Button>
                   ) : null}
+                  {props.mode === "edit-ingredient" ? (
+                    <Button
+                      fullWidth
+                      icon="Trash2"
+                      tone="danger"
+                      variant="ghost"
+                      onPress={props.onRemove}
+                    >
+                      {RECIPE_EDITOR.removeFromRecipe}
+                    </Button>
+                  ) : null}
                 </View>
               </>
             )}
           </View>
         </View>
-        <TimePicker
-          open={isTimePickerOpen}
-          value={chosenTime}
-          onChange={(next) => {
-            setChosenTime(next);
-            setIsTimeStillNow(false);
-          }}
-          onClose={() => {
-            setIsTimePickerOpen(false);
-          }}
-        />
+        {logging === undefined ? null : (
+          <TimePicker
+            open={isTimePickerOpen}
+            value={chosenTime}
+            onChange={(next) => {
+              setChosenTime(next);
+              setIsTimeStillNow(false);
+            }}
+            onClose={() => {
+              setIsTimePickerOpen(false);
+            }}
+          />
+        )}
       </KeyboardAvoidingView>
     </View>
   );

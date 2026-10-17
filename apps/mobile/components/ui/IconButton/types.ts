@@ -11,6 +11,9 @@ export type IconButtonVariant = "secondary" | "ghost" | "ring";
 /** Medium is a 44 point square. Small is a 36 point square that still reaches a 44 point touch target. */
 export type IconButtonSize = "md" | "sm";
 
+/** The text tones a glyph can be drawn in. */
+export type IconButtonTone = "primary" | "secondary";
+
 export type IconButtonProps = {
   icon: IconName;
   /**
@@ -24,6 +27,11 @@ export type IconButtonProps = {
   variant?: IconButtonVariant;
   /** Defaults to `md`. */
   size?: IconButtonSize;
+  /**
+   * The colour of the glyph: primary text, or secondary text for a quiet control such as the X on an
+   * ingredient row. The ring is always secondary. Defaults to `primary`.
+   */
+  tone?: IconButtonTone;
   /** Dims the button to 40 percent and stops it responding, with no motion. */
   disabled?: boolean;
   /**

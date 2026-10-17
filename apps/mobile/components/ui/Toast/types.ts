@@ -39,6 +39,8 @@ export type ToastOptions = Pick<
 export type ToastContextValue = {
   /** Shows a toast. One shows at a time, so a new toast replaces the current one. */
   show: (options: ToastOptions) => void;
+  /** Takes the current toast down at once, with its action, such as when a page opens over the screen. */
+  dismiss: () => void;
 };
 
 export type ToastProviderProps = {

@@ -19,6 +19,11 @@ export type PortionSelection = ChosenAmount & {
 
 type PortionPickerBaseProps = {
   food: Food;
+  onBack: () => void;
+};
+
+/** What the pages that log a food at a time have beyond the base: the Time row, and saving. */
+type PortionPickerLoggingProps = PortionPickerBaseProps & {
   /** The Time row's time as `HH:mm` when the picker opens. */
   time: string;
   /** The row reads "Now · 12:40" and not "12:40", until the person chooses a time. */
@@ -32,11 +37,10 @@ type PortionPickerBaseProps = {
   /** False while the connection is lost: Add, Save and Delete stop responding. Defaults to true. */
   isOnline?: boolean | undefined;
   onSubmit: (selection: PortionSelection) => void;
-  onBack: () => void;
 };
 
 /** The page for a food that is about to be logged: Add, or Copy to your foods for a food that must be reviewed first. */
-type PortionPickerAddProps = PortionPickerBaseProps & {
+type PortionPickerAddProps = PortionPickerLoggingProps & {
   mode: "add";
   /** The food's own portions. The picker adds g and, for a food measured by volume, ml and the spoons. */
   portions: readonly FoodPortion[];
@@ -52,7 +56,7 @@ type PortionPickerAddProps = PortionPickerBaseProps & {
  * work from `snapshot`, so a change to the live food never reaches them; the live food only decides which
  * portions the chips offer.
  */
-type PortionPickerEditProps = PortionPickerBaseProps & {
+type PortionPickerEditProps = PortionPickerLoggingProps & {
   mode: "edit";
   /** What the entry was logged with. */
   snapshot: FoodSnapshot;
@@ -69,4 +73,21 @@ type PortionPickerEditProps = PortionPickerBaseProps & {
   caption?: string | undefined;
 };
 
-export type PortionPickerProps = PortionPickerAddProps | PortionPickerEditProps;
+/**
+ * The amount step of an ingredient already in a recipe (the picker's ingredient mode): the same page as a
+ * logged entry's, from the ingredient's own snapshot, with no Time row and nothing saved. Save hands the
+ * amount over, and "Remove from recipe" sits under it in place of Delete. Both work offline, because they
+ * change the recipe's draft and not the database.
+ */
+type PortionPickerEditIngredientProps = PortionPickerBaseProps & {
+  mode: "edit-ingredient";
+  /** What the ingredient was added with. */
+  snapshot: FoodSnapshot;
+  /** The food's portions as they are now, as for a logged entry. Leave it out while they are not known. */
+  livePortions?: LiveFoodPortions | undefined;
+  onSubmit: (amount: ChosenAmount) => void;
+  onRemove: () => void;
+};
+
+export type PortionPickerProps =
+  PortionPickerAddProps | PortionPickerEditProps | PortionPickerEditIngredientProps;

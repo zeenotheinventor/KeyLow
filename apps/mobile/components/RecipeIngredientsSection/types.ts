@@ -8,6 +8,10 @@ export type RecipeIngredientsSectionProps = {
   problems: readonly string[];
   /** The section itself, so the screen can scroll to it when the ingredients are the first thing wrong. */
   sectionRef: Ref<View>;
+  /** Opens the amount step of the ingredient at this place. */
+  onOpen: (position: number) => void;
+  /** Removes the ingredient at this place. */
+  onRemove: (position: number) => void;
   /** The heading, so the screen can move a screen reader's focus to it when the ingredients are the first thing wrong. */
   headingRef: Ref<View>;
 };

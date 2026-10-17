@@ -263,7 +263,7 @@ describe("the recipe editor", () => {
       );
     });
 
-    it("should list the ingredients, counted in the heading, with nothing to press or remove", async () => {
+    it("should list the ingredients, counted in the heading, each to open and to remove", async () => {
       await showEditor({ existing: chickenAndRice });
 
       expect(screen.getByRole("heading", { name: "Ingredients · 3" })).toBeOnTheScreen();
@@ -272,7 +272,11 @@ describe("the recipe editor", () => {
       expect(list.getByText("500 g")).toBeOnTheScreen();
       expect(list.getByText("Dry rice")).toBeOnTheScreen();
       expect(list.getByText("Olive oil")).toBeOnTheScreen();
-      expect(list.queryByRole("button")).not.toBeOnTheScreen();
+      expect(list.getByRole("button", { name: "Remove Chicken breast" })).toBeOnTheScreen();
+      expect(
+        list.getByRole("button", { name: "Chicken breast, 500 g, change amount" }),
+      ).toBeOnTheScreen();
+      expect(list.queryByRole("button", { name: /Add ingredient/ })).not.toBeOnTheScreen();
     });
   });
 
