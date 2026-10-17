@@ -8,15 +8,13 @@ import {
   MAX_RECIPE_STEP_LENGTH,
   MAX_RECIPE_YIELD_GRAMS,
 } from "./bounds";
+import { characterCount } from "./characterCount";
 import { foodSnapshotSchema } from "../diary/schemas";
 import { NUTRITION_ENGINE_VERSION } from "../diary/versions";
 import { quantityUnitSchema } from "../nutrition/units";
 import { nutrientsSchema } from "../schemas/nutrients";
 
 const rowIdSchema = z.guid();
-
-/** Characters as the database counts them: code points, so an emoji is one and not two. */
-const characterCount = (text: string): number => Array.from(text).length;
 
 const isNotBlank = (text: string): boolean => text.trim() !== "";
 
