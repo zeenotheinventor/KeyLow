@@ -37,7 +37,7 @@ Left and right are one muscle in v1: a unilateral set counts for the muscle once
 - `exercise_muscles` (exercise_id, owner_id denormalised for RLS, muscle_id, role primary|secondary|stabiliser, weight numeric 0..1): the per-muscle share of a set. Bench press is `chest_lower 1.0, chest_upper 0.6, delt_front 0.5, triceps 0.5`. Every exercise has at least one primary muscle.
 - `workout_sessions` (user_id, started_at, ended_at, local_date, tz, routine_day_id null, note, deleted_at).
 - `workout_sets` (session_id, user_id, exercise_id, position, set_type warmup|working|drop|failure, reps, load_kg, rir null, rpe null, performed_at, snapshot jsonb, deleted_at). `snapshot` freezes the exercise's muscle map at log time, the same rule as food snapshots: editing an exercise's muscles never rewrites past heat.
-- `routines` (user_id, name, is_archived) and `routine_days` (routine_id, weekday null, position, name) and `routine_exercises` (routine_day_id, exercise_id, position, target_sets, rep_min, rep_max, target_rir).
+- `routines` (user_id, name, is_active, is_archived; at most one active per user) and `routine_days` (routine_id, weekday null, position, name) and `routine_exercises` (routine_day_id, exercise_id, position, target_sets, rep_min, rep_max, target_rir).
 - `training_goals` (user_id, goal aesthetic|strength|hybrid, focus text[], days_per_week, session_minutes, equipment text[], experience beginner|intermediate|advanced, muscle_priority jsonb, answered_at): one current row per user, history kept like `targets`.
 
 The global exercise library is imported the CoFID way: a script in `packages/db/scripts`, a curated CSV in `packages/db/data/exercises/`, raw rows kept in a service-role table. The starting source is free-exercise-db (public domain), re-mapped by hand from its coarse groups onto the muscle list above and reviewed before import. wger (CC-BY-SA) is a secondary reference only and is not bulk-imported, to keep the share-alike licence out of the data.
@@ -75,7 +75,16 @@ Starting values, by size class (to be tuned; they are a starting point, not sett
 
 `θ = 0.25 × C_m`. A per-muscle override map exists in the params for when one muscle needs to differ from its class.
 
-Functions: `muscleState(sets, now, params)` returns `{ heat, readyAt, weeklySets, volumeStatus }` per muscle id; `weeklyVolume(sets, asOf, params)`; `suggestSession(state, goals, library, constraints, params)`.
+Functions: `muscleState(sets, now, params)` returns `{ heat, readyAt, weeklySets, volumeStatus }` per muscle id; `weeklyVolume(sets, asOf, params)`; `expandPlan` and `compareWeek` (below); `suggestSession(state, goals, library, constraints, params)`.
+
+### Projected against actual
+
+Two views of the same week, drawn with the same maths:
+
+- **Actual** comes from the logged sets.
+- **Projected** comes from the plan: the active routine's days placed on their weekdays for the week, each routine exercise expanded into `target_sets` planned sets at `target_rir`, with the snapshot taken from the exercise's current muscle map. A planned session the user has already logged is replaced by its actual sets; a planned day that passed without a session stays in the projection, so a missed day shows as a gap.
+
+`expandPlan(routine, weekStart, tz, params)` returns planned sets of the same shape as logged sets (marked `planned: true`), so `muscleState` and `weeklyVolume` run on them unchanged. `compareWeek(actual, projected)` returns, per muscle, the actual weekly sets, the projected weekly sets and the gap, with status `behind | on_plan | ahead` (on plan within a params tolerance of 1 set). Heat can be shown for any day of the week in both views: actual heat uses sets up to that moment, projected heat assumes the plan was followed up to that moment. Suggestions from T5 accepted into a day count as planned.
 
 It runs on the client. The input is a few hundred sets at most, so unlike the nutrition check-in there is no Edge Function and nothing derived is persisted. A daily snapshot table can be added later if history charts need it.
 
@@ -87,12 +96,12 @@ The goal questionnaire writes `training_goals`. `muscle_priority` is derived in 
 
 ### The body map: 2D first, 3D behind the same interface
 
-One renderer contract on both apps: `BodyMap({ values: Record<MuscleId, number>, scale: 'heat' | 'volume', onSelect })`.
+One renderer contract on both apps: `BodyMap({ values: Record<MuscleId, number>, scale: 'heat' | 'volume' | 'gap', onSelect })`. The screen shows the map in three modes from the same component: **Actual**, **Projected**, and side by side (two maps, one actual, one projected, sharing rotation in 3D), plus a day-of-week scrubber for heat. Both the 2D and the 3D renderer support every mode.
 
 1. **2D (first):** a front and back SVG with one path per muscle id, drawn with `react-native-svg` on mobile and inline SVG on web. Ships with the heat model and proves the logging loop.
 2. **3D (later):** `@react-three/fiber` with `drei` on web, and `@react-three/fiber/native` with `expo-gl` on mobile (the dev client allows the native module). The asset is a glTF binary of about 2 to 4 MB, male and female, each muscle a mesh named by its id. A Blender script in `tools/body-model` turns the source model into that file: decimate, rename, Draco or meshopt compression. Each muscle's material colour and emissive intensity follow its value on the scale. If draw calls become a problem, the fallback is one merged mesh with a per-vertex muscle id attribute and a shader that reads a uniform array of values. Tapping a muscle raycasts to its id and opens the same detail sheet as the 2D map.
 
-Two colour scales: `heat` is sequential (neutral at rest, through amber, to red at full heat, with a matching glow); `volume` is diverging (blue under, green productive, red over). The colours come from `@keylow/tokens` and are checked for contrast in light and dark.
+Two colour scales: `heat` is sequential (neutral at rest, through amber, to red at full heat, with a matching glow); `volume` is diverging (blue under, green productive, red over). `gap` is diverging around the plan (blue behind plan, neutral on plan, amber ahead of plan). The colours come from `@keylow/tokens` and are checked for contrast in light and dark.
 
 The source model is a human decision taken before the 3D milestone starts: Z-Anatomy or BodyParts3D (free, CC-BY-SA, attribution on the About screen, heavy cleanup) or a licensed commercial model whose licence allows bundling in an app.
 
