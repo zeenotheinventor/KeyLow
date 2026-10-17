@@ -142,3 +142,13 @@ export const WithNotice: Story = {
     </GroupedList>
   ),
 };
+
+// The recipe library's card: the rows alone, with no heading over them.
+export const TitleHidden: Story = {
+  render: (args) => (
+    <GroupedList {...args} hidesTitle source={undefined} title="Recipes">
+      <ListRow icon="ChefHat" title="Beef chilli" onPress={() => undefined} />
+      <ListRow icon="ChefHat" title="Chicken and rice" onPress={() => undefined} />
+    </GroupedList>
+  ),
+};

@@ -27,6 +27,9 @@ export const Row: Story = { args: { variant: "row" } };
 // A card of three rows, as the loading board draws a group of results.
 export const Group: Story = { args: { variant: "group" } };
 
+// A card of four recipe rows, as the recipe library's loading board draws them.
+export const RecipeGroup: Story = { args: { variant: "recipeGroup", rows: 4 } };
+
 // A food's page, as the food boards draw it while the food loads.
 export const Detail: Story = { args: { variant: "detail" } };
 

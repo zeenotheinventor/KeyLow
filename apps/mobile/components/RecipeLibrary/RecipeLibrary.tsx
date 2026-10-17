@@ -1,0 +1,61 @@
+import { useRecipes } from "@keylow/api-client";
+import { useRouter } from "expo-router";
+
+import { useIsOnline } from "../../lib/connectivity";
+import { newRecipePath, recipePath } from "../../lib/recipeRoutes";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { RecipeLibraryView } from "../RecipeLibraryView";
+
+/**
+ * The recipe library: the user's live recipes, read with one request that also brings the archived ones
+ * for the archived screen, which are left out here. It stays mounted under the terms gate's cover when it
+ * is a tab, so the read waits until the account has accepted the current Terms. A failed refetch keeps the
+ * recipes already loaded, so only a library that never loaded is an error. Recipes are never written to the
+ * persisted offline cache, so a phone that starts offline has none, and one that went offline keeps what it
+ * had loaded in memory, readable but not changeable.
+ */
+export function RecipeLibrary() {
+  const router = useRouter();
+  const isOnline = useIsOnline();
+  const recipes = useRecipes({ archived: true, enabled: useReadsEnabled() });
+
+  const actions = {
+    onOpenRecipe: (id: string) => {
+      router.push(recipePath(id));
+    },
+    onNewRecipe: (name?: string) => {
+      router.push(newRecipePath(name));
+    },
+  };
+
+  if (recipes.data !== undefined) {
+    const liveRecipes = recipes.data.filter((recipe) => !recipe.is_archived);
+
+    // Offline, a library with no live recipe in memory has nothing to read, as one never loaded.
+    if (isOnline || liveRecipes.length > 0) {
+      return (
+        <RecipeLibraryView {...actions} isOnline={isOnline} recipes={liveRecipes} status="ready" />
+      );
+    }
+
+    return <RecipeLibraryView {...actions} status="offline" />;
+  }
+
+  if (!isOnline) {
+    return <RecipeLibraryView {...actions} status="offline" />;
+  }
+
+  if (recipes.isError) {
+    return (
+      <RecipeLibraryView
+        {...actions}
+        status="error"
+        onRetry={() => {
+          void recipes.refetch();
+        }}
+      />
+    );
+  }
+
+  return <RecipeLibraryView {...actions} status="loading" />;
+}

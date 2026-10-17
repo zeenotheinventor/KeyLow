@@ -1,1 +1,8 @@
-export const storyStates = ["NoResults", "YourFoodsEmpty", "WithoutAction", "Wide"];
+export const storyStates = [
+  "NoResults",
+  "YourFoodsEmpty",
+  "WithoutAction",
+  "Wide",
+  "PrimaryAction",
+  "DisabledAction",
+];

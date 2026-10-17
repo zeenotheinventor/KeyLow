@@ -1,4 +1,11 @@
-import { FOOD_NOT_FOUND, SEARCH_EMPTY, YOUR_FOODS_EMPTY } from "@keylow/core/copy";
+import {
+  FOOD_NOT_FOUND,
+  RECIPES_EMPTY,
+  RECIPES_LIBRARY,
+  RECIPES_SEARCH_EMPTY,
+  SEARCH_EMPTY,
+  YOUR_FOODS_EMPTY,
+} from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { EmptyState } from "./EmptyState";
@@ -50,4 +57,34 @@ export const WithoutAction: Story = {
 // The food detail's not-found board: the words are 32 points from the sides.
 export const Wide: Story = {
   args: { icon: "SearchX", title: FOOD_NOT_FOUND.title, body: FOOD_NOT_FOUND.body, inset: "wide" },
+};
+
+// The recipes tab before the first recipe: its one action is primary.
+export const PrimaryAction: Story = {
+  args: {
+    icon: "ChefHat",
+    title: RECIPES_EMPTY.title,
+    body: RECIPES_EMPTY.body,
+    action: {
+      label: RECIPES_LIBRARY.newRecipe,
+      icon: "Plus",
+      variant: "primary",
+      onPress: () => undefined,
+    },
+  },
+};
+
+// The recipes tab's no-matches state while offline: the action cannot work without a connection.
+export const DisabledAction: Story = {
+  args: {
+    icon: "SearchX",
+    title: RECIPES_SEARCH_EMPTY.title,
+    body: RECIPES_SEARCH_EMPTY.body,
+    action: {
+      label: RECIPES_LIBRARY.newRecipe,
+      icon: "Plus",
+      disabled: true,
+      onPress: () => undefined,
+    },
+  },
 };

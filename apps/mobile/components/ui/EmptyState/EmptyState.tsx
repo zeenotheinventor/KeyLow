@@ -39,8 +39,9 @@ export function EmptyState({ icon, title, body, action, inset = "default" }: Emp
           {action === undefined ? null : (
             <Button
               className="mt-3"
+              disabled={action.disabled ?? false}
               icon={action.icon}
-              variant="secondary"
+              variant={action.variant ?? "secondary"}
               onPress={action.onPress}
             >
               {action.label}

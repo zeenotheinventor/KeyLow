@@ -1,4 +1,5 @@
 import type { HighlightSegment } from "@keylow/core/search";
+import type { ReactNode } from "react";
 
 /** The macros as the row writes them, in grams, with a sentence for a screen reader. */
 export type FoodRowMacros = {
@@ -10,7 +11,7 @@ export type FoodRowMacros = {
 };
 
 /** The M2 row has no layout of its own. The food log has these three. */
-export type FoodRowLayout = "search" | "recent" | "diary";
+export type FoodRowLayout = "search" | "recent" | "diary" | "recipe";
 
 /**
  * A food on the search and Your foods lists. Every text is given already written: the row never
@@ -37,8 +38,10 @@ export type FoodRowProps = {
    * the macros are always protein, carbohydrate, fat. `search` is a result: the food icon tile, the
    * serving and a trailing add button. `recent` is the same row as Recent draws it, with the amount last
    * logged for a serving, 56 points tall and the whole name in semibold. `diary` is a logged food: no
-   * tile, the time and amount, a trailing chevron and, with `onDelete`, swipe to delete. Leave it out for
-   * the M2 row.
+   * tile, the time and amount, a trailing chevron and, with `onDelete`, swipe to delete. `recipe` is a
+   * recipe in the library: the ChefHat tile, the serving and the yield under the title, the values of one
+   * serving on the stats line, no chevron and a `trailing` slot for the row's menu. Leave it out for the
+   * M2 row.
    */
   layout?: FoodRowLayout | undefined;
   /**
@@ -68,4 +71,15 @@ export type FoodRowProps = {
    * chevron and no press (it still swipes to delete when it has `onDelete`).
    */
   onPress?: (() => void) | undefined;
+  /**
+   * Names the row's button in place of the words the row writes from its parts, for a `recipe` row whose
+   * screen spells the serving and the values out, such as "Chicken and rice, 1 serving 275 grams, makes 4,
+   * 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, open".
+   */
+  openLabel?: string | undefined;
+  /**
+   * A `recipe` row's own control at its trailing edge, beside the row and not inside it, so pressing it does
+   * not press the row. The row menu ticket puts the More button here. Leave it out for none.
+   */
+  trailing?: ReactNode;
 };

@@ -60,3 +60,21 @@ export const WithClear: Story = {
 
 // Opens the keyboard, to show the field docked above it with the accent border of a focused field.
 export const Focused: Story = { args: { autoFocus: true } };
+
+// A screen that places the field among its content, such as the recipes tab, has no dock around it.
+export const Inline: Story = {
+  args: { placement: "inline", label: "Search recipes", placeholder: "Search recipes" },
+  decorators: [
+    (Story) => (
+      <View className="px-4 pt-4">
+        <Story />
+      </View>
+    ),
+  ],
+};
+
+// The recipes tab draws the field disabled while its list loads.
+export const Disabled: Story = {
+  args: { ...Inline.args, disabled: true },
+  decorators: Inline.decorators ?? [],
+};

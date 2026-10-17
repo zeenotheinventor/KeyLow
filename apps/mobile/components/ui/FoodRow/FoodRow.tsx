@@ -26,6 +26,9 @@ const rowClassName = {
   search: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-1",
   recent: "min-h-[56px] flex-row items-center gap-3 py-2 pl-3 pr-1",
   diary: "min-h-[56px] flex-row items-center gap-3 bg-surface py-2 pl-4 pr-3",
+  recipe: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-3",
+  // A recipe row with a control of its own beside it draws as the board does, 4 points from the control.
+  recipeWithTrailing: "min-h-[60px] flex-row items-center gap-3 py-2 pl-3 pr-1",
 } as const;
 
 // The gap between the title, the serving and the stats: 4 points, and 2 on a diary row.
@@ -34,6 +37,7 @@ const textColumnClassName = {
   search: "min-w-0 flex-1 gap-1",
   recent: "min-w-0 flex-1 gap-1",
   diary: "min-w-0 flex-1 gap-[2px]",
+  recipe: "min-w-0 flex-1 gap-1",
 } as const;
 
 const deleteAction = { name: "delete", label: FOOD_ROW.deleteAction } as const;
@@ -58,10 +62,14 @@ export function FoodRow({
   isSwiped,
   onSwipedChange,
   onPress,
+  openLabel,
+  trailing,
 }: FoodRowProps) {
   const { isFirst } = useGroupedRowPosition();
   const isBusy = busyLabel !== undefined;
   const isDiary = layout === "diary";
+  const isRecipe = layout === "recipe";
+  const hasTrailing = trailing !== undefined && trailing !== null;
   const isLog = layout !== undefined;
   const name = nameSegments.map((segment) => segment.text).join("");
   const spokenEnergy =
@@ -101,24 +109,25 @@ export function FoodRow({
     );
     spokenDetail = note;
   }
-  const label = [
-    name,
-    brand,
-    isLog ? caption : undefined,
-    spokenDetail,
-    isLog ? undefined : spokenEnergy,
-  ]
-    .filter(Boolean)
-    .join(", ");
+  // A recipe row is named by the sentence its screen gives it, which spells the serving and the values out.
+  const label =
+    openLabel ??
+    [name, brand, isLog ? caption : undefined, spokenDetail, isLog ? undefined : spokenEnergy]
+      .filter(Boolean)
+      .join(", ");
 
   // A diary row and a Recent row write the whole name in semibold, because nothing is matched on either.
+  // A recipe row does the same until the search matches it, and then only the match is semibold.
+  const isNameMatched = nameSegments.some((segment) => segment.matched);
   const titleVariant = (matched: boolean) =>
-    isDiary || layout === "recent" || matched ? "body-strong" : "body";
+    isDiary || layout === "recent" || matched || (isRecipe && !isNameMatched)
+      ? "body-strong"
+      : "body";
   const rowContent = (
     <>
       {isDiary ? null : (
         <View className="h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised">
-          <Icon name="Utensils" tone="secondary" />
+          <Icon name={isRecipe ? "ChefHat" : "Utensils"} tone="secondary" />
         </View>
       )}
       <View className={textColumnClassName[layout ?? "classic"]}>
@@ -158,7 +167,7 @@ export function FoodRow({
               </Text>
             </View>
           )}
-          {showsAdd || onPress === undefined ? null : (
+          {showsAdd || isRecipe || onPress === undefined ? null : (
             <Icon name="ChevronRight" size="sm" tone="muted" />
           )}
         </>
@@ -168,7 +177,8 @@ export function FoodRow({
 
   const divider = isFirst ? "" : "border-t border-border";
   const dimmed = disabled && !isBusy ? "opacity-50" : "";
-  const rowClasses = `${rowClassName[layout ?? "classic"]} ${layout === undefined ? divider : ""} ${dimmed}`;
+  const rowClassKey = isRecipe && hasTrailing ? "recipeWithTrailing" : (layout ?? "classic");
+  const rowClasses = `${rowClassName[rowClassKey]} ${layout === undefined ? divider : ""} ${dimmed}`;
   const actions = canDelete ? [deleteAction] : undefined;
   const onAction: PressableProps["onAccessibilityAction"] = canDelete
     ? ({ nativeEvent }) => {
@@ -232,6 +242,7 @@ export function FoodRow({
           onPress={onAdd}
         />
       ) : null}
+      {isRecipe ? trailing : null}
     </View>
   );
 }

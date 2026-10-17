@@ -1,1 +1,1 @@
-export const storyStates = ["Default", "WithSeeMore", "TitleOnly", "WithNotice"];
+export const storyStates = ["Default", "WithSeeMore", "TitleOnly", "WithNotice", "TitleHidden"];

@@ -15,4 +15,7 @@ export const storyStates = [
   "NeedsReview",
   "AddDisabled",
   "FourDigitEnergy",
+  "Recipe",
+  "RecipeMatched",
+  "RecipeWithMore",
 ];

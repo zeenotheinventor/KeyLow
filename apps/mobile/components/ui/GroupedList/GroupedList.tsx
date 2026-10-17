@@ -13,29 +13,38 @@ import type { GroupedListProps } from "./types";
  * more rows than it shows, a "See N more" button. A notice about the group, such as a failed add, sits
  * between the heading and the card, which is the kit's `Card`.
  */
-export function GroupedList({ title, source, seeMore, notice, children }: GroupedListProps) {
+export function GroupedList({
+  title,
+  hidesTitle = false,
+  source,
+  seeMore,
+  notice,
+  children,
+}: GroupedListProps) {
   const rows = positionedRows(children);
 
   return (
     <View className="gap-2">
-      {/* The title shrinks and wraps at large text, so See more is never pushed off the edge. */}
-      <View className="min-h-[32px] flex-row items-center justify-between gap-2 px-1">
-        <Text className="shrink" role="heading" variant="body-strong">
-          {title}
-          {source === undefined ? null : (
-            <Text tone="muted" variant="caption">
-              {` · ${source}`}
-            </Text>
+      {hidesTitle ? null : (
+        // The title shrinks and wraps at large text, so See more is never pushed off the edge.
+        <View className="min-h-[32px] flex-row items-center justify-between gap-2 px-1">
+          <Text className="shrink" role="heading" variant="body-strong">
+            {title}
+            {source === undefined ? null : (
+              <Text tone="muted" variant="caption">
+                {` · ${source}`}
+              </Text>
+            )}
+          </Text>
+          {seeMore === undefined || seeMore.hiddenCount <= 0 ? null : (
+            <SeeMoreButton
+              label={`${describeSeeMore(seeMore.hiddenCount)} in ${title}`}
+              text={describeSeeMore(seeMore.hiddenCount)}
+              onPress={seeMore.onPress}
+            />
           )}
-        </Text>
-        {seeMore === undefined || seeMore.hiddenCount <= 0 ? null : (
-          <SeeMoreButton
-            label={`${describeSeeMore(seeMore.hiddenCount)} in ${title}`}
-            text={describeSeeMore(seeMore.hiddenCount)}
-            onPress={seeMore.onPress}
-          />
-        )}
-      </View>
+        </View>
+      )}
       {notice}
       {/* The rows bring their own padding, so the card has none. */}
       <Card aria-label={title} padding={0} role="list">
