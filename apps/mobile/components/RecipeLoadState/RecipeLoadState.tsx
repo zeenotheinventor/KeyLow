@@ -14,9 +14,9 @@ import { EmptyState, ErrorState, SheetHeader, Skeleton } from "../ui";
 import type { RecipeLoadStateProps } from "./types";
 
 /**
- * What the recipe editor's route shows while the recipe loads, fails to load or is not there: the "Recipe"
+ * What the recipe view shows while the recipe loads, fails to load or is not there: the "Recipe"
  * header with Back, and the kit's skeleton, failure or empty state under it. The failure itself is never
- * shown, only its fixed sentence. The recipe view will show these states in its place.
+ * shown, only its fixed sentence. It is the recipe view's, and the edit route sends the user there when its recipe is not ready.
  */
 export function RecipeLoadState({ state, onBack, onRetry }: RecipeLoadStateProps) {
   const insets = useSafeAreaInsets();
@@ -36,10 +36,10 @@ export function RecipeLoadState({ state, onBack, onRetry }: RecipeLoadStateProps
         accessible
         aria-label={RECIPE_EDITOR.loadingLabel}
         aria-live="polite"
-        className="px-4 pt-2"
+        className="px-4 pb-4 pt-1"
         role="status"
       >
-        <Skeleton variant="detail" />
+        <Skeleton variant="recipeView" />
       </View>
     );
   }

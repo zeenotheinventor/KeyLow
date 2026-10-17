@@ -654,12 +654,18 @@ export async function fakeFetch(
       );
     case "recipes":
       // The library asks for the live recipes alone with `is_archived=eq.false`, and for both without it.
+      // One recipe is asked for by `id=eq.<id>`, and its row holds the ingredients as `recipe_ingredients`.
       return Promise.resolve(
         jsonResponse(
           diaryBackend.recipes
             .filter(
               (row) =>
                 searchParams.get("is_archived") !== "eq.false" || row["is_archived"] === false,
+            )
+            .filter(
+              (row) =>
+                searchParams.get("id") === null ||
+                searchParams.get("id") === `eq.${String(row["id"])}`,
             )
             .sort((first, second) => String(first["name"]).localeCompare(String(second["name"]))),
         ),

@@ -87,3 +87,53 @@ describe("Skeleton shaped like the recipe library", () => {
     expect(rows()[1]).toHaveStyle({ borderTopWidth: 1 });
   });
 });
+
+describe("Skeleton shaped like the recipe view", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    registerAppStyles(kitStyles);
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("should draw the two cards as blocks, then a card of three rows", async () => {
+    await renderSkeleton({ variant: "recipeView" });
+
+    expect(screen.getByTestId("skeleton-recipe-view", hidden)).toBeOnTheScreen();
+    expect(screen.getByTestId("skeleton-card", hidden)).toBeOnTheScreen();
+    // Per serving: 2 + 3 tiles + 1. Servings: 2 + 1. Rows: 3 tiles + 3 titles + 3 captions.
+    expect(bones()).toHaveLength(6 + 3 + 9);
+  });
+
+  it("should pad the Servings block 12 above and below and 16 at the sides, as the board does", async () => {
+    await renderSkeleton({ variant: "recipeView" });
+
+    expect(
+      viewsDrawn({ paddingTop: 12, paddingBottom: 12, paddingLeft: 16, paddingRight: 16 }),
+    ).toHaveLength(1);
+  });
+
+  it("should vary the row names' widths as the board does", async () => {
+    await renderSkeleton({ variant: "recipeView" });
+
+    // After the Per serving block (6 bones) and the Servings block (3), each row is a tile, a name and a caption.
+    const names = [bones()[10], bones()[13], bones()[16]];
+    expect(names[0]).toHaveStyle({ width: "68%" });
+    expect(names[1]).toHaveStyle({ width: "52%" });
+    expect(names[2]).toHaveStyle({ width: "74%" });
+  });
+
+  it("should be hidden from screen readers, because the screen says what is loading", async () => {
+    await renderSkeleton({ variant: "recipeView" });
+
+    expect(screen.queryByTestId("skeleton-recipe-view")).not.toBeOnTheScreen();
+  });
+});

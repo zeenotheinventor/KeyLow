@@ -1,3 +1,6 @@
+import type { Ref } from "react";
+import type { TextInput } from "react-native";
+
 export type ServingsStepperProps = {
   /** The label on the left of the row, such as "Servings". It is also the field's accessible name. */
   label: string;
@@ -18,6 +21,8 @@ export type ServingsStepperProps = {
   canIncrease: boolean;
   /** One sentence under the row, right aligned, that turns the field's border to danger. */
   error?: string | undefined;
+  /** The field itself, for a screen that moves focus to it, as the recipe view does after its Reset. */
+  fieldRef?: Ref<TextInput> | undefined;
   /** Asked for when the field is left. */
   onBlur?: () => void;
   /** Disables the buttons and the field as a whole. */

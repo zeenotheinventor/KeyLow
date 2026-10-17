@@ -1,7 +1,7 @@
 import "react-native-gesture-handler/jestSetup";
 
 import { KeyLowProvider } from "@keylow/api-client";
-import { GENERIC_ERROR, RECIPE_EDITOR, RECIPE_NOT_FOUND, RETRY_LABEL } from "@keylow/core/copy";
+import { GENERIC_ERROR, RECIPE_EDITOR } from "@keylow/core/copy";
 import { buildChickenAndRiceRecipe } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent } from "@testing-library/react-native";
@@ -11,7 +11,7 @@ import { setUpTests } from "react-native-reanimated";
 import EditRecipeRoute from "../../app/recipes/[id]/edit";
 import NewRecipeRoute from "../../app/recipes/new";
 import { ToastProvider } from "../../components/ui";
-import { recipesPath } from "../../lib/recipeRoutes";
+import { recipePath } from "../../lib/recipeRoutes";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
@@ -21,8 +21,8 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 import type { RecipeState } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
-// The route that opens a saved recipe in its editor, with the interim wrapper's three states around it, and
-// the route that opens a new one. The recipe read is stood in for, so each test says what it answers.
+// The route that opens a saved recipe in its editor, which sends the user to the recipe view when the
+// recipe is not ready, and the route that opens a new one. The recipe read is stood in for, so each test says what it answers.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -41,6 +41,12 @@ jest.mock("expo-router/react-navigation", () => ({ usePreventRemove: () => undef
 
 const mockRecipeState: { current: RecipeState } = { current: { status: "loading" } };
 const mockUseRecipe = jest.fn();
+// Whether the account has accepted the current Terms, which nothing is read before.
+const mockReadsEnabled = { current: true };
+
+jest.mock("../../lib/useReadsEnabled", () => ({
+  useReadsEnabled: () => mockReadsEnabled.current,
+}));
 
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
@@ -101,7 +107,6 @@ describe("the recipe editor's routes", () => {
     kitStyles = await compileKitStyles("", [
       "components/RecipeEditor",
       "components/RecipeEditorScreen",
-      "components/RecipeLoadState",
       "components/RecipeDetailsFields",
       "components/RecipeIngredientsSection",
       "components/PerServingCard",
@@ -115,6 +120,7 @@ describe("the recipe editor's routes", () => {
     resetDiaryBackend();
     mockUseRecipe.mockReset();
     mockRecipeState.current = { status: "loading" };
+    mockReadsEnabled.current = true;
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
   });
 
@@ -137,62 +143,45 @@ describe("the recipe editor's routes", () => {
       expect(mockUseRecipe).toHaveBeenCalledWith(RECIPE_ID, expect.anything());
     });
 
-    it("should show the Recipe header and a loading region while it loads", async () => {
-      await showRoute("edit", { id: RECIPE_ID });
+    it.each([
+      ["is loading", { status: "loading" }],
+      ["failed to load", { status: "error", debugMessage: "raw database text" }],
+      ["is not there", { status: "notFound" }],
+    ] satisfies [string, RecipeState][])(
+      "should replace itself with the recipe view, which has the states, when the recipe %s",
+      async (_description, state) => {
+        mockRecipeState.current = state;
+        await showRoute("edit", { id: RECIPE_ID });
 
-      expect(await screen.findByLabelText(RECIPE_EDITOR.loadingLabel)).toBeOnTheScreen();
-      expect(screen.getByRole("heading", { name: RECIPE_EDITOR.loadingTitle })).toBeOnTheScreen();
-      expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
-    });
+        expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        expect(routerMock.replace).toHaveBeenCalledWith(recipePath(RECIPE_ID));
+        expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
+        expect(screen.queryByLabelText(RECIPE_EDITOR.loadingLabel)).not.toBeOnTheScreen();
+        expect(screen.queryByText(GENERIC_ERROR)).not.toBeOnTheScreen();
+      },
+    );
 
-    it("should say something went wrong, without the failure, and ask again on Try again", async () => {
-      mockRecipeState.current = { status: "error", debugMessage: "raw database text" };
-      const user = await showRoute("edit", { id: RECIPE_ID });
-      const invalidate = jest.spyOn(queryClient, "invalidateQueries");
-
-      expect(await screen.findByText(GENERIC_ERROR)).toBeOnTheScreen();
-      expect(screen.queryByText(/raw database text/)).not.toBeOnTheScreen();
-
-      await user.press(screen.getByRole("button", { name: RETRY_LABEL }));
-
-      expect(invalidate).toHaveBeenCalledTimes(1);
-    });
-
-    it("should say the recipe is not found when there is none", async () => {
-      mockRecipeState.current = { status: "notFound" };
-      await showRoute("edit", { id: RECIPE_ID });
-
-      expect(await screen.findByText(RECIPE_NOT_FOUND.title)).toBeOnTheScreen();
-      expect(screen.getByText(RECIPE_NOT_FOUND.body)).toBeOnTheScreen();
-    });
-
-    it("should say not found at once for an id that cannot be a recipe, and ask about nothing", async () => {
+    it("should send an id that cannot be a recipe to the view, and ask about nothing", async () => {
       await showRoute("edit", { id: "abc" });
 
-      expect(await screen.findByText(RECIPE_NOT_FOUND.title)).toBeOnTheScreen();
+      expect(routerMock.replace).toHaveBeenCalledWith(recipePath("abc"));
       expect(mockUseRecipe).toHaveBeenCalledWith(undefined, expect.anything());
     });
 
-    it("should show the failed state offline with nothing in memory, as a read that cannot be made never ends", async () => {
-      await act(() => {
-        onlineManager.setOnline(false);
-      });
+    it("should send the user to the view while the terms gate is up, even for a recipe the cache holds", async () => {
+      mockRecipeState.current = readyState;
+      mockReadsEnabled.current = false;
       await showRoute("edit", { id: RECIPE_ID });
 
-      expect(await screen.findByText(GENERIC_ERROR)).toBeOnTheScreen();
+      expect(routerMock.replace).toHaveBeenCalledWith(recipePath(RECIPE_ID));
+      expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
     });
 
-    it("should go back from a load state, or to the library when there is nothing to go back to", async () => {
-      mockRecipeState.current = { status: "notFound" };
-      const user = await showRoute("edit", { id: RECIPE_ID });
-      await screen.findByText(RECIPE_NOT_FOUND.title);
+    it("should not replace itself when the recipe is ready", async () => {
+      mockRecipeState.current = readyState;
+      await showRoute("edit", { id: RECIPE_ID });
 
-      await user.press(screen.getByRole("button", { name: "Back" }));
-      expect(routerMock.back).toHaveBeenCalledTimes(1);
-
-      routerMock.canGoBack.mockReturnValue(false);
-      await user.press(screen.getByRole("button", { name: "Back" }));
-      expect(routerMock.replace).toHaveBeenCalledWith(recipesPath());
+      expect(routerMock.replace).not.toHaveBeenCalled();
     });
   });
 

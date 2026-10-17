@@ -24,6 +24,7 @@ export function ServingsStepper({
   canDecrease,
   canIncrease,
   error,
+  fieldRef,
   onBlur,
   disabled = false,
   className = "",
@@ -62,6 +63,7 @@ export function ServingsStepper({
               disabled={disabled}
               error={error}
               errorShownElsewhere
+              inputRef={fieldRef}
               keyboardType="number-pad"
               label={label}
               labelHidden

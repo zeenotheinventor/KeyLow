@@ -692,8 +692,9 @@ describe("the recipe editor", () => {
       expect(routerMock.dismissTo).toHaveBeenCalledWith(recipePath(RECIPE_ID));
     });
 
-    it("should name the interim target the editor itself until the recipe view exists", () => {
-      expect(recipePath(RECIPE_ID)).toBe(editRecipePath(RECIPE_ID));
+    it("should lead Back and Save to the recipe view, which is not the editor", () => {
+      expect(recipePath(RECIPE_ID)).toBe(`/recipes/${RECIPE_ID}`);
+      expect(recipePath(RECIPE_ID)).not.toBe(editRecipePath(RECIPE_ID));
     });
   });
 
