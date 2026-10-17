@@ -137,3 +137,44 @@ describe("Skeleton shaped like the recipe view", () => {
     expect(screen.queryByTestId("skeleton-recipe-view")).not.toBeOnTheScreen();
   });
 });
+
+describe("Skeleton shaped like the refresh screen", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    registerAppStyles(kitStyles);
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("should draw the intro line, a Per serving block of four lines, and two cards", async () => {
+    await renderSkeleton({ variant: "recipeRefresh" });
+
+    expect(screen.getByTestId("skeleton-recipe-refresh", hidden)).toBeOnTheScreen();
+    // Intro 1. Per serving: a heading and four lines of two. Cards: 3 and 2.
+    expect(bones()).toHaveLength(1 + (1 + 8) + 3 + 2);
+  });
+
+  it("should vary the widths of the four values as the board does", async () => {
+    await renderSkeleton({ variant: "recipeRefresh" });
+
+    const values = [bones()[3], bones()[5], bones()[7], bones()[9]];
+    expect(values[0]).toHaveStyle({ width: 84 });
+    expect(values[1]).toHaveStyle({ width: 64 });
+    expect(values[2]).toHaveStyle({ width: 48 });
+    expect(values[3]).toHaveStyle({ width: 64 });
+  });
+
+  it("should be hidden from screen readers, because the screen says what is loading", async () => {
+    await renderSkeleton({ variant: "recipeRefresh" });
+
+    expect(screen.queryByTestId("skeleton-recipe-refresh")).not.toBeOnTheScreen();
+  });
+});

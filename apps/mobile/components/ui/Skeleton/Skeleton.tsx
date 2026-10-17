@@ -121,6 +121,42 @@ function SkeletonRecipeView() {
   );
 }
 
+// The refresh screen as its loading board draws it: an intro line, the Per serving card as a heading over
+// four lines of a label and a value, and two cards of bars. Its sides are the screen's, so it gives none of its own.
+const refreshValueWidthClassNames = ["w-[84px]", "w-[64px]", "w-[48px]", "w-[64px]"];
+
+function SkeletonRecipeRefresh() {
+  return (
+    <View className="gap-5" testID="skeleton-recipe-refresh">
+      <SkeletonBone className="h-[14px] w-[90%]" />
+      <Card>
+        <View className="gap-4">
+          <SkeletonBone className="h-[14px] w-24" />
+          {refreshValueWidthClassNames.map((valueWidthClassName, index) => (
+            <View key={index} className="flex-row justify-between">
+              <SkeletonBone className="h-3 w-[72px]" />
+              <SkeletonBone className={`h-3 ${valueWidthClassName}`} />
+            </View>
+          ))}
+        </View>
+      </Card>
+      <Card>
+        <View className="gap-3">
+          <SkeletonBone className="h-[14px] w-[60%]" />
+          <SkeletonBone className="h-[10px] w-[30%]" />
+          <SkeletonBone className="h-3 w-[45%]" />
+        </View>
+      </Card>
+      <Card>
+        <View className="gap-3">
+          <SkeletonBone className="h-[14px] w-[50%]" />
+          <SkeletonBone className="h-[10px] w-[25%]" />
+        </View>
+      </Card>
+    </View>
+  );
+}
+
 // The food log as the loading board draws it: seven pills, four bars and five hours, the second and fourth
 // with a food under their chip. It carries the screen's 16 points at its sides.
 const dayBoneKeys = ["mo", "tu", "we", "th", "fr", "sa", "su"];
@@ -233,6 +269,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
     <Animated.View aria-hidden style={animatedStyle} testID="skeleton">
       {variant === "detail" ? <SkeletonDetail /> : null}
       {variant === "recipeView" ? <SkeletonRecipeView /> : null}
+      {variant === "recipeRefresh" ? <SkeletonRecipeRefresh /> : null}
       {variant === "diary" || variant === "diaryDay" ? (
         <SkeletonDiary includesWeek={variant === "diary"} />
       ) : null}

@@ -3,6 +3,7 @@ export const storyStates = [
   "Group",
   "RecipeGroup",
   "RecipeView",
+  "RecipeRefresh",
   "Detail",
   "Diary",
   "DiaryDay",

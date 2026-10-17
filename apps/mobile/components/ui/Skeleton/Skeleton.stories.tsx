@@ -33,6 +33,9 @@ export const RecipeGroup: Story = { args: { variant: "recipeGroup", rows: 4 } };
 // The recipe view while it loads: the Per serving and Servings cards as blocks, then three rows.
 export const RecipeView: Story = { args: { variant: "recipeView" } };
 
+// The refresh screen while it checks the foods: an intro line, the Per serving card of four lines, and two cards.
+export const RecipeRefresh: Story = { args: { variant: "recipeRefresh" } };
+
 // A food's page, as the food boards draw it while the food loads.
 export const Detail: Story = { args: { variant: "detail" } };
 

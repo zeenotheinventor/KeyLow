@@ -5,6 +5,7 @@ import {
   newRecipePath,
   recipePath,
   recipesPath,
+  refreshRecipePath,
 } from "../lib/recipeRoutes";
 
 describe("where the recipe library leads", () => {
@@ -39,6 +40,12 @@ describe("where the recipe library leads", () => {
   it("should open a recipe on its view at /recipes/<id>", () => {
     expect(recipePath("0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11")).toBe(
       "/recipes/0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11",
+    );
+  });
+
+  it("should lead to the refresh of a recipe's ingredients at /recipes/<id>/refresh", () => {
+    expect(refreshRecipePath("0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11")).toBe(
+      "/recipes/0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11/refresh",
     );
   });
 

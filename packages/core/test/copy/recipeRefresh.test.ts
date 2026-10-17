@@ -5,6 +5,7 @@ import {
   RECIPE_ACTIONS,
   RECIPE_TOASTS,
   REFRESH,
+  REFRESH_PER_100_LABELS,
   describeBeforeAfter,
   describeCountedHeading,
   describePortionFellBack,
@@ -178,5 +179,20 @@ describe("describePortionFellBack", () => {
     expect(() => describePortionFellBack(amount({ unit: "g", portionLabel: null }, {}))).toThrow(
       RangeError,
     );
+  });
+});
+
+describe("the labels of the per 100 values a refresh lists", () => {
+  it("should name every nutrient a snapshot keeps, in the words of the food screens", () => {
+    expect(REFRESH_PER_100_LABELS).toEqual({
+      kcal: "Energy",
+      protein_g: "Protein",
+      fat_g: "Fat",
+      carbs_g: "Carbohydrate",
+      fibre_g: "Fibre",
+      sat_fat_g: "Saturated fat",
+      sugars_g: "Sugars",
+      salt_g: "Salt",
+    });
   });
 });

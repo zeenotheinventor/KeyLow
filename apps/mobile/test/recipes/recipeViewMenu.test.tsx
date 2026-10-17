@@ -21,7 +21,7 @@ import {
 } from "../../components/RecipeLibraryView/sampleRecipes";
 import { RecipeView } from "../../components/RecipeView";
 import { ToastProvider } from "../../components/ui";
-import { recipePath, recipesPath } from "../../lib/recipeRoutes";
+import { recipePath, recipesPath, refreshRecipePath } from "../../lib/recipeRoutes";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
@@ -95,6 +95,8 @@ const duplicateItem = () =>
   screen.findByRole("button", { name: "Duplicate, Makes a copy you can change" });
 const archiveItem = () =>
   screen.findByRole("button", { name: "Archive, Hidden until you restore it" });
+const refreshItem = () =>
+  screen.findByRole("button", { name: "Refresh ingredients, Check your foods for changes" });
 const toast = (name: string) => screen.findByRole("status", { name });
 const writesTo = (table: string) =>
   diaryBackend.requests.filter((request) => request.table === table && request.method !== "GET");
@@ -146,15 +148,31 @@ describe("the recipe view's More menu", () => {
       expect(more).toHaveAccessibleName("More");
     });
 
-    it("should open a sheet of exactly Duplicate and Archive, each with its caption", async () => {
+    it("should open a sheet of Refresh ingredients, Duplicate and Archive, each with its caption", async () => {
       const { user } = await showView();
 
       await user.press(moreButton());
 
+      expect(await refreshItem()).toBeEnabled();
       expect(await duplicateItem()).toBeEnabled();
       expect(await archiveItem()).toBeEnabled();
-      expect(screen.queryByRole("button", { name: /^Refresh ingredients/ })).not.toBeOnTheScreen();
-      expect(screen.getAllByRole("button", { name: /, (?:Makes|Hidden)/ })).toHaveLength(2);
+      expect(
+        screen.getAllByRole("button", { name: /, (?:Check your foods|Makes|Hidden)/ }),
+      ).toHaveLength(3);
+    });
+
+    it("should list Refresh ingredients first", async () => {
+      const { user } = await showView();
+
+      await user.press(moreButton());
+      await refreshItem();
+
+      const [first, second, third] = screen.getAllByRole("button", {
+        name: /, (?:Check your foods|Makes|Hidden)/,
+      });
+      expect(first).toHaveAccessibleName(/^Refresh ingredients, /);
+      expect(second).toHaveAccessibleName(/^Duplicate, /);
+      expect(third).toHaveAccessibleName(/^Archive, /);
     });
 
     it("should leave Archive out for a recipe that is already archived, and keep Duplicate", async () => {
@@ -193,6 +211,65 @@ describe("the recipe view's More menu", () => {
         expect(screen.queryByRole("button", { name: /^Duplicate, / })).not.toBeOnTheScreen();
       });
       expect(moreButton()).toBeDisabled();
+    });
+  });
+
+  describe("Refresh ingredients", () => {
+    it("should push the refresh screen over the view and close the sheet", async () => {
+      const { user } = await showView();
+      await user.press(moreButton());
+
+      await user.press(await refreshItem());
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith(refreshRecipePath(chickenAndRice.id));
+      await waitFor(() => {
+        expect(
+          screen.queryByRole("button", { name: /^Refresh ingredients, / }),
+        ).not.toBeOnTheScreen();
+      });
+    });
+
+    it("should write nothing and read no food on the way, since the screen it opens does the looking", async () => {
+      const { user } = await showView();
+      await user.press(moreButton());
+
+      await user.press(await refreshItem());
+
+      expect(writesTo("recipes")).toHaveLength(0);
+      expect(writesTo("save_recipe")).toHaveLength(0);
+    });
+
+    it("should push once for a double tap", async () => {
+      const { user } = await showView();
+      await user.press(moreButton());
+      const item = await refreshItem();
+
+      await act(async () => {
+        await fireEvent.press(item);
+        await fireEvent.press(item);
+      });
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+
+    it("should open the screen again the next time, as the menu comes back from it", async () => {
+      const { user } = await showView();
+      await user.press(moreButton());
+      await user.press(await refreshItem());
+
+      await user.press(moreButton());
+      await user.press(await refreshItem());
+
+      expect(routerMock.push).toHaveBeenCalledTimes(2);
+    });
+
+    it("should be left in the menu of an archived recipe, which can still be refreshed", async () => {
+      const { user } = await showView({ ...chickenAndRice, is_archived: true });
+
+      await user.press(moreButton());
+
+      expect(await refreshItem()).toBeEnabled();
     });
   });
 
