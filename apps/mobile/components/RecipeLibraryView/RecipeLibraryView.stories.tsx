@@ -10,6 +10,9 @@ import type { Meta, StoryObj } from "@storybook/react-native";
 const actions = {
   onOpenRecipe: () => undefined,
   onNewRecipe: () => undefined,
+  onOpenArchived: () => undefined,
+  onDuplicateRecipe: () => undefined,
+  onArchiveRecipe: () => undefined,
 };
 
 const meta = {
@@ -27,9 +30,24 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The recipes library board: the five recipes, nothing typed.
+// The recipes library board: the five recipes, nothing typed, and "Archived recipes 2" under the list.
+// More on a row opens the recipes row-menu board.
 export const Library: Story = {
-  render: () => <RecipeLibraryView {...actions} recipes={sampleRecipes} status="ready" />,
+  render: () => (
+    <RecipeLibraryView {...actions} archivedCount={2} recipes={sampleRecipes} status="ready" />
+  ),
+};
+
+// The recipes archived-toast board's list: four rows and "Archived recipes 3". The toast is the kit's.
+export const AfterArchiving: Story = {
+  render: () => (
+    <RecipeLibraryView
+      {...actions}
+      archivedCount={3}
+      recipes={sampleRecipes.filter((recipe) => recipe.name !== "Chicken and rice")}
+      status="ready"
+    />
+  ),
 };
 
 // The recipes search board: "chi" typed, with the matched letters in bold.
@@ -48,6 +66,11 @@ export const NoMatches: Story = {
 
 export const Empty: Story = {
   render: () => <RecipeLibraryView {...actions} recipes={[]} status="ready" />,
+};
+
+// Nothing live but some archived: the empty state stays and the Archived recipes row sits under it. Not drawn.
+export const EmptyWithArchived: Story = {
+  render: () => <RecipeLibraryView {...actions} archivedCount={2} recipes={[]} status="ready" />,
 };
 
 // The rows appear after 200 ms, as the skeleton does everywhere.

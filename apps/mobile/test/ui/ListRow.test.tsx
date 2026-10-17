@@ -347,5 +347,18 @@ describe("ListRow", () => {
         fontSize: 20,
       });
     });
+
+    it("should draw a quiet value as secondary body text, as the Archived recipes row's count", async () => {
+      await renderRow(
+        { title: "Archived recipes", value: "2", unit: undefined, valueLook: "quiet" },
+        scheme,
+      );
+
+      expect(await screen.findByText("2")).toHaveStyle({
+        color: resolvedColor(scheme, "text-secondary"),
+        fontFamily: "Geist-Regular",
+        fontSize: 16,
+      });
+    });
   });
 });

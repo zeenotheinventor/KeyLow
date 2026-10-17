@@ -1,5 +1,6 @@
 import {
   NEW_RECIPE_NAME_PARAMETER,
+  archivedRecipesPath,
   editRecipePath,
   newRecipePath,
   recipePath,
@@ -39,5 +40,9 @@ describe("where the recipe library leads", () => {
     expect(recipePath("0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11")).toBe(
       "/recipes/0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11",
     );
+  });
+
+  it("should lead to the archived recipes at /recipes/archived", () => {
+    expect(archivedRecipesPath()).toBe("/recipes/archived");
   });
 });

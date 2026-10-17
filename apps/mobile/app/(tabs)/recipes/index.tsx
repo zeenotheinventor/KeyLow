@@ -1,4 +1,4 @@
-import { RecipeLibrary } from "../../components/RecipeLibrary";
+import { RecipeLibrary } from "../../../components/RecipeLibrary";
 
 export default function RecipesRoute() {
   return <RecipeLibrary />;

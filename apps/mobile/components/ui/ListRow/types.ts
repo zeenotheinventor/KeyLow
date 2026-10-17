@@ -11,6 +11,12 @@ type ListRowBaseProps = {
   value?: string | undefined;
   /** The unit after the value, such as `kcal`. */
   unit?: string | undefined;
+  /**
+   * How the value is drawn. `numeral`, the default, is a small semibold numeral, for a figure such as an
+   * amount. `quiet` is secondary body text, for a count beside a title, as the recipe library's Archived
+   * recipes row draws it.
+   */
+  valueLook?: "numeral" | "quiet" | undefined;
   /** Whether the chevron that says the row navigates is drawn. Only a row with `onPress` has one. Defaults to true. */
   chevron?: boolean | undefined;
   /** Dims the row to half and stops it responding. */

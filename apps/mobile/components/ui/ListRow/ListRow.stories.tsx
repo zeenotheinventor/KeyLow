@@ -44,6 +44,17 @@ export const WithValue: Story = {
   },
 };
 
+// The recipe library's Archived recipes row: a count in secondary text, and a chevron.
+export const WithQuietValue: Story = {
+  args: {
+    icon: "Archive",
+    title: "Archived recipes",
+    value: "2",
+    valueLook: "quiet",
+    onPress: () => undefined,
+  },
+};
+
 // The More screen's Sign out row: a title and nothing else, and it acts so it has no chevron.
 export const TitleOnly: Story = {
   args: { icon: "X", title: "Sign out", chevron: false, onPress: () => undefined },

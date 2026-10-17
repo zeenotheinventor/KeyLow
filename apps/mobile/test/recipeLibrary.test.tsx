@@ -9,6 +9,7 @@ import {
   archivedSampleRecipes,
   sampleRecipes,
 } from "../components/RecipeLibraryView/sampleRecipes";
+import { ToastProvider } from "../components/ui";
 import { isPersistedQuery } from "../lib/diaryCache/isPersistedQuery";
 import { ThemeProvider } from "../lib/theme";
 import {
@@ -50,7 +51,9 @@ async function renderLibrary() {
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <RecipeLibrary />
+        <ToastProvider>
+          <RecipeLibrary />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -59,7 +62,9 @@ async function renderLibrary() {
 
 const field = () => screen.getByRole("searchbox", { name: "Search recipes" });
 const library = () => screen.findByLabelText("Recipes");
-const openButtons = () => within(screen.getByLabelText("Recipes")).getAllByRole("button");
+// A row is two buttons, the one that opens it and its More, so the open ones are told apart by their names.
+const openButtons = () =>
+  within(screen.getByLabelText("Recipes")).getAllByRole("button", { name: /, open$/ });
 const goOffline = () =>
   act(() => {
     onlineManager.setOnline(false);
@@ -164,6 +169,53 @@ describe("the recipe library screen", () => {
 
       expect(routerMock.push).toHaveBeenCalledTimes(1);
       expect(routerMock.push).toHaveBeenCalledWith("/recipes/new?name=pasta");
+    });
+  });
+
+  describe("the Archived recipes row", () => {
+    const archivedLink = () => screen.getByRole("button", { name: "Archived recipes, 2" });
+
+    it("should sit under the list with the count of archived recipes", async () => {
+      await renderLibrary();
+      await library();
+
+      expect(archivedLink()).toBeOnTheScreen();
+      expect(within(archivedLink()).getByText("2")).toBeOnTheScreen();
+    });
+
+    it("should open the archived recipes inside the Recipes tab", async () => {
+      const user = await renderLibrary();
+      await library();
+
+      await user.press(archivedLink());
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith("/recipes/archived");
+    });
+
+    it("should be hidden while a search is typed, because archived recipes are not searched", async () => {
+      const user = await renderLibrary();
+      await library();
+
+      await user.type(field(), "chi");
+
+      expect(screen.queryByRole("button", { name: /^Archived recipes/ })).not.toBeOnTheScreen();
+    });
+
+    it("should be hidden when nothing is archived", async () => {
+      diaryBackend.recipes = [...sampleRecipes];
+      await renderLibrary();
+      await library();
+
+      expect(screen.queryByRole("button", { name: /^Archived recipes/ })).not.toBeOnTheScreen();
+    });
+
+    it("should stay under No recipes yet when every recipe is archived", async () => {
+      diaryBackend.recipes = [...archivedSampleRecipes];
+      await renderLibrary();
+
+      expect(await screen.findByRole("heading", { name: "No recipes yet" })).toBeOnTheScreen();
+      expect(archivedLink()).toBeOnTheScreen();
     });
   });
 
