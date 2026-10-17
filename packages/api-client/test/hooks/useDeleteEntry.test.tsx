@@ -9,6 +9,7 @@ import { keys } from "../../src/queryKeys";
 import { getLogEntry } from "../../src/repos/diary";
 import { foodEntryRow } from "../support/diary";
 import { installDiaryFake } from "../support/diaryFake";
+import { recipeEntryRow } from "../support/recipeEntries";
 import { createWrapper } from "../support/wrapper";
 
 const server = setupServer();
@@ -48,6 +49,29 @@ const renderDay = async (fake: ReturnType<typeof installDiaryFake>) => {
 };
 
 describe("useDeleteEntry", () => {
+  it("should soft delete a recipe entry and take it out of the day at once", async () => {
+    const dinner = recipeEntryRow();
+    const fake = installDiaryFake(server, [breakfast, dinner]);
+    const { queryClient, result } = await renderDay(fake);
+    const releaseWrites = fake.holdWrites();
+
+    act(() => {
+      result.current.remove.mutate(dinner);
+    });
+
+    await waitFor(() => {
+      expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({
+        entries: [{ id: breakfast.id }],
+      });
+    });
+    releaseWrites();
+    await waitFor(() => {
+      expect(result.current.remove.isSuccess).toBe(true);
+    });
+    expect(fake.rows.find(({ id }) => id === dinner.id)?.deleted_at).not.toBeNull();
+    expect(fake.rows.find(({ id }) => id === breakfast.id)?.deleted_at).toBeNull();
+  });
+
   it("should soft delete the entry and leave the other one", async () => {
     const fake = installDiaryFake(server, [breakfast, lunch]);
     const { result } = await renderDay(fake);

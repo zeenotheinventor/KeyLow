@@ -17,7 +17,7 @@ import { useEntryDraft } from "./useEntryDraft";
 
 import type { EditEntryDialogProps } from "./types";
 import type { EntryDraft } from "./useEntryDraft";
-import type { LogEntry } from "@keylow/api-client";
+import type { FoodLogEntry, QuickLogEntry } from "@keylow/api-client";
 import type { Ref } from "react";
 
 import { DIARY_DIALOG_CLASSES } from "@/components/diary/diaryDialogClasses";
@@ -30,8 +30,11 @@ import { TimeField } from "@/components/ui/TimeField";
 import { useDeleteEntryWithUndo } from "@/lib/foodLogActions/useDeleteEntryWithUndo";
 import { useIsOnline } from "@/lib/useIsOnline";
 
+// A recipe entry has no edit dialog yet, so the dialog is only ever given a food or a quick add.
+type EditableEntry = FoodLogEntry | QuickLogEntry;
+
 type EntryFormProps = {
-  entry: LogEntry;
+  entry: EditableEntry;
   draft: EntryDraft;
   amountRef?: Ref<HTMLInputElement>;
   caloriesRef?: Ref<HTMLInputElement>;
@@ -100,7 +103,7 @@ function EditEntryForm({
   opener,
   onClose,
 }: {
-  entry: LogEntry;
+  entry: EditableEntry;
   opener: Element | null;
   onClose: () => void;
 }) {
@@ -196,14 +199,16 @@ function EditEntryForm({
 }
 
 /**
- * The edit entry dialog, for a logged food or a quick add. It opens on the entry the diary shows, with its
+ * The edit entry dialog, for a logged food or a quick add. A recipe entry has none yet: it is treated as
+ * an entry the day does not have, and the dialog closes. It opens on the entry the diary shows, with its
  * time in the Time field. Changing the amount recomputes from the entry's own snapshot, so a food edited
  * since then changes nothing until "Update to current food data" is pressed. Delete is immediate and offers
  * Undo on the diary, through the diary's own handler. Save writes what changed in one request.
  */
 export function EditEntryDialog({ entryId, date, opener, onClose }: EditEntryDialogProps) {
   const day = useDiaryDay(date);
-  const entry = day.data?.entries.find((candidate) => candidate.id === entryId);
+  const found = day.data?.entries.find((candidate) => candidate.id === entryId);
+  const entry = found?.item_type === "recipe" ? undefined : found;
 
   // An entry that is not on the day, such as one the diary no longer has, leaves nothing to edit.
   useEffect(() => {

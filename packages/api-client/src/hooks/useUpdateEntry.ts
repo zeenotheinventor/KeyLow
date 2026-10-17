@@ -17,6 +17,9 @@ import type { EntryUpdate } from "../repos/diaryWrites";
  * - `time`: a new `loggedAt` and the profile's time zone. `local_date` is recomputed, so moving an
  *   entry across midnight moves it to the other day.
  *
+ * A recipe entry takes `amount` (a number of servings or grams of cooked weight, rebuilt from the
+ * entry's own snapshot, so editing or archiving the recipe since changes nothing) and `time`.
+ *
  * They are written in one request. The stored entry replaces the old one in the cache (and leaves
  * the old day if the day changed), then the days, weeks and recent foods are refreshed.
  */

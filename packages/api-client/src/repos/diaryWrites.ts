@@ -4,11 +4,12 @@ import {
   buildQuickEntry,
   quickLogEntryInsertSchema,
   recomputeEntry,
+  recomputeRecipeEntry,
   refreshEntryFromFood,
 } from "@keylow/core/diary";
 import { z } from "zod";
 
-import { ENTRY_COLUMNS, idOfRow, parseRow, repoError } from "./diaryRows";
+import { ENTRY_COLUMNS, idOfRow, insertDiaryEntry, parseRow, repoError } from "./diaryRows";
 import {
   diaryInsertSchema,
   foodLogEntrySchema,
@@ -17,12 +18,19 @@ import {
 } from "./diarySchemas";
 import { getFood, listFoodPortions } from "./foods";
 
-import type { DiaryInsert, FoodLogEntry, LogEntry, QuickLogEntry } from "./diarySchemas";
+import type {
+  DiaryInsert,
+  FoodLogEntry,
+  LogEntry,
+  QuickLogEntry,
+  RecipeLogEntry,
+} from "./diarySchemas";
 import type { Database } from "../database.types";
 import type {
   BuildLogEntryInput,
   BuildQuickEntryInput,
   EntryQuantityChange,
+  RecipeAmount,
 } from "@keylow/core/diary";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -63,13 +71,7 @@ async function insertEntry<Schema extends z.ZodType<LogEntry>>(
   // The builders store the time and the day as given, so a malformed one is caught here, before any request.
   parseRow(diaryInsertSchema, entry, action, () => "(new)");
 
-  // Narrow the union so each branch type-checks against the generated insert type.
-  const table = client.from("food_log_entries");
-  const { data, error } = await (
-    entry.item_type === "food" ? table.insert(entry) : table.insert(entry)
-  )
-    .select(ENTRY_COLUMNS)
-    .single();
+  const { data, error } = await insertDiaryEntry(client, entry).select(ENTRY_COLUMNS).single();
 
   if (error) {
     throw repoError(action, error);
@@ -156,13 +158,16 @@ export type QuickEntryValues = {
 
 /**
  * What to change on an entry. A food entry takes any of three, at least one: an amount, the current
- * food data, a time. A quick add has no amount and no food, so it takes new values, a time, or both
- * (anything else is a compile error, and a `RangeError` at run time for a caller that got past the
- * types). When more than one is given they apply in this order and are written together: the current
+ * food data, a time. A quick add has no amount and no food, so it takes new values, a time, or both.
+ * A recipe entry takes an amount (a number of servings or grams of cooked weight), a time, or both:
+ * it has no "current recipe data" to update to (anything else is a compile error, and a `RangeError`
+ * at run time for a caller that got past the types). When more than one is given they apply in this order and are written together: the current
  * food data first, then the amount (from the refreshed snapshot), then the time.
  *
  * `entry` must be the latest row the diary returned (the cached one): an amount change rewrites the
- * snapshot and the nutrients from it, so a stale copy would write stale values back.
+ * snapshot and the nutrients from it, so a stale copy would write stale values back. A recipe entry's
+ * amount is rebuilt by `recomputeRecipeEntry` in core from that snapshot alone, so editing or archiving
+ * the recipe afterwards changes nothing about the entry.
  */
 export type EntryUpdate =
   | {
@@ -171,6 +176,15 @@ export type EntryUpdate =
       quick?: QuickEntryValues;
       time?: EntryTimeChange;
       amount?: never;
+      useCurrentFoodData?: never;
+    }
+  | {
+      entry: RecipeLogEntry;
+      /** A new number of servings or grams of cooked weight, recomputed from the entry's own snapshot (never the live recipe). */
+      amount?: RecipeAmount;
+      /** A new time. `local_date` is recomputed from it. */
+      time?: EntryTimeChange;
+      quick?: never;
       useCurrentFoodData?: never;
     }
   | {
@@ -226,9 +240,47 @@ function quickColumns(entry: QuickLogEntry, quick: QuickEntryValues): EntryRow {
   return { nutrients: built.nutrients, snapshot: built.snapshot };
 }
 
+type RecipeEntryUpdate = Extract<EntryUpdate, { entry: RecipeLogEntry }>;
+
+const isRecipeUpdate = (update: EntryUpdate): update is RecipeEntryUpdate =>
+  update.entry.item_type === "recipe";
+
+/**
+ * A recipe entry's new amount: the columns that depend on the snapshot, rebuilt from the entry's own
+ * snapshot by core. The recipe is never read, so a recipe edited or archived since changes nothing.
+ * Core's `RangeError` quotes no value, but the message here names the action only, as the rest do.
+ */
+function recipeAmountColumns({ entry, amount, useCurrentFoodData }: RecipeEntryUpdate): EntryRow {
+  // Widened, because the types already say a recipe entry has no food data; this is for a caller past them.
+  const requestedFoodData: unknown = useCurrentFoodData;
+  if (requestedFoodData === true) {
+    throw new RangeError("Only a food entry has a food to update to");
+  }
+  if (amount === undefined) {
+    return {};
+  }
+
+  let next: RecipeLogEntry;
+  try {
+    next = recomputeRecipeEntry(entry, amount);
+  } catch (error) {
+    if (error instanceof RangeError) {
+      throw new RangeError("Could not update the entry: the amount or the recipe is not valid");
+    }
+    throw error;
+  }
+  return {
+    quantity: next.quantity,
+    unit: next.unit,
+    resolved_grams: next.resolved_grams,
+    snapshot: next.snapshot,
+    nutrients: next.nutrients,
+  };
+}
+
 async function currentFoodColumns(
   client: SupabaseClient<Database>,
-  { entry, amount, useCurrentFoodData }: EntryUpdate,
+  { entry, amount, useCurrentFoodData }: Exclude<EntryUpdate, RecipeEntryUpdate>,
 ): Promise<EntryRow> {
   if (entry.item_type !== "food") {
     throw new RangeError("Only a food entry has an amount or a food to update");
@@ -277,7 +329,11 @@ export async function updateLogEntry(
   // The pure parts first, so a bad time or values fail before the food is read.
   const timing = time === undefined ? {} : timingColumns(time);
   const quickValues = quick === undefined ? {} : quickColumns(entry, quick);
-  const food = changesFood ? await currentFoodColumns(client, update) : {};
+  const food = !changesFood
+    ? {}
+    : isRecipeUpdate(update)
+      ? recipeAmountColumns(update)
+      : await currentFoodColumns(client, update);
 
   const { data, error } = await client
     .from("food_log_entries")

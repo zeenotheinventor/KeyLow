@@ -2,7 +2,14 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { diaryDay, noTargets, overTargetDay, sampleDay, targets } from "../diary/support";
+import {
+  diaryDay,
+  noTargets,
+  overTargetDay,
+  recipeEntry,
+  sampleDay,
+  targets,
+} from "../diary/support";
 import { renderWithRouter } from "../ui/appRouter";
 
 import type { DiaryDay, Targets } from "@keylow/api-client";
@@ -234,6 +241,19 @@ describe("the dashboard screen", () => {
 
       expect(screen.getByText("Target 2,200 kcal")).toBeTruthy();
       expect(screen.getByRole("link", { name: "Edit targets" })).toBeTruthy();
+    });
+  });
+
+  describe("a recipe entry in the day", () => {
+    it("should count the serving in today's calories and macros", () => {
+      showDay(TODAY, [...sampleDay(TODAY), recipeEntry({ date: TODAY, time: "18:00" })]);
+
+      renderDashboard();
+
+      // 1,039 kcal and the golden serving's 374.2 leave 787 of 2,200.
+      expect(card().getAttribute("aria-label")).toBe(
+        "Today, open the diary. 787 calories remaining of 2,200. Protein: 118 of 160 grams. Carbs: 168 of 220 grams. Fat: 27 of 70 grams",
+      );
     });
   });
 

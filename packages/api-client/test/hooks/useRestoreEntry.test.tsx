@@ -8,6 +8,7 @@ import { useRestoreEntry } from "../../src/hooks/useRestoreEntry";
 import { keys } from "../../src/queryKeys";
 import { foodEntryRow } from "../support/diary";
 import { installDiaryFake } from "../support/diaryFake";
+import { recipeEntryRow, servingInput } from "../support/recipeEntries";
 import { createWrapper } from "../support/wrapper";
 
 const server = setupServer();
@@ -54,6 +55,30 @@ const renderDay = async () => {
 };
 
 describe("useRestoreEntry", () => {
+  it("should bring a deleted recipe entry back into its day, in time order, with nothing in it changed", async () => {
+    const dinner = recipeEntryRow({ ...servingInput });
+    const fake = installDiaryFake(server, [breakfast, dinner]);
+    const rendered = createWrapper();
+    const { result } = renderHook(
+      () => ({ day: useDiaryDay(DAY), remove: useDeleteEntry(), restore: useRestoreEntry() }),
+      { wrapper: rendered.wrapper },
+    );
+    await waitFor(() => {
+      expect(result.current.day.isSuccess).toBe(true);
+    });
+    await act(() => result.current.remove.mutateAsync(dinner));
+    await waitFor(() => {
+      expect(result.current.day.data?.entries).toHaveLength(1);
+    });
+
+    await act(() => result.current.restore.mutateAsync(dinner));
+
+    await waitFor(() => {
+      expect(result.current.day.data?.entries).toEqual([breakfast, dinner]);
+    });
+    expect(fake.rows.find(({ id }) => id === dinner.id)?.deleted_at).toBeNull();
+  });
+
   it("should clear deleted_at, so the entry is in the day again", async () => {
     const { fake, result } = await renderDay();
 

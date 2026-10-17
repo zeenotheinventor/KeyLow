@@ -1,6 +1,7 @@
 import { TERMS_VERSION } from "@keylow/core/copy";
-import { buildLogEntry, buildQuickEntry } from "@keylow/core/diary";
-import { buildFood } from "@keylow/core/testing";
+import { buildLogEntry, buildQuickEntry, buildRecipeLogEntry } from "@keylow/core/diary";
+import { computeRecipe } from "@keylow/core/recipes";
+import { buildChickenAndRiceRecipe, buildFood } from "@keylow/core/testing";
 import { createClient } from "@supabase/supabase-js";
 import { QueryClient } from "@tanstack/react-query";
 
@@ -187,6 +188,38 @@ export function quickEntry(options: {
   });
 
   return { ...entry, ...databaseColumns(), kcal: options.kcal };
+}
+
+/**
+ * A serving of the golden recipe (500 g chicken, 200 g rice and 20 g oil, in four servings with a measured
+ * 1,100 g) as the database returns it: "Chicken and rice", 275 g and 374.2 kcal for one serving.
+ */
+export function recipeEntry(options: {
+  date: string;
+  utcTime: string;
+  quantity?: number;
+  unit?: "serving" | "g";
+}): Row {
+  const golden = buildChickenAndRiceRecipe({ yieldGrams: 1100 });
+  const entry = buildRecipeLogEntry({
+    recipe: {
+      id: "44444444-4444-4444-8444-444444444444",
+      name: "Chicken and rice",
+      servings: golden.servings,
+      yield_grams: golden.yieldGrams,
+      computed: computeRecipe({
+        servings: golden.servings,
+        yieldGrams: golden.yieldGrams,
+        ingredients: golden.ingredients,
+      }),
+    },
+    quantity: options.quantity ?? 1,
+    unit: options.unit ?? "serving",
+    localDate: options.date,
+    loggedAt: `${options.date}T${options.utcTime}:00+00:00`,
+  });
+
+  return { ...entry, ...databaseColumns(), kcal: entry.nutrients.kcal };
 }
 
 /**

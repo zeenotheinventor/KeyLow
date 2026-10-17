@@ -2,7 +2,7 @@ import { formatClockTime, instantAtLocalTime, toLocalDate } from "@keylow/core/d
 import { z } from "zod";
 
 import { getDiaryDay } from "./diary";
-import { repoError } from "./diaryRows";
+import { insertDiaryEntry, repoError } from "./diaryRows";
 import { diaryInsertSchema } from "./diarySchemas";
 
 import type { DiaryInsert, LogEntry } from "./diarySchemas";
@@ -88,13 +88,7 @@ async function insertCopy(
   client: SupabaseClient<Database>,
   copy: DiaryInsert,
 ): Promise<{ id: string } | { error: PostgrestError }> {
-  const table = client.from("food_log_entries");
-  // Narrow the union so each branch type-checks against the generated insert type.
-  const { data, error } = await (
-    copy.item_type === "food" ? table.insert(copy) : table.insert(copy)
-  )
-    .select("id")
-    .single();
+  const { data, error } = await insertDiaryEntry(client, copy).select("id").single();
 
   return error === null ? data : { error };
 }

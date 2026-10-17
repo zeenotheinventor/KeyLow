@@ -396,6 +396,33 @@ describe("FoodRow in the food log", () => {
     });
   });
 
+  describe("a diary row with nothing to open", () => {
+    it("should be plain text named by the food, when and how much, and not a button", async () => {
+      await renderDiaryRow({ onPress: undefined });
+
+      expect(screen.getByLabelText(chickenName)).toBeOnTheScreen();
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should end without a chevron", async () => {
+      await renderDiaryRow({ onPress: undefined });
+
+      // The flame on the stats line only.
+      expect(drawings()).toHaveLength(1);
+    });
+
+    it("should still offer Delete as an accessibility action, which calls onDelete", async () => {
+      const onDelete = jest.fn();
+      await renderDiaryRow({ onPress: undefined, onDelete });
+      const row = screen.getByLabelText(chickenName);
+
+      expect(row).toHaveProp("accessibilityActions", [{ name: "delete", label: "Delete" }]);
+      await fireEvent(row, "accessibilityAction", { nativeEvent: { actionName: "delete" } });
+
+      expect(onDelete).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe("swipe to delete", () => {
     it("should offer Delete as an accessibility action on the row, which calls onDelete", async () => {
       const onDelete = jest.fn();

@@ -1,10 +1,10 @@
 import { buildRecipeLogEntry, recipeLogEntryInsertSchema } from "@keylow/core/diary";
-import { z } from "zod";
 
 import { ENTRY_COLUMNS, idOfRow, parseRow } from "./diaryRows";
-import { foodLogEntrySchema } from "./diarySchemas";
+import { recipeLogEntrySchema } from "./diarySchemas";
 import { recipeRepoError } from "./recipes";
 
+import type { RecipeLogEntry } from "./diarySchemas";
 import type { Database } from "../database.types";
 import type { BuildRecipeLogEntryInput } from "@keylow/core/diary";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -12,19 +12,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 // A logged recipe is health data. Nothing here puts a recipe, an amount or a total in an error: a
 // failed write names the action and the database's error code, and a check that fails before a
 // request names the fields and never a value.
-
-// The diary reads leave `recipe_id` out of the columns they select (they have no recipe entries), so
-// the row this write gets back asks for it as well.
-const RECIPE_ENTRY_COLUMNS = `${ENTRY_COLUMNS},recipe_id`;
-
-const { id, created_at, kcal } = foodLogEntrySchema.shape;
-
-/**
- * A recipe entry as the database stores it: core's insert schema, plus the columns the database fills in
- * (the same ones, from the same definitions, as a food entry's).
- */
-const recipeLogEntrySchema = recipeLogEntryInsertSchema.safeExtend({ id, created_at, kcal });
-export type RecipeLogEntry = z.infer<typeof recipeLogEntrySchema>;
 
 /** What a recipe is logged with: the recipe, an amount by serving or by grams of cooked weight, and when. See `buildRecipeLogEntry` in core. */
 export type LogRecipeInput = BuildRecipeLogEntryInput;
@@ -84,7 +71,7 @@ export async function logRecipe(
   const { data, error } = await client
     .from("food_log_entries")
     .insert(checkedEntry(input))
-    .select(RECIPE_ENTRY_COLUMNS)
+    .select(ENTRY_COLUMNS)
     .single();
 
   if (error) {

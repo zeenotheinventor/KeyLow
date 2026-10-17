@@ -14,7 +14,7 @@ import {
 import { useState } from "react";
 
 import type { QuickAddDraft, QuickAddTexts } from "@/components/diary/QuickAddFields";
-import type { EntryUpdate, LogEntry } from "@keylow/api-client";
+import type { EntryUpdate, FoodLogEntry, QuickLogEntry } from "@keylow/api-client";
 import type {
   AmountFood,
   AmountPortion,
@@ -69,7 +69,7 @@ const NO_CHOICES: PickerChoices = { portions: [], options: [] };
 const numberText = (value: number | null): string => (value === null ? "" : String(value));
 
 // A quick add's saved numbers and label, as the fields hold them. A food entry has none.
-function quickTexts(entry: LogEntry): QuickAddTexts {
+function quickTexts(entry: FoodLogEntry | QuickLogEntry): QuickAddTexts {
   if (entry.item_type !== "quick") {
     return { kcal: "", protein: "", carbs: "", fat: "", label: "" };
   }
@@ -91,7 +91,7 @@ function quickTexts(entry: LogEntry): QuickAddTexts {
  * a whole), its time, or both. What the person has typed is kept apart from the entry and starts again for
  * another entry. Nothing a failed save throws is kept: it can quote the amount, which is health data.
  */
-export function useEntryDraft(entry: LogEntry): EntryDraft {
+export function useEntryDraft(entry: FoodLogEntry | QuickLogEntry): EntryDraft {
   const timeZone = useProfileTimeZone().data ?? "UTC";
   const updateEntry = useUpdateEntry();
   const quick = useQuickAddDraft(quickTexts(entry));

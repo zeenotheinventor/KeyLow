@@ -13,6 +13,7 @@ import { SwipeToDelete } from "./SwipeToDelete";
 
 import type { FoodRowProps } from "./types";
 import type { ReactNode } from "react";
+import type { PressableProps } from "react-native";
 
 // The title is 16 over 22 where body is 16 over 24, as the boards draw a food name. A matched part is
 // the semibold weight and the rest the regular, so the match reads in bold.
@@ -157,7 +158,9 @@ export function FoodRow({
               </Text>
             </View>
           )}
-          {showsAdd ? null : <Icon name="ChevronRight" size="sm" tone="muted" />}
+          {showsAdd || onPress === undefined ? null : (
+            <Icon name="ChevronRight" size="sm" tone="muted" />
+          )}
         </>
       )}
     </>
@@ -165,28 +168,41 @@ export function FoodRow({
 
   const divider = isFirst ? "" : "border-t border-border";
   const dimmed = disabled && !isBusy ? "opacity-50" : "";
-  const row = (
-    <PressableSurface
-      accessibilityActions={canDelete ? [deleteAction] : undefined}
-      busy={isBusy}
-      className={`${rowClassName[layout ?? "classic"]} ${layout === undefined ? divider : ""} ${dimmed}`}
-      disabled={disabled}
-      label={label}
-      pressScale={rowPressScale}
-      onAccessibilityAction={
-        canDelete
-          ? ({ nativeEvent }) => {
-              if (nativeEvent.actionName === deleteAction.name) {
-                onDelete();
-              }
-            }
-          : undefined
+  const rowClasses = `${rowClassName[layout ?? "classic"]} ${layout === undefined ? divider : ""} ${dimmed}`;
+  const actions = canDelete ? [deleteAction] : undefined;
+  const onAction: PressableProps["onAccessibilityAction"] = canDelete
+    ? ({ nativeEvent }) => {
+        if (nativeEvent.actionName === deleteAction.name) {
+          onDelete();
+        }
       }
-      onPress={onPress}
-    >
-      {rowContent}
-    </PressableSurface>
-  );
+    : undefined;
+  // A row with nothing to open is plain text: not a button, so a screen reader does not offer a press.
+  const row =
+    onPress === undefined ? (
+      <View
+        accessible
+        accessibilityActions={actions}
+        aria-label={label}
+        className={rowClasses}
+        onAccessibilityAction={onAction}
+      >
+        {rowContent}
+      </View>
+    ) : (
+      <PressableSurface
+        accessibilityActions={actions}
+        busy={isBusy}
+        className={rowClasses}
+        disabled={disabled}
+        label={label}
+        pressScale={rowPressScale}
+        onAccessibilityAction={onAction}
+        onPress={onPress}
+      >
+        {rowContent}
+      </PressableSurface>
+    );
 
   if (!isLog) {
     return row;

@@ -63,5 +63,9 @@ export type FoodRowProps = {
   isSwiped?: boolean | undefined;
   /** Called when a swipe, a tap on the open row or the Delete action opens or closes the row. */
   onSwipedChange?: ((isSwiped: boolean) => void) | undefined;
-  onPress: () => void;
+  /**
+   * Opens the food. Leave it out when there is nothing to open yet, and the row is plain text with no
+   * chevron and no press (it still swipes to delete when it has `onDelete`).
+   */
+  onPress?: (() => void) | undefined;
 };

@@ -8,6 +8,7 @@ import { CopyDayPartialWriteError, copyDay, undoCopyDay } from "../../src/repos/
 import { createTestClient } from "../createTestClient";
 import { answerCopyDay, copiedId } from "../support/copyDayServer";
 import { foodEntryRow, quickEntryRow } from "../support/diary";
+import { recipeEntryRow, servingInput } from "../support/recipeEntries";
 
 import type { LogEntry } from "../../src/repos/diarySchemas";
 
@@ -151,6 +152,90 @@ describe("copyDay", () => {
         "unit",
       ].sort(),
     );
+  });
+
+  describe("a recipe entry in the day", () => {
+    const dinner = recipeEntryRow({ ...servingInput, loggedAt: "2026-10-15T17:00:00+00:00" });
+
+    it("should copy it as a recipe entry, with its frozen snapshot, recipe id and nutrients as they were", async () => {
+      const { handlers, writes } = answerCopyDay({ sourceEntries: [dinner] });
+      server.use(...handlers);
+
+      await copyDay(createTestClient(), { from: "2026-10-15", to: "2026-10-16", timeZone: LONDON });
+
+      const [copy] = insertedBodies(writes);
+      expect(copy).toMatchObject({
+        item_type: "recipe",
+        recipe_id: dinner.recipe_id,
+        food_id: null,
+        portion_id: null,
+        quantity: 1,
+        unit: "serving",
+        resolved_grams: dinner.resolved_grams,
+        snapshot: dinner.snapshot,
+        nutrients: dinner.nutrients,
+        local_date: "2026-10-16",
+      });
+    });
+
+    it("should keep the clock time of the original on the target day", async () => {
+      const { handlers, writes } = answerCopyDay({ sourceEntries: [dinner] });
+      server.use(...handlers);
+
+      await copyDay(createTestClient(), { from: "2026-10-15", to: "2026-10-16", timeZone: LONDON });
+
+      const [copy] = insertedBodies(writes) as { logged_at: string }[];
+      expect(clockOf(copy?.logged_at ?? "", LONDON)).toBe("18:00");
+    });
+
+    it("should send only the columns a client may insert, and no generated one", async () => {
+      const { handlers, writes } = answerCopyDay({ sourceEntries: [dinner] });
+      server.use(...handlers);
+
+      await copyDay(createTestClient(), { from: "2026-10-15", to: "2026-10-16", timeZone: LONDON });
+
+      const [copy] = insertedBodies(writes);
+      expect(Object.keys(copy as object).sort()).toEqual(
+        [
+          "food_id",
+          "item_type",
+          "local_date",
+          "logged_at",
+          "nutrients",
+          "portion_id",
+          "quantity",
+          "recipe_id",
+          "resolved_grams",
+          "snapshot",
+          "unit",
+        ].sort(),
+      );
+    });
+
+    it("should not read the recipe, so an archived or edited recipe makes no difference", async () => {
+      // answerCopyDay has no handler for the recipes tables: a read of one would fail the run.
+      const { handlers } = answerCopyDay({ sourceEntries: [dinner] });
+      server.use(...handlers);
+
+      const copied = await copyDay(createTestClient(), {
+        from: "2026-10-15",
+        to: "2026-10-16",
+        timeZone: LONDON,
+      });
+
+      expect(copied.count).toBe(1);
+    });
+
+    it("should leave the day at the sum of the original entries with the recipe serving added", async () => {
+      const { handlers, writes } = answerCopyDay({ sourceEntries: [...sampleDay, dinner] });
+      server.use(...handlers);
+
+      await copyDay(createTestClient(), { from: "2026-10-15", to: "2026-10-16", timeZone: LONDON });
+
+      const copies = insertedBodies(writes) as { nutrients: LogEntry["nutrients"] }[];
+      expect(copies).toHaveLength(8);
+      expect(sumEntries(copies).kcal).toBeCloseTo(1039 + 374.2, 10);
+    });
   });
 
   it("should insert one entry at a time in the order of the source day, so the copies keep their order", async () => {

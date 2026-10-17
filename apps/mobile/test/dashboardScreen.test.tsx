@@ -16,6 +16,7 @@ import {
   diaryClient,
   foodEntry,
   noTargets,
+  recipeEntry,
   requestsTo,
   resetDiaryBackend,
   sampleDay,
@@ -172,6 +173,15 @@ describe("the dashboard screen", () => {
       await renderDashboard();
 
       expect(await card()).toHaveAccessibleName(underTargetName);
+    });
+
+    it("should count a recipe entry in the day: 1,039 kcal and the golden serving's 374.2 leave 787", async () => {
+      diaryBackend.entries.push(recipeEntry({ date: "2026-10-15", utcTime: "17:00" }));
+      await renderDashboard();
+
+      expect(await card()).toHaveAccessibleName(
+        "Today, open the diary. 787 calories remaining of 2,200. Protein: 118 of 160 grams. Carbs: 168 of 220 grams. Fat: 27 of 70 grams",
+      );
     });
 
     it("should draw the ring and the three macro bars from the day's foods against the targets", async () => {

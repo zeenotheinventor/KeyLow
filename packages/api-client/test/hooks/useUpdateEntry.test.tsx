@@ -11,6 +11,7 @@ import { keys } from "../../src/queryKeys";
 import { FOOD_ID, foodEntryRow } from "../support/diary";
 import { installDiaryFake } from "../support/diaryFake";
 import { REST_URL, foodRow, postgrestRows } from "../support/postgrest";
+import { goldenYieldRecipe, recipeEntryRow } from "../support/recipeEntries";
 import { createWrapper } from "../support/wrapper";
 
 const server = setupServer();
@@ -49,6 +50,37 @@ const renderDays = async (fake: ReturnType<typeof installDiaryFake>) => {
 };
 
 describe("useUpdateEntry", () => {
+  it("should change the amount of a recipe entry from its own snapshot and show it in the day", async () => {
+    const dinner = recipeEntryRow({
+      recipe: goldenYieldRecipe,
+      quantity: 1,
+      unit: "serving",
+      loggedAt: `${DAY}T17:00:00.000Z`,
+      localDate: DAY,
+    });
+    const fake = installDiaryFake(server, [dinner]);
+    const { queryClient, result } = await renderDays(fake);
+    fake.holdReads();
+
+    const updated = await act(() =>
+      result.current.update.mutateAsync({
+        entry: dinner,
+        amount: { quantity: 1.5, unit: "serving" },
+      }),
+    );
+
+    expect(updated).toMatchObject({
+      item_type: "recipe",
+      quantity: 1.5,
+      resolved_grams: 412.5,
+      recipe_id: dinner.recipe_id,
+    });
+    expect(updated.nutrients.kcal).toBeCloseTo(561.3, 1);
+    expect(queryClient.getQueryData(keys.diary.day(DAY))).toMatchObject({
+      entries: [{ id: dinner.id, item_type: "recipe", quantity: 1.5 }],
+    });
+  });
+
   it("should change the amount from the entry's own snapshot and show it in the day", async () => {
     const fake = installDiaryFake(server, [lateSnack]);
     const { queryClient, result } = await renderDays(fake);
