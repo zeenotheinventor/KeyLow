@@ -4,6 +4,7 @@ import { join, relative, sep } from "node:path";
 import {
   editRecipePath,
   newRecipePath,
+  logRecipePath,
   recipePath,
   recipesPath,
   refreshRecipePath,
@@ -76,6 +77,10 @@ describe("the recipe addresses and the screens under app/", () => {
 
   it("should open the refresh of a saved recipe's ingredients at its refresh address", () => {
     expect(routeFileFor(refreshRecipePath(SOME_RECIPE_ID))).toBe("recipes/[id]/refresh.tsx");
+  });
+
+  it("should open the amount step of a recipe at its log address, in the foods sheet", () => {
+    expect(routeFileFor(logRecipePath(SOME_RECIPE_ID))).toBe("foods/recipe/[id]/log.tsx");
   });
 
   it("should open no screen at an address nothing is built for", () => {

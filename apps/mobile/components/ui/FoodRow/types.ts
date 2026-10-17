@@ -56,7 +56,7 @@ export type FoodRowProps = {
   needsReview?: boolean | undefined;
   /**
    * Logs the serving at once. Gives a `search`, `recent` or `recipe` row its add button. Pressing it does not
-   * press the row. A `recipe` row in the log search has this and no `onPress`, so only the button acts.
+   * press the row. A `recipe` row in the log search has this beside its `onPress`, which opens the amount step.
    */
   onAdd?: (() => void) | undefined;
   /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. A disabled row disables its add button too. */

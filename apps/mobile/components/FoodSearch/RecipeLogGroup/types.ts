@@ -8,4 +8,5 @@ export type RecipeLogGroupProps = {
   /** Dims every plus and stops it responding, such as while offline. */
   addDisabled: boolean;
   onAdd: LogRecipes["onAdd"];
+  onOpen: LogRecipes["onOpen"];
 };

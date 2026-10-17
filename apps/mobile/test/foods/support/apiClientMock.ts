@@ -10,6 +10,7 @@ import type {
   LogRecipeInput,
   RecentFood,
   RecipeLogEntry,
+  RecipeState,
 } from "@keylow/api-client";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 
@@ -83,6 +84,9 @@ export const termsAccepted = { current: true };
 export const mockUseFood = jest.fn<QueryState<Food | null>, [string | undefined]>();
 export const mockUseFoodPortions = jest.fn<QueryState<FoodPortion[]>, [string | undefined]>();
 export const mockUseFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
+// The recipe the amount step reads by id, as the real hook states it. A test sets `recipeState` for a case.
+export const recipeState: { current: RecipeState } = { current: { status: "loading" } };
+export const mockUseRecipe = jest.fn<RecipeState, [string | undefined, { enabled?: boolean }?]>();
 
 export const foodQuery: QueryState<Food | null> = {
   data: foodFixture,
@@ -142,6 +146,9 @@ export function resetApiClientMock(): void {
   mockUseFoodPortions.mockImplementation(() => portionsQuery);
   mockUseFoodWithPortions.mockReset();
   mockUseFoodWithPortions.mockImplementation(foodWithPortionsState);
+  recipeState.current = { status: "loading" };
+  mockUseRecipe.mockReset();
+  mockUseRecipe.mockImplementation(() => recipeState.current);
 }
 
 // The real error classes stay in place so the screens' instanceof checks run against them.
@@ -166,6 +173,7 @@ export const mockApiClient = {
   useFood: mockUseFood,
   useFoodPortions: mockUseFoodPortions,
   useFoodWithPortions: mockUseFoodWithPortions,
+  useRecipe: mockUseRecipe,
   // A signed in user here has accepted the current Terms, so the AuthGate's terms gate stays out of the way.
   useTermsAcceptance: () => ({
     isPending: false,

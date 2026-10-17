@@ -79,7 +79,7 @@ const chickenAndRice: RecipeSummary = {
 };
 
 const rowName =
-  "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+  "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount";
 const addName = "Add Chicken and rice, 1 serving (275 g)";
 const notSaved = "Not saved. Check your connection and try again.";
 
@@ -379,20 +379,61 @@ describe("recipes in the log search", () => {
       expect(screen.getByText("8.1 F")).toBeOnTheScreen();
     });
 
-    it("should be named by its values in words, and not offer to choose an amount", async () => {
+    it("should be named by its values in words, and offer to choose an amount", async () => {
       await renderLogSearch();
       await type("chicken");
 
-      expect(screen.getByLabelText(rowName)).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: rowName })).toBeOnTheScreen();
     });
 
-    it("should not be pressable yet: its plus is the only button in the group", async () => {
+    it("should be a button beside its plus, with no chevron because the plus is there", async () => {
+      await renderLogSearch();
+      await type("chicken");
+
+      expect(within(recipeList()).getAllByRole("button")).toHaveLength(2);
+    });
+
+    it("should open the amount step with the day and the hour carried on", async () => {
       const user = await renderLogSearch();
       await type("chicken");
 
-      expect(within(recipeList()).getAllByRole("button")).toHaveLength(1);
-      await user.press(screen.getByLabelText(rowName));
-      expect(routerMock.push).not.toHaveBeenCalled();
+      await user.press(screen.getByRole("button", { name: rowName }));
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith(
+        `/foods/recipe/${recipeId}/log?day=2026-10-14&time=18%3A00`,
+      );
+      expect(mockLogRecipe).not.toHaveBeenCalled();
+    });
+
+    it("should open the amount step with the day alone from the dock", async () => {
+      routerMock.searchParams = { day: "2026-10-14" };
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <ToastProvider>
+            <FoodSearchRoute />
+          </ToastProvider>
+        </ThemeProvider>,
+      );
+      await type("chicken");
+
+      await user.press(screen.getByRole("button", { name: rowName }));
+
+      expect(routerMock.push).toHaveBeenCalledWith(`/foods/recipe/${recipeId}/log?day=2026-10-14`);
+    });
+
+    it("should open the amount step while offline, which only the plus needs a connection for", async () => {
+      onlineManager.setOnline(false);
+      const user = await renderLogSearch();
+      await type("chicken");
+
+      await user.press(screen.getByRole("button", { name: rowName }));
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      await act(() => {
+        onlineManager.setOnline(true);
+      });
     });
   });
 

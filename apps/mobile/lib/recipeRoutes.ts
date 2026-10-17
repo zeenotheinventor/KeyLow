@@ -19,6 +19,12 @@ export const editRecipePath = (id: string): string => `${recipesPath()}/${id}/ed
 /** The recipe view, the screen a library row opens and where the editor's Back and Save lead. */
 export const recipePath = (id: string): string => `${recipesPath()}/${id}`;
 
+/**
+ * The amount step of a recipe, in the foods sheet: where a "Your recipes" row of the log search leads. The caller
+ * adds the day and hour the sheet carries (`withLogContext`).
+ */
+export const logRecipePath = (id: string): string => `/foods/recipe/${id}/log`;
+
 /** The screen that shows what "Refresh ingredients" would change in a saved recipe, pushed over its view. */
 export const refreshRecipePath = (id: string): string => `${recipesPath()}/${id}/refresh`;
 

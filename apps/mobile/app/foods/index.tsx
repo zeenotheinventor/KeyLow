@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { FoodSearch } from "../../components/FoodSearch";
 import { readLogContext, withLogContext } from "../../lib/navigation";
+import { logRecipePath } from "../../lib/recipeRoutes";
 
 /**
  * The root of the food search sheet. `/foods?scope=own` is the same sheet titled "Your foods", which
@@ -38,6 +39,9 @@ export default function FoodSearchRoute() {
               context: logContext,
               onOpenRecent: (foodId) => {
                 router.push(withLogContext(`/foods/${foodId}/log`, logContext, { recent: "1" }));
+              },
+              onOpenRecipe: (recipeId) => {
+                router.push(withLogContext(logRecipePath(recipeId), logContext));
               },
               onQuickAdd: () => {
                 router.push(withLogContext("/foods/quick-add", logContext));

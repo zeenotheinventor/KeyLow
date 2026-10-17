@@ -19,13 +19,18 @@ export type SearchResultsProps = {
   choosesAmount?: boolean | undefined;
 };
 
-/** The user's recipes that match, drawn as the first group of the log search with a plus that logs one serving. */
+/**
+ * The user's recipes that match, drawn as the first group of the log search. A row opens the amount step, and its
+ * plus logs one serving at once.
+ */
 export type LogRecipes = {
   /** The recipes that can be logged, in the order the search returned them. */
   rows: readonly RecipeSummary[];
   /** True while the recipes on show may not be the answer yet, so "No foods found" is not said. */
   isSearching: boolean;
   onAdd: (recipe: RecipeSummary) => void;
+  /** Opens the amount step for the recipe. */
+  onOpen: (recipe: RecipeSummary) => void;
 };
 
 export type LogRows = {

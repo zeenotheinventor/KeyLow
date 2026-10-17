@@ -93,6 +93,7 @@ export function LocalFoodGroups({
           query={query}
           recipes={logRows.recipes.rows}
           onAdd={logRows.recipes.onAdd}
+          onOpen={logRows.recipes.onOpen}
         />
       )}
       {foodGroups}

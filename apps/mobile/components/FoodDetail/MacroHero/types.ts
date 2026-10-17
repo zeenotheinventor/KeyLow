@@ -50,5 +50,6 @@ export type MacroHeroRegionProps = {
 
 export type MacroHeroProps =
   | { food: MacroHeroFood; amount?: undefined }
-  | { food: MacroHeroFood; amount: MacroHeroAmount }
+  // An amount needs no food of its own: a recipe's amount is drawn from the recipe, which is not a food.
+  | { food?: MacroHeroFood | undefined; amount: MacroHeroAmount }
   | MacroHeroRegionProps;

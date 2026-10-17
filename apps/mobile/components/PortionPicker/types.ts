@@ -1,4 +1,10 @@
-import type { ChosenAmount, FoodSnapshot, LiveFoodPortions } from "@keylow/core/diary";
+import type { RecipeSummary } from "@keylow/api-client";
+import type {
+  ChosenAmount,
+  FoodSnapshot,
+  LiveFoodPortions,
+  RecipeAmount,
+} from "@keylow/core/diary";
 import type { SpoonPortion } from "@keylow/core/nutrition";
 import type { Food, FoodPortion } from "@keylow/core/schemas";
 import type { ReactNode } from "react";
@@ -11,6 +17,17 @@ export type PortionAmount = ChosenAmount<FoodPortion | SpoonPortion>;
  * one of the food's own, one of the spoons, or, on the entry screen, the portion the entry was logged with.
  */
 export type PortionSelection = ChosenAmount & {
+  /** The Time row's time as `HH:mm`. */
+  time: string;
+  /** The row still reads "Now": the person did not choose a time, so the time is the moment the screen opened. */
+  isNow: boolean;
+};
+
+/**
+ * What the recipe's Add hands over: the amount (a number of servings, or grams of cooked weight) and the time
+ * the Time row shows.
+ */
+export type RecipeSelection = RecipeAmount & {
   /** The Time row's time as `HH:mm`. */
   time: string;
   /** The row still reads "Now": the person did not choose a time, so the time is the moment the screen opened. */
@@ -104,8 +121,34 @@ type PortionPickerAddIngredientProps = PortionPickerBaseProps & {
   onSubmit: (amount: ChosenAmount) => void;
 };
 
-export type PortionPickerProps =
+/**
+ * The amount step of a recipe about to be logged (the picker's recipe mode): the recipe's name under Back, its
+ * yield, what the chosen amount comes to, its values per 100 g, and at the bottom the amount, the unit chips
+ * (1 serving and g), the Time row and Add. The recipe is the search hit, with its `computed` cache, so the
+ * hero and the entry that is stored are worked out from the same figures. It has no food.
+ */
+export type RecipePortionPickerProps = {
+  mode: "recipe";
+  recipe: RecipeSummary;
+  onBack: () => void;
+  /** The Time row's time as `HH:mm` when the picker opens. */
+  time: string;
+  /** The row reads "Now · 12:40" and not "12:40", until the person chooses a time. */
+  isNow: boolean;
+  /** Draws Add as working and stops it responding. */
+  isSaving: boolean;
+  /** Shows that the last Add was not saved. */
+  hasSaveError: boolean;
+  /** False while the connection is lost: Add stops responding. Defaults to true. */
+  isOnline?: boolean | undefined;
+  onSubmit: (selection: RecipeSelection) => void;
+};
+
+/** The pages of a food, which the picker has had since the diary was built. */
+export type FoodPortionPickerProps =
   | PortionPickerAddProps
   | PortionPickerEditProps
   | PortionPickerAddIngredientProps
   | PortionPickerEditIngredientProps;
+
+export type PortionPickerProps = FoodPortionPickerProps | RecipePortionPickerProps;

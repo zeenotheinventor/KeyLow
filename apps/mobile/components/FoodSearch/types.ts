@@ -9,6 +9,8 @@ export type FoodSearchLogging = {
   context: LogContext;
   /** Opens the portion picker for a Recent food, filled in with the amount it was last logged with. */
   onOpenRecent: (foodId: string) => void;
+  /** Opens the amount step for a recipe, from its row in "Your recipes", with the day and time carried on. */
+  onOpenRecipe: (recipeId: string) => void;
   /** Opens the quick add form, from the Quick add row, with the day and time carried on. */
   onQuickAdd: () => void;
 };
