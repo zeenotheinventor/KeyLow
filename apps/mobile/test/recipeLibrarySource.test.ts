@@ -6,7 +6,14 @@ const { readFileSync, readdirSync } = jest.requireActual<{
 
 // The recipe library's own files, and the route helper. The kit pieces it extended are held to the same
 // rules by the repository's source guard; this keeps the screen itself honest where the ticket asks for it.
-const directories = ["components/RecipeLibrary", "components/RecipeLibraryView"];
+const directories = [
+  "components/RecipeLibrary",
+  "components/RecipeLibraryView",
+  "components/RecipeActions",
+  "components/RecipeRowMenu",
+  "components/ArchivedRecipesView",
+  "components/ArchivedRecipesScreen",
+];
 const sourceFiles = [
   "lib/recipeRoutes.ts",
   ...directories.flatMap((directory) =>

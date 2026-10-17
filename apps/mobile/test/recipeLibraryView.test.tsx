@@ -1,3 +1,4 @@
+import { themes } from "@keylow/tokens";
 import { act, cleanup, render, screen, userEvent, within } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -9,6 +10,7 @@ import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { RecipeLibraryViewProps } from "../components/RecipeLibraryView";
+import type { RecipeSummary } from "@keylow/api-client";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -25,13 +27,19 @@ setUpTests();
 const onOpenRecipe = jest.fn<undefined, [string]>();
 const onNewRecipe = jest.fn<undefined, [string?]>();
 const onRetry = jest.fn<undefined, []>();
+const onOpenArchived = jest.fn<undefined, []>();
+const onDuplicateRecipe = jest.fn<undefined, [RecipeSummary]>();
+const onArchiveRecipe = jest.fn<undefined, [RecipeSummary]>();
 
-const ready: RecipeLibraryViewProps = {
-  status: "ready",
-  recipes: sampleRecipes,
+const actions = {
   onOpenRecipe,
   onNewRecipe,
+  onOpenArchived,
+  onDuplicateRecipe,
+  onArchiveRecipe,
 };
+
+const ready: RecipeLibraryViewProps = { status: "ready", recipes: sampleRecipes, ...actions };
 
 async function renderLibrary(
   props: RecipeLibraryViewProps = ready,
@@ -47,7 +55,8 @@ async function renderLibrary(
 const user = () => userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
 const field = () => screen.getByRole("searchbox", { name: "Search recipes" });
 const library = () => screen.getByLabelText("Recipes");
-const openButtons = () => within(library()).getAllByRole("button");
+// A row is two buttons, the one that opens it and its More, so the open ones are told apart by their names.
+const openButtons = () => within(library()).getAllByRole("button", { name: /, open$/ });
 
 // The rows' open buttons, in order, each named as the string or pattern at its place.
 function expectOpenButtonsNamed(names: readonly (string | RegExp)[]) {
@@ -91,6 +100,9 @@ describe("the recipe library", () => {
     onOpenRecipe.mockReset();
     onNewRecipe.mockReset();
     onRetry.mockReset();
+    onOpenArchived.mockReset();
+    onDuplicateRecipe.mockReset();
+    onArchiveRecipe.mockReset();
   });
 
   afterEach(async () => {
@@ -143,7 +155,7 @@ describe("the recipe library", () => {
       },
     );
 
-    it("should not draw the archived recipes row, which the archived screen's ticket adds", async () => {
+    it("should not draw the archived recipes row when nothing is archived", async () => {
       await renderLibrary();
 
       expect(screen.queryByRole("button", { name: /^Archived recipes/ })).not.toBeOnTheScreen();
@@ -216,6 +228,129 @@ describe("the recipe library", () => {
       await renderLibrary();
 
       expect(screen.queryByText("Needs review")).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("the More menu", () => {
+    const more = () => screen.getByRole("button", { name: "More for Chicken and rice" });
+    const duplicateItem = () =>
+      screen.getByRole("button", { name: "Duplicate, Makes a copy you can change" });
+    const archiveItem = () =>
+      screen.getByRole("button", { name: "Archive, Hidden until you restore it" });
+
+    it("should give every row a More button named for its recipe, beside the row and not in it", async () => {
+      await renderLibrary();
+
+      expect(screen.getAllByRole("button", { name: /^More for / })).toHaveLength(5);
+      expect(
+        within(screen.getByRole("button", { name: /^Beef chilli,/ })).queryByRole("button"),
+      ).toBeNull();
+    });
+
+    it.each(["dark", "light"] as const)(
+      "should draw the More glyph in secondary text, in the %s scheme",
+      async (scheme) => {
+        await renderLibrary(ready, scheme);
+
+        const [glyph] = more().queryAll((node) => node.type === "RNSVGSvgView");
+        expect(glyph).toHaveProp("stroke", themes[scheme]["text-secondary"]);
+      },
+    );
+
+    it("should open the sheet with the recipe's name and its two actions", async () => {
+      await renderLibrary();
+
+      await user().press(more());
+
+      expect(await screen.findByRole("heading", { name: "Chicken and rice" })).toBeOnTheScreen();
+      expect(duplicateItem()).toBeEnabled();
+      expect(archiveItem()).toBeEnabled();
+      expect(onDuplicateRecipe).not.toHaveBeenCalled();
+      expect(onArchiveRecipe).not.toHaveBeenCalled();
+    });
+
+    it("should not press the row", async () => {
+      await renderLibrary();
+
+      await user().press(more());
+
+      expect(onOpenRecipe).not.toHaveBeenCalled();
+    });
+
+    it("should duplicate the recipe at once, with no confirmation, and close", async () => {
+      await renderLibrary();
+      await user().press(more());
+
+      await user().press(await screen.findByRole("button", { name: /^Duplicate,/ }));
+
+      expect(onDuplicateRecipe).toHaveBeenCalledTimes(1);
+      expect(onDuplicateRecipe).toHaveBeenCalledWith(sampleRecipes[1]);
+      expect(onArchiveRecipe).not.toHaveBeenCalled();
+    });
+
+    it("should archive the recipe at once, with no confirmation, and close", async () => {
+      await renderLibrary();
+      await user().press(more());
+
+      await user().press(await screen.findByRole("button", { name: /^Archive,/ }));
+
+      expect(onArchiveRecipe).toHaveBeenCalledTimes(1);
+      expect(onArchiveRecipe).toHaveBeenCalledWith(sampleRecipes[1]);
+      expect(onDuplicateRecipe).not.toHaveBeenCalled();
+    });
+
+    it("should be dimmed and stop responding when the recipes are only from this session", async () => {
+      await renderLibrary({ ...ready, isOnline: false });
+
+      const buttons = screen.getAllByRole("button", { name: /^More for / });
+      expect(buttons).toHaveLength(5);
+      buttons.forEach((button) => {
+        expect(button).toBeDisabled();
+      });
+    });
+  });
+
+  describe("the Archived recipes row", () => {
+    const archivedLink = () => screen.getByRole("button", { name: "Archived recipes, 2" });
+
+    it("should show the count and a way in under the list, and open the archived recipes", async () => {
+      await renderLibrary({ ...ready, archivedCount: 2 });
+
+      await user().press(archivedLink());
+
+      expect(onOpenArchived).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not be drawn when nothing is archived", async () => {
+      await renderLibrary({ ...ready, archivedCount: 0 });
+
+      expect(screen.queryByRole("button", { name: /^Archived recipes/ })).not.toBeOnTheScreen();
+    });
+
+    it("should be hidden while a search is typed, with matches or without", async () => {
+      await renderLibrary({ ...ready, archivedCount: 2 });
+
+      await user().type(field(), "chi");
+      expect(screen.queryByRole("button", { name: /^Archived recipes/ })).not.toBeOnTheScreen();
+
+      await user().clear(field());
+      await user().type(field(), "pasta");
+      expect(screen.queryByRole("button", { name: /^Archived recipes/ })).not.toBeOnTheScreen();
+    });
+
+    it("should stay under No recipes yet when only archived recipes exist", async () => {
+      await renderLibrary({ ...ready, recipes: [], archivedCount: 2 });
+
+      expect(screen.getByRole("heading", { name: "No recipes yet" })).toBeOnTheScreen();
+      expect(archivedLink()).toBeOnTheScreen();
+    });
+
+    it("should still open when the recipes are only from this session", async () => {
+      await renderLibrary({ ...ready, isOnline: false, archivedCount: 2 });
+
+      await user().press(archivedLink());
+
+      expect(onOpenArchived).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -373,7 +508,7 @@ describe("the recipe library", () => {
   });
 
   describe("loading", () => {
-    const loading: RecipeLibraryViewProps = { status: "loading", onOpenRecipe, onNewRecipe };
+    const loading: RecipeLibraryViewProps = { status: "loading", ...actions };
 
     it("should name the region Loading your recipes", async () => {
       await renderLibrary(loading);
@@ -407,8 +542,7 @@ describe("the recipe library", () => {
     const failed: RecipeLibraryViewProps = {
       status: "error",
       onRetry,
-      onOpenRecipe,
-      onNewRecipe,
+      ...actions,
     };
 
     it("should say Couldn't load your recipes, with the connection advice", async () => {
@@ -442,7 +576,7 @@ describe("the recipe library", () => {
   });
 
   describe("offline with nothing in memory", () => {
-    const offline: RecipeLibraryViewProps = { status: "offline", onOpenRecipe, onNewRecipe };
+    const offline: RecipeLibraryViewProps = { status: "offline", ...actions };
 
     it("should say You're offline and that recipes need a connection", async () => {
       await renderLibrary(offline);

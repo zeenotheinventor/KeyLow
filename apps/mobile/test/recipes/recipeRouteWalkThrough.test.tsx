@@ -13,7 +13,8 @@ import { setUpTests } from "react-native-reanimated";
 
 import { chickenAndRiceRecipe } from "./recipeViewFixtures";
 import TabsLayout from "../../app/(tabs)/_layout";
-import RecipesRoute from "../../app/(tabs)/recipes";
+import RecipesLayout from "../../app/(tabs)/recipes/_layout";
+import RecipesRoute from "../../app/(tabs)/recipes/index";
 import EditRecipeRoute from "../../app/recipes/[id]/edit";
 import RecipeViewRoute from "../../app/recipes/[id]/index";
 import NewRecipeRoute from "../../app/recipes/new";
@@ -122,7 +123,8 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard"),
   "(tabs)/diary": standIn("Diary"),
-  "(tabs)/recipes": RecipesRoute,
+  "(tabs)/recipes/_layout": RecipesLayout,
+  "(tabs)/recipes/index": RecipesRoute,
   "(tabs)/more": standIn("More"),
   "foods/index": standIn("Search"),
   "recipes/new": NewRecipeRoute,

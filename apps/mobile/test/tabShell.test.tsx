@@ -16,6 +16,7 @@ import {
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
 import MoreRoute from "../app/(tabs)/more";
+import RecipesLayout from "../app/(tabs)/recipes/_layout";
 import RootLayout from "../app/_layout";
 import FoodsLayout from "../app/foods/_layout";
 import FoodSearchRoute from "../app/foods/index";
@@ -72,6 +73,11 @@ function RecipesStandIn() {
   return <Text role="heading">Recipes</Text>;
 }
 
+// The archived recipes have their own tests. Here they are a heading, because this test is about the shell.
+function ArchivedStandIn() {
+  return <Text role="heading">Archived recipes</Text>;
+}
+
 const routes = {
   _layout: RootLayout,
   index: IndexRoute,
@@ -79,7 +85,9 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": DashboardRoute,
   "(tabs)/diary": DiaryStandIn,
-  "(tabs)/recipes": RecipesStandIn,
+  "(tabs)/recipes/_layout": RecipesLayout,
+  "(tabs)/recipes/index": RecipesStandIn,
+  "(tabs)/recipes/archived": ArchivedStandIn,
   "(tabs)/more": MoreRoute,
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
@@ -149,6 +157,28 @@ describe("the tab shell", () => {
 
       expect(await screen.findByRole("heading", { name })).toBeOnTheScreen();
       expect(screen.getByRole("tab", { name, selected: true })).toBeOnTheScreen();
+    });
+
+    it("should keep the tab bar, with Recipes selected, on the archived recipes pushed inside the Recipes tab", async () => {
+      await renderApp("/recipes/archived");
+
+      expect(await screen.findByRole("heading", { name: "Archived recipes" })).toBeOnTheScreen();
+      expect(screen.getAllByRole("tab")).toHaveLength(4);
+      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should go back from the archived recipes to the Recipes tab", async () => {
+      await renderApp("/recipes");
+      await screen.findByRole("heading", { name: "Recipes" });
+      await act(() => {
+        router.push("/recipes/archived");
+      });
+      expect(await screen.findByRole("heading", { name: "Archived recipes" })).toBeOnTheScreen();
+
+      await goBack();
+
+      expect(await screen.findByRole("heading", { name: "Recipes" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
     });
 
     it("should draw no tab for what More holds, which has no screen of its own", async () => {

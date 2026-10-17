@@ -16,6 +16,7 @@ export function ListRow({
   subtitle,
   value,
   unit,
+  valueLook = "numeral",
   chevron = true,
   onPress,
   disabled = false,
@@ -53,7 +54,11 @@ export function ListRow({
       </View>
       {value === undefined ? null : (
         <View className="shrink-0 flex-row items-baseline gap-[3px]">
-          <Text variant="numeral-small">{value}</Text>
+          {valueLook === "quiet" ? (
+            <Text tone="secondary">{value}</Text>
+          ) : (
+            <Text variant="numeral-small">{value}</Text>
+          )}
           {unit === undefined ? null : (
             <Text tone="muted" variant="caption">
               {unit}
