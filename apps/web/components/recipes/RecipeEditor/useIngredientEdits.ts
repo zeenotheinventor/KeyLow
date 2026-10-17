@@ -15,9 +15,14 @@ import type { Dispatch, SetStateAction } from "react";
 import { useToast } from "@/components/ui/Toast";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
 
-/** Which ingredient dialog is open, and the button it came from, which focus goes back to. */
+/**
+ * Which ingredient dialog is open, and the button it came from, which focus goes back to. The edit dialog
+ * holds the ingredient itself and not its position, since an Undo can put another ingredient in front of it
+ * while the dialog is open.
+ */
 export type IngredientDialog =
-  { kind: "add"; opener: HTMLElement } | { kind: "edit"; position: number; opener: HTMLElement };
+  | { kind: "add"; opener: HTMLElement }
+  | { kind: "edit"; ingredient: RecipeIngredient; opener: HTMLElement };
 
 /**
  * What the Ingredients card can do to the recipe's draft: add an ingredient at the end, replace one in
@@ -61,7 +66,10 @@ export function useIngredientEdits(
       setDialog({ kind: "add", opener });
     },
     openEdit: (position: number, opener: HTMLElement) => {
-      setDialog({ kind: "edit", position, opener });
+      const ingredient = latestIngredients.current[position];
+      if (ingredient !== undefined) {
+        setDialog({ kind: "edit", ingredient, opener });
+      }
     },
     close: () => {
       setDialog(null);

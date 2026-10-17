@@ -41,19 +41,19 @@ const ANNOUNCE_AFTER_TYPING_MS = 500;
  */
 export function RecipeView({ recipe }: RecipeViewProps) {
   const isOnline = useIsOnline();
-  // Null is the recipe's own servings.
+  // Null is the recipe's own servings, so the number is never one the recipe has since stopped having.
   const [chosenServings, setChosenServings] = useState<number | null>(null);
   const [text, setText] = useState(() => String(recipe.servings));
   const [hasProblem, setHasProblem] = useState(false);
-  const [announcedServings, setAnnouncedServings] = useState<number | null>(null);
+  // Whether the new amounts are due to be read out. What is read is always the view's own words.
+  const [isAnnouncementDue, setIsAnnouncementDue] = useState(false);
   const servingsField = useRef<HTMLInputElement>(null);
   const announceTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const view = recipeViewOf(recipe, chosenServings);
   // The card is for the recipe as saved, so it never follows the servings.
   const card = recipeCardOf(recipeDraftOf(recipe));
-  const announcement =
-    announcedServings === null ? "" : recipeViewOf(recipe, announcedServings).announcement;
+  const announcement = isAnnouncementDue ? view.announcement : "";
 
   useEffect(
     () => () => {
@@ -62,22 +62,30 @@ export function RecipeView({ recipe }: RecipeViewProps) {
     [],
   );
 
-  function announce(servings: number, after: number) {
+  function announce(after: number) {
     clearTimeout(announceTimer.current);
     if (after === 0) {
-      setAnnouncedServings(servings);
+      setIsAnnouncementDue(true);
     } else {
+      // The words that were read out before are cleared, so what is read next is read as new.
+      setIsAnnouncementDue(false);
       announceTimer.current = setTimeout(() => {
-        setAnnouncedServings(servings);
+        setIsAnnouncementDue(true);
       }, after);
     }
   }
 
+  // The recipe's own servings are kept as null however they were arrived at, so a recipe saved at 2.5 and
+  // typed back as "2.5" is the recipe's own and not a chosen number to keep.
+  function choose(servings: number) {
+    setChosenServings(servings === recipe.servings ? null : servings);
+  }
+
   function setServings(servings: number) {
-    setChosenServings(servings);
+    choose(servings);
     setText(String(servings));
     setHasProblem(false);
-    announce(servings, 0);
+    announce(0);
   }
 
   function handleStep(direction: ServingsStepDirection) {
@@ -92,8 +100,8 @@ export function RecipeView({ recipe }: RecipeViewProps) {
     const entered = enteredViewServings(typed, recipe.servings);
     setHasProblem(entered === null);
     if (entered !== null) {
-      setChosenServings(entered);
-      announce(entered, ANNOUNCE_AFTER_TYPING_MS);
+      choose(entered);
+      announce(ANNOUNCE_AFTER_TYPING_MS);
     }
   }
 
@@ -130,7 +138,7 @@ export function RecipeView({ recipe }: RecipeViewProps) {
             size="sm"
             aria-label={editLabel}
             aria-disabled
-            className="opacity-40"
+            className="aria-disabled:pointer-events-none aria-disabled:opacity-40"
           >
             <Pencil aria-hidden strokeWidth={iconStroke} />
             {RECIPE_VIEW.edit}

@@ -630,8 +630,21 @@ describe("RecipeEditor", () => {
       expect(nameField().value).toBe("Chicken and rice, again");
       expect(saveButton().getAttribute("aria-disabled")).toBe("true");
       expect(saveButton().className).toContain("opacity-40");
+      expect(saveButton().className).toContain("aria-disabled:pointer-events-none");
 
       fireEvent.click(saveButton());
+      expect(updateRecipe).not.toHaveBeenCalled();
+    });
+
+    it("should not save when the form is submitted from a field with the keyboard", () => {
+      showEditor({ existing: chickenAndRice });
+      act(() => {
+        onlineManager.setOnline(false);
+      });
+      type(nameField(), "Chicken and rice, again");
+
+      fireEvent.submit(nameField());
+
       expect(updateRecipe).not.toHaveBeenCalled();
     });
 
