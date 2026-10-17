@@ -241,6 +241,28 @@ export const StackedNeedsReview: Story = {
   render: () => <FoodRow {...stackedChicken} needsReview />,
 };
 
+const recipeRowName =
+  "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+
+// A recipe the diary holds: a chef's hat before the name, which stays on one line, and nothing to open.
+export const StackedRecipe: Story = {
+  render: () => (
+    <FoodRow
+      layout="stacked"
+      nameSegments={[{ text: "Chicken and rice", matched: false }]}
+      caption="18:00 · 1 serving (275 g)"
+      energy="374"
+      macros={{
+        protein: "32",
+        carbs: "43",
+        fat: "8.1",
+        description: "protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+      }}
+      recipeRowName={recipeRowName}
+    />
+  ),
+};
+
 // A result in the add dialog: the food tile, the serving, the stats line and the quiet add button.
 export const Search: Story = {
   render: () => <FoodRow {...searchChicken} />,
@@ -345,6 +367,24 @@ export const Table: Story = {
     <HourTable>
       <FoodRow {...porridgeOats} />
       <FoodRow {...semiSkimmedMilk} />
+    </HourTable>
+  ),
+};
+
+// A recipe the diary holds: a chef's hat before the name, which stays on one line, and Delete alone.
+export const TableRecipe: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <HourTable>
+      <FoodRow
+        layout="table"
+        nameSegments={[{ text: "Chicken and rice", matched: false }]}
+        caption="18:00 · 1 serving (275 g)"
+        energy="374"
+        macros={{ protein: "32", carbs: "43", fat: "8.1" }}
+        recipeRowName={recipeRowName}
+        onDelete={() => undefined}
+      />
     </HourTable>
   ),
 };

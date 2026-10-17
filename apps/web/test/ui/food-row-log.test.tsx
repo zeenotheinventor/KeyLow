@@ -138,6 +138,67 @@ describe("FoodRow stats line", () => {
   });
 });
 
+describe("FoodRow stacked, for a logged recipe", () => {
+  const recipeRowName =
+    "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+
+  function renderRecipe(props: LogRowOverrides = {}) {
+    render(
+      <ul>
+        <FoodRow
+          layout="stacked"
+          nameSegments={[{ text: "Chicken and rice", matched: false }]}
+          caption="18:00 · 1 serving (275 g)"
+          energy="374"
+          macros={{ ...macros, protein: "32", carbs: "43", fat: "8.1" }}
+          recipeRowName={recipeRowName}
+          {...props}
+        />
+      </ul>,
+    );
+  }
+
+  it("should be named by the sentence it is given", () => {
+    renderRecipe();
+
+    expect(screen.getByRole("listitem", { name: recipeRowName })).toBeTruthy();
+  });
+
+  it("should put the chef's hat before the name, 16 px and muted", () => {
+    renderRecipe();
+
+    const row = screen.getByRole("listitem", { name: recipeRowName });
+    const hat = row.querySelector("svg.lucide-chef-hat");
+
+    expect(hat?.getAttribute("class")).toContain("size-4");
+    expect(hat?.getAttribute("class")).toContain("text-text-muted");
+    expect(hat?.nextElementSibling?.textContent).toBe("Chicken and rice");
+  });
+
+  it("should keep the name to one line, ending in an ellipsis", async () => {
+    renderRecipe();
+
+    const name = screen.getByText("Chicken and rice");
+
+    expect(await declarationsOf(name.className, "truncate")).toContain("text-overflow: ellipsis");
+  });
+
+  it("should write the caption and the stats line as a food row does", () => {
+    renderRecipe();
+
+    expect(screen.getByText("18:00 · 1 serving (275 g)")).toBeTruthy();
+    expect(screen.getByText("32 P")).toBeTruthy();
+    expect(screen.getByText("43 C")).toBeTruthy();
+    expect(screen.getByText("8.1 F")).toBeTruthy();
+  });
+
+  it("should draw no chef's hat on a food", () => {
+    renderStacked();
+
+    expect(screen.getByRole("listitem").querySelector("svg.lucide-chef-hat")).toBeNull();
+  });
+});
+
 describe("FoodRow stacked", () => {
   it("should be one button naming the food, the time and amount and the stats", () => {
     renderStacked();

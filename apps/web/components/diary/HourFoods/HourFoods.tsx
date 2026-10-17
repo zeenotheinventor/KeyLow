@@ -36,6 +36,7 @@ export function HourFoods({
               caption={row.caption}
               energy={row.energy}
               macros={row.cells}
+              recipeRowName={row.recipeRowName}
               deleteDisabled={deleteDisabled}
               onEdit={
                 isRecipe
@@ -65,6 +66,7 @@ export function HourFoods({
               caption={row.caption}
               energy={row.energy}
               macros={row.macros}
+              recipeRowName={row.recipeRowName}
               needsReview={row.macros === undefined}
               onClick={
                 isRecipe
