@@ -322,3 +322,19 @@ export const RecipeWithMore: Story = {
     />
   ),
 };
+
+// An ingredient of the recipe editor (recipe-editor.ingredients): the amount it is used in, and what that comes to.
+export const Ingredient: Story = {
+  args: {
+    layout: "ingredient",
+    nameSegments: [{ text: "Milk, semi-skimmed, pasteurised, average", matched: false }],
+    caption: "100 ml",
+    energy: "47",
+    macros: { protein: "3.6", carbs: "4.8", fat: "1.8", description: "" },
+  },
+};
+
+// A food that does not give all three macros says it needs review in their place.
+export const IngredientNeedsReview: Story = {
+  args: { ...Ingredient.args, needsReview: true, macros: undefined },
+};

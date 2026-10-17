@@ -1,1 +1,8 @@
-export const storyStates = ["Default", "WithoutTitle", "Tall", "Closed", "Interactive"];
+export const storyStates = [
+  "Default",
+  "WithoutTitle",
+  "Tall",
+  "CentredTitle",
+  "Closed",
+  "Interactive",
+];

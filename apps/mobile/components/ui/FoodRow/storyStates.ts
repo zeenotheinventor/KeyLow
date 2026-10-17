@@ -21,4 +21,6 @@ export const storyStates = [
   "Recipe",
   "RecipeMatched",
   "RecipeWithMore",
+  "Ingredient",
+  "IngredientNeedsReview",
 ];

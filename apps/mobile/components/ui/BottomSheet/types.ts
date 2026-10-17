@@ -10,6 +10,8 @@ export type BottomSheetProps = {
   onClose: () => void;
   /** Sets the sheet's heading and its accessible name. Leave it out when the contents have their own. */
   title?: string | undefined;
+  /** Centres the title, as the discard sheet's board draws it. Defaults to the start of the line. */
+  isTitleCentred?: boolean | undefined;
   /**
    * The sheet's accessible name, for a sheet whose contents have a heading of their own and so draw no
    * title, such as the date picker's month. The sheet is named by `title` when it has one, and this adds
