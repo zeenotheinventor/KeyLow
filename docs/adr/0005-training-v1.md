@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed, 2026-10-17. Accepted when Zee approves the pull request that carries it.
+Accepted, 2026-10-17 (Zee approved the pull request that carries it, #262).
 
 ## Context
 
