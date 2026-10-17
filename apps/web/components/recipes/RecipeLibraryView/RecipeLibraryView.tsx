@@ -9,86 +9,32 @@ import {
   RETRY_LABEL,
   SEARCH_CLEAR_LABEL,
   TAB_TITLES,
+  describeArchivedLink,
+  describeArchivedLinkName,
   describeRecipeCount,
 } from "@keylow/core/copy";
 import { filterRecipesByName } from "@keylow/core/search";
 import { iconStroke } from "@keylow/tokens";
-import { ChefHat, Plus, SearchX } from "lucide-react";
+import { Archive, ChefHat, Plus, SearchX } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import { RecipeLibrarySkeleton } from "../RecipeLibrarySkeleton";
-import { recipeRowFields } from "./recipeRowFields";
+import { RecipeRowActions } from "../RecipeRowActions";
+import { RecipeRows } from "../RecipeRows";
+import { RECIPE_STATE_CLASSES } from "../stateClasses";
 
 import type { RecipeLibraryViewProps } from "./types";
-import type { RecipeSummary } from "@keylow/api-client";
 
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
-import { FoodRow } from "@/components/ui/FoodRow";
-import { FoodTable } from "@/components/ui/FoodTable";
 import { SearchField } from "@/components/ui/SearchField";
-import { newRecipePath, recipePath } from "@/lib/recipeRoutes";
+import { archivedPath, newRecipePath } from "@/lib/recipeRoutes";
 
 // How long typing has to stop before the number of recipes found is read out, so a screen reader is
 // not interrupted by every letter.
 const ANNOUNCE_AFTER_TYPING_MS = 500;
-
-// The boards centre the state in a 420 px block with no card around it, and add 120 px of padding below
-// that block, so the state sits a little above the middle of the space.
-const STATE_CLASSES =
-  "box-content min-h-[420px] justify-center border-0 bg-transparent px-6 py-0 pb-[120px]";
-
-const TABLE_LABEL = "Recipes";
-
-function Rows({ recipes, query }: { recipes: readonly RecipeSummary[]; query: string }) {
-  return (
-    <>
-      <Card padding="none" className="max-lg:hidden">
-        <FoodTable variant="recipe" label={TABLE_LABEL}>
-          {recipes.map((recipe) => {
-            const row = recipeRowFields(recipe, query);
-
-            return (
-              <FoodRow
-                key={recipe.id}
-                layout="recipeTable"
-                nameSegments={row.nameSegments}
-                href={recipePath(recipe.id)}
-                servingCaption={row.servingCaption}
-                servings={row.servings}
-                energy={row.energy}
-                macros={row.cellMacros}
-              />
-            );
-          })}
-        </FoodTable>
-      </Card>
-      <Card asChild padding="none" className="lg:hidden">
-        <ul aria-label={TABLE_LABEL} className="divide-y divide-border">
-          {recipes.map((recipe) => {
-            const row = recipeRowFields(recipe, query);
-
-            return (
-              <FoodRow
-                key={recipe.id}
-                layout="recipe"
-                nameSegments={row.nameSegments}
-                href={recipePath(recipe.id)}
-                openLabel={row.openLabel}
-                caption={row.caption}
-                energy={row.energy}
-                macros={row.macros}
-              />
-            );
-          })}
-        </ul>
-      </Card>
-    </>
-  );
-}
 
 /**
  * The recipe library page, drawn from what it is given: the user's live recipes with a search over
@@ -100,6 +46,7 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
   const [query, setQuery] = useState("");
   const [announcedQuery, setAnnouncedQuery] = useState("");
   const searchField = useRef<HTMLInputElement>(null);
+  const newRecipeLink = useRef<HTMLAnchorElement>(null);
   const trimmedQuery = query.trim();
 
   useEffect(() => {
@@ -121,13 +68,16 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
     announcedQuery === ""
       ? ""
       : describeRecipeCount(filterRecipesByName(recipes, announcedQuery).length);
+  // The link is left out while a search narrows the list, as the search board draws it.
+  const archivedCount = props.status === "ready" ? props.archivedCount : 0;
+  const showsArchivedLink = archivedCount > 0 && trimmedQuery === "";
 
   return (
     <div className="mx-auto flex w-full max-w-[1132px] flex-col gap-5">
       <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
         <h1 className="text-h1">{TAB_TITLES.recipes}</h1>
         <Button asChild className="max-md:w-full">
-          <Link href={newRecipePath()}>
+          <Link ref={newRecipeLink} href={newRecipePath()}>
             <Plus aria-hidden strokeWidth={iconStroke} />
             {RECIPES_LIBRARY.newRecipe}
           </Link>
@@ -173,7 +123,7 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
           body={RECIPES_LOAD_FAILED.body}
           retryLabel={RETRY_LABEL}
           onRetry={props.onRetry}
-          className={STATE_CLASSES}
+          className={RECIPE_STATE_CLASSES}
         />
       )}
 
@@ -188,7 +138,7 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
             variant: "primary",
             href: newRecipePath(),
           }}
-          className={STATE_CLASSES}
+          className={RECIPE_STATE_CLASSES}
         />
       )}
 
@@ -198,11 +148,47 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
           title={RECIPES_SEARCH_EMPTY.title}
           body={RECIPES_SEARCH_EMPTY.body}
           action={{ label: RECIPES_LIBRARY.newRecipe, icon: Plus, href: newRecipePath(query) }}
-          className={STATE_CLASSES}
+          className={RECIPE_STATE_CLASSES}
         />
       )}
 
-      {showsRows && <Rows recipes={found} query={trimmedQuery} />}
+      {props.status === "ready" && showsRows && (
+        <RecipeRows
+          recipes={found}
+          query={trimmedQuery}
+          opensRecipe
+          renderButtons={(recipe, row) => (
+            <RecipeRowActions
+              name={recipe.name}
+              layout={row.layout}
+              isDuplicating={props.isDuplicating(recipe.id)}
+              onDuplicate={() => {
+                props.onDuplicate(recipe);
+              }}
+              archiveButtonRef={row.removeButtonRef}
+              onArchive={() => {
+                // The row is about to go, so focus is given to its neighbour first, or to New recipe
+                // when it was the only one, rather than left to fall to the page.
+                if (!row.moveFocusToNextRow()) {
+                  newRecipeLink.current?.focus();
+                }
+                props.onArchive(recipe);
+              }}
+            />
+          )}
+        />
+      )}
+
+      {showsArchivedLink && (
+        <Link
+          href={archivedPath()}
+          aria-label={describeArchivedLinkName(archivedCount)}
+          className="inline-flex min-h-touch-target items-center gap-2 self-start rounded-small text-label-small text-accent-ink outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+        >
+          <Archive aria-hidden className="size-[18px]" strokeWidth={iconStroke} />
+          {describeArchivedLink(archivedCount)}
+        </Link>
+      )}
     </div>
   );
 }

@@ -72,6 +72,35 @@ describe("FoodRow with the recipe layout", () => {
 
     expect(screen.getByRole("link").textContent).toContain("Needs review");
   });
+
+  it("should put the row's buttons after the link, not inside it", () => {
+    renderRecipeRow({ actions: <button type="button">Archive Chicken and rice</button> });
+
+    const link = screen.getByRole("link");
+    const button = screen.getByRole("button", { name: "Archive Chicken and rice" });
+    expect(link.contains(button)).toBe(false);
+    expect(link.parentElement).toBe(button.closest("li"));
+  });
+
+  it("should be plain text with no link when it has nowhere to open", () => {
+    render(
+      <ul>
+        <FoodRow
+          layout="recipe"
+          nameSegments={chickenAndRice.nameSegments}
+          caption="1 serving (275 g) · makes 4"
+          energy="374"
+          macros={{ protein: "32", carbs: "43", fat: "8.1" }}
+          actions={<button type="button">Restore Chicken and rice</button>}
+        />
+      </ul>,
+    );
+
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("Chicken and rice")).toBeTruthy();
+    expect(screen.getByText("1 serving (275 g) · makes 4")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Restore Chicken and rice" })).toBeTruthy();
+  });
 });
 
 const chickenAndRiceCells: RecipeTableRowProps = {
@@ -153,5 +182,34 @@ describe("FoodTable with the recipe variant", () => {
 
     expect(screen.getByText("Chi").className).toContain("font-semibold");
     expect(screen.getByText("cken and rice").className).toContain("font-normal");
+  });
+
+  it("should put the row's buttons in the last cell", () => {
+    renderRecipeTable({ actions: <button type="button">Archive Chicken and rice</button> });
+
+    const row = screen.getByRole("row", { name: /Chicken and rice/ });
+    const cells = within(row).getAllByRole("cell");
+    expect(
+      within(cells.at(-1) ?? row).getByRole("button", { name: "Archive Chicken and rice" }),
+    ).toBeTruthy();
+  });
+
+  it("should write the name as plain text when the recipe has nowhere to open", () => {
+    render(
+      <FoodTable variant="recipe" label="Recipes">
+        <FoodRow
+          layout="recipeTable"
+          nameSegments={chickenAndRiceCells.nameSegments}
+          servingCaption="1 serving (275 g)"
+          servings="4"
+          energy="374"
+          macros={{ protein: "32", carbs: "43", fat: "8.1" }}
+        />
+      </FoodTable>,
+    );
+
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(screen.getByText("Chicken and rice")).toBeTruthy();
+    expect(screen.getByText("1 serving (275 g)")).toBeTruthy();
   });
 });
