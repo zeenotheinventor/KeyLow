@@ -18,6 +18,11 @@ import {
 describe("search group headings", () => {
   it("should pin the headings and captions the boards draw", () => {
     expect(SEARCH_GROUP_HEADINGS).toEqual({
+      recipes: {
+        title: "Your recipes",
+        caption: "Per serving",
+        label: "Your recipes, values per serving",
+      },
       yours: { title: "Your foods", caption: "Yours", label: "Your foods" },
       common: { title: "Common foods", caption: "UK CoFID", label: "Common foods from UK CoFID" },
       branded: {
