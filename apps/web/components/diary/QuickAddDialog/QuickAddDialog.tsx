@@ -44,8 +44,9 @@ export function QuickAddDialog({ request, opener, onClose }: QuickAddDialogProps
   }, []);
 
   async function handleAdd() {
-    // Adding needs a connection, and Enter in a field submits the form even though the button is off.
-    if (!validated.ok || !isOnline) {
+    // Adding needs a connection, and Enter in a field submits the form even though the button is off. The
+    // same goes for an add that is still being saved: Enter again must not log a second entry.
+    if (!validated.ok || !isOnline || isSaving) {
       return;
     }
     const { value } = validated;

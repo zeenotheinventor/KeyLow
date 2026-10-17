@@ -1,3 +1,4 @@
+import { CopyDayPartialWriteError } from "@keylow/api-client";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -67,13 +68,13 @@ const { push, copyDay, undoCopyDay } = vi.hoisted(() => ({
       vi.fn<
         (
           input: { from: string; to: string; timeZone: string },
-          options: { onSuccess: (copied: CopiedDay) => void; onError: () => void },
+          options: { onSuccess: (copied: CopiedDay) => void; onError: (error: Error) => void },
         ) => void
       >(),
     isPending: false,
   },
   undoCopyDay: {
-    mutate: vi.fn<(copied: CopiedDay, options: { onError: () => void }) => void>(),
+    mutate: vi.fn<(copied: CopiedDay, options?: { onError: () => void }) => void>(),
     isPending: false,
   },
 }));
@@ -438,14 +439,56 @@ describe("the week view", () => {
       expect(undoCopyDay.mutate.mock.calls[0]?.[0]).toBe(copied);
     });
 
+    it("should show no toast and no Undo when the day had nothing to copy", () => {
+      renderWeek();
+      fireEvent.click(copyButton("Tue 13"));
+
+      act(() => {
+        copyDay.mutate.mock.calls[0]?.[1].onSuccess({ localDate: TODAY, count: 0, entryIds: [] });
+      });
+
+      expect(screen.queryByText(/^Copied/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+    });
+
     it("should say so when a copy does not go through", () => {
       renderWeek();
       fireEvent.click(copyButton("Tue 13"));
 
       act(() => {
-        copyDay.mutate.mock.calls[0]?.[1].onError();
+        copyDay.mutate.mock.calls[0]?.[1].onError(new Error("RAW"));
       });
 
+      expect(screen.getByText("Something went wrong. Try again.")).toBeTruthy();
+    });
+
+    it("should take nothing back when a copy fails with nothing written", () => {
+      renderWeek();
+      fireEvent.click(copyButton("Tue 13"));
+
+      act(() => {
+        copyDay.mutate.mock.calls[0]?.[1].onError(new Error("RAW"));
+      });
+
+      expect(undoCopyDay.mutate).not.toHaveBeenCalled();
+    });
+
+    it("should take back the copies already written when a copy fails part way, and say it failed", () => {
+      renderWeek();
+      fireEvent.click(copyButton("Tue 13"));
+
+      act(() => {
+        copyDay.mutate.mock.calls[0]?.[1].onError(
+          new CopyDayPartialWriteError(["a", "b"], "Copied 2 of 3", new Error("RAW")),
+        );
+      });
+
+      expect(undoCopyDay.mutate).toHaveBeenCalledOnce();
+      expect(undoCopyDay.mutate).toHaveBeenCalledWith({
+        localDate: TODAY,
+        count: 2,
+        entryIds: ["a", "b"],
+      });
       expect(screen.getByText("Something went wrong. Try again.")).toBeTruthy();
     });
 
@@ -462,7 +505,7 @@ describe("the week view", () => {
       fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
       act(() => {
-        undoCopyDay.mutate.mock.calls[0]?.[1].onError();
+        undoCopyDay.mutate.mock.calls[0]?.[1]?.onError();
       });
 
       expect(screen.getByText("Something went wrong. Try again.")).toBeTruthy();

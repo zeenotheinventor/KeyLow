@@ -133,6 +133,17 @@ describe("the quick add dialog", () => {
       });
     });
 
+    it("should add once when Enter is pressed again while the first add is still being saved", () => {
+      api.quickAdd.mutateAsync = vi.fn(() => new Promise<LogEntry>(() => undefined));
+      renderDialog();
+      type(calories(), "130");
+
+      fireEvent.submit(calories());
+      fireEvent.submit(calories());
+
+      expect(api.quickAdd.mutateAsync).toHaveBeenCalledOnce();
+    });
+
     it("should not add on Enter while the calories are not above 0", () => {
       renderDialog();
 

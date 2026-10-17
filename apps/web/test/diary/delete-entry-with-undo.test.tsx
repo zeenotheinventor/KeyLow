@@ -80,14 +80,14 @@ describe("useDeleteEntryWithUndo after the component that used it has gone", () 
     api.restoreEntry.mutateAsync = vi.fn(() => Promise.reject(new Error("RAW"))) as never;
     renderThenUnmountAfterRemoving();
 
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
 
     expect(await screen.findByText("Something went wrong. Try again.")).toBeTruthy();
   });
 
   it("should say nothing when both go through", async () => {
     renderThenUnmountAfterRemoving();
-    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Undo" }));
     await act(async () => {
       await Promise.resolve();
     });
