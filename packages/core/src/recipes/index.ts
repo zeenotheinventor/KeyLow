@@ -41,3 +41,5 @@ export type {
   RefreshRecipeIngredientsInput,
   RefreshedRecipeIngredients,
 } from "./refreshRecipeIngredients";
+export { scaleFactor, scaleIngredientAmount, scaleYield } from "./scaleRecipe";
+export type { ScalableIngredient } from "./scaleRecipe";
