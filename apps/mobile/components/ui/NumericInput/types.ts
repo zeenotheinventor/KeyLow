@@ -1,4 +1,4 @@
-import type { FieldFrameProps, FieldMacro, FieldTextProps } from "../Input";
+import type { FieldAdjustment, FieldFrameProps, FieldMacro, FieldTextProps } from "../Input";
 
 export type NumericInputMacro = FieldMacro;
 
@@ -12,4 +12,12 @@ export type NumericInputProps = FieldFrameProps &
     unit?: string | undefined;
     /** Puts the macro's colour beside the label, as the food form draws Protein, Carbohydrate and Fat. */
     macro?: NumericInputMacro | undefined;
+    /** Defaults to `right`. The servings stepper centres its number. */
+    align?: "right" | "center" | undefined;
+    /** Defaults to the decimal pad. A count of whole things asks for the number pad, which has no decimal key. */
+    keyboardType?: "decimal-pad" | "number-pad" | undefined;
+    /** Sets the value in strong body text. Defaults to regular. */
+    strongValue?: boolean | undefined;
+    /** Makes the field an adjustable that a swipe steps up and down. */
+    adjustable?: FieldAdjustment | undefined;
   };

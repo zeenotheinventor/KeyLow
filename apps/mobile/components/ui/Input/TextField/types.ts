@@ -1,4 +1,4 @@
-import type { InputProps } from "../types";
+import type { FieldAdjustment, InputProps } from "../types";
 
 export type FieldMacro = "protein" | "carbs" | "fat";
 
@@ -9,5 +9,9 @@ export type TextFieldProps = InputProps & {
   /** Puts the macro's colour beside the label. */
   macro?: FieldMacro | undefined;
   /** Defaults to `left`. */
-  align?: "left" | "right";
+  align?: "left" | "right" | "center";
+  /** Sets the value in strong body text, as the servings stepper's number is. Defaults to regular. */
+  strongValue?: boolean | undefined;
+  /** Makes the field an adjustable that a swipe steps up and down. */
+  adjustable?: FieldAdjustment | undefined;
 };

@@ -6,14 +6,16 @@ import type { NumericInputProps } from "./types";
 export function NumericInput({
   placeholder = "0",
   density = "compact",
+  align = "right",
+  keyboardType = "decimal-pad",
   ...props
 }: NumericInputProps) {
   return (
     <TextField
       {...props}
       density={density}
-      align="right"
-      keyboardType="decimal-pad"
+      align={align}
+      keyboardType={keyboardType}
       placeholder={placeholder}
     />
   );

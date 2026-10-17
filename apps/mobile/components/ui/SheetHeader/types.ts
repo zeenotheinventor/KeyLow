@@ -4,8 +4,13 @@ export type SheetHeaderControl = {
   icon: IconName;
   /** What the control does, as a short sentence case name. It is the control's accessible name. */
   label: string;
+  /** Dims the control to 40 percent and stops it responding, as the recipe view does while offline. */
+  disabled?: boolean | undefined;
   onPress: () => void;
 };
+
+/** The two controls on the right of a header that has two, such as Edit and More. */
+export type SheetHeaderControlPair = readonly [SheetHeaderControl, SheetHeaderControl];
 
 /**
  * `sheet` is the header of the sheet itself, as the search sheet has it: raised controls and a large
@@ -20,8 +25,12 @@ export type SheetHeaderProps = {
   title: string;
   /** Close on the sheet header, back on the stack header. */
   leading: SheetHeaderControl;
-  /** The optional control on the right: create on the sheet header, close on the stack header. */
-  trailing?: SheetHeaderControl | undefined;
+  /**
+   * The optional control on the right: create on the sheet header, close on the stack header. A header
+   * can have two, side by side, such as the recipe view's Edit and More. The title then sits in the space
+   * they leave.
+   */
+  trailing?: SheetHeaderControl | SheetHeaderControlPair | undefined;
   /**
    * Whether the title is a heading for a screen reader. Defaults to true. A view that has its own
    * heading, as the food detail has the food's name, turns it off so there is one.

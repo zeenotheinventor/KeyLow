@@ -123,3 +123,24 @@ export const WithWarningHelper: Story = {
 };
 
 export const Disabled: Story = { args: { disabled: true, value: "165" } };
+
+// A whole number beside its own label, as the servings stepper has it: the number pad with no decimal
+// key, the digits centred and strong, no visible label, and a screen reader that can swipe it up and down.
+export const WholeNumberBesideLabel: Story = {
+  args: {
+    label: "Servings",
+    labelHidden: true,
+    value: "6",
+    align: "center",
+    strongValue: true,
+    keyboardType: "number-pad",
+    adjustable: { valueText: "6 servings", onStep: () => undefined },
+  },
+  decorators: [
+    (Story) => (
+      <View className="w-[72px]">
+        <Story />
+      </View>
+    ),
+  ],
+};

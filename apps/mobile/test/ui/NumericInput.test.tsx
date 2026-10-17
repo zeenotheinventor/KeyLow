@@ -138,6 +138,89 @@ describe("NumericInput", () => {
     });
   });
 
+  describe("a field that stands beside its label, as the servings stepper's does", () => {
+    it("should ask for the number pad, which has no decimal key, when it takes whole numbers", async () => {
+      await renderNumericInput({ keyboardType: "number-pad" });
+
+      expect(screen.getByLabelText("Energy (kcal)")).toHaveProp("keyboardType", "number-pad");
+    });
+
+    it("should centre its digits when asked", async () => {
+      await renderNumericInput({ value: "6", align: "center" });
+
+      expect(await screen.findByLabelText("Energy (kcal)")).toHaveProp("textAlign", "center");
+    });
+
+    it("should set its digits in strong body text when asked", async () => {
+      await renderNumericInput({ value: "6", strongValue: true });
+
+      expect(await screen.findByLabelText("Energy (kcal)")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 16,
+      });
+    });
+
+    it("should draw no label when it is hidden, and still be named by it", async () => {
+      await renderNumericInput({ labelHidden: true });
+
+      expect(screen.queryByText("Energy")).not.toBeOnTheScreen();
+      expect(screen.getByLabelText("Energy (kcal)")).toBeOnTheScreen();
+    });
+
+    it("should be an adjustable that reads its value aloud as the text it is given", async () => {
+      await renderNumericInput({
+        unit: undefined,
+        value: "6",
+        adjustable: { valueText: "6 servings", onStep: () => undefined },
+      });
+
+      const field = screen.getByRole("adjustable", { name: "Energy" });
+      expect(field).toHaveAccessibilityValue({ text: "6 servings" });
+    });
+
+    it.each([
+      { actionName: "increment", direction: 1 },
+      { actionName: "decrement", direction: -1 },
+    ])(
+      "should step $direction on an accessibility $actionName",
+      async ({ actionName, direction }) => {
+        const onStep = jest.fn();
+        await renderNumericInput({
+          unit: undefined,
+          value: "6",
+          adjustable: { valueText: "6 servings", onStep },
+        });
+
+        await fireEvent(screen.getByRole("adjustable", { name: "Energy" }), "accessibilityAction", {
+          nativeEvent: { actionName },
+        });
+
+        expect(onStep).toHaveBeenCalledTimes(1);
+        expect(onStep).toHaveBeenCalledWith(direction);
+      },
+    );
+
+    it("should not step on an accessibility action it does not know", async () => {
+      const onStep = jest.fn();
+      await renderNumericInput({
+        unit: undefined,
+        adjustable: { valueText: "6 servings", onStep },
+      });
+
+      await fireEvent(screen.getByRole("adjustable", { name: "Energy" }), "accessibilityAction", {
+        nativeEvent: { actionName: "activate" },
+      });
+
+      expect(onStep).not.toHaveBeenCalled();
+    });
+
+    it("should be a plain field, with no role of its own, when it is not adjustable", async () => {
+      await renderNumericInput();
+
+      expect(screen.queryByRole("adjustable")).not.toBeOnTheScreen();
+    });
+  });
+
   // At large text a long label such as Carbohydrate wraps inside its column of the three across macro row. A
   // label that cannot shrink ran past its column and over the next field's mark (measured at font scale 2).
   describe("a long label at large text", () => {
