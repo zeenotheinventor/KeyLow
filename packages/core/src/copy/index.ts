@@ -28,3 +28,4 @@ export * from "./recipeLog";
 export * from "./recipeEditor";
 export * from "./recipeRefresh";
 export * from "./scaledAmount";
+export * from "./recipeView";
