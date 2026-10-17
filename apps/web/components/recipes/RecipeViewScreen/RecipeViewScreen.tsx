@@ -1,6 +1,6 @@
 "use client";
 
-import { keys, useRecipe } from "@keylow/api-client";
+import { keys, useRecipe, useRecipes } from "@keylow/api-client";
 import {
   GENERIC_ERROR,
   RECIPE_EDITOR,
@@ -104,6 +104,9 @@ export function RecipeViewScreen({ id }: RecipeViewScreenProps) {
   // A link that cannot be a recipe is not asked about, as the editor does not ask.
   const isKnownToBeMissing = !isRecipeId(id);
   const state = useRecipe(isKnownToBeMissing ? undefined : id);
+  // The view's Duplicate names a copy from the library, so the library is read alongside the recipe and not
+  // after it. The view reads the same list, so this is one request.
+  useRecipes({ archived: true, enabled: !isKnownToBeMissing });
   const queryClient = useQueryClient();
 
   if (isKnownToBeMissing) {

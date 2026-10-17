@@ -11,7 +11,7 @@ import { buildRecipeIngredient } from "@keylow/core/recipes";
 import { buildChickenAndRiceRecipe, buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   recipeViewBackend,
@@ -22,6 +22,9 @@ import {
 import type { SavedRecipe } from "./recipeViewSupport";
 
 import { RecipeViewScreen } from "@/components/recipes";
+
+// The Duplicate and Archive buttons go through the router, which these tests do not use.
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }) }));
 
 const RECIPE_ID = "55555555-5555-4555-8555-555555555555";
 
@@ -192,7 +195,7 @@ describe("RecipeViewScreen", () => {
       ).toBeTruthy();
     });
 
-    it("should have Edit as its only button in the header, going to the editor", async () => {
+    it("should have Edit going to the editor, and no Refresh ingredients button yet", async () => {
       await showRecipe();
 
       expect(
@@ -203,8 +206,8 @@ describe("RecipeViewScreen", () => {
       expect(
         screen.getByRole("link", { name: describeEditRecipe("Chicken and rice") }).textContent,
       ).toBe(RECIPE_VIEW.edit);
-      expect(screen.queryByRole("button", { name: /Refresh|Duplicate|Archive/ })).toBeNull();
-      expect(screen.queryByRole("link", { name: /Refresh|Duplicate|Archive/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /Refresh/ })).toBeNull();
+      expect(screen.queryByRole("link", { name: /Refresh/ })).toBeNull();
     });
   });
 

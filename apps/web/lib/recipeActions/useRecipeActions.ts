@@ -56,6 +56,7 @@ export function useRecipeActions(): RecipeActions {
   const namesBeingSaved = useRef(new Set<string>());
   const archivesUnderWay = useRef(new Set<string>());
   const [duplicatingIds, setDuplicatingIds] = useState<ReadonlySet<string>>(new Set());
+  const [archivingIds, setArchivingIds] = useState<ReadonlySet<string>>(new Set());
 
   const showFailure = () => {
     toast.show({ message: GENERIC_ERROR, icon: CircleAlert, tone: "danger" });
@@ -97,6 +98,10 @@ export function useRecipeActions(): RecipeActions {
       return false;
     }
     archivesUnderWay.current.add(action);
+    // Only putting a recipe away makes its Archive button busy. Bringing one back has no button of its own.
+    if (isArchived) {
+      setArchivingIds((ids) => new Set(ids).add(id));
+    }
     try {
       await queryClient.cancelQueries({ queryKey: keys.recipes.all });
       setLibraryFlag(id, isArchived);
@@ -110,11 +115,19 @@ export function useRecipeActions(): RecipeActions {
       }
     } finally {
       archivesUnderWay.current.delete(action);
+      if (isArchived) {
+        setArchivingIds((ids) => {
+          const remaining = new Set(ids);
+          remaining.delete(id);
+          return remaining;
+        });
+      }
     }
   }
 
   return {
     isDuplicating: (recipeId) => duplicatingIds.has(recipeId),
+    isArchiving: (recipeId) => archivingIds.has(recipeId),
     duplicate: (recipe, followUp) => {
       if (duplicatesUnderWay.current.has(recipe.id)) {
         return;
