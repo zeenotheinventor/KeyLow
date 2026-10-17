@@ -23,6 +23,8 @@ export const routerMock = {
   isFocused: true,
   redirect: jest.fn<undefined, [string]>(),
   segments: noSegments,
+  // The address of the screen in front, as `usePathname` gives it to every screen, whichever it is on.
+  pathname: "",
   searchParams: noSearchParams,
 };
 
@@ -41,6 +43,7 @@ export function resetRouterMock(): void {
   routerMock.isFocused = true;
   routerMock.redirect.mockReset();
   routerMock.segments = [];
+  routerMock.pathname = "";
   routerMock.searchParams = {};
 }
 
@@ -78,6 +81,7 @@ export const mockExpoRouter = {
   useIsFocused,
   useFocusEffect,
   useSegments: () => routerMock.segments,
+  usePathname: () => routerMock.pathname,
   useLocalSearchParams: () => routerMock.searchParams,
   // With `asChild` the link is its child, which is how the real one hands over its role and its press.
   Link: ({ children, asChild }: { children: ReactNode; asChild?: boolean }) =>

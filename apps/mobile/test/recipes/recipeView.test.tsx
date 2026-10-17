@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CHICKEN_AND_RICE_ID, chickenAndRiceRecipe, frittataRecipe } from "./recipeViewFixtures";
 import { RecipeView } from "../../components/RecipeView";
+import { ToastProvider } from "../../components/ui";
 import { editRecipePath } from "../../lib/recipeRoutes";
 import { ThemeProvider } from "../../lib/theme";
 import {
@@ -49,7 +50,9 @@ function viewOf(recipe: RecipeViewRecipe) {
   return (
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <RecipeView recipe={recipe} onBack={onBack} />
+        <ToastProvider>
+          <RecipeView recipe={recipe} onBack={onBack} />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>
   );
@@ -148,11 +151,11 @@ describe("the recipe view", () => {
       await showView(chickenAndRiceRecipe);
     });
 
-    it("should have Back, the recipe's name and Edit named for the recipe, and no More", () => {
+    it("should have Back, the recipe's name and Edit named for the recipe, then More", () => {
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
       expect(screen.getByRole("heading", { name: "Chicken and rice" })).toBeOnTheScreen();
       expect(editButton("Chicken and rice")).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: "More" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "More" })).toBeEnabled();
     });
 
     it("should go back when Back is pressed", async () => {
@@ -498,6 +501,16 @@ describe("the recipe view", () => {
       expect(screen.queryByTestId("press-overlay")).not.toBeOnTheScreen();
       await userEvent.press(edit);
       expect(routerMock.push).not.toHaveBeenCalled();
+    });
+
+    it("should leave More beside it, dimmed and disabled too, and open no menu", async () => {
+      const more = screen.getByRole("button", { name: "More" });
+
+      expect(more).toBeDisabled();
+      await fireEvent(more, "pressIn");
+      expect(screen.queryByTestId("press-overlay")).not.toBeOnTheScreen();
+      await userEvent.press(more);
+      expect(screen.queryByRole("button", { name: /^Duplicate, / })).not.toBeOnTheScreen();
     });
 
     it("should still scale, reset and read every row", async () => {

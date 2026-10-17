@@ -8,6 +8,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { CHICKEN_AND_RICE_ID, chickenAndRiceRecipe, frittataRecipe } from "./recipeViewFixtures";
 import RecipeViewRoute from "../../app/recipes/[id]/index";
+import { ToastProvider } from "../../components/ui";
 import { isPersistedQuery } from "../../lib/diaryCache/isPersistedQuery";
 import { recipesPath } from "../../lib/recipeRoutes";
 import { ThemeProvider } from "../../lib/theme";
@@ -81,7 +82,9 @@ async function showRoute(id: string) {
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <RecipeViewRoute />
+        <ToastProvider>
+          <RecipeViewRoute />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -147,7 +150,7 @@ describe("the recipe view's route", () => {
       expect(screen.queryByText(/archived/i)).not.toBeOnTheScreen();
     });
 
-    it("should read the recipe, and write nothing however the servings change", async () => {
+    it("should read the recipe and the library, and write nothing however the servings change", async () => {
       diaryBackend.recipes = [recipeRowOf(chickenAndRiceRecipe)];
       const user = await showRoute(CHICKEN_AND_RICE_ID);
       await screen.findByRole("heading", { name: "Chicken and rice" });
@@ -156,7 +159,9 @@ describe("the recipe view's route", () => {
       await user.press(screen.getByRole("button", { name: "Fewer servings" }));
       await user.press(screen.getByRole("button", { name: "Fewer servings" }));
 
+      // The recipe, and the library its Duplicate names a copy from.
       expect(diaryBackend.requests.filter((request) => request.table === "recipes")).toEqual([
+        expect.objectContaining({ method: "GET" }),
         expect.objectContaining({ method: "GET" }),
       ]);
       expect(diaryBackend.requests.every((request) => request.method === "GET")).toBe(true);

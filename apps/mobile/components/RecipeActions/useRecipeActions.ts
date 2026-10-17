@@ -11,6 +11,16 @@ import type { RecipeSummary } from "@keylow/api-client";
 // The library reads archived recipes with the live ones in one request, so every recipe is in this list.
 const libraryKey = keys.recipes.list(true);
 
+// The write has worked and its toast must still show, so a screen's follow-up that throws is not allowed to
+// stop it. The user is left where they were, with the toast.
+function runFollowUp(followUp: () => void): void {
+  try {
+    followUp();
+  } catch {
+    // Nothing to report: the failure is the screen's own and carries no recipe data worth logging.
+  }
+}
+
 /**
  * Duplicate, archive and restore for a recipe, each with its toast, shared by the library, the archived
  * screen and the recipe view's menu. The library list in the cache changes as the write is asked for, so
@@ -19,7 +29,9 @@ const libraryKey = keys.recipes.list(true);
  * waits for the save. A copy is named from the names in the library read, archived ones included, so one
  * the user has put away is never reused. The name of a copy is held from the moment it is asked for, and
  * the copy joins the cached list when it is saved, so a second Duplicate before the library has been read
- * again is "(copy 2)" and not a second "(copy)".
+ * again is "(copy 2)" and not a second "(copy)". A screen that leaves for another when an action has gone
+ * through, as the recipe view does, says where in the follow-up it passes: it runs only when the write
+ * worked, so a failure leaves the user where they were, and one that throws cannot take the toast with it.
  */
 export function useRecipeActions(): RecipeActions {
   const toast = useToast();
@@ -71,7 +83,7 @@ export function useRecipeActions(): RecipeActions {
   };
 
   return {
-    duplicate: (recipe) => {
+    duplicate: (recipe, followUp) => {
       const names = (queryClient.getQueryData<RecipeSummary[]>(libraryKey) ?? []).map(
         ({ name }) => name,
       );
@@ -81,13 +93,18 @@ export function useRecipeActions(): RecipeActions {
         .mutateAsync({ recipeId: recipe.id, name })
         .then((copy) => {
           addToLibrary(recipe.id, copy);
+          runFollowUp(() => followUp?.onSaved?.(copy));
           toast.show({
             message: RECIPE_TOASTS.duplicated,
             icon: "Copy",
             actionLabel: UNDO_LABEL,
             // The ADR gives recipes no delete, so putting a copy away is archiving it.
             onAction: () => {
-              void setArchived(copy.id, true);
+              void setArchived(copy.id, true).then((worked) => {
+                if (worked) {
+                  runFollowUp(() => followUp?.onUndone?.(copy));
+                }
+              });
             },
           });
         }, showFailure)
@@ -95,9 +112,10 @@ export function useRecipeActions(): RecipeActions {
           namesBeingSaved.current.delete(name);
         });
     },
-    archive: (recipe) => {
+    archive: (recipe, followUp) => {
       void setArchived(recipe.id, true).then((worked) => {
         if (worked) {
+          runFollowUp(() => followUp?.onArchived?.());
           toast.show({
             message: RECIPE_TOASTS.archived,
             icon: "Archive",

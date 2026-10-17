@@ -1,2 +1,2 @@
 export { useRecipeActions } from "./useRecipeActions";
-export type { RecipeActions } from "./types";
+export type { ArchiveFollowUp, DuplicateFollowUp, RecipeActions } from "./types";
