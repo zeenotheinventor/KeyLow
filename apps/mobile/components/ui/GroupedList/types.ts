@@ -10,6 +10,12 @@ export type GroupedListSeeMore = {
 export type GroupedListProps = {
   /** The group's name. It heads the section and names the list. */
   title: string;
+  /**
+   * Draws the card without its heading row, for a screen whose boards show only the card, such as the
+   * recipe library. The title still names the list for a screen reader. `source` and `seeMore` are
+   * part of the heading row, so they are not drawn either.
+   */
+  hidesTitle?: boolean | undefined;
   /** Where the group comes from, written after the title, such as "UK CoFID". */
   source?: string | undefined;
   /** Offers the rows that are not shown. */

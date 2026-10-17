@@ -1,0 +1,36 @@
+import {
+  NEW_RECIPE_NAME_PARAMETER,
+  newRecipePath,
+  recipePath,
+  recipesPath,
+} from "../lib/recipeRoutes";
+
+describe("where the recipe library leads", () => {
+  it("should name the library /recipes", () => {
+    expect(recipesPath()).toBe("/recipes");
+  });
+
+  it("should open the empty editor for a new recipe", () => {
+    expect(newRecipePath()).toBe("/recipes/new");
+  });
+
+  it("should carry a typed word to the editor in the name parameter", () => {
+    expect(NEW_RECIPE_NAME_PARAMETER).toBe("name");
+    expect(newRecipePath("pasta")).toBe("/recipes/new?name=pasta");
+  });
+
+  it("should keep the word as typed, encoded for an address", () => {
+    expect(newRecipePath("Mac & cheese")).toBe("/recipes/new?name=Mac%20%26%20cheese");
+  });
+
+  it("should leave out a word that is only spaces, and trim the ends of one that is not", () => {
+    expect(newRecipePath("   ")).toBe("/recipes/new");
+    expect(newRecipePath("  pasta ")).toBe("/recipes/new?name=pasta");
+  });
+
+  it("should open a recipe on the editor until the recipe view exists", () => {
+    expect(recipePath("0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11")).toBe(
+      "/recipes/0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11/edit",
+    );
+  });
+});

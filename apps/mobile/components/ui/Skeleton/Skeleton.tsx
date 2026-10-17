@@ -32,6 +32,28 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
+// How wide the title's bone is on each row of the recipe library's loading board, and every caption is 55 percent.
+const recipeTitleWidthClassNames = ["w-[70%]", "w-[55%]", "w-[80%]", "w-[62%]"];
+
+// A row as the recipe library's loading board draws it: the icon tile, a title over a shorter caption, and
+// nothing at the end. It is 80 points tall, with the hairline above every row after the first.
+function SkeletonRecipeRow({ index }: { index: number }) {
+  const titleWidthClassName = recipeTitleWidthClassNames[index % recipeTitleWidthClassNames.length];
+
+  return (
+    <View
+      className={`min-h-[80px] flex-row items-center gap-3 px-3 py-2 ${index === 0 ? "" : "border-t border-border"}`}
+      testID="skeleton-recipe-row"
+    >
+      <SkeletonBone className="h-control-sm w-control-sm shrink-0" />
+      <View className="flex-1 gap-2">
+        <SkeletonBone className={`h-[14px] ${titleWidthClassName}`} />
+        <SkeletonBone className="h-[10px] w-[55%]" />
+      </View>
+    </View>
+  );
+}
+
 // A food's page as the loading board draws it: the name on two lines, the source as a pill, and the
 // two cards under them. Its sides are the screen's, so it gives none of its own.
 function SkeletonDetail() {
@@ -163,6 +185,16 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "nutritionCard" ? <SkeletonNutritionCard /> : null}
       {variant === "thisWeekCard" ? <SkeletonThisWeekCard /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
+      {variant === "recipeGroup" ? (
+        <View
+          className="overflow-hidden rounded-large border border-border bg-surface elevation-card"
+          testID="skeleton-card"
+        >
+          {Array.from({ length: rows }, (_, index) => (
+            <SkeletonRecipeRow key={index} index={index} />
+          ))}
+        </View>
+      ) : null}
       {variant === "group" ? (
         <View
           className="overflow-hidden rounded-large border border-border bg-surface elevation-card"

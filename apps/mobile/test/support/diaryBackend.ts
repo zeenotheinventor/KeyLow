@@ -22,6 +22,8 @@ export const diaryBackend: {
   terms: { terms_accepted_at: string | null; terms_version: string | null };
   targets: Targets;
   entries: Row[];
+  /** The `recipes` rows as the library reads them: `id`, `name`, `servings`, `yield_grams`, `is_archived` and `computed`. */
+  recipes: Row[];
   dayLogs: Row[];
   /** The `day_totals` rows, which the week's read returns for the days it asks for. Empty by default. */
   dayTotals: Row[];
@@ -61,6 +63,7 @@ export const diaryBackend: {
   terms: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
   targets: { target_kcal: 2200, target_protein_g: 160, target_carbs_g: 220, target_fat_g: 70 },
   entries: [],
+  recipes: [],
   dayLogs: [],
   dayTotals: [],
   failingTables: new Set(),
@@ -94,6 +97,7 @@ export function resetDiaryBackend(): void {
     target_fat_g: 70,
   };
   diaryBackend.entries = [];
+  diaryBackend.recipes = [];
   diaryBackend.dayLogs = [];
   diaryBackend.dayTotals = [];
   diaryBackend.failingTables.clear();
@@ -627,6 +631,18 @@ export async function fakeFetch(
             .filter((row) => inDateFilter(searchParams, row["local_date"]))
             .filter((row) => searchParams.get("deleted_at") !== "is.null" || isLive(row))
             .sort(byTimeline),
+        ),
+      );
+    case "recipes":
+      // The library asks for the live recipes alone with `is_archived=eq.false`, and for both without it.
+      return Promise.resolve(
+        jsonResponse(
+          diaryBackend.recipes
+            .filter(
+              (row) =>
+                searchParams.get("is_archived") !== "eq.false" || row["is_archived"] === false,
+            )
+            .sort((first, second) => String(first["name"]).localeCompare(String(second["name"]))),
         ),
       );
     case "day_logs":

@@ -42,6 +42,10 @@ describe("which queries the diary cache keeps", () => {
     ["the portions of a food", keys.foods.portions("food-id")],
     ["the foods of the user", keys.foods.own],
     ["a profile", keys.profiles.detail("user-id")],
+    ["the recipe library", keys.recipes.list(true)],
+    ["the live recipes", keys.recipes.list(false)],
+    ["a recipe", keys.recipes.detail("recipe-id")],
+    ["a search of recipes", keys.recipes.search("chi")],
     ["a diary query this cache does not know", ["diary", "something-new", "2026-10-15"]],
   ])("should not keep %s", (_name, queryKey) => {
     expect(isPersistedQuery(queryFor(queryKey))).toBe(false);

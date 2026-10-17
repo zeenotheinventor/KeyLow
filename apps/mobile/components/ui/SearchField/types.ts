@@ -17,4 +17,12 @@ export type SearchFieldProps = {
   clear?: { label: string; onPress: () => void } | undefined;
   /** The slot at the trailing edge, for the scan control: a ghost `IconButton`. */
   trailing?: ReactNode;
+  /**
+   * `dock`, the default, is the sheet's field at the bottom of the screen above the keyboard, with a
+   * hairline over it and the screen's sides. `inline` is the field alone, for a screen that places it among
+   * its content, such as the recipes tab's, which has no sides or keyboard lift of its own to give.
+   */
+  placement?: "dock" | "inline" | undefined;
+  /** Dims the field to 40 percent and stops it taking text, such as while the list it filters loads. */
+  disabled?: boolean | undefined;
 };

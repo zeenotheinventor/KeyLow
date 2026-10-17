@@ -1,6 +1,7 @@
 import { View } from "react-native";
 
 import { Card } from "../Card";
+import { IconButton } from "../IconButton";
 import { FoodRow } from "./FoodRow";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
@@ -245,4 +246,40 @@ export const FourDigitEnergy: Story = {
     },
     onDelete: () => undefined,
   },
+};
+
+// The golden recipe as the library writes a row: the serving and the yield, and the values of one serving.
+const chickenAndRice = {
+  layout: "recipe",
+  nameSegments: [{ text: "Chicken and rice", matched: false }],
+  openLabel:
+    "Chicken and rice, 1 serving 275 grams, makes 4, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, open",
+  caption: "1 serving (275 g) · makes 4",
+  energy: "374",
+  macros: { protein: "32", carbs: "43", fat: "8.1", description: "" },
+} as const;
+
+export const Recipe: Story = { args: chickenAndRice };
+
+// The match is the only semibold part of the title while a search is typed.
+export const RecipeMatched: Story = {
+  args: {
+    ...chickenAndRice,
+    nameSegments: [
+      { text: "Chi", matched: true },
+      { text: "cken and rice", matched: false },
+    ],
+  },
+};
+
+// The row menu ticket puts its More button here; the slot sits beside the row and does not press it.
+export const RecipeWithMore: Story = {
+  args: chickenAndRice,
+  // An element is drawn in `render`, because Storybook walks every arg to infer its type.
+  render: (args) => (
+    <FoodRow
+      {...args}
+      trailing={<IconButton icon="Ellipsis" label="More for Chicken and rice" variant="ghost" />}
+    />
+  ),
 };

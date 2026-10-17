@@ -1,0 +1,89 @@
+import { render, screen } from "@testing-library/react-native";
+import { AccessibilityInfo } from "react-native";
+import { setUpTests } from "react-native-reanimated";
+
+import { Skeleton } from "../../components/ui";
+import { ThemeProvider } from "../../lib/theme";
+import { compileKitStyles } from "../support/kitStyles";
+import { registerAppStyles } from "../support/nativeWindStyles";
+import { viewsDrawn } from "../support/viewsDrawn";
+
+import type { SkeletonProps } from "../../components/ui";
+
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
+
+setUpTests();
+
+async function renderSkeleton(props: SkeletonProps) {
+  await render(
+    <ThemeProvider fixedPreference="dark">
+      <Skeleton {...props} />
+    </ThemeProvider>,
+  );
+}
+
+// A skeleton is hidden from screen readers, because the screen says what is loading in words, so its
+// drawing is found by ids, and a query has to ask for hidden elements.
+const hidden = { includeHiddenElements: true };
+const rows = () => screen.getAllByTestId("skeleton-recipe-row", hidden);
+const bones = () => screen.getAllByTestId("skeleton-bone", hidden);
+
+describe("Skeleton shaped like the recipe library", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    registerAppStyles(kitStyles);
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it("should be a card of as many rows as it is asked for", async () => {
+    await renderSkeleton({ variant: "recipeGroup", rows: 4 });
+
+    expect(screen.getByTestId("skeleton-card", hidden)).toBeOnTheScreen();
+    expect(rows()).toHaveLength(4);
+  });
+
+  it("should draw a tile, a title and a caption on each row, and no value at the end", async () => {
+    await renderSkeleton({ variant: "recipeGroup", rows: 4 });
+
+    expect(bones()).toHaveLength(12);
+  });
+
+  it("should make each row 80 points tall at least, as the loading board draws it", async () => {
+    await renderSkeleton({ variant: "recipeGroup", rows: 4 });
+
+    expect(viewsDrawn({ minHeight: 80 })).toHaveLength(4);
+  });
+
+  it("should vary the width of the titles, and keep the captions at 55 percent", async () => {
+    await renderSkeleton({ variant: "recipeGroup", rows: 4 });
+
+    const titles = bones().filter((_, index) => index % 3 === 1);
+    const captions = bones().filter((_, index) => index % 3 === 2);
+    expect(titles[0]).toHaveStyle({ width: "70%" });
+    expect(titles[1]).toHaveStyle({ width: "55%" });
+    expect(titles[2]).toHaveStyle({ width: "80%" });
+    expect(titles[3]).toHaveStyle({ width: "62%" });
+    for (const caption of captions) {
+      expect(caption).toHaveStyle({ width: "55%" });
+    }
+  });
+
+  it("should part the rows with a hairline, and draw none above the first", async () => {
+    await renderSkeleton({ variant: "recipeGroup", rows: 4 });
+
+    expect(rows()[0]).not.toHaveStyle({ borderTopWidth: 1 });
+    expect(rows()[1]).toHaveStyle({ borderTopWidth: 1 });
+  });
+});
