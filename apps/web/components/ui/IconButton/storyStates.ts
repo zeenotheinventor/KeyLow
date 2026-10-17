@@ -4,9 +4,6 @@ export const storyStates = [
   "Focused",
   "Pressed",
   "Disabled",
-  "Danger",
-  "DangerFocused",
-  "DangerDisabled",
   "StepControls",
   "RowActions",
 ];

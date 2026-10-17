@@ -150,8 +150,8 @@ describe("IconButton", () => {
     });
   });
 
-  describe("tone", () => {
-    it("should write the icon in the secondary text colour by default", () => {
+  describe("colour", () => {
+    it("should write the icon in the secondary text colour, for Remove as for the rest", () => {
       render(<IconButton icon={X} label="Remove" />);
       const { className } = screen.getByRole("button", { name: "Remove" });
 
@@ -159,14 +159,13 @@ describe("IconButton", () => {
       expect(className).not.toContain("text-danger");
     });
 
-    it("should write the icon in the danger colour for the danger tone", async () => {
-      render(<IconButton icon={X} label="Remove" tone="danger" />);
-      const { className } = screen.getByRole("button", { name: "Remove" });
-      const css = await compileUtilities(className);
+    it("should not take a tone", () => {
+      render(
+        // @ts-expect-error the boards draw Remove in the secondary colour, so there is no tone to ask for
+        <IconButton icon={X} label="Remove" tone="danger" />,
+      );
 
-      expect(className).toContain("text-danger");
-      expect(className).not.toContain("text-text-secondary");
-      expect(css).toMatch(/\.text-danger\s*\{[^}]*color: rgb\(var\(--kl-danger\)/);
+      expect(screen.getByRole("button", { name: "Remove" }).className).not.toContain("text-danger");
     });
   });
 });
