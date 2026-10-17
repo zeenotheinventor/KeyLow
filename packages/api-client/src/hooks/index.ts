@@ -34,6 +34,16 @@ export { useMaterialiseOffProduct } from "./useMaterialiseOffProduct";
 export { useOwnFoods } from "./useOwnFoods";
 export { useQuickAdd } from "./useQuickAdd";
 export { useRecentFoods } from "./useRecentFoods";
+export { useRecipe } from "./useRecipe";
+export type { RecipeState } from "./useRecipe";
+export { useRecipeSearch } from "./useRecipeSearch";
+export type {
+  RecipeSearchError,
+  RecipeSearchResult,
+  UseRecipeSearchOptions,
+} from "./useRecipeSearch";
+export { useRecipes } from "./useRecipes";
+export type { UseRecipesOptions } from "./useRecipes";
 export { useRestoreEntry } from "./useRestoreEntry";
 export { useSetDayComplete } from "./useSetDayComplete";
 export { useProfileTimeZone } from "./useProfileTimeZone";

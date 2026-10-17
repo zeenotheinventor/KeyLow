@@ -16,6 +16,18 @@ export const keys = {
     own: ["foods", "own"] as const,
   },
   /**
+   * The recipe reads. A family of its own, outside `diary` and the lists a persisted cache keeps, so
+   * nothing about a recipe is stored on the device by the diary cache. Every key sits under
+   * `["recipes"]`, so one invalidation of `keys.recipes.all` refreshes the library, a recipe and a search.
+   * `archived` says whether archived recipes are included besides the live ones.
+   */
+  recipes: {
+    all: ["recipes"] as const,
+    list: (archived: boolean) => ["recipes", "list", archived] as const,
+    detail: (id: string) => ["recipes", "detail", id] as const,
+    search: (q: string, archived = false) => ["recipes", "search", q, archived] as const,
+  },
+  /**
    * The diary reads. `day` and `week` are the two a persisted cache keeps. Every key sits under
    * `["diary"]`, so one invalidation of `keys.diary.all` refreshes a diary after a write.
    * `localDate` is `YYYY-MM-DD`, `weekStart` is the Monday of the week as `YYYY-MM-DD`, and

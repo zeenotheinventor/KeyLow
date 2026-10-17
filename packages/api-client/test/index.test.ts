@@ -48,6 +48,12 @@ describe("the package index", () => {
     "useTermsAcceptance",
     "useUpdateTargets",
     "TargetsValidationError",
+    "getRecipe",
+    "listRecipes",
+    "searchRecipes",
+    "useRecipe",
+    "useRecipes",
+    "useRecipeSearch",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

@@ -116,3 +116,33 @@ describe("keys.diary", () => {
     }
   });
 });
+
+describe("keys.recipes", () => {
+  it("should expose the recipes root key", () => {
+    expect(keys.recipes.all).toEqual(["recipes"]);
+  });
+
+  it("should build a list key scoped to whether archived recipes are included", () => {
+    expect(keys.recipes.list(false)).toEqual(["recipes", "list", false]);
+    expect(keys.recipes.list(true)).toEqual(["recipes", "list", true]);
+  });
+
+  it("should build a detail key scoped to the recipe id", () => {
+    expect(keys.recipes.detail("recipe-1")).toEqual(["recipes", "detail", "recipe-1"]);
+  });
+
+  it("should build a search key scoped to the query text, live recipes only unless archived is asked for", () => {
+    expect(keys.recipes.search("stew")).toEqual(["recipes", "search", "stew", false]);
+    expect(keys.recipes.search("stew", true)).toEqual(["recipes", "search", "stew", true]);
+  });
+
+  it("should nest every recipes key under the recipes root so one invalidation covers them all", () => {
+    for (const key of [
+      keys.recipes.list(false),
+      keys.recipes.detail("recipe-1"),
+      keys.recipes.search("stew"),
+    ]) {
+      expect(key.slice(0, 1)).toEqual(keys.recipes.all);
+    }
+  });
+});
