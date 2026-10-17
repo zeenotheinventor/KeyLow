@@ -16,6 +16,7 @@ export const storyStates = [
   "StackedNeedsReview",
   "StackedRecipe",
   "Search",
+  "SearchRecipe",
   "SearchLongTitle",
   "SearchWrappedStats",
   "SearchNeedsReview",
