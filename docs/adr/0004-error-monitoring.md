@@ -33,10 +33,10 @@ Tracing is off everywhere (`tracesSampleRate: 0`). There is no session replay.
 ### Each surface does nothing unless it is switched on
 
 - **Web** starts Sentry only when `NEXT_PUBLIC_SENTRY_DSN` is set and `NEXT_PUBLIC_VERCEL_ENV` is `production`. Local development, tests, CI and previews send nothing.
-- **Mobile** starts Sentry only when `EXPO_PUBLIC_SENTRY_DSN` is set, and skips `__DEV__` builds. The release is the commit (`EXPO_PUBLIC_COMMIT_SHA`), falling back to the runtime version for the bundle built into the app. The dist is the running update id.
+- **Mobile** starts Sentry only when `EXPO_PUBLIC_SENTRY_DSN` is set, and skips `__DEV__` builds. The release is the commit (`EXPO_PUBLIC_COMMIT_SHA`), falling back to the runtime version for the bundle built into the app. The dist is the running update id. Release-health sessions are off (`enableAutoSessionTracking: false`) and so are client reports. On web the session integrations are removed.
 - **Edge** reports only when the `SENTRY_DSN` function secret is set. Without it (local stack, CI) a failure is written to the console and the Sentry SDK is never loaded.
 
-Where each DSN lives: `NEXT_PUBLIC_SENTRY_DSN` is a Vercel production environment variable, set by Zee. `EXPO_PUBLIC_SENTRY_DSN` belongs in `apps/mobile/eas.json` and in the OTA workflow (`.github/workflows/eas-update.yml`), and Zee adds it there, because writing it from an agent session was blocked by its safety checks. `SENTRY_DSN` is a Supabase function secret. This describes where each lives, not that each is set yet. A DSN is not written in this repository's docs.
+Where each DSN lives: `NEXT_PUBLIC_SENTRY_DSN` is a Vercel production environment variable, set by Zee. `EXPO_PUBLIC_SENTRY_DSN` is an EAS environment variable in the `production` environment, set by Zee in the EAS dashboard (project, Environment variables) or with `eas env:create --environment production --name EXPO_PUBLIC_SENTRY_DSN --visibility plaintext`. It is not in `eas.json`, the OTA workflow or any other committed file, so it cannot change the native fingerprint. `eas update` runs with `--environment production`, so OTA bundles get it, and the `production-apk` build profile sets `environment: production`, so that APK gets it. The plain `production` build profile does not, so a build made from it has reporting off. `SENTRY_DSN` is a Supabase function secret. This describes where each lives, not that each is set yet. A DSN is not written in this repository's docs.
 
 ### Source maps
 

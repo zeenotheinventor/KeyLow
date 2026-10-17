@@ -91,11 +91,17 @@ If the alerts stop coming:
 | Name                     | Where it lives                                      |
 | ------------------------ | --------------------------------------------------- |
 | `NEXT_PUBLIC_SENTRY_DSN` | Vercel production environment, set by Zee           |
-| `EXPO_PUBLIC_SENTRY_DSN` | `apps/mobile/eas.json` and the OTA workflow         |
+| `EXPO_PUBLIC_SENTRY_DSN` | EAS environment variable, `production` environment  |
 | `SENTRY_DSN`             | Supabase function secret                            |
 | `SENTRY_AUTH_TOKEN`      | GitHub `production` environment, EAS secret, Vercel |
 
-The mobile DSN belongs in `eas.json` and the OTA workflow, and Zee adds it there. Do not assume it is already there.
+The mobile DSN is an EAS environment variable in the `production` environment, and Zee sets it in the EAS dashboard (project, Environment variables) or with:
+
+```sh
+eas env:create --environment production --name EXPO_PUBLIC_SENTRY_DSN --visibility plaintext
+```
+
+It is in no committed file, so it does not change the native fingerprint. `eas update` runs with `--environment production`, so OTA bundles get it, and the `production-apk` build profile sets `environment: production`, so that APK gets it. A build from the plain `production` profile does not, and would have reporting off. Do not assume it is already set.
 
 ### Source maps
 
