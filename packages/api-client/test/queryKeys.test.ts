@@ -131,6 +131,10 @@ describe("keys.recipes", () => {
     expect(keys.recipes.detail("recipe-1")).toEqual(["recipes", "detail", "recipe-1"]);
   });
 
+  it("should build a refresh preview key scoped to the recipe id", () => {
+    expect(keys.recipes.refresh("recipe-1")).toEqual(["recipes", "refresh", "recipe-1"]);
+  });
+
   it("should build a search key scoped to the query text, live recipes only unless archived is asked for", () => {
     expect(keys.recipes.search("stew")).toEqual(["recipes", "search", "stew", false]);
     expect(keys.recipes.search("stew", true)).toEqual(["recipes", "search", "stew", true]);
@@ -140,6 +144,7 @@ describe("keys.recipes", () => {
     for (const key of [
       keys.recipes.list(false),
       keys.recipes.detail("recipe-1"),
+      keys.recipes.refresh("recipe-1"),
       keys.recipes.search("stew"),
     ]) {
       expect(key.slice(0, 1)).toEqual(keys.recipes.all);

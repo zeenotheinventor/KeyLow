@@ -7,9 +7,15 @@ import {
 } from "@keylow/core/recipes";
 import { z } from "zod";
 
-import { LIBRARY_COLUMNS, getRecipe, recipeRepoError, recipeSummaryOf } from "./recipes";
+import {
+  LIBRARY_COLUMNS,
+  getRecipe,
+  readRecipeRefresh,
+  recipeRepoError,
+  recipeSummaryOf,
+} from "./recipes";
 
-import type { RecipeDetail, RecipeSummary } from "./recipes";
+import type { RecipeDetail, RecipeRefreshDiff, RecipeSummary } from "./recipes";
 import type { Database } from "../database.types";
 import type { RecipeIngredient } from "@keylow/core/recipes";
 import type { Json } from "@keylow/db";
@@ -201,4 +207,37 @@ export async function duplicateRecipe(
     ingredients: original.ingredients,
     steps: original.instructions,
   });
+}
+
+/**
+ * Applies "Refresh ingredients": reads the recipe and its foods as they are now, rebuilds the
+ * ingredients whose food changed, and saves them with the new totals in one `save_recipe` call, all or
+ * nothing. It resolves to the diff it applied, so a screen shows what was written, and if a food changed
+ * since the preview that is the newer diff. Nothing is written when no food changed, so a refresh never
+ * overwrites a recipe it did not need to change. Last save wins, with no check for a change since the
+ * recipe was read, as for any save. Nothing in the diary is touched: an entry keeps its frozen figures.
+ * A recipe that does not exist or is not the caller's fails with P0002, the code the database uses for it.
+ */
+export async function applyRecipeRefresh(
+  client: SupabaseClient<Database>,
+  recipeId: string,
+): Promise<RecipeRefreshDiff> {
+  const refresh = await readRecipeRefresh(client, recipeId);
+  if (refresh === null) {
+    throw new Error("Could not refresh the recipe's ingredients (P0002)", {
+      cause: { code: "P0002" },
+    });
+  }
+
+  const { recipe, diff } = refresh;
+  if (diff.hasChanges) {
+    await saveRecipe(client, recipe.id, {
+      name: recipe.name,
+      servings: recipe.servings,
+      yieldGrams: recipe.yield_grams,
+      ingredients: diff.ingredients,
+      steps: recipe.instructions,
+    });
+  }
+  return diff;
 }

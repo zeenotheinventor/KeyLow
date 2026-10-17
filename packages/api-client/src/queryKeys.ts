@@ -25,6 +25,8 @@ export const keys = {
     all: ["recipes"] as const,
     list: (archived: boolean) => ["recipes", "list", archived] as const,
     detail: (id: string) => ["recipes", "detail", id] as const,
+    /** What "Refresh ingredients" would change in one recipe. Read afresh each time, never persisted. */
+    refresh: (id: string) => ["recipes", "refresh", id] as const,
     search: (q: string, archived = false) => ["recipes", "search", q, archived] as const,
   },
   /**
