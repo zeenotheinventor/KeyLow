@@ -7,7 +7,8 @@ const THREE_DIGITS_BEFORE_THE_END = /\B(?=(\d{3})+(?!\d))/g;
 const withoutNegativeZero = (value: number): number => value + 0;
 
 /** The thousands separator is written by hand, because Hermes and Node must agree to the character. */
-const groupThousands = (digits: string): string => digits.replace(THREE_DIGITS_BEFORE_THE_END, ",");
+export const groupThousands = (digits: string): string =>
+  digits.replace(THREE_DIGITS_BEFORE_THE_END, ",");
 
 /**
  * Calories: a whole number with a thousands separator, so `2480` reads `2,480`. Matches the design

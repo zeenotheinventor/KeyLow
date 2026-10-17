@@ -1,4 +1,4 @@
-export type SearchGroupKey = "yours" | "common" | "branded" | "live";
+export type SearchGroupKey = "recipes" | "yours" | "common" | "branded" | "live";
 
 type SearchGroupHeading = {
   title: string;
@@ -10,6 +10,11 @@ type SearchGroupHeading = {
 
 /** The groups of the search sheet, in the fixed order the sheet draws them. */
 export const SEARCH_GROUP_HEADINGS: Readonly<Record<SearchGroupKey, SearchGroupHeading>> = {
+  recipes: {
+    title: "Your recipes",
+    caption: "Per serving",
+    label: "Your recipes, values per serving",
+  },
   yours: { title: "Your foods", caption: "Yours", label: "Your foods" },
   common: { title: "Common foods", caption: "UK CoFID", label: "Common foods from UK CoFID" },
   branded: {
