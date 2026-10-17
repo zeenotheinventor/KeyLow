@@ -262,6 +262,45 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the dashboard's This week card", () => {
+    it("should be a title, a value line, the bar, a caption and seven circles", async () => {
+      await renderSkeleton({ variant: "thisWeekCard" });
+
+      expect(bones()).toHaveLength(4 + 7);
+    });
+
+    it("should draw the title as a bone 104 wide and 20 tall, and the value line 12 tall", async () => {
+      await renderSkeleton({ variant: "thisWeekCard" });
+
+      expect(bones()[0]).toHaveStyle({ width: 104, height: 20 });
+      expect(bones()[1]).toHaveStyle({ height: 12 });
+    });
+
+    it("should draw the bar as an 8 point pill and the caption line 12 tall", async () => {
+      await renderSkeleton({ variant: "thisWeekCard" });
+
+      expect(bones()[2]).toHaveStyle({ height: 8, borderRadius: 999 });
+      expect(bones()[3]).toHaveStyle({ height: 12 });
+    });
+
+    it("should draw each of the seven circles 20 points across", async () => {
+      await renderSkeleton({ variant: "thisWeekCard" });
+
+      for (const circle of bones().slice(4)) {
+        expect(circle).toHaveStyle({ width: 20, height: 20, borderRadius: 9999 });
+      }
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "thisWeekCard" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });

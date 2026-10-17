@@ -124,6 +124,28 @@ function SkeletonNutritionCard() {
   );
 }
 
+// The dashboard's This week card as its loading board draws it: a title, a value line, the 8 point bar,
+// a caption line and seven small circles, one under each day marker's place.
+function SkeletonThisWeekCard() {
+  return (
+    <Card>
+      <View className="gap-3" testID="skeleton-this-week-card">
+        <SkeletonBone className="h-5 w-[104px]" />
+        <SkeletonBone className="h-3 w-[60%]" />
+        <SkeletonBone className="h-2 rounded-pill" />
+        <SkeletonBone className="h-3 w-[45%]" />
+        <View className="flex-row pt-2">
+          {dayBoneKeys.map((key) => (
+            <View key={key} className="flex-1 items-center">
+              <SkeletonBone className="h-5 w-5 rounded-full" />
+            </View>
+          ))}
+        </View>
+      </View>
+    </Card>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -139,6 +161,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
         <SkeletonDiary includesWeek={variant === "diary"} />
       ) : null}
       {variant === "nutritionCard" ? <SkeletonNutritionCard /> : null}
+      {variant === "thisWeekCard" ? <SkeletonThisWeekCard /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "group" ? (
         <View

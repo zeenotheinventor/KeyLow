@@ -1,1 +1,9 @@
-export const storyStates = ["Row", "Group", "Detail", "Diary", "DiaryDay", "NutritionCard"];
+export const storyStates = [
+  "Row",
+  "Group",
+  "Detail",
+  "Diary",
+  "DiaryDay",
+  "NutritionCard",
+  "ThisWeekCard",
+];

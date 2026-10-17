@@ -448,7 +448,12 @@ describe("the dashboard screen", () => {
       const dayReads = requestsTo("food_log_entries");
 
       diaryBackend.targetsReadFails = false;
-      await user.press(screen.getByRole("button", { name: "Try again" }));
+      // The targets are the This week card's too, so it shows its own Try again under the Today card's.
+      const [todaysRetry] = screen.getAllByRole("button", { name: "Try again" });
+      if (todaysRetry === undefined) {
+        throw new Error("The Today card has no Try again");
+      }
+      await user.press(todaysRetry);
       await card();
 
       expect(requestsTo("food_log_entries")).toBe(dayReads);
