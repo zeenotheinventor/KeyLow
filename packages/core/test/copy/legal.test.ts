@@ -41,7 +41,7 @@ function allTextOf(document: LegalDocument): string {
 describe("the legal copy", () => {
   describe("the terms version", () => {
     it("should be the date the current terms took effect", () => {
-      expect(TERMS_VERSION).toBe("2026-10-15");
+      expect(TERMS_VERSION).toBe("2026-10-16");
     });
   });
 
@@ -116,7 +116,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 15 October 2026");
+      expect(document.lastUpdated).toBe("Last updated 16 October 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
@@ -199,7 +199,9 @@ describe("the legal copy", () => {
     });
 
     it("should say the information is used only to run the diary and the adaptive engine", () => {
-      expect(text).toContain("Your information is used for nothing else.");
+      expect(text).toContain(
+        "Your information is used for nothing else, apart from the error reports described under Who else handles your information.",
+      );
     });
 
     it("should rest health data on explicit consent given by ticking the box at sign-up", () => {
@@ -224,6 +226,7 @@ describe("the legal copy", () => {
         "Supabase: the database and sign-in.",
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
+        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins or body stats, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ]);
     });
@@ -246,6 +249,12 @@ describe("the legal copy", () => {
 
     it("should keep information until the account is deleted, then delete it", () => {
       expect(text).toContain("Your information is kept until you delete your account.");
+    });
+
+    it("should say error reports are kept for 30 days and can outlast a deleted account", () => {
+      expect(text).toContain(
+        "Error reports are the one exception: they are kept for 30 days, so they can outlast a deleted account by up to 30 days.",
+      );
     });
 
     it("should list the rights, including a complaint to the ICO at ico.org.uk", () => {
