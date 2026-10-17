@@ -1,5 +1,6 @@
 import { MacroHero } from "./MacroHero";
 
+import type { MacroHeroFoodProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 
 const meta = {
@@ -15,7 +16,7 @@ const meta = {
       </div>
     ),
   ],
-} satisfies Meta<typeof MacroHero>;
+} satisfies Meta<MacroHeroFoodProps>;
 
 export default meta;
 

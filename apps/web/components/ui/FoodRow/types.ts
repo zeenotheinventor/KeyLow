@@ -143,5 +143,27 @@ export type RecipeTableRowProps = {
   className?: string | undefined;
 };
 
+/**
+ * An ingredient of a recipe at the wide width, one row of the table that `FoodTable` draws with its
+ * `ingredient` variant: the food's name, the amount it is used in, then protein, carbs, fat and energy for
+ * that amount, and an actions cell that is empty until a screen has something to put in it.
+ */
+export type IngredientTableRowProps = {
+  layout: "ingredientTable";
+  nameSegments: readonly FoodNameSegment[];
+  /** The amount as the diary writes it: "100 g", "1 medium (110 g)". It is one line. */
+  amount: string;
+  /** The energy for the amount, already formatted, in kcal. Leave it out when there is none, and the cell is a dash. */
+  energy?: string | undefined;
+  /** The macros for the amount as `formatGrams` writes them. The table adds the unit. */
+  macros: FoodTableRowMacros;
+  className?: string | undefined;
+};
+
 export type FoodRowProps =
-  FoodListRowProps | FoodLogRowProps | FoodTableRowProps | RecipeRowProps | RecipeTableRowProps;
+  | FoodListRowProps
+  | FoodLogRowProps
+  | FoodTableRowProps
+  | RecipeRowProps
+  | RecipeTableRowProps
+  | IngredientTableRowProps;

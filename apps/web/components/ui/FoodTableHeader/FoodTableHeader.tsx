@@ -1,6 +1,10 @@
-import { FOOD_MACRO_LABELS, FOOD_ROW, RECIPES_TABLE } from "@keylow/core/copy";
+import { FOOD_MACRO_LABELS, FOOD_ROW, PORTION_PICKER, RECIPES_TABLE } from "@keylow/core/copy";
 
-import { foodTableColumnsClassName, recipeTableColumnsClassName } from "./columns";
+import {
+  foodTableColumnsClassName,
+  ingredientTableColumnsClassName,
+  recipeTableColumnsClassName,
+} from "./columns";
 
 import type { FoodTableHeaderProps } from "./types";
 
@@ -18,16 +22,22 @@ const macroColumns = [
  * kcal, and a heading for the actions that is only read out. `FoodTable` puts it above the rows; use
  * this directly only to compose a table of your own, as the first row inside its `role="table"`. It is
  * hidden at the narrow width, where the stacked rows take over. The `recipe` variant heads the recipe
- * library's table: Recipe and Servings in place of Food.
+ * library's table: Recipe and Servings in place of Food. The `ingredient` variant heads a recipe's
+ * ingredients: Food, then Amount.
  */
 export function FoodTableHeader({ variant = "food" }: FoodTableHeaderProps) {
   const isRecipe = variant === "recipe";
+  const isIngredient = variant === "ingredient";
 
   return (
     <div
       role="row"
       className={cn(
-        isRecipe ? recipeTableColumnsClassName : foodTableColumnsClassName,
+        isRecipe
+          ? recipeTableColumnsClassName
+          : isIngredient
+            ? ingredientTableColumnsClassName
+            : foodTableColumnsClassName,
         "pb-1 pt-2 text-caption text-text-muted max-md:hidden",
       )}
     >
@@ -37,6 +47,7 @@ export function FoodTableHeader({ variant = "food" }: FoodTableHeaderProps) {
           {RECIPES_TABLE.servings}
         </span>
       )}
+      {isIngredient && <span role="columnheader">{PORTION_PICKER.amountLabel}</span>}
       {macroColumns.map(({ label, dotClassName }) => (
         <span key={label} role="columnheader" className="flex items-center justify-end gap-[6px]">
           <span aria-hidden className={cn("size-[6px] shrink-0 rounded-[2px]", dotClassName)} />

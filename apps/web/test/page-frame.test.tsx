@@ -30,6 +30,7 @@ describe("PageFrame", () => {
     ["foodRecord", { phone: [16, 16], desktop: [24, 24] }],
     ["diary", { phone: [16, 16], desktop: [24, 24] }],
     ["targets", { phone: [16, 16], desktop: [32, 32] }],
+    ["recipeEditor", { phone: [16, 16], desktop: [24, 24] }],
   ] as const)(
     "should pad the %s family top and bottom as its boards draw it",
     async (variant, expected) => {

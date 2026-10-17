@@ -8,3 +8,8 @@ export const foodTableColumnsClassName =
 // energy at 96 px and 232 px for the row's buttons.
 export const recipeTableColumnsClassName =
   "grid grid-cols-[minmax(0,1fr)_80px_80px_80px_80px_96px_232px] items-center px-4";
+
+// The recipe editor's ingredients: the food takes what is left, then its amount at 150 px, protein, carbs
+// and fat at 64 px, energy at 84 px and 80 px for the row's buttons.
+export const ingredientTableColumnsClassName =
+  "grid grid-cols-[minmax(0,1fr)_150px_64px_64px_64px_84px_80px] items-center px-4";

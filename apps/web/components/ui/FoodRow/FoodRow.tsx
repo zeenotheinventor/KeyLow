@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { FoodLogRow } from "./FoodLogRow";
 import { FoodTableRow } from "./FoodTableRow";
+import { IngredientTableRow } from "./IngredientTableRow";
 import { RecipeRow } from "./RecipeRow";
 import { RecipeTableRow } from "./RecipeTableRow";
 import { interactiveClasses } from "./rowStates";
@@ -50,7 +51,7 @@ function Macros({ macros, basis }: { macros: FoodRowMacros; basis?: string | und
 /**
  * A food on the search and Your foods lists: its name with the matched words in bold, then its macros and
  * energy. Put it inside a `GroupedList`. Give it a `layout` for the food log's rows (`stacked`, `search`,
- * `table`) or the recipe library's (`recipe` for a card row, `recipeTable` for a table row) instead.
+ * `table`) or the recipe library's (`recipe` for a card row, `recipeTable` for a table row) or a recipe's ingredients (`ingredientTable`) instead.
  */
 export function FoodRow(props: FoodRowProps) {
   switch (props.layout) {
@@ -60,6 +61,8 @@ export function FoodRow(props: FoodRowProps) {
       return <RecipeRow {...props} />;
     case "recipeTable":
       return <RecipeTableRow {...props} />;
+    case "ingredientTable":
+      return <IngredientTableRow {...props} />;
     case "stacked":
     case "search":
       return <FoodLogRow {...props} />;

@@ -1,0 +1,65 @@
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+
+import type { IngredientTableRowProps } from "@/components/ui/FoodRow";
+
+import { FoodRow } from "@/components/ui/FoodRow";
+import { FoodTable } from "@/components/ui/FoodTable";
+
+afterEach(() => {
+  cleanup();
+});
+
+const onions: IngredientTableRowProps = {
+  layout: "ingredientTable",
+  nameSegments: [{ text: "Onions, raw", matched: false }],
+  amount: "1 medium (110 g)",
+  energy: "39",
+  macros: { protein: "1.1", carbs: "8.8", fat: "0.1" },
+};
+
+function renderIngredients(props: Partial<IngredientTableRowProps> = {}) {
+  render(
+    <FoodTable variant="ingredient" label="Ingredients">
+      <FoodRow {...onions} {...props} />
+    </FoodTable>,
+  );
+}
+
+describe("FoodTable with the ingredient variant", () => {
+  it("should head the columns Food, Amount, Protein, Carbs, Fat and kcal, then the actions", () => {
+    renderIngredients();
+
+    expect(screen.getAllByRole("columnheader").map((header) => header.textContent)).toEqual([
+      "Food",
+      "Amount",
+      "Protein",
+      "Carbs",
+      "Fat",
+      "kcal",
+      "Actions",
+    ]);
+  });
+
+  it("should write an ingredient as its name, its amount, its macros in grams and its energy", () => {
+    renderIngredients();
+    const row = screen.getByRole("row", { name: /Onions, raw/ });
+
+    expect(
+      within(row)
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent),
+    ).toEqual(["Onions, raw", "1 medium (110 g)", "1.1 g", "8.8 g", "0.1 g", "39 kcal", ""]);
+  });
+
+  it("should write a dash for a macro that is not given, and for no energy", () => {
+    renderIngredients({ energy: undefined, macros: { protein: null, carbs: "8.8", fat: "0.1" } });
+    const row = screen.getByRole("row", { name: /Onions, raw/ });
+
+    expect(
+      within(row)
+        .getAllByRole("cell")
+        .map((cell) => cell.textContent),
+    ).toEqual(["Onions, raw", "1 medium (110 g)", "–", "8.8 g", "0.1 g", "–", ""]);
+  });
+});
