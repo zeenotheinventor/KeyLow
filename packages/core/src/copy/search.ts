@@ -31,6 +31,9 @@ export const SEARCH_GROUP_HEADINGS: Readonly<Record<SearchGroupKey, SearchGroupH
 
 export const describeSeeMore = (hiddenCount: number): string => `See ${hiddenCount} more`;
 
+/** The name of the control that empties a search field once it holds text. */
+export const SEARCH_CLEAR_LABEL = "Clear search";
+
 export const SEARCH_IDLE = {
   title: "Search for a food",
   body: "Type at least 2 characters to search your foods, UK CoFID and Open Food Facts.",

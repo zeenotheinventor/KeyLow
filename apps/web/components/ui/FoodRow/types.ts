@@ -10,6 +10,9 @@ export type FoodRowMacros = {
   description: string;
 };
 
+/** The three macros as written on a row's stats line. The sentence for a screen reader is the row's own name. */
+export type FoodRowMacroValues = Pick<FoodRowMacros, "protein" | "carbs" | "fat">;
+
 export type FoodRowContent = {
   nameSegments: readonly FoodNameSegment[];
   brand?: string;
@@ -98,4 +101,47 @@ export type FoodTableRowProps = {
   className?: string | undefined;
 };
 
-export type FoodRowProps = FoodListRowProps | FoodLogRowProps | FoodTableRowProps;
+/**
+ * A recipe in the library at the narrow width: the chef's hat tile, the name with the matched letters in
+ * bold, the serving and what it makes under it, and the stats line of one serving. The whole row is a link
+ * to the recipe. Put it inside a `GroupedList` or any `ul`.
+ */
+export type RecipeRowProps = {
+  layout: "recipe";
+  nameSegments: readonly FoodNameSegment[];
+  /** Where the recipe opens. */
+  href: string;
+  /** The name of the link, with the serving, what it makes and the values read in words. */
+  openLabel: string;
+  /** The line under the name: "1 serving (275 g) · makes 4". It is one line. */
+  caption: string;
+  /** The energy of one serving, already formatted, in kcal. */
+  energy?: string | undefined;
+  /** The macros of one serving. Without them the stats line says "Needs review". */
+  macros?: FoodRowMacroValues | undefined;
+  className?: string | undefined;
+};
+
+/**
+ * A recipe in the library at the wide width, one row of the table that `FoodTable` draws with its `recipe`
+ * variant: the name as a link and the serving under it, then servings, protein, carbs, fat and energy, and
+ * an actions cell that is empty until a screen has something to put in it.
+ */
+export type RecipeTableRowProps = {
+  layout: "recipeTable";
+  nameSegments: readonly FoodNameSegment[];
+  /** Where the recipe opens. */
+  href: string;
+  /** The line under the name: "1 serving (275 g)". It is one line. */
+  servingCaption: string;
+  /** How many servings the recipe makes, already formatted. */
+  servings: string;
+  /** The energy of one serving, already formatted, in kcal. Leave it out for a recipe that has none, and the cell is a dash. */
+  energy?: string | undefined;
+  /** The macros of one serving as `formatGrams` writes them. The table adds the unit. */
+  macros: FoodTableRowMacros;
+  className?: string | undefined;
+};
+
+export type FoodRowProps =
+  FoodListRowProps | FoodLogRowProps | FoodTableRowProps | RecipeRowProps | RecipeTableRowProps;

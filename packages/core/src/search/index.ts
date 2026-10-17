@@ -5,6 +5,7 @@ export type { MacroDescription } from "./describeMacros";
 export { energyShares } from "./energyShares";
 export type { EnergyShares } from "./energyShares";
 export { filterOwnFoods } from "./filterOwnFoods";
+export { filterRecipesByName } from "./filterRecipesByName";
 export { FOOD_SEARCH_GROUP_LIMITS, groupFoodSearchResults } from "./groupFoodSearchResults";
 export type {
   FoodSearchGroup,

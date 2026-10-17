@@ -1,8 +1,11 @@
 import type { LucideIcon } from "lucide-react";
 
-export type EmptyStateAction = { label: string; icon?: LucideIcon } & (
-  { href: string; onClick?: never } | { onClick: () => void; href?: never }
-);
+export type EmptyStateAction = {
+  label: string;
+  icon?: LucideIcon;
+  /** Secondary unless the state is the first thing a person does, such as the first recipe, where it is primary. */
+  variant?: "primary" | "secondary";
+} & ({ href: string; onClick?: never } | { onClick: () => void; href?: never });
 
 /**
  * How much room the state takes, as the boards draw it in four places: the list on the foods page
@@ -17,7 +20,7 @@ export type EmptyStateProps = {
   body?: string | undefined;
   /** Level one when the state is the whole page, level two when it fills a part of one. */
   headingLevel?: 1 | 2;
-  /** The one thing to do next. It is a secondary button, or a link when it goes to a page. */
+  /** The one thing to do next. It is a button, or a link when it goes to a page. */
   action?: EmptyStateAction | undefined;
   /** Danger toned icon, for a failure. `ErrorState` sets it. */
   tone?: "neutral" | "danger";

@@ -7,10 +7,10 @@ import { FoodTableHeader } from "@/components/ui/FoodTableHeader";
  * `FoodRow`s with `layout="table"`. It is hidden as a whole at the narrow width, where the stacked rows
  * take over, so no table without headings is left for assistive technology.
  */
-export function FoodTable({ label, children }: FoodTableProps) {
+export function FoodTable({ label, variant, children }: FoodTableProps) {
   return (
     <div role="table" aria-label={label} className="max-md:hidden">
-      <FoodTableHeader />
+      <FoodTableHeader variant={variant} />
       {children}
     </div>
   );

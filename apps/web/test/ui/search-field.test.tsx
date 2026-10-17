@@ -306,3 +306,58 @@ describe("SearchLauncher", () => {
     });
   });
 });
+
+describe("SearchField clear control", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("should have no clear control unless a screen gives one", () => {
+    render(<SearchField label="Search recipes" value="chi" onChange={() => undefined} />);
+
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+  });
+
+  it("should not show the clear control while the field is empty", () => {
+    render(
+      <SearchField
+        label="Search recipes"
+        value=""
+        onChange={() => undefined}
+        clear={{ label: "Clear search", onClick: () => undefined }}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Clear search" })).toBeNull();
+  });
+
+  it("should show the clear control once the field holds text, and call it when pressed", () => {
+    const onClick = vi.fn();
+    render(
+      <SearchField
+        label="Search recipes"
+        value="chi"
+        onChange={() => undefined}
+        clear={{ label: "Clear search", onClick }}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("should disable the clear control with the field, so a disabled field cannot be emptied", () => {
+    render(
+      <SearchField
+        label="Search recipes"
+        value="chi"
+        disabled
+        onChange={() => undefined}
+        clear={{ label: "Clear search", onClick: () => undefined }}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Clear search" })).toHaveProperty("disabled", true);
+  });
+});

@@ -13,11 +13,19 @@ export type BarcodeButton = {
   onClick: () => void;
 };
 
+export type ClearButton = {
+  /** What the button is called, such as "Clear search". */
+  label: string;
+  onClick: () => void;
+};
+
 export type SearchFieldProps = Omit<ComponentProps<"input">, "type" | "size" | "aria-label"> & {
   /** The search box's accessible name. */
   label: string;
   size?: SearchSize;
   barcodeButton?: BarcodeButton;
+  /** Adds a button that empties the field. It shows once the field holds text, so give the field a `value`. */
+  clear?: ClearButton;
 };
 
 export type SearchLauncherProps = {

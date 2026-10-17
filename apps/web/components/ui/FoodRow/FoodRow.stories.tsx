@@ -3,7 +3,7 @@ import { userEvent, within } from "storybook/test";
 
 import { FoodRow } from "./FoodRow";
 
-import type { FoodLogRowProps, FoodRowContent, FoodTableRowProps } from "./types";
+import type { FoodLogRowProps, FoodRowContent, FoodTableRowProps, RecipeRowProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/nextjs";
 import type { ReactNode } from "react";
 
@@ -406,5 +406,101 @@ export const TableDeleteDisabled: Story = {
       />
       <FoodRow {...semiSkimmedMilk} deleteDisabled />
     </HourTable>
+  ),
+};
+
+const chickenAndRice: RecipeRowProps = {
+  layout: "recipe",
+  nameSegments: [{ text: "Chicken and rice", matched: false }],
+  href: "/recipes/chicken-and-rice",
+  openLabel:
+    "Chicken and rice, 1 serving 275 grams, makes 4, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, open",
+  caption: "1 serving (275 g) · makes 4",
+  energy: "374",
+  macros: { protein: "32", carbs: "43", fat: "8.1" },
+};
+
+// A recipe row is the library's, in a card with no heading, as the narrow library draws it.
+export const Recipe: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <div className="max-w-md p-6">
+      <Card asChild padding="none">
+        <ul className="divide-y divide-border">
+          <FoodRow {...chickenAndRice} />
+        </ul>
+      </Card>
+    </div>
+  ),
+};
+
+// A search matched the first letters of two words, so only those are semibold.
+export const RecipeMatched: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <div className="max-w-md p-6">
+      <Card asChild padding="none">
+        <ul className="divide-y divide-border">
+          <FoodRow
+            {...chickenAndRice}
+            nameSegments={[
+              { text: "Chi", matched: true },
+              { text: "cken and rice", matched: false },
+            ]}
+          />
+        </ul>
+      </Card>
+    </div>
+  ),
+};
+
+export const RecipeLongTitle: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <div className="max-w-md p-6">
+      <Card asChild padding="none">
+        <ul className="divide-y divide-border">
+          <FoodRow
+            {...chickenAndRice}
+            nameSegments={[
+              {
+                text: "Slow cooked chicken thighs with brown rice, roasted peppers, smoked paprika and a lot of garlic",
+                matched: false,
+              },
+            ]}
+          />
+        </ul>
+      </Card>
+    </div>
+  ),
+};
+
+export const RecipeTable: Story = {
+  parameters: { isTable: true },
+  render: () => (
+    <div className="max-w-5xl p-6">
+      <Card padding="none">
+        <FoodTable variant="recipe" label="Recipes">
+          <FoodRow
+            layout="recipeTable"
+            nameSegments={[{ text: "Beef chilli", matched: false }]}
+            href="/recipes/beef-chilli"
+            servingCaption="1 serving (350 g)"
+            servings="6"
+            energy="412"
+            macros={{ protein: "34", carbs: "31", fat: "16" }}
+          />
+          <FoodRow
+            layout="recipeTable"
+            nameSegments={[{ text: "Chicken and rice", matched: false }]}
+            href="/recipes/chicken-and-rice"
+            servingCaption="1 serving (275 g)"
+            servings="4"
+            energy="374"
+            macros={{ protein: "32", carbs: "43", fat: "8.1" }}
+          />
+        </FoodTable>
+      </Card>
+    </div>
   ),
 };

@@ -15,6 +15,7 @@ const sizeClasses = {
 
 function ActionButton({ action }: { action: EmptyStateAction }) {
   const Icon = action.icon;
+  const variant = action.variant ?? "secondary";
   const content = (
     <>
       {Icon !== undefined && <Icon aria-hidden strokeWidth={iconStroke} />}
@@ -24,14 +25,14 @@ function ActionButton({ action }: { action: EmptyStateAction }) {
 
   if (action.href !== undefined) {
     return (
-      <Button asChild variant="secondary" className="mt-3">
+      <Button asChild variant={variant} className="mt-3">
         <Link href={action.href}>{content}</Link>
       </Button>
     );
   }
 
   return (
-    <Button variant="secondary" className="mt-3" onClick={action.onClick}>
+    <Button variant={variant} className="mt-3" onClick={action.onClick}>
       {content}
     </Button>
   );
