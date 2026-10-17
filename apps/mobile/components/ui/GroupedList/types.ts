@@ -16,6 +16,8 @@ export type GroupedListProps = {
    * part of the heading row, so they are not drawn either.
    */
   hidesTitle?: boolean | undefined;
+  /** Names the list for a screen reader in place of the title, when the heading's words alone say too little, such as "Your recipes, values per serving". */
+  label?: string | undefined;
   /** Where the group comes from, written after the title, such as "UK CoFID". */
   source?: string | undefined;
   /** Offers the rows that are not shown. */

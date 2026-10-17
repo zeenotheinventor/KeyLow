@@ -80,15 +80,20 @@ type RecipeForSearchRow = RecipeServings & {
 
 /**
  * The name of a recipe row in the food search, read in words: "Chicken and rice, recipe, 1 serving 275
- * grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount".
+ * grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount". A row
+ * that opens nothing yet (the log search before the amount step) leaves "choose amount" out.
  */
-export const describeRecipeSearchRowName = (name: string, recipe: RecipeForSearchRow): string =>
+export const describeRecipeSearchRowName = (
+  name: string,
+  recipe: RecipeForSearchRow,
+  { choosesAmount = true }: { choosesAmount?: boolean } = {},
+): string =>
   [
     name,
     "recipe",
     `1 serving ${describeSpokenGrams(gramsOfOneServing(recipe))}`,
     describeSpokenNutrients(recipe.computed.perServing),
-    "choose amount",
+    ...(choosesAmount ? ["choose amount"] : []),
   ].join(", ");
 
 /**

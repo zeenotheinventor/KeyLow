@@ -54,7 +54,10 @@ export type FoodRowProps = {
   caption?: string | undefined;
   /** The food is missing a macro. The stats line says "Needs review" in place of the macros, and the add button gives way to a chevron. */
   needsReview?: boolean | undefined;
-  /** Logs the serving at once. Gives a `search` or `recent` row its add button. Pressing it does not press the row. */
+  /**
+   * Logs the serving at once. Gives a `search`, `recent` or `recipe` row its add button. Pressing it does not
+   * press the row. A `recipe` row in the log search has this and no `onPress`, so only the button acts.
+   */
   onAdd?: (() => void) | undefined;
   /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. A disabled row disables its add button too. */
   addDisabled?: boolean | undefined;

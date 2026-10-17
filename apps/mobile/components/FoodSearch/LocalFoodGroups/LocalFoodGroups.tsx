@@ -4,10 +4,11 @@ import { formatCalories } from "@keylow/core/format";
 import { describeFoodRow, describeMacros, servingOfSearchHit } from "@keylow/core/search";
 
 import { FoodRow, GroupedList } from "../../ui";
+import { RecipeLogGroup } from "../RecipeLogGroup";
 
 import type { LocalFoodGroupsProps } from "./types";
 
-/** The foods the local search found, one titled card per source, in the order the boards draw them. */
+/** The recipes and foods the local search found, one titled card per source, in the order the boards draw them: recipes first, in the log search. */
 export function LocalFoodGroups({
   groups,
   query,
@@ -16,7 +17,7 @@ export function LocalFoodGroups({
   onSeeMore,
   onOpenFood,
 }: LocalFoodGroupsProps) {
-  return groups.map((group) => {
+  const foodGroups = groups.map((group) => {
     const { title, caption } = SEARCH_GROUP_HEADINGS[group.key];
 
     return (
@@ -83,4 +84,18 @@ export function LocalFoodGroups({
       </GroupedList>
     );
   });
+
+  return (
+    <>
+      {logRows?.recipes === undefined || logRows.recipes.rows.length === 0 ? null : (
+        <RecipeLogGroup
+          addDisabled={logRows.addDisabled}
+          query={query}
+          recipes={logRows.recipes.rows}
+          onAdd={logRows.recipes.onAdd}
+        />
+      )}
+      {foodGroups}
+    </>
+  );
 }

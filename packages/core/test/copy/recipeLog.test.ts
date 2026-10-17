@@ -197,6 +197,14 @@ describe("describeRecipeSearchRowName", () => {
       "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount",
     );
   });
+
+  it("should leave out choose amount for a row that opens nothing yet", () => {
+    expect(
+      describeRecipeSearchRowName("Chicken and rice", chickenAndRice, { choosesAmount: false }),
+    ).toBe(
+      "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams",
+    );
+  });
 });
 
 describe("describeRecipeLoggedRowName", () => {
