@@ -46,3 +46,5 @@ export type {
   RecipeSearchOptions,
   RecipeSummary,
 } from "./recipes";
+export { logRecipe } from "./recipeEntries";
+export type { LogRecipeInput, RecipeLogEntry } from "./recipeEntries";

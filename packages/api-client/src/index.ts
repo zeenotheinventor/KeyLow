@@ -133,3 +133,6 @@ export type {
   RecipeUpdate,
   Targets,
 } from "./repos";
+export { useLogRecipeServing } from "./hooks";
+export { logRecipe } from "./repos";
+export type { LogRecipeInput, RecipeLogEntry } from "./repos";

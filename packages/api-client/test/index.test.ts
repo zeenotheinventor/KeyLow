@@ -62,6 +62,8 @@ describe("the package index", () => {
     "useUpdateRecipe",
     "useArchiveRecipe",
     "useDuplicateRecipe",
+    "logRecipe",
+    "useLogRecipeServing",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });
