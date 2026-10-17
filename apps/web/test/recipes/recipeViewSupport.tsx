@@ -8,6 +8,8 @@ import { renderWithRouter } from "../ui/appRouter";
 import type { StoredRecipe } from "@keylow/core/recipes";
 import type { ReactElement } from "react";
 
+import { ToastProvider } from "@/components/ui/Toast";
+
 export type SavedRecipe = StoredRecipe & { id: string; is_archived?: boolean };
 
 type RecipeViewBackend = {
@@ -96,7 +98,7 @@ export function renderWithRecipeView(ui: ReactElement) {
 
   return renderWithRouter(
     <KeyLowProvider client={client} queryClient={queryClient}>
-      {ui}
+      <ToastProvider>{ui}</ToastProvider>
     </KeyLowProvider>,
   );
 }

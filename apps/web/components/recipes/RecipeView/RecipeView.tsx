@@ -1,6 +1,7 @@
 "use client";
 
-import { OFFLINE_BANNER, RECIPE_VIEW, TAB_TITLES, describeEditRecipe } from "@keylow/core/copy";
+import { useRecipes } from "@keylow/api-client";
+import { OFFLINE_BANNER, RECIPE_VIEW, TAB_TITLES } from "@keylow/core/copy";
 import {
   enteredViewServings,
   recipeCardOf,
@@ -8,14 +9,14 @@ import {
   recipeViewOf,
   stepViewServings,
 } from "@keylow/core/recipes";
-import { iconStroke } from "@keylow/tokens";
-import { Pencil, WifiOff } from "lucide-react";
-import Link from "next/link";
+import { WifiOff } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { PerServingCard } from "../PerServingCard";
 import { RecipeEditorFrame } from "../RecipeEditorFrame";
 import { RecipeEditorLayout } from "../RecipeEditorLayout";
+import { RecipeViewActions } from "../RecipeViewActions";
 import { RecipeViewIngredientsCard } from "../RecipeViewIngredientsCard";
 import { RecipeViewStepsCard } from "../RecipeViewStepsCard";
 import { ServingsCard } from "../ServingsCard";
@@ -25,8 +26,8 @@ import type { ServingsStepDirection } from "@/components/ui/ServingsStepper";
 
 import { BackToFoodsLink } from "@/components/foods/FoodDetail";
 import { Banner } from "@/components/ui/Banner";
-import { Button } from "@/components/ui/Button";
-import { editRecipePath, recipesPath } from "@/lib/recipeRoutes";
+import { useRecipeActions } from "@/lib/recipeActions";
+import { editRecipePath, recipePath, recipesPath } from "@/lib/recipeRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 
 // How long typing has to stop before the new amounts are read out.
@@ -37,10 +38,16 @@ const ANNOUNCE_AFTER_TYPING_MS = 500;
  * ingredients in the amounts that number needs, then the method. The servings are this page's own and
  * start at the recipe's every time it opens; changing them changes what is on screen and nothing else,
  * so nothing is saved or sent. It holds no arithmetic, rounding or checks: what the amounts say, what
- * counts as a servings number and what a button does to it are core's.
+ * counts as a servings number and what a button does to it are core's. Its Duplicate and Archive buttons
+ * are the library's own actions (`useRecipeActions`): a copy opens on its own page, and an archived recipe
+ * leaves for the library, each with a toast that has Undo.
  */
 export function RecipeView({ recipe }: RecipeViewProps) {
+  const router = useRouter();
   const isOnline = useIsOnline();
+  const actions = useRecipeActions();
+  // A copy is named from the names in the library, archived ones included, so it is read here too.
+  const library = useRecipes({ archived: true });
   // Null is the recipe's own servings, so the number is never one the recipe has since stopped having.
   const [chosenServings, setChosenServings] = useState<number | null>(null);
   const [text, setText] = useState(() => String(recipe.servings));
@@ -116,34 +123,46 @@ export function RecipeView({ recipe }: RecipeViewProps) {
     servingsField.current?.focus();
   }
 
-  const editLabel = describeEditRecipe(recipe.name);
+  // The copy opens on its own page, and Undo puts the copy away and goes back to this one. Where the user is
+  // when Undo is pressed is read from the address, since this page may be gone by then. If they have left
+  // the copy's page, there is no page of the copy's to leave.
+  function duplicate() {
+    actions.duplicate(recipe, {
+      onSaved: (copy) => {
+        router.push(recipePath(copy.id));
+      },
+      onUndone: (copy) => {
+        if (window.location.pathname === recipePath(copy.id)) {
+          router.replace(recipePath(recipe.id));
+        }
+      },
+    });
+  }
+
+  function archive() {
+    actions.archive(recipe, {
+      onArchived: () => {
+        router.push(recipesPath());
+      },
+    });
+  }
 
   return (
     <RecipeEditorFrame
       backLink={<BackToFoodsLink tone="accent" label={TAB_TITLES.recipes} href={recipesPath()} />}
       title={recipe.name}
       titleAction={
-        isOnline ? (
-          <Button asChild variant="secondary" size="sm">
-            <Link href={editRecipePath(recipe.id)} aria-label={editLabel}>
-              <Pencil aria-hidden strokeWidth={iconStroke} />
-              {RECIPE_VIEW.edit}
-            </Link>
-          </Button>
-        ) : (
-          // Offline, Edit stays in the tab order and says it is disabled, and the banner says why.
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            aria-label={editLabel}
-            aria-disabled
-            className="aria-disabled:pointer-events-none aria-disabled:opacity-40"
-          >
-            <Pencil aria-hidden strokeWidth={iconStroke} />
-            {RECIPE_VIEW.edit}
-          </Button>
-        )
+        <RecipeViewActions
+          name={recipe.name}
+          editHref={editRecipePath(recipe.id)}
+          isOnline={isOnline}
+          isArchived={recipe.is_archived}
+          isLibraryRead={!library.isPending}
+          isDuplicating={actions.isDuplicating(recipe.id)}
+          isArchiving={actions.isArchiving(recipe.id)}
+          onDuplicate={duplicate}
+          onArchive={archive}
+        />
       }
     >
       <RecipeEditorLayout

@@ -27,4 +27,6 @@ export type RecipeActions = {
   restore: (recipe: ActedOnRecipe) => void;
   /** Whether a copy of the recipe is being saved, which is when its Duplicate button is busy. */
   isDuplicating: (recipeId: string) => boolean;
+  /** Whether the recipe is being taken out of the library, which is when its Archive button is busy. */
+  isArchiving: (recipeId: string) => boolean;
 };
