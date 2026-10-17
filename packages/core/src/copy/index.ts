@@ -22,3 +22,4 @@ export * from "./weekGrid";
 export * from "./quickAdd";
 export * from "./entryScreen";
 export * from "./diaryDialogs";
+export * from "./weekCard";
