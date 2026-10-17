@@ -29,7 +29,10 @@ export function useDeleteEntry() {
     mutationFn: (entry: LogEntry) => softDeleteLogEntry(client, entry.id),
     onMutate: async (entry) => {
       // A read already on its way would bring the entry back over the optimistic removal.
-      await queryClient.cancelQueries({ queryKey: keys.diary.day(entry.local_date) });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: keys.diary.day(entry.local_date) }),
+        queryClient.cancelQueries({ queryKey: keys.diary.entry(entry.id) }),
+      ]);
       removeEntryFromDay(queryClient, entry.local_date, entry.id);
       markEntryGone(queryClient, entry.id);
     },

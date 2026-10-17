@@ -6,6 +6,7 @@ import { useDeleteEntry } from "../../src/hooks/useDeleteEntry";
 import { useDiaryDay } from "../../src/hooks/useDiaryDay";
 import { useRecentFoods } from "../../src/hooks/useRecentFoods";
 import { keys } from "../../src/queryKeys";
+import { getLogEntry } from "../../src/repos/diary";
 import { foodEntryRow } from "../support/diary";
 import { installDiaryFake } from "../support/diaryFake";
 import { createWrapper } from "../support/wrapper";
@@ -140,6 +141,29 @@ describe("useDeleteEntry", () => {
       await waitFor(() => {
         expect(result.current.remove.isSuccess).toBe(true);
       });
+    });
+
+    it("should not let a read of the entry that was already on its way bring it back", async () => {
+      const fake = installDiaryFake(server, [breakfast, lunch]);
+      const { client, queryClient, result } = await renderDay(fake);
+      queryClient.setQueryData(keys.diary.entry(breakfast.id), breakfast);
+      const releaseReads = fake.holdReads();
+      act(() => {
+        void queryClient.query({
+          queryKey: keys.diary.entry(breakfast.id),
+          queryFn: () => getLogEntry(client, breakfast.id),
+          staleTime: 0,
+        });
+      });
+      // The read reaches the table while the entry is still there.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      await act(() => result.current.remove.mutateAsync(breakfast));
+      // The old read lands now, with the entry in it.
+      releaseReads();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      expect(queryClient.getQueryData(keys.diary.entry(breakfast.id))).toBeNull();
     });
 
     it("should leave the other entry that was opened alone", async () => {

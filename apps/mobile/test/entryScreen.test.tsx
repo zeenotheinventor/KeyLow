@@ -646,6 +646,22 @@ describe("the entry screen", () => {
         });
       });
 
+      it("should keep showing the entry while it leaves, though the cache already holds it as gone", async () => {
+        diaryBackend.hungWriteTables.add("food_log_entries");
+        const user = await renderEntry(CHICKEN_INDEX);
+        await findFoodEntry();
+
+        await user.press(deleteButton());
+
+        // The router is a mock, so the screen stays up as it does for the pop animation.
+        await waitFor(() => {
+          expect(queryClient.getQueryData(keys.diary.entry(entryId(CHICKEN_INDEX)))).toBeNull();
+        });
+        expect(routerMock.back).toHaveBeenCalledTimes(1);
+        expect(screen.queryByText("Entry not found")).not.toBeOnTheScreen();
+        expect(screen.getByRole("heading", { name: "Chicken breast, grilled" })).toBeOnTheScreen();
+      });
+
       it("should take the entry out of the cached day at once", async () => {
         const user = await renderEntry(CHICKEN_INDEX, { loadDay: true });
         await findFoodEntry();
@@ -848,6 +864,17 @@ describe("the entry screen", () => {
 
     it("should say so for an entry that does not exist or was deleted", async () => {
       await renderEntry("00000000-0000-4000-8000-0000000000ff");
+
+      expect(await screen.findByText("Entry not found")).toBeOnTheScreen();
+      expect(screen.getByText("It may have been deleted.")).toBeOnTheScreen();
+    });
+
+    it("should say so for an entry that was deleted, opened by its link", async () => {
+      diaryBackend.entries[CHICKEN_INDEX] = {
+        ...diaryBackend.entries[CHICKEN_INDEX],
+        deleted_at: "2026-10-15T10:00:00+00:00",
+      };
+      await renderEntry(CHICKEN_INDEX);
 
       expect(await screen.findByText("Entry not found")).toBeOnTheScreen();
       expect(screen.getByText("It may have been deleted.")).toBeOnTheScreen();
