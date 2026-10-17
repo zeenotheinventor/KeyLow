@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 
 import { FoodEntryForm } from "./FoodEntryForm";
 import { QuickEntryForm } from "./QuickEntryForm";
+import { RecipeEntryForm } from "./RecipeEntryForm";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { EntryLoadState } from "../EntryLoadState";
 
@@ -13,8 +14,8 @@ import type { EntryScreenProps } from "./types";
 import type { LogEntry } from "@keylow/api-client";
 
 /**
- * What a diary row opens: a logged food or a quick add, by the entry's id (a recipe entry has no screen yet). It waits for the entry and for
- * the profile's time zone, which the time is read in, and draws the food's form or the quick add's. Nothing
+ * What a diary row opens: a logged food, recipe or quick add, by the entry's id. It waits for the entry and for
+ * the profile's time zone, which the time is read in, and draws the food's form, the recipe's or the quick add's. Nothing
  * is read while the terms gate is up. Back, a save and a delete return to where the user came from, once: a second way out, such as a
  * save that finishes after Back was pressed, would go back past it.
  */
@@ -73,17 +74,19 @@ export function EntryScreen({ id }: EntryScreenProps) {
   if (!isReadEnabled || shownEntry === undefined || profileTimeZone.data === undefined) {
     return renderState("loading");
   }
-  // A recipe entry has no screen yet, so a link to one shows the same as an entry that is not there.
-  if (shownEntry === null || shownEntry.item_type === "recipe") {
+  if (shownEntry === null) {
     return renderState("notFound");
   }
 
   // A signed in user always has a profile row, which the database creates. If it is missing the day is UTC.
   const timeZone = profileTimeZone.data ?? "UTC";
 
-  return shownEntry.item_type === "food" ? (
-    <FoodEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />
-  ) : (
-    <QuickEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />
-  );
+  switch (shownEntry.item_type) {
+    case "food":
+      return <FoodEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />;
+    case "recipe":
+      return <RecipeEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />;
+    case "quick":
+      return <QuickEntryForm entry={shownEntry} timeZone={timeZone} onLeave={leave} />;
+  }
 }

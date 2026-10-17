@@ -17,6 +17,8 @@ export type { Recipe, RecipeComputed, RecipeIngredient, StoredRecipeIngredient }
 export { buildRecipeIngredient } from "./buildRecipeIngredient";
 export type { RecipeIngredientInput } from "./buildRecipeIngredient";
 export { computeRecipe } from "./computeRecipe";
+export { recipeOfSnapshot } from "./recipeOfSnapshot";
+export type { RecipeOfSnapshot } from "./recipeOfSnapshot";
 export type { ComputeRecipeInput } from "./computeRecipe";
 export {
   addStep,

@@ -424,7 +424,7 @@ describe("FoodRow in the food log", () => {
   });
 
   describe("a logged recipe", () => {
-    // What the diary hands a recipe entry: core writes the row's name, and the row has nothing to open yet.
+    // What the diary hands a recipe entry: core writes the row's name, and the row opens its entry.
     const chickenAndRiceName =
       "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
     const chickenAndRice: FoodRowProps = {
@@ -435,15 +435,14 @@ describe("FoodRow in the food log", () => {
       caption: "18:00 · 1 serving (275 g)",
       energy: "374",
       macros: { protein: "32", carbs: "43", fat: "8.1", description: "" },
-      onPress: undefined,
+      onPress: () => undefined,
       onAdd: undefined,
     };
 
-    it("should be named by the sentence it is given, and not be a button", async () => {
+    it("should be named by the sentence it is given, and be a button", async () => {
       await renderRow(chickenAndRice);
 
-      expect(screen.getByLabelText(chickenAndRiceName)).toBeOnTheScreen();
-      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: chickenAndRiceName })).toBeOnTheScreen();
     });
 
     it("should write the name on one line, the time and serving, then the values of the amount", async () => {
@@ -458,10 +457,17 @@ describe("FoodRow in the food log", () => {
       expect(screen.getByText("8.1 F")).toBeOnTheScreen();
     });
 
-    it("should draw a chef's hat before the name and no chevron", async () => {
+    it("should draw a chef's hat before the name and a chevron after it", async () => {
       await renderRow(chickenAndRice);
 
-      // The hat and the flame on the stats line.
+      // The hat, the flame on the stats line and the chevron.
+      expect(drawings()).toHaveLength(3);
+    });
+
+    it("should be plain text with no chevron while it has nothing to open", async () => {
+      await renderRow({ ...chickenAndRice, onPress: undefined });
+
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
       expect(drawings()).toHaveLength(2);
     });
 

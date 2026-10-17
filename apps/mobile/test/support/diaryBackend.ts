@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import { QueryClient } from "@tanstack/react-query";
 
 import type { Database } from "@keylow/api-client";
+import type { LoggableRecipe } from "@keylow/core/diary";
 import type { RecipeComputed } from "@keylow/core/recipes";
 
 type Row = Record<string, unknown>;
@@ -220,9 +221,36 @@ export const boardRecipeTotal: RecipeComputed["total"] = {
   fibre_g: null,
 };
 
+/** The id of the golden recipe, which its entries and its row in the recipe table share. */
+export const goldenRecipeId = "44444444-4444-4444-8444-444444444444";
+
 /**
- * A serving of the golden recipe (500 g chicken, 200 g rice and 20 g oil, in four servings with a measured
- * 1,100 g) as the database returns it: "Chicken and rice", 275 g and 374.2 kcal for one serving.
+ * The golden recipe (500 g chicken, 200 g rice and 20 g oil, in four servings with a measured 1,100 g) as an
+ * entry freezes it: "Chicken and rice", with the boards' totals when `total` is given.
+ */
+export function goldenLoggableRecipe(
+  total?: RecipeComputed["total"],
+): LoggableRecipe & { computed: RecipeComputed } {
+  const golden = buildChickenAndRiceRecipe({ yieldGrams: 1100 });
+
+  return {
+    id: goldenRecipeId,
+    name: "Chicken and rice",
+    servings: golden.servings,
+    yield_grams: golden.yieldGrams,
+    computed: {
+      ...computeRecipe({
+        servings: golden.servings,
+        yieldGrams: golden.yieldGrams,
+        ingredients: golden.ingredients,
+      }),
+      ...(total === undefined ? {} : { total }),
+    },
+  };
+}
+
+/**
+ * A serving of the golden recipe as the database returns it: "Chicken and rice", 275 g and 374.2 kcal for one serving.
  */
 export function recipeEntry(options: {
   date: string;
@@ -232,22 +260,8 @@ export function recipeEntry(options: {
   /** The whole recipe's nutrients, when a test needs the boards' (see `boardRecipeTotal`) over the ingredients'. */
   total?: RecipeComputed["total"];
 }): Row {
-  const golden = buildChickenAndRiceRecipe({ yieldGrams: 1100 });
   const entry = buildRecipeLogEntry({
-    recipe: {
-      id: "44444444-4444-4444-8444-444444444444",
-      name: "Chicken and rice",
-      servings: golden.servings,
-      yield_grams: golden.yieldGrams,
-      computed: {
-        ...computeRecipe({
-          servings: golden.servings,
-          yieldGrams: golden.yieldGrams,
-          ingredients: golden.ingredients,
-        }),
-        ...(options.total === undefined ? {} : { total: options.total }),
-      },
-    },
+    recipe: goldenLoggableRecipe(options.total),
     quantity: options.quantity ?? 1,
     unit: options.unit ?? "serving",
     localDate: options.date,

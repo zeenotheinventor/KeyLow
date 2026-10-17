@@ -4,13 +4,15 @@ const { readFileSync, readdirSync } = jest.requireActual<{
   readdirSync: (path: string, options: { encoding: "utf8" }) => string[];
 }>("node:fs");
 
-// The amount step of a recipe: the picker's recipe mode, its route, and the log search group that opens it.
+// The amount step of a recipe: the picker's recipe mode, its route, the log search group that opens it, and the
+// entry screen's form for a logged recipe, which uses the same page.
 // The kit pieces it reuses are held to the same rules by the repository's source guard; this keeps the step
 // itself honest where the ticket asks for it.
 const directories = [
   "components/PortionPicker/RecipePortionPicker",
   "components/FoodSearch/RecipeLogGroup",
   "app/foods/recipe/[id]",
+  "components/EntryScreen/RecipeEntryForm",
 ];
 const sourceFiles = directories.flatMap((directory) =>
   readdirSync(directory, { encoding: "utf8" })
@@ -26,6 +28,7 @@ describe("the recipe amount step's source", () => {
         "components/PortionPicker/RecipePortionPicker/previewTypedRecipeAmount.ts",
         "components/FoodSearch/RecipeLogGroup/RecipeLogGroup.tsx",
         "app/foods/recipe/[id]/log.tsx",
+        "components/EntryScreen/RecipeEntryForm/RecipeEntryForm.tsx",
       ]),
     );
   });

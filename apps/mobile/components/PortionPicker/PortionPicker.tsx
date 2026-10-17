@@ -48,10 +48,10 @@ import type { PickerChoices } from "@keylow/core/diary";
 
 /**
  * The page for choosing an amount before something is logged or saved: a food's (add, edit, and the two
- * ingredient modes) or a recipe's.
+ * ingredient modes) or a recipe's (add, and edit for a logged entry).
  */
 export function PortionPicker(props: PortionPickerProps) {
-  return props.mode === "recipe" ? (
+  return props.mode === "recipe" || props.mode === "edit-recipe" ? (
     <RecipePortionPicker {...props} />
   ) : (
     <FoodPortionPicker {...props} />

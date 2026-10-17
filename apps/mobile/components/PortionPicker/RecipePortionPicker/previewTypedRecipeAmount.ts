@@ -1,8 +1,8 @@
 import { buildRecipeLogEntry, previewRecipeAmount } from "@keylow/core/diary";
 import { parseFormNumber } from "@keylow/core/foods";
 
-import type { RecipeSummary } from "@keylow/api-client";
 import type { RecipeAmount, RecipeAmountValues } from "@keylow/core/diary";
+import type { RecipeOfSnapshot } from "@keylow/core/recipes";
 
 /** What an amount typed for a recipe comes to: the amount, its energy and macros, and the weight it is. */
 export type TypedRecipeAmount = {
@@ -19,7 +19,7 @@ export type TypedRecipeAmount = {
  * stored, so the hero, its caption and the stored entry agree to the digit.
  */
 export function previewTypedRecipeAmount(
-  recipe: RecipeSummary,
+  recipe: RecipeOfSnapshot,
   unit: RecipeAmount["unit"],
   quantityText: string,
 ): TypedRecipeAmount | null {
