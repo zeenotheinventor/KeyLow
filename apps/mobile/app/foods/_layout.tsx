@@ -19,6 +19,7 @@ export default function FoodsLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="[id]/index" />
         <Stack.Screen name="[id]/log" />
+        <Stack.Screen name="recipe/[id]/log" />
         <Stack.Screen name="new" />
         <Stack.Screen name="[id]/edit" />
         <Stack.Screen name="scan" />

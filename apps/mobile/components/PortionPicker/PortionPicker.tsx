@@ -7,6 +7,7 @@ import {
   RECIPE_EDITOR,
   SAVE_FAILED_BANNER,
   describeMissingValuesBeforeLogging,
+  describePer100Heading,
   describePortionUnit,
 } from "@keylow/core/copy";
 import {
@@ -39,10 +40,23 @@ import {
   TimeRow,
 } from "../ui";
 import { PerHundredList } from "./PerHundredList";
+import { RecipePortionPicker } from "./RecipePortionPicker";
 import { MacroHero } from "../FoodDetail/MacroHero";
 
-import type { PortionPickerProps } from "./types";
+import type { FoodPortionPickerProps, PortionPickerProps } from "./types";
 import type { PickerChoices } from "@keylow/core/diary";
+
+/**
+ * The page for choosing an amount before something is logged or saved: a food's (add, edit, and the two
+ * ingredient modes) or a recipe's.
+ */
+export function PortionPicker(props: PortionPickerProps) {
+  return props.mode === "recipe" ? (
+    <RecipePortionPicker {...props} />
+  ) : (
+    <FoodPortionPicker {...props} />
+  );
+}
 
 /**
  * The page for changing the serving before a food is logged, as the portion boards draw it: the food's name
@@ -54,7 +68,7 @@ import type { PickerChoices } from "@keylow/core/diary";
  * logged or saved, so it works offline. A food about to join a recipe has the add page without the Time row,
  * with the food's source under the title and Add to recipe; a food that must be reviewed first cannot be added.
  */
-export function PortionPicker(props: PortionPickerProps) {
+function FoodPortionPicker(props: FoodPortionPickerProps) {
   const { food, onBack } = props;
   // The pages that log a food at a time. An ingredient's amount step is not one.
   const logging = props.mode === "add" || props.mode === "edit" ? props : undefined;
@@ -154,7 +168,7 @@ export function PortionPicker(props: PortionPickerProps) {
               </Text>
             ) : null}
             <MacroHero amount={hero} food={food} />
-            <PerHundredList food={food} />
+            <PerHundredList heading={describePer100Heading(food.basis)} values={food} />
           </ScrollView>
           {/* The dock is the sheet's surface under a hairline, with the board's 42 below its controls. */}
           <View

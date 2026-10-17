@@ -16,8 +16,10 @@ import type { RecipeComputed } from "../recipes/schemas";
 export const RECIPE_BADGE = "Recipe";
 
 export const RECIPE_UNITS = {
-  /** The chip that picks a number of servings, the recipe's natural unit. The other chip is g. */
+  /** The chip that picks a number of servings, the recipe's natural unit. */
   serving: "1 serving",
+  /** The chip that picks grams of the cooked dish, or of the raw ingredients when the recipe has no cooked weight. */
+  grams: "g",
 };
 
 /** The entry screen's line for an entry whose recipe has been archived since. */

@@ -45,6 +45,7 @@ describe("the recipe strings of the amount step and the entry screen", () => {
   it("should pin the badge, the serving chip and the archived notice", () => {
     expect(RECIPE_BADGE).toBe("Recipe");
     expect(RECIPE_UNITS.serving).toBe("1 serving");
+    expect(RECIPE_UNITS.grams).toBe("g");
     expect(RECIPE_ARCHIVED_NOTICE).toBe(
       "This recipe has been archived. Your entry keeps its saved values.",
     );
@@ -53,6 +54,7 @@ describe("the recipe strings of the amount step and the entry screen", () => {
   it("should end no chip or badge with a full stop", () => {
     expect(RECIPE_BADGE).not.toMatch(/\.$/);
     expect(RECIPE_UNITS.serving).not.toMatch(/\.$/);
+    expect(RECIPE_UNITS.grams).not.toMatch(/\.$/);
   });
 });
 

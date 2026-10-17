@@ -11,10 +11,17 @@ import type { RecipeLogGroupProps } from "./types";
 
 /**
  * "Your recipes · Per serving": the recipes the search found, first in the log search. Each row is the
- * library's recipe row with the serving a plus logs, and a plus beside it. The row opens nothing until the
- * amount step exists, so it is plain text, and only the plus acts.
+ * library's recipe row with the serving a plus logs, and a plus beside it. Pressing the row opens the amount
+ * step, where the number of servings or the grams are chosen; the plus logs one serving at once and does not
+ * press the row.
  */
-export function RecipeLogGroup({ recipes, query, addDisabled, onAdd }: RecipeLogGroupProps) {
+export function RecipeLogGroup({
+  recipes,
+  query,
+  addDisabled,
+  onAdd,
+  onOpen,
+}: RecipeLogGroupProps) {
   const { title, caption, label } = SEARCH_GROUP_HEADINGS.recipes;
 
   return (
@@ -26,9 +33,12 @@ export function RecipeLogGroup({ recipes, query, addDisabled, onAdd }: RecipeLog
           addDisabled={addDisabled}
           caption={describeRecipeServing(recipe)}
           layout="recipe"
-          openLabel={describeRecipeSearchRowName(recipe.name, recipe, { choosesAmount: false })}
+          openLabel={describeRecipeSearchRowName(recipe.name, recipe)}
           onAdd={() => {
             onAdd(recipe);
+          }}
+          onPress={() => {
+            onOpen(recipe);
           }}
         />
       ))}
