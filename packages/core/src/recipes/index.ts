@@ -53,3 +53,7 @@ export {
 } from "./ingredientList";
 export { recipeCardOf } from "./recipeCard";
 export type { RecipeCard } from "./recipeCard";
+export { enteredViewServings, stepViewServings } from "./viewServings";
+export type { ServingsStepDirection } from "./viewServings";
+export { recipeViewOf } from "./recipeViewOf";
+export type { RecipeView, RecipeViewIngredient } from "./recipeViewOf";
