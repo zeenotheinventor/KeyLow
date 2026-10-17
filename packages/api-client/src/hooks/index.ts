@@ -59,3 +59,4 @@ export { useUpdateEntry } from "./useUpdateEntry";
 export { useUpdateFood } from "./useUpdateFood";
 export { useUpdateRecipe } from "./useUpdateRecipe";
 export { TargetsValidationError, useUpdateTargets } from "./useUpdateTargets";
+export { useLogRecipeServing } from "./useLogRecipeServing";
