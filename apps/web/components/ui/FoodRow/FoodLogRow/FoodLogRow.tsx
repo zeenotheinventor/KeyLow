@@ -20,6 +20,9 @@ const layoutClasses = {
   search: "min-h-[60px] py-2 pl-3",
 } as const;
 
+// With buttons at its end a stacked row gives them the room the board draws: 8 px, not 12.
+const stackedWithActionsClasses = "min-h-[56px] py-2 pl-4 pr-2";
+
 const textColumnClasses = {
   stacked: "flex min-w-0 flex-1 flex-col gap-[2px]",
   search: "flex min-w-0 flex-1 flex-col gap-1",
@@ -40,12 +43,17 @@ export function FoodLogRow({
   onClick,
   onAdd,
   addDisabled = false,
+  actions,
 }: FoodLogRowProps) {
   const name = nameSegments.map((segment) => segment.text).join("");
   const isSearch = layout === "search";
   const isRecipe = recipeRowName !== undefined;
   const showsAdd = isSearch && onAdd !== undefined && !needsReview;
   const isAddInert = addDisabled || disabled;
+  const rowClasses =
+    layout === "stacked" && actions !== undefined
+      ? stackedWithActionsClasses
+      : layoutClasses[layout];
 
   const title = isSearch
     ? nameSegments.map((segment, index) => (
@@ -114,7 +122,7 @@ export function FoodLogRow({
       type="button"
       className={cn(
         rowButtonClasses,
-        layoutClasses[layout],
+        rowClasses,
         !disabled && interactiveClasses,
         disabled && "pointer-events-none",
       )}
@@ -124,9 +132,7 @@ export function FoodLogRow({
       {content}
     </button>
   ) : (
-    <div className={cn("flex w-full min-w-0 flex-1 items-center gap-3", layoutClasses[layout])}>
-      {content}
-    </div>
+    <div className={cn("flex w-full min-w-0 flex-1 items-center gap-3", rowClasses)}>{content}</div>
   );
 
   return (
@@ -135,6 +141,7 @@ export function FoodLogRow({
       className={cn("flex items-center", disabled && "opacity-50", className)}
     >
       {row}
+      {actions !== undefined && <div className="flex shrink-0 flex-col pr-2">{actions}</div>}
       {showsAdd && (
         <Button
           type="button"

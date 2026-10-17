@@ -23,7 +23,10 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { problemSentences } from "./problemSentences";
+import { useIngredientEdits } from "./useIngredientEdits";
+import { AddIngredientDialog } from "../AddIngredientDialog";
 import { DiscardRecipeDialog } from "../DiscardRecipeDialog";
+import { EditIngredientDialog } from "../EditIngredientDialog";
 import { PerServingCard } from "../PerServingCard";
 import { RecipeDetailsCard } from "../RecipeDetailsCard";
 import { RecipeEditorFrame } from "../RecipeEditorFrame";
@@ -51,8 +54,9 @@ const CARD_FOLLOWS_TYPING_AFTER_MS = 500;
 type SaveStatus = "idle" | "saving" | "created";
 
 /**
- * The recipe editor: the details, the ingredients (read only until they can be added) and the Per serving
- * card, which follows the servings and the cooked weight once typing stops. Save is always pressable, and a
+ * The recipe editor: the details, the ingredients (added, edited and removed in place, with an Undo for a
+ * removal) and the Per serving card, which follows the ingredients, the servings and the cooked weight once
+ * typing stops. Save is always pressable, and a
  * failed one says what to fix, field by field, and moves focus to the first. Leaving with changes asks
  * first. It holds no sums of its own: the card, the checks, the sentences and what counts as a change are
  * core's.
@@ -91,6 +95,10 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     shownSentences.servings !== undefined ||
     shownSentences.cookedWeight !== undefined ||
     shownSentences.ingredients.length > 0;
+
+  const ingredientEdits = useIngredientEdits(draft.ingredients, setDraft);
+  const { dialog } = ingredientEdits;
+  const editedIngredient = dialog?.kind === "edit" ? draft.ingredients[dialog.position] : undefined;
 
   const card = recipeCardOf(useSettledValue(draft, CARD_FOLLOWS_TYPING_AFTER_MS));
 
@@ -256,9 +264,35 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
             ingredients={draft.ingredients}
             problems={shownSentences.ingredients}
             focusRef={ingredientsCard}
+            isLocked={isLocked}
+            onAdd={ingredientEdits.openAdd}
+            onEdit={ingredientEdits.openEdit}
+            onRemove={ingredientEdits.remove}
           />
         </RecipeEditorLayout>
       </form>
+      {dialog?.kind === "add" && (
+        <AddIngredientDialog
+          opener={dialog.opener}
+          onClose={ingredientEdits.close}
+          onAdd={ingredientEdits.add}
+        />
+      )}
+      {dialog?.kind === "edit" && editedIngredient !== undefined && (
+        <EditIngredientDialog
+          // Another ingredient is another dialog, so what was typed for one is not carried to the next.
+          key={dialog.position}
+          ingredient={editedIngredient}
+          opener={dialog.opener}
+          onClose={ingredientEdits.close}
+          onSave={(ingredient) => {
+            ingredientEdits.replace(dialog.position, ingredient);
+          }}
+          onRemove={() => {
+            ingredientEdits.remove(dialog.position, dialog.opener);
+          }}
+        />
+      )}
       <DiscardRecipeDialog
         open={leaveTo !== null}
         isNewRecipe={isNewRecipe}

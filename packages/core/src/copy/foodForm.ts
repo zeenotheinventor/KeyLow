@@ -18,6 +18,9 @@ export const FOOD_REVIEW_BANNER = {
   action: "Copy to your foods",
 };
 
+/** The same action where the link opens in a new tab, such as from a recipe being edited, whose unsaved draft a page change would lose. */
+export const FOOD_REVIEW_ACTION_IN_NEW_TAB = "Copy to your foods (opens in a new tab)";
+
 export const describeNameProblem = (problem: "required" | "too_long"): string =>
   problem === "required" ? "Name is required" : "Name must be 200 characters or fewer";
 

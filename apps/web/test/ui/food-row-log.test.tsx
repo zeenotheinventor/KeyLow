@@ -23,7 +23,9 @@ const macros: FoodRowMacros = {
   description: "not used by the food log rows",
 };
 
-type LogRowOverrides = Partial<Omit<FoodLogRowProps, "layout">>;
+type StackedRowProps = Extract<FoodLogRowProps, { layout: "stacked" }>;
+type LogRowOverrides = Partial<Omit<StackedRowProps, "layout">>;
+type SearchRowOverrides = Omit<LogRowOverrides, "actions">;
 
 const spokenStats = "222 kilocalories, protein 48 grams, carbohydrate 0 grams, fat 3.3 grams";
 
@@ -53,7 +55,7 @@ function renderStacked(props: LogRowOverrides = {}) {
   return { onClick };
 }
 
-function renderSearch(props: LogRowOverrides = {}) {
+function renderSearch(props: SearchRowOverrides = {}) {
   const onClick = vi.fn();
   const onAdd = vi.fn();
   render(
@@ -385,6 +387,32 @@ describe("FoodRow search", () => {
 
   it("should have no add button when nothing adds the food", () => {
     renderSearch({ onAdd: undefined });
+
+    expect(screen.getAllByRole("button")).toHaveLength(1);
+  });
+});
+
+describe("a stacked row with buttons at its end", () => {
+  it("should hold the buttons beside the row, outside its press", () => {
+    const onClick = vi.fn();
+    const onRemove = vi.fn();
+    renderStacked({
+      onClick,
+      actions: (
+        <button type="button" onClick={onRemove}>
+          Remove Chicken breast, grilled
+        </button>
+      ),
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove Chicken breast, grilled" }));
+
+    expect(onRemove).toHaveBeenCalledOnce();
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it("should draw no buttons when none are given", () => {
+    renderStacked();
 
     expect(screen.getAllByRole("button")).toHaveLength(1);
   });

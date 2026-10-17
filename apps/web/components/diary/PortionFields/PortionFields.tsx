@@ -9,8 +9,9 @@ import { TimeField } from "@/components/ui/TimeField";
 
 /**
  * What the add and the edit dialogs share once a food is chosen, as the portion boards draw them: what the
- * amount comes to in the hero, the amount and its unit, and the Time field. The dialog keeps the amount, the
- * unit and the time, and works the preview out with core, so this only draws them.
+ * amount comes to in the hero, the amount and its unit, and the Time field, which an ingredient, not being
+ * logged at a time, leaves out. The dialog keeps the amount, the unit and the time, and works the preview out
+ * with core, so this only draws them.
  */
 export function PortionFields({
   name,
@@ -23,10 +24,8 @@ export function PortionFields({
   onQuantityChange,
   onUnitChange,
   amountRef,
-  time,
-  isNow,
-  onTimeChange,
   notice,
+  ...timeProps
 }: PortionFieldsProps) {
   const chosenPortion = portions.find((portion) => portion.id === unitValue);
   // A portion's own noun ("medium", "pot") follows the amount when its label counts one, else "portion(s)".
@@ -60,7 +59,13 @@ export function PortionFields({
           onChange={onUnitChange}
         />
       </div>
-      <TimeField value={time} isNow={isNow} onChange={onTimeChange} />
+      {timeProps.time !== undefined && (
+        <TimeField
+          value={timeProps.time}
+          isNow={timeProps.isNow}
+          onChange={timeProps.onTimeChange}
+        />
+      )}
     </>
   );
 }

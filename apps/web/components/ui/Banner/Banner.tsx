@@ -39,7 +39,11 @@ const actionText =
 function ActionControl({ action, className }: { action: BannerAction; className: string }) {
   if (action.href !== undefined) {
     return (
-      <Link href={action.href} className={className}>
+      <Link
+        href={action.href}
+        className={className}
+        {...(action.newTab === true ? { target: "_blank", rel: "noreferrer" } : {})}
+      >
         {action.label}
       </Link>
     );

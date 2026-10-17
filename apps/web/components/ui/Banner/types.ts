@@ -7,7 +7,13 @@ export type BannerTone = "info" | "review" | "error";
 export type BannerActionPlacement = "trailing" | "below";
 
 export type BannerAction = { label: string } & (
-  { href: string; onClick?: never } | { onClick: () => void; href?: never }
+  | {
+      href: string;
+      /** Opens the link in a new tab, for a screen whose unsaved work a page change would lose. Say so in the label. */
+      newTab?: boolean | undefined;
+      onClick?: never;
+    }
+  | { onClick: () => void; href?: never; newTab?: never }
 );
 
 export type BannerProps = {
