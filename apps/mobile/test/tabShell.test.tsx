@@ -16,7 +16,6 @@ import {
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
 import MoreRoute from "../app/(tabs)/more";
-import RecipesRoute from "../app/(tabs)/recipes";
 import RootLayout from "../app/_layout";
 import FoodsLayout from "../app/foods/_layout";
 import FoodSearchRoute from "../app/foods/index";
@@ -63,9 +62,14 @@ const standIn = (text: string) =>
     return <Text>{text}</Text>;
   };
 
-// The diary has its own tests. Here it is a heading, because these tests are about the shell around it.
+// The diary and the recipe library have their own tests. Here each is a heading, because these tests are
+// about the shell around them.
 function DiaryStandIn() {
   return <Text role="heading">Diary</Text>;
+}
+
+function RecipesStandIn() {
+  return <Text role="heading">Recipes</Text>;
 }
 
 const routes = {
@@ -75,7 +79,7 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": DashboardRoute,
   "(tabs)/diary": DiaryStandIn,
-  "(tabs)/recipes": RecipesRoute,
+  "(tabs)/recipes": RecipesStandIn,
   "(tabs)/more": MoreRoute,
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
@@ -273,15 +277,6 @@ describe("the tab shell", () => {
       });
 
       expect(await screen.findByText(text)).toBeOnTheScreen();
-    });
-  });
-
-  describe("the placeholders", () => {
-    it("should say what recipes will show, under Coming soon", async () => {
-      await renderApp("/recipes");
-
-      expect(await screen.findByRole("heading", { name: "Coming soon" })).toBeOnTheScreen();
-      expect(screen.getByText("Your recipes will appear here.")).toBeOnTheScreen();
     });
   });
 

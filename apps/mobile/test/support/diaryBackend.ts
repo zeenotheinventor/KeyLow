@@ -507,6 +507,28 @@ function writeEntries(init: RequestInit, search: URLSearchParams): Response {
   );
 }
 
+/** The id a recipe saved through `save_recipe` is given, since a test needs to know where its view is. */
+export const SAVED_RECIPE_ID = "77777777-7777-4777-8777-777777777777";
+
+const objectOrEmpty = (value: unknown): object =>
+  typeof value === "object" && value !== null ? value : {};
+
+// `save_recipe` writes a new recipe and its ingredients in one call and answers with the recipe's id.
+function saveRecipe(init: RequestInit): Response {
+  const body = readBody(init);
+  const ingredients = fieldOf(body, "p_ingredients");
+  diaryBackend.recipes.push({
+    ...objectOrEmpty(fieldOf(body, "p_recipe")),
+    id: SAVED_RECIPE_ID,
+    is_archived: false,
+    recipe_ingredients: (Array.isArray(ingredients) ? ingredients : []).map(
+      (ingredient: unknown, position) => ({ ...objectOrEmpty(ingredient), position }),
+    ),
+  });
+
+  return jsonResponse(SAVED_RECIPE_ID);
+}
+
 function writeDayLogs(init: RequestInit, search: URLSearchParams): Response {
   const body = readBody(init);
   if (init.method === "POST") {
@@ -670,6 +692,8 @@ export async function fakeFetch(
             .sort((first, second) => String(first["name"]).localeCompare(String(second["name"]))),
         ),
       );
+    case "save_recipe":
+      return Promise.resolve(saveRecipe(init ?? {}));
     case "day_logs":
       if (init !== undefined && isDiaryWrite) {
         return Promise.resolve(writeDayLogs(init, searchParams));

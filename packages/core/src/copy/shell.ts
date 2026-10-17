@@ -24,7 +24,6 @@ export const COMING_SOON_TITLE = "Coming soon";
 /** The sentence under `COMING_SOON_TITLE` on each placeholder the boards draw. */
 export const PLACEHOLDER_BODIES = {
   diary: "Your logged foods will appear here, day by day.",
-  recipes: "Your recipes will appear here.",
 };
 
 /** The More screen: four sections, each a title over its rows, as the `tab-shell.more` board draws them. */
