@@ -21,6 +21,7 @@ export type { ComputeRecipeInput } from "./computeRecipe";
 export {
   addStep,
   editStep,
+  isStepTooLong,
   moveStep,
   moveStepDown,
   moveStepUp,

@@ -12,7 +12,8 @@ export type ProblemSentences = {
 
 /**
  * Sorts the codes `validateRecipeDraft` gives into the field they belong to, each with core's sentence.
- * The steps have no field on this page, and a saved recipe's steps are valid, so their codes show nothing.
+ * The steps have no field on this page: the step sheet keeps a step that cannot be stored out of the draft,
+ * and a saved recipe's steps are valid, so their codes show nothing.
  */
 export function problemSentences(problems: readonly RecipeDraftProblem[]): ProblemSentences {
   const sentences: ProblemSentences = { ingredients: [] };

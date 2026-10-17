@@ -31,6 +31,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { problemSentences } from "./problemSentences";
 import { useIngredientEdits } from "./useIngredientEdits";
+import { useStepEdits } from "./useStepEdits";
+import { useStepSheet } from "./useStepSheet";
 import { useIsOnline } from "../../lib/connectivity";
 import { dockBottomPadding } from "../../lib/dockBottomPadding";
 import { recipePath, recipesPath } from "../../lib/recipeRoutes";
@@ -43,6 +45,8 @@ import { IngredientAmountStep } from "../IngredientAmountStep";
 import { PerServingCard } from "../PerServingCard";
 import { RecipeDetailsFields } from "../RecipeDetailsFields";
 import { RecipeIngredientsSection } from "../RecipeIngredientsSection";
+import { RecipeStepsSection } from "../RecipeStepsSection";
+import { StepSheet } from "../StepSheet";
 import { Banner, Button, SheetHeader, useToast, useToastAboveBar } from "../ui";
 
 import type { ProblemSentences } from "./problemSentences";
@@ -75,7 +79,8 @@ type Exit = { href: string; how: "dismiss" | "replace" };
 /**
  * The recipe editor: the details, the ingredients (each opens its amount step, in a page over the editor so
  * the draft and the scroll place stay where they are, and each can be removed with an Undo; Add ingredient
- * opens the food search over the editor the same way) and the Per serving card, which follows the servings, the cooked weight and the ingredients once typing stops. Save is always pressable (but
+ * opens the food search over the editor the same way), the Instructions (a step opens a sheet over the editor,
+ * and Reorder moves them up and down) and the Per serving card, which follows the servings, the cooked weight and the ingredients once typing stops. Save is always pressable (but
  * offline), and a failed one says what to fix, field by field, scrolls to the first and moves focus to it.
  * Leaving with changes asks first, by the header's Back or Close, the Android back button and the iOS swipe
  * back alike. It holds no sums of its own: the card, the checks, the sentences and what counts as a change
@@ -123,6 +128,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const cookedWeightField = useRef<TextInput>(null);
   const ingredientsSection = useRef<View>(null);
   const ingredientsHeading = useRef<View>(null);
+  const stepsHeading = useRef<View>(null);
   const addIngredientRow = useRef<View>(null);
   const ingredientLimitCaption = useRef<View>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS has the padding view.
@@ -130,6 +136,10 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const trackScrollOffset = useScrollFocusedInputIntoView(scrollViewRef, keyboardLift);
 
   const ingredientEdits = useIngredientEdits(draft.ingredients, setDraft);
+  const stepEdits = useStepEdits(draft.steps, setDraft);
+  // A removed step leaves nothing to keep a screen reader's focus on, so it is taken to the heading first,
+  // and the toast's announcement is the last thing it says.
+  const stepSheet = useStepSheet(draft.steps, stepEdits, focusStepsHeading);
   // Toasts sit above the pinned Save, as the board draws them, and not above a tab bar this screen has not.
   useToastAboveBar(dockHeight);
 
@@ -158,9 +168,16 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   // a save under way is not interrupted. Saving and discarding both leave nothing changed, so the hold is
   // already lifted when the way out runs. With an amount step open, the way back closes the step.
   usePreventRemove(
-    isChanged || saveStatus === "saving" || openedIngredient !== undefined || isAddOpen,
+    isChanged ||
+      saveStatus === "saving" ||
+      openedIngredient !== undefined ||
+      isAddOpen ||
+      stepSheet.isOpen,
     () => {
-      if (isAddOpen) {
+      if (stepSheet.isOpen) {
+        // The way back closes the step sheet and keeps what was typed, as the dim does.
+        stepSheet.dismiss();
+      } else if (isAddOpen) {
         // The way back steps back: from the amount step to the results, and from the results to the editor.
         if (chosenFood === undefined) {
           closeAddIngredient();
@@ -235,6 +252,24 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     toast.dismiss();
     stepCount.current += 1;
     setOpenStep({ ingredient, id: stepCount.current });
+  }
+
+  function focusStepsHeading() {
+    if (stepsHeading.current !== null) {
+      AccessibilityInfo.sendAccessibilityEvent(stepsHeading.current, "focus");
+    }
+  }
+
+  function openStepSheet(position: number) {
+    if (!isLocked) {
+      stepSheet.openStep(position);
+    }
+  }
+
+  function openNewStepSheet() {
+    if (!isLocked) {
+      stepSheet.openNewStep();
+    }
   }
 
   function openAddIngredient() {
@@ -492,6 +527,15 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
                   onOpen={openIngredientStep}
                   onRemove={removeIngredientAt}
                 />
+                <RecipeStepsSection
+                  headingRef={stepsHeading}
+                  isLocked={isLocked}
+                  steps={draft.steps}
+                  onAdd={openNewStepSheet}
+                  onMoveDown={stepEdits.moveDown}
+                  onMoveUp={stepEdits.moveUp}
+                  onOpen={openStepSheet}
+                />
               </View>
             </ScrollView>
             {/* The dock is the sheet's surface under a hairline, with the board's 42 below its button. It is a
@@ -527,6 +571,22 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
           />
         </KeyboardAvoidingView>
       </View>
+      {stepSheet.sheet === null ? null : (
+        // Over the whole editor and not inside its keyboard avoiding view, so the sheet is lifted above the
+        // keyboard once and not twice. Another opening is another sheet, so the text and the keyboard start afresh.
+        <StepSheet
+          key={stepSheet.sheet.id}
+          isNew={stepSheet.sheet.target.kind === "add"}
+          isDismissible={stepSheet.isDismissible}
+          number={stepSheet.sheet.number}
+          open={stepSheet.isOpen}
+          text={stepSheet.sheet.text}
+          onChangeText={stepSheet.changeText}
+          onClose={stepSheet.dismiss}
+          onDone={stepSheet.done}
+          onRemove={stepSheet.remove}
+        />
+      )}
       {isAddOpen ? (
         <View accessibilityViewIsModal className="absolute inset-0 bg-background">
           <AddIngredientSheet

@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   addStep,
   editStep,
+  isStepTooLong,
   moveStep,
   moveStepDown,
   moveStepUp,
   normaliseSteps,
   removeStep,
+  validateRecipeDraft,
 } from "../../src/recipes";
 
 const frozen = (steps: string[]): readonly string[] => Object.freeze([...steps]);
@@ -198,6 +200,39 @@ describe("what an error says", () => {
     for (const fail of failures) {
       expect(fail).toThrow(RangeError);
       expect(fail).not.toThrow(/1200|calories/);
+    }
+  });
+});
+
+describe("isStepTooLong", () => {
+  it("should allow a step of exactly the most characters, and refuse one more", () => {
+    expect(isStepTooLong("x".repeat(1000))).toBe(false);
+    expect(isStepTooLong("x".repeat(1001))).toBe(true);
+  });
+
+  it("should count the step as it is saved, without the spaces round it", () => {
+    expect(isStepTooLong(`  ${"x".repeat(1000)}  `)).toBe(false);
+  });
+
+  it("should count an emoji as one character, as the database does", () => {
+    expect(isStepTooLong("\u{1F34B}".repeat(1000))).toBe(false);
+    expect(isStepTooLong("\u{1F34B}".repeat(1001))).toBe(true);
+  });
+
+  it("should agree with the validator", () => {
+    const problemsOf = (step: string) => {
+      const result = validateRecipeDraft({
+        name: "Chicken and rice",
+        servings: "4",
+        cookedWeight: "",
+        ingredients: [],
+        steps: [step],
+      });
+      return result.ok ? [] : result.problems;
+    };
+    for (const length of [1000, 1001]) {
+      const step = "x".repeat(length);
+      expect(problemsOf(step).includes("step_too_long")).toBe(isStepTooLong(step));
     }
   });
 });

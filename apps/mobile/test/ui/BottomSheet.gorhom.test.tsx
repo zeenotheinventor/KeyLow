@@ -12,38 +12,42 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // Stands in for gorhom so a test can see which calls the kit's sheet makes on it, and play the library's
 // own report of a close, which it makes when a drag down ends. What gorhom does on a device is in the
 // library's own tests and on the device.
-const mockSheet: { calls: string[]; reportClose: () => void } = {
+const mockSheet: { calls: string[]; reportClose: () => void; canDragDown: boolean | undefined } = {
   calls: [],
   reportClose: jest.fn(),
+  canDragDown: undefined,
 };
 
 jest.mock("@gorhom/bottom-sheet", () => {
   const { forwardRef, useImperativeHandle } = jest.requireActual<typeof import("react")>("react");
-  const FakeSheet = forwardRef<unknown, { children: React.ReactNode; onClose: () => void }>(
-    function FakeSheet({ children, onClose }, ref) {
-      mockSheet.reportClose = onClose;
-      useImperativeHandle(ref, () => ({
-        close: () => mockSheet.calls.push("close"),
-        snapToIndex: (index: number) => mockSheet.calls.push(`snapToIndex(${index})`),
-      }));
-      return children;
-    },
-  );
+  const FakeSheet = forwardRef<
+    unknown,
+    { children: React.ReactNode; onClose: () => void; enablePanDownToClose: boolean }
+  >(function FakeSheet({ children, onClose, enablePanDownToClose }, ref) {
+    mockSheet.reportClose = onClose;
+    mockSheet.canDragDown = enablePanDownToClose;
+    useImperativeHandle(ref, () => ({
+      close: () => mockSheet.calls.push("close"),
+      snapToIndex: (index: number) => mockSheet.calls.push(`snapToIndex(${index})`),
+    }));
+    return children;
+  });
   return {
     __esModule: true,
     default: FakeSheet,
     BottomSheetView: ({ children }: never) => children,
+    BottomSheetTextInput: () => null,
   };
 });
 
 const frame = { x: 0, y: 0, width: 390, height: 844 };
 const insets = { top: 47, right: 0, bottom: 34, left: 0 };
 
-function sheetElement(open: boolean, onClose: () => void) {
+function sheetElement(open: boolean, onClose: () => void, isDismissible?: boolean) {
   return (
     <SafeAreaProvider initialMetrics={{ frame, insets }}>
       <ThemeProvider fixedPreference="dark">
-        <BottomSheet open={open} title="Log weight" onClose={onClose}>
+        <BottomSheet isDismissible={isDismissible} open={open} title="Log weight" onClose={onClose}>
           {null}
         </BottomSheet>
       </ThemeProvider>
@@ -93,6 +97,17 @@ describe("BottomSheet on the library's ref", () => {
     await view.rerender(sheetElement(true, () => undefined));
 
     expect(mockSheet.calls).toEqual(["close"]);
+  });
+
+  it("should let a drag down close the sheet unless the screen says it cannot be closed yet", async () => {
+    const view = await render(sheetElement(true, () => undefined));
+    expect(mockSheet.canDragDown).toBe(true);
+
+    await view.rerender(sheetElement(true, () => undefined, false));
+    expect(mockSheet.canDragDown).toBe(false);
+
+    await view.rerender(sheetElement(true, () => undefined, true));
+    expect(mockSheet.canDragDown).toBe(true);
   });
 
   it("should not snap anywhere on the first open", async () => {

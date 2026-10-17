@@ -13,6 +13,7 @@ import { SheetBackdrop } from "./SheetBackdrop";
 import { SheetBackground } from "./SheetBackground";
 import { SheetBackdropContext } from "./SheetCloseContext";
 import { SheetHandle } from "./SheetHandle";
+import { IsInsideSheetContext } from "./SheetInputContext";
 
 import type { BottomSheetProps } from "./types";
 import type { ComponentRef } from "react";
@@ -42,6 +43,7 @@ export function BottomSheet({
   onClose,
   title,
   isTitleCentred = false,
+  isDismissible = true,
   label,
   children,
 }: BottomSheetProps) {
@@ -116,9 +118,15 @@ export function BottomSheet({
         animationConfigs={open ? enterAnimation : exitAnimation}
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
-        enablePanDownToClose
+        enablePanDownToClose={isDismissible}
         handleComponent={SheetHandle}
         index={0}
+        // A field in the sheet (the library's own input, which `TextArea` draws inside a sheet) lifts the
+        // sheet with the keyboard, and the sheet goes back down when the keyboard is hidden. Android 15
+        // draws edge to edge and does not resize the window for the keyboard, so the sheet pans itself.
+        android_keyboardInputMode="adjustPan"
+        keyboardBehavior="interactive"
+        keyboardBlurBehavior="restore"
         overrideReduceMotion={isReducedMotion ? ReduceMotion.Always : ReduceMotion.System}
         onClose={() => {
           // The sheet also reports a close the screen asked for, which the screen already knows about.
@@ -146,7 +154,7 @@ export function BottomSheet({
                 </Text>
               </View>
             )}
-            {children}
+            <IsInsideSheetContext value>{children}</IsInsideSheetContext>
           </View>
         </BottomSheetView>
       </GorhomBottomSheet>

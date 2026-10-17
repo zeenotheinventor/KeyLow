@@ -5,6 +5,9 @@
  * never the text of a step, which is health data.
  */
 
+import { MAX_RECIPE_STEP_LENGTH } from "./bounds";
+import { characterCount } from "./characterCount";
+
 const isPlace = (index: number, length: number): boolean =>
   Number.isInteger(index) && index >= 0 && index < length;
 
@@ -67,3 +70,10 @@ export const moveStepDown = (steps: readonly string[], index: number): string[] 
  */
 export const normaliseSteps = (steps: readonly string[]): string[] =>
   steps.map((step) => step.trim()).filter((step) => step !== "");
+
+/**
+ * Whether a step is longer than a recipe allows, counted as it is saved (trimmed, in code points), so it
+ * is true only when Save would refuse the step.
+ */
+export const isStepTooLong = (step: string): boolean =>
+  characterCount(step.trim()) > MAX_RECIPE_STEP_LENGTH;

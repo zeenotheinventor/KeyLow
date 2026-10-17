@@ -1,5 +1,7 @@
 import type { HapticFeedbackName } from "../../../lib/haptics";
 import type { IconName, IconSizeName } from "../Icon";
+import type { Ref } from "react";
+import type { View } from "react-native";
 
 /**
  * The ring is the quiet plus on a food row: a 32 point circle with a border and no fill, the icon in the
@@ -42,6 +44,8 @@ export type IconButtonProps = {
   /** The haptic token to play when pressed. The design gives none of its own. */
   haptic?: HapticFeedbackName;
   onPress?: (() => void) | undefined;
+  /** The button itself, so a screen can move a screen reader's focus to it. */
+  ref?: Ref<View> | undefined;
   /** Layout from the caller, such as alignment and margins. */
   className?: string;
 };
