@@ -119,3 +119,26 @@ export type {
   SessionSummary,
   SessionWeek,
 } from "./historySummary";
+
+export { validateRoutineDraft } from "./routineDraft";
+export type {
+  RoutineDraft,
+  RoutineDraftDay,
+  RoutineDraftExercise,
+  RoutineDraftIssue,
+  RoutineDraftPath,
+  RoutineDraftRule,
+} from "./routineDraft";
+export { routinePayload } from "./routinePayload";
+export type { RoutinePayload } from "./routinePayload";
+export { scaffoldSession } from "./scaffoldSession";
+export type {
+  ScaffoldedExercise,
+  ScaffoldRoutineDay,
+  ScaffoldRoutineExercise,
+  SessionScaffold,
+} from "./scaffoldSession";
+export { summariseRoutine } from "./summariseRoutine";
+export type { RoutineDaySummary, RoutineSummary, SummarisedRoutine } from "./summariseRoutine";
+export { estimateSessionMinutes, SESSION_TIME_PARAMS_V1 } from "./sessionTime";
+export type { SessionLoad, SessionTimeParams } from "./sessionTime";
