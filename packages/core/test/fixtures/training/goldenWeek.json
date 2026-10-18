@@ -1092,7 +1092,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "traps_mid": {
             "heat": 0.7352,
@@ -1128,13 +1128,13 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "obliques": {
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "glute_max": {
             "heat": 0,
@@ -1146,7 +1146,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "quads": {
             "heat": 0,
@@ -1164,7 +1164,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "calves": {
             "heat": 0,
@@ -1176,13 +1176,13 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "neck": {
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           }
         }
       },
@@ -1230,7 +1230,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "traps_mid": {
             "heat": 0.2387,
@@ -1266,13 +1266,13 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "obliques": {
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "glute_max": {
             "heat": 0,
@@ -1284,7 +1284,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "quads": {
             "heat": 0,
@@ -1302,7 +1302,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "calves": {
             "heat": 0,
@@ -1314,13 +1314,13 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "neck": {
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           }
         }
       },
@@ -1368,7 +1368,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "traps_mid": {
             "heat": 0.0173,
@@ -1404,13 +1404,13 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "obliques": {
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "glute_max": {
             "heat": 0.0641,
@@ -1422,7 +1422,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "quads": {
             "heat": 0.0801,
@@ -1440,7 +1440,7 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "calves": {
             "heat": 0.0095,
@@ -1452,13 +1452,13 @@
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           },
           "neck": {
             "heat": 0,
             "readyAt": "now",
             "weeklySets": 0,
-            "volumeStatus": "under"
+            "volumeStatus": "not_targeted"
           }
         }
       }

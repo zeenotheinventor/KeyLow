@@ -29,6 +29,7 @@ import {
   muscleState,
   projectedState,
   projectWeek,
+  targetedMuscles,
 } from "../../src/training";
 
 import type { LoggedWeek, PlannedSet, PlanRoutineDay } from "../../src/training";
@@ -258,6 +259,18 @@ describe("projectedState", () => {
     expect(projectedState(week.projected, moment, LONDON, params)).toEqual(
       muscleState(week.projected, moment, params.training),
     );
+  });
+
+  it("should pass the targeted muscles on to muscleState", () => {
+    const moment = "2026-10-22T12:00:00.000Z";
+    const targeted = targetedMuscles({ routine });
+
+    const state = projectedState(week.projected, moment, LONDON, params, targeted);
+
+    expect(state).toEqual(muscleState(week.projected, moment, params.training, targeted));
+    expect(state.abs.volumeStatus).toBe("not_targeted");
+    expect(state.quads.volumeStatus).toBe("under");
+    expect(projectedState(week.projected, moment, LONDON, params).abs.volumeStatus).toBe("under");
   });
 
   it("should count a planned day from the day after, not once its time has passed", () => {

@@ -16,6 +16,7 @@ import {
   muscleState,
   PLAN_STATUSES,
   projectWeek,
+  targetedMuscles,
   VOLUME_STATUSES,
 } from "../../src/training";
 import goldenWeek from "../fixtures/training/goldenWeek.json";
@@ -27,7 +28,9 @@ import type { LoggedSet, PlanRoutine } from "../../src/training";
  * in Europe/London, with the heat, ready at, weekly sets, volume status and plan-week comparison that
  * Zee agreed on 2026-10-18. The agreed numbers were worked by hand from ADR 0005 and are copied into the
  * fixture as literals. They must never be computed from the code under test or from the params, and they
- * change only when Zee agrees a new table, which is a new params version (ADR 0002).
+ * change only when Zee agrees a new table, which is a new params version (ADR 0002). The one amendment
+ * since is KEY-356: the seven muscles the routine does not train read `not_targeted` instead of `under`,
+ * when the fixture is computed with the muscles the routine targets.
  *
  * Precision is the one the table was agreed to: heat to 4 decimal places, weekly sets and gaps to 2, and
  * ready at to the nearest minute.
@@ -175,6 +178,19 @@ const loggedSets: LoggedSet[] = fixture.sets.map((set) => {
   };
 });
 
+// The seven muscles with 0 weekly sets at every moment, which the Push Pull Legs routine does not train.
+const UNTARGETED_MUSCLES = [
+  "traps_upper",
+  "abs",
+  "obliques",
+  "glute_med",
+  "adductors",
+  "tibialis",
+  "neck",
+] as const;
+
+const targeted = targetedMuscles({ routine });
+
 const MILLISECONDS_PER_MINUTE = 60_000;
 
 const toMinute = (timestamp: string): string =>
@@ -230,10 +246,19 @@ describe("golden fixture week", () => {
     });
   });
 
+  describe("targeted muscles", () => {
+    it("should target the 15 muscles the routine trains and not the seven it leaves out", () => {
+      expect(MUSCLE_IDS.filter((muscle) => !targeted.has(muscle))).toStrictEqual([
+        ...UNTARGETED_MUSCLES,
+      ]);
+      expect(targeted.size).toBe(15);
+    });
+  });
+
   describe("muscle state", () => {
     describe.each(fixture.expected.moments)("$label", ({ now, muscles }) => {
       // Every set of the week is passed at every moment, so sets after `now` must be left out.
-      const state = muscleState(loggedSets, instant(now), params.training);
+      const state = muscleState(loggedSets, instant(now), params.training, targeted);
 
       it.each(MUSCLE_IDS)("should give %s its agreed heat", (muscle) => {
         expect(state[muscle].heat).toBeCloseTo(muscles[muscle].heat, FOUR_DECIMAL_PLACES);
@@ -256,6 +281,14 @@ describe("golden fixture week", () => {
 
       it.each(MUSCLE_IDS)("should give %s its agreed volume status", (muscle) => {
         expect(state[muscle].volumeStatus).toBe(muscles[muscle].volumeStatus);
+      });
+
+      it("should still call the seven untargeted muscles under when no targeted set is passed", () => {
+        const withoutTargeting = muscleState(loggedSets, instant(now), params.training);
+
+        for (const muscle of UNTARGETED_MUSCLES) {
+          expect(withoutTargeting[muscle].volumeStatus).toBe("under");
+        }
       });
     });
   });

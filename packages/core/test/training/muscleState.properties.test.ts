@@ -198,4 +198,51 @@ describe("muscleState properties", () => {
       }),
     );
   });
+
+  describe("with a set of targeted muscles", () => {
+    const targetedSubset = fc.subarray([...MUSCLE_IDS]).map((muscles) => new Set(muscles));
+
+    it("should never change heat, ready at or weekly sets, and only turn an under into not_targeted", () => {
+      fc.assert(
+        fc.property(recentSets, targetedSubset, (sets, targeted) => {
+          const plain = muscleState(sets, at(NOW), params);
+          const withSet = muscleState(sets, at(NOW), params, targeted);
+          for (const muscle of MUSCLE_IDS) {
+            expect(withSet[muscle].heat).toBe(plain[muscle].heat);
+            expect(withSet[muscle].readyAt).toBe(plain[muscle].readyAt);
+            expect(withSet[muscle].weeklySets).toBe(plain[muscle].weeklySets);
+            const turned = !targeted.has(muscle) && plain[muscle].volumeStatus === "under";
+            expect(withSet[muscle].volumeStatus).toBe(
+              turned ? "not_targeted" : plain[muscle].volumeStatus,
+            );
+          }
+        }),
+      );
+    });
+
+    it("should give weeklyVolume the weekly sets and status muscleState gives", () => {
+      fc.assert(
+        fc.property(recentSets, targetedSubset, (sets, targeted) => {
+          const state = muscleState(sets, at(NOW), params, targeted);
+          const volume = weeklyVolume(sets, at(NOW), params, targeted);
+          for (const muscle of MUSCLE_IDS) {
+            expect(volume[muscle]).toStrictEqual({
+              weeklySets: state[muscle].weeklySets,
+              volumeStatus: state[muscle].volumeStatus,
+            });
+          }
+        }),
+      );
+    });
+
+    it("should leave the call with no set exactly as it is when every muscle is in the set", () => {
+      fc.assert(
+        fc.property(recentSets, (sets) => {
+          expect(muscleState(sets, at(NOW), params, new Set(MUSCLE_IDS))).toStrictEqual(
+            muscleState(sets, at(NOW), params),
+          );
+        }),
+      );
+    });
+  });
 });

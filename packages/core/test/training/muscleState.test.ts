@@ -11,7 +11,7 @@ import {
 } from "../../src/training";
 
 import type { SetSnapshotMuscle } from "../../src/schemas";
-import type { TrainingParams } from "../../src/training";
+import type { MuscleId, TrainingParams } from "../../src/training";
 
 const params = TRAINING_PARAMS_V1;
 
@@ -326,7 +326,121 @@ describe("volumeStatusOf", () => {
     expect(volumeStatusOf(weeklySets, large)).toBe(status);
   });
 
-  it("should name the four statuses of ADR 0005 in order", () => {
-    expect(VOLUME_STATUSES).toEqual(["under", "maintaining", "productive", "over"]);
+  it("should name the four statuses of ADR 0005, then not_targeted, in order", () => {
+    expect(VOLUME_STATUSES).toEqual(["under", "maintaining", "productive", "over", "not_targeted"]);
+  });
+
+  describe("for a muscle that is not targeted", () => {
+    it.each([
+      [0, "not_targeted"],
+      [5.75, "not_targeted"],
+      [6, "maintaining"],
+      [9.75, "maintaining"],
+      [10, "productive"],
+      [22, "productive"],
+      [22.25, "over"],
+    ] as const)("should call %d small-muscle sets %s", (weeklySets, status) => {
+      expect(volumeStatusOf(weeklySets, small, false)).toBe(status);
+    });
+
+    it.each([
+      [7.75, "not_targeted"],
+      [8, "maintaining"],
+    ] as const)("should call %d medium-muscle sets %s", (weeklySets, status) => {
+      expect(volumeStatusOf(weeklySets, medium, false)).toBe(status);
+    });
+  });
+
+  describe("for a muscle that is targeted", () => {
+    it("should call 0 sets under when targeted is given as true", () => {
+      expect(volumeStatusOf(0, small, true)).toBe("under");
+    });
+
+    it("should call a set count what the call without the argument calls it", () => {
+      for (const weeklySets of [0, 5.75, 6, 10, 22, 22.25]) {
+        expect(volumeStatusOf(weeklySets, small, true)).toBe(volumeStatusOf(weeklySets, small));
+      }
+    });
+  });
+});
+
+describe("with a set of targeted muscles", () => {
+  const quadsOnly = new Set<MuscleId>(["quads"]);
+
+  it("should call an untargeted muscle with no sets not_targeted and a targeted one under", () => {
+    const state = muscleState([], at(MORNING), params, quadsOnly);
+
+    expect(state.quads.volumeStatus).toBe("under");
+    expect(state.abs.volumeStatus).toBe("not_targeted");
+    expect(state.neck).toStrictEqual({
+      heat: 0,
+      readyAt: at(MORNING),
+      weeklySets: 0,
+      volumeStatus: "not_targeted",
+    });
+  });
+
+  it("should call every muscle not_targeted for an empty set, which is not the same as no set", () => {
+    const none = muscleState([], at(MORNING), params, new Set());
+
+    for (const state of Object.values(none)) {
+      expect(state.volumeStatus).toBe("not_targeted");
+    }
+    for (const state of Object.values(muscleState([], at(MORNING), params))) {
+      expect(state.volumeStatus).toBe("under");
+    }
+  });
+
+  it("should keep the real status of an untargeted muscle trained to its MEV or more", () => {
+    /*
+     * Twelve working sets of bench press at full effort, none of it in the targeted set. chest_lower
+     * takes 12 sets (medium: MAV low 12), so productive. triceps and delt_front take 6, at small's MEV
+     * of 6, so maintaining. chest_upper takes 7.2, below medium's MEV of 8, so not_targeted.
+     */
+    const state = muscleState(
+      repeat(12, heatSet(benchPress)),
+      at(MORNING + HOUR),
+      params,
+      quadsOnly,
+    );
+
+    expect(state.chest_lower).toMatchObject({ weeklySets: 12, volumeStatus: "productive" });
+    expect(state.triceps).toMatchObject({ weeklySets: 6, volumeStatus: "maintaining" });
+    expect(state.delt_front).toMatchObject({ weeklySets: 6, volumeStatus: "maintaining" });
+    expect(state.chest_upper).toMatchObject({ weeklySets: 7.2, volumeStatus: "not_targeted" });
+  });
+
+  it("should keep an untargeted muscle's over status, so over-training is never hidden", () => {
+    const state = muscleState(repeat(23, heatSet(triceps)), at(MORNING + HOUR), params, quadsOnly);
+
+    expect(state.triceps).toMatchObject({ weeklySets: 23, volumeStatus: "over" });
+  });
+
+  it("should leave heat, ready at and weekly sets as they are without the set", () => {
+    const sets = repeat(4, heatSet(benchPress));
+    const without = muscleState(sets, at(MORNING + HOUR), params);
+    const withSet = muscleState(sets, at(MORNING + HOUR), params, quadsOnly);
+
+    for (const muscle of MUSCLE_IDS) {
+      expect(withSet[muscle].heat).toBe(without[muscle].heat);
+      expect(withSet[muscle].readyAt).toBe(without[muscle].readyAt);
+      expect(withSet[muscle].weeklySets).toBe(without[muscle].weeklySets);
+    }
+  });
+
+  it("should give weeklyVolume the same statuses muscleState gives", () => {
+    const sets = repeat(5, heatSet(benchPress));
+    const state = muscleState(sets, at(MORNING + HOUR), params, quadsOnly);
+
+    const volume = weeklyVolume(sets, at(MORNING + HOUR), params, quadsOnly);
+
+    for (const muscle of MUSCLE_IDS) {
+      expect(volume[muscle]).toStrictEqual({
+        weeklySets: state[muscle].weeklySets,
+        volumeStatus: state[muscle].volumeStatus,
+      });
+    }
+    expect(volume.abs.volumeStatus).toBe("not_targeted");
+    expect(volume.quads.volumeStatus).toBe("under");
   });
 });
