@@ -180,6 +180,10 @@ describe("keys.training", () => {
     expect(keys.training.sets("2026-10-03")).toEqual(["training", "sets", "2026-10-03"]);
   });
 
+  it("should expose the key of whether any session was ever logged", () => {
+    expect(keys.training.hasLoggedSession).toEqual(["training", "has-logged-session"]);
+  });
+
   it("should expose the active routine key", () => {
     expect(keys.training.activeRoutine).toEqual(["training", "active-routine"]);
   });

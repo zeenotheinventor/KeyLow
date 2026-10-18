@@ -1,7 +1,12 @@
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
-import { getActiveRoutine, listSetsFrom, listWeekSessions } from "../../src/repos/training";
+import {
+  getActiveRoutine,
+  hasLoggedSession,
+  listSetsFrom,
+  listWeekSessions,
+} from "../../src/repos/training";
 import { createTestClient } from "../createTestClient";
 import {
   BENCH_MUSCLES,
@@ -368,6 +373,42 @@ describe("getActiveRoutine", () => {
     expect(error?.message).toMatch(
       /^Could not read the routine: row .* has an unexpected shape at /,
     );
+    expect(textOf(error)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
+  });
+});
+
+describe("hasLoggedSession", () => {
+  it("should ask for one id of a live session and read nothing else", async () => {
+    const fake = installTrainingFake(server, { sessions: [sessionRow()] });
+
+    await hasLoggedSession(createTestClient());
+
+    const url = firstRequest(fake.requestsTo("workout_sessions"));
+    expect(url.searchParams.get("select")).toBe("id");
+    expect(url.searchParams.get("deleted_at")).toBe("is.null");
+    expect(url.searchParams.get("limit")).toBe("1");
+  });
+
+  it("should be true when the user has a session", async () => {
+    installTrainingFake(server, { sessions: [sessionRow()] });
+
+    expect(await hasLoggedSession(createTestClient())).toBe(true);
+  });
+
+  it("should be false when the user has no session", async () => {
+    installTrainingFake(server, { sessions: [] });
+
+    expect(await hasLoggedSession(createTestClient())).toBe(false);
+  });
+
+  it("should name the action and the error code only when the database fails", async () => {
+    const fake = installTrainingFake(server, { sessions: [sessionRow()] });
+    fake.failWith("42501");
+
+    const error = await rejectionOf(hasLoggedSession(createTestClient()));
+
+    expect(error?.message).toBe("Could not check your sessions (42501)");
+    expect(error?.cause).toEqual({ code: "42501" });
     expect(textOf(error)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
   });
 });

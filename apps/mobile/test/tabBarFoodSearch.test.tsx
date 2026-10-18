@@ -115,6 +115,7 @@ const routes = {
   "(tabs)/dashboard": standIn("Dashboard screen"),
   "(tabs)/diary": DiaryStandIn,
   "(tabs)/recipes": standIn("Recipes screen"),
+  "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreStandIn,
   "foods/index": SearchStandIn,
   "foods/scan": ScanStandIn,

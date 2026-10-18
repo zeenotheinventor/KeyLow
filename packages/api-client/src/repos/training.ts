@@ -168,3 +168,22 @@ export async function getActiveRoutine(
 
   return data === null ? null : parseRow(routineColumnsSchema, data, "read the routine", idOfRow);
 }
+
+/**
+ * Whether the signed in user has a live session at all, however old. It tells the Train home's first
+ * visit (nothing logged, ever) from a user who has trained but has no routine. One id is read and no
+ * session content, so nothing health related is fetched for the answer.
+ */
+export async function hasLoggedSession(client: SupabaseClient<Database>): Promise<boolean> {
+  const { data, error } = await client
+    .from("workout_sessions")
+    .select("id")
+    .is("deleted_at", null)
+    .limit(1);
+
+  if (error) {
+    throw trainingRepoError("check your sessions", error);
+  }
+
+  return data.length > 0;
+}

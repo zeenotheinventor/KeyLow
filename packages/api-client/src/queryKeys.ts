@@ -59,6 +59,8 @@ export const keys = {
     sets: (windowStart: string) => ["training", "sets", windowStart] as const,
     /** The active routine with its days, exercises and muscle maps, or null when there is none. */
     activeRoutine: ["training", "active-routine"] as const,
+    /** Whether the signed in user has any live session at all: a yes or no, never a session. Persisted on mobile. */
+    hasLoggedSession: ["training", "has-logged-session"] as const,
     /** The prefix of every `weekSessions` key. */
     weekSessionsAll: ["training", "week-sessions"] as const,
     /** The live sessions of the week that starts on `weekStart`, each with its live sets. */

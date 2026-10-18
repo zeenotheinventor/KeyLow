@@ -302,6 +302,43 @@ function SkeletonBodyMapCard() {
   );
 }
 
+// The Train home as its loading board draws it: the Today card as a label, a title, a line and a button,
+// the body map as two figures, and the week as seven cells. The cards are 12 points apart and the screen
+// gives their sides.
+const trainFigureBoneKeys = ["front", "back"];
+
+function SkeletonTrainHome() {
+  return (
+    <View className="gap-3" testID="skeleton-train-home">
+      <Card>
+        <View className="gap-2">
+          <SkeletonBone className="h-3 w-[140px]" />
+          <SkeletonBone className="h-[22px] w-[90px]" />
+          <SkeletonBone className="h-3 w-[200px]" />
+          <SkeletonBone className="mt-2 h-[44px] rounded-medium" />
+        </View>
+      </Card>
+      <Card>
+        <View className="flex-row justify-center gap-[28px]">
+          {trainFigureBoneKeys.map((key) => (
+            <SkeletonBone
+              key={key}
+              className="h-[198px] w-[90px] rounded-b-[20px] rounded-t-[45px]"
+            />
+          ))}
+        </View>
+      </Card>
+      <Card padding={3}>
+        <View className="flex-row gap-1">
+          {dayBoneKeys.map((key) => (
+            <SkeletonBone key={key} className="h-[56px] flex-1" />
+          ))}
+        </View>
+      </Card>
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -321,6 +358,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "nutritionCard" ? <SkeletonNutritionCard /> : null}
       {variant === "thisWeekCard" ? <SkeletonThisWeekCard /> : null}
       {variant === "bodyMapCard" ? <SkeletonBodyMapCard /> : null}
+      {variant === "trainHome" ? <SkeletonTrainHome /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View

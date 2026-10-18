@@ -88,6 +88,7 @@ const routes = {
   "(tabs)/recipes/_layout": RecipesLayout,
   "(tabs)/recipes/index": RecipesStandIn,
   "(tabs)/recipes/archived": ArchivedStandIn,
+  "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreRoute,
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,

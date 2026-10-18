@@ -159,9 +159,11 @@ export {
 } from "./repos";
 export type { ImportResult, WeighIn, WeighInChange } from "./repos";
 export {
+  useActiveRoutine,
   useActiveSession,
   useBodyMap,
   useDashboardBodyMap,
+  useHasLoggedSession,
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,

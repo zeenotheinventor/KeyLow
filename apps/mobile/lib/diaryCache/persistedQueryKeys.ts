@@ -24,6 +24,8 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.profiles.termsAcceptance,
   keys.training.setsAll,
   keys.training.activeRoutine,
+  // A yes or no, so the Train home tells a first visit from no routine without a connection.
+  keys.training.hasLoggedSession,
   keys.training.weekSessionsAll,
   keys.training.sessionsAll,
   keys.training.activeSession,

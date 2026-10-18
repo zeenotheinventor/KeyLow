@@ -341,6 +341,55 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the Train home", () => {
+    it("should be the Today card's four bones, two figures and seven days", async () => {
+      await renderSkeleton({ variant: "trainHome" });
+
+      expect(bones()).toHaveLength(4 + 2 + 7);
+    });
+
+    it("should draw the Today card as a 140 and a 90 wide title and caption, a 200 wide line and a 44 tall button", async () => {
+      await renderSkeleton({ variant: "trainHome" });
+
+      expect(bones()[0]).toHaveStyle({ width: 140, height: 12 });
+      expect(bones()[1]).toHaveStyle({ width: 90, height: 22 });
+      expect(bones()[2]).toHaveStyle({ width: 200, height: 12 });
+      expect(bones()[3]).toHaveStyle({ height: 44, borderRadius: 12 });
+    });
+
+    it("should draw the body map as two figures 90 wide and 198 tall, round at the top", async () => {
+      await renderSkeleton({ variant: "trainHome" });
+
+      for (const figure of bones().slice(4, 6)) {
+        expect(figure).toHaveStyle({
+          width: 90,
+          height: 198,
+          borderTopLeftRadius: 45,
+          borderTopRightRadius: 45,
+          borderBottomLeftRadius: 20,
+          borderBottomRightRadius: 20,
+        });
+      }
+    });
+
+    it("should draw the week as seven cells 56 tall", async () => {
+      await renderSkeleton({ variant: "trainHome" });
+
+      for (const cell of bones().slice(6)) {
+        expect(cell).toHaveStyle({ height: 56 });
+      }
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "trainHome" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });

@@ -85,6 +85,10 @@ export const TRAIN_OFFLINE_TITLE = "You're offline";
 export const describeOfflineBanner = (savedAtClockTime: string): string =>
   `Showing your training as saved at ${savedAtClockTime}. Starting a session or logging a set needs a connection.`;
 
+/** The offline banner's line when no training has been saved on the phone yet, so there is no time to name. */
+export const TRAIN_OFFLINE_NOTHING_SAVED =
+  "Your training will show when you are back online. Starting a session or logging a set needs a connection.";
+
 /** The line above the Today card's title: "Today · Thursday 15 October". */
 export const describeTodayHeading = (localDate: string): string =>
   `Today · ${describeDateInWords(localDate)}`;
