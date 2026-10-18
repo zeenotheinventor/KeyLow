@@ -3,6 +3,7 @@ import { TRAINING_PARAMS_V1, muscleState, targetedMuscles } from "@keylow/core/t
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { HEAT_LOOKBACK_DAYS, newestCachedSetRows } from "./heatWindowRows";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { toTrainingReadResult } from "./trainingReadResult";
@@ -14,30 +15,6 @@ import type { DiaryReadOptions } from "./DiaryReadOptions";
 import type { TrainingReadResult } from "./trainingReadResult";
 import type { TrainingSet } from "../repos/trainingSchemas";
 import type { MuscleId, MuscleState } from "@keylow/core/training";
-import type { QueryClient } from "@tanstack/react-query";
-
-// The heat window reaches 14 days back from `now`, so it starts at some hour of the local day 14 days
-// back. Reading from the start of the day before that covers it whatever the hour.
-const LOOKBACK_DAYS = TRAINING_PARAMS_V1.heatWindowDays + 1;
-
-/**
- * The rows of the newest sets read held in the cache, whatever start day they are keyed by, or undefined
- * when none is. Rows only: the heat is worked out from them at the current `now` by `select`, and rows
- * from an older day hold every set that could have been logged since on a phone with no connection.
- */
-function newestCachedRows(queryClient: QueryClient): TrainingSet[] | undefined {
-  // By the time each was read and not by start day: a start day moves back as well as forward when the
-  // profile's zone moves west, and the read that is newest in time holds the newest rows.
-  const [newest] = queryClient
-    .getQueryCache()
-    .findAll({ queryKey: keys.training.setsAll })
-    .flatMap(({ queryKey }) => {
-      const state = queryClient.getQueryState<TrainingSet[]>(queryKey);
-      return state?.data === undefined ? [] : [{ rows: state.data, readAt: state.dataUpdatedAt }];
-    })
-    .sort((first, second) => second.readAt - first.readAt);
-  return newest?.rows;
-}
 
 /**
  * Each muscle's heat, ready time, weekly sets and volume status at `now`, an ISO timestamp with a zone.
@@ -70,7 +47,7 @@ export function useMuscleState(
   const routine = useActiveRoutine({ enabled });
 
   const today = timeZone.data ? toLocalDate(new Date(now), timeZone.data) : null;
-  const startDay = today === null ? "" : addCalendarDays(today, -LOOKBACK_DAYS);
+  const startDay = today === null ? "" : addCalendarDays(today, -HEAT_LOOKBACK_DAYS);
   const activeRoutine = routine.data;
 
   const select = useCallback(
@@ -87,7 +64,7 @@ export function useMuscleState(
   // Until today's rows are there, the newest rows held under another start day stand in (a cache restored
   // on a later day than it was read). Not before the routine is known, so no muscle flashes as under.
   const standInRows = useCallback(
-    () => (activeRoutine === undefined ? undefined : newestCachedRows(queryClient)),
+    () => (activeRoutine === undefined ? undefined : newestCachedSetRows(queryClient)),
     [queryClient, activeRoutine],
   );
 

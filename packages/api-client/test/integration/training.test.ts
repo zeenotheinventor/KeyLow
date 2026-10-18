@@ -160,6 +160,7 @@ describe("getActiveRoutine", () => {
       [0, 3],
       [1, 0],
     ]);
+    expect(routine.days.map(({ name }) => name)).toEqual(["pull", "push"]);
     const [pull, push] = routine.days;
     expect(
       pull?.exercises.map(({ position, exercise_id, target_sets, target_rir }) => ({
@@ -271,9 +272,16 @@ describe("listWeekSessions", () => {
 
     const sessions = await listWeekSessions(user.client, "2026-10-12");
 
-    expect(sessions).toEqual([
-      { id: empty, local_date: "2026-10-13", routine_day_id: null, deleted_at: null, sets: [] },
-    ]);
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0]).toMatchObject({
+      id: empty,
+      local_date: "2026-10-13",
+      routine_day_id: null,
+      ended_at: null,
+      deleted_at: null,
+      sets: [],
+    });
+    expect(sessions[0]?.started_at).toMatch(/^2026-10-13T09:00:00/);
   });
 
   it("should never return another user's sessions or sets", async () => {

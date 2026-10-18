@@ -160,13 +160,28 @@ export {
 export type { ImportResult, WeighIn, WeighInChange } from "./repos";
 export {
   useActiveSession,
+  useBodyMap,
+  useDashboardBodyMap,
   useLastPerformance,
+  useMuscleDetail,
+  useMuscleList,
   useMuscleState,
   useSession,
   useWeekComparison,
   useWeightUnit,
 } from "./hooks";
-export type { TrainingReadResult, UseLastPerformanceOptions } from "./hooks";
+export type {
+  BodyMap,
+  BodyMapDay,
+  BodyMapScale,
+  DashboardBodyMap,
+  DashboardToday,
+  TrainingReadResult,
+  UseBodyMapInput,
+  UseLastPerformanceOptions,
+  UseMuscleDetailInput,
+  UseMuscleListInput,
+} from "./hooks";
 export {
   getActiveRoutine,
   getActiveSession,

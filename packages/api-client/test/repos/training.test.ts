@@ -160,7 +160,7 @@ describe("listWeekSessions", () => {
 
     const url = firstRequest(fake.requestsTo("workout_sessions"));
     expect(url.searchParams.get("select")).toBe(
-      "id,local_date,routine_day_id,deleted_at,workout_sets(id,session_id,exercise_id,set_type,rir,rpe,performed_at,snapshot,deleted_at)",
+      "id,local_date,routine_day_id,started_at,ended_at,deleted_at,workout_sets(id,session_id,exercise_id,set_type,rir,rpe,performed_at,snapshot,deleted_at)",
     );
     expect(url.searchParams.get("deleted_at")).toBe("is.null");
     expect(url.searchParams.getAll("local_date")).toEqual(["gte.2026-10-12", "lte.2026-10-18"]);
@@ -180,6 +180,8 @@ describe("listWeekSessions", () => {
         id: row.id,
         local_date: "2026-10-14",
         routine_day_id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        started_at: "2026-10-14T17:00:00+00:00",
+        ended_at: "2026-10-14T18:00:00+00:00",
         deleted_at: null,
         sets: [
           {
@@ -196,6 +198,14 @@ describe("listWeekSessions", () => {
         ],
       },
     ]);
+  });
+
+  it("should read a session that is still open with no end", async () => {
+    installTrainingFake(server, { sessions: [sessionRow({ ended_at: null })] });
+
+    const sessions = await listWeekSessions(createTestClient(), "2026-10-12");
+
+    expect(sessions[0]).toMatchObject({ started_at: "2026-10-14T17:00:00+00:00", ended_at: null });
   });
 
   it("should return a session with no sets", async () => {
@@ -264,7 +274,7 @@ describe("getActiveRoutine", () => {
 
     const url = firstRequest(fake.requestsTo("routines"));
     expect(url.searchParams.get("select")).toBe(
-      "id,name,routine_days(id,position,weekday,routine_exercises(id,position,exercise_id,target_sets,target_rir,exercises(id,name,equipment,mechanic,exercise_muscles(muscle_id,role,weight))))",
+      "id,name,routine_days(id,name,position,weekday,routine_exercises(id,position,exercise_id,target_sets,target_rir,exercises(id,name,equipment,mechanic,exercise_muscles(muscle_id,role,weight))))",
     );
     expect(url.searchParams.get("is_active")).toBe("eq.true");
     expect(url.searchParams.get("routine_days.order")).toBe("position.asc");
@@ -282,6 +292,7 @@ describe("getActiveRoutine", () => {
       days: [
         {
           id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+          name: "key354 day",
           position: 0,
           weekday: 0,
           exercises: [
@@ -325,7 +336,7 @@ describe("getActiveRoutine", () => {
   it("should refuse a row of an unexpected shape, naming the row and the field only", async () => {
     installTrainingFake(server, {
       routine: routineRow({
-        routine_days: [{ id: "x", position: 0, weekday: 9, routine_exercises: [] }],
+        routine_days: [{ id: "x", name: "Day", position: 0, weekday: 9, routine_exercises: [] }],
       }),
     });
 
