@@ -37,6 +37,20 @@ function assertLocalDate(localDate: string): void {
   }
 }
 
+/**
+ * The Monday and the Sunday of the training week that starts on `weekStart`. Throws a `RangeError`
+ * naming the rule when it is not a calendar date or not a Monday, before any request is made.
+ */
+export function trainingWeekBounds(weekStart: string): { first: string; last: string } {
+  assertLocalDate(weekStart);
+  const days = weekOf(weekStart);
+  const [first, last] = [days[0], days[6]];
+  if (first !== weekStart || last === undefined) {
+    throw new RangeError("A training week must start on a Monday");
+  }
+  return { first, last };
+}
+
 /** A set's snapshot read by core, which names why it cannot read one. The message names the row and the problem only. */
 export function readSnapshot(
   columns: { id: string; snapshot: unknown },
@@ -109,12 +123,7 @@ export async function listWeekSessions(
   client: SupabaseClient<Database>,
   weekStart: string,
 ): Promise<WeekSession[]> {
-  assertLocalDate(weekStart);
-  const days = weekOf(weekStart);
-  const [first, last] = [days[0], days[6]];
-  if (first !== weekStart || last === undefined) {
-    throw new RangeError("A training week must start on a Monday");
-  }
+  const { first, last } = trainingWeekBounds(weekStart);
 
   const { data, error } = await client
     .from("workout_sessions")

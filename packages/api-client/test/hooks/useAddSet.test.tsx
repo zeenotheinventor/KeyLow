@@ -128,6 +128,8 @@ describe("useAddSet", () => {
       "activeSession",
       "sets",
       "weekSessions",
+      "history",
+      "historyList",
       "lastPerformance",
       "otherExerciseLastPerformance",
     ] as const) {
@@ -155,5 +157,7 @@ describe("useAddSet", () => {
     expect(queryClient.getQueryData(keys.training.session(SET_SESSION_ID))).toEqual(cached);
     expect(seeded.isStale(seeded.queryKeys.sets)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.weekSessions)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.history)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.historyList)).toBe(true);
   });
 });

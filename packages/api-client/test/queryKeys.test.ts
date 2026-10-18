@@ -254,6 +254,37 @@ describe("keys.training", () => {
     }
   });
 
+  it("should key the history of a week by its Monday, under the history prefix", () => {
+    expect(keys.training.historyAll).toEqual(["training", "history"]);
+    expect(keys.training.history("2026-10-12")).toEqual(["training", "history", "2026-10-12"]);
+    expect(keys.training.history("2026-10-12").slice(0, 2)).toEqual(keys.training.historyAll);
+  });
+
+  it("should key the history list, the infinite read of weeks, under the history prefix and apart from every week", () => {
+    expect(keys.training.historyList).toEqual(["training", "history", "list"]);
+    expect(keys.training.historyList.slice(0, 2)).toEqual(keys.training.historyAll);
+    expect(keys.training.history("2026-10-12")).not.toEqual(keys.training.historyList);
+  });
+
+  it("should keep the history prefix apart from the week sessions and the session reads", () => {
+    for (const prefix of [
+      keys.training.weekSessionsAll,
+      keys.training.sessionsAll,
+      keys.training.setsAll,
+    ]) {
+      expect(keys.training.history("2026-10-12").slice(0, prefix.length)).not.toEqual(prefix);
+      expect(keys.training.historyList.slice(0, prefix.length)).not.toEqual(prefix);
+    }
+  });
+
+  it("should hold fixed words and a date only in a history key, never a session, an exercise or a muscle", () => {
+    for (const key of [keys.training.history("2026-10-12"), keys.training.historyList]) {
+      for (const part of key) {
+        expect(part).toMatch(/^(training|history|list|\d{4}-\d{2}-\d{2})$/);
+      }
+    }
+  });
+
   it("should key the routine library by whether archived routines are included, under the routines prefix", () => {
     expect(keys.training.routines(false)).toEqual(["training", "routines", false]);
     expect(keys.training.routines(true)).toEqual(["training", "routines", true]);

@@ -64,6 +64,8 @@ describe("useRemoveSet", () => {
       "activeSession",
       "sets",
       "weekSessions",
+      "history",
+      "historyList",
       "lastPerformance",
     ] as const) {
       expect(seeded.isStale(seeded.queryKeys[name])).toBe(true);

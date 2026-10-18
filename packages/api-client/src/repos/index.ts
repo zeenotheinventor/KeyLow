@@ -95,3 +95,5 @@ export { deleteSession, finishSession, startSession } from "./sessionWrites";
 export type { SessionFinish, SessionStart } from "./sessionWrites";
 export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
 export type { SetAdd, SetPatch } from "./setWrites";
+export { findPreviousSessionWeek, listSessionsInWeek } from "./trainingHistory";
+export type { HistorySessionRow, HistorySetRow } from "./trainingSchemas";

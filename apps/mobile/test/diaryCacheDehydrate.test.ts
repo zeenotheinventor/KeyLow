@@ -67,6 +67,19 @@ describe("which queries are stored when the diary cache is saved", () => {
     ]);
   });
 
+  it("should store every week of the history and the history list, however old, within the age limit", () => {
+    const { read, storedKeys } = createCache();
+    read(keys.training.history("2026-09-28"), 100);
+    read(keys.training.history("2026-10-05"), 50);
+    read(keys.training.historyList, 1);
+
+    expect(storedKeys()).toEqual([
+      keys.training.history("2026-09-28"),
+      keys.training.history("2026-10-05"),
+      keys.training.historyList,
+    ]);
+  });
+
   it("should store every routines read and every routine, and the active routine beside them", () => {
     const { read, storedKeys } = createCache();
     const first = "88888888-8888-4888-8888-888888888888";
