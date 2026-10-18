@@ -17,6 +17,7 @@
     "./search": "./src/search/index.ts",
     "./terms": "./src/terms/index.ts",
     "./training": "./src/training/index.ts",
+    "./weight": "./src/weight/index.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

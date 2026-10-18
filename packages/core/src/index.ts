@@ -9,3 +9,4 @@ export * from "./schemas";
 export * from "./search";
 export * from "./terms";
 export * from "./training";
+export * from "./weight";
