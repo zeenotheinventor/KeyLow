@@ -20,6 +20,9 @@
 #      (not a repository secret, so that only runs on an allowed branch can
 #      read it):
 #        EXPO_TOKEN  Expo access token for the EAS account (KEY-13)
+#      Optionally, one more secret on the same environment:
+#        SENTRY_AUTH_TOKEN  Sentry auth token (KEY-278), to upload the source maps of the update.
+#      Without it the update is still published, and its error reports show unreadable stacks.
 #   3. On that same environment, set "Deployment branches" to "Selected
 #      branches" and allow only `main` (Settings > Environments > production
 #      > Deployment branches). This branch policy is the only restriction on
@@ -37,10 +40,20 @@
 # `base` profile in apps/mobile/eas.json, which feeds the same values to EAS
 # builds, so the embedded bundle and an OTA bundle never disagree.
 #
+# EXPO_PUBLIC_SENTRY_DSN (KEY-278) is the exception: it is neither here nor in eas.json. It is an EAS
+# environment variable in the `production` environment on expo.dev. `eas update --environment production`
+# below reads it for the OTA bundle, and the `production-apk` profile in eas.json (`environment:
+# production`) reads it for the build, so the two cannot disagree. Without it, error reporting is off.
+#
 # EXPO_PUBLIC_COMMIT_SHA is the commit the bundle was built from, shown on the
 # About screen (KEY-261). It is set here only, never in eas.json (which the
 # fingerprint hashes whole) or the Expo config, so it changes no fingerprint input
 # and a merge never needs a new APK. The APK's embedded bundle has no commit.
+#
+# Source maps (KEY-278): after the publish, in the same step so the two cannot drift, the maps of the
+# bundle `eas update` just exported (in `dist`) are uploaded to Sentry, where each bundle's debug id
+# ties an error report to its map. This only runs when SENTRY_AUTH_TOKEN is set. The organization and
+# project come from the Sentry plugin in app.json.
 #
 # Scope: OTA carries JavaScript only. A native change (new native dependency,
 # config plugin or SDK bump) changes the fingerprint runtime version and needs
@@ -134,4 +147,11 @@ jobs:
           EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID: 127670518185-ni3pj7ngsfunqnqr5mmsd7bvmjp7ooi8.apps.googleusercontent.com
           EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: 127670518185-hp20gpd441vf5j74b1bt5u23vvsock8e.apps.googleusercontent.com
           EXPO_PUBLIC_COMMIT_SHA: ${{ github.sha }}
-        run: eas update --channel production --environment production --auto --non-interactive
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          eas update --channel production --environment production --auto --non-interactive
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then
+            pnpm exec sentry-expo-upload-sourcemaps dist
+          else
+            echo "::notice title=Source maps not uploaded::SENTRY_AUTH_TOKEN is not set, so this update's error reports will show unreadable stacks."
+          fi

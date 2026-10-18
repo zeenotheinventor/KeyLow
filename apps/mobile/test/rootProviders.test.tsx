@@ -11,6 +11,7 @@ import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { resetSupabaseMock } from "./support/supabaseMock";
 import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
+import { initSentry } from "../lib/sentry/init";
 
 import type { ReactNode } from "react";
 
@@ -74,6 +75,8 @@ jest.mock("../lib/connectivity", () => ({
   ...jest.requireActual<typeof import("../lib/connectivity")>("../lib/connectivity"),
   feedFocusManager: jest.fn(),
 }));
+// Whether the layout starts Sentry is what is asked. What it starts with is proved with the Sentry tests.
+jest.mock("../lib/sentry/init", () => ({ initSentry: jest.fn() }));
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -98,6 +101,10 @@ describe("the app root", () => {
 
   it("should tell React Query when the app is in the foreground, as the layout loads, so a stale diary refetches on return", () => {
     expect(feedFocusManager).toHaveBeenCalledTimes(1);
+  });
+
+  it("should start error reporting as the layout loads, so an error while the app starts is reported", () => {
+    expect(initSentry).toHaveBeenCalledTimes(1);
   });
 
   it("should show a toast that a screen asks for, because the toast provider is mounted", async () => {

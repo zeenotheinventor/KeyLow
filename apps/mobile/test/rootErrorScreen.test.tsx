@@ -1,4 +1,5 @@
 import { GENERIC_ERROR, RETRY_LABEL, ROOT_ERROR } from "@keylow/core/copy";
+import { captureException } from "@sentry/react-native";
 import { render, screen, userEvent } from "@testing-library/react-native";
 import { ExpoRoot, Stack } from "expo-router";
 import { getMockContext } from "expo-router/testing-library";
@@ -119,6 +120,13 @@ describe("root error screen", () => {
 
     const logged = consoleError.mock.calls.flat();
     expect(logged).toContainEqual(expect.objectContaining({ message: SECRET }));
+  });
+
+  it("should report the error to Sentry, which scrubs its message before it is sent", async () => {
+    await renderApp();
+    await screen.findByRole("alert");
+
+    expect(captureException).toHaveBeenCalledWith(expect.objectContaining({ message: SECRET }));
   });
 
   it("should draw the route again on Try again", async () => {
