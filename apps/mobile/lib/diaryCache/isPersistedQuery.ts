@@ -1,10 +1,8 @@
 import { DIARY_CACHE_MAX_AGE_MS } from "./constants";
 import { PERSISTED_QUERY_KEYS } from "./persistedQueryKeys";
+import { queryKeyStartsWith } from "./queryKeyStartsWith";
 
 import type { Query } from "@tanstack/react-query";
-
-const startsWith = (queryKey: readonly unknown[], prefix: readonly unknown[]) =>
-  prefix.every((part, index) => queryKey[index] === part);
 
 /**
  * Whether the cache keeps a query: it is one of the persisted families, it holds data, and the data is
@@ -15,6 +13,6 @@ export function isPersistedQuery(query: Query): boolean {
   return (
     query.state.status === "success" &&
     Date.now() - query.state.dataUpdatedAt <= DIARY_CACHE_MAX_AGE_MS &&
-    PERSISTED_QUERY_KEYS.some((prefix) => startsWith(query.queryKey, prefix))
+    PERSISTED_QUERY_KEYS.some((prefix) => queryKeyStartsWith(query.queryKey, prefix))
   );
 }

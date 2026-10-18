@@ -8,17 +8,18 @@ import {
   DIARY_CACHE_BUSTER,
   DIARY_CACHE_MAX_AGE_MS,
   createDiaryCachePersister,
-  isPersistedQuery,
+  createShouldDehydrateQuery,
 } from "../../lib/diaryCache";
 
 import type { PersistedDiaryCacheProps } from "./types";
 
 /**
- * Keeps the diary reads on the phone, so the diary opens at once and without a connection. The
- * stored cache is read before any query runs, and the queries it holds show their data while they
- * refresh. Only the families `isPersistedQuery` lists are stored, no write is, and web does not use
- * this. It sits inside `KeyLowProvider`, whose query client it persists, and outside the sign-in gate,
- * so the gate's own read finds the stored acceptance.
+ * Keeps the diary and training reads on the phone, so the diary opens at once and without a connection,
+ * and so do the body's heat, the active routine and the week's sessions. The stored cache is read
+ * before any query runs, and the queries it holds show their data while they refresh. Only the
+ * families `isPersistedQuery` lists are stored (of the sets reads only the newest), no write is, and
+ * web does not use this. It sits inside `KeyLowProvider`, whose query client it persists, and outside
+ * the sign-in gate, so the gate's own read finds the stored acceptance.
  *
  * On a sign out, which is also how an account deletion ends, the stored cache is removed and the one in
  * memory is reset, so the next person to sign in never sees it. Supabase reporting no session at a
@@ -60,7 +61,7 @@ export function PersistedDiaryCache({ children, readStoredUserId }: PersistedDia
         maxAge: DIARY_CACHE_MAX_AGE_MS,
         buster: DIARY_CACHE_BUSTER,
         dehydrateOptions: {
-          shouldDehydrateQuery: isPersistedQuery,
+          shouldDehydrateQuery: createShouldDehydrateQuery(queryClient),
           // A write waits for a connection, and is never replayed from storage.
           shouldDehydrateMutation: () => false,
         },

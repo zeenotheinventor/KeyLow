@@ -68,6 +68,32 @@ describe("which queries the diary cache keeps", () => {
   });
 });
 
+describe("which training queries the diary cache keeps", () => {
+  it.each([
+    ["the sets from a start day", keys.training.sets("2026-10-02")],
+    ["the active routine", keys.training.activeRoutine],
+    ["the sessions of a week", keys.training.weekSessions("2026-10-12")],
+  ])("should keep %s", (_name, queryKey) => {
+    expect(isPersistedQuery(queryFor(queryKey))).toBe(true);
+  });
+
+  it.each([
+    ["a search of exercises by text", ["training", "exercise-search", "bench"]],
+    ["a training query this cache does not know", ["training", "something-new", "2026-10-02"]],
+    ["the bare training prefix", keys.training.all],
+  ])("should not keep %s", (_name, queryKey) => {
+    expect(isPersistedQuery(queryFor(queryKey))).toBe(false);
+  });
+
+  it("should not keep a week of sessions whose data is older than the longest the cache may be kept", () => {
+    const stale = queryFor(keys.training.weekSessions("2026-09-28"), {
+      updatedAt: Date.now() - DIARY_CACHE_MAX_AGE_MS - HOUR_MS,
+    });
+
+    expect(isPersistedQuery(stale)).toBe(false);
+  });
+});
+
 function createFakeStorage() {
   const items = new Map<string, string>();
   return {
@@ -311,5 +337,21 @@ describe("the diary cache persister", () => {
     await expect(Promise.resolve(persister.restoreClient())).rejects.toThrow(
       new Error("The stored diary cache could not be read"),
     );
+  });
+
+  it("should fail to read a damaged cache of training reads without putting any of it in the message", async () => {
+    const storage = createFakeStorage();
+    storage.items.set(
+      "keylow.diary-cache",
+      '{"clientState": {"queries": [{"queryKey": ["training", "sets"], "data": [{"snapshot": {"name": "Barbell bench press", "load": 82.5',
+    );
+    const persister = createDiaryCachePersister(storage, signedInAs(OWNER));
+
+    const failure = await Promise.resolve(persister.restoreClient()).catch(
+      (error: unknown) => error,
+    );
+
+    expect(failure).toEqual(new Error("The stored diary cache could not be read"));
+    expect(JSON.stringify(failure)).not.toContain("bench");
   });
 });
