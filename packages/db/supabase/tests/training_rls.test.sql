@@ -873,6 +873,682 @@ select throws_ok(
   '23514', 'new row for relation "training_goals" violates check constraint "training_goals_effective_range_check"', 'a goals row cannot end before it starts'
 );
 
+-- Owner only, as user A: A reads only their own rows, and cannot write a row for anyone else or
+-- point a row at anyone else's session, routine, day or private exercise. A reference to another
+-- user's row fails exactly as a reference to an id that does not exist.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"34800000-0000-4000-8000-00000000000a","role":"authenticated"}';
+
+select is(
+  (select count(*)::int from public.routines where user_id <> '34800000-0000-4000-8000-00000000000a')
+    || '/' || (select count(*)::int from public.routine_days where user_id <> '34800000-0000-4000-8000-00000000000a')
+    || '/' || (select count(*)::int from public.routine_exercises where user_id <> '34800000-0000-4000-8000-00000000000a')
+    || '/' || (select count(*)::int from public.workout_sessions where user_id <> '34800000-0000-4000-8000-00000000000a')
+    || '/' || (select count(*)::int from public.workout_sets where user_id <> '34800000-0000-4000-8000-00000000000a')
+    || '/' || (select count(*)::int from public.training_goals where user_id <> '34800000-0000-4000-8000-00000000000a'),
+  '0/0/0/0/0/0',
+  'user A sees no other user''s routines, days, planned exercises, sessions, sets or goals'
+);
+select is(
+  (select count(*)::int from public.workout_sessions where id = '34800000-0000-4000-8000-0000000006a1')
+    || '/' || (select count(*)::int from public.training_goals where id = '34800000-0000-4000-8000-0000000008a1'),
+  '1/1',
+  'user A sees their own session and goals'
+);
+
+-- Writing a row for another user.
+select throws_ok(
+  $$ select pg_temp.add_routine('key348-a-for-b', '34800000-0000-4000-8000-00000000000b') $$,
+  '42501', 'new row violates row-level security policy for table "routines"', 'user A cannot insert a routine for user B'
+);
+select throws_ok(
+  $$ select pg_temp.add_day(current_setting('key348.direct')::uuid, 9, null, 'key348-a-for-b', '34800000-0000-4000-8000-00000000000b') $$,
+  '42501', 'new row violates row-level security policy for table "routine_days"', 'user A cannot insert a day with user B''s id, even in their own routine'
+);
+select throws_ok(
+  $$ select pg_temp.add_planned(current_setting('key348.sunday')::uuid, 9, planned_user => '34800000-0000-4000-8000-00000000000b') $$,
+  '42501', 'new row violates row-level security policy for table "routine_exercises"', 'user A cannot insert a planned exercise with user B''s id'
+);
+select throws_ok(
+  $$ select pg_temp.start_session(session_owner => '34800000-0000-4000-8000-00000000000b') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sessions"', 'user A cannot insert a session for user B'
+);
+select throws_ok(
+  $$ select pg_temp.log_set(set_user => '34800000-0000-4000-8000-00000000000b') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"', 'user A cannot insert a set with user B''s id'
+);
+select throws_ok(
+  $$ insert into public.training_goals (user_id, goal, days_per_week, session_minutes, experience, muscle_priority, params_version)
+     values ('34800000-0000-4000-8000-00000000000b', 'strength', 3, 45, 'beginner', '{}', 'key348-params-1') $$,
+  '42501', 'new row violates row-level security policy for table "training_goals"', 'user A cannot insert goals for user B'
+);
+
+-- Pointing a row at another user's row, or at an id that does not exist.
+select throws_ok(
+  $$ select pg_temp.add_day('34800000-0000-4000-8000-0000000003b1', 9, null) $$,
+  '42501', 'new row violates row-level security policy for table "routine_days"', 'user A cannot add a day to user B''s routine'
+);
+select throws_ok(
+  $$ select pg_temp.add_day('34800000-0000-4000-8000-00000000dead', 9, null) $$,
+  '42501', 'new row violates row-level security policy for table "routine_days"', 'a routine that does not exist fails the same way'
+);
+select throws_ok(
+  $$ select pg_temp.add_planned('34800000-0000-4000-8000-0000000004b1', 9) $$,
+  '42501', 'new row violates row-level security policy for table "routine_exercises"', 'user A cannot plan an exercise on user B''s day'
+);
+select throws_ok(
+  $$ select pg_temp.add_planned('34800000-0000-4000-8000-00000000dead', 9) $$,
+  '42501', 'new row violates row-level security policy for table "routine_exercises"', 'a day that does not exist fails the same way'
+);
+select throws_ok(
+  $$ select pg_temp.add_planned(current_setting('key348.sunday')::uuid, 9, planned_exercise => '34800000-0000-4000-8000-0000000001b1') $$,
+  '42501', 'new row violates row-level security policy for table "routine_exercises"', 'user A cannot plan user B''s private exercise'
+);
+select throws_ok(
+  $$ select pg_temp.add_planned(current_setting('key348.sunday')::uuid, 9, planned_exercise => '34800000-0000-4000-8000-00000000dead') $$,
+  '42501', 'new row violates row-level security policy for table "routine_exercises"', 'an exercise that does not exist fails the same way when planned'
+);
+select throws_ok(
+  $$ select pg_temp.start_session(session_day => '34800000-0000-4000-8000-0000000004b1') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sessions"', 'user A cannot start a session from user B''s day'
+);
+select throws_ok(
+  $$ select pg_temp.start_session(session_day => '34800000-0000-4000-8000-00000000dead') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sessions"', 'a day that does not exist fails the same way for a session'
+);
+select lives_ok(
+  $$ select pg_temp.start_session(session_day => current_setting('key348.sunday')::uuid, session_note => 'key348-from-sunday') $$,
+  'user A starts a session from their own day'
+);
+select throws_ok(
+  $$ select pg_temp.log_set(set_session => '34800000-0000-4000-8000-0000000006b1') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"', 'user A cannot add a set to user B''s session'
+);
+select throws_ok(
+  $$ select pg_temp.log_set(set_session => '34800000-0000-4000-8000-00000000dead') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"', 'a session that does not exist fails the same way'
+);
+select throws_ok(
+  $$ select pg_temp.log_set(set_exercise => '34800000-0000-4000-8000-0000000001b1') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"', 'user A cannot log a set against user B''s private exercise'
+);
+select throws_ok(
+  $$ select pg_temp.log_set(set_exercise => '34800000-0000-4000-8000-0000000001c1') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"', 'user A cannot log a set against user C''s private exercise'
+);
+select throws_ok(
+  $$ select pg_temp.log_set(set_exercise => '34800000-0000-4000-8000-00000000dead') $$,
+  '42501', 'new row violates row-level security policy for table "workout_sets"', 'an exercise that does not exist fails the same way when logged'
+);
+
+-- Changing another user's rows changes nothing.
+with changed as (
+  update public.routines set name = 'key348-taken-over' where id = '34800000-0000-4000-8000-0000000003b1' returning 1
+)
+select is((select count(*)::int from changed), 0, 'user A renames none of user B''s routines');
+with changed as (
+  update public.routine_days set name = 'key348-taken-over' where id = '34800000-0000-4000-8000-0000000004b1' returning 1
+)
+select is((select count(*)::int from changed), 0, 'user A renames none of user B''s days');
+with changed as (
+  update public.workout_sessions set deleted_at = now() where id = '34800000-0000-4000-8000-0000000006b1' returning 1
+)
+select is((select count(*)::int from changed), 0, 'user A deletes none of user B''s sessions');
+with changed as (
+  update public.workout_sets set reps = 1 where id = '34800000-0000-4000-8000-0000000007b1' returning 1
+)
+select is((select count(*)::int from changed), 0, 'user A edits none of user B''s sets');
+with changed as (
+  update public.training_goals set effective_to = now() where id = '34800000-0000-4000-8000-0000000008b1' returning 1
+)
+select is((select count(*)::int from changed), 0, 'user A closes none of user B''s goals');
+with removed as (
+  delete from public.routine_days where id = '34800000-0000-4000-8000-0000000004b1' returning 1
+)
+select is((select count(*)::int from removed), 0, 'user A deletes none of user B''s days');
+with removed as (
+  delete from public.routine_exercises where id = '34800000-0000-4000-8000-0000000005b1' returning 1
+)
+select is((select count(*)::int from removed), 0, 'user A deletes none of user B''s planned exercises');
+
+-- What the grants leave out, on A's own rows.
+select throws_ok(
+  $$ delete from public.workout_sets where session_id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sets', 'user A cannot hard delete a set'
+);
+select throws_ok(
+  $$ delete from public.workout_sessions where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sessions', 'user A cannot hard delete a session'
+);
+select throws_ok(
+  $$ delete from public.routines where id = current_setting('key348.direct')::uuid $$,
+  '42501', 'permission denied for table routines', 'user A cannot delete a routine'
+);
+select throws_ok(
+  $$ delete from public.training_goals where id = '34800000-0000-4000-8000-0000000008a1' $$,
+  '42501', 'permission denied for table training_goals', 'user A cannot delete goals'
+);
+select throws_ok(
+  $$ update public.workout_sets set session_id = '34800000-0000-4000-8000-0000000006b1' where session_id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sets', 'a set never changes session'
+);
+select throws_ok(
+  $$ update public.workout_sets set exercise_id = '34800000-0000-4000-8000-0000000001a1' where session_id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sets', 'a set never changes exercise'
+);
+select throws_ok(
+  $$ update public.workout_sets set snapshot = '{"version":1}' where session_id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sets', 'a set''s snapshot is never rewritten'
+);
+select throws_ok(
+  $$ update public.workout_sets set performed_at = now() - interval '1 day' where session_id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sets', 'a set''s performed_at is set on insert only'
+);
+select throws_ok(
+  $$ update public.workout_sets set user_id = '34800000-0000-4000-8000-00000000000b' where session_id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sets', 'user A cannot hand a set to user B'
+);
+select throws_ok(
+  $$ insert into public.workout_sets (id, session_id, user_id, exercise_id, position, reps, snapshot)
+     values ('34800000-0000-4000-8000-0000000007ff', '34800000-0000-4000-8000-0000000006a1', '34800000-0000-4000-8000-00000000000a', '34800000-0000-4000-8000-000000000101', 0, 5, '{"version":1}') $$,
+  '42501', 'permission denied for table workout_sets', 'user A cannot choose the id of a set'
+);
+select throws_ok(
+  $$ insert into public.workout_sets (session_id, user_id, exercise_id, position, reps, snapshot, deleted_at)
+     values ('34800000-0000-4000-8000-0000000006a1', '34800000-0000-4000-8000-00000000000a', '34800000-0000-4000-8000-000000000101', 0, 5, '{"version":1}', now()) $$,
+  '42501', 'permission denied for table workout_sets', 'user A cannot insert a deleted set'
+);
+select throws_ok(
+  $$ update public.workout_sessions set started_at = now() where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sessions', 'a session''s start never changes'
+);
+select throws_ok(
+  $$ update public.workout_sessions set local_date = '2026-10-01' where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sessions', 'a session never moves to another day'
+);
+select throws_ok(
+  $$ update public.workout_sessions set tz = 'UTC' where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sessions', 'a session''s zone never changes'
+);
+select throws_ok(
+  $$ update public.workout_sessions set routine_day_id = null where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sessions', 'a session never moves to another planned day'
+);
+select throws_ok(
+  $$ update public.workout_sessions set user_id = '34800000-0000-4000-8000-00000000000b' where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  '42501', 'permission denied for table workout_sessions', 'user A cannot hand a session to user B'
+);
+select throws_ok(
+  $$ insert into public.workout_sessions (id, user_id, started_at, local_date, tz)
+     values ('34800000-0000-4000-8000-0000000006ff', '34800000-0000-4000-8000-00000000000a', now(), '2026-10-18', 'UTC') $$,
+  '42501', 'permission denied for table workout_sessions', 'user A cannot choose the id of a session'
+);
+select throws_ok(
+  $$ update public.routines set user_id = '34800000-0000-4000-8000-00000000000b' where id = current_setting('key348.direct')::uuid $$,
+  '42501', 'permission denied for table routines', 'user A cannot hand a routine to user B'
+);
+select throws_ok(
+  $$ insert into public.routines (user_id, name, is_active) values ('34800000-0000-4000-8000-00000000000a', 'key348-born-active', true) $$,
+  '42501', 'permission denied for table routines', 'a routine cannot be inserted active'
+);
+select throws_ok(
+  $$ update public.routine_days set routine_id = '34800000-0000-4000-8000-0000000003b1' where id = current_setting('key348.sunday')::uuid $$,
+  '42501', 'permission denied for table routine_days', 'a day never moves to another routine'
+);
+select throws_ok(
+  $$ update public.routine_days set user_id = '34800000-0000-4000-8000-00000000000b' where id = current_setting('key348.sunday')::uuid $$,
+  '42501', 'permission denied for table routine_days', 'user A cannot hand a day to user B'
+);
+select throws_ok(
+  $$ update public.routine_exercises set target_sets = 4 where routine_day_id = current_setting('key348.sunday')::uuid $$,
+  '42501', 'permission denied for table routine_exercises', 'a planned exercise is never edited in place'
+);
+select throws_ok(
+  $$ update public.training_goals set goal = 'strength' where id = '34800000-0000-4000-8000-0000000008a1' $$,
+  '42501', 'permission denied for table training_goals', 'a goals row is never edited, only closed'
+);
+select throws_ok(
+  $$ update public.training_goals set effective_from = now() - interval '1 year' where id = '34800000-0000-4000-8000-0000000008a1' $$,
+  '42501', 'permission denied for table training_goals', 'a goals row''s start never changes'
+);
+
+-- What the grants allow, on A's own rows.
+select lives_ok(
+  $$ update public.workout_sessions set ended_at = '2026-10-17 09:00+00', note = 'key348-done' where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  'user A ends and annotates their own session'
+);
+select lives_ok(
+  $$ update public.workout_sessions set deleted_at = now() where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  'user A soft deletes their own session'
+);
+select is(
+  (select count(*)::int from public.workout_sessions where id = '34800000-0000-4000-8000-0000000006a1' and deleted_at is not null)
+    || '/' || (select count(*)::int from public.workout_sets where session_id = '34800000-0000-4000-8000-0000000006a1' and deleted_at is null),
+  '1/8',
+  'a soft deleted session is still readable, and its sets are untouched'
+);
+select lives_ok(
+  $$ update public.workout_sessions set deleted_at = null where id = '34800000-0000-4000-8000-0000000006a1' $$,
+  'user A restores their own session'
+);
+select lives_ok(
+  $$ update public.workout_sets set deleted_at = now() where session_id = '34800000-0000-4000-8000-0000000006a1' and position = 6 $$,
+  'user A soft deletes their own set'
+);
+select is(
+  (select count(*)::int from public.workout_sets where session_id = '34800000-0000-4000-8000-0000000006a1' and position = 6 and deleted_at is not null),
+  1,
+  'a soft deleted set is still readable'
+);
+select lives_ok(
+  $$ update public.routines set name = 'key348-a-direct-renamed', is_archived = true where id = current_setting('key348.direct')::uuid $$,
+  'user A renames and archives their own routine'
+);
+select lives_ok(
+  $$ update public.routine_days set name = 'key348-sunday-renamed', weekday = 5 where id = current_setting('key348.sunday')::uuid $$,
+  'user A edits their own day'
+);
+select throws_ok(
+  $$ update public.routines set is_active = true where id = current_setting('key348.direct')::uuid $$,
+  '23514', 'new row for relation "routines" violates check constraint "routines_active_not_archived"',
+  'an archived routine cannot be active'
+);
+
+-- An exercise is soft deleted, never hard deleted, and the sets logged against it keep their frozen
+-- snapshot whatever happens to it.
+select lives_ok(
+  $$ select pg_temp.log_set(12, 40, set_exercise => '34800000-0000-4000-8000-0000000001a2', set_position => 7,
+       set_snapshot => pg_temp.snapshot('34800000-0000-4000-8000-0000000001a2', 'key348-a-row')) $$,
+  'user A logs a set against their own private exercise'
+);
+select lives_ok(
+  $$ update public.exercises set name = 'key348-a-row-renamed', deleted_at = now() where id = '34800000-0000-4000-8000-0000000001a2' $$,
+  'user A renames and soft deletes that exercise'
+);
+select is(
+  (select count(*)::int || '/' || min(s.snapshot ->> 'ref') || '/' || min(s.snapshot ->> 'name') || '/' || min(s.snapshot ->> 'version')
+   from public.workout_sets s where s.exercise_id = '34800000-0000-4000-8000-0000000001a2' and s.deleted_at is null),
+  '1/34800000-0000-4000-8000-0000000001a2/key348-a-row/1',
+  'the set survives the exercise''s soft delete with its snapshot as it was logged'
+);
+select is(
+  (select count(*)::int from public.exercises where id = '34800000-0000-4000-8000-0000000001a2' and deleted_at is not null),
+  1,
+  'the soft deleted exercise is still readable for the set that names it'
+);
+
+reset role;
+
+-- No action: the set blocks a stray hard delete of its exercise, even by postgres.
+select throws_ok(
+  $$ delete from public.exercises where id = '34800000-0000-4000-8000-0000000001a2' $$,
+  '23503', 'update or delete on table "exercises" violates foreign key constraint "workout_sets_exercise_id_fkey" on table "workout_sets"',
+  'a set blocks the hard delete of its exercise'
+);
+select throws_ok(
+  $$ delete from public.exercises where id = '34800000-0000-4000-8000-0000000001a1' $$,
+  '23503', 'update or delete on table "exercises" violates foreign key constraint "routine_exercises_exercise_id_fkey" on table "routine_exercises"',
+  'a planned exercise blocks the hard delete of its exercise'
+);
+
+-- save_routine as user A: creating. Keys it does not know are ignored, so the caller owns the
+-- routine, it starts inactive and live, and every position is the index in its array.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"34800000-0000-4000-8000-00000000000a","role":"authenticated"}';
+
+select lives_ok(
+  $$ select set_config('key348.plan', public.save_routine(
+       null,
+       '{"name":"key348-a-plan","id":"34800000-0000-4000-8000-0000000003ee","user_id":"34800000-0000-4000-8000-00000000000b","is_active":true,"is_archived":true}',
+       jsonb_build_array(
+         pg_temp.day('key348-push', 0, jsonb_build_array(
+           pg_temp.planned() || '{"user_id":"34800000-0000-4000-8000-00000000000b","position":9,"routine_day_id":"34800000-0000-4000-8000-0000000004b1"}',
+           pg_temp.planned('34800000-0000-4000-8000-0000000001a1', 4, 6, 8, 2)
+         )) || '{"position":5,"user_id":"34800000-0000-4000-8000-00000000000b","routine_id":"34800000-0000-4000-8000-0000000003b1"}',
+         pg_temp.day('key348-pull', 2, jsonb_build_array(pg_temp.planned('34800000-0000-4000-8000-000000000101', 5, 5, 5, 0))),
+         pg_temp.day('key348-legs', null) - 'id'
+       )
+     )::text, true) $$,
+  'a new routine is created with its days and their exercises'
+);
+select is(
+  (select user_id::text || '/' || name || '/' || is_active::text || '/' || is_archived::text || '/' || (id <> '34800000-0000-4000-8000-0000000003ee')::text
+   from public.routines where id = current_setting('key348.plan')::uuid),
+  '34800000-0000-4000-8000-00000000000a/key348-a-plan/false/false/true',
+  'the routine belongs to the caller, starts inactive and live, and has the database''s id, whatever the payload says'
+);
+select is(
+  (select array_agg(position::text || ':' || coalesce(weekday::text, 'any') || ':' || name || ':' || user_id::text order by position)
+   from public.routine_days where routine_id = current_setting('key348.plan')::uuid),
+  array[
+    '0:0:key348-push:34800000-0000-4000-8000-00000000000a',
+    '1:2:key348-pull:34800000-0000-4000-8000-00000000000a',
+    '2:any:key348-legs:34800000-0000-4000-8000-00000000000a'
+  ],
+  'the days are in the order sent, on their weekdays, and belong to the caller'
+);
+select is(
+  (select array_agg(d.name || ':' || e.position::text || ':' || e.exercise_id::text || ':' || e.target_sets::text || ':' || e.rep_min::text || '-' || e.rep_max::text || ':' || coalesce(e.target_rir::text, 'none') || ':' || e.user_id::text order by d.position, e.position)
+   from public.routine_exercises e join public.routine_days d on d.id = e.routine_day_id
+   where d.routine_id = current_setting('key348.plan')::uuid),
+  array[
+    'key348-push:0:34800000-0000-4000-8000-000000000101:3:8-12:none:34800000-0000-4000-8000-00000000000a',
+    'key348-push:1:34800000-0000-4000-8000-0000000001a1:4:6-8:2:34800000-0000-4000-8000-00000000000a',
+    'key348-pull:0:34800000-0000-4000-8000-000000000101:5:5-5:0:34800000-0000-4000-8000-00000000000a'
+  ],
+  'each day has its exercises in the order sent, a global and an own exercise among them'
+);
+do $$ begin
+  perform set_config('key348.push', (select id::text from public.routine_days where routine_id = current_setting('key348.plan')::uuid and name = 'key348-push'), true);
+  perform set_config('key348.pull', (select id::text from public.routine_days where routine_id = current_setting('key348.plan')::uuid and name = 'key348-pull'), true);
+  perform set_config('key348.legs', (select id::text from public.routine_days where routine_id = current_setting('key348.plan')::uuid and name = 'key348-legs'), true);
+end $$;
+select lives_ok(
+  $$ select pg_temp.start_session(session_day => current_setting('key348.push')::uuid, session_note => 'key348-from-push');
+     select pg_temp.start_session(session_day => current_setting('key348.legs')::uuid, session_note => 'key348-from-legs') $$,
+  'user A logs a session from the push day and one from the legs day'
+);
+
+-- save_routine as user A: editing. Push and pull swap both positions and weekdays, legs is removed
+-- and arms is added. The kept days keep their ids.
+select lives_ok(
+  $$ select set_config('key348.plan_edit', public.save_routine(
+       current_setting('key348.plan')::uuid,
+       '{"name":"key348-a-plan-v2"}',
+       jsonb_build_array(
+         pg_temp.day('key348-pull-v2', 0, jsonb_build_array(pg_temp.planned('34800000-0000-4000-8000-0000000001a1')), current_setting('key348.pull')),
+         pg_temp.day('key348-push', 2, jsonb_build_array(pg_temp.planned('34800000-0000-4000-8000-000000000101', 3, 10, 15)), current_setting('key348.push')),
+         pg_temp.day('key348-arms', 4, jsonb_build_array(pg_temp.planned()))
+       )
+     )::text, true) $$,
+  'the routine is edited: two days swap position and weekday, one is removed and one is added'
+);
+select lives_ok(
+  $$ set constraints all immediate; set constraints all deferred $$,
+  'every deferred check passes after the edit, the day position key among them'
+);
+select is(current_setting('key348.plan_edit'), current_setting('key348.plan'), 'an edit returns the routine''s id');
+select is(
+  (select name from public.routines where id = current_setting('key348.plan')::uuid),
+  'key348-a-plan-v2',
+  'the routine is renamed'
+);
+select is(
+  (select array_agg(position::text || ':' || coalesce(weekday::text, 'any') || ':' || name || ':' ||
+     case id when current_setting('key348.push')::uuid then 'push-id' when current_setting('key348.pull')::uuid then 'pull-id' else 'new-id' end
+     order by position)
+   from public.routine_days where routine_id = current_setting('key348.plan')::uuid),
+  array['0:0:key348-pull-v2:pull-id', '1:2:key348-push:push-id', '2:4:key348-arms:new-id'],
+  'the kept days keep their ids, swap positions and weekdays, and the new day is added'
+);
+select is(
+  (select count(*)::int from public.routine_days where id = current_setting('key348.legs')::uuid),
+  0,
+  'the day that was not sent is removed'
+);
+select is(
+  (select array_agg(note || ':' || coalesce(case routine_day_id when current_setting('key348.push')::uuid then 'push-id' else routine_day_id::text end, 'unlinked') order by note)
+   from public.workout_sessions where note in ('key348-from-push', 'key348-from-legs')),
+  array['key348-from-legs:unlinked', 'key348-from-push:push-id'],
+  'the removed day''s session keeps itself and loses only its link; the kept day''s session keeps its link'
+);
+select is(
+  (select array_agg(d.name || ':' || e.position::text || ':' || e.exercise_id::text || ':' || e.target_sets::text || ':' || e.rep_min::text || '-' || e.rep_max::text order by d.position, e.position)
+   from public.routine_exercises e join public.routine_days d on d.id = e.routine_day_id
+   where d.routine_id = current_setting('key348.plan')::uuid),
+  array[
+    'key348-pull-v2:0:34800000-0000-4000-8000-0000000001a1:3:8-12',
+    'key348-push:0:34800000-0000-4000-8000-000000000101:3:10-15',
+    'key348-arms:0:34800000-0000-4000-8000-000000000101:3:8-12'
+  ],
+  'each day''s exercises are replaced as a whole'
+);
+
+-- save_routine is all or nothing. Each refused save below leaves the edited version in place.
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-refused"}', jsonb_build_array(
+       pg_temp.day('key348-refused', 0, jsonb_build_array(pg_temp.planned(), pg_temp.planned('34800000-0000-4000-8000-0000000001b1')), current_setting('key348.pull')))) $$,
+  'P0002', 'an exercise does not exist or is not yours',
+  'one of user B''s private exercises refuses the whole save'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-refused"}', jsonb_build_array(
+       pg_temp.day('key348-refused', 0, jsonb_build_array(pg_temp.planned('34800000-0000-4000-8000-00000000dead'))))) $$,
+  'P0002', 'an exercise does not exist or is not yours',
+  'an exercise that does not exist fails the same way'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-refused"}', jsonb_build_array(
+       pg_temp.day('key348-refused', 0, '[]', current_setting('key348.pull')),
+       pg_temp.day('key348-refused', 1, '[]', '34800000-0000-4000-8000-0000000004b1'))) $$,
+  'P0002', 'a routine day does not exist or is not in this routine',
+  'a day of user B''s refuses the save after the routine row was written'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-refused"}', jsonb_build_array(
+       pg_temp.day('key348-refused', 0, '[]', current_setting('key348.sunday')))) $$,
+  'P0002', 'a routine day does not exist or is not in this routine',
+  'a day of the caller''s other routine is refused the same way'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-refused"}', jsonb_build_array(
+       pg_temp.day('key348-refused', 0, '[]', current_setting('key348.legs')))) $$,
+  'P0002', 'a routine day does not exist or is not in this routine',
+  'a removed day cannot be sent back by its old id'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-refused"}', jsonb_build_array(
+       pg_temp.day('key348-refused', 0, '[]', current_setting('key348.pull')),
+       pg_temp.day('key348-refused', 1, jsonb_build_array(pg_temp.planned(target_sets => 21))))) $$,
+  '22023', 'target_sets must be a whole number from 1 to 20',
+  'a bound broken in a later day refuses the whole save'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-refused"}', jsonb_build_array(pg_temp.day('key348-refused', 0, '[]', current_setting('key348.pull')))) $$,
+  'P0002', 'a routine day does not exist or is not in this routine',
+  'a new routine cannot take an existing day'
+);
+select throws_ok(
+  $$ select public.save_routine('34800000-0000-4000-8000-0000000003b1', '{"name":"key348-refused"}', '[]') $$,
+  'P0002', 'the routine does not exist or is not yours',
+  'user A cannot save over user B''s routine'
+);
+select throws_ok(
+  $$ select public.save_routine('34800000-0000-4000-8000-00000000dead', '{"name":"key348-refused"}', '[]') $$,
+  'P0002', 'the routine does not exist or is not yours',
+  'a routine that does not exist fails the same way'
+);
+select is(
+  (select count(*)::int from public.routines where name = 'key348-refused')
+    || '/' || (select count(*)::int from public.routine_days where name = 'key348-refused'),
+  '0/0',
+  'no refused save created or renamed a routine or a day'
+);
+select is(
+  (select r.name || '/' || array_to_string(array_agg(d.id::text || ':' || d.position::text || ':' || coalesce(d.weekday::text, 'any') || ':' || d.name order by d.position), ',')
+   from public.routines r join public.routine_days d on d.routine_id = r.id
+   where r.id = current_setting('key348.plan')::uuid group by r.name),
+  'key348-a-plan-v2/' || current_setting('key348.pull') || ':0:0:key348-pull-v2,' || current_setting('key348.push') || ':1:2:key348-push,'
+    || (select id::text from public.routine_days where routine_id = current_setting('key348.plan')::uuid and name = 'key348-arms') || ':2:4:key348-arms',
+  'after the refused saves the routine and its days are exactly the previous version'
+);
+select is(
+  (select count(*)::int from public.routine_exercises e join public.routine_days d on d.id = e.routine_day_id where d.routine_id = current_setting('key348.plan')::uuid),
+  3,
+  'and so are its planned exercises'
+);
+
+-- The edges. Seven days on every weekday, a name of 200 characters, day names of 100, a day of 30
+-- exercises at the top of every target, and a weekday sent as 6.0.
+select lives_ok(
+  $$ select set_config('key348.full', public.save_routine(
+       null,
+       jsonb_build_object('name', 'key348-' || repeat('f', 193)),
+       (select jsonb_agg(
+          case when weekday = 6
+            then jsonb_build_object('weekday', 6.0, 'name', 'key348-' || repeat('w', 93), 'exercises', (
+              select jsonb_agg(pg_temp.planned('34800000-0000-4000-8000-000000000101', 20, 100, 100, 10)) from generate_series(1, 30)))
+            else pg_temp.day('key348-' || repeat('w', 93), weekday, jsonb_build_array(pg_temp.planned('34800000-0000-4000-8000-000000000101', 1, 1, 1, 0)))
+          end order by weekday)
+        from generate_series(0, 6) as weekday)
+     )::text, true) $$,
+  'seven days, 200 and 100 character names, 30 exercises on a day and every target at its edge are accepted'
+);
+select is(
+  (select count(*)::int || '/' || array_to_string(array_agg(weekday order by position), ',') from public.routine_days where routine_id = current_setting('key348.full')::uuid)
+    || '/' || (select count(*)::int from public.routine_exercises e join public.routine_days d on d.id = e.routine_day_id where d.routine_id = current_setting('key348.full')::uuid),
+  '7/0,1,2,3,4,5,6/36',
+  'the full routine has its seven days and 36 planned exercises'
+);
+select lives_ok(
+  $$ select public.save_routine(current_setting('key348.full')::uuid, '{"name":"key348-emptied"}', '[]') $$,
+  'a routine can be saved with no days'
+);
+select is(
+  (select count(*)::int from public.routine_days where routine_id = current_setting('key348.full')::uuid),
+  0,
+  'and then has none'
+);
+
+-- Every payload refusal, with 22023 and a message that quotes no value.
+select throws_ok($$ select public.save_routine(null, '[]', '[]') $$, '22023', 'save_routine needs the routine as a JSON object', 'a routine that is not an object is refused');
+select throws_ok($$ select public.save_routine(null, null, '[]') $$, '22023', 'save_routine needs the routine as a JSON object', 'a missing routine is refused');
+select throws_ok($$ select public.save_routine(null, '{"name":"key348-x"}', '{}') $$, '22023', 'save_routine needs the days as a JSON array', 'days that are not an array are refused');
+select throws_ok($$ select public.save_routine(null, '{"name":1}', '[]') $$, '22023', 'the routine name must be text', 'a name that is not text is refused');
+select throws_ok($$ select public.save_routine(null, '{}', '[]') $$, '22023', 'the routine name must be text', 'a missing name is refused');
+select throws_ok($$ select public.save_routine(null, '{"name":" \t"}', '[]') $$, '22023', 'the routine name must not be blank', 'a blank name is refused');
+select throws_ok(
+  $$ select public.save_routine(null, jsonb_build_object('name', 'key348-' || repeat('f', 194)), '[]') $$,
+  '22023', 'the routine name has at most 200 characters', 'a name of 201 characters is refused'
+);
+select throws_ok($$ select public.save_routine(null, '{"name":"key348-x"}', '[1]') $$, '22023', 'every day must be a JSON object', 'a day that is not an object is refused');
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', (select jsonb_agg(pg_temp.day('key348-d', null)) from generate_series(1, 8))) $$,
+  '22023', 'a routine has at most 7 days', 'eight days are refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, '[]', 'key348-not-a-uuid'))) $$,
+  '22023', 'every day id must be a uuid or null', 'a day id that is not a uuid is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null) || '{"id":5}')) $$,
+  '22023', 'every day id must be a uuid or null', 'a day id that is a number is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-x"}', jsonb_build_array(
+       pg_temp.day('key348-d', 0, '[]', current_setting('key348.pull')), pg_temp.day('key348-d', 1, '[]', upper(current_setting('key348.pull'))))) $$,
+  '22023', 'a day is sent at most once', 'the same day sent twice is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null) || '{"weekday":"1"}')) $$,
+  '22023', 'every weekday must be a number or null', 'a weekday that is text is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', 7))) $$,
+  '22023', 'every weekday must be a whole number from 0 to 6', 'weekday 7 is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', -1))) $$,
+  '22023', 'every weekday must be a whole number from 0 to 6', 'weekday -1 is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null) || '{"weekday":1.5}')) $$,
+  '22023', 'every weekday must be a whole number from 0 to 6', 'a weekday that is not whole is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', 3), pg_temp.day('key348-e', 3))) $$,
+  '22023', 'a routine has at most one day per weekday', 'two days on one weekday are refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null) - 'name')) $$,
+  '22023', 'every day name must be text', 'a day with no name is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day(' ', null))) $$,
+  '22023', 'a day name must not be blank', 'a blank day name is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-' || repeat('w', 94), null))) $$,
+  '22023', 'a day name has at most 100 characters', 'a day name of 101 characters is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null) - 'exercises')) $$,
+  '22023', 'every day needs its exercises as a JSON array', 'a day with no exercises array is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, (select jsonb_agg(pg_temp.planned()) from generate_series(1, 31))))) $$,
+  '22023', 'a routine day has at most 30 exercises', '31 exercises on a day are refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, '["key348"]'))) $$,
+  '22023', 'every planned exercise must be a JSON object', 'a planned exercise that is not an object is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned('key348-not-a-uuid'))))) $$,
+  '22023', 'every exercise id must be a uuid', 'an exercise id that is not a uuid is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned() - 'exercise_id')))) $$,
+  '22023', 'every exercise id must be a uuid', 'a planned exercise with no exercise id is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned() || '{"target_sets":"3"}')))) $$,
+  '22023', 'the targets of every planned exercise must be numbers, and target_rir may be null', 'target_sets as text is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned() - 'rep_max')))) $$,
+  '22023', 'the targets of every planned exercise must be numbers, and target_rir may be null', 'a missing rep_max is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned() || '{"target_rir":"2"}')))) $$,
+  '22023', 'the targets of every planned exercise must be numbers, and target_rir may be null', 'target_rir as text is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(target_sets => 0))))) $$,
+  '22023', 'target_sets must be a whole number from 1 to 20', '0 target sets are refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(target_sets => 21))))) $$,
+  '22023', 'target_sets must be a whole number from 1 to 20', '21 target sets are refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(target_sets => 2.5))))) $$,
+  '22023', 'target_sets must be a whole number from 1 to 20', 'target sets that are not whole are refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(rep_min => 0))))) $$,
+  '22023', 'rep_min and rep_max must be whole numbers from 1 to 100', 'a rep_min of 0 is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(rep_max => 101))))) $$,
+  '22023', 'rep_min and rep_max must be whole numbers from 1 to 100', 'a rep_max of 101 is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(rep_min => 8.5))))) $$,
+  '22023', 'rep_min and rep_max must be whole numbers from 1 to 100', 'a rep target that is not whole is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(rep_min => 12, rep_max => 8))))) $$,
+  '22023', 'rep_min cannot be above rep_max', 'a rep_min above rep_max is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(target_rir => -1))))) $$,
+  '22023', 'target_rir must be a whole number from 0 to 10, or null', 'a target RIR of -1 is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(target_rir => 11))))) $$,
+  '22023', 'target_rir must be a whole number from 0 to 10, or null', 'a target RIR of 11 is refused'
+);
+select throws_ok(
+  $$ select public.save_routine(null, '{"name":"key348-x"}', jsonb_build_array(pg_temp.day('key348-d', null, jsonb_build_array(pg_temp.planned(target_rir => 1.5))))) $$,
+  '22023', 'target_rir must be a whole number from 0 to 10, or null', 'a target RIR that is not whole is refused'
+);
+select is(
+  (select count(*)::int from public.routines where name = 'key348-x'),
+  0,
+  'no refused payload created a routine'
+);
+
 
 select * from finish();
 
