@@ -212,6 +212,50 @@ describe("compareWeekSoFar", () => {
     });
   });
 
+  describe("a routine made active on Thursday 22 October", () => {
+    // Push is Monday, Legs Wednesday and Pull Friday of the week of 19 October.
+    const planRoutine: PlanRoutine = { days: [push, legs, pull] };
+    const switchedOnThursday: PlanRoutine = { ...planRoutine, activeFrom: "2026-10-22" };
+    const projectionOf = (routine: PlanRoutine) =>
+      projectWeek(routine, WEEK, LONDON, noneLogged, params);
+    const THURSDAY_NOON = "2026-10-22T12:00:00+01:00";
+    const SATURDAY_NOON = "2026-10-24T12:00:00+01:00";
+
+    it("should read every muscle on plan, with a gap of 0, for the Monday to Wednesday days it never planned", () => {
+      const soFar = compareWeekSoFar(
+        projectionOf(switchedOnThursday),
+        THURSDAY_NOON,
+        LONDON,
+        params,
+      );
+
+      for (const muscle of MUSCLE_IDS) {
+        expect(soFar[muscle].gap).toBe(0);
+        expect(soFar[muscle].status).toBe("on_plan");
+      }
+    });
+
+    it("should read the same Thursday behind for a routine that planned those days", () => {
+      const soFar = compareWeekSoFar(projectionOf(planRoutine), THURSDAY_NOON, LONDON, params);
+
+      expect(soFar.chest_lower.status).toBe("behind");
+      expect(soFar.quads.status).toBe("behind");
+    });
+
+    it("should read a missed Friday behind on Saturday, since it is after the active date", () => {
+      const soFar = compareWeekSoFar(
+        projectionOf(switchedOnThursday),
+        SATURDAY_NOON,
+        LONDON,
+        params,
+      );
+
+      expect(soFar.lats.gap).toBe(-3);
+      expect(soFar.lats.status).toBe("behind");
+      expect(soFar.chest_lower.gap).toBe(0);
+    });
+  });
+
   it("should keep the actual sets of compareWeek and plan fewer sets than it before Sunday", () => {
     const soFar = compareWeekSoFar(goldenProjection, THURSDAY_19_00, GOLDEN_TIME_ZONE, params);
     const whole = compareWeek(goldenProjection.actual, goldenProjection.projected, params);

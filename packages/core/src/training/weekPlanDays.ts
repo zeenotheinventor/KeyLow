@@ -1,5 +1,5 @@
 import { MAX_WEEKDAY, MIN_WEEKDAY } from "./bounds";
-import { requireTimeZone, weekDays } from "./expandPlan";
+import { requireActiveFrom, requireTimeZone, weekDays } from "./expandPlan";
 import { parseMoment } from "./muscleState";
 import { summariseRoutine } from "./summariseRoutine";
 import { isCalendarDay } from "../dates/calendarDay";
@@ -39,8 +39,16 @@ export type WeekRoutineDay = Pick<RoutineDayRow, "id" | "name" | "position" | "w
   exercises: readonly WeekRoutineExercise[];
 };
 
-/** The active routine, as far as the week reads it. */
-export type WeekRoutine = Readonly<{ name: string; days: readonly WeekRoutineDay[] }>;
+/**
+ * The active routine, as far as the week reads it. `activeFrom` is the local calendar day the routine
+ * was made active, `YYYY-MM-DD` in the user's zone, as in `PlanRoutine`. Left out, the routine plans the
+ * whole week.
+ */
+export type WeekRoutine = Readonly<{
+  name: string;
+  days: readonly WeekRoutineDay[];
+  activeFrom?: string;
+}>;
 
 export type WeekPlanInput = Readonly<{
   /** Null when the person has no active routine. */
@@ -96,6 +104,10 @@ export const WEEK_DAY_STATUSES = [
  */
 export type WeekDayStatus = (typeof WEEK_DAY_STATUSES)[number];
 
+/**
+ * One day of the week. Screens draw a day by its `status`. A `rest` day may still carry the
+ * `plannedDay` it would have had, as a day before the routine's `activeFrom` does.
+ */
 export type WeekPlanDay = Readonly<{
   /** `YYYY-MM-DD`. */
   date: string;
@@ -172,9 +184,17 @@ const plannedDayOf = (day: WeekRoutineDay, dayNumber: number): PlannedDay => ({
 
 /**
  * The status of a planned day that has nothing logged against it, by where its date stands against
- * today.
+ * today. A date before the day the routine became active was never part of its plan, so it reads
+ * `rest`, never `missed`.
  */
-const statusOfUnloggedPlannedDay = (date: string, today: string): WeekDayStatus => {
+const statusOfUnloggedPlannedDay = (
+  date: string,
+  today: string,
+  activeFrom: string | undefined,
+): WeekDayStatus => {
+  if (activeFrom !== undefined && date < activeFrom) {
+    return "rest";
+  }
   if (date < today) {
     return "missed";
   }
@@ -208,6 +228,8 @@ type StatusInput = Readonly<{
   /** The ids of the routine days a finished session of the week is credited to. */
   loggedDayIds: ReadonlySet<string>;
   routineDayIds: ReadonlySet<string>;
+  /** The local day the routine became active, when it has one. */
+  activeFrom: string | undefined;
 }>;
 
 const statusOf = ({
@@ -217,12 +239,15 @@ const statusOf = ({
   sessions,
   loggedDayIds,
   routineDayIds,
+  activeFrom,
 }: StatusInput): WeekDayStatus => {
   if (sessions.some(isOpenSession)) {
     return "in_progress";
   }
   if (plannedDay !== null) {
-    return loggedDayIds.has(plannedDay.id) ? "logged" : statusOfUnloggedPlannedDay(date, today);
+    return loggedDayIds.has(plannedDay.id)
+      ? "logged"
+      : statusOfUnloggedPlannedDay(date, today, activeFrom);
   }
   if (sessions.length === 0) {
     return "rest";
@@ -244,8 +269,9 @@ const statusOf = ({
  *   An open session is credited to none. A session credited to a day on another date leaves that
  *   date's own planned day uncredited.
  * - A date with a planned day reads `logged` when its day is credited, `in_progress` when a session
- *   there is open, and otherwise `today`, `planned` or `missed` by its date against today. Its
- *   sessions and sets stay on the date whoever they are credited to.
+ *   there is open, and otherwise `today`, `planned` or `missed` by its date against today, or `rest`
+ *   when its date is before the routine's `activeFrom` (the routine plans from the day it was made
+ *   active). Its sessions and sets stay on the date whoever they are credited to.
  * - A date with no planned day reads `in_progress` when a session there is open, `logged` when a
  *   finished one names a routine day (the plan was followed on another date), `extra` when a finished
  *   one does not, and `rest` otherwise.
@@ -254,7 +280,8 @@ const statusOf = ({
  *
  * Throws a `RangeError` naming the rule when the week does not start on a Monday, the zone is not an
  * IANA name, `now` is not an ISO timestamp with a zone, a session's local date is not a calendar day,
- * two routine days share a weekday, or a weekday is out of range.
+ * the routine's `activeFrom` is not a calendar day, two routine days share a weekday, or a weekday is
+ * out of range.
  */
 export const weekPlanDays = ({
   routine,
@@ -268,6 +295,7 @@ export const weekPlanDays = ({
   const today = toLocalDate(new Date(parseMoment(now)), tz);
   if (routine !== null) {
     checkRoutine(routine);
+    requireActiveFrom(routine.activeFrom);
   }
   const weekSessions: WeekSession[] = [];
   for (const session of sessions) {
@@ -326,6 +354,7 @@ export const weekPlanDays = ({
           sessions: daySessions,
           loggedDayIds,
           routineDayIds,
+          activeFrom: routine?.activeFrom,
         }),
       };
     }),

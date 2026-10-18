@@ -16,6 +16,8 @@ import {
   weekPlanDays,
 } from "@keylow/core/training";
 
+import { planRoutineOf } from "./planRoutineOf";
+
 import type { ActiveRoutine, TrainingSet, WeekSession } from "../repos/trainingSchemas";
 import type {
   BodyMapView,
@@ -87,7 +89,7 @@ export function momentOf({ weekStart, now, at }: BodyMapMoment, timeZone: string
 
 function projectionOf(rows: BodyMapRows, weekStart: string): WeekProjection {
   return projectWeek(
-    rows.routine ?? NO_ROUTINE,
+    planRoutineOf(rows.routine, rows.timeZone) ?? NO_ROUTINE,
     weekStart,
     rows.timeZone,
     { sessions: rows.sessions, sets: rows.sessions.flatMap((session) => session.sets) },
@@ -197,7 +199,7 @@ export function nothingLoggedAt(sets: readonly TrainingSet[], computedAt: string
 /** The week as the scrubber and the Train home draw it, read at the current moment. */
 export function weekPlanOf(rows: BodyMapRows, weekStart: string, now: string): WeekPlan {
   return weekPlanDays({
-    routine: rows.routine,
+    routine: planRoutineOf(rows.routine, rows.timeZone),
     sessions: rows.sessions,
     now,
     tz: rows.timeZone,

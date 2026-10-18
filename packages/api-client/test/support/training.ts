@@ -121,6 +121,7 @@ export const previousSetRow = (overrides: Record<string, unknown> = {}) => ({
 export const routineRow = (overrides: Record<string, unknown> = {}) => ({
   id: ROUTINE_ID,
   name: "key354 routine",
+  activated_at: null,
   routine_days: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",

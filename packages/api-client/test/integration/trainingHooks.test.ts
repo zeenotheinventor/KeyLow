@@ -22,6 +22,7 @@ import {
   startSession,
 } from "./support/training";
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
+import { planRoutineOf } from "../../src/hooks/planRoutineOf";
 import { useMuscleState } from "../../src/hooks/useMuscleState";
 import { useWeekComparison } from "../../src/hooks/useWeekComparison";
 import { getActiveRoutine, listSetsFrom, listWeekSessions } from "../../src/repos/training";
@@ -126,7 +127,7 @@ describe("useWeekComparison over the real tables", () => {
     const sessions = await listWeekSessions(owner.client, WEEK_START);
     const routine = await getActiveRoutine(owner.client);
     const { actual, projected } = projectWeek(
-      present(routine, "the routine"),
+      present(planRoutineOf(routine, "UTC"), "the routine"),
       WEEK_START,
       "UTC",
       { sessions, sets: sessions.flatMap((session) => session.sets) },

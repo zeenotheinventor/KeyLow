@@ -208,7 +208,8 @@ export const todayCard = ({
   if (week.routineName === null) {
     return hasEverLoggedSession ? { kind: "no_routine" } : { kind: "first_time" };
   }
-  if (today.plannedDay === null) {
+  // A `rest` day that still carries a planned day is one before the routine was made active.
+  if (today.plannedDay === null || today.status === "rest") {
     return { kind: "rest", next: nextPlannedDayAfter(week, today.date) };
   }
   return {

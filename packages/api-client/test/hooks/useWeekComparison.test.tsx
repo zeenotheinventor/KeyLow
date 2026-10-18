@@ -61,6 +61,48 @@ describe("useWeekComparison", () => {
     });
   });
 
+  describe("a routine made active part way through the week", () => {
+    const weekComparisonOf = async (routineOverrides: Record<string, unknown>) => {
+      installTrainingFake(server, { sessions: [], routine: routineRow(routineOverrides) });
+      const { wrapper } = createWrapper();
+      const { result } = renderHook(() => useWeekComparison(WEEK_START), { wrapper });
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      return result.current.data;
+    };
+
+    it("should plan nothing for the Monday it was made active after, so there is no gap to be behind", async () => {
+      const week = await weekComparisonOf({ activated_at: "2026-10-15T09:00:00+00:00" });
+
+      expect(week?.chest_lower).toEqual({
+        actualWeeklySets: 0,
+        projectedWeeklySets: 0,
+        gap: 0,
+        status: "on_plan",
+      });
+    });
+
+    it("should plan the Monday it was made active on", async () => {
+      const week = await weekComparisonOf({ activated_at: "2026-10-12T06:00:00+00:00" });
+
+      expect(week?.chest_lower.projectedWeeklySets).toBe(3);
+    });
+
+    it("should read the activation on the user's local day, not the UTC day", async () => {
+      // 23:30 UTC on Monday 12 October is 00:30 on Tuesday 13 October in London (BST).
+      const week = await weekComparisonOf({ activated_at: "2026-10-12T23:30:00+00:00" });
+
+      expect(week?.chest_lower.projectedWeeklySets).toBe(0);
+    });
+
+    it("should plan the whole week for a routine with no recorded activation", async () => {
+      const week = await weekComparisonOf({ activated_at: null });
+
+      expect(week?.chest_lower.projectedWeeklySets).toBe(3);
+    });
+  });
+
   it("should replace the planned day with the logged one, so a logged day is on plan", async () => {
     installTrainingFake(server, { sessions: [mondaySession(3)], routine: routineRow() });
     const { wrapper } = createWrapper();

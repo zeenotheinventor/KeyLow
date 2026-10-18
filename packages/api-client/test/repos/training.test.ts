@@ -274,7 +274,7 @@ describe("getActiveRoutine", () => {
 
     const url = firstRequest(fake.requestsTo("routines"));
     expect(url.searchParams.get("select")).toBe(
-      "id,name,routine_days(id,name,position,weekday,routine_exercises(id,position,exercise_id,target_sets,target_rir,exercises(id,name,equipment,mechanic,exercise_muscles(muscle_id,role,weight))))",
+      "id,name,activated_at,routine_days(id,name,position,weekday,routine_exercises(id,position,exercise_id,target_sets,target_rir,exercises(id,name,equipment,mechanic,exercise_muscles(muscle_id,role,weight))))",
     );
     expect(url.searchParams.get("is_active")).toBe("eq.true");
     expect(url.searchParams.get("routine_days.order")).toBe("position.asc");
@@ -289,6 +289,7 @@ describe("getActiveRoutine", () => {
     expect(routine).toEqual({
       id: "88888888-8888-4888-8888-888888888888",
       name: "key354 routine",
+      activatedAt: null,
       days: [
         {
           id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
@@ -314,6 +315,28 @@ describe("getActiveRoutine", () => {
         },
       ],
     });
+  });
+
+  it("should keep the instant the routine was made active, and never a date", async () => {
+    installTrainingFake(server, {
+      routine: routineRow({ activated_at: "2026-10-15T23:30:00+00:00" }),
+    });
+
+    const routine = await getActiveRoutine(createTestClient());
+
+    expect(routine?.activatedAt).toBe("2026-10-15T23:30:00+00:00");
+    expect(routine).not.toHaveProperty("activeFrom");
+  });
+
+  it("should refuse an activation that is not a timestamp, naming the row and the field only", async () => {
+    installTrainingFake(server, { routine: routineRow({ activated_at: "Thursday" }) });
+
+    const error = await rejectionOf(getActiveRoutine(createTestClient()));
+
+    expect(error?.message).toMatch(
+      /^Could not read the routine: row .* has an unexpected shape at activated_at/,
+    );
+    expect(textOf(error)).not.toContain("Thursday");
   });
 
   it("should resolve to null when the user has no active routine", async () => {

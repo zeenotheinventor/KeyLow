@@ -63,6 +63,7 @@ export const goldenSessions = goldenWeek.sessions.map((session) => ({
 export const goldenRoutine = {
   id: ROUTINE_ID,
   name: goldenWeek.routine.name,
+  activated_at: null,
   routine_days: goldenWeek.routine.days.map((day) => ({
     id: day.id,
     name: day.name,

@@ -58,6 +58,8 @@ const UNTARGETED: MuscleId[] = [
 ];
 const PUSH: MuscleId[] = ["triceps", "delt_front", "delt_side", "chest_upper", "chest_lower"];
 
+const PULL_ONLY: MuscleId[] = ["biceps", "delt_rear", "forearms", "lats", "traps_mid"];
+
 /** The default routine with its Monday bench press planned for `targetSets` sets, enough to glow. */
 const benchRoutine = (targetSets: number) => {
   const routine = routineRow();
@@ -372,6 +374,86 @@ describe("useBodyMap, gap", () => {
       expect(result.current.data).toBeDefined();
     });
     expect(result.current.data?.values.lats).toBe(ON_PLAN);
+  });
+});
+
+describe("useBodyMap, a routine made active on Thursday 15 October", () => {
+  // Nothing is logged this week, and the golden routine plans Push on Monday, Pull on Tuesday, Legs on
+  // Thursday and Push on Saturday.
+  const THURSDAY_NOON = "2026-10-15T12:00:00+01:00";
+  const SATURDAY_NOON = "2026-10-17T12:00:00+01:00";
+  const nothingLogged = (activatedAt: string | null) => ({
+    ...goldenWeekData,
+    sets: [],
+    sessions: [],
+    routine: { ...goldenWeekData.routine, activated_at: activatedAt },
+  });
+
+  it("should leave Monday to Wednesday at gap 0, nothing behind, and read them as rest", async () => {
+    installTrainingFake(server, nothingLogged("2026-10-15T07:30:00+00:00"));
+
+    const gap = renderBodyMap({ scale: "gap", now: THURSDAY_NOON });
+    const days = renderBodyMap({ scale: "heat", now: THURSDAY_NOON });
+    await waitFor(() => {
+      expect(gap.result.current.data).toBeDefined();
+      expect(days.result.current.data).toBeDefined();
+    });
+
+    // Nothing is behind. The muscles only Tuesday's Pull trains have no planned set this week at all.
+    expect(gap.result.current.data?.values).toStrictEqual(
+      Object.fromEntries(
+        MUSCLE_IDS.map((muscle) => [
+          muscle,
+          UNTARGETED.includes(muscle) || PULL_ONLY.includes(muscle) ? NOT_IN_PLAN : ON_PLAN,
+        ]),
+      ),
+    );
+    expect(days.result.current.data?.days.map((day) => day.status)).toStrictEqual([
+      "rest",
+      "rest",
+      "rest",
+      "today",
+      "rest",
+      "planned",
+      "rest",
+    ]);
+  });
+
+  it("should read the same Thursday behind and the first two days missed for a routine with no recorded activation", async () => {
+    installTrainingFake(server, nothingLogged(null));
+
+    const gap = renderBodyMap({ scale: "gap", now: THURSDAY_NOON });
+    const days = renderBodyMap({ scale: "heat", now: THURSDAY_NOON });
+    await waitFor(() => {
+      expect(gap.result.current.data).toBeDefined();
+      expect(days.result.current.data).toBeDefined();
+    });
+
+    expect(gap.result.current.data?.values.chest_lower).toBe(BEHIND);
+    expect(days.result.current.data?.days.slice(0, 2).map((day) => day.status)).toStrictEqual([
+      "missed",
+      "missed",
+    ]);
+  });
+
+  it("should read the activation on the user's local day, not the UTC day", async () => {
+    // 23:30 UTC on Thursday is 00:30 on Friday in London (BST), so Thursday's Legs was never planned.
+    installTrainingFake(server, nothingLogged("2026-10-15T23:30:00+00:00"));
+
+    const { result } = renderBodyMap({ scale: "heat", now: SATURDAY_NOON });
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+
+    expect(result.current.data?.days.map((day) => day.status)).toStrictEqual([
+      "rest",
+      "rest",
+      "rest",
+      "rest",
+      "rest",
+      "today",
+      "rest",
+    ]);
   });
 });
 

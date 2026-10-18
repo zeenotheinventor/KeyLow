@@ -155,7 +155,7 @@ export async function getActiveRoutine(
   const { data, error } = await client
     .from("routines")
     .select(
-      "id,name,routine_days(id,name,position,weekday,routine_exercises(id,position,exercise_id,target_sets,target_rir,exercises(id,name,equipment,mechanic,exercise_muscles(muscle_id,role,weight))))",
+      "id,name,activated_at,routine_days(id,name,position,weekday,routine_exercises(id,position,exercise_id,target_sets,target_rir,exercises(id,name,equipment,mechanic,exercise_muscles(muscle_id,role,weight))))",
     )
     .eq("is_active", true)
     .order("position", { ascending: true, referencedTable: "routine_days" })
