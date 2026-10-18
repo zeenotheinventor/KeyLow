@@ -87,6 +87,9 @@ const parseTimestamp = (timestamp: string, rule: string): number => {
 const SESSION_TIME_RULE = "A session's times must be ISO timestamps with a zone";
 const SET_TIME_RULE = "A set's performed_at must be an ISO timestamp with a zone";
 
+/** The fields of a set that say where it sits in its session and whether it counts at all. Not exported from the package. */
+export type OrderableSet = Pick<HistorySet, "id" | "position" | "performed_at" | "deleted_at">;
+
 const isLive = (set: Pick<HistorySet, "deleted_at">): boolean => set.deleted_at === null;
 
 const workingSetsOf = (sets: readonly HistorySet[]): HistorySet[] =>
@@ -107,7 +110,7 @@ const compareText = (first: string, second: string): number => {
  *
  * Throws a `RangeError` naming the rule when a set's `performed_at` is not an ISO timestamp with a zone.
  */
-export const orderSessionSets = <Set extends HistorySet>(sets: readonly Set[]): Set[] =>
+export const orderSessionSets = <Set extends OrderableSet>(sets: readonly Set[]): Set[] =>
   sets
     .filter(isLive)
     .map((set) => ({ set, performedAt: parseTimestamp(set.performed_at, SET_TIME_RULE) }))
