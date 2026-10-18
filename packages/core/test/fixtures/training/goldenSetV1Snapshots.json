@@ -1,0 +1,90 @@
+[
+  {
+    "name": "the dumbbell lateral raise of ADR 0005, Amendment 1",
+    "exercise": {
+      "id": "6f1c2b9e-0000-4000-8000-000000000001",
+      "name": "Dumbbell lateral raise",
+      "equipment": "dumbbell",
+      "mechanic": "isolation"
+    },
+    "muscles": [
+      { "muscle_id": "delt_side", "role": "primary", "weight": 1 },
+      { "muscle_id": "traps_upper", "role": "secondary", "weight": 0.3 }
+    ],
+    "snapshot": {
+      "version": 1,
+      "kind": "exercise",
+      "ref": "6f1c2b9e-0000-4000-8000-000000000001",
+      "name": "Dumbbell lateral raise",
+      "equipment": "dumbbell",
+      "mechanic": "isolation",
+      "muscleListVersion": 1,
+      "muscles": [
+        { "muscle_id": "delt_side", "role": "primary", "weight": 1 },
+        { "muscle_id": "traps_upper", "role": "secondary", "weight": 0.3 }
+      ]
+    }
+  },
+  {
+    "name": "the barbell bench press of ADR 0005, read out of list order",
+    "exercise": {
+      "id": "6f1c2b9e-0000-4000-8000-000000000002",
+      "name": "Barbell bench press",
+      "equipment": "barbell",
+      "mechanic": "compound"
+    },
+    "muscles": [
+      { "muscle_id": "chest_lower", "role": "primary", "weight": 1 },
+      { "muscle_id": "triceps", "role": "secondary", "weight": 0.5 },
+      { "muscle_id": "chest_upper", "role": "secondary", "weight": 0.6 },
+      { "muscle_id": "delt_front", "role": "secondary", "weight": 0.5 }
+    ],
+    "snapshot": {
+      "version": 1,
+      "kind": "exercise",
+      "ref": "6f1c2b9e-0000-4000-8000-000000000002",
+      "name": "Barbell bench press",
+      "equipment": "barbell",
+      "mechanic": "compound",
+      "muscleListVersion": 1,
+      "muscles": [
+        { "muscle_id": "chest_upper", "role": "secondary", "weight": 0.6 },
+        { "muscle_id": "chest_lower", "role": "primary", "weight": 1 },
+        { "muscle_id": "delt_front", "role": "secondary", "weight": 0.5 },
+        { "muscle_id": "triceps", "role": "secondary", "weight": 0.5 }
+      ]
+    }
+  },
+  {
+    "name": "a bodyweight pull-up with a stabiliser",
+    "exercise": {
+      "id": "6f1c2b9e-0000-4000-8000-000000000003",
+      "name": "Pull-up",
+      "equipment": "bodyweight",
+      "mechanic": "compound"
+    },
+    "muscles": [
+      { "muscle_id": "abs", "role": "stabiliser", "weight": 0.2 },
+      { "muscle_id": "lats", "role": "primary", "weight": 1 },
+      { "muscle_id": "biceps", "role": "secondary", "weight": 0.5 },
+      { "muscle_id": "delt_rear", "role": "secondary", "weight": 0.3 },
+      { "muscle_id": "traps_mid", "role": "secondary", "weight": 0.4 }
+    ],
+    "snapshot": {
+      "version": 1,
+      "kind": "exercise",
+      "ref": "6f1c2b9e-0000-4000-8000-000000000003",
+      "name": "Pull-up",
+      "equipment": "bodyweight",
+      "mechanic": "compound",
+      "muscleListVersion": 1,
+      "muscles": [
+        { "muscle_id": "delt_rear", "role": "secondary", "weight": 0.3 },
+        { "muscle_id": "lats", "role": "primary", "weight": 1 },
+        { "muscle_id": "traps_mid", "role": "secondary", "weight": 0.4 },
+        { "muscle_id": "biceps", "role": "secondary", "weight": 0.5 },
+        { "muscle_id": "abs", "role": "stabiliser", "weight": 0.2 }
+      ]
+    }
+  }
+]
