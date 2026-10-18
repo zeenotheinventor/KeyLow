@@ -91,3 +91,5 @@ export type { ListRoutinesOptions } from "./routines";
 export { saveRoutine, setActiveRoutine, setRoutineArchived } from "./routineWrites";
 export type { RoutineSave } from "./routineWrites";
 export type { RoutineDetail, RoutineListEntry, RoutineRecord } from "./routineSchemas";
+export { deleteSession, finishSession, startSession } from "./sessionWrites";
+export type { SessionFinish, SessionStart } from "./sessionWrites";

@@ -504,3 +504,11 @@ None of this raises a notice or an error that quotes a value. The date is a mome
 ### Implemented by
 
 - KEY-378, migration 3: `routines.activated_at`, its trigger, `delete_workout_session`, the live session trigger on `workout_sets`, their pgTAP (`routines_activated_at.test.sql`, `delete_workout_session.test.sql` and `workout_sets_live_session.test.sql`) and the regenerated `packages/db/src/types.gen.ts`.
+
+## Amendment 3 (T2: one session in progress per user, 2026-10-18)
+
+Zee ruled on 2026-10-18 (KEY-386, `20261018170000_workout_sessions_one_open_per_user.sql`) that a user has at most one session in progress: the partial unique index `workout_sessions_one_open_per_user` on `(user_id) where ended_at is null and deleted_at is null` refuses a second with `23505`, the client reads back the session in progress, and the migration first ends older duplicates at their own `started_at`.
+
+### Implemented by
+
+- KEY-386, migration 4: `workout_sessions_one_open_per_user`, the backfill that ends older duplicates at their last live set or their start, its pgTAP (`workout_sessions_one_open.test.sql`) and the session writes of `@keylow/api-client`.

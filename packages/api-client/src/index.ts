@@ -224,3 +224,7 @@ export type {
   RoutineRecord,
   RoutineSave,
 } from "./repos";
+export { useDeleteSession, useFinishSession, useStartSession } from "./hooks";
+export type { FinishSessionInput } from "./hooks";
+export { deleteSession, finishSession, startSession } from "./repos";
+export type { SessionFinish, SessionStart } from "./repos";

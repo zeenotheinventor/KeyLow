@@ -109,6 +109,13 @@ describe("the package index", () => {
     "useRoutines",
     "useSaveRoutine",
     "useSetActiveRoutine",
+
+    "startSession",
+    "finishSession",
+    "deleteSession",
+    "useStartSession",
+    "useFinishSession",
+    "useDeleteSession",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

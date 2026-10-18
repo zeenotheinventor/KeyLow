@@ -75,7 +75,7 @@ describe("getSession", () => {
       { weekday: 3, name: "key384-legs", exerciseIds: [bench.id] },
     ]);
     const routineDayId = present((await dayIdsOf(owner, routineId))[0], "the routine day");
-    const session = await startSession(owner, "2026-10-17", { routineDayId });
+    const session = await startSession(owner, "2026-10-17", { routineDayId, endedAt: null });
     const [setId] = await logSets(owner, session, bench, [
       { performedAt: "2026-10-17T09:30:00Z", reps: 11, loadKg: 82.5, rir: 1 },
     ]);
@@ -174,7 +174,7 @@ describe("getActiveSession", () => {
     ]);
     const routineDayId = present((await dayIdsOf(user, routineId))[0], "the routine day");
     await startSession(user, "2026-10-10");
-    const open = await startSession(user, "2026-10-17", { routineDayId });
+    const open = await startSession(user, "2026-10-17", { routineDayId, endedAt: null });
     const [setId] = await logSets(user, open, bench, [{ performedAt: "2026-10-17T09:30:00Z" }]);
 
     const active = await getActiveSession(user.client);
@@ -186,10 +186,12 @@ describe("getActiveSession", () => {
 
   it("should skip a session that has ended, however new, and one that is soft deleted", async () => {
     const user = await createTestUser("key384");
-    const older = await startSession(user, "2026-10-10");
-    await startSession(user, "2026-10-14", { endedAt: "2026-10-14T09:40:00Z" });
-    const deleted = await startSession(user, "2026-10-16");
+    // The deleted session is in progress too, newer than the one that is found, so only its deletion
+    // keeps it from being the answer. It goes first, since a user holds one live session in progress.
+    const deleted = await startSession(user, "2026-10-16", { endedAt: null });
     await softDeleteSession(user, deleted);
+    const older = await startSession(user, "2026-10-10", { endedAt: null });
+    await startSession(user, "2026-10-14", { endedAt: "2026-10-14T09:40:00Z" });
 
     expect((await getActiveSession(user.client))?.id).toBe(older);
   });
@@ -204,7 +206,7 @@ describe("getActiveSession", () => {
   it("should leave out the soft-deleted sets of the session", async () => {
     const user = await createTestUser("key384");
     const bench = await saveExercise(user, "active-deleted");
-    const open = await startSession(user, "2026-10-17");
+    const open = await startSession(user, "2026-10-17", { endedAt: null });
     const [kept, removed] = await logSets(user, open, bench, [
       { performedAt: "2026-10-17T09:30:00Z" },
       { performedAt: "2026-10-17T09:35:00Z" },
@@ -221,7 +223,7 @@ describe("getActiveSession", () => {
       createTestUser("key384"),
       createTestUser("key384"),
     ]);
-    const open = await startSession(owner, "2026-10-17");
+    const open = await startSession(owner, "2026-10-17", { endedAt: null });
 
     expect((await getActiveSession(owner.client))?.id).toBe(open);
     expect(await getActiveSession(stranger.client)).toBeNull();

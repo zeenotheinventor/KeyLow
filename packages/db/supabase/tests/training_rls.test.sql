@@ -957,7 +957,7 @@ select throws_ok(
   '42501', 'new row violates row-level security policy for table "workout_sessions"', 'a day that does not exist fails the same way for a session'
 );
 select lives_ok(
-  $$ select pg_temp.start_session(session_day => current_setting('key348.sunday')::uuid, session_note => 'key348-from-sunday') $$,
+  $$ select pg_temp.start_session(session_day => current_setting('key348.sunday')::uuid, session_ended => '2026-10-18 09:00+00', session_note => 'key348-from-sunday') $$,
   'user A starts a session from their own day'
 );
 select throws_ok(
@@ -1244,8 +1244,8 @@ do $$ begin
   perform set_config('key348.legs', (select id::text from public.routine_days where routine_id = current_setting('key348.plan')::uuid and name = 'key348-legs'), true);
 end $$;
 select lives_ok(
-  $$ select pg_temp.start_session(session_day => current_setting('key348.push')::uuid, session_note => 'key348-from-push');
-     select pg_temp.start_session(session_day => current_setting('key348.legs')::uuid, session_note => 'key348-from-legs') $$,
+  $$ select pg_temp.start_session(session_day => current_setting('key348.push')::uuid, session_ended => '2026-10-18 09:00+00', session_note => 'key348-from-push');
+     select pg_temp.start_session(session_day => current_setting('key348.legs')::uuid, session_ended => '2026-10-18 09:00+00', session_note => 'key348-from-legs') $$,
   'user A logs a session from the push day and one from the legs day'
 );
 

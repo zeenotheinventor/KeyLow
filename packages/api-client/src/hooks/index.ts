@@ -92,3 +92,8 @@ export { useRoutines } from "./useRoutines";
 export type { UseRoutinesOptions } from "./useRoutines";
 export { useSaveRoutine } from "./useSaveRoutine";
 export { useSetActiveRoutine } from "./useSetActiveRoutine";
+
+export { useDeleteSession } from "./useDeleteSession";
+export { useFinishSession } from "./useFinishSession";
+export type { FinishSessionInput } from "./useFinishSession";
+export { useStartSession } from "./useStartSession";
