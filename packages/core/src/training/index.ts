@@ -59,6 +59,18 @@ export {
   MUSCLES,
 } from "./muscles";
 export type { MuscleDetails, MuscleGroup, MuscleId, MuscleSizeClass } from "./muscles";
+export {
+  muscleParams,
+  muscleState,
+  VOLUME_STATUSES,
+  volumeStatusOf,
+  weeklyVolume,
+} from "./muscleState";
+export type { HeatSet, MuscleState, MuscleVolume, VolumeStatus } from "./muscleState";
+export { TRAINING_PARAMS_V1, TRAINING_PARAMS_VERSION } from "./params";
+export type { EffortParams, MuscleParams, TrainingParams, VolumeLandmarks } from "./params";
 export { parseSetSnapshot } from "./parseSetSnapshot";
 export type { ParsedSetSnapshot, SetSnapshotProblem } from "./parseSetSnapshot";
+export { setEffort } from "./setEffort";
+export type { EffortSet } from "./setEffort";
 export { SET_SNAPSHOT_VERSION } from "./versions";
