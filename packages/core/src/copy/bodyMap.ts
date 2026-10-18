@@ -141,6 +141,9 @@ export const BODY_MAP = {
     coolestStep: HEAT_STEP_NAMES[0],
     restDay: "Rest day",
     open: "Open the body map",
+    loadingLabel: "Loading the body map",
+    loadFailed: "Couldn't load the body map",
+    offlineUnavailable: "The body map isn't available offline.",
   },
   trainCard: { openName: "Open body map" },
   figureSetting: {
@@ -445,12 +448,17 @@ export type DashboardBodyMapCardInput = Readonly<{
   /** Today's planned day, or null when there is no routine. */
   today: TodayPlan | null;
   heatWindowDays: number;
+  /**
+   * Whether the card opens the body map. Its name then ends with "Open the body map". A card that opens
+   * nothing yet is named by what it shows alone.
+   */
+  opensBodyMap: boolean;
 }>;
 
 export type DashboardBodyMapCardCopy = {
   warmestLine: string;
   todayLine: string | null;
-  /** The name of the whole card, which is one pressable surface. */
+  /** The name of the whole card: what it shows, and "Open the body map" when it opens the body map. */
   accessibleName: string;
 };
 
@@ -464,6 +472,7 @@ export const describeDashboardBodyMapCard = ({
   warmest,
   today,
   heatWindowDays,
+  opensBodyMap,
 }: DashboardBodyMapCardInput): DashboardBodyMapCardCopy => {
   const nothingLogged = describeNothingLogged(heatWindowDays);
   const dayName = today?.kind === "session" ? today.routineDayName : BODY_MAP.dashboardCard.restDay;
@@ -476,7 +485,7 @@ export const describeDashboardBodyMapCard = ({
     `${BODY_MAP.title}, ${BODY_MAP.views.actual} heat now.`,
     `${warmest.length === 0 ? nothingLogged : warmestIn(warmest, "percent")}.`,
     ...(todaySpoken === null ? [] : [`${todaySpoken}.`]),
-    BODY_MAP.dashboardCard.open,
+    ...(opensBodyMap ? [BODY_MAP.dashboardCard.open] : []),
   ];
   return {
     warmestLine: warmest.length === 0 ? nothingLogged : warmestIn(warmest, "%"),

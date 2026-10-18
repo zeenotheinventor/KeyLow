@@ -50,3 +50,6 @@ export const NutritionCard: Story = { args: { variant: "nutritionCard" } };
 
 // The dashboard's This week card while it loads: the title, a value line, the 8 point bar, a caption and seven circles.
 export const ThisWeekCard: Story = { args: { variant: "thisWeekCard" } };
+
+// The dashboard's body map card while it loads: the title, two figures with the legend, and two lines.
+export const BodyMapCard: Story = { args: { variant: "bodyMapCard" } };

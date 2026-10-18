@@ -301,6 +301,46 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the dashboard's body map card", () => {
+    it("should be the title, the view, two figures, the legend and two lines", async () => {
+      await renderSkeleton({ variant: "bodyMapCard" });
+
+      expect(bones()).toHaveLength(7);
+    });
+
+    it("should draw the title 72 wide and 12 tall and the view 104 wide and 14 tall", async () => {
+      await renderSkeleton({ variant: "bodyMapCard" });
+
+      expect(bones()[0]).toHaveStyle({ width: 72, height: 12 });
+      expect(bones()[1]).toHaveStyle({ width: 104, height: 14 });
+    });
+
+    it("should draw each figure 100 wide and 220 tall, the size of the figures it stands in for", async () => {
+      await renderSkeleton({ variant: "bodyMapCard" });
+
+      for (const figure of bones().slice(2, 4)) {
+        expect(figure).toHaveStyle({ width: 100, height: 220, borderRadius: 12 });
+      }
+    });
+
+    it("should draw the legend 32 wide and 120 tall, and the two lines 12 tall", async () => {
+      await renderSkeleton({ variant: "bodyMapCard" });
+
+      expect(bones()[4]).toHaveStyle({ width: 32, height: 120 });
+      expect(bones()[5]).toHaveStyle({ width: "60%", height: 12 });
+      expect(bones()[6]).toHaveStyle({ width: 56, height: 12 });
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "bodyMapCard" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });

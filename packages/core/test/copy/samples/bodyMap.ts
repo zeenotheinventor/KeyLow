@@ -17,9 +17,11 @@ const dashboardInputs: copy.DashboardBodyMapCardInput[] = [
     warmest,
     today: { kind: "session", routineDayName: "Legs", plannedSets: 16 },
     heatWindowDays: 14,
+    opensBodyMap: true,
   },
-  { warmest, today: { kind: "rest" }, heatWindowDays: 14 },
-  { warmest: [], today: null, heatWindowDays: 14 },
+  { warmest, today: { kind: "rest" }, heatWindowDays: 14, opensBodyMap: true },
+  { warmest: [], today: null, heatWindowDays: 14, opensBodyMap: true },
+  { warmest, today: { kind: "rest" }, heatWindowDays: 14, opensBodyMap: false },
 ];
 const header = { tz: LONDON, weekEnd: "2026-10-18", plannedSessions: [SATURDAYS_PUSH] } as const;
 
