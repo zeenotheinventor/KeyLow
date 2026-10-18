@@ -1,36 +1,5 @@
-// The 22 muscle ids of ADR 0005 ("The muscle list is the contract"), in the ADR's order.
-// This is the only copy inside packages/db. Core's MUSCLE_IDS (KEY-346) will become the single
-// source; when it lands, this file re-exports it instead of listing the ids again.
-export const MUSCLE_IDS = [
-  "chest_upper",
-  "chest_lower",
-  "delt_front",
-  "delt_side",
-  "delt_rear",
-  "lats",
-  "traps_upper",
-  "traps_mid",
-  "lower_back",
-  "biceps",
-  "triceps",
-  "forearms",
-  "abs",
-  "obliques",
-  "glute_max",
-  "glute_med",
-  "quads",
-  "hamstrings",
-  "adductors",
-  "calves",
-  "tibialis",
-  "neck",
-] as const;
-
-export type MuscleId = (typeof MUSCLE_IDS)[number];
-
-const muscleIds: ReadonlySet<string> = new Set(MUSCLE_IDS);
-
-export const isMuscleId = (value: string): value is MuscleId => muscleIds.has(value);
+export { MUSCLE_IDS, isMuscleId } from "@keylow/core";
+export type { MuscleId } from "@keylow/core";
 
 /** The roles of `exercise_muscles.role`, strongest first. */
 export const ROLES = ["primary", "secondary", "stabiliser"] as const;

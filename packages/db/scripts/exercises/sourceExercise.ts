@@ -38,6 +38,8 @@ export interface SourceExercise {
 
 const groups: ReadonlySet<string> = new Set(SOURCE_MUSCLE_GROUPS);
 
+const isSourceMuscleGroup = (value: string): value is SourceMuscleGroup => groups.has(value);
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -71,12 +73,12 @@ function readGroups(
     throw new Error(`${where}: ${key} is not a list`);
   }
   return value.map((group: unknown) => {
-    if (typeof group !== "string" || !groups.has(group)) {
+    if (typeof group !== "string" || !isSourceMuscleGroup(group)) {
       throw new Error(
         `${where}: ${key} holds "${String(group)}", which is not a known muscle group`,
       );
     }
-    return group as SourceMuscleGroup;
+    return group;
   });
 }
 

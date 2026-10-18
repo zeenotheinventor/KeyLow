@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { formatCsv } from "../../../scripts/cofid/csv";
-import { checkCurated } from "../../../scripts/exercises/checkCurated";
+import { checkCurated, describeProblems } from "../../../scripts/exercises/checkCurated";
 import { CURATED_COLUMNS } from "../../../scripts/exercises/columns";
 import { MUSCLE_IDS } from "../../../scripts/exercises/muscles";
 
@@ -30,13 +30,13 @@ describe("checkCurated", () => {
     expect(checkCurated(fileOf(validRows()))).toEqual([]);
   });
 
-  it("should pass secondary and stabiliser shares and the weights 0 and 1", () => {
+  it("should pass secondary and stabiliser shares and the weights 1 and 0.01", () => {
     const rows = withRow(0, ([ref, name, equipment, mechanic]) => [
       ref,
       name,
       equipment,
       mechanic,
-      "chest_upper:primary:1;triceps:secondary:0.5;abs:stabiliser:0",
+      "chest_upper:primary:1;triceps:secondary:0.5;abs:stabiliser:0.01",
       "a note, with a comma",
     ]);
 
@@ -101,8 +101,8 @@ describe("checkCurated", () => {
     expect(rulesOf(fileOf(rows))).toEqual(["no_primary"]);
   });
 
-  it.each(["1.5", "-0.5", "heavy", "", "1e-1"])(
-    "should report the weight %j as not a number from 0 to 1",
+  it.each(["0", "0.0", "0.00", "1.5", "-0.5", "heavy", "", "1e-1"])(
+    "should report the weight %j as not a number above 0 and at most 1",
     (weight) => {
       const rows = withRow(2, ([ref, name, equipment, mechanic]) => [
         ref,
@@ -128,6 +128,26 @@ describe("checkCurated", () => {
     ]);
 
     expect(rulesOf(fileOf(rows))).toEqual(["weight_out_of_range"]);
+  });
+
+  it("should state the rule for a weight out of range, without the muscle or the weight", () => {
+    const rows = withRow(0, ([ref, name, equipment, mechanic]) => [
+      ref,
+      name,
+      equipment,
+      mechanic,
+      "chest_upper:primary:1.0;triceps:secondary:0",
+      "",
+    ]);
+
+    expect(checkCurated(fileOf(rows))).toEqual([
+      {
+        rule: "weight_out_of_range",
+        line: 2,
+        sourceRef: "Exercise_chest_upper",
+        message: "a muscle weight must be a number above 0 and at most 1",
+      },
+    ]);
   });
 
   it("should report a source_ref that appears twice, naming the first line", () => {
@@ -210,5 +230,21 @@ describe("checkCurated", () => {
 
   it("should refuse a file with a quoted field that never closes", () => {
     expect(rulesOf(`${CURATED_COLUMNS.join(",")}\n"Open,quote\n`)).toEqual(["malformed"]);
+  });
+});
+
+describe("describeProblems", () => {
+  it("should give each problem as its CSV line and rule, or the file and rule when it has no line", () => {
+    expect(
+      describeProblems([
+        {
+          rule: "weight_out_of_range",
+          line: 3,
+          sourceRef: "Secret_Lift_Name",
+          message: "chest_upper has weight 7",
+        },
+        { rule: "muscle_never_primary", message: "neck is not the primary muscle of any exercise" },
+      ]),
+    ).toEqual(["  line 3: weight_out_of_range", "  the file: muscle_never_primary"]);
   });
 });

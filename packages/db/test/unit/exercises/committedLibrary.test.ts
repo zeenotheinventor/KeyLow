@@ -7,9 +7,8 @@ import { parseCsv } from "../../../scripts/cofid/csv";
 import { checkCurated } from "../../../scripts/exercises/checkCurated";
 import { curateExercises } from "../../../scripts/exercises/curate";
 import { EXERCISE_FILES } from "../../../scripts/exercises/files";
+import { isMuscleId } from "../../../scripts/exercises/muscles";
 import { formatMuscleShares } from "../../../scripts/exercises/muscleShares";
-
-import type { MuscleId } from "../../../scripts/exercises/muscles";
 
 const readPackageFile = (path: string): Buffer =>
   readFileSync(new URL(`../../../${path}`, import.meta.url));
@@ -38,7 +37,10 @@ function readReviewSample(markdown: string): Map<string, string> {
         ? []
         : cell.split(", ").map((pair) => {
             const [muscle = "", weight = ""] = pair.split(" ");
-            return { muscle: muscle as MuscleId, role, weight: Number(weight) };
+            if (!isMuscleId(muscle)) {
+              throw new Error("REVIEW-SAMPLE.md names a muscle that is not on the list");
+            }
+            return { muscle, role, weight: Number(weight) };
           });
     });
     rows.set(cells[refIndex]?.slice(1, -1) ?? "", formatMuscleShares(shares));

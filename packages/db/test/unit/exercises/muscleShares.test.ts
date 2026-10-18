@@ -57,7 +57,7 @@ describe("parseMuscleShares", () => {
 
   it("should refuse an entry that is not id:role:weight", () => {
     expect(() => parseMuscleShares("delt_side:primary")).toThrow(
-      '"delt_side:primary" is not of the form id:role:weight',
+      "a muscle share must be written id:role:weight",
     );
   });
 });

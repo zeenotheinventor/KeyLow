@@ -1,4 +1,4 @@
-import { checkCurated } from "./checkCurated";
+import { checkCurated, describeProblems } from "./checkCurated";
 import { isEquipment, isMechanic } from "./columns";
 import { isMuscleId, isRole } from "./muscles";
 import { parseMuscleShares } from "./muscleShares";
@@ -14,11 +14,8 @@ import type { ImportExercise } from "./importExercise";
 export function readCuratedExercises(csv: string): ImportExercise[] {
   const problems = checkCurated(csv);
   if (problems.length > 0) {
-    const details = problems.map(
-      ({ rule, line }) => `  ${line === undefined ? "the file" : `line ${line}`}: ${rule}`,
-    );
     throw new Error(
-      `The curated CSV fails ${problems.length} checks, so nothing was written:\n${details.join("\n")}`,
+      `The curated CSV fails ${problems.length} checks, so nothing was written:\n${describeProblems(problems).join("\n")}`,
     );
   }
 

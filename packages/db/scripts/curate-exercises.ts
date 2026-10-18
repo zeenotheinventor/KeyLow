@@ -11,7 +11,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { checkCurated } from "./exercises/checkCurated";
+import { checkCurated, describeProblems } from "./exercises/checkCurated";
 import { curateExercises } from "./exercises/curate";
 import { EXERCISE_FILES } from "./exercises/files";
 import { readPinnedFile } from "./exercises/pinnedSource";
@@ -36,8 +36,8 @@ function main(): void {
   );
 
   const problems = checkCurated(result.curatedCsv);
-  for (const { rule, sourceRef, message } of problems) {
-    console.error(`  ${rule}${sourceRef === undefined ? "" : ` ${sourceRef}`}: ${message}`);
+  for (const description of describeProblems(problems)) {
+    console.error(description);
   }
   if (problems.length > 0) {
     throw new Error(`The curated CSV fails ${problems.length} checks; nothing was written`);

@@ -25,7 +25,7 @@ export function parseMuscleShares(text: string): RawMuscleShare[] {
   return text.split(";").map((entry) => {
     const parts = entry.split(":");
     if (parts.length !== 3) {
-      throw new Error(`"${entry}" is not of the form id:role:weight`);
+      throw new Error("a muscle share must be written id:role:weight");
     }
     const [muscle = "", role = "", weight = ""] = parts;
     return { muscle, role, weight };
