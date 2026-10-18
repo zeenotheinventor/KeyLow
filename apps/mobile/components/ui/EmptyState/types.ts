@@ -13,8 +13,8 @@ export type EmptyStateAction = {
 };
 
 export type EmptyStateProps = {
-  /** The icon in the tile above the title, by name. */
-  icon: IconName;
+  /** The icon in the tile above the title, by name. Leave it out for no tile, as the training boards' card draws it. */
+  icon?: IconName | undefined;
   /** The fixed sentence that says what is missing. A screen passes it from `@keylow/core/copy`. */
   title: string;
   /** One more sentence, from `@keylow/core/copy` too. */
@@ -23,4 +23,10 @@ export type EmptyStateProps = {
   action?: EmptyStateAction | undefined;
   /** How far the words are from the sides: 24 points by default, 32 when wide, as the food not found board draws it. */
   inset?: "default" | "wide" | undefined;
+  /**
+   * `page`, the default, takes the height of its parent and sits in the middle of it. `card` is the
+   * training boards' empty state: a card the height of its words, with 20 points at the top and sides and
+   * 16 below, among the other cards of a screen. `inset` is for the page and does not move a card's words.
+   */
+  variant?: "page" | "card" | undefined;
 };

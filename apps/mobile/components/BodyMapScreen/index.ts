@@ -1,0 +1,1 @@
+export { BodyMapScreen } from "./BodyMapScreen";

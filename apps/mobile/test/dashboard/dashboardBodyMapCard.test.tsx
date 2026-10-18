@@ -1,6 +1,6 @@
 import { BODY_ARTWORK, isMuscleId } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
-import { render, screen, within } from "@testing-library/react-native";
+import { render, screen, userEvent, within } from "@testing-library/react-native";
 
 import { DashboardBodyMapCard } from "../../components/DashboardScreen/DashboardBodyMapCard";
 import { ThemeProvider } from "../../lib/theme";
@@ -23,16 +23,21 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // hidden from it, and the tests ask for hidden elements to read what they say.
 const hidden = { includeHiddenElements: true };
 
-function renderCard(props: DashboardBodyMapCardProps, scheme: ThemeScheme = "dark") {
+const openBodyMap = jest.fn<undefined, []>();
+
+function renderCard(
+  props: Omit<DashboardBodyMapCardProps, "onOpen">,
+  scheme: ThemeScheme = "dark",
+) {
   return render(
     <ThemeProvider fixedPreference={scheme}>
-      <DashboardBodyMapCard {...props} />
+      <DashboardBodyMapCard {...props} onOpen={openBodyMap} />
     </ThemeProvider>,
   );
 }
 
 const goldenName =
-  "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Legs, 16 sets planned.";
+  "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Legs, 16 sets planned. Open the body map";
 
 // A host node's props are loosely typed, so a prop is read with a descriptor.
 function propOf(props: object, name: string): unknown {
@@ -76,10 +81,11 @@ describe("DashboardBodyMapCard", () => {
 
   beforeEach(() => {
     registerAppStyles(kitStyles);
+    openBodyMap.mockReset();
   });
 
   describe("the golden week at Thursday 17:55", () => {
-    it("should be named by the warmest three muscles and today's planned day, without the words that open the body map", async () => {
+    it("should be named by the warmest three muscles and today's planned day, ending with the words that open the body map", async () => {
       await renderCard({ bodyMap: goldenThursdayBodyMap });
 
       expect(screen.getByLabelText(goldenName)).toBeOnTheScreen();
@@ -155,7 +161,7 @@ describe("DashboardBodyMapCard", () => {
       expect(screen.getByText("Today: Rest day", hidden)).toBeOnTheScreen();
       expect(
         screen.getByLabelText(
-          "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Rest day.",
+          "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Rest day. Open the body map",
         ),
       ).toBeOnTheScreen();
     });
@@ -170,7 +176,7 @@ describe("DashboardBodyMapCard", () => {
       expect(screen.queryByText(/^Today/, hidden)).not.toBeOnTheScreen();
       expect(
         screen.getByLabelText(
-          "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent.",
+          "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Open the body map",
         ),
       ).toBeOnTheScreen();
     });
@@ -191,57 +197,61 @@ describe("DashboardBodyMapCard", () => {
       expect(screen.getByText("Nothing logged in the last 14 days", hidden)).toBeOnTheScreen();
       expect(screen.queryByText(/^Warmest/, hidden)).not.toBeOnTheScreen();
       expect(
-        screen.getByLabelText("Body map, Actual heat now. Nothing logged in the last 14 days."),
+        screen.getByLabelText(
+          "Body map, Actual heat now. Nothing logged in the last 14 days. Open the body map",
+        ),
       ).toBeOnTheScreen();
     });
 
-    it("should offer no link and no Start button, because there is nothing to start yet", async () => {
+    it("should offer no Start button, because there is nothing to start yet", async () => {
       await renderCard({ bodyMap: noHistoryBodyMap });
 
-      expect(screen.queryAllByRole("button", hidden)).toHaveLength(0);
-      expect(screen.queryAllByRole("link", hidden)).toHaveLength(0);
       expect(screen.queryByText(/start/i, hidden)).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /start/i, ...hidden })).not.toBeOnTheScreen();
     });
   });
 
-  describe("as information only, until the body map screen exists", () => {
-    it("should be no button and no link, so a press on it opens nothing", async () => {
+  describe("as one link to the body map", () => {
+    it("should be one button, named by what it shows and Open the body map", async () => {
       await renderCard({ bodyMap: goldenThursdayBodyMap });
 
-      expect(screen.queryAllByRole("button", hidden)).toHaveLength(0);
-      expect(screen.queryAllByRole("link", hidden)).toHaveLength(0);
+      expect(screen.getByRole("button", { name: goldenName })).toBeOnTheScreen();
+      expect(screen.getAllByRole("button", hidden)).toHaveLength(1);
     });
 
-    it("should be named without a role, because a summary role is announced as a summary", async () => {
+    it("should open the body map when it is pressed anywhere", async () => {
       await renderCard({ bodyMap: goldenThursdayBodyMap });
+      const user = userEvent.setup();
 
-      const card = screen.getByLabelText(goldenName);
-      expect(card).not.toHaveProp("role");
-      expect(card).not.toHaveProp("accessibilityRole");
+      await user.press(screen.getByRole("button", { name: goldenName }));
+
+      expect(openBodyMap).toHaveBeenCalledTimes(1);
     });
 
-    it("should answer no press, long-press or touch at all, however it is built", async () => {
+    it("should label the link Body map, with a chevron after it, 44 points tall to touch", async () => {
       await renderCard({ bodyMap: goldenThursdayBodyMap });
 
-      const respondingNodes = (
+      const label = screen.getByText("Body map", hidden);
+
+      expect(label.parent).toHaveStyle({
+        minHeight: 44,
+        flexDirection: "row",
+        alignItems: "center",
+      });
+    });
+
+    it("should have no toggle and no long-press on the dashboard", async () => {
+      await renderCard({ bodyMap: goldenThursdayBodyMap });
+
+      expect(screen.queryAllByRole("switch", hidden)).toHaveLength(0);
+      expect(screen.queryAllByRole("radio", hidden)).toHaveLength(0);
+      expect(screen.queryByText(/show projected|show actual/i, hidden)).not.toBeOnTheScreen();
+      expect(
         screen.root?.queryAll(
           (node) =>
-            typeof node.type === "string" &&
-            Object.keys(node.props).some((name) =>
-              /^(onPress|onLongPress|onClick|onTouch|onResponder|onStartShouldSetResponder|onMoveShouldSetResponder)/.test(
-                name,
-              ),
-            ),
-        ) ?? []
-      ).map((node) => node.type);
-      expect(respondingNodes).toEqual([]);
-    });
-
-    it("should leave out the words that open the body map, in the name and on the card", async () => {
-      await renderCard({ bodyMap: goldenThursdayBodyMap });
-
-      expect(screen.queryByLabelText(/open the body map/i, hidden)).not.toBeOnTheScreen();
-      expect(screen.queryByText("Body map", hidden)).not.toBeOnTheScreen();
+            typeof node.type === "string" && propOf(node.props, "onLongPress") !== undefined,
+        ),
+      ).toEqual([]);
     });
 
     it("should have no 22 stops for a screen reader: the figures are images, not buttons", async () => {
@@ -249,7 +259,7 @@ describe("DashboardBodyMapCard", () => {
 
       expect(screen.getByRole("img", { name: /, front$/, ...hidden })).toBeOnTheScreen();
       expect(screen.getByRole("img", { name: /, back$/, ...hidden })).toBeOnTheScreen();
-      expect(screen.queryAllByRole("button", hidden)).toHaveLength(0);
+      expect(screen.getAllByRole("button", hidden)).toHaveLength(1);
     });
   });
 
