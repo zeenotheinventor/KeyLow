@@ -257,3 +257,22 @@ export type {
 export type { PlanAdjusted, PlanDayExercise, KeptExercise } from "./suggest/suggestTypes";
 export { toAcceptedExercises } from "./suggest/toAcceptedExercises";
 export type { AcceptedExercise } from "./suggest/toAcceptedExercises";
+
+export {
+  CUSTOM_EXERCISE_ROLE_WEIGHTS,
+  customExerciseMechanic,
+  customExerciseMuscles,
+  customExercisePayload,
+  validateCustomExerciseDraft,
+} from "./customExercise";
+export type {
+  CleanCustomExercise,
+  CustomExerciseChoice,
+  CustomExerciseDraft,
+  CustomExerciseDraftMuscle,
+  CustomExerciseField,
+  CustomExerciseIssue,
+  CustomExerciseMuscle,
+  CustomExercisePayload,
+  CustomExerciseRule,
+} from "./customExercise";

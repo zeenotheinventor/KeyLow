@@ -67,3 +67,22 @@ export class RoutineRuleError extends Error {
     this.rule = rule;
   }
 }
+
+/** The rules an exercise write is refused by, as stable codes. The sentence for each is screen copy. */
+export type ExerciseRule = "global_exercise";
+
+/**
+ * An exercise write the database refused for a rule the screen can explain: today only editing or
+ * archiving an exercise of the library, which is no one's to change. The screen avoids it by offering
+ * Edit and Archive on the user's own exercises only. The message names the action and the rule and
+ * nothing from the exercise, because an exercise's name and muscles are health data.
+ */
+export class ExerciseRuleError extends Error {
+  readonly rule: ExerciseRule;
+
+  constructor(action: string, rule: ExerciseRule) {
+    super(`Could not ${action} (${rule})`, { cause: { code: rule } });
+    this.name = "ExerciseRuleError";
+    this.rule = rule;
+  }
+}

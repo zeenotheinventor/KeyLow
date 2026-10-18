@@ -243,3 +243,19 @@ export { findPreviousSessionWeek, listSessionsInWeek } from "./repos";
 export type { HistorySessionRow, HistorySetRow } from "./repos";
 export { useSaveTrainingGoals, useTrainingGoals, useTrainingGoalsHistory } from "./hooks";
 export { getCurrentTrainingGoals, listTrainingGoalsHistory, saveTrainingGoals } from "./repos";
+export { useArchiveExercise, useExercise, useExerciseSearch, useSaveExercise } from "./hooks";
+export type {
+  ExerciseSearchError,
+  ExerciseSearchResult,
+  ExerciseState,
+  UseExerciseSearchOptions,
+} from "./hooks";
+export { ExerciseRuleError } from "./errors";
+export type { ExerciseRule } from "./errors";
+export { archiveExercise, getExercise, saveExercise, searchExercises } from "./repos";
+export type {
+  ExerciseDetail,
+  ExerciseSave,
+  ExerciseSearchHit,
+  ExerciseSearchOptions,
+} from "./repos";

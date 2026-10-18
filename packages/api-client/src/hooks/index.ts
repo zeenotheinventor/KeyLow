@@ -117,3 +117,13 @@ export type { HistoryEntry, HistoryWeek } from "./historyEntries";
 export { useSaveTrainingGoals } from "./useSaveTrainingGoals";
 export { useTrainingGoals } from "./useTrainingGoals";
 export { useTrainingGoalsHistory } from "./useTrainingGoalsHistory";
+export { useExercise } from "./useExercise";
+export type { ExerciseState } from "./useExercise";
+export { useExerciseSearch } from "./useExerciseSearch";
+export type {
+  ExerciseSearchError,
+  ExerciseSearchResult,
+  UseExerciseSearchOptions,
+} from "./useExerciseSearch";
+export { useArchiveExercise } from "./useArchiveExercise";
+export { useSaveExercise } from "./useSaveExercise";
