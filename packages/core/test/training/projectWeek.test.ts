@@ -10,6 +10,7 @@ import {
   LONDON,
   legs,
   loggedSets,
+  planExercise,
   PREVIOUS_WEEK,
   pull,
   push,
@@ -17,6 +18,7 @@ import {
   row,
   rowMuscles,
   session,
+  squat,
   squatMuscles,
   WEEK,
 } from "./plans";
@@ -29,7 +31,7 @@ import {
   projectWeek,
 } from "../../src/training";
 
-import type { LoggedWeek } from "../../src/training";
+import type { LoggedWeek, PlannedSet, PlanRoutineDay } from "../../src/training";
 
 const params = COMPARE_PARAMS_V1;
 
@@ -253,25 +255,218 @@ describe("projectedState", () => {
 
   it("should be muscleState over the projected sets up to the moment", () => {
     const moment = "2026-10-22T12:00:00.000Z";
-    expect(projectedState(week.projected, moment, params)).toEqual(
+    expect(projectedState(week.projected, moment, LONDON, params)).toEqual(
       muscleState(week.projected, moment, params.training),
     );
   });
 
-  it("should assume a planned day was followed once its time has passed", () => {
-    const beforeLegs = "2026-10-21T16:00:00.000Z";
-    const afterLegs = "2026-10-21T19:00:00.000Z";
+  it("should count a planned day from the day after, not once its time has passed", () => {
+    const wednesdayBeforeLegs = "2026-10-21T15:00:00.000Z";
+    const wednesdayAfterLegs = "2026-10-21T18:00:00.000Z";
+    const wednesdayEnd = "2026-10-21T22:59:00.000Z";
+    const thursdayStart = "2026-10-21T23:00:00.000Z";
+    const thursdayNoon = "2026-10-22T11:00:00.000Z";
 
-    expect(projectedState(week.projected, beforeLegs, params).quads.heat).toBe(0);
-    expect(projectedState(week.projected, afterLegs, params).quads.heat).toBeGreaterThan(0);
+    expect(projectedState(week.projected, wednesdayBeforeLegs, LONDON, params).quads.heat).toBe(0);
+    expect(projectedState(week.projected, wednesdayAfterLegs, LONDON, params).quads.heat).toBe(0);
+    expect(projectedState(week.projected, wednesdayEnd, LONDON, params).quads.heat).toBe(0);
+
+    const legsSets = week.planned.filter((set) => set.routine_day_id === legs.id);
+    for (const moment of [thursdayStart, thursdayNoon]) {
+      const quads = projectedState(week.projected, moment, LONDON, params).quads;
+      expect(quads.heat).toBeGreaterThan(0);
+      expect(quads).toEqual(muscleState(legsSets, moment, params.training).quads);
+    }
     // Nothing was logged on Wednesday, so the actual view stays cold.
-    expect(muscleState(week.actual, afterLegs, params.training).quads.heat).toBe(0);
+    expect(muscleState(week.actual, thursdayNoon, params.training).quads.heat).toBe(0);
   });
 
   it("should use the logged sets of a done day, not its planned ones", () => {
     const moment = "2026-10-19T20:00:00.000Z";
-    expect(projectedState(week.projected, moment, params).chest_lower).toEqual(
+    expect(projectedState(week.projected, moment, LONDON, params).chest_lower).toEqual(
       muscleState(mondaySets, moment, params.training).chest_lower,
     );
+  });
+
+  describe("on a week with a planned Thursday", () => {
+    const thursday: PlanRoutineDay = {
+      id: dayId(5),
+      position: 4,
+      weekday: 3,
+      exercises: [planExercise(curl, curlMuscles, 2, 1, 0)],
+    };
+    const fullWeek = projectWeek(
+      { days: [push, legs, thursday, pull] },
+      WEEK,
+      LONDON,
+      { sessions: [], sets: [] },
+      params,
+    );
+    const plannedOf = (...days: PlanRoutineDay[]): PlannedSet[] =>
+      fullWeek.planned.filter((set) => days.some((day) => day.id === set.routine_day_id));
+
+    it("should leave out the planned Thursday and Friday and count Monday and Wednesday on Thursday", () => {
+      const thursdayEvening = "2026-10-22T19:00:00.000Z";
+      const state = projectedState(fullWeek.projected, thursdayEvening, LONDON, params);
+
+      expect(state).toEqual(muscleState(plannedOf(push, legs), thursdayEvening, params.training));
+      expect(state.quads.heat).toBeGreaterThan(0);
+      expect(state.biceps.heat).toBe(0);
+      expect(state.lats.heat).toBe(0);
+    });
+
+    it("should count the planned Thursday from Friday 00:00 and not the planned Friday", () => {
+      const fridayStart = "2026-10-22T23:00:00.000Z";
+      const state = projectedState(fullWeek.projected, fridayStart, LONDON, params);
+
+      expect(state).toEqual(
+        muscleState(plannedOf(push, legs, thursday), fridayStart, params.training),
+      );
+      expect(state.biceps.heat).toBeGreaterThan(0);
+      expect(state.lats.heat).toBe(0);
+    });
+  });
+
+  describe("on a planned day that was logged today", () => {
+    const wednesday = session(1, "2026-10-21", legs.id);
+    const wednesdayMorning = "2026-10-21T09:00:00.000Z";
+
+    it("should count a logged set the moment it is performed, however early in the day", () => {
+      const sets = loggedSets(wednesday, squat, squatMuscles, 4, wednesdayMorning);
+      const logged = projectWeek(routine, WEEK, LONDON, { sessions: [wednesday], sets }, params);
+      const afterSets = "2026-10-21T09:30:00.000Z";
+      const beforeSets = "2026-10-21T08:59:00.000Z";
+
+      expect(projectedState(logged.projected, afterSets, LONDON, params).quads).toEqual(
+        muscleState(sets, afterSets, params.training).quads,
+      );
+      expect(
+        projectedState(logged.projected, afterSets, LONDON, params).quads.heat,
+      ).toBeGreaterThan(0);
+      expect(projectedState(logged.projected, beforeSets, LONDON, params).quads.heat).toBe(0);
+    });
+
+    it("should count only the logged sets of a half-logged day and nothing for the unlogged ones", () => {
+      const sets = loggedSets(wednesday, squat, squatMuscles, 2, wednesdayMorning);
+      const logged = projectWeek(routine, WEEK, LONDON, { sessions: [wednesday], sets }, params);
+      const evening = "2026-10-21T20:00:00.000Z";
+      const nextDay = "2026-10-22T11:00:00.000Z";
+
+      expect(
+        logged.projected.some((set) => "planned" in set && set.routine_day_id === legs.id),
+      ).toBe(false);
+      for (const moment of [evening, nextDay]) {
+        expect(projectedState(logged.projected, moment, LONDON, params).quads).toEqual(
+          muscleState(sets, moment, params.training).quads,
+        );
+      }
+    });
+
+    it("should leave an unplanned session of the day to the actual view", () => {
+      const unplanned = session(2, "2026-10-21", null);
+      const sets = loggedSets(unplanned, curl, curlMuscles, 3, wednesdayMorning);
+      const logged = projectWeek(routine, WEEK, LONDON, { sessions: [unplanned], sets }, params);
+      const moment = "2026-10-21T12:00:00.000Z";
+
+      expect(projectedState(logged.projected, moment, LONDON, params).biceps.heat).toBe(0);
+      expect(muscleState(logged.actual, moment, params.training).biceps.heat).toBeGreaterThan(0);
+    });
+  });
+
+  it("should count a planned Monday with no session from Tuesday 00:00", () => {
+    const quiet = projectWeek(routine, WEEK, LONDON, { sessions: [], sets: [] }, params);
+    const mondayEnd = "2026-10-19T22:59:00.000Z";
+    const tuesdayStart = "2026-10-19T23:00:00.000Z";
+    const pushSets = quiet.planned.filter((set) => set.routine_day_id === push.id);
+
+    expect(projectedState(quiet.projected, mondayEnd, LONDON, params).chest_lower.heat).toBe(0);
+    const chestLower = projectedState(quiet.projected, tuesdayStart, LONDON, params).chest_lower;
+    expect(chestLower.heat).toBeGreaterThan(0);
+    expect(chestLower).toEqual(muscleState(pushSets, tuesdayStart, params.training).chest_lower);
+  });
+
+  describe("by the date in the week's zone", () => {
+    const sunday: PlanRoutineDay = {
+      id: dayId(6),
+      position: 4,
+      weekday: 6,
+      exercises: [planExercise(curl, curlMuscles, 2, 1, 0)],
+    };
+    const weekendRoutine = { days: [push, sunday] };
+    const quiet: LoggedWeek = { sessions: [], sets: [] };
+    // The Sunday of the week before and the Monday after it, as a heat window across the weeks has them.
+    const setsAround = (tz: string, sundayWeek: string, mondayWeek: string): PlannedSet[] => [
+      ...projectWeek(weekendRoutine, sundayWeek, tz, quiet, params).planned.filter(
+        (set) => set.routine_day_id === sunday.id,
+      ),
+      ...projectWeek(weekendRoutine, mondayWeek, tz, quiet, params).planned.filter(
+        (set) => set.routine_day_id === push.id,
+      ),
+    ];
+
+    it("should count Sunday and not Monday at 00:30 on Monday in London", () => {
+      const sets = setsAround(LONDON, PREVIOUS_WEEK, WEEK);
+      const moment = "2026-10-18T23:30:00.000Z";
+      const state = projectedState(sets, moment, LONDON, params);
+
+      expect(state.biceps.heat).toBeGreaterThan(0);
+      expect(state.biceps).toEqual(
+        muscleState(
+          sets.filter((set) => set.routine_day_id === sunday.id),
+          moment,
+          params.training,
+        ).biceps,
+      );
+      expect(state.chest_lower.heat).toBe(0);
+    });
+
+    it("should count neither at the same instant in Los Angeles, where it is still Sunday", () => {
+      const sets = setsAround("America/Los_Angeles", PREVIOUS_WEEK, WEEK);
+      const state = projectedState(sets, "2026-10-18T23:30:00.000Z", "America/Los_Angeles", params);
+
+      expect(state.biceps.heat).toBe(0);
+      expect(state.chest_lower.heat).toBe(0);
+    });
+
+    it("should hold Sunday back in Los Angeles through its evening, after the planned time has passed", () => {
+      const sets = setsAround("America/Los_Angeles", PREVIOUS_WEEK, WEEK);
+      // 19:00 PDT on Sunday, an hour after the 18:00 planned time.
+      const sundayEvening = "2026-10-19T02:00:00.000Z";
+      const mondayStart = "2026-10-19T07:00:00.000Z";
+
+      expect(projectedState(sets, sundayEvening, "America/Los_Angeles", params).biceps.heat).toBe(
+        0,
+      );
+      expect(
+        projectedState(sets, mondayStart, "America/Los_Angeles", params).biceps.heat,
+      ).toBeGreaterThan(0);
+    });
+
+    it("should hold Sunday back until local midnight on the day the clocks go back", () => {
+      const sunday25 = projectWeek(weekendRoutine, WEEK, LONDON, quiet, params).planned.filter(
+        (set) => set.routine_day_id === sunday.id,
+      );
+      const sundayNight = "2026-10-25T23:30:00.000Z";
+      const mondayStart = "2026-10-26T00:00:00.000Z";
+
+      expect(projectedState(sunday25, sundayNight, LONDON, params).biceps.heat).toBe(0);
+      const biceps = projectedState(sunday25, mondayStart, LONDON, params).biceps;
+      expect(biceps.heat).toBeGreaterThan(0);
+      expect(biceps).toEqual(muscleState(sunday25, mondayStart, params.training).biceps);
+    });
+  });
+
+  describe("on input it refuses", () => {
+    it("should refuse a time zone that is not an IANA name, naming the rule and not the value", () => {
+      expect(() =>
+        projectedState(week.projected, "2026-10-22T12:00:00.000Z", "Not/AZone", params),
+      ).toThrow(new RangeError("A week's time zone must be an IANA zone name"));
+    });
+
+    it("should refuse a moment without a zone as muscleState does", () => {
+      expect(() => projectedState(week.projected, "2026-10-22T12:00:00", LONDON, params)).toThrow(
+        new RangeError("The moment to compute at must be an ISO timestamp with a zone"),
+      );
+    });
   });
 });
