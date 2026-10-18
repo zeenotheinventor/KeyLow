@@ -29,7 +29,7 @@ const variantTone: Record<ButtonVariant, ButtonTone> = {
   ghost: "primary",
 };
 
-// What a label and its icon can be written in: the variant's own tone, or the ghost button's danger or accent ink.
+// What a label and its icon can be written in: the variant's own tone, or the danger tone of the ghost and secondary buttons, or the ghost button's accent ink.
 type ButtonTone = Tone | "danger" | "accent-ink";
 
 // Medium and large are the design system card's: a body strong label, 8 between an icon and it. The small
@@ -86,9 +86,9 @@ export function Button({
   className = "",
 }: ButtonProps) {
   const look = sizeLook[size];
-  const isGhostDanger = variant === "ghost" && requestedTone === "danger";
+  const isDanger = requestedTone === "danger" && (variant === "ghost" || variant === "secondary");
   const isGhostAccentInk = variant === "ghost" && requestedTone === "accent-ink";
-  const tone = isGhostDanger
+  const tone = isDanger
     ? "danger"
     : isGhostAccentInk
       ? "accent-ink"
@@ -122,7 +122,7 @@ export function Button({
             {children}
           </Text>
         </View>
-        {loading ? <ButtonSpinner isDanger={isGhostDanger} variant={variant} /> : null}
+        {loading ? <ButtonSpinner isDanger={isDanger} variant={variant} /> : null}
       </PressableSurface>
     </View>
   );

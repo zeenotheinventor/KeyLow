@@ -89,6 +89,11 @@ export const GhostDestructive: Story = {
   args: { variant: "ghost", tone: "danger", size: "lg", icon: "Trash2", children: "Delete" },
 };
 
+// Discard session beside Keep logging: the secondary fill and border with the label in the danger colour.
+export const SecondaryDanger: Story = {
+  args: { variant: "secondary", tone: "danger", icon: "Trash2", children: "Discard session" },
+};
+
 export const GhostDestructiveLoading: Story = {
   args: {
     variant: "ghost",

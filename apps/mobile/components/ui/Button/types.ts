@@ -23,10 +23,12 @@ export type ButtonProps = {
    */
   quiet?: boolean;
   /**
-   * Ghost only: `danger` writes the label and icon in the danger colour on the plain background, with no
-   * fill and no visible border, for a destructive action that sits under the main one, such as Delete under
-   * Save. The filled `destructive` variant stays for an action that is the point of the view. Every other
-   * variant keeps its own colour. Ghost only: `accent-ink` writes the label and icon in the design's
+   * `danger` (ghost and secondary only) writes the label and icon in the danger colour. On ghost it sits on
+   * the plain background with no fill and no visible border, for a destructive action that sits under the
+   * main one, such as Delete under Save. On secondary it keeps the secondary fill and border, for a
+   * destructive answer beside a main button that keeps, such as Discard session beside Keep logging. The
+   * filled `destructive` variant stays for an action that is the point of the view. Every other variant
+   * keeps its own colour. Ghost only: `accent-ink` writes the label and icon in the design's
    * `--accent-ink`, lime in dark and the primary text colour in light, where lime is too faint for text,
    * for a link-like action inside a card, such as Edit beside a target.
    */

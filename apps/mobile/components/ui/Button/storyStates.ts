@@ -11,6 +11,7 @@ export const storyStates = [
   "Disabled",
   "Loading",
   "GhostDestructive",
+  "SecondaryDanger",
   "GhostDestructiveLoading",
   "GhostDestructiveDisabled",
   "GhostAccentInk",
