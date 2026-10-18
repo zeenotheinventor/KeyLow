@@ -116,6 +116,17 @@ describe("the package index", () => {
     "useStartSession",
     "useFinishSession",
     "useDeleteSession",
+
+    "addSet",
+    "updateSet",
+    "removeSet",
+    "restoreSet",
+    "reorderSets",
+    "useAddSet",
+    "useUpdateSet",
+    "useRemoveSet",
+    "useRestoreSet",
+    "useReorderSets",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

@@ -37,6 +37,12 @@ const DEFAULT_SESSIONS = 2;
  */
 const SESSION_SELECT = `${SESSION_DETAIL_COLUMNS},routine_days(name),workout_sets(${SESSION_SET_COLUMNS})`;
 
+/** A set of a session read: its columns checked, and its snapshot by core. */
+export function parseSessionSet(row: unknown, action: string): SessionSet {
+  const columns = parseRow(sessionSetColumnsSchema, row, action, idOfRow);
+  return { ...columns, snapshot: readSnapshot(columns, action) };
+}
+
 function parseSessionRow(row: unknown, action: string): SessionWithSets {
   const { routine_days, workout_sets, ...session } = parseRow(
     sessionWithSetsColumnsSchema,
@@ -47,10 +53,7 @@ function parseSessionRow(row: unknown, action: string): SessionWithSets {
   return {
     ...session,
     routine_day_name: routine_days?.name ?? null,
-    sets: workout_sets.map((set): SessionSet => {
-      const columns = parseRow(sessionSetColumnsSchema, set, action, idOfRow);
-      return { ...columns, snapshot: readSnapshot(columns, action) };
-    }),
+    sets: workout_sets.map((set) => parseSessionSet(set, action)),
   };
 }
 

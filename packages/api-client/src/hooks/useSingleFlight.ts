@@ -7,13 +7,17 @@ type Flight<Output> = { key: string; promise: Promise<Output> };
  * Save) does not start a second request: it gets the pending call's promise, so both presses see its
  * result. A call with a different input is a different edit, so it runs after the pending call
  * settles, whether that one succeeded or failed, and the last save wins. The inputs are plain data,
- * so they are compared by their JSON.
+ * so they are compared by their JSON, unless `keyOf` says which part of the input makes a press the
+ * same press (a double press of Log set carries a later time, and is still the same press).
  */
-export function useSingleFlight<Input, Output>(run: (input: Input) => Promise<Output>) {
+export function useSingleFlight<Input, Output>(
+  run: (input: Input) => Promise<Output>,
+  keyOf: (input: Input) => string = (input) => JSON.stringify(input),
+) {
   const latest = useRef<Flight<Output> | null>(null);
 
   return (input: Input): Promise<Output> => {
-    const key = JSON.stringify(input);
+    const key = keyOf(input);
     const pending = latest.current;
     if (pending?.key === key) {
       return pending.promise;

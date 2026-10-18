@@ -77,6 +77,7 @@ describe("useDeleteSession", () => {
     expect(seeded.isStale(seeded.queryKeys.activeSession)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.sets)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.weekSessions)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.lastPerformance)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.activeRoutine)).toBe(false);
     expect(seeded.isStale(seeded.queryKeys.routines)).toBe(false);
     expect(seeded.isStale(seeded.queryKeys.routine)).toBe(false);

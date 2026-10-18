@@ -230,3 +230,7 @@ export { useDeleteSession, useFinishSession, useStartSession } from "./hooks";
 export type { FinishSessionInput } from "./hooks";
 export { deleteSession, finishSession, startSession } from "./repos";
 export type { SessionFinish, SessionStart } from "./repos";
+export { useAddSet, useRemoveSet, useReorderSets, useRestoreSet, useUpdateSet } from "./hooks";
+export type { ReorderSetsInput, UpdateSetInput } from "./hooks";
+export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./repos";
+export type { SetAdd, SetPatch } from "./repos";
