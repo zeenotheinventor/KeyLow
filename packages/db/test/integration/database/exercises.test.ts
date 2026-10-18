@@ -56,15 +56,13 @@ describe("the exercise library on a committed transaction", () => {
     const user = await createTestUser(suite);
     const name = uniqueName("no-map");
 
-    const { error } = await user.client
-      .from("exercises")
-      .insert({
-        owner_id: user.id,
-        source: "user",
-        name,
-        equipment: "band",
-        mechanic: "isolation",
-      });
+    const { error } = await user.client.from("exercises").insert({
+      owner_id: user.id,
+      source: "user",
+      name,
+      equipment: "band",
+      mechanic: "isolation",
+    });
     expect(error?.code).toBe("23514");
     expect(error?.message).toBe("an exercise needs at least one primary muscle");
 
