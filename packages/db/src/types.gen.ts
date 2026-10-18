@@ -1039,6 +1039,10 @@ export type Database = {
           retry_after_seconds: number;
         }[];
       };
+      import_exercises: {
+        Args: { p_exercises: Json; p_import_run_id: string };
+        Returns: Json;
+      };
       recipe_instructions_are_valid: {
         Args: { steps: string[] };
         Returns: boolean;

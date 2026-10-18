@@ -1,4 +1,4 @@
-// Column order of the files in data/exercises. The importer (a later ticket) reads them by these names.
+// Column order of the files in data/exercises. The importer reads them by these names.
 export const CURATED_COLUMNS = [
   "source_ref",
   "name",
@@ -16,6 +16,10 @@ export const MECHANICS = ["compound", "isolation"] as const;
 
 export type Mechanic = (typeof MECHANICS)[number];
 
+const mechanics: ReadonlySet<string> = new Set(MECHANICS);
+
+export const isMechanic = (value: string): value is Mechanic => mechanics.has(value);
+
 /** The `equipment` enum of ADR 0005 Amendment 1, which the import writes into. */
 export const EQUIPMENT = [
   "barbell",
@@ -31,3 +35,7 @@ export const EQUIPMENT = [
 ] as const;
 
 export type Equipment = (typeof EQUIPMENT)[number];
+
+const equipmentValues: ReadonlySet<string> = new Set(EQUIPMENT);
+
+export const isEquipment = (value: string): value is Equipment => equipmentValues.has(value);

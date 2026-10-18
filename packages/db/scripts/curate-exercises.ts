@@ -11,20 +11,10 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
-import { parseChecksumFile, sha256Hex } from "./cofid/checksum";
 import { checkCurated } from "./exercises/checkCurated";
 import { curateExercises } from "./exercises/curate";
 import { EXERCISE_FILES } from "./exercises/files";
-
-function readSource(path: string): string {
-  const bytes = readFileSync(path);
-  const actual = sha256Hex(bytes);
-  const expected = parseChecksumFile(readFileSync(`${path}.sha256`, "utf8"));
-  if (actual !== expected) {
-    throw new Error(`${path} has sha256 ${actual}, but its .sha256 file says ${expected}`);
-  }
-  return bytes.toString("utf8");
-}
+import { readPinnedFile } from "./exercises/pinnedSource";
 
 const readIfPresent = (path: string): string | undefined => {
   try {
@@ -41,7 +31,7 @@ function main(): void {
   const path = (relative: string): string => join(packageDirectory, relative);
 
   const result = curateExercises(
-    readSource(path(EXERCISE_FILES.source)),
+    readPinnedFile(path(EXERCISE_FILES.source)).toString("utf8"),
     readFileSync(path(EXERCISE_FILES.overrides), "utf8"),
   );
 
