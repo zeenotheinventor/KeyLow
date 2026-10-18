@@ -161,7 +161,7 @@ To regenerate the exercise seed after the curated CSV changes (see `packages/db/
 pnpm --filter @keylow/db import:exercises --label seed --emit-sql supabase/seeds/40_exercises.sql
 ```
 
-It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV and the source file. To load the library into a running stack through the import instead, run `pnpm --filter @keylow/db import:exercises --label <label>` (add `--dry-run` to check the CSV and write nothing). Importing again changes nothing, and an exercise that has left the CSV is soft deleted. Production gets the library only through that command, run by Zee, because the seeds never reach it.
+It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV and the source file. To load the library into a running stack through the import instead, run `pnpm --filter @keylow/db import:exercises --label <label>` (add `--dry-run` to check the CSV and write nothing). Importing again changes nothing, and an exercise that has left the CSV is soft deleted. Production gets the library only through that command, run by Zee, because the seeds never reach it. The import's integration tests leave soft-deleted `key349-` exercises behind, because `service_role` has no delete grant on the exercise tables. They are harmless, and only a reset of the database clears them.
 
 ### Weigh-in seed
 

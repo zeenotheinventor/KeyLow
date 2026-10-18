@@ -395,12 +395,13 @@ A partial `unique (user_id) where effective_to is null`: one current row per use
 
 ### Functions
 
-All are `security invoker`, so every policy applies to their writes. All refuse a payload that is not an object or array where one is expected, or that breaks a bound, with error code `22023`, and a row that is not the caller's or does not exist with `P0002`. Messages state the rule and never quote a value. `execute` is revoked from `public`, `anon` and `service_role` by name and granted to `authenticated` only, as `save_recipe`'s is.
+All are `security invoker`, so every policy applies to their writes. All but `import_exercises` (below) refuse a payload that is not an object or array where one is expected, or that breaks a bound, with error code `22023`, and a row that is not the caller's or does not exist with `P0002`. Messages state the rule and never quote a value. For those, `execute` is revoked from `public`, `anon` and `service_role` by name and granted to `authenticated` only, as `save_recipe`'s is.
 
 - `save_exercise(p_exercise_id uuid, p_exercise jsonb, p_muscles jsonb) returns uuid`: creates (id null) or edits a user exercise and replaces its muscle map, all or nothing. The database chooses a new exercise's id. It cannot write a global exercise.
 - `save_routine(p_routine_id uuid, p_routine jsonb, p_days jsonb) returns uuid`: creates or edits a routine, updates, inserts and deletes its days as in "Routines", and replaces each day's exercises, all or nothing.
 - `set_active_routine(p_routine_id uuid) returns void`: clears the caller's active routine and sets this one. Null clears without setting.
 - `save_training_goals(p_goals jsonb) returns uuid`: closes the current row and inserts the new one in one transaction.
+- `import_exercises(p_import_run_id uuid, p_exercises jsonb) returns jsonb` (KEY-349, `20261018150000_import_exercises.sql`): the one write path of the exercise import and of the `40_exercises` seed. It creates, updates and revives the global exercises of a batch, keyed by `(free_exercise_db, source_ref)`, replaces a map only when a muscle, role or weight differs, points each exercise's source row at the given run, and returns `{created, updated, unchanged}`, all or nothing, so that an exercise and its map meet the deferred primary-muscle trigger in one transaction. It is the exception to the paragraph above. It is `security invoker` with an empty `search_path` like the rest, but `execute` is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only, and it checks no typed field itself, because the import's checker has already passed the CSV. A malformed payload therefore surfaces as a table error that can quote the value, so its caller keeps only the error code.
 
 Logging a set needs no function: one set is one row, inserted and updated directly under the policies below.
 
@@ -459,4 +460,4 @@ There is still no data export and no in-app account deletion (M7, KEY-7). The co
 - KEY-347, migration 1: the enums for exercises, `muscles` and its seed, `exercises`, `exercise_muscles` and the primary-muscle trigger, the provenance tables, `save_exercise`, their grants and policies, pgTAP, and the regenerated `packages/db/src/types.gen.ts`.
 - KEY-348, migration 2: the remaining enums, sessions, sets, routines, days, routine exercises, goals, `save_routine`, `set_active_routine`, `save_training_goals`, their grants and policies, pgTAP including the account deletion proof, and `types.gen.ts`.
 - KEY-346, core: `MUSCLE_IDS`, the numbers above as constants, the zod schemas and the set snapshot.
-- KEY-349, the import: writes through the `service_role` grants above.
+- KEY-349, the import: writes through `import_exercises`, which the `service_role` grants above allow.
