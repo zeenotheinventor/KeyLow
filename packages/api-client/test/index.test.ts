@@ -80,6 +80,11 @@ describe("the package index", () => {
     "useDeleteWeighIn",
     "useImportWeighIns",
     "useWeightTrend",
+    "listSetsFrom",
+    "listWeekSessions",
+    "getActiveRoutine",
+    "useMuscleState",
+    "useWeekComparison",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });
