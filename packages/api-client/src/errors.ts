@@ -49,3 +49,21 @@ export function toEdgeErrorKind(error: Error): EdgeErrorKind {
 
   return error instanceof EdgeFunctionError ? error.code : "failed";
 }
+
+/** The rules a routine write is refused by, as stable codes. The sentence for each is screen copy. */
+export type RoutineRule = "active_routine";
+
+/**
+ * A routine write the database refused for a rule the screen can explain: today only archiving the
+ * active routine, which the screen avoids by making another routine active first. The message names the
+ * action and the rule and nothing from the routine, because routines are health data.
+ */
+export class RoutineRuleError extends Error {
+  readonly rule: RoutineRule;
+
+  constructor(action: string, rule: RoutineRule) {
+    super(`Could not ${action} (${rule})`, { cause: { code: rule } });
+    this.name = "RoutineRuleError";
+    this.rule = rule;
+  }
+}

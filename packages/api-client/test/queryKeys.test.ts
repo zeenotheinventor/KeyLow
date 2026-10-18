@@ -4,6 +4,7 @@ import { keys } from "../src/queryKeys";
 
 const SESSION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const EXERCISE_ID = "77777777-7777-4777-8777-777777777777";
+const ROUTINE_ID = "88888888-8888-4888-8888-888888888888";
 
 describe("keys.profiles", () => {
   it("should expose the profiles root key", () => {
@@ -235,6 +236,45 @@ describe("keys.training", () => {
     ]) {
       for (const prefix of [keys.training.setsAll, keys.training.weekSessionsAll]) {
         expect(key.slice(0, prefix.length)).not.toEqual(prefix);
+      }
+    }
+  });
+
+  it("should key the routine library by whether archived routines are included, under the routines prefix", () => {
+    expect(keys.training.routines(false)).toEqual(["training", "routines", false]);
+    expect(keys.training.routines(true)).toEqual(["training", "routines", true]);
+    expect(keys.training.routinesAll).toEqual(["training", "routines"]);
+    expect(keys.training.routines(true).slice(0, 2)).toEqual(keys.training.routinesAll);
+  });
+
+  it("should key one routine by its id under the routine prefix", () => {
+    expect(keys.training.routine(ROUTINE_ID)).toEqual(["training", "routine", ROUTINE_ID]);
+    expect(keys.training.routineAll).toEqual(["training", "routine"]);
+    expect(keys.training.routine(ROUTINE_ID).slice(0, 2)).toEqual(keys.training.routineAll);
+  });
+
+  it("should keep the routine reads apart from each other and from every other training prefix", () => {
+    const prefixes = [
+      keys.training.setsAll,
+      keys.training.weekSessionsAll,
+      keys.training.sessionsAll,
+      keys.training.routinesAll,
+      keys.training.routineAll,
+      keys.training.activeRoutine,
+    ];
+    for (const key of [keys.training.routines(true), keys.training.routine(ROUTINE_ID)]) {
+      expect(
+        prefixes.filter((prefix) => key.slice(0, prefix.length).join() === prefix.join()),
+      ).toHaveLength(1);
+    }
+  });
+
+  it("should hold fixed words, a flag and an id only in a routine key, never a name or an exercise", () => {
+    const words =
+      /^(training|routines|routine|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+    for (const key of [keys.training.routines(false), keys.training.routine(ROUTINE_ID)]) {
+      for (const part of key) {
+        expect(typeof part === "boolean" || words.test(part)).toBe(true);
       }
     }
   });

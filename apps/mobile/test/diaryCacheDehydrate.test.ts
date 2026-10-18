@@ -67,6 +67,25 @@ describe("which queries are stored when the diary cache is saved", () => {
     ]);
   });
 
+  it("should store every routines read and every routine, and the active routine beside them", () => {
+    const { read, storedKeys } = createCache();
+    const first = "88888888-8888-4888-8888-888888888888";
+    const second = "88888888-8888-4888-8888-999999999999";
+    read(keys.training.routines(false), 100);
+    read(keys.training.routines(true));
+    read(keys.training.routine(first), 100);
+    read(keys.training.routine(second), 1);
+    read(keys.training.activeRoutine);
+
+    expect(storedKeys()).toEqual([
+      keys.training.activeRoutine,
+      keys.training.routine(first),
+      keys.training.routine(second),
+      keys.training.routines(false),
+      keys.training.routines(true),
+    ]);
+  });
+
   it("should store the weight unit beside the time zone", () => {
     const { read, storedKeys } = createCache();
     read(keys.profiles.timeZone);
