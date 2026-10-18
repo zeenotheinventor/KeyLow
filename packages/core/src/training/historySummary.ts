@@ -64,7 +64,7 @@ export type SessionSummary = {
   warmupSets: number;
   /** Up to three muscles, those with the most effective sets first. */
   topMuscles: MuscleId[];
-  /** The routine day's name, or null for a free session. The wording "Workout" is copy. */
+  /** The routine day's name, or null for a free session. The wording "Session" is copy (`TRAIN_TODAY_CARD.sessionName`). */
   titleSource: string | null;
   /** Null when no planned day was given. */
   planComparison: SessionPlanComparison | null;

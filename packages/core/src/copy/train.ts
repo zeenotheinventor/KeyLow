@@ -5,6 +5,7 @@ import {
   describeWeekRange,
   joinInWords,
 } from "./bodyMap";
+import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
 import { dayNumber } from "../dates/calendarDay";
@@ -146,9 +147,6 @@ export type TodayCardCopy =
       action: string;
     }>
   | Readonly<{ kind: "rest"; heading: string; title: string; body: string | null }>;
-
-const describeCount = (count: number, singular: string, plural: string): string =>
-  `${count} ${count === 1 ? singular : plural}`;
 
 /** The sets logged of the sets planned: "8 of 16 sets", or the sets alone when the day plans none: "8 sets". */
 const describeSetsOfPlanned = (setsLogged: number, setsPlanned: number): string =>
