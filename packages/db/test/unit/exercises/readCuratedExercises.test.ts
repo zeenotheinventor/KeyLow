@@ -74,4 +74,31 @@ describe("readCuratedExercises", () => {
     expect(message).toContain("the file: muscle_never_primary");
     expect(message).not.toMatch(/Secret|Other_Lift|abs|7/);
   });
+
+  it.each(["0", "0.0", "0.00"])(
+    "should refuse a muscle weight of %s, naming the rule and line but no name or muscle",
+    (weight) => {
+      const rows = validRows();
+      // The fifth data row, line 6, still trains delt_rear as primary, so only the weight is wrong.
+      rows[4] = [
+        "Secret_Lift_Name",
+        "Secret Lift Name",
+        "barbell",
+        "isolation",
+        `delt_rear:primary:1.0;biceps:secondary:${weight}`,
+        "",
+      ];
+
+      let message = "";
+      try {
+        readCuratedExercises(fileOf(rows));
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(message).toContain("fails 1 checks");
+      expect(message).toContain("line 6: weight_out_of_range");
+      expect(message).not.toMatch(/Secret|delt_rear|biceps/);
+    },
+  );
 });

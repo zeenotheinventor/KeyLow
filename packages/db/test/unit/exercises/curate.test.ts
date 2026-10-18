@@ -179,7 +179,7 @@ describe("parseOverrides", () => {
     [
       "two rows for one exercise",
       `${NO_OVERRIDES}A,exclude,,x\nA,exclude,,y\n`,
-      "already has an override",
+      "a second override",
     ],
     [
       "muscles on an exclude row",
@@ -190,10 +190,11 @@ describe("parseOverrides", () => {
     [
       "an unknown muscle",
       `${NO_OVERRIDES}A,map,serratus:primary:1.0,x\n`,
-      '"serratus" is not one of the 22',
+      "a muscle is not one of the 22 muscle ids",
     ],
-    ["an unknown role", `${NO_OVERRIDES}A,map,abs:main:1.0,x\n`, 'role "main"'],
-    ["a weight above 1", `${NO_OVERRIDES}A,map,abs:primary:2,x\n`, 'weight "2"'],
+    ["an unknown role", `${NO_OVERRIDES}A,map,abs:main:1.0,x\n`, "a role is not primary"],
+    ["a weight above 1", `${NO_OVERRIDES}A,map,abs:primary:2,x\n`, "must be a number above 0"],
+    ["a muscle share with two parts", `${NO_OVERRIDES}A,map,abs:primary,x\n`, "id:role:weight"],
     [
       "a muscle twice",
       `${NO_OVERRIDES}A,map,abs:primary:1.0;abs:secondary:0.5,x\n`,
@@ -203,6 +204,37 @@ describe("parseOverrides", () => {
     ["a missing field", `${NO_OVERRIDES}A,map,abs:primary:1.0\n`, "expected 4 fields"],
   ])("should refuse %s", (_case, csv, message) => {
     expect(() => parseOverrides(csv)).toThrow(message);
+  });
+
+  it.each(["0", "0.0", "0.00", "1.5"])(
+    "should refuse the weight %s with the rule and the line, and no muscle or weight",
+    (weight) => {
+      const csv = `${NO_OVERRIDES}Secret_Ref,map,abs:primary:1.0;lats:secondary:${weight},x\n`;
+
+      expect(() => parseOverrides(csv)).toThrow(
+        "overrides.csv line 2: a muscle weight must be a number above 0 and at most 1",
+      );
+    },
+  );
+
+  it.each([
+    ["an unknown muscle", "serratus:primary:1.0"],
+    ["an unknown role", "abs:main:1.0"],
+    ["a weight out of range", "abs:primary:7.5"],
+    ["a muscle share with two parts", "abs:primary"],
+    ["a muscle twice", "abs:primary:1.0;abs:secondary:0.5"],
+  ])("should name no source_ref, muscle, role or weight when it refuses %s", (_case, muscles) => {
+    const csv = `${NO_OVERRIDES}Secret_Ref,map,${muscles},x\n`;
+
+    expect(() => parseOverrides(csv)).toThrow(/^overrides\.csv line 2: [a-z ]+/);
+    expect(() => parseOverrides(csv)).not.toThrow(/Secret|serratus|abs|main|7\.5|primary:/);
+  });
+
+  it("should name no source_ref when two rows are for one exercise", () => {
+    const csv = `${NO_OVERRIDES}Secret_Ref,exclude,,x\nSecret_Ref,exclude,,y\n`;
+
+    expect(() => parseOverrides(csv)).toThrow("overrides.csv line 3: a second override");
+    expect(() => parseOverrides(csv)).not.toThrow(/Secret/);
   });
 });
 

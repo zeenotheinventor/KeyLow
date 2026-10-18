@@ -6,7 +6,7 @@ import { isMuscleId, isRole } from "./muscles";
 import { parseMuscleShares } from "./muscleShares";
 import { parseCsv } from "../cofid/csv";
 
-import type { MuscleShare } from "./muscleShares";
+import type { MuscleShare, RawMuscleShare } from "./muscleShares";
 
 /**
  * - `map` replaces the rule-based muscles of an exercise the rules keep.
@@ -20,19 +20,27 @@ export type Override =
 
 const weightPattern = /^\d+(\.\d+)?$/;
 
+function readRawShares(text: string, where: string): RawMuscleShare[] {
+  try {
+    return parseMuscleShares(text);
+  } catch (error) {
+    throw new Error(`${where}: ${error instanceof Error ? error.message : String(error)}`, {
+      cause: error,
+    });
+  }
+}
+
 function readShares(text: string, where: string): MuscleShare[] {
-  const shares = parseMuscleShares(text).map(({ muscle, role, weight }) => {
+  const shares = readRawShares(text, where).map(({ muscle, role, weight }) => {
     if (!isMuscleId(muscle)) {
-      throw new Error(`${where}: "${muscle}" is not one of the 22 muscle ids`);
+      throw new Error(`${where}: a muscle is not one of the 22 muscle ids`);
     }
     if (!isRole(role)) {
-      throw new Error(`${where}: ${muscle} has role "${role}"`);
+      throw new Error(`${where}: a role is not primary, secondary or stabiliser`);
     }
     const value = Number(weight);
-    if (!weightPattern.test(weight) || value > 1) {
-      throw new Error(
-        `${where}: ${muscle} has weight "${weight}", which is not a number from 0 to 1`,
-      );
+    if (!weightPattern.test(weight) || value <= 0 || value > 1) {
+      throw new Error(`${where}: a muscle weight must be a number above 0 and at most 1`);
     }
     return { muscle, role, weight: value };
   });
@@ -62,7 +70,7 @@ export function parseOverrides(csv: string): Map<string, Override> {
       throw new Error(`${where}: source_ref and note must not be empty`);
     }
     if (overrides.has(sourceRef)) {
-      throw new Error(`${where}: ${sourceRef} already has an override`);
+      throw new Error(`${where}: a second override for one exercise`);
     }
 
     if (action === "map") {

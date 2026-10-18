@@ -49,7 +49,7 @@ pnpm --filter @keylow/db curate:exercises          # writes exercises.curated.cs
 pnpm --filter @keylow/db curate:exercises --check  # writes nothing; fails if the committed CSVs are stale
 ```
 
-The script refuses a source file whose sha256 does not match its `.sha256` file, runs the checker (`scripts/exercises/checkCurated.ts`) on the result and writes nothing if any check fails. The generator was run twice and gave byte-identical files. The unit test `test/unit/exercises/committedLibrary.test.ts` rebuilds both CSVs from the source and the overrides on every `pnpm test`, so a hand edit of a generated file, or an override or rule change without a rebuild, fails CI.
+The script refuses a source file whose sha256 does not match its `.sha256` file, runs the checker (`scripts/exercises/checkCurated.ts`) on the result and writes nothing if any check fails. Like the importer, it prints only the rule and the CSV line of each failed check of the curated file, never an exercise name or a muscle. The generator was run twice and gave byte-identical files. The unit test `test/unit/exercises/committedLibrary.test.ts` rebuilds both CSVs from the source and the overrides on every `pnpm test`, so a hand edit of a generated file, or an override or rule change without a rebuild, fails CI.
 
 ## What the source looks like
 

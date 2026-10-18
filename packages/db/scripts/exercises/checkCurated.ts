@@ -26,6 +26,15 @@ const weightPattern = /^\d+(\.\d+)?$/;
 const mechanics: ReadonlySet<string> = new Set(MECHANICS);
 const equipmentValues: ReadonlySet<string> = new Set(EQUIPMENT);
 
+/**
+ * The rule and the CSV line of each problem, one string per problem and nothing else. The checker's
+ * own messages quote names, muscles and weights, which the scripts never print.
+ */
+export const describeProblems = (problems: readonly CheckProblem[]): string[] =>
+  problems.map(
+    ({ rule, line }) => `  ${line === undefined ? "the file" : `line ${line}`}: ${rule}`,
+  );
+
 export function checkCurated(csv: string): CheckProblem[] {
   const problems: CheckProblem[] = [];
   let rows: string[][];
@@ -99,10 +108,10 @@ export function checkCurated(csv: string): CheckProblem[] {
         report("malformed", `${muscle} has role "${role}"`, sourceRef);
       }
       const value = Number(weight);
-      if (!weightPattern.test(weight) || value > 1) {
+      if (!weightPattern.test(weight) || value <= 0 || value > 1) {
         report(
           "weight_out_of_range",
-          `${muscle} has weight "${weight}", which is not a number from 0 to 1`,
+          "a muscle weight must be a number above 0 and at most 1",
           sourceRef,
         );
       }
