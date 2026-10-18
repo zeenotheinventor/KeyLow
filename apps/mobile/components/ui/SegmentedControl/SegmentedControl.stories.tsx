@@ -21,6 +21,23 @@ const appearanceOptions: SegmentedControlOption<Appearance>[] = [
   { value: "system", label: "Match device" },
 ];
 
+type MuscleRole = "primary" | "second" | "assist";
+type Span = "day" | "week" | "month" | "year";
+
+const muscleRoleOptions: SegmentedControlOption<MuscleRole>[] = [
+  { value: "primary", label: "Primary" },
+  { value: "second", label: "Second" },
+  { value: "assist", label: "Assist" },
+];
+
+// The labels stand in for the short words a screen builds, as the small size is meant to hold four.
+const spanOptions: SegmentedControlOption<Span>[] = [
+  { value: "day", label: "Day" },
+  { value: "week", label: "Week" },
+  { value: "month", label: "Month" },
+  { value: "year", label: "Year" },
+];
+
 // A choice is kept by the screen that holds it, so a story keeps it too and a press moves it.
 function BasisChoice({ initial }: { initial: Basis }) {
   const [value, setValue] = useState(initial);
@@ -43,6 +60,37 @@ function AppearanceChoice({ initial }: { initial: Appearance }) {
       value={value}
       onChange={setValue}
     />
+  );
+}
+
+// The small size is as wide as the screen makes it, so the stories fix a width as the boards do.
+function MuscleRoleChoice() {
+  const [value, setValue] = useState<MuscleRole>("primary");
+  return (
+    <View className="w-[156px]">
+      <SegmentedControl
+        label="Role for Side delts"
+        options={muscleRoleOptions}
+        size="sm"
+        value={value}
+        onChange={setValue}
+      />
+    </View>
+  );
+}
+
+function SpanChoice() {
+  const [value, setValue] = useState<Span>("week");
+  return (
+    <View className="w-[208px]">
+      <SegmentedControl
+        label="Span"
+        options={spanOptions}
+        size="sm"
+        value={value}
+        onChange={setValue}
+      />
+    </View>
   );
 }
 
@@ -80,3 +128,9 @@ export const AppearanceDark: Story = { render: () => <AppearanceChoice initial="
 export const AppearanceLight: Story = { render: () => <AppearanceChoice initial="light" /> };
 
 export const AppearanceMatchDevice: Story = { render: () => <AppearanceChoice initial="system" /> };
+
+// The small size on the custom exercise form: a muscle's role, in a row that has its name and a remove button too.
+export const SmallThreeOptions: Story = { render: () => <MuscleRoleChoice /> };
+
+// The small size with four options.
+export const SmallFourOptions: Story = { render: () => <SpanChoice /> };

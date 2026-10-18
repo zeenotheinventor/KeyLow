@@ -4,11 +4,11 @@ import type { PressableProps, View } from "react-native";
 
 export type PressableSurfaceProps = {
   children: ReactNode;
-  /** What a screen reader announces the control as. Defaults to `button`. A tab bar's items are `tab`s, a segmented control's are `radio`s. */
-  role?: "button" | "tab" | "radio" | "switch" | undefined;
+  /** What a screen reader announces the control as. Defaults to `button`. A tab bar's items are `tab`s, a segmented control's are `radio`s, and a chip that is one of several chosen is a `checkbox`. */
+  role?: "button" | "tab" | "radio" | "checkbox" | "switch" | undefined;
   /** Whether the tab, or the day on a week strip, is the selected one. Only for a `tab` or a `button` that picks one of several. */
   selected?: boolean | undefined;
-  /** Whether the radio or switch is on. Only for a `radio` or a `switch`. */
+  /** Whether the radio, checkbox or switch is on. Only for a `radio`, a `checkbox` or a `switch`. */
   checked?: boolean | undefined;
   /** Whether the control has opened something that is showing, such as the Time row's picker. Only for a `button` that opens one. */
   expanded?: boolean | undefined;
