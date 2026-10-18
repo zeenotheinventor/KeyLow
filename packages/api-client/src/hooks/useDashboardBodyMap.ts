@@ -9,6 +9,7 @@ import {
 import { useMemo } from "react";
 
 import { planRoutineOf } from "./planRoutineOf";
+import { refetchFailedReads } from "./trainingReadResult";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useMuscleState } from "./useMuscleState";
 import { useProfileTimeZone } from "./useProfileTimeZone";
@@ -107,11 +108,15 @@ export function useDashboardBodyMap({
     }
   }, [heat, zone, weekStart, activeRoutine, sessions, now]);
 
+  // The heat is a result of its own, which reads again what it holds in error: the zone, the routine and the
+  // sets. The week's sessions are the one read left.
+  const readFailedWeek = refetchFailedReads([week]);
+  const refetch = () => Promise.all([states.refetch(), readFailedWeek()]);
   if (computed !== undefined && "data" in computed) {
-    return { data: computed.data, isPending: false, isError: false, error: null };
+    return { data: computed.data, isPending: false, isError: false, error: null, refetch };
   }
   if (computed !== undefined) {
-    return { data: undefined, isPending: false, isError: true, error: computed.error };
+    return { data: undefined, isPending: false, isError: true, error: computed.error, refetch };
   }
   const failed = [timeZone, routine, week].find((read) => read.isError && read.data === undefined);
   if (states.isError || failed !== undefined) {
@@ -120,9 +125,10 @@ export function useDashboardBodyMap({
       isPending: false,
       isError: true,
       error: states.error ?? failed?.error ?? null,
+      refetch,
     };
   }
-  return { data: undefined, isPending: true, isError: false, error: null };
+  return { data: undefined, isPending: true, isError: false, error: null, refetch };
 }
 
 function dashboardTodayOf(card: ReturnType<typeof todayCard>): DashboardToday {

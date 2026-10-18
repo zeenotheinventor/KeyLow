@@ -1,6 +1,6 @@
 import { TRAINING_PARAMS_V1, muscleState, targetedMuscles } from "@keylow/core/training";
 import { onlineManager } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -275,5 +275,30 @@ describe("useMuscleState", () => {
       expect(result.current.isError).toBe(true);
     });
     expect(result.current.error?.message).toBe("Could not load your time zone (42501)");
+  });
+
+  it("should read again only the sets read that failed", async () => {
+    const fake = installTrainingFake(server, { sets: [benchSet()], routine: routineRow() });
+    fake.failWith("42501", "workout_sets");
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    const zoneReads = fake.requestsTo("profiles").length;
+    const routineReads = fake.requestsTo("routines").length;
+    const setReads = fake.requestsTo("workout_sets").length;
+    fake.failWith(null);
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(fake.requestsTo("workout_sets").length).toBeGreaterThan(setReads);
+    expect(fake.requestsTo("profiles")).toHaveLength(zoneReads);
+    expect(fake.requestsTo("routines")).toHaveLength(routineReads);
   });
 });

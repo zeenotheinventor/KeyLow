@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -180,5 +180,28 @@ describe("useDashboardBodyMap", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(fake.requests).toEqual([]);
     expect(result.current).toMatchObject({ data: undefined, isPending: true });
+  });
+
+  it("should read again only the reads that failed", async () => {
+    const fake = installTrainingFake(server, goldenWeekData);
+    fake.failWith("42501", "routines");
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useDashboardBodyMap({ now: CARD_MOMENT }), { wrapper });
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    const zoneReads = fake.requestsTo("profiles").length;
+    const routineReads = fake.requestsTo("routines").length;
+    fake.failWith(null);
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(fake.requestsTo("routines").length).toBeGreaterThan(routineReads);
+    expect(fake.requestsTo("profiles")).toHaveLength(zoneReads);
   });
 });

@@ -8,12 +8,12 @@ import {
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
 import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
-import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useBodyMapView } from "../../lib/bodyMapView";
 import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
@@ -24,17 +24,19 @@ import { EmptyState, ErrorState, SheetHeader, Skeleton } from "../ui";
 const MINIMUM_BOTTOM_PADDING = 16;
 
 /**
- * The body map screen, pushed over the tabs from the dashboard card: Actual heat now, front and back, with
- * the heat legend. The colours are the hook's steps and nothing here works heat out. It reads the cached
- * rows, so it opens offline, and the clock ticks once a minute without a new read. Nothing is read while
- * the terms gate is up. With no sets in the last 14 days the figures are at rest and the empty state says
- * why, with no legend. It has no Start a session button until the Train tab it opens is mounted, and none
- * of the controls the next tickets add.
+ * The body map screen, pushed over the tabs from the dashboard card: heat now, front and back, with the
+ * heat legend, in the view last chosen on this device (Actual until one is). A tap on the figures or the
+ * button under them switches between Actual and Projected. The colours are the hook's steps and nothing
+ * here works heat out. Both views are read, from the cached rows, so it opens offline and a switch is at
+ * once, and the clock ticks once a minute without a new read. Nothing is read while the terms gate is up.
+ * With no routine Projected is off and the screen shows Actual, keeping the view chosen for when there
+ * is one. With no sets in the last 14 days the figures are at rest and the empty state says why, with no
+ * legend. It has no Start a session button until the Train tab it opens is mounted, and none of the
+ * controls the next tickets add.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const queryClient = useQueryClient();
   const isOnline = useIsOnline();
   const isReadEnabled = useReadsEnabled();
   const now = useNow();
@@ -43,11 +45,20 @@ export function BodyMapScreen() {
   const zone = timeZone.data ?? "UTC";
   const today = toLocalDate(now, zone);
   const weekStart = addCalendarDays(today, -daysSinceMonday(today));
-  const bodyMap = useBodyMap({
+  const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
+  const nowIso = now.toISOString();
+  const actual = useBodyMap({
     scale: "heat",
     view: "actual",
     weekStart,
-    now: now.toISOString(),
+    now: nowIso,
+    enabled: isReadEnabled,
+  });
+  const projected = useBodyMap({
+    scale: "heat",
+    view: "projected",
+    weekStart,
+    now: nowIso,
     enabled: isReadEnabled,
   });
 
@@ -60,34 +71,55 @@ export function BodyMapScreen() {
     }
   }
 
-  // The body map is worked out from several reads, so Try again reads every one that failed.
+  // The body map is worked out from several reads, so Try again reads every one of them that failed, and
+  // nothing else on screen.
   function readAgain() {
-    void queryClient.refetchQueries({
-      type: "active",
-      predicate: (query) => query.state.status === "error",
-    });
+    void Promise.all([actual.refetch(), projected.refetch()]);
   }
 
   function renderBody() {
-    const { data } = bodyMap;
-    if (data !== undefined) {
-      const { viewLabel, subLine } = describeBodyMapHeader({
+    const { data: actualData } = actual;
+    const { data: projectedData } = projected;
+    if (isViewRead && actualData !== undefined && projectedData !== undefined) {
+      const { projectedAvailable, todayProjectedIsActual } = projectedData;
+      const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
+      const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
         scale: "heat",
-        view: "actual",
-        at: data.computedAt,
+        view,
+        at: actualData.computedAt,
         tz: zone,
         isToday: true,
         weekEnd: addCalendarDays(weekStart, 6),
         plannedSessions: [],
       });
+      const note = !projectedAvailable
+        ? BODY_MAP.toggle.projectedNeedsRoutine
+        : view === "projected" && todayProjectedIsActual
+          ? BODY_MAP.notes.todayProjected
+          : null;
+      const card = (
+        <BodyMapCard
+          actualValues={actualData.values}
+          isToggleEnabled={projectedAvailable}
+          note={note}
+          onToggle={() => {
+            setView(view === "projected" ? "actual" : "projected");
+          }}
+          projectedValues={projectedData.values}
+          subLine={
+            actualData.nothingLogged
+              ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays)
+              : subLine
+          }
+          toggleLabel={toggleLabel}
+          view={view}
+          viewLabel={viewLabel}
+        />
+      );
 
-      return data.nothingLogged ? (
+      return actualData.nothingLogged ? (
         <>
-          <BodyMapCard
-            subLine={describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays)}
-            values={data.values}
-            viewLabel={viewLabel}
-          />
+          {card}
           <EmptyState
             body={BODY_MAP.emptyState.body}
             title={BODY_MAP.emptyState.title}
@@ -96,12 +128,12 @@ export function BodyMapScreen() {
         </>
       ) : (
         <>
-          <BodyMapCard subLine={subLine} values={data.values} viewLabel={viewLabel} />
+          {card}
           <BodyMapLegend />
         </>
       );
     }
-    if (bodyMap.isError) {
+    if (actual.isError || projected.isError) {
       return (
         <ErrorState
           body={TRAIN_ERROR.body}
@@ -110,8 +142,10 @@ export function BodyMapScreen() {
         />
       );
     }
-    // Offline, a read that has not arrived will not: there is no saved body map to show.
-    return isOnline ? (
+    // Offline, a read that has not arrived will not: there is no saved body map to show. Rows that are
+    // there are only waiting for the stored view, which is read from the phone and comes at once.
+    const isWaitingForView = actual.data !== undefined && projected.data !== undefined;
+    return isOnline || isWaitingForView ? (
       <View accessible aria-label={BODY_MAP.dashboardCard.loadingLabel} role="status">
         <Skeleton variant="bodyMap" />
       </View>
