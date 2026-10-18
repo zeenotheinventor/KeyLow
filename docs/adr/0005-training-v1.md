@@ -453,7 +453,7 @@ There is still no data export and no in-app account deletion (M7, KEY-7). The co
 
 - **Export:** every column of the user's rows in `exercises` (their own, `source = 'user'`), `exercise_muscles` (their own), `workout_sessions`, `workout_sets` (including `snapshot`), `routines`, `routine_days`, `routine_exercises` and `training_goals` (every row, current and past). Global exercises are not exported; the user's sets carry the snapshot of each exercise they used.
 - **Deletion:** the `on delete cascade` foreign keys from `auth.users` on every user table. It needs no code, and KEY-348 proves it with a user who has sessions, sets, routines, goals and custom exercises.
-- **Privacy Policy:** `packages/core/src/copy/legal.ts` lists "Your custom foods and recipes" but no workout data. A copy change adding workouts, routines and training goals lands before any client can store a session (a T2 ticket). It is not part of T1, because T1 adds no client.
+- **Privacy Policy:** `packages/core/src/copy/legal.ts` lists workouts, routines and training goals as data Ki-Lo holds and as health data, and the Terms cover training (KEY-379, with `TERMS_VERSION` bumped so every user accepts once, Zee 2026-10-18). This landed before any client can store a session.
 
 ### Implemented by
 

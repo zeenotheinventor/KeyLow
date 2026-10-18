@@ -136,8 +136,8 @@ account id as the only user detail. The rules and the reasons are in
 in [`docs/runbooks/error-monitoring.md`](docs/runbooks/error-monitoring.md).
 
 The privacy policy and terms are served by the web app at `/privacy` and `/terms`, and the mobile
-About screen links to them. Sojisoft Limited is the data controller. Weight, diary and body stats
-are health data, so no health values go into logs, error reports or analytics.
+About screen links to them. Sojisoft Limited is the data controller. Weight, diary, body stats
+and workouts are health data, so no health values go into logs, error reports or analytics.
 
 Food data comes with licence conditions that the apps show on About:
 

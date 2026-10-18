@@ -93,7 +93,8 @@ describe("the words on the web sign up board", () => {
       termsLink: "Terms",
       betweenLinks: " and the ",
       privacyLink: "Privacy Policy",
-      afterPrivacy: ", including storing my weight, food diary and body stats to run the app.",
+      afterPrivacy:
+        ", including storing my weight, food diary, body stats and workouts to run the app.",
     });
   });
 });

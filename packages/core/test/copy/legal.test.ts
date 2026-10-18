@@ -10,6 +10,7 @@ import {
   TERMS_VERSION,
 } from "../../src/copy";
 import { describeLastUpdated } from "../../src/copy/legal";
+import { needsTermsAcceptance } from "../../src/terms";
 
 import type { LegalDocument } from "../../src/copy";
 
@@ -41,7 +42,25 @@ function allTextOf(document: LegalDocument): string {
 describe("the legal copy", () => {
   describe("the terms version", () => {
     it("should be the date the current terms took effect", () => {
-      expect(TERMS_VERSION).toBe("2026-10-16");
+      expect(TERMS_VERSION).toBe("2026-10-18");
+    });
+
+    it("should ask someone who accepted the terms of 16 October 2026 to accept again", () => {
+      expect(
+        needsTermsAcceptance(
+          { terms_accepted_at: "2026-10-17T09:30:00+00:00", terms_version: "2026-10-16" },
+          TERMS_VERSION,
+        ),
+      ).toBe(true);
+    });
+
+    it("should not ask someone who accepted the current terms again", () => {
+      expect(
+        needsTermsAcceptance(
+          { terms_accepted_at: "2026-10-18T09:30:00+00:00", terms_version: TERMS_VERSION },
+          TERMS_VERSION,
+        ),
+      ).toBe(false);
     });
   });
 
@@ -116,7 +135,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 16 October 2026");
+      expect(document.lastUpdated).toBe("Last updated 18 October 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
@@ -194,7 +213,36 @@ describe("the legal copy", () => {
         "Your weigh-ins, including any imported from Apple Health or Health Connect.",
         "Your food diary.",
         "Your custom foods and recipes.",
+        "Your workouts: sessions, sets, loads and the exercises you create.",
+        "Your routines and training goals.",
         "Your goals, your targets and your expenditure estimates.",
+      ]);
+    });
+
+    it("should say the information runs the food diary, the workout log and the adaptive engine", () => {
+      const why = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "Why Ki-Lo uses it",
+      );
+      expect(why?.paragraphs[0]).toBe(
+        "Ki-Lo uses your information to run your food diary, your workout log and the adaptive engine. The engine estimates your energy expenditure and sets your targets.",
+      );
+    });
+
+    it("should name workouts, routines and training goals as health data", () => {
+      const basis = PRIVACY_POLICY.sections.find((section) => section.heading === "Lawful basis");
+      expect(basis?.paragraphs).toContain(
+        "Your weight, food diary, body stats, workouts, routines and training goals are health data. For health data, the basis is your explicit consent. You give it when you tick the box at sign-up.",
+      );
+    });
+
+    it("should say who cannot see the workouts, and that the mobile app keeps a copy on the phone with no encryption of its own, removed at sign out", () => {
+      const stored = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "Where your information is stored",
+      );
+      expect(stored?.paragraphs).toEqual([
+        "Your information is stored with Supabase, in its London region (eu-west-2).",
+        "Other people who use Ki-Lo cannot see your workouts, routines, training goals or the exercises you create.",
+        "The mobile app also keeps a copy of what you have recently looked at on your phone, so that it opens without a connection. That includes your food diary and targets, and your workouts, routines and training goals. The copy is in storage private to the Ki-Lo app. Ki-Lo does not add encryption of its own to it. It is removed when you sign out.",
       ]);
     });
 
@@ -226,7 +274,7 @@ describe("the legal copy", () => {
         "Supabase: the database and sign-in.",
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
-        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins or body stats, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
+        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ]);
     });
@@ -294,6 +342,13 @@ describe("the legal copy", () => {
 
     it("should be titled Terms of Use", () => {
       expect(TERMS.title).toBe("Terms of Use");
+    });
+
+    it("should say Ki-Lo is an app for tracking food, weight and training", () => {
+      const about = TERMS.sections.find((section) => section.heading === "About these terms");
+      expect(about?.paragraphs).toEqual([
+        "These terms cover your use of Ki-Lo, an app for tracking your food, your weight and your training. By using Ki-Lo, you agree to them.",
+      ]);
     });
 
     it("should say Ki-Lo is for personal use, provided as it is with no warranty", () => {
