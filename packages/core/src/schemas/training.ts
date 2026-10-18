@@ -51,8 +51,9 @@ import { SET_SNAPSHOT_VERSION } from "../training/versions";
 
 /*
  * The training rows of ADR 0005, Amendment 1, as PostgREST returns them, with every check the
- * migrations (KEY-347, KEY-348) put on them. Clients parse a row before they write it, so a write that
- * breaks a bound never reaches the database. Messages state the rule and never quote a value, because
+ * migrations (KEY-347, KEY-348) put on them, so a client can refuse a row that breaks a bound before the
+ * database does. The list schemas hold the rules that span rows (muscles per exercise, sets per session,
+ * days per routine, exercises per day). Messages state the rule and never quote a value, because
  * training logs are health data.
  */
 
