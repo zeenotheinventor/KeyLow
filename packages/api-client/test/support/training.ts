@@ -9,6 +9,10 @@ import type { SetupServer } from "msw/node";
 /** An exercise name and a muscle share nobody would pick by chance, to look for in an error or a key. */
 export const RECOGNISABLE_EXERCISE_NAME = "key354-recognisable-exercise";
 export const RECOGNISABLE_WEIGHT = 0.7351;
+/** A routine day name and a load nobody would pick by chance, to look for in an error or a key. */
+export const RECOGNISABLE_DAY_NAME = "key384-recognisable-day";
+export const RECOGNISABLE_LOAD = 187.25;
+export const ROUTINE_DAY_ID = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
 
 export const EXERCISE_ID = "77777777-7777-4777-8777-777777777777";
 export const ROUTINE_ID = "88888888-8888-4888-8888-888888888888";
@@ -65,6 +69,51 @@ export const sessionRow = (overrides: Record<string, unknown> = {}) => {
     ...overrides,
   };
 };
+
+/** A live `workout_sets` row as PostgREST returns it for the columns a session read selects. */
+export const sessionSetRow = (overrides: Record<string, unknown> = {}) => ({
+  ...setRow(),
+  position: 0,
+  reps: 8,
+  load_kg: 60,
+  ...overrides,
+});
+
+/**
+ * A session in progress as PostgREST returns it for the session reads: its columns, the name of its
+ * routine day (null for a free session) and its live sets.
+ */
+export const openSessionRow = (overrides: Record<string, unknown> = {}) => {
+  const id = nextId("bbbbbbbb-bbbb-4bbb-8bbb");
+  return {
+    id,
+    started_at: "2026-10-18T09:00:00+00:00",
+    ended_at: null,
+    local_date: "2026-10-18",
+    routine_day_id: ROUTINE_DAY_ID,
+    note: null,
+    deleted_at: null,
+    routine_days: { name: RECOGNISABLE_DAY_NAME },
+    workout_sets: [sessionSetRow({ session_id: id })],
+    ...overrides,
+  };
+};
+
+/** A working set of an earlier session as PostgREST returns it for the last performance read. */
+export const previousSetRow = (overrides: Record<string, unknown> = {}) => ({
+  id: nextId("99999999-9999-4999-8999"),
+  session_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  position: 0,
+  set_type: "working",
+  reps: 8,
+  load_kg: RECOGNISABLE_LOAD,
+  rir: 2,
+  rpe: null,
+  performed_at: "2026-10-11T09:30:00+00:00",
+  deleted_at: null,
+  workout_sessions: { local_date: "2026-10-11" },
+  ...overrides,
+});
 
 /** The active routine as PostgREST returns it, with one Monday day of one bench press exercise. */
 export const routineRow = (overrides: Record<string, unknown> = {}) => ({

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { keys } from "../src/queryKeys";
 
+const SESSION_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const EXERCISE_ID = "77777777-7777-4777-8777-777777777777";
+
 describe("keys.profiles", () => {
   it("should expose the profiles root key", () => {
     expect(keys.profiles.all).toEqual(["profiles"]);
@@ -18,6 +21,10 @@ describe("keys.profiles", () => {
   it("should expose keys for the signed in user's targets and time zone, under the profiles root", () => {
     expect(keys.profiles.targets).toEqual(["profiles", "targets"]);
     expect(keys.profiles.timeZone).toEqual(["profiles", "time-zone"]);
+  });
+
+  it("should expose a key for the signed in user's weight unit, under the profiles root", () => {
+    expect(keys.profiles.weightUnit).toEqual(["profiles", "weight-unit"]);
   });
 });
 
@@ -193,22 +200,68 @@ describe("keys.training", () => {
     );
   });
 
+  it("should key a session by its id under the sessions prefix", () => {
+    expect(keys.training.session(SESSION_ID)).toEqual(["training", "sessions", SESSION_ID]);
+    expect(keys.training.sessionsAll).toEqual(["training", "sessions"]);
+    expect(keys.training.session(SESSION_ID).slice(0, 2)).toEqual(keys.training.sessionsAll);
+  });
+
+  it("should expose the active session key", () => {
+    expect(keys.training.activeSession).toEqual(["training", "active-session"]);
+  });
+
+  it("should key the last performance by the exercise, and by the session left out when one is", () => {
+    expect(keys.training.lastPerformance(EXERCISE_ID)).toEqual([
+      "training",
+      "last-performance",
+      EXERCISE_ID,
+    ]);
+    expect(keys.training.lastPerformance(EXERCISE_ID, SESSION_ID)).toEqual([
+      "training",
+      "last-performance",
+      EXERCISE_ID,
+      SESSION_ID,
+    ]);
+    expect(keys.training.lastPerformance(EXERCISE_ID, SESSION_ID).slice(0, 3)).toEqual(
+      keys.training.lastPerformance(EXERCISE_ID),
+    );
+  });
+
+  it("should not put the session reads under the prefix of any other training family", () => {
+    for (const key of [
+      keys.training.session(SESSION_ID),
+      keys.training.activeSession,
+      keys.training.lastPerformance(EXERCISE_ID, SESSION_ID),
+    ]) {
+      for (const prefix of [keys.training.setsAll, keys.training.weekSessionsAll]) {
+        expect(key.slice(0, prefix.length)).not.toEqual(prefix);
+      }
+    }
+  });
+
   it("should nest every training key under the training root so one invalidation covers them all", () => {
     for (const key of [
       keys.training.sets("2026-10-03"),
       keys.training.activeRoutine,
       keys.training.weekSessions("2026-10-12"),
+      keys.training.session(SESSION_ID),
+      keys.training.activeSession,
+      keys.training.lastPerformance(EXERCISE_ID),
     ]) {
       expect(key.slice(0, 1)).toEqual(keys.training.all);
     }
   });
 
-  it("should hold dates and fixed words only, so no key carries a set value, a load or a muscle", () => {
-    const words = /^(training|sets|active-routine|week-sessions|\d{4}-\d{2}-\d{2})$/;
+  it("should hold dates, ids and fixed words only, so no key carries a set value, a load or a muscle", () => {
+    const words =
+      /^(training|sets|active-routine|week-sessions|sessions|active-session|last-performance|\d{4}-\d{2}-\d{2}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
     for (const key of [
       keys.training.sets("2026-10-03"),
       keys.training.activeRoutine,
       keys.training.weekSessions("2026-10-12"),
+      keys.training.session(SESSION_ID),
+      keys.training.activeSession,
+      keys.training.lastPerformance(EXERCISE_ID, SESSION_ID),
     ]) {
       for (const part of key) {
         expect(part).toMatch(words);

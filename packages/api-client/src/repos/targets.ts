@@ -1,5 +1,6 @@
 import type { Database } from "../database.types";
 import type { ProgressTargets, ValidTargets } from "@keylow/core/diary";
+import type { WeightDisplayUnit } from "@keylow/core/weight";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 // Targets are health data. The database's own message can quote a value (a refused number is written into
@@ -82,6 +83,23 @@ export async function getMyTimeZone(client: SupabaseClient<Database>): Promise<s
   }
 
   return data?.timezone ?? null;
+}
+
+/**
+ * Reads the unit the signed in user's profile shows loads in, `kg` or `lb`. The column also allows `st`,
+ * which training does not use, so that, a unit this build does not know, no value and no profile row
+ * all read as `kg`.
+ */
+export async function getMyWeightUnit(
+  client: SupabaseClient<Database>,
+): Promise<WeightDisplayUnit> {
+  const { data, error } = await client.from("profiles").select("weight_unit").maybeSingle();
+
+  if (error) {
+    throw repoError("load your weight unit", error);
+  }
+
+  return data?.weight_unit === "lb" ? "lb" : "kg";
 }
 
 /**

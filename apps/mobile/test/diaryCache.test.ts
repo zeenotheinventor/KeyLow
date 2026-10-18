@@ -73,6 +73,9 @@ describe("which training queries the diary cache keeps", () => {
     ["the sets from a start day", keys.training.sets("2026-10-02")],
     ["the active routine", keys.training.activeRoutine],
     ["the sessions of a week", keys.training.weekSessions("2026-10-12")],
+    ["a session with its sets", keys.training.session("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")],
+    ["the session in progress", keys.training.activeSession],
+    ["the weight unit a restored session shows its loads in", keys.profiles.weightUnit],
   ])("should keep %s", (_name, queryKey) => {
     expect(isPersistedQuery(queryFor(queryKey))).toBe(true);
   });
@@ -81,6 +84,13 @@ describe("which training queries the diary cache keeps", () => {
     ["a search of exercises by text", ["training", "exercise-search", "bench"]],
     ["a training query this cache does not know", ["training", "something-new", "2026-10-02"]],
     ["the bare training prefix", keys.training.all],
+    [
+      "the last performance of an exercise, which is only read while logging",
+      keys.training.lastPerformance(
+        "77777777-7777-4777-8777-777777777777",
+        "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      ),
+    ],
   ])("should not keep %s", (_name, queryKey) => {
     expect(isPersistedQuery(queryFor(queryKey))).toBe(false);
   });

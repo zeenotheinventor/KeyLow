@@ -13,6 +13,7 @@ import {
 
 import type { ActiveRoutine, TrainingSet, WeekSession } from "./trainingSchemas";
 import type { Database } from "../database.types";
+import type { SetSnapshot } from "@keylow/core/schemas";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 // A set holds an exercise name, a muscle share and an effort, and a routine holds exercise names: all
@@ -27,7 +28,7 @@ const LOCAL_DATE = z.iso.date();
 // A session row is read with its sets embedded, and a row without the list is not a session of no sets.
 const sessionWithSetsSchema = sessionColumnsSchema.extend({ workout_sets: z.array(z.unknown()) });
 
-const trainingRepoError = (action: string, cause: PostgrestError) =>
+export const trainingRepoError = (action: string, cause: PostgrestError) =>
   new Error(`Could not ${action} (${cause.code})`, { cause: { code: cause.code } });
 
 function assertLocalDate(localDate: string): void {
@@ -36,9 +37,11 @@ function assertLocalDate(localDate: string): void {
   }
 }
 
-/** A set row read: its columns checked, and its snapshot by core, which names why it cannot read one. */
-function parseSetRow(row: unknown, action: string): TrainingSet {
-  const columns = parseRow(setColumnsSchema, row, action, idOfRow);
+/** A set's snapshot read by core, which names why it cannot read one. The message names the row and the problem only. */
+export function readSnapshot(
+  columns: { id: string; snapshot: unknown },
+  action: string,
+): SetSnapshot {
   const snapshot = parseSetSnapshot(columns.snapshot);
   if (!snapshot.ok) {
     throw new Error(
@@ -46,7 +49,13 @@ function parseSetRow(row: unknown, action: string): TrainingSet {
       { cause: { code: snapshot.problem } },
     );
   }
-  return { ...columns, snapshot: snapshot.snapshot };
+  return snapshot.snapshot;
+}
+
+/** A set row read: its columns checked, and its snapshot by core. */
+function parseSetRow(row: unknown, action: string): TrainingSet {
+  const columns = parseRow(setColumnsSchema, row, action, idOfRow);
+  return { ...columns, snapshot: readSnapshot(columns, action) };
 }
 
 /**

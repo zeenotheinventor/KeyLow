@@ -83,7 +83,15 @@ describe("the package index", () => {
     "listSetsFrom",
     "listWeekSessions",
     "getActiveRoutine",
+    "getActiveSession",
+    "getLastPerformance",
+    "getMyWeightUnit",
+    "getSession",
+    "useActiveSession",
+    "useLastPerformance",
     "useMuscleState",
+    "useSession",
+    "useWeightUnit",
     "useWeekComparison",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);

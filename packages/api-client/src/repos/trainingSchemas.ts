@@ -59,6 +59,84 @@ export const SESSION_COLUMNS = Object.keys(sessionColumnsSchema.shape).join(",")
 export type WeekSession = z.output<typeof sessionColumnsSchema> & { sets: TrainingSet[] };
 
 /**
+ * The columns of a `workout_sets` row that a session in progress shows and logs against, as PostgREST
+ * returns them: those of the sets read with the place in the list and the values entered.
+ */
+export const sessionSetColumnsSchema = setColumnsSchema.extend({
+  position: setShape.position,
+  reps: setShape.reps,
+  load_kg: setShape.load_kg,
+});
+
+export const SESSION_SET_COLUMNS = Object.keys(sessionSetColumnsSchema.shape).join(",");
+
+/** A live set of a session, with its snapshot read. */
+export type SessionSet = Omit<z.output<typeof sessionSetColumnsSchema>, "snapshot"> & {
+  snapshot: SetSnapshot;
+};
+
+/** The columns of a `workout_sessions` row the session bar and the session screen read, as PostgREST returns them. */
+export const sessionDetailColumnsSchema = z.object({
+  id: sessionShape.id,
+  started_at: sessionShape.started_at,
+  ended_at: sessionShape.ended_at,
+  local_date: sessionShape.local_date,
+  routine_day_id: sessionShape.routine_day_id,
+  note: sessionShape.note,
+  deleted_at: sessionShape.deleted_at,
+});
+
+export const SESSION_DETAIL_COLUMNS = Object.keys(sessionDetailColumnsSchema.shape).join(",");
+
+/**
+ * A live session with the name of its routine day (null for a free session, or when the day was removed
+ * from the routine) and its live sets in the order they are listed. Rows only: nothing here is worked out
+ * from the sets, so what is stored on a device is what the database held.
+ */
+export type SessionWithSets = z.output<typeof sessionDetailColumnsSchema> & {
+  routine_day_name: string | null;
+  sets: SessionSet[];
+};
+
+/** A session row with its routine day and its sets embedded, as PostgREST returns it. The sets are checked one by one. */
+export const sessionWithSetsColumnsSchema = sessionDetailColumnsSchema.extend({
+  routine_days: z.object({ name: routineDayRowSchema.shape.name }).nullable(),
+  workout_sets: z.array(z.unknown()),
+});
+
+/** The columns of a `workout_sets` row the "previous" values and the prefill read, with the session's local date embedded. */
+export const lastPerformanceRowSchema = z.object({
+  id: setShape.id,
+  session_id: setShape.session_id,
+  position: setShape.position,
+  set_type: setShape.set_type,
+  reps: setShape.reps,
+  load_kg: setShape.load_kg,
+  rir: setShape.rir,
+  rpe: setShape.rpe,
+  performed_at: setShape.performed_at,
+  deleted_at: setShape.deleted_at,
+  workout_sessions: z.object({ local_date: sessionShape.local_date }),
+});
+
+export const LAST_PERFORMANCE_COLUMNS = Object.keys(lastPerformanceRowSchema.shape)
+  .filter((column) => column !== "workout_sessions")
+  .join(",");
+
+/** One set of an earlier session, with the values a "previous" column shows and a prefill copies. */
+export type LastPerformanceSet = Omit<
+  z.output<typeof lastPerformanceRowSchema>,
+  "session_id" | "workout_sessions"
+>;
+
+/** The sets of one earlier session, oldest first. */
+export type LastPerformanceSession = {
+  session_id: string;
+  local_date: string;
+  sets: LastPerformanceSet[];
+};
+
+/**
  * The active routine as core plans from it. `id` and `name` are the routine's own, and `days` are
  * `PlanRoutine`'s: each exercise carries the exercise it names and that exercise's muscle map as it is
  * now, which `expandPlan` and `targetedMuscles` read.
