@@ -156,7 +156,8 @@ const HEAT_LEGEND_CAPTION =
 const WEB_HEAT_LEGEND_ADDITION = "Press and hold a muscle, or pick it below, for its details.";
 const VOLUME_LEGEND_CAPTION = "Sets this week against each muscle's target.";
 
-const joinInWords = (items: readonly string[]): string => {
+/** Items as a sentence lists them: "A", "A and B", "A, B and C". */
+export const joinInWords = (items: readonly string[]): string => {
   const last = items.at(-1) ?? "";
   return items.length < 2 ? last : `${items.slice(0, -1).join(", ")} and ${last}`;
 };
@@ -175,6 +176,10 @@ const weekdayIndexOf = (localDate: string): number =>
 /** The full name of the weekday of a calendar day (`YYYY-MM-DD`): "Monday". */
 export const describeWeekdayName = (localDate: string): string =>
   `${WEEKDAY_NAMES_LONG[weekdayIndexOf(localDate)]}`;
+
+/** The short name of the weekday of a calendar day (`YYYY-MM-DD`): "Mon". */
+export const describeWeekdayShortName = (localDate: string): string =>
+  `${WEEKDAY_NAMES_SHORT[weekdayIndexOf(localDate)]}`;
 
 /** A calendar day (`YYYY-MM-DD`) as the boards write it: "Mon 12 Oct". */
 export const describeShortDate = (localDate: string): string => {
@@ -387,7 +392,7 @@ export const describeScrubberDay = ({
     ...(onlyInProjected ? [BODY_MAP.scrubber.availableInProjected] : []),
   ];
   return {
-    weekday: `${WEEKDAY_NAMES_SHORT[weekdayIndexOf(localDate)]}`,
+    weekday: describeWeekdayShortName(localDate),
     dayOfMonth: String(parseCalendarDay(localDate).day),
     accessibleName: parts.join(", "),
   };

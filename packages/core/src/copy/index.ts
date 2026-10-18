@@ -33,3 +33,4 @@ export * from "./weight";
 export * from "./muscleNames";
 export * from "./bodyMap";
 export * from "./bodyMapSheet";
+export * from "./train";

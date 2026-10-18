@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
 
-import { MUSCLE_GROUP_NAMES, MUSCLE_NAMES } from "../../src/copy";
+import { MUSCLE_GROUP_NAMES, MUSCLE_NAMES, NAME_NUMBER } from "../../src/copy";
 import { MUSCLE_GROUPS, MUSCLE_IDS, MUSCLES } from "../../src/training";
 
 describe("the muscle names", () => {
+  it("should say which of the 22 muscle names read as one thing, and every other as many", () => {
+    expect(Object.keys(NAME_NUMBER).sort()).toStrictEqual([...MUSCLE_IDS].sort());
+    expect(MUSCLE_IDS.filter((muscle) => NAME_NUMBER[muscle] === "one")).toStrictEqual([
+      "chest_upper",
+      "chest_lower",
+      "lower_back",
+      "neck",
+    ]);
+  });
+
   it("should name all 22 muscles as the muscle list board does", () => {
     expect(MUSCLE_NAMES).toStrictEqual({
       chest_upper: "Upper chest",
