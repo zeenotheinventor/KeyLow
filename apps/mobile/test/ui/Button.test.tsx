@@ -460,8 +460,8 @@ describe("Button", () => {
         ).toHaveLength(1);
       });
 
-      it.each(["primary", "secondary", "destructive"] as const)(
-        "should leave the %s variant alone when asked for the danger tone, because only ghost can have it",
+      it.each(["primary", "destructive"] as const)(
+        "should leave the %s variant alone when asked for the danger tone, because only ghost and secondary can have it",
         async (variant) => {
           await renderButton({ variant, tone: "danger" }, scheme);
           await screen.findByRole("button", { name: "Add entry" });
@@ -474,6 +474,45 @@ describe("Button", () => {
           });
         },
       );
+    });
+
+    describe("the secondary danger look", () => {
+      it("should write the label in the danger colour and keep the secondary fill and border", async () => {
+        await renderButton({ variant: "secondary", tone: "danger", icon: "Trash2" }, scheme);
+
+        expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
+          backgroundColor: resolvedColor(scheme, "surface-raised"),
+          borderColor: resolvedColor(scheme, "border"),
+          borderWidth: 1,
+        });
+        expect(screen.getByText("Add entry")).toHaveStyle({
+          color: resolvedColor(scheme, "danger"),
+        });
+      });
+
+      it("should draw the leading icon in the danger colour", async () => {
+        await renderButton({ variant: "secondary", tone: "danger", icon: "Trash2" }, scheme);
+        await screen.findByRole("button", { name: "Add entry" });
+
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
+      });
+
+      it("should draw the spinner ring in the danger colour while loading", async () => {
+        await renderButton({ variant: "secondary", tone: "danger", loading: true }, scheme);
+        await screen.findByRole("progressbar", { name: "Loading" });
+
+        expect(
+          viewsDrawn({ width: 18, height: 18, borderColor: resolvedColor(scheme, "danger") }),
+        ).toHaveLength(1);
+      });
+
+      it("should write the label in the plain colour without the danger tone", async () => {
+        await renderButton({ variant: "secondary" }, scheme);
+
+        expect(await screen.findByText("Add entry")).toHaveStyle({
+          color: resolvedColor(scheme, "text-primary"),
+        });
+      });
     });
 
     it("should draw the press overlay from the press-overlay token", async () => {
