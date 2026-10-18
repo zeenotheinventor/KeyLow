@@ -689,6 +689,286 @@ export type Database = {
         };
         Relationships: [];
       };
+      routine_days: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          position: number;
+          routine_id: string;
+          user_id: string;
+          weekday: number | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          position: number;
+          routine_id: string;
+          user_id?: string;
+          weekday?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          position?: number;
+          routine_id?: string;
+          user_id?: string;
+          weekday?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "routine_days_routine_id_fkey";
+            columns: ["routine_id"];
+            isOneToOne: false;
+            referencedRelation: "routines";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      routine_exercises: {
+        Row: {
+          created_at: string;
+          exercise_id: string;
+          id: string;
+          position: number;
+          rep_max: number;
+          rep_min: number;
+          routine_day_id: string;
+          target_rir: number | null;
+          target_sets: number;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          exercise_id: string;
+          id?: string;
+          position: number;
+          rep_max: number;
+          rep_min: number;
+          routine_day_id: string;
+          target_rir?: number | null;
+          target_sets: number;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          exercise_id?: string;
+          id?: string;
+          position?: number;
+          rep_max?: number;
+          rep_min?: number;
+          routine_day_id?: string;
+          target_rir?: number | null;
+          target_sets?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "routine_exercises_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: false;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "routine_exercises_routine_day_id_fkey";
+            columns: ["routine_day_id"];
+            isOneToOne: false;
+            referencedRelation: "routine_days";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      routines: {
+        Row: {
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          is_archived: boolean;
+          name: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          is_archived?: boolean;
+          name: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          is_archived?: boolean;
+          name?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      training_goals: {
+        Row: {
+          created_at: string;
+          days_per_week: number;
+          effective_from: string;
+          effective_to: string | null;
+          equipment: Database["public"]["Enums"]["equipment"][];
+          experience: Database["public"]["Enums"]["experience_level"];
+          focus: string[];
+          goal: Database["public"]["Enums"]["training_goal"];
+          id: string;
+          muscle_priority: Json;
+          params_version: string;
+          session_minutes: number;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          days_per_week: number;
+          effective_from?: string;
+          effective_to?: string | null;
+          equipment?: Database["public"]["Enums"]["equipment"][];
+          experience: Database["public"]["Enums"]["experience_level"];
+          focus?: string[];
+          goal: Database["public"]["Enums"]["training_goal"];
+          id?: string;
+          muscle_priority: Json;
+          params_version: string;
+          session_minutes: number;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          days_per_week?: number;
+          effective_from?: string;
+          effective_to?: string | null;
+          equipment?: Database["public"]["Enums"]["equipment"][];
+          experience?: Database["public"]["Enums"]["experience_level"];
+          focus?: string[];
+          goal?: Database["public"]["Enums"]["training_goal"];
+          id?: string;
+          muscle_priority?: Json;
+          params_version?: string;
+          session_minutes?: number;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      workout_sessions: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          ended_at: string | null;
+          id: string;
+          local_date: string;
+          note: string | null;
+          routine_day_id: string | null;
+          started_at: string;
+          tz: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          local_date: string;
+          note?: string | null;
+          routine_day_id?: string | null;
+          started_at: string;
+          tz: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          local_date?: string;
+          note?: string | null;
+          routine_day_id?: string | null;
+          started_at?: string;
+          tz?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workout_sessions_routine_day_id_fkey";
+            columns: ["routine_day_id"];
+            isOneToOne: false;
+            referencedRelation: "routine_days";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workout_sets: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          exercise_id: string;
+          id: string;
+          load_kg: number | null;
+          performed_at: string;
+          position: number;
+          reps: number;
+          rir: number | null;
+          rpe: number | null;
+          session_id: string;
+          set_type: Database["public"]["Enums"]["set_type"];
+          snapshot: Json;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          exercise_id: string;
+          id?: string;
+          load_kg?: number | null;
+          performed_at?: string;
+          position: number;
+          reps: number;
+          rir?: number | null;
+          rpe?: number | null;
+          session_id: string;
+          set_type?: Database["public"]["Enums"]["set_type"];
+          snapshot: Json;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          exercise_id?: string;
+          id?: string;
+          load_kg?: number | null;
+          performed_at?: string;
+          position?: number;
+          reps?: number;
+          rir?: number | null;
+          rpe?: number | null;
+          session_id?: string;
+          set_type?: Database["public"]["Enums"]["set_type"];
+          snapshot?: Json;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workout_sets_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: false;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workout_sets_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "workout_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       day_totals: {
@@ -729,6 +1009,11 @@ export type Database = {
         Args: { p_ingredients: Json; p_recipe: Json; p_recipe_id: string };
         Returns: string;
       };
+      save_routine: {
+        Args: { p_days: Json; p_routine: Json; p_routine_id: string };
+        Returns: string;
+      };
+      save_training_goals: { Args: { p_goals: Json }; Returns: string };
       search_food_candidate_ids: {
         Args: { search_phrase: string; search_tsquery: unknown };
         Returns: string[];
@@ -754,10 +1039,12 @@ export type Database = {
           source: Database["public"]["Enums"]["food_source"];
         }[];
       };
+      set_active_routine: { Args: { p_routine_id: string }; Returns: undefined };
       store_off_product: {
         Args: { p_food: Json; p_portions: Json; p_raw: Json };
         Returns: Json;
       };
+      training_focus_is_valid: { Args: { focus: string[] }; Returns: boolean };
     };
     Enums: {
       equipment:
@@ -773,12 +1060,15 @@ export type Database = {
         | "other";
       exercise_mechanic: "compound" | "isolation";
       exercise_source: "free_exercise_db" | "user";
+      experience_level: "beginner" | "intermediate" | "advanced";
       food_source: "off" | "cofid" | "user";
       log_item_type: "food" | "recipe" | "quick";
       muscle_group: "chest" | "shoulders" | "back" | "arms" | "core" | "legs" | "neck";
       muscle_role: "primary" | "secondary" | "stabiliser";
       muscle_size_class: "small" | "medium" | "large";
       nutrient_basis: "per_100g" | "per_100ml";
+      set_type: "warmup" | "working" | "drop" | "failure";
+      training_goal: "aesthetic" | "strength" | "hybrid";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -917,12 +1207,15 @@ export const Constants = {
       ],
       exercise_mechanic: ["compound", "isolation"],
       exercise_source: ["free_exercise_db", "user"],
+      experience_level: ["beginner", "intermediate", "advanced"],
       food_source: ["off", "cofid", "user"],
       log_item_type: ["food", "recipe", "quick"],
       muscle_group: ["chest", "shoulders", "back", "arms", "core", "legs", "neck"],
       muscle_role: ["primary", "secondary", "stabiliser"],
       muscle_size_class: ["small", "medium", "large"],
       nutrient_basis: ["per_100g", "per_100ml"],
+      set_type: ["warmup", "working", "drop", "failure"],
+      training_goal: ["aesthetic", "strength", "hybrid"],
     },
   },
 } as const;
