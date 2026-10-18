@@ -18,19 +18,19 @@ ESLint enforces the dependency rules for `src/` (`import-x/no-nodejs-modules` an
 
 ## Layout
 
-| Path             | Holds                                                                            | Status                     |
-| ---------------- | -------------------------------------------------------------------------------- | -------------------------- |
-| `src/dates/`     | Date helpers (`toLocalDate`)                                                     | One helper                 |
-| `src/schemas/`   | Zod schemas (nutrients, foods, Edge Function contracts)                          | Foods and OFF contracts    |
-| `src/foods/`     | Barcode normalisation, quality rule, data attribution                            | Added in M2                |
-| `src/format/`    | Number formatting: calories, grams, weight, delta grams, energy share            | Ported from the design     |
-| `src/copy/`      | Every shared user-facing sentence: sources, search, barcode, auth, forms         | Added in M2                |
-| `src/search/`    | Search presentation: grouping, match highlight, energy shares, macros, food rows | Added in M2                |
-| `src/terms/`     | Whether the user has to accept the Terms (again): `needsTermsAcceptance`         | Added in M2                |
-| `src/nutrition/` | Nutrient maths and unit conversion                                               | Empty, filled in M2 and M5 |
-| `src/engine/`    | Trend, expenditure and targets                                                   | Empty, filled in M6        |
-| `src/training/`  | Muscle list, training bounds and enums, set snapshot (ADR 0005, Amendment 1)     | Added in T1 (KEY-346)      |
-| `test/`          | Vitest tests, mirroring the `src/` folder structure                              |                            |
+| Path             | Holds                                                                              | Status                                            |
+| ---------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `src/dates/`     | Date helpers (`toLocalDate`)                                                       | One helper                                        |
+| `src/schemas/`   | Zod schemas (nutrients, foods, Edge Function contracts)                            | Foods and OFF contracts                           |
+| `src/foods/`     | Barcode normalisation, quality rule, data attribution                              | Added in M2                                       |
+| `src/format/`    | Number formatting: calories, grams, weight, delta grams, energy share              | Ported from the design                            |
+| `src/copy/`      | Every shared user-facing sentence: sources, search, barcode, auth, forms           | Added in M2                                       |
+| `src/search/`    | Search presentation: grouping, match highlight, energy shares, macros, food rows   | Added in M2                                       |
+| `src/terms/`     | Whether the user has to accept the Terms (again): `needsTermsAcceptance`           | Added in M2                                       |
+| `src/nutrition/` | Nutrient maths and unit conversion                                                 | Empty, filled in M2 and M5                        |
+| `src/engine/`    | Trend, expenditure and targets                                                     | Empty, filled in M6                               |
+| `src/training/`  | Muscle list, training bounds and enums, set snapshot, `TrainingParams`, heat model | Added in T1 (KEY-346), heat model in T3 (KEY-351) |
+| `test/`          | Vitest tests, mirroring the `src/` folder structure                                |                                                   |
 
 Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/foods`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`, `@keylow/core/format`, `@keylow/core/copy`, `@keylow/core/search`, `@keylow/core/terms`, `@keylow/core/training`), and `@keylow/core` re-exports the public surface. The exception is `@keylow/core/testing` (`buildFood`, `buildFoodPortion`, `buildOffCandidate`): test builders that only test code imports, never shipped code, and the root export leaves it out.
 
