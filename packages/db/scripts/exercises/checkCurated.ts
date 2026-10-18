@@ -1,7 +1,7 @@
 // Checks the curated exercise CSV against the rules the import relies on. Pure: it takes the file's
 // text and returns every problem it finds, so a test can feed it a broken file and the generator can
 // refuse to write one.
-import { CURATED_COLUMNS, MECHANICS } from "./columns";
+import { CURATED_COLUMNS, EQUIPMENT, MECHANICS } from "./columns";
 import { MUSCLE_IDS, isMuscleId, isRole } from "./muscles";
 import { parseMuscleShares } from "./muscleShares";
 import { parseCsv } from "../cofid/csv";
@@ -24,6 +24,7 @@ export interface CheckProblem {
 
 const weightPattern = /^\d+(\.\d+)?$/;
 const mechanics: ReadonlySet<string> = new Set(MECHANICS);
+const equipmentValues: ReadonlySet<string> = new Set(EQUIPMENT);
 
 export function checkCurated(csv: string): CheckProblem[] {
   const problems: CheckProblem[] = [];
@@ -54,7 +55,7 @@ export function checkCurated(csv: string): CheckProblem[] {
       report("malformed", `Expected ${CURATED_COLUMNS.length} fields, found ${row.length}`);
       return;
     }
-    const [sourceRef = "", name = "", , mechanic = "", musclesText = ""] = row;
+    const [sourceRef = "", name = "", equipment = "", mechanic = "", musclesText = ""] = row;
 
     if (sourceRef === "" || name === "") {
       report("malformed", "source_ref and name must not be empty", sourceRef);
@@ -64,6 +65,13 @@ export function checkCurated(csv: string): CheckProblem[] {
       linesBySourceRef.set(sourceRef, line);
     } else {
       report("duplicate_source_ref", `${sourceRef} is already on line ${firstLine}`, sourceRef);
+    }
+    if (!equipmentValues.has(equipment)) {
+      report(
+        "malformed",
+        `equipment "${equipment}" is not one of ${EQUIPMENT.join(", ")}`,
+        sourceRef,
+      );
     }
     if (!mechanics.has(mechanic)) {
       report("malformed", `mechanic "${mechanic}" is not ${MECHANICS.join(" or ")}`, sourceRef);

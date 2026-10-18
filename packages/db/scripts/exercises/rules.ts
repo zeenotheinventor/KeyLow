@@ -3,6 +3,7 @@
 // Movement patterns are read from the exercise name, lower-cased, because the source has nothing finer.
 import { DEFAULT_WEIGHTS } from "./muscles";
 
+import type { Equipment } from "./columns";
 import type { MuscleId, Role } from "./muscles";
 import type { MuscleShare } from "./muscleShares";
 import type { SourceExercise, SourceMuscleGroup } from "./sourceExercise";
@@ -249,5 +250,35 @@ export const mapMechanic = (exercise: SourceExercise): "compound" | "isolation" 
       ? "compound"
       : "isolation";
 
-/** The source's equipment; a missing value is bodyweight work in every kept exercise. */
-export const mapEquipment = (exercise: SourceExercise): string => exercise.equipment ?? "body only";
+const sourceEquipment: Record<string, Equipment> = {
+  barbell: "barbell",
+  dumbbell: "dumbbell",
+  kettlebells: "kettlebell",
+  cable: "cable",
+  machine: "machine",
+  "e-z curl bar": "ez_bar",
+  bands: "band",
+  "body only": "bodyweight",
+  "exercise ball": "other",
+  "medicine ball": "other",
+  "foam roll": "other",
+  other: "other",
+};
+
+/**
+ * The source's equipment as the enum: a Smith machine by name (the source files it under machine
+ * or barbell), and a missing value as bodyweight, which every kept exercise without one is.
+ */
+export const mapEquipment = (exercise: SourceExercise): Equipment => {
+  if (/\bsmith\b/i.test(exercise.name)) {
+    return "smith_machine";
+  }
+  if (exercise.equipment === null) {
+    return "bodyweight";
+  }
+  const mapped = sourceEquipment[exercise.equipment];
+  if (mapped === undefined) {
+    throw new Error(`${exercise.id}: equipment has no mapping to the enum`);
+  }
+  return mapped;
+};

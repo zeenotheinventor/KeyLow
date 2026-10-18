@@ -88,7 +88,7 @@ Chest listed as **secondary** becomes `chest_upper` when the exercise's primary 
 
 ## Mechanic and equipment
 
-`mechanic` is the source's `compound` or `isolation`. Where the source has none (87 entries, 5 of them kept), it is `compound` when the source lists any secondary muscle and `isolation` otherwise. `equipment` is the source's text; where the source has none, every one of the 6 kept exercises is bodyweight work (inverted rows, decline push-ups, the floor glute-ham raise), so it is `body only`.
+`mechanic` is the source's `compound` or `isolation`. Where the source has none (87 entries, 5 of them kept), it is `compound` when the source lists any secondary muscle and `isolation` otherwise. `equipment` is the source's text; where the source has none, every one of the 6 kept exercises is bodyweight work (inverted rows, decline push-ups, the floor glute-ham raise), so it is `bodyweight`. The source's labels are then mapped onto the `equipment` enum of ADR 0005 Amendment 1: `body only` to `bodyweight`, `kettlebells` to `kettlebell`, `bands` to `band`, `e-z curl bar` to `ez_bar`, `exercise ball`, `medicine ball` and `foam roll` to `other`, and any exercise named "Smith" to `smith_machine` whatever the source files it under. An unknown label stops the generator.
 
 ## Exclusions
 

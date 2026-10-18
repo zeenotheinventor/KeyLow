@@ -43,6 +43,19 @@ describe("checkCurated", () => {
     expect(checkCurated(fileOf(rows))).toEqual([]);
   });
 
+  it("should report equipment that is not in the enum", () => {
+    const rows = withRow(0, ([ref, name, , mechanic, muscles, note]) => [
+      ref,
+      name,
+      "body only",
+      mechanic,
+      muscles,
+      note,
+    ]);
+
+    expect(rulesOf(fileOf(rows))).toEqual(["malformed"]);
+  });
+
   it("should report a muscle id that is not one of the 22", () => {
     const rows = [
       ...validRows(),

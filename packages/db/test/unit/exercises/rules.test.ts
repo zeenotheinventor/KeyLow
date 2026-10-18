@@ -334,12 +334,40 @@ describe("mapMechanic and mapEquipment", () => {
     expect(mapMechanic(sourceExercise({ name: "C", mechanic: null }))).toBe("isolation");
   });
 
-  it("should write missing equipment as body only", () => {
+  it("should map the source's equipment onto the enum", () => {
     expect(mapEquipment(sourceExercise({ name: "Inverted Row", equipment: null }))).toBe(
-      "body only",
+      "bodyweight",
+    );
+    expect(mapEquipment(sourceExercise({ name: "Push-Up", equipment: "body only" }))).toBe(
+      "bodyweight",
+    );
+    expect(mapEquipment(sourceExercise({ name: "Swing", equipment: "kettlebells" }))).toBe(
+      "kettlebell",
+    );
+    expect(mapEquipment(sourceExercise({ name: "Curl", equipment: "e-z curl bar" }))).toBe(
+      "ez_bar",
+    );
+    expect(mapEquipment(sourceExercise({ name: "Pull Apart", equipment: "bands" }))).toBe("band");
+    expect(mapEquipment(sourceExercise({ name: "Slam", equipment: "medicine ball" }))).toBe(
+      "other",
     );
     expect(mapEquipment(sourceExercise({ name: "Cable Crunch", equipment: "cable" }))).toBe(
       "cable",
+    );
+  });
+
+  it("should map a Smith machine by name whatever the source files it under", () => {
+    expect(
+      mapEquipment(sourceExercise({ name: "Smith Machine Squat", equipment: "machine" })),
+    ).toBe("smith_machine");
+    expect(
+      mapEquipment(sourceExercise({ name: "Smith Machine Bench Press", equipment: "barbell" })),
+    ).toBe("smith_machine");
+  });
+
+  it("should refuse equipment it has no mapping for", () => {
+    expect(() => mapEquipment(sourceExercise({ name: "Odd", equipment: "trampoline" }))).toThrow(
+      "equipment has no mapping",
     );
   });
 });
