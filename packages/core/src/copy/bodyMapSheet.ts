@@ -8,7 +8,7 @@ import {
   describeWeekRange,
   formatSetCount,
 } from "./bodyMap";
-import { MUSCLE_GROUP_NAMES, MUSCLE_NAMES } from "./muscleNames";
+import { MUSCLE_GROUP_NAMES, MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
 import { MUSCLES } from "../training/muscles";
 
 import type { PlannedSession } from "./bodyMap";
@@ -105,32 +105,6 @@ const POSITION_BY_END_OF_WEEK: Readonly<Record<RangePosition, string>> = {
   below: "below your target",
   inside: "inside your target",
   above: "above your target",
-};
-
-/** Whether the muscle's name reads as one thing ("neck") or many ("abs", "lats"), which the sentences agree with. */
-const NAME_NUMBER: Readonly<Record<MuscleId, "one" | "many">> = {
-  chest_upper: "one",
-  chest_lower: "one",
-  delt_front: "many",
-  delt_side: "many",
-  delt_rear: "many",
-  lats: "many",
-  traps_upper: "many",
-  traps_mid: "many",
-  lower_back: "one",
-  biceps: "many",
-  triceps: "many",
-  forearms: "many",
-  abs: "many",
-  obliques: "many",
-  glute_max: "many",
-  glute_med: "many",
-  quads: "many",
-  hamstrings: "many",
-  adductors: "many",
-  calves: "many",
-  tibialis: "many",
-  neck: "one",
 };
 
 const heatTile = ({ heatPercent, heatStep }: MuscleDetail): HeatTileCopy => ({

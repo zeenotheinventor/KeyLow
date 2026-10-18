@@ -29,6 +29,12 @@ export const samples: Record<string, () => string[]> = {
   describeHeatStep: () => [0, 1, 2, 3, 4, 5].map(copy.describeHeatStep),
   describeHours: () => [copy.describeHours(1), copy.describeHours(31)],
   describeWeekdayName: () => [copy.describeWeekdayName("2026-10-12")],
+  describeWeekdayShortName: () => [copy.describeWeekdayShortName("2026-10-12")],
+  joinInWords: () => [
+    copy.joinInWords(["lats"]),
+    copy.joinInWords(["lats", "biceps"]),
+    copy.joinInWords(["lats", "mid traps", "biceps"]),
+  ],
   describeShortDate: () => [copy.describeShortDate("2026-10-12")],
   describeWeekRange: () => [
     copy.describeWeekRange("2026-10-12"),
