@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18.
 
 ## Context
 
@@ -13,7 +13,7 @@ M2 onward builds a Postgres schema whose shape (tables, columns, the `day_totals
 The following, transcribed verbatim from the document's Data model (Supabase Postgres) section, is frozen:
 
 - `profiles` (id -> auth.users, sex, birth_date, height_cm, activity, weight_unit, energy_unit, timezone, checkin_weekday, onboarding_weight_kg, onboarding_completed_at)
-- `weigh_ins` (user_id, measured_at, local_date, tz, weight_kg 20..400, source manual|healthkit|health_connect|import, external_id, note, deleted_at); unique `(user_id, source, external_id)` where not null
+- `weigh_ins` (user_id, measured_at, local_date, tz, weight_kg 20..400, source manual|healthkit|health_connect|import, external_id, note, deleted_at); unique `(user_id, source, external_id)` where not null (superseded in part by Amendment 9: the unique key is a plain constraint that also covers soft-deleted rows, and is not partial)
 - `foods` (source off|cofid|user, source_ref, owner_id null for global, name, brand, barcode digits-only, basis per_100g|per_100ml, density_g_per_ml, kcal, protein_g, fat_g, sat_fat_g, carbs_g EU-style, sugars_g, fibre_g, salt_g, micros jsonb, quality jsonb {kcal_derived, suspect, fields_missing}, food_group, fetched_at, search tsvector, deleted_at); unique `(source, source_ref)` for non-user rows; gin on search and `name gin_trgm_ops`; check `(source='user') = (owner_id is not null)`
 - `food_portions` (food_id, owner_id denormalised for RLS, label, grams or ml, is_default, position)
 - `food_source_data` (food_id, import_run_id, raw jsonb) and `import_runs` (source, label, file_sha256, started/finished, row_count): service role only
@@ -887,3 +887,322 @@ Sub-recipes (a recipe used as an ingredient) stay deferred, as the frozen `recip
 - KEY-7 (M7), outside this amendment: the export and delete account screens.
 
 Any further deviation from the frozen Decision, from Amendments 1 to 7 or from this amendment needs an Amendment 9 before the migration or code that implements it lands.
+
+## Amendment 9 (Weigh-ins and trend, 2026-10-18)
+
+### Status
+
+Recorded on 2026-10-18 under KEY-358. Implements Zee's rulings on KEY-5 (the M5 brief, weight and trend). The rulings are these:
+
+- Of 2026-10-14, in the Build Plan: the health data rules recorded under "Health data" below.
+- Of 2026-10-15: terms acceptance is not in any row level security policy, because Zee cancelled KEY-233 and left consent with the app gates.
+- Of 2026-10-17: M5 builds Health Connect only, with no Apple support until Zee says otherwise. No M5 change is expected to alter the native fingerprint, so every M5 piece goes out over the air. The weight chart offers 1 week, 30 days, 90 days and 1 year (7, 30, 90 and 365 days).
+- Of 2026-10-18: the Health import does not wait for KEY-278 (mobile error reporting with health data scrubbed).
+
+The remaining details are interpretations made for implementation. They are, in full:
+
+- the columns, types and checks of `weigh_ins`, among them `numeric(6,3)` for the weight, no default on `measured_at` and `source`, and the name `weigh_in_source` for the enum.
+- the plain unique constraint that replaces the partial key, and the two reasons given for it.
+- the check that pairs `external_id` with `source`, and that `import` may have either.
+- the rules for `tz` and `local_date`, among them that an import uses the profile zone and that an edit of the time recomputes both.
+- the note rule.
+- that an imported weigh-in cannot be edited and that the api-client, and not the database, enforces it, and that soft-deleted rows are kept for good.
+- the column grants and the three policies, and that `service_role` gets nothing.
+- the two indexes.
+- the trend output shape, the rule that gives a list row its status, and when the trend is settling.
+- that the import anchor lives on the device in `expo-secure-store`, its key and value, the 7 day overlap, the 365 day first read, and when the anchor moves.
+- that the 30 day Health Connect history limit is accepted and the history permission is not added.
+- the accepted limits of import.
+- the export and account deletion contract recorded for M7.
+- the health data rules for weigh-ins.
+
+Zee confirms them by approving the PR that carries this amendment. Amendments 1 to 8 are unchanged. The frozen Decision text is unchanged except for one inline note on the `weigh_ins` line, which "Supersedes" explains. This amendment replaces one key on the frozen `weigh_ins` line, adds one enum and fills in the columns the line names. It adds no table, because the frozen Decision already names `weigh_ins`. Amendment 1's `id` and `created_at` columns apply to it, as they do to every new table.
+
+### Supersedes
+
+The frozen `weigh_ins` line in the Decision changes in one way:
+
+- `unique (user_id, source, external_id) where not null` becomes a plain `unique (user_id, source, external_id)` constraint. It is not partial, and it covers soft-deleted rows.
+
+Nothing else on that line changes. The line carries an inline note pointing here, and the rest of the Decision is untouched. See "The import key outlives a delete" for the reasons.
+
+No data is migrated. `weigh_ins` does not exist in any database yet (no migration creates it), so M5's migration (KEY-360) creates it with the plain constraint.
+
+### The numbers
+
+Every figure this amendment sets for weigh-ins is in this table, so that the migration and core use the same ones.
+
+| What                                          | Rule                                                                                               | Core constant (KEY-361)              |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| Weight (`weight_kg`)                          | `numeric(6,3)`, from 20 to 400 inclusive. Three decimals is one gram.                              | `WEIGH_IN_MIN_KG`, `WEIGH_IN_MAX_KG` |
+| Weight typed and shown                        | One decimal. Core limits manual entry to one decimal. The column does not.                         |                                      |
+| Weight stored                                 | The column rounds to 3 decimals, half away from zero, and the check applies to the rounded value.  |                                      |
+| Note                                          | Null, or 1 to 200 characters.                                                                      | `WEIGH_IN_NOTE_MAX_CHARS`            |
+| Health sample id (`external_id`)              | When present, 1 to 200 characters.                                                                 |                                      |
+| Import overlap                                | Each import re-reads from 7 days before the anchor.                                                | `HEALTH_IMPORT_OVERLAP_DAYS`         |
+| First import                                  | As far back as Health Connect allows, up to 365 days (the longest chart range).                    |                                      |
+| Health Connect history without the permission | The 30 days before the date the read permission was first granted. A platform fact, not a choice.  |                                      |
+| Chart ranges                                  | 7, 30, 90 and 365 days, in that order.                                                             | `WEIGHT_RANGES`                      |
+| Settling                                      | Fewer than 7 accepted readings (days) on the last trend point.                                     | `TREND_SETTLED_OBS`                  |
+| Gap that starts a new trend segment           | More than 30 days between readings. This is the engine parameter `maxGapDays`, which KEY-359 owns. |                                      |
+
+- Lengths count characters, not bytes, as `foods_name_length_check` does in Amendment 6.
+- The constants are named as KEY-361 names them. Core exports each one and the migration (KEY-360) writes the same numbers into its checks. If they ever differ, this table wins.
+- Kilograms are the only stored unit. Pounds are display only (the Build Plan's rule for units).
+
+### `weigh_ins`
+
+| Column        | Definition                                                                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | `uuid primary key default gen_random_uuid()` (Amendment 1).                                                                                  |
+| `user_id`     | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. The RLS with-check rejects any value but the caller's.      |
+| `measured_at` | `timestamptz not null`, with no default. The instant of the reading. The client always sends it, because `local_date` and `tz` depend on it. |
+| `local_date`  | `date not null`. See "`local_date` and `tz`".                                                                                                |
+| `tz`          | `text not null`. See "`local_date` and `tz`". The database does not validate it.                                                             |
+| `weight_kg`   | `numeric(6,3) not null`, with a check that it is from 20 to 400 inclusive (`weight_kg between 20 and 400`).                                  |
+| `source`      | `public.weigh_in_source not null`, with no default.                                                                                          |
+| `external_id` | `text`, nullable, with the pairing check in "`source` and `external_id`".                                                                    |
+| `note`        | `text`, nullable, with the check in "Note".                                                                                                  |
+| `deleted_at`  | `timestamptz`, nullable. Null means live.                                                                                                    |
+| `created_at`  | `timestamptz not null default now()` (Amendment 1).                                                                                          |
+
+- Rounding. The column rounds what it is given to 3 decimals, half away from zero, and the check of 20 to 400 applies to the rounded value. So 19.9996 is stored as 20.000 and passes, and 19.9994 is stored as 19.999 and fails. A value of 1000 or more cannot be stored in `numeric(6,3)` and fails with "numeric field overflow" (SQLSTATE 22003) before the check runs. Core's Health sample mapper and manual-entry builder round to 3 decimals before sending, so the client and the column agree on what is stored.
+- Precision. Three decimals keeps a smart scale's reading to the gram, so the trend sees what the scale reported. The screens show one decimal, and a manual entry is limited to one decimal by core (the entry sheet's rule, "Up to one decimal place"), not by the column.
+- Several weigh-ins on one date are allowed, and nothing in the table limits them. The trend takes the median of a date's readings.
+- `user_id` references `auth.users` with `on delete cascade`, so deleting the account deletes its weigh-ins, soft-deleted rows included.
+- The names of the constraints are the migration's call. The rules are the contract.
+
+Implemented by KEY-360.
+
+### `source` and `external_id`
+
+Answer: an enum `public.weigh_in_source ('manual', 'healthkit', 'health_connect', 'import')`. The four values are the frozen ones, in the style of Amendment 1's enums.
+
+- M5 writes only `manual` and `health_connect`.
+- There is no Apple support in M5 (Zee, 2026-10-17). `healthkit` stays in the enum so that a later HealthKit implementation needs no migration, but nothing writes it and no code reads it specially. The `HealthProvider` adapter stays, so HealthKit can be added later without rework.
+- `import` is for a future file import. M5 does not build one.
+
+`external_id` pairs with `source` in one check on the table:
+
+- a `manual` row has a null `external_id`.
+- a `healthkit` or `health_connect` row has an `external_id`, the Health sample id, of 1 to 200 characters.
+- an `import` row may have either, and when it has one, it is 1 to 200 characters.
+
+A `check` passes when its expression is null, and `char_length(null)` is null. Each branch that requires an id therefore spells out `external_id is not null and char_length(external_id) between 1 and 200`, and does not rely on the length test alone. The database does not trim `external_id`. It is a machine id and the client stores it as the platform gave it. Core's Health sample mapper returns null, and so skips the sample, for a sample id outside 1 to 200 characters, so one bad sample cannot fail a whole batch.
+
+Implemented by KEY-360 (the enum and the check), KEY-361 (the mapper that sets both) and KEY-363 (the adapter that supplies the sample id).
+
+### `local_date` and `tz`
+
+Answer:
+
+- `tz` is the IANA zone of the user's profile (`profiles.timezone`) at the moment the row is written.
+- `local_date` is the calendar date of `measured_at` in that zone. The client computes it with core `toLocalDate`.
+- `local_date` is never recomputed when the profile zone changes later. A stored weigh-in keeps its day, which is the precedent of Amendment 5 for a log entry. The difference from a log entry is that the weigh-in also stores the zone it used, so the day can be explained.
+- An import uses the profile zone, not the zone offset of the Health sample. An offset is not a zone, and it is not safe across clock changes: the same offset belongs to many zones, and a zone's offset changes whenever its clocks change.
+- When the user edits the time of a manual weigh-in, the client recomputes `local_date` and `tz` from the new `measured_at` and the profile zone at that moment, so the three change together as they do for a log entry's `logged_at` in Amendment 5. An edit of the value or the note touches none of them.
+- The database does not check that `measured_at`, `local_date` and `tz` agree. The agreement depends on a zone the user can change, and a stored row keeps the day it was written on, as in Amendment 5.
+
+The trend, the list and the chart ranges all group and filter by `local_date`, never by `measured_at`, so a day's weight does not move when a zone changes.
+
+Implemented by KEY-361 (`buildManualWeighIn` and the Health sample mapper, which call `toLocalDate`) and KEY-362 (the edit).
+
+### Note
+
+Answer: `note` is optional. The client trims it and stores a blank note as null. When present it is 1 to 200 characters, enforced by a check on the column (`note is null or char_length(note) between 1 and 200`). The database does not trim, so a hand-made call can store a note of spaces. That is accepted: it is the owner's own data, and the screens treat a blank note as none.
+
+A note is health data. It never appears in a log, an error report or an analytics event (see "Health data").
+
+Implemented by KEY-360 (the check) and KEY-361 (`validateNote`).
+
+### The import key outlives a delete
+
+Answer: the frozen key becomes a plain constraint, `unique (user_id, source, external_id)`. It is not a partial index, and it covers every row, soft-deleted ones included. Postgres treats nulls as distinct in a unique constraint, so a plain constraint behaves exactly as the partial one did for manual rows, which all have a null `external_id`.
+
+Why, in two parts:
+
+1. A deleted import must never come back. Import re-reads an overlap window every time (see "Where the import anchor lives"), so a sample the user deleted is read again at the next import. If the key forgot the row when it was soft-deleted, the import would insert it a second time. With the key covering soft-deleted rows, the import skips it like any other duplicate. This is also what the weigh-in sheet tells the user: deleting an imported reading removes it from Ki-Lo only, and it "won't come back on the next import".
+2. A partial index cannot serve the bulk import. `ON CONFLICT (user_id, source, external_id)` can infer a partial unique index only when the statement repeats the index predicate, and PostgREST's `on_conflict` takes column names only, so there is no way to repeat it. The import would fail with error 42P10. A plain constraint is inferred from the column list alone.
+
+Part 2 was checked before it was written, on 2026-10-18, in one throwaway `psql` session against the local database (PostgreSQL 17.6, `docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1`, with `\set VERBOSITY verbose` so that the error shows its SQLSTATE). It used temporary tables only, which vanish when the session ends, so nothing real was created, altered or dropped. `p` has a partial unique index and `q` a plain constraint:
+
+```sql
+\set VERBOSITY verbose
+create temp table p (a uuid, b text, c text);
+create unique index on p (a, b, c) where c is not null;
+create temp table q (a uuid, b text, c text, unique (a, b, c));
+```
+
+| Table                     | Statement                                                | Result                                                                                            |
+| ------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `q`, plain constraint     | `insert ... on conflict (a, b, c) do nothing`, a new key | `INSERT 0 1`                                                                                      |
+| `q`                       | the same statement with the same key                     | `INSERT 0 0`, and `q` still holds one row                                                         |
+| `q`                       | the same statement twice with `c` null                   | `INSERT 0 1` both times, and `q` holds three rows, so null keys are distinct                      |
+| `p`, partial unique index | `insert ... on conflict (a, b, c) do nothing`, a new key | `ERROR: 42P10: there is no unique or exclusion constraint matching the ON CONFLICT specification` |
+
+So `p` raises 42P10 and `q` does not. With `on_error_stop` set, the session ended at that error, which is why `p` was run last.
+
+Consequences:
+
+- The import is one bulk insert that ignores duplicates (`on conflict (user_id, source, external_id) do nothing`, which PostgREST sends for an upsert with `ignoreDuplicates`). It needs no `update` grant on `source` or `external_id`.
+- A soft-deleted row is kept for good, because it holds the key. See "Edit and delete rules".
+- A user who deletes an imported reading and wants it back has no screen for that in M5. Clearing `deleted_at` restores a row, and nothing in M5 does it.
+
+Implemented by KEY-360 (the constraint and its pgTAP) and KEY-362 (the bulk import and its proofs that a deleted import does not come back).
+
+### Edit and delete rules
+
+Answer:
+
+- A manual weigh-in can be edited (value, time, note) and deleted.
+- An imported weigh-in cannot be edited, only deleted. The weigh-in sheet says so ("Imported readings can only be deleted here."), and it shows a delete button and no save button for an imported reading.
+- Delete is a soft delete: `deleted_at` is set. There is no `delete` grant and no hard delete.
+- Clearing `deleted_at` restores a row. Nothing in M5 uses that.
+- Soft-deleted rows are kept for good. They keep every column. A soft-deleted weigh-in therefore keeps its value and note until account deletion, because the row holds the import key. This matches the Privacy Policy, which keeps information until the account is deleted. Account deletion removes them through the `auth.users` cascade.
+
+The database does not enforce the edit rule, because column grants cannot tell one row from another, and a trigger is more than the rule is worth. The api-client enforces it: it updates only rows with `source = 'manual'` (`.eq("source", "manual")`), and an update that matches no row is an error that holds no value. A soft delete applies to a row of any source, because `deleted_at` is in the update grant for every row. A hand-made call can therefore edit an imported row of its own. That is accepted, for the reason Amendment 8 gives for `computed`: it is the owner's own data, and the import key makes the next import skip the row regardless.
+
+Implemented by KEY-362 (the repo functions and the hooks).
+
+### Privileges and row level security
+
+In the style of Amendment 8: `revoke all` on the table from `anon`, `authenticated` and `service_role`, then explicit column grants to `authenticated`. RLS is enabled.
+
+- `select` on all columns.
+- `insert` on `user_id`, `measured_at`, `local_date`, `tz`, `weight_kg`, `source`, `external_id` and `note`.
+- `update` on `measured_at`, `local_date`, `tz`, `weight_kg`, `note` and `deleted_at`. `user_id`, `source` and `external_id` are insert only, so a row never changes owner, source or key.
+- No `delete`. `id` and `created_at` are in neither list. Account deletion cascades regardless of grants, because a foreign key action does not run as the caller.
+- `anon` gets nothing, and `service_role` gets nothing. Nothing server side reads or writes weigh-ins yet. M6's `run-checkin` reads weigh-ins to run `computeTrend`, and M7's export reads them too. Each grants what it needs in its own migration.
+
+Policies, as predicates, all for `authenticated` and all using `(select auth.uid())`:
+
+- `weigh_ins_select_own`: using `user_id = (select auth.uid())`.
+- `weigh_ins_insert_own`: with check `user_id = (select auth.uid())`.
+- `weigh_ins_update_own`: using and with check `user_id = (select auth.uid())`.
+
+There is no `delete` policy, because there is no grant. Terms acceptance is not in the policies: Zee cancelled KEY-233 on 2026-10-15, and consent stays with the app gates. The select policy does not filter `deleted_at`. The clients filter it, as they do for foods (Amendment 1). A column added later is not writable by clients until a migration grants it, the rule of Amendments 3 and 4.
+
+Implemented by KEY-360, with pgTAP asserting every policy and the exact privilege set.
+
+### Indexes
+
+- The unique constraint above. Its index leads with `user_id`.
+- One list index, `(user_id, local_date desc, measured_at desc)`. It serves the list (newest first), the trend (the whole history of the caller, in date order) and the chart ranges (a `local_date` window). Ties are broken by `id` in the read and not in the index, as in Amendment 5.
+
+Both indexes lead with `user_id`, so the cascade from `auth.users` has an index on the referencing column, for the reason Amendment 2 gives for `portion_id`. No other index is added. A partial index on live rows is not needed at this size.
+
+Implemented by KEY-360.
+
+### The trend output shape
+
+This is the contract between core `computeTrend` and every reader of it. KEY-359 implements it, and a change to it is an amendment. `computeTrend` is the function ADR 0002 names. Its boundary and its purity rule are unchanged. M5 builds it ahead of the rest of the engine because the weight screen needs it.
+
+<!-- prettier-ignore -->
+```ts
+// Input: one entry per live (not soft-deleted) weigh-in.
+interface TrendInput { localDate: string; weightKg: number }   // YYYY-MM-DD, kg
+
+// Output of computeTrend: one point per calendar day from the first to the last reading of
+// each segment, in date order across segments. Nothing is rounded.
+interface TrendPoint {
+  date: string;          // YYYY-MM-DD
+  segment: number;       // 0-based, goes up after a gap of more than maxGapDays between readings
+  trendKg: number;       // the bias-corrected EWMA on that day
+  rawKg: number | null;  // the daily median of that date's readings, null on a day with none
+  usedKg: number;        // the value fed to the EWMA: the median, the winsorised median, or the fill
+  rejected: boolean;     // the reading was rejected as an isolated spike (rawKg shows it, usedKg is the fill)
+  winsorised: boolean;   // the reading was pulled to the winsor limit (84.0 used as 82.0)
+  interpolated: boolean; // no accepted reading drove this day: a day with none, or a rejected day
+  nObs: number;          // accepted readings (days) so far in this segment, this day included
+}
+```
+
+- A weigh-in row's status in the list is the status of its date's point. The list marks a row rejected when its date's point has `rejected`, and every row of that date shares it.
+- "Settling" is `nObs < 7` on the last point. The constant is `TREND_SETTLED_OBS`, and it lives in the core helpers (KEY-361).
+- The last reading cannot be judged as a spike until a later one exists, so it shows as winsorised, not rejected, until then. The full rule belongs to `computeTrend` (KEY-359). A reading more than 15 per cent from the trend, once 5 accepted readings exist before it in its segment, is rejected when the next reading does not agree with it. Otherwise it is winsorised, or used as it is before 5 readings.
+- The input is live rows only. Every reader drops soft-deleted rows before the call, and the api-client's list already returns live rows only.
+- The trend is derived and never stored on its own. The mobile app runs `computeTrend` over its cached list (KEY-362), and the check-in function runs the same function over the same rows (M6).
+
+Implemented by KEY-359 (the function and its golden numbers), KEY-361 (`weeklyRateKg` and `isTrendSettling`, which read these points) and KEY-362 (`useWeightTrend`, which exposes the points and a map from date to point).
+
+### Where the import anchor lives
+
+Answer: on the device, in `expo-secure-store`, one key per user. The key is `health-import-anchor.<user id>` and the value is an ISO instant. It is not in a table.
+
+Why, written out:
+
+- The anchor says how far this phone has read from this phone's Health Connect. In a table it would be shared with a second device of the same user, which would then start its read from a point the first device reached and skip data that its own Health Connect holds.
+- A table needs a migration and a policy. The device store needs neither.
+- The Build Plan has account deletion wipe the on-device secure store, so an anchor kept there goes with the account. AsyncStorage would not. M7 builds that deletion.
+- Losing the anchor is harmless. It is an optimisation only, because the import key makes every import idempotent. With no anchor the next import reads the first-import window again and inserts nothing that is already there.
+- The key uses only letters, digits, `.` and `-`, which `expo-secure-store` allows in a key.
+
+The rules of the import, which KEY-364 implements:
+
+- The anchor value is the timestamp of the newest sample read. It is never later than the device clock, and it never moves back.
+- Each import re-reads from 7 days before the anchor, so a sample that arrives late with an older timestamp is still seen.
+- The first import has no anchor and reads as far back as Health Connect allows, up to 365 days (the longest chart range).
+- The anchor moves only after the save succeeded. A failed save leaves it untouched, so the next import reads the same window again.
+- The import runs when the app comes to the foreground and on pull to refresh, and only while signed in.
+
+Implemented by KEY-363 (the adapter, which reads and does not apply the overlap or move the anchor) and KEY-364 (the anchor store and the import runner).
+
+### Health Connect's history limit
+
+Answer: accept it. Without the `READ_HEALTH_DATA_HISTORY` permission, Android lets an app read only the 30 days before the date its read permission was first granted. `apps/mobile/app.json` declares only `android.permission.health.READ_WEIGHT`.
+
+Why the permission is not added in M5, written out. Adding it edits the Android manifest, which changes the native fingerprint, and a new fingerprint needs a new APK. Zee ruled on 2026-10-17 that no M5 change is expected to alter the fingerprint, and that the Health Connect adapter ticket stops and comes back to Zee before any new APK. The ruling holds, so the permission waits for Zee. Adding it later loses nothing: the anchor would be cleared once so that the next import reads further back, and the import key skips every reading that is already stored.
+
+The consequences:
+
+- The first import brings in at most the 30 days before the permission was granted, even though the first-import window is 365 days. The window is the ceiling and the platform sets the floor.
+- The limit is on the depth of history, not on new data. Once the permission is granted, every later reading is readable.
+- A user's 90 day and 1 year ranges fill from there, from manual weigh-ins and from new readings.
+- It is not verified here whether Android returns the allowed part of a window that starts before the limit or refuses it. If it refuses, the first import must ask for 30 days. KEY-363 reads the library and the Android documentation and reports which it is.
+
+This is raised as a question for Zee on the pull request that carries this amendment: whether to add the permission in a later build. No code in M5 depends on the answer.
+
+Implemented by KEY-363 (the first read) and KEY-364 (the runner).
+
+### Accepted limits of import
+
+- A sample edited later in Health Connect keeps its id, so the first imported value stays. The key skips the edited one.
+- A sample deleted in Health Connect is not deleted here.
+- A sample that reaches Health Connect more than 7 days after its timestamp, after a newer sample has already moved the anchor past it, is not imported. The overlap window is what catches late samples, and it is 7 days.
+- Ki-Lo never writes weight back to Health. That is out of scope.
+- There is no background delivery. Import runs on app foreground and on pull to refresh only (KEY-5, out of scope). No background task, observer or scheduled job is used.
+- There is no Apple support in M5. `healthkit` stays in the enum.
+
+### Health data
+
+A weigh-in is health data (the Build Plan's rules of 2026-10-14). A weight value, a note and anything read from a Health sample (its id, its time and its value) never appear in a log, an error report or an analytics event. Only row ids and counts do. A row id is our own uuid. A Health sample id is not.
+
+- An imported row keeps only the value, the timestamp and the sample id from the Health record. Nothing else the record carries (device, source app, metadata) is read or stored.
+- The Privacy Policy already tells users that error reports never contain their weigh-ins, so this is a promise already made and not only a rule of the code.
+- The rule binds the code we write. PostgreSQL's own error log, and so the Supabase logs, can hold a failing row in the DETAIL of a check violation, which no client can prevent. Core therefore checks the weight, the note and the sample id before they are sent, so a typed value does not reach a check.
+- No client code reads, logs or reports the message or detail of a database error from a weigh-in read or write. An error carries the action and the code only, which is how `targets.ts` builds its errors.
+- The import does not wait for KEY-278, by Zee's ruling of 2026-10-18. The rule is therefore held in the code that touches the data (KEY-361, KEY-362, KEY-363 and KEY-364), and not by a scrubber.
+
+### Export and account deletion
+
+There is no data export and no in-app account deletion today. Verified on main on 2026-10-18: the Privacy Policy and the Terms in `packages/core/src/copy/legal.ts` say that both are done by email for now and that the in-app versions "are on the way". No code on main exports or deletes an account. The build lives in M7 (KEY-7, Settings: "export my data" and "delete account"). M5 builds neither screen. This amendment records the contract M7 will use:
+
+- Export includes every column of every `weigh_ins` row of the user, soft-deleted rows included. The `service_role` grant that an export path needs is M7's to add.
+- Account deletion works through the `on delete cascade` foreign key from `auth.users` (`weigh_ins.user_id`). It needs no code. M7's deletion also wipes the on-device secure store, which holds the import anchor.
+- The Privacy Policy already lists "Your weigh-ins, including any imported from Apple Health or Health Connect", so no policy copy changes. It was read in `packages/core/src/copy/legal.ts` for this amendment. The words "Apple Health" describe what the app may import, which stays true if HealthKit is added later, so they are left as they are.
+
+Implemented by KEY-360 (the cascade and its proof). The screens are KEY-7's.
+
+### Implemented by
+
+- KEY-360, the migration and seed: the enum `weigh_in_source`, `weigh_ins` with its checks, the plain unique constraint and the list index, the grants and policies, pgTAP (every policy, the exact privileges, the bounds, the import key and the account deletion cascade), the regenerated `packages/db/src/types.gen.ts`, and weigh-ins in the seed.
+- KEY-359, the engine: `computeTrend` and the `TrendInput` and `TrendPoint` shapes above, with the golden numbers.
+- KEY-361, the core helpers: the constants in "The numbers", the weight and note checks, the manual weigh-in builder, display units, the weekly rate, settling, the chart ranges and the Health sample mapper.
+- KEY-362, the api-client: the weigh-in repo and hooks (list, add, edit, delete), the trend over the cached list, and the bulk import that ignores duplicates.
+- KEY-363, the Health adapter: the `HealthProvider` interface and the Health Connect implementation.
+- KEY-364, the import runner: the anchor store, the runner with a single flight, and the foreground trigger.
+- KEY-7 (M7), outside this amendment: the export and delete account screens.
+
+### Consequences of Amendment 9
+
+The migration (KEY-360) creates the enum, the table, the constraint, the index, the grants and the policies, and `packages/db/src/types.gen.ts` gains `weigh_ins` and `weigh_in_source`. Core, the api-client and the mobile app build to the numbers and the shapes above. Any further deviation from the frozen Decision, from Amendments 1 to 8 or from this amendment needs an Amendment 10 before the migration or code that implements it lands.
