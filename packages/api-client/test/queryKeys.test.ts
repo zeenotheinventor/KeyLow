@@ -232,6 +232,16 @@ describe("keys.training", () => {
     );
   });
 
+  it("should expose the prefix of every last performance key, to refresh them all after a set is logged", () => {
+    expect(keys.training.lastPerformanceAll).toEqual(["training", "last-performance"]);
+    for (const key of [
+      keys.training.lastPerformance(EXERCISE_ID),
+      keys.training.lastPerformance(EXERCISE_ID, SESSION_ID),
+    ]) {
+      expect(key.slice(0, 2)).toEqual(keys.training.lastPerformanceAll);
+    }
+  });
+
   it("should not put the session reads under the prefix of any other training family", () => {
     for (const key of [
       keys.training.session(SESSION_ID),

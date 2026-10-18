@@ -93,3 +93,5 @@ export type { RoutineSave } from "./routineWrites";
 export type { RoutineDetail, RoutineListEntry, RoutineRecord } from "./routineSchemas";
 export { deleteSession, finishSession, startSession } from "./sessionWrites";
 export type { SessionFinish, SessionStart } from "./sessionWrites";
+export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrites";
+export type { SetAdd, SetPatch } from "./setWrites";

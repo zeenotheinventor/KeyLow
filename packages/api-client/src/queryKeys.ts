@@ -82,6 +82,8 @@ export const keys = {
     routineAll: ["training", "routine"] as const,
     /** One routine of the signed in user with its days and their exercises in order, or null. Persisted on mobile, as rows. */
     routine: (id: string) => ["training", "routine", id] as const,
+    /** The prefix of every `lastPerformance` key, of every exercise. */
+    lastPerformanceAll: ["training", "last-performance"] as const,
     /**
      * The working sets of one exercise from its latest earlier sessions. `excludeSessionId` is the
      * session being logged, which is left out. It is part of the key so a session started later never

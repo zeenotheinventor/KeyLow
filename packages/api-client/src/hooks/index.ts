@@ -99,3 +99,11 @@ export { useDeleteSession } from "./useDeleteSession";
 export { useFinishSession } from "./useFinishSession";
 export type { FinishSessionInput } from "./useFinishSession";
 export { useStartSession } from "./useStartSession";
+
+export { useAddSet } from "./useAddSet";
+export { useRemoveSet } from "./useRemoveSet";
+export { useReorderSets } from "./useReorderSets";
+export type { ReorderSetsInput } from "./useReorderSets";
+export { useRestoreSet } from "./useRestoreSet";
+export { useUpdateSet } from "./useUpdateSet";
+export type { UpdateSetInput } from "./useUpdateSet";

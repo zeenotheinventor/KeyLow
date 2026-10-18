@@ -1,7 +1,7 @@
 import { HttpResponse, http } from "msw";
 
 import { REST_URL, postgrestError, postgrestRows } from "./postgrest";
-import { RECOGNISABLE_DAY_NAME, openSessionRow } from "./training";
+import { EXERCISE_ID, RECOGNISABLE_DAY_NAME, openSessionRow } from "./training";
 import { keys } from "../../src/queryKeys";
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -205,6 +205,10 @@ export function seedSessionQueries(queryClient: QueryClient) {
     activeSession: keys.training.activeSession,
     sets: keys.training.sets("2026-10-02"),
     weekSessions: keys.training.weekSessions("2026-10-12"),
+    lastPerformance: keys.training.lastPerformance(
+      EXERCISE_ID,
+      "bbbbbbbb-bbbb-4bbb-8bbb-000000000999",
+    ),
     activeRoutine: keys.training.activeRoutine,
     routines: keys.training.routines(false),
     routine: keys.training.routine("88888888-8888-4888-8888-999999999999"),
