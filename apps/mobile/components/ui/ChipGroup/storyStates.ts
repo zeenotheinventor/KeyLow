@@ -4,4 +4,6 @@ export const storyStates = [
   "LongLabel",
   "OneSelected",
   "NoneSelected",
+  "WrapTenChips",
+  "MultipleTwoChosen",
 ];

@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 import { ChipGroup } from "./ChipGroup";
 
-import type { ChipGroupOption } from "./types";
+import type { ChipGroupOption, ChipGroupProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 // The labels stand in for the strings a screen builds, such as the portion picker's, which are not this component's.
@@ -27,6 +27,20 @@ const longLabelUnits: ChipGroupOption<StoryUnit>[] = [
   { value: "g", label: "g" },
 ];
 
+// The equipment questions' chips: short labels that all fit on a few lines, so they wrap and none scrolls.
+const tenEquipment: ChipGroupOption<StoryUnit>[] = [
+  { value: "barbell", label: "Barbell" },
+  { value: "dumbbell", label: "Dumbbell" },
+  { value: "kettlebell", label: "Kettlebell" },
+  { value: "cable", label: "Cable" },
+  { value: "machine", label: "Machine" },
+  { value: "smith-machine", label: "Smith machine" },
+  { value: "ez-bar", label: "EZ bar" },
+  { value: "band", label: "Band" },
+  { value: "bodyweight", label: "Bodyweight" },
+  { value: "other", label: "Other" },
+];
+
 // The choice is kept by the screen that holds it, so a story keeps it too and a press moves it.
 function Units({
   options,
@@ -39,6 +53,22 @@ function Units({
   return <ChipGroup label="Unit" options={options} value={value} onChange={setValue} />;
 }
 
+// Several chosen, kept by the screen the same way.
+function Equipment({ initial }: { initial: StoryUnit[] }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <ChipGroup
+      label="Equipment"
+      layout="wrap"
+      options={tenEquipment}
+      selection="multiple"
+      value={value}
+      onChange={setValue}
+    />
+  );
+}
+
+// The meta is typed by the single choice's props, because the component takes the props of a single choice or of several and Storybook cannot read the args of either from it.
 const meta = {
   title: "UI/ChipGroup",
   component: ChipGroup,
@@ -56,7 +86,7 @@ const meta = {
     value: "g",
     onChange: () => undefined,
   },
-} satisfies Meta<typeof ChipGroup<StoryUnit>>;
+} satisfies Meta<ChipGroupProps<StoryUnit>>;
 
 export default meta;
 
@@ -80,3 +110,21 @@ export const OneSelected: Story = { render: () => <Units options={fiveUnits} ini
 
 // None chosen yet: every chip is raised.
 export const NoneSelected: Story = { render: () => <Units options={fiveUnits} initial={null} /> };
+
+// The chips fall onto further lines instead of scrolling, so every one shows at once.
+export const WrapTenChips: Story = {
+  render: () => (
+    <ChipGroup
+      label="Equipment"
+      layout="wrap"
+      options={tenEquipment}
+      value="cable"
+      onChange={() => undefined}
+    />
+  ),
+};
+
+// Several chosen: each press adds the chip or takes it out and leaves the others as they were.
+export const MultipleTwoChosen: Story = {
+  render: () => <Equipment initial={["barbell", "cable"]} />,
+};

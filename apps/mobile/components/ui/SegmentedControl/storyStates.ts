@@ -4,4 +4,6 @@ export const storyStates = [
   "AppearanceDark",
   "AppearanceLight",
   "AppearanceMatchDevice",
+  "SmallThreeOptions",
+  "SmallFourOptions",
 ];
