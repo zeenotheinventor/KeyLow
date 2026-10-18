@@ -9,12 +9,13 @@ import {
   COMPARE_PARAMS_V1,
   compareWeek,
   MUSCLE_IDS,
+  muscleState,
   projectWeek,
   targetedMuscles,
 } from "../../src/training";
 import goldenWeek from "../fixtures/training/goldenWeek.json";
 
-import type { LoggedSet, MuscleId, PlanRoutine } from "../../src/training";
+import type { MuscleDetailSet, MuscleId, PlanRoutine } from "../../src/training";
 
 /*
  * The golden week of KEY-353 as inputs for the body map tests: the same routine, sessions and sets the
@@ -66,7 +67,14 @@ const sessions = goldenWeek.sessions.map((session) => ({
   deleted_at: null,
 }));
 
-export const loggedSets: LoggedSet[] = goldenWeek.sets.map((set) => {
+/** The routine day name of each logged session, which the muscle sheet writes after the date. */
+export const sessionDayNames = goldenWeek.sessions.map((session) => ({
+  id: session.id,
+  routine_day_name:
+    goldenWeek.routine.days.find((day) => day.id === session.routineDayId)?.name ?? null,
+}));
+
+export const loggedSets: MuscleDetailSet[] = goldenWeek.sets.map((set) => {
   const { id, name, equipment, mechanic, muscles } = requireExercise(set.exercise);
   return {
     session_id: set.sessionId,
@@ -90,6 +98,13 @@ export const week = projectWeek(
 );
 
 export const comparison = compareWeek(week.actual, week.projected, params);
+
+/** Thursday 15 October 19:00 in London, the moment of the muscle sheet and list boards. */
+export const THURSDAY_EVENING = "2026-10-15T19:00:00+01:00";
+
+/** The heat, ready time and weekly sets of every muscle from the logged sets up to `now`. */
+export const actualStateAt = (now: string) =>
+  muscleState(loggedSets, now, params.training, targeted);
 
 /** A record of every muscle id, valued by `valueOf`. */
 export const recordOfMuscles = <Value>(

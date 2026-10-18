@@ -167,3 +167,18 @@ export type {
 } from "./goalPresets";
 export { trainingGoalsPayload } from "./trainingGoalsPayload";
 export type { TrainingGoalsPayload } from "./trainingGoalsPayload";
+
+export { muscleDetail } from "./muscleDetail";
+export type {
+  LastTrained,
+  LastTrainedExercise,
+  MuscleDetail,
+  MuscleDetailInput,
+  MuscleDetailSession,
+  MuscleDetailSet,
+  MuscleDetailView,
+  RangePosition,
+  WeeklySetsDetail,
+} from "./muscleDetail";
+export { muscleListGroups } from "./muscleList";
+export type { MuscleListGroup, MuscleListRow } from "./muscleList";

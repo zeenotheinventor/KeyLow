@@ -30,3 +30,4 @@ export * from "./recipeRefresh";
 export * from "./scaledAmount";
 export * from "./recipeView";
 export * from "./weight";
+export * from "./muscleNames";
