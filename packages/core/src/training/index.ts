@@ -154,3 +154,16 @@ export {
 export type { BodyMapView, WarmMuscle } from "./bodyMapValues";
 export { dayMoments } from "./bodyMapMoments";
 export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
+
+export { goalAnswersSchema } from "./goalAnswers";
+export type { GoalAnswers } from "./goalAnswers";
+export { deriveMusclePriority, GOAL_PRESETS_V1, goalTargetedMuscles } from "./goalPresets";
+export type {
+  ExerciseTarget,
+  FocusOverlay,
+  GoalPresets,
+  MusclePriority,
+  MusclePriorityLevel,
+} from "./goalPresets";
+export { trainingGoalsPayload } from "./trainingGoalsPayload";
+export type { TrainingGoalsPayload } from "./trainingGoalsPayload";
