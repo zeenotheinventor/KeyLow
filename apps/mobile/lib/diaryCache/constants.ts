@@ -3,7 +3,8 @@
  * days, the targets, the recent foods, the time zone, the terms acceptance, the weight unit, the
  * training sets, the active routine with its day names, the week's sessions with their start and end,
  * the session reads and the session in progress). The cache of an older app is then thrown away on the
- * next start instead of being read as the new shape.
+ * next start instead of being read as the new shape. An additive field with a safe fallback when it is
+ * missing (the routine's `activatedAt`, read as no date) does not bump the version.
  */
 export const DIARY_CACHE_SCHEMA_VERSION = 2;
 

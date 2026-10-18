@@ -79,8 +79,8 @@ describe("the training reads in a persisted cache", () => {
   };
 
   /** Opens the app online once, then returns what a persister would have stored. */
-  const openOnline = async () => {
-    const fake = installTrainingFake(server, seed());
+  const openOnline = async (data: ReturnType<typeof seed> = seed()) => {
+    const fake = installTrainingFake(server, data);
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(
       () => ({ heat: useMuscleState(MORNING), week: useWeekComparison(WEEK_START) }),
@@ -182,6 +182,99 @@ describe("the training reads in a persisted cache", () => {
     expect(result.current.data).toEqual(expected);
     expect(result.current.data?.chest_lower.heat).toBeGreaterThan(0);
     expect(fake.requests).toHaveLength(requestsBefore);
+  });
+
+  describe("a routine made active on Thursday 15 October", () => {
+    const ACTIVATED_AT = "2026-10-15T07:30:00+00:00";
+    const ACTIVE_FROM = "2026-10-15";
+
+    it("should store the instant it was made active and no date derived from it", async () => {
+      const { stored } = await openOnline({
+        ...seed(),
+        routine: routineRow({ activated_at: ACTIVATED_AT }),
+      });
+
+      const routineKey = JSON.stringify(keys.training.activeRoutine);
+      const storedRoutine = stored.queries.find(
+        ({ queryKey }) => JSON.stringify(queryKey) === routineKey,
+      );
+      expect(storedRoutine?.state.data).toMatchObject({ activatedAt: ACTIVATED_AT });
+      for (const query of stored.queries) {
+        expect(namesIn(query.state.data)).not.toContain("activeFrom");
+      }
+    });
+
+    it("should plan the whole week from a restored routine that has no activation field at all", async () => {
+      // A routine cached by an older app, before the field existed: the stored value has no `activatedAt`.
+      const { fake, rows, stored } = await openOnline({ ...seed(), sessions: [] });
+      const oldRoutine = Object.fromEntries(
+        Object.entries(rows.routine ?? {}).filter(([name]) => name !== "activatedAt"),
+      );
+      const routineKey = JSON.stringify(keys.training.activeRoutine);
+      const withoutField = {
+        ...stored,
+        queries: stored.queries.map((query) =>
+          JSON.stringify(query.queryKey) === routineKey
+            ? { ...query, state: { ...query.state, data: oldRoutine } }
+            : query,
+        ),
+      };
+      const restored = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+      hydrate(restored, withoutField);
+      fake.goOffline();
+      onlineManager.setOnline(false);
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <KeyLowProvider client={createTestClient()} queryClient={restored}>
+          {children}
+        </KeyLowProvider>
+      );
+
+      const { result } = renderHook(() => useWeekComparison(WEEK_START), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      expect(restored.getQueryData<object>(keys.training.activeRoutine)).not.toHaveProperty(
+        "activatedAt",
+      );
+      expect(result.current.data?.chest_lower).toMatchObject({ projectedWeeklySets: 3 });
+    });
+
+    it("should compare the week as core does from the restored rows and the activation, with the network down", async () => {
+      const { fake, rows, stored } = await openOnline({
+        ...seed(),
+        sessions: [],
+        routine: routineRow({ activated_at: ACTIVATED_AT }),
+      });
+      const restored = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+      hydrate(restored, stored);
+      fake.goOffline();
+      onlineManager.setOnline(false);
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <KeyLowProvider client={createTestClient()} queryClient={restored}>
+          {children}
+        </KeyLowProvider>
+      );
+
+      const { result } = renderHook(() => useWeekComparison(WEEK_START), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      const sessions = throughStorage(rows.sessions ?? []);
+      const week = projectWeek(
+        { ...throughStorage(rows.routine ?? { days: [] }), activeFrom: ACTIVE_FROM },
+        WEEK_START,
+        "Europe/London",
+        { sessions, sets: sessions.flatMap((session) => session.sets) },
+        COMPARE_PARAMS_V1,
+      );
+      expect(result.current.data).toEqual(
+        compareWeek(week.actual, week.projected, COMPARE_PARAMS_V1),
+      );
+      // Monday's Push was never planned, so there is nothing to be behind on.
+      expect(result.current.data?.chest_lower).toMatchObject({ projectedWeeklySets: 0, gap: 0 });
+    });
   });
 
   /** A restore where the sets, the sessions and the zone came back but the routine did not (it was too old to keep). */

@@ -119,6 +119,25 @@ describe("useDashboardBodyMap", () => {
     expect(result.current.data?.today).toStrictEqual({ kind: "rest", dayName: null });
   });
 
+  it("should say rest, not today's planned day, when the routine was made active after now", async () => {
+    // The device clock is behind the server's: the routine was activated on Friday by the server's clock
+    // and now is still Thursday, the day of the Legs, which this routine never planned.
+    installTrainingFake(server, {
+      ...goldenWeekData,
+      sets: [],
+      sessions: [],
+      routine: { ...goldenWeekData.routine, activated_at: "2026-10-16T09:00:00+00:00" },
+    });
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useDashboardBodyMap({ now: CARD_MOMENT }), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.today).toStrictEqual({ kind: "rest", dayName: null });
+  });
+
   it("should say none with no active routine", async () => {
     installTrainingFake(server, { sets: [], sessions: [], routine: null });
     const { wrapper } = createWrapper();

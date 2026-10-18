@@ -34,8 +34,12 @@ export type PlanRoutineDay = Pick<RoutineDayRow, "id" | "position" | "weekday"> 
   exercises: readonly PlanExercise[];
 };
 
-/** The active routine, as far as the plan reads it. */
-export type PlanRoutine = Readonly<{ days: readonly PlanRoutineDay[] }>;
+/**
+ * The active routine, as far as the plan reads it. `activeFrom` is the local calendar day the routine
+ * was made active, `YYYY-MM-DD` in the user's zone: the plan places no set before it. Left out, the
+ * routine plans the whole week.
+ */
+export type PlanRoutine = Readonly<{ days: readonly PlanRoutineDay[]; activeFrom?: string }>;
 
 /**
  * A set the plan expects: the shape `muscleState` and `weeklyVolume` read, so they run on it unchanged,
@@ -70,6 +74,13 @@ export const weekDays = (weekStart: string): string[] => {
 export const requireTimeZone = (tz: string): void => {
   if (!isValidTimeZone(tz)) {
     throw new RangeError("A week's time zone must be an IANA zone name");
+  }
+};
+
+/** Refuses an `activeFrom` that is given but is not a calendar day. */
+export const requireActiveFrom = (activeFrom: string | undefined): void => {
+  if (activeFrom !== undefined && !isCalendarDay(activeFrom)) {
+    throw new RangeError("A routine's active date must be a calendar day written YYYY-MM-DD");
   }
 };
 
@@ -139,15 +150,17 @@ const plannedSetsOfDay = (
  * `tz`. Each routine day with a weekday lands on that day of the week, at `params.plannedTime` local
  * (18:00 in v1), and each of its routine exercises becomes `target_sets` working sets at `target_rir`,
  * with a snapshot built by `buildSetSnapshot` from the exercise's current muscle map. A day whose
- * weekday is null means "any day", so it is not placed on the calendar and gives no planned sets.
+ * weekday is null means "any day", so it is not placed on the calendar and gives no planned sets. A
+ * routine with an `activeFrom` places no set on a day before it, and the day itself is planned.
  *
  * The sets come in weekday order, each day's in exercise position order. The exercise's muscle map is
  * read now, not when the routine was saved, so editing an exercise moves the plan but never a logged
  * set, which keeps its own snapshot.
  *
  * Throws a `RangeError` naming the rule when the week does not start on a Monday, the zone is not an
- * IANA name, two days share a weekday, a weekday or a target is out of range, a routine exercise's map
- * is taken from another exercise, or a muscle map breaks a rule of `buildSetSnapshot`.
+ * IANA name, `activeFrom` is not a calendar day, two days share a weekday, a weekday or a target is out
+ * of range, a routine exercise's map is taken from another exercise, or a muscle map breaks a rule of
+ * `buildSetSnapshot`.
  */
 export const expandPlan = (
   routine: PlanRoutine,
@@ -158,6 +171,7 @@ export const expandPlan = (
   const days = weekDays(weekStart);
   requireTimeZone(tz);
   checkRoutine(routine);
+  requireActiveFrom(routine.activeFrom);
   const { hour, minute } = params.plannedTime;
   return routine.days
     .filter((day): day is PlanRoutineDay & { weekday: number } => day.weekday !== null)
@@ -165,6 +179,9 @@ export const expandPlan = (
     .flatMap((day) => {
       // checkRoutine has held the weekday to 0 to 6, so the week has that day.
       const localDate = days[day.weekday] as string;
+      if (routine.activeFrom !== undefined && localDate < routine.activeFrom) {
+        return [];
+      }
       const performedAt = instantAtLocalTime(localDate, hour, minute, tz).toISOString();
       return plannedSetsOfDay(day, localDate, performedAt);
     });

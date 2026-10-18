@@ -66,6 +66,7 @@ const trainingSets: TrainingSet[] = [
 const activeRoutine: ActiveRoutine = {
   id: "88888888-8888-4888-8888-888888888888",
   name: "key357 routine",
+  activatedAt: null,
   days: [],
 };
 

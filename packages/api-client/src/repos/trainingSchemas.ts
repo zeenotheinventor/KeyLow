@@ -141,11 +141,15 @@ export type LastPerformanceSession = {
 /**
  * The active routine as core plans from it. `id` and `name` are the routine's own, and `days` are
  * `PlanRoutine`'s: each exercise carries the exercise it names and that exercise's muscle map as it is
- * now, which `expandPlan` and `targetedMuscles` read.
+ * now, which `expandPlan` and `targetedMuscles` read. `activatedAt` is the instant the routine was made
+ * active, or null when none was recorded (a routine active before the column existed). It is the
+ * instant and never a date, since the date depends on the zone: `planRoutineOf` turns it into core's
+ * `activeFrom` at read time.
  */
-export type ActiveRoutine = Omit<PlanRoutine, "days"> & {
+export type ActiveRoutine = Omit<PlanRoutine, "days" | "activeFrom"> & {
   id: string;
   name: string;
+  activatedAt: string | null;
   /** Each day with its own name, which the week and the muscle sheet write. */
   days: (PlanRoutineDay & { name: string })[];
 };
@@ -159,6 +163,7 @@ export const routineColumnsSchema = z
   .object({
     id: routineRowSchema.shape.id,
     name: routineRowSchema.shape.name,
+    activated_at: routineRowSchema.shape.created_at.nullable(),
     routine_days: z.array(
       z.object({
         id: dayShape.id,
@@ -187,6 +192,7 @@ export const routineColumnsSchema = z
   .transform((routine): ActiveRoutine => ({
     id: routine.id,
     name: routine.name,
+    activatedAt: routine.activated_at,
     days: routine.routine_days.map((day) => ({
       id: day.id,
       name: day.name,

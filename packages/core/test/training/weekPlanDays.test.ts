@@ -594,6 +594,81 @@ describe("weekPlanDays", () => {
     });
   });
 
+  describe("a routine active from a day", () => {
+    const activeFromThursday: WeekRoutine = { ...goldenRoutine, activeFrom: "2026-10-15" };
+    const activeFromWeek = (activeFrom: string, overrides: Partial<WeekPlanInput> = {}): WeekPlan =>
+      goldenWeekPlan({ routine: { ...goldenRoutine, activeFrom }, sessions: [], ...overrides });
+
+    it("should read the planned days before it rest, not missed, and the ones from it on by their date", () => {
+      const plan = goldenWeekPlan({
+        routine: activeFromThursday,
+        sessions: [],
+        now: SUNDAY_EVENING,
+      });
+
+      // Monday's Push and Tuesday's Pull come before Thursday. Thursday's Legs and Saturday's Push do not.
+      expect(statusesOf(plan)).toStrictEqual([
+        "rest",
+        "rest",
+        "rest",
+        "missed",
+        "rest",
+        "missed",
+        "rest",
+      ]);
+    });
+
+    it("should plan the day it is active from", () => {
+      expect(dayOf(activeFromWeek("2026-10-15"), THURSDAY).status).toBe("today");
+      expect(dayOf(activeFromWeek("2026-10-16"), THURSDAY).status).toBe("rest");
+    });
+
+    it("should read a planned day before it as rest on any day of the week it is read", () => {
+      for (const now of [
+        THURSDAY_BEFORE_LEGS,
+        "2026-10-14T09:00:00+01:00",
+        "2026-10-18T09:00:00+01:00",
+      ]) {
+        const plan = goldenWeekPlan({ routine: activeFromThursday, sessions: [], now });
+
+        expect(dayOf(plan, MONDAY).status).toBe("rest");
+        expect(dayOf(plan, TUESDAY).status).toBe("rest");
+      }
+    });
+
+    it("should read the same week as with no active date when it is active from the Monday or earlier", () => {
+      const withoutDate = goldenWeekPlan({ now: SUNDAY_EVENING });
+
+      for (const activeFrom of [goldenWeekStart, "2026-10-11", "2020-01-01"]) {
+        expect(
+          activeFromWeek(activeFrom, { sessions: goldenWeekPlan().sessions, now: SUNDAY_EVENING }),
+        ).toStrictEqual(withoutDate);
+      }
+    });
+
+    it("should keep a session logged before the active date as logged", () => {
+      const plan = goldenWeekPlan({ routine: activeFromThursday, now: THURSDAY_BEFORE_LEGS });
+
+      expect(statusesOf(plan)).toStrictEqual([
+        "logged",
+        "logged",
+        "rest",
+        "today",
+        "rest",
+        "planned",
+        "rest",
+      ]);
+    });
+
+    it("should refuse an active date that is not a calendar day", () => {
+      for (const activeFrom of ["2026-02-30", "15/10/2026", ""]) {
+        expect(() => activeFromWeek(activeFrom)).toThrow(
+          new RangeError("A routine's active date must be a calendar day written YYYY-MM-DD"),
+        );
+      }
+    });
+  });
+
   describe("the rules it refuses", () => {
     it("should refuse a week that does not start on a Monday", () => {
       expect(() => goldenWeekPlan({ weekStart: "2026-10-13" })).toThrow(

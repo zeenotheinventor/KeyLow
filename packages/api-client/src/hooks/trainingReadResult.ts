@@ -22,7 +22,7 @@ export type TrainingReadResult<Data> = {
  * failure of any of them, or of the computed read itself, is the error while there is no data to show.
  */
 export function toTrainingReadResult<Data>(
-  computed: UseQueryResult<Data>,
+  computed: UseQueryResult<Data | undefined>,
   prerequisites: readonly UseQueryResult[],
   gates: readonly UseQueryResult[],
 ): TrainingReadResult<Data> {

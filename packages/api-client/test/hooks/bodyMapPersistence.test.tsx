@@ -7,6 +7,7 @@ import {
   projectWeek,
   projectedState,
   targetedMuscles,
+  weekPlanDays,
 } from "@keylow/core/training";
 import { dehydrate, hydrate, onlineManager } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -75,8 +76,8 @@ const DERIVED_NAMES = [
 
 describe("the body map in a persisted cache", () => {
   /** Opens the app online once on Thursday evening, then returns what a persister would have stored. */
-  const openOnline = async () => {
-    const fake = installTrainingFake(server, goldenWeekData);
+  const openOnline = async (data: Parameters<typeof installTrainingFake>[1] = goldenWeekData) => {
+    const fake = installTrainingFake(server, data);
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(
       () => ({
@@ -282,6 +283,73 @@ describe("the body map in a persisted cache", () => {
         nextWeekMonday,
       ),
     );
+  });
+
+  describe("a routine made active on Thursday 15 October", () => {
+    const ACTIVATED_AT = "2026-10-15T07:30:00+00:00";
+    const nothingLoggedFromThursday = () => ({
+      ...goldenWeekData,
+      sets: [],
+      sessions: [],
+      routine: { ...goldenWeekData.routine, activated_at: ACTIVATED_AT },
+    });
+
+    it("should store the instant it was made active and no date derived from it", async () => {
+      const { stored } = await openOnline(nothingLoggedFromThursday());
+
+      const routineKey = JSON.stringify(keys.training.activeRoutine);
+      const storedRoutine = stored.queries.find(
+        ({ queryKey }) => JSON.stringify(queryKey) === routineKey,
+      );
+      expect(storedRoutine?.state.data).toMatchObject({ activatedAt: ACTIVATED_AT });
+      for (const query of stored.queries) {
+        expect(namesIn(query.state.data)).not.toContain("activeFrom");
+      }
+    });
+
+    it("should plan from it at a later moment from the restored rows with the network down", async () => {
+      const { fake, rows, stored } = await openOnline(nothingLoggedFromThursday());
+      const { wrapper } = reopenOffline(fake, stored);
+      const requestsBefore = fake.requests.length;
+
+      const { result } = renderHook(
+        () =>
+          useBodyMap({
+            scale: "gap",
+            view: "projected",
+            weekStart: GOLDEN_WEEK_START,
+            now: SATURDAY_NOON,
+          }),
+        { wrapper },
+      );
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      // Core, called directly on the rows that were stored, with the day the routine was made active on.
+      const week = weekPlanDays({
+        routine: {
+          ...throughStorage(rows.routine ?? { name: "", days: [] }),
+          activeFrom: "2026-10-15",
+        },
+        sessions: [],
+        now: SATURDAY_NOON,
+        tz: "Europe/London",
+        weekStart: GOLDEN_WEEK_START,
+      });
+      expect(result.current.data?.days.map((day) => day.status)).toStrictEqual(
+        week.days.map((day) => day.status),
+      );
+      expect(result.current.data?.days.slice(0, 3).map((day) => day.status)).toStrictEqual([
+        "rest",
+        "rest",
+        "rest",
+      ]);
+      // Chest is Monday's Push, never planned, so on plan. Quads is Thursday's Legs, missed, so behind.
+      expect(result.current.data?.values.chest_lower).toBe(1);
+      expect(result.current.data?.values.quads).toBe(0);
+      expect(fake.requests).toHaveLength(requestsBefore);
+    });
   });
 
   it("should stay pending offline for a week that was never cached, when the number needs the week", async () => {

@@ -85,6 +85,7 @@ const trainingSets: TrainingSet[] = [
 const legsRoutine: ActiveRoutine = {
   id: "88888888-8888-4888-8888-888888888888",
   name: "Push Pull Legs",
+  activatedAt: null,
   days: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",

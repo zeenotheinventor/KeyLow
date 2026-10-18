@@ -2,10 +2,11 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { asLogged, dayId, exerciseId, id, session } from "./plans";
-import { instantAtLocalTime } from "../../src/dates";
+import { addCalendarDays, instantAtLocalTime } from "../../src/dates";
 import {
   COMPARE_PARAMS_V1,
   compareWeek,
+  expandPlan,
   MUSCLE_IDS,
   MUSCLE_ROLES,
   projectWeek,
@@ -145,6 +146,32 @@ describe("projected against actual, properties", () => {
             expect(comparison[muscle].gap).toBeLessThanOrEqual(0);
             expect(comparison[muscle].actualWeeklySets).toBe(0);
           }
+        },
+      ),
+    );
+  });
+
+  it("should plan, project and compare as it does with no active date when it is active on or before the week's Monday", () => {
+    fc.assert(
+      fc.property(
+        planRoutine,
+        fc.constantFrom(...WEEKS),
+        fc.constantFrom(...ZONES),
+        fc.integer({ min: 0, max: 400 }),
+        (routine, weekStart, tz, daysBefore) => {
+          const activeFrom = addCalendarDays(weekStart, -daysBefore);
+          const dated = { ...routine, activeFrom };
+          const noLogs = { sessions: [], sets: [] };
+
+          expect(expandPlan(dated, weekStart, tz, params)).toStrictEqual(
+            expandPlan(routine, weekStart, tz, params),
+          );
+          const withDate = projectWeek(dated, weekStart, tz, noLogs, params);
+          const withoutDate = projectWeek(routine, weekStart, tz, noLogs, params);
+          expect(withDate).toStrictEqual(withoutDate);
+          expect(compareWeek(withDate.actual, withDate.projected, params)).toStrictEqual(
+            compareWeek(withoutDate.actual, withoutDate.projected, params),
+          );
         },
       ),
     );

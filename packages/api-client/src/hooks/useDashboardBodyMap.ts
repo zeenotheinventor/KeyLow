@@ -8,6 +8,7 @@ import {
 } from "@keylow/core/training";
 import { useMemo } from "react";
 
+import { planRoutineOf } from "./planRoutineOf";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useMuscleState } from "./useMuscleState";
 import { useProfileTimeZone } from "./useProfileTimeZone";
@@ -79,7 +80,13 @@ export function useDashboardBodyMap({
     }
     try {
       const card = todayCard({
-        week: weekPlanDays({ routine: activeRoutine, sessions, now, tz: zone, weekStart }),
+        week: weekPlanDays({
+          routine: planRoutineOf(activeRoutine, zone),
+          sessions,
+          now,
+          tz: zone,
+          weekStart,
+        }),
         now,
         sessionTimeParams: SESSION_TIME_PARAMS_V1,
         // Only the first visit is told apart from no routine, and the card writes both as none.

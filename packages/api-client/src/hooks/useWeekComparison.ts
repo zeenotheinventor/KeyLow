@@ -4,6 +4,7 @@ import { useCallback } from "react";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
+import { planRoutineOf } from "./planRoutineOf";
 import { retryUnlessRangeError } from "./retryUnlessRangeError";
 import { toTrainingReadResult } from "./trainingReadResult";
 import { useActiveRoutine } from "./useActiveRoutine";
@@ -46,12 +47,15 @@ export function useWeekComparison(
 
   const select = useCallback(
     (sessions: WeekSession[]) => {
-      // The zone only places the planned sets in time, and the comparison counts every set of the
-      // week whatever its time, so UTC while a restored cache waits for the zone gives the same numbers.
+      // The day the routine was made active is read in the user's zone, so there is no comparison until
+      // the zone is there. The result stays pending then, as it does for the other training hooks.
+      if (!zone) {
+        return undefined;
+      }
       const { actual, projected } = projectWeek(
-        activeRoutine ?? NO_ROUTINE,
+        planRoutineOf(activeRoutine ?? null, zone) ?? NO_ROUTINE,
         weekStart,
-        zone ?? "UTC",
+        zone,
         { sessions, sets: sessions.flatMap((session) => session.sets) },
         COMPARE_PARAMS_V1,
       );
@@ -60,7 +64,11 @@ export function useWeekComparison(
     [weekStart, zone, activeRoutine],
   );
 
-  const sessions = useQuery<WeekSession[], Error, Record<MuscleId, MusclePlanComparison>>({
+  const sessions = useQuery<
+    WeekSession[],
+    Error,
+    Record<MuscleId, MusclePlanComparison> | undefined
+  >({
     queryKey: keys.training.weekSessions(weekStart),
     queryFn:
       zone && activeRoutine !== undefined ? () => listWeekSessions(client, weekStart) : skipToken,

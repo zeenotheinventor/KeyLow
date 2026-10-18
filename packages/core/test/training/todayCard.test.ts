@@ -326,6 +326,24 @@ describe("todayCard", () => {
   });
 
   describe("a rest day", () => {
+    it("should name Monday of the following week as next on the Sunday for a routine active from Thursday", () => {
+      const activeFromThursday: WeekRoutine = { ...goldenRoutine, activeFrom: "2026-10-15" };
+
+      expect(
+        cardFor({ routine: activeFromThursday, sessions: [], now: "2026-10-18T20:00:00+01:00" }),
+      ).toMatchObject({ kind: "rest", next: { date: "2026-10-19", name: "Push" } });
+    });
+
+    it("should read a rest day, not the planned day, when the routine was made active after today", () => {
+      // A device clock behind the server's: active from Friday while now is still Thursday.
+      const activeFromFriday: WeekRoutine = { ...goldenRoutine, activeFrom: "2026-10-16" };
+
+      expect(cardFor({ routine: activeFromFriday, sessions: [] })).toStrictEqual({
+        kind: "rest",
+        next: { date: "2026-10-17", id: "00000003-0000-4000-8000-000000000004", name: "Push" },
+      });
+    });
+
     it("should read the next planned day, Legs on Thursday, on the Wednesday before it", () => {
       expect(cardFor({ now: "2026-10-14T12:00:00+01:00" })).toStrictEqual({
         kind: "rest",

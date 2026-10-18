@@ -6,15 +6,18 @@ import {
   benchMuscles,
   curl,
   curlMuscles,
+  dayId,
   LONDON,
   legs,
   planExercise,
+  PREVIOUS_WEEK,
   pull,
   push,
   routine,
   squat,
   WEEK,
 } from "./plans";
+import { toLocalDate } from "../../src/dates";
 import {
   buildSetSnapshot,
   COMPARE_PARAMS_V1,
@@ -221,5 +224,102 @@ describe("expandPlan", () => {
     expect(() => expandPlan({ days: [day] }, WEEK, LONDON, params)).toThrow(
       new RangeError("An exercise needs at least one primary muscle"),
     );
+  });
+});
+
+describe("expandPlan from the routine's active date", () => {
+  // Monday 19 October 2026 is WEEK. Push is Monday, legs Wednesday, pull Friday.
+  const thursday: PlanRoutineDay = {
+    ...push,
+    id: dayId(5),
+    weekday: 3,
+    exercises: [planExercise(bench, benchMuscles, 2, 2, 0)],
+  };
+  const sunday: PlanRoutineDay = { ...pull, id: dayId(6), weekday: 6 };
+  const saturday: PlanRoutineDay = { ...pull, id: dayId(7), weekday: 5 };
+  const localDatesOf = (planned: readonly { local_date: string }[]): string[] => [
+    ...new Set(planned.map((set) => set.local_date)),
+  ];
+
+  it("should place Thursday and the days after it, and none before, when it is active from Thursday", () => {
+    const planned = expandPlan(
+      { days: [push, legs, thursday, pull], activeFrom: "2026-10-22" },
+      WEEK,
+      LONDON,
+      params,
+    );
+
+    expect(localDatesOf(planned)).toEqual(["2026-10-22", "2026-10-23"]);
+    expect(planned.map((set) => set.routine_day_id)).toEqual([
+      ...Array<string>(2).fill(thursday.id),
+      ...Array<string>(3).fill(pull.id),
+    ]);
+  });
+
+  it("should plan the day it is active from", () => {
+    const planned = expandPlan(
+      { days: [push, legs, pull], activeFrom: "2026-10-21" },
+      WEEK,
+      LONDON,
+      params,
+    );
+
+    expect(localDatesOf(planned)).toEqual(["2026-10-21", "2026-10-23"]);
+    expect(planned.filter((set) => set.routine_day_id === legs.id)).toHaveLength(4);
+  });
+
+  it("should plan nothing when it is active from after the last day of the week", () => {
+    expect(
+      expandPlan({ days: [push, legs, pull], activeFrom: "2026-10-26" }, WEEK, LONDON, params),
+    ).toEqual([]);
+  });
+
+  it("should give the plan it gives with no date when it is active from the Monday or earlier", () => {
+    const withoutDate = expandPlan(routine, WEEK, LONDON, params);
+
+    for (const activeFrom of [WEEK, PREVIOUS_WEEK, "2020-01-01"]) {
+      expect(expandPlan({ ...routine, activeFrom }, WEEK, LONDON, params)).toStrictEqual(
+        withoutDate,
+      );
+    }
+  });
+
+  it("should compare calendar days in the week's zone, not the UTC dates of the planned times", () => {
+    // 18:00 on Sunday 25 October in Los Angeles (PDT, UTC-7) is 01:00 UTC on Monday 26 October, so the
+    // UTC date of the set is the 26th while its local date is the 25th.
+    const planned = expandPlan(
+      { days: [sunday], activeFrom: "2026-10-26" },
+      WEEK,
+      "America/Los_Angeles",
+      params,
+    );
+
+    expect(planned).toEqual([]);
+  });
+
+  it("should start on the local day of an activation at 23:30 UTC on Sunday 25 October in London", () => {
+    // The clocks went back that morning, so London is on UTC and the local day is still the 25th.
+    const activeFrom = toLocalDate(new Date("2026-10-25T23:30:00Z"), LONDON);
+    const planned = expandPlan({ days: [saturday, sunday], activeFrom }, WEEK, LONDON, params);
+
+    expect(activeFrom).toBe("2026-10-25");
+    expect(localDatesOf(planned)).toEqual(["2026-10-25"]);
+  });
+
+  it("should start on the next local day of an activation just before midnight UTC while London is on summer time", () => {
+    // 23:30 UTC on Saturday 24 October is 00:30 BST on Sunday the 25th.
+    const activeFrom = toLocalDate(new Date("2026-10-24T23:30:00Z"), LONDON);
+    const planned = expandPlan({ days: [saturday, sunday], activeFrom }, WEEK, LONDON, params);
+
+    expect(activeFrom).toBe("2026-10-25");
+    expect(localDatesOf(planned)).toEqual(["2026-10-25"]);
+  });
+
+  it("should refuse an active date that is not a calendar day", () => {
+    for (const activeFrom of ["2026-02-30", "22/10/2026", "", "2026-10-22T09:00:00Z"]) {
+      expect(() => expandPlan({ ...routine, activeFrom }, WEEK, LONDON, params)).toThrow(
+        new RangeError("A routine's active date must be a calendar day written YYYY-MM-DD"),
+      );
+    }
   });
 });
