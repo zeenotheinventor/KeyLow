@@ -90,3 +90,21 @@ export type { EffortSet } from "./setEffort";
 export { targetedMuscles } from "./targetedMuscles";
 export type { TargetedMusclesInput } from "./targetedMuscles";
 export { SET_SNAPSHOT_VERSION } from "./versions";
+
+export { displayLoad, loadToKg } from "./loads";
+export type { LoadUnit } from "./loads";
+export { parseEffortInput, parseLoadInput, parseRepsInput, validateSetDraft } from "./setInput";
+export type {
+  EffortInputResult,
+  EffortMode,
+  LoadInputResult,
+  RepsInputResult,
+  SetDraft,
+  SetDraftIssue,
+  SetDraftResult,
+  SetInputField,
+  SetInputRule,
+  SetValues,
+} from "./setInput";
+export { buildWorkoutSetInsert } from "./buildWorkoutSetInsert";
+export type { WorkoutSetInsert, WorkoutSetInsertInput } from "./buildWorkoutSetInsert";
