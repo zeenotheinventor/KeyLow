@@ -124,6 +124,7 @@ A fresh stack loads `seed.sql` first and then every file in `packages/db/supabas
 | `10_cofid_subset.sql`   | 209 CoFID foods (chicken, chick peas, yogurt, milk, oil, bread, rice, cheese and the other staples, per 100 ml drinks and three suspect foods) with their source data. Generated, never edited.                                              |
 | `20_off_sample.sql`     | Five Open Food Facts products for the barcode path and the suspect review gate with no network. Hand written. Their barcodes start with 2, the range GS1 keeps for internal use, so no real product has one.                                 |
 | `30_cofid_portions.sql` | The natural portions of 24 CoFID foods (1 medium banana, 1 chicken thigh, eggs by size, slices, potatoes by size), each weight copied from a USDA FoodData Central portion. Generated from `data/portions/cofid-portions.csv`, never edited. |
+| `40_exercises.sql`      | The 673 global exercises of the curated library with their muscle maps and source rows, each written by one call of `public.import_exercises`. Generated from `data/exercises/exercises.curated.csv`, never edited.                          |
 
 The seeds never reach production. `supabase db push` does not run seeds unless it is given `--include-seed`, and `deploy-supabase.yml` does not give it. Production gets the natural portions of `30_cofid_portions.sql` only through the portions loader, which Zee runs himself (see Loading the portions into production below).
 
@@ -133,6 +134,7 @@ To load the seeds into a stack that is already running, which is how a database 
 docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/10_cofid_subset.sql
 docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/20_off_sample.sql
 docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/30_cofid_portions.sql
+docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/40_exercises.sql
 ```
 
 Each file is one transaction and every statement is an upsert, so running them again is safe and changes nothing. On a database that already holds the full CoFID import, the subset foods keep their values. Only the source data rows of those 209 foods are pointed at the seed's import run, instead of the run that wrote them. `packages/db/supabase/tests/search_foods_seeded.test.sql` needs `10_cofid_subset.sql` and `20_off_sample.sql` loaded, and the integration test `cofid-portions-seed.test.ts` needs `30_cofid_portions.sql`. Each says so when it fails because its seed is not loaded.
@@ -152,6 +154,14 @@ pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv
 ```
 
 It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV. The file lists one portion per row. Every weight is copied from a USDA FoodData Central portion row (Foundation Foods or SR Legacy, public domain under CC0), and `fdc_id`, `fdc_description` and `source` name the food and the portion it came from so a reviewer can check each one. The loader ignores those columns. A CoFID food is matched to an FDC food by name and state (raw or cooked, flesh only or meat and skin, with or without bone), and a food with no clear match is left out of the file. Each portion has a deterministic id made from its food code and label, so loading the file again changes nothing, a corrected weight updates the same row, and the diary entries that link to a portion keep working. The loader never deletes a portion that a later edition of the file drops. A portion that is relabelled gets a new id, because the id comes from the label, and the old row stays, so a rename leaves a duplicate chip until the old row is removed by hand.
+
+To regenerate the exercise seed after the curated CSV changes (see `packages/db/data/exercises/VERIFICATION.md`), run this from the repository root:
+
+```sh
+pnpm --filter @keylow/db import:exercises --label seed --emit-sql supabase/seeds/40_exercises.sql
+```
+
+It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV and the source file. To load the library into a running stack through the import instead, run `pnpm --filter @keylow/db import:exercises --label <label>` (add `--dry-run` to check the CSV and write nothing). Importing again changes nothing, and an exercise that has left the CSV is soft deleted. Production gets the library only through that command, run by Zee, because the seeds never reach it.
 
 ### Weigh-in seed
 

@@ -1,6 +1,6 @@
 # Exercise library verification
 
-This is the written record of where the global exercise library comes from and how it is built. It covers the pinned source file, how to check and rebuild it, what the source looks like, and what the curation keeps and leaves out. The mapping rules themselves are in `MAPPING.md`, and the lifts a human should check are in `REVIEW-SAMPLE.md`. Importing the library into the database is a later ticket; nothing here touches the database.
+This is the written record of where the global exercise library comes from and how it is built. It covers the pinned source file, how to check and rebuild it, what the source looks like, and what the curation keeps and leaves out. The mapping rules themselves are in `MAPPING.md`, and the lifts a human should check are in `REVIEW-SAMPLE.md`. The last section records the import of the library into the database.
 
 ## Provenance
 
@@ -53,7 +53,7 @@ The script refuses a source file whose sha256 does not match its `.sha256` file,
 
 ## What the source looks like
 
-Each entry has `id`, `name`, `force`, `level`, `mechanic`, `equipment`, `primaryMuscles`, `secondaryMuscles`, `instructions`, `category` and `images`. The curation reads all of these except `level` and `images`. Ids are unique and are file-name-like (`Barbell_Bench_Press_-_Medium_Grip`), so they are the `source_ref` the importer will store. No two entries share a name.
+Each entry has `id`, `name`, `force`, `level`, `mechanic`, `equipment`, `primaryMuscles`, `secondaryMuscles`, `instructions`, `category` and `images`. The curation reads all of these except `level` and `images`. Ids are unique and are file-name-like (`Barbell_Bench_Press_-_Medium_Grip`), so they are the `source_ref` the importer stores. No two entries share a name.
 
 | Category              | Exercises |
 | --------------------- | --------- |
@@ -100,3 +100,57 @@ Exercises with each muscle as primary (an exercise with two primaries counts for
 | triceps     | 67         | neck       | 5          |
 
 All 22 ids are primary somewhere. The thin ones are discussed in `MAPPING.md`, "Gaps": tibialis has one exercise because the source has only one dorsiflexion exercise, and no exercise was invented to pad it.
+
+## Import
+
+`pnpm --filter @keylow/db import:exercises --label <label>` reads `exercises.curated.csv`, runs the checker on it and refuses to write anything if the checker fails. It then writes the exercises, their muscle maps and their source rows to the database that `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` name, or to the local stack when neither is set. The unit tests under `test/unit/exercises` and the integration tests `test/integration/database/exercises-import.test.ts` and `exercise-library.test.ts` cover it.
+
+- `--dry-run` maps and checks every row and writes nothing. It connects to nothing.
+- `--emit-sql <file>` writes the same library as the seed `supabase/seeds/40_exercises.sql` and connects to nothing.
+- One `exercise_import_runs` row records each import (the label, the source repository's commit and the sha256 of the CSV), and each exercise has one `exercise_source_data` row holding its entry of the source file exactly as it was fetched, pointing at the latest run.
+- Exercises are keyed by `(source, source_ref)`. Importing the same CSV again leaves every exercise row and every map row as it was, and only moves the source rows to the new run. A changed name, equipment or mechanic updates that exercise. A changed muscle, role or weight replaces that exercise's map and no other. An exercise that the CSV no longer has is soft deleted (`deleted_at`) and never deleted, and it is live again if a later CSV has it back.
+- Every write goes through the function `public.import_exercises`, one call per batch of 100 exercises. PostgREST gives each request its own transaction and the primary-muscle trigger is checked at commit, so an exercise and its map have to arrive in one call. The seed calls the same function.
+- No log line and no error message holds an exercise name, a source reference or a muscle. A failed check names its rule and the line of the CSV, and a database failure names only its error code.
+
+### Result
+
+An import of the committed CSV into an empty local database, with the label `key349-local-full`:
+
+| Outcome                             | Exercises |
+| ----------------------------------- | --------- |
+| Imported (created)                  | 673       |
+| Left out (`exercises.excluded.csv`) | 203       |
+| Source file                         | 876       |
+
+The same command run again gave 0 created, 0 updated, 673 unchanged and 0 soft deleted, and the database held the same 673 exercises and 2,189 map rows with the same ids (an md5 over the map row ids was equal before and after). Applying the seed over the imported library changed nothing either.
+
+Exercises that have each muscle as primary, counted in the database after the import (live global exercises, an exercise with two primaries counting for both). They equal the counts under "Result" above, and all 22 muscles have at least one:
+
+| Muscle      | Primary in | Muscle     | Primary in |
+| ----------- | ---------- | ---------- | ---------- |
+| chest_upper | 14         | forearms   | 23         |
+| chest_lower | 56         | abs        | 50         |
+| delt_front  | 77         | obliques   | 30         |
+| delt_side   | 21         | glute_max  | 17         |
+| delt_rear   | 21         | glute_med  | 3          |
+| lats        | 56         | quads      | 91         |
+| traps_upper | 9          | hamstrings | 51         |
+| traps_mid   | 34         | adductors  | 3          |
+| lower_back  | 16         | calves     | 13         |
+| biceps      | 50         | tibialis   | 1          |
+| triceps     | 67         | neck       | 5          |
+
+`exercise-library.test.ts` repeats that check on any database: each of the 22 muscle ids has a live global exercise with that muscle as its primary.
+
+### Seed
+
+`supabase/seeds/40_exercises.sql` holds the full curated list (673 exercises), not a subset. It is 996 kB, about a third of the size of the CoFID subset seed next to it. Applying it with `psql` to a database with the migrations took 0.41 s, and a fresh `supabase start` of a scratch stack (all migrations, then every seed) took 26 s in total, so there was no reason to cut it. A unit test regenerates the seed from the CSV and the source file and fails if the committed file differs.
+
+### Production
+
+The seeds never reach production, because `supabase db push` does not run them. Zee runs the import against production once the migration `20261018150000_import_exercises.sql` is deployed, with the production URL and service role key set, first as a dry run and then for real:
+
+```sh
+pnpm --filter @keylow/db import:exercises --label production-<date> --dry-run
+SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... pnpm --filter @keylow/db import:exercises --label production-<date>
+```
