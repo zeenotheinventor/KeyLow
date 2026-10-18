@@ -11,6 +11,7 @@ import { ScrollView, View } from "react-native";
 
 import { useIsOnline } from "../../lib/connectivity";
 import { ScreenHeader } from "../ScreenHeader";
+import { TodayCard } from "../TodayCard";
 import { Banner, ErrorState, Skeleton } from "../ui";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
@@ -19,12 +20,20 @@ import { useTrainHome } from "./useTrainHome";
 import type { TrainScreenProps } from "./types";
 
 /**
- * The Train tab: the first visit, no routine, or a routine's own cards, under the title. It stays mounted
- * under the terms gate's cover, so its reads wait until the account has accepted the current Terms. Offline
- * it shows what the phone saved, under a notice that says when. Starting a session needs a connection, so
- * the buttons that log one are dimmed offline. A button is drawn only when its handler is given.
+ * The Train tab: the Today card, or the first visit or no routine card when today has no card, under the
+ * title. It stays mounted under the terms gate's cover, so its reads wait until the account has accepted the
+ * current Terms. Offline it shows what the phone saved, under a notice that says when. Starting a session
+ * needs a connection, so the buttons that log or reopen one are dimmed offline. A button is drawn only when
+ * its handler is given.
  */
-export function TrainScreen({ onLogSession, onCreateRoutine, onSetGoal }: TrainScreenProps) {
+export function TrainScreen({
+  onLogSession,
+  onCreateRoutine,
+  onSetGoal,
+  onStart,
+  onResume,
+  onViewSession,
+}: TrainScreenProps) {
   const home = useTrainHome();
   const isOnline = useIsOnline();
 
@@ -61,7 +70,17 @@ export function TrainScreen({ onLogSession, onCreateRoutine, onSetGoal }: TrainS
             <Skeleton variant="trainHome" />
           </View>
         ) : null}
-        {home.status === "ready" && !home.hasRoutine ? (
+        {home.status === "ready" && home.today !== null ? (
+          <TodayCard
+            card={home.today.card}
+            context={home.today.context}
+            isStartAndResumeDisabled={!isOnline}
+            onResume={onResume}
+            onStart={onStart}
+            onViewSession={onViewSession}
+          />
+        ) : null}
+        {home.status === "ready" && home.today === null && !home.hasRoutine ? (
           home.hasLoggedSession ? (
             <TrainNoRoutine
               isLogDisabled={!isOnline}
