@@ -10,4 +10,5 @@ export const storyStates = [
   "NutritionCard",
   "ThisWeekCard",
   "BodyMapCard",
+  "TrainHome",
 ];

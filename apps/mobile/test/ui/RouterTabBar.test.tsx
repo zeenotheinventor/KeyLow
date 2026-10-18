@@ -20,7 +20,11 @@ async function userPress(role: "tab" | "button", name: string) {
 }
 
 // The real Expo Router, with the kit's bar in the place of its own, as the app's tab layout will do.
-async function renderTabs(extraScreens: Record<string, () => React.JSX.Element> = {}) {
+async function renderTabs(
+  extraScreens: Record<string, () => React.JSX.Element> = {},
+  // A Train screen between Recipes and More: hidden from the bar, as the app registers it until it is ready, or shown.
+  train: "none" | "hidden" | "shown" = "none",
+) {
   const onAddPress = jest.fn();
   // The listener a screen can put on its own tab press, to take it over, as a screen scrolling to top would.
   const onDiaryTabPress = jest.fn<undefined, [{ preventDefault: () => void }]>();
@@ -51,6 +55,10 @@ async function renderTabs(extraScreens: Record<string, () => React.JSX.Element> 
             options={{ title: "Diary" }}
           />
           <Tabs.Screen name="recipes" options={{ title: "Recipes" }} />
+          {train === "hidden" ? (
+            <Tabs.Screen name="train" options={{ title: "Train", href: null }} />
+          ) : null}
+          {train === "shown" ? <Tabs.Screen name="train" options={{ title: "Train" }} /> : null}
           <Tabs.Screen name="more" options={{ title: "More" }} />
         </Tabs>
       </ThemeProvider>
@@ -64,6 +72,7 @@ async function renderTabs(extraScreens: Record<string, () => React.JSX.Element> 
       dashboard: () => <Text>Dashboard screen</Text>,
       diary: () => <Text>Diary screen</Text>,
       recipes: () => <Text>Recipes screen</Text>,
+      ...(train === "none" ? {} : { train: () => <Text>Train screen</Text> }),
       more: () => <Text>More screen</Text>,
       ...extraScreens,
     },
@@ -124,6 +133,42 @@ describe("RouterTabBar in the real Expo Router Tabs", () => {
 
     expect(screen.getAllByRole("tab")).toHaveLength(4);
     expect(screen.queryByRole("tab", { name: /unlisted/i })).not.toBeOnTheScreen();
+  });
+
+  describe("a Train screen between Recipes and More", () => {
+    it("should draw no tab for it while its href is null, so the bar is the four it was", async () => {
+      await renderTabs({}, "hidden");
+
+      const tabs = screen.getAllByRole("tab");
+      expect(tabs).toHaveLength(4);
+      expect(screen.queryByRole("tab", { name: "Train" })).not.toBeOnTheScreen();
+      expect(
+        ["Dashboard", "Diary", "Recipes", "More"].map((name) =>
+          tabs.indexOf(screen.getByRole("tab", { name })),
+        ),
+      ).toEqual([0, 1, 2, 3]);
+    });
+
+    it("should draw five labelled tabs and the plus, with Train after Recipes, once it has an href", async () => {
+      await renderTabs({}, "shown");
+
+      const controls = screen.getAllByRole(/^(tab|button)$/);
+      expect(screen.getAllByRole("tab")).toHaveLength(5);
+      expect(
+        ["Dashboard", "Diary", "Find food", "Recipes", "Train", "More"].map((name) =>
+          controls.indexOf(screen.getByRole(name === "Find food" ? "button" : "tab", { name })),
+        ),
+      ).toEqual([0, 1, 2, 3, 4, 5]);
+    });
+
+    it("should open the Train screen and select its tab when it is pressed", async () => {
+      const { view } = await renderTabs({}, "shown");
+
+      await userPress("tab", "Train");
+
+      expect(view.getPathname()).toBe("/train");
+      expect(screen.getByRole("tab", { name: "Train", selected: true })).toBeOnTheScreen();
+    });
   });
 
   it("should give every screen the quick fade for a tab change", async () => {

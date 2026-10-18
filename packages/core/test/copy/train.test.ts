@@ -16,6 +16,7 @@ import {
   TRAIN_LOADING_NAME,
   TRAIN_NO_ROUTINE,
   TRAIN_TODAY_CARD,
+  TRAIN_OFFLINE_NOTHING_SAVED,
   TRAIN_OFFLINE_TITLE,
 } from "../../src/copy";
 import * as trainCopy from "../../src/copy/train";
@@ -710,6 +711,12 @@ describe("the Train tab states", () => {
     expect(TRAIN_OFFLINE_TITLE).toBe("You're offline");
     expect(describeOfflineBanner("17:52")).toBe(
       "Showing your training as saved at 17:52. Starting a session or logging a set needs a connection.",
+    );
+  });
+
+  it("should say there is nothing saved to show when the phone has no training saved yet, with no time", () => {
+    expect(TRAIN_OFFLINE_NOTHING_SAVED).toBe(
+      "Your training will show when you are back online. Starting a session or logging a set needs a connection.",
     );
   });
 });

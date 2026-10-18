@@ -72,6 +72,7 @@ describe("which training queries the diary cache keeps", () => {
   it.each([
     ["the sets from a start day", keys.training.sets("2026-10-02")],
     ["the active routine", keys.training.activeRoutine],
+    ["whether any session was ever logged", keys.training.hasLoggedSession],
     ["the sessions of a week", keys.training.weekSessions("2026-10-12")],
     ["a session with its sets", keys.training.session("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")],
     ["the session in progress", keys.training.activeSession],

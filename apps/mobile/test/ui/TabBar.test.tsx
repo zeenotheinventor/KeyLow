@@ -530,6 +530,46 @@ describe("TabBar", () => {
     });
   });
 
+  describe("five destinations and the plus, the six slots of the Train tab", () => {
+    const trainTabs = [
+      { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+      { key: "diary", label: "Diary", icon: "BookOpen" },
+      { key: "recipes", label: "Recipes", icon: "ChefHat" },
+      { key: "train", label: "Train", icon: "Dumbbell" },
+      { key: "more", label: "More", icon: "Ellipsis" },
+    ] as const;
+    const sixSlots: Control[] = [
+      { role: "tab", name: "Dashboard" },
+      { role: "tab", name: "Diary" },
+      { role: "button", name: "Find food" },
+      { role: "tab", name: "Recipes" },
+      { role: "tab", name: "Train" },
+      { role: "tab", name: "More" },
+    ];
+
+    it("should put the add button third, after Diary, with Recipes, Train and More after it", async () => {
+      await renderTabBar({ tabs: trainTabs });
+
+      expect(screen.getAllByRole("tab")).toHaveLength(5);
+      expect(positionsOf(sixSlots)).toEqual([0, 1, 2, 3, 4, 5]);
+    });
+
+    it("should slide the underline under Train, the fifth slot of six", async () => {
+      await renderTabBar({ tabs: trainTabs, activeKey: "train" });
+      await layOut(390);
+
+      // Each of the six slots is 65 points of the 390, and Train is after the plus, so it is 4 slots in.
+      expect(animatedTranslateXPoints(slide())).toBeCloseTo(4 * 65, 3);
+    });
+
+    it("should leave the underline under the destinations before the plus where they are", async () => {
+      await renderTabBar({ tabs: trainTabs, activeKey: "diary" });
+      await layOut(390);
+
+      expect(animatedTranslateXPoints(slide())).toBeCloseTo(1 * 65, 3);
+    });
+  });
+
   describe("the slot count", () => {
     it("should divide the bar by its real slots: two destinations and the plus make three", async () => {
       await renderTabBar({

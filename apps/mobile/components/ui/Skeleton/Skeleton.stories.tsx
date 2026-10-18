@@ -53,3 +53,6 @@ export const ThisWeekCard: Story = { args: { variant: "thisWeekCard" } };
 
 // The dashboard's body map card while it loads: the title, two figures with the legend, and two lines.
 export const BodyMapCard: Story = { args: { variant: "bodyMapCard" } };
+
+// The Train home while it loads: the Today card, the two body figures and the seven days of the week.
+export const TrainHome: Story = { args: { variant: "trainHome" } };
