@@ -87,4 +87,6 @@ export type {
 } from "./projectWeek";
 export { setEffort } from "./setEffort";
 export type { EffortSet } from "./setEffort";
+export { targetedMuscles } from "./targetedMuscles";
+export type { TargetedMusclesInput } from "./targetedMuscles";
 export { SET_SNAPSHOT_VERSION } from "./versions";

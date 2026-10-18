@@ -63,7 +63,7 @@ ready_at  = t + τ_m · ln(F_m / θ)  when F_m > θ, else now
 
 Because fatigue decays exponentially from a dose-sized peak, more volume means a longer time to recovery with no extra rule.
 
-Chronic load: `weeklySets_m` is the effort-weighted set count of the last 7 days, compared with volume landmarks `MEV_m ≤ MAV_m ≤ MRV_m` to give `under | maintaining | productive | over`.
+Chronic load: `weeklySets_m` is the effort-weighted set count of the last 7 days, compared with volume landmarks `MEV_m ≤ MAV_m ≤ MRV_m` to give `under | maintaining | productive | over`. A fifth status, `not_targeted`, replaces `under` (and only `under`) for a muscle the plan and the goal do not train (Zee, 2026-10-18, KEY-339 ruling E, definition confirmed on KEY-356). A muscle is targeted when some exercise of the active routine's days holds it in its muscle map with a weight above 0 (on any day, a day with no weekday included), or when the goal's `muscle_priority` ranks it above 0. With neither a routine with exercises nor a priority above 0, every muscle is targeted. A muscle that is not targeted but has reached its MEV keeps its real status, so a muscle the user in fact trains is never hidden and over-training is never masked. Heat, `readyAt` and `weeklySets` do not depend on it. No `TrainingParams` value changes and a call that does not say which muscles are targeted returns what it returned before, so this is not a new params version (ADR 0002).
 
 Starting values, by size class (to be tuned; they are a starting point, not settled physiology):
 
@@ -75,7 +75,7 @@ Starting values, by size class (to be tuned; they are a starting point, not sett
 
 `θ = 0.25 × C_m`. A per-muscle override map exists in the params for when one muscle needs to differ from its class.
 
-Functions: `muscleState(sets, now, params)` returns `{ heat, readyAt, weeklySets, volumeStatus }` per muscle id; `weeklyVolume(sets, asOf, params)`; `expandPlan` and `compareWeek` (below); `suggestSession(state, goals, library, constraints, params)`.
+Functions: `muscleState(sets, now, params, targeted?)` returns `{ heat, readyAt, weeklySets, volumeStatus }` per muscle id; `weeklyVolume(sets, asOf, params, targeted?)`; `targetedMuscles({ routine, priority? })` returns the targeted set (above), which `muscleState`, `weeklyVolume` and `projectedState` take as an optional trailing argument, every muscle being targeted when it is left out; `expandPlan` and `compareWeek` (below); `suggestSession(state, goals, library, constraints, params)`.
 
 ### Projected against actual
 
@@ -92,7 +92,7 @@ It runs on the client. The input is a few hundred sets at most, so unlike the nu
 
 ### Goals and suggestions
 
-The goal questionnaire writes `training_goals`. `muscle_priority` is derived in core from the answers through preset maps, versioned with the params: `aesthetic` with `v_taper` raises `delt_side`, `lats` and `chest_upper` and lowers direct `obliques` work; `strength` raises the muscles of the squat, bench, deadlift and overhead press and switches rep targets to lower ranges with load progression.
+The goal questionnaire writes `training_goals`. `muscle_priority` is derived in core from the answers through preset maps, versioned with the params: `aesthetic` with `v_taper` raises `delt_side`, `lats` and `chest_upper` and lowers direct `obliques` work; `strength` raises the muscles of the squat, bench, deadlift and overhead press and switches rep targets to lower ranges with load progression. A muscle with priority 0, or absent from `muscle_priority`, is not targeted by the goal (the routine can still target it, see "The heat model").
 
 `suggestSession` is deterministic. It scores each muscle as `priority × max(0, MAV_low − weeklySets) × (1 − heat)`, then greedily picks exercises from the library that cover the top-scoring muscles. It skips exercises whose primary muscles are hot (heat above a params threshold) and stays inside the session's minutes and equipment. When the day has a planned routine day, it keeps the plan and only swaps or adds exercises. Every suggestion carries its reasons as data (muscle ids and the numbers behind them), so the screen and any later assistant can explain it without recomputing.
 
