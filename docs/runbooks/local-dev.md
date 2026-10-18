@@ -153,6 +153,16 @@ pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv
 
 It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV. The file lists one portion per row. Every weight is copied from a USDA FoodData Central portion row (Foundation Foods or SR Legacy, public domain under CC0), and `fdc_id`, `fdc_description` and `source` name the food and the portion it came from so a reviewer can check each one. The loader ignores those columns. A CoFID food is matched to an FDC food by name and state (raw or cooked, flesh only or meat and skin, with or without bone), and a food with no clear match is left out of the file. Each portion has a deterministic id made from its food code and label, so loading the file again changes nothing, a corrected weight updates the same row, and the diary entries that link to a portion keep working. The loader never deletes a portion that a later edition of the file drops. A portion that is relabelled gets a new id, because the id comes from the label, and the old row stays, so a rename leaves a duplicate chip until the old row is removed by hand.
 
+### Weigh-in seed
+
+`packages/db/supabase/seeds/40_weigh_ins.sql` gives the demo user (`demo@keylow.local`) six weeks of weigh-ins, dated relative to today in the demo profile's time zone: a drift from about 85.0 to 83.6 kg, a gap of five days (12 to 16 days ago), a spike of 99.0 kg 6 days ago that the trend rejects, one day with two readings, about one reading in three imported from Health Connect, and one soft-deleted import (`seed-hc-deleted`). The demo user is settled (at least seven accepted readings in the last 14 days). The settling state belongs to a brand-new account, so use one for it. A fresh stack loads the file with the other seeds. To load it into a stack that is already running, which is how the shared stack gets it without a reset, run this from the repository root:
+
+```sh
+docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages/db/supabase/seeds/40_weigh_ins.sql
+```
+
+The file is one transaction and every row has a fixed id, so running it again moves the same rows to today and adds none. The dates are relative, so load it again on a later day to keep the chart's ranges full. The integration test `packages/db/test/integration/database/weigh-ins-seed.test.ts` needs it loaded and says so when it fails because it is not, or because it was loaded on an earlier day. The seed never reaches production.
+
 ### Loading the portions into production
 
 Production gets the portions only through the loader, run by Zee from the repository root in his own terminal. It writes with the service role key, which belongs in no chat, ticket, pull request or agent session. The prompt reads the key without echoing it. Run the dry run first: it prints how many foods matched and which codes are not in production. If the full CoFID import was never run there, the matched count is low or zero, and the fix is `pnpm --filter @keylow/db import:cofid` first. Running the load again is safe.

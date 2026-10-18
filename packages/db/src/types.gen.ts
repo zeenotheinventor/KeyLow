@@ -856,6 +856,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      weigh_ins: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          external_id: string | null;
+          id: string;
+          local_date: string;
+          measured_at: string;
+          note: string | null;
+          source: Database["public"]["Enums"]["weigh_in_source"];
+          tz: string;
+          user_id: string;
+          weight_kg: number;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          external_id?: string | null;
+          id?: string;
+          local_date: string;
+          measured_at: string;
+          note?: string | null;
+          source: Database["public"]["Enums"]["weigh_in_source"];
+          tz: string;
+          user_id?: string;
+          weight_kg: number;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          external_id?: string | null;
+          id?: string;
+          local_date?: string;
+          measured_at?: string;
+          note?: string | null;
+          source?: Database["public"]["Enums"]["weigh_in_source"];
+          tz?: string;
+          user_id?: string;
+          weight_kg?: number;
+        };
+        Relationships: [];
+      };
       workout_sessions: {
         Row: {
           created_at: string;
@@ -1069,6 +1111,7 @@ export type Database = {
       nutrient_basis: "per_100g" | "per_100ml";
       set_type: "warmup" | "working" | "drop" | "failure";
       training_goal: "aesthetic" | "strength" | "hybrid";
+      weigh_in_source: "manual" | "healthkit" | "health_connect" | "import";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -1216,6 +1259,7 @@ export const Constants = {
       nutrient_basis: ["per_100g", "per_100ml"],
       set_type: ["warmup", "working", "drop", "failure"],
       training_goal: ["aesthetic", "strength", "hybrid"],
+      weigh_in_source: ["manual", "healthkit", "health_connect", "import"],
     },
   },
 } as const;
