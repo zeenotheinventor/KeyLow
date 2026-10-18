@@ -182,3 +182,11 @@ export type {
 } from "./muscleDetail";
 export { muscleListGroups } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow } from "./muscleList";
+
+export { BODY_ARTWORK, BODY_ARTWORK_SIDE_OF, BODY_GLOW_FILTER } from "./bodyArtwork";
+export type {
+  BackMuscleId,
+  BodyArtworkFigure,
+  BodyArtworkSide,
+  FrontMuscleId,
+} from "./bodyArtwork";
