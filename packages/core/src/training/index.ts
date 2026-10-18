@@ -142,3 +142,15 @@ export { summariseRoutine } from "./summariseRoutine";
 export type { RoutineDaySummary, RoutineSummary, SummarisedRoutine } from "./summariseRoutine";
 export { estimateSessionMinutes, SESSION_TIME_PARAMS_V1 } from "./sessionTime";
 export type { SessionLoad, SessionTimeParams } from "./sessionTime";
+
+export {
+  GAP_VALUES,
+  gapValues,
+  HEAT_STEP_CUTS_V1,
+  heatValues,
+  volumeValues,
+  warmestMuscles,
+} from "./bodyMapValues";
+export type { BodyMapView, WarmMuscle } from "./bodyMapValues";
+export { dayMoments } from "./bodyMapMoments";
+export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
