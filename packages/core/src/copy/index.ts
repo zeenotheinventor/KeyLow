@@ -29,3 +29,4 @@ export * from "./recipeEditor";
 export * from "./recipeRefresh";
 export * from "./scaledAmount";
 export * from "./recipeView";
+export * from "./weight";
