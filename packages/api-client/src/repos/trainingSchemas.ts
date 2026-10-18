@@ -10,7 +10,7 @@ import {
 import { z } from "zod";
 
 import type { SetSnapshot } from "@keylow/core/schemas";
-import type { PlanRoutine } from "@keylow/core/training";
+import type { PlanRoutine, PlanRoutineDay } from "@keylow/core/training";
 
 // The bounds are core's: each field here is the field of the row schema in core, so a bound that moves
 // there moves here. The row schemas are refined (a set has one effort measure at most, a snapshot is
@@ -50,6 +50,8 @@ export const sessionColumnsSchema = z.object({
   id: sessionShape.id,
   local_date: sessionShape.local_date,
   routine_day_id: sessionShape.routine_day_id,
+  started_at: sessionShape.started_at,
+  ended_at: sessionShape.ended_at,
   deleted_at: sessionShape.deleted_at,
 });
 
@@ -141,7 +143,12 @@ export type LastPerformanceSession = {
  * `PlanRoutine`'s: each exercise carries the exercise it names and that exercise's muscle map as it is
  * now, which `expandPlan` and `targetedMuscles` read.
  */
-export type ActiveRoutine = PlanRoutine & { id: string; name: string };
+export type ActiveRoutine = Omit<PlanRoutine, "days"> & {
+  id: string;
+  name: string;
+  /** Each day with its own name, which the week and the muscle sheet write. */
+  days: (PlanRoutineDay & { name: string })[];
+};
 
 const dayShape = routineDayRowSchema.shape;
 const plannedShape = routineExerciseRowSchema.shape;
@@ -155,6 +162,7 @@ export const routineColumnsSchema = z
     routine_days: z.array(
       z.object({
         id: dayShape.id,
+        name: dayShape.name,
         position: dayShape.position,
         weekday: dayShape.weekday,
         routine_exercises: z.array(
@@ -181,6 +189,7 @@ export const routineColumnsSchema = z
     name: routine.name,
     days: routine.routine_days.map((day) => ({
       id: day.id,
+      name: day.name,
       position: day.position,
       weekday: day.weekday,
       exercises: day.routine_exercises.map(({ exercises, ...planned }) => ({

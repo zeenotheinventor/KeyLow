@@ -93,6 +93,10 @@ describe("the package index", () => {
     "useSession",
     "useWeightUnit",
     "useWeekComparison",
+    "useBodyMap",
+    "useMuscleList",
+    "useMuscleDetail",
+    "useDashboardBodyMap",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

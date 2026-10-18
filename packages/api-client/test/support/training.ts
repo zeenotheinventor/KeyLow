@@ -64,6 +64,8 @@ export const sessionRow = (overrides: Record<string, unknown> = {}) => {
     id,
     local_date: "2026-10-14",
     routine_day_id: null,
+    started_at: "2026-10-14T17:00:00+00:00",
+    ended_at: "2026-10-14T18:00:00+00:00",
     deleted_at: null,
     workout_sets: [setRow({ session_id: id })],
     ...overrides,
@@ -122,6 +124,7 @@ export const routineRow = (overrides: Record<string, unknown> = {}) => ({
   routine_days: [
     {
       id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      name: "key354 day",
       position: 0,
       weekday: 0,
       routine_exercises: [
