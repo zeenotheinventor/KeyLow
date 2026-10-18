@@ -234,3 +234,23 @@ export type {
 } from "./nutritionProposal";
 export { PRIORITY_GROUP_VOLUME_STATUS, summarisePriorities } from "./prioritySummary";
 export type { PrioritySummary } from "./prioritySummary";
+export { SUGGEST_PARAMS_V1 } from "./suggest/suggestParams";
+export type { ExerciseTieBreak, SuggestParams } from "./suggest/suggestParams";
+export { suggestSession } from "./suggest/suggestSession";
+export type {
+  NoRoom,
+  NothingForNoRoom,
+  NothingForOtherReason,
+  NothingReason,
+  OtherNothingReason,
+  NothingToSuggest,
+  SkippedMuscle,
+  SuggestConstraints,
+  SuggestedExercise,
+  SuggestedSession,
+  SuggestExercise,
+  SuggestGoals,
+  SuggestionReason,
+  SuggestState,
+  Suggestion,
+} from "./suggest/suggestTypes";
