@@ -221,3 +221,16 @@ export type {
 } from "./sessionProgress";
 export { prefillNextSet, sameAgain } from "./prefill";
 export type { LastPerformanceSet, PrefillSessionSet, SetPrefill } from "./prefill";
+
+export {
+  NUTRITION_DIRECTIONS,
+  NUTRITION_PROPOSALS_V1,
+  proposeNutrition,
+} from "./nutritionProposal";
+export type {
+  NutritionDirection,
+  NutritionProposal,
+  NutritionProposals,
+} from "./nutritionProposal";
+export { PRIORITY_GROUP_VOLUME_STATUS, summarisePriorities } from "./prioritySummary";
+export type { PrioritySummary } from "./prioritySummary";
