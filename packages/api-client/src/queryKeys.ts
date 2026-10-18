@@ -30,6 +30,17 @@ export const keys = {
     search: (q: string, archived = false) => ["recipes", "search", q, archived] as const,
   },
   /**
+   * The weigh-in reads. A family of its own, outside `diary`, and not in the list a persisted cache keeps,
+   * so no weigh-in is stored on the device by the diary cache. The trend is derived from `list` and has
+   * no key. Every key sits under `["weigh-ins"]`, so one invalidation of `keys.weighIns.all` refreshes
+   * everything after a write.
+   */
+  weighIns: {
+    all: ["weigh-ins"] as const,
+    /** Every live weigh-in of the signed in user, newest first. */
+    list: ["weigh-ins", "list"] as const,
+  },
+  /**
    * The diary reads. `day` and `week` are the two a persisted cache keeps. Every key sits under
    * `["diary"]`, so one invalidation of `keys.diary.all` refreshes a diary after a write.
    * `localDate` is `YYYY-MM-DD`, `weekStart` is the Monday of the week as `YYYY-MM-DD`, and

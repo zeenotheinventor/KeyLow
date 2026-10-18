@@ -151,3 +151,14 @@ describe("keys.recipes", () => {
     }
   });
 });
+
+describe("keys.weighIns", () => {
+  it("should expose the weigh-ins root key", () => {
+    expect(keys.weighIns.all).toEqual(["weigh-ins"]);
+  });
+
+  it("should expose the list key nested under the weigh-ins root", () => {
+    expect(keys.weighIns.list).toEqual(["weigh-ins", "list"]);
+    expect(keys.weighIns.list.slice(0, 1)).toEqual(keys.weighIns.all);
+  });
+});
