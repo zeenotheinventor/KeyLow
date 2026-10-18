@@ -20,7 +20,7 @@
 
 begin;
 
-select * from no_plan();
+select plan(372);
 
 -- Four users. The on_auth_user_created trigger creates their profiles rows. C is the throwaway user
 -- whose account is deleted at the end. D only owns the training goals rows of the bound checks.
@@ -1547,6 +1547,279 @@ select is(
   (select count(*)::int from public.routines where name = 'key348-x'),
   0,
   'no refused payload created a routine'
+);
+
+-- set_active_routine as user A.
+select lives_ok($$ select public.set_active_routine(current_setting('key348.plan')::uuid) $$, 'user A makes a routine active');
+select is(
+  (select array_agg(id::text) from public.routines where is_active),
+  array[current_setting('key348.plan')],
+  'it is A''s only active routine'
+);
+select lives_ok(
+  $$ select set_config('key348.second', public.save_routine(null, '{"name":"key348-a-second"}', jsonb_build_array(pg_temp.day('key348-solo', 1, jsonb_build_array(pg_temp.planned()))))::text, true) $$,
+  'user A saves a second routine'
+);
+select throws_ok(
+  $$ update public.routines set is_active = true where id = current_setting('key348.second')::uuid $$,
+  '23505', 'duplicate key value violates unique constraint "routines_one_active_per_user"',
+  'a second active routine is refused'
+);
+select lives_ok($$ select public.set_active_routine(current_setting('key348.second')::uuid) $$, 'user A switches the active routine');
+select is(
+  (select array_agg(id::text) from public.routines where is_active),
+  array[current_setting('key348.second')],
+  'the switch cleared the old active routine and set the new one'
+);
+select lives_ok($$ select public.set_active_routine(current_setting('key348.second')::uuid) $$, 'making the active routine active again changes nothing');
+select is(
+  (select array_agg(id::text) from public.routines where is_active),
+  array[current_setting('key348.second')],
+  'it is still the only active routine'
+);
+select lives_ok($$ select public.set_active_routine(null) $$, 'a null routine clears the active one');
+select is((select count(*)::int from public.routines where is_active), 0, 'user A has no active routine');
+select throws_ok(
+  $$ select public.set_active_routine(current_setting('key348.direct')::uuid) $$,
+  '22023', 'an archived routine cannot be active',
+  'an archived routine cannot be made active'
+);
+select throws_ok(
+  $$ select public.set_active_routine('34800000-0000-4000-8000-0000000003b1') $$,
+  'P0002', 'the routine does not exist or is not yours',
+  'user A cannot make user B''s routine active'
+);
+select throws_ok(
+  $$ select public.set_active_routine('34800000-0000-4000-8000-00000000dead') $$,
+  'P0002', 'the routine does not exist or is not yours',
+  'a routine that does not exist fails the same way'
+);
+select lives_ok($$ select public.set_active_routine(current_setting('key348.plan')::uuid) $$, 'user A makes the first routine active again');
+
+-- save_training_goals as user A. A's current row is 30 days old. Keys it does not know are
+-- ignored, so the new row belongs to the caller, takes the database's time and is current.
+select lives_ok(
+  $$ select set_config('key348.goals_1', public.save_training_goals(
+       pg_temp.goals() || '{"days_per_week":1,"session_minutes":15,"id":"34800000-0000-4000-8000-0000000008ee","user_id":"34800000-0000-4000-8000-00000000000b","effective_from":"2020-01-01T00:00:00Z","effective_to":"2030-01-01T00:00:00Z"}'
+     )::text, true) $$,
+  'user A saves new goals, at 1 day a week and 15 minutes'
+);
+select is(
+  (select array_agg(
+     case id when '34800000-0000-4000-8000-0000000008a1' then 'previous' when current_setting('key348.goals_1')::uuid then 'new' else id::text end
+     || ':' || (effective_from = now())::text || ':' || coalesce((effective_to = now())::text, 'current')
+     order by effective_from)
+   from public.training_goals where user_id = '34800000-0000-4000-8000-00000000000a'),
+  array['previous:false:true', 'new:true:current'],
+  'the previous row is closed when the new one starts, and the new one is the only current row'
+);
+select is(
+  (select user_id::text || '/' || goal::text || '/' || focus::text || '/' || days_per_week::text || '/' || session_minutes::text || '/' || equipment::text || '/' || experience::text || '/' || muscle_priority::text || '/' || params_version || '/' || (id <> '34800000-0000-4000-8000-0000000008ee')::text
+   from public.training_goals where id = current_setting('key348.goals_1')::uuid),
+  '34800000-0000-4000-8000-00000000000a/hybrid/{chest,arms}/1/15/{barbell,dumbbell}/intermediate/{"biceps": 1, "chest_upper": 1.5}/key348-params-2/true',
+  'the new row holds the answers, belongs to the caller and has the database''s id'
+);
+select throws_ok(
+  $$ select public.save_training_goals(pg_temp.goals()) $$,
+  '40001', 'the current training goals are newer than this save, so it must be retried',
+  'a second save in the same transaction is refused, because it would end the current row when it starts'
+);
+
+-- Every payload refusal, with 22023 and a message that quotes no value.
+select throws_ok($$ select public.save_training_goals('[]') $$, '22023', 'save_training_goals needs the goals as a JSON object', 'goals that are not an object are refused');
+select throws_ok($$ select public.save_training_goals(null) $$, '22023', 'save_training_goals needs the goals as a JSON object', 'missing goals are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"goal":"key348"}') $$, '22023', 'the goal must be aesthetic, strength or hybrid', 'a goal off the list is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() - 'goal') $$, '22023', 'the goal must be aesthetic, strength or hybrid', 'a missing goal is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"focus":"chest"}') $$, '22023', 'the focus must be a JSON array', 'a focus that is not an array is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() - 'focus') $$, '22023', 'the focus must be a JSON array', 'a missing focus is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"focus":["key348"]}') $$, '22023', 'the focus must be values of the focus list, each at most once', 'a focus off the list is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"focus":["legs","legs"]}') $$, '22023', 'the focus must be values of the focus list, each at most once', 'a repeated focus is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"focus":[1]}') $$, '22023', 'the focus must be values of the focus list, each at most once', 'a focus that is not text is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"focus":[null]}') $$, '22023', 'the focus must be values of the focus list, each at most once', 'a null focus is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"days_per_week":"4"}') $$, '22023', 'days_per_week must be a number', 'days_per_week as text is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"days_per_week":0}') $$, '22023', 'days_per_week must be a whole number from 1 to 7', '0 days a week are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"days_per_week":8}') $$, '22023', 'days_per_week must be a whole number from 1 to 7', '8 days a week are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"days_per_week":2.5}') $$, '22023', 'days_per_week must be a whole number from 1 to 7', 'days a week that are not whole are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() - 'session_minutes') $$, '22023', 'session_minutes must be a number', 'missing session_minutes are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"session_minutes":14}') $$, '22023', 'session_minutes must be a whole number from 15 to 180', '14 minutes are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"session_minutes":181}') $$, '22023', 'session_minutes must be a whole number from 15 to 180', '181 minutes are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"session_minutes":45.5}') $$, '22023', 'session_minutes must be a whole number from 15 to 180', 'minutes that are not whole are refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"equipment":"barbell"}') $$, '22023', 'the equipment must be a JSON array', 'equipment that is not an array is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"equipment":["key348"]}') $$, '22023', 'every equipment must be one of the equipment list', 'equipment off the list is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"equipment":[null]}') $$, '22023', 'every equipment must be one of the equipment list', 'a null equipment is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"experience":"expert"}') $$, '22023', 'the experience must be beginner, intermediate or advanced', 'an experience off the list is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"muscle_priority":[]}') $$, '22023', 'the muscle priority must be a JSON object', 'a muscle priority that is not an object is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"muscle_priority":{"key348":1}}') $$, '22023', 'every muscle priority must name a muscle of the muscle list', 'a priority for a muscle off the list is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"muscle_priority":{"quads":"high"}}') $$, '22023', 'every muscle priority must be a number', 'a priority that is not a number is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"params_version":""}') $$, '22023', 'the params version must be non-empty text', 'an empty params version is refused');
+select throws_ok($$ select public.save_training_goals(pg_temp.goals() || '{"params_version":2}') $$, '22023', 'the params version must be non-empty text', 'a params version that is not text is refused');
+select is(
+  (select count(*)::int || '/' || count(*) filter (where effective_to is null)::int from public.training_goals where user_id = '34800000-0000-4000-8000-00000000000a'),
+  '2/1',
+  'no refused save wrote a goals row'
+);
+
+reset role;
+
+-- A later request. Postgres moves A's history back a day, as if the first save had been made
+-- yesterday, so the next save starts after it.
+update public.training_goals set effective_from = now() - interval '30 days', effective_to = now() - interval '1 day'
+where id = '34800000-0000-4000-8000-0000000008a1';
+update public.training_goals set effective_from = now() - interval '1 day'
+where id = current_setting('key348.goals_1')::uuid;
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"34800000-0000-4000-8000-00000000000a","role":"authenticated"}';
+
+select lives_ok(
+  $$ select set_config('key348.goals_2', public.save_training_goals(
+       pg_temp.goals() || '{"focus":[],"equipment":[],"days_per_week":7,"session_minutes":180,"muscle_priority":{},"goal":"strength"}'
+     )::text, true) $$,
+  'user A saves goals again, with no focus or equipment, 7 days a week and 180 minutes'
+);
+select is(
+  (select array_agg(
+     case id when '34800000-0000-4000-8000-0000000008a1' then 'first' when current_setting('key348.goals_1')::uuid then 'second' when current_setting('key348.goals_2')::uuid then 'third' else id::text end
+     || ':' || coalesce((effective_to = now())::text, 'current')
+     order by effective_from)
+   from public.training_goals where user_id = '34800000-0000-4000-8000-00000000000a'),
+  array['first:false', 'second:true', 'third:current'],
+  'the history keeps every row, the last save closed the previous one, and exactly one row is current'
+);
+select is(
+  (select goal::text || '/' || focus::text || '/' || equipment::text || '/' || days_per_week::text || '/' || session_minutes::text || '/' || muscle_priority::text
+   from public.training_goals where id = current_setting('key348.goals_2')::uuid),
+  'strength/{}/{}/7/180/{}',
+  'the current row holds the latest answers'
+);
+
+reset role;
+
+-- User B: the other direction. B sees none of A's rows and cannot change them through any function.
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"34800000-0000-4000-8000-00000000000b","role":"authenticated"}';
+
+select is(
+  (select count(*)::int from public.routines where user_id <> '34800000-0000-4000-8000-00000000000b')
+    || '/' || (select count(*)::int from public.routine_days where user_id <> '34800000-0000-4000-8000-00000000000b')
+    || '/' || (select count(*)::int from public.routine_exercises where user_id <> '34800000-0000-4000-8000-00000000000b')
+    || '/' || (select count(*)::int from public.workout_sessions where user_id <> '34800000-0000-4000-8000-00000000000b')
+    || '/' || (select count(*)::int from public.workout_sets where user_id <> '34800000-0000-4000-8000-00000000000b')
+    || '/' || (select count(*)::int from public.training_goals where user_id <> '34800000-0000-4000-8000-00000000000b'),
+  '0/0/0/0/0/0',
+  'user B sees none of user A''s or user C''s routines, days, planned exercises, sessions, sets or goals'
+);
+select is(
+  (select count(*)::int from public.routines where id = current_setting('key348.plan')::uuid)
+    || '/' || (select count(*)::int from public.routine_days where id = current_setting('key348.push')::uuid)
+    || '/' || (select count(*)::int from public.workout_sessions where id = '34800000-0000-4000-8000-0000000006a1')
+    || '/' || (select count(*)::int from public.workout_sets where session_id = '34800000-0000-4000-8000-0000000006a1')
+    || '/' || (select count(*)::int from public.training_goals where id = current_setting('key348.goals_2')::uuid),
+  '0/0/0/0/0',
+  'user B cannot read A''s rows even by id'
+);
+select is(
+  (select count(*)::int from public.workout_sets where id = '34800000-0000-4000-8000-0000000007b1')
+    || '/' || (select count(*)::int from public.routines where id = '34800000-0000-4000-8000-0000000003b1'),
+  '1/1',
+  'user B sees their own set and routine'
+);
+select throws_ok(
+  $$ select public.save_routine(current_setting('key348.plan')::uuid, '{"name":"key348-taken-over"}', '[]') $$,
+  'P0002', 'the routine does not exist or is not yours',
+  'user B cannot save over user A''s routine'
+);
+select throws_ok(
+  $$ select public.save_routine('34800000-0000-4000-8000-0000000003b1', '{"name":"key348-taken-over"}', jsonb_build_array(
+       pg_temp.day('key348-b-day', 0, jsonb_build_array(pg_temp.planned('34800000-0000-4000-8000-0000000001a1')), '34800000-0000-4000-8000-0000000004b1'))) $$,
+  'P0002', 'an exercise does not exist or is not yours',
+  'user B cannot plan user A''s private exercise'
+);
+select throws_ok(
+  $$ select public.save_routine('34800000-0000-4000-8000-0000000003b1', '{"name":"key348-taken-over"}', jsonb_build_array(
+       pg_temp.day('key348-b-day', 0, '[]', current_setting('key348.push')))) $$,
+  'P0002', 'a routine day does not exist or is not in this routine',
+  'user B cannot take user A''s day into their routine'
+);
+select throws_ok(
+  $$ select public.set_active_routine(current_setting('key348.plan')::uuid) $$,
+  'P0002', 'the routine does not exist or is not yours',
+  'user B cannot make user A''s routine active'
+);
+select lives_ok(
+  $$ select public.set_active_routine(null) $$,
+  'user B clears their own active routine'
+);
+select lives_ok(
+  $$ select public.save_training_goals(pg_temp.goals()) $$,
+  'user B saves their own goals'
+);
+select is(
+  (select count(*)::int || '/' || count(*) filter (where effective_to is null)::int from public.training_goals),
+  '2/1',
+  'user B''s save closed and replaced only their own goals'
+);
+
+reset role;
+
+select is(
+  (select count(*)::int || '/' || count(*) filter (where effective_to is null)::int from public.training_goals where user_id = '34800000-0000-4000-8000-00000000000a')
+    || '/' || (select is_active::text from public.routines where id = current_setting('key348.plan')::uuid)
+    || '/' || (select is_active::text from public.routines where id = '34800000-0000-4000-8000-0000000003b1'),
+  '3/1/true/false',
+  'user B''s calls left A''s goals and active routine alone, and cleared only B''s'
+);
+select is(
+  (select array_agg(exercise_id::text) from public.routine_exercises where routine_day_id = '34800000-0000-4000-8000-0000000004b1')
+    || array[(select name from public.routines where id = '34800000-0000-4000-8000-0000000003b1')],
+  array['34800000-0000-4000-8000-0000000001b1', 'key348-b-plan'],
+  'the routine_id and routine_day_id sent by A were ignored and the refused saves left B''s plan as it was'
+);
+
+-- Account deletion. User C has a custom exercise, a routine with a day and planned exercises (one on
+-- the custom exercise), a session from that day with sets (one on the custom exercise) and a closed
+-- and a current goals row. Deleting the auth user removes all of it in one statement, the `no
+-- action` checks of the sets and planned exercises on the custom exercise pass because the same
+-- statement removes both sides, and the pending deferred checks then pass too.
+select lives_ok(
+  $$ delete from auth.users where id = '34800000-0000-4000-8000-00000000000c' $$,
+  'deleting an auth user with sessions, sets, routines, goals and a custom exercise succeeds'
+);
+select lives_ok(
+  $$ set constraints all immediate $$,
+  'every deferred check passes after the deletion'
+);
+select is(
+  (select count(*)::int from public.workout_sessions where user_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.workout_sets where user_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.routines where user_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.routine_days where user_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.routine_exercises where user_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.training_goals where user_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.exercises where owner_id = '34800000-0000-4000-8000-00000000000c')
+    || '/' || (select count(*)::int from public.exercise_muscles where owner_id = '34800000-0000-4000-8000-00000000000c'),
+  '0/0/0/0/0/0/0/0',
+  'none of the deleted user''s sessions, sets, routines, days, planned exercises, goals, exercises or maps remain'
+);
+select is(
+  (select count(*)::int from public.workout_sessions where id = '34800000-0000-4000-8000-0000000006c1')
+    + (select count(*)::int from public.workout_sets where id in ('34800000-0000-4000-8000-0000000007c1', '34800000-0000-4000-8000-0000000007c2'))
+    + (select count(*)::int from public.routines where id = '34800000-0000-4000-8000-0000000003c1')
+    + (select count(*)::int from public.routine_days where id = '34800000-0000-4000-8000-0000000004c1')
+    + (select count(*)::int from public.routine_exercises where id in ('34800000-0000-4000-8000-0000000005c1', '34800000-0000-4000-8000-0000000005c2'))
+    + (select count(*)::int from public.training_goals where id in ('34800000-0000-4000-8000-0000000008c1', '34800000-0000-4000-8000-0000000008c2'))
+    + (select count(*)::int from public.exercises where id = '34800000-0000-4000-8000-0000000001c1'),
+  0,
+  'none of the deleted user''s fixture rows remain by id'
+);
+select is(
+  (select count(*)::int from public.exercises where id = '34800000-0000-4000-8000-000000000101')
+    || '/' || (select count(*)::int from public.exercise_muscles where exercise_id = '34800000-0000-4000-8000-000000000101')
+    || '/' || ((select count(*)::int from public.workout_sets where exercise_id = '34800000-0000-4000-8000-000000000101' and user_id = '34800000-0000-4000-8000-00000000000a' and deleted_at is null) > 0)::text
+    || '/' || (select count(*)::int from public.workout_sets where id = '34800000-0000-4000-8000-0000000007b1')
+    || '/' || ((select count(*)::int from public.routines where user_id in ('34800000-0000-4000-8000-00000000000a', '34800000-0000-4000-8000-00000000000b')) > 0)::text,
+  '1/1/true/1/true',
+  'the global exercise and its map, and the other users'' sets and routines, stay'
 );
 
 
