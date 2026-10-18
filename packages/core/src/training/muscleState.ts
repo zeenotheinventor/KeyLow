@@ -102,9 +102,14 @@ const parseTimestamp = (timestamp: string, rule: string): number => {
   return Date.parse(timestamp);
 };
 
-/** A moment as epoch milliseconds, or a `RangeError` naming the rule. Not exported from the package. */
-export const parseMoment = (moment: string): number =>
-  parseTimestamp(moment, "The moment to compute at must be an ISO timestamp with a zone");
+/**
+ * A moment as epoch milliseconds, or a `RangeError` naming the rule. Not exported from the package.
+ * `rule` is the message, so a caller reading another field can name that field.
+ */
+export const parseMoment = (
+  moment: string,
+  rule = "The moment to compute at must be an ISO timestamp with a zone",
+): number => parseTimestamp(moment, rule);
 
 /** One set's stimulus on one muscle, `weight × effort`, with the time it landed. */
 type Stimulus = { at: number; amount: number };
