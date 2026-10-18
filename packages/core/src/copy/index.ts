@@ -34,3 +34,6 @@ export * from "./muscleNames";
 export * from "./bodyMap";
 export * from "./bodyMapSheet";
 export * from "./train";
+export * from "./history";
+export * from "./routines";
+export * from "./counts";
