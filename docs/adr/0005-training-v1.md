@@ -153,3 +153,308 @@ Training logs are health data under the project's Working conventions: no exerci
 - Training-aware calories never edit `keylow-engine-v1`; they are a separate layer with its own version, and a change to its params is a new `keylow-fuel` version.
 - The 2D map ships before the 3D model, so the 3D work is a renderer swap and never blocks the tracker.
 - Choosing the 3D source model and its licence is a human decision recorded before the 3D milestone starts.
+
+## Amendment 1 (T1: exact training schema, 2026-10-18)
+
+### Status
+
+Recorded on 2026-10-18 under KEY-343. Both T1 migrations (KEY-347 and KEY-348) build exactly to this amendment, as the recipes migration built to ADR 0003 Amendment 8. It fills in what the accepted "Tables" section leaves open and overrides nothing in it. Everything below is an interpretation made for implementation unless it quotes the accepted text, so Zee confirms it by approving the pull request that carries it. The choices most worth a second look are:
+
+- `exercise_muscles.weight` must be above 0, not just at least 0, because a muscle with weight 0 contributes nothing and should not be listed.
+- The at-least-one-primary rule is a deferred constraint trigger, not a check inside a function, so the import (which writes as the service role) is held to it too.
+- `routine_days` keep their ids across edits (`save_routine` updates them in place), so a logged session's link to its planned day survives an edit of the routine.
+- A routine day has at most one per weekday.
+- Sets are soft deleted, and their `position` has no uniqueness rule, so reordering never collides.
+- Equipment is an enum, not a text list.
+
+### Conventions
+
+Every new table carries ADR 0003 Amendment 1's two columns: `id uuid primary key default gen_random_uuid()` and `created_at timestamptz not null default now()`. There is no `updated_at`. Two exceptions:
+
+- `muscles` is keyed by its text id (`id text primary key`). It keeps `created_at`.
+- `exercise_source_data` is keyed by `exercise_id`, as `food_source_data` is keyed by `food_id`. It keeps `created_at`.
+
+Every user-owned table has `user_id` (or `owner_id` where the row may also be global) as `uuid references auth.users (id) on delete cascade`. Row level security is enabled on every table. Every policy uses `(select auth.uid())`. Each table starts from `revoke all ... from anon, authenticated, service_role` and grants back only what is listed under "Privileges and row level security". A column added later is not writable by clients until a migration grants it, the rule of ADR 0003 Amendments 3 and 4.
+
+Weekdays are `0` (Monday) to `6` (Sunday), the numbering core's `calendarDay` already uses.
+
+### Enums
+
+| Enum                | Values                                                                                                            |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `muscle_group`      | `chest`, `shoulders`, `back`, `arms`, `core`, `legs`, `neck`                                                      |
+| `muscle_size_class` | `small`, `medium`, `large`                                                                                        |
+| `exercise_source`   | `free_exercise_db`, `user`                                                                                        |
+| `exercise_mechanic` | `compound`, `isolation`                                                                                           |
+| `muscle_role`       | `primary`, `secondary`, `stabiliser`                                                                              |
+| `equipment`         | `barbell`, `dumbbell`, `kettlebell`, `cable`, `machine`, `smith_machine`, `ez_bar`, `band`, `bodyweight`, `other` |
+| `set_type`          | `warmup`, `working`, `drop`, `failure`                                                                            |
+| `training_goal`     | `aesthetic`, `strength`, `hybrid`                                                                                 |
+| `experience_level`  | `beginner`, `intermediate`, `advanced`                                                                            |
+
+Equipment is an enum rather than a checked text list because `exercises.equipment` and `training_goals.equipment` (an array) must share one list, and an enum gives both the same generated TypeScript union. Adding a value is a migration either way.
+
+### The numbers
+
+| What                      | Bound                                                                           |
+| ------------------------- | ------------------------------------------------------------------------------- |
+| Names (exercise, routine) | not blank, at most 200 characters                                               |
+| Routine day name          | not blank, at most 100 characters                                               |
+| Session note              | at most 1,000 characters                                                        |
+| `exercise_muscles.weight` | above 0 and at most 1                                                           |
+| Muscles per exercise      | at most 22 (one row per muscle at most)                                         |
+| `reps`                    | integer, 1 to 100                                                               |
+| `load_kg`                 | at least 0 and at most 1,000; null for an unloaded bodyweight set               |
+| `rir`                     | integer, 0 to 10                                                                |
+| `rpe`                     | 1 to 10 in steps of 0.5                                                         |
+| Sets per session          | at most 200                                                                     |
+| Days per routine          | at most 7, at most one per weekday                                              |
+| Exercises per routine day | at most 30                                                                      |
+| `target_sets`             | integer, 1 to 20                                                                |
+| `rep_min`, `rep_max`      | integers, 1 to 100, `rep_min <= rep_max`                                        |
+| `target_rir`              | integer, 0 to 10, nullable                                                      |
+| `days_per_week`           | integer, 1 to 7                                                                 |
+| `session_minutes`         | integer, 15 to 180                                                              |
+| `focus`                   | a subset of `v_taper`, `chest`, `arms`, `glutes`, `legs`, `overall`, no repeats |
+
+Core exports the same numbers as constants (KEY-346), and its schemas check them before any write.
+
+### `muscles`
+
+| Column       | Definition                                                 |
+| ------------ | ---------------------------------------------------------- |
+| `id`         | `text primary key`, with check `id ~ '^[a-z_]+$'`.         |
+| `group`      | `muscle_group not null`.                                   |
+| `size_class` | `muscle_size_class not null`.                              |
+| `position`   | `integer not null unique`, the order of the accepted list. |
+| `created_at` | as the conventions.                                        |
+
+Seeded in the same migration with exactly the 22 ids of "The muscle list is the contract", in its order. Their size classes are the table in "The heat model". Nothing writes the table after the migration: clients, the service role and the import get no write grant. Adding or splitting an id is a new list version and a migration.
+
+### `exercises`
+
+| Column       | Definition                                                                                                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `owner_id`   | `uuid references auth.users (id) on delete cascade`, nullable, no default. Null exactly for a global row: check `(source = 'user') = (owner_id is not null)`, as `foods` has. |
+| `source`     | `exercise_source not null`.                                                                                                                                                   |
+| `source_ref` | `text`, nullable. Check `(source = 'user') = (source_ref is null)`: every imported row has one and no user row does.                                                          |
+| `name`       | `text not null`, not blank, at most 200 characters.                                                                                                                           |
+| `equipment`  | `equipment not null`.                                                                                                                                                         |
+| `mechanic`   | `exercise_mechanic not null`.                                                                                                                                                 |
+| `deleted_at` | `timestamptz`, nullable. Exercises are soft deleted, never hard deleted, because logged sets and routine exercises reference them.                                            |
+
+- `unique (source, source_ref)`. Postgres treats nulls as distinct, so user rows never collide.
+- `gin (name extensions.gin_trgm_ops)` for name search, and a partial `(owner_id) where owner_id is not null` for the library and the account deletion cascade.
+- The library search is a case-insensitive `ilike` through PostgREST, escaped by the client, with no new function, the answer ADR 0003 Amendment 8 gives for recipes.
+
+### `exercise_muscles`
+
+| Column        | Definition                                                                                                                                                                   |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `exercise_id` | `uuid not null references public.exercises (id) on delete cascade`.                                                                                                          |
+| `owner_id`    | `uuid references auth.users (id) on delete cascade`, nullable. A denormalised copy of the exercise's `owner_id` for RLS, as `food_portions` has. Null for a global exercise. |
+| `muscle_id`   | `text not null references public.muscles (id)`.                                                                                                                              |
+| `role`        | `muscle_role not null`.                                                                                                                                                      |
+| `weight`      | `numeric not null`, with check `weight > 0 and weight <= 1`.                                                                                                                 |
+
+- `unique (exercise_id, muscle_id)`. That index also serves reading an exercise's map and the cascade from `exercises`. A plain index on `muscle_id` serves the reverse lookup ("exercises for side delts").
+- The map is replaced as a whole on every save (rows deleted and inserted), so nothing references an `exercise_muscles` id.
+- **At least one primary muscle:** a constraint trigger `exercise_has_primary_muscle`, `deferrable initially deferred`, after insert or update on `exercises` and after insert, update or delete on `exercise_muscles`. At commit it checks that every affected exercise that still exists has at least one `primary` row, and otherwise raises `23514` with the message "an exercise needs at least one primary muscle" and no value. Because it is deferred, `save_exercise` and the import can delete and reinsert a map inside one transaction. An exercise removed in the same transaction (an account deletion cascade) is skipped.
+
+### Exercise provenance
+
+Separate from the foods tables, so the foods schema and its `food_source` enum are untouched.
+
+- `exercise_import_runs`: `source exercise_source not null` with check `source <> 'user'`, `label text not null`, `source_commit text not null`, `file_sha256 text not null` (64 hex characters), `started_at timestamptz not null default now()`, `finished_at timestamptz`, `row_count integer`, and the conventions' columns.
+- `exercise_source_data`: `exercise_id uuid primary key references public.exercises (id) on delete cascade`, `import_run_id uuid not null references public.exercise_import_runs (id)`, `raw jsonb not null` (the source row as fetched), `created_at`.
+
+Neither is visible to `anon` or `authenticated`.
+
+### `workout_sessions`
+
+| Column           | Definition                                                                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_id`        | `uuid not null default auth.uid() references auth.users (id) on delete cascade`.                                                                                 |
+| `started_at`     | `timestamptz not null`.                                                                                                                                          |
+| `ended_at`       | `timestamptz`, nullable while the session is in progress. Check `ended_at >= started_at`.                                                                        |
+| `local_date`     | `date not null`, the user's calendar day of `started_at`, as `food_log_entries.local_date` is.                                                                   |
+| `tz`             | `text not null`, the IANA zone the day was computed in, not blank, at most 64 characters.                                                                        |
+| `routine_day_id` | `uuid references public.routine_days (id) on delete set null`, nullable. Set when the session was started from a planned day. A plain index serves the set-null. |
+| `note`           | `text`, nullable, at most 1,000 characters.                                                                                                                      |
+| `deleted_at`     | `timestamptz`, nullable. Sessions are soft deleted, so a mistaken delete can be undone like a diary entry.                                                       |
+
+Index `(user_id, local_date)` for history and the week view.
+
+### `workout_sets`
+
+| Column         | Definition                                                                                                                                                                                                                                                                                                             |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `session_id`   | `uuid not null references public.workout_sessions (id) on delete cascade`.                                                                                                                                                                                                                                             |
+| `user_id`      | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. A denormalised copy of the session's for RLS and for the heat window index.                                                                                                                                                           |
+| `exercise_id`  | `uuid not null references public.exercises (id)`, with the default `no action`. Exercises are soft deleted, so this never blocks a normal edit. An account deletion removes the user's sets and custom exercises in the same statement, which `no action` allows; KEY-348 proves it, as KEY-283 proved it for recipes. |
+| `position`     | `integer not null`, at least 0, with no uniqueness rule. Sets are read in `position`, then `performed_at`, then `id` order, so a tie is harmless and a reorder is a plain update of two rows with nothing to collide.                                                                                                  |
+| `set_type`     | `set_type not null default 'working'`.                                                                                                                                                                                                                                                                                 |
+| `reps`         | `integer not null`, 1 to 100.                                                                                                                                                                                                                                                                                          |
+| `load_kg`      | `numeric`, nullable, at least 0 and at most 1,000. Stored in kg whatever the profile's unit.                                                                                                                                                                                                                           |
+| `rir`          | `smallint`, nullable, 0 to 10.                                                                                                                                                                                                                                                                                         |
+| `rpe`          | `numeric`, nullable, 1 to 10, with check `rpe * 2 = floor(rpe * 2)` (steps of 0.5).                                                                                                                                                                                                                                    |
+| `performed_at` | `timestamptz not null default now()`.                                                                                                                                                                                                                                                                                  |
+| `snapshot`     | `jsonb not null`, with a check that it is an object and that `snapshot ->> 'version'` is not null. The shape is in "The set snapshot".                                                                                                                                                                                 |
+| `deleted_at`   | `timestamptz`, nullable.                                                                                                                                                                                                                                                                                               |
+
+- Check `not (rir is not null and rpe is not null)`: at most one effort measure per set.
+- Index `(user_id, performed_at)` for the 14-day heat window (T3), and a plain index on `exercise_id` for the foreign key.
+- A plain index `(session_id, position)` serves reading a session in order.
+- A session holds at most 200 live sets. The clients enforce it through core; the database does not count.
+
+### The set snapshot
+
+Each set freezes the exercise as it was when the set was logged, so editing an exercise's muscles never rewrites past heat. Core owns the shape (`buildSetSnapshot`, KEY-346) under its own constant `SET_SNAPSHOT_VERSION = 1`. It is separate from the food `SNAPSHOT_VERSION`, which does not move.
+
+```json
+{
+  "version": 1,
+  "kind": "exercise",
+  "ref": "6f1c2b9e-0000-4000-8000-000000000001",
+  "name": "Dumbbell lateral raise",
+  "equipment": "dumbbell",
+  "mechanic": "isolation",
+  "muscleListVersion": 1,
+  "muscles": [
+    { "muscle_id": "delt_side", "role": "primary", "weight": 1 },
+    { "muscle_id": "traps_upper", "role": "secondary", "weight": 0.3 }
+  ]
+}
+```
+
+`ref` is the exercise's id. `muscleListVersion` is the version of the accepted muscle list the map was written against (1 for the 22 ids), so a later list can be told apart. T3 reads only the snapshot, never the live map.
+
+### Routines
+
+`routines`:
+
+| Column        | Definition                                                                       |
+| ------------- | -------------------------------------------------------------------------------- |
+| `user_id`     | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. |
+| `name`        | `text not null`, not blank, at most 200 characters.                              |
+| `is_active`   | `boolean not null default false`.                                                |
+| `is_archived` | `boolean not null default false`.                                                |
+
+- Check `not (is_active and is_archived)`.
+- A partial `unique (user_id) where is_active`: at most one active routine per user. Switching the active routine goes through `set_active_routine`, which clears the old one and sets the new one in one transaction.
+- Routines are archived, never deleted, as recipes are.
+
+`routine_days`:
+
+| Column       | Definition                                                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `routine_id` | `uuid not null references public.routines (id) on delete cascade`.                                                                          |
+| `user_id`    | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. Denormalised for RLS.                                      |
+| `position`   | `integer not null`, at least 0. `unique (routine_id, position)`, deferrable initially deferred so a reorder can swap positions in one save. |
+| `weekday`    | `smallint`, nullable, 0 (Monday) to 6 (Sunday). Null means "any day". A partial `unique (routine_id, weekday) where weekday is not null`.   |
+| `name`       | `text not null`, not blank, at most 100 characters.                                                                                         |
+
+The weekday index is partial, so it cannot be deferred. `save_routine` therefore clears the weekday of every day it is about to move before it sets the new ones, so two days can swap weekdays in one save.
+
+Days keep their ids across edits. `save_routine` updates a day that is sent with its id, inserts one sent without, and deletes one that is no longer sent. A deleted day sets `workout_sessions.routine_day_id` to null, so only a day the user removed loses its link. That is the link projected training (T3) uses to replace a planned day with its logged session.
+
+`routine_exercises`:
+
+| Column           | Definition                                                                                                           |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `routine_day_id` | `uuid not null references public.routine_days (id) on delete cascade`.                                               |
+| `user_id`        | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. Denormalised for RLS.               |
+| `position`       | `integer not null`, at least 0. `unique (routine_day_id, position)`.                                                 |
+| `exercise_id`    | `uuid not null references public.exercises (id)`, `no action`, for the same reason as sets. A plain index serves it. |
+| `target_sets`    | `smallint not null`, 1 to 20.                                                                                        |
+| `rep_min`        | `smallint not null`, 1 to 100.                                                                                       |
+| `rep_max`        | `smallint not null`, 1 to 100, check `rep_min <= rep_max`.                                                           |
+| `target_rir`     | `smallint`, nullable, 0 to 10.                                                                                       |
+
+A day's exercises are replaced as a whole on every save, because nothing references them.
+
+### `training_goals`
+
+| Column            | Definition                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `user_id`         | `uuid not null default auth.uid() references auth.users (id) on delete cascade`.                                 |
+| `goal`            | `training_goal not null`.                                                                                        |
+| `focus`           | `text[] not null default '{}'`, checked by an immutable helper against the focus list in "The numbers".          |
+| `days_per_week`   | `smallint not null`, 1 to 7.                                                                                     |
+| `session_minutes` | `smallint not null`, 15 to 180.                                                                                  |
+| `equipment`       | `equipment[] not null default '{}'`.                                                                             |
+| `experience`      | `experience_level not null`.                                                                                     |
+| `muscle_priority` | `jsonb not null`, an object from muscle id to a priority number, derived in core from the answers.               |
+| `params_version`  | `text not null`, the `TrainingParams` version the priorities were derived with, so a retune never rewrites them. |
+| `effective_from`  | `timestamptz not null default now()`.                                                                            |
+| `effective_to`    | `timestamptz`, nullable. Null means current. Check `effective_to > effective_from`.                              |
+
+A partial `unique (user_id) where effective_to is null`: one current row per user, with history kept the way `targets` keeps it. A new answer closes the current row and inserts the next through `save_training_goals`.
+
+### Functions
+
+All are `security invoker`, so every policy applies to their writes. All refuse a payload that is not an object or array where one is expected, or that breaks a bound, with error code `22023`, and a row that is not the caller's or does not exist with `P0002`. Messages state the rule and never quote a value. `execute` is revoked from `public`, `anon` and `service_role` by name and granted to `authenticated` only, as `save_recipe`'s is.
+
+- `save_exercise(p_exercise_id uuid, p_exercise jsonb, p_muscles jsonb) returns uuid`: creates (id null) or edits a user exercise and replaces its muscle map, all or nothing. The database chooses a new exercise's id. It cannot write a global exercise.
+- `save_routine(p_routine_id uuid, p_routine jsonb, p_days jsonb) returns uuid`: creates or edits a routine, updates, inserts and deletes its days as in "Routines", and replaces each day's exercises, all or nothing.
+- `set_active_routine(p_routine_id uuid) returns void`: clears the caller's active routine and sets this one. Null clears without setting.
+- `save_training_goals(p_goals jsonb) returns uuid`: closes the current row and inserts the new one in one transaction.
+
+Logging a set needs no function: one set is one row, inserted and updated directly under the policies below.
+
+### Privileges and row level security
+
+`anon` gets nothing on any table. `authenticated`:
+
+| Table                                          | Grants                                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `muscles`                                      | `select`.                                                                                                                                                                                                                                                                                  |
+| `exercises`                                    | `select`; `insert (owner_id, source, name, equipment, mechanic)`; `update (name, equipment, mechanic, deleted_at)`. No `delete`.                                                                                                                                                           |
+| `exercise_muscles`                             | `select`; `insert (exercise_id, owner_id, muscle_id, role, weight)`; `delete`. No `update`: the map is replaced as a whole.                                                                                                                                                                |
+| `exercise_import_runs`, `exercise_source_data` | nothing.                                                                                                                                                                                                                                                                                   |
+| `workout_sessions`                             | `select`; `insert (user_id, started_at, ended_at, local_date, tz, routine_day_id, note)`; `update (ended_at, note, deleted_at)`. No `delete`.                                                                                                                                              |
+| `workout_sets`                                 | `select`; `insert (session_id, user_id, exercise_id, position, set_type, reps, load_kg, rir, rpe, performed_at, snapshot)`; `update (position, set_type, reps, load_kg, rir, rpe, deleted_at)`. No `delete`. A set never changes session or exercise, and its snapshot is never rewritten. |
+| `routines`                                     | `select`; `insert (user_id, name)`; `update (name, is_active, is_archived)`. No `delete`.                                                                                                                                                                                                  |
+| `routine_days`                                 | `select`; `insert (routine_id, user_id, position, weekday, name)`; `update (position, weekday, name)`; `delete`.                                                                                                                                                                           |
+| `routine_exercises`                            | `select`; `insert (routine_day_id, user_id, position, exercise_id, target_sets, rep_min, rep_max, target_rir)`; `delete`. No `update`.                                                                                                                                                     |
+| `training_goals`                               | `select`; `insert (user_id, goal, focus, days_per_week, session_minutes, equipment, experience, muscle_priority, params_version)`; `update (effective_to)`. No `delete`.                                                                                                                   |
+
+`service_role` gets `select`, `insert` and `update` on `exercises`, `exercise_import_runs` and `exercise_source_data`, and `select`, `insert` and `delete` on `exercise_muscles`, which the import (KEY-349) needs. It gets nothing on the user tables, because nothing server side reads them yet. The M7 export grants what it needs then.
+
+Policies, as predicates, all for `authenticated`:
+
+- `muscles_select_all`: using `true`.
+- `exercises_select_visible`: using `owner_id is null or owner_id = (select auth.uid())`.
+- `exercises_insert_own`: with check `owner_id = (select auth.uid()) and source = 'user'`.
+- `exercises_update_own`: using and with check `owner_id = (select auth.uid())`. A global row cannot be updated by a client.
+- `exercise_muscles_select_visible`: using `owner_id is null or owner_id = (select auth.uid())`.
+- `exercise_muscles_insert_own`: with check `owner_id = (select auth.uid())` and the exercise is the caller's (`exists (select 1 from public.exercises e where e.id = exercise_muscles.exercise_id and e.owner_id = (select auth.uid()))`).
+- `exercise_muscles_delete_own`: using `owner_id = (select auth.uid())`.
+- `workout_sessions_*_own` (select, insert, update): `user_id = (select auth.uid())`. The insert also requires, when `routine_day_id` is set, that the day is the caller's (`exists` over `routine_days` under its own policy).
+- `workout_sets_select_own`, `workout_sets_update_own`: `user_id = (select auth.uid())`.
+- `workout_sets_insert_own`: with check `user_id = (select auth.uid())`, and the session is the caller's (`exists (select 1 from public.workout_sessions s where s.id = workout_sets.session_id and s.user_id = (select auth.uid()))`), and the exercise is visible to the caller (`exists (select 1 from public.exercises e where e.id = workout_sets.exercise_id)`, which runs under the exercises policy). An id that does not exist fails the same way as one that is not the caller's. Without the second `exists`, a foreign key, which ignores row level security, would let a user log a set against another user's private exercise.
+- `routines_*_own` (select, insert, update): `user_id = (select auth.uid())`.
+- `routine_days_*_own` (select, update, delete): `user_id = (select auth.uid())`. The insert also requires that the routine is the caller's.
+- `routine_exercises_*_own` (select, delete): `user_id = (select auth.uid())`. The insert also requires that the day is the caller's and the exercise is visible, as for sets.
+- `training_goals_*_own` (select, insert, update): `user_id = (select auth.uid())`.
+
+pgTAP asserts every policy and the exact privilege set per table (KEY-347 and KEY-348).
+
+### Health data
+
+Training logs are health data under the project's Working conventions. No exercise name, load, rep count, effort value, goal answer or muscle value appears in a log, an error report or an analytics event; only ids and counts do. The functions and the trigger raise no `notice` or `warning` that quotes a value, and their errors state the rule only. PostgreSQL can still put a failing row in the detail of a check constraint error, which no client controls. That is why the functions check every typed field before writing, and why no client reads, logs or reports the message or detail of a database error from a training read or write.
+
+### Export and account deletion
+
+There is still no data export and no in-app account deletion (M7, KEY-7). The contract M7 will use:
+
+- **Export:** every column of the user's rows in `exercises` (their own, `source = 'user'`), `exercise_muscles` (their own), `workout_sessions`, `workout_sets` (including `snapshot`), `routines`, `routine_days`, `routine_exercises` and `training_goals` (every row, current and past). Global exercises are not exported; the user's sets carry the snapshot of each exercise they used.
+- **Deletion:** the `on delete cascade` foreign keys from `auth.users` on every user table. It needs no code, and KEY-348 proves it with a user who has sessions, sets, routines, goals and custom exercises.
+- **Privacy Policy:** `packages/core/src/copy/legal.ts` lists "Your custom foods and recipes" but no workout data. A copy change adding workouts, routines and training goals lands before any client can store a session (a T2 ticket). It is not part of T1, because T1 adds no client.
+
+### Implemented by
+
+- KEY-347, migration 1: the enums for exercises, `muscles` and its seed, `exercises`, `exercise_muscles` and the primary-muscle trigger, the provenance tables, `save_exercise`, their grants and policies, pgTAP, and the regenerated `packages/db/src/types.gen.ts`.
+- KEY-348, migration 2: the remaining enums, sessions, sets, routines, days, routine exercises, goals, `save_routine`, `set_active_routine`, `save_training_goals`, their grants and policies, pgTAP including the account deletion proof, and `types.gen.ts`.
+- KEY-346, core: `MUSCLE_IDS`, the numbers above as constants, the zod schemas and the set snapshot.
+- KEY-349, the import: writes through the `service_role` grants above.
