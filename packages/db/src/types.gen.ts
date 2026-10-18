@@ -783,6 +783,7 @@ export type Database = {
       };
       routines: {
         Row: {
+          activated_at: string | null;
           created_at: string;
           id: string;
           is_active: boolean;
@@ -791,6 +792,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          activated_at?: string | null;
           created_at?: string;
           id?: string;
           is_active?: boolean;
@@ -799,6 +801,7 @@ export type Database = {
           user_id?: string;
         };
         Update: {
+          activated_at?: string | null;
           created_at?: string;
           id?: string;
           is_active?: boolean;
@@ -1038,6 +1041,10 @@ export type Database = {
           allowed: boolean;
           retry_after_seconds: number;
         }[];
+      };
+      delete_workout_session: {
+        Args: { p_session_id: string };
+        Returns: undefined;
       };
       import_exercises: {
         Args: { p_exercises: Json; p_import_run_id: string };

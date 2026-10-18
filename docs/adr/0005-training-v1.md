@@ -461,3 +461,44 @@ There is still no data export and no in-app account deletion (M7, KEY-7). The co
 - KEY-348, migration 2: the remaining enums, sessions, sets, routines, days, routine exercises, goals, `save_routine`, `set_active_routine`, `save_training_goals`, their grants and policies, pgTAP including the account deletion proof, and `types.gen.ts`.
 - KEY-346, core: `MUSCLE_IDS`, the numbers above as constants, the zod schemas and the set snapshot.
 - KEY-349, the import: writes through `import_exercises`, which the `service_role` grants above allow.
+
+## Amendment 2 (T2: routine activation date and atomic session delete, 2026-10-18)
+
+### Status
+
+Recorded on 2026-10-18 under KEY-378, the third training migration (`20261018160000_routine_activation_and_session_delete.sql`). It adds one column, two triggers and one function, and changes no grant, policy or row that exists. It adds to Amendment 1's "Routines", "Functions" and "Privileges and row level security" and overrides nothing in them. Zee decided on 2026-10-18 that a newly active routine plans from the day it is activated, which is why the activation date is stored.
+
+### `routines.activated_at`
+
+`activated_at timestamptz`, nullable, no default. It holds the moment the routine last became the active one, and is null until the first activation.
+
+- **Why.** A newly active routine plans from the day it is activated. Without a date, switching routine on a Thursday would make the new routine's Monday to Wednesday count as missed days in the week's gap. The brief's "makes it the plan for the current week" still holds from the activation day on. Nothing recorded the day before this amendment.
+- **A trigger is the only writer.** `routines_stamp_activated_at` is a `before update` row trigger with the condition `new.is_active and not old.is_active`. It sets `new.activated_at = now()`, whatever value the statement sent for the column. Every other update leaves the column alone: deactivating a routine keeps the old date, an update of the name alone never touches it, and the next activation overwrites it. The trigger fires on the false to true change however it was made, so `set_active_routine` and a direct client update of `is_active` give the same result, and `set_active_routine` needs no change.
+- **No client grant.** The `update` grant on `routines` stays `(name, is_active, is_archived)` and the `insert` grant stays `(user_id, name)`. A client reads the column through the table-wide `select` and can never write it, the rule of ADR 0003 Amendments 3 and 4.
+- **The trigger function** is `security invoker` with an empty `search_path`, like the other functions. Only the trigger runs it, so `execute` is revoked from `public`, `anon`, `authenticated` and `service_role` by name.
+- **Routines that were active before this migration** have a null date. T1 shipped no client and no seed that activates a routine, so none is expected. Whatever reads the date treats null as "no activation date recorded".
+
+### `delete_workout_session`
+
+`delete_workout_session(p_session_id uuid) returns void`, added to "Functions". It is `security invoker` with an empty `search_path`, so the owner-only policies and the column grants of Amendment 1 apply to both of its writes.
+
+- **Why.** Sessions and sets are soft deleted, and a set carries no flag of its session. Heat reads `workout_sets` alone, so a client that soft deleted the session on its own, or whose second call failed, would leave sets that heat keeps counting. The `session · discard` canvas ("removed from your history and your body map") and the history session menu both need one all-or-nothing delete.
+- **What it does.** In one transaction it locks the caller's live session, soft deletes it with `deleted_at = now()`, and stamps `deleted_at = now()` on every live set of that session. A set deleted earlier keeps its earlier stamp. A session with no sets is deleted too. The row lock makes the call wait for a set that another transaction is already logging against the session, so that set is stamped with the rest. A set written after the lock was taken waits for the call and is then refused by the trigger below. The order of the two writes does not matter to that rule, because the trigger ignores a write that sets `deleted_at`. The sets are written first so that the session, which history reads, is the last row to change.
+- **Refusals.** A null id raises `22023`. A session that does not exist, is not the caller's or is already deleted raises `P0002`, and the three cases give the same message. Messages state the rule and quote no value.
+- **Privileges.** `execute` is revoked from `public`, `anon` and `service_role` by name and granted to `authenticated` only, as for the other functions.
+
+### A set is written only into a live session
+
+The trigger `workout_sets_require_live_session` (`before insert or update of deleted_at`, for each row, when the new row's `deleted_at` is null) takes a `for key share` lock on the set's session row and refuses the write with `42501` and the message "a set can only be written into a live session" when that session is visible to the caller and deleted. So a set cannot be inserted into a deleted session, and a set cannot be revived behind one. Stamping a set as deleted is never held up. Restoring a session takes two steps in this order: the session, then its sets.
+
+- **Why a trigger and not a policy.** A policy subquery reads the snapshot its statement started with. An insert that began while a delete was in flight would pass it, then wait on the foreign key's lock and complete after the delete committed, leaving a live set in a deleted session. The same holds for a revive. The locking read waits for the delete and then sees the row as it left it.
+- **The other refusals are unchanged.** A session that does not exist or is not the caller's is invisible to the trigger, which leaves it to the insert policy and the foreign key of Amendment 1, so the `workout_sets` policies are exactly as Amendment 1 has them.
+- **Privileges.** The trigger function is `security invoker` with an empty `search_path`, and `execute` is revoked from `public`, `anon`, `authenticated` and `service_role` by name, as for the other trigger function.
+
+### Health data
+
+None of this raises a notice or an error that quotes a value. The date is a moment, not a training value, and the function's errors state the rule only.
+
+### Implemented by
+
+- KEY-378, migration 3: `routines.activated_at`, its trigger, `delete_workout_session`, the live session trigger on `workout_sets`, their pgTAP (`routines_activated_at.test.sql`, `delete_workout_session.test.sql` and `workout_sets_live_session.test.sql`) and the regenerated `packages/db/src/types.gen.ts`.
