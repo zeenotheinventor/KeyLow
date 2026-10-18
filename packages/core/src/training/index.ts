@@ -190,3 +190,5 @@ export type {
   BodyArtworkSide,
   FrontMuscleId,
 } from "./bodyArtwork";
+
+export { compareWeekSoFar } from "./compareWeekSoFar";

@@ -39,6 +39,10 @@ const statusOf = (gap: number, tolerance: number): PlanStatus => {
  * both lists for a calendar week. A set counts `weight × effort` on each muscle of its snapshot, as in
  * `weeklyVolume`. Every muscle id is present, at 0 and on plan when neither list trains it.
  *
+ * This compares the whole week's plan, today's and later days included, so it is the volume view's
+ * projected week and any week total. The gap view uses `compareWeekSoFar`, which leaves out the planned
+ * days that have not come due.
+ *
  * Throws a `RangeError` naming the rule when a set's `performed_at` is not an ISO timestamp with a zone.
  */
 export const compareWeek = (
