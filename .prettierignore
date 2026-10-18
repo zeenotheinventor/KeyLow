@@ -3,6 +3,9 @@ package-lock.json
 yarn.lock
 packages/tokens/src/source/
 
+# verbatim upstream file, pinned by sha256 (packages/db/data/exercises/VERIFICATION.md)
+packages/db/data/exercises/upstream/
+
 # generated or verbatim design export, except its hand-written README (tools/design-export)
 docs/design/*
 !docs/design/README.md

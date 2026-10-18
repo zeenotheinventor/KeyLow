@@ -1,0 +1,22 @@
+source_ref,action,muscles,note
+Alternating_Deltoid_Raise,map,delt_front:primary:1.0;delt_side:primary:1.0,Alternates a front raise and a lateral raise from rep to rep so both heads are primary
+Balance_Board,exclude,,"balance drill, not resistance training"
+Barbell_Deadlift,map,lower_back:primary:1.0;glute_max:primary:1.0;hamstrings:primary:1.0;lats:secondary:0.5;traps_upper:secondary:0.5;traps_mid:secondary:0.5;forearms:secondary:0.5;quads:secondary:0.5;calves:stabiliser:0.2,"The source makes only the lower back primary; the conventional deadlift is a hip hinge led by the glutes and hamstrings as much as by the spinal erectors, and grip is a real limit"
+Battling_Ropes,exclude,,"conditioning drill, not resistance training"
+Bench_Press_-_Powerlifting,map,chest_lower:primary:1.0;chest_upper:secondary:0.6;delt_front:secondary:0.5;triceps:secondary:0.5;lats:stabiliser:0.2;forearms:stabiliser:0.2,"The source makes triceps primary; a full-range competition bench press takes the flat bench press map, with lats and grip as stabilisers"
+Bench_Press_with_Chains,map,chest_lower:primary:1.0;chest_upper:secondary:0.6;delt_front:secondary:0.5;triceps:secondary:0.5;lats:stabiliser:0.2,"As Bench_Press_-_Powerlifting: a full-range bench press with chains takes the flat bench press map"
+Cable_Hip_Adduction,map,adductors:primary:1.0,The source lists quadriceps but the movement sweeps the cuffed leg across the body (hip adduction)
+Cuban_Press,map,delt_rear:primary:1.0;delt_front:secondary:0.5;delt_side:secondary:0.5;traps_upper:secondary:0.5,"External rotation from the scarecrow position is the limiting part, counted as rear delt like External_Rotation; the light press after it is secondary"
+Dumbbell_Raise,map,delt_side:primary:1.0;traps_upper:secondary:0.5;biceps:secondary:0.5,"The instructions describe a dumbbell upright row (elbows lead, side delts lift), so it takes the upright row map"
+Dumbbell_Scaption,map,delt_front:primary:1.0;delt_side:secondary:0.5;traps_upper:secondary:0.5,"A raise in the scapular plane, 30 degrees off the front, so the side delt helps the front delt"
+Freehand_Jump_Squat,exclude,,"bodyweight jump, a plyometric drill filed under strength"
+Pallof_Press,map,obliques:primary:1.0;abs:secondary:0.5;chest_lower:stabiliser:0.2;delt_front:stabiliser:0.2;triceps:stabiliser:0.2,"An anti-rotation hold: the arms only hold the handle out, so the chest, front delts and triceps the source lists are stabilisers"
+Pallof_Press_With_Rotation,map,obliques:primary:1.0;abs:secondary:0.5;chest_lower:stabiliser:0.2;delt_front:stabiliser:0.2;triceps:stabiliser:0.2,"As Pallof_Press: the arms hold the handle out while the trunk rotates, so they are stabilisers"
+Power_Partials,map,delt_side:primary:1.0,"Partial lateral raises (arms out to the sides), which the name does not say"
+Rocking_Standing_Calf_Raise,map,calves:primary:1.0;tibialis:secondary:0.5,"Each rep ends with a toe raise that the instructions say contracts the tibialis, so tibialis is secondary"
+Scapular_Pull-Up,map,traps_mid:primary:1.0;lats:secondary:0.5,"Scapular depression from a hang works the lower traps, which ADR 0005 counts in traps_mid, not the upper traps the source names"
+Seated_Dumbbell_Press,exclude,,duplicate of Dumbbell_Shoulder_Press (the same seated dumbbell press in other words)
+Side_Laterals_to_Front_Raise,map,delt_front:primary:1.0;delt_side:primary:1.0;traps_upper:secondary:0.5,Each rep is a lateral raise then a front raise so both heads are primary
+Side_Leg_Raises,include,glute_med:primary:1.0,"The source files it as a stretch and names the adductors, but it raises the straight leg out to the side (hip abduction) and is resistance work with an ankle weight or band"
+Standing_Low-Pulley_Deltoid_Raise,map,delt_side:primary:1.0;forearms:stabiliser:0.2,"A one-arm cross-body cable lateral raise, which the name does not say"
+Straight_Raises_on_Incline_Bench,map,delt_front:primary:1.0;traps_mid:secondary:0.5,"A prone straight-arm raise in front of the head; the traps it works are the lower traps, which ADR 0005 counts in traps_mid"
