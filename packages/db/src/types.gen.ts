@@ -55,6 +55,159 @@ export type Database = {
         };
         Relationships: [];
       };
+      exercise_import_runs: {
+        Row: {
+          created_at: string;
+          file_sha256: string;
+          finished_at: string | null;
+          id: string;
+          label: string;
+          row_count: number | null;
+          source: Database["public"]["Enums"]["exercise_source"];
+          source_commit: string;
+          started_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          file_sha256: string;
+          finished_at?: string | null;
+          id?: string;
+          label: string;
+          row_count?: number | null;
+          source: Database["public"]["Enums"]["exercise_source"];
+          source_commit: string;
+          started_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          file_sha256?: string;
+          finished_at?: string | null;
+          id?: string;
+          label?: string;
+          row_count?: number | null;
+          source?: Database["public"]["Enums"]["exercise_source"];
+          source_commit?: string;
+          started_at?: string;
+        };
+        Relationships: [];
+      };
+      exercise_muscles: {
+        Row: {
+          created_at: string;
+          exercise_id: string;
+          id: string;
+          muscle_id: string;
+          owner_id: string | null;
+          role: Database["public"]["Enums"]["muscle_role"];
+          weight: number;
+        };
+        Insert: {
+          created_at?: string;
+          exercise_id: string;
+          id?: string;
+          muscle_id: string;
+          owner_id?: string | null;
+          role: Database["public"]["Enums"]["muscle_role"];
+          weight: number;
+        };
+        Update: {
+          created_at?: string;
+          exercise_id?: string;
+          id?: string;
+          muscle_id?: string;
+          owner_id?: string | null;
+          role?: Database["public"]["Enums"]["muscle_role"];
+          weight?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "exercise_muscles_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: false;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "exercise_muscles_muscle_id_fkey";
+            columns: ["muscle_id"];
+            isOneToOne: false;
+            referencedRelation: "muscles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      exercise_source_data: {
+        Row: {
+          created_at: string;
+          exercise_id: string;
+          import_run_id: string;
+          raw: Json;
+        };
+        Insert: {
+          created_at?: string;
+          exercise_id: string;
+          import_run_id: string;
+          raw: Json;
+        };
+        Update: {
+          created_at?: string;
+          exercise_id?: string;
+          import_run_id?: string;
+          raw?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "exercise_source_data_exercise_id_fkey";
+            columns: ["exercise_id"];
+            isOneToOne: true;
+            referencedRelation: "exercises";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "exercise_source_data_import_run_id_fkey";
+            columns: ["import_run_id"];
+            isOneToOne: false;
+            referencedRelation: "exercise_import_runs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      exercises: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          equipment: Database["public"]["Enums"]["equipment"];
+          id: string;
+          mechanic: Database["public"]["Enums"]["exercise_mechanic"];
+          name: string;
+          owner_id: string | null;
+          source: Database["public"]["Enums"]["exercise_source"];
+          source_ref: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          equipment: Database["public"]["Enums"]["equipment"];
+          id?: string;
+          mechanic: Database["public"]["Enums"]["exercise_mechanic"];
+          name: string;
+          owner_id?: string | null;
+          source: Database["public"]["Enums"]["exercise_source"];
+          source_ref?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          equipment?: Database["public"]["Enums"]["equipment"];
+          id?: string;
+          mechanic?: Database["public"]["Enums"]["exercise_mechanic"];
+          name?: string;
+          owner_id?: string | null;
+          source?: Database["public"]["Enums"]["exercise_source"];
+          source_ref?: string | null;
+        };
+        Relationships: [];
+      };
       food_log_entries: {
         Row: {
           created_at: string;
@@ -328,6 +481,30 @@ export type Database = {
         };
         Relationships: [];
       };
+      muscles: {
+        Row: {
+          created_at: string;
+          group: Database["public"]["Enums"]["muscle_group"];
+          id: string;
+          position: number;
+          size_class: Database["public"]["Enums"]["muscle_size_class"];
+        };
+        Insert: {
+          created_at?: string;
+          group: Database["public"]["Enums"]["muscle_group"];
+          id: string;
+          position: number;
+          size_class: Database["public"]["Enums"]["muscle_size_class"];
+        };
+        Update: {
+          created_at?: string;
+          group?: Database["public"]["Enums"]["muscle_group"];
+          id?: string;
+          position?: number;
+          size_class?: Database["public"]["Enums"]["muscle_size_class"];
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           activity: string | null;
@@ -544,6 +721,10 @@ export type Database = {
         Args: { steps: string[] };
         Returns: boolean;
       };
+      save_exercise: {
+        Args: { p_exercise: Json; p_exercise_id: string; p_muscles: Json };
+        Returns: string;
+      };
       save_recipe: {
         Args: { p_ingredients: Json; p_recipe: Json; p_recipe_id: string };
         Returns: string;
@@ -579,8 +760,24 @@ export type Database = {
       };
     };
     Enums: {
+      equipment:
+        | "barbell"
+        | "dumbbell"
+        | "kettlebell"
+        | "cable"
+        | "machine"
+        | "smith_machine"
+        | "ez_bar"
+        | "band"
+        | "bodyweight"
+        | "other";
+      exercise_mechanic: "compound" | "isolation";
+      exercise_source: "free_exercise_db" | "user";
       food_source: "off" | "cofid" | "user";
       log_item_type: "food" | "recipe" | "quick";
+      muscle_group: "chest" | "shoulders" | "back" | "arms" | "core" | "legs" | "neck";
+      muscle_role: "primary" | "secondary" | "stabiliser";
+      muscle_size_class: "small" | "medium" | "large";
       nutrient_basis: "per_100g" | "per_100ml";
     };
     CompositeTypes: {
@@ -706,8 +903,25 @@ export const Constants = {
   },
   public: {
     Enums: {
+      equipment: [
+        "barbell",
+        "dumbbell",
+        "kettlebell",
+        "cable",
+        "machine",
+        "smith_machine",
+        "ez_bar",
+        "band",
+        "bodyweight",
+        "other",
+      ],
+      exercise_mechanic: ["compound", "isolation"],
+      exercise_source: ["free_exercise_db", "user"],
       food_source: ["off", "cofid", "user"],
       log_item_type: ["food", "recipe", "quick"],
+      muscle_group: ["chest", "shoulders", "back", "arms", "core", "legs", "neck"],
+      muscle_role: ["primary", "secondary", "stabiliser"],
+      muscle_size_class: ["small", "medium", "large"],
       nutrient_basis: ["per_100g", "per_100ml"],
     },
   },
