@@ -74,6 +74,16 @@ describe("preset as consumed by Tailwind", () => {
     });
   });
 
+  it("should resolve the body map colours through theme variables, the glow whole", () => {
+    expect(resolvedTheme.colors).toMatchObject({
+      "heat-3": "rgb(var(--kl-heat-3) / <alpha-value>)",
+      "heat-glow": "var(--kl-heat-glow)",
+      "volume-not-targeted": "rgb(var(--kl-volume-not-targeted) / <alpha-value>)",
+      "gap-on-plan": "rgb(var(--kl-gap-on-plan) / <alpha-value>)",
+      "body-silhouette": "rgb(var(--kl-body-silhouette) / <alpha-value>)",
+    });
+  });
+
   it("should resolve label-small as 14 over 20 semibold with no tracking", () => {
     expect(valueOf(resolvedTheme.fontSize, "label-small")).toEqual([
       "14px",
@@ -121,6 +131,20 @@ describe("the classes the design's screens are written with", () => {
     "text-success-ink",
     "bg-camera",
     "bg-viewfinder-dim",
+    "bg-body-silhouette",
+    "bg-body-separator",
+    "bg-heat-0",
+    "bg-heat-3",
+    "bg-heat-5",
+    "bg-heat-glow",
+    "bg-volume-under",
+    "bg-volume-maintaining",
+    "bg-volume-productive",
+    "bg-volume-over",
+    "bg-volume-not-targeted",
+    "bg-gap-behind",
+    "bg-gap-on-plan",
+    "bg-gap-ahead",
   ];
 
   it.each(classNames)("should generate %s", async (className) => {
@@ -134,6 +158,13 @@ describe("the classes the design's screens are written with", () => {
 
     expect(css).toContain("background-color: rgb(var(--kl-accent) / 0.2)");
     expect(css).toContain("background-color: var(--kl-accent-muted)");
+  });
+
+  it("should follow the theme through the heat variables, the glow whole", async () => {
+    const css = await renderCss({ presets: [preset] }, ["bg-heat-3/20", "bg-heat-glow"]);
+
+    expect(css).toContain("background-color: rgb(var(--kl-heat-3) / 0.2)");
+    expect(css).toContain("background-color: var(--kl-heat-glow)");
   });
 
   it("should not support an opacity modifier on a translucent colour", async () => {

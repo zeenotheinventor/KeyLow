@@ -27,6 +27,7 @@ const sources = {
   spacingCss: readSource("spacing.css"),
   typographyCss: readSource("typography.css"),
   motionCss: readSource("motion.css"),
+  trainingCss: readSource("training.css"),
 };
 
 // Runs first so the stylesheet is only written for sources the build accepts.

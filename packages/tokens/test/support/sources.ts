@@ -17,6 +17,7 @@ export const readSourceTexts = (): TokenSourceTexts => ({
   spacingCss: readSource("spacing.css"),
   typographyCss: readSource("typography.css"),
   motionCss: readSource("motion.css"),
+  trainingCss: readSource("training.css"),
 });
 
 export type FlatTokens = Record<string, string>;
@@ -50,3 +51,17 @@ export const customPropertiesUnder = (selector: string): FlatTokens =>
         .map(([property, value]) => [property.slice(2), value]),
     ),
   );
+
+/**
+ * The Ki-Lo training additions (`training.css`), without the dashes. They are kept apart from the
+ * design system's files, so the agreement tests above stay about the design system alone.
+ */
+export const trainingTokens = (scheme: "dark" | "light"): FlatTokens => {
+  const scopes = parseCssScopes(readSource("training.css"));
+  const selector = scheme === "dark" ? ":root" : '[data-theme="light"]';
+  return Object.fromEntries(
+    Object.entries(scopes[selector] ?? {})
+      .filter(([property]) => property.startsWith("--"))
+      .map(([property, value]) => [property.slice(2), value]),
+  );
+};

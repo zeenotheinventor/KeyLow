@@ -3,7 +3,12 @@ import { describe, expect, it } from "vitest";
 import { buildTokens } from "../scripts/buildTokens";
 import * as generated from "../src/source.generated";
 import { flattenTokens } from "./support/flattenTokens";
-import { customPropertiesUnder, readSourceTexts, readTokenJson } from "./support/sources";
+import {
+  customPropertiesUnder,
+  readSourceTexts,
+  readTokenJson,
+  trainingTokens,
+} from "./support/sources";
 
 describe("the design system sources", () => {
   const tokenJson = readTokenJson();
@@ -27,11 +32,73 @@ describe("every design token", () => {
   const tokenJson = readTokenJson();
 
   it.each(["dark", "light"] as const)(
-    "should come back out of the exports with its value for the %s theme",
+    "should come back out of the exports with its value for the %s theme, beside the training additions",
     (scheme) => {
-      expect(flattenTokens(scheme)).toEqual(tokenJson[scheme]);
+      expect(flattenTokens(scheme)).toEqual({ ...tokenJson[scheme], ...trainingTokens(scheme) });
     },
   );
+});
+
+describe("the training additions", () => {
+  const expectedNames = [
+    "body-silhouette",
+    "body-separator",
+    "heat-0",
+    "heat-1",
+    "heat-2",
+    "heat-3",
+    "heat-4",
+    "heat-5",
+    "heat-glow",
+    "volume-under",
+    "volume-maintaining",
+    "volume-productive",
+    "volume-over",
+    "volume-not-targeted",
+    "gap-behind",
+    "gap-on-plan",
+    "gap-ahead",
+  ];
+
+  it.each(["dark", "light"] as const)(
+    "should name exactly the canvas tokens in the %s theme",
+    (scheme) => {
+      expect(Object.keys(trainingTokens(scheme)).sort()).toEqual([...expectedNames].sort());
+    },
+  );
+
+  it.each([
+    ["dark", generated.colors],
+    ["light", generated.lightColors],
+  ])(
+    "should not hold the retired far-behind and far-ahead gap steps in the %s theme",
+    (_scheme, palette) => {
+      expect(Object.keys(palette)).not.toContain("gap-behind-far");
+      expect(Object.keys(palette)).not.toContain("gap-ahead-far");
+    },
+  );
+
+  it("should refuse a training token that the light theme lacks", () => {
+    const sources = readSourceTexts();
+
+    expect(() =>
+      buildTokens({
+        ...sources,
+        trainingCss: sources.trainingCss.replace("--heat-3:#CC7A22;", ""),
+      }),
+    ).toThrow(/heat-3/);
+  });
+
+  it("should refuse a training token that reuses a design system name", () => {
+    const sources = readSourceTexts();
+
+    expect(() =>
+      buildTokens({
+        ...sources,
+        trainingCss: sources.trainingCss.replace(":root{", ":root{\n--accent:#000000;"),
+      }),
+    ).toThrow(/accent/);
+  });
 });
 
 describe("buildTokens", () => {

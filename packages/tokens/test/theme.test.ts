@@ -4,7 +4,7 @@ import { colors, elevation, lightColors, themePlugin, themes, themeVariables } f
 import { isSolidColor } from "../src/theme";
 import { blendOver, contrastRatio } from "./support/contrastRatio";
 import { renderCss, warmUpTailwindBeforeAll } from "./support/renderCss";
-import { customPropertiesUnder } from "./support/sources";
+import { customPropertiesUnder, trainingTokens } from "./support/sources";
 
 warmUpTailwindBeforeAll();
 
@@ -22,6 +22,13 @@ describe("themes", () => {
   it("should hold the dark colours as the default and the light colours as the alternative", () => {
     expect(themes.dark).toBe(colors);
     expect(themes.light).toBe(lightColors);
+  });
+
+  it("should hold the training additions beside the design's colours in both themes", () => {
+    expect(colors["heat-3"]).toBe("#C98B2E");
+    expect(lightColors["heat-3"]).toBe("#CC7A22");
+    expect(colors["gap-on-plan"]).toBe("#596274");
+    expect(lightColors["gap-on-plan"]).toBe("#B4BAC6");
   });
 
   it("should give both themes the same colour names, in the same order", () => {
@@ -99,6 +106,17 @@ describe("the ink and camera colours", () => {
   });
 });
 
+describe("the training additions as theme variables", () => {
+  it("should emit a solid one as channels and the glow whole, in each theme", () => {
+    expect(themeVariables("dark")["--kl-heat-3"]).toBe("201 139 46");
+    expect(themeVariables("light")["--kl-heat-3"]).toBe("204 122 34");
+    expect(themeVariables("dark")["--kl-heat-glow"]).toBe("rgba(255,122,107,0.55)");
+    expect(themeVariables("light")["--kl-heat-glow"]).toBe("rgba(168,35,29,0.35)");
+    expect(themeVariables("dark")["--kl-volume-not-targeted"]).toBe("48 55 70");
+    expect(themeVariables("light")["--kl-gap-ahead"]).toBe("179 92 0");
+  });
+});
+
 describe("themeVariables", () => {
   const tokenValueFor = (scheme: "dark" | "light") =>
     customPropertiesUnder(scheme === "dark" ? ":root" : '[data-theme="light"]');
@@ -107,7 +125,7 @@ describe("themeVariables", () => {
     "should round-trip every %s theme colour and shadow to the design's value",
     (scheme) => {
       const variables = themeVariables(scheme);
-      const expected = tokenValueFor(scheme);
+      const expected = { ...tokenValueFor(scheme), ...trainingTokens(scheme) };
 
       for (const [name, value] of Object.entries(variables)) {
         const token = name.replace(/^--kl-/, "");
