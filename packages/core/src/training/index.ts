@@ -30,6 +30,10 @@ export {
 } from "./bounds";
 export { buildSetSnapshot } from "./buildSetSnapshot";
 export type { SnapshotExercise } from "./buildSetSnapshot";
+export { COMPARE_PARAMS_V1 } from "./compareParams";
+export type { CompareParams } from "./compareParams";
+export { compareWeek, PLAN_STATUSES } from "./compareWeek";
+export type { MusclePlanComparison, PlanStatus } from "./compareWeek";
 export {
   EQUIPMENT,
   EXERCISE_MECHANICS,
@@ -50,6 +54,8 @@ export type {
   TrainingFocus,
   TrainingGoal,
 } from "./enums";
+export { expandPlan } from "./expandPlan";
+export type { PlanExercise, PlannedSet, PlanRoutine, PlanRoutineDay } from "./expandPlan";
 export {
   isMuscleId,
   MUSCLE_GROUPS,
@@ -71,6 +77,14 @@ export { TRAINING_PARAMS_V1, TRAINING_PARAMS_VERSION } from "./params";
 export type { EffortParams, MuscleParams, TrainingParams, VolumeLandmarks } from "./params";
 export { parseSetSnapshot } from "./parseSetSnapshot";
 export type { ParsedSetSnapshot, SetSnapshotProblem } from "./parseSetSnapshot";
+export { projectedState, projectWeek } from "./projectWeek";
+export type {
+  AcceptedSuggestion,
+  LoggedSession,
+  LoggedSet,
+  LoggedWeek,
+  WeekProjection,
+} from "./projectWeek";
 export { setEffort } from "./setEffort";
 export type { EffortSet } from "./setEffort";
 export { SET_SNAPSHOT_VERSION } from "./versions";

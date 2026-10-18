@@ -137,18 +137,36 @@ const byMuscle = <Value>(valueOf: (muscle: MuscleId) => Value): Record<MuscleId,
     Value
   >;
 
+/** The effort-weighted set count of some stimuli, rounded as weekly sets are. */
+const weightedSetsOf = (stimuli: readonly Stimulus[]): number =>
+  Math.round(sumOf(stimuli.map((stimulus) => stimulus.amount)) * WEEKLY_SETS_SCALE) /
+  WEEKLY_SETS_SCALE;
+
 const volumeOf = (
   stimuli: Map<MuscleId, Stimulus[]>,
   asOf: number,
   params: TrainingParams,
 ): Record<MuscleId, MuscleVolume> =>
   byMuscle((muscle) => {
-    const window = withinDays(stimuli.get(muscle) ?? [], asOf, params.volumeWindowDays);
-    const weeklySets =
-      Math.round(sumOf(window.map((stimulus) => stimulus.amount)) * WEEKLY_SETS_SCALE) /
-      WEEKLY_SETS_SCALE;
+    const weeklySets = weightedSetsOf(
+      withinDays(stimuli.get(muscle) ?? [], asOf, params.volumeWindowDays),
+    );
     return { weeklySets, volumeStatus: volumeStatusOf(weeklySets, muscleParams(muscle, params)) };
   });
+
+/**
+ * Each muscle's effort-weighted sets over every live set given, whenever it was performed: the sum of
+ * `weight × effort`, rounded as weekly sets are. The caller chooses the sets, so `compareWeek` can count
+ * a calendar week, which a clock change makes 167 or 169 hours long, where `weeklyVolume` counts a
+ * rolling window. Not exported from the package: `compareWeek` is its public use.
+ */
+export const weightedSetsByMuscle = (
+  sets: readonly HeatSet[],
+  params: TrainingParams,
+): Record<MuscleId, number> => {
+  const stimuli = stimuliUpTo(sets, Number.POSITIVE_INFINITY, params);
+  return byMuscle((muscle) => weightedSetsOf(stimuli.get(muscle) ?? []));
+};
 
 /**
  * Each muscle's effort-weighted sets over the volume window ending at `asOf` (the last 7 days in v1,
