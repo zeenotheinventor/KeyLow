@@ -145,7 +145,7 @@ What M6 must provide (KeyLow v1): one read path, `dayTarget(targets, localDate, 
 
 ### Health data
 
-Training logs are health data under the project's Working conventions: no exercise name, load, reps or muscle value in logs, error reports or analytics (ids and counts only). Training tables are in the data export and are removed by account deletion.
+Training logs are health data under the project's Working conventions: no exercise name, load, reps or muscle value in logs, error reports or analytics (ids and counts only). Training tables are in the data export and are removed by account deletion. Training reads are kept in the same private on-device cache as the diary (Zee, 2026-10-18) and removed on sign out, and KEY-254 encrypts the whole cache later.
 
 ## Consequences
 

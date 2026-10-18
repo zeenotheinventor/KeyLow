@@ -1,7 +1,8 @@
 /**
  * Bump this when the shape of the data of a persisted query changes (the diary day, week and complete
- * days, the targets, the recent foods, the time zone, the terms acceptance). The cache of an older
- * app is then thrown away on the next start instead of being read as the new shape.
+ * days, the targets, the recent foods, the time zone, the terms acceptance, the training sets, the
+ * active routine and the week's sessions). The cache of an older app is then thrown away on the next
+ * start instead of being read as the new shape.
  */
 export const DIARY_CACHE_SCHEMA_VERSION = 1;
 
