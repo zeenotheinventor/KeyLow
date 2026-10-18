@@ -72,6 +72,8 @@ export { useWeightTrend } from "./useWeightTrend";
 export { useMuscleState } from "./useMuscleState";
 export { useWeekComparison } from "./useWeekComparison";
 export { useActiveRoutine } from "./useActiveRoutine";
+export { planRoutineOf } from "./planRoutineOf";
+export { useWeekSessionRows } from "./useWeekSessionRows";
 export { useActiveSession } from "./useActiveSession";
 export { useHasLoggedSession } from "./useHasLoggedSession";
 export { useLastPerformance } from "./useLastPerformance";

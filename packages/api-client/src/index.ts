@@ -170,8 +170,11 @@ export {
   useMuscleState,
   useSession,
   useWeekComparison,
+  useWeekSessionRows,
   useWeightUnit,
 } from "./hooks";
+export { planRoutineOf } from "./hooks";
+export { weekStartOf } from "./weekStartOf";
 export type {
   BodyMap,
   BodyMapDay,

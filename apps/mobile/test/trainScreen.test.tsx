@@ -40,6 +40,9 @@ jest.mock(
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 
+// 17:55 in London on Thursday 15 October 2026, which is BST: the week of Monday 12 October.
+jest.mock("../lib/useNow", () => ({ useNow: () => new Date("2026-10-15T16:55:00Z") }));
+
 setUpTests();
 
 let queryClient: QueryClient;
@@ -308,6 +311,10 @@ describe("the Train screen", () => {
       queryClient.setQueryData(keys.training.hasLoggedSession, false, {
         updatedAt: updatedAt.session,
       });
+      queryClient.setQueryData(keys.training.weekSessions("2026-10-12"), [], {
+        updatedAt: SAVED_AT,
+      });
+      queryClient.setQueryData(keys.training.activeSession, null, { updatedAt: SAVED_AT });
     }
 
     async function renderWithCache(props: TrainScreenProps = {}) {
