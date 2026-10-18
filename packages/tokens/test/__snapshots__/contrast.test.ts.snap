@@ -1,5 +1,49 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`body map colour contrast on the surface > should record the ratio of every body map colour in the dark theme, with no threshold for the rest 1`] = `
+{
+  "body-separator": 1,
+  "body-silhouette": 1.28,
+  "gap-ahead": 8.7,
+  "gap-behind": 6.08,
+  "gap-on-plan": 2.9,
+  "heat-0": 1.79,
+  "heat-1": 2.45,
+  "heat-2": 3.74,
+  "heat-3": 6.1,
+  "heat-4": 6.7,
+  "heat-5": 6.98,
+  "heat-glow": 2.93,
+  "volume-maintaining": 8.04,
+  "volume-not-targeted": 1.49,
+  "volume-over": 5.87,
+  "volume-productive": 9.6,
+  "volume-under": 5.11,
+}
+`;
+
+exports[`body map colour contrast on the surface > should record the ratio of every body map colour in the light theme, with no threshold for the rest 1`] = `
+{
+  "body-separator": 1,
+  "body-silhouette": 1.18,
+  "gap-ahead": 4.44,
+  "gap-behind": 5.61,
+  "gap-on-plan": 1.83,
+  "heat-0": 1.49,
+  "heat-1": 1.8,
+  "heat-2": 2.28,
+  "heat-3": 3.1,
+  "heat-4": 4.38,
+  "heat-5": 6.76,
+  "heat-glow": 1.87,
+  "volume-maintaining": 2.93,
+  "volume-not-targeted": 1.31,
+  "volume-over": 4.48,
+  "volume-productive": 3.3,
+  "volume-under": 5.61,
+}
+`;
+
 exports[`recorded contrast ratios > should record every text, accent, status and macro colour on each surface in the dark theme 1`] = `
 {
   "accent": {

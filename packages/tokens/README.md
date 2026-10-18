@@ -8,7 +8,7 @@ The values are the Ki-Lo design system's, copied verbatim and never retyped. See
 
 Light-mode colour treatment, accepted by Zee (Q14): the light tokens are not darkened, and light-mode small text is not coloured. The lime `accent` is a fill with `accent-foreground` text on it, never text. Warning, success, danger and macro colours appear as a dot, bar, border or `*-muted` fill, and the words and values stay in `text-primary` or `text-secondary`. So a warning notice's text is `text-primary` in light, and a macro value sits beside a colour dot rather than being coloured text. Keep this in every light story and screen. In dark, coloured text is fine because every pair passes 4.5:1. If an approved frame shows otherwise, the frame wins.
 
-`test/contrast.test.ts` records the WCAG ratio of every text, accent, status and macro colour on `background`, `surface` and `surface-raised` in both themes. It asserts no threshold. A design system edit that moves a ratio shows up as a snapshot diff. Regenerate the snapshot with `pnpm --filter @keylow/tokens exec vitest run -u test/contrast.test.ts` and note the change in the PR.
+`test/contrast.test.ts` records the WCAG ratio of every text, accent, status and macro colour on `background`, `surface` and `surface-raised` in both themes. It asserts no threshold. A design system edit that moves a ratio shows up as a snapshot diff. The body map colours (below) have their own section of that test: it asserts 3:1 on `surface` for the eight that carry a status and records the ratio of every one in the snapshot. Regenerate the snapshot with `pnpm --filter @keylow/tokens exec vitest run -u test/contrast.test.ts` and note the change in the PR.
 
 ## Use
 
@@ -74,6 +74,7 @@ The Tailwind classes do not read this file. They read the `--kl-*` variables fro
 | `motionDuration`, `stagger`, `skeletonDelay`, `pressScale`, `easingCurve`, `motionScale`, `reducedMotion`        | The same motion tokens as numbers, plus what reduce-motion collapses to.              |
 | `springs`, `timings`                                                                                             | The Reanimated spring and timing constants from the design system readme.             |
 | `haptic`                                                                                                         | The haptic token names: `select`, `confirm`, `complete`, `warning`, `error`.          |
+| `bodyMapPalette`                                                                                                 | The body map colours for one theme as concrete strings, for SVG fills.                |
 | `preset`, `themePlugin`, `themeVariables`                                                                        | The Tailwind preset, the plugin, and the variables as data.                           |
 | `controlSizes`, `scaleSteps`                                                                                     | The class names the preset adds for the control sizes and the press scale, as data.   |
 
@@ -85,13 +86,25 @@ The `kl-*` keyframes in `motion.css` are CSS and are not exported.
 
 `scripts/buildTokens.ts` reads them with a small CSS parser and builds the data. `src/source.generated.ts` is that data written out as TypeScript, so the apps never parse CSS at run time. The build throws when the JSON and the CSS disagree, when the light theme lacks a colour or a shadow the dark one has, or when the design adds a token that has no export yet. `test/source.test.ts` fails when the generated file is out of date, and it rebuilds the design's flat JSON from the exports to prove every token is present with its value.
 
-When the design system changes, replace the five files in `src/source/` and run:
+`src/source/training.css` is the exception (see "Body map colours" below). When the design system changes, replace the five design system files in `src/source/` and run:
 
 ```sh
 pnpm --filter @keylow/tokens generate
 ```
 
 then commit the regenerated files with the new snapshot values.
+
+## Body map colours are Ki-Lo training additions, not the design system's
+
+`src/source/training.css` holds the colours of the 2D body map: `body-silhouette` and `body-separator`, the heat scale `heat-0` to `heat-5` with `heat-glow` (step 5 glows), the volume scale `volume-under`, `volume-maintaining`, `volume-productive`, `volume-over` and `volume-not-targeted`, and the gap scale `gap-behind`, `gap-on-plan` and `gap-ahead`. They come from the Ki-Lo training canvas (`kilo-training-proposals-v2.css`, approved on KEY-339), not from the Ki-Lo Design System project, and are kept in their own file so the five design system files stay verbatim. The far-behind and far-ahead gap steps are retired: core has three plan statuses. The build treats them as colours: they are in `colors` and `lightColors`, and so in the preset (`bg-heat-3`, `bg-gap-on-plan`), `themeVariables`, `themePlugin` and `css/kilo-tokens.css`. The build throws when a training token is in one theme only or reuses a design system name.
+
+`bodyMapPalette(scheme)` returns them as concrete colour strings, because `react-native-svg` fills cannot read CSS variables:
+
+```ts
+const { heat, heatGlow, volume, gap, silhouette, separator } = bodyMapPalette("dark");
+```
+
+`gap.notInPlan` is `volume.notTargeted`, as the canvas draws it. In dark, heat steps 3 to 5 differ mostly by hue (adjacent ratios 1.04 to 1.10 on `surface`), so the glow and the numbers in the sheet and the list carry the difference between them. Colour is never the only signal.
 
 ## Spacing and type are the design's steps
 

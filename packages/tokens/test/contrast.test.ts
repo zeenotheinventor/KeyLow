@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import { contrastRatio } from "./support/contrast";
-import { readTokenJson } from "./support/sources";
+import { blendOver } from "./support/contrastRatio";
+import { readTokenJson, trainingTokens } from "./support/sources";
 
 describe("contrastRatio", () => {
   it("should be 21 for black on white and 1 for a colour on itself", () => {
@@ -57,6 +58,53 @@ describe("recorded contrast ratios", () => {
               roundedRatio(theme[foreground] ?? "", theme[background] ?? ""),
             ]),
           ),
+        ]),
+      );
+
+      expect(ratios).toMatchSnapshot();
+    },
+  );
+});
+
+// The body map figure sits on a card, so its colours are read against `surface`. Zee approved the
+// canvas (KEY-339) with the claim that these eight read at 3:1 or more. The other body map colours
+// are meant to recede (the silhouette, rested heat, not targeted, on plan), so they have no threshold.
+const bodyMapColoursAtThreeToOne = [
+  "heat-3",
+  "heat-4",
+  "heat-5",
+  "volume-under",
+  "volume-productive",
+  "volume-over",
+  "gap-behind",
+  "gap-ahead",
+] as const;
+
+const bodyMapRatioOnSurface = (scheme: "dark" | "light", name: string): number => {
+  const surface = readTokenJson()[scheme].surface ?? "";
+  const colour = trainingTokens(scheme)[name] ?? "";
+  // The glow is translucent, so it is read as it looks once drawn over the card.
+  const drawn = colour.startsWith("rgba(") ? blendOver(colour, surface) : colour;
+  return roundedRatio(drawn, surface);
+};
+
+describe("body map colour contrast on the surface", () => {
+  it.each(["dark", "light"] as const)(
+    "should read at 3:1 or more for the figure colours that carry a status in the %s theme",
+    (scheme) => {
+      for (const name of bodyMapColoursAtThreeToOne) {
+        expect(bodyMapRatioOnSurface(scheme, name), name).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+
+  it.each(["dark", "light"] as const)(
+    "should record the ratio of every body map colour in the %s theme, with no threshold for the rest",
+    (scheme) => {
+      const ratios = Object.fromEntries(
+        Object.keys(trainingTokens(scheme)).map((name) => [
+          name,
+          bodyMapRatioOnSurface(scheme, name),
         ]),
       );
 

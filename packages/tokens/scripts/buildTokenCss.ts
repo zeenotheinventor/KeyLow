@@ -32,6 +32,7 @@ export const buildTokenCss = (sources: TokenSourceTexts): string => {
     sources.spacingCss,
     sources.typographyCss,
     sources.motionCss,
+    sources.trainingCss,
   ].map(parseCssScopes);
 
   const reducedMotion = rule(":root", declarationsUnder(stylesheets, reducedMotionSelector), "  ");

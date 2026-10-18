@@ -6,6 +6,8 @@ export type TokenSourceTexts = {
   spacingCss: string;
   typographyCss: string;
   motionCss: string;
+  /** The Ki-Lo training additions from the canvas, kept apart from the design system's files. */
+  trainingCss: string;
 };
 
 type FlatTokens = Record<string, string>;
@@ -136,6 +138,29 @@ const splitFontStack = (value: string): string[] => value.match(/"[^"]*"|[^,]+/g
 const takeColors = (ledger: ReturnType<typeof createLedger>, colorNames: string[]): FlatTokens =>
   Object.fromEntries(colorNames.map((name) => [name, ledger.take(name)]));
 
+/**
+ * The training colours for one theme, by name. They are checked against the design system's colours
+ * and against each other, so a training token can neither shadow a design colour nor exist in one
+ * theme only.
+ */
+const readTrainingColors = (
+  trainingCss: string,
+  designColorNames: string[],
+): { dark: FlatTokens; light: FlatTokens } => {
+  const scopes = parseCssScopes(trainingCss);
+  const dark = customProperties(scopes[darkSelector] ?? {});
+  const light = customProperties(scopes[lightSelector] ?? {});
+  assertSameNames("training colours", dark, light);
+  const shadowed = Object.keys(dark).filter((name) => designColorNames.includes(name));
+  if (shadowed.length > 0) {
+    throw new Error(`The training colours reuse design system names: ${shadowed.join(", ")}`);
+  }
+  return {
+    dark,
+    light: Object.fromEntries(Object.keys(dark).map((name) => [name, light[name] ?? ""])),
+  };
+};
+
 const takeElevation = (ledger: ReturnType<typeof createLedger>): FlatTokens =>
   ledger.takeMatching(/^elevation-(.+)$/);
 
@@ -168,8 +193,10 @@ export const buildTokens = (sources: TokenSourceTexts): Record<string, unknown> 
     throw new Error("colors.css must declare color-scheme for the dark and the light theme");
   }
 
+  const training = readTrainingColors(sources.trainingCss, colorNames);
+
   const darkLedger = createLedger("dark", tokenJson.dark);
-  const colors = takeColors(darkLedger, colorNames);
+  const colors = { ...takeColors(darkLedger, colorNames), ...training.dark };
   const statusBarStyleDark = darkLedger.take(statusBarStyleName);
   const elevationDark = takeElevation(darkLedger);
   const spacing = darkLedger.takeMatching(/^space-(.+)$/);
@@ -229,7 +256,7 @@ export const buildTokens = (sources: TokenSourceTexts): Record<string, unknown> 
   darkLedger.assertEmpty();
 
   const lightLedger = createLedger("light", tokenJson.light);
-  const lightColors = takeColors(lightLedger, colorNames);
+  const lightColors = { ...takeColors(lightLedger, colorNames), ...training.light };
   const statusBarStyleLight = lightLedger.take(statusBarStyleName);
   const elevationLight = takeElevation(lightLedger);
   lightLedger.assertEmpty();
