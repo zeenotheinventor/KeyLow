@@ -1,0 +1,1609 @@
+{
+  "description": "Golden fixture week of KEY-353: made-up sample data, Monday 12 to Sunday 18 October 2026, Europe/London (BST, UTC+1). Every expected value is a literal copied from the Linear document 'Golden fixture week (draft for Zee to agree)', agreed by Zee on 2026-10-18 (projection reading (a), logged replaces planned; weekly sets of the plan week counted Monday to Sunday). Never compute one from the code or its params.",
+  "timeZone": "Europe/London",
+  "weekStart": "2026-10-12",
+  "exercises": [
+    {
+      "sourceRef": "Barbell_Bench_Press_-_Medium_Grip",
+      "id": "00000001-0000-4000-8000-000000000001",
+      "name": "Barbell Bench Press - Medium Grip",
+      "equipment": "barbell",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "chest_lower",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "chest_upper",
+          "role": "secondary",
+          "weight": 0.6
+        },
+        {
+          "muscle_id": "delt_front",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "triceps",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Incline_Dumbbell_Press",
+      "id": "00000001-0000-4000-8000-000000000002",
+      "name": "Incline Dumbbell Press",
+      "equipment": "dumbbell",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "chest_upper",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "chest_lower",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "delt_front",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "triceps",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Seated_Barbell_Military_Press",
+      "id": "00000001-0000-4000-8000-000000000003",
+      "name": "Seated Barbell Military Press",
+      "equipment": "barbell",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "delt_front",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "delt_side",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "triceps",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Side_Lateral_Raise",
+      "id": "00000001-0000-4000-8000-000000000004",
+      "name": "Side Lateral Raise",
+      "equipment": "dumbbell",
+      "mechanic": "isolation",
+      "muscles": [
+        {
+          "muscle_id": "delt_side",
+          "role": "primary",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "sourceRef": "Triceps_Pushdown_-_Rope_Attachment",
+      "id": "00000001-0000-4000-8000-000000000005",
+      "name": "Triceps Pushdown - Rope Attachment",
+      "equipment": "cable",
+      "mechanic": "isolation",
+      "muscles": [
+        {
+          "muscle_id": "triceps",
+          "role": "primary",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "sourceRef": "Pullups",
+      "id": "00000001-0000-4000-8000-000000000006",
+      "name": "Pullups",
+      "equipment": "bodyweight",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "lats",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "traps_mid",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "biceps",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Bent_Over_Barbell_Row",
+      "id": "00000001-0000-4000-8000-000000000007",
+      "name": "Bent Over Barbell Row",
+      "equipment": "barbell",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "lats",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "traps_mid",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "delt_rear",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "biceps",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Wide-Grip_Lat_Pulldown",
+      "id": "00000001-0000-4000-8000-000000000008",
+      "name": "Wide-Grip Lat Pulldown",
+      "equipment": "cable",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "lats",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "delt_rear",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "traps_mid",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "biceps",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Face_Pull",
+      "id": "00000001-0000-4000-8000-000000000009",
+      "name": "Face Pull",
+      "equipment": "cable",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "delt_rear",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "traps_mid",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Barbell_Curl",
+      "id": "00000001-0000-4000-8000-000000000010",
+      "name": "Barbell Curl",
+      "equipment": "barbell",
+      "mechanic": "isolation",
+      "muscles": [
+        {
+          "muscle_id": "biceps",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "forearms",
+          "role": "secondary",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "sourceRef": "Barbell_Squat",
+      "id": "00000001-0000-4000-8000-000000000011",
+      "name": "Barbell Squat",
+      "equipment": "barbell",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "quads",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "glute_max",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "hamstrings",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "lower_back",
+          "role": "stabiliser",
+          "weight": 0.2
+        },
+        {
+          "muscle_id": "calves",
+          "role": "stabiliser",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "sourceRef": "Romanian_Deadlift",
+      "id": "00000001-0000-4000-8000-000000000012",
+      "name": "Romanian Deadlift",
+      "equipment": "barbell",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "hamstrings",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "lower_back",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "glute_max",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "calves",
+          "role": "stabiliser",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "sourceRef": "Leg_Press",
+      "id": "00000001-0000-4000-8000-000000000013",
+      "name": "Leg Press",
+      "equipment": "machine",
+      "mechanic": "compound",
+      "muscles": [
+        {
+          "muscle_id": "quads",
+          "role": "primary",
+          "weight": 1
+        },
+        {
+          "muscle_id": "glute_max",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "hamstrings",
+          "role": "secondary",
+          "weight": 0.5
+        },
+        {
+          "muscle_id": "calves",
+          "role": "stabiliser",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "sourceRef": "Seated_Leg_Curl",
+      "id": "00000001-0000-4000-8000-000000000014",
+      "name": "Seated Leg Curl",
+      "equipment": "machine",
+      "mechanic": "isolation",
+      "muscles": [
+        {
+          "muscle_id": "hamstrings",
+          "role": "primary",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "sourceRef": "Standing_Calf_Raises",
+      "id": "00000001-0000-4000-8000-000000000015",
+      "name": "Standing Calf Raises",
+      "equipment": "machine",
+      "mechanic": "isolation",
+      "muscles": [
+        {
+          "muscle_id": "calves",
+          "role": "primary",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "routine": {
+    "name": "Push Pull Legs",
+    "days": [
+      {
+        "id": "00000003-0000-4000-8000-000000000001",
+        "name": "Push",
+        "position": 0,
+        "weekday": 0,
+        "exercises": [
+          {
+            "id": "00000002-0000-4000-8000-000000000001",
+            "position": 0,
+            "exercise": "Barbell_Bench_Press_-_Medium_Grip",
+            "targetSets": 3,
+            "targetRepsMin": 6,
+            "targetRepsMax": 8,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000002",
+            "position": 1,
+            "exercise": "Incline_Dumbbell_Press",
+            "targetSets": 3,
+            "targetRepsMin": 8,
+            "targetRepsMax": 10,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000003",
+            "position": 2,
+            "exercise": "Seated_Barbell_Military_Press",
+            "targetSets": 3,
+            "targetRepsMin": 6,
+            "targetRepsMax": 8,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000004",
+            "position": 3,
+            "exercise": "Side_Lateral_Raise",
+            "targetSets": 4,
+            "targetRepsMin": 12,
+            "targetRepsMax": 15,
+            "targetRir": 1
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000005",
+            "position": 4,
+            "exercise": "Triceps_Pushdown_-_Rope_Attachment",
+            "targetSets": 3,
+            "targetRepsMin": 10,
+            "targetRepsMax": 12,
+            "targetRir": 1
+          }
+        ]
+      },
+      {
+        "id": "00000003-0000-4000-8000-000000000002",
+        "name": "Pull",
+        "position": 1,
+        "weekday": 1,
+        "exercises": [
+          {
+            "id": "00000002-0000-4000-8000-000000000006",
+            "position": 0,
+            "exercise": "Pullups",
+            "targetSets": 3,
+            "targetRepsMin": 6,
+            "targetRepsMax": 10,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000007",
+            "position": 1,
+            "exercise": "Bent_Over_Barbell_Row",
+            "targetSets": 3,
+            "targetRepsMin": 8,
+            "targetRepsMax": 10,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000008",
+            "position": 2,
+            "exercise": "Wide-Grip_Lat_Pulldown",
+            "targetSets": 3,
+            "targetRepsMin": 10,
+            "targetRepsMax": 12,
+            "targetRir": 1
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000009",
+            "position": 3,
+            "exercise": "Face_Pull",
+            "targetSets": 3,
+            "targetRepsMin": 15,
+            "targetRepsMax": 20,
+            "targetRir": 4
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000010",
+            "position": 4,
+            "exercise": "Barbell_Curl",
+            "targetSets": 3,
+            "targetRepsMin": 8,
+            "targetRepsMax": 12,
+            "targetRir": 1
+          }
+        ]
+      },
+      {
+        "id": "00000003-0000-4000-8000-000000000003",
+        "name": "Legs",
+        "position": 2,
+        "weekday": 3,
+        "exercises": [
+          {
+            "id": "00000002-0000-4000-8000-000000000011",
+            "position": 0,
+            "exercise": "Barbell_Squat",
+            "targetSets": 3,
+            "targetRepsMin": 5,
+            "targetRepsMax": 8,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000012",
+            "position": 1,
+            "exercise": "Romanian_Deadlift",
+            "targetSets": 3,
+            "targetRepsMin": 8,
+            "targetRepsMax": 10,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000013",
+            "position": 2,
+            "exercise": "Leg_Press",
+            "targetSets": 3,
+            "targetRepsMin": 10,
+            "targetRepsMax": 12,
+            "targetRir": 1
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000014",
+            "position": 3,
+            "exercise": "Seated_Leg_Curl",
+            "targetSets": 3,
+            "targetRepsMin": 10,
+            "targetRepsMax": 12,
+            "targetRir": 1
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000015",
+            "position": 4,
+            "exercise": "Standing_Calf_Raises",
+            "targetSets": 4,
+            "targetRepsMin": 10,
+            "targetRepsMax": 15,
+            "targetRir": 1
+          }
+        ]
+      },
+      {
+        "id": "00000003-0000-4000-8000-000000000004",
+        "name": "Push",
+        "position": 3,
+        "weekday": 5,
+        "exercises": [
+          {
+            "id": "00000002-0000-4000-8000-000000000016",
+            "position": 0,
+            "exercise": "Barbell_Bench_Press_-_Medium_Grip",
+            "targetSets": 3,
+            "targetRepsMin": 6,
+            "targetRepsMax": 8,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000017",
+            "position": 1,
+            "exercise": "Incline_Dumbbell_Press",
+            "targetSets": 3,
+            "targetRepsMin": 8,
+            "targetRepsMax": 10,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000018",
+            "position": 2,
+            "exercise": "Seated_Barbell_Military_Press",
+            "targetSets": 3,
+            "targetRepsMin": 6,
+            "targetRepsMax": 8,
+            "targetRir": 2
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000019",
+            "position": 3,
+            "exercise": "Side_Lateral_Raise",
+            "targetSets": 4,
+            "targetRepsMin": 12,
+            "targetRepsMax": 15,
+            "targetRir": 1
+          },
+          {
+            "id": "00000002-0000-4000-8000-000000000020",
+            "position": 4,
+            "exercise": "Triceps_Pushdown_-_Rope_Attachment",
+            "targetSets": 3,
+            "targetRepsMin": 10,
+            "targetRepsMax": 12,
+            "targetRir": 1
+          }
+        ]
+      }
+    ]
+  },
+  "sessions": [
+    {
+      "id": "00000004-0000-4000-8000-000000000001",
+      "localDate": "2026-10-12",
+      "startedAt": "2026-10-12T18:00:00+01:00",
+      "endedAt": "2026-10-12T18:48:00+01:00",
+      "routineDayId": "00000003-0000-4000-8000-000000000001"
+    },
+    {
+      "id": "00000004-0000-4000-8000-000000000002",
+      "localDate": "2026-10-13",
+      "startedAt": "2026-10-13T18:00:00+01:00",
+      "endedAt": "2026-10-13T18:51:00+01:00",
+      "routineDayId": "00000003-0000-4000-8000-000000000002"
+    },
+    {
+      "id": "00000004-0000-4000-8000-000000000003",
+      "localDate": "2026-10-15",
+      "startedAt": "2026-10-15T18:30:00+01:00",
+      "endedAt": null,
+      "routineDayId": "00000003-0000-4000-8000-000000000003"
+    }
+  ],
+  "sets": [
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Barbell_Bench_Press_-_Medium_Grip",
+      "setType": "warmup",
+      "reps": 10,
+      "loadKg": 40,
+      "rir": null,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:00:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Barbell_Bench_Press_-_Medium_Grip",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": 80,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:03:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Barbell_Bench_Press_-_Medium_Grip",
+      "setType": "working",
+      "reps": 7,
+      "loadKg": 80,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:06:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Barbell_Bench_Press_-_Medium_Grip",
+      "setType": "working",
+      "reps": 6,
+      "loadKg": 80,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:09:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Incline_Dumbbell_Press",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 30,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:12:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Incline_Dumbbell_Press",
+      "setType": "working",
+      "reps": 9,
+      "loadKg": 30,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:15:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Incline_Dumbbell_Press",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": 30,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:18:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Seated_Barbell_Military_Press",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": 50,
+      "rir": null,
+      "rpe": 8,
+      "performedAt": "2026-10-12T18:21:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Seated_Barbell_Military_Press",
+      "setType": "working",
+      "reps": 7,
+      "loadKg": 50,
+      "rir": null,
+      "rpe": 8,
+      "performedAt": "2026-10-12T18:24:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Seated_Barbell_Military_Press",
+      "setType": "working",
+      "reps": 6,
+      "loadKg": 50,
+      "rir": null,
+      "rpe": 8,
+      "performedAt": "2026-10-12T18:27:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Side_Lateral_Raise",
+      "setType": "working",
+      "reps": 15,
+      "loadKg": 10,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:30:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Side_Lateral_Raise",
+      "setType": "working",
+      "reps": 14,
+      "loadKg": 10,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:33:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Side_Lateral_Raise",
+      "setType": "working",
+      "reps": 13,
+      "loadKg": 10,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:36:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Side_Lateral_Raise",
+      "setType": "working",
+      "reps": 12,
+      "loadKg": 10,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:39:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Triceps_Pushdown_-_Rope_Attachment",
+      "setType": "working",
+      "reps": 12,
+      "loadKg": 25,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:42:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Triceps_Pushdown_-_Rope_Attachment",
+      "setType": "working",
+      "reps": 11,
+      "loadKg": 25,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:45:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000001",
+      "exercise": "Triceps_Pushdown_-_Rope_Attachment",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 25,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-12T18:48:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Pullups",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": null,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:00:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Pullups",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": null,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:03:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Pullups",
+      "setType": "working",
+      "reps": 7,
+      "loadKg": null,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:06:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Bent_Over_Barbell_Row",
+      "setType": "warmup",
+      "reps": 10,
+      "loadKg": 40,
+      "rir": null,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:09:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Bent_Over_Barbell_Row",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 70,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:12:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Bent_Over_Barbell_Row",
+      "setType": "working",
+      "reps": 9,
+      "loadKg": 70,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:15:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Bent_Over_Barbell_Row",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": 70,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:18:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Wide-Grip_Lat_Pulldown",
+      "setType": "working",
+      "reps": 12,
+      "loadKg": 60,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:21:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Wide-Grip_Lat_Pulldown",
+      "setType": "working",
+      "reps": 11,
+      "loadKg": 60,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:24:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Wide-Grip_Lat_Pulldown",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 60,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:27:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Wide-Grip_Lat_Pulldown",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 60,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:30:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Wide-Grip_Lat_Pulldown",
+      "setType": "working",
+      "reps": 9,
+      "loadKg": 60,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:33:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Face_Pull",
+      "setType": "working",
+      "reps": 20,
+      "loadKg": 20,
+      "rir": 4,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:36:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Face_Pull",
+      "setType": "working",
+      "reps": 18,
+      "loadKg": 20,
+      "rir": 4,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:39:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Face_Pull",
+      "setType": "working",
+      "reps": 15,
+      "loadKg": 20,
+      "rir": 4,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:42:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Barbell_Curl",
+      "setType": "working",
+      "reps": 12,
+      "loadKg": 30,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:45:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Barbell_Curl",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 30,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:48:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000002",
+      "exercise": "Barbell_Curl",
+      "setType": "working",
+      "reps": 9,
+      "loadKg": 30,
+      "rir": null,
+      "rpe": null,
+      "performedAt": "2026-10-13T18:51:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Barbell_Squat",
+      "setType": "warmup",
+      "reps": 8,
+      "loadKg": 60,
+      "rir": null,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:30:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Barbell_Squat",
+      "setType": "warmup",
+      "reps": 5,
+      "loadKg": 80,
+      "rir": null,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:33:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Barbell_Squat",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": 100,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:36:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Barbell_Squat",
+      "setType": "working",
+      "reps": 7,
+      "loadKg": 100,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:39:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Barbell_Squat",
+      "setType": "working",
+      "reps": 6,
+      "loadKg": 100,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:42:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Romanian_Deadlift",
+      "setType": "working",
+      "reps": 10,
+      "loadKg": 90,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:45:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Romanian_Deadlift",
+      "setType": "working",
+      "reps": 9,
+      "loadKg": 90,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:48:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Romanian_Deadlift",
+      "setType": "working",
+      "reps": 8,
+      "loadKg": 90,
+      "rir": 2,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:51:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Leg_Press",
+      "setType": "working",
+      "reps": 12,
+      "loadKg": 180,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:54:00+01:00"
+    },
+    {
+      "sessionId": "00000004-0000-4000-8000-000000000003",
+      "exercise": "Leg_Press",
+      "setType": "working",
+      "reps": 11,
+      "loadKg": 180,
+      "rir": 1,
+      "rpe": null,
+      "performedAt": "2026-10-15T18:57:00+01:00"
+    }
+  ],
+  "expected": {
+    "moments": [
+      {
+        "label": "Tuesday 13 October 20:00",
+        "now": "2026-10-13T20:00:00+01:00",
+        "muscles": {
+          "chest_upper": {
+            "heat": 0.2143,
+            "readyAt": "now",
+            "weeklySets": 4.8,
+            "volumeStatus": "under"
+          },
+          "chest_lower": {
+            "heat": 0.2006,
+            "readyAt": "now",
+            "weeklySets": 4.5,
+            "volumeStatus": "under"
+          },
+          "delt_front": {
+            "heat": 0.2569,
+            "readyAt": "2026-10-13T20:39:00+01:00",
+            "weeklySets": 6,
+            "volumeStatus": "maintaining"
+          },
+          "delt_side": {
+            "heat": 0.2379,
+            "readyAt": "now",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "delt_rear": {
+            "heat": 0.6445,
+            "readyAt": "2026-10-14T18:44:00+01:00",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "lats": {
+            "heat": 1,
+            "readyAt": "2026-10-15T17:42:00+01:00",
+            "weeklySets": 11,
+            "volumeStatus": "maintaining"
+          },
+          "traps_upper": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "traps_mid": {
+            "heat": 0.7352,
+            "readyAt": "2026-10-15T06:31:00+01:00",
+            "weeklySets": 7.75,
+            "volumeStatus": "under"
+          },
+          "lower_back": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "biceps": {
+            "heat": 0.9969,
+            "readyAt": "2026-10-15T05:12:00+01:00",
+            "weeklySets": 8.5,
+            "volumeStatus": "maintaining"
+          },
+          "triceps": {
+            "heat": 0.3233,
+            "readyAt": "2026-10-14T02:10:00+01:00",
+            "weeklySets": 7.5,
+            "volumeStatus": "maintaining"
+          },
+          "forearms": {
+            "heat": 0.1784,
+            "readyAt": "now",
+            "weeklySets": 1.5,
+            "volumeStatus": "under"
+          },
+          "abs": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "obliques": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "glute_max": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "glute_med": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "quads": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "hamstrings": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "adductors": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "calves": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "tibialis": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "neck": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          }
+        }
+      },
+      {
+        "label": "Thursday 15 October 08:00",
+        "now": "2026-10-15T08:00:00+01:00",
+        "muscles": {
+          "chest_upper": {
+            "heat": 0.0696,
+            "readyAt": "now",
+            "weeklySets": 4.8,
+            "volumeStatus": "under"
+          },
+          "chest_lower": {
+            "heat": 0.0651,
+            "readyAt": "now",
+            "weeklySets": 4.5,
+            "volumeStatus": "under"
+          },
+          "delt_front": {
+            "heat": 0.0573,
+            "readyAt": "now",
+            "weeklySets": 6,
+            "volumeStatus": "maintaining"
+          },
+          "delt_side": {
+            "heat": 0.0531,
+            "readyAt": "now",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "delt_rear": {
+            "heat": 0.1438,
+            "readyAt": "now",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "lats": {
+            "heat": 0.3385,
+            "readyAt": "2026-10-15T17:42:00+01:00",
+            "weeklySets": 11,
+            "volumeStatus": "maintaining"
+          },
+          "traps_upper": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "traps_mid": {
+            "heat": 0.2387,
+            "readyAt": "now",
+            "weeklySets": 7.75,
+            "volumeStatus": "under"
+          },
+          "lower_back": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "biceps": {
+            "heat": 0.2224,
+            "readyAt": "now",
+            "weeklySets": 8.5,
+            "volumeStatus": "maintaining"
+          },
+          "triceps": {
+            "heat": 0.0721,
+            "readyAt": "now",
+            "weeklySets": 7.5,
+            "volumeStatus": "maintaining"
+          },
+          "forearms": {
+            "heat": 0.0398,
+            "readyAt": "now",
+            "weeklySets": 1.5,
+            "volumeStatus": "under"
+          },
+          "abs": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "obliques": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "glute_max": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "glute_med": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "quads": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "hamstrings": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "adductors": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "calves": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "tibialis": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "neck": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          }
+        }
+      },
+      {
+        "label": "Sunday 18 October 20:00",
+        "now": "2026-10-18T20:00:00+01:00",
+        "muscles": {
+          "chest_upper": {
+            "heat": 0.005,
+            "readyAt": "now",
+            "weeklySets": 4.8,
+            "volumeStatus": "under"
+          },
+          "chest_lower": {
+            "heat": 0.0047,
+            "readyAt": "now",
+            "weeklySets": 4.5,
+            "volumeStatus": "under"
+          },
+          "delt_front": {
+            "heat": 0.0017,
+            "readyAt": "now",
+            "weeklySets": 6,
+            "volumeStatus": "maintaining"
+          },
+          "delt_side": {
+            "heat": 0.0016,
+            "readyAt": "now",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "delt_rear": {
+            "heat": 0.0043,
+            "readyAt": "now",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "lats": {
+            "heat": 0.0245,
+            "readyAt": "now",
+            "weeklySets": 11,
+            "volumeStatus": "maintaining"
+          },
+          "traps_upper": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "traps_mid": {
+            "heat": 0.0173,
+            "readyAt": "now",
+            "weeklySets": 7.75,
+            "volumeStatus": "under"
+          },
+          "lower_back": {
+            "heat": 0.0337,
+            "readyAt": "now",
+            "weeklySets": 2.1,
+            "volumeStatus": "under"
+          },
+          "biceps": {
+            "heat": 0.0067,
+            "readyAt": "now",
+            "weeklySets": 8.5,
+            "volumeStatus": "maintaining"
+          },
+          "triceps": {
+            "heat": 0.0022,
+            "readyAt": "now",
+            "weeklySets": 7.5,
+            "volumeStatus": "maintaining"
+          },
+          "forearms": {
+            "heat": 0.0012,
+            "readyAt": "now",
+            "weeklySets": 1.5,
+            "volumeStatus": "under"
+          },
+          "abs": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "obliques": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "glute_max": {
+            "heat": 0.0641,
+            "readyAt": "now",
+            "weeklySets": 4,
+            "volumeStatus": "under"
+          },
+          "glute_med": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "quads": {
+            "heat": 0.0801,
+            "readyAt": "now",
+            "weeklySets": 5,
+            "volumeStatus": "under"
+          },
+          "hamstrings": {
+            "heat": 0.0882,
+            "readyAt": "now",
+            "weeklySets": 5.5,
+            "volumeStatus": "under"
+          },
+          "adductors": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "calves": {
+            "heat": 0.0095,
+            "readyAt": "now",
+            "weeklySets": 1.6,
+            "volumeStatus": "under"
+          },
+          "tibialis": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          },
+          "neck": {
+            "heat": 0,
+            "readyAt": "now",
+            "weeklySets": 0,
+            "volumeStatus": "under"
+          }
+        }
+      }
+    ],
+    "planWeek": {
+      "asOf": "2026-10-18T20:00:00+01:00",
+      "muscles": {
+        "chest_upper": {
+          "actualWeeklySets": 4.8,
+          "projectedWeeklySets": 9.6,
+          "gap": -4.8,
+          "status": "behind"
+        },
+        "chest_lower": {
+          "actualWeeklySets": 4.5,
+          "projectedWeeklySets": 9,
+          "gap": -4.5,
+          "status": "behind"
+        },
+        "delt_front": {
+          "actualWeeklySets": 6,
+          "projectedWeeklySets": 12,
+          "gap": -6,
+          "status": "behind"
+        },
+        "delt_side": {
+          "actualWeeklySets": 5.5,
+          "projectedWeeklySets": 11,
+          "gap": -5.5,
+          "status": "behind"
+        },
+        "delt_rear": {
+          "actualWeeklySets": 5.5,
+          "projectedWeeklySets": 5.5,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "lats": {
+          "actualWeeklySets": 11,
+          "projectedWeeklySets": 11,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "traps_upper": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "traps_mid": {
+          "actualWeeklySets": 7.75,
+          "projectedWeeklySets": 7.75,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "lower_back": {
+          "actualWeeklySets": 2.1,
+          "projectedWeeklySets": 2.1,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "biceps": {
+          "actualWeeklySets": 8.5,
+          "projectedWeeklySets": 8.5,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "triceps": {
+          "actualWeeklySets": 7.5,
+          "projectedWeeklySets": 15,
+          "gap": -7.5,
+          "status": "behind"
+        },
+        "forearms": {
+          "actualWeeklySets": 1.5,
+          "projectedWeeklySets": 1.5,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "abs": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "obliques": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "glute_max": {
+          "actualWeeklySets": 4,
+          "projectedWeeklySets": 4,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "glute_med": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "quads": {
+          "actualWeeklySets": 5,
+          "projectedWeeklySets": 5,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "hamstrings": {
+          "actualWeeklySets": 5.5,
+          "projectedWeeklySets": 5.5,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "adductors": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "calves": {
+          "actualWeeklySets": 1.6,
+          "projectedWeeklySets": 1.6,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "tibialis": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        },
+        "neck": {
+          "actualWeeklySets": 0,
+          "projectedWeeklySets": 0,
+          "gap": 0,
+          "status": "on_plan"
+        }
+      },
+      "totals": {
+        "actualWeeklySets": 80.75,
+        "projectedWeeklySets": 109.05,
+        "gap": -28.3
+      }
+    }
+  }
+}
