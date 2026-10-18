@@ -211,3 +211,13 @@ export type {
   WeekSession,
   WeekSet,
 } from "./weekPlanDays";
+
+export { planProgress, sessionClock, sessionMuscleSets } from "./sessionProgress";
+export type {
+  ExerciseProgress,
+  MuscleSessionSets,
+  PlanProgress,
+  ProgressSet,
+} from "./sessionProgress";
+export { prefillNextSet, sameAgain } from "./prefill";
+export type { LastPerformanceSet, PrefillSessionSet, SetPrefill } from "./prefill";
