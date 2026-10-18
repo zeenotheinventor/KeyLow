@@ -30,6 +30,28 @@ export const keys = {
     search: (q: string, archived = false) => ["recipes", "search", q, archived] as const,
   },
   /**
+   * The training reads. Unlike `recipes` and `weighIns`, these are persisted on mobile: the mobile app
+   * keeps each family below by its prefix (`setsAll`, `activeRoutine`, `weekSessionsAll`), so heat, the
+   * plan and the week open without a connection. Nothing here is a search, and any search added later
+   * (exercises by text) must not sit under these prefixes. A key holds dates and fixed words only,
+   * never a set value, a load or a muscle. What is stored is rows: heat, volume and the comparison are
+   * worked out from them at read time, so they are never stale. Every key sits under `["training"]`.
+   * `windowStart` and `weekStart` are `YYYY-MM-DD`, and `weekStart` is the Monday.
+   */
+  training: {
+    all: ["training"] as const,
+    /** The prefix of every `sets` key. */
+    setsAll: ["training", "sets"] as const,
+    /** The live sets from `windowStart` on, to the end of the day they were read. Keyed by the day, never by a time. */
+    sets: (windowStart: string) => ["training", "sets", windowStart] as const,
+    /** The active routine with its days, exercises and muscle maps, or null when there is none. */
+    activeRoutine: ["training", "active-routine"] as const,
+    /** The prefix of every `weekSessions` key. */
+    weekSessionsAll: ["training", "week-sessions"] as const,
+    /** The live sessions of the week that starts on `weekStart`, each with its live sets. */
+    weekSessions: (weekStart: string) => ["training", "week-sessions", weekStart] as const,
+  },
+  /**
    * The weigh-in reads. A family of its own, outside `diary`, and not in the list a persisted cache keeps,
    * so no weigh-in is stored on the device by the diary cache. The trend is derived from `list` and has
    * no key. Every key sits under `["weigh-ins"]`, so one invalidation of `keys.weighIns.all` refreshes

@@ -157,3 +157,7 @@ export {
   updateWeighIn,
 } from "./repos";
 export type { ImportResult, WeighIn, WeighInChange } from "./repos";
+export { useMuscleState, useWeekComparison } from "./hooks";
+export type { TrainingReadResult } from "./hooks";
+export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./repos";
+export type { ActiveRoutine, TrainingSet, WeekSession } from "./repos";

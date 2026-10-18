@@ -162,3 +162,57 @@ describe("keys.weighIns", () => {
     expect(keys.weighIns.list.slice(0, 1)).toEqual(keys.weighIns.all);
   });
 });
+
+describe("keys.training", () => {
+  it("should expose the training root key", () => {
+    expect(keys.training.all).toEqual(["training"]);
+  });
+
+  it("should key the sets by the first day of their window and nothing else", () => {
+    expect(keys.training.sets("2026-10-03")).toEqual(["training", "sets", "2026-10-03"]);
+  });
+
+  it("should expose the active routine key", () => {
+    expect(keys.training.activeRoutine).toEqual(["training", "active-routine"]);
+  });
+
+  it("should key a week's sessions by the Monday", () => {
+    expect(keys.training.weekSessions("2026-10-12")).toEqual([
+      "training",
+      "week-sessions",
+      "2026-10-12",
+    ]);
+  });
+
+  it("should expose the prefix of every sets key and of every week sessions key, for a persisted list", () => {
+    expect(keys.training.setsAll).toEqual(["training", "sets"]);
+    expect(keys.training.weekSessionsAll).toEqual(["training", "week-sessions"]);
+    expect(keys.training.sets("2026-10-03").slice(0, 2)).toEqual(keys.training.setsAll);
+    expect(keys.training.weekSessions("2026-10-12").slice(0, 2)).toEqual(
+      keys.training.weekSessionsAll,
+    );
+  });
+
+  it("should nest every training key under the training root so one invalidation covers them all", () => {
+    for (const key of [
+      keys.training.sets("2026-10-03"),
+      keys.training.activeRoutine,
+      keys.training.weekSessions("2026-10-12"),
+    ]) {
+      expect(key.slice(0, 1)).toEqual(keys.training.all);
+    }
+  });
+
+  it("should hold dates and fixed words only, so no key carries a set value, a load or a muscle", () => {
+    const words = /^(training|sets|active-routine|week-sessions|\d{4}-\d{2}-\d{2})$/;
+    for (const key of [
+      keys.training.sets("2026-10-03"),
+      keys.training.activeRoutine,
+      keys.training.weekSessions("2026-10-12"),
+    ]) {
+      for (const part of key) {
+        expect(part).toMatch(words);
+      }
+    }
+  });
+});

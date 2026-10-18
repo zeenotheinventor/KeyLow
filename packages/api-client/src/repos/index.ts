@@ -68,3 +68,5 @@ export {
 } from "./weighIns";
 export type { ImportResult, WeighInChange } from "./weighIns";
 export type { WeighIn } from "./weighInSchemas";
+export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./training";
+export type { ActiveRoutine, TrainingSet, WeekSession } from "./trainingSchemas";
