@@ -453,7 +453,7 @@ Training logs are health data under the project's Working conventions. No exerci
 
 There is still no data export and no in-app account deletion (M7, KEY-7). The contract M7 will use:
 
-- **Export:** every column of the user's rows in `exercises` (their own, `source = 'user'`), `exercise_muscles` (their own), `workout_sessions`, `workout_sets` (including `snapshot`), `routines`, `routine_days`, `routine_exercises` and `training_goals` (every row, current and past). Global exercises are not exported; the user's sets carry the snapshot of each exercise they used.
+- **Export:** every column of the user's rows in `exercises` (their own, `source = 'user'`), `exercise_muscles` (their own), `workout_sessions`, `workout_sets` (including `snapshot`), `routines`, `routine_days`, `routine_exercises`, `training_goals` (every row, current and past) and `accepted_suggestions` (every row, live and soft deleted, Amendment 4). Global exercises are not exported; the user's sets carry the snapshot of each exercise they used.
 - **Deletion:** the `on delete cascade` foreign keys from `auth.users` on every user table. It needs no code, and KEY-348 proves it with a user who has sessions, sets, routines, goals and custom exercises.
 - **Privacy Policy:** `packages/core/src/copy/legal.ts` lists workouts, routines and training goals as data Ki-Lo holds and as health data, and the Terms cover training (KEY-379, with `TERMS_VERSION` bumped so every user accepts once, Zee 2026-10-18). This landed before any client can store a session.
 
@@ -512,3 +512,61 @@ Zee ruled on 2026-10-18 (KEY-386, `20261018170000_workout_sessions_one_open_per_
 ### Implemented by
 
 - KEY-386, migration 4: `workout_sessions_one_open_per_user`, the backfill that ends older duplicates at their last live set or their start, its pgTAP (`workout_sessions_one_open.test.sql`) and the session writes of `@keylow/api-client`.
+
+## Amendment 4 (T5: accepted suggestions, 2026-10-18)
+
+### Status
+
+Recorded on 2026-10-18 under KEY-397, the fifth training migration (`20261018180000_accepted_suggestions.sql`). It adds one table with its indexes, grants and policies, and changes no table, grant, policy, function or row that exists. It adds to Amendment 1's "Tables", "Privileges and row level security" and "Export and account deletion" and overrides nothing in them. Zee decided on 2026-10-18 that an accepted suggestion is a table of its own and not an edit of the routine (KEY-397), and that an accepted suggestion counts as planned (KEY-339), the canvas showing "Add to Thursday" with an Undo. "Projected against actual" already says that suggestions accepted into a day count as planned, and `projectWeek` in core has taken them as the typed input `acceptedSuggestions` since T3, but no table stored one.
+
+### Why a table of its own
+
+Writing the added sets into `routine_exercises` would change the user's routine for every week, and an accepted suggestion is for one day and can be undone. A row here says "on this date, this was added", leaves the routine as it is, and is gone from the projection when it is soft deleted.
+
+### `accepted_suggestions`
+
+| Column           | Definition                                                                                                                                                                                                                                                                                |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_id`        | `uuid not null default auth.uid() references auth.users (id) on delete cascade`.                                                                                                                                                                                                          |
+| `local_date`     | `date not null`, the day the suggestion was accepted into, in the user's zone, as `food_log_entries.local_date` is.                                                                                                                                                                       |
+| `routine_day_id` | `uuid references public.routine_days (id) on delete set null`, nullable. The routine day it was folded into, null when it stands alone. Removing the day from the routine clears the link and keeps the row. A plain index serves the set null.                                           |
+| `exercises`      | `jsonb not null`, an array of 1 to 30 objects: the planned exercises with their target sets, rep range, target RIR and a set snapshot each. Core owns the shape (`acceptedSuggestionSchema`, KEY-402), so the table checks only the array, its length and that each element is an object. |
+| `reasons`        | `jsonb not null`, an object: the reasons as data (muscle ids and the numbers behind them), so a suggestion the user took keeps its reasons when the goal changes. The table checks only that it is an object.                                                                             |
+| `params_version` | `text not null`, the training params version the suggestion was made with, as `training_goals.params_version` is.                                                                                                                                                                         |
+| `deleted_at`     | `timestamptz`, nullable. Undo and an accept over an earlier suggestion soft delete the row, so a mistake can be undone like a diary entry.                                                                                                                                                |
+
+It has the conventions' `id` and `created_at` and no `updated_at`.
+
+Checks, each breaking on one rule only so that the constraint name in a refusal states it: `accepted_suggestions_exercises_is_array`, `accepted_suggestions_exercises_count_check` (1 to 30 elements), `accepted_suggestions_exercises_are_objects` and `accepted_suggestions_reasons_is_object`. The two that read the array pass a value that is not an array, which the first refuses. The element check uses a strict path, because the default lax mode unwraps an array inside the array and would let `[[{}]]` through.
+
+Indexes:
+
+- `accepted_suggestions_one_live_per_user_day`: unique on `(user_id, local_date) where deleted_at is null`. A user has at most one live accepted suggestion for a day. Accepting again for the same day, or after an Undo, replaces by soft deleting the old row first in the client, and the index refuses a second live row however it is written, with `23505`. It also refuses restoring a deleted row while another is live for the day.
+- `accepted_suggestions_user_id_local_date_idx` on `(user_id, local_date)`. The partial index above holds live rows only, so it cannot serve a read of a day's undone rows or the cascade from `auth.users`, which looks up `user_id` over every row. `training_goals` has its second index for the same reason.
+- `accepted_suggestions_routine_day_id_idx` on `(routine_day_id)`, for the set null.
+
+### Privileges and row level security
+
+`anon` and `service_role` get nothing, because nothing server side reads the table yet and the M7 export grants what it needs then. `authenticated` gets `select`; `insert (user_id, local_date, routine_day_id, exercises, reasons, params_version)`; and `update (deleted_at)`. No `delete`. A suggestion never moves to another day, user or planned day, and its exercises, reasons and params version are never rewritten: it is undone and restored, or replaced by a new row.
+
+Policies, all for `authenticated`:
+
+- `accepted_suggestions_select_own`: using `user_id = (select auth.uid())`.
+- `accepted_suggestions_insert_own`: with check `user_id = (select auth.uid())`, and, when `routine_day_id` is set, that the day is the caller's (`exists (select 1 from public.routine_days d where d.id = accepted_suggestions.routine_day_id)`, which runs under the owner-only `routine_days` policy), as `workout_sessions_insert_own` does. A day that does not exist fails the same way as one that is not the caller's.
+- `accepted_suggestions_update_own`: using and with check `user_id = (select auth.uid())`.
+
+pgTAP (`accepted_suggestions.test.sql`) asserts the exact columns, types and checks, every bound just outside and at the edge, the exact privilege set per role, the policies, the owner-only rule in both directions, the partial unique index, the set null and the account deletion.
+
+### Health data
+
+An accepted suggestion shows how a person trains, so it is health data under Amendment 1's "Health data". No suggestion content, exercise name or muscle value appears in a log, an error report or an analytics event, only ids and counts. The checks name the rule and never quote a value, and no client reads, logs or reports the message or detail of a database error from a training write.
+
+### Export and account deletion
+
+`accepted_suggestions` is in the M7 export: every column of the user's rows, live and soft deleted. It cascades from `auth.users` with the other user tables, so account deletion needs no code, and the pgTAP file proves it with a user who has a live and a soft deleted row and a routine day.
+
+### Implemented by
+
+- KEY-397, migration 5: `accepted_suggestions`, its checks, indexes, grants and policies, its pgTAP (`accepted_suggestions.test.sql`) and the regenerated `packages/db/src/types.gen.ts`.
+- KEY-402, core: `acceptedSuggestionSchema`, the shape of `exercises` and `reasons`.
+- KEY-406, the accepted-suggestions api-client.

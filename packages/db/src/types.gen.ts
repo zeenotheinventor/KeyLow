@@ -28,6 +28,50 @@ export type Database = {
   };
   public: {
     Tables: {
+      accepted_suggestions: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          exercises: Json;
+          id: string;
+          local_date: string;
+          params_version: string;
+          reasons: Json;
+          routine_day_id: string | null;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          exercises: Json;
+          id?: string;
+          local_date: string;
+          params_version: string;
+          reasons: Json;
+          routine_day_id?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          exercises?: Json;
+          id?: string;
+          local_date?: string;
+          params_version?: string;
+          reasons?: Json;
+          routine_day_id?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "accepted_suggestions_routine_day_id_fkey";
+            columns: ["routine_day_id"];
+            isOneToOne: false;
+            referencedRelation: "routine_days";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       day_logs: {
         Row: {
           completed_at: string | null;
