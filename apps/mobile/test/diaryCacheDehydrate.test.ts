@@ -51,6 +51,30 @@ describe("which queries are stored when the diary cache is saved", () => {
     ]);
   });
 
+  it("should store every session read and the session in progress, and never the last performance", () => {
+    const { read, storedKeys } = createCache();
+    const first = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const second = "bbbbbbbb-bbbb-4bbb-8bbb-cccccccccccc";
+    read(keys.training.session(first), 100);
+    read(keys.training.session(second), 1);
+    read(keys.training.activeSession);
+    read(keys.training.lastPerformance("77777777-7777-4777-8777-777777777777", second));
+
+    expect(storedKeys()).toEqual([
+      keys.training.activeSession,
+      keys.training.session(first),
+      keys.training.session(second),
+    ]);
+  });
+
+  it("should store the weight unit beside the time zone", () => {
+    const { read, storedKeys } = createCache();
+    read(keys.profiles.timeZone);
+    read(keys.profiles.weightUnit);
+
+    expect(storedKeys()).toEqual([keys.profiles.timeZone, keys.profiles.weightUnit]);
+  });
+
   it("should keep the newest sets and the diary together", () => {
     const { read, storedKeys } = createCache();
     read(keys.training.sets("2026-10-02"), 48);

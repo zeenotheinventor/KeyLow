@@ -41,7 +41,13 @@ export {
 } from "./foods";
 export type { CreatedFood, FoodSearchHit } from "./foods";
 export { fetchOffProduct, searchOff } from "./off";
-export { getMyTargets, getMyTimeZone, updateMyTargets, updateMyTimeZone } from "./targets";
+export {
+  getMyTargets,
+  getMyTimeZone,
+  getMyWeightUnit,
+  updateMyTargets,
+  updateMyTimeZone,
+} from "./targets";
 export type { Targets } from "./targets";
 export { acceptTerms, getMyTermsAcceptance } from "./terms";
 export { createRecipe, duplicateRecipe, setRecipeArchived, updateRecipe } from "./recipeWrites";
@@ -69,4 +75,14 @@ export {
 export type { ImportResult, WeighInChange } from "./weighIns";
 export type { WeighIn } from "./weighInSchemas";
 export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./training";
-export type { ActiveRoutine, TrainingSet, WeekSession } from "./trainingSchemas";
+export type {
+  ActiveRoutine,
+  LastPerformanceSession,
+  LastPerformanceSet,
+  SessionSet,
+  SessionWithSets,
+  TrainingSet,
+  WeekSession,
+} from "./trainingSchemas";
+export { getActiveSession, getLastPerformance, getSession } from "./trainingSessions";
+export type { LastPerformanceOptions } from "./trainingSessions";

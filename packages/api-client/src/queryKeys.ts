@@ -5,6 +5,8 @@ export const keys = {
     termsAcceptance: ["profiles", "terms-acceptance"] as const,
     targets: ["profiles", "targets"] as const,
     timeZone: ["profiles", "time-zone"] as const,
+    /** The weight unit the signed in user's profile shows loads in, `kg` or `lb`. */
+    weightUnit: ["profiles", "weight-unit"] as const,
   },
   foods: {
     all: ["foods"] as const,
@@ -37,6 +39,12 @@ export const keys = {
    * never a set value, a load or a muscle. What is stored is rows: heat, volume and the comparison are
    * worked out from them at read time, so they are never stale. Every key sits under `["training"]`.
    * `windowStart` and `weekStart` are `YYYY-MM-DD`, and `weekStart` is the Monday.
+   *
+   * The session reads follow the same rule. `session(id)`, under the `sessionsAll` prefix, and
+   * `activeSession` are persisted on mobile, so a session in progress opens without a connection:
+   * what is stored is the session row with its sets, and nothing worked out from them. `lastPerformance`
+   * is not persisted, since it is only read while logging, which needs a connection. A session or
+   * exercise id is the only thing those keys carry besides fixed words.
    */
   training: {
     all: ["training"] as const,
@@ -50,6 +58,22 @@ export const keys = {
     weekSessionsAll: ["training", "week-sessions"] as const,
     /** The live sessions of the week that starts on `weekStart`, each with its live sets. */
     weekSessions: (weekStart: string) => ["training", "week-sessions", weekStart] as const,
+    /** The prefix of every `session` key. */
+    sessionsAll: ["training", "sessions"] as const,
+    /** One live session of the signed in user with its routine day's name and its live sets, or null. */
+    session: (id: string) => ["training", "sessions", id] as const,
+    /** The signed in user's newest live session that has not ended, with its sets, or null. */
+    activeSession: ["training", "active-session"] as const,
+    /**
+     * The working sets of one exercise from its latest earlier sessions. `excludeSessionId` is the
+     * session being logged, which is left out. It is part of the key so a session started later never
+     * shows the list read while an earlier one was open. Without it, the key is the prefix of all of
+     * an exercise's reads, to invalidate them together.
+     */
+    lastPerformance: (exerciseId: string, excludeSessionId?: string) =>
+      excludeSessionId === undefined
+        ? (["training", "last-performance", exerciseId] as const)
+        : (["training", "last-performance", exerciseId, excludeSessionId] as const),
   },
   /**
    * The weigh-in reads. A family of its own, outside `diary`, and not in the list a persisted cache keeps,

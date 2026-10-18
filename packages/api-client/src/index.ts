@@ -82,6 +82,7 @@ export {
   getMyTargets,
   getMyTermsAcceptance,
   getMyTimeZone,
+  getMyWeightUnit,
   getRecipe,
   listCompleteDays,
   listFoodPortions,
@@ -157,7 +158,30 @@ export {
   updateWeighIn,
 } from "./repos";
 export type { ImportResult, WeighIn, WeighInChange } from "./repos";
-export { useMuscleState, useWeekComparison } from "./hooks";
-export type { TrainingReadResult } from "./hooks";
-export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./repos";
-export type { ActiveRoutine, TrainingSet, WeekSession } from "./repos";
+export {
+  useActiveSession,
+  useLastPerformance,
+  useMuscleState,
+  useSession,
+  useWeekComparison,
+  useWeightUnit,
+} from "./hooks";
+export type { TrainingReadResult, UseLastPerformanceOptions } from "./hooks";
+export {
+  getActiveRoutine,
+  getActiveSession,
+  getLastPerformance,
+  getSession,
+  listSetsFrom,
+  listWeekSessions,
+} from "./repos";
+export type {
+  ActiveRoutine,
+  LastPerformanceOptions,
+  LastPerformanceSession,
+  LastPerformanceSet,
+  SessionSet,
+  SessionWithSets,
+  TrainingSet,
+  WeekSession,
+} from "./repos";

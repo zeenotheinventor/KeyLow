@@ -3,7 +3,12 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
 
-import { getMyTargets, getMyTimeZone, updateMyTargets } from "../../src/repos/targets";
+import {
+  getMyTargets,
+  getMyTimeZone,
+  getMyWeightUnit,
+  updateMyTargets,
+} from "../../src/repos/targets";
 import { createTestClient } from "../createTestClient";
 import { REST_URL, SIGNED_IN_USER_ID, postgrestError, postgrestRows } from "../support/postgrest";
 
@@ -237,6 +242,63 @@ describe("getMyTimeZone", () => {
 
     await expect(getMyTimeZone(createTestClient())).rejects.toMatchObject({
       message: "Could not load your time zone (XX000)",
+    });
+  });
+});
+
+describe("getMyWeightUnit", () => {
+  const unitIs = (weight_unit: string | null) => {
+    server.use(
+      http.get(`${REST_URL}/profiles`, ({ request }) => postgrestRows(request, [{ weight_unit }])),
+    );
+  };
+
+  it("should select only the weight_unit column", async () => {
+    let requestUrl: URL | undefined;
+    server.use(
+      http.get(`${REST_URL}/profiles`, ({ request }) => {
+        requestUrl = new URL(request.url);
+        return postgrestRows(request, [{ weight_unit: "kg" }]);
+      }),
+    );
+
+    await getMyWeightUnit(createTestClient());
+
+    expect(requestUrl?.searchParams.get("select")).toBe("weight_unit");
+  });
+
+  it.each(["kg", "lb"] as const)(
+    "should return %s when the profile shows loads in it",
+    async (unit) => {
+      unitIs(unit);
+
+      expect(await getMyWeightUnit(createTestClient())).toBe(unit);
+    },
+  );
+
+  it.each([
+    ["not set", null],
+    ["stone, which training does not use", "st"],
+    ["a value this build does not know", "oz"],
+  ])("should read as kg when the unit is %s", async (_name, stored) => {
+    unitIs(stored);
+
+    expect(await getMyWeightUnit(createTestClient())).toBe("kg");
+  });
+
+  it("should read as kg when the user has no profile row", async () => {
+    server.use(http.get(`${REST_URL}/profiles`, ({ request }) => postgrestRows(request, [])));
+
+    expect(await getMyWeightUnit(createTestClient())).toBe("kg");
+  });
+
+  it("should name the action and the error code only when the database fails", async () => {
+    server.use(
+      http.get(`${REST_URL}/profiles`, () => postgrestError(500, "XX000", "database unavailable")),
+    );
+
+    await expect(getMyWeightUnit(createTestClient())).rejects.toMatchObject({
+      message: "Could not load your weight unit (XX000)",
     });
   });
 });

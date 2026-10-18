@@ -1,5 +1,7 @@
 import { buildSetSnapshot } from "@keylow/core/training";
 
+import { adminClient } from "./stack";
+
 import type { TestUser } from "./users";
 import type { ExerciseMuscleEntry, SetSnapshot } from "@keylow/core/schemas";
 
@@ -48,6 +50,24 @@ export async function saveExercise(
       muscles,
     ),
   };
+}
+
+/**
+ * A global exercise, which every user can log a set against, with the snapshot a set of it would carry.
+ * An exercise a user saves is theirs alone, so two users can only share a global one.
+ */
+export async function findGlobalExercise(): Promise<SavedExercise> {
+  const { data, error } = await adminClient()
+    .from("exercises")
+    .select("id,name,equipment,mechanic")
+    .is("owner_id", null)
+    .order("id")
+    .limit(1)
+    .single();
+  if (error) {
+    throw new Error(`Could not read a global exercise (${error.code})`);
+  }
+  return { id: data.id, name: data.name, snapshot: buildSetSnapshot(data, BENCH_MUSCLES) };
 }
 
 export type PlannedDay = {
@@ -115,14 +135,21 @@ export async function startSession(
   {
     routineDayId = null,
     startedAt = `${localDate}T09:00:00Z`,
+    endedAt = null,
     tz = "UTC",
-  }: { routineDayId?: string | null; startedAt?: string; tz?: string } = {},
+  }: {
+    routineDayId?: string | null;
+    startedAt?: string;
+    endedAt?: string | null;
+    tz?: string;
+  } = {},
 ): Promise<string> {
   const { data, error } = await user.client
     .from("workout_sessions")
     .insert({
       user_id: user.id,
       started_at: startedAt,
+      ended_at: endedAt,
       local_date: localDate,
       tz,
       routine_day_id: routineDayId,
@@ -140,6 +167,11 @@ export type LoggedSetInput = {
   performedAt: string;
   rir?: number | null;
   rpe?: number | null;
+  /** Where the set sits in the session. The order given when not. */
+  position?: number;
+  setType?: "warmup" | "working" | "drop" | "failure";
+  reps?: number;
+  loadKg?: number | null;
 };
 
 /** Logs working sets of the exercise in the session, in the order given, and returns their ids. */
@@ -156,10 +188,10 @@ export async function logSets(
         session_id: sessionId,
         user_id: user.id,
         exercise_id: exercise.id,
-        position,
-        set_type: "working" as const,
-        reps: 8,
-        load_kg: 60,
+        position: set.position ?? position,
+        set_type: set.setType ?? ("working" as const),
+        reps: set.reps ?? 8,
+        load_kg: set.loadKg === undefined ? 60 : set.loadKg,
         rir: set.rir === undefined ? 2 : set.rir,
         rpe: set.rpe ?? null,
         performed_at: set.performedAt,
