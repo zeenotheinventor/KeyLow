@@ -192,3 +192,22 @@ export type {
 } from "./bodyArtwork";
 
 export { compareWeekSoFar } from "./compareWeekSoFar";
+
+export { todayCard } from "./todayCard";
+export type { NextPlannedDay, NextSet, TodayCard, TodayCardInput } from "./todayCard";
+export { WEEK_DAY_STATUSES, weekCaption, weekPlanDays } from "./weekPlanDays";
+export type {
+  PlannedDay,
+  PlannedExercise,
+  UnplacedDay,
+  WeekCaption,
+  WeekDayStatus,
+  WeekPlan,
+  WeekPlanDay,
+  WeekPlanInput,
+  WeekRoutine,
+  WeekRoutineDay,
+  WeekRoutineExercise,
+  WeekSession,
+  WeekSet,
+} from "./weekPlanDays";
