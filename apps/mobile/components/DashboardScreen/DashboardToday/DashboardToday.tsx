@@ -15,6 +15,7 @@ import { useIsOnline } from "../../../lib/connectivity";
 import { diaryHref } from "../../../lib/navigation";
 import { useNow } from "../../../lib/useNow";
 import { Banner, ErrorState } from "../../ui";
+import { DashboardBodyMap } from "../DashboardBodyMap";
 import { DashboardFrame } from "../DashboardFrame";
 import { DashboardWeek } from "../DashboardWeek";
 import { NutritionCard } from "../NutritionCard";
@@ -28,8 +29,8 @@ import type { DiaryDay } from "@keylow/api-client";
  * the two share the cache and agree) and the targets, added up by core, with the This week card under it.
  * Nothing is read while `isReadEnabled` is false, because the terms gate is up over the app. The header
  * stays whatever the card is doing: a skeleton while it loads, the offline notice over it when offline,
- * and an error state with Try again in its place when a read failed. The week card reads, loads and fails
- * on its own.
+ * and an error state with Try again in its place when a read failed. The week card and the body map card
+ * read, load and fail on their own.
  */
 export function DashboardToday({ timeZone, isReadEnabled }: DashboardTodayProps) {
   const router = useRouter();
@@ -112,6 +113,7 @@ export function DashboardToday({ timeZone, isReadEnabled }: DashboardTodayProps)
         )}
         {renderToday()}
         <DashboardWeek isReadEnabled={isReadEnabled} today={today} />
+        <DashboardBodyMap isReadEnabled={isReadEnabled} />
       </ScrollView>
     </DashboardFrame>
   );

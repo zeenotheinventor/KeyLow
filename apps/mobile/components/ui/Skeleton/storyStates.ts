@@ -9,4 +9,5 @@ export const storyStates = [
   "DiaryDay",
   "NutritionCard",
   "ThisWeekCard",
+  "BodyMapCard",
 ];

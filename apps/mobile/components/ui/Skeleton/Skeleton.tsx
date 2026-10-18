@@ -277,6 +277,31 @@ function SkeletonThisWeekCard() {
   );
 }
 
+// The dashboard's body map card as it loads, as tall as the card it becomes so the cards under it do not
+// jump: the title and the view, the two 100 by 220 figures and the legend, and the two lines under a
+// hairline.
+function SkeletonBodyMapCard() {
+  return (
+    <Card padding={0}>
+      <View className="gap-2 py-3 pl-4 pr-3" testID="skeleton-body-map-card">
+        <View className="gap-[6px]">
+          <SkeletonBone className="h-[12px] w-[72px]" />
+          <SkeletonBone className="h-[14px] w-[104px]" />
+        </View>
+        <View className="flex-row items-end justify-center gap-[28px]">
+          <SkeletonBone className="h-[220px] w-[100px] rounded-medium" />
+          <SkeletonBone className="h-[220px] w-[100px] rounded-medium" />
+          <SkeletonBone className="mb-[6px] h-[120px] w-[32px]" />
+        </View>
+        <View className="flex-row items-center justify-between gap-3 border-t border-border pt-2">
+          <SkeletonBone className="h-3 w-[60%]" />
+          <SkeletonBone className="h-3 w-[56px]" />
+        </View>
+      </View>
+    </Card>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -295,6 +320,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       ) : null}
       {variant === "nutritionCard" ? <SkeletonNutritionCard /> : null}
       {variant === "thisWeekCard" ? <SkeletonThisWeekCard /> : null}
+      {variant === "bodyMapCard" ? <SkeletonBodyMapCard /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View

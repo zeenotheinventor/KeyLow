@@ -197,6 +197,9 @@ describe("the fixed words of the body map, as the boards draw them", () => {
         coolestStep: "Rested",
         restDay: "Rest day",
         open: "Open the body map",
+        loadingLabel: "Loading the body map",
+        loadFailed: "Couldn't load the body map",
+        offlineUnavailable: "The body map isn't available offline.",
       },
       trainCard: { openName: "Open body map" },
       figureSetting: {
@@ -515,6 +518,7 @@ describe("describeDashboardBodyMapCard", () => {
         warmest,
         today: { kind: "session", routineDayName: "Legs", plannedSets: 16 },
         heatWindowDays: 14,
+        opensBodyMap: true,
       }),
     ).toStrictEqual({
       warmestLine: "Warmest: lats 25 %, mid traps 18 %, biceps 15 %",
@@ -529,6 +533,7 @@ describe("describeDashboardBodyMapCard", () => {
       warmest,
       today: { kind: "rest" },
       heatWindowDays: 14,
+      opensBodyMap: true,
     });
 
     expect(card.todayLine).toBe("Today: Rest day");
@@ -537,7 +542,12 @@ describe("describeDashboardBodyMapCard", () => {
 
   it("should write no history with the nothing logged line, and leave today out without a routine", () => {
     expect(
-      describeDashboardBodyMapCard({ warmest: [], today: null, heatWindowDays: 14 }),
+      describeDashboardBodyMapCard({
+        warmest: [],
+        today: null,
+        heatWindowDays: 14,
+        opensBodyMap: true,
+      }),
     ).toStrictEqual({
       warmestLine: "Nothing logged in the last 14 days",
       todayLine: null,
@@ -552,8 +562,54 @@ describe("describeDashboardBodyMapCard", () => {
         warmest,
         today: { kind: "session", routineDayName: "Legs", plannedSets: 1 },
         heatWindowDays: 14,
+        opensBodyMap: true,
       }).accessibleName,
     ).toContain("Today: Legs, 1 set planned.");
+  });
+
+  describe("when the card does not open the body map yet", () => {
+    it("should end the name with the last sentence about today and leave out the words that open it", () => {
+      expect(
+        describeDashboardBodyMapCard({
+          warmest,
+          today: { kind: "session", routineDayName: "Legs", plannedSets: 16 },
+          heatWindowDays: 14,
+          opensBodyMap: false,
+        }).accessibleName,
+      ).toBe(
+        "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Legs, 16 sets planned.",
+      );
+    });
+
+    it("should end the no-history name with the nothing logged sentence", () => {
+      expect(
+        describeDashboardBodyMapCard({
+          warmest: [],
+          today: null,
+          heatWindowDays: 14,
+          opensBodyMap: false,
+        }).accessibleName,
+      ).toBe("Body map, Actual heat now. Nothing logged in the last 14 days.");
+    });
+
+    it("should change nothing but the name", () => {
+      const input = {
+        warmest,
+        today: { kind: "rest" },
+        heatWindowDays: 14,
+      } as const;
+      const { accessibleName: closedName, ...closedWords } = describeDashboardBodyMapCard({
+        ...input,
+        opensBodyMap: false,
+      });
+      const { accessibleName: openName, ...openWords } = describeDashboardBodyMapCard({
+        ...input,
+        opensBodyMap: true,
+      });
+
+      expect(closedWords).toStrictEqual(openWords);
+      expect(openName).toBe(`${closedName} Open the body map`);
+    });
   });
 });
 
