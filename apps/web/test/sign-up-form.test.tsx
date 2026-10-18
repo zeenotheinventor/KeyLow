@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => ({
 
 const GENERIC_ERROR = "Something went wrong. Try again.";
 const ACCEPTANCE_NAME =
-  "I accept the Terms and the Privacy Policy, including storing my weight, food diary and body stats to run the app.";
+  "I accept the Terms and the Privacy Policy, including storing my weight, food diary, body stats and workouts to run the app.";
 
 function fillForm(email: string, password: string) {
   fireEvent.change(screen.getByLabelText("Email"), { target: { value: email } });

@@ -40,7 +40,7 @@ jest.mock("../lib/supabase", () => ({
 }));
 
 const acceptanceSentence =
-  "I accept the Terms and the Privacy Policy, including storing my weight, food diary and body stats to run the app.";
+  "I accept the Terms and the Privacy Policy, including storing my weight, food diary, body stats and workouts to run the app.";
 
 let queryClient: QueryClient;
 let finishAcceptCall: () => void;

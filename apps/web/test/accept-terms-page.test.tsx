@@ -93,7 +93,7 @@ describe("Accept-terms page", () => {
 
     expect(
       screen.getByRole("checkbox", {
-        name: "I accept the Terms and the Privacy Policy, including storing my weight, food diary and body stats to run the app.",
+        name: "I accept the Terms and the Privacy Policy, including storing my weight, food diary, body stats and workouts to run the app.",
       }),
     ).toHaveProperty("checked", false);
     expect(screen.getByRole("link", { name: "Terms" }).getAttribute("href")).toBe("/terms");
