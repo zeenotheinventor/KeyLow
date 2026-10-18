@@ -531,16 +531,20 @@ const objectOrEmpty = (value: unknown): object =>
 function saveRecipe(init: RequestInit): Response {
   const body = readBody(init);
   const ingredients = fieldOf(body, "p_ingredients");
+  const existingId = fieldOf(body, "p_recipe_id");
+  const id = typeof existingId === "string" ? existingId : SAVED_RECIPE_ID;
+  // A saved recipe is replaced in place, as the database does when `p_recipe_id` is given.
+  diaryBackend.recipes = diaryBackend.recipes.filter((row) => row["id"] !== id);
   diaryBackend.recipes.push({
     ...objectOrEmpty(fieldOf(body, "p_recipe")),
-    id: SAVED_RECIPE_ID,
+    id,
     is_archived: false,
     recipe_ingredients: (Array.isArray(ingredients) ? ingredients : []).map(
       (ingredient: unknown, position) => ({ ...objectOrEmpty(ingredient), position }),
     ),
   });
 
-  return jsonResponse(SAVED_RECIPE_ID);
+  return jsonResponse(id);
 }
 
 function writeDayLogs(init: RequestInit, search: URLSearchParams): Response {

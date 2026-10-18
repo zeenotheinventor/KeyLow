@@ -420,7 +420,7 @@ describe("the recipe editor", () => {
       expect(screen.getByText("Recipe saved")).toBeOnTheScreen();
     });
 
-    it("should stay open on the saved recipe as the new starting point, so leaving asks nothing", async () => {
+    it("should stay open on the saved recipe as the new starting point, with nothing to lose and nothing holding the way out", async () => {
       mockUpdateRecipe.mockImplementation((payload: SavePayload) =>
         Promise.resolve(storedOf(payload)),
       );
@@ -429,14 +429,59 @@ describe("the recipe editor", () => {
 
       await user.press(saveButton());
 
-      // The header follows the saved name, and nothing is left to lose.
+      // The header follows the saved name, and the navigator is not asked to hold the screen back, or the
+      // way out that Save has just asked for would be refused.
       expect(screen.getByRole("heading", { name: "Chicken and rice, again" })).toBeOnTheScreen();
       expect(mockHold.isHeld).toBe(false);
-      routerMock.dismissTo.mockReset();
+      expect(screen.queryByText(DISCARD_SHEET.editTitle)).not.toBeOnTheScreen();
+    });
+
+    it("should keep Save working and Back inert after a save, until the editor has gone", async () => {
+      mockUpdateRecipe.mockImplementation((payload: SavePayload) =>
+        Promise.resolve(storedOf(payload)),
+      );
+      const user = await showEditor({ existing: chickenAndRice });
+      await type(nameField(), "Chicken and rice, again");
+
+      await user.press(saveButton());
+
+      // The router is a stand-in that leaves the editor on the screen, as the closing motion does.
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("button", { busy: true })).toBeOnTheScreen();
+      expect(nameField()).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+    });
+
+    it("should make no second request and leave once for a Save pressed after the first has been saved", async () => {
+      mockUpdateRecipe.mockImplementation((payload: SavePayload) =>
+        Promise.resolve(storedOf(payload)),
+      );
+      await showEditor({ existing: chickenAndRice });
+      await type(nameField(), "Chicken and rice, again");
+      const save = saveButton();
+      await fireEvent.press(save);
+
+      await fireEvent.press(save);
+      await fireEvent.press(save);
+
+      expect(mockUpdateRecipe).toHaveBeenCalledTimes(1);
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+    });
+
+    it("should do nothing for the header's Back after a save, so the editor is left once", async () => {
+      mockUpdateRecipe.mockImplementation((payload: SavePayload) =>
+        Promise.resolve(storedOf(payload)),
+      );
+      const user = await showEditor({ existing: chickenAndRice });
+      await type(nameField(), "Chicken and rice, again");
+      await user.press(saveButton());
 
       await user.press(screen.getByRole("button", { name: "Back" }));
+      await act(() => {
+        mockHold.onHeld({ data: { action: { type: "GO_BACK" } } });
+      });
 
-      expect(routerMock.dismissTo).toHaveBeenCalledWith(recipePath(RECIPE_ID));
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
       expect(screen.queryByText(DISCARD_SHEET.editTitle)).not.toBeOnTheScreen();
     });
 
@@ -537,6 +582,17 @@ describe("the recipe editor", () => {
       expect(mockUpdateRecipe).toHaveBeenCalledTimes(2);
       expect(screen.queryByText(SAVE_FAILED_BANNER)).not.toBeOnTheScreen();
     });
+
+    it("should give Save back, working no more, when the save fails", async () => {
+      mockUpdateRecipe.mockRejectedValue(new Error("down"));
+      const user = await showEditor({ existing: chickenAndRice });
+      await type(nameField(), "Chicken and rice, again");
+
+      await user.press(saveButton());
+
+      expect(screen.getByRole("button", { name: "Save", busy: false })).toBeEnabled();
+      expect(screen.getByRole("button", { name: "Back" })).toBeEnabled();
+    });
   });
 
   describe("saving a new recipe", () => {
@@ -559,6 +615,29 @@ describe("the recipe editor", () => {
       expect(mockCreateRecipe).toHaveBeenCalledTimes(1);
       expect(routerMock.replace).toHaveBeenCalledWith(recipePath(RECIPE_ID));
       expect(screen.getByText("Recipe saved")).toBeOnTheScreen();
+    });
+
+    it("should keep Save working and create nothing twice for a Save pressed after the first has been saved", async () => {
+      mockStartingDraft.current = {
+        name: "",
+        servings: "1",
+        cookedWeight: "",
+        ingredients: golden.ingredients,
+        steps: [],
+      };
+      mockCreateRecipe.mockImplementation((payload: SavePayload) =>
+        Promise.resolve(storedOf(payload)),
+      );
+      await showEditor();
+      await type(nameField(), "Chicken and rice");
+      const save = saveButton();
+      await fireEvent.press(save);
+
+      await fireEvent.press(save);
+
+      expect(mockCreateRecipe).toHaveBeenCalledTimes(1);
+      expect(routerMock.replace).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("button", { busy: true })).toBeOnTheScreen();
     });
   });
 

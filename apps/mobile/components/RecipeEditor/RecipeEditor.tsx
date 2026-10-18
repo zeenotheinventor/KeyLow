@@ -71,7 +71,7 @@ const ROOM_ABOVE_PROBLEM = 16;
 // How far above the bottom of the scroll view the end of the Ingredients is left after one is added.
 const ROOM_BELOW_INGREDIENTS = 16;
 
-type SaveStatus = "idle" | "saving" | "created";
+type SaveStatus = "idle" | "saving" | "leaving";
 
 /** Where the screen goes once nothing holds it back. A new recipe is replaced by its saved one, anything else is gone back to. */
 type Exit = { href: string; how: "dismiss" | "replace" };
@@ -418,14 +418,14 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       setBaseline(savedDraft);
       setDraft(savedDraft);
       setHasTriedToSave(false);
-      // A new recipe stays locked while it is replaced by its saved one, so nothing can save it twice.
-      setSaveStatus(existing === undefined ? "created" : "idle");
+      // A saved recipe, new or edited, stays locked until the editor has gone, so nothing can save it twice or
+      // leave it a second time. The guard on `isSavingNow` is kept too, as the exit runs a render later.
+      setSaveStatus("leaving");
       toast.show({ message: RECIPE_TOASTS.saved, tone: "success", icon: "Check" });
       setExit({ href: recipePath(stored.id), how: existing === undefined ? "replace" : "dismiss" });
     } catch {
       setHasSaveFailed(true);
       setSaveStatus("idle");
-    } finally {
       isSavingNow.current = false;
     }
   }
