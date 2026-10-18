@@ -16,7 +16,9 @@ export type CompareParams = Readonly<{
   training: TrainingParams;
   /**
    * The local time a planned day's sets are placed at, on its weekday, in the week's zone. A routine
-   * day has no time of its own, so every planned set of a day lands at this one moment.
+   * day has no time of its own, so every planned set of a day lands at this one moment. It is where a
+   * counted planned set decays from, not when it starts to count: projected heat counts a planned set
+   * from the day after (`projectedState`).
    */
   plannedTime: Readonly<{ hour: number; minute: number }>;
   /**

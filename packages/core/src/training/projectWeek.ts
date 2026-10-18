@@ -1,6 +1,7 @@
-import { expandPlan, weekDays } from "./expandPlan";
-import { muscleState } from "./muscleState";
+import { expandPlan, requireTimeZone, weekDays } from "./expandPlan";
+import { muscleState, parseMoment } from "./muscleState";
 import { isCalendarDay } from "../dates/calendarDay";
+import { toLocalDate } from "../dates/toLocalDate";
 
 import type { CompareParams } from "./compareParams";
 import type { PlanExercise, PlannedSet, PlanRoutine } from "./expandPlan";
@@ -113,13 +114,25 @@ export const projectWeek = (
 };
 
 /**
- * Projected heat at a moment: `muscleState` over the projected sets up to `at`, so it assumes the
- * plan was followed until then (and what was logged in its place where it was). Pass sets from before
- * the week with the projection when the heat window reaches back past Monday. Throws as `muscleState`
- * does.
+ * Projected heat at a moment: `muscleState` over the projected sets up to `at`, so it assumes the plan
+ * was followed until then (and what was logged in its place where it was). A logged set counts once
+ * `at` has reached its `performed_at`. A planned set counts only when its `local_date` is before the
+ * local date of `at` in the IANA zone `tz` (the zone given to `projectWeek`), so today's unlogged
+ * planned session adds nothing until the day after, and what is logged today shows as it is logged
+ * (Zee, KEY-339 ruling D). A counted planned set decays from `params.plannedTime` on its own day. Pass
+ * sets from before the week with the projection when the heat window reaches back past Monday.
+ *
+ * Throws a `RangeError` naming the rule when `tz` is not an IANA name, and as `muscleState` does for
+ * the other inputs.
  */
 export const projectedState = (
-  projected: readonly HeatSet[],
+  projected: readonly (PlannedSet | LoggedSet)[],
   at: string,
+  tz: string,
   params: CompareParams,
-): Record<MuscleId, MuscleState> => muscleState(projected, at, params.training);
+): Record<MuscleId, MuscleState> => {
+  requireTimeZone(tz);
+  const today = toLocalDate(new Date(parseMoment(at)), tz);
+  const counted = projected.filter((set) => !("planned" in set) || set.local_date < today);
+  return muscleState(counted, at, params.training);
+};
