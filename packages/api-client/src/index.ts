@@ -140,3 +140,20 @@ export { useRecipeRefreshPreview, useRefreshRecipeIngredients } from "./hooks";
 export type { RecipeRefreshPreviewState } from "./hooks";
 export { applyRecipeRefresh, previewRecipeRefresh } from "./repos";
 export type { RecipeRefreshDiff } from "./repos";
+export {
+  useAddWeighIn,
+  useDeleteWeighIn,
+  useImportWeighIns,
+  useUpdateWeighIn,
+  useWeighIns,
+  useWeightTrend,
+} from "./hooks";
+export {
+  WeighInNotEditableError,
+  addWeighIn,
+  importWeighIns,
+  listWeighIns,
+  softDeleteWeighIn,
+  updateWeighIn,
+} from "./repos";
+export type { ImportResult, WeighIn, WeighInChange } from "./repos";

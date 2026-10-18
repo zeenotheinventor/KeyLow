@@ -68,6 +68,18 @@ describe("the package index", () => {
     "applyRecipeRefresh",
     "useRecipeRefreshPreview",
     "useRefreshRecipeIngredients",
+    "listWeighIns",
+    "addWeighIn",
+    "updateWeighIn",
+    "softDeleteWeighIn",
+    "importWeighIns",
+    "WeighInNotEditableError",
+    "useWeighIns",
+    "useAddWeighIn",
+    "useUpdateWeighIn",
+    "useDeleteWeighIn",
+    "useImportWeighIns",
+    "useWeightTrend",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

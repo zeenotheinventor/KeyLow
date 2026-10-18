@@ -58,3 +58,13 @@ export type { LogRecipeInput } from "./recipeEntries";
 export { applyRecipeRefresh } from "./recipeWrites";
 export { previewRecipeRefresh } from "./recipes";
 export type { RecipeRefreshDiff } from "./recipes";
+export {
+  WeighInNotEditableError,
+  addWeighIn,
+  importWeighIns,
+  listWeighIns,
+  softDeleteWeighIn,
+  updateWeighIn,
+} from "./weighIns";
+export type { ImportResult, WeighInChange } from "./weighIns";
+export type { WeighIn } from "./weighInSchemas";
