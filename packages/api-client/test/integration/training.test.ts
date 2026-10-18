@@ -268,7 +268,7 @@ describe("listWeekSessions", () => {
 
   it("should return a session with no sets as a session with an empty list", async () => {
     const user = await createTestUser("key354");
-    const empty = await startSession(user, "2026-10-13");
+    const empty = await startSession(user, "2026-10-13", { endedAt: null });
 
     const sessions = await listWeekSessions(user.client, "2026-10-12");
 

@@ -128,14 +128,18 @@ export async function dayIdsOf(user: TestUser, routineId: string): Promise<strin
   return data.map(({ id }) => id);
 }
 
-/** Starts a session on this local day. The note names it as a key354 row. */
+/**
+ * Starts a session on this local day, an hour long unless `endedAt` is given. Pass `endedAt: null` for
+ * a session in progress: a user can have one at a time (KEY-386), so a test that wants more than one
+ * session gives all but one an end. The note names it as a key354 row.
+ */
 export async function startSession(
   user: TestUser,
   localDate: string,
   {
     routineDayId = null,
     startedAt = `${localDate}T09:00:00Z`,
-    endedAt = null,
+    endedAt = new Date(Date.parse(startedAt) + 60 * 60 * 1000).toISOString(),
     tz = "UTC",
   }: {
     routineDayId?: string | null;

@@ -108,6 +108,8 @@ async function startSession(user: TestUser, routineDayId: string | null) {
     .insert({
       user_id: user.id,
       started_at: "2026-10-18T08:00:00Z",
+      // Finished, so several sessions can exist at once: the database allows one open session per person (KEY-386).
+      ended_at: "2026-10-18T09:00:00Z",
       local_date: "2026-10-18",
       tz: "Europe/London",
       routine_day_id: routineDayId,
