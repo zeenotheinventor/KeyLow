@@ -45,6 +45,11 @@ export const keys = {
    * what is stored is the session row with its sets, and nothing worked out from them. `lastPerformance`
    * is not persisted, since it is only read while logging, which needs a connection. A session or
    * exercise id is the only thing those keys carry besides fixed words.
+   *
+   * The routine reads follow it too. `routines(archived)`, under `routinesAll`, and `routine(id)`, under
+   * `routineAll`, are persisted on mobile so the routines open without a connection. A routine key
+   * carries a flag or a routine id besides fixed words, never a routine name or an exercise. The
+   * routines are written only with a connection: nothing is queued or replayed from storage.
    */
   training: {
     all: ["training"] as const,
@@ -64,6 +69,17 @@ export const keys = {
     session: (id: string) => ["training", "sessions", id] as const,
     /** The signed in user's newest live session that has not ended, with its sets, or null. */
     activeSession: ["training", "active-session"] as const,
+    /** The prefix of every `routines` key. */
+    routinesAll: ["training", "routines"] as const,
+    /**
+     * The signed in user's routines by name, each with its days and their set counts. `archived` false
+     * lists the live routines, and true adds the archived ones. Persisted on mobile, as rows.
+     */
+    routines: (archived: boolean) => ["training", "routines", archived] as const,
+    /** The prefix of every `routine` key. */
+    routineAll: ["training", "routine"] as const,
+    /** One routine of the signed in user with its days and their exercises in order, or null. Persisted on mobile, as rows. */
+    routine: (id: string) => ["training", "routine", id] as const,
     /**
      * The working sets of one exercise from its latest earlier sessions. `excludeSessionId` is the
      * session being logged, which is left out. It is part of the key so a session started later never

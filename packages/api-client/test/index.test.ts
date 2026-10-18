@@ -97,6 +97,18 @@ describe("the package index", () => {
     "useMuscleList",
     "useMuscleDetail",
     "useDashboardBodyMap",
+
+    "RoutineRuleError",
+    "getRoutine",
+    "listRoutines",
+    "saveRoutine",
+    "setActiveRoutine",
+    "setRoutineArchived",
+    "useArchiveRoutine",
+    "useRoutine",
+    "useRoutines",
+    "useSaveRoutine",
+    "useSetActiveRoutine",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

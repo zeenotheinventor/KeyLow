@@ -200,3 +200,27 @@ export type {
   TrainingSet,
   WeekSession,
 } from "./repos";
+export {
+  useArchiveRoutine,
+  useRoutine,
+  useRoutines,
+  useSaveRoutine,
+  useSetActiveRoutine,
+} from "./hooks";
+export type { UseRoutinesOptions } from "./hooks";
+export { RoutineRuleError } from "./errors";
+export type { RoutineRule } from "./errors";
+export {
+  getRoutine,
+  listRoutines,
+  saveRoutine,
+  setActiveRoutine,
+  setRoutineArchived,
+} from "./repos";
+export type {
+  ListRoutinesOptions,
+  RoutineDetail,
+  RoutineListEntry,
+  RoutineRecord,
+  RoutineSave,
+} from "./repos";

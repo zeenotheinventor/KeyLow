@@ -6,8 +6,9 @@ import { keys } from "@keylow/api-client";
  * its days in, and the terms acceptance is what the terms gate needs to decide, so without both the
  * diary could not open without a connection. The training reads are the rows heat, the plan and the
  * week are worked out from, and the session in progress with its sets, so a workout opens without a
- * connection. The last performance of an exercise is not kept: it is only read while logging, which
- * needs a connection. No search is kept, the training ones included (exercises by text).
+ * connection, and the routines with their days and exercises, so the plan opens too. The last
+ * performance of an exercise is not kept: it is only read while logging, which needs a connection. No
+ * search is kept, the training ones included (exercises by text).
  */
 export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.diary.days,
@@ -26,4 +27,7 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.training.weekSessionsAll,
   keys.training.sessionsAll,
   keys.training.activeSession,
+  // The routines and one routine with its days, so the routines open and edit without a connection.
+  keys.training.routinesAll,
+  keys.training.routineAll,
 ];
