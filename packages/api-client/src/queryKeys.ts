@@ -46,6 +46,10 @@ export const keys = {
    * is not persisted, since it is only read while logging, which needs a connection. A session or
    * exercise id is the only thing those keys carry besides fixed words.
    *
+   * The history list follows it as well: `history(weekStart)` and `historyList`, under the `historyAll`
+   * prefix, are persisted on mobile so the list opens without a connection. What is stored is the
+   * sessions with their sets, and the summaries run at read time. A key holds a date and fixed words only.
+   *
    * The routine reads follow it too. `routines(archived)`, under `routinesAll`, and `routine(id)`, under
    * `routineAll`, are persisted on mobile so the routines open without a connection. A routine key
    * carries a flag or a routine id besides fixed words, never a routine name or an exercise. The
@@ -65,6 +69,15 @@ export const keys = {
     weekSessionsAll: ["training", "week-sessions"] as const,
     /** The live sessions of the week that starts on `weekStart`, each with its live sets. */
     weekSessions: (weekStart: string) => ["training", "week-sessions", weekStart] as const,
+    /**
+     * The prefix of every `history` key, and of `historyList`. The history list is persisted on mobile,
+     * as rows: the summaries are worked out from them at read time, so they are never stale.
+     */
+    historyAll: ["training", "history"] as const,
+    /** The live sessions of the week that starts on `weekStart`, newest first, each with its routine day's name and its live sets. */
+    history: (weekStart: string) => ["training", "history", weekStart] as const,
+    /** The history list as one infinite read whose pages are weeks, newest week first. */
+    historyList: ["training", "history", "list"] as const,
     /** The prefix of every `session` key. */
     sessionsAll: ["training", "sessions"] as const,
     /** One live session of the signed in user with its routine day's name and its live sets, or null. */

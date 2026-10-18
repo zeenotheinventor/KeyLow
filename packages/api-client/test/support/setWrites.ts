@@ -263,6 +263,8 @@ export function seedSetQueries(queryClient: QueryClient) {
     activeSession: keys.training.activeSession,
     sets: keys.training.sets("2026-10-02"),
     weekSessions: keys.training.weekSessions("2026-10-12"),
+    history: keys.training.history("2026-10-12"),
+    historyList: keys.training.historyList,
     lastPerformance: keys.training.lastPerformance(EXERCISE_ID, SET_SESSION_ID),
     otherExerciseLastPerformance: keys.training.lastPerformance(OTHER_EXERCISE_ID),
     activeRoutine: keys.training.activeRoutine,

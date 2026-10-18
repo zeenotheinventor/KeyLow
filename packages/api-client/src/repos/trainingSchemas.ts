@@ -106,6 +106,35 @@ export const sessionWithSetsColumnsSchema = sessionDetailColumnsSchema.extend({
   workout_sets: z.array(z.unknown()),
 });
 
+/**
+ * The columns of a `workout_sets` row the history list reads: those of the sets read with the place in
+ * the session, and not the reps or the load, which the list does not show. A row is kept small because
+ * the list is stored on the device.
+ */
+export const historySetColumnsSchema = setColumnsSchema.extend({ position: setShape.position });
+
+export const HISTORY_SET_COLUMNS = Object.keys(historySetColumnsSchema.shape).join(",");
+
+/** A live set of the history list, with its snapshot read. Core's `summariseSession` takes it as it is. */
+export type HistorySetRow = Omit<z.output<typeof historySetColumnsSchema>, "snapshot"> & {
+  snapshot: SetSnapshot;
+};
+
+/**
+ * A live session of the history list with its routine day's name (null for a free session, or when the
+ * day was removed from the routine) and its live sets. Rows only: the summaries are worked out at read time.
+ */
+export type HistorySessionRow = z.output<typeof sessionColumnsSchema> & {
+  routine_day_name: string | null;
+  sets: HistorySetRow[];
+};
+
+/** A session row of the history list as PostgREST returns it, with its routine day and sets embedded. The sets are checked one by one. */
+export const historySessionColumnsSchema = sessionColumnsSchema.extend({
+  routine_days: z.object({ name: routineDayRowSchema.shape.name }).nullable(),
+  workout_sets: z.array(z.unknown()),
+});
+
 /** The columns of a `workout_sets` row the "previous" values and the prefill read, with the session's local date embedded. */
 export const lastPerformanceRowSchema = z.object({
   id: setShape.id,

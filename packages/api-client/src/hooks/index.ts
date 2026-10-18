@@ -109,3 +109,8 @@ export type { ReorderSetsInput } from "./useReorderSets";
 export { useRestoreSet } from "./useRestoreSet";
 export { useUpdateSet } from "./useUpdateSet";
 export type { UpdateSetInput } from "./useUpdateSet";
+
+export { useHistoryWeek } from "./useHistoryWeek";
+export { useHistory } from "./useHistory";
+export type { UseHistoryOptions, UseHistoryResult } from "./useHistory";
+export type { HistoryEntry, HistoryWeek } from "./historyEntries";

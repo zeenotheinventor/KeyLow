@@ -5,8 +5,9 @@ import { keys } from "@keylow/api-client";
  * The diary reads are the ones the screen needs to open offline. The time zone is what the diary reads
  * its days in, and the terms acceptance is what the terms gate needs to decide, so without both the
  * diary could not open without a connection. The training reads are the rows heat, the plan and the
- * week are worked out from, and the session in progress with its sets, so a workout opens without a
- * connection, and the routines with their days and exercises, so the plan opens too. The last
+ * week are worked out from, the history list as rows, and the session in progress with its sets, so a
+ * workout opens without a connection, and the routines with their days and exercises, so the plan
+ * opens too. The last
  * performance of an exercise is not kept: it is only read while logging, which needs a connection. No
  * search is kept, the training ones included (exercises by text).
  */
@@ -27,6 +28,8 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   // A yes or no, so the Train home tells a first visit from no routine without a connection.
   keys.training.hasLoggedSession,
   keys.training.weekSessionsAll,
+  // The history list and each of its weeks, as rows: the summaries are worked out at read time.
+  keys.training.historyAll,
   keys.training.sessionsAll,
   keys.training.activeSession,
   // The routines and one routine with its days, so the routines open and edit without a connection.

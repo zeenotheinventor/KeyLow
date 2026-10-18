@@ -76,6 +76,8 @@ describe("which training queries the diary cache keeps", () => {
     ["the sessions of a week", keys.training.weekSessions("2026-10-12")],
     ["a session with its sets", keys.training.session("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb")],
     ["the session in progress", keys.training.activeSession],
+    ["the sessions of a week in the history", keys.training.history("2026-10-12")],
+    ["the history list, whose pages are weeks", keys.training.historyList],
     ["the routines, with the archived ones left out", keys.training.routines(false)],
     ["the routines, with the archived ones in", keys.training.routines(true)],
     [
@@ -100,6 +102,14 @@ describe("which training queries the diary cache keeps", () => {
     ],
   ])("should not keep %s", (_name, queryKey) => {
     expect(isPersistedQuery(queryFor(queryKey))).toBe(false);
+  });
+
+  it("should not keep a week of the history whose data is older than the longest the cache may be kept", () => {
+    const stale = queryFor(keys.training.history("2026-09-28"), {
+      updatedAt: Date.now() - DIARY_CACHE_MAX_AGE_MS - HOUR_MS,
+    });
+
+    expect(isPersistedQuery(stale)).toBe(false);
   });
 
   it("should not keep a week of sessions whose data is older than the longest the cache may be kept", () => {

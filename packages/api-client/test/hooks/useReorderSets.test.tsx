@@ -83,7 +83,14 @@ describe("useReorderSets", () => {
       result.current.mutateAsync({ sessionId: SET_SESSION_ID, orderedIds: [SECOND, FIRST] }),
     );
 
-    for (const name of ["session", "activeSession", "sets", "weekSessions"] as const) {
+    for (const name of [
+      "session",
+      "activeSession",
+      "sets",
+      "weekSessions",
+      "history",
+      "historyList",
+    ] as const) {
       expect(seeded.isStale(seeded.queryKeys[name])).toBe(true);
     }
     expect(seeded.isStale(seeded.queryKeys.routines)).toBe(false);

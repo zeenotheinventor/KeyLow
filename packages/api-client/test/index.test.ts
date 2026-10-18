@@ -130,6 +130,11 @@ describe("the package index", () => {
     "useRemoveSet",
     "useRestoreSet",
     "useReorderSets",
+
+    "findPreviousSessionWeek",
+    "listSessionsInWeek",
+    "useHistory",
+    "useHistoryWeek",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

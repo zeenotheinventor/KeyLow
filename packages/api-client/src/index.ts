@@ -237,3 +237,7 @@ export { useAddSet, useRemoveSet, useReorderSets, useRestoreSet, useUpdateSet } 
 export type { ReorderSetsInput, UpdateSetInput } from "./hooks";
 export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./repos";
 export type { SetAdd, SetPatch } from "./repos";
+export { useHistory, useHistoryWeek } from "./hooks";
+export type { HistoryEntry, HistoryWeek, UseHistoryOptions, UseHistoryResult } from "./hooks";
+export { findPreviousSessionWeek, listSessionsInWeek } from "./repos";
+export type { HistorySessionRow, HistorySetRow } from "./repos";
