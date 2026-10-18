@@ -339,6 +339,32 @@ function SkeletonTrainHome() {
   );
 }
 
+// The body map screen as it loads: the card with the view label and its line over the two figures, then
+// the legend bar and its caption. The figures take what the card leaves, up to the 140 points the screen
+// draws them at, so a narrow phone does not push them out of the card.
+function SkeletonBodyMap() {
+  return (
+    <View className="gap-3" testID="skeleton-body-map">
+      <Card padding={3}>
+        <View className="gap-2">
+          <View className="gap-[6px]">
+            <SkeletonBone className="h-[14px] w-[104px]" />
+            <SkeletonBone className="h-3 w-[168px]" />
+          </View>
+          <View className="flex-row justify-center gap-10">
+            <SkeletonBone className="aspect-[200/440] max-w-[140px] flex-1 rounded-medium" />
+            <SkeletonBone className="aspect-[200/440] max-w-[140px] flex-1 rounded-medium" />
+          </View>
+        </View>
+      </Card>
+      <View className="gap-[6px]">
+        <SkeletonBone className="h-[10px] rounded-[3px]" />
+        <SkeletonBone className="h-3 w-[60%] self-center" />
+      </View>
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -359,6 +385,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "thisWeekCard" ? <SkeletonThisWeekCard /> : null}
       {variant === "bodyMapCard" ? <SkeletonBodyMapCard /> : null}
       {variant === "trainHome" ? <SkeletonTrainHome /> : null}
+      {variant === "bodyMap" ? <SkeletonBodyMap /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View

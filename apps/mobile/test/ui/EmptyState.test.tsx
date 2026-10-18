@@ -190,6 +190,58 @@ describe("EmptyState", () => {
     );
   });
 
+  describe("as a card, as the training boards draw their empty states", () => {
+    it("should sit in a card with 20 points above, 20 at the sides and 16 below, and draw no tile without an icon", async () => {
+      await renderEmptyState({ icon: undefined, variant: "card" });
+
+      expect(screen.getByRole("heading", { name: "No foods found" }).parent).toHaveStyle({
+        alignItems: "center",
+        rowGap: 8,
+        paddingTop: 20,
+        paddingLeft: 20,
+        paddingRight: 20,
+        paddingBottom: 16,
+      });
+      expect(screen.queryByTestId("empty-state-tile")).not.toBeOnTheScreen();
+    });
+
+    it("should take only the height of its words, not the height of its parent", async () => {
+      await renderEmptyState({ icon: undefined, variant: "card" });
+
+      expect(viewsDrawn({ flex: 1, justifyContent: "center" })).toHaveLength(0);
+    });
+
+    it("should be drawn on the surface with the card's border", async () => {
+      await renderEmptyState({ icon: undefined, variant: "card" });
+
+      expect(fadingView().children[0]).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "surface"),
+        borderWidth: 1,
+      });
+    });
+
+    it("should draw its action 8 points further down than the words", async () => {
+      await renderEmptyState({
+        icon: undefined,
+        variant: "card",
+        action: { label: "Start a session", variant: "primary", onPress: () => undefined },
+      });
+
+      // The button's own layout wraps the pressable and its press scale, and carries the margin.
+      expect(screen.getByRole("button", { name: "Start a session" }).parent?.parent).toHaveStyle({
+        marginTop: 8,
+      });
+    });
+  });
+
+  describe("the icon", () => {
+    it("should be left out with its tile when no icon is given", async () => {
+      await renderEmptyState({ icon: undefined });
+
+      expect(screen.queryByTestId("empty-state-tile")).not.toBeOnTheScreen();
+    });
+  });
+
   describe("motion", () => {
     it("should fade in over the quick duration, in place of the design's cut-in", async () => {
       await renderEmptyState();

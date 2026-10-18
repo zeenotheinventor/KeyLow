@@ -36,7 +36,7 @@ const meta = {
       </View>
     ),
   ],
-  args: { bodyMap: goldenThursday },
+  args: { bodyMap: goldenThursday, onOpen: () => undefined },
 } satisfies Meta<typeof DashboardBodyMapCard>;
 
 export default meta;
@@ -66,7 +66,7 @@ export const NoPlanForToday: Story = {
   args: { bodyMap: { ...goldenThursday, today: { kind: "none", dayName: null } } },
 };
 
-// A fresh install: the figures at rest, the no-history line, and no link or Start button.
+// A fresh install: the figures at rest, the no-history line, and no Start button.
 export const NoHistory: Story = {
   args: { bodyMap: { values: RESTING_HEAT, warmest: [], today: { kind: "none", dayName: null } } },
 };

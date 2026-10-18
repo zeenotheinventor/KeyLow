@@ -390,6 +390,50 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the body map screen", () => {
+    it("should be the view label and its line, two figures, the legend bar and its caption", async () => {
+      await renderSkeleton({ variant: "bodyMap" });
+
+      expect(bones()).toHaveLength(6);
+    });
+
+    it("should draw the view label 104 wide and 14 tall and its line 168 wide and 12 tall", async () => {
+      await renderSkeleton({ variant: "bodyMap" });
+
+      expect(bones()[0]).toHaveStyle({ width: 104, height: 14 });
+      expect(bones()[1]).toHaveStyle({ width: 168, height: 12 });
+    });
+
+    it("should draw each figure at most 140 wide and 2.2 times as tall as it is wide, so it is the size of the figure whatever the phone", async () => {
+      await renderSkeleton({ variant: "bodyMap" });
+
+      for (const figure of bones().slice(2, 4)) {
+        expect(figure).toHaveStyle({
+          flexGrow: 1,
+          maxWidth: 140,
+          aspectRatio: "200 / 440",
+          borderRadius: 12,
+        });
+      }
+    });
+
+    it("should draw the legend bar 10 tall and its caption 12 tall", async () => {
+      await renderSkeleton({ variant: "bodyMap" });
+
+      expect(bones()[4]).toHaveStyle({ height: 10 });
+      expect(bones()[5]).toHaveStyle({ width: "60%", height: 12 });
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "bodyMap" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like a food's page", () => {
     it("should be five bones: two lines of a name, a source pill, and the two cards under them", async () => {
       await renderSkeleton({ variant: "detail" });

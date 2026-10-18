@@ -11,4 +11,5 @@ export const storyStates = [
   "ThisWeekCard",
   "BodyMapCard",
   "TrainHome",
+  "BodyMap",
 ];

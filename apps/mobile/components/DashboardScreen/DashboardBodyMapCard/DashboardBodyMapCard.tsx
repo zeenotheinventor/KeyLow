@@ -3,7 +3,8 @@ import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
 import { View } from "react-native";
 
 import { todayPlanOf } from "./todayPlanOf";
-import { BodyFigure, Card, Icon, Text } from "../../ui";
+import { rowPressScale } from "../../../lib/motion";
+import { BodyFigure, Card, Icon, PressableSurface, Text } from "../../ui";
 
 import type { DashboardBodyMapCardProps } from "./types";
 
@@ -22,37 +23,48 @@ const heatSwatchClassNames = [
 ];
 
 /**
- * The body map on the dashboard as its board draws it: Actual heat now, front and back at 100 points, the
- * heat legend from Peak to Rested, the three warmest muscles and today's planned day. The figure is drawn
- * male until the figure setting exists. It is information for now and not a link, because the body map screen
- * it will open does not exist yet, so it has no button and its name leaves out "Open the body map". The
- * whole card is one element with that name and no role, and the words and figures inside it are hidden from screen
- * readers because the name already says all of it.
+ * The body map on the dashboard as its board draws it: the title and the view with a Body map link and its
+ * chevron, Actual heat now, front and back at 100 points, the heat legend from Peak to Rested, the three
+ * warmest muscles and today's planned day. The figure is drawn male until the figure setting exists. The
+ * whole card is one button that opens the body map, as the Today and This week cards open the Diary, named
+ * by what it shows and "Open the body map". There is no toggle and no long-press here. The words and
+ * figures inside it are hidden from screen readers, because that name already says all of it.
  */
-export function DashboardBodyMapCard({ bodyMap }: DashboardBodyMapCardProps) {
+export function DashboardBodyMapCard({ bodyMap, onOpen }: DashboardBodyMapCardProps) {
   const { warmestLine, todayLine, accessibleName } = describeDashboardBodyMapCard({
     warmest: bodyMap.warmest,
     today: todayPlanOf(bodyMap.today),
     heatWindowDays: TRAINING_PARAMS_V1.heatWindowDays,
-    opensBodyMap: false,
+    opensBodyMap: true,
   });
   const figureLabel = (side: "front" | "back") =>
     describeBodyFigureLabel({ scale: "heat", view: "actual", side, hint: null });
 
   return (
     <Card padding={0}>
-      <View accessible aria-label={accessibleName} className="py-3 pl-4 pr-3">
+      <PressableSurface
+        className="py-3 pl-4 pr-3"
+        label={accessibleName}
+        pressScale={rowPressScale}
+        onPress={onOpen}
+      >
         <View aria-hidden className="gap-2">
-          <View className="gap-[2px]">
-            <View className="flex-row items-center gap-[6px]">
-              <Icon name="Dumbbell" size={TITLE_ICON_SIZE} tone="secondary" />
-              <Text tone="muted" variant="caption">
-                {BODY_MAP.dashboardCard.title}
-              </Text>
+          <View className="flex-row items-start justify-between gap-2">
+            <View className="gap-[2px]">
+              <View className="flex-row items-center gap-[6px]">
+                <Icon name="Dumbbell" size={TITLE_ICON_SIZE} tone="secondary" />
+                <Text tone="muted" variant="caption">
+                  {BODY_MAP.dashboardCard.title}
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <View className="h-2 w-2 rounded-full bg-text-primary" />
+                <Text variant="body-strong">{BODY_MAP.dashboardCard.view}</Text>
+              </View>
             </View>
-            <View className="flex-row items-center gap-2">
-              <View className="h-2 w-2 rounded-full bg-text-primary" />
-              <Text variant="body-strong">{BODY_MAP.dashboardCard.view}</Text>
+            <View className="min-h-touch-target flex-row items-center gap-[2px]">
+              <Text variant="label-small">{BODY_MAP.dashboardCard.link}</Text>
+              <Icon name="ChevronRight" size="sm" tone="secondary" />
             </View>
           </View>
           <View className="flex-row items-end justify-center gap-[28px]">
@@ -101,7 +113,7 @@ export function DashboardBodyMapCard({ bodyMap }: DashboardBodyMapCardProps) {
             )}
           </View>
         </View>
-      </View>
+      </PressableSurface>
     </Card>
   );
 }

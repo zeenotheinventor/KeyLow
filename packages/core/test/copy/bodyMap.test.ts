@@ -151,6 +151,9 @@ describe("the fixed words of the body map, as the boards draw them", () => {
     expect(BODY_MAP).toStrictEqual({
       title: "Body map",
       listTitle: "Muscles",
+      // Deliberately off the canvas, which draws "Back to Train" alone: the screen also opens from the
+      // dashboard and from a cold link, where "Back to Train" would name the wrong place.
+      back: "Back",
       backToTrain: "Back to Train",
       muscleListButton: "Muscle list",
       closeSheet: "Close",

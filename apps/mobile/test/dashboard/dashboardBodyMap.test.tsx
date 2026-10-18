@@ -163,7 +163,7 @@ describe("DashboardBodyMap", () => {
 
       expect(
         await screen.findByLabelText(
-          "Body map, Actual heat now. Warmest: lats 9 percent. Today: Legs, 16 sets planned.",
+          "Body map, Actual heat now. Warmest: lats 9 percent. Today: Legs, 16 sets planned. Open the body map",
         ),
       ).toBeOnTheScreen();
     });

@@ -95,6 +95,8 @@ export const BODY_MAP_LEGEND_ITEMS = {
 export const BODY_MAP = {
   title: "Body map",
   listTitle: "Muscles",
+  /** The back button where the screen opens from anywhere but the Train home: the dashboard, or a cold link. */
+  back: "Back",
   backToTrain: "Back to Train",
   muscleListButton: "Muscle list",
   closeSheet: "Close",

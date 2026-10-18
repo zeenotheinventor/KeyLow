@@ -1,4 +1,5 @@
 import {
+  BODY_MAP,
   FOOD_NOT_FOUND,
   RECIPES_EMPTY,
   RECIPES_LIBRARY,
@@ -87,4 +88,21 @@ export const DisabledAction: Story = {
       onPress: () => undefined,
     },
   },
+};
+
+// The training boards' empty state, as the body map draws it: a card with no tile, in among the other cards.
+// Its Start a session button waits for the Train tab, so the story leaves it out too.
+export const Card: Story = {
+  args: {
+    variant: "card",
+    title: BODY_MAP.emptyState.title,
+    body: BODY_MAP.emptyState.body,
+  },
+  decorators: [
+    (Story) => (
+      <View className="p-4">
+        <Story />
+      </View>
+    ),
+  ],
 };

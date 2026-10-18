@@ -56,3 +56,6 @@ export const BodyMapCard: Story = { args: { variant: "bodyMapCard" } };
 
 // The Train home while it loads: the Today card, the two body figures and the seven days of the week.
 export const TrainHome: Story = { args: { variant: "trainHome" } };
+
+// The body map screen while it loads: the card with the view label and two figures, and the legend under it.
+export const BodyMap: Story = { args: { variant: "bodyMap" } };

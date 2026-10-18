@@ -10,8 +10,8 @@ const TITLE_ICON_SIZE = 14;
 /**
  * The body map card when it has nothing to show: its title over one quiet line, either that a read failed
  * or that the body map is not available offline. There is no Try again, because the card reads again by
- * itself and the Dashboard's own error state is where a failed read is retried. It is not pressable, as the
- * card is not.
+ * itself and the Dashboard's own error state is where a failed read is retried. It is not pressable,
+ * because a read that failed or a phone with nothing saved has no body map to open.
  */
 export function DashboardBodyMapMessage({ kind }: DashboardBodyMapMessageProps) {
   return (
