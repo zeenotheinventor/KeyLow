@@ -61,6 +61,7 @@ const names: IconName[] = [
   "CloudOff",
   "Ellipsis",
   "Flame",
+  "History",
   "Info",
   "LayoutDashboard",
   "LoaderCircle",

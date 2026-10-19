@@ -45,3 +45,13 @@ export const WithAction: Story = {
     inset: "wide",
   },
 };
+
+// The training boards' error state, such as the history list's: a card among the other cards of a screen.
+export const Card: Story = {
+  args: {
+    title: SEARCH_FAILED_MOBILE.title,
+    body: SEARCH_FAILED_MOBILE.body,
+    retry: { label: "Try again", onPress: () => undefined },
+    variant: "card",
+  },
+};

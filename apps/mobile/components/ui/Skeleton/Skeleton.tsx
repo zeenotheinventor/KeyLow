@@ -365,6 +365,36 @@ function SkeletonBodyMap() {
   );
 }
 
+// The history list as its loading board draws it: a week heading as a bar, then a card of three rows, each a
+// date block beside a name over a longer line. The widths vary so the rows do not look stamped. The screen
+// gives its sides.
+const historyRows = [
+  { key: "first", nameWidthClassName: "w-[90px]", lineWidthClassName: "w-[170px]" },
+  { key: "second", nameWidthClassName: "w-[70px]", lineWidthClassName: "w-[150px]" },
+  { key: "third", nameWidthClassName: "w-[80px]", lineWidthClassName: "w-[180px]" },
+];
+
+function SkeletonHistoryList() {
+  return (
+    <View className="gap-2" testID="skeleton-history-list">
+      <SkeletonBone className="h-3 w-[160px]" />
+      <Card padding={3}>
+        <View className="gap-4">
+          {historyRows.map(({ key, nameWidthClassName, lineWidthClassName }) => (
+            <View key={key} className="flex-row gap-3">
+              <SkeletonBone className="h-[44px] w-[40px] shrink-0" />
+              <View className="flex-1 gap-[6px]">
+                <SkeletonBone className={`h-[14px] ${nameWidthClassName}`} />
+                <SkeletonBone className={`h-3 ${lineWidthClassName}`} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </Card>
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -386,6 +416,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "bodyMapCard" ? <SkeletonBodyMapCard /> : null}
       {variant === "trainHome" ? <SkeletonTrainHome /> : null}
       {variant === "bodyMap" ? <SkeletonBodyMap /> : null}
+      {variant === "historyList" ? <SkeletonHistoryList /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View

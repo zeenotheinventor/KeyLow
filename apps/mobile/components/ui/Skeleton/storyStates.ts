@@ -12,4 +12,5 @@ export const storyStates = [
   "BodyMapCard",
   "TrainHome",
   "BodyMap",
+  "HistoryList",
 ];

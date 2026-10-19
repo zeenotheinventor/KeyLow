@@ -59,3 +59,6 @@ export const TrainHome: Story = { args: { variant: "trainHome" } };
 
 // The body map screen while it loads: the card with the view label and two figures, and the legend under it.
 export const BodyMap: Story = { args: { variant: "bodyMap" } };
+
+// The history list while it loads: a week heading and a card of three rows, each a date block, a name and a line.
+export const HistoryList: Story = { args: { variant: "historyList" } };

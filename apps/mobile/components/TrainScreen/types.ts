@@ -26,6 +26,8 @@ export type TrainScreenProps = {
   onResume?: (() => void) | undefined;
   /** Opens today's finished session: "View session" on the Today card. Drawn only when it is given. */
   onViewSession?: (() => void) | undefined;
+  /** Opens the history list: "History" in the header. Drawn only when it is given. */
+  onOpenHistory?: (() => void) | undefined;
 };
 
 /** The Today card for today: what `todayCard` gave and what its words need besides it. */

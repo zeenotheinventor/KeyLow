@@ -58,7 +58,10 @@ export type UseHistoryResult = TrainingReadResult<HistoryWeek[]> & {
   /** Whether a week with a session exists before the last one loaded. */
   hasEarlierWeeks: boolean;
   isLoadingEarlierWeeks: boolean;
-  /** Loads the next earlier week that has a session. */
+  /**
+   * Loads the next earlier week that has a session. It rejects when that week does not load, with an error
+   * that names the action and the database code only. The weeks already on screen stay.
+   */
   loadEarlierWeeks: () => Promise<void>;
 };
 
@@ -132,7 +135,10 @@ export function useHistory({ weeks, enabled = true }: UseHistoryOptions): UseHis
     hasEarlierWeeks: hasNextPage,
     isLoadingEarlierWeeks: history.isFetchingNextPage,
     loadEarlierWeeks: async () => {
-      await fetchNextPage();
+      const result = await fetchNextPage();
+      if (result.isError) {
+        throw result.error;
+      }
     },
   };
 }

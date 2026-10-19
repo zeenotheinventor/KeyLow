@@ -86,6 +86,60 @@ describe("ErrorState", () => {
     });
   });
 
+  describe("as a card, as the training boards draw their error states", () => {
+    it("should sit in a card with 20 points above, 20 at the sides and 16 below, like the empty card", async () => {
+      await renderErrorState({ variant: "card" });
+
+      expect(screen.getByRole("alert").parent).toHaveStyle({
+        alignItems: "center",
+        rowGap: 8,
+        paddingTop: 20,
+        paddingLeft: 20,
+        paddingRight: 20,
+        paddingBottom: 16,
+      });
+    });
+
+    it("should be drawn on the surface with the card's border", async () => {
+      await renderErrorState({ variant: "card" });
+
+      expect(fadingView().children[0]).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "surface"),
+        borderWidth: 1,
+      });
+    });
+
+    it("should take only the height of its words, not the height of its parent", async () => {
+      await renderErrorState({ variant: "card" });
+
+      expect(viewsDrawn({ flex: 1, justifyContent: "center" })).toHaveLength(0);
+    });
+
+    it("should keep the alert, the danger tile and the retry, with the retry 8 points below the words", async () => {
+      const onPress = jest.fn();
+      await renderErrorState({
+        variant: "card",
+        retry: { label: "Try again", onPress },
+      });
+
+      expect(screen.getByRole("alert")).toBeOnTheScreen();
+      expect(tile()).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Try again" }).parent?.parent).toHaveStyle({
+        marginTop: 8,
+      });
+    });
+
+    it("should leave the default view as it was: filling the parent, in no card, 24 points at the sides", async () => {
+      await renderErrorState();
+
+      expect(fadingView().parent).toHaveStyle({ flexGrow: 1, justifyContent: "center" });
+      expect(fadingView().children[0]).not.toHaveStyle({ borderWidth: 1 });
+      expect(viewsDrawn({ alignItems: "center", paddingLeft: 24, paddingRight: 24 })).toHaveLength(
+        1,
+      );
+    });
+  });
+
   describe("what it says", () => {
     it("should be an alert that reads the title and the sentence it is given", async () => {
       await renderErrorState();
