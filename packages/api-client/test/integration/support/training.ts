@@ -53,14 +53,19 @@ export async function saveExercise(
 }
 
 /**
- * A global exercise, which every user can log a set against, with the snapshot a set of it would carry.
- * An exercise a user saves is theirs alone, so two users can only share a global one.
+ * A library exercise, which every user can log a set against, with the snapshot a set of it would carry.
+ * An exercise a user saves is theirs alone, so two users can only share a global one. It has to be a
+ * live one from the library: the database suites leave soft-deleted key349- exercises behind and keep
+ * live ones while they run, and a set cannot be logged against either.
  */
 export async function findGlobalExercise(): Promise<SavedExercise> {
   const { data, error } = await adminClient()
     .from("exercises")
     .select("id,name,equipment,mechanic")
+    .eq("source", "free_exercise_db")
     .is("owner_id", null)
+    .is("deleted_at", null)
+    .not("source_ref", "like", "key349-%")
     .order("id")
     .limit(1)
     .single();
