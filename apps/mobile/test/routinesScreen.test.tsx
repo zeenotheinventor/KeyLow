@@ -11,6 +11,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { ArchivedRoutinesScreen } from "../components/ArchivedRoutinesScreen";
 import { RoutinesScreen } from "../components/RoutinesScreen";
+import { ToastProvider } from "../components/ui";
 import { archivedRoutinesPath, routinesPath, trainPath } from "../lib/routineRoutes";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "./support/diaryBackend";
@@ -55,7 +56,7 @@ async function renderScreen(
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={routinesClient} queryClient={queryClient}>
-        {screenElement}
+        <ToastProvider>{screenElement}</ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -204,12 +205,11 @@ describe("the routines screens", () => {
       expect(routerMock.push).toHaveBeenCalledWith(archivedRoutinesPath());
     });
 
-    it("should draw no Make active, Edit or New routine, because nothing supplies them yet", async () => {
+    it("should draw no Edit or New routine, because nothing supplies them yet", async () => {
       seedGoldenRoutines();
       await renderScreen(<RoutinesScreen />);
       await screen.findByRole("heading", { name: "Push Pull Legs" });
 
-      expect(screen.queryByRole("button", { name: /Make active/ })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeOnTheScreen();
       expect(
         screen.queryByRole("button", { name: ROUTINES_SCREEN.newRoutineLabel }),
@@ -292,7 +292,6 @@ describe("the routines screens", () => {
       expect(await screen.findByText("Starting strength")).toBeOnTheScreen();
       expect(screen.getByText("3 days")).toBeOnTheScreen();
       expect(screen.queryByText("Push Pull Legs")).not.toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: /Restore/ })).not.toBeOnTheScreen();
     });
 
     it("should go back to the screen before it, or to the routines when there is none", async () => {

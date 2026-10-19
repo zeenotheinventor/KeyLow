@@ -1,10 +1,14 @@
 import { useProfileTimeZone, useRoutines } from "@keylow/api-client";
+import { describeMakeActiveDialog } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { useRouter } from "expo-router";
 
 import { archivedRoutinesPath, trainPath } from "../../lib/routineRoutes";
+import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { RoutinesView } from "../RoutinesView";
+import { ConfirmDialog } from "../ui";
+import { useMakeRoutineActive } from "./useMakeRoutineActive";
 
 import type { RoutineItem } from "../RoutinesView";
 
@@ -23,13 +27,18 @@ const routineItemOf = (routine: StoredRoutine): RoutineItem => ({
  * profile's time zone, and a profile without one is UTC. The list does not wait for the zone: until it is
  * known the date is left out. Both reads are kept on the phone, so the list opens
  * without a connection. Back returns to the Train tab, and the archived link opens the archived routines.
- * Nothing makes a routine active, edits or creates one yet, so those controls are not drawn.
+ * Make active on an other routine asks first, as the `routines · set-active` board draws it, with today in
+ * the profile's zone: the routine plans from that day. Until the zone is known the question cannot name
+ * the day, so Make active is not drawn. Nothing edits or creates a routine yet, so those controls are not
+ * drawn.
  */
 export function RoutinesScreen() {
   const router = useRouter();
   const enabled = useReadsEnabled();
   const routines = useRoutines({ archived: true, enabled });
   const timeZone = useProfileTimeZone({ enabled });
+  const now = useNow();
+  const makeActive = useMakeRoutineActive();
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Train tab instead.
@@ -67,24 +76,55 @@ export function RoutinesScreen() {
   const zone = timeZone.data === undefined ? null : (timeZone.data ?? "UTC");
   const live = routines.data.filter((routine) => !routine.is_archived);
   const active = live.find((routine) => routine.is_active);
-
+  const localDate = zone === null ? null : toLocalDate(now, zone);
   return (
-    <RoutinesView
-      {...navigation}
-      active={
-        active === undefined
-          ? null
-          : {
-              ...routineItemOf(active),
-              activeFrom:
-                active.activated_at === null || zone === null
-                  ? null
-                  : toLocalDate(new Date(active.activated_at), zone),
-            }
-      }
-      archivedCount={routines.data.length - live.length}
-      others={live.filter((routine) => routine !== active).map(routineItemOf)}
-      status="ready"
-    />
+    <>
+      <RoutinesView
+        {...navigation}
+        onMakeActive={
+          localDate === null
+            ? undefined
+            : (routine) => {
+                makeActive.ask(
+                  routine,
+                  describeMakeActiveDialog({
+                    routineName: routine.name,
+                    previousActiveName: active?.name ?? null,
+                    localDate,
+                  }),
+                );
+              }
+        }
+        active={
+          active === undefined
+            ? null
+            : {
+                ...routineItemOf(active),
+                activeFrom:
+                  active.activated_at === null || zone === null
+                    ? null
+                    : toLocalDate(new Date(active.activated_at), zone),
+              }
+        }
+        archivedCount={routines.data.length - live.length}
+        others={live.filter((routine) => routine !== active).map(routineItemOf)}
+        status="ready"
+      />
+      {makeActive.question === null ? null : (
+        <ConfirmDialog
+          body={makeActive.question.copy.body}
+          busy={makeActive.isBusy}
+          cancelLabel={makeActive.question.copy.cancelAction}
+          confirmLabel={makeActive.question.copy.confirmAction}
+          open={makeActive.isOpen}
+          title={makeActive.question.copy.title}
+          tone="primary"
+          onCancel={makeActive.cancel}
+          onConfirm={() => {
+            void makeActive.confirm();
+          }}
+        />
+      )}
+    </>
   );
 }

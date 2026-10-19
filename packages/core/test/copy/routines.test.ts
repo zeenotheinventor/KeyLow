@@ -27,6 +27,8 @@ import {
   ROUTINE_DISCARD,
   ROUTINE_EDITOR,
   ROUTINE_EDITOR_LOADING_LABEL,
+  ROUTINE_MAKE_ACTIVE_FAILED,
+  ROUTINE_RESTORE_FAILED,
   ROUTINE_WEEKDAY_CHOICES,
   ROUTINES_ARCHIVED,
   ROUTINES_EMPTY,
@@ -80,6 +82,15 @@ describe("the Routines screen's fixed words", () => {
       undoAction: "Undo",
     });
     expect(ARCHIVE_ACTIVE_REFUSAL).toBe("Make another routine active first.");
+  });
+
+  it("should propose the toasts for a make active and a restore that did not go through", () => {
+    expect(ROUTINE_MAKE_ACTIVE_FAILED).toBe(
+      "Your routine was not made active. Check your connection, then try again.",
+    );
+    expect(ROUTINE_RESTORE_FAILED).toBe(
+      "Your routine was not restored. Check your connection, then try again.",
+    );
   });
 
   it("should count the archived routines on the link", () => {

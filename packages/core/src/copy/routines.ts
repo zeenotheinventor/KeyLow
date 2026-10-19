@@ -65,6 +65,18 @@ export const ROUTINE_ARCHIVED_TOAST = {
 /** The refusal when the active routine is archived. The boards do not draw it. */
 export const ARCHIVE_ACTIVE_REFUSAL = "Make another routine active first.";
 
+/**
+ * The toast when making a routine active did not go through, offline or on a failed write. It names no
+ * routine and says nothing of what the list now shows, since the read after a write can fail on its own.
+ * The boards do not draw it.
+ */
+export const ROUTINE_MAKE_ACTIVE_FAILED =
+  "Your routine was not made active. Check your connection, then try again.";
+
+/** The toast when restoring a routine did not go through, worded as the one above. The boards do not draw it. */
+export const ROUTINE_RESTORE_FAILED =
+  "Your routine was not restored. Check your connection, then try again.";
+
 /** The fixed words of the routine editor. */
 export const ROUTINE_EDITOR = {
   title: "Edit routine",
