@@ -1,4 +1,4 @@
-import { KeyLowProvider } from "@keylow/api-client";
+import { KeyLowProvider, keys } from "@keylow/api-client";
 import { SESSION_DISCARD, TRAIN_DISCARD_FAILED } from "@keylow/core/copy";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
@@ -48,7 +48,11 @@ async function renderSession(onDiscarded: (() => void) | null = jest.fn()) {
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={trainWritesClient} queryClient={queryClient}>
         <ToastProvider>
-          <SessionScreen onDiscarded={onDiscarded ?? undefined} onHide={jest.fn()} />
+          <SessionScreen
+            onDiscarded={onDiscarded ?? undefined}
+            onFinished={jest.fn()}
+            onHide={jest.fn()}
+          />
         </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
@@ -131,6 +135,39 @@ describe("discarding a session from the active session screen", () => {
     });
     expect(trainWrites.deletedIds).toEqual([GOLDEN_SESSION_ID]);
     expect(trainBackend.activeSession).toBeNull();
+  });
+
+  it("should forget the exercises added but not yet logged once the session is discarded, and not before", async () => {
+    const onDiscarded = jest.fn();
+    const user = await renderSession(onDiscarded);
+    const addedKey = keys.training.addedExercises(GOLDEN_SESSION_ID);
+    queryClient.setQueryData(addedKey, [
+      { id: "added", name: "Lateral raise", equipment: "cable" },
+    ]);
+    await askToDiscard(user);
+    expect(queryClient.getQueryData(addedKey)).toBeDefined();
+
+    await user.press(screen.getByRole("button", { name: SESSION_DISCARD.confirmAction }));
+
+    await waitFor(() => {
+      expect(onDiscarded).toHaveBeenCalledTimes(1);
+    });
+    expect(queryClient.getQueryData(addedKey)).toBeUndefined();
+  });
+
+  it("should keep the added exercises when the discard fails", async () => {
+    trainWrites.failDeletes = true;
+    const user = await renderSession();
+    const addedKey = keys.training.addedExercises(GOLDEN_SESSION_ID);
+    queryClient.setQueryData(addedKey, [
+      { id: "added", name: "Lateral raise", equipment: "cable" },
+    ]);
+    await askToDiscard(user);
+
+    await user.press(screen.getByRole("button", { name: SESSION_DISCARD.confirmAction }));
+
+    await screen.findByRole("status", { name: TRAIN_DISCARD_FAILED });
+    expect(queryClient.getQueryData(addedKey)).toBeDefined();
   });
 
   it("should delete once when Discard session is pressed twice", async () => {

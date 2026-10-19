@@ -129,7 +129,7 @@ async function renderSession(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={client} queryClient={queryClient}>
         <ToastProvider>
-          <SessionScreen onHide={jest.fn()} {...props} />
+          <SessionScreen onFinished={jest.fn()} onHide={jest.fn()} {...props} />
         </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
@@ -621,7 +621,7 @@ describe("the active session screen", () => {
         <ThemeProvider fixedPreference="dark">
           <KeyLowProvider client={trainClient} queryClient={queryClient}>
             <ToastProvider>
-              <SessionScreen onHide={jest.fn()} />
+              <SessionScreen onFinished={jest.fn()} onHide={jest.fn()} />
             </ToastProvider>
           </KeyLowProvider>
         </ThemeProvider>,
@@ -649,7 +649,7 @@ describe("the active session screen", () => {
         <ThemeProvider fixedPreference="dark">
           <KeyLowProvider client={trainClient} queryClient={queryClient}>
             <ToastProvider>
-              <SessionScreen onHide={jest.fn()} />
+              <SessionScreen onFinished={jest.fn()} onHide={jest.fn()} />
             </ToastProvider>
           </KeyLowProvider>
         </ThemeProvider>,

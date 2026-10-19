@@ -1,4 +1,5 @@
 import type { ChosenExercise } from "../AddExerciseSheet";
+import type { FinishDetails, SavedOutcome } from "../FinishScreen";
 import type { ExercisePlan } from "../SetEntrySheet";
 import type { SessionSet } from "@keylow/api-client";
 import type {
@@ -17,6 +18,12 @@ export type SessionScreenProps = {
    * is drawn only when it is given, so none is a dead control.
    */
   onDiscarded?: (() => void) | undefined;
+  /**
+   * Called once the session is saved. The route shows the Session saved toast and, when the screen is
+   * still open, goes on to the tabs: nothing is left to show, since the session is no longer the one in
+   * progress. A save that lands after the screen closed still calls it, with `isScreenOpen` false.
+   */
+  onFinished: (outcome: SavedOutcome) => void;
 };
 
 /**
@@ -97,6 +104,8 @@ export type SessionScreenView =
       exercises: readonly SessionScreenExercise[];
       /** Puts a card for the picked exercise on the screen, with one row to do. It exists on screen only until its first set is logged. */
       addExercise: (exercise: ChosenExercise) => void;
+      /** What the finish screen shows, as it stands now. */
+      finish: FinishDetails;
     };
 
 /**

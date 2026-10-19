@@ -1,6 +1,6 @@
 import {
   ADD_EXERCISE,
-  DIARY_MORE_LABEL,
+  FINISH_SCREEN,
   SESSION_ACTIVE,
   TRAIN_ERROR,
   TRAIN_LOADING_NAME,
@@ -11,15 +11,18 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddExerciseSheet } from "../AddExerciseSheet";
+import { FinishScreen } from "../FinishScreen";
 import { SessionClock } from "../SessionClock";
 import { SessionExerciseCard } from "../SessionExerciseCard";
+import { SessionHeaderActions } from "../SessionHeaderActions";
 import { SessionMenu } from "../SessionMenu";
 import { SetEntrySheet } from "../SetEntrySheet";
-import { Button, ErrorState, IconButton, SheetHeader } from "../ui";
+import { Button, ErrorState, SheetHeader, Text } from "../ui";
 import { usePendingSets } from "./pendingSets";
 import { useSessionScreen } from "./useSessionScreen";
 import { useSetLogging } from "./useSetLogging";
 
+import type { FinishDetails } from "../FinishScreen";
 import type { SessionScreenProps } from "./types";
 import type { SetEntryOpening } from "../SetEntrySheet";
 
@@ -29,17 +32,19 @@ const MINIMUM_DOCK_BOTTOM_PADDING = 34;
 /**
  * The active session, a full screen over the tabs, as the `session · active` and `session · from-routine`
  * boards draw it: the control that hides it while the session keeps running, the session's name with its
- * clock and sets logged, and a card for each exercise with its set rows, with Add exercise docked under them.
- * An exercise added with no set yet is a card too, held by `useAddedExercises`. The cells of a set still to do
- * open the set entry sheet, which logs the set. The check logs a set from the numbers its row shows (or opens
- * the same sheet when it has none) or removes a logged one, and Add set adds a row. Editing a logged set and
- * Finish have tickets of their own. While the session is read the screen shows a loading status, a failed
- * read shows Try again, and with no open session only the control that hides it is left (no board draws
- * these).
+ * clock and sets logged, Finish and More at the right of the header, and a card for each exercise with its
+ * set rows, with Add exercise docked under them. An exercise added with no set yet is a card too, held by
+ * `useAddedExercises`. The cells of a set still to do open the set entry sheet, which logs the set. The check
+ * logs a set from the numbers its row shows (or opens the same sheet when it has none) or removes a logged
+ * one, and Add set adds a row. Editing a logged set has a ticket of its own. Finish opens the finish screen
+ * in place of the session, and Keep logging brings the session back. Finish is off while no set is logged,
+ * with a line that says what to do (no board draws it). While the session is read the screen shows a
+ * loading status, a failed read shows Try again, and with no open session only the control that hides it is
+ * left (no board draws these).
  * The header's More control, which no board draws, holds Discard session and is drawn only when
  * `onDiscarded` is given.
  */
-export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
+export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreenProps) {
   const pendingSets = usePendingSets();
   const view = useSessionScreen(pendingSets.sets);
   const logging = useSetLogging(view, pendingSets);
@@ -50,8 +55,31 @@ export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
     openingId: number;
   } | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [finishing, setFinishing] = useState<FinishDetails | null>(null);
+  // Held here, beside `finishing`, so Keep logging does not drop a note of up to 1,000 characters.
+  const [note, setNote] = useState("");
   const insets = useSafeAreaInsets();
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  // The finish screen keeps what it was opened with, so it stays up while the saved session stops being the one in progress.
+  if (finishing !== null) {
+    return (
+      <FinishScreen
+        details={finishing}
+        note={note}
+        onChangeNote={setNote}
+        onKeepLogging={() => {
+          setFinishing(null);
+        }}
+        onSaved={onFinished}
+      />
+    );
+  }
+
+  const hasNothingLogged =
+    view.status === "ready" && view.finish.workingSets + view.finish.warmups === 0;
+  // A set whose insert has not landed is counted on the finish screen, and Save would end the session before it is stored.
+  const hasSetBeingSaved = pendingSets.sets.some(({ savedId }) => savedId === null);
 
   return (
     <View className="flex-1 bg-background">
@@ -62,15 +90,19 @@ export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
             {...view.header}
             onHide={onHide}
             trailingSlot={
-              onDiscarded === undefined ? undefined : (
-                <IconButton
-                  icon="Ellipsis"
-                  label={DIARY_MORE_LABEL}
-                  onPress={() => {
-                    setIsMenuOpen(true);
-                  }}
-                />
-              )
+              <SessionHeaderActions
+                isFinishDisabled={hasNothingLogged || hasSetBeingSaved}
+                onFinish={() => {
+                  setFinishing(view.finish);
+                }}
+                onMore={
+                  onDiscarded === undefined
+                    ? undefined
+                    : () => {
+                        setIsMenuOpen(true);
+                      }
+                }
+              />
             }
           />
         ) : (
@@ -85,6 +117,11 @@ export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
           />
         )}
       </View>
+      {hasNothingLogged ? (
+        <Text className="px-4 pb-1 text-center" tone="secondary" variant="caption">
+          {FINISH_SCREEN.nothingLoggedHint}
+        </Text>
+      ) : null}
       {view.status === "loading" ? (
         <View accessible aria-label={TRAIN_LOADING_NAME} className="flex-1" role="status" />
       ) : null}

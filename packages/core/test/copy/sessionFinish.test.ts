@@ -116,6 +116,10 @@ describe("the finish screen's fixed words", () => {
     expect(FINISH_SCREEN.nothingLoggedHint).toBe("Log a set or discard this session.");
   });
 
+  it("should state the note rule in a sentence for a note past the limit, which no board draws", () => {
+    expect(FINISH_SCREEN.noteTooLong).toBe("Keep a note to 1,000 characters or fewer.");
+  });
+
   it("should title the screen with the routine day", () => {
     expect(describeFinishTitle("Legs")).toBe("Finish Legs");
   });

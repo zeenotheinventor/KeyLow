@@ -75,7 +75,10 @@ function jsonBodyOf(init: RequestInit | undefined): unknown {
   return typeof init?.body === "string" ? JSON.parse(init.body) : null;
 }
 
-async function writesFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+export async function writesFetch(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const path = new URL(address).pathname;
   const method = init?.method ?? "GET";

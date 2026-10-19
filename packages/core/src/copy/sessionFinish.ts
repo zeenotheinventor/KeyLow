@@ -86,6 +86,8 @@ export const FINISH_SCREEN = {
   undoAction: "Undo",
   /** Beside Finish while no set is logged, which is then disabled. The boards do not draw it. */
   nothingLoggedHint: "Log a set or discard this session.",
+  /** Under the note past its limit, as a step's is. The boards do not draw it. */
+  noteTooLong: `Keep a note to ${formatScaledCount(MAX_SESSION_NOTE_LENGTH)} characters or fewer.`,
 } as const;
 
 /** The title: "Finish Legs", or "Finish session" for a session that follows no routine day. */

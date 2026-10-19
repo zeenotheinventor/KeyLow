@@ -1,6 +1,6 @@
-import { useDeleteSession } from "@keylow/api-client";
+import { keys, useDeleteSession } from "@keylow/api-client";
 import { TRAIN_DISCARD_FAILED } from "@keylow/core/copy";
-import { onlineManager } from "@tanstack/react-query";
+import { onlineManager, useQueryClient } from "@tanstack/react-query";
 
 import { useToast } from "../ui";
 
@@ -22,6 +22,7 @@ type DiscardSession = {
 export function useDiscardSession(sessionId: string, onDiscarded: () => void): DiscardSession {
   const toast = useToast();
   const deleteSession = useDeleteSession();
+  const queryClient = useQueryClient();
 
   return {
     discard: async () => {
@@ -35,6 +36,8 @@ export function useDiscardSession(sessionId: string, onDiscarded: () => void): D
         toast.show({ message: TRAIN_DISCARD_FAILED, tone: "danger", icon: "CircleAlert" });
         return;
       }
+      // The exercises added to the session with no set logged go with it.
+      queryClient.removeQueries({ queryKey: keys.training.addedExercises(sessionId) });
       onDiscarded();
     },
     isDiscarding: deleteSession.isPending,
