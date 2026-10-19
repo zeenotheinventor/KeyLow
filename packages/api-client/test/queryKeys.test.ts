@@ -298,6 +298,16 @@ describe("keys.training", () => {
     expect(keys.training.routine(ROUTINE_ID).slice(0, 2)).toEqual(keys.training.routineAll);
   });
 
+  it("should key the current training goal with fixed words only", () => {
+    expect(keys.training.goals).toEqual(["training", "goals"]);
+  });
+
+  it("should keep the goal history outside the prefix of the persisted current goal, and under the training root", () => {
+    expect(keys.training.goalsHistory).toEqual(["training", "goals-history"]);
+    expect(keys.training.goalsHistory.slice(0, 2)).not.toEqual(keys.training.goals);
+    expect(keys.training.goalsHistory[0]).toBe(keys.training.all[0]);
+  });
+
   it("should keep the routine reads apart from each other and from every other training prefix", () => {
     const prefixes = [
       keys.training.setsAll,

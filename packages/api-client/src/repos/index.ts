@@ -97,3 +97,8 @@ export { addSet, removeSet, reorderSets, restoreSet, updateSet } from "./setWrit
 export type { SetAdd, SetPatch } from "./setWrites";
 export { findPreviousSessionWeek, listSessionsInWeek } from "./trainingHistory";
 export type { HistorySessionRow, HistorySetRow } from "./trainingSchemas";
+export {
+  getCurrentTrainingGoals,
+  listTrainingGoalsHistory,
+  saveTrainingGoals,
+} from "./trainingGoals";

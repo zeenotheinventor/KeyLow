@@ -17,6 +17,7 @@ import { getActiveRoutine, listWeekSessions } from "../../src/repos/training";
 import { createTestClient } from "../createTestClient";
 import { GOLDEN_WEEK_START, goldenWeekData } from "../support/goldenWeekRows";
 import { installTrainingFake, routineRow, sessionRow, setRow } from "../support/training";
+import { trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
 
 import type { UseBodyMapInput } from "../../src/hooks/useBodyMap";
@@ -299,6 +300,65 @@ describe("useBodyMap, volume", () => {
         "projected",
       ),
     );
+  });
+});
+
+describe("useBodyMap, with a training goal", () => {
+  it("should target what the goal ranks whatever the routine, in the volume numbers", async () => {
+    const goal = trainingGoalsRow(vTaperAnswers);
+    installTrainingFake(server, {
+      sets: benchSets("2026-10-15T09:00:00+00:00"),
+      routine: benchRoutine(3),
+      goal,
+    });
+    const client = createTestClient();
+
+    const { result } = renderBodyMap({ scale: "volume", view: "actual" });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const sessions = await listWeekSessions(client, GOLDEN_WEEK_START);
+    const routine = await getActiveRoutine(client);
+    const { actual, projected } = projectWeek(
+      routine ?? { days: [] },
+      GOLDEN_WEEK_START,
+      "Europe/London",
+      { sessions, sets: sessions.flatMap((session) => session.sets) },
+      COMPARE_PARAMS_V1,
+    );
+    const comparison = compareWeek(actual, projected, COMPARE_PARAMS_V1);
+    expect(result.current.data?.values).toStrictEqual(
+      volumeValues(
+        comparison,
+        targetedMuscles({ routine, priority: goal.muscle_priority }),
+        "actual",
+      ),
+    );
+    // The goal changes the numbers: the routine alone leaves the lats untargeted.
+    expect(result.current.data?.values.lats).not.toBe(
+      volumeValues(comparison, targetedMuscles({ routine }), "actual").lats,
+    );
+  });
+
+  it("should be pending until the goal is read", async () => {
+    const fake = installTrainingFake(server, {
+      sets: benchSets("2026-10-15T09:00:00+00:00"),
+      routine: benchRoutine(3),
+      goal: trainingGoalsRow(vTaperAnswers),
+    });
+    const release = fake.holdGoals();
+
+    const { result } = renderBodyMap({ scale: "volume", view: "actual" });
+
+    await waitFor(() => {
+      expect(fake.requestsTo("workout_sets")).toHaveLength(1);
+    });
+    expect(result.current).toMatchObject({ data: undefined, isPending: true });
+    release();
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
   });
 });
 

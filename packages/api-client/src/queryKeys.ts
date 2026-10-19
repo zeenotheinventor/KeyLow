@@ -107,6 +107,18 @@ export const keys = {
       excludeSessionId === undefined
         ? (["training", "last-performance", exerciseId] as const)
         : (["training", "last-performance", exerciseId, excludeSessionId] as const),
+    /**
+     * The signed in user's current training goal (the `training_goals` row that has not ended), or null
+     * when there is none. Persisted on mobile, as the row: the priorities are read from it at read time
+     * and nothing worked out from them is stored. The key is fixed words only, never an answer. The goal
+     * is saved only with a connection: nothing is queued or replayed from storage.
+     */
+    goals: ["training", "goals"] as const,
+    /**
+     * Every row the signed in user has saved, newest first. Not persisted: a later screen reads it with
+     * a connection. Its second element is not `goals`, so the persisted `goals` prefix does not match it.
+     */
+    goalsHistory: ["training", "goals-history"] as const,
   },
   /**
    * The weigh-in reads. A family of its own, outside `diary`, and not in the list a persisted cache keeps,

@@ -158,6 +158,33 @@ describe("the body map in a persisted cache", () => {
     }
   });
 
+  it("should show the body map, as with no goal, from a cache saved before the goal was kept, with the network down", async () => {
+    const { fake, stored } = await openOnline();
+    const withoutGoal = {
+      ...stored,
+      queries: stored.queries.filter(
+        ({ queryKey }) => JSON.stringify(queryKey) !== JSON.stringify(keys.training.goals),
+      ),
+    };
+    expect(withoutGoal.queries).toHaveLength(stored.queries.length - 1);
+    const { wrapper } = reopenOffline(fake, withoutGoal);
+
+    const { result } = renderHook(
+      () =>
+        useBodyMap({
+          scale: "heat",
+          view: "actual",
+          weekStart: GOLDEN_WEEK_START,
+          now: SATURDAY_NOON,
+        }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+  });
+
   it("should work out the heat at a later moment from the restored rows with the network down", async () => {
     const { fake, thursdayHeat, rows, stored } = await openOnline();
     const { wrapper } = reopenOffline(fake, stored);

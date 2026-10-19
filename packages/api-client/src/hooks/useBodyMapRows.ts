@@ -2,9 +2,11 @@ import { addCalendarDays, daysSinceMonday, isCalendarDay, toLocalDate } from "@k
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { currentGoalOf } from "./currentGoalOf";
 import { HEAT_LOOKBACK_DAYS, newestCachedSetRows } from "./heatWindowRows";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useProfileTimeZone } from "./useProfileTimeZone";
+import { useTrainingGoals } from "./useTrainingGoals";
 import { useWeekSessionRows } from "./useWeekSessionRows";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
@@ -70,9 +72,11 @@ export function useBodyMapRows<Data>(
   const queryable = enabled && weekIsValid;
   const timeZone = useProfileTimeZone({ enabled: queryable });
   const routine = useActiveRoutine({ enabled: queryable });
+  const goals = useTrainingGoals({ enabled: queryable });
 
   const zone = timeZone.data;
   const activeRoutine = routine.data;
+  const currentGoals = currentGoalOf(goals);
   const instant = new Date(now);
   const today =
     zone && weekIsValid && !Number.isNaN(instant.getTime()) ? toLocalDate(instant, zone) : null;
@@ -98,7 +102,9 @@ export function useBodyMapRows<Data>(
     enabled: queryable && needsWeek,
   });
 
-  const reads = needsWeek ? [timeZone, routine, sets, week] : [timeZone, routine, sets];
+  const reads = needsWeek
+    ? [timeZone, routine, goals, sets, week]
+    : [timeZone, routine, goals, sets];
   const sessions = week.data;
   const setRows = sets.data;
 
@@ -109,7 +115,12 @@ export function useBodyMapRows<Data>(
     if (!weekIsValid) {
       return { error: new RangeError(WEEK_RULE) };
     }
-    if (!zone || activeRoutine === undefined || setRows === undefined) {
+    if (
+      !zone ||
+      activeRoutine === undefined ||
+      currentGoals === undefined ||
+      setRows === undefined
+    ) {
       return null;
     }
     if (needsWeek && sessions === undefined) {
@@ -120,6 +131,7 @@ export function useBodyMapRows<Data>(
         data: compute({
           timeZone: zone,
           routine: activeRoutine,
+          priority: currentGoals?.muscle_priority ?? null,
           sets: withSetsOfSessions(setRows, sessions ?? []),
           sessions: sessions ?? [],
         }),
@@ -130,7 +142,17 @@ export function useBodyMapRows<Data>(
       }
       throw error;
     }
-  }, [enabled, weekIsValid, zone, activeRoutine, setRows, sessions, needsWeek, compute]);
+  }, [
+    enabled,
+    weekIsValid,
+    zone,
+    activeRoutine,
+    currentGoals,
+    setRows,
+    sessions,
+    needsWeek,
+    compute,
+  ]);
 
   if (computed !== null && "data" in computed) {
     return { data: computed.data, isPending: false, isError: false, error: null };

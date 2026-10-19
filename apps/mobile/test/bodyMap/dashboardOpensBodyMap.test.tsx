@@ -109,6 +109,7 @@ describe("the dashboard card opening the body map", () => {
     queryClient = createDiaryQueryClient();
     queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
     queryClient.setQueryData(keys.training.activeRoutine, NO_DAYS_ROUTINE);
+    queryClient.setQueryData(keys.training.goals, null);
     queryClient.setQueryData(keys.training.sets("2026-09-27"), trainingSets);
     queryClient.setQueryData(keys.training.sets("2026-09-30"), trainingSets);
     queryClient.setQueryData(keys.training.weekSessions("2026-10-12"), []);

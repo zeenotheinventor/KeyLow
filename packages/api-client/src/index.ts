@@ -241,3 +241,5 @@ export { useHistory, useHistoryWeek } from "./hooks";
 export type { HistoryEntry, HistoryWeek, UseHistoryOptions, UseHistoryResult } from "./hooks";
 export { findPreviousSessionWeek, listSessionsInWeek } from "./repos";
 export type { HistorySessionRow, HistorySetRow } from "./repos";
+export { useSaveTrainingGoals, useTrainingGoals, useTrainingGoalsHistory } from "./hooks";
+export { getCurrentTrainingGoals, listTrainingGoalsHistory, saveTrainingGoals } from "./repos";

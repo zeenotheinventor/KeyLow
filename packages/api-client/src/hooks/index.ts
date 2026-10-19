@@ -114,3 +114,6 @@ export { useHistoryWeek } from "./useHistoryWeek";
 export { useHistory } from "./useHistory";
 export type { UseHistoryOptions, UseHistoryResult } from "./useHistory";
 export type { HistoryEntry, HistoryWeek } from "./historyEntries";
+export { useSaveTrainingGoals } from "./useSaveTrainingGoals";
+export { useTrainingGoals } from "./useTrainingGoals";
+export { useTrainingGoalsHistory } from "./useTrainingGoalsHistory";

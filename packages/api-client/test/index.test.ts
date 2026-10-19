@@ -135,6 +135,12 @@ describe("the package index", () => {
     "listSessionsInWeek",
     "useHistory",
     "useHistoryWeek",
+    "getCurrentTrainingGoals",
+    "listTrainingGoalsHistory",
+    "saveTrainingGoals",
+    "useTrainingGoals",
+    "useTrainingGoalsHistory",
+    "useSaveTrainingGoals",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

@@ -149,7 +149,8 @@ export const routineRow = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
-export type TrainingTable = "workout_sets" | "workout_sessions" | "routines" | "profiles";
+export type TrainingTable =
+  "workout_sets" | "workout_sessions" | "routines" | "profiles" | "training_goals";
 
 /**
  * A stand-in for the three training tables behind MSW. A read answers the rows it was given (the sets
@@ -163,14 +164,21 @@ export function installTrainingFake(
     sets?: unknown[];
     sessions?: unknown[];
     routine?: unknown;
+    /** The user's current `training_goals` row, or none (null or left out) when they have no goal. */
+    goal?: unknown;
     /** The profile's IANA zone the hooks read the user's days in. Europe/London unless given. */
     timeZone?: string;
   } = {},
 ) {
   const requests: { table: TrainingTable; url: URL }[] = [];
-  const control: { failure: { code: string; tables: TrainingTable[] } | null; offline: boolean } = {
+  const control: {
+    failure: { code: string; tables: TrainingTable[] } | null;
+    offline: boolean;
+    goalsGate: Promise<void> | null;
+  } = {
     failure: null,
     offline: false,
+    goalsGate: null,
   };
 
   const answer = (table: TrainingTable, request: Request, rows: readonly unknown[]) => {
@@ -204,6 +212,14 @@ export function installTrainingFake(
     http.get(`${REST_URL}/profiles`, ({ request }) =>
       answer("profiles", request, [{ timezone: data.timeZone ?? "Europe/London" }]),
     ),
+    http.get(`${REST_URL}/training_goals`, async ({ request }) => {
+      await control.goalsGate;
+      return answer(
+        "training_goals",
+        request,
+        data.goal === undefined || data.goal === null ? [] : [data.goal],
+      );
+    }),
     http.get(`${REST_URL}/routines`, ({ request }) =>
       answer(
         "routines",
@@ -226,11 +242,22 @@ export function installTrainingFake(
               tables:
                 tables.length > 0
                   ? tables
-                  : ["workout_sets", "workout_sessions", "routines", "profiles"],
+                  : ["workout_sets", "workout_sessions", "routines", "profiles", "training_goals"],
             };
     },
     goOffline: (offline = true) => {
       control.offline = offline;
+    },
+    /** Holds the goal read after it has arrived, until the returned function is called. */
+    holdGoals: () => {
+      let open: () => void = () => undefined;
+      control.goalsGate = new Promise<void>((resolve) => {
+        open = resolve;
+      });
+      return () => {
+        control.goalsGate = null;
+        open();
+      };
     },
   };
 }
