@@ -8,6 +8,7 @@ import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MONTH_NAMES_LONG } from "./diaryDay";
 import { MUSCLE_NAMES } from "./muscleNames";
+import { SET_MARKS, SET_PHRASES } from "./sessionWording";
 import { TRAIN_TODAY_CARD } from "./train";
 import { addCalendarDays, parseCalendarDay } from "../dates/calendarDay";
 import { formatClockTime } from "../dates/formatClockTime";
@@ -277,22 +278,6 @@ export const describeSessionExerciseNote = ({
     ...(setsOver > 0 ? [`${setsOver} more than planned`] : []),
   ];
   return notes.length === 0 ? null : notes.join(SEPARATOR);
-};
-
-/** What a set is called on a row and in the sheet, given its number among the working sets. */
-const SET_PHRASES: Record<SetType, (setNumber: number) => string> = {
-  warmup: () => "Warm-up set",
-  working: (setNumber) => `Set ${setNumber}`,
-  drop: () => "Drop set",
-  failure: () => "Failure set",
-};
-
-/** The mark at the start of a set's row, as the session set types board draws them. */
-const SET_MARKS: Record<SetType, (setNumber: number) => string> = {
-  warmup: () => "W",
-  working: (setNumber) => String(setNumber),
-  drop: () => "D",
-  failure: () => "F",
 };
 
 export type HistorySetInput = Readonly<{
