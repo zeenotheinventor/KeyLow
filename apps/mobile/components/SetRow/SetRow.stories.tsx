@@ -103,3 +103,23 @@ export const LongPrevious: Story = {
     }),
   },
 };
+
+// The check as a button: the next set, which logs the numbers it shows when pressed.
+export const NextWithCheckButton: Story = {
+  args: {
+    state: "next",
+    copy: describeSetRow({
+      setType: "working",
+      setNumber: 3,
+      unit: "kg",
+      previous: { loadKg: 170, reps: 10 },
+      entry: { state: "ready", loadKg: 180, reps: 11 },
+    }),
+    onCheck: () => undefined,
+  },
+};
+
+// The check of a logged set as a button, which removes it.
+export const DoneWithCheckButton: Story = {
+  args: { onCheck: () => undefined },
+};

@@ -99,6 +99,8 @@ export const SET_ENTRY = {
   noHistory: "Nothing logged for this exercise yet.",
   /** The line after a write that failed. The boards do not draw it. */
   saveFailed: "Your set did not save. Check your connection, then try again.",
+  /** The line after a remove that failed. The boards do not draw it. */
+  removeFailed: "Your set was not removed. Check your connection, then try again.",
 } as const;
 
 /** The RIR chips. The last one stands for six or more. */

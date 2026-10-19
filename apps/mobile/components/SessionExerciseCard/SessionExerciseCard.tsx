@@ -1,11 +1,28 @@
 import { useLastPerformance } from "@keylow/api-client";
 import { describeSetColumns, describeSetEntryName, describeSetRow } from "@keylow/core/copy";
-import { exerciseSetRows, prefillNextSet } from "@keylow/core/training";
+import { exerciseSetRows, prefillNextSet, sameAgain } from "@keylow/core/training";
+import { useState } from "react";
 
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ExerciseCard } from "../ExerciseCard";
 
 import type { SessionExerciseCardProps } from "./types";
+import type { ExerciseCardRow } from "../ExerciseCard";
+import type { SetRowEntry } from "@keylow/core/copy";
+import type { SetPrefill, SetType, SetValues } from "@keylow/core/training";
+
+/** The numbers a row logs when its set opens from the last one or from last time: always a working set. Null when there is nothing to fill it from. */
+function valuesOfPrefill(prefill: SetPrefill): SetValues | null {
+  return prefill.source === "none"
+    ? null
+    : {
+        setType: "working",
+        loadKg: prefill.load_kg,
+        reps: prefill.reps,
+        rir: prefill.rir,
+        rpe: null,
+      };
+}
 
 /**
  * One exercise of the session in progress: its card, with the Previous column read from the exercise's latest
@@ -13,6 +30,13 @@ import type { SessionExerciseCardProps } from "./types";
  * fails) every Previous is an en dash and the rest of the card is unchanged. The cells of a set still to do
  * open the set entry, which the screen hosts, for the exercise's next free slot and with the numbers it is
  * filled from.
+ *
+ * The check of a row to log writes the numbers the next row opens with (`prefillNextSet`), and the check of a
+ * logged row removes it. A row with no numbers to log opens that same set entry from its check. Add set adds
+ * one more row, filled with the same again of the exercise's last set (its type, load, reps and effort), or
+ * as the next row is when nothing is logged yet. The added rows are kept as the fewest rows the card must
+ * show: logging any set raises the sets done and leaves the rows as many, and a row added while none is left
+ * to log stays until a set is logged.
  */
 export function SessionExerciseCard({
   sessionId,
@@ -22,6 +46,7 @@ export function SessionExerciseCard({
   unit,
   exercise,
   sessionSets,
+  logging,
   onEditSet,
 }: SessionExerciseCardProps) {
   const enabled = useReadsEnabled();
@@ -29,41 +54,116 @@ export function SessionExerciseCard({
     enabled,
     excludeSessionId: sessionId,
   });
+  const [minimumRows, setMinimumRows] = useState(0);
   const [latestSession] = lastPerformance.data ?? [];
   const previousSets = latestSession?.sets ?? [];
+  const { exerciseId } = exercise;
   const rows = exerciseSetRows(exercise, sessionSets, previousSets);
+  const prefill = prefillNextSet(exerciseId, sessionSets, previousSets);
+  const valuesToLog = valuesOfPrefill(prefill);
+  const lastSet = exercise.rows.flatMap(({ set }) => (set === null ? [] : [set])).at(-1);
+  const valuesToAdd = lastSet === undefined ? valuesToLog : sameAgain(lastSet);
+  const addedCount = Math.max(minimumRows - rows.length, 0);
   // A set is logged as the next free slot of its exercise, whichever row was pressed, so that is the set the
   // entry opens for: its number, and the same set of the earlier session.
   const nextFreeSlot = rows.find((row) => row.state !== "done");
+
+  const openEntry = (setType: SetType, setNumber: number) => {
+    const slot = nextFreeSlot ?? { setType, setNumber, previous: null };
+    onEditSet({
+      exerciseId,
+      exerciseName: name,
+      setType: slot.setType,
+      setNumber: slot.setNumber,
+      plan,
+      prefill,
+      lastWeek: slot.previous,
+    });
+  };
+
+  const checkOf = (
+    values: SetValues | null,
+    setType: SetType,
+    setNumber: number,
+  ): ExerciseCardRow["onCheck"] =>
+    values === null
+      ? () => {
+          openEntry(setType, setNumber);
+        }
+      : () => {
+          logging.logSet({ exerciseId, values });
+        };
+
+  // Removing a set takes a row away only when the sets done are beyond the plan, or it is a warm-up (which
+  // the plan never counts), so only then does the fewest rows the card must show come down with it.
+  const workingDoneCount = rows.filter(
+    ({ state, setType }) => state === "done" && setType !== "warmup",
+  ).length;
+  const removalTakesARow = (setType: SetType) =>
+    setType === "warmup" || plan === null || workingDoneCount > plan.sets;
+
+  const loggedRows = rows.map(
+    ({ setId, state, setType, setNumber, previous, entry }): ExerciseCardRow => {
+      const copy = describeSetRow({ setType, setNumber, unit, previous, entry });
+      if (setId === null) {
+        return {
+          key: `planned-${setNumber}`,
+          state,
+          setType,
+          copy,
+          edit: {
+            name: describeSetEntryName(name, setType, setNumber),
+            onPress: () => {
+              openEntry(setType, setNumber);
+            },
+          },
+          onCheck: checkOf(valuesToLog, setType, setNumber),
+        };
+      }
+      return {
+        key: setId,
+        state,
+        setType,
+        copy,
+        onCheck: logging.isSaving(setId)
+          ? undefined
+          : () => {
+              if (removalTakesARow(setType)) {
+                setMinimumRows((current) => Math.max(current - 1, 0));
+              }
+              logging.removeSet({ setId, exerciseName: name, setType, setNumber });
+            },
+      };
+    },
+  );
+
+  const workingRowCount = rows.filter(({ setType }) => setType !== "warmup").length;
+  const addedRows = Array.from({ length: addedCount }, (_, index): ExerciseCardRow => {
+    const setType = valuesToAdd?.setType ?? "working";
+    const setNumber = setType === "warmup" ? 0 : workingRowCount + index + 1;
+    const entry: SetRowEntry =
+      valuesToAdd === null
+        ? { state: "empty" }
+        : { state: "ready", loadKg: valuesToAdd.loadKg, reps: valuesToAdd.reps };
+
+    return {
+      key: `added-${index + 1}`,
+      state: "todo",
+      setType,
+      copy: describeSetRow({ setType, setNumber, unit, previous: null, entry }),
+      onCheck: checkOf(valuesToAdd, setType, setNumber),
+    };
+  });
 
   return (
     <ExerciseCard
       columns={describeSetColumns(unit)}
       name={name}
-      rows={rows.map(({ setId, state, setType, setNumber, previous, entry }) => ({
-        key: setId ?? `planned-${setNumber}`,
-        state,
-        setType,
-        copy: describeSetRow({ setType, setNumber, unit, previous, entry }),
-        edit:
-          state === "done" || nextFreeSlot === undefined
-            ? undefined
-            : {
-                name: describeSetEntryName(name, setType, setNumber),
-                onPress: () => {
-                  onEditSet({
-                    exerciseId: exercise.exerciseId,
-                    exerciseName: name,
-                    setType: nextFreeSlot.setType,
-                    setNumber: nextFreeSlot.setNumber,
-                    plan,
-                    prefill: prefillNextSet(exercise.exerciseId, sessionSets, previousSets),
-                    lastWeek: nextFreeSlot.previous,
-                  });
-                },
-              },
-      }))}
+      rows={[...loggedRows, ...addedRows]}
       target={target}
+      onAddSet={() => {
+        setMinimumRows(rows.length + addedCount + 1);
+      }}
     />
   );
 }

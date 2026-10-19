@@ -31,14 +31,18 @@ const fieldBaseClassName = "h-9 items-center justify-center rounded-small";
 
 /**
  * One set of an exercise, as the `session · active` board draws it: the set's mark (W for a warm-up), what the
- * same set made last time, the load, the reps and the RIR, and the check. The check is not a button yet, so
- * it is drawn with its accessible name and no role, until the ticket that logs a set makes it one. A set still
- * to do has its load, reps and RIR cells as one button that opens the set entry (`edit`); a row without it
- * only displays. Every word is `describeSetRow`'s.
+ * same set made last time, the load, the reps and the RIR, and the check. The check is a button when the
+ * row is given what it does (`onCheck`), named as `describeSetRow` names it; without one it is drawn with its
+ * accessible name and no role. A set still to do has its load, reps and RIR cells as one button that opens
+ * the set entry (`edit`); a row without it only displays. Every word is `describeSetRow`'s.
  */
-export function SetRow({ state, setType, copy, edit }: SetRowProps) {
+export function SetRow({ state, setType, copy, edit, onCheck }: SetRowProps) {
   const isDone = state === "done";
   const valueTone = isDone ? "primary" : "muted";
+  const checkBoxClassName = `h-10 ${setColumnClassName.check} items-center justify-center rounded-small border ${checkClassName[state]}`;
+  const checkIcon = (
+    <Icon name="Check" size={18} strokeWidth={2.25} tone={isDone ? "on-status" : "muted"} />
+  );
 
   const cells = (
     <>
@@ -93,13 +97,22 @@ export function SetRow({ state, setType, copy, edit }: SetRowProps) {
           {cells}
         </PressableSurface>
       )}
-      <View
-        accessible
-        aria-label={copy.accessibleName}
-        className={`h-10 ${setColumnClassName.check} items-center justify-center rounded-small border ${checkClassName[state]}`}
-      >
-        <Icon name="Check" size={18} strokeWidth={2.25} tone={isDone ? "on-status" : "muted"} />
-      </View>
+      {onCheck === undefined ? (
+        <View accessible aria-label={copy.accessibleName} className={checkBoxClassName}>
+          {checkIcon}
+        </View>
+      ) : (
+        // The box is 40 points inside a 44 point row, so the slop reaches the 44 point touch target. The
+        // press overlay fills the box, so the box clips it to its rounded corners.
+        <PressableSurface
+          className={`overflow-hidden ${checkBoxClassName}`}
+          hitSlop={2}
+          label={copy.accessibleName}
+          onPress={onCheck}
+        >
+          {checkIcon}
+        </PressableSurface>
+      )}
     </View>
   );
 }

@@ -1,2 +1,10 @@
 export { SessionScreen } from "./SessionScreen";
-export type { SessionScreenProps } from "./types";
+export type {
+  LogSetRequest,
+  PendingSet,
+  PendingSets,
+  RemoveSetRequest,
+  ScreenSet,
+  SessionScreenProps,
+  SetLogging,
+} from "./types";

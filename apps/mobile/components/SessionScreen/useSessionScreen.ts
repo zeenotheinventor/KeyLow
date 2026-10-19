@@ -3,15 +3,15 @@ import { describeExerciseTarget } from "@keylow/core/copy";
 import { planProgress, scaffoldSession, sessionExercises } from "@keylow/core/training";
 import { useMemo } from "react";
 
+import { NO_PENDING_SETS, withPendingSets } from "./pendingSets";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
-import type { SessionScreenExercise, SessionScreenView } from "./types";
-import type { RoutineDetail, SessionWithSets } from "@keylow/api-client";
+import type { PendingSet, ScreenSet, SessionScreenExercise, SessionScreenView } from "./types";
+import type { RoutineDetail } from "@keylow/api-client";
 import type { SessionExercise, SessionScaffold } from "@keylow/core/training";
 
 type RoutineDay = RoutineDetail["days"][number];
 type Plan = { day: RoutineDay; scaffold: SessionScaffold };
-type OpenSessionSet = SessionWithSets["sets"][number];
 
 /**
  * The exercise's name and target line, from the routine day when it plans the exercise and from the name and
@@ -19,7 +19,7 @@ type OpenSessionSet = SessionWithSets["sets"][number];
  * rows never produce: a row is planned or logged.
  */
 function describeExercise(
-  exercise: SessionExercise<OpenSessionSet>,
+  exercise: SessionExercise<ScreenSet>,
   plan: Plan | null,
 ): Pick<SessionScreenExercise, "name" | "target" | "plan"> | null {
   const planned = plan?.day.exercises.find((entry) => entry.exercise_id === exercise.exerciseId);
@@ -42,12 +42,15 @@ function describeExercise(
       plan: exercisePlan,
     };
   }
-  const logged = exercise.rows.find((row) => row.set !== null)?.set;
-  return logged === null || logged === undefined
+  // A set still being saved has no snapshot yet, so the name is read from a set the database holds.
+  const snapshot = exercise.rows.flatMap(({ set }) =>
+    set?.snapshot === undefined ? [] : [set.snapshot],
+  )[0];
+  return snapshot === undefined
     ? null
     : {
-        name: logged.snapshot.name,
-        target: describeExerciseTarget({ target: null, equipment: logged.snapshot.equipment }),
+        name: snapshot.name,
+        target: describeExerciseTarget({ target: null, equipment: snapshot.equipment }),
         plan: null,
       };
 }
@@ -59,9 +62,12 @@ function describeExercise(
  * phone, so the screen opens offline. A session with no routine day does not wait on or fail with the
  * routine reads. A session whose day is not in the active routine (it was changed since), or whose routine
  * cannot be read because the phone is offline and has it not saved, is shown as a session with no plan.
- * The rows are worked out again only when the session or the routine changes, never on the header's tick.
+ * The rows are worked out again only when the session, the routine or the sets being saved change, never on
+ * the header's tick. The sets being saved are drawn as logged, so the header and the rows move at the press.
  */
-export function useSessionScreen(): SessionScreenView {
+export function useSessionScreen(
+  pendingSets: readonly PendingSet[] = NO_PENDING_SETS,
+): SessionScreenView {
   const enabled = useReadsEnabled();
   const session = useActiveSession({ enabled });
   const routine = useActiveRoutine({ enabled });
@@ -78,16 +84,18 @@ export function useSessionScreen(): SessionScreenView {
     const day = detailData?.days.find((entry) => entry.id === open.routine_day_id) ?? null;
     const scaffold = day === null ? null : scaffoldSession(day);
     const plan = day === null || scaffold === null ? null : { day, scaffold };
-    const progress = planProgress(scaffold, open.sets);
+    const sets = withPendingSets(open.sets, pendingSets);
+    const progress = planProgress(scaffold, sets);
     return {
+      sets,
       setsLogged: progress.logged,
       setsPlanned: progress.planned ?? 0,
-      exercises: sessionExercises(scaffold, open.sets).flatMap((exercise) => {
+      exercises: sessionExercises(scaffold, sets).flatMap((exercise) => {
         const described = describeExercise(exercise, plan);
         return described === null ? [] : [{ ...described, exercise }];
       }),
     };
-  }, [open, detailData]);
+  }, [open, detailData, pendingSets]);
 
   const reads = followsRoutineDay ? [session, unit, routine, detail] : [session, unit];
   if (reads.some((read) => read.isError && read.data === undefined)) {
@@ -128,7 +136,7 @@ export function useSessionScreen(): SessionScreenView {
       setsPlanned: content.setsPlanned,
     },
     unit: unit.data,
-    sets: open.sets,
+    sets: content.sets,
     exercises: content.exercises,
   };
 }

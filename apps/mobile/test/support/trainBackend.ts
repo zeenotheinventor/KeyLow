@@ -34,6 +34,14 @@ export const trainBackend: {
    * `last_performance` names that read in the tables above.
    */
   lastPerformance: Row[];
+  /** The writes made to `workout_sets`, in order: `add_set`, `remove_set` and `restore_set`. */
+  writes: string[];
+  /** Fails the writes with a database error, as a refused or dropped connection does. */
+  failingWrites: boolean;
+  /** Holds the answer to a set insert until the test calls it, so a test can look at the screen while the write is on its way. */
+  holdAddSet: Promise<void> | null;
+  /** The sets removed from the active session, which Undo brings back. */
+  removedSets: Row[];
 } = {
   routine: null,
   sessions: [],
@@ -44,6 +52,10 @@ export const trainBackend: {
   requests: [],
   weightUnit: "kg",
   lastPerformance: [],
+  writes: [],
+  failingWrites: false,
+  holdAddSet: null,
+  removedSets: [],
 };
 
 export function resetTrainBackend(): void {
@@ -57,6 +69,11 @@ export function resetTrainBackend(): void {
   trainBackend.requests = [];
   trainBackend.weightUnit = "kg";
   trainBackend.lastPerformance = [];
+  trainBackend.writes = [];
+  trainBackend.failingWrites = false;
+  trainBackend.holdAddSet = null;
+  trainBackend.removedSets = [];
+  nextSetNumber = 0;
 }
 
 /** The number of reads made to a training table. */
@@ -96,6 +113,109 @@ const jsonResponse = (body: unknown, status = 200): Response =>
     headers: { "Content-Type": "application/json" },
   });
 
+let nextSetNumber = 0;
+
+const isRow = (value: unknown): value is Row => typeof value === "object" && value !== null;
+
+const rowsOf = (value: unknown): Row[] => (Array.isArray(value) ? value.filter(isRow) : []);
+
+/** The `workout_sets` of the open session. A write keeps its change with `saveSetsOfActiveSession`. */
+export const setsOfActiveSession = (): Row[] =>
+  rowsOf(trainBackend.activeSession?.["workout_sets"]);
+
+export function saveSetsOfActiveSession(sets: Row[]): void {
+  if (trainBackend.activeSession !== null) {
+    trainBackend.activeSession = { ...trainBackend.activeSession, workout_sets: sets };
+  }
+}
+
+const bodyOf = (init?: RequestInit): Row => {
+  const parsed: unknown = typeof init?.body === "string" ? JSON.parse(init.body) : {};
+  return isRow(parsed) ? parsed : {};
+};
+
+const wantsOneObject = (init?: RequestInit): boolean =>
+  new Headers(init?.headers).get("Accept")?.includes("vnd.pgrst.object") === true;
+
+const oneRow = (rows: Row[], init?: RequestInit): Response =>
+  wantsOneObject(init)
+    ? jsonResponse(rows[0] ?? null, rows.length === 0 ? 406 : 200)
+    : jsonResponse(rows);
+
+/** The exercise of the routine with its muscle map, as the read the snapshot is taken from returns it. */
+function exerciseRead(url: URL, init?: RequestInit): Response {
+  const id = (url.searchParams.get("id") ?? "").replace("eq.", "");
+  const found = rowsOf(trainBackend.routine?.["routine_days"])
+    .flatMap((day) => rowsOf(day["routine_exercises"]))
+    .flatMap((entry) => rowsOf([entry["exercises"]]))
+    .find((exercise) => exercise["id"] === id);
+  return oneRow(found === undefined ? [] : [found], init);
+}
+
+/** The writes and the reads that go with them: the count of live sets, the insert, remove and restore. */
+async function setWrite(url: URL, init?: RequestInit): Promise<Response | null> {
+  const method = init?.method ?? "GET";
+  const sets = setsOfActiveSession();
+  if (method === "GET" && url.searchParams.get("select") === "position") {
+    const live = sets.filter((row) => row["deleted_at"] === null);
+    const highest = live.map((row) => Number(row["position"])).sort((a, b) => b - a)[0];
+    return new Response(JSON.stringify(highest === undefined ? [] : [{ position: highest }]), {
+      status: 200,
+      headers: { "Content-Type": "application/json", "Content-Range": `0-0/${live.length}` },
+    });
+  }
+  if (method === "GET" && url.searchParams.has("id")) {
+    const id = (url.searchParams.get("id") ?? "").replace("eq.", "");
+    const row = [...sets, ...trainBackend.removedSets].find((entry) => entry["id"] === id);
+    return oneRow(row === undefined ? [] : [row], init);
+  }
+  if (method === "POST") {
+    trainBackend.writes.push("add_set");
+    if (trainBackend.holdAddSet !== null) {
+      await trainBackend.holdAddSet;
+    }
+    if (trainBackend.failingWrites) {
+      return jsonResponse(
+        { code: "XX000", message: "raw database text", details: null, hint: null },
+        500,
+      );
+    }
+    nextSetNumber += 1;
+    const row = {
+      ...bodyOf(init),
+      id: `00000009-0000-4000-8000-${String(nextSetNumber).padStart(12, "0")}`,
+      deleted_at: null,
+    };
+    sets.push(row);
+    saveSetsOfActiveSession(sets);
+    return oneRow([row], init);
+  }
+  if (method === "PATCH") {
+    const id = (url.searchParams.get("id") ?? "").replace("eq.", "");
+    const body = bodyOf(init);
+    const isRemoval = body["deleted_at"] !== null;
+    trainBackend.writes.push(isRemoval ? "remove_set" : "restore_set");
+    if (trainBackend.failingWrites) {
+      return jsonResponse(
+        { code: "XX000", message: "raw database text", details: null, hint: null },
+        500,
+      );
+    }
+    const from = isRemoval ? sets : trainBackend.removedSets;
+    const to = isRemoval ? trainBackend.removedSets : sets;
+    const index = from.findIndex((row) => row["id"] === id);
+    const [moved] = index === -1 ? [] : from.splice(index, 1);
+    if (moved === undefined) {
+      return oneRow([], init);
+    }
+    const updated = { ...moved, deleted_at: body["deleted_at"] };
+    to.push(updated);
+    saveSetsOfActiveSession(sets);
+    return oneRow([updated], init);
+  }
+  return null;
+}
+
 export async function trainFetch(
   input: string | URL | Request,
   init?: RequestInit,
@@ -107,8 +227,17 @@ export async function trainFetch(
   if (table === "profiles" && url.searchParams.get("select") === "weight_unit") {
     return jsonResponse([{ weight_unit: trainBackend.weightUnit }]);
   }
+  if (table === "exercises" && url.searchParams.get("select")?.includes("exercise_muscles")) {
+    return exerciseRead(url, init);
+  }
   if (table !== "routines" && table !== "workout_sessions" && table !== "workout_sets") {
     return diaryFetch(input, init);
+  }
+  if (table === "workout_sets") {
+    const written = await setWrite(url, init);
+    if (written !== null) {
+      return written;
+    }
   }
 
   const read =

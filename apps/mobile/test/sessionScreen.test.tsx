@@ -13,6 +13,7 @@ import {
 import { setUpTests } from "react-native-reanimated";
 
 import { SessionScreen } from "../components/SessionScreen";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
@@ -107,7 +108,9 @@ async function renderSession(
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={client} queryClient={queryClient}>
-        <SessionScreen onHide={jest.fn()} {...props} />
+        <ToastProvider>
+          <SessionScreen onHide={jest.fn()} {...props} />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -118,6 +121,8 @@ const exerciseCard = async (name: string) => within(await screen.findByLabelText
 
 const CELLS_PER_ROW = 5;
 const TEXTS_BEFORE_ROWS = 2;
+// The last text of a card is its Add set button.
+const ADD_SET_TEXT = "Add set";
 
 /**
  * Expects the card to read its name, its target line and then the cells of each row, in the order drawn.
@@ -130,7 +135,7 @@ async function expectCard(
   rows: readonly (readonly string[])[],
 ) {
   await waitFor(() => {
-    expectTextsInOrder(card.getAllByText(/./), [name, target, ...rows.flat()]);
+    expectTextsInOrder(card.getAllByText(/./), [name, target, ...rows.flat(), ADD_SET_TEXT]);
   });
 }
 
@@ -142,7 +147,7 @@ async function expectColumn(
 ) {
   await waitFor(() => {
     const texts = card.getAllByText(/./);
-    expect(texts).toHaveLength(TEXTS_BEFORE_ROWS + expected.length * CELLS_PER_ROW);
+    expect(texts).toHaveLength(TEXTS_BEFORE_ROWS + expected.length * CELLS_PER_ROW + 1);
     expected.forEach((text, index) => {
       expect(texts[TEXTS_BEFORE_ROWS + index * CELLS_PER_ROW + column]).toHaveTextContent(text, {
         exact: true,
@@ -296,23 +301,28 @@ describe("the active session screen", () => {
       await expectColumn(squat, 1, ["–", "–", "97.5 × 8", "97.5 × 7", "97.5 × 6"]);
     });
 
-    it("should offer a button to open the set entry for each set still to do, and none on the checks", async () => {
+    it("should offer a button to open the set entry for each set still to do, and the checks that can log or remove as buttons", async () => {
       await renderSession();
       await exerciseCard("Leg press");
 
       expect(screen.getAllByRole("button", { name: /^[A-Za-z ]+, set \d$/ })).toHaveLength(8);
       expect(screen.getByRole("button", { name: "Leg press, set 3" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Standing calf raise, set 4" })).toBeOnTheScreen();
-      expect(screen.getByLabelText("Log set 3, 180 kilograms, 11 reps")).not.toHaveProp("role");
+      expect(
+        screen.getByRole("button", { name: "Log set 3, 180 kilograms, 11 reps" }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", { name: "Set 2 logged, 180 kilograms, 11 reps, RIR 1, undo" }),
+      ).toBeOnTheScreen();
     });
 
-    it("should leave the sets already logged as display only", async () => {
+    it("should leave the cells of the sets already logged as display only", async () => {
       await renderSession();
       await exerciseCard("Leg press");
 
       expect(screen.queryByRole("button", { name: "Barbell squat, set 1" })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Leg press, set 2" })).not.toBeOnTheScreen();
-      expect(screen.getAllByRole("button")).toHaveLength(9);
+      expect(screen.getAllByRole("button", { name: /^[A-Za-z ]+, set \d$/ })).toHaveLength(8);
     });
 
     it("should show an extra row for a set logged beyond the target", async () => {
@@ -588,7 +598,9 @@ describe("the active session screen", () => {
       await render(
         <ThemeProvider fixedPreference="dark">
           <KeyLowProvider client={trainClient} queryClient={queryClient}>
-            <SessionScreen onHide={jest.fn()} />
+            <ToastProvider>
+              <SessionScreen onHide={jest.fn()} />
+            </ToastProvider>
           </KeyLowProvider>
         </ThemeProvider>,
       );
@@ -614,7 +626,9 @@ describe("the active session screen", () => {
       await render(
         <ThemeProvider fixedPreference="dark">
           <KeyLowProvider client={trainClient} queryClient={queryClient}>
-            <SessionScreen onHide={jest.fn()} />
+            <ToastProvider>
+              <SessionScreen onHide={jest.fn()} />
+            </ToastProvider>
           </KeyLowProvider>
         </ThemeProvider>,
       );
