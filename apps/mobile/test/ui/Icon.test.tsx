@@ -38,6 +38,8 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   { tone: "calories", colorName: "calories" },
   // The check on the day complete switch's knob.
   { tone: "accent", colorName: "accent" },
+  // The week strip's tick: the success green in dark and a darker green in light, to read on a light surface.
+  { tone: "success-ink", colorName: "success-ink" },
 ];
 
 const names: IconName[] = [

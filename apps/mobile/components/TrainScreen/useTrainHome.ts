@@ -7,36 +7,54 @@ import {
   useWeekSessionRows,
   weekStartOf,
 } from "@keylow/api-client";
-import { toLocalDate } from "@keylow/core/dates";
+import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
 import { SESSION_TIME_PARAMS_V1, todayCard, weekPlanDays } from "@keylow/core/training";
 
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
-import type { TodayCardView, TrainHome } from "./types";
+import type { TodayCardView, TrainHome, TrainWeekView } from "./types";
 import type { ActiveRoutine } from "@keylow/api-client";
 import type { TodayCard, WeekPlan, WeekSession } from "@keylow/core/training";
 
 /**
- * The week's sessions with the one in progress among them, dated today. The session in progress is read on
- * its own, so it can be newer than the week's rows (a session just started, or a set just logged), and it
+ * The week's sessions with the one in progress among them, dated `localDate`. The session in progress is read
+ * on its own, so it can be newer than the week's rows (a session just started, or a set just logged), and it
  * can have started on an earlier day (one that crosses midnight, or is left open): the database allows one
- * open session, so the card must offer Resume for it on whatever day it is, never Start. Core's week plan
- * puts a session on the day it started and would drop it, or leave it on yesterday, so it takes the place
- * of its own row and the day it is read on.
+ * open session, so the Today card must offer Resume for it on whatever day it is, never Start. Core's week
+ * plan puts a session on the day it started and would drop it, or leave it on yesterday, so it takes the place
+ * of its own row on `localDate`: today for the card.
  */
 function withSessionInProgress(
   weekSessions: readonly WeekSession[],
   sessionInProgress: WeekSession | null,
-  today: string,
+  localDate: string,
 ): readonly WeekSession[] {
   if (sessionInProgress === null) {
     return weekSessions;
   }
   return [
     ...weekSessions.filter((session) => session.id !== sessionInProgress.id),
-    { ...sessionInProgress, local_date: today },
+    { ...sessionInProgress, local_date: localDate },
   ];
+}
+
+/**
+ * The day the week strip puts the session in progress on: the day it started when that is in the week the
+ * strip draws, so Thursday's Legs left open past midnight is still Thursday's and not a missed day, and today
+ * otherwise, so a session left open from an earlier week still shows.
+ */
+function stripDateOfSession(
+  sessionInProgress: WeekSession | null,
+  weekStart: string,
+  today: string,
+): string {
+  const startedOn = sessionInProgress?.local_date;
+  return startedOn !== undefined &&
+    startedOn >= weekStart &&
+    startedOn <= addCalendarDays(weekStart, 6)
+    ? startedOn
+    : today;
 }
 
 /** The exercise as the catalogue stores it, or null when the routine does not hold it. */
@@ -71,6 +89,11 @@ function todayViewOf(
   };
 }
 
+/** The week strip's week, or null when it has nothing to show: no routine day and no session in the week. */
+function weekViewOf(plan: WeekPlan, weekStart: string): TrainWeekView | null {
+  return plan.routineDayCount > 0 || plan.sessions.length > 0 ? { plan, weekStart } : null;
+}
+
 /**
  * What the Train home shows, from the reads it waits on: the profile's time zone, the active routine, the
  * sessions of the week that holds today, the session in progress and, only when there is no routine,
@@ -80,7 +103,9 @@ function todayViewOf(
  * never in a query key: the week reads under its Monday, so a tick only works the card out again. It is
  * ready once the reads it needs are there, from the cache too, so it works offline. A read that fails while
  * there is nothing to show is an error, and a refetch that fails behind content that is already there is
- * not. `retry` reads again the ones that are being used. The week strip joins the reads here.
+ * not. `retry` reads again the ones that are being used. The week strip draws the same week with the same
+ * merge of the session in progress, except that it keeps that session on the day it started (when that is in
+ * the week) where the card dates it today.
  */
 export function useTrainHome(): TrainHome {
   const enabled = useReadsEnabled();
@@ -124,13 +149,17 @@ export function useTrainHome(): TrainHome {
 
   const at = now.toISOString();
   const today = toLocalDate(now, zone);
-  const plan = weekPlanDays({
-    routine: planRoutineOf(routine.data, zone),
-    sessions: withSessionInProgress(week.data, sessionInProgress.data, today),
-    now: at,
-    tz: zone,
-    weekStart,
-  });
+  const planWith = (sessionDate: string) =>
+    weekPlanDays({
+      routine: planRoutineOf(routine.data, zone),
+      sessions: withSessionInProgress(week.data, sessionInProgress.data, sessionDate),
+      now: at,
+      tz: zone,
+      weekStart,
+    });
+  const plan = planWith(today);
+  const stripDate = stripDateOfSession(sessionInProgress.data, weekStart, today);
+  const stripPlan = stripDate === today ? plan : planWith(stripDate);
   const card = todayCard({
     week: plan,
     now: at,
@@ -143,6 +172,7 @@ export function useTrainHome(): TrainHome {
     hasRoutine: routine.data !== null,
     hasLoggedSession: everLogged.data === true,
     today: todayViewOf(card, routine.data, plan),
+    week: weekViewOf(stripPlan, weekStart),
     timeZone: zone,
     savedAt: new Date(Math.min(...reads.map((read) => read.dataUpdatedAt))),
   };
