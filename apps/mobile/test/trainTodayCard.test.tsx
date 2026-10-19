@@ -147,7 +147,12 @@ describe("the Today card", () => {
     });
 
     it("should not draw Resume or View session for a handler that belongs to another state", async () => {
-      await renderCard(planned, thursday, { onResume: jest.fn(), onViewSession: jest.fn() });
+      await renderCard(planned, thursday, {
+        onResume: jest.fn(),
+        onViewSession: jest.fn(),
+        onLogAnother: jest.fn(),
+        onLogSession: jest.fn(),
+      });
 
       expect(screen.queryByRole("button")).not.toBeOnTheScreen();
     });
@@ -248,7 +253,12 @@ describe("the Today card", () => {
     });
 
     it("should not draw Start or View session for a handler that belongs to another state", async () => {
-      await renderCard(inProgress, thursday, { onStart: jest.fn(), onViewSession: jest.fn() });
+      await renderCard(inProgress, thursday, {
+        onStart: jest.fn(),
+        onViewSession: jest.fn(),
+        onLogAnother: jest.fn(),
+        onLogSession: jest.fn(),
+      });
 
       expect(screen.queryByRole("button")).not.toBeOnTheScreen();
     });
@@ -345,10 +355,77 @@ describe("the Today card", () => {
       ).toBeEnabled();
     });
 
-    it("should not draw Start or Resume for a handler that belongs to another state", async () => {
-      await renderCard(done, thursday, { onStart: jest.fn(), onResume: jest.fn() });
+    it("should not draw Start, Resume or Log a session for a handler that belongs to another state", async () => {
+      await renderCard(done, thursday, {
+        onStart: jest.fn(),
+        onResume: jest.fn(),
+        onLogSession: jest.fn(),
+      });
 
       expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should draw Log another session when onLogAnother is given, and call it when pressed", async () => {
+      const onLogAnother = jest.fn();
+      const user = userEvent.setup();
+      await renderCard(done, thursday, { onLogAnother });
+
+      await user.press(screen.getByRole("button", { name: TRAIN_TODAY_CARD.logAnotherAction }));
+
+      expect(onLogAnother).toHaveBeenCalledTimes(1);
+    });
+
+    it("should say Log another session in core's words", async () => {
+      await renderCard(done, thursday, { onLogAnother: jest.fn() });
+
+      expect(screen.getByRole("button", { name: "Log another session" })).toBeOnTheScreen();
+    });
+
+    it("should draw View session and Log another session together, each calling its own handler", async () => {
+      const onViewSession = jest.fn();
+      const onLogAnother = jest.fn();
+      const user = userEvent.setup();
+      await renderCard(done, thursday, { onViewSession, onLogAnother });
+
+      await user.press(screen.getByRole("button", { name: "Log another session" }));
+
+      expect(screen.getByRole("button", { name: "View session" })).toBeOnTheScreen();
+      expect(onLogAnother).toHaveBeenCalledTimes(1);
+      expect(onViewSession).not.toHaveBeenCalled();
+    });
+
+    it("should dim Log another session and stop it responding when starting is disabled", async () => {
+      const onLogAnother = jest.fn();
+      const user = userEvent.setup();
+      await renderCard(done, thursday, { onLogAnother, isStartAndResumeDisabled: true });
+
+      await user.press(screen.getByRole("button", { name: "Log another session" }));
+
+      expect(screen.getByRole("button", { name: "Log another session" })).toBeDisabled();
+      expect(onLogAnother).not.toHaveBeenCalled();
+    });
+
+    it("should show Log another session as busy while a session is starting", async () => {
+      await renderCard(done, thursday, { onLogAnother: jest.fn(), isStarting: true });
+
+      expect(
+        screen.getByRole("button", { name: /Log another session/, busy: true }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should not show Log another session as busy when no session is starting", async () => {
+      await renderCard(done, thursday, { onLogAnother: jest.fn() });
+
+      expect(
+        screen.queryByRole("button", { name: /Log another session/, busy: true }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should read the sets alone when a second session takes the day past the sets it plans", async () => {
+      await renderCard({ ...done, setsLogged: 9, setsPlanned: 6, next: null }, thursday);
+
+      expect(screen.getByText("30 min · 9 sets")).toBeOnTheScreen();
+      expect(screen.queryByText(/9 of 6/)).not.toBeOnTheScreen();
     });
   });
 
@@ -371,14 +448,49 @@ describe("the Today card", () => {
       expect(screen.getByText("Next: Legs on Thursday.")).toBeOnTheScreen();
     });
 
-    it("should draw no button even when every handler is given", async () => {
+    it("should draw no button when no handler is given", async () => {
+      await renderCard(rest, wednesday);
+
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should draw no button for the handlers that belong to other states", async () => {
       await renderCard(rest, wednesday, {
         onStart: jest.fn(),
         onResume: jest.fn(),
         onViewSession: jest.fn(),
+        onLogAnother: jest.fn(),
       });
 
       expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should draw Log a session when onLogSession is given, and call it when pressed", async () => {
+      const onLogSession = jest.fn();
+      const user = userEvent.setup();
+      await renderCard(rest, wednesday, { onLogSession });
+
+      await user.press(screen.getByRole("button", { name: TRAIN_TODAY_CARD.logSessionAction }));
+
+      expect(onLogSession).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("button", { name: "Log a session" })).toBeOnTheScreen();
+    });
+
+    it("should dim Log a session and stop it responding when starting is disabled", async () => {
+      const onLogSession = jest.fn();
+      const user = userEvent.setup();
+      await renderCard(rest, wednesday, { onLogSession, isStartAndResumeDisabled: true });
+
+      await user.press(screen.getByRole("button", { name: "Log a session" }));
+
+      expect(screen.getByRole("button", { name: "Log a session" })).toBeDisabled();
+      expect(onLogSession).not.toHaveBeenCalled();
+    });
+
+    it("should show Log a session as busy while a session is starting", async () => {
+      await renderCard(rest, wednesday, { onLogSession: jest.fn(), isStarting: true });
+
+      expect(screen.getByRole("button", { name: /Log a session/, busy: true })).toBeOnTheScreen();
     });
   });
 });

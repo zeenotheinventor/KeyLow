@@ -1,5 +1,5 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { ADD_EXERCISE, TRAIN_FIRST_TIME } from "@keylow/core/copy";
+import { ADD_EXERCISE, TRAIN_FIRST_TIME, TRAIN_TODAY_CARD } from "@keylow/core/copy";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { useState } from "react";
@@ -15,7 +15,13 @@ import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { finishClient, finishWrites, resetFinishWrites } from "./support/finishBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
-import { resetTrainBackend, trainBackend } from "./support/trainBackend";
+import { loggedSession, resetTrainBackend, trainBackend } from "./support/trainBackend";
+import {
+  goldenRoutine,
+  mondayPush,
+  thursdayLegsInTheWeek,
+  tuesdayPull,
+} from "./support/trainGoldenWeek";
 import { resetTrainWrites, trainWrites } from "./support/trainWritesBackend";
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -205,5 +211,55 @@ describe("the Train loop, end to end", () => {
       screen.queryByRole("button", { name: TRAIN_FIRST_TIME.logAction }),
     ).not.toBeOnTheScreen();
     expect(trainBackend.activeSession).toBeNull();
+  });
+  it("should log another session after one is finished, ending on the Train home with the day's totals across both", async () => {
+    // Legs already finished today at 19:00 in London: 30 minutes and 8 of its 16 sets.
+    trainBackend.routine = goldenRoutine;
+    trainBackend.weekSessions = [
+      mondayPush,
+      tuesdayPull,
+      thursdayLegsInTheWeek("2026-10-15T19:00:00+01:00"),
+    ];
+    trainBackend.sessions = [loggedSession];
+    mockNow = new Date("2026-10-15T18:30:00Z");
+    jest.setSystemTime(mockNow);
+    const user = userEvent.setup();
+    await renderApp();
+
+    // The Done card reads the first session, and offers another.
+    expect(
+      await screen.findByText("30 min · 8 of 16 sets · next: Push on Saturday"),
+    ).toBeOnTheScreen();
+    await user.press(screen.getByRole("button", { name: TRAIN_TODAY_CARD.logAnotherAction }));
+    await screen.findByRole("button", { name: "Hide session, it keeps running" });
+    expect(routerMock.push).toHaveBeenCalledWith("/session");
+    expect(trainWrites.inserted).toHaveLength(1);
+    expect(trainWrites.inserted[0]).toMatchObject({ routine_day_id: null });
+
+    // One set in the second session, then Finish and Save session.
+    await user.press(screen.getByRole("button", { name: ADD_EXERCISE.title }));
+    await user.type(
+      await screen.findByRole("searchbox", { name: ADD_EXERCISE.searchName }),
+      "lateral raise",
+    );
+    await user.press(
+      await screen.findByRole("button", { name: "Add Side lateral raise, Dumbbell" }),
+    );
+    await user.press(await screen.findByRole("button", { name: "Side lateral raise, set 1" }));
+    await user.type(await screen.findByLabelText("Load, kg"), "10");
+    await user.type(screen.getByLabelText("Reps"), "12");
+    mockNow = new Date("2026-10-15T18:55:00Z");
+    await user.press(screen.getByRole("button", { name: "Log set" }));
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
+    });
+    await user.press(screen.getByRole("button", { name: "Finish" }));
+    await user.press(await screen.findByRole("button", { name: "Save session" }));
+
+    // The Train home adds the two sessions up: 30 + 25 minutes, 8 + 1 sets.
+    expect(
+      await screen.findByText("55 min · 9 of 16 sets · next: Push on Saturday"),
+    ).toBeOnTheScreen();
+    expect(screen.getByRole("button", { name: TRAIN_TODAY_CARD.logAnotherAction })).toBeEnabled();
   });
 });

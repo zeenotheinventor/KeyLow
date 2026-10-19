@@ -39,6 +39,10 @@ export const TRAIN_TODAY_CARD = {
   inProgressLabel: "In progress",
   doneLabel: "Done",
   viewSessionAction: "View session",
+  /** The action on the Done card that starts another session the same day (KEY-492). No board draws it. */
+  logAnotherAction: "Log another session",
+  /** The action on the rest-day card that starts a free session (KEY-492). No board draws it. */
+  logSessionAction: "Log a session",
   /** The name of a session that follows no routine day. */
   sessionName: "Session",
   /** The action on the card of a session that follows no routine day. */
@@ -161,13 +165,28 @@ export type TodayCardCopy =
       statusLabel: string;
       /** "30 min · 8 of 16 sets · next: Push on Saturday". */
       summaryLine: string;
+      /** "View session". */
       action: string;
+      /** "Log another session". */
+      logAnotherAction: string;
     }>
-  | Readonly<{ kind: "rest"; heading: string; title: string; body: string | null }>;
+  | Readonly<{
+      kind: "rest";
+      heading: string;
+      title: string;
+      body: string | null;
+      /** "Log a session". */
+      logSessionAction: string;
+    }>;
 
-/** The sets logged of the sets planned: "8 of 16 sets", or the sets alone when the day plans none: "8 sets". */
+/**
+ * The sets logged of the sets planned: "8 of 16 sets". The sets alone when the day plans none, or when more
+ * are logged than planned (a second session the same day): "9 sets", never "9 of 6 sets".
+ */
 const describeSetsOfPlanned = (setsLogged: number, setsPlanned: number): string =>
-  setsPlanned === 0 ? describeSets(setsLogged) : `${setsLogged} of ${describeSets(setsPlanned)}`;
+  setsPlanned === 0 || setsLogged > setsPlanned
+    ? describeSets(setsLogged)
+    : `${setsLogged} of ${describeSets(setsPlanned)}`;
 
 const describeMinutes = (minutes: number): string => `${minutes} ${MINUTES_ABBREVIATION}`;
 
@@ -259,6 +278,7 @@ export const describeTodayCard = (
           ...next,
         ].join(" · "),
         action: TRAIN_TODAY_CARD.viewSessionAction,
+        logAnotherAction: TRAIN_TODAY_CARD.logAnotherAction,
       };
     }
     case "rest":
@@ -267,6 +287,7 @@ export const describeTodayCard = (
         heading,
         title: TRAIN_TODAY_CARD.restTitle,
         body: describeRestBody(card.next, context),
+        logSessionAction: TRAIN_TODAY_CARD.logSessionAction,
       };
   }
 };

@@ -108,6 +108,8 @@ describe("the Today card's fixed words", () => {
       inProgressLabel: "In progress",
       doneLabel: "Done",
       viewSessionAction: "View session",
+      logAnotherAction: "Log another session",
+      logSessionAction: "Log a session",
       sessionName: "Session",
       resumeSessionAction: "Resume session",
     });
@@ -252,6 +254,22 @@ describe("describeTodayCard", () => {
       ).toMatchObject({ summaryLine: "4 min · 0 of 1 set" });
     });
 
+    it("should count the sets alone when more are logged than the day plans", () => {
+      expect(
+        describeTodayCard(
+          {
+            kind: "in_progress",
+            dayName: "Legs",
+            minutesSoFar: 30,
+            setsLogged: 18,
+            setsPlanned: 16,
+            nextSet: null,
+          },
+          context,
+        ),
+      ).toMatchObject({ summaryLine: "30 min · 18 sets" });
+    });
+
     it("should count the sets alone when the session follows no routine day", () => {
       const copy = describeTodayCard(
         {
@@ -288,7 +306,24 @@ describe("describeTodayCard", () => {
         statusLabel: "Done",
         summaryLine: "30 min · 8 of 16 sets · next: Push on Saturday",
         action: "View session",
+        logAnotherAction: "Log another session",
       });
+    });
+
+    it("should count the sets alone when a second session takes the day past the sets it plans", () => {
+      expect(
+        describeTodayCard(
+          {
+            kind: "done",
+            dayName: "Legs",
+            minutes: 45,
+            setsLogged: 9,
+            setsPlanned: 6,
+            next: null,
+          },
+          thursdayContext,
+        ),
+      ).toMatchObject({ summaryLine: "45 min · 9 sets" });
     });
 
     it("should leave the next day out when the routine has none", () => {
@@ -349,6 +384,7 @@ describe("describeTodayCard", () => {
         heading: "Today · Wednesday 14 October",
         title: "Rest day",
         body: "Next: Legs on Thursday. Lats and biceps are still recovering from Tuesday.",
+        logSessionAction: "Log a session",
       });
     });
 
