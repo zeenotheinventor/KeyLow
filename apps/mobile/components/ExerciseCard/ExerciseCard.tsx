@@ -3,8 +3,9 @@ import { View } from "react-native";
 
 import { SetRow, setColumnClassName } from "../SetRow";
 import { Button, Card, Text } from "../ui";
+import { ReadOnlyExerciseCard } from "./ReadOnlyExerciseCard";
 
-import type { ExerciseCardProps } from "./types";
+import type { ActiveExerciseCardProps, ExerciseCardProps } from "./types";
 
 // The headings of the number columns sit over the middle of their cells.
 const columnHeadingClassName = "text-center";
@@ -13,9 +14,17 @@ const columnHeadingClassName = "text-center";
  * An exercise of the session as the `session · active` board draws it: its name and target line over a table
  * of its set rows. The column headings are hidden from a screen reader, since each row's check names its own
  * numbers. The board's More button waits for its own ticket. The card is a region named for the exercise, and
- * its rows are a list named Sets, with Add set under them when the card is given what it does.
+ * its rows are a list named Sets, with Add set under them when the card is given what it does. With
+ * `variant="readOnly"` it is an exercise of a logged session instead (`ReadOnlyExerciseCard`).
  */
-export function ExerciseCard({ name, target, columns, rows, onAddSet }: ExerciseCardProps) {
+export function ExerciseCard(props: ExerciseCardProps) {
+  if (props.variant === "readOnly") {
+    return <ReadOnlyExerciseCard {...props} />;
+  }
+  return <ActiveExerciseCard {...props} />;
+}
+
+function ActiveExerciseCard({ name, target, columns, rows, onAddSet }: ActiveExerciseCardProps) {
   return (
     <Card aria-label={name} level="surface" padding={0} role="region">
       <View className="gap-0 pb-1 pt-2">

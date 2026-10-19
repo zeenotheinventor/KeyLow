@@ -9,6 +9,8 @@ export type SessionRowProps = {
   meta: string;
   /** "Lats · biceps · mid traps", or null when no muscle worked. */
   muscles: string | null;
-  /** The row's name for a screen reader: the session, its day and its figures. */
+  /** The row's name for a screen reader: the session, its day and its figures, and that it opens: `describeHistoryRow`'s `accessibleName`. */
   accessibilityLabel: string;
+  /** Opens the session. */
+  onPress: () => void;
 };

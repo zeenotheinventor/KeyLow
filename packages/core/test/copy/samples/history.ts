@@ -50,6 +50,11 @@ export const samples: Record<string, () => string[]> = {
       );
       return [week.name, week.total];
     }),
+  describeSessionBackLabel: () => [
+    copy.describeSessionBackLabel("history"),
+    copy.describeSessionBackLabel("train"),
+  ],
+  describeOpenSessionName: () => [copy.describeOpenSessionName("Pull, Tue 13 October")],
   describeHistorySessionName: () => [
     copy.describeHistorySessionName("Pull"),
     copy.describeHistorySessionName(null),
@@ -96,7 +101,7 @@ export const samples: Record<string, () => string[]> = {
   describeHistorySet: () =>
     (["warmup", "working", "drop", "failure"] as const).flatMap((setType) => {
       const set = copy.describeHistorySet({ ...workingSet, setType });
-      return [set.label, set.what, set.rir, set.accessibleName];
+      return [set.label, set.what, set.rir, set.description, set.accessibleName];
     }),
   describeEditSetSheet: () => {
     const { accessibleName, title, subtitle } = copy.describeEditSetSheet(sheet);

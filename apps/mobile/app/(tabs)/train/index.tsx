@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 
 import { TrainScreen, useTrainSessionActions } from "../../../components/TrainScreen";
+import { sessionDetailPath } from "../../../lib/historyRoutes";
 import { newRoutinePath, routinesPath } from "../../../lib/routineRoutes";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
 
@@ -31,6 +32,9 @@ export default function TrainRoute() {
       }}
       onResume={resume}
       onStart={start}
+      onViewSession={(sessionId) => {
+        router.push(sessionDetailPath(sessionId, "train"));
+      }}
     />
   );
 }

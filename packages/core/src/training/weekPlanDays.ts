@@ -144,6 +144,46 @@ const SESSION_DATE_RULE = "A session's local date must be a calendar day written
 export const isOpenSession = (session: Pick<WeekSession, "ended_at">): boolean =>
   session.ended_at === null;
 
+const SESSION_END_RULE = "A session time must be an ISO timestamp with a zone";
+
+const compareText = (first: string, second: string): number => {
+  if (first === second) {
+    return 0;
+  }
+  return first < second ? -1 : 1;
+};
+
+/**
+ * The finished session that ended last, or null when none has finished. The session detail opens it from
+ * a day that holds several (KEY-492 allows that). The ends are compared as moments, so a zone offset does
+ * not reorder them. A tie goes to the later start, then to the later id, so the answer never depends on
+ * the order the sessions were read in. An open session is never the answer.
+ *
+ * Throws a `RangeError` naming the rule when a time is not an ISO timestamp with a zone.
+ */
+export const latestFinishedSession = <Session extends WeekSession>(
+  sessions: readonly Session[],
+): Session | null => {
+  const finished = sessions.flatMap((session) =>
+    session.ended_at === null
+      ? []
+      : [
+          {
+            session,
+            endedAt: parseMoment(session.ended_at, SESSION_END_RULE),
+            startedAt: parseMoment(session.started_at, SESSION_END_RULE),
+          },
+        ],
+  );
+  const [latest] = finished.sort(
+    (first, second) =>
+      second.endedAt - first.endedAt ||
+      second.startedAt - first.startedAt ||
+      compareText(second.session.id, first.session.id),
+  );
+  return latest?.session ?? null;
+};
+
 /** The working sets of a session: live, and not a warm-up. */
 export const workingSetsOf = (session: WeekSession): WeekSet[] =>
   session.sets.filter((set) => set.deleted_at === null && set.set_type !== "warmup");

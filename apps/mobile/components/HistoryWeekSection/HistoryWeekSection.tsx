@@ -11,7 +11,11 @@ import type { HistoryWeekSectionProps } from "./types";
  * over a card of the week's sessions, newest first. The words are core's (`describeHistoryWeek` and
  * `describeHistoryRow`).
  */
-export function HistoryWeekSection({ week, thisWeekStart }: HistoryWeekSectionProps) {
+export function HistoryWeekSection({
+  week,
+  thisWeekStart,
+  onOpenSession,
+}: HistoryWeekSectionProps) {
   const copy = describeHistoryWeek(week, thisWeekStart);
 
   return (
@@ -34,12 +38,15 @@ export function HistoryWeekSection({ week, thisWeekStart }: HistoryWeekSectionPr
           return (
             <SessionRow
               key={session.id}
-              accessibilityLabel={row.description}
+              accessibilityLabel={row.accessibleName}
               dayOfMonth={row.dayOfMonth}
               meta={row.meta}
               muscles={row.muscles}
               title={row.name}
               weekday={row.weekday}
+              onPress={() => {
+                onOpenSession(session.id);
+              }}
             />
           );
         })}

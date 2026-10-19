@@ -32,13 +32,21 @@ function bindStart(
       };
 }
 
+/** The handler of View session, given the session it opens. */
+function bindViewSession(handler: (sessionId: string) => void, sessionId: string): () => void {
+  return () => {
+    handler(sessionId);
+  };
+}
+
 /**
  * The Train tab: the Today card, or the first visit or no routine card when today has no card, under the
  * title, and the week strip under them when the week has a routine day or a session. It stays mounted under
  * the terms gate's cover, so its reads wait until the account has accepted the current Terms. Offline it
  * shows what the phone saved, under a notice that says when. Starting a session needs a connection, so the
  * buttons that log or reopen one are dimmed offline. A button is drawn only when its handler is given, and
- * it passes the handler what the start needs: the routine day and the time zone.
+ * it passes the handler what the start needs: the routine day and the time zone. View session and a logged day
+ * of the week strip pass the id of the session they open.
  */
 export function TrainScreen({
   isStarting = false,
@@ -130,7 +138,11 @@ export function TrainScreen({
             }
             onLogAnother={bindStart(onLogSession, { routineDayId: null, timeZone: home.timeZone })}
             onLogSession={bindStart(onLogSession, { routineDayId: null, timeZone: home.timeZone })}
-            onViewSession={onViewSession}
+            onViewSession={
+              onViewSession === undefined || home.today.sessionToViewId === null
+                ? undefined
+                : bindViewSession(onViewSession, home.today.sessionToViewId)
+            }
           />
         ) : null}
         {home.status === "ready" && home.today === null && !home.hasRoutine ? (
@@ -157,7 +169,11 @@ export function TrainScreen({
           )
         ) : null}
         {home.status === "ready" && home.week !== null ? (
-          <PlanWeekStrip week={home.week.plan} weekStart={home.week.weekStart} />
+          <PlanWeekStrip
+            week={home.week.plan}
+            weekStart={home.week.weekStart}
+            onViewSession={onViewSession}
+          />
         ) : null}
       </ScrollView>
     </View>

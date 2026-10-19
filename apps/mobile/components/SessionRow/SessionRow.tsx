@@ -1,14 +1,14 @@
 import { View } from "react-native";
 
-import { Text, useGroupedRowPosition } from "../ui";
+import { rowPressScale } from "../../lib/motion";
+import { Icon, PressableSurface, Text, useGroupedRowPosition } from "../ui";
 
 import type { SessionRowProps } from "./types";
 
 /**
  * A logged session in the history list, as the `history · list` board draws it: a date block with the
- * weekday over the day, the title, "51 min · 17 sets" and the top muscles. A row in a `GroupedList` has the
- * hairline above it, except the first. It is a plain row and not a button, because the session detail that
- * it will open is not built yet, and a chevron on it would lead nowhere.
+ * weekday over the day, the title, "51 min · 17 sets" and the top muscles, and a chevron at the end. The row
+ * is a button that opens the session. A row in a `GroupedList` has the hairline above it, except the first.
  */
 export function SessionRow({
   weekday,
@@ -17,14 +17,16 @@ export function SessionRow({
   meta,
   muscles,
   accessibilityLabel,
+  onPress,
 }: SessionRowProps) {
   const { isFirst } = useGroupedRowPosition();
 
   return (
-    <View
-      accessible
-      aria-label={accessibilityLabel}
+    <PressableSurface
       className={`min-h-[68px] flex-row items-center gap-3 px-3 py-2 ${isFirst ? "" : "border-t border-border"}`}
+      label={accessibilityLabel}
+      pressScale={rowPressScale}
+      onPress={onPress}
     >
       <View className="h-[44px] w-[40px] shrink-0 items-center justify-center rounded-small bg-surface-raised">
         <Text tone="secondary" variant="caption">
@@ -43,6 +45,7 @@ export function SessionRow({
           </Text>
         )}
       </View>
-    </View>
+      <Icon name="ChevronRight" size="sm" tone="muted" />
+    </PressableSurface>
   );
 }

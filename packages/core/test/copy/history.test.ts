@@ -10,6 +10,8 @@ import {
   describeHistorySet,
   describeHistoryWeek,
   describeLoadFieldLabel,
+  describeOpenSessionName,
+  describeSessionBackLabel,
   describeSessionExerciseNote,
   describeSessionStats,
   describeSessionWhen,
@@ -21,6 +23,8 @@ import {
   HISTORY_LOAD_EARLIER_FAILED,
   HISTORY_SCREEN,
   HISTORY_SESSION_DETAIL,
+  HISTORY_SESSION_LOADING_NAME,
+  HISTORY_SESSION_NOT_FOUND,
 } from "../../src/copy";
 import * as historyCopy from "../../src/copy/history";
 
@@ -105,6 +109,18 @@ describe("the History screen's fixed words", () => {
 
   it("should say what the loading board names for a screen reader", () => {
     expect(HISTORY_LOADING_NAME).toBe("Loading your history");
+  });
+
+  it("should name the session loading skeleton for a screen reader", () => {
+    expect(HISTORY_SESSION_LOADING_NAME).toBe("Loading your session");
+  });
+
+  it("should say a session is not found without saying why, since a missing one and another person's read alike", () => {
+    expect(HISTORY_SESSION_NOT_FOUND).toStrictEqual({
+      title: "Session not found",
+      body: "This session is not in your history.",
+      action: "Open history",
+    });
   });
 
   it("should say what the error board says, with no value in it", () => {
@@ -401,6 +417,7 @@ describe("describeHistorySet", () => {
       label: "1",
       what: "10 reps",
       rir: "RIR 2",
+      description: "Set 1, 10 reps, RIR 2",
       accessibleName: "Set 1, 10 reps, RIR 2, edit",
     });
   });
@@ -412,6 +429,7 @@ describe("describeHistorySet", () => {
       label: "W",
       what: "40 kg × 10",
       rir: "No RIR",
+      description: "Warm-up set, 40 kg by 10, no RIR",
       accessibleName: "Warm-up set, 40 kg by 10, no RIR, edit",
     });
   });
@@ -430,6 +448,7 @@ describe("describeHistorySet", () => {
       label: "4",
       what: "60 kg × 10",
       rir: "RIR 1",
+      description: "Set 4, 60 kg by 10, RIR 1, not in the plan",
       accessibleName: "Set 4, 60 kg by 10, RIR 1, not in the plan, edit",
     });
   });
@@ -576,5 +595,23 @@ describe("the voice of the History copy", () => {
       expect(sentence).not.toContain(";");
       expect(sentence).not.toContain("!");
     }
+  });
+});
+
+describe("describeOpenSessionName", () => {
+  it("should add that a control opens the session to the name of what it holds", () => {
+    expect(describeOpenSessionName("Tuesday 13 October, Pull, logged, 17 sets")).toBe(
+      "Tuesday 13 October, Pull, logged, 17 sets, open session",
+    );
+  });
+});
+
+describe("describeSessionBackLabel", () => {
+  it("should name the history list when the session was opened from it", () => {
+    expect(describeSessionBackLabel("history")).toBe("Back to History");
+  });
+
+  it("should name the Train home when the session was opened from its Today card or week strip", () => {
+    expect(describeSessionBackLabel("train")).toBe("Back to Train");
   });
 });

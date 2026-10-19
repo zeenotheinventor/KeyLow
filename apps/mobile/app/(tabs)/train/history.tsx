@@ -2,6 +2,7 @@ import { useRouter } from "expo-router";
 
 import { HistoryScreen } from "../../../components/HistoryScreen";
 import { useTrainSessionActions } from "../../../components/TrainScreen";
+import { sessionDetailPath } from "../../../lib/historyRoutes";
 
 // Pushed inside the Train tab from the Train home's History link. The root layout's AuthGate covers it, and
 // the stack above gives it no header.
@@ -18,5 +19,14 @@ export default function HistoryRoute() {
     }
   }
 
-  return <HistoryScreen isStarting={isStarting} onBack={goBack} onStartSession={start} />;
+  return (
+    <HistoryScreen
+      isStarting={isStarting}
+      onBack={goBack}
+      onOpenSession={(sessionId) => {
+        router.push(sessionDetailPath(sessionId));
+      }}
+      onStartSession={start}
+    />
+  );
 }

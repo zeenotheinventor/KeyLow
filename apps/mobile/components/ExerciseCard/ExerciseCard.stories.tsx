@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 import { ExerciseCard } from "./ExerciseCard";
 
-import type { ExerciseCardRow } from "./types";
+import type { ActiveExerciseCardProps, ExerciseCardRow } from "./types";
 import type { LoadUnit } from "@keylow/core/training";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
@@ -56,7 +56,7 @@ const meta = {
     columns: describeSetColumns("kg"),
     rows: legPressRows("kg"),
   },
-} satisfies Meta<typeof ExerciseCard>;
+} satisfies Meta<ActiveExerciseCardProps>;
 
 export default meta;
 

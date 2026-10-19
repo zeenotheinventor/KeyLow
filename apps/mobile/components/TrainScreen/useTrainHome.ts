@@ -8,7 +8,12 @@ import {
   weekStartOf,
 } from "@keylow/api-client";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
-import { SESSION_TIME_PARAMS_V1, todayCard, weekPlanDays } from "@keylow/core/training";
+import {
+  SESSION_TIME_PARAMS_V1,
+  todayCard,
+  todaySessionToView,
+  weekPlanDays,
+} from "@keylow/core/training";
 
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
@@ -77,6 +82,7 @@ function todayViewOf(
   return {
     card,
     plannedDayId: plan.days.find((day) => day.date === plan.today)?.plannedDay?.id ?? null,
+    sessionToViewId: card.kind === "done" ? (todaySessionToView(plan)?.id ?? null) : null,
     context: {
       localDate: plan.today,
       nextExerciseName:

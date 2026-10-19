@@ -136,7 +136,7 @@ describe("the Train loop, end to end", () => {
       "components/AddExerciseSheet",
       "components/ExerciseRow",
       "components/FinishScreen",
-      "components/FinishStat",
+      "components/StatCard",
       "app",
     ]);
   });

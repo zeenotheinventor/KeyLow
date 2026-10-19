@@ -94,4 +94,31 @@ describe("useSession", () => {
     expect(result.current.error?.message).toBe("Could not load your session (57014)");
     expect(JSON.stringify(result.current.error?.cause)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
   });
+
+  it("should not retry an id that is not a UUID, since asking again cannot change the answer", async () => {
+    const fake = installTrainingFake(server, { sessions: [] });
+    const { wrapper } = createWrapper(undefined, { retryDelayMs: 20 });
+
+    const { result } = renderHook(() => useSession("not-a-uuid"), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(result.current.failureCount).toBe(1);
+    expect(fake.requests).toEqual([]);
+  });
+
+  it("should retry a failed request, as the connection may come back", async () => {
+    const fake = installTrainingFake(server, { sessions: [openSessionRow()] });
+    fake.failWith("57014");
+    const { wrapper } = createWrapper(undefined, { retryDelayMs: 20 });
+
+    const { result } = renderHook(() => useSession(SESSION_ID), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(result.current.failureCount).toBe(4);
+  });
 });

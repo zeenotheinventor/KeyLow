@@ -16,7 +16,12 @@ import {
   squatId,
   workingSets,
 } from "./weekPlanRows";
-import { SESSION_TIME_PARAMS_V1, todayCard, weekPlanDays } from "../../src/training";
+import {
+  SESSION_TIME_PARAMS_V1,
+  todayCard,
+  todaySessionToView,
+  weekPlanDays,
+} from "../../src/training";
 
 import type { TodayCardInput, WeekPlanInput, WeekRoutine } from "../../src/training";
 
@@ -414,5 +419,58 @@ describe("todayCard", () => {
         new RangeError("A session time must be an ISO timestamp with a zone"),
       );
     });
+  });
+});
+
+describe("todaySessionToView", () => {
+  const weekAt = (sessions: WeekPlanInput["sessions"], now: string) =>
+    weekPlanDays({
+      routine: goldenRoutine,
+      sessions,
+      now,
+      tz: goldenTimeZone,
+      weekStart: goldenWeekStart,
+    });
+
+  it("should give the session the Done card counts, the golden Thursday Legs", () => {
+    const week = weekAt([...finishedWeek, goldenFinishedThursdaySession], THURSDAY_AFTER_LEGS);
+
+    expect(todaySessionToView(week)).toBe(goldenFinishedThursdaySession);
+  });
+
+  it("should give the later of two sessions finished today", () => {
+    const morning = sessionOn(1, "2026-10-15", {
+      routine_day_id: legsDayId,
+      started_at: "2026-10-15T07:00:00+01:00",
+      ended_at: "2026-10-15T07:45:00+01:00",
+    });
+    const evening = sessionOn(2, "2026-10-15", {
+      started_at: "2026-10-15T18:00:00+01:00",
+      ended_at: "2026-10-15T18:20:30+01:00",
+    });
+
+    expect(todaySessionToView(weekAt([evening, morning], THURSDAY_AFTER_LEGS))).toBe(evening);
+  });
+
+  it("should give a planned day's own session logged on an earlier date, as the Done card counts it", () => {
+    const legsOnWednesday = sessionOn(1, "2026-10-14", {
+      routine_day_id: legsDayId,
+      started_at: "2026-10-14T18:00:00+01:00",
+      ended_at: "2026-10-14T18:50:00+01:00",
+    });
+
+    expect(todaySessionToView(weekAt([legsOnWednesday], "2026-10-15T09:00:00+01:00"))).toBe(
+      legsOnWednesday,
+    );
+  });
+
+  it("should give null while today's session is still open and nothing else finished", () => {
+    const week = weekAt([goldenOpenThursdaySession], THURSDAY_MID_LEGS);
+
+    expect(todaySessionToView(week)).toBeNull();
+  });
+
+  it("should give null on a day with nothing logged", () => {
+    expect(todaySessionToView(weekAt(finishedWeek, THURSDAY_BEFORE_LEGS))).toBeNull();
   });
 });

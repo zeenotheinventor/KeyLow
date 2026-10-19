@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
-import { FinishStat } from "../FinishStat";
+import { StatCard } from "../StatCard";
 import { Banner, Button, SheetHeader, Text, TextArea } from "../ui";
 import { useSaveSession } from "./useSaveSession";
 
@@ -92,9 +92,9 @@ export function FinishScreen({
         keyboardShouldPersistTaps="handled"
       >
         <View className="flex-row gap-2">
-          <FinishStat label={FINISH_SCREEN.timeLabel} note={timeNote} value={time.value} />
-          <FinishStat label={FINISH_SCREEN.setsLabel} note={sets.note} value={sets.value} />
-          <FinishStat
+          <StatCard label={FINISH_SCREEN.timeLabel} note={timeNote} value={time.value} />
+          <StatCard label={FINISH_SCREEN.setsLabel} note={sets.note} value={sets.value} />
+          <StatCard
             label={FINISH_SCREEN.exercisesLabel}
             note={exercises.note}
             value={exercises.value}

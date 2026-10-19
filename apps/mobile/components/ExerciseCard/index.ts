@@ -1,2 +1,3 @@
 export { ExerciseCard } from "./ExerciseCard";
-export type { ExerciseCardProps, ExerciseCardRow } from "./types";
+export type { ReadOnlyExerciseCardProps, ReadOnlyExerciseCardRow } from "./ReadOnlyExerciseCard";
+export type { ActiveExerciseCardProps, ExerciseCardProps, ExerciseCardRow } from "./types";

@@ -24,7 +24,7 @@ import {
   WEDNESDAY,
   workingSets,
 } from "./weekPlanRows";
-import { weekCaption, weekPlanDays } from "../../src/training";
+import { latestFinishedSession, weekCaption, weekPlanDays } from "../../src/training";
 
 import type { WeekPlan, WeekPlanInput, WeekRoutine } from "../../src/training";
 
@@ -847,4 +847,63 @@ describe("one session credits at most one day", () => {
       expect(caption.loggedDayCount).toBeLessThanOrEqual(caption.loggedSessionCount);
     },
   );
+});
+
+describe("latestFinishedSession", () => {
+  const morning = sessionOn(1, "2026-10-15", {
+    started_at: "2026-10-15T07:00:00+01:00",
+    ended_at: "2026-10-15T07:45:00+01:00",
+  });
+  const evening = sessionOn(2, "2026-10-15", {
+    started_at: "2026-10-15T18:00:00+01:00",
+    ended_at: "2026-10-15T18:20:00+01:00",
+  });
+  const open = sessionOn(3, "2026-10-15", {
+    started_at: "2026-10-15T20:00:00+01:00",
+    ended_at: null,
+  });
+
+  it("should give the session that ended last of several finished on one day", () => {
+    expect(latestFinishedSession([evening, morning])).toBe(evening);
+    expect(latestFinishedSession([morning, evening])).toBe(evening);
+  });
+
+  it("should compare the moments, so a zone offset does not reorder the sessions", () => {
+    // 12:30 in New York is 16:30 in London, later than the London 15:00 one, though 12:30 is the smaller clock.
+    const london = sessionOn(4, "2026-10-15", { ended_at: "2026-10-15T15:00:00+01:00" });
+    const newYork = sessionOn(5, "2026-10-15", { ended_at: "2026-10-15T12:30:00-04:00" });
+
+    expect(latestFinishedSession([newYork, london])).toBe(newYork);
+  });
+
+  it("should leave an open session out, even when it started last", () => {
+    expect(latestFinishedSession([morning, open])).toBe(morning);
+  });
+
+  it("should give null when no session has finished", () => {
+    expect(latestFinishedSession([open])).toBeNull();
+    expect(latestFinishedSession([])).toBeNull();
+  });
+
+  it("should break a tie on the end by the later start, then the later id", () => {
+    const sameEnd = "2026-10-15T19:00:00+01:00";
+    // The earlier start has the larger id, so only the start rule can put the later start first.
+    const earlierStart = sessionOn(9, "2026-10-15", {
+      started_at: "2026-10-15T18:00:00+01:00",
+      ended_at: sameEnd,
+    });
+    const laterStart = sessionOn(6, "2026-10-15", {
+      started_at: "2026-10-15T18:30:00+01:00",
+      ended_at: sameEnd,
+    });
+    const sameTimes = sessionOn(7, "2026-10-15", {
+      started_at: "2026-10-15T18:30:00+01:00",
+      ended_at: sameEnd,
+    });
+
+    expect(latestFinishedSession([earlierStart, laterStart])).toBe(laterStart);
+    expect(latestFinishedSession([laterStart, earlierStart])).toBe(laterStart);
+    expect(latestFinishedSession([laterStart, sameTimes])).toBe(sameTimes);
+    expect(latestFinishedSession([sameTimes, laterStart])).toBe(sameTimes);
+  });
 });
