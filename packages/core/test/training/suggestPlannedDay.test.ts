@@ -101,6 +101,7 @@ describe("a planned day is kept", () => {
               muscle_id: "delt_side",
               priority: 3,
               weekly_sets: 0,
+              logged_sets: 0,
               mav_low: 10,
               heat: 0,
               score: 30,
