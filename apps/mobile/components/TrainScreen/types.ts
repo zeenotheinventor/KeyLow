@@ -1,4 +1,5 @@
 import type { TodayCardContext, TodayCardWithSession } from "@keylow/core/copy";
+import type { WeekPlan } from "@keylow/core/training";
 
 /** What a start needs besides the moment: the routine day to follow, or null for a free session, and the profile's zone. */
 export type TrainSessionStart = {
@@ -35,6 +36,13 @@ export type TodayCardView = {
   plannedDayId: string | null;
 };
 
+/** The week strip's week: core's plan, which already holds the session in progress, and its Monday. */
+export type TrainWeekView = {
+  plan: WeekPlan;
+  /** The Monday of the week, `YYYY-MM-DD`. */
+  weekStart: string;
+};
+
 /** What the Train home has read. */
 export type TrainHome =
   | { status: "loading" }
@@ -49,6 +57,8 @@ export type TrainHome =
        * or no routine card stands in its place.
        */
       today: TodayCardView | null;
+      /** The week strip's week, or null when there is nothing to show: no routine day and no session in the week. */
+      week: TrainWeekView | null;
       /** The profile's IANA time zone, UTC when the profile row is missing. */
       timeZone: string;
       /** When the oldest of the reads was made, which is how old the screen's content is. */

@@ -10,6 +10,7 @@ import { formatClockTime } from "@keylow/core/dates";
 import { ScrollView, View } from "react-native";
 
 import { useIsOnline } from "../../lib/connectivity";
+import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
 import { TodayCard } from "../TodayCard";
 import { Banner, ErrorState, Skeleton } from "../ui";
@@ -33,10 +34,11 @@ function bindStart(
 
 /**
  * The Train tab: the Today card, or the first visit or no routine card when today has no card, under the
- * title. It stays mounted under the terms gate's cover, so its reads wait until the account has accepted the
- * current Terms. Offline it shows what the phone saved, under a notice that says when. Starting a session
- * needs a connection, so the buttons that log or reopen one are dimmed offline. A button is drawn only when
- * its handler is given, and it passes the handler what the start needs: the routine day and the time zone.
+ * title, and the week strip under them when the week has a routine day or a session. It stays mounted under
+ * the terms gate's cover, so its reads wait until the account has accepted the current Terms. Offline it
+ * shows what the phone saved, under a notice that says when. Starting a session needs a connection, so the
+ * buttons that log or reopen one are dimmed offline. A button is drawn only when its handler is given, and
+ * it passes the handler what the start needs: the routine day and the time zone.
  */
 export function TrainScreen({
   isStarting = false,
@@ -125,6 +127,9 @@ export function TrainScreen({
               onSetGoal={onSetGoal}
             />
           )
+        ) : null}
+        {home.status === "ready" && home.week !== null ? (
+          <PlanWeekStrip week={home.week.plan} weekStart={home.week.weekStart} />
         ) : null}
       </ScrollView>
     </View>
