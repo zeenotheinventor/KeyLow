@@ -25,11 +25,15 @@ const FIRST_WEEKS = 2;
 /**
  * The history list, pushed inside the Train tab so the tab bar stays: the calendar weeks that hold a
  * session, newest first, each a card of its sessions, with "Load earlier weeks" under them while there are
- * earlier weeks. It works from the weeks the phone saved when there is no connection. Nothing in it opens
- * yet: the session detail makes the rows open. With no sessions it shows the empty state, and Start a
- * session only when a handler is given.
+ * earlier weeks. A row opens its session. It works from the weeks the phone saved when there is no
+ * connection. With no sessions it shows the empty state, and Start a session only when a handler is given.
  */
-export function HistoryScreen({ onBack, onStartSession, isStarting = false }: HistoryScreenProps) {
+export function HistoryScreen({
+  onBack,
+  onOpenSession,
+  onStartSession,
+  isStarting = false,
+}: HistoryScreenProps) {
   const insets = useSafeAreaInsets();
   const enabled = useReadsEnabled();
   const isOnline = useIsOnline();
@@ -51,6 +55,7 @@ export function HistoryScreen({ onBack, onStartSession, isStarting = false }: Hi
               key={week.weekStart}
               thisWeekStart={weekStartOf(toLocalDate(now, zone))}
               week={week}
+              onOpenSession={onOpenSession}
             />
           ))}
           {history.hasEarlierWeeks ? (

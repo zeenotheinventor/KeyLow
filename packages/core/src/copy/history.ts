@@ -50,6 +50,26 @@ export const HISTORY_SESSION_DETAIL = {
   setsListName: "Sets",
 } as const;
 
+/** Where the person came from to a session: the history list, or the Train home (its Today card or week strip). */
+export type SessionOrigin = "history" | "train";
+
+/** The detail's Back control, named for the screen it goes back to. */
+export const describeSessionBackLabel = (origin: SessionOrigin): string =>
+  origin === "train" ? HISTORY_SCREEN.backLabel : HISTORY_SESSION_DETAIL.backLabel;
+
+/**
+ * The card shown when a session cannot be found: one that does not exist, was deleted or is another
+ * person's. The three read alike, so it says none of them. No board draws it.
+ */
+export const HISTORY_SESSION_NOT_FOUND = {
+  title: "Session not found",
+  body: "This session is not in your history.",
+  action: "Open history",
+} as const;
+
+/** The name of the session detail's loading skeleton for a screen reader. No board draws it. */
+export const HISTORY_SESSION_LOADING_NAME = "Loading your session";
+
 /** The card shown when nothing has been logged, ever. */
 export const HISTORY_EMPTY = {
   title: "No sessions yet",
@@ -88,6 +108,7 @@ export const HISTORY_DELETE_SESSION = {
 } as const;
 
 const MINUTES_ABBREVIATION = "min";
+const OPEN_SESSION = "open session";
 const SEPARATOR = " · ";
 const DAYS_PER_WEEK = 7;
 
@@ -164,6 +185,9 @@ const describeRowDate = (localDate: string): string => {
   return `${describeWeekdayShortName(localDate)} ${day} ${MONTH_NAMES_LONG[month - 1]}`;
 };
 
+/** The name of a control that opens a session, given the name of what it holds: "Pull, Tue 13 October, 51 minutes · 17 sets, open session". */
+export const describeOpenSessionName = (name: string): string => `${name}, ${OPEN_SESSION}`;
+
 /** One session of the list. */
 export const describeHistoryRow = ({ localDate, summary }: HistoryRowInput): HistoryRowCopy => {
   const { durationMinutes, workingSets } = summary;
@@ -187,7 +211,7 @@ export const describeHistoryRow = ({ localDate, summary }: HistoryRowInput): His
     meta: [...minutes, sets].join(SEPARATOR),
     muscles: describeMusclesLine(summary.topMuscles),
     description,
-    accessibleName: `${description}, open session`,
+    accessibleName: describeOpenSessionName(description),
   };
 };
 
@@ -309,7 +333,9 @@ export type HistorySetCopy = {
   what: string;
   /** "RIR 2" or "No RIR". */
   rir: string;
-  /** "Set 3, 70 kg by 10, RIR 2, edit". */
+  /** "Set 3, 70 kg by 10, RIR 2": the name of a row that opens nothing. A set not in the plan adds "not in the plan". */
+  description: string;
+  /** The description and "edit": "Set 3, 70 kg by 10, RIR 2, edit", for a row that opens the edit. */
   accessibleName: string;
 };
 
@@ -325,17 +351,18 @@ export const describeHistorySet = ({
 }: HistorySetInput): HistorySetCopy => {
   const loadText = loadKg === null ? null : `${displayLoad(loadKg, unit)} ${unit}`;
   const repsText = describeCount(reps, "rep", "reps");
+  const description = [
+    SET_PHRASES[setType](setNumber),
+    loadText === null ? repsText : `${loadText} by ${reps}`,
+    rir === null ? "no RIR" : `RIR ${rir}`,
+    ...(isNotInPlan ? ["not in the plan"] : []),
+  ].join(", ");
   return {
     label: SET_MARKS[setType](setNumber),
     what: loadText === null ? repsText : `${loadText} × ${reps}`,
     rir: rir === null ? "No RIR" : `RIR ${rir}`,
-    accessibleName: [
-      SET_PHRASES[setType](setNumber),
-      loadText === null ? repsText : `${loadText} by ${reps}`,
-      rir === null ? "no RIR" : `RIR ${rir}`,
-      ...(isNotInPlan ? ["not in the plan"] : []),
-      "edit",
-    ].join(", "),
+    description,
+    accessibleName: `${description}, edit`,
   };
 };
 

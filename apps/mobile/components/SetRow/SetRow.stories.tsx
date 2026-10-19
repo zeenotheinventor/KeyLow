@@ -3,6 +3,7 @@ import { View } from "react-native";
 
 import { SetRow } from "./SetRow";
 
+import type { ActiveSetRowProps } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -27,7 +28,7 @@ const meta = {
       entry: { state: "logged", loadKg: 180, reps: 11, rir: 1 },
     }),
   },
-} satisfies Meta<typeof SetRow>;
+} satisfies Meta<ActiveSetRowProps>;
 
 export default meta;
 

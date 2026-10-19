@@ -19,7 +19,7 @@ import {
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { trainBackend } from "./support/trainBackend";
-import { goldenRoutine } from "./support/trainGoldenWeek";
+import { goldenRoutine, mondayPush, tuesdayPull } from "./support/trainGoldenWeek";
 import { resetTrainWrites, trainWrites } from "./support/trainWritesBackend";
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -100,6 +100,20 @@ describe("the history in the Train tab", () => {
       expect(routerMock.push).toHaveBeenCalledWith("/train/history");
     });
 
+    it("should push the session's detail from a logged day of the week strip", async () => {
+      trainBackend.routine = goldenRoutine;
+      trainBackend.weekSessions = [mondayPush, tuesdayPull];
+      const user = await renderRoute(<TrainRoute />);
+
+      await user.press(
+        await screen.findByRole("button", { name: /^Tuesday 13 October.*open session$/ }),
+      );
+
+      expect(routerMock.push).toHaveBeenCalledWith(
+        `/train/history/${String(tuesdayPull["id"])}?from=train`,
+      );
+    });
+
     it("should be there for a user who has logged nothing too", async () => {
       await renderRoute(<TrainRoute />);
 
@@ -116,6 +130,17 @@ describe("the history in the Train tab", () => {
       await user.press(screen.getByRole("button", { name: "Back to Train" }));
 
       expect(routerMock.back).toHaveBeenCalledTimes(1);
+    });
+
+    it("should push the session's detail from a row", async () => {
+      historyBackend.sessions = goldenHistoryWeek;
+      const user = await renderRoute(<HistoryRoute />);
+
+      await user.press(await screen.findByRole("button", { name: /^Pull, Tue 13 October/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith(
+        `/train/history/${String(goldenHistoryWeek[1]?.["id"])}`,
+      );
     });
 
     it("should go to the Train home when there is nothing to go back to", async () => {

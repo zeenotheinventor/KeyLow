@@ -1,7 +1,7 @@
 import { TRAIN_HOME } from "@keylow/core/copy";
 import { weekPlanDays } from "@keylow/core/training";
 import { themes } from "@keylow/tokens";
-import { cleanup, render, screen, within } from "@testing-library/react-native";
+import { cleanup, render, screen, userEvent, within } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { PlanWeekStrip } from "../components/PlanWeekStrip";
@@ -83,10 +83,10 @@ const planAt = (now: string, routine: WeekRoutine | null, sessions: readonly Wee
 const thursdayBeforeLegs = () =>
   planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, tuesdayPull]);
 
-async function renderStrip(week: WeekPlan) {
+async function renderStrip(week: WeekPlan, onViewSession?: (sessionId: string) => void) {
   await render(
     <ThemeProvider fixedPreference="dark">
-      <PlanWeekStrip week={week} weekStart={WEEK_START} />
+      <PlanWeekStrip week={week} weekStart={WEEK_START} onViewSession={onViewSession} />
     </ThemeProvider>,
   );
 }
@@ -323,6 +323,122 @@ describe("PlanWeekStrip", () => {
       expect(
         within(markOf("Monday 12 October, session logged, 16 sets")).getByTestId("week-day-check"),
       ).toBeOnTheScreen();
+    });
+  });
+
+  describe("with a handler for opening a session", () => {
+    it("should make each logged day a button that says it opens the session, and no other day", async () => {
+      await renderStrip(thursdayBeforeLegs(), jest.fn());
+
+      expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(
+        screen.getByRole("button", {
+          name: "Monday 12 October, Push, logged, 16 sets, open session",
+        }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", {
+          name: "Tuesday 13 October, Pull, logged, 16 sets, open session",
+        }),
+      ).toBeOnTheScreen();
+      // Today, a planned day and a rest day only inform.
+      expect(screen.queryByRole("button", { name: /^(Thursday|Friday|Saturday)/ })).toBeNull();
+    });
+
+    it("should open the session of the day that is pressed", async () => {
+      const user = userEvent.setup();
+      const onViewSession = jest.fn();
+      await renderStrip(thursdayBeforeLegs(), onViewSession);
+
+      await user.press(screen.getByRole("button", { name: /^Tuesday 13 October/ }));
+
+      expect(onViewSession).toHaveBeenCalledTimes(1);
+      expect(onViewSession).toHaveBeenCalledWith("tuesday");
+    });
+
+    it("should open the session that ended last when a day holds several", async () => {
+      const user = userEvent.setup();
+      const onViewSession = jest.fn();
+      const morning = {
+        ...session("morning", "2026-10-13", "pull", 8, "2026-10-13T08:45:00+01:00"),
+        started_at: "2026-10-13T08:00:00+01:00",
+      };
+      const evening = {
+        ...session("evening", "2026-10-13", null, 4, "2026-10-13T18:30:00+01:00"),
+        started_at: "2026-10-13T18:00:00+01:00",
+      };
+      await renderStrip(
+        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, evening, morning]),
+        onViewSession,
+      );
+
+      await user.press(screen.getByRole("button", { name: /^Tuesday 13 October/ }));
+
+      expect(onViewSession).toHaveBeenCalledWith("evening");
+    });
+
+    it("should make a session that follows no routine day a button too", async () => {
+      const user = userEvent.setup();
+      const onViewSession = jest.fn();
+      const extra = session("extra", "2026-10-14", null, 5, "2026-10-14T19:00:00+01:00");
+      await renderStrip(
+        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, extra]),
+        onViewSession,
+      );
+
+      await user.press(
+        screen.getByRole("button", {
+          name: "Wednesday 14 October, session logged, 5 sets, open session",
+        }),
+      );
+
+      expect(onViewSession).toHaveBeenCalledWith("extra");
+    });
+
+    it("should leave a day with a session still open alone, since the session screen resumes it", async () => {
+      const running = session("running", "2026-10-15", "legs", 3, null);
+      await renderStrip(
+        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, running]),
+        jest.fn(),
+      );
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.queryByRole("button", { name: /^Thursday/ })).toBeNull();
+    });
+
+    it("should leave a planned day alone when its session was logged on another date, since nothing was logged on it", async () => {
+      // Legs, planned for Thursday, was logged on Wednesday: Thursday reads logged with no session of its own.
+      const legsOnWednesday = session(
+        "legs",
+        "2026-10-14",
+        "legs",
+        16,
+        "2026-10-14T19:00:00+01:00",
+      );
+      await renderStrip(
+        planAt("2026-10-16T16:55:00Z", goldenRoutine, [legsOnWednesday]),
+        jest.fn(),
+      );
+
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getByRole("button", { name: /^Wednesday 14 October/ })).toBeOnTheScreen();
+    });
+
+    it("should leave a day that is not logged alone even when a session of another routine day finished on it", async () => {
+      // Pull was done on Thursday, which plans Legs: the day is still Legs to do, so it only informs.
+      const pullOnThursday = session(
+        "pull-thursday",
+        "2026-10-15",
+        "pull",
+        6,
+        "2026-10-15T17:00:00+01:00",
+      );
+      await renderStrip(
+        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, pullOnThursday]),
+        jest.fn(),
+      );
+
+      expect(screen.queryByRole("button", { name: /^Thursday/ })).toBeNull();
     });
   });
 });

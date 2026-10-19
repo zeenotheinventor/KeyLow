@@ -24,7 +24,8 @@ const meta = {
     title: "Pull",
     meta: "51 min · 17 sets",
     muscles: "Lats · biceps · mid traps",
-    accessibilityLabel: "Pull, Tue 13 October, 51 minutes · 17 sets",
+    accessibilityLabel: "Pull, Tue 13 October, 51 minutes · 17 sets, open session",
+    onPress: () => undefined,
   },
 } satisfies Meta<typeof SessionRow>;
 

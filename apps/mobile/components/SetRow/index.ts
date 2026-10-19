@@ -1,3 +1,4 @@
 export { setColumnClassName } from "./columnClassName";
 export { SetRow } from "./SetRow";
-export type { SetRowEdit, SetRowProps } from "./types";
+export type { ReadOnlySetRowProps } from "./ReadOnlySetRow";
+export type { ActiveSetRowProps, SetRowEdit, SetRowProps } from "./types";

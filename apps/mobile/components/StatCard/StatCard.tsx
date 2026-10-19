@@ -2,10 +2,10 @@ import { View } from "react-native";
 
 import { Card, Text } from "../ui";
 
-import type { FinishStatProps } from "./types";
+import type { StatCardProps } from "./types";
 
-/** One of the three cards at the top of the finish screen: a label, a figure and a line under it. */
-export function FinishStat({ label, value, note }: FinishStatProps) {
+/** One of the three cards at the top of the finish screen and of the session detail: a label, a figure and a line under it. The card takes its share of the row. */
+export function StatCard({ label, value, note }: StatCardProps) {
   return (
     <View className="min-w-0 flex-1">
       <Card padding={3}>

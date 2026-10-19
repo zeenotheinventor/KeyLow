@@ -57,7 +57,7 @@ const meta = {
       </View>
     ),
   ],
-  args: { week: goldenWeek, thisWeekStart: "2026-10-12" },
+  args: { week: goldenWeek, thisWeekStart: "2026-10-12", onOpenSession: () => undefined },
 } satisfies Meta<typeof HistoryWeekSection>;
 
 export default meta;

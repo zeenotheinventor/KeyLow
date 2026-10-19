@@ -10,4 +10,6 @@ export type WeekDayProps = {
   accessibleName: string;
   look: WeekDayLook;
   isToday: boolean;
+  /** Opens what the day holds, such as its session. With it the day is a button. Without it the day only informs. */
+  onPress?: (() => void) | undefined;
 };

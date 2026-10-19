@@ -193,9 +193,14 @@ export type {
 
 export { compareWeekSoFar } from "./compareWeekSoFar";
 
-export { todayCard } from "./todayCard";
+export { todayCard, todaySessionToView } from "./todayCard";
 export type { NextPlannedDay, NextSet, TodayCard, TodayCardInput } from "./todayCard";
-export { WEEK_DAY_STATUSES, weekCaption, weekPlanDays } from "./weekPlanDays";
+export {
+  WEEK_DAY_STATUSES,
+  latestFinishedSession,
+  weekCaption,
+  weekPlanDays,
+} from "./weekPlanDays";
 export type {
   PlannedDay,
   PlannedExercise,

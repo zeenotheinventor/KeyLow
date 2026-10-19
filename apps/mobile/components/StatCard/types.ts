@@ -1,4 +1,4 @@
-export type FinishStatProps = {
+export type StatCardProps = {
   /** The card's small heading: "Time". */
   label: string;
   /** The figure: "30 min". */

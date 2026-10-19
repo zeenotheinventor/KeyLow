@@ -251,7 +251,48 @@ describe("the Train home's Today card", () => {
       );
 
       expect(handlers.onViewSession).toHaveBeenCalledTimes(1);
+      expect(handlers.onViewSession).toHaveBeenCalledWith(
+        thursdayLegsInTheWeek(LEGS_ENDED_AT)["id"],
+      );
       expect(screen.queryByRole("button", { name: /Start|Resume/ })).not.toBeOnTheScreen();
+    });
+
+    it("should open the session that ended last when two were finished today", async () => {
+      const eveningSession = {
+        ...thursdayLegsInTheWeek(LEGS_ENDED_AT),
+        id: "00000004-0000-4000-8000-0000000000ff",
+        routine_day_id: null,
+        started_at: "2026-10-15T19:10:00+01:00",
+        ended_at: "2026-10-15T19:40:00+01:00",
+      };
+      trainBackend.weekSessions = [
+        mondayPush,
+        tuesdayPull,
+        thursdayLegsInTheWeek(LEGS_ENDED_AT),
+        eveningSession,
+      ];
+      mockNow = new Date("2026-10-15T19:00:00Z");
+      const handlers = allHandlers();
+      const user = userEvent.setup();
+      await renderTrain(handlers);
+
+      await user.press(
+        await screen.findByRole("button", { name: TRAIN_TODAY_CARD.viewSessionAction }),
+      );
+
+      expect(handlers.onViewSession).toHaveBeenCalledWith(eveningSession.id);
+    });
+
+    it("should open a logged day of the week strip with the same handler", async () => {
+      const handlers = allHandlers();
+      const user = userEvent.setup();
+      await renderTrain(handlers);
+
+      await user.press(
+        await screen.findByRole("button", { name: /^Tuesday 13 October.*open session$/ }),
+      );
+
+      expect(handlers.onViewSession).toHaveBeenCalledWith(tuesdayPull["id"]);
     });
 
     it("should draw no button when no handler is given", async () => {
@@ -310,11 +351,12 @@ describe("the Train home's Today card", () => {
       expect(screen.getByText("Next: Legs on Thursday.")).toBeOnTheScreen();
     });
 
-    it("should draw no button, even with every handler", async () => {
+    it("should draw no button on the card, even with every handler, and only the two logged days on the strip", async () => {
       await renderTrain(allHandlers());
       await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle });
 
-      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(screen.queryByRole("button", { name: /Start|Resume|View session|Log/ })).toBeNull();
     });
   });
 

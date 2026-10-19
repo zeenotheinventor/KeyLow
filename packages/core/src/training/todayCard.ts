@@ -1,6 +1,6 @@
 import { parseMoment } from "./muscleState";
 import { estimateSessionMinutes } from "./sessionTime";
-import { isOpenSession, workingSetsOf } from "./weekPlanDays";
+import { isOpenSession, latestFinishedSession, workingSetsOf } from "./weekPlanDays";
 import { addCalendarDays } from "../dates/calendarDay";
 
 import type { SessionTimeParams } from "./sessionTime";
@@ -103,6 +103,22 @@ const dayOfSessions = (
   return named ?? today.plannedDay;
 };
 
+/**
+ * The finished sessions that count as today: the ones on its date, and a planned day's own session logged
+ * on another date.
+ */
+const finishedSessionsOfToday = (
+  week: WeekPlan,
+  today: WeekPlanDay,
+): { session: WeekSession; endedAt: string }[] =>
+  week.sessions.flatMap((session) =>
+    session.ended_at !== null &&
+    (session.local_date === today.date ||
+      (today.plannedDay !== null && session.routine_day_id === today.plannedDay.id))
+      ? [{ session, endedAt: session.ended_at }]
+      : [],
+  );
+
 const nextSetOf = (day: PlannedDay | null, sessions: readonly WeekSession[]): NextSet | null => {
   if (day === null) {
     return null;
@@ -180,15 +196,7 @@ export const todayCard = ({
     };
   }
 
-  // The finished sessions that count as today: the ones on its date, and a planned day's own session
-  // logged on another date.
-  const counted = week.sessions.flatMap((session) =>
-    session.ended_at !== null &&
-    (session.local_date === today.date ||
-      (today.plannedDay !== null && session.routine_day_id === today.plannedDay.id))
-      ? [{ session, endedAt: session.ended_at }]
-      : [],
-  );
+  const counted = finishedSessionsOfToday(week, today);
   if (counted.length > 0) {
     const sessions = counted.map(({ session }) => session);
     const day = dayOfSessions(week, sessions, today);
@@ -225,4 +233,20 @@ export const todayCard = ({
       sessionTimeParams,
     ),
   };
+};
+
+/**
+ * The session the Today card's View session opens: the one of the sessions the Done card counts that ended
+ * last (`latestFinishedSession`), or null when the card is not a Done card. A card that adds up two sessions
+ * still opens one, the later.
+ *
+ * Throws a `RangeError` naming the rule when the week does not hold today or a session's times are not ISO
+ * timestamps with a zone.
+ */
+export const todaySessionToView = (week: WeekPlan): WeekSession | null => {
+  const today = week.days.find((day) => day.date === week.today);
+  if (today === undefined) {
+    throw new RangeError("The today card needs a week that holds today");
+  }
+  return latestFinishedSession(finishedSessionsOfToday(week, today).map(({ session }) => session));
 };

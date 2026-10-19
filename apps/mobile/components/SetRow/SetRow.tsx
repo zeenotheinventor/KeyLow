@@ -2,8 +2,9 @@ import { View } from "react-native";
 
 import { Icon, PressableSurface, Text } from "../ui";
 import { setColumnClassName } from "./columnClassName";
+import { ReadOnlySetRow } from "./ReadOnlySetRow";
 
-import type { SetRowProps } from "./types";
+import type { ActiveSetRowProps, SetRowProps } from "./types";
 import type { SetRowState } from "@keylow/core/training";
 
 // The classes are written out so Tailwind sees them. A done row has the success tint, its fields lose their
@@ -34,9 +35,17 @@ const fieldBaseClassName = "h-9 items-center justify-center rounded-small";
  * same set made last time, the load, the reps and the RIR, and the check. The check is a button when the
  * row is given what it does (`onCheck`), named as `describeSetRow` names it; without one it is drawn with its
  * accessible name and no role. A set still to do has its load, reps and RIR cells as one button that opens
- * the set entry (`edit`); a row without it only displays. Every word is `describeSetRow`'s.
+ * the set entry (`edit`); a row without it only displays. Every word is `describeSetRow`'s. With
+ * `variant="readOnly"` it is a set of a logged session instead (`ReadOnlySetRow`).
  */
-export function SetRow({ state, setType, copy, edit, onCheck }: SetRowProps) {
+export function SetRow(props: SetRowProps) {
+  if (props.variant === "readOnly") {
+    return <ReadOnlySetRow {...props} />;
+  }
+  return <ActiveSetRow {...props} />;
+}
+
+function ActiveSetRow({ state, setType, copy, edit, onCheck }: ActiveSetRowProps) {
   const isDone = state === "done";
   const valueTone = isDone ? "primary" : "muted";
   const checkBoxClassName = `h-10 ${setColumnClassName.check} items-center justify-center rounded-small border ${checkClassName[state]}`;

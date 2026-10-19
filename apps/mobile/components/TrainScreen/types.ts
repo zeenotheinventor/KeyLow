@@ -26,8 +26,11 @@ export type TrainScreenProps = {
   onStart?: ((start: TrainSessionStart) => void) | undefined;
   /** Reopens the session in progress: "Resume Legs" on the Today card. Drawn only when it is given. */
   onResume?: (() => void) | undefined;
-  /** Opens today's finished session: "View session" on the Today card. Drawn only when it is given. */
-  onViewSession?: (() => void) | undefined;
+  /**
+   * Opens a finished session, given its id: "View session" on the Today card (today's session that ended
+   * last) and a logged day of the week strip (that day's). Drawn, and pressable, only when it is given.
+   */
+  onViewSession?: ((sessionId: string) => void) | undefined;
   /** Opens the history list: "History" in the header. Drawn only when it is given. */
   onOpenHistory?: (() => void) | undefined;
 };
@@ -38,6 +41,8 @@ export type TodayCardView = {
   context: TodayCardContext;
   /** The routine day today plans, which Start follows, or null when today plans none. */
   plannedDayId: string | null;
+  /** The finished session View session opens: the one that ended last of those the Done card counts. Null for any other card. */
+  sessionToViewId: string | null;
 };
 
 /** The week strip's week: core's plan, which already holds the session in progress, and its Monday. */

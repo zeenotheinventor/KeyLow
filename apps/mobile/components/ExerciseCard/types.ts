@@ -1,3 +1,4 @@
+import type { ReadOnlyExerciseCardProps } from "./ReadOnlyExerciseCard";
 import type { SetRowEdit } from "../SetRow";
 import type { SetColumnsCopy, SetRowCopy } from "@keylow/core/copy";
 import type { SetRowState, SetType } from "@keylow/core/training";
@@ -14,7 +15,9 @@ export type ExerciseCardRow = {
   onCheck?: (() => void) | undefined;
 };
 
-export type ExerciseCardProps = {
+export type ActiveExerciseCardProps = {
+  /** The card of the session in progress. This is the default. */
+  variant?: "active" | undefined;
   name: string;
   /** The line under the name: "3 × 10 to 12 · RIR 1 · Machine". */
   target: string;
@@ -24,3 +27,10 @@ export type ExerciseCardProps = {
   /** Adds one more row for the exercise. Without it the card has no Add set button. */
   onAddSet?: (() => void) | undefined;
 };
+
+/**
+ * An exercise of the session in progress, or with `variant="readOnly"` an exercise of a logged session as
+ * the session detail draws it.
+ */
+export type ExerciseCardProps =
+  ActiveExerciseCardProps | (ReadOnlyExerciseCardProps & { variant: "readOnly" });

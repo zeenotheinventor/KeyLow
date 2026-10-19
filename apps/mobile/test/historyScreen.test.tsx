@@ -59,7 +59,7 @@ async function renderHistory(props: Partial<HistoryScreenProps> = {}, client = q
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={historyClient} queryClient={client}>
         <ToastProvider>
-          <HistoryScreen onBack={() => undefined} {...props} />
+          <HistoryScreen onBack={() => undefined} onOpenSession={() => undefined} {...props} />
         </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
@@ -138,9 +138,15 @@ describe("the history screen", () => {
       const thisWeek = await screen.findByLabelText(THIS_WEEK);
       const rows = within(thisWeek).getAllByLabelText(/October/);
       expect(rows).toHaveLength(3);
-      expect(rows[0]).toHaveAccessibleName("Legs, Thu 15 October, 30 minutes · 8 sets");
-      expect(rows[1]).toHaveAccessibleName("Pull, Tue 13 October, 51 minutes · 17 sets");
-      expect(rows[2]).toHaveAccessibleName("Push, Mon 12 October, 48 minutes · 16 sets");
+      expect(rows[0]).toHaveAccessibleName(
+        "Legs, Thu 15 October, 30 minutes · 8 sets, open session",
+      );
+      expect(rows[1]).toHaveAccessibleName(
+        "Pull, Tue 13 October, 51 minutes · 17 sets, open session",
+      );
+      expect(rows[2]).toHaveAccessibleName(
+        "Push, Mon 12 October, 48 minutes · 16 sets, open session",
+      );
       const pull = within(thisWeek).getByLabelText(/^Pull/);
       expect(within(pull).getByText("Tue")).toBeOnTheScreen();
       expect(within(pull).getByText("13")).toBeOnTheScreen();
@@ -148,12 +154,22 @@ describe("the history screen", () => {
       expect(within(pull).getByText("Lats · biceps · mid traps")).toBeOnTheScreen();
     });
 
-    it("should draw the rows as plain rows: nothing in the list is a button or a link", async () => {
+    it("should draw every row as a button that opens its session", async () => {
       await renderHistory();
 
       await screen.findByLabelText(THIS_WEEK);
-      expect(screen.queryByRole("link")).toBeNull();
-      expect(screen.queryByRole("button", { name: /October/ })).toBeNull();
+      expect(screen.getAllByRole("button", { name: /open session$/ })).toHaveLength(7);
+    });
+
+    it("should open the session of the row that is pressed, and no other", async () => {
+      const onOpenSession = jest.fn();
+      const user = await renderHistory({ onOpenSession });
+      await screen.findByLabelText(THIS_WEEK);
+
+      await user.press(screen.getByRole("button", { name: /^Pull, Tue 13 October/ }));
+
+      expect(onOpenSession).toHaveBeenCalledTimes(1);
+      expect(onOpenSession).toHaveBeenCalledWith(String(goldenHistoryWeek[1]?.["id"]));
     });
 
     it("should offer no earlier weeks when there are none", async () => {

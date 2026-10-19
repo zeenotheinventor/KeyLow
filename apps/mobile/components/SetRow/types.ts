@@ -1,3 +1,4 @@
+import type { ReadOnlySetRowProps } from "./ReadOnlySetRow";
 import type { SetRowCopy } from "@keylow/core/copy";
 import type { SetRowState, SetType } from "@keylow/core/training";
 
@@ -7,7 +8,9 @@ export type SetRowEdit = {
   onPress: () => void;
 };
 
-export type SetRowProps = {
+export type ActiveSetRowProps = {
+  /** The row of the session in progress. This is the default. */
+  variant?: "active" | undefined;
   /** Done is logged, next is the set to log now, to do is a planned set still to come. */
   state: SetRowState;
   /** A warm-up's mark is drawn in the warning ink. */
@@ -22,3 +25,9 @@ export type SetRowProps = {
    */
   onCheck?: (() => void) | undefined;
 };
+
+/**
+ * A set of the session in progress, or with `variant="readOnly"` a set of a logged session as the session
+ * detail draws it: what was done, with no check, and a press only when it is given what it does.
+ */
+export type SetRowProps = ActiveSetRowProps | (ReadOnlySetRowProps & { variant: "readOnly" });
