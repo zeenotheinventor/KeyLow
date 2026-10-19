@@ -254,3 +254,6 @@ export type {
   SuggestState,
   Suggestion,
 } from "./suggest/suggestTypes";
+export type { PlanAdjusted, PlanDayExercise, KeptExercise } from "./suggest/suggestTypes";
+export { toAcceptedExercises } from "./suggest/toAcceptedExercises";
+export type { AcceptedExercise } from "./suggest/toAcceptedExercises";
