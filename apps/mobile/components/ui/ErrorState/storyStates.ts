@@ -1,1 +1,1 @@
-export const storyStates = ["SearchFailed", "WithRetry", "WithAction"];
+export const storyStates = ["SearchFailed", "WithRetry", "WithAction", "Card"];

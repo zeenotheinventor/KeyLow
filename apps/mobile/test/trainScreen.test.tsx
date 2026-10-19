@@ -89,6 +89,25 @@ describe("the Train screen", () => {
     queryClient.clear();
   });
 
+  describe("the History link in the header", () => {
+    it("should be drawn when a handler is given and call it when pressed", async () => {
+      const onOpenHistory = jest.fn();
+      const user = userEvent.setup();
+      await renderTrain({ onOpenHistory });
+
+      await user.press(await screen.findByRole("button", { name: TRAIN_HOME.historyLink }));
+
+      expect(onOpenHistory).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not be drawn without a handler, so it is never a dead control", async () => {
+      await renderTrain();
+
+      await screen.findByRole("heading", { name: TRAIN_FIRST_TIME.title });
+      expect(screen.queryByRole("button", { name: TRAIN_HOME.historyLink })).toBeNull();
+    });
+  });
+
   describe("the first visit: no routine and no session, ever", () => {
     it("should show the title, the body map at rest and the Train with Ki-Lo card with its three lines", async () => {
       await renderTrain();

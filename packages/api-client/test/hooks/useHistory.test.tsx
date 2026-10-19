@@ -242,12 +242,32 @@ describe("useHistory", () => {
     });
 
     fake.failWith("42501", "workout_sessions");
-    await act(() => result.current.loadEarlierWeeks());
+    await act(async () => {
+      await expect(result.current.loadEarlierWeeks()).rejects.toThrow();
+    });
 
     await waitFor(() => {
       expect(result.current.isLoadingEarlierWeeks).toBe(false);
     });
     expect(result.current.data).toHaveLength(1);
     expect(result.current.isError).toBe(false);
+  });
+
+  it("should reject with an error that names the action and the code only when the page asked for fails", async () => {
+    const fake = installHistoryFake(server, { sessions: twoWeeks, routine: goldenRoutine });
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useHistory({ weeks: 1 }), { wrapper });
+    await waitFor(() => {
+      expect(result.current.data).toHaveLength(1);
+    });
+
+    fake.failWith("42501", "workout_sessions");
+    let failure: unknown;
+    await act(async () => {
+      failure = await result.current.loadEarlierWeeks().catch((error: unknown) => error);
+    });
+
+    expect(failure).toBeInstanceOf(Error);
+    expect(String(failure)).not.toContain(RECOGNISABLE_EXERCISE_NAME);
   });
 });

@@ -31,4 +31,10 @@ export type ErrorStateProps = {
    * the height of its words, for an error among other content, such as the end of a list.
    */
   size?: "fill" | "section" | undefined;
+  /**
+   * `page`, the default, is the view as the other boards draw it. `card` is the training boards' error state:
+   * a card the height of its words, with 20 points at the top and sides and 16 below, among the other cards of a
+   * screen, built as `EmptyState`'s card is. `inset` and `size` are for the page and do not move a card's words.
+   */
+  variant?: "page" | "card" | undefined;
 };

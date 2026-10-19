@@ -1,7 +1,9 @@
+import { keys } from "@keylow/api-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 
 import { DIARY_CACHE_MAX_AGE_MS, DIARY_CACHE_STORAGE_KEY } from "./constants";
 import { hasCurrentTermsAcceptance } from "./hasCurrentTermsAcceptance";
+import { queryKeyStartsWith } from "./queryKeyStartsWith";
 
 import type {
   AsyncStorage,
@@ -46,6 +48,63 @@ export function parseStoredCache(stored: string): PersistedClient {
   return parsed;
 }
 
+// What of the history is stored: the first pages of the list, which are its newest weeks, and the newest
+// weeks read one by one. A user who loads earlier weeks one after another would otherwise store their whole
+// history under the one key, at over 700 KB for half a year. The last page stored still carries the week
+// before it, so "Load earlier weeks" works after a restore.
+const STORED_HISTORY_WEEKS = 4;
+
+const isHistoryListKey = (queryKey: readonly unknown[]) =>
+  queryKeyStartsWith(queryKey, keys.training.historyList);
+
+const isHistoryWeekKey = (queryKey: readonly unknown[]) =>
+  queryKeyStartsWith(queryKey, keys.training.historyAll) && !isHistoryListKey(queryKey);
+
+type DehydratedQuery = PersistedClient["clientState"]["queries"][number];
+
+function withFirstPagesOnly(query: DehydratedQuery): DehydratedQuery {
+  const { data } = query.state;
+  if (
+    typeof data !== "object" ||
+    data === null ||
+    !("pages" in data) ||
+    !Array.isArray(data.pages) ||
+    !("pageParams" in data) ||
+    !Array.isArray(data.pageParams)
+  ) {
+    return query;
+  }
+
+  return {
+    ...query,
+    state: {
+      ...query.state,
+      data: {
+        pages: data.pages.slice(0, STORED_HISTORY_WEEKS),
+        pageParams: data.pageParams.slice(0, STORED_HISTORY_WEEKS),
+      },
+    },
+  };
+}
+
+// A week's key ends in its Monday, `YYYY-MM-DD`, which sorts as plain text.
+const weekOf = (query: DehydratedQuery) => String(query.queryKey[2]);
+
+const compareNewestFirst = (first: string, second: string) =>
+  first < second ? 1 : first > second ? -1 : 0;
+
+/** The queries to store, with the history held to its newest weeks. A week's key ends in its Monday, `YYYY-MM-DD`. */
+function cappedHistory(queries: DehydratedQuery[]): DehydratedQuery[] {
+  const newestWeeks = queries
+    .filter(({ queryKey }) => isHistoryWeekKey(queryKey))
+    .sort((first, second) => compareNewestFirst(weekOf(first), weekOf(second)))
+    .slice(0, STORED_HISTORY_WEEKS);
+
+  return queries
+    .filter((query) => !isHistoryWeekKey(query.queryKey) || newestWeeks.includes(query))
+    .map((query) => (isHistoryListKey(query.queryKey) ? withFirstPagesOnly(query) : query));
+}
+
 // Joins the buster and the owner, which no buster or user id (a UUID) contains.
 const OWNER_SEPARATOR = "|";
 
@@ -83,7 +142,11 @@ export function createDiaryCachePersister(
         return EMPTY_CACHE;
       }
 
-      return JSON.stringify({ ...client, buster: `${client.buster}${OWNER_SEPARATOR}${ownerId}` });
+      return JSON.stringify({
+        ...client,
+        clientState: { ...client.clientState, queries: cappedHistory(client.clientState.queries) },
+        buster: `${client.buster}${OWNER_SEPARATOR}${ownerId}`,
+      });
     },
     deserialize: parseStoredCache,
   });

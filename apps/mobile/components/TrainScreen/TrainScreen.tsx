@@ -13,7 +13,7 @@ import { useIsOnline } from "../../lib/connectivity";
 import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
 import { TodayCard } from "../TodayCard";
-import { Banner, ErrorState, Skeleton } from "../ui";
+import { Banner, Button, ErrorState, Skeleton } from "../ui";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
 import { useTrainHome } from "./useTrainHome";
@@ -48,6 +48,7 @@ export function TrainScreen({
   onStart,
   onResume,
   onViewSession,
+  onOpenHistory,
 }: TrainScreenProps) {
   const home = useTrainHome();
   const isOnline = useIsOnline();
@@ -67,7 +68,16 @@ export function TrainScreen({
 
   return (
     <View className="flex-1 bg-background">
-      <ScreenHeader title={TRAIN_HOME.title} />
+      <ScreenHeader
+        title={TRAIN_HOME.title}
+        trailing={
+          onOpenHistory === undefined ? undefined : (
+            <Button icon="History" size="sm" variant="secondary" onPress={onOpenHistory}>
+              {TRAIN_HOME.historyLink}
+            </Button>
+          )
+        }
+      />
       <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-4 pt-1">
         {isOnline ? null : (
           <Banner

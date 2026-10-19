@@ -18,6 +18,7 @@ import {
   HISTORY_EMPTY,
   HISTORY_ERROR,
   HISTORY_LOADING_NAME,
+  HISTORY_LOAD_EARLIER_FAILED,
   HISTORY_SCREEN,
   HISTORY_SESSION_DETAIL,
 } from "../../src/copy";
@@ -74,6 +75,12 @@ describe("the History screen's fixed words", () => {
       backLabel: "Back to Train",
       loadEarlierAction: "Load earlier weeks",
     });
+  });
+
+  it("should state the rule, and no value, when earlier weeks do not load, as the toast no board draws", () => {
+    expect(HISTORY_LOAD_EARLIER_FAILED).toBe(
+      "Earlier weeks did not load, check your connection and try again",
+    );
   });
 
   it("should name the session detail's controls and cards as the history · session-detail board does", () => {
@@ -174,6 +181,7 @@ describe("describeHistoryRow", () => {
       name: "Pull",
       meta: "51 min · 17 sets",
       muscles: "Lats · biceps · mid traps",
+      description: "Pull, Tue 13 October, 51 minutes · 17 sets",
       accessibleName: "Pull, Tue 13 October, 51 minutes · 17 sets, open session",
     });
   });
@@ -192,6 +200,7 @@ describe("describeHistoryRow", () => {
 
     expect(row.meta).toBe("8 sets");
     expect(row.muscles).toBe("Hamstrings · quads · glutes");
+    expect(row.description).toBe("Legs, Thu 15 October, 8 sets, in progress");
     expect(row.accessibleName).toBe("Legs, Thu 15 October, 8 sets, in progress, open session");
   });
 

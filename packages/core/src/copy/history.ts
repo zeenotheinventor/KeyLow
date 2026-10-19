@@ -34,6 +34,10 @@ export const HISTORY_SCREEN = {
   loadEarlierAction: "Load earlier weeks",
 } as const;
 
+/** The toast when "Load earlier weeks" fails. It states the rule and never a value. No board draws it. */
+export const HISTORY_LOAD_EARLIER_FAILED =
+  "Earlier weeks did not load, check your connection and try again";
+
 /** The fixed words of the session detail. */
 export const HISTORY_SESSION_DETAIL = {
   backLabel: "Back to History",
@@ -140,7 +144,9 @@ export type HistoryRowCopy = {
   meta: string;
   /** "Lats · biceps · mid traps", or null when no muscle worked. */
   muscles: string | null;
-  /** "Pull, Tue 13 October, 51 minutes · 17 sets, open session". An open session adds "in progress" before the link hint. */
+  /** "Pull, Tue 13 October, 51 minutes · 17 sets", for a row that opens nothing. An open session adds "in progress". */
+  description: string;
+  /** The description and "open session": "Pull, Tue 13 October, 51 minutes · 17 sets, open session". */
   accessibleName: string;
 };
 
@@ -168,19 +174,20 @@ export const describeHistoryRow = ({ localDate, summary }: HistoryRowInput): His
     durationMinutes === null ? [] : [describeCount(durationMinutes, "minute", "minutes")];
   const openState =
     durationMinutes === null ? [TRAIN_TODAY_CARD.inProgressLabel.toLowerCase()] : [];
+  const description = [
+    name,
+    describeRowDate(localDate),
+    [...spokenMinutes, sets].join(SEPARATOR),
+    ...openState,
+  ].join(", ");
   return {
     weekday: describeWeekdayShortName(localDate),
     dayOfMonth: String(parseCalendarDay(localDate).day),
     name,
     meta: [...minutes, sets].join(SEPARATOR),
     muscles: describeMusclesLine(summary.topMuscles),
-    accessibleName: [
-      name,
-      describeRowDate(localDate),
-      [...spokenMinutes, sets].join(SEPARATOR),
-      ...openState,
-      "open session",
-    ].join(", "),
+    description,
+    accessibleName: `${description}, open session`,
   };
 };
 

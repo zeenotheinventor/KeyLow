@@ -390,6 +390,42 @@ describe("Skeleton", () => {
     });
   });
 
+  describe("shaped like the history list", () => {
+    it("should be a week heading and a card of three rows of a date block, a name and a line", async () => {
+      await renderSkeleton({ variant: "historyList" });
+
+      expect(bones()).toHaveLength(1 + 3 * 3);
+    });
+
+    it("should draw the week heading as a 160 wide and 12 tall bone", async () => {
+      await renderSkeleton({ variant: "historyList" });
+
+      expect(bones()[0]).toHaveStyle({ width: 160, height: 12 });
+    });
+
+    it("should draw each row as a 40 by 44 date block over a name 14 tall and a line 12 tall", async () => {
+      await renderSkeleton({ variant: "historyList" });
+
+      const [, ...rowBones] = bones();
+      const names = [90, 70, 80];
+      const lines = [170, 150, 180];
+      names.forEach((nameWidth, row) => {
+        expect(rowBones[row * 3]).toHaveStyle({ width: 40, height: 44 });
+        expect(rowBones[row * 3 + 1]).toHaveStyle({ width: nameWidth, height: 14 });
+        expect(rowBones[row * 3 + 2]).toHaveStyle({ width: lines[row], height: 12 });
+      });
+    });
+
+    it("should keep the 200 ms delay and stay hidden from screen readers like the others", async () => {
+      await renderSkeleton({ variant: "historyList" });
+
+      await advance(skeletonDelay - 1);
+
+      expect(getAnimatedStyle(skeleton()).opacity).toBe(0);
+      expect(skeleton()).toHaveProp("aria-hidden", true);
+    });
+  });
+
   describe("shaped like the body map screen", () => {
     it("should be the view label and its line, two figures, the legend bar and its caption", async () => {
       await renderSkeleton({ variant: "bodyMap" });
