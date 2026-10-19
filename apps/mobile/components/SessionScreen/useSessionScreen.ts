@@ -3,6 +3,7 @@ import { describeExerciseTarget } from "@keylow/core/copy";
 import { planProgress, scaffoldSession, sessionExercises } from "@keylow/core/training";
 import { useMemo } from "react";
 
+import { describeFinishDetails } from "./finishDetails";
 import { NO_PENDING_SETS, withPendingSets } from "./pendingSets";
 import { useAddedExercises } from "./useAddedExercises";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
@@ -109,6 +110,17 @@ export function useSessionScreen(
       sets,
       setsLogged: progress.logged,
       setsPlanned: progress.planned ?? 0,
+      finish: describeFinishDetails(
+        { id: open.id, started_at: open.started_at, sets },
+        open.routine_day_name,
+        progress,
+        plan === null
+          ? null
+          : plan.day.exercises.map((entry) => ({
+              exerciseId: entry.exercise_id,
+              name: entry.exercise.name,
+            })),
+      ),
       exercises: sessionExercises(
         scaffold,
         sets,
@@ -162,5 +174,6 @@ export function useSessionScreen(
     sets: content.sets,
     exercises: content.exercises,
     addExercise,
+    finish: content.finish,
   };
 }

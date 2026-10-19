@@ -67,7 +67,7 @@ async function renderSession(props: Partial<SessionScreenProps> = {}) {
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={trainClient} queryClient={queryClient}>
         <ToastProvider>
-          <SessionScreen onHide={jest.fn()} {...props} />
+          <SessionScreen onFinished={jest.fn()} onHide={jest.fn()} {...props} />
         </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,

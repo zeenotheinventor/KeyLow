@@ -274,7 +274,7 @@ describe("starting, resuming and logging a session from the Train tab", () => {
           <KeyLowProvider client={trainWritesClient} queryClient={queryClient}>
             <ToastProvider>
               <TrainRoute />
-              <SessionScreen onDiscarded={jest.fn()} onHide={jest.fn()} />
+              <SessionScreen onDiscarded={jest.fn()} onFinished={jest.fn()} onHide={jest.fn()} />
             </ToastProvider>
           </KeyLowProvider>
         </ThemeProvider>,

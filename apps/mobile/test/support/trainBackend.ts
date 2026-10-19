@@ -149,10 +149,13 @@ const oneRow = (rows: Row[], init?: RequestInit): Response =>
 /** The exercise of the routine with its muscle map, as the read the snapshot is taken from returns it. */
 function exerciseRead(url: URL, init?: RequestInit): Response {
   const id = (url.searchParams.get("id") ?? "").replace("eq.", "");
-  const found = rowsOf(trainBackend.routine?.["routine_days"])
-    .flatMap((day) => rowsOf(day["routine_exercises"]))
-    .flatMap((entry) => rowsOf([entry["exercises"]]))
-    .find((exercise) => exercise["id"] === id);
+  const found = [
+    ...rowsOf(trainBackend.routine?.["routine_days"])
+      .flatMap((day) => rowsOf(day["routine_exercises"]))
+      .flatMap((entry) => rowsOf([entry["exercises"]])),
+    // An exercise picked from the search is not in the routine, and the search finds it among these.
+    ...trainBackend.exercises,
+  ].find((exercise) => exercise["id"] === id);
   return oneRow(found === undefined ? [] : [found], init);
 }
 

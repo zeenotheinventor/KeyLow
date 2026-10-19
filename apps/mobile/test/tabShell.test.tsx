@@ -63,10 +63,14 @@ const standIn = (text: string) =>
     return <Text>{text}</Text>;
   };
 
-// The diary and the recipe library have their own tests. Here each is a heading, because these tests are
+// The diary, the recipe library and the Train home have their own tests. Here each is a heading, because these tests are
 // about the shell around them.
 function DiaryStandIn() {
   return <Text role="heading">Diary</Text>;
+}
+
+function TrainStandIn() {
+  return <Text role="heading">Train</Text>;
 }
 
 function RecipesStandIn() {
@@ -88,7 +92,7 @@ const routes = {
   "(tabs)/recipes/_layout": RecipesLayout,
   "(tabs)/recipes/index": RecipesStandIn,
   "(tabs)/recipes/archived": ArchivedStandIn,
-  "(tabs)/train": standIn("Train screen"),
+  "(tabs)/train": TrainStandIn,
   "(tabs)/more": MoreRoute,
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
@@ -109,7 +113,7 @@ async function goBack() {
   });
 }
 
-const tabNames = ["Dashboard", "Diary", "Recipes", "More"];
+const tabNames = ["Dashboard", "Diary", "Recipes", "Train", "More"];
 const launcher = () => screen.queryByRole("button", { name: "Search for a food" });
 const sheetHeading = () => screen.queryByRole("heading", { name: "Log food" });
 const selectedTabs = (options: { hidden?: boolean } = {}) =>
@@ -127,13 +131,13 @@ describe("the tab shell", () => {
   });
 
   describe("the tab bar", () => {
-    it("should draw Dashboard, Diary, Recipes and More in that order, and nothing else", async () => {
+    it("should draw Dashboard, Diary, Recipes, Train and More in that order, and nothing else", async () => {
       await renderApp("/dashboard");
 
       const tabs = await screen.findAllByRole("tab");
-      expect(tabs).toHaveLength(4);
+      expect(tabs).toHaveLength(5);
       expect(tabNames.map((name) => tabs.indexOf(screen.getByRole("tab", { name })))).toEqual([
-        0, 1, 2, 3,
+        0, 1, 2, 3, 4,
       ]);
     });
 
@@ -164,7 +168,7 @@ describe("the tab shell", () => {
       await renderApp("/recipes/archived");
 
       expect(await screen.findByRole("heading", { name: "Archived recipes" })).toBeOnTheScreen();
-      expect(screen.getAllByRole("tab")).toHaveLength(4);
+      expect(screen.getAllByRole("tab")).toHaveLength(5);
       expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
     });
 
@@ -186,7 +190,7 @@ describe("the tab shell", () => {
       await renderApp("/more");
 
       expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
-      expect(screen.getAllByRole("tab")).toHaveLength(4);
+      expect(screen.getAllByRole("tab")).toHaveLength(5);
       expect(
         screen.queryByRole("tab", { name: /settings|weight|your foods/i }),
       ).not.toBeOnTheScreen();

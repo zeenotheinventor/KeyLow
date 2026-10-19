@@ -1,14 +1,17 @@
 import { KeyLowProvider } from "@keylow/api-client";
 import { TRAIN_DISCARD_FAILED } from "@keylow/core/copy";
-import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { act, render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { useState } from "react";
 
 import SessionRoute from "../app/session";
+import { Button, ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+import { finishClient, finishWrites, resetFinishWrites } from "./support/finishBackend";
 import { legsRoutine, goldenLegsOpen } from "./support/sessionGoldenLegs";
 import { resetTrainBackend, trainBackend } from "./support/trainBackend";
-import { resetTrainWrites, trainWrites, trainWritesClient } from "./support/trainWritesBackend";
+import { resetTrainWrites, trainWrites } from "./support/trainWritesBackend";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -27,10 +30,31 @@ jest.mock(
 async function renderRoute() {
   await render(
     <ThemeProvider fixedPreference="dark">
-      <KeyLowProvider client={trainWritesClient} queryClient={createDiaryQueryClient()}>
-        <SessionRoute />
+      <KeyLowProvider client={finishClient} queryClient={createDiaryQueryClient()}>
+        <ToastProvider>
+          <SessionRoute />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
+  );
+}
+
+// The route with a test control that closes it, as the Android back key or a swipe would, while the toast
+// provider above it stays.
+function RouteThatCloses() {
+  const [isOpen, setIsOpen] = useState(true);
+
+  return (
+    <>
+      {isOpen ? <SessionRoute /> : null}
+      <Button
+        onPress={() => {
+          setIsOpen(false);
+        }}
+      >
+        Close route
+      </Button>
+    </>
   );
 }
 
@@ -39,6 +63,7 @@ describe("the session route", () => {
     resetRouterMock();
     resetTrainBackend();
     resetTrainWrites();
+    resetFinishWrites();
     trainBackend.routine = legsRoutine;
     trainBackend.activeSession = goldenLegsOpen();
   });
@@ -106,5 +131,59 @@ describe("the session route", () => {
       expect(await screen.findByRole("status", { name: TRAIN_DISCARD_FAILED })).toBeOnTheScreen();
       expect(routerMock.back).not.toHaveBeenCalled();
     });
+  });
+
+  it("should leave the way hiding does once a finished session is saved", async () => {
+    const user = userEvent.setup();
+    await renderRoute();
+
+    await user.press(await screen.findByRole("button", { name: "Finish" }));
+    await user.press(await screen.findByRole("button", { name: "Save session" }));
+
+    await waitFor(() => {
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+    });
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("should show one toast and leave nothing a second time when the save lands after the route closed", async () => {
+    let release: () => void = () => undefined;
+    finishWrites.holdPatches = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const user = userEvent.setup();
+    await render(
+      <ThemeProvider fixedPreference="dark">
+        <KeyLowProvider client={finishClient} queryClient={createDiaryQueryClient()}>
+          <ToastProvider>
+            <RouteThatCloses />
+          </ToastProvider>
+        </KeyLowProvider>
+      </ThemeProvider>,
+    );
+    await user.press(await screen.findByRole("button", { name: "Finish" }));
+    await user.press(await screen.findByRole("button", { name: "Save session" }));
+    await screen.findByRole("button", { name: /^Saving session/ });
+    await user.press(screen.getByRole("button", { name: "Close route" }));
+
+    await act(() => {
+      release();
+    });
+
+    expect(await screen.findByRole("status", { name: "Session saved" })).toBeOnTheScreen();
+    expect(screen.getAllByRole("status", { name: "Session saved" })).toHaveLength(1);
+    expect(routerMock.back).not.toHaveBeenCalled();
+    expect(routerMock.replace).not.toHaveBeenCalled();
+  });
+
+  it("should show the Session saved toast, from the provider above the route, as the screen closes", async () => {
+    const user = userEvent.setup();
+    await renderRoute();
+
+    await user.press(await screen.findByRole("button", { name: "Finish" }));
+    await user.press(await screen.findByRole("button", { name: "Save session" }));
+
+    expect(await screen.findByRole("status", { name: "Session saved" })).toBeOnTheScreen();
+    expect(routerMock.back).toHaveBeenCalledTimes(1);
   });
 });
