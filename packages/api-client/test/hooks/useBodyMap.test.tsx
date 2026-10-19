@@ -7,7 +7,7 @@ import {
   targetedMuscles,
   volumeValues,
 } from "@keylow/core/training";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { z } from "zod";
@@ -756,5 +756,62 @@ describe("useBodyMap, the queries", () => {
       expect(result.current.isError).toBe(true);
     });
     expect(result.current.error?.message).toBe("Could not load your sets (42501)");
+  });
+});
+
+describe("useBodyMap, refetch", () => {
+  it("should read again only the reads that failed, and then give the numbers", async () => {
+    const fake = installTrainingFake(server, goldenWeekData);
+    fake.failWith("42501", "workout_sets");
+    const { result } = renderBodyMap();
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    const zoneReads = fake.requestsTo("profiles").length;
+    const routineReads = fake.requestsTo("routines").length;
+    const weekReads = fake.requestsTo("workout_sessions").length;
+    const setReads = fake.requestsTo("workout_sets").length;
+    fake.failWith(null);
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(fake.requestsTo("workout_sets").length).toBeGreaterThan(setReads);
+    expect(fake.requestsTo("profiles")).toHaveLength(zoneReads);
+    expect(fake.requestsTo("routines")).toHaveLength(routineReads);
+    expect(fake.requestsTo("workout_sessions")).toHaveLength(weekReads);
+  });
+
+  it("should settle without a request, and without throwing, when the error is the hook's own RangeError", async () => {
+    const fake = installTrainingFake(server, goldenWeekData);
+    const { result } = renderBodyMap({ weekStart: "2026-10-14" });
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(RangeError);
+    });
+
+    await act(async () => {
+      await expect(result.current.refetch()).resolves.toBeDefined();
+    });
+
+    expect(fake.requests).toEqual([]);
+  });
+
+  it("should settle without a request when nothing failed", async () => {
+    const fake = installTrainingFake(server, goldenWeekData);
+    const { result } = renderBodyMap();
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    const requestCount = fake.requests.length;
+
+    await act(async () => {
+      await result.current.refetch();
+    });
+
+    expect(fake.requests).toHaveLength(requestCount);
   });
 });

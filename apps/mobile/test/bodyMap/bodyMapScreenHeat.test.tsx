@@ -79,7 +79,7 @@ const goldenBodyMap: BodyMap = {
 };
 
 function readResult(data: BodyMap): TrainingReadResult<BodyMap> {
-  return { data, isPending: false, isError: false, error: null };
+  return { data, isPending: false, isError: false, error: null, refetch: () => Promise.resolve() };
 }
 
 // A host node's props are loosely typed, so a prop is read with a descriptor.
@@ -109,6 +109,8 @@ async function renderScreen(scheme: ThemeScheme = "dark") {
       </KeyLowProvider>
     </ThemeProvider>,
   );
+  // The screen waits for the view stored on the phone before it draws the figures and the button.
+  await screen.findByRole("button", { name: "Show projected" });
 }
 
 const frontName = "Body map, Actual, heat, front";
@@ -148,7 +150,7 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
       await renderScreen();
 
       await waitFor(() => {
-        expect(useBodyMap).toHaveBeenLastCalledWith({
+        expect(useBodyMap).toHaveBeenCalledWith({
           scale: "heat",
           view: "actual",
           weekStart: "2026-10-12",
@@ -255,10 +257,11 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
       expect(sized).toHaveLength(2);
     });
 
-    it("should leave the figures plain images: no muscle is a button before the gestures exist", async () => {
+    it("should leave the figures plain images: no muscle is a button before the long-press exists", async () => {
       await renderScreen();
 
-      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
     });
   });
 
@@ -360,18 +363,10 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
   });
 
   describe("only what this ticket builds", () => {
-    it("should show no scale switch, view toggle, side switch, day scrubber or muscle list yet", async () => {
+    it("should show no scale switch, side switch, day scrubber or muscle list yet", async () => {
       await renderScreen();
 
-      for (const name of [
-        /scale/i,
-        /show projected/i,
-        /show actual/i,
-        /side/i,
-        /day shown/i,
-        /muscle list/i,
-        /long-press/i,
-      ]) {
+      for (const name of [/scale/i, /side/i, /day shown/i, /muscle list/i, /long-press/i]) {
         expect(screen.queryByLabelText(name)).not.toBeOnTheScreen();
         expect(screen.queryByText(name)).not.toBeOnTheScreen();
       }
@@ -402,8 +397,10 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
 
       const front = screen.getByRole("img", { name: frontName });
 
-      expect(front.parent?.parent).toHaveStyle({ rowGap: 4, alignItems: "center" });
-      expect(front.parent?.parent?.parent).toHaveStyle({
+      // The figure sits in the box that is its fade, the box that holds the old figure over it, and the column.
+      const column = front.parent?.parent?.parent?.parent;
+      expect(column).toHaveStyle({ rowGap: 4, alignItems: "center" });
+      expect(column?.parent).toHaveStyle({
         flexDirection: "row",
         justifyContent: "center",
         columnGap: 40,

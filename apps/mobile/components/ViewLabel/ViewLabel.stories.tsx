@@ -24,6 +24,11 @@ type Story = StoryObj<typeof meta>;
 // Actual heat now, as the body map board draws it.
 export const ActualNow: Story = {};
 
+// Projected draws its dot as a dashed ring.
+export const ProjectedNow: Story = {
+  args: { label: "Projected", isProjected: true },
+};
+
 // Nothing logged in the last 14 days, so the line says why there is nothing to show.
 export const NothingLogged: Story = {
   args: { subLine: "Nothing logged in the last 14 days" },

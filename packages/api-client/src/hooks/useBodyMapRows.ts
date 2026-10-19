@@ -3,6 +3,7 @@ import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { HEAT_LOOKBACK_DAYS, newestCachedSetRows } from "./heatWindowRows";
+import { refetchFailedReads } from "./trainingReadResult";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useProfileTimeZone } from "./useProfileTimeZone";
 import { useWeekSessionRows } from "./useWeekSessionRows";
@@ -132,14 +133,15 @@ export function useBodyMapRows<Data>(
     }
   }, [enabled, weekIsValid, zone, activeRoutine, setRows, sessions, needsWeek, compute]);
 
+  const refetch = refetchFailedReads(reads);
   if (computed !== null && "data" in computed) {
-    return { data: computed.data, isPending: false, isError: false, error: null };
+    return { data: computed.data, isPending: false, isError: false, error: null, refetch };
   }
   if (computed !== null) {
-    return { data: undefined, isPending: false, isError: true, error: computed.error };
+    return { data: undefined, isPending: false, isError: true, error: computed.error, refetch };
   }
   const failed = reads.find((read) => read.isError && read.data === undefined);
   return failed === undefined
-    ? { data: undefined, isPending: true, isError: false, error: null }
-    : { data: undefined, isPending: false, isError: true, error: failed.error };
+    ? { data: undefined, isPending: true, isError: false, error: null, refetch }
+    : { data: undefined, isPending: false, isError: true, error: failed.error, refetch };
 }

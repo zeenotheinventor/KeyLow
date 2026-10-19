@@ -6,13 +6,21 @@ import type { UseQueryResult } from "@tanstack/react-query";
  * `data` is undefined until all are there, `isPending` is true while it is, and `isError` is true when
  * a read failed and there is nothing to show yet. `error` then holds an error that names the action and
  * the database code only. A background refetch that fails never replaces data already on screen.
+ * `refetch` reads again every read that is in error and no other, and settles when they have, so a screen's
+ * Try again touches nothing else that is mounted. With nothing in error it reads nothing.
  */
 export type TrainingReadResult<Data> = {
   data: Data | undefined;
   isPending: boolean;
   isError: boolean;
   error: Error | null;
+  refetch: () => Promise<unknown>;
 };
+
+/** Reads again the reads in error and no other, as a `TrainingReadResult`'s `refetch`. */
+export function refetchFailedReads(reads: readonly UseQueryResult[]): () => Promise<unknown> {
+  return () => Promise.all(reads.filter((read) => read.isError).map((read) => read.refetch()));
+}
 
 /**
  * One result from the read the number is computed in and the reads it waits for. `gates` are the reads
@@ -26,14 +34,15 @@ export function toTrainingReadResult<Data>(
   prerequisites: readonly UseQueryResult[],
   gates: readonly UseQueryResult[],
 ): TrainingReadResult<Data> {
+  const refetch = refetchFailedReads([...prerequisites, computed]);
   if (computed.data !== undefined && gates.every((gate) => gate.data !== undefined)) {
-    return { data: computed.data, isPending: false, isError: false, error: null };
+    return { data: computed.data, isPending: false, isError: false, error: null, refetch };
   }
 
   const failed = [...prerequisites, computed].find(
     (read) => read.isError && read.data === undefined,
   );
   return failed === undefined
-    ? { data: undefined, isPending: true, isError: false, error: null }
-    : { data: undefined, isPending: false, isError: true, error: failed.error };
+    ? { data: undefined, isPending: true, isError: false, error: null, refetch }
+    : { data: undefined, isPending: false, isError: true, error: failed.error, refetch };
 }

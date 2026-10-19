@@ -1,6 +1,6 @@
 import { KeyLowProvider, keys } from "@keylow/api-client";
 import { buildSetSnapshot } from "@keylow/core/training";
-import { onlineManager } from "@tanstack/react-query";
+import { onlineManager, useQuery } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 
@@ -149,6 +149,40 @@ describe("the body map screen's states", () => {
     });
   });
 
+  describe("Projected, from the cached rows", () => {
+    async function figuresOf(view: string) {
+      const back = await screen.findByRole("img", { name: `Body map, ${view}, heat, back` });
+      const front = await screen.findByRole("img", { name: `Body map, ${view}, heat, front` });
+      return [fillsIn(front, "front"), fillsIn(back, "back")];
+    }
+
+    it("should draw on today the very fills of Actual, and say why under the figures", async () => {
+      seedCachedRows([latsSet]);
+      await renderScreen();
+      const actualFills = await figuresOf("Actual");
+      const user = userEvent.setup();
+
+      await user.press(await screen.findByRole("button", { name: "Show projected" }));
+
+      expect(await figuresOf("Projected")).toEqual(actualFills);
+      expect(
+        screen.getByText(
+          "Today, Projected shows what you have logged. A planned session counts from the next day, so pick a later day to see where your plan takes you.",
+        ),
+      ).toBeOnTheScreen();
+    });
+
+    it("should leave the button off, with the reason, when there is no routine", async () => {
+      seedCachedRows([latsSet]);
+      queryClient.setQueryData(keys.training.activeRoutine, null);
+      await renderScreen();
+
+      expect(await screen.findByRole("button", { name: "Show projected" })).toBeDisabled();
+      expect(screen.getByText("Projected needs a routine.")).toBeOnTheScreen();
+      expect(screen.getByRole("status", { name: "Actual" })).toBeOnTheScreen();
+    });
+  });
+
   describe("with nothing logged in the last 14 days", () => {
     beforeEach(() => {
       seedCachedRows([]);
@@ -200,12 +234,13 @@ describe("the body map screen's states", () => {
       expect(screen.queryByText("Start a session")).not.toBeOnTheScreen();
     });
 
-    it("should leave nothing to press but Back, so no figure is interactive", async () => {
+    it("should leave nothing to press but Back and the view toggle, so no figure is interactive", async () => {
       await renderScreen();
       await screen.findByRole("heading", { name: "Nothing to show yet" });
 
-      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getAllByRole("button")).toHaveLength(2);
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Show projected" })).toBeOnTheScreen();
     });
   });
 
@@ -276,6 +311,57 @@ describe("the body map screen's states", () => {
       await waitFor(() => {
         expect(requestsTo("workout_sets")).toBeGreaterThan(readsBefore);
       });
+    });
+
+    it("should read again only the reads that failed, and no other query on screen", async () => {
+      // The fake database serves no training table, so the rows that are saved are kept as read, and the
+      // sets, which are not saved, are the one read that fails.
+      for (const queryKey of [
+        keys.profiles.timeZone,
+        keys.training.activeRoutine,
+        keys.training.weekSessions(WEEK_START),
+      ]) {
+        queryClient.setQueryDefaults(queryKey, { staleTime: Infinity });
+      }
+      let unrelatedReads = 0;
+      function UnrelatedFailingQuery() {
+        useQuery({
+          queryKey: ["unrelated-dashboard-query"],
+          queryFn: () => {
+            unrelatedReads += 1;
+            return Promise.reject(new Error("unrelated read failed"));
+          },
+          retry: false,
+        });
+        return null;
+      }
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <KeyLowProvider client={diaryClient} queryClient={queryClient}>
+            <UnrelatedFailingQuery />
+            <BodyMapScreen />
+          </KeyLowProvider>
+        </ThemeProvider>,
+      );
+      await screen.findByText("Your training did not load");
+      await waitFor(() => {
+        expect(unrelatedReads).toBe(1);
+      });
+      const routineReads = requestsTo("routines");
+      const zoneReads = requestsTo("profiles");
+      const weekReads = requestsTo("workout_sessions");
+      const setReads = requestsTo("workout_sets");
+      const user = userEvent.setup();
+
+      await user.press(screen.getByRole("button", { name: "Try again" }));
+
+      await waitFor(() => {
+        expect(requestsTo("workout_sets")).toBeGreaterThan(setReads);
+      });
+      expect(unrelatedReads).toBe(1);
+      expect(requestsTo("routines")).toBe(routineReads);
+      expect(requestsTo("profiles")).toBe(zoneReads);
+      expect(requestsTo("workout_sessions")).toBe(weekReads);
     });
   });
 });

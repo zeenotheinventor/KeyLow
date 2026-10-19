@@ -28,6 +28,7 @@ const names: IconName[] = [
   "Apple",
   "Archive",
   "ArrowRight",
+  "ArrowRightLeft",
   "BookOpen",
   "Calendar",
   "Camera",

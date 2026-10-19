@@ -1,7 +1,7 @@
-import { BODY_MAP, describeBodyFigureLabel } from "@keylow/core/copy";
-import { View, useWindowDimensions } from "react-native";
+import { useWindowDimensions, View } from "react-native";
 
-import { BodyFigure, Card, Text } from "../ui";
+import { BodyMapFigures } from "../BodyMapFigures";
+import { Button, Card, Text } from "../ui";
 import { ViewLabel } from "../ViewLabel";
 
 import type { BodyMapCardProps } from "./types";
@@ -10,37 +10,56 @@ const FIGURE_WIDTH = 140;
 // What the figures share the screen's width with, in points: the screen's 16 at each side, the card's 12 of
 // padding and 1 of border at each side, and the 40 between the figures.
 const SIDES_AND_GAP_WIDTH = 2 * 16 + 2 * (12 + 1) + 40;
-const SIDES = ["front", "back"] as const;
 
 /**
- * The body map as its board draws it: the view label over the front and the back of the body side by side,
- * each with its name under it. The figures are drawn male until the figure setting exists, and are plain
- * images. They are 140 points wide, or narrower on a phone too narrow to hold two of that width.
+ * The body map as its boards draw it: the view label over the front and the back of the body side by side,
+ * each with its name under it, and under them the button that switches between Actual and Projected, with
+ * the line that goes with it. A tap on the figures switches too. The figures are drawn male until the
+ * figure setting exists, and are plain images. They are 140 points wide, or narrower on a phone too
+ * narrow to hold two of that width.
  */
-export function BodyMapCard({ values, viewLabel, subLine }: BodyMapCardProps) {
+export function BodyMapCard({
+  view,
+  actualValues,
+  projectedValues,
+  viewLabel,
+  subLine,
+  toggleLabel,
+  isToggleEnabled,
+  onToggle,
+  note,
+}: BodyMapCardProps) {
   const { width: screenWidth } = useWindowDimensions();
   const figureWidth = Math.min(FIGURE_WIDTH, Math.floor((screenWidth - SIDES_AND_GAP_WIDTH) / 2));
 
   return (
     <Card padding={3}>
       <View className="gap-2">
-        <ViewLabel label={viewLabel} subLine={subLine} />
-        <View className="flex-row justify-center gap-10">
-          {SIDES.map((side) => (
-            <View key={side} className="items-center gap-1">
-              <BodyFigure
-                label={describeBodyFigureLabel({ scale: "heat", view: "actual", side, hint: null })}
-                scale="heat"
-                side={side}
-                values={values}
-                w={figureWidth}
-              />
-              <Text tone="muted" variant="caption">
-                {BODY_MAP.sideSwitch[side]}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <ViewLabel isProjected={view === "projected"} label={viewLabel} subLine={subLine} />
+        <BodyMapFigures
+          actualValues={actualValues}
+          figureWidth={figureWidth}
+          onTap={isToggleEnabled ? onToggle : undefined}
+          projectedValues={projectedValues}
+          view={view}
+        />
+        {toggleLabel === null ? null : (
+          <Button
+            className="self-center"
+            disabled={!isToggleEnabled}
+            icon="ArrowRightLeft"
+            onPress={onToggle}
+            size="sm"
+            variant="secondary"
+          >
+            {toggleLabel}
+          </Button>
+        )}
+        {note === null ? null : (
+          <Text className="px-2 pb-[2px] pt-1 text-center" tone="secondary" variant="caption">
+            {note}
+          </Text>
+        )}
       </View>
     </Card>
   );
