@@ -27,6 +27,7 @@ import {
 } from "./support/historyEditBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
 import {
   GOLDEN_PULL_ID,
   bentOverRow,
@@ -38,7 +39,6 @@ import {
 import { trainBackend } from "./support/trainBackend";
 
 import type { QueryClient } from "@tanstack/react-query";
-import type { TestInstance } from "test-renderer";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -96,21 +96,6 @@ async function renderDetail() {
   await render(screenElement());
   await screen.findByRole("heading", { name: "Pull" });
   return user;
-}
-
-type ClickHandler = (event: { stopPropagation: () => void; nativeEvent: object }) => void;
-const isClickHandler = (value: unknown): value is ClickHandler => typeof value === "function";
-
-async function pressTwiceInTheSameMoment(button: TestInstance) {
-  const { onClick } = button.props;
-  if (!isClickHandler(onClick)) {
-    throw new Error("The button has no click handler");
-  }
-  await act(() => {
-    for (let press = 0; press < 2; press += 1) {
-      onClick({ stopPropagation: () => undefined, nativeEvent: {} });
-    }
-  });
 }
 
 const latPulldown = () => within(screen.getByLabelText("Wide-Grip Lat Pulldown"));

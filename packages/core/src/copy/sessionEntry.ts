@@ -1,7 +1,14 @@
 import { describeRepRange } from "./routines";
 import { lowerFirst, SET_PHRASES, spokenNumbers, writtenNumbers } from "./sessionWording";
 import { formatScaledCount } from "../format/scaledCount";
-import { MAX_LOAD_KG, MAX_REPS, MIN_REPS, MAX_RIR, MIN_RIR } from "../training/bounds";
+import {
+  MAX_LOAD_KG,
+  MAX_REPS,
+  MAX_SETS_PER_SESSION,
+  MIN_REPS,
+  MAX_RIR,
+  MIN_RIR,
+} from "../training/bounds";
 import { kgToLb } from "../weight/units";
 
 import type { SetType } from "../training/enums";
@@ -99,6 +106,8 @@ export const SET_ENTRY = {
   noHistory: "Nothing logged for this exercise yet.",
   /** The line after a write that failed. The boards do not draw it. */
   saveFailed: "Your set did not save. Check your connection, then try again.",
+  /** The line when a set is refused because the session already holds its most sets. The boards do not draw it. */
+  sessionFull: `This session holds ${MAX_SETS_PER_SESSION} sets, the most a session can hold.`,
   /** The line after a remove that failed. The boards do not draw it. */
   removeFailed: "Your set was not removed. Check your connection, then try again.",
 } as const;

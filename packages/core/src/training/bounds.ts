@@ -47,6 +47,9 @@ export const RPE_STEP = 0.5;
 /** Live sets in one session. The clients enforce it through core; the database does not count. */
 export const MAX_SETS_PER_SESSION = 200;
 
+/** The rule a write states when a session already holds `MAX_SETS_PER_SESSION` live sets. It names no value of a set. */
+export const FULL_SESSION_RULE = `A session holds at most ${MAX_SETS_PER_SESSION} live sets.`;
+
 /** Days in one routine, at most one per weekday. */
 export const MAX_DAYS_PER_ROUTINE = 7;
 

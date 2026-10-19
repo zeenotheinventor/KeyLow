@@ -11,4 +11,6 @@ export type ReadOnlyExerciseCardProps = {
   /** The note beside the name: "Bodyweight", "2 more than planned", both, or null for none. */
   note: string | null;
   rows: readonly ReadOnlyExerciseCardRow[];
+  /** Adds a set to the exercise. Without it the card has no Add set button. */
+  onAddSet?: (() => void) | undefined;
 };

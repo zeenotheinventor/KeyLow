@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSetSnapshot, buildWorkoutSetInsert } from "../../src/training";
+import {
+  FULL_SESSION_RULE,
+  buildSetSnapshot,
+  buildWorkoutSetInsert,
+  isFullSessionRefusal,
+} from "../../src/training";
 
 import type { ExerciseMuscleEntry } from "../../src/schemas";
 import type { SetValues, SnapshotExercise } from "../../src/training";
@@ -118,6 +123,30 @@ describe("buildWorkoutSetInsert", () => {
 
       expect(build).toThrow(RangeError);
       expect(messageOf(build)).toBe("A session holds at most 200 live sets.");
+    });
+  });
+
+  describe("isFullSessionRefusal", () => {
+    it("should be true for the RangeError the limit throws", () => {
+      let thrown: unknown;
+      try {
+        buildWorkoutSetInsert({ ...input, liveSetsInSession: 200 });
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(isFullSessionRefusal(thrown)).toBe(true);
+      expect(messageOf(() => buildWorkoutSetInsert({ ...input, liveSetsInSession: 200 }))).toBe(
+        FULL_SESSION_RULE,
+      );
+    });
+
+    it("should be false for another RangeError, another error and a thrown string", () => {
+      expect(
+        isFullSessionRefusal(new RangeError("The set breaks the rules: reps_whole_1_to_100.")),
+      ).toBe(false);
+      expect(isFullSessionRefusal(new Error(FULL_SESSION_RULE))).toBe(false);
+      expect(isFullSessionRefusal(FULL_SESSION_RULE)).toBe(false);
     });
   });
 

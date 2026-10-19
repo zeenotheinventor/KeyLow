@@ -1,5 +1,6 @@
 import { exerciseMuscleEntrySchema, exerciseRowSchema } from "@keylow/core/schemas";
 import {
+  FULL_SESSION_RULE,
   MAX_LOAD_KG,
   MAX_REPS,
   MAX_RIR,
@@ -33,9 +34,6 @@ const ROW_ID = z.guid();
 
 const SET_RULE_MESSAGE = (rules: readonly string[]) =>
   `The set breaks the rules: ${rules.join(", ")}.`;
-
-/** The most live sets a session holds. The database does not count them, so a write checks here. */
-const FULL_SESSION_MESSAGE = `A session holds at most ${MAX_SETS_PER_SESSION} live sets.`;
 
 function assertId(id: string, what: string): void {
   if (!ROW_ID.safeParse(id).success) {
@@ -339,7 +337,7 @@ export async function restoreSet(
   }
   const { count } = await liveSetsOf(client, set.session_id, "restore the set");
   if (count >= MAX_SETS_PER_SESSION) {
-    throw new RangeError(FULL_SESSION_MESSAGE);
+    throw new RangeError(FULL_SESSION_RULE);
   }
 
   const { data, error } = await client
@@ -395,7 +393,7 @@ export async function reorderSets(
     throw new RangeError("A set can be listed once in a reorder");
   }
   if (orderedIds.length > MAX_SETS_PER_SESSION) {
-    throw new RangeError(FULL_SESSION_MESSAGE);
+    throw new RangeError(FULL_SESSION_RULE);
   }
 
   const { data, error } = await client

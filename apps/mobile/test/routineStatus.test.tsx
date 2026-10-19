@@ -24,11 +24,11 @@ import {
   routineStatusClient,
   storedRoutine,
 } from "./support/routineStatusBackend";
+import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
 import { resetTrainBackend } from "./support/trainBackend";
 
 import type { StoredRoutine } from "./support/routineStatusBackend";
 import type { QueryClient } from "@tanstack/react-query";
-import type { TestInstance } from "test-renderer";
 
 // Making a routine active and restoring an archived one, through the real screens, hooks and plan
 // wiring over a fake database that answers as the real one does.
@@ -52,24 +52,6 @@ let mockNow = new Date("2026-10-15T16:55:00Z");
 jest.mock("../lib/useNow", () => ({ useNow: () => mockNow }));
 
 setUpTests();
-
-// Two presses before React has drawn anything between them, which two awaited presses never do. A press is
-// the host element's click, so the same handler runs twice inside one act, as a double tap's would.
-type ClickHandler = (event: { stopPropagation: () => void; nativeEvent: object }) => void;
-
-const isClickHandler = (value: unknown): value is ClickHandler => typeof value === "function";
-
-async function pressTwiceInTheSameMoment(button: TestInstance) {
-  const { onClick } = button.props;
-  if (!isClickHandler(onClick)) {
-    throw new Error("The button has no click handler");
-  }
-  await act(() => {
-    for (let press = 0; press < 2; press += 1) {
-      onClick({ stopPropagation: () => undefined, nativeEvent: {} });
-    }
-  });
-}
 
 const makeActiveButton = (routineName: string) => ({ name: `Make active, ${routineName}` });
 const restoreButton = (routineName: string) => ({ name: `Restore ${routineName}` });
