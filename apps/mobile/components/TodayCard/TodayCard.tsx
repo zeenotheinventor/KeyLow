@@ -11,8 +11,10 @@ import type { TodayCardProps } from "./types";
  * `train · rest-day` boards draw them: the planned day with Start, the session in progress with its sets and
  * Resume, the finished session with View session, and the rest day with the next day and the muscles still
  * recovering. Every word is core's (`describeTodayCard`). A button is drawn only when its handler is given,
- * so none is a dead control. Start and Resume are dimmed when `isStartAndResumeDisabled`, and View session
- * is not, since it reads what is saved.
+ * so none is a dead control. Start, Resume, Log another session and Log a session are dimmed when
+ * `isStartAndResumeDisabled`, and View session is not, since it reads what is saved. Log another session
+ * (Done) and Log a session (rest day) are drawn on no board (KEY-492): they are secondary buttons like the
+ * no routine card's, under the card's copy.
  */
 export function TodayCard({
   card,
@@ -22,6 +24,8 @@ export function TodayCard({
   onStart,
   onResume,
   onViewSession,
+  onLogAnother,
+  onLogSession,
 }: TodayCardProps) {
   const copy = describeTodayCard(card, context);
 
@@ -111,6 +115,18 @@ export function TodayCard({
                 {copy.action}
               </Button>
             )}
+            {onLogAnother === undefined ? null : (
+              <Button
+                className="mt-3"
+                disabled={isStartAndResumeDisabled}
+                fullWidth
+                loading={isStarting}
+                variant="secondary"
+                onPress={onLogAnother}
+              >
+                {copy.logAnotherAction}
+              </Button>
+            )}
           </>
         ) : null}
         {copy.kind === "rest" ? (
@@ -119,6 +135,18 @@ export function TodayCard({
               {copy.title}
             </Text>
             {copy.body === null ? null : <Text tone="secondary">{copy.body}</Text>}
+            {onLogSession === undefined ? null : (
+              <Button
+                className="mt-3"
+                disabled={isStartAndResumeDisabled}
+                fullWidth
+                loading={isStarting}
+                variant="secondary"
+                onPress={onLogSession}
+              >
+                {copy.logSessionAction}
+              </Button>
+            )}
           </>
         ) : null}
       </View>

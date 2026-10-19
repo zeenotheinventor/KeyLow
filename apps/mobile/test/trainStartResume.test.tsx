@@ -1,5 +1,10 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { TRAIN_FIRST_TIME, TRAIN_NO_ROUTINE, TRAIN_START_FAILED } from "@keylow/core/copy";
+import {
+  TRAIN_FIRST_TIME,
+  TRAIN_NO_ROUTINE,
+  TRAIN_START_FAILED,
+  TRAIN_TODAY_CARD,
+} from "@keylow/core/copy";
 import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -248,6 +253,14 @@ describe("starting, resuming and logging a session from the Train tab", () => {
       expect(trainBackend.activeSession).toBe(thursdayLegsActive);
     });
 
+    it("should draw neither Log another session nor Log a session while a session is open", async () => {
+      await renderRoute();
+      await screen.findByRole("button", { name: "Resume Legs" });
+
+      expect(screen.queryByRole("button", { name: "Log another session" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Log a session" })).not.toBeOnTheScreen();
+    });
+
     it("should open the session screen once when Resume is pressed twice", async () => {
       const user = userEvent.setup();
       await renderRoute();
@@ -257,6 +270,199 @@ describe("starting, resuming and logging a session from the Train tab", () => {
       await user.press(resume);
 
       expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("on the golden Thursday with Legs done", () => {
+    beforeEach(() => {
+      // 19:30 in London, after Legs ended at 19:00.
+      mockNow = new Date("2026-10-15T18:30:00Z");
+      trainBackend.routine = goldenRoutine;
+      trainBackend.weekSessions = [
+        mondayPush,
+        tuesdayPull,
+        thursdayLegsInTheWeek("2026-10-15T19:00:00+01:00"),
+      ];
+      jest.setSystemTime(mockNow);
+    });
+
+    it("should start a free session on no routine day and open the session screen from Log another session", async () => {
+      const user = userEvent.setup();
+      await renderRoute();
+
+      await user.press(
+        await screen.findByRole("button", { name: TRAIN_TODAY_CARD.logAnotherAction }),
+      );
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledWith("/session");
+      });
+      expect(trainWrites.inserted).toHaveLength(1);
+      expect(trainWrites.inserted[0]).toMatchObject({
+        routine_day_id: null,
+        local_date: "2026-10-15",
+        tz: "Europe/London",
+      });
+    });
+
+    it("should make one start, not two, when Log another session is pressed twice", async () => {
+      let release: () => void = () => undefined;
+      trainWrites.holdInserts = new Promise((resolve) => {
+        release = resolve;
+      });
+      const user = userEvent.setup();
+      await renderRoute();
+      const logAnother = await screen.findByRole("button", { name: "Log another session" });
+
+      await user.press(logAnother);
+      await act(() => {
+        jest.setSystemTime(new Date("2026-10-15T18:30:01Z"));
+      });
+      await user.press(logAnother);
+      await act(() => {
+        release();
+      });
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledTimes(1);
+      });
+      expect(trainWrites.inserted).toHaveLength(1);
+      expect(queryClient.getMutationCache().getAll()).toHaveLength(1);
+    });
+
+    it("should show Log another session as busy while the start is under way", async () => {
+      let release: () => void = () => undefined;
+      trainWrites.holdInserts = new Promise((resolve) => {
+        release = resolve;
+      });
+      const user = userEvent.setup();
+      await renderRoute();
+
+      await user.press(await screen.findByRole("button", { name: "Log another session" }));
+
+      expect(
+        await screen.findByRole("button", { name: /Log another session/, busy: true }),
+      ).toBeOnTheScreen();
+      await act(() => {
+        release();
+      });
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should not start anything, and dim Log another session, while offline", async () => {
+      const user = userEvent.setup();
+      await renderRoute();
+      await screen.findByRole("button", { name: "Log another session" });
+
+      await goOffline();
+      await user.press(screen.getByRole("button", { name: "Log another session" }));
+
+      expect(screen.getByRole("button", { name: "Log another session" })).toBeDisabled();
+      expect(trainWrites.inserted).toHaveLength(0);
+      expect(routerMock.push).not.toHaveBeenCalled();
+    });
+
+    it("should show the error toast, open nothing and let it be pressed again when the start fails", async () => {
+      trainWrites.failInserts = true;
+      const user = userEvent.setup();
+      await renderRoute();
+
+      await user.press(await screen.findByRole("button", { name: "Log another session" }));
+
+      expect(await screen.findByRole("status", { name: TRAIN_START_FAILED })).toBeOnTheScreen();
+      expect(routerMock.push).not.toHaveBeenCalled();
+
+      trainWrites.failInserts = false;
+      await user.press(screen.getByRole("button", { name: "Log another session" }));
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("should draw no Log a session, since that is the rest day's", async () => {
+      await renderRoute();
+      await screen.findByRole("button", { name: "Log another session" });
+
+      expect(screen.queryByRole("button", { name: "Log a session" })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("on the golden Wednesday, a rest day", () => {
+    beforeEach(() => {
+      mockNow = new Date("2026-10-14T11:00:00Z");
+      trainBackend.routine = goldenRoutine;
+      trainBackend.weekSessions = [mondayPush, tuesdayPull];
+      jest.setSystemTime(mockNow);
+    });
+
+    it("should start a free session on no routine day and open the session screen from Log a session", async () => {
+      const user = userEvent.setup();
+      await renderRoute();
+
+      await user.press(
+        await screen.findByRole("button", { name: TRAIN_TODAY_CARD.logSessionAction }),
+      );
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledWith("/session");
+      });
+      expect(trainWrites.inserted).toHaveLength(1);
+      expect(trainWrites.inserted[0]).toMatchObject({
+        routine_day_id: null,
+        local_date: "2026-10-14",
+        tz: "Europe/London",
+      });
+    });
+
+    it("should make one start, not two, when Log a session is pressed twice", async () => {
+      let release: () => void = () => undefined;
+      trainWrites.holdInserts = new Promise((resolve) => {
+        release = resolve;
+      });
+      const user = userEvent.setup();
+      await renderRoute();
+      const logSession = await screen.findByRole("button", { name: "Log a session" });
+
+      await user.press(logSession);
+      await act(() => {
+        jest.setSystemTime(new Date("2026-10-14T11:00:01Z"));
+      });
+      await user.press(logSession);
+      await act(() => {
+        release();
+      });
+
+      await waitFor(() => {
+        expect(routerMock.push).toHaveBeenCalledTimes(1);
+      });
+      expect(trainWrites.inserted).toHaveLength(1);
+      expect(queryClient.getMutationCache().getAll()).toHaveLength(1);
+    });
+
+    it("should not start anything, and dim Log a session, while offline", async () => {
+      const user = userEvent.setup();
+      await renderRoute();
+      await screen.findByRole("button", { name: "Log a session" });
+
+      await goOffline();
+      await user.press(screen.getByRole("button", { name: "Log a session" }));
+
+      expect(screen.getByRole("button", { name: "Log a session" })).toBeDisabled();
+      expect(trainWrites.inserted).toHaveLength(0);
+      expect(routerMock.push).not.toHaveBeenCalled();
+    });
+
+    it("should show the error toast and open nothing when the start fails", async () => {
+      trainWrites.failInserts = true;
+      const user = userEvent.setup();
+      await renderRoute();
+
+      await user.press(await screen.findByRole("button", { name: "Log a session" }));
+
+      expect(await screen.findByRole("status", { name: TRAIN_START_FAILED })).toBeOnTheScreen();
+      expect(routerMock.push).not.toHaveBeenCalled();
     });
   });
 

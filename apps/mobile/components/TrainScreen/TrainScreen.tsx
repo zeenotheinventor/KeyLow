@@ -98,6 +98,8 @@ export function TrainScreen({
                     timeZone: home.timeZone,
                   })
             }
+            onLogAnother={bindStart(onLogSession, { routineDayId: null, timeZone: home.timeZone })}
+            onLogSession={bindStart(onLogSession, { routineDayId: null, timeZone: home.timeZone })}
             onViewSession={onViewSession}
           />
         ) : null}

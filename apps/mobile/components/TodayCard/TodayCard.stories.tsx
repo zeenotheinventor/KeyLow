@@ -31,6 +31,8 @@ const meta = {
     onStart: () => undefined,
     onResume: () => undefined,
     onViewSession: () => undefined,
+    onLogAnother: () => undefined,
+    onLogSession: () => undefined,
   },
 } satisfies Meta<typeof TodayCard>;
 
@@ -72,6 +74,25 @@ export const Done: Story = {
   },
 };
 
+// Offline: Log another session is dimmed, View session reads what is saved and stays enabled.
+export const DoneOffline: Story = {
+  args: { ...Done.args, isStartAndResumeDisabled: true },
+};
+
+// A second session takes the day past the sets it plans, so the line counts the sets alone.
+export const DoneAfterASecondSession: Story = {
+  args: {
+    card: {
+      kind: "done",
+      dayName: "Legs",
+      minutes: 75,
+      setsLogged: 18,
+      setsPlanned: 16,
+      next: { date: "2026-10-17", id: "push", name: "Push" },
+    },
+  },
+};
+
 // Wednesday 14 October, with the muscles still recovering as the `train · rest-day` board draws them.
 export const Rest: Story = {
   args: {
@@ -82,4 +103,9 @@ export const Rest: Story = {
       recovery: { muscles: ["lats", "biceps"], trainedOn: "2026-10-13" },
     },
   },
+};
+
+// Offline: Log a session is dimmed.
+export const RestOffline: Story = {
+  args: { ...Rest.args, isStartAndResumeDisabled: true },
 };
