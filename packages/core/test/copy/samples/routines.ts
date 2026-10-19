@@ -25,6 +25,10 @@ const routineRules = [
 ] as const;
 
 export const samples: Record<string, () => string[]> = {
+  describeDayNameFieldName: () => [copy.describeDayNameFieldName("Pull")],
+  describeDayMenuName: () => [copy.describeDayMenuName("Pull")],
+  describeNewDayName: () => [copy.describeNewDayName(1), copy.describeNewDayName(7)],
+  describeWeekdayPickerTitle: () => [copy.describeWeekdayPickerTitle("Pull")],
   describeArchivedRoutinesLink: () => [
     copy.describeArchivedRoutinesLink(1),
     copy.describeArchivedRoutinesLink(3),
