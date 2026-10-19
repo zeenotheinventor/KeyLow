@@ -8,7 +8,7 @@ export type BatchOutcome = { created: number; updated: number; unchanged: number
 
 /**
  * Where an import writes to. The Supabase implementation is in supabaseExerciseStore.ts, and the
- * generator of an idempotent SQL seed file is another one.
+ * generator of an idempotent SQL migration file is another one.
  */
 export type ExerciseImportStore = {
   /** Inserts the `exercise_import_runs` row and returns its id. */

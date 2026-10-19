@@ -6,25 +6,27 @@
 // source row each. Running it again with the same CSV changes nothing. A changed map replaces that
 // exercise's map. An exercise the CSV no longer has is soft deleted, never deleted.
 //
-//   --dry-run   maps and checks every row and writes nothing, and connects to nothing.
-//   --emit-sql  writes the same library as an idempotent SQL seed file at that path, and connects to nothing.
+//   --dry-run         maps and checks every row and writes nothing, and connects to nothing.
+//   --emit-migration  writes the same library as an idempotent SQL migration at that path, and connects to
+//                     nothing. It takes no label, because the migration records its own.
 //
 //   pnpm --filter @keylow/db import:exercises --label local-full
 //   pnpm --filter @keylow/db import:exercises --label local-full --dry-run
-//   pnpm --filter @keylow/db import:exercises --label seed --emit-sql supabase/seeds/40_exercises.sql
-import { writeFileSync } from "node:fs";
+//   pnpm --filter @keylow/db import:exercises --emit-migration supabase/migrations/<timestamp>_exercise_library.sql
 import { dirname, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import { createClient } from "@supabase/supabase-js";
 
 import { resolveConnection } from "./cofid/connection";
-import { readExerciseLibrary, renderExerciseSeed } from "./exercises/exerciseLibrary";
+import { readExerciseLibrary, renderExerciseMigration } from "./exercises/exerciseLibrary";
 import { SOURCE_COMMIT } from "./exercises/files";
 import { importExercises } from "./exercises/importExercises";
 import { createSupabaseExerciseStore } from "./exercises/supabaseExerciseStore";
+import { writeNewMigration } from "./exercises/writeNewMigration";
 import { readSupabaseStatus } from "./supabaseStatus";
 
+import type { ExerciseLibrary } from "./exercises/exerciseLibrary";
 import type { ExerciseImportStore } from "./exercises/importExercises";
 import type { Database } from "../src/types.gen";
 
@@ -34,7 +36,7 @@ const BATCH_SIZE = 100;
 
 const usage = `Usage:
   import-exercises.ts --label <label> [--dry-run]
-  import-exercises.ts --label <label> --emit-sql <seed file>`;
+  import-exercises.ts --emit-migration <migration file>`;
 
 const storeThatMustNotBeUsed: ExerciseImportStore = {
   startRun: () => Promise.reject(new Error("A dry run must not write")),
@@ -45,23 +47,21 @@ const storeThatMustNotBeUsed: ExerciseImportStore = {
   recordRowCount: () => Promise.reject(new Error("A dry run must not write")),
 };
 
-async function runImport(options: {
-  label: string;
-  emitSqlPath: string | undefined;
-  dryRun: boolean;
-}): Promise<void> {
-  const { label, emitSqlPath, dryRun } = options;
-  // run-typescript.ts sets argv[1] to this file, so the package directory is its parent's parent.
-  const packageDirectory = resolve(dirname(process.argv[1] ?? "."), "..");
-  const library = readExerciseLibrary(packageDirectory);
+// run-typescript.ts sets argv[1] to this file, so the package directory is its parent's parent.
+const readLibrary = (): ExerciseLibrary =>
+  readExerciseLibrary(resolve(dirname(process.argv[1] ?? "."), ".."));
+
+async function emitMigration(path: string): Promise<void> {
+  const startedAt = Date.now();
+  writeNewMigration(path, await renderExerciseMigration(readLibrary(), console.log));
+  console.log(`Wrote ${path} in ${((Date.now() - startedAt) / 1000).toFixed(1)} s`);
+}
+
+async function runImport(options: { label: string; dryRun: boolean }): Promise<void> {
+  const { label, dryRun } = options;
+  const library = readLibrary();
   const startedAt = Date.now();
   const seconds = (): string => ((Date.now() - startedAt) / 1000).toFixed(1);
-
-  if (emitSqlPath !== undefined) {
-    writeFileSync(emitSqlPath, await renderExerciseSeed(library, label, console.log));
-    console.log(`Wrote ${emitSqlPath} in ${seconds()} s`);
-    return;
-  }
 
   let store = storeThatMustNotBeUsed;
   if (!dryRun) {
@@ -94,17 +94,16 @@ async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
       label: { type: "string" },
-      "emit-sql": { type: "string" },
+      "emit-migration": { type: "string" },
       "dry-run": { type: "boolean", default: false },
     },
   });
+  const migrationPath = values["emit-migration"];
 
-  if (values.label !== undefined && !(values["emit-sql"] !== undefined && values["dry-run"])) {
-    await runImport({
-      label: values.label,
-      emitSqlPath: values["emit-sql"],
-      dryRun: values["dry-run"],
-    });
+  if (migrationPath !== undefined && values.label === undefined && !values["dry-run"]) {
+    await emitMigration(migrationPath);
+  } else if (migrationPath === undefined && values.label !== undefined) {
+    await runImport({ label: values.label, dryRun: values["dry-run"] });
   } else {
     console.error(usage);
     process.exitCode = 2;

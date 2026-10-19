@@ -5,13 +5,14 @@ import type { ImportRow } from "./importExercise";
 import type { ExerciseImportStore } from "./importExercises";
 
 /**
- * The id of the one `exercise_import_runs` row a generated seed writes. A seed has no database to
- * hand it an id, so it is fixed, which is also what lets the seed be applied twice (ADR 0003, "Seed files").
+ * The id of the one `exercise_import_runs` row a generated migration writes. A migration has no
+ * database to hand it an id, so it is fixed, which is also what lets it be applied twice. It is not
+ * the 5eed0040 prefix that the weigh-in seed uses for its own rows.
  */
-export const EXERCISE_SEED_RUN_ID = "5eed0040-0000-4000-8000-000000000001";
+export const EXERCISE_MIGRATION_RUN_ID = "e1b00000-0000-4000-8000-000000000001";
 
-export type ExerciseSeedStore = ExerciseImportStore & {
-  /** The whole seed file. Only a finished run can be rendered. */
+export type ExerciseMigrationStore = ExerciseImportStore & {
+  /** The whole migration file. Only a finished run can be rendered. */
   render(): string;
 };
 
@@ -23,7 +24,7 @@ const byCodeUnits = (first: string, second: string): number =>
 const upsertRunStatement = ({ label, sourceCommit, fileSha256, rowCount }: FinishedRun): string =>
   [
     "insert into public.exercise_import_runs (id, source, label, source_commit, file_sha256, started_at, finished_at, row_count)",
-    `values (${[sqlLiteral(EXERCISE_SEED_RUN_ID), "'free_exercise_db'", sqlLiteral(label), sqlLiteral(sourceCommit), sqlLiteral(fileSha256), "now()", "now()", sqlLiteral(rowCount)].join(", ")})`,
+    `values (${[sqlLiteral(EXERCISE_MIGRATION_RUN_ID), "'free_exercise_db'", sqlLiteral(label), sqlLiteral(sourceCommit), sqlLiteral(fileSha256), "now()", "now()", sqlLiteral(rowCount)].join(", ")})`,
     "on conflict (id) do update set label = excluded.label, source_commit = excluded.source_commit, file_sha256 = excluded.file_sha256, finished_at = excluded.finished_at, row_count = excluded.row_count;",
   ].join(" ");
 
@@ -37,18 +38,22 @@ const escapeNonAscii = (text: string): string =>
 
 const importStatement = (row: ImportRow): string =>
   escapeNonAscii(
-    `select public.import_exercises(${sqlLiteral(EXERCISE_SEED_RUN_ID)}, ${sqlLiteral([toExercisePayload(row)])});`,
+    `select public.import_exercises(${sqlLiteral(EXERCISE_MIGRATION_RUN_ID)}, ${sqlLiteral([toExercisePayload(row)])});`,
   );
 
 /**
- * An `ExerciseImportStore` that writes no database but a SQL file: each exercise as one call of
- * `public.import_exercises`, which is the write the Supabase store makes too, so a seeded database
- * and an imported one are made by the same code. The calls create what is missing and change what
- * differs, so the file can be applied to any database any number of times. One call per line and
+ * An `ExerciseImportStore` that writes no database but a migration file: each exercise as one call
+ * of `public.import_exercises`, which is the write the Supabase store makes too, so a migrated
+ * database and an imported one are made by the same code. The calls create what is missing and
+ * change what differs, so the file can be applied to any database any number of times. It adds and
+ * updates and never removes: a later migration does not soft delete an exercise the CSV dropped.
+ * The migration runner owns the transaction, so there is no begin or commit, and the deferred
+ * primary-muscle check passes whenever it commits because each call writes an exercise with its
+ * map. One call per line and
  * one exercise per call, so a diff shows exactly the exercises that changed. The output depends only
  * on the exercises: they are sorted by source_ref and nothing in it comes from the clock or the machine.
  */
-export function createExerciseSeedStore(): ExerciseSeedStore {
+export function createExerciseMigrationStore(): ExerciseMigrationStore {
   const rows: ImportRow[] = [];
   let startedRun: Pick<FinishedRun, "label" | "sourceCommit" | "fileSha256"> | undefined;
   let finishedRun: FinishedRun | undefined;
@@ -56,7 +61,7 @@ export function createExerciseSeedStore(): ExerciseSeedStore {
   return {
     startRun(run) {
       startedRun = run;
-      return Promise.resolve(EXERCISE_SEED_RUN_ID);
+      return Promise.resolve(EXERCISE_MIGRATION_RUN_ID);
     },
 
     writeBatch(_runId, batch) {
@@ -64,7 +69,7 @@ export function createExerciseSeedStore(): ExerciseSeedStore {
       return Promise.resolve({ created: batch.length, updated: 0, unchanged: 0 });
     },
 
-    // A seed is for a database that has no exercises, so there is nothing for it to remove.
+    // A generated migration only adds and updates, so there is nothing for it to remove.
     listLiveSourceRefs: () => Promise.resolve([]),
     softDelete: () => Promise.resolve(),
 
@@ -79,20 +84,19 @@ export function createExerciseSeedStore(): ExerciseSeedStore {
 
     render() {
       if (finishedRun === undefined) {
-        throw new Error("The import run is not finished, so there is no seed to write");
+        throw new Error("The import run is not finished, so there is no migration to write");
       }
       const sorted = [...rows].sort((first, second) =>
         byCodeUnits(first.sourceRef, second.sourceRef),
       );
       return `${[
         "-- Generated by packages/db/scripts/import-exercises.ts from data/exercises/exercises.curated.csv. Do not edit by hand.",
-        "-- Regenerate it as docs/runbooks/local-dev.md describes. Every call is idempotent.",
-        "begin;",
-        // The literals leave backslashes alone, which is only right while this is on.
-        "set local standard_conforming_strings = on;",
+        "-- Regenerate with: pnpm --filter @keylow/db import:exercises --emit-migration supabase/migrations/<timestamp>_exercise_library.sql",
+        "-- An applied migration is never edited: a later change to the CSV is a new generated migration. Every call is idempotent.",
+        // No `set local standard_conforming_strings`: the CLI runs a migration outside a transaction block, so it would only warn.
+        "-- The literals leave backslashes alone, which is right while standard_conforming_strings is on, the server default.",
         upsertRunStatement(finishedRun),
         ...sorted.map(importStatement),
-        "commit;",
       ].join("\n")}\n`;
     },
   };

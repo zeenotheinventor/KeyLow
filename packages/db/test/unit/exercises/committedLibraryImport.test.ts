@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
@@ -6,9 +6,13 @@ import { describe, expect, it } from "vitest";
 import { parseCsv } from "../../../scripts/cofid/csv";
 import {
   readExerciseLibrary,
-  renderExerciseSeed,
+  renderExerciseMigration,
 } from "../../../scripts/exercises/exerciseLibrary";
-import { EXERCISE_SEED_FILE, SOURCE_COMMIT } from "../../../scripts/exercises/files";
+import {
+  EXERCISE_MIGRATION_SUFFIX,
+  EXERCISE_MIGRATIONS_DIRECTORY,
+  SOURCE_COMMIT,
+} from "../../../scripts/exercises/files";
 import { importExercises } from "../../../scripts/exercises/importExercises";
 import { readCuratedExercises } from "../../../scripts/exercises/readCuratedExercises";
 
@@ -19,6 +23,18 @@ const library = readExerciseLibrary(packageDirectory);
 
 const readPackageFile = (path: string): string =>
   readFileSync(new URL(`../../../${path}`, import.meta.url), "utf8");
+
+// Migrations are named by timestamp, so the last in name order is the newest.
+const newestLibraryMigration = (): string => {
+  const names = readdirSync(new URL(`../../../${EXERCISE_MIGRATIONS_DIRECTORY}`, import.meta.url))
+    .filter((name) => name.endsWith(EXERCISE_MIGRATION_SUFFIX))
+    .sort();
+  const newest = names.at(-1);
+  if (newest === undefined) {
+    throw new Error(`There is no ${EXERCISE_MIGRATION_SUFFIX} migration`);
+  }
+  return `${EXERCISE_MIGRATIONS_DIRECTORY}/${newest}`;
+};
 
 /** A store that fails the test if the import writes to it. */
 const storeThatMustNotBeUsed: ExerciseImportStore = {
@@ -59,10 +75,13 @@ describe("the committed exercise library, imported", () => {
     expect(readPackageFile("data/exercises/VERIFICATION.md")).toContain(SOURCE_COMMIT);
   });
 
-  it("should be what 40_exercises.sql holds, so the seed cannot drift from the CSV", async () => {
+  it("should be what the newest exercise library migration holds, so it cannot drift from the CSV", async () => {
     // Compared as a boolean so a mismatch does not print two long strings.
     const isUpToDate =
-      (await renderExerciseSeed(library, "seed")) === readPackageFile(EXERCISE_SEED_FILE);
-    expect(isUpToDate, "run the regeneration command in docs/runbooks/local-dev.md").toBe(true);
+      (await renderExerciseMigration(library)) === readPackageFile(newestLibraryMigration());
+    expect(
+      isUpToDate,
+      "the CSV or the source commit changed: generate a new migration as docs/runbooks/local-dev.md describes, and never edit an applied one",
+    ).toBe(true);
   });
 });

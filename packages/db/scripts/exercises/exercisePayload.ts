@@ -1,7 +1,7 @@
 import type { ImportRow } from "./importExercise";
 import type { Json } from "../../src/types.gen";
 
-/** One exercise as `public.import_exercises` takes it. The Supabase store and the seed file both write exactly this. */
+/** One exercise as `public.import_exercises` takes it. The Supabase store and the migration file both write exactly this. */
 export const toExercisePayload = ({
   sourceRef,
   name,
