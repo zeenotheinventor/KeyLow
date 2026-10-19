@@ -4,15 +4,17 @@ import { useRouter } from "expo-router";
 import { routinesPath } from "../../lib/routineRoutes";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ArchivedRoutinesView } from "../ArchivedRoutinesView";
+import { useRestoreRoutine } from "./useRestoreRoutine";
 
 /**
  * The archived routines, read from the list's one request, which brings them with the live routines. It is
- * normally opened from the list, so they are already in memory. Back returns to the list. Nothing restores a
- * routine yet, so Restore is not drawn.
+ * normally opened from the list, so they are already in memory. Back returns to the list. Restore brings a
+ * routine back into the list, with no question first, as the `routines · archived` board draws it.
  */
 export function ArchivedRoutinesScreen() {
   const router = useRouter();
   const routines = useRoutines({ archived: true, enabled: useReadsEnabled() });
+  const restore = useRestoreRoutine();
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the routines instead.
@@ -35,6 +37,9 @@ export function ArchivedRoutinesScreen() {
           }))}
         status="ready"
         onBack={goBack}
+        onRestore={(routine) => {
+          void restore(routine);
+        }}
       />
     );
   }
