@@ -79,4 +79,31 @@ describe("useRoutine", () => {
     });
     expect(result.current.error?.message).toBe("Could not load your routine (57014)");
   });
+
+  it("should not retry an id that is not a UUID, since asking again cannot change the answer", async () => {
+    const fake = installRoutinesFake(server);
+    const { wrapper } = createWrapper(undefined, { retryDelayMs: 20 });
+
+    const { result } = renderHook(() => useRoutine("not-a-uuid"), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(result.current.failureCount).toBe(1);
+    expect(fake.requestCount).toBe(0);
+  });
+
+  it("should retry a failed request, as the connection may come back", async () => {
+    const fake = installRoutinesFake(server);
+    fake.failWith("57014");
+    const { wrapper } = createWrapper(undefined, { retryDelayMs: 20 });
+
+    const { result } = renderHook(() => useRoutine(ROUTINE_ID), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(fake.requestCount).toBe(4);
+  });
 });

@@ -8,17 +8,25 @@ import {
   describeArchivedRoutinesLink,
   describeArchivedRoutineMeta,
   describeDaysSummary,
+  describeDayMenuName,
+  describeDayNameFieldName,
   describeEditorDay,
   describeExerciseFieldNames,
   describeMakeActiveDialog,
   describeMakeActiveName,
+  describeNewDayName,
   describeOtherRoutineMeta,
   describeProblemsBanner,
   describeRepRange,
   describeRestoreName,
   describeRoutineRule,
+  describeWeekdayPickerTitle,
   ROUTINE_ARCHIVED_TOAST,
+  ROUTINE_DAY_CONTROLS,
+  ROUTINE_DISCARD,
   ROUTINE_EDITOR,
+  ROUTINE_EDITOR_LOADING_LABEL,
+  ROUTINE_WEEKDAY_CHOICES,
   ROUTINES_ARCHIVED,
   ROUTINES_EMPTY,
   ROUTINES_SCREEN,
@@ -461,6 +469,69 @@ describe("the sentences for a draft's rules", () => {
 
   it("should name the weekday the repeated rule is about", () => {
     expect(describeRoutineRule("weekday_repeated", 5)).toBe("Only one day can be on Saturday.");
+  });
+});
+
+describe("the words the routine editor shell needs that no board draws", () => {
+  it("should ask before throwing a routine's changes away", () => {
+    expect(ROUTINE_DISCARD).toStrictEqual({
+      title: "Discard changes?",
+      body: "What you changed in this routine is lost.",
+      discardAction: "Discard changes",
+      keepEditingAction: "Keep editing",
+    });
+  });
+
+  it("should name the controls of a day", () => {
+    expect(ROUTINE_DAY_CONTROLS).toStrictEqual({
+      addDayAction: "Add day",
+      removeDayAction: "Remove day",
+      dayNameLabel: "Day name",
+      weekdayGroupLabel: "Weekday",
+    });
+  });
+
+  it("should name a day's menu button and its weekday sheet after the day", () => {
+    expect(describeDayMenuName("Pull")).toBe("Options for Pull");
+    expect(describeWeekdayPickerTitle("Pull")).toBe("Weekday for Pull");
+  });
+
+  it("should name a day's name field after the day, so two open days' fields differ", () => {
+    expect(describeDayNameFieldName("Pull")).toBe("Day name for Pull");
+  });
+
+  it("should say what is loading while the editor waits for its routine", () => {
+    expect(ROUTINE_EDITOR_LOADING_LABEL).toBe("Loading routine");
+  });
+
+  it("should call a new day by its place in the routine", () => {
+    expect(describeNewDayName(1)).toBe("Day 1");
+    expect(describeNewDayName(5)).toBe("Day 5");
+  });
+
+  it("should offer Monday to Sunday, in order, then any day", () => {
+    expect(ROUTINE_WEEKDAY_CHOICES).toStrictEqual([
+      { weekday: 0, label: "Mon" },
+      { weekday: 1, label: "Tue" },
+      { weekday: 2, label: "Wed" },
+      { weekday: 3, label: "Thu" },
+      { weekday: 4, label: "Fri" },
+      { weekday: 5, label: "Sat" },
+      { weekday: 6, label: "Sun" },
+      { weekday: null, label: "Any" },
+    ]);
+  });
+
+  it("should label a day with no weekday as the choices do", () => {
+    expect(
+      describeEditorDay({
+        name: "Push",
+        weekday: null,
+        exerciseCount: 0,
+        setCount: 0,
+        isOpen: false,
+      }).weekdayLabel,
+    ).toBe(ROUTINE_WEEKDAY_CHOICES.at(-1)?.label);
   });
 });
 

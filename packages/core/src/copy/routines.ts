@@ -86,6 +86,7 @@ const SEPARATOR = " · ";
 const A_MONDAY = "2026-10-12";
 const WEEKDAYS = Array.from({ length: MAX_WEEKDAY + 1 }, (_, weekday) => weekday);
 const REST_LABEL = "Rest";
+const ANY_WEEKDAY_LABEL = "Any";
 
 const describeDayCount = (count: number): string => describeCount(count, "day", "days");
 
@@ -291,7 +292,8 @@ export const describeEditorDay = ({
   meta: [describeCount(exerciseCount, "exercise", "exercises"), describeSets(setCount)].join(
     SEPARATOR,
   ),
-  weekdayLabel: weekday === null ? "Any" : describeWeekdayShortName(weekdayDate(weekday)),
+  weekdayLabel:
+    weekday === null ? ANY_WEEKDAY_LABEL : describeWeekdayShortName(weekdayDate(weekday)),
   weekdayAccessibleName: `Weekday for ${name}: ${
     weekday === null ? "any day" : describeWeekdayName(weekdayDate(weekday))
   }`,
@@ -345,3 +347,52 @@ const RULE_SENTENCES: Record<RoutineDraftRule, (weekday: number | null) => strin
  */
 export const describeRoutineRule = (rule: RoutineDraftRule, weekday: number | null): string =>
   RULE_SENTENCES[rule](weekday);
+
+/**
+ * The question asked when the editor is closed with changes. No board draws it (KEY-442 proposes these
+ * words, to be drawn by the designers).
+ */
+export const ROUTINE_DISCARD = {
+  title: "Discard changes?",
+  body: "What you changed in this routine is lost.",
+  discardAction: "Discard changes",
+  keepEditingAction: "Keep editing",
+} as const;
+
+/**
+ * The controls of a day in the editor that no board draws: adding and removing a day, the day's name field
+ * and the weekday picker (KEY-442 proposes these words, to be drawn by the designers).
+ */
+export const ROUTINE_DAY_CONTROLS = {
+  addDayAction: "Add day",
+  removeDayAction: "Remove day",
+  dayNameLabel: "Day name",
+  weekdayGroupLabel: "Weekday",
+} as const;
+
+/** The weekday sheet's chips: Monday to Sunday by their weekday number, then any day, which is a null weekday. */
+export const ROUTINE_WEEKDAY_CHOICES: readonly Readonly<{
+  weekday: number | null;
+  label: string;
+}>[] = [
+  ...WEEKDAYS.map((weekday) => ({
+    weekday,
+    label: describeWeekdayShortName(weekdayDate(weekday)),
+  })),
+  { weekday: null, label: ANY_WEEKDAY_LABEL },
+];
+
+/** The name of the button that opens a day's menu: "Options for Pull". */
+export const describeDayMenuName = (dayName: string): string => `Options for ${dayName}`;
+
+/** The title of the sheet that picks a day's weekday: "Weekday for Pull". */
+export const describeWeekdayPickerTitle = (dayName: string): string => `Weekday for ${dayName}`;
+
+/** The accessible name of a day's name field, which tells the fields of two open days apart: "Day name for Pull". */
+export const describeDayNameFieldName = (dayName: string): string => `Day name for ${dayName}`;
+
+/** What a screen reader hears while a routine loads for the editor. No board draws the state. */
+export const ROUTINE_EDITOR_LOADING_LABEL = "Loading routine";
+
+/** The name a day added to a routine starts with, from its place in the routine: "Day 3". */
+export const describeNewDayName = (position: number): string => `Day ${position}`;
