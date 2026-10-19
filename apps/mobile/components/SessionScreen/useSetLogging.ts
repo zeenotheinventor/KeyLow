@@ -1,11 +1,12 @@
-import { useAddSet, useRemoveSet, useRestoreSet } from "@keylow/api-client";
-import { FINISH_SCREEN, SET_ENTRY, describeSetRemovedToast } from "@keylow/core/copy";
+import { useAddSet } from "@keylow/api-client";
+import { SET_ENTRY } from "@keylow/core/copy";
 import { displayLoad } from "@keylow/core/training";
 import { onlineManager } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 
 import { useToast } from "../ui";
 import { isPendingSetId } from "./pendingSets";
+import { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 
 import type {
   LogSetRequest,
@@ -28,24 +29,17 @@ function draftOf(values: SetValues, unit: LoadUnit): SetDraft {
   };
 }
 
-/** The rule a restore was refused by (a full session), which states no value; any other failure is the generic sentence. */
-const messageOf = (error: unknown): string =>
-  error instanceof RangeError ? error.message : SET_ENTRY.saveFailed;
-
 /**
  * What the checks of the session screen do. Logging turns the row done at once, as a set being saved, and
  * takes it back if the write fails; a second press of the same row while the first is on its way does
- * nothing. Removing a set shows the toast with Undo once it is removed. Every write needs a connection: with
+ * nothing. Removing a set is `useRemoveSetWithUndo`'s. Every write needs a connection: with
  * none, nothing is written and nothing is kept for later. A failure says the set did not save, and never
  * what its numbers were.
  */
 export function useSetLogging(view: SessionScreenView, pending: PendingSets): SetLogging {
   const toast = useToast();
   const addSet = useAddSet();
-  const removeSetMutation = useRemoveSet();
-  const restoreSetMutation = useRestoreSet();
   const logging = useRef(new Set<string>());
-  const removing = useRef(new Set<string>());
   const pendingCount = useRef(0);
   const { prune } = pending;
   const sets = view.status === "ready" ? view.sets : null;
@@ -59,16 +53,6 @@ export function useSetLogging(view: SessionScreenView, pending: PendingSets): Se
 
   const showFailure = (message: string = SET_ENTRY.saveFailed) => {
     toast.show({ message, tone: "danger", icon: "CircleAlert" });
-  };
-
-  const restore = (setId: string) => {
-    if (!onlineManager.isOnline()) {
-      showFailure();
-      return;
-    }
-    restoreSetMutation.mutateAsync(setId).catch((error: unknown) => {
-      showFailure(messageOf(error));
-    });
   };
 
   const logSet = ({ exerciseId, values }: LogSetRequest) => {
@@ -121,32 +105,9 @@ export function useSetLogging(view: SessionScreenView, pending: PendingSets): Se
       });
   };
 
-  const removeSet = ({ setId, exerciseName, setType, setNumber }: RemoveSetRequest) => {
-    if (removing.current.has(setId)) {
-      return;
-    }
-    if (!onlineManager.isOnline()) {
-      showFailure(SET_ENTRY.removeFailed);
-      return;
-    }
-    removing.current.add(setId);
-    void removeSetMutation
-      .mutateAsync(setId)
-      .then(() => {
-        toast.show({
-          message: describeSetRemovedToast({ exerciseName, setType, setNumber }),
-          actionLabel: FINISH_SCREEN.undoAction,
-          onAction: () => {
-            restore(setId);
-          },
-        });
-      })
-      .catch(() => {
-        showFailure(SET_ENTRY.removeFailed);
-      })
-      .finally(() => {
-        removing.current.delete(setId);
-      });
+  const removeSetWithUndo = useRemoveSetWithUndo();
+  const removeSet = (request: RemoveSetRequest) => {
+    void removeSetWithUndo(request);
   };
 
   return { logSet, removeSet, isSaving: isPendingSetId };

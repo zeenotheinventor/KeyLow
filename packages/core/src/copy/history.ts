@@ -105,6 +105,8 @@ export const HISTORY_DELETE_SESSION = {
   title: "Delete this session?",
   confirmAction: "Delete session",
   cancelAction: "Keep it",
+  /** The toast when the delete does not go through. It states the rule and never a value. No board draws it. */
+  failed: "The session was not deleted, check your connection and try again",
 } as const;
 
 const MINUTES_ABBREVIATION = "min";
@@ -407,7 +409,7 @@ export const describeEditSetSheet = ({
 export const describeLoadFieldLabel = (unit: LoadUnit): string => `Load, ${unit}`;
 
 export type DeleteSessionInput = Readonly<{
-  /** Every live set the session holds, warm-ups included, since they all go with it. */
+  /** The sets the question names: the session's working sets, or its warm-ups when it has no others. */
   setCount: number;
   /** The routine day's name, or null for a session that follows no routine day. */
   dayName: string | null;

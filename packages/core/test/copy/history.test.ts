@@ -545,6 +545,7 @@ describe("the delete session confirmation", () => {
       title: "Delete this session?",
       confirmAction: "Delete session",
       cancelAction: "Keep it",
+      failed: "The session was not deleted, check your connection and try again",
     });
   });
 

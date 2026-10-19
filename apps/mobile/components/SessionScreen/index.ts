@@ -1,4 +1,5 @@
 export { SessionScreen } from "./SessionScreen";
+export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
 export type {
   LogSetRequest,
   PendingSet,

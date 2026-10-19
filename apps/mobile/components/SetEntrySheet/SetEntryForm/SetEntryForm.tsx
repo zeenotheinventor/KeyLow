@@ -1,8 +1,6 @@
 import { useAddSet } from "@keylow/api-client";
 import {
-  RIR_CHIP_LABELS,
   SET_ENTRY,
-  describeLoadFieldLabel,
   describePrefillLine,
   describeSameAgainName,
   describeSetEntrySubtitle,
@@ -14,22 +12,14 @@ import { displayLoad, sameAgain, validateSetDraft } from "@keylow/core/training"
 import { useState } from "react";
 import { View } from "react-native";
 
-import { Button, ChipGroup, NumericInput, PressableSurface, Text } from "../../ui";
+import { Button, PressableSurface, Text } from "../../ui";
+import { LoadRepsFields } from "../LoadRepsFields";
+import { RirField } from "../RirField";
 
 import type { SetEntryFormProps } from "./types";
 import type { SetDraft, SetPrefill, SetValues } from "@keylow/core/training";
 
 type EditedFields = Readonly<{ load: boolean; reps: boolean }>;
-
-// RIR is held as the text of its number, which is what a chip stands for: "6+" is 6.
-const RIR_OPTIONS = RIR_CHIP_LABELS.map((label, index) => ({ value: String(index), label }));
-const LAST_RIR_CHIP = RIR_OPTIONS.length - 1;
-
-/** The chip that stands for the RIR held as text: the 6+ chip for six or more, none for a blank. */
-function chipOf(rir: string): string | null {
-  const number = rir.trim() === "" ? Number.NaN : Number(rir);
-  return Number.isInteger(number) && number >= 0 ? String(Math.min(number, LAST_RIR_CHIP)) : null;
-}
 
 /** The text the fields open with: a blank for a number the prefill does not have. */
 function openingDraft(prefill: SetPrefill, unit: SetEntryFormProps["unit"]) {
@@ -122,58 +112,33 @@ export function SetEntryForm({
           </PressableSurface>
         )}
       </View>
-      <View className="flex-row gap-3">
-        <View className="flex-1">
-          <NumericInput
-            align="center"
-            error={loadError}
-            label={describeLoadFieldLabel(unit)}
-            size="display"
-            value={typed.load}
-            onChangeText={(load) => {
-              setTyped((current) => ({ ...current, load }));
-              setEdited((current) => ({ ...current, load: true }));
-            }}
-          />
-        </View>
-        <View className="flex-1">
-          <NumericInput
-            align="center"
-            error={repsError}
-            keyboardType="number-pad"
-            label={SET_ENTRY.repsLabel}
-            size="display"
-            value={typed.reps}
-            onChangeText={(reps) => {
-              setTyped((current) => ({ ...current, reps }));
-              setEdited((current) => ({ ...current, reps: true }));
-            }}
-          />
-        </View>
-      </View>
+      <LoadRepsFields
+        load={typed.load}
+        loadError={loadError}
+        reps={typed.reps}
+        repsError={repsError}
+        unit={unit}
+        onChangeLoad={(load) => {
+          setTyped((current) => ({ ...current, load }));
+          setEdited((current) => ({ ...current, load: true }));
+        }}
+        onChangeReps={(reps) => {
+          setTyped((current) => ({ ...current, reps }));
+          setEdited((current) => ({ ...current, reps: true }));
+        }}
+      />
       {loadError === undefined && repsError === undefined ? (
         <Text className="-mt-2" tone="muted" variant="caption">
           {describePrefillLine(prefill, lastWeek, unit)}
         </Text>
       ) : null}
-      <View className="gap-2">
-        <Text tone="secondary" variant="caption">
-          {SET_ENTRY.rirHeading}
-        </Text>
-        <ChipGroup
-          allowDeselect
-          label={SET_ENTRY.rirHeading}
-          layout="equal"
-          options={RIR_OPTIONS}
-          value={chipOf(typed.rir)}
-          onChange={(chip: string | null) => {
-            setTyped((current) => ({ ...current, rir: chip ?? "" }));
-          }}
-        />
-        <Text tone="muted" variant="caption">
-          {SET_ENTRY.rirHelp}
-        </Text>
-      </View>
+      <RirField
+        help={SET_ENTRY.rirHelp}
+        rir={typed.rir}
+        onChange={(rir) => {
+          setTyped((current) => ({ ...current, rir }));
+        }}
+      />
       {addSet.isError ? (
         <Text role="alert" tone="danger" variant="caption">
           {SET_ENTRY.saveFailed}
