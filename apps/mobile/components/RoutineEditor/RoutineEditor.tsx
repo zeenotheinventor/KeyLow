@@ -6,7 +6,7 @@ import {
   describeDaysSummary,
   describeWeekdayPickerTitle,
 } from "@keylow/core/copy";
-import { MAX_DAYS_PER_ROUTINE, summariseRoutine } from "@keylow/core/training";
+import { MAX_DAYS_PER_ROUTINE, MAX_EXERCISES_PER_ROUTINE_DAY } from "@keylow/core/training";
 import { useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { vars } from "nativewind";
@@ -14,11 +14,18 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { Keyboard, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { draftOfState, routineDraftReducer, startingStateOf } from "./routineDraftReducer";
+import {
+  draftOfState,
+  routineDraftReducer,
+  startingStateOf,
+  summaryOf,
+} from "./routineDraftReducer";
 import { leaveRoutineEditor } from "../../lib/leaveRoutineEditor";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
+import { AddExerciseSheet } from "../AddExerciseSheet";
 import { RoutineDayCard } from "../RoutineDayCard";
+import { RoutineDayExercises } from "../RoutineDayExercises";
 import {
   ActionMenu,
   BottomSheet,
@@ -49,10 +56,12 @@ const weekdayOptions = ROUTINE_WEEKDAY_CHOICES.map(({ weekday, label }) => ({
  * one, so Save is drawn but cannot be pressed. Closing with changes asks first, by the header's Cancel, the
  * Android back button and the iOS swipe back alike.
  */
-export function RoutineEditor({ initialDraft }: RoutineEditorProps) {
+export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [startingState] = useState(() => startingStateOf(initialDraft ?? emptyDraft));
+  const [startingState] = useState(() =>
+    startingStateOf(initialDraft ?? emptyDraft, exerciseNames),
+  );
   const [state, dispatch] = useReducer(routineDraftReducer, startingState);
   const [openSheet, setOpenSheet] = useState<OpenSheet | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -66,7 +75,7 @@ export function RoutineEditor({ initialDraft }: RoutineEditorProps) {
 
   const draft = draftOfState(state);
   const isChanged = JSON.stringify(draft) !== JSON.stringify(draftOfState(startingState));
-  const summary = summariseRoutine(draft);
+  const summary = summaryOf(state);
   // The sheet keeps its day while it slides away, so its title holds. A removed day has no weekday to show.
   const sheetDay =
     openSheet === null ? undefined : state.days.find((day) => day.key === openSheet.dayKey);
@@ -168,7 +177,21 @@ export function RoutineEditor({ initialDraft }: RoutineEditorProps) {
               onToggle={() => {
                 dispatch({ type: "toggleDay", key: day.key });
               }}
-            />
+            >
+              <RoutineDayExercises
+                exercises={day.exercises}
+                isFull={day.exercises.length >= MAX_EXERCISES_PER_ROUTINE_DAY}
+                onAdd={() => {
+                  openSheetFor("exercise", day);
+                }}
+                onChangeField={(key, field, text) => {
+                  dispatch({ type: "editExercise", dayKey: day.key, key, field, text });
+                }}
+                onRemove={(key) => {
+                  dispatch({ type: "removeExercise", dayKey: day.key, key });
+                }}
+              />
+            </RoutineDayCard>
           ))}
           <Button
             disabled={state.days.length >= MAX_DAYS_PER_ROUTINE}
@@ -232,6 +255,16 @@ export function RoutineEditor({ initialDraft }: RoutineEditorProps) {
           ]}
         />
       </BottomSheet>
+      <AddExerciseSheet
+        mode="routine"
+        open={isSheetOpen && openSheet?.kind === "exercise"}
+        onChoose={({ id, name }) => {
+          if (openSheet?.kind === "exercise") {
+            dispatch({ type: "addExercise", dayKey: openSheet.dayKey, exercise: { id, name } });
+          }
+        }}
+        onClose={closeSheet}
+      />
       <ConfirmDialog
         body={ROUTINE_DISCARD.body}
         cancelLabel={ROUTINE_DISCARD.keepEditingAction}

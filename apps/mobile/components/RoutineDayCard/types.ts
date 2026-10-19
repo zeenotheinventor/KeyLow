@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type RoutineDayCardProps = {
   name: string;
   /** 0 (Monday) to 6 (Sunday), or null for any day. */
@@ -14,4 +16,6 @@ export type RoutineDayCardProps = {
   /** Opens the day's menu. */
   onOpenMenu: () => void;
   onRename: (name: string) => void;
+  /** The day's exercises, drawn in the body under the name field. */
+  children?: ReactNode;
 };

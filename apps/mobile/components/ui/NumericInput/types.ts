@@ -14,10 +14,17 @@ export type NumericInputProps = FieldFrameProps &
     macro?: NumericInputMacro | undefined;
     /** Defaults to `right`. The servings stepper centres its number. */
     align?: "right" | "center" | undefined;
-    /** Defaults to the decimal pad. A count of whole things asks for the number pad, which has no decimal key. */
-    keyboardType?: "decimal-pad" | "number-pad" | undefined;
-    /** `display` is a 32 point number in a box 64 points high, as the set entry boards draw the load and the reps. Defaults to `default`. */
-    size?: "default" | "display" | undefined;
+    /**
+     * Defaults to the decimal pad. A count of whole things asks for the number pad, which has no decimal key.
+     * A range such as the reps "8 to 12" asks for the punctuation keyboard, which has the hyphen and the space.
+     */
+    keyboardType?: "decimal-pad" | "number-pad" | "numbers-and-punctuation" | undefined;
+    /**
+     * `display` is a 32 point number in a box 64 points high, as the set entry boards draw the load and the reps.
+     * `cell` is a box 36 points high with no padding across, as the routine editor board draws the sets, reps
+     * and RIR of an exercise. Defaults to `default`.
+     */
+    size?: "default" | "display" | "cell" | undefined;
     /** Sets the value in strong body text. Defaults to regular. */
     strongValue?: boolean | undefined;
     /** Makes the field an adjustable that a swipe steps up and down. */

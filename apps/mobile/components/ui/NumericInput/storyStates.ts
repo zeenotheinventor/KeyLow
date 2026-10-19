@@ -13,4 +13,5 @@ export const storyStates = [
   "WholeNumberBesideLabel",
   "DisplaySize",
   "DisplaySizeWithError",
+  "CellSize",
 ];

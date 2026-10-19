@@ -364,4 +364,51 @@ describe("NumericInput", () => {
       expect(viewsDrawn({ minHeight: 44 }).length).toBeGreaterThan(0);
     });
   });
+  describe("the cell size", () => {
+    it("should draw a box 36 points high with no padding across, as the routine editor board's fields", async () => {
+      await renderNumericInput({
+        label: "Sets for Barbell squat",
+        labelHidden: true,
+        unit: undefined,
+        value: "3",
+        size: "cell",
+        align: "center",
+        strongValue: true,
+      });
+
+      expect(viewsDrawn({ height: 36, paddingLeft: 0, paddingRight: 0 })).toHaveLength(1);
+      expect(viewsDrawn({ minHeight: 44 })).toHaveLength(0);
+    });
+
+    it("should write the number centred in body strong, in a line short enough for the box", async () => {
+      await renderNumericInput({
+        label: "Sets for Barbell squat",
+        labelHidden: true,
+        unit: undefined,
+        value: "3",
+        size: "cell",
+        align: "center",
+        strongValue: true,
+      });
+
+      const field = screen.getByLabelText("Sets for Barbell squat");
+      // NativeWind hands a text input's alignment over as a prop, not a style.
+      expect(field).toHaveProp("textAlign", "center");
+      expect(field).toHaveStyle({ fontWeight: "600" });
+      expect(field).not.toHaveStyle({ minHeight: 40 });
+    });
+
+    it("should ask for the punctuation keyboard where a range is typed", async () => {
+      await renderNumericInput({
+        label: "Reps for Barbell squat",
+        unit: undefined,
+        keyboardType: "numbers-and-punctuation",
+      });
+
+      expect(screen.getByLabelText("Reps for Barbell squat")).toHaveProp(
+        "keyboardType",
+        "numbers-and-punctuation",
+      );
+    });
+  });
 });

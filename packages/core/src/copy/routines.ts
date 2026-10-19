@@ -314,6 +314,12 @@ export const describeExerciseFieldNames = (exerciseName: string): ExerciseFieldN
   rir: `RIR for ${exerciseName}`,
 });
 
+/**
+ * The name of the button that takes an exercise out of a day: "Remove Barbell squat". The boards draw no
+ * such button (KEY-450 proposes these words, to be drawn by the designers).
+ */
+export const describeRemoveExercise = (exerciseName: string): string => `Remove ${exerciseName}`;
+
 /** The reps field's text: "5 to 8", or "8" when the two are the same. */
 export const describeRepRange = (repMin: number, repMax: number): string =>
   repMin === repMax ? String(repMin) : `${repMin} to ${repMax}`;
