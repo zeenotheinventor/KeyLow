@@ -22,6 +22,7 @@ import { setUpTests } from "react-native-reanimated";
 import { RoutineEditor } from "../components/RoutineEditor";
 import { routinesPath } from "../lib/routineRoutes";
 import { ThemeProvider } from "../lib/theme";
+import { EditorProviders } from "./support/editorProviders";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -30,7 +31,7 @@ import { pushPullLegsDraft } from "./support/routineEditorFixtures";
 import type { RoutineDraft } from "@keylow/core/training";
 
 // The routine editor shell with a draft handed to it: the name, the days and their weekdays, the live meta,
-// and what closing does. Nothing saves, so no hook is stood in for.
+// and what closing does. Saving has its own tests.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -66,7 +67,9 @@ async function showEditor(initialDraft?: RoutineDraft) {
   const user = userEvent.setup();
   await render(
     <ThemeProvider fixedPreference="dark">
-      <RoutineEditor initialDraft={initialDraft} />
+      <EditorProviders>
+        <RoutineEditor initialDraft={initialDraft} />
+      </EditorProviders>
     </ThemeProvider>,
   );
   return user;
@@ -106,12 +109,12 @@ describe("the routine editor", () => {
   });
 
   describe("a saved routine", () => {
-    it("should head the screen with Cancel editing, Edit routine and a Save that cannot be pressed", async () => {
+    it("should head the screen with Cancel editing, Edit routine and a Save that can be pressed", async () => {
       await showEditor(pushPullLegsDraft);
 
       expect(screen.getByRole("heading", { name: ROUTINE_EDITOR.title })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: ROUTINE_EDITOR.cancelLabel })).toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: ROUTINE_EDITOR.saveAction })).toBeDisabled();
+      expect(screen.getByRole("button", { name: ROUTINE_EDITOR.saveAction })).toBeEnabled();
     });
 
     it("should show its name", async () => {

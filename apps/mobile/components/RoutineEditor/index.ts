@@ -6,4 +6,12 @@ export {
   startingStateOf,
   summaryOf,
 } from "./routineDraftReducer";
-export type { EditorAction, EditorDay, EditorState, RoutineEditorProps } from "./types";
+export type {
+  EditorAction,
+  EditorDay,
+  EditorState,
+  MoveDirection,
+  RoutineEditorProps,
+} from "./types";
+export { routineMarksOf } from "./routineMarks";
+export type { DayMarks, ExerciseMarks, RoutineMarks } from "./routineMarks";

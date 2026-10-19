@@ -17,6 +17,7 @@ import { Keyboard } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { RoutineEditor } from "../components/RoutineEditor";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { lateralRaiseExercises } from "./support/exerciseCatalogue";
@@ -81,7 +82,9 @@ async function showEditor(
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={trainClient} queryClient={queryClient}>
-        <RoutineEditor exerciseNames={exerciseNames} initialDraft={draft} />
+        <ToastProvider>
+          <RoutineEditor exerciseNames={exerciseNames} initialDraft={draft} />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -94,6 +97,12 @@ async function openDay(user: Awaited<ReturnType<typeof showEditor>>, dayName: st
     throw new Error(`There is no Show button for ${dayName}`);
   }
   await user.press(button);
+}
+
+// An exercise is taken out from its menu, which also moves it.
+async function removeExercise(user: Awaited<ReturnType<typeof showEditor>>, exerciseName: string) {
+  await user.press(screen.getByRole("button", { name: `Options for ${exerciseName}` }));
+  await user.press(screen.getByRole("button", { name: `Remove ${exerciseName}` }));
 }
 
 const sets = (exerciseName: string) => screen.getByLabelText(`Sets for ${exerciseName}`);
@@ -234,7 +243,7 @@ describe("the exercises of a day in the routine editor", () => {
       expect(screen.getByText("Barbell squat")).toHaveProp("numberOfLines", 1);
     });
 
-    it("should draw Add exercise and a Remove control for every exercise", async () => {
+    it("should draw Add exercise and an options button for every exercise", async () => {
       const user = await showEditor();
 
       await openDay(user, "Legs");
@@ -242,8 +251,9 @@ describe("the exercises of a day in the routine editor", () => {
       expect(
         screen.getByRole("button", { name: ROUTINE_EDITOR.addExerciseAction }),
       ).toBeOnTheScreen();
-      expect(screen.getAllByRole("button", { name: /^Remove / })).toHaveLength(5);
-      expect(screen.getByRole("button", { name: "Remove Barbell squat" })).toBeOnTheScreen();
+      // The five exercises' buttons and the open day's own.
+      expect(screen.getAllByRole("button", { name: /^Options for / })).toHaveLength(6);
+      expect(screen.getByRole("button", { name: "Options for Barbell squat" })).toBeOnTheScreen();
     });
   });
 
@@ -485,7 +495,7 @@ describe("the exercises of a day in the routine editor", () => {
       const user = await showEditor();
       await openDay(user, "Legs");
 
-      await user.press(screen.getByRole("button", { name: "Remove Barbell squat" }));
+      await removeExercise(user, "Barbell squat");
 
       expect(screen.queryByLabelText("Sets for Barbell squat")).not.toBeOnTheScreen();
       expect(sets("Romanian deadlift")).toBeOnTheScreen();
@@ -498,7 +508,7 @@ describe("the exercises of a day in the routine editor", () => {
       await openDay(user, "Legs");
       await fireEvent.changeText(sets("Leg press"), "5");
 
-      await user.press(screen.getByRole("button", { name: "Remove Barbell squat" }));
+      await removeExercise(user, "Barbell squat");
 
       expect(sets("Leg press")).toHaveDisplayValue("5");
     });
@@ -507,7 +517,7 @@ describe("the exercises of a day in the routine editor", () => {
       const user = await showEditor(dayOfOne, dayOfOneNames);
       await user.press(screen.getByRole("button", { name: "Show Pull exercises" }));
 
-      await user.press(screen.getByRole("button", { name: "Remove Barbell row" }));
+      await removeExercise(user, "Barbell row");
 
       expect(text("0 exercises · 0 sets")).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: ROUTINE_EDITOR.addExerciseAction })).toBeEnabled();
@@ -516,7 +526,7 @@ describe("the exercises of a day in the routine editor", () => {
     it("should count the editor as changed, so closing asks first", async () => {
       const user = await showEditor();
       await openDay(user, "Legs");
-      await user.press(screen.getByRole("button", { name: "Remove Barbell squat" }));
+      await removeExercise(user, "Barbell squat");
 
       await user.press(screen.getByRole("button", { name: ROUTINE_EDITOR.cancelLabel }));
 

@@ -3,14 +3,20 @@ import { describeMakeActiveDialog } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { useRouter } from "expo-router";
 
-import { archivedRoutinesPath, trainPath } from "../../lib/routineRoutes";
+import {
+  archivedRoutinesPath,
+  editRoutinePath,
+  newRoutinePath,
+  trainPath,
+} from "../../lib/routineRoutes";
 import { useNow } from "../../lib/useNow";
+import { useOpenOnce } from "../../lib/useOpenOnce";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { RoutinesView } from "../RoutinesView";
 import { ConfirmDialog } from "../ui";
 import { useMakeRoutineActive } from "./useMakeRoutineActive";
 
-import type { RoutineItem } from "../RoutinesView";
+import type { RoutineItem, RoutineRef } from "../RoutinesView";
 
 type StoredRoutine = NonNullable<ReturnType<typeof useRoutines>["data"]>[number];
 
@@ -29,8 +35,8 @@ const routineItemOf = (routine: StoredRoutine): RoutineItem => ({
  * without a connection. Back returns to the Train tab, and the archived link opens the archived routines.
  * Make active on an other routine asks first, as the `routines · set-active` board draws it, with today in
  * the profile's zone: the routine plans from that day. Until the zone is known the question cannot name
- * the day, so Make active is not drawn. Nothing edits or creates a routine yet, so those controls are not
- * drawn.
+ * the day, so Make active is not drawn. A routine's card or row opens its editor, and New routine and
+ * Create routine open the editor for a new one.
  */
 export function RoutinesScreen() {
   const router = useRouter();
@@ -39,6 +45,8 @@ export function RoutinesScreen() {
   const timeZone = useProfileTimeZone({ enabled });
   const now = useNow();
   const makeActive = useMakeRoutineActive();
+  // A second tap while an editor is sliding in would stack it twice.
+  const openOnce = useOpenOnce();
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Train tab instead.
@@ -52,7 +60,19 @@ export function RoutinesScreen() {
   const navigation = {
     onBack: goBack,
     onOpenArchived: () => {
-      router.push(archivedRoutinesPath());
+      openOnce(() => {
+        router.push(archivedRoutinesPath());
+      });
+    },
+    onCreateRoutine: () => {
+      openOnce(() => {
+        router.push(newRoutinePath());
+      });
+    },
+    onEditRoutine: ({ id }: RoutineRef) => {
+      openOnce(() => {
+        router.push(editRoutinePath(id));
+      });
     },
   };
 

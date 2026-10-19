@@ -6,6 +6,7 @@ import { act, cleanup, render, screen, userEvent } from "@testing-library/react-
 import { setUpTests } from "react-native-reanimated";
 
 import { RoutineEditorScreen } from "../components/RoutineEditorScreen";
+import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, resetDiaryBackend } from "./support/diaryBackend";
 import { resetRouterMock } from "./support/expoRouterMock";
@@ -78,7 +79,9 @@ describe("the edit routine screen's exercises", () => {
     await render(
       <ThemeProvider fixedPreference="dark">
         <KeyLowProvider client={routineDetailClient} queryClient={queryClient}>
-          <RoutineEditorScreen id={ROUTINE_ID} />
+          <ToastProvider>
+            <RoutineEditorScreen id={ROUTINE_ID} />
+          </ToastProvider>
         </KeyLowProvider>
       </ThemeProvider>,
     );
@@ -91,6 +94,6 @@ describe("the edit routine screen's exercises", () => {
 
     expect(screen.getAllByText("An exercise")).toHaveLength(5);
     expect(screen.getAllByLabelText("Sets for An exercise")).toHaveLength(5);
-    expect(screen.getAllByRole("button", { name: "Remove An exercise" })).toHaveLength(5);
+    expect(screen.getAllByRole("button", { name: "Options for An exercise" })).toHaveLength(5);
   });
 });

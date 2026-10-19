@@ -6,15 +6,17 @@ import {
 } from "@keylow/core/copy";
 import { Text as NativeText, View } from "react-native";
 
-import { Card, IconButton, Input, PressableSurface, Text } from "../ui";
+import { Card, FieldError, IconButton, Input, PressableSurface, Text } from "../ui";
 
 import type { RoutineDayCardProps } from "./types";
 
 /**
  * One day of the routine editor, as the `routines · editor` board draws its header: the name over the
  * exercises and sets, the weekday as a chip, and the control that opens or closes the card. The weekday chip
- * opens the sheet that picks it. The body is where the day's exercises go (the next ticket); until then it
- * holds the day's name field and its menu, which no board draws. The words are core's (`describeEditorDay`).
+ * opens the sheet that picks it, and takes the danger border with its sentence under the header when the
+ * weekday is a problem, as the `routines · invalid` board draws it. The body holds the day's name field and
+ * its menu, which no board draws, and then the day's exercises (the children). The words are core's
+ * (`describeEditorDay`).
  */
 export function RoutineDayCard({
   name,
@@ -25,6 +27,8 @@ export function RoutineDayCard({
   onToggle,
   onOpenWeekday,
   onOpenMenu,
+  weekdayError,
+  nameError,
   onRename,
   children,
 }: RoutineDayCardProps) {
@@ -43,7 +47,7 @@ export function RoutineDayCard({
         </View>
         {/* The chip is 32 points, the board's, and reaches the 44 point touch target through its hit slop. */}
         <PressableSurface
-          className="h-[32px] items-center justify-center rounded-pill border border-border bg-surface-raised px-3"
+          className={`h-[32px] items-center justify-center rounded-pill border bg-surface-raised px-3 ${weekdayError === undefined ? "border-border" : "border-danger"}`}
           hitSlop={{ top: 6, bottom: 6 }}
           label={copy.weekdayAccessibleName}
           onPress={onOpenWeekday}
@@ -66,12 +70,16 @@ export function RoutineDayCard({
           onPress={onToggle}
         />
       </View>
+      {weekdayError === undefined ? null : (
+        <FieldError className="px-3 pb-2">{weekdayError}</FieldError>
+      )}
       {isOpen ? (
         <View className="flex-row items-end gap-2 border-t border-border p-3">
           <View className="min-w-0 flex-1">
             <Input
               accessibilityLabel={describeDayNameFieldName(name)}
               density="compact"
+              error={nameError}
               label={ROUTINE_DAY_CONTROLS.dayNameLabel}
               value={name}
               onChangeText={onRename}

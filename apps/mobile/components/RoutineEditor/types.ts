@@ -6,6 +6,8 @@ export type RoutineEditorProps = {
   initialDraft?: RoutineDraft | undefined;
   /** The names of the draft's exercises, by exercise id, for the rows that show them. */
   exerciseNames?: ExerciseNames | undefined;
+  /** The id of the routine being edited, which Save replaces. Leave it out to create a routine. */
+  routineId?: string | undefined;
 };
 
 /** A day of the draft with what only the editor needs: a key that stays with it, and whether its body is showing. */
@@ -34,7 +36,19 @@ export type EditorAction =
   | { type: "toggleDay"; key: number }
   | { type: "addExercise"; dayKey: number; exercise: { id: string; name: string } }
   | { type: "editExercise"; dayKey: number; key: number; field: ExerciseField; text: string }
-  | { type: "removeExercise"; dayKey: number; key: number };
+  | { type: "removeExercise"; dayKey: number; key: number }
+  | { type: "moveDay"; key: number; by: MoveDirection }
+  | { type: "moveExercise"; dayKey: number; key: number; by: MoveDirection }
+  | { type: "openDays"; keys: readonly number[] };
+
+/** One place towards the start of the list (up), or towards its end (down). */
+export type MoveDirection = "up" | "down";
 
 /** The sheet over the editor, and the day it is about. The name is kept as it was when the sheet opened, so the sheet's title holds while it slides away. */
-export type OpenSheet = { kind: "weekday" | "menu" | "exercise"; dayKey: number; dayName: string };
+export type OpenSheet = {
+  kind: "weekday" | "menu" | "exercise" | "exerciseMenu";
+  dayKey: number;
+  dayName: string;
+  exerciseKey?: number | undefined;
+  exerciseName?: string | undefined;
+};

@@ -12,6 +12,7 @@ import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-libra
 import { setUpTests } from "react-native-reanimated";
 
 import { RoutineEditorScreen } from "../components/RoutineEditorScreen";
+import { ToastProvider } from "../components/ui";
 import { routinesPath } from "../lib/routineRoutes";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, resetDiaryBackend } from "./support/diaryBackend";
@@ -57,7 +58,9 @@ async function showScreen(id: string) {
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={routineDetailClient} queryClient={queryClient}>
-        <RoutineEditorScreen id={id} />
+        <ToastProvider>
+          <RoutineEditorScreen id={id} />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );
