@@ -1,4 +1,5 @@
 packages/db/supabase/seeds/10_cofid_subset.sql linguist-generated -diff
+packages/db/supabase/migrations/*_exercise_library.sql linguist-generated -diff
 
 # The copy index is one independent `export *` line per module. Git's union driver keeps the lines both
 # branches added when you rebase or merge locally, so two branches that each add a module rebase without

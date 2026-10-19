@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { createExerciseSeedStore } from "./exerciseSeedStore";
+import { createExerciseMigrationStore } from "./exerciseMigrationStore";
 import { EXERCISE_FILES, SOURCE_COMMIT } from "./files";
 import { importExercises } from "./importExercises";
 import { readPinnedFile } from "./pinnedSource";
@@ -29,17 +29,19 @@ export function readExerciseLibrary(packageDirectory: string): ExerciseLibrary {
   };
 }
 
-/** The whole library as the text of an idempotent SQL seed file. Connects to nothing. */
-export async function renderExerciseSeed(
+/** The label of the one import run a generated migration records. */
+const MIGRATION_LABEL = "migration";
+
+/** The whole library as the text of an idempotent SQL migration. Connects to nothing. */
+export async function renderExerciseMigration(
   library: ExerciseLibrary,
-  label: string,
   log: (message: string) => void = () => undefined,
 ): Promise<string> {
-  const store = createExerciseSeedStore();
+  const store = createExerciseMigrationStore();
   await importExercises(store, {
     ...library,
     sourceCommit: SOURCE_COMMIT,
-    label,
+    label: MIGRATION_LABEL,
     dryRun: false,
     batchSize: 100,
     log,

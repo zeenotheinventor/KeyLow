@@ -106,10 +106,10 @@ All 22 ids are primary somewhere. The thin ones are discussed in `MAPPING.md`, "
 `pnpm --filter @keylow/db import:exercises --label <label>` reads `exercises.curated.csv`, runs the checker on it and refuses to write anything if the checker fails. It then writes the exercises, their muscle maps and their source rows to the database that `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` name, or to the local stack when neither is set. The unit tests under `test/unit/exercises` and the integration tests `test/integration/database/exercises-import.test.ts` and `exercise-library.test.ts` cover it.
 
 - `--dry-run` maps and checks every row and writes nothing. It connects to nothing.
-- `--emit-sql <file>` writes the same library as the seed `supabase/seeds/40_exercises.sql` and connects to nothing.
+- `--emit-migration <file>` writes the same library as a migration, `supabase/migrations/<timestamp>_exercise_library.sql`, and connects to nothing. It takes no `--label`.
 - One `exercise_import_runs` row records each import (the label, the source repository's commit and the sha256 of the CSV), and each exercise has one `exercise_source_data` row holding its entry of the source file exactly as it was fetched, pointing at the latest run.
 - Exercises are keyed by `(source, source_ref)`. Importing the same CSV again leaves every exercise row and every map row as it was, and only moves the source rows to the new run. A changed name, equipment or mechanic updates that exercise. A changed muscle, role or weight replaces that exercise's map and no other. An exercise that the CSV no longer has is soft deleted (`deleted_at`) and never deleted, and it is live again if a later CSV has it back.
-- Every write goes through the function `public.import_exercises`, one call per batch of 100 exercises. PostgREST gives each request its own transaction and the primary-muscle trigger is checked at commit, so an exercise and its map have to arrive in one call. The seed calls the same function.
+- Every write goes through the function `public.import_exercises`, one call per batch of 100 exercises. PostgREST gives each request its own transaction and the primary-muscle trigger is checked at commit, so an exercise and its map have to arrive in one call. The migration calls the same function.
 - No log line and no error message holds an exercise name, a source reference or a muscle. A failed check names its rule and the line of the CSV, and a database failure names only its error code.
 
 ### Result
@@ -142,15 +142,10 @@ Exercises that have each muscle as primary, counted in the database after the im
 
 `exercise-library.test.ts` repeats that check on any database: each of the 22 muscle ids has a live global exercise with that muscle as its primary.
 
-### Seed
+### Migration
 
-`supabase/seeds/40_exercises.sql` holds the full curated list (673 exercises), not a subset. It is 996 kB, about a third of the size of the CoFID subset seed next to it. Applying it with `psql` to a database with the migrations took 0.41 s, and a fresh `supabase start` of a scratch stack (all migrations, then every seed) took 26 s in total, so there was no reason to cut it. A unit test regenerates the seed from the CSV and the source file and fails if the committed file differs.
+`supabase/migrations/20261019030000_exercise_library.sql` holds the full curated list (673 exercises), not a subset, and loads it into every database that applies the migrations. It is 996 kB. A unit test regenerates the newest `*_exercise_library.sql` from the CSV and the source file and fails if the committed file differs. A later CSV change is a new generated migration, never an edit of an applied one.
 
 ### Production
 
-The seeds never reach production, because `supabase db push` does not run them. Zee runs the import against production once the migration `20261018150000_import_exercises.sql` is deployed, with the production URL and service role key set, first as a dry run and then for real:
-
-```sh
-pnpm --filter @keylow/db import:exercises --label production-<date> --dry-run
-SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... pnpm --filter @keylow/db import:exercises --label production-<date>
-```
+The library reaches production through the migration: Deploy Supabase runs `supabase db push` on the merge to `main`, and nobody runs the import by hand. The `--label` import above stays for a local stack.
