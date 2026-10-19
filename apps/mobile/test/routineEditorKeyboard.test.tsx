@@ -6,6 +6,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { RoutineEditor } from "../components/RoutineEditor";
 import { ThemeProvider } from "../lib/theme";
+import { EditorProviders } from "./support/editorProviders";
 import { resetRouterMock } from "./support/expoRouterMock";
 import {
   focusFieldAt,
@@ -45,7 +46,9 @@ async function showEditorWithLegsOpen() {
   const user = userEvent.setup();
   await render(
     <ThemeProvider fixedPreference="dark">
-      <RoutineEditor exerciseNames={pushPullLegsExerciseNames} initialDraft={pushPullLegsDraft} />
+      <EditorProviders>
+        <RoutineEditor exerciseNames={pushPullLegsExerciseNames} initialDraft={pushPullLegsDraft} />
+      </EditorProviders>
     </ThemeProvider>,
   );
   await user.press(screen.getByRole("button", { name: "Show Legs exercises" }));

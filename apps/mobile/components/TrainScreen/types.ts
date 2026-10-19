@@ -18,6 +18,8 @@ export type TrainScreenProps = {
   onLogSession?: ((start: TrainSessionStart) => void) | undefined;
   /** Opens the routine editor: "Create routine". Drawn only when it is given. */
   onCreateRoutine?: (() => void) | undefined;
+  /** Opens the routines list: the "Routines" button in the header. Drawn only when it is given. */
+  onOpenRoutines?: (() => void) | undefined;
   /** Opens the goal questionnaire: "Set your goal". Drawn only when it is given. */
   onSetGoal?: (() => void) | undefined;
   /** Starts the day's session: "Start Legs" on the Today card. Drawn only when it is given. */

@@ -44,6 +44,7 @@ export function TrainScreen({
   isStarting = false,
   onLogSession,
   onCreateRoutine,
+  onOpenRoutines,
   onSetGoal,
   onStart,
   onResume,
@@ -66,16 +67,33 @@ export function TrainScreen({
     );
   }
 
+  // The board draws the Routines link on every Train home but the first visit's, and not while it loads or fails.
+  const isFirstTime =
+    home.status === "ready" && home.today === null && !home.hasRoutine && !home.hasLoggedSession;
+  const hasHistoryLink = onOpenHistory !== undefined;
+  const hasRoutinesLink = home.status === "ready" && !isFirstTime && onOpenRoutines !== undefined;
+
   return (
     <View className="flex-1 bg-background">
       <ScreenHeader
         title={TRAIN_HOME.title}
         trailing={
-          onOpenHistory === undefined ? undefined : (
-            <Button icon="History" size="sm" variant="secondary" onPress={onOpenHistory}>
-              {TRAIN_HOME.historyLink}
-            </Button>
-          )
+          hasHistoryLink || hasRoutinesLink ? (
+            // History first, then Routines: a row that wraps under the title when large text leaves no room, and
+            // takes at most 70 percent of the header so the title keeps the rest.
+            <View className="max-w-[70%] shrink flex-row flex-wrap justify-end gap-2">
+              {hasHistoryLink ? (
+                <Button icon="History" size="sm" variant="secondary" onPress={onOpenHistory}>
+                  {TRAIN_HOME.historyLink}
+                </Button>
+              ) : null}
+              {hasRoutinesLink ? (
+                <Button icon="Calendar" size="sm" variant="secondary" onPress={onOpenRoutines}>
+                  {TRAIN_HOME.routinesLink}
+                </Button>
+              ) : null}
+            </View>
+          ) : undefined
         }
       />
       <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-4 pt-1">

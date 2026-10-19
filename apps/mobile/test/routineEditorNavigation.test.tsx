@@ -12,6 +12,7 @@ import { setUpTests } from "react-native-reanimated";
 import TrainLayout from "../app/(tabs)/train/_layout";
 import EditRoutineRoute from "../app/(tabs)/train/routines/[id]";
 import NewRoutineRoute from "../app/(tabs)/train/routines/new";
+import { ToastProvider } from "../components/ui";
 import { routinesPath, trainPath } from "../lib/routineRoutes";
 import { ThemeProvider } from "../lib/theme";
 import { resetDiaryBackend } from "./support/diaryBackend";
@@ -52,7 +53,9 @@ function Providers() {
   return (
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={routineDetailClient} queryClient={queryClient}>
-        <Slot />
+        <ToastProvider>
+          <Slot />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>
   );

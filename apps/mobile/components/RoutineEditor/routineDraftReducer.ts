@@ -13,7 +13,7 @@ import {
 } from "./editorExercise";
 
 import type { EditorExercise, ExerciseNames } from "./editorExercise";
-import type { EditorAction, EditorDay, EditorState } from "./types";
+import type { EditorAction, EditorDay, EditorState, MoveDirection } from "./types";
 import type { RoutineDraft } from "@keylow/core/training";
 
 /** The editor's state for a routine, every day closed. `exerciseNames` gives each exercise's name by its id. */
@@ -67,6 +67,19 @@ function newDayName(days: readonly EditorDay[]): string {
       return name;
     }
   }
+}
+
+/** The list with the item at `index` swapped with its neighbour in the direction, or the list itself when there is no neighbour. */
+function moved<Item>(items: readonly Item[], index: number, by: MoveDirection): readonly Item[] {
+  const target = by === "up" ? index - 1 : index + 1;
+  const item = items[index];
+  const neighbour = items[target];
+  if (item === undefined || neighbour === undefined) {
+    return items;
+  }
+  return items.map((existing, position) =>
+    position === index ? neighbour : position === target ? item : existing,
+  );
 }
 
 const changeDay = (
@@ -145,5 +158,34 @@ export function routineDraftReducer(state: EditorState, action: EditorAction): E
       return changeExercises(state, action.dayKey, (exercises) =>
         exercises.filter((exercise) => exercise.key !== action.key),
       );
+    case "moveDay": {
+      const days = moved(
+        state.days,
+        state.days.findIndex((day) => day.key === action.key),
+        action.by,
+      );
+      return days === state.days ? state : { ...state, days };
+    }
+    case "moveExercise": {
+      const day = state.days.find(({ key }) => key === action.dayKey);
+      if (day === undefined) {
+        return state;
+      }
+      const exercises = moved(
+        day.exercises,
+        day.exercises.findIndex((exercise) => exercise.key === action.key),
+        action.by,
+      );
+      return exercises === day.exercises
+        ? state
+        : changeDay(state, action.dayKey, (target) => ({ ...target, exercises }));
+    }
+    case "openDays":
+      return {
+        ...state,
+        days: state.days.map((day) =>
+          action.keys.includes(day.key) ? { ...day, isOpen: true } : day,
+        ),
+      };
   }
 }

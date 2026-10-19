@@ -400,6 +400,22 @@ export const ROUTINE_WEEKDAY_CHOICES: readonly Readonly<{
   { weekday: null, label: ANY_WEEKDAY_LABEL },
 ];
 
+/**
+ * The two moves in a day's menu and in an exercise's menu. The boards draw no way to reorder (canvas gap 4,
+ * KEY-454 proposes these words, to be drawn by the designers): there is no drag.
+ */
+export const ROUTINE_MOVE = {
+  upAction: "Move up",
+  downAction: "Move down",
+} as const;
+
+/** The toast when a routine could not be saved, offline or not: the draft is still on the screen. No board draws it. */
+export const ROUTINE_SAVE_FAILED = "Your routine did not save, check your connection and try again";
+
+/** The name of the button that opens an exercise's menu: "Options for Barbell squat". */
+export const describeExerciseMenuName = (exerciseName: string): string =>
+  `Options for ${exerciseName}`;
+
 /** The name of the button that opens a day's menu: "Options for Pull". */
 export const describeDayMenuName = (dayName: string): string => `Options for ${dayName}`;
 

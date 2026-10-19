@@ -1,12 +1,18 @@
+import { useSaveRoutine } from "@keylow/api-client";
 import {
   ROUTINE_DAY_CONTROLS,
   ROUTINE_DISCARD,
   ROUTINE_EDITOR,
+  ROUTINE_MOVE,
+  ROUTINE_SAVE_FAILED,
   ROUTINE_WEEKDAY_CHOICES,
   describeDaysSummary,
+  describeProblemsBanner,
+  describeRemoveExercise,
   describeWeekdayPickerTitle,
 } from "@keylow/core/copy";
 import { MAX_DAYS_PER_ROUTINE, MAX_EXERCISES_PER_ROUTINE_DAY } from "@keylow/core/training";
+import { onlineManager } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { usePreventRemove } from "expo-router/react-navigation";
 import { vars } from "nativewind";
@@ -20,7 +26,8 @@ import {
   startingStateOf,
   summaryOf,
 } from "./routineDraftReducer";
-import { leaveRoutineEditor } from "../../lib/leaveRoutineEditor";
+import { routineMarksOf } from "./routineMarks";
+import { leaveRoutineEditor, leaveRoutineEditorSaved } from "../../lib/leaveRoutineEditor";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { AddExerciseSheet } from "../AddExerciseSheet";
@@ -28,19 +35,30 @@ import { RoutineDayCard } from "../RoutineDayCard";
 import { RoutineDayExercises } from "../RoutineDayExercises";
 import {
   ActionMenu,
+  Banner,
   BottomSheet,
   Button,
   ChipGroup,
   ConfirmDialog,
+  FieldError,
   Input,
   SheetHeader,
   Text,
+  useToast,
 } from "../ui";
 
-import type { OpenSheet, RoutineEditorProps } from "./types";
+import type { RoutineMarks } from "./routineMarks";
+import type { EditorState, MoveDirection, OpenSheet, RoutineEditorProps } from "./types";
 import type { RoutineDraft } from "@keylow/core/training";
 
 const emptyDraft: RoutineDraft = { name: "", days: [] };
+
+// How long a save may hold the screen. A link that stalls never settles the save, and Android has no network
+// timeout, so after this the person can leave and is asked about the changes as usual.
+const SAVE_HOLD_CEILING_MILLISECONDS = 12000;
+
+// How far under the top of the scroll view the first problem is scrolled to.
+const ROOM_ABOVE_PROBLEM = 12;
 
 // A weekday sheet's chips carry a text value, which a null weekday (any day) has no number for.
 const ANY_WEEKDAY_VALUE = "any";
@@ -49,15 +67,72 @@ const weekdayOptions = ROUTINE_WEEKDAY_CHOICES.map(({ weekday, label }) => ({
   label,
 }));
 
+/** Whether a day holds a problem a closed day would hide: its name, or one of its exercises. */
+const dayHasMarks = (marks: RoutineMarks, position: number): boolean => {
+  const day = marks.days[position];
+  return (
+    day !== undefined &&
+    (day.name !== undefined || day.exercises.some((mark) => mark !== undefined))
+  );
+};
+
+/** The mark the first problem is in, in the order the editor draws them: the name, then each day and its exercises. */
+function firstMarkId(state: EditorState, marks: RoutineMarks): string | undefined {
+  if (marks.name !== undefined) {
+    return "name";
+  }
+  for (const [position, dayMarks] of marks.days.entries()) {
+    const day = state.days[position];
+    if (day === undefined) {
+      continue;
+    }
+    if (dayMarks.header !== undefined || dayMarks.name !== undefined) {
+      return `day:${day.key}`;
+    }
+    const exercisePosition = dayMarks.exercises.findIndex((mark) => mark !== undefined);
+    const exercise = day.exercises[exercisePosition];
+    if (exercise !== undefined) {
+      return `exercise:${day.key}:${exercise.key}`;
+    }
+  }
+  return undefined;
+}
+
+/** Move up and Move down, the first dimmed at the top of its list and the second at the bottom. */
+const moveItems = (isFirst: boolean, isLast: boolean, move: (by: MoveDirection) => void) =>
+  [
+    {
+      label: ROUTINE_MOVE.upAction,
+      icon: "ChevronUp",
+      disabled: isFirst,
+      onPress: () => {
+        move("up");
+      },
+    },
+    {
+      label: ROUTINE_MOVE.downAction,
+      icon: "ChevronDown",
+      disabled: isLast,
+      onPress: () => {
+        move("down");
+      },
+    },
+  ] as const;
+
 /**
  * The routine editor's shell, as the `routines · editor` board draws it: Cancel editing, the title and a
  * Save, the routine's name, and a card for each day under a Days heading that sums them up as core words it.
- * The draft is a reducer; the days' exercises, the checks, reordering and Save are the tickets after this
- * one, so Save is drawn but cannot be pressed. Closing with changes asks first, by the header's Cancel, the
- * Android back button and the iOS swipe back alike.
+ * The draft is a reducer. Save checks the draft with core's rules: with problems it marks each one next to
+ * its field, counts them in the banner and scrolls to the first (the marks then follow the draft as it is
+ * fixed), and with none it saves, which needs a connection. A save that works returns to the routines list,
+ * and one that fails keeps the draft and says so in a toast. A day's and an exercise's menus move them up
+ * and down. Closing with changes asks first, by the header's Cancel, the Android back button and the iOS
+ * swipe back alike, but never after a save.
  */
-export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProps) {
+export function RoutineEditor({ initialDraft, exerciseNames, routineId }: RoutineEditorProps) {
   const router = useRouter();
+  const toast = useToast();
+  const saveRoutine = useSaveRoutine();
   const insets = useSafeAreaInsets();
   const [startingState] = useState(() =>
     startingStateOf(initialDraft ?? emptyDraft, exerciseNames),
@@ -66,7 +141,16 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
   const [openSheet, setOpenSheet] = useState<OpenSheet | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
-  const [isLeaving, setIsLeaving] = useState(false);
+  const [exit, setExit] = useState<"discarded" | "saved" | null>(null);
+  const isLeaving = exit !== null;
+  // Marks show from the first press of Save with problems, and follow the draft after.
+  const [areMarksShown, setAreMarksShown] = useState(false);
+  const [scrollRequest, setScrollRequest] = useState(0);
+  const [markNodes] = useState(() => new Map<string, View>());
+  const markToScrollTo = useRef<string | undefined>(undefined);
+  const [isSaveSlow, setIsSaveSlow] = useState(false);
+  const slowSaveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const scrollOffset = useRef(0);
   const frameRef = useRef<View>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS adjusts the scroll view's insets.
@@ -76,24 +160,117 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
   const draft = draftOfState(state);
   const isChanged = JSON.stringify(draft) !== JSON.stringify(draftOfState(startingState));
   const summary = summaryOf(state);
+  const marks = areMarksShown ? routineMarksOf(draft) : undefined;
   // The sheet keeps its day while it slides away, so its title holds. A removed day has no weekday to show.
   const sheetDay =
     openSheet === null ? undefined : state.days.find((day) => day.key === openSheet.dayKey);
+  const sheetDayPosition = state.days.findIndex((day) => day.key === sheetDay?.key);
+  const sheetExercises = sheetDay?.exercises ?? [];
+  const sheetExercisePosition = sheetExercises.findIndex(
+    (exercise) => exercise.key === openSheet?.exerciseKey,
+  );
 
   // The Android back button and the iOS swipe back end here when changes would be lost. Discarding lifts the
   // hold first, and the way out runs once, after the render that lifted it, or the navigator would still
-  // refuse it.
-  usePreventRemove(isChanged && !isLeaving, () => {
-    setIsDiscardOpen(true);
+  // refuse it. While a save is on its way the screen is held whether or not it changed, and asks nothing: the
+  // save cannot be taken back, so the person waits for it.
+  const isSaveHolding = saveRoutine.isPending && !isSaveSlow;
+  usePreventRemove((isChanged || isSaveHolding) && !isLeaving, () => {
+    if (!isSaveHolding) {
+      setIsDiscardOpen(true);
+    }
   });
 
   useEffect(() => {
-    if (isLeaving) {
+    if (exit === "discarded") {
       leaveRoutineEditor(router);
+    } else if (exit === "saved") {
+      leaveRoutineEditorSaved(router);
     }
-  }, [isLeaving, router]);
+  }, [exit, router]);
+
+  useEffect(
+    () => () => {
+      clearTimeout(slowSaveTimer.current);
+    },
+    [],
+  );
+
+  // The scroll waits for the render that opened the days with problems, because a row in a closed day is not drawn.
+  useEffect(() => {
+    const node =
+      markToScrollTo.current === undefined ? undefined : markNodes.get(markToScrollTo.current);
+    const scrollView = scrollViewRef.current;
+    const scrollViewHost = scrollView?.getNativeScrollRef();
+    if (scrollRequest === 0 || node === undefined || scrollView === null || !scrollViewHost) {
+      return;
+    }
+    node.measureInWindow((_left, top) => {
+      scrollViewHost.measureInWindow((_scrollViewLeft, scrollViewTop) => {
+        scrollView.scrollTo({
+          y: Math.max(0, scrollOffset.current + top - scrollViewTop - ROOM_ABOVE_PROBLEM),
+          animated: true,
+        });
+      });
+    });
+  }, [scrollRequest, markNodes]);
+
+  function markNode(id: string) {
+    return (node: View | null) => {
+      if (node === null) {
+        markNodes.delete(id);
+      } else {
+        markNodes.set(id, node);
+      }
+    };
+  }
+
+  async function save() {
+    const found = routineMarksOf(draft);
+    if (found.count > 0) {
+      setAreMarksShown(true);
+      dispatch({
+        type: "openDays",
+        keys: state.days
+          .filter((_, position) => dayHasMarks(found, position))
+          .map((day) => day.key),
+      });
+      markToScrollTo.current = firstMarkId(state, found);
+      setScrollRequest((request) => request + 1);
+      return;
+    }
+    // Nothing is queued, so with no connection the press goes straight to the failure.
+    if (!onlineManager.isOnline()) {
+      showSaveFailed();
+      return;
+    }
+    setIsSaveSlow(false);
+    clearTimeout(slowSaveTimer.current);
+    slowSaveTimer.current = setTimeout(() => {
+      setIsSaveSlow(true);
+    }, SAVE_HOLD_CEILING_MILLISECONDS);
+    try {
+      await saveRoutine.mutateAsync({ id: routineId ?? null, draft });
+    } catch {
+      clearTimeout(slowSaveTimer.current);
+      setIsSaveSlow(false);
+      showSaveFailed();
+      return;
+    }
+    clearTimeout(slowSaveTimer.current);
+    // The hold on leaving lifts first, and the way out runs after the render that lifted it.
+    setExit("saved");
+  }
+
+  function showSaveFailed() {
+    toast.show({ message: ROUTINE_SAVE_FAILED, tone: "danger", icon: "CircleAlert" });
+  }
 
   function close() {
+    // The save is on its way and cannot be taken back, so leaving would only look like a discard.
+    if (isSaveHolding) {
+      return;
+    }
     if (isChanged) {
       setIsDiscardOpen(true);
     } else {
@@ -101,10 +278,20 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
     }
   }
 
-  function openSheetFor(kind: OpenSheet["kind"], day: { key: number; name: string }) {
+  function openSheetFor(
+    kind: OpenSheet["kind"],
+    day: { key: number; name: string },
+    exercise?: { key: number; name: string },
+  ) {
     // A focused field would keep the keyboard up over the sheet.
     Keyboard.dismiss();
-    setOpenSheet({ kind, dayKey: day.key, dayName: day.name });
+    setOpenSheet({
+      kind,
+      dayKey: day.key,
+      dayName: day.name,
+      exerciseKey: exercise?.key,
+      exerciseName: exercise?.name,
+    });
     setIsSheetOpen(true);
   }
 
@@ -123,7 +310,13 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
         leading={{ icon: "ChevronLeft", label: ROUTINE_EDITOR.cancelLabel, onPress: close }}
         title={initialDraft === undefined ? ROUTINE_EDITOR.newTitle : ROUTINE_EDITOR.title}
         trailingSlot={
-          <Button disabled size="sm">
+          <Button
+            loading={saveRoutine.isPending}
+            size="sm"
+            onPress={() => {
+              void save();
+            }}
+          >
             {ROUTINE_EDITOR.saveAction}
           </Button>
         }
@@ -135,16 +328,25 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
         contentContainerClassName="grow gap-3 px-4 pb-4 pt-1"
         keyboardShouldPersistTaps="handled"
         scrollEventThrottle={16}
-        onScroll={trackScrollOffset}
+        onScroll={(event) => {
+          scrollOffset.current = event.nativeEvent.contentOffset.y;
+          trackScrollOffset(event);
+        }}
       >
-        <Input
-          density="compact"
-          label={ROUTINE_EDITOR.nameLabel}
-          value={state.name}
-          onChangeText={(name) => {
-            dispatch({ type: "renameRoutine", name });
-          }}
-        />
+        {marks === undefined || marks.count === 0 ? null : (
+          <Banner sentence title={describeProblemsBanner(marks.count)} variant="error" />
+        )}
+        <View ref={markNode("name")}>
+          <Input
+            density="compact"
+            error={marks?.name}
+            label={ROUTINE_EDITOR.nameLabel}
+            value={state.name}
+            onChangeText={(name) => {
+              dispatch({ type: "renameRoutine", name });
+            }}
+          />
+        </View>
         <View className="gap-2">
           <View className="flex-row items-baseline justify-between">
             <Text role="heading" variant="body-strong">
@@ -157,41 +359,48 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
               })}
             </Text>
           </View>
+          {marks?.daysMessage === undefined ? null : <FieldError>{marks.daysMessage}</FieldError>}
           {state.days.map((day, position) => (
-            <RoutineDayCard
-              exerciseCount={summary.days[position]?.exerciseCount ?? 0}
-              isOpen={day.isOpen}
-              key={day.key}
-              name={day.name}
-              setCount={summary.days[position]?.setCount ?? 0}
-              weekday={day.weekday}
-              onOpenMenu={() => {
-                openSheetFor("menu", day);
-              }}
-              onOpenWeekday={() => {
-                openSheetFor("weekday", day);
-              }}
-              onRename={(name) => {
-                dispatch({ type: "renameDay", key: day.key, name });
-              }}
-              onToggle={() => {
-                dispatch({ type: "toggleDay", key: day.key });
-              }}
-            >
-              <RoutineDayExercises
-                exercises={day.exercises}
-                isFull={day.exercises.length >= MAX_EXERCISES_PER_ROUTINE_DAY}
-                onAdd={() => {
-                  openSheetFor("exercise", day);
+            <View key={day.key} ref={markNode(`day:${day.key}`)}>
+              <RoutineDayCard
+                exerciseCount={summary.days[position]?.exerciseCount ?? 0}
+                isOpen={day.isOpen}
+                name={day.name}
+                nameError={marks?.days[position]?.name}
+                setCount={summary.days[position]?.setCount ?? 0}
+                weekday={day.weekday}
+                weekdayError={marks?.days[position]?.header}
+                onOpenMenu={() => {
+                  openSheetFor("menu", day);
                 }}
-                onChangeField={(key, field, text) => {
-                  dispatch({ type: "editExercise", dayKey: day.key, key, field, text });
+                onOpenWeekday={() => {
+                  openSheetFor("weekday", day);
                 }}
-                onRemove={(key) => {
-                  dispatch({ type: "removeExercise", dayKey: day.key, key });
+                onRename={(name) => {
+                  dispatch({ type: "renameDay", key: day.key, name });
                 }}
-              />
-            </RoutineDayCard>
+                onToggle={() => {
+                  dispatch({ type: "toggleDay", key: day.key });
+                }}
+              >
+                <RoutineDayExercises
+                  exercises={day.exercises}
+                  isFull={day.exercises.length >= MAX_EXERCISES_PER_ROUTINE_DAY}
+                  marks={marks?.days[position]?.exercises}
+                  registerRow={(key) => markNode(`exercise:${day.key}:${key}`)}
+                  onAdd={() => {
+                    openSheetFor("exercise", day);
+                  }}
+                  onChangeField={(key, field, text) => {
+                    dispatch({ type: "editExercise", dayKey: day.key, key, field, text });
+                  }}
+                  onOpenMenu={(key) => {
+                    const exercise = day.exercises.find((candidate) => candidate.key === key);
+                    openSheetFor("exerciseMenu", day, exercise);
+                  }}
+                />
+              </RoutineDayCard>
+            </View>
           ))}
           <Button
             disabled={state.days.length >= MAX_DAYS_PER_ROUTINE}
@@ -241,6 +450,15 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
       >
         <ActionMenu
           items={[
+            ...moveItems(
+              sheetDayPosition === 0,
+              sheetDayPosition === state.days.length - 1,
+              (by) => {
+                if (sheetDay !== undefined) {
+                  dispatch({ type: "moveDay", key: sheetDay.key, by });
+                }
+              },
+            ),
             {
               label: ROUTINE_DAY_CONTROLS.removeDayAction,
               icon: "Trash2",
@@ -248,6 +466,45 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
               onPress: () => {
                 if (sheetDay !== undefined) {
                   dispatch({ type: "removeDay", key: sheetDay.key });
+                }
+                closeSheet();
+              },
+            },
+          ]}
+        />
+      </BottomSheet>
+      <BottomSheet
+        label={openSheet?.exerciseName ?? ""}
+        open={isSheetOpen && openSheet?.kind === "exerciseMenu"}
+        onClose={closeSheet}
+      >
+        <ActionMenu
+          items={[
+            ...moveItems(
+              sheetExercisePosition === 0,
+              sheetExercisePosition === sheetExercises.length - 1,
+              (by) => {
+                if (sheetDay !== undefined && openSheet?.exerciseKey !== undefined) {
+                  dispatch({
+                    type: "moveExercise",
+                    dayKey: sheetDay.key,
+                    key: openSheet.exerciseKey,
+                    by,
+                  });
+                }
+              },
+            ),
+            {
+              label: describeRemoveExercise(openSheet?.exerciseName ?? ""),
+              icon: "Trash2",
+              destructive: true,
+              onPress: () => {
+                if (sheetDay !== undefined && openSheet?.exerciseKey !== undefined) {
+                  dispatch({
+                    type: "removeExercise",
+                    dayKey: sheetDay.key,
+                    key: openSheet.exerciseKey,
+                  });
                 }
                 closeSheet();
               },
@@ -277,7 +534,7 @@ export function RoutineEditor({ initialDraft, exerciseNames }: RoutineEditorProp
         }}
         onConfirm={() => {
           setIsDiscardOpen(false);
-          setIsLeaving(true);
+          setExit("discarded");
         }}
       />
     </View>

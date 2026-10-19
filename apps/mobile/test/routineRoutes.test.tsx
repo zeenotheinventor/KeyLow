@@ -7,7 +7,12 @@ import { getMockContext } from "expo-router/testing-library";
 import { Text } from "react-native";
 
 import TrainLayout from "../app/(tabs)/train/_layout";
-import { archivedRoutinesPath, routinesPath } from "../lib/routineRoutes";
+import {
+  archivedRoutinesPath,
+  editRoutinePath,
+  newRoutinePath,
+  routinesPath,
+} from "../lib/routineRoutes";
 import { ThemeProvider } from "../lib/theme";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -30,9 +35,18 @@ describe("the routines addresses and the screens under app/", () => {
     expect(archivedRoutinesPath()).toBe("/train/routines/archived");
   });
 
+  it("should address the new routine editor and a routine's editor under the routines", () => {
+    expect(newRoutinePath()).toBe("/train/routines/new");
+    expect(editRoutinePath("55555555-5555-4555-8555-555555555555")).toBe(
+      "/train/routines/55555555-5555-4555-8555-555555555555",
+    );
+  });
+
   it.each([
     ["the routines list", "(tabs)/train/routines.tsx"],
     ["the archived routines", "(tabs)/train/routines/archived.tsx"],
+    ["the new routine editor", "(tabs)/train/routines/new.tsx"],
+    ["a routine's editor", "(tabs)/train/routines/[id].tsx"],
   ])("should have a route file for %s", (_name, file) => {
     expect(existsSync(join(appDirectory, file))).toBe(true);
   });

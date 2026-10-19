@@ -76,6 +76,7 @@ export function RoutineEditorScreen({ id }: RoutineEditorScreenProps) {
         key={routine.data.id}
         exerciseNames={exerciseNamesOf(routine.data)}
         initialDraft={draftOfStoredRoutine(routine.data)}
+        routineId={routine.data.id}
       />
     );
   }

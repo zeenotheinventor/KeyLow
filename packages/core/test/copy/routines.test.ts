@@ -12,6 +12,7 @@ import {
   describeDayNameFieldName,
   describeEditorDay,
   describeExerciseFieldNames,
+  describeExerciseMenuName,
   describeMakeActiveDialog,
   describeMakeActiveName,
   describeNewDayName,
@@ -28,7 +29,9 @@ import {
   ROUTINE_EDITOR,
   ROUTINE_EDITOR_LOADING_LABEL,
   ROUTINE_MAKE_ACTIVE_FAILED,
+  ROUTINE_MOVE,
   ROUTINE_RESTORE_FAILED,
+  ROUTINE_SAVE_FAILED,
   ROUTINE_WEEKDAY_CHOICES,
   ROUTINES_ARCHIVED,
   ROUTINES_EMPTY,
@@ -516,6 +519,20 @@ describe("the words the routine editor shell needs that no board draws", () => {
 
   it("should name a day's name field after the day, so two open days' fields differ", () => {
     expect(describeDayNameFieldName("Pull")).toBe("Day name for Pull");
+  });
+
+  it("should name the two moves of the day's and the exercise's menus", () => {
+    expect(ROUTINE_MOVE).toStrictEqual({ upAction: "Move up", downAction: "Move down" });
+  });
+
+  it("should name an exercise's menu button after the exercise", () => {
+    expect(describeExerciseMenuName("Barbell squat")).toBe("Options for Barbell squat");
+  });
+
+  it("should say a routine did not save, and what to check, without a full stop", () => {
+    expect(ROUTINE_SAVE_FAILED).toBe(
+      "Your routine did not save, check your connection and try again",
+    );
   });
 
   it("should say what is loading while the editor waits for its routine", () => {

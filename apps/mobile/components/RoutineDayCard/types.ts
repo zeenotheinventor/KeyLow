@@ -15,6 +15,10 @@ export type RoutineDayCardProps = {
   onOpenWeekday: () => void;
   /** Opens the day's menu. */
   onOpenMenu: () => void;
+  /** What is wrong with the weekday: the chip takes the danger border and the sentence sits under the header. */
+  weekdayError?: string | undefined;
+  /** What is wrong with the day's name, which the name field in the open body shows. */
+  nameError?: string | undefined;
   onRename: (name: string) => void;
   /** The day's exercises, drawn in the body under the name field. */
   children?: ReactNode;

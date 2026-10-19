@@ -12,7 +12,13 @@ import { setUpTests } from "react-native-reanimated";
 import { ArchivedRoutinesScreen } from "../components/ArchivedRoutinesScreen";
 import { RoutinesScreen } from "../components/RoutinesScreen";
 import { ToastProvider } from "../components/ui";
-import { archivedRoutinesPath, routinesPath, trainPath } from "../lib/routineRoutes";
+import {
+  archivedRoutinesPath,
+  editRoutinePath,
+  newRoutinePath,
+  routinesPath,
+  trainPath,
+} from "../lib/routineRoutes";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
@@ -101,6 +107,16 @@ function seedGoldenRoutines() {
     }),
   ];
 }
+
+const idOfRoutine = (name: string): string => {
+  const row = routinesBackend.rows.find((candidate) => candidate["name"] === name);
+  const id = row?.["id"];
+  if (typeof id !== "string") {
+    throw new Error(`There is no routine called ${name}`);
+  }
+  return id;
+};
+const activeRoutineId = () => idOfRoutine("Push Pull Legs");
 
 describe("the routines screens", () => {
   let kitStyles: string;
@@ -205,15 +221,38 @@ describe("the routines screens", () => {
       expect(routerMock.push).toHaveBeenCalledWith(archivedRoutinesPath());
     });
 
-    it("should draw no Edit or New routine, because nothing supplies them yet", async () => {
+    it("should open the editor of the active routine from its card", async () => {
       seedGoldenRoutines();
+      const user = userEvent.setup();
       await renderScreen(<RoutinesScreen />);
-      await screen.findByRole("heading", { name: "Push Pull Legs" });
 
-      expect(screen.queryByRole("button", { name: /Edit/ })).not.toBeOnTheScreen();
-      expect(
-        screen.queryByRole("button", { name: ROUTINES_SCREEN.newRoutineLabel }),
-      ).not.toBeOnTheScreen();
+      await user.press(
+        await screen.findByRole("button", { name: /^Push Pull Legs, active.*Edit$/ }),
+      );
+
+      expect(routerMock.push).toHaveBeenCalledWith(editRoutinePath(activeRoutineId()));
+    });
+
+    it("should open the editor of another routine from its row", async () => {
+      seedGoldenRoutines();
+      const user = userEvent.setup();
+      await renderScreen(<RoutinesScreen />);
+
+      await user.press(await screen.findByRole("button", { name: /^Upper Lower/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith(editRoutinePath(idOfRoutine("Upper Lower")));
+    });
+
+    it("should open the new routine editor from New routine in the header", async () => {
+      seedGoldenRoutines();
+      const user = userEvent.setup();
+      await renderScreen(<RoutinesScreen />);
+
+      await user.press(
+        await screen.findByRole("button", { name: ROUTINES_SCREEN.newRoutineLabel }),
+      );
+
+      expect(routerMock.push).toHaveBeenCalledWith(newRoutinePath());
     });
 
     it("should go back to the screen before it, or to the Train tab when there is none", async () => {
@@ -229,11 +268,17 @@ describe("the routines screens", () => {
       expect(routerMock.replace).toHaveBeenCalledWith(trainPath());
     });
 
-    it("should show the empty state, and no button, when there are no routines", async () => {
+    it("should show the empty state with Create routine, which opens the new routine editor, and no New routine in the header", async () => {
+      const user = userEvent.setup();
       await renderScreen(<RoutinesScreen />);
 
       expect(await screen.findByRole("heading", { name: ROUTINES_EMPTY.title })).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: ROUTINES_EMPTY.action })).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", { name: ROUTINES_SCREEN.newRoutineLabel }),
+      ).not.toBeOnTheScreen();
+      await user.press(screen.getByRole("button", { name: ROUTINES_EMPTY.action }));
+
+      expect(routerMock.push).toHaveBeenCalledWith(newRoutinePath());
     });
 
     it("should say the load failed when there is nothing saved to show, and read again on try again", async () => {

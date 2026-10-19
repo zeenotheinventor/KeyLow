@@ -18,6 +18,7 @@ import { ThemeProvider } from "../lib/theme";
 import { diaryBackend, createDiaryQueryClient } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { expectTextsInOrder } from "./support/textsInOrder";
 import {
   activeRoutine,
   loggedSession,
@@ -26,6 +27,7 @@ import {
   trainClient,
   trainRequestsTo,
 } from "./support/trainBackend";
+import { viewsDrawn } from "./support/viewsDrawn";
 
 import type { TrainScreenProps } from "../components/TrainScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -225,6 +227,93 @@ describe("the Train screen", () => {
       expect(screen.queryByRole("heading", { name: TRAIN_FIRST_TIME.title })).not.toBeOnTheScreen();
       expect(screen.queryByRole("heading", { name: TRAIN_NO_ROUTINE.title })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("the Routines link", () => {
+    const routinesLink = { name: TRAIN_HOME.routinesLink };
+
+    it("should open the routines from the header on a Train home with a routine", async () => {
+      trainBackend.routine = activeRoutine;
+      const onOpenRoutines = jest.fn();
+      const user = userEvent.setup();
+      await renderTrain({ onOpenRoutines });
+
+      await user.press(await screen.findByRole("button", routinesLink));
+
+      expect(onOpenRoutines).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw it after History in the same header row when both are given", async () => {
+      trainBackend.routine = activeRoutine;
+      await renderTrain({ onOpenHistory: jest.fn(), onOpenRoutines: jest.fn() });
+
+      await screen.findByRole("button", { name: TRAIN_HOME.routinesLink });
+
+      expectTextsInOrder(screen.getAllByText(/^(History|Routines)$/), ["History", "Routines"]);
+    });
+
+    it("should cap the links' row at 70 percent of the header, so large text leaves the title room", async () => {
+      trainBackend.routine = activeRoutine;
+      await renderTrain({ onOpenHistory: jest.fn(), onOpenRoutines: jest.fn() });
+      await screen.findByRole("button", routinesLink);
+
+      expect(viewsDrawn({ maxWidth: "70%", flexWrap: "wrap", flexDirection: "row" })).toHaveLength(
+        1,
+      );
+    });
+
+    it("should draw it beside the title on the no routine card too", async () => {
+      trainBackend.sessions = [loggedSession];
+      await renderTrain({ onOpenRoutines: jest.fn() });
+
+      expect(await screen.findByRole("button", routinesLink)).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: TRAIN_NO_ROUTINE.title })).toBeOnTheScreen();
+    });
+
+    it("should leave it out of the first visit, as the board does", async () => {
+      await renderTrain({ onOpenRoutines: jest.fn() });
+      await screen.findByRole("heading", { name: TRAIN_FIRST_TIME.title });
+
+      expect(screen.queryByRole("button", routinesLink)).not.toBeOnTheScreen();
+    });
+
+    it("should leave it out while the home loads and when it fails to load", async () => {
+      trainBackend.hungTables.add("routines");
+      await renderTrain({ onOpenRoutines: jest.fn() });
+      await screen.findByRole("status", { name: TRAIN_LOADING_NAME });
+
+      expect(screen.queryByRole("button", routinesLink)).not.toBeOnTheScreen();
+
+      await cleanup();
+      queryClient.clear();
+      resetTrainBackend();
+      trainBackend.failingTables.add("routines");
+      await renderTrain({ onOpenRoutines: jest.fn() });
+      await screen.findByText(TRAIN_ERROR.title);
+
+      expect(screen.queryByRole("button", routinesLink)).not.toBeOnTheScreen();
+    });
+
+    it("should not be drawn when no handler is given", async () => {
+      trainBackend.routine = activeRoutine;
+      await renderTrain(noHandlers);
+      await waitFor(() => {
+        expect(trainRequestsTo("routines")).toBe(1);
+      });
+
+      expect(screen.queryByRole("button", routinesLink)).not.toBeOnTheScreen();
+    });
+
+    it("should stay pressable offline, since the routines are read from the phone", async () => {
+      trainBackend.routine = activeRoutine;
+      await renderTrain({ onOpenRoutines: jest.fn() });
+      await screen.findByRole("button", routinesLink);
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+
+      expect(screen.getByRole("button", routinesLink)).not.toBeDisabled();
     });
   });
 

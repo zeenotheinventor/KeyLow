@@ -14,8 +14,10 @@ import type { RoutineDayExercisesProps } from "./types";
 export function RoutineDayExercises({
   exercises,
   isFull,
+  marks,
+  registerRow,
   onChangeField,
-  onRemove,
+  onOpenMenu,
   onAdd,
 }: RoutineDayExercisesProps) {
   return (
@@ -40,18 +42,20 @@ export function RoutineDayExercises({
         </Text>
         <View className="w-[36px]" />
       </View>
-      {exercises.map((exercise) => (
+      {exercises.map((exercise, position) => (
         <RoutineExerciseRow
           key={exercise.key}
+          marks={marks?.[position]}
           name={exercise.name}
+          rowRef={registerRow?.(exercise.key)}
           repsText={exercise.repsText}
           rirText={exercise.rirText}
           setsText={exercise.setsText}
           onChangeField={(field, text) => {
             onChangeField(exercise.key, field, text);
           }}
-          onRemove={() => {
-            onRemove(exercise.key);
+          onOpenMenu={() => {
+            onOpenMenu(exercise.key);
           }}
         />
       ))}
