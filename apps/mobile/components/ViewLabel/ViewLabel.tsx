@@ -30,6 +30,8 @@ function ViewName({ label, isProjected = false }: ViewName) {
  */
 export function ViewLabel({ label, subLine, isProjected = false }: ViewLabelProps) {
   const { outgoing, incomingStyle, outgoingStyle } = useCrossFade({ label, isProjected }, label);
+  // Only a fade in progress styles the new layer; at rest it is drawn plain.
+  const incomingLayerStyle = outgoing === null ? undefined : incomingStyle;
 
   return (
     <View className="gap-[2px]">
@@ -41,7 +43,7 @@ export function ViewLabel({ label, subLine, isProjected = false }: ViewLabelProp
             </Animated.View>
           </View>
         )}
-        <Animated.View style={outgoing === null ? undefined : incomingStyle}>
+        <Animated.View style={incomingLayerStyle}>
           <ViewName isProjected={isProjected} label={label} />
         </Animated.View>
       </View>

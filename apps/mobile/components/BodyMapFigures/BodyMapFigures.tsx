@@ -46,6 +46,8 @@ export function BodyMapFigures({
   onTap,
 }: BodyMapFiguresProps) {
   const { outgoing, incomingStyle, outgoingStyle } = useCrossFade(view, view);
+  // Only a fade in progress styles the new layer; at rest it is drawn plain.
+  const incomingLayerStyle = outgoing === null ? undefined : incomingStyle;
   const valuesOf = (shown: BodyMapView) => (shown === "projected" ? projectedValues : actualValues);
 
   // The responder is made once, because one made again in the middle of a touch would start with no memory
@@ -86,7 +88,7 @@ export function BodyMapFigures({
                 </Animated.View>
               </View>
             )}
-            <Animated.View style={outgoing === null ? undefined : incomingStyle}>
+            <Animated.View style={incomingLayerStyle}>
               <BodyFigure
                 label={describeBodyFigureLabel({ scale: "heat", view, side, hint: null })}
                 scale="heat"
