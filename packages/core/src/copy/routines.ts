@@ -113,8 +113,8 @@ export type RoutineCardInput = Readonly<{
 export type ActiveRoutineInput = RoutineCardInput &
   Readonly<{
     name: string;
-    /** The calendar day the routine began to plan from, `YYYY-MM-DD`. */
-    activeFrom: string;
+    /** The calendar day the routine began to plan from, `YYYY-MM-DD`, or null when it is not known. */
+    activeFrom: string | null;
   }>;
 
 export type RoutineWeekDayCopy = {
@@ -125,11 +125,13 @@ export type RoutineWeekDayCopy = {
 };
 
 export type ActiveRoutineCopy = {
-  /** "4 days · 63 sets a week · since Mon 21 Sep". */
+  /** "4 days · 63 sets a week · since Mon 21 Sep", or "4 days · 63 sets a week" without the date. */
   meta: string;
   /** The seven weekdays of the card's strip, Monday first. */
   week: RoutineWeekDayCopy[];
-  /** "Push Pull Legs, active, 4 days, Monday Tuesday Thursday Saturday, 63 sets a week. Edit". */
+  /** "Push Pull Legs, active, 4 days, Monday Tuesday Thursday Saturday, 63 sets a week": the name of a card that opens nothing. */
+  readName: string;
+  /** `readName` and ". Edit": the name of a card that opens the editor. */
   accessibleName: string;
 };
 
@@ -149,19 +151,25 @@ export const describeActiveRoutine = ({
   const weekdayNames = datedWeekdays(days).map((weekday) =>
     describeWeekdayName(weekdayDate(weekday)),
   );
+  const readName = [
+    name,
+    ROUTINES_SCREEN.activeLabel.toLowerCase(),
+    dayCount,
+    ...(weekdayNames.length === 0 ? [] : [weekdayNames.join(" ")]),
+    setsAWeek,
+  ].join(", ");
   return {
-    meta: [dayCount, setsAWeek, `since ${describeShortDate(activeFrom)}`].join(SEPARATOR),
+    meta: [
+      dayCount,
+      setsAWeek,
+      ...(activeFrom === null ? [] : [`since ${describeShortDate(activeFrom)}`]),
+    ].join(SEPARATOR),
     week: WEEKDAYS.map((weekday) => ({
       weekday: describeWeekdayShortName(weekdayDate(weekday)),
       label: days.find((day) => day.weekday === weekday)?.name ?? REST_LABEL,
     })),
-    accessibleName: [
-      name,
-      ROUTINES_SCREEN.activeLabel.toLowerCase(),
-      dayCount,
-      ...(weekdayNames.length === 0 ? [] : [weekdayNames.join(" ")]),
-      `${setsAWeek}. Edit`,
-    ].join(", "),
+    readName,
+    accessibleName: `${readName}. Edit`,
   };
 };
 

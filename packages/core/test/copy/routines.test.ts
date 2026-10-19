@@ -99,6 +99,7 @@ describe("describeActiveRoutine", () => {
         { weekday: "Sat", label: "Push" },
         { weekday: "Sun", label: "Rest" },
       ],
+      readName: "Push Pull Legs, active, 4 days, Monday Tuesday Thursday Saturday, 63 sets a week",
       accessibleName:
         "Push Pull Legs, active, 4 days, Monday Tuesday Thursday Saturday, 63 sets a week. Edit",
     });
@@ -115,6 +116,33 @@ describe("describeActiveRoutine", () => {
     expect(card.meta).toBe("1 day · 1 set a week · since Thu 15 Oct");
     expect(card.accessibleName).toBe("Full body, active, 1 day, 1 set a week. Edit");
     expect(card.week.map(({ label }) => label)).toStrictEqual(Array(7).fill("Rest"));
+  });
+});
+
+describe("describeActiveRoutine without a way to edit", () => {
+  it("should give the card a name that does not say Edit, for a card that opens nothing", () => {
+    const card = describeActiveRoutine({
+      name: goldenRoutineName,
+      days: goldenDays,
+      setsPerWeek: goldenSetsPerWeek,
+      activeFrom: "2026-09-21",
+    });
+
+    expect(card.readName).toBe(
+      "Push Pull Legs, active, 4 days, Monday Tuesday Thursday Saturday, 63 sets a week",
+    );
+    expect(card.accessibleName).toBe(`${card.readName}. Edit`);
+  });
+
+  it("should leave out since when the routine has no activation date", () => {
+    const card = describeActiveRoutine({
+      name: "Full body",
+      days: [{ name: "All", weekday: 2 }],
+      setsPerWeek: 9,
+      activeFrom: null,
+    });
+
+    expect(card.meta).toBe("1 day · 9 sets a week");
   });
 });
 

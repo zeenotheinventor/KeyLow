@@ -76,3 +76,13 @@ export const Rows: Story = {
     </Card>
   ),
 };
+
+// The active routine's card on the routines list board: the accent in place of the hairline.
+export const Accent: Story = {
+  args: { border: "accent" },
+  render: (args) => (
+    <Card {...args}>
+      <Contents />
+    </Card>
+  ),
+};
