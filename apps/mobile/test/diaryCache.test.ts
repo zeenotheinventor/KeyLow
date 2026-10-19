@@ -85,6 +85,7 @@ describe("which training queries the diary cache keeps", () => {
       keys.training.routine("88888888-8888-4888-8888-888888888888"),
     ],
     ["the weight unit a restored session shows its loads in", keys.profiles.weightUnit],
+    ["the current training goal", keys.training.goals],
   ])("should keep %s", (_name, queryKey) => {
     expect(isPersistedQuery(queryFor(queryKey))).toBe(true);
   });
@@ -93,6 +94,7 @@ describe("which training queries the diary cache keeps", () => {
     ["a search of exercises by text", ["training", "exercise-search", "bench"]],
     ["a training query this cache does not know", ["training", "something-new", "2026-10-02"]],
     ["the bare training prefix", keys.training.all],
+    ["the history of training goals", keys.training.goalsHistory],
     [
       "the last performance of an exercise, which is only read while logging",
       keys.training.lastPerformance(

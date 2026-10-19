@@ -7,9 +7,10 @@ import { keys } from "@keylow/api-client";
  * diary could not open without a connection. The training reads are the rows heat, the plan and the
  * week are worked out from, the history list as rows, and the session in progress with its sets, so a
  * workout opens without a connection, and the routines with their days and exercises, so the plan
- * opens too. The last
- * performance of an exercise is not kept: it is only read while logging, which needs a connection. No
- * search is kept, the training ones included (exercises by text).
+ * opens too. The last performance of an exercise is not kept: it is only read while logging, which
+ * needs a connection. The current training goal is kept as its row, the priorities of the muscles it
+ * ranks are worked out from it at read time. No search is kept, the training ones included (exercises
+ * by text).
  */
 export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.diary.days,
@@ -35,4 +36,7 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   // The routines and one routine with its days, so the routines open and edit without a connection.
   keys.training.routinesAll,
   keys.training.routineAll,
+  // The current goal, as the row, so the targeted muscles are worked out without a connection. The history
+  // of past goals is not kept, and the goal is saved only with a connection: nothing is replayed from here.
+  keys.training.goals,
 ];

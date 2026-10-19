@@ -75,6 +75,7 @@ let queryClient: QueryClient;
 function seedCachedRows(sets: TrainingSet[]) {
   queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
   queryClient.setQueryData(keys.training.activeRoutine, noRoutineDays);
+  queryClient.setQueryData(keys.training.goals, null);
   queryClient.setQueryData(keys.training.weekSessions(WEEK_START), []);
   queryClient.setQueryData(keys.training.sets(SETS_WINDOW_START), sets);
 }
@@ -286,6 +287,7 @@ describe("the body map screen's states", () => {
     beforeEach(() => {
       queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
       queryClient.setQueryData(keys.training.activeRoutine, noRoutineDays);
+      queryClient.setQueryData(keys.training.goals, null);
       queryClient.setQueryData(keys.training.weekSessions(WEEK_START), []);
       diaryBackend.failingTables.add("workout_sets");
     });

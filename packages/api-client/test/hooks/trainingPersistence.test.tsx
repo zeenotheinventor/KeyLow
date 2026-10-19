@@ -12,15 +12,18 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { useMuscleState } from "../../src/hooks/useMuscleState";
+import { useTrainingGoals } from "../../src/hooks/useTrainingGoals";
 import { useWeekComparison } from "../../src/hooks/useWeekComparison";
 import { KeyLowProvider } from "../../src/KeyLowProvider";
 import { keys } from "../../src/queryKeys";
 import { createTestClient } from "../createTestClient";
 import { createQueryClient } from "../support/queryClients";
 import { installTrainingFake, routineRow, sessionRow, setRow } from "../support/training";
+import { trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
 
 import type { ActiveRoutine, TrainingSet, WeekSession } from "../../src";
+import type { TrainingGoalsRow } from "@keylow/core/schemas";
 import type { ReactNode } from "react";
 
 const server = setupServer();
@@ -79,7 +82,7 @@ describe("the training reads in a persisted cache", () => {
   };
 
   /** Opens the app online once, then returns what a persister would have stored. */
-  const openOnline = async (data: ReturnType<typeof seed> = seed()) => {
+  const openOnline = async (data: ReturnType<typeof seed> & { goal?: unknown } = seed()) => {
     const fake = installTrainingFake(server, data);
     const { queryClient, wrapper } = createWrapper();
     const { result } = renderHook(
@@ -91,6 +94,7 @@ describe("the training reads in a persisted cache", () => {
       expect(result.current.week.data).toBeDefined();
     });
     const rows = {
+      goal: queryClient.getQueryData<TrainingGoalsRow | null>(keys.training.goals),
       sets: queryClient.getQueryData<TrainingSet[]>(keys.training.sets(START_DAY)),
       routine: queryClient.getQueryData<ActiveRoutine | null>(keys.training.activeRoutine),
       sessions: queryClient.getQueryData<WeekSession[]>(keys.training.weekSessions(WEEK_START)),
@@ -151,6 +155,91 @@ describe("the training reads in a persisted cache", () => {
     expect(result.current.data?.chest_lower.heat).toBeLessThan(morning?.chest_lower.heat ?? 0);
     expect(result.current.data?.chest_lower.readyAt).not.toBe(morning?.chest_lower.readyAt);
     expect(fake.requests).toHaveLength(requestsBefore);
+  });
+
+  describe("the current training goal", () => {
+    const goal = trainingGoalsRow(vTaperAnswers);
+
+    it("should store the row of the goal and no status worked out from its priorities", async () => {
+      const { stored } = await openOnline({ ...seed(), goal });
+
+      const storedGoal = stored.queries.find(
+        ({ queryKey }) => JSON.stringify(queryKey) === JSON.stringify(keys.training.goals),
+      );
+      expect(storedGoal?.state.data).toEqual(goal);
+      for (const { state } of stored.queries) {
+        expect(JSON.stringify(state.data)).not.toContain("not_targeted");
+      }
+    });
+
+    it("should work out heat as with no goal from a cache saved before the goal was kept, with the network down", async () => {
+      const { fake, rows, stored } = await openOnline({ ...seed(), goal });
+      const withoutGoal = {
+        ...stored,
+        queries: stored.queries.filter(
+          ({ queryKey }) => JSON.stringify(queryKey) !== JSON.stringify(keys.training.goals),
+        ),
+      };
+      expect(withoutGoal.queries).toHaveLength(stored.queries.length - 1);
+      const restored = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+      hydrate(restored, withoutGoal);
+      fake.goOffline();
+      onlineManager.setOnline(false);
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <KeyLowProvider client={createTestClient()} queryClient={restored}>
+          {children}
+        </KeyLowProvider>
+      );
+
+      const { result } = renderHook(() => useMuscleState(EVENING), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      expect(result.current.data).toEqual(
+        muscleState(
+          throughStorage(rows.sets ?? []),
+          EVENING,
+          TRAINING_PARAMS_V1,
+          targetedMuscles({ routine: rows.routine ?? null }),
+        ),
+      );
+    });
+
+    it("should give the stored goal back offline and work the targeted muscles out from it", async () => {
+      const { fake, rows, stored } = await openOnline({ ...seed(), goal });
+      const restored = createQueryClient({ defaultOptions: { queries: { retry: false } } });
+      hydrate(restored, stored);
+      fake.goOffline();
+      onlineManager.setOnline(false);
+      const requestsBefore = fake.requests.length;
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <KeyLowProvider client={createTestClient()} queryClient={restored}>
+          {children}
+        </KeyLowProvider>
+      );
+
+      const { result } = renderHook(
+        () => ({ goals: useTrainingGoals(), heat: useMuscleState(EVENING) }),
+        { wrapper },
+      );
+
+      await waitFor(() => {
+        expect(result.current.heat.data).toBeDefined();
+      });
+      expect(result.current.goals.data).toEqual(goal);
+      expect(result.current.heat.data).toEqual(
+        muscleState(
+          throughStorage(rows.sets ?? []),
+          EVENING,
+          TRAINING_PARAMS_V1,
+          targetedMuscles({ routine: rows.routine ?? null, priority: goal.muscle_priority }),
+        ),
+      );
+      expect(result.current.heat.data?.abs.volumeStatus).toBe("not_targeted");
+      expect(result.current.heat.data?.lats.volumeStatus).toBe("under");
+      expect(fake.requests).toHaveLength(requestsBefore);
+    });
   });
 
   it("should compute heat from the rows read the day before when restored on the next day with the network down", async () => {

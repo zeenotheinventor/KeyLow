@@ -731,6 +731,9 @@ export async function fakeFetch(
           diaryBackend.dayTotals.filter((row) => inDateFilter(searchParams, row["local_date"])),
         ),
       );
+    case "training_goals":
+      // The user has no goal, so the training reads that wait for it are not held up by an error.
+      return Promise.resolve(jsonResponse([]));
     default:
       return Promise.resolve(jsonResponse({ message: "unexpected request" }, 404));
   }

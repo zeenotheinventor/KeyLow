@@ -318,6 +318,17 @@ export const routineDayExercisesSchema = z
   });
 
 /**
+ * A timestamp as a count of microseconds, because Postgres stores microseconds and `Date.parse` keeps
+ * only milliseconds: two saves less than a millisecond apart would otherwise read as ending at their
+ * start. The fraction is padded or cut to six digits, and a BigInt holds the count exactly.
+ */
+const microsecondsOf = (timestamp: string): bigint => {
+  const fraction = /\.(\d+)/.exec(timestamp)?.[1] ?? "";
+  const microsecondDigits = fraction.padEnd(6, "0").slice(3, 6);
+  return BigInt(Date.parse(timestamp)) * 1000n + BigInt(microsecondDigits);
+};
+
+/**
  * A `training_goals` row. `muscle_priority` maps muscle ids to a priority number, derived in core from
  * the answers with the `TrainingParams` version in `params_version`. Null `effective_to` means current.
  */
@@ -342,7 +353,7 @@ export const trainingGoalsRowSchema = z
   .refine(
     (goals) =>
       goals.effective_to === null ||
-      Date.parse(goals.effective_to) > Date.parse(goals.effective_from),
+      microsecondsOf(goals.effective_to) > microsecondsOf(goals.effective_from),
     { message: "A goal must end after it starts", path: ["effective_to"] },
   );
 

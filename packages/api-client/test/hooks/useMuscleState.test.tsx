@@ -8,6 +8,7 @@ import { useMuscleState } from "../../src/hooks/useMuscleState";
 import { keys } from "../../src/queryKeys";
 import { getActiveRoutine, listSetsFrom } from "../../src/repos/training";
 import { createTestClient } from "../createTestClient";
+import { goldenWeekData } from "../support/goldenWeekRows";
 import {
   EXERCISE_ID,
   RECOGNISABLE_EXERCISE_NAME,
@@ -16,6 +17,7 @@ import {
   setRow,
   snapshotOf,
 } from "../support/training";
+import { trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
 
 import type { TrainingSet } from "../../src";
@@ -98,6 +100,129 @@ describe("useMuscleState", () => {
       expect(result.current.data).toBeDefined();
     });
     expect(result.current.data?.lats.volumeStatus).toBe("under");
+  });
+
+  describe("with a training goal", () => {
+    it("should target the muscles the goal ranks whatever the routine, and leave abs and obliques not targeted", async () => {
+      installTrainingFake(server, {
+        sets: [benchSet()],
+        routine: routineRow(),
+        goal: trainingGoalsRow(vTaperAnswers),
+      });
+      const { wrapper } = createWrapper();
+
+      const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      const state = result.current.data;
+      // The routine trains the lower chest and the triceps only, the V-taper goal ranks the rest of these.
+      expect(state?.delt_side.volumeStatus).toBe("under");
+      expect(state?.lats.volumeStatus).toBe("under");
+      expect(state?.chest_upper.volumeStatus).toBe("under");
+      expect(state?.abs.volumeStatus).toBe("not_targeted");
+      expect(state?.obliques.volumeStatus).toBe("not_targeted");
+    });
+
+    it("should give what core gives for the routine and the goal's priorities", async () => {
+      const goal = trainingGoalsRow(vTaperAnswers);
+      installTrainingFake(server, { sets: [benchSet()], routine: routineRow(), goal });
+      const { wrapper } = createWrapper();
+      const client = createTestClient();
+
+      const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      const rows = await listSetsFrom(client, START_DAY, "2026-10-17");
+      const routine = await getActiveRoutine(client);
+      expect(result.current.data).toEqual(
+        muscleState(
+          rows,
+          NOW,
+          TRAINING_PARAMS_V1,
+          targetedMuscles({ routine, priority: goal.muscle_priority }),
+        ),
+      );
+    });
+
+    it("should report the golden week with the V-taper goal: abs and obliques not targeted, the ranked muscles targeted", async () => {
+      installTrainingFake(server, {
+        ...goldenWeekData,
+        goal: trainingGoalsRow(vTaperAnswers),
+      });
+      const { wrapper } = createWrapper();
+
+      const { result } = renderHook(() => useMuscleState("2026-10-15T18:00:00Z"), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      const state = result.current.data;
+      expect(state?.abs.volumeStatus).toBe("not_targeted");
+      expect(state?.obliques.volumeStatus).toBe("not_targeted");
+      for (const muscle of ["delt_side", "lats", "chest_upper"] as const) {
+        expect(state?.[muscle].volumeStatus).not.toBe("not_targeted");
+      }
+    });
+
+    it("should be pending until the goal is read, and never show a muscle as untargeted that the goal ranks", async () => {
+      const fake = installTrainingFake(server, {
+        sets: [benchSet()],
+        routine: routineRow(),
+        goal: trainingGoalsRow(vTaperAnswers),
+      });
+      const release = fake.holdGoals();
+      const { wrapper } = createWrapper();
+
+      const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
+
+      await waitFor(() => {
+        expect(fake.requestsTo("routines")).toHaveLength(1);
+      });
+      expect(result.current).toMatchObject({ data: undefined, isPending: true });
+      expect(fake.requestsTo("workout_sets")).toEqual([]);
+      release();
+      await waitFor(() => {
+        expect(result.current.data?.lats.volumeStatus).toBe("under");
+      });
+    });
+
+    it("should report an error that names the action and the code when the goal cannot be read", async () => {
+      const fake = installTrainingFake(server, { sets: [benchSet()], routine: routineRow() });
+      fake.failWith("42501", "training_goals");
+      const { wrapper } = createWrapper();
+
+      const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+      expect(result.current.error?.message).toBe("Could not load your training goals (42501)");
+    });
+
+    it("should hold the goal row in the cache and no priority-based status", async () => {
+      installTrainingFake(server, {
+        sets: [benchSet()],
+        routine: routineRow(),
+        goal: trainingGoalsRow(vTaperAnswers),
+      });
+      const { queryClient, wrapper } = createWrapper();
+
+      const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      expect(queryClient.getQueryData(keys.training.goals)).toEqual(
+        trainingGoalsRow(vTaperAnswers),
+      );
+      expect(JSON.stringify(queryClient.getQueryData(keys.training.goals))).not.toContain(
+        "not_targeted",
+      );
+    });
   });
 
   it("should store the rows under the key of the start day and no derived number", async () => {
@@ -206,6 +331,7 @@ describe("useMuscleState", () => {
       const { queryClient, wrapper } = createWrapper();
       queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
       queryClient.setQueryData(keys.training.activeRoutine, null);
+      queryClient.setQueryData(keys.training.goals, null);
       // The higher start day was read first. The lower one, read later, holds no set at all.
       queryClient.setQueryData(keys.training.sets("2026-10-04"), [cachedSet], { updatedAt: 1_000 });
       queryClient.setQueryData(keys.training.sets("2026-10-01"), [], { updatedAt: 2_000 });

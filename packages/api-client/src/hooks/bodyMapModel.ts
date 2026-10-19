@@ -44,6 +44,8 @@ export type BodyMapRows = {
   timeZone: string;
   /** The active routine, or null when there is none. */
   routine: ActiveRoutine | null;
+  /** The current goal's muscle priority, or null when the user has no goal. */
+  priority: Readonly<Partial<Record<MuscleId, number>>> | null;
   /** The live sets from the start of the heat window of the week through today. */
   sets: readonly TrainingSet[];
   /** The live sessions of the week with their sets. */
@@ -63,16 +65,18 @@ export type BodyMapMoment = {
 const NO_ROUTINE: PlanRoutine = { days: [] };
 
 /**
- * What decides which muscles are targeted. The goal's muscle priority joins here when the goal read
- * exists (`targetedMuscles` takes it as `priority`), so every body map number gets it from this one place.
+ * What decides which muscles are targeted: the active routine and the current goal's muscle priority
+ * (`targetedMuscles` takes it as `priority`), so every body map number gets it from this one place.
  */
-export const targetedInputOf = (routine: ActiveRoutine | null): TargetedMusclesInput => ({
+export const targetedInputOf = ({
   routine,
-});
+  priority,
+}: Pick<BodyMapRows, "routine" | "priority">): TargetedMusclesInput => ({ routine, priority });
 
-/** The muscles the plan trains (and the goal, once `targetedInputOf` passes it). */
-export const targetedMusclesOf = (routine: ActiveRoutine | null): ReadonlySet<MuscleId> =>
-  targetedMuscles(targetedInputOf(routine));
+/** The muscles the plan trains and the goal ranks above 0. */
+export const targetedMusclesOf = (
+  rows: Pick<BodyMapRows, "routine" | "priority">,
+): ReadonlySet<MuscleId> => targetedMuscles(targetedInputOf(rows));
 
 /** The seven days of the week, and the moment the body map reads at: `now`, or the instant of the day picked. */
 export function momentOf({ weekStart, now, at }: BodyMapMoment, timeZone: string) {
@@ -125,7 +129,7 @@ export function heatStatesOf(
   weekStart: string,
   computedAt: string,
 ): Record<MuscleId, MuscleState> {
-  const targeted = targetedMusclesOf(rows.routine);
+  const targeted = targetedMusclesOf(rows);
   if (view === "actual" || rows.routine === null) {
     return muscleState(rows.sets, computedAt, TRAINING_PARAMS_V1, targeted);
   }
@@ -156,7 +160,7 @@ function gapValuesOf(rows: BodyMapRows, weekStart: string, computedAt: string) {
       projectedWeeklySets: wholeWeek[muscle].projectedWeeklySets,
     };
   }
-  return gapValues(inPlanFromWholeWeek, targetedMusclesOf(rows.routine));
+  return gapValues(inPlanFromWholeWeek, targetedMusclesOf(rows));
 }
 
 /** The values of one scale. Heat reads at `computedAt`, volume the calendar week, and gap the week so far. */
@@ -174,7 +178,7 @@ export function valuesOf(
       const { actual, projected } = projectionOf(rows, weekStart);
       return volumeValues(
         compareWeek(actual, projected, COMPARE_PARAMS_V1),
-        targetedMusclesOf(rows.routine),
+        targetedMusclesOf(rows),
         // With no routine there is no plan to project, so Projected is Actual.
         rows.routine === null ? "actual" : view,
       );
@@ -230,7 +234,7 @@ export function muscleDetailOf(
       id,
       routine_day_name: routine_day_id === null ? null : (dayNames.get(routine_day_id) ?? null),
     })),
-    targeted: targetedInputOf(rows.routine),
+    targeted: targetedInputOf(rows),
     // With no routine there is no plan to project, so Projected is Actual.
     view: rows.routine === null ? "actual" : view,
     now: computedAt,

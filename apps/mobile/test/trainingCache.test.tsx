@@ -1,10 +1,12 @@
-import { KeyLowProvider, keys, useMuscleState } from "@keylow/api-client";
+import { KeyLowProvider, keys, useBodyMap, useMuscleState } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
 import {
+  GOAL_PRESETS_V1,
   TRAINING_PARAMS_V1,
   buildSetSnapshot,
   muscleState,
   targetedMuscles,
+  trainingGoalsPayload,
 } from "@keylow/core/training";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { hashKey, onlineManager } from "@tanstack/react-query";
@@ -24,6 +26,7 @@ import {
 import { DIARY_CACHE_MAX_AGE_MS, DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
 
 import type { ActiveRoutine, TrainingSet } from "@keylow/api-client";
+import type { TrainingGoalsRow } from "@keylow/core/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -70,6 +73,27 @@ const activeRoutine: ActiveRoutine = {
   days: [],
 };
 
+// The aesthetic V-taper goal. With the routine above, which trains nothing, only a stored goal leaves
+// the abs not targeted, since with neither a routine nor a goal ranking a muscle every muscle is targeted.
+const trainingGoal: TrainingGoalsRow = {
+  id: "55555555-5555-4555-8555-555555555555",
+  user_id: SIGNED_IN_USER_ID,
+  ...trainingGoalsPayload(
+    {
+      goal: "aesthetic",
+      focus: ["v_taper"],
+      days_per_week: 4,
+      session_minutes: 60,
+      equipment: ["barbell", "dumbbell"],
+      experience: "intermediate",
+    },
+    GOAL_PRESETS_V1,
+  ),
+  effective_from: "2026-10-10T09:00:00+00:00",
+  effective_to: null,
+  created_at: "2026-10-10T09:00:00+00:00",
+};
+
 const termsAcceptance = {
   terms_accepted_at: "2026-10-15T09:30:00+00:00",
   terms_version: TERMS_VERSION,
@@ -84,6 +108,9 @@ function seedTrainingReads(
   queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
   queryClient.setQueryData(keys.training.sets(START_DAY), trainingSets);
   queryClient.setQueryData(keys.training.activeRoutine, activeRoutine);
+  queryClient.setQueryData(keys.training.goals, trainingGoal);
+  // Every row of the user's goals is read with a connection and is not kept.
+  queryClient.setQueryData(keys.training.goalsHistory, [trainingGoal]);
   queryClient.setQueryData(keys.training.weekSessions(WEEK_START), []);
   if (options.olderSetsReadHoursAgo !== undefined) {
     queryClient.setQueryData(keys.training.sets(OLDER_START_DAY), trainingSets, {
@@ -99,6 +126,26 @@ function HeatOfTheLowerChest({ now }: { now: string }) {
     <Text>Reading the heat</Text>
   ) : (
     <Text>{`Lower chest heat ${data.chest_lower.heat.toFixed(4)}`}</Text>
+  );
+}
+
+function StatusOfTheAbs({ now }: { now: string }) {
+  const { data } = useMuscleState(now);
+
+  return data === undefined ? (
+    <Text>Reading the abs</Text>
+  ) : (
+    <Text>{`Abs ${data.abs.volumeStatus}`}</Text>
+  );
+}
+
+function BodyMapOfTheLowerChest({ now }: { now: string }) {
+  const { data } = useBodyMap({ scale: "heat", view: "actual", weekStart: WEEK_START, now });
+
+  return data === undefined ? (
+    <Text>Reading the body map</Text>
+  ) : (
+    <Text>{`Body map lower chest ${data.values.chest_lower}`}</Text>
   );
 }
 
@@ -167,15 +214,16 @@ describe("the training reads in the persisted cache", () => {
   afterEach(async () => {
     await cleanup();
     await letWaitingSavesRun();
+    // Cleared first: a read paused for want of a connection would otherwise resume into the next test.
+    queryClient.clear();
     await act(() => {
       onlineManager.setOnline(true);
     });
-    queryClient.clear();
     jest.useRealTimers();
   });
 
   describe("what is stored", () => {
-    it("should be the sets, the active routine and the week's sessions, with the newest sets only", async () => {
+    it("should be the sets, the active routine, the current goal and the week's sessions, with the newest sets only", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />, { olderSetsReadHoursAgo: 30 });
 
       const hashes = await storedQueryHashes();
@@ -183,10 +231,22 @@ describe("the training reads in the persisted cache", () => {
         expect.arrayContaining([
           hashKey(keys.training.sets(START_DAY)),
           hashKey(keys.training.activeRoutine),
+          hashKey(keys.training.goals),
           hashKey(keys.training.weekSessions(WEEK_START)),
         ]),
       );
       expect(hashes).not.toContain(hashKey(keys.training.sets(OLDER_START_DAY)));
+    });
+
+    it("should keep the goal row as it is, and not the goal history", async () => {
+      await storeTheTrainingReadsAndCloseTheApp(<View />);
+
+      const stored = parseStoredCache((await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
+      const goalQuery = stored.clientState.queries.find(
+        ({ queryHash }) => queryHash === hashKey(keys.training.goals),
+      );
+      expect(goalQuery?.state.data).toEqual(trainingGoal);
+      expect(await storedQueryHashes()).not.toContain(hashKey(keys.training.goalsHistory));
     });
   });
 
@@ -210,6 +270,27 @@ describe("the training reads in the persisted cache", () => {
     });
   });
 
+  describe("a cold start with no connection, for the goal", () => {
+    it("should work the targeted muscles out from the stored goal, and ask the network for nothing", async () => {
+      await storeTheTrainingReadsAndCloseTheApp(<StatusOfTheAbs now={MORNING} />);
+      diaryBackend.requests = [];
+
+      await renderCache(<StatusOfTheAbs now={EVENING} />);
+
+      // With no goal the empty routine would leave every muscle targeted, so this is the stored goal at work.
+      expect(await screen.findByText("Abs not_targeted")).toBeOnTheScreen();
+      expect(diaryBackend.requests).toEqual([]);
+    });
+
+    it("should store no status worked out from the goal's priorities", async () => {
+      await storeTheTrainingReadsAndCloseTheApp(<StatusOfTheAbs now={MORNING} />);
+
+      const text = (await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "";
+      expect(text).not.toContain("not_targeted");
+      expect(text).not.toContain("volumeStatus");
+    });
+  });
+
   describe("whose cache it is", () => {
     it("should not read the stored training reads for another account, and remove them", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />);
@@ -223,6 +304,7 @@ describe("the training reads in the persisted cache", () => {
       });
       expect(queryClient.getQueryData(keys.training.sets(START_DAY))).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.activeRoutine)).toBeUndefined();
+      expect(queryClient.getQueryData(keys.training.goals)).toBeUndefined();
       expect(screen.queryByText(/Lower chest heat/)).not.toBeOnTheScreen();
     });
 
@@ -254,6 +336,7 @@ describe("the training reads in the persisted cache", () => {
       });
       expect(queryClient.getQueryData(keys.training.sets(START_DAY))).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.activeRoutine)).toBeUndefined();
+      expect(queryClient.getQueryData(keys.training.goals)).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.weekSessions(WEEK_START))).toBeUndefined();
       // A save that was already waiting for its turn must not bring the cache back.
       await letWaitingSavesRun();
@@ -292,6 +375,40 @@ describe("the training reads in the persisted cache", () => {
       expect(queryClient.getQueryData(keys.training.weekSessions(WEEK_START))).toBeUndefined();
     });
   });
+
+  describe("a cache saved before the goal was kept", () => {
+    it("should show heat and the body map as with no goal, with no connection", async () => {
+      await storeTheTrainingReadsAndCloseTheApp(<View />);
+      const stored = parseStoredCache((await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
+      await AsyncStorage.setItem(
+        DIARY_CACHE_STORAGE_KEY,
+        JSON.stringify({
+          ...stored,
+          clientState: {
+            ...stored.clientState,
+            queries: stored.clientState.queries.filter(
+              ({ queryHash }) => queryHash !== hashKey(keys.training.goals),
+            ),
+          },
+        }),
+      );
+      expect(await storedQueryHashes()).not.toContain(hashKey(keys.training.goals));
+      diaryBackend.requests = [];
+
+      await renderCache(
+        <>
+          <HeatOfTheLowerChest now={EVENING} />
+          <BodyMapOfTheLowerChest now={EVENING} />
+        </>,
+      );
+
+      expect(await screen.findByText(/^Lower chest heat /)).toBeOnTheScreen();
+      expect(await screen.findByText(/^Body map lower chest /)).toBeOnTheScreen();
+      expect(diaryBackend.requests).toEqual([]);
+      await cleanup();
+      await letWaitingSavesRun();
+    });
+  });
 });
 
 describe("the query client of the phone, for the training reads", () => {
@@ -301,6 +418,7 @@ describe("the query client of the phone, for the training reads", () => {
     for (const queryKey of [
       keys.training.sets(START_DAY),
       keys.training.activeRoutine,
+      keys.training.goals,
       keys.training.weekSessions(WEEK_START),
     ]) {
       expect(phoneClient.getQueryDefaults(queryKey).gcTime).toBe(DIARY_CACHE_MAX_AGE_MS);

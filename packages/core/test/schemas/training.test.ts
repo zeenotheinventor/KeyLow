@@ -603,6 +603,20 @@ describe("trainingGoalsRowSchema", () => {
   it.each<[string, Partial<TrainingGoalsRow>]>([
     ["the current goals", {}],
     ["goals that ended", { effective_to: "2026-10-25T08:00:00+00:00" }],
+    [
+      "goals that ended less than a millisecond after they began, as two quick saves store them",
+      {
+        effective_from: "2026-10-18T08:00:00.843291+00:00",
+        effective_to: "2026-10-18T08:00:00.843953+00:00",
+      },
+    ],
+    [
+      "goals that ended a microsecond after they began, read in another offset",
+      {
+        effective_from: "2026-10-18T09:00:00.000001+01:00",
+        effective_to: "2026-10-18T08:00:00.000002+00:00",
+      },
+    ],
     ["no focus and no equipment", { focus: [], equipment: [] }],
     ["every focus once", { focus: ["v_taper", "chest", "arms", "glutes", "legs", "overall"] }],
     ["the fewest days and minutes", { days_per_week: 1, session_minutes: 15 }],
@@ -628,6 +642,22 @@ describe("trainingGoalsRowSchema", () => {
       { muscle_priority: { delts: 1 } as TrainingGoalsRow["muscle_priority"] },
     ],
     ["a blank params version", { params_version: "" }],
+    [
+      "an end a microsecond before the start",
+      {
+        effective_from: "2026-10-18T08:00:00.843953+00:00",
+        effective_to: "2026-10-18T08:00:00.843291+00:00",
+      },
+      "A goal must end after it starts",
+    ],
+    [
+      "an end at the same microsecond as the start",
+      {
+        effective_from: "2026-10-18T08:00:00.843291+00:00",
+        effective_to: "2026-10-18T08:00:00.843291+00:00",
+      },
+      "A goal must end after it starts",
+    ],
     [
       "an end at the start",
       { effective_to: "2026-10-18T08:00:00+00:00" },

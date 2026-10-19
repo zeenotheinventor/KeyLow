@@ -3,12 +3,14 @@ import { TRAINING_PARAMS_V1, muscleState, targetedMuscles } from "@keylow/core/t
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
+import { currentGoalOf } from "./currentGoalOf";
 import { HEAT_LOOKBACK_DAYS, newestCachedSetRows } from "./heatWindowRows";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { toTrainingReadResult } from "./trainingReadResult";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useProfileTimeZone } from "./useProfileTimeZone";
+import { useTrainingGoals } from "./useTrainingGoals";
 import { listSetsFrom } from "../repos/training";
 
 import type { DiaryReadOptions } from "./DiaryReadOptions";
@@ -24,11 +26,13 @@ import type { MuscleId, MuscleState } from "@keylow/core/training";
  * `now`, so it is the same all day and a cache restored on a phone is found again. Core's `muscleState`
  * runs in `select`, so the numbers are worked out at the `now` given, from whatever rows are cached,
  * online or not. The muscles the active routine trains are targeted (`targetedMuscles`), and any other
- * that has not reached its MEV is `not_targeted`. The routine is read through `useActiveRoutine`, which
- * `useWeekComparison` shares. Goal priorities join `targetedMuscles` when the goal read exists.
+ * that has not reached its MEV is `not_targeted`, unless the current goal ranks it above 0 (its
+ * `muscle_priority`), which targets it whatever the routine. The routine is read through
+ * `useActiveRoutine` and the goal through `useTrainingGoals`, which the body map shares. With no goal the
+ * routine alone decides.
  *
- * The result is pending until the time zone, the routine and the sets are all there, so a muscle is
- * never shown under that the routine does not train. A user with no profile row stays pending, since
+ * The result is pending until the time zone, the routine, the goal and the sets are all there, so a
+ * muscle is never shown under that the routine does not train, nor as untargeted when the goal ranks it. A user with no profile row stays pending, since
  * there is no zone to read days in. `enabled` false makes no request at all. `now` that is not an ISO
  * timestamp with a zone throws a `RangeError`. Every signed-in user has a profile row in KeyLow, so
  * waiting for the zone is waiting for a read that resolves.
@@ -45,10 +49,12 @@ export function useMuscleState(
   const queryClient = useQueryClient();
   const timeZone = useProfileTimeZone({ enabled });
   const routine = useActiveRoutine({ enabled });
+  const goals = useTrainingGoals({ enabled });
 
   const today = timeZone.data ? toLocalDate(new Date(now), timeZone.data) : null;
   const startDay = today === null ? "" : addCalendarDays(today, -HEAT_LOOKBACK_DAYS);
   const activeRoutine = routine.data;
+  const currentGoals = currentGoalOf(goals);
 
   const select = useCallback(
     (sets: TrainingSet[]) =>
@@ -56,22 +62,28 @@ export function useMuscleState(
         sets,
         now,
         TRAINING_PARAMS_V1,
-        targetedMuscles({ routine: activeRoutine ?? null }),
+        targetedMuscles({
+          routine: activeRoutine ?? null,
+          priority: currentGoals?.muscle_priority ?? null,
+        }),
       ),
-    [now, activeRoutine],
+    [now, activeRoutine, currentGoals],
   );
 
   // Until today's rows are there, the newest rows held under another start day stand in (a cache restored
-  // on a later day than it was read). Not before the routine is known, so no muscle flashes as under.
+  // on a later day than it was read). Not before the routine and the goal are known, so no muscle flashes as under.
   const standInRows = useCallback(
-    () => (activeRoutine === undefined ? undefined : newestCachedSetRows(queryClient)),
-    [queryClient, activeRoutine],
+    () =>
+      activeRoutine === undefined || currentGoals === undefined
+        ? undefined
+        : newestCachedSetRows(queryClient),
+    [queryClient, activeRoutine, currentGoals],
   );
 
   const sets = useQuery({
     queryKey: keys.training.sets(startDay),
     queryFn:
-      today === null || activeRoutine === undefined
+      today === null || activeRoutine === undefined || currentGoals === undefined
         ? skipToken
         : () => listSetsFrom(client, startDay, today),
     enabled,
@@ -79,5 +91,9 @@ export function useMuscleState(
     placeholderData: standInRows,
   });
 
-  return toTrainingReadResult(sets, [timeZone, routine], [timeZone, routine]);
+  return toTrainingReadResult(
+    sets,
+    [timeZone, routine, goals],
+    currentGoals === undefined ? [timeZone, routine, goals] : [timeZone, routine],
+  );
 }

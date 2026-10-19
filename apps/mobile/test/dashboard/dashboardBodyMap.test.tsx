@@ -118,6 +118,7 @@ let queryClient: QueryClient;
 function seedCachedRows() {
   queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
   queryClient.setQueryData(keys.training.activeRoutine, legsRoutine);
+  queryClient.setQueryData(keys.training.goals, null);
   queryClient.setQueryData(keys.training.sets(START_DAY), trainingSets);
   queryClient.setQueryData(keys.training.weekSessions(WEEK_START), []);
 }
@@ -223,6 +224,7 @@ describe("DashboardBodyMap", () => {
     it("should say so in a quiet line, with no figure and no value", async () => {
       queryClient.setQueryData(keys.profiles.timeZone, "Europe/London");
       queryClient.setQueryData(keys.training.activeRoutine, legsRoutine);
+      queryClient.setQueryData(keys.training.goals, null);
       diaryBackend.failingTables.add("workout_sets");
       await renderCard();
 
