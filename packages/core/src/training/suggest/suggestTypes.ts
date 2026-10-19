@@ -1,5 +1,6 @@
 import type { ExerciseMuscleEntry, TrainingGoalsRow } from "../../schemas/training";
 import type { Equipment, ExerciseMechanic } from "../enums";
+import type { PlanRoutineDay } from "../expandPlan";
 import type { MuscleId } from "../muscles";
 import type { MuscleState } from "../muscleState";
 
@@ -35,6 +36,12 @@ export type SuggestExercise = Readonly<{
 export type SuggestConstraints = Readonly<{
   minutes?: number;
   equipment?: readonly Equipment[];
+  /**
+   * The routine day the suggestion is for, with its exercises' muscle maps. The day is kept as planned and
+   * only added to (`plan_adjusted`), and `minutes` is then the length of the whole day, the
+   * planned exercises included. Left out, the suggestion is a fresh session.
+   */
+  plannedDay?: PlanRoutineDay;
 }>;
 
 /** The numbers behind a pick, for one muscle, as they stood when the exercise was chosen. Data, not text. */
@@ -105,4 +112,35 @@ export type NothingForOtherReason = Readonly<{
 
 export type NothingToSuggest = NothingForNoRoom | NothingForOtherReason;
 
-export type Suggestion = SuggestedSession | NothingToSuggest;
+/** A planned exercise, kept as planned: its planned sets, and the routine exercise it came from. */
+export type KeptExercise = Readonly<{
+  exercise_id: string;
+  sets: number;
+  target_rir: number | null;
+  origin: "plan";
+  /** The planned exercise's own id on the routine day. */
+  routine_exercise_id: string;
+}>;
+
+/** An exercise of a planned day as suggested: kept as planned, or added at the end. */
+export type PlanDayExercise = KeptExercise | SuggestedExercise;
+
+/**
+ * The planned day with what was added, or `nothing` when nothing was. The planned exercises come first,
+ * in their planned order and with their planned sets, then the added ones. At least one is added.
+ */
+export type PlanAdjusted = Readonly<{
+  kind: "plan_adjusted";
+  exercises: readonly PlanDayExercise[];
+  /** How many exercises were added. */
+  added: number;
+  /** The sets and the minutes of the day as it now reads. */
+  sets: number;
+  minutes: number;
+  /** The sets and the minutes of the day as planned. */
+  planned: Readonly<{ sets: number; minutes: number }>;
+  skipped: readonly SkippedMuscle[];
+  no_room: NoRoom | null;
+}>;
+
+export type Suggestion = SuggestedSession | PlanAdjusted | NothingToSuggest;
