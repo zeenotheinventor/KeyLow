@@ -49,6 +49,8 @@ export function SheetHeader({
   title,
   leading,
   trailing,
+  subtitle,
+  trailingSlot,
   isTitleHeading = true,
 }: SheetHeaderProps) {
   const look = variants[variant];
@@ -67,30 +69,52 @@ export function SheetHeader({
     );
   }
 
+  function renderTrailing() {
+    if (trailing === undefined) {
+      // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
+      return trailingSlot ?? <View className="w-touch-target" testID="sheet-header-empty-slot" />;
+    }
+    if ("icon" in trailing) {
+      return renderControl(trailing, look.trailingIconSize);
+    }
+    return (
+      <View className="shrink-0 flex-row gap-2" testID="sheet-header-trailing">
+        {trailing.map((control) => renderControl(control, look.trailingIconSize))}
+      </View>
+    );
+  }
+
   return (
     <View
       className={`flex-row items-center gap-2 px-4 pt-3 ${look.className}`}
       testID="sheet-header"
     >
       {renderControl(leading, look.leadingIconSize)}
-      <Text
-        className="flex-1 text-center"
-        numberOfLines={1}
-        role={isTitleHeading ? "heading" : undefined}
-        variant={look.titleVariant}
-      >
-        {title}
-      </Text>
-      {trailing === undefined ? (
-        // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
-        <View className="w-touch-target" testID="sheet-header-empty-slot" />
-      ) : "icon" in trailing ? (
-        renderControl(trailing, look.trailingIconSize)
+      {subtitle === undefined ? (
+        <Text
+          className="flex-1 text-center"
+          numberOfLines={1}
+          role={isTitleHeading ? "heading" : undefined}
+          variant={look.titleVariant}
+        >
+          {title}
+        </Text>
       ) : (
-        <View className="shrink-0 flex-row gap-2" testID="sheet-header-trailing">
-          {trailing.map((control) => renderControl(control, look.trailingIconSize))}
+        <View className="min-w-0 flex-1 items-center gap-0.5">
+          <Text
+            className="text-center"
+            numberOfLines={1}
+            role={isTitleHeading ? "heading" : undefined}
+            variant={look.titleVariant}
+          >
+            {title}
+          </Text>
+          <Text tone="secondary" variant="caption">
+            {subtitle}
+          </Text>
         </View>
       )}
+      {renderTrailing()}
     </View>
   );
 }

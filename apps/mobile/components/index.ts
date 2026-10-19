@@ -46,3 +46,5 @@ export type {
   ScanResultProps,
   ScannedBarcode,
 } from "./BarcodeScanner";
+export { SessionScreen } from "./SessionScreen";
+export type { SessionScreenProps } from "./SessionScreen";
