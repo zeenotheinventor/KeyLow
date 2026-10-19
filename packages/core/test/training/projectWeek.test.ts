@@ -194,19 +194,6 @@ describe("projectWeek", () => {
     expect(week.projected).toEqual(week.planned.filter((set) => set.routine_day_id !== pull.id));
   });
 
-  it("should ignore accepted suggestions for now", () => {
-    const suggestion = {
-      local_date: "2026-10-24",
-      routine_day_id: null,
-      exercises: arms.exercises,
-    };
-    const logged: LoggedWeek = { sessions: [], sets: [], acceptedSuggestions: [suggestion] };
-
-    expect(projectWeek(routine, WEEK, LONDON, logged, params)).toEqual(
-      projectWeek(routine, WEEK, LONDON, { sessions: [], sets: [] }, params),
-    );
-  });
-
   describe("at a time zone edge", () => {
     /*
      * A session started at 23:15 UTC on Sunday 18 October is 00:15 BST on Monday 19 October in

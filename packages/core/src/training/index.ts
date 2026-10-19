@@ -276,3 +276,5 @@ export type {
   CustomExercisePayload,
   CustomExerciseRule,
 } from "./customExercise";
+export { parseAcceptedSuggestion } from "./parseAcceptedSuggestion";
+export type { ParsedAcceptedSuggestion } from "./parseAcceptedSuggestion";

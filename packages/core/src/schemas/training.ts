@@ -357,6 +357,102 @@ export const trainingGoalsRowSchema = z
     { message: "A goal must end after it starts", path: ["effective_to"] },
   );
 
+/**
+ * One exercise an accepted suggestion added, shaped like a planned exercise (`PlanExercise`) with the
+ * set snapshot frozen when it was accepted. `id` is the exercise's own id and `position` its place in
+ * the suggested day, after the planned exercises.
+ */
+const acceptedExerciseSchema = z
+  .strictObject({
+    id: rowIdSchema,
+    position: positionSchema,
+    exercise_id: rowIdSchema,
+    target_sets: integerBetween(MIN_TARGET_SETS, MAX_TARGET_SETS),
+    target_rir: integerBetween(MIN_RIR, MAX_RIR).nullable(),
+    // The rep range of the suggestion. Optional, so a row stored without one still parses.
+    rep_min: integerBetween(MIN_TARGET_REPS, MAX_TARGET_REPS).optional(),
+    rep_max: integerBetween(MIN_TARGET_REPS, MAX_TARGET_REPS).optional(),
+    exercise: z.strictObject({
+      id: rowIdSchema,
+      name: z.string(),
+      equipment: equipmentSchema,
+      mechanic: exerciseMechanicSchema,
+    }),
+    muscles: exerciseMusclesSchema,
+    snapshot: setSnapshotSchema,
+  })
+  .refine(
+    (exercise) =>
+      exercise.rep_min === undefined ||
+      exercise.rep_max === undefined ||
+      exercise.rep_min <= exercise.rep_max,
+    {
+      message: "The lowest rep target cannot be above the highest",
+      path: ["rep_max"],
+    },
+  )
+  .refine((exercise) => exercise.exercise.id === exercise.exercise_id, {
+    message: "An accepted exercise's details must be those of its own exercise",
+    path: ["exercise", "id"],
+  })
+  .refine((exercise) => exercise.snapshot.ref === exercise.exercise_id, {
+    message: "An accepted exercise's snapshot must be taken from its own exercise",
+    path: ["snapshot", "ref"],
+  });
+
+/**
+ * The numbers behind one pick of a suggestion (`SuggestionReason`), as data. Not strict, unlike the
+ * exercises: a row stored with a number a later build adds (`logged_sets` is optional because earlier
+ * rows lack it) must still parse, or the projection would silently skip the suggestion.
+ */
+const suggestionReasonSchema = z.object({
+  muscle_id: muscleIdSchema,
+  priority: z.number(),
+  weekly_sets: z.number(),
+  mav_low: z.number(),
+  heat: z.number(),
+  score: z.number(),
+  logged_sets: z.number().optional(),
+});
+
+/**
+ * The reasons stored with an accepted suggestion: for each exercise it added, the muscles that scored and
+ * the numbers behind them, so the suggestion keeps its reasons when the goal changes later. It is an
+ * object because the table holds `reasons` as one. Not strict at any level, for the reason above.
+ */
+const acceptedReasonsSchema = z.object({
+  picks: z
+    .array(
+      z.object({
+        exercise_id: rowIdSchema,
+        reasons: z.array(suggestionReasonSchema).max(MAX_MUSCLES_PER_EXERCISE),
+      }),
+    )
+    .max(MAX_EXERCISES_PER_ROUTINE_DAY),
+});
+
+/**
+ * The columns of an `accepted_suggestions` row (ADR 0005, Amendment 4) that the projection and the
+ * explanation read; the row's own columns (id, owner, deletion and creation times) are ignored. The table
+ * checks only that `exercises` is an array of 1 to 30 objects, so this owns the shape of each. A day
+ * holds at most as many exercises as a routine day does. Messages state the rule and never quote a value.
+ */
+export const acceptedSuggestionSchema = z.object({
+  local_date: z.iso.date(),
+  routine_day_id: rowIdSchema.nullable(),
+  exercises: z
+    .array(acceptedExerciseSchema)
+    .min(1, { message: "An accepted suggestion has at least one exercise" })
+    .max(MAX_EXERCISES_PER_ROUTINE_DAY, {
+      message: `An accepted suggestion has at most ${MAX_EXERCISES_PER_ROUTINE_DAY} exercises`,
+    })
+    .refine((exercises) => hasNoRepeats(exercises.map((exercise) => exercise.position)), {
+      message: "Two exercises of an accepted suggestion cannot share a position",
+    }),
+  reasons: acceptedReasonsSchema,
+  params_version: z.string().min(1),
+});
+
 export type ExerciseRow = z.infer<typeof exerciseRowSchema>;
 export type ExerciseMuscleRow = z.infer<typeof exerciseMuscleRowSchema>;
 export type ExerciseMuscleEntry = z.infer<typeof exerciseMuscleEntrySchema>;
@@ -368,3 +464,4 @@ export type RoutineRow = z.infer<typeof routineRowSchema>;
 export type RoutineDayRow = z.infer<typeof routineDayRowSchema>;
 export type RoutineExerciseRow = z.infer<typeof routineExerciseRowSchema>;
 export type TrainingGoalsRow = z.infer<typeof trainingGoalsRowSchema>;
+export type StoredAcceptedSuggestion = z.infer<typeof acceptedSuggestionSchema>;
