@@ -26,6 +26,14 @@ export const trainBackend: {
   hungTables: Set<string>;
   /** The tables the training reads were made to, in order. The week read and the active session read are `week_sessions` and `active_session`. */
   requests: string[];
+  /** The unit the profile shows loads in. */
+  weightUnit: "kg" | "lb";
+  /**
+   * The `workout_sets` rows of the sessions before, as the "previous" read returns them: with `session_id`,
+   * and `workout_sessions` holding the session's `local_date`. The read keeps the rows of its exercise.
+   * `last_performance` names that read in the tables above.
+   */
+  lastPerformance: Row[];
 } = {
   routine: null,
   sessions: [],
@@ -34,6 +42,8 @@ export const trainBackend: {
   failingTables: new Set(),
   hungTables: new Set(),
   requests: [],
+  weightUnit: "kg",
+  lastPerformance: [],
 };
 
 export function resetTrainBackend(): void {
@@ -45,6 +55,8 @@ export function resetTrainBackend(): void {
   trainBackend.failingTables.clear();
   trainBackend.hungTables.clear();
   trainBackend.requests = [];
+  trainBackend.weightUnit = "kg";
+  trainBackend.lastPerformance = [];
 }
 
 /** The number of reads made to a training table. */
@@ -89,11 +101,19 @@ async function trainFetch(input: string | URL | Request, init?: RequestInit): Pr
   const url = new URL(address);
   const table = url.pathname.split("/").pop() ?? "";
 
-  if (table !== "routines" && table !== "workout_sessions") {
+  if (table === "profiles" && url.searchParams.get("select") === "weight_unit") {
+    return jsonResponse([{ weight_unit: trainBackend.weightUnit }]);
+  }
+  if (table !== "routines" && table !== "workout_sessions" && table !== "workout_sets") {
     return diaryFetch(input, init);
   }
 
-  const read = table === "workout_sessions" ? sessionReadOf(url) : table;
+  const read =
+    table === "workout_sessions"
+      ? sessionReadOf(url)
+      : table === "workout_sets"
+        ? "last_performance"
+        : table;
   trainBackend.requests.push(read);
   if (trainBackend.hungTables.has(read)) {
     return new Promise(() => undefined);
@@ -107,6 +127,17 @@ async function trainFetch(input: string | URL | Request, init?: RequestInit): Pr
 
   if (table === "routines") {
     return jsonResponse(trainBackend.routine === null ? [] : [trainBackend.routine]);
+  }
+  if (read === "last_performance") {
+    const exerciseFilter = url.searchParams.get("exercise_id");
+    return jsonResponse(
+      trainBackend.lastPerformance
+        .filter((row) => exerciseFilter === `eq.${String(row["exercise_id"])}`)
+        .filter((row) => url.searchParams.get("session_id") !== `neq.${String(row["session_id"])}`)
+        .sort((first, second) =>
+          String(second["performed_at"]).localeCompare(String(first["performed_at"])),
+        ),
+    );
   }
   if (read === "week_sessions") {
     return jsonResponse(trainBackend.weekSessions);

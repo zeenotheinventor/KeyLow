@@ -1,4 +1,5 @@
 import type { IconName } from "../Icon";
+import type { ReactNode } from "react";
 
 export type SheetHeaderControl = {
   icon: IconName;
@@ -31,6 +32,13 @@ export type SheetHeaderProps = {
    * they leave.
    */
   trailing?: SheetHeaderControl | SheetHeaderControlPair | undefined;
+  /** A line under the title in the secondary caption, such as a session's clock. */
+  subtitle?: string | undefined;
+  /**
+   * Anything else at the right, such as a primary button, drawn when there is no `trailing` control. It
+   * takes the place of the empty slot, so it sets the space the title is centred in.
+   */
+  trailingSlot?: ReactNode;
   /**
    * Whether the title is a heading for a screen reader. Defaults to true. A view that has its own
    * heading, as the food detail has the food's name, turns it off so there is one.

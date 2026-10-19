@@ -3,7 +3,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { SheetHeader } from "../../components/ui";
+import { SheetHeader, Text } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -353,6 +353,36 @@ describe("SheetHeader", () => {
       expect(await screen.findByRole("heading", { name: "Find food" })).toHaveStyle({
         color: resolvedColor(scheme, "text-primary"),
       });
+    });
+  });
+
+  describe("a subtitle and a trailing slot", () => {
+    it("should draw the subtitle under the title, and keep the title as the heading", async () => {
+      await renderHeader({
+        ...searchHeader,
+        trailing: undefined,
+        subtitle: "30:00 · 8 of 16 sets",
+      });
+
+      expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+      expect(screen.getByText("30:00 · 8 of 16 sets")).toBeOnTheScreen();
+    });
+
+    it("should draw the trailing slot in place of the empty slot when there is no trailing control", async () => {
+      await renderHeader({
+        ...searchHeader,
+        trailing: undefined,
+        trailingSlot: <Text>Finish</Text>,
+      });
+
+      expect(screen.getByText("Finish")).toBeOnTheScreen();
+      expect(screen.queryByTestId("sheet-header-empty-slot")).not.toBeOnTheScreen();
+    });
+
+    it("should leave the empty slot as it was when neither is given", async () => {
+      await renderHeader({ ...searchHeader, trailing: undefined });
+
+      expect(screen.getByTestId("sheet-header-empty-slot")).toBeOnTheScreen();
     });
   });
 });

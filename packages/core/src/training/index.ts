@@ -278,3 +278,12 @@ export type {
 } from "./customExercise";
 export { parseAcceptedSuggestion } from "./parseAcceptedSuggestion";
 export type { ParsedAcceptedSuggestion } from "./parseAcceptedSuggestion";
+
+export { exerciseSetRows, sessionExercises } from "./exerciseRows";
+export type {
+  ExerciseSetRow,
+  SessionExercise,
+  SessionRow,
+  SessionRowEntry,
+  SetRowState,
+} from "./exerciseRows";

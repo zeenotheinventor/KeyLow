@@ -26,6 +26,11 @@ export function RootNavigator() {
           name="foods"
           options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
         />
+        {/* The active session covers the tabs and slides up, and hiding it slides it back down. */}
+        <Stack.Screen
+          name="session"
+          options={{ presentation: "fullScreenModal", animation: "slide_from_bottom" }}
+        />
       </Stack>
     </View>
   );
