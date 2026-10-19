@@ -126,6 +126,7 @@ export const createSuggestContext = (
       muscle_id: muscle,
       priority: priorityOf(muscle),
       weekly_sets: setsOf(muscle),
+      logged_sets: state[muscle].weeklySets,
       mav_low: mavLowOf(muscle),
       heat: heatOf(muscle),
       score: scoreOf(muscle),

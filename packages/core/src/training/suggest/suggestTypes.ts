@@ -48,8 +48,17 @@ export type SuggestConstraints = Readonly<{
 export type SuggestionReason = Readonly<{
   muscle_id: MuscleId;
   priority: number;
-  /** The sets of the last 7 days plus the sets already given by earlier picks of this suggestion. */
+  /**
+   * The sets the score read when the exercise was chosen: `logged_sets`, plus on a planned day the sets of
+   * the planned exercises kept, plus the sets already given by earlier picks of this suggestion. Not a
+   * count of what was logged.
+   */
   weekly_sets: number;
+  /**
+   * The effort weighted sets of the last 7 days from `muscleState`, before anything this suggestion
+   * credits. The only figure a sentence may call "in the last 7 days".
+   */
+  logged_sets: number;
   mav_low: number;
   heat: number;
   score: number;

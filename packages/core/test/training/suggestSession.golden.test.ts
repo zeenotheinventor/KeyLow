@@ -38,7 +38,8 @@ const reason = (
   mav_low: number,
   heat: number,
   score: number,
-) => ({ muscle_id, priority, weekly_sets, mav_low, heat, score });
+  logged_sets: number,
+) => ({ muscle_id, priority, weekly_sets, logged_sets, mav_low, heat, score });
 
 const readable = (session: SuggestedSession) =>
   session.exercises.map((exercise) => ({
@@ -52,6 +53,7 @@ const readable = (session: SuggestedSession) =>
       muscle_id: each.muscle_id,
       priority: each.priority,
       weekly_sets: roundedTo(each.weekly_sets, 2),
+      logged_sets: roundedTo(each.logged_sets, 2),
       mav_low: each.mav_low,
       heat: roundedTo(each.heat, 4),
       score: roundedTo(each.score, 2),
@@ -137,15 +139,15 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
     expect(readable(session).map((exercise) => exercise.reasons)).toStrictEqual([
       // glute_max, quads and hamstrings tie at 20.00, and list position puts glute_max first.
       [
-        reason("glute_max", 2, 0, 10, 0, 20),
-        reason("lower_back", 1, 0, 10, 0, 10),
-        reason("hamstrings", 2, 0, 10, 0, 20),
+        reason("glute_max", 2, 0, 10, 0, 20, 0),
+        reason("lower_back", 1, 0, 10, 0, 10, 0),
+        reason("hamstrings", 2, 0, 10, 0, 20, 0),
       ],
-      [reason("chest_upper", 3, 4.8, 12, 0.13, 18.79)],
-      [reason("quads", 2, 1.5, 10, 0, 17)],
-      [reason("delt_side", 3, 5.5, 10, 0.1221, 11.85)],
-      [reason("hamstrings", 2, 4.5, 10, 0, 11)],
-      [reason("chest_lower", 2, 6, 12, 0.1217, 10.54)],
+      [reason("chest_upper", 3, 4.8, 12, 0.13, 18.79, 4.8)],
+      [reason("quads", 2, 1.5, 10, 0, 17, 0)],
+      [reason("delt_side", 3, 5.5, 10, 0.1221, 11.85, 5.5)],
+      [reason("hamstrings", 2, 4.5, 10, 0, 11, 0)],
+      [reason("chest_lower", 2, 6, 12, 0.1217, 10.54, 4.5)],
     ]);
   });
 
@@ -212,15 +214,15 @@ describe("the strength user with no routine for the day (document case b2, the m
       // lower_back, glute_max, quads and hamstrings all score 30.00 at priority 3, and list position puts
       // lower_back first.
       [
-        reason("lower_back", 3, 0, 10, 0, 30),
-        reason("glute_max", 3, 0, 10, 0, 30),
-        reason("hamstrings", 3, 0, 10, 0, 30),
+        reason("lower_back", 3, 0, 10, 0, 30, 0),
+        reason("glute_max", 3, 0, 10, 0, 30, 0),
+        reason("hamstrings", 3, 0, 10, 0, 30, 0),
       ],
-      [reason("quads", 3, 1.5, 10, 0, 25.5)],
-      [reason("chest_lower", 3, 4.5, 12, 0.1217, 19.76)],
-      [reason("hamstrings", 3, 4.5, 10, 0, 16.5)],
-      [reason("delt_front", 3, 7.5, 10, 0.1319, 6.51)],
-      [reason("chest_upper", 1, 6.6, 12, 0.13, 4.7)],
+      [reason("quads", 3, 1.5, 10, 0, 25.5, 0)],
+      [reason("chest_lower", 3, 4.5, 12, 0.1217, 19.76, 4.5)],
+      [reason("hamstrings", 3, 4.5, 10, 0, 16.5, 0)],
+      [reason("delt_front", 3, 7.5, 10, 0.1319, 6.51, 6)],
+      [reason("chest_upper", 1, 6.6, 12, 0.13, 4.7, 4.8)],
     ]);
   });
 

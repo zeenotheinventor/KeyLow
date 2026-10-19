@@ -56,12 +56,14 @@ const reason = (
   mav_low: number,
   heat: number,
   score: number,
-) => ({ muscle_id, priority, weekly_sets, mav_low, heat, score });
+  logged_sets: number,
+) => ({ muscle_id, priority, weekly_sets, logged_sets, mav_low, heat, score });
 
 const readable = (reasons: readonly SuggestionReason[]) =>
   reasons.map((each) => ({
     ...each,
     weekly_sets: roundedTo(each.weekly_sets, 2),
+    logged_sets: roundedTo(each.logged_sets, 2),
     heat: roundedTo(each.heat, 4),
     score: roundedTo(each.score, 2),
   }));
@@ -121,7 +123,9 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
     if (added?.origin !== "added") {
       throw new Error("Expected the added exercise");
     }
-    expect(readable(added.reasons)).toStrictEqual([reason("chest_upper", 3, 4.8, 12, 0.13, 18.79)]);
+    expect(readable(added.reasons)).toStrictEqual([
+      reason("chest_upper", 3, 4.8, 12, 0.13, 18.79, 4.8),
+    ]);
   });
 
   it("should total 19 sets and read 60 minutes, from a plan of 16 sets and 50 minutes", () => {
@@ -199,7 +203,9 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
     if (raise?.origin !== "added") {
       throw new Error("Expected the added raise");
     }
-    expect(readable(raise.reasons)).toStrictEqual([reason("delt_side", 3, 5.5, 10, 0.1221, 11.85)]);
+    expect(readable(raise.reasons)).toStrictEqual([
+      reason("delt_side", 3, 5.5, 10, 0.1221, 11.85, 5.5),
+    ]);
   });
 });
 
@@ -278,7 +284,7 @@ describe("the strength user, Thursday's Legs kept plus one main lift (document c
     if (added?.origin !== "added") {
       throw new Error("Expected the added exercise");
     }
-    expect(readable(added.reasons)[0]).toStrictEqual(reason("lower_back", 3, 2.1, 10, 0, 23.7));
+    expect(readable(added.reasons)[0]).toStrictEqual(reason("lower_back", 3, 2.1, 10, 0, 23.7, 0));
   });
 
   it("should read 60 minutes and say the bench press would read 70", () => {

@@ -42,3 +42,4 @@ export * from "./sessionActive";
 export * from "./sessionEntry";
 export * from "./sessionExercise";
 export * from "./sessionFinish";
+export * from "./suggestion";

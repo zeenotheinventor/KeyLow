@@ -265,6 +265,7 @@ describe("the score", () => {
         muscle_id: "chest_lower",
         priority: 3,
         weekly_sets: 1.5,
+        logged_sets: 0,
         mav_low: 12,
         heat: 0,
         score: 31.5,
@@ -555,6 +556,7 @@ describe("the reasons are data only", () => {
       for (const each of picked.reasons) {
         expect(Object.keys(each).sort()).toStrictEqual([
           "heat",
+          "logged_sets",
           "mav_low",
           "muscle_id",
           "priority",
@@ -562,7 +564,14 @@ describe("the reasons are data only", () => {
           "weekly_sets",
         ]);
         expect(MUSCLE_IDS).toContain(each.muscle_id);
-        for (const key of ["heat", "mav_low", "priority", "score", "weekly_sets"] as const) {
+        for (const key of [
+          "heat",
+          "logged_sets",
+          "mav_low",
+          "priority",
+          "score",
+          "weekly_sets",
+        ] as const) {
           expect(typeof each[key]).toBe("number");
         }
       }
