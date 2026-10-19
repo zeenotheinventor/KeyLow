@@ -9,12 +9,15 @@ export function putExerciseInCache(queryClient: QueryClient, exercise: ExerciseD
 }
 
 /**
- * Marks every exercise search and the exercise `id` (when it is known) stale after a write. Nothing else
- * of training is touched: a logged set holds the muscle map it was logged with, so saving or archiving an
- * exercise changes no set, no session and no heat.
+ * Marks every exercise search, every suggestion library and the exercise `id` (when it is known) stale
+ * after a write. The suggestion library is the exercises the suggestion chooses from and is read once for
+ * the session, so a saved or archived exercise must reach it. Nothing else of training is touched: a
+ * logged set holds the muscle map it was logged with, so saving or archiving an exercise changes no set,
+ * no session and no heat.
  */
 export function refreshExercises(queryClient: QueryClient, id: string | undefined): void {
   void queryClient.invalidateQueries({ queryKey: keys.training.exerciseSearchAll });
+  void queryClient.invalidateQueries({ queryKey: keys.training.suggestionLibraryAll });
   if (id !== undefined) {
     void queryClient.invalidateQueries({ queryKey: keys.training.exercise(id) });
   }

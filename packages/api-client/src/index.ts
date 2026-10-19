@@ -289,6 +289,10 @@ export type {
   ExerciseState,
   UseExerciseSearchOptions,
 } from "./hooks";
+export { useSuggestion } from "./hooks";
+export type { SuggestionRead, SuggestionUnavailableReason, UseSuggestionInput } from "./hooks";
+export { listSuggestionLibrary } from "./repos";
+export type { SuggestionLibraryOptions } from "./repos";
 export { ExerciseRuleError } from "./errors";
 export type { ExerciseRule } from "./errors";
 export { archiveExercise, getExercise, saveExercise, searchExercises } from "./repos";

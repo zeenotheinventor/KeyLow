@@ -457,6 +457,37 @@ describe("keys.training, the exercise reads", () => {
     }
   });
 
+  it("should key the suggestion library by the sorted equipment key alone, under the training root", () => {
+    expect(keys.training.suggestionLibrary("barbell,dumbbell")).toEqual([
+      "training",
+      "suggestion-library",
+      "barbell,dumbbell",
+    ]);
+    expect(keys.training.suggestionLibraryAll).toEqual(["training", "suggestion-library"]);
+    expect(keys.training.suggestionLibrary("cable").slice(0, 2)).toEqual(
+      keys.training.suggestionLibraryAll,
+    );
+  });
+
+  it("should keep the suggestion library under none of the persisted families", () => {
+    const persisted = [
+      keys.training.setsAll,
+      keys.training.activeRoutine,
+      keys.training.hasLoggedSession,
+      keys.training.weekSessionsAll,
+      keys.training.historyAll,
+      keys.training.sessionsAll,
+      keys.training.activeSession,
+      keys.training.routinesAll,
+      keys.training.routineAll,
+      keys.training.goals,
+    ];
+    const key = keys.training.suggestionLibrary("barbell,dumbbell");
+    for (const prefix of persisted) {
+      expect(key.slice(0, prefix.length)).not.toEqual(prefix);
+    }
+  });
+
   it("should hold an id only in an exercise key, never a name or a muscle", () => {
     const words =
       /^(training|exercise|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;

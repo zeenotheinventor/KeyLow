@@ -121,6 +121,8 @@ export {
 } from "./trainingGoals";
 export { getExercise, searchExercises } from "./exercises";
 export type { ExerciseDetail, ExerciseSearchHit, ExerciseSearchOptions } from "./exercises";
+export { listSuggestionLibrary } from "./suggestionLibrary";
+export type { SuggestionLibraryOptions } from "./suggestionLibrary";
 export { archiveExercise, saveExercise } from "./exerciseWrites";
 export type { ExerciseSave } from "./exerciseWrites";
 export {
