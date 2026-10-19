@@ -22,6 +22,18 @@ export const samples: Record<string, () => string[]> = {
     copy.describeExerciseGroupHeading("library", 4),
   ],
   describeAddExerciseName: () => [copy.describeAddExerciseName("Side lateral raise")],
+  describeExerciseRowName: () => [
+    copy.describeExerciseRowName({
+      name: "Side lateral raise",
+      equipment: "dumbbell",
+      isCustom: false,
+    }),
+    copy.describeExerciseRowName({
+      name: "Lean-away cable raise",
+      equipment: "cable",
+      isCustom: true,
+    }),
+  ],
   describeCreateExerciseRow: () =>
     ["lateral raise", "  "].flatMap((query) =>
       Object.values(copy.describeCreateExerciseRow(query)),

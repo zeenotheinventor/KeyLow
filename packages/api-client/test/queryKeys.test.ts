@@ -370,6 +370,14 @@ describe("keys.training, the exercise reads", () => {
     expect(keys.training.exerciseSearch("raise")).toEqual(["training", "exercise-search", "raise"]);
   });
 
+  it("should build the added exercises key scoped to the session id", () => {
+    expect(keys.training.addedExercises(EXERCISE_ID)).toEqual([
+      "training",
+      "added-exercises",
+      EXERCISE_ID,
+    ]);
+  });
+
   it("should build an exercise key scoped to the exercise id", () => {
     expect(keys.training.exercise(EXERCISE_ID)).toEqual(["training", "exercise", EXERCISE_ID]);
   });
@@ -395,6 +403,7 @@ describe("keys.training, the exercise reads", () => {
     for (const key of [
       keys.training.exerciseSearch("raise"),
       keys.training.exercise(EXERCISE_ID),
+      keys.training.addedExercises(EXERCISE_ID),
     ]) {
       expect(key.slice(0, 1)).toEqual(keys.training.all);
       for (const prefix of persisted) {

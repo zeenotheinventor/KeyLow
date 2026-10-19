@@ -20,7 +20,7 @@ export const trainBackend: {
   weekSessions: Row[];
   /** The newest session that has not ended, with its routine day and its `workout_sets`, or null for none. */
   activeSession: Row | null;
-  /** Fails the reads of this table with a database error. `week_sessions` and `active_session` name the other two reads of `workout_sessions`. */
+  /** Fails the reads of this table with a database error. `week_sessions` and `active_session` name the other two reads of `workout_sessions`, and `exercise_search` names the exercise search. */
   failingTables: Set<string>;
   /** Never answers the reads of this table, as a slow connection does. */
   hungTables: Set<string>;
@@ -42,6 +42,8 @@ export const trainBackend: {
   holdAddSet: Promise<void> | null;
   /** The sets removed from the active session, which Undo brings back. */
   removedSets: Row[];
+  /** The `exercises` rows the search answers with, whatever the words, each with its `exercise_muscles`, in the order the database sorts them: the person's own first, then by name. */
+  exercises: Row[];
 } = {
   routine: null,
   sessions: [],
@@ -56,6 +58,7 @@ export const trainBackend: {
   failingWrites: false,
   holdAddSet: null,
   removedSets: [],
+  exercises: [],
 };
 
 export function resetTrainBackend(): void {
@@ -74,6 +77,7 @@ export function resetTrainBackend(): void {
   trainBackend.holdAddSet = null;
   trainBackend.removedSets = [];
   nextSetNumber = 0;
+  trainBackend.exercises = [];
 }
 
 /** The number of reads made to a training table. */
@@ -227,10 +231,20 @@ export async function trainFetch(
   if (table === "profiles" && url.searchParams.get("select") === "weight_unit") {
     return jsonResponse([{ weight_unit: trainBackend.weightUnit }]);
   }
-  if (table === "exercises" && url.searchParams.get("select")?.includes("exercise_muscles")) {
+  // The read of one exercise by its id, for a set's snapshot. The search names no id.
+  if (
+    table === "exercises" &&
+    url.searchParams.has("id") &&
+    url.searchParams.get("select")?.includes("exercise_muscles")
+  ) {
     return exerciseRead(url, init);
   }
-  if (table !== "routines" && table !== "workout_sessions" && table !== "workout_sets") {
+  if (
+    table !== "routines" &&
+    table !== "workout_sessions" &&
+    table !== "workout_sets" &&
+    table !== "exercises"
+  ) {
     return diaryFetch(input, init);
   }
   if (table === "workout_sets") {
@@ -245,7 +259,9 @@ export async function trainFetch(
       ? sessionReadOf(url)
       : table === "workout_sets"
         ? "last_performance"
-        : table;
+        : table === "exercises"
+          ? "exercise_search"
+          : table;
   trainBackend.requests.push(read);
   if (trainBackend.hungTables.has(read)) {
     return new Promise(() => undefined);
@@ -257,6 +273,10 @@ export async function trainFetch(
     );
   }
 
+  if (read === "exercise_search") {
+    // The database answers with the rows the test set, whatever the words, as the boards' search does.
+    return jsonResponse(trainBackend.exercises);
+  }
   if (table === "routines") {
     return jsonResponse(trainBackend.routine === null ? [] : [trainBackend.routine]);
   }

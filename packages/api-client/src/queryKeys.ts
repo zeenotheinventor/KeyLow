@@ -133,6 +133,12 @@ export const keys = {
      * id is the only thing the key carries besides fixed words.
      */
     exercise: (id: string) => ["training", "exercise", id] as const,
+    /**
+     * The exercises added to a session on screen that have no logged set yet, which the data model cannot
+     * store (it stores sets). Never persisted: they survive the screen being hidden and shown again, and
+     * not the app being closed. The session id is the only thing the key carries besides fixed words.
+     */
+    addedExercises: (sessionId: string) => ["training", "added-exercises", sessionId] as const,
   },
   /**
    * The weigh-in reads. A family of its own, outside `diary`, and not in the list a persisted cache keeps,

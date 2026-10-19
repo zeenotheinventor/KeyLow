@@ -83,6 +83,23 @@ export const CentredTitle: Story = {
   ),
 };
 
+// A fixed height sheet, for a list that scrolls: it is as tall as its snap point and the contents fill it. A
+// list inside it scrolls in `SheetScrollView`, which Jest cannot render, so the story fills it with a view.
+export const FixedHeight: Story = {
+  args: { title: "Add exercise", snapPoints: ["80%"], children: null },
+  render: (args) => (
+    <BottomSheet {...args}>
+      <View className="flex-1 gap-4">
+        {weekDays.map((day) => (
+          <Text key={day} variant="body-strong">
+            {day}
+          </Text>
+        ))}
+      </View>
+    </BottomSheet>
+  ),
+};
+
 export const Closed: Story = { args: { open: false, title: "Log weight" } };
 
 function OpenAndClose() {

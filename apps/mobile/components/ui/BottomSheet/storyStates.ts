@@ -3,6 +3,7 @@ export const storyStates = [
   "WithoutTitle",
   "Tall",
   "CentredTitle",
+  "FixedHeight",
   "Closed",
   "Interactive",
 ];

@@ -42,20 +42,36 @@ const unique = (ids: readonly string[]): string[] => [...new Set(ids)];
  * first of the plan's first unfinished exercise is the next row, the one `planProgress` names as `nextSet`.
  * Soft-deleted sets are left out.
  *
+ * `addedExerciseIds` are the exercises added to the session on screen (KEY-434), in the order they were
+ * added. The data model stores sets, not exercises, so one with no set yet is not in `loggedSets`: it is
+ * listed last, in that order, with one row to do. The first of them is the next row when the plan has no
+ * set left to log, so its numbers open prefilled from last time. An added exercise that has a set, or that
+ * the plan lists, is ignored and drawn as it is without them.
+ *
  * Throws a `RangeError` naming the rule when a set's `performed_at` is not an ISO timestamp with a zone.
  */
 export const sessionExercises = <Set extends PrefillSessionSet>(
   scaffold: SessionScaffold | null,
   loggedSets: readonly Set[],
+  addedExerciseIds: readonly string[] = [],
 ): SessionExercise<Set>[] => {
   const sets = orderSessionSets(loggedSets);
   const progress = planProgress(scaffold, sets);
-  const exerciseIds = unique([
+  const listedIds = unique([
     ...(scaffold?.exercises.map((exercise) => exercise.exercise_id) ?? []),
     ...sets.map((set) => set.exercise_id),
   ]);
+  const addedWithoutSets = unique(addedExerciseIds).filter((id) => !listedIds.includes(id));
+  const exerciseIds = [...listedIds, ...addedWithoutSets];
 
   return exerciseIds.map((exerciseId) => {
+    if (addedWithoutSets.includes(exerciseId)) {
+      const isNext = progress.nextSet === null && exerciseId === addedWithoutSets[0];
+      return {
+        exerciseId,
+        rows: [{ state: isNext ? "next" : "todo", setType: "working", setNumber: 1, set: null }],
+      };
+    }
     const doneRows = sets
       .filter((set) => set.exercise_id === exerciseId)
       .reduce<SessionRow<Set>[]>((rows, set) => {
