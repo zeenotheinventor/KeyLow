@@ -6,4 +6,5 @@ export type {
   SetChanges,
   SetEntryOpening,
   SetEntrySheetProps,
+  SetLogRequest,
 } from "./types";

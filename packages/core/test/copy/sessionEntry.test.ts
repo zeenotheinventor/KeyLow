@@ -415,6 +415,10 @@ describe("the set entry sheet's fixed words", () => {
     );
   });
 
+  it("should say a full session holds 200 sets, the most it can hold", () => {
+    expect(SET_ENTRY.sessionFull).toBe("This session holds 200 sets, the most a session can hold.");
+  });
+
   it("should say a set was not removed and what to do, with no number in it", () => {
     expect(SET_ENTRY.removeFailed).toBe(
       "Your set was not removed. Check your connection, then try again.",

@@ -14,6 +14,7 @@ export {
   MAX_SESSION_MINUTES,
   MAX_SESSION_NOTE_LENGTH,
   MAX_SESSION_TIME_ZONE_LENGTH,
+  FULL_SESSION_RULE,
   MAX_SETS_PER_SESSION,
   MAX_TARGET_REPS,
   MAX_TARGET_SETS,
@@ -106,7 +107,7 @@ export type {
   SetInputRule,
   SetValues,
 } from "./setInput";
-export { buildWorkoutSetInsert } from "./buildWorkoutSetInsert";
+export { buildWorkoutSetInsert, isFullSessionRefusal } from "./buildWorkoutSetInsert";
 export type { WorkoutSetInsert, WorkoutSetInsertInput } from "./buildWorkoutSetInsert";
 
 export { groupSessionsByWeek, orderSessionSets, summariseSession } from "./historySummary";
@@ -224,6 +225,7 @@ export type {
   PlanProgress,
   ProgressSet,
 } from "./sessionProgress";
+export { addedSetTime } from "./addedSetTime";
 export { prefillNextSet, sameAgain } from "./prefill";
 export type { LastPerformanceSet, PrefillSessionSet, SetPrefill } from "./prefill";
 

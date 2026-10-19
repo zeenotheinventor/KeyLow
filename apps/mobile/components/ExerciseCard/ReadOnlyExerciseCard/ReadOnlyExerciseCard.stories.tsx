@@ -55,6 +55,9 @@ export const Normal: Story = {};
 // An exercise done as planned has no note.
 export const NoNote: Story = { args: { note: null, rows: [row(1, 12, false), row(2, 11, false)] } };
 
+// With Add set under the sets, which the session detail gives every card.
+export const WithAddSet: Story = { args: { onAddSet: () => undefined } };
+
 // With what pressing a set does, which the edit builds: every row is a button with a chevron.
 export const Pressable: Story = {
   args: {

@@ -51,6 +51,7 @@ function LogSetSheet({
   entry,
   openingId,
   onPressSetNumber,
+  onLogSet,
 }: SetEntrySheetProps) {
   return (
     <BottomSheet
@@ -64,6 +65,7 @@ function LogSetSheet({
         sessionId={sessionId}
         unit={unit}
         onLogged={onClose}
+        onLogSet={onLogSet}
         onPressSetNumber={onPressSetNumber}
       />
     </BottomSheet>

@@ -1,5 +1,13 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { cleanup, render, screen, userEvent, waitFor, within } from "@testing-library/react-native";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -8,6 +16,7 @@ import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { pressInTheSameMoment } from "./support/sameTickPress";
 import { exerciseIdOf, GOLDEN_SESSION_ID } from "./support/sessionGoldenLegs";
 import { resetSetEntryBackend, setEntryBackend, setEntryClient } from "./support/setEntryBackend";
 import { resetTrainBackend } from "./support/trainBackend";
@@ -753,6 +762,60 @@ describe("the set entry sheet", () => {
       });
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
       expect(setEntryBackend.inserts).toMatchObject([{ load_kg: 185, reps: 11, rir: 2 }]);
+    });
+  });
+
+  describe("handing the set over to the screen with onLogSet", () => {
+    const sameAgain = () => screen.getByRole("button", { name: /^Same again/ });
+
+    it("should hand over one set for Same again and Log set pressed in the same moment, whatever each holds", async () => {
+      const pending = Promise.withResolvers<boolean>();
+      const onLogSet = jest.fn(() => pending.promise);
+      const user = userEvent.setup();
+      await renderSheet({ onLogSet });
+      await user.clear(repsField());
+      await user.type(repsField(), "9");
+
+      await pressInTheSameMoment(sameAgain(), logSet());
+
+      expect(onLogSet).toHaveBeenCalledTimes(1);
+      expect(setEntryBackend.insertAttempts).toBe(0);
+      await act(() => {
+        pending.resolve(true);
+      });
+    });
+
+    it("should stay open with the typed numbers when the screen answers false, and take another press", async () => {
+      const onLogSet = jest.fn(() => Promise.resolve(false));
+      const user = userEvent.setup();
+      const { onClose } = await renderSheet({ onLogSet });
+      await user.clear(repsField());
+      await user.type(repsField(), "9");
+
+      await user.press(logSet());
+      await user.press(logSet());
+
+      expect(onLogSet).toHaveBeenCalledTimes(2);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(repsField()).toHaveDisplayValue("9");
+      expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+    });
+
+    it("should close once the screen answers true, and write nothing of its own", async () => {
+      const onLogSet = jest.fn(() => Promise.resolve(true));
+      const user = userEvent.setup();
+      const { onClose } = await renderSheet({ onLogSet });
+
+      await user.press(logSet());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+      expect(onLogSet).toHaveBeenCalledWith({
+        draft: { setType: "working", load: "180.0000", reps: "11", rir: "1", rpe: "" },
+        unit: "kg",
+      });
+      expect(setEntryBackend.insertAttempts).toBe(0);
     });
   });
 

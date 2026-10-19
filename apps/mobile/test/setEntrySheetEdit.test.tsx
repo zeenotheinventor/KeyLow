@@ -1,4 +1,4 @@
-import { cleanup, render, screen, userEvent, act } from "@testing-library/react-native";
+import { cleanup, render, screen, userEvent } from "@testing-library/react-native";
 import { setUpTests } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -6,9 +6,9 @@ import { SetEntrySheet } from "../components/SetEntrySheet";
 import { ThemeProvider } from "../lib/theme";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { pressInTheSameMoment, pressTwiceInTheSameMoment } from "./support/sameTickPress";
 
 import type { EditSetOpening, EditSetSheetProps } from "../components/SetEntrySheet";
-import type { TestInstance } from "test-renderer";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -67,23 +67,6 @@ const loadField = (unit = "kg") => screen.getByLabelText(`Load, ${unit}`);
 const repsField = () => screen.getByLabelText("Reps");
 const saveChanges = () => screen.getByRole("button", { name: "Save changes" });
 const deleteSet = () => screen.getByRole("button", { name: "Delete set" });
-
-// Two presses before React has drawn anything between them, which two awaited presses never do. A press is
-// the host element's click, so the same handler runs twice inside one act, as a double tap's would.
-type ClickHandler = (event: { stopPropagation: () => void; nativeEvent: object }) => void;
-const isClickHandler = (value: unknown): value is ClickHandler => typeof value === "function";
-
-async function pressTwiceInTheSameMoment(button: TestInstance) {
-  const { onClick } = button.props;
-  if (!isClickHandler(onClick)) {
-    throw new Error("The button has no click handler");
-  }
-  await act(() => {
-    for (let press = 0; press < 2; press += 1) {
-      onClick({ stopPropagation: () => undefined, nativeEvent: {} });
-    }
-  });
-}
 
 describe("the set entry sheet, editing a set of a past session", () => {
   let kitStyles: string;
@@ -321,15 +304,7 @@ describe("the set entry sheet, editing a set of a past session", () => {
       const saveButton = saveChanges();
       const deleteButton = deleteSet();
 
-      await act(() => {
-        const click = { stopPropagation: () => undefined, nativeEvent: {} };
-        for (const { props } of [deleteButton, saveButton]) {
-          const { onClick } = props;
-          if (isClickHandler(onClick)) {
-            onClick(click);
-          }
-        }
-      });
+      await pressInTheSameMoment(deleteButton, saveButton);
 
       expect(onDelete).toHaveBeenCalledTimes(1);
       expect(onSave).not.toHaveBeenCalled();

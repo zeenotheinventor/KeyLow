@@ -9,14 +9,20 @@ import type { Database } from "@keylow/api-client";
 type Row = Record<string, unknown>;
 
 /**
- * The writes the history can make, on the sessions `sessionDetailBackend` holds: the update of a set, its
- * removal and restoring, and the delete of a session. The reads are the session detail's and the history
+ * The writes the history can make, on the sessions `sessionDetailBackend` holds: the insert of a set, the
+ * update of a set, its removal and restoring, and the delete of a session. The reads are the session detail's and the history
  * list's, over the same sessions, so a write shows in both as the database would show it. A test reads
  * back what was asked of the database and what it holds now.
  */
 export const historyEditBackend: {
   /** The bodies of the set updates (not removals or restores), in order. */
   updates: Row[];
+  /** The bodies of the set inserts, in order. */
+  inserts: Row[];
+  /** When set, the count of live sets the session is said to hold, whatever it holds. */
+  liveSetCount: number | null;
+  /** Holds the read of an exercise's last performance (by the exercise's id) until its promise settles. */
+  heldLastPerformance: Map<string, Promise<void>>;
   /** The ids of the sets removed, in order. */
   removedIds: string[];
   /** The ids of the sets restored, in order. */
@@ -31,6 +37,9 @@ export const historyEditBackend: {
   removedSets: Row[];
 } = {
   updates: [],
+  inserts: [],
+  liveSetCount: null,
+  heldLastPerformance: new Map(),
   removedIds: [],
   restoredIds: [],
   deletedSessionIds: [],
@@ -41,6 +50,10 @@ export const historyEditBackend: {
 
 export function resetHistoryEditBackend(): void {
   historyEditBackend.updates = [];
+  historyEditBackend.inserts = [];
+  historyEditBackend.liveSetCount = null;
+  historyEditBackend.heldLastPerformance = new Map();
+  insertedCount = 0;
   historyEditBackend.removedIds = [];
   historyEditBackend.restoredIds = [];
   historyEditBackend.deletedSessionIds = [];
@@ -99,6 +112,8 @@ function oneSet(row: Row | undefined, init?: RequestInit): Response {
   return wantsOneObject(init) ? jsonResponse(row) : jsonResponse([row]);
 }
 
+let insertedCount = 0;
+
 function setWrites(url: URL, init?: RequestInit): Response | null {
   const method = (init?.method ?? "GET").toUpperCase();
   const idFilter = url.searchParams.get("id");
@@ -106,7 +121,30 @@ function setWrites(url: URL, init?: RequestInit): Response | null {
 
   if (method === "GET" && url.searchParams.get("session_id")?.startsWith("eq.")) {
     const live = setsOfSession(url.searchParams.get("session_id")?.replace("eq.", "") ?? "");
-    return jsonResponse([], 200, { "content-range": `*/${live.length}` });
+    const highest = live.map((row) => Number(row["position"])).sort((a, b) => b - a)[0];
+    return jsonResponse(highest === undefined ? [] : [{ position: highest }], 200, {
+      "content-range": `*/${historyEditBackend.liveSetCount ?? live.length}`,
+    });
+  }
+  if (method === "POST") {
+    if (historyEditBackend.failingWrites) {
+      return databaseError();
+    }
+    const body = bodyOf(init);
+    historyEditBackend.inserts.push(body);
+    insertedCount += 1;
+    const inserted = {
+      ...body,
+      id: `0000000b-0000-4000-8000-${String(insertedCount).padStart(12, "0")}`,
+      deleted_at: null,
+    };
+    const session = sessionDetailBackend.sessions.find(
+      (entry) => entry["id"] === body["session_id"],
+    );
+    if (session !== undefined) {
+      putSets(session, [...rowsOf(session["workout_sets"]), inserted].sort(byPosition));
+    }
+    return oneSet(inserted, init);
   }
   if (method === "GET" && id !== null) {
     const live = findLiveSet(id)?.found;
@@ -180,6 +218,10 @@ export async function historyEditFetch(
   trainBackend.weekSessions = sessionDetailBackend.sessions;
 
   if (url.pathname.endsWith("/workout_sets")) {
+    if (method === "GET") {
+      const exerciseFilter = url.searchParams.get("exercise_id")?.replace("eq.", "");
+      await historyEditBackend.heldLastPerformance.get(exerciseFilter ?? "");
+    }
     if (method === "PATCH") {
       await historyEditBackend.holdWrites;
     }

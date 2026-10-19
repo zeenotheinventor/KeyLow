@@ -1,4 +1,5 @@
 import {
+  ADD_EXERCISE,
   HISTORY_ERROR,
   HISTORY_SCREEN,
   HISTORY_SESSION_DETAIL,
@@ -11,15 +12,20 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AddExerciseSheet } from "../AddExerciseSheet";
 import { ExerciseCard } from "../ExerciseCard";
 import { SessionDetailMenu } from "../SessionDetailMenu";
 import { SetEntrySheet } from "../SetEntrySheet";
 import { StatCard } from "../StatCard";
-import { EmptyState, ErrorState, SheetHeader, Skeleton, Text } from "../ui";
+import { Button, EmptyState, ErrorState, SheetHeader, Skeleton, Text } from "../ui";
+import { useAddToSession } from "./useAddToSession";
 import { useEditSet } from "./useEditSet";
 import { useSessionDetail } from "./useSessionDetail";
 
 import type { SessionDetailContent, SessionDetailScreenProps, SessionDetailView } from "./types";
+
+// The session in progress leaves 34 under its dock, a home indicator's height, which a phone with a taller inset outgrows.
+const MINIMUM_DOCK_BOTTOM_PADDING = 34;
 
 /**
  * A logged session, opened from the history list, the Today card or the week strip, as the
@@ -28,7 +34,8 @@ import type { SessionDetailContent, SessionDetailScreenProps, SessionDetailView 
  * sets. A session that is not found, in whatever way, shows a card that leads back to the history. Back is
  * named for the screen the session was opened from. Pressing a set opens the edit set sheet (change it, or
  * delete it with an Undo), and "More for this session" holds Delete session, which asks first and then goes
- * back to the history list.
+ * back to the history list. Add set under an exercise and Add exercise under the cards (no board draws them)
+ * add to the session: see `useAddToSession`.
  */
 export function SessionDetailScreen({
   id,
@@ -47,6 +54,7 @@ export function SessionDetailScreen({
   const detail: SessionDetailView =
     isLeaving && lastContent !== null ? { status: "ready", content: lastContent } : read;
   const editSet = useEditSet(id);
+  const addToSession = useAddToSession(id);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   function renderBody() {
@@ -81,6 +89,9 @@ export function SessionDetailScreen({
                     editSet.openSet(row.key);
                   },
                 }))}
+                onAddSet={() => {
+                  addToSession.openAddSet(exerciseId, card.name);
+                }}
               />
             ))}
           </ScrollView>
@@ -146,7 +157,22 @@ export function SessionDetailScreen({
         }
       />
       {renderBody()}
+      {detail.status === "ready" && id !== undefined ? (
+        // The dock holds Add exercise under the cards, as the session in progress draws it.
+        <View
+          className="border-t border-border bg-surface px-4 pb-[var(--dock-bottom)] pt-3"
+          style={vars({ "--dock-bottom": Math.max(insets.bottom, MINIMUM_DOCK_BOTTOM_PADDING) })}
+        >
+          <Button fullWidth icon="Plus" variant="secondary" onPress={addToSession.openPicker}>
+            {ADD_EXERCISE.title}
+          </Button>
+        </View>
+      ) : null}
       {editSet.sheet === null ? null : <SetEntrySheet {...editSet.sheet} />}
+      {addToSession.sheet === null ? null : <SetEntrySheet {...addToSession.sheet} />}
+      {detail.status === "ready" && id !== undefined ? (
+        <AddExerciseSheet {...addToSession.picker} />
+      ) : null}
       {detail.status === "ready" && id !== undefined ? (
         <SessionDetailMenu
           open={isMenuOpen}

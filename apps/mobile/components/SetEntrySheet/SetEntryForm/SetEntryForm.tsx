@@ -9,7 +9,7 @@ import {
   isWordedSetInputRule,
 } from "@keylow/core/copy";
 import { displayLoad, sameAgain, validateSetDraft } from "@keylow/core/training";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { View } from "react-native";
 
 import { Button, PressableSurface, Text } from "../../ui";
@@ -48,19 +48,25 @@ function sameAgainDraft(values: SetValues): SetDraft {
  * The inside of the set entry sheet: the exercise and set, the load and reps fields, RIR, and Same again and
  * Log set. A field shows its rule once it has been edited, and Log set is off while any field breaks one.
  * The typed values are held here and a failed write leaves them as they are, with a line saying the set did
- * not save that the next try clears.
+ * not save that the next try clears. Given `onLogSet` (a session that is not the one in progress) the form
+ * hands it the set instead of writing, and the screen that owns it says what went wrong, so no line is drawn
+ * here; the sheet closes only when it resolves to true, and one press does one thing.
  */
 export function SetEntryForm({
   entry,
   sessionId,
   unit,
   onLogged,
+  onLogSet,
   onPressSetNumber,
 }: SetEntryFormProps) {
   const { exerciseId, exerciseName, setType, setNumber, plan, prefill, lastWeek } = entry;
   const [typed, setTyped] = useState(() => openingDraft(prefill, unit));
   const [edited, setEdited] = useState<EditedFields>({ load: false, reps: false });
   const addSet = useAddSet();
+  const [isAnswering, setIsAnswering] = useState(false);
+  // The state would still read idle for a second press that arrives before React has drawn the first.
+  const isAnsweringRef = useRef(false);
 
   const draft: SetDraft = { setType, ...typed, rpe: "" };
   const checked = validateSetDraft(draft, { unit, effortMode: "rir" });
@@ -74,9 +80,32 @@ export function SetEntryForm({
   const loadError = errorOf("load");
   const repsError = errorOf("reps");
   const repeat = prefill.source === "none" ? null : sameAgain(prefill);
-  const isLogging = addSet.isPending;
+  const isLogging = addSet.isPending || isAnswering;
+
+  async function logThrough(
+    store: NonNullable<SetEntryFormProps["onLogSet"]>,
+    input: { draft: SetDraft; unit: SetEntryFormProps["unit"] },
+  ) {
+    if (isAnsweringRef.current) {
+      return;
+    }
+    isAnsweringRef.current = true;
+    setIsAnswering(true);
+    try {
+      if (await store(input)) {
+        onLogged();
+      }
+    } finally {
+      isAnsweringRef.current = false;
+      setIsAnswering(false);
+    }
+  }
 
   function log(input: { draft: SetDraft; unit: SetEntryFormProps["unit"] }) {
+    if (onLogSet !== undefined) {
+      void logThrough(onLogSet, input);
+      return;
+    }
     addSet.mutate(
       { sessionId, exerciseId, effortMode: "rir", now: new Date(), ...input },
       { onSuccess: onLogged },

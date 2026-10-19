@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { MAX_SETS_PER_SESSION } from "./bounds";
+import { FULL_SESSION_RULE, MAX_SETS_PER_SESSION } from "./bounds";
 import { buildSetSnapshot } from "./buildSetSnapshot";
 import { loadToKg } from "./loads";
 import { setValueIssues } from "./setInput";
@@ -37,6 +37,10 @@ export type WorkoutSetInsertInput = Readonly<{
   liveSetsInSession: number;
 }>;
 
+/** Whether a write was refused because the session already holds its most live sets, which a screen words for itself. */
+export const isFullSessionRefusal = (error: unknown): boolean =>
+  error instanceof RangeError && error.message === FULL_SESSION_RULE;
+
 // The schemas' timestamp rule: a zone designator is required, so a time never depends on the device zone.
 const timestampSchema = z.iso.datetime({ offset: true });
 
@@ -52,7 +56,7 @@ export const buildWorkoutSetInsert = (input: WorkoutSetInsertInput): WorkoutSetI
   const { sessionId, exercise, muscles, draft, position, performedAt, liveSetsInSession } = input;
 
   if (liveSetsInSession >= MAX_SETS_PER_SESSION) {
-    throw new RangeError(`A session holds at most ${MAX_SETS_PER_SESSION} live sets.`);
+    throw new RangeError(FULL_SESSION_RULE);
   }
   if (!timestampSchema.safeParse(performedAt).success) {
     throw new RangeError("A set's performed_at must be an ISO timestamp with a zone.");

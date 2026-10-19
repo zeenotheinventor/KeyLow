@@ -1,17 +1,18 @@
-import { HISTORY_SESSION_DETAIL } from "@keylow/core/copy";
+import { HISTORY_SESSION_DETAIL, SESSION_ACTIVE } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { SetRow } from "../../SetRow";
-import { Card, Text } from "../../ui";
+import { Button, Card, Text } from "../../ui";
 
 import type { ReadOnlyExerciseCardProps } from "./types";
 
 /**
  * An exercise of a logged session, as the `history · session-detail` board draws it: its name with a note
  * beside it, over the sets it holds. There are no column headings, since each row reads as a sentence. The
- * card is a region named for the exercise, and its rows are a list named Sets.
+ * card is a region named for the exercise, and its rows are a list named Sets, with Add set under them when
+ * the card is given what it does.
  */
-export function ReadOnlyExerciseCard({ name, note, rows }: ReadOnlyExerciseCardProps) {
+export function ReadOnlyExerciseCard({ name, note, rows, onAddSet }: ReadOnlyExerciseCardProps) {
   return (
     <Card aria-label={name} level="surface" padding={0} role="region">
       <View className="pb-1 pt-2">
@@ -30,6 +31,17 @@ export function ReadOnlyExerciseCard({ name, note, rows }: ReadOnlyExerciseCardP
             <SetRow key={key} variant="readOnly" {...row} />
           ))}
         </View>
+        {onAddSet === undefined ? null : (
+          <Button
+            className="ml-2 self-start"
+            icon="Plus"
+            size="sm"
+            variant="ghost"
+            onPress={onAddSet}
+          >
+            {SESSION_ACTIVE.addSetAction}
+          </Button>
+        )}
       </View>
     </Card>
   );

@@ -1,5 +1,5 @@
 import type { ExerciseTargetInput } from "@keylow/core/copy";
-import type { LoadUnit, SetPrefill, SetType } from "@keylow/core/training";
+import type { LoadUnit, SetDraft, SetPrefill, SetType } from "@keylow/core/training";
 
 /** What the exercise's plan asks: its sets, rep range and RIR. */
 export type ExercisePlan = NonNullable<ExerciseTargetInput["target"]>;
@@ -43,6 +43,12 @@ export type SetChanges = {
   rir?: number | null;
 };
 
+/** A set to store, as the form holds it: the text of its numbers and the unit the load was typed in. */
+export type SetLogRequest = {
+  draft: SetDraft;
+  unit: LoadUnit;
+};
+
 export type SetEntrySheetProps = {
   mode?: "log" | undefined;
   open: boolean;
@@ -60,6 +66,12 @@ export type SetEntrySheetProps = {
   entry: SetEntryOpening;
   /** Opens the set types sheet. The set number at the top is a button only when a screen handles it. */
   onPressSetNumber?: (() => void) | undefined;
+  /**
+   * Stores the set in place of the sheet's own write to the session in progress, for a session that is not
+   * the one in progress. Resolves to whether it was stored: when not, the sheet stays open with the numbers as
+   * typed, and the screen has said so. Without it the sheet logs to `sessionId` itself.
+   */
+  onLogSet?: ((request: SetLogRequest) => Promise<boolean>) | undefined;
 };
 
 /** The sheet when it changes a set of a past session (`history · edit-set`): the same fields, with Delete set and Save changes. */
