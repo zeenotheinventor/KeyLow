@@ -18,6 +18,7 @@ export function TodayCard({
   card,
   context,
   isStartAndResumeDisabled,
+  isStarting = false,
   onStart,
   onResume,
   onViewSession,
@@ -49,6 +50,7 @@ export function TodayCard({
                 disabled={isStartAndResumeDisabled}
                 fullWidth
                 icon="Play"
+                loading={isStarting}
                 onPress={onStart}
               >
                 {copy.action}

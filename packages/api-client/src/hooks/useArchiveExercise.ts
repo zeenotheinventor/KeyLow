@@ -21,6 +21,7 @@ export function useArchiveExercise() {
   const archiveOnce = useSingleFlight((id: string) => archiveExercise(client, id));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: archiveOnce,
     onSettled: (_result, _error, id) => {
       refreshExercises(queryClient, id);

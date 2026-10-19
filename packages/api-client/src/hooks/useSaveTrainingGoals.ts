@@ -29,6 +29,7 @@ export function useSaveTrainingGoals() {
   const saveOnce = useSingleFlight((answers: GoalAnswers) => saveTrainingGoals(client, answers));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: saveOnce,
     onSuccess: (goals) => {
       queryClient.setQueryData(keys.training.goals, goals);

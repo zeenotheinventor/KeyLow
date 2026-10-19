@@ -30,6 +30,7 @@ export function useSaveExercise() {
   const saveOnce = useSingleFlight((save: ExerciseSave) => saveExercise(client, save));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: saveOnce,
     onSuccess: (exercise) => {
       putExerciseInCache(queryClient, exercise);

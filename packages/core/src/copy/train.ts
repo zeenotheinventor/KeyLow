@@ -78,6 +78,19 @@ export const TRAIN_ERROR = {
   action: "Try again",
 } as const;
 
+/**
+ * The danger toast when a session did not start. It states the rule and never a value. No board draws it
+ * (KEY-431): it is the only string the Start flow adds. A toast is one sentence with no full stop.
+ */
+export const TRAIN_START_FAILED = "Your session did not start, check your connection and try again";
+
+/**
+ * The danger toast when a discard did not go through, so the session is still there. It states the rule and
+ * never a value. No board draws it (KEY-431).
+ */
+export const TRAIN_DISCARD_FAILED =
+  "Discarding a session needs a connection, your session is still here";
+
 /** The title of the offline banner, which `describeOfflineBanner` completes. */
 export const TRAIN_OFFLINE_TITLE = "You're offline";
 

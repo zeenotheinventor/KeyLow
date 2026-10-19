@@ -18,6 +18,7 @@ export function useReorderSets() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    networkMode: "always",
     scope: SESSION_SET_SCOPE,
     mutationFn: ({ sessionId, orderedIds }: ReorderSetsInput) =>
       reorderSets(client, sessionId, orderedIds),

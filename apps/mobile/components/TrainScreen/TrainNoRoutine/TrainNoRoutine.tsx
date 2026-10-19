@@ -15,6 +15,7 @@ export function TrainNoRoutine({
   onCreateRoutine,
   onLogSession,
   isLogDisabled,
+  isStarting = false,
 }: TrainNoRoutineProps) {
   const hasActions = onCreateRoutine !== undefined || onLogSession !== undefined;
 
@@ -39,6 +40,7 @@ export function TrainNoRoutine({
               <Button
                 className="flex-1"
                 disabled={isLogDisabled}
+                loading={isStarting}
                 variant="secondary"
                 onPress={onLogSession}
               >

@@ -19,6 +19,7 @@ export function useRemoveSet() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    networkMode: "always",
     scope: SESSION_SET_SCOPE,
     mutationFn: (id: string) => removeSet(client, id),
     onSuccess: (set) => {

@@ -1,17 +1,25 @@
 import type { TodayCardContext, TodayCardWithSession } from "@keylow/core/copy";
 
+/** What a start needs besides the moment: the routine day to follow, or null for a free session, and the profile's zone. */
+export type TrainSessionStart = {
+  routineDayId: string | null;
+  timeZone: string;
+};
+
 export type TrainScreenProps = {
+  /** Shows a spinner on the buttons that start a session, and stops them responding, while a start is under way. */
+  isStarting?: boolean | undefined;
   /**
    * Starts a session that follows no routine day: "Log a session" on the first visit and "Log a session
    * anyway" with no routine. The screen draws each of those buttons only when it is given.
    */
-  onLogSession?: (() => void) | undefined;
+  onLogSession?: ((start: TrainSessionStart) => void) | undefined;
   /** Opens the routine editor: "Create routine". Drawn only when it is given. */
   onCreateRoutine?: (() => void) | undefined;
   /** Opens the goal questionnaire: "Set your goal". Drawn only when it is given. */
   onSetGoal?: (() => void) | undefined;
   /** Starts the day's session: "Start Legs" on the Today card. Drawn only when it is given. */
-  onStart?: (() => void) | undefined;
+  onStart?: ((start: TrainSessionStart) => void) | undefined;
   /** Reopens the session in progress: "Resume Legs" on the Today card. Drawn only when it is given. */
   onResume?: (() => void) | undefined;
   /** Opens today's finished session: "View session" on the Today card. Drawn only when it is given. */
@@ -22,6 +30,8 @@ export type TrainScreenProps = {
 export type TodayCardView = {
   card: TodayCardWithSession;
   context: TodayCardContext;
+  /** The routine day today plans, which Start follows, or null when today plans none. */
+  plannedDayId: string | null;
 };
 
 /** What the Train home has read. */

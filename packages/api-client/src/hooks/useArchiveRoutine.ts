@@ -26,6 +26,7 @@ export function useArchiveRoutine() {
   );
 
   return useMutation({
+    networkMode: "always",
     mutationFn: archiveOnce,
     onSettled: () => {
       refreshRoutines(queryClient);
