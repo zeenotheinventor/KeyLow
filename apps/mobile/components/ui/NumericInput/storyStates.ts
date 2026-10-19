@@ -11,4 +11,6 @@ export const storyStates = [
   "WithWarningHelper",
   "Disabled",
   "WholeNumberBesideLabel",
+  "DisplaySize",
+  "DisplaySizeWithError",
 ];

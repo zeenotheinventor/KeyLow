@@ -21,23 +21,25 @@ type OpenSessionSet = SessionWithSets["sets"][number];
 function describeExercise(
   exercise: SessionExercise<OpenSessionSet>,
   plan: Plan | null,
-): Pick<SessionScreenExercise, "name" | "target"> | null {
+): Pick<SessionScreenExercise, "name" | "target" | "plan"> | null {
   const planned = plan?.day.exercises.find((entry) => entry.exercise_id === exercise.exerciseId);
   if (plan !== null && planned !== undefined) {
     const slots = plan.scaffold.exercises
       .filter((entry) => entry.exercise_id === exercise.exerciseId)
       .reduce((total, entry) => total + entry.slots, 0);
+    const exercisePlan = {
+      sets: slots,
+      repMin: planned.rep_min,
+      repMax: planned.rep_max,
+      rir: planned.target_rir,
+    };
     return {
       name: planned.exercise.name,
       target: describeExerciseTarget({
-        target: {
-          sets: slots,
-          repMin: planned.rep_min,
-          repMax: planned.rep_max,
-          rir: planned.target_rir,
-        },
+        target: exercisePlan,
         equipment: planned.exercise.equipment,
       }),
+      plan: exercisePlan,
     };
   }
   const logged = exercise.rows.find((row) => row.set !== null)?.set;
@@ -46,6 +48,7 @@ function describeExercise(
     : {
         name: logged.snapshot.name,
         target: describeExerciseTarget({ target: null, equipment: logged.snapshot.equipment }),
+        plan: null,
       };
 }
 

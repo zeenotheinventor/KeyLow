@@ -6,4 +6,6 @@ export const storyStates = [
   "NoneSelected",
   "WrapTenChips",
   "MultipleTwoChosen",
+  "EqualColumnsRir",
+  "ClearableRir",
 ];

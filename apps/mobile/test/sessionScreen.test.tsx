@@ -20,6 +20,7 @@ import { registerAppStyles } from "./support/nativeWindStyles";
 import {
   freshLegsOpen,
   GOLDEN_SESSION_ID,
+  exerciseIdOf,
   goldenLegsOpen,
   LEGS_DAY_ID,
   legsRoutine,
@@ -27,6 +28,7 @@ import {
   previousThursday,
   previousThursdayAndOpenSession,
 } from "./support/sessionGoldenLegs";
+import { resetSetEntryBackend, setEntryBackend, setEntryClient } from "./support/setEntryBackend";
 import { expectTextsInOrder } from "./support/textsInOrder";
 import { resetTrainBackend, trainBackend, trainClient } from "./support/trainBackend";
 
@@ -97,11 +99,14 @@ const THURSDAY_1900 = "2026-10-15T18:00:00Z";
 
 let queryClient: QueryClient;
 
-async function renderSession(props: Partial<SessionScreenProps> = {}) {
+async function renderSession(
+  props: Partial<SessionScreenProps> = {},
+  client: typeof trainClient = trainClient,
+) {
   queryClient = createDiaryQueryClient();
   await render(
     <ThemeProvider fixedPreference="dark">
-      <KeyLowProvider client={trainClient} queryClient={queryClient}>
+      <KeyLowProvider client={client} queryClient={queryClient}>
         <SessionScreen onHide={jest.fn()} {...props} />
       </KeyLowProvider>
     </ThemeProvider>,
@@ -163,6 +168,7 @@ describe("the active session screen", () => {
       "components/SessionExerciseCard",
       "components/ExerciseCard",
       "components/SetRow",
+      "components/SetEntrySheet",
       "app",
     ]);
   });
@@ -171,6 +177,7 @@ describe("the active session screen", () => {
     mockExerciseCardDraws.mockClear();
     registerAppStyles(kitStyles);
     resetTrainBackend();
+    resetSetEntryBackend();
     mockNow = new Date(THURSDAY_1900);
   });
 
@@ -289,12 +296,23 @@ describe("the active session screen", () => {
       await expectColumn(squat, 1, ["–", "–", "97.5 × 8", "97.5 × 7", "97.5 × 6"]);
     });
 
-    it("should not offer the checks as buttons, since they do nothing yet", async () => {
+    it("should offer a button to open the set entry for each set still to do, and none on the checks", async () => {
       await renderSession();
       await exerciseCard("Leg press");
 
-      expect(screen.getAllByRole("button")).toHaveLength(1);
+      expect(screen.getAllByRole("button", { name: /^[A-Za-z ]+, set \d$/ })).toHaveLength(8);
+      expect(screen.getByRole("button", { name: "Leg press, set 3" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Standing calf raise, set 4" })).toBeOnTheScreen();
       expect(screen.getByLabelText("Log set 3, 180 kilograms, 11 reps")).not.toHaveProp("role");
+    });
+
+    it("should leave the sets already logged as display only", async () => {
+      await renderSession();
+      await exerciseCard("Leg press");
+
+      expect(screen.queryByRole("button", { name: "Barbell squat, set 1" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Leg press, set 2" })).not.toBeOnTheScreen();
+      expect(screen.getAllByRole("button")).toHaveLength(9);
     });
 
     it("should show an extra row for a set logged beyond the target", async () => {
@@ -386,7 +404,7 @@ describe("the active session screen", () => {
       await renderSession();
       const squat = await exerciseCard("Barbell squat");
 
-      expect(squat.getByLabelText("Log set 1, 97.5 kilograms, 8 reps")).toBeOnTheScreen();
+      expect(await squat.findByLabelText("Log set 1, 97.5 kilograms, 8 reps")).toBeOnTheScreen();
       await expectColumn(squat, 1, ["97.5 × 8", "97.5 × 7", "97.5 × 6"]);
       expect(squat.getAllByLabelText("Log set 2")).toHaveLength(1);
     });
@@ -407,6 +425,129 @@ describe("the active session screen", () => {
       expect(screen.queryByLabelText("Seated leg curl")).not.toBeOnTheScreen();
       expect(screen.queryByLabelText("Standing calf raise")).not.toBeOnTheScreen();
       expect(screen.queryByLabelText(/^Log set/)).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("opening the set entry", () => {
+    beforeEach(() => {
+      seedGoldenThursday();
+      setEntryBackend.exercise = {
+        id: exerciseIdOf("legPress"),
+        name: "Leg press",
+        equipment: "machine",
+        mechanic: "compound",
+        exercise_muscles: [{ muscle_id: "quads", role: "primary", weight: 1 }],
+      };
+      setEntryBackend.liveSets = 8;
+    });
+
+    it("should open the next set, leg press set 3, on 180, 11 and RIR 1 with the line saying where they came from", async () => {
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+
+      await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
+
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("180");
+      expect(screen.getByLabelText("Reps")).toHaveDisplayValue("11");
+      expect(screen.getByRole("radio", { name: "1" })).toBeChecked();
+      expect(
+        screen.getByText(
+          "Filled from your last set: 180 kg × 11 at RIR 1. Last week: 170 kg × 10.",
+        ),
+      ).toBeOnTheScreen();
+      expect(screen.getByText("Set 3 of 3 · target 10 to 12 reps at RIR 1")).toBeOnTheScreen();
+    });
+
+    it("should open a set still to do from the exercise's last time, with no set of the session to fill from", async () => {
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+
+      await user.press(await screen.findByRole("button", { name: "Seated leg curl, set 1" }));
+
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("45");
+      expect(screen.getByLabelText("Reps")).toHaveDisplayValue("12");
+      expect(screen.getByText("Filled from last time: 45 kg × 12 at RIR 2.")).toBeOnTheScreen();
+      expect(screen.getByText("Set 1 of 3 · target 10 to 12 reps at RIR 1")).toBeOnTheScreen();
+    });
+
+    it("should title a later set still to do with the set it will become, the next free slot of the exercise", async () => {
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+
+      await user.press(await screen.findByRole("button", { name: "Seated leg curl, set 3" }));
+
+      expect(screen.getByText("Set 1 of 3 · target 10 to 12 reps at RIR 1")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("45");
+    });
+
+    it("should start a row tapped straight after a set was logged from that row's own numbers, not the last form's", async () => {
+      // The clock stands still, so the logged form is still on its way out when the next row is pressed.
+      jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
+      try {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        await renderSession({}, setEntryClient);
+        await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
+        await user.clear(screen.getByLabelText("Load, kg"));
+        await user.type(screen.getByLabelText("Load, kg"), "190");
+        await user.press(screen.getByRole("button", { name: "Log set" }));
+        await waitFor(() => {
+          expect(setEntryBackend.inserts).toHaveLength(1);
+        });
+        expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("190");
+
+        await user.press(screen.getByRole("button", { name: "Seated leg curl, set 1" }));
+
+        expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("45");
+      } finally {
+        jest.useRealTimers();
+      }
+    });
+
+    it("should log the set with Log set, close the sheet and write it to the session", async () => {
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+      await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
+
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(screen.queryByLabelText("Load, kg")).not.toBeOnTheScreen();
+      });
+      expect(setEntryBackend.inserts).toMatchObject([
+        { session_id: GOLDEN_SESSION_ID, load_kg: 180, reps: 11, rir: 1, set_type: "working" },
+      ]);
+    });
+
+    it("should keep the sheet and what was typed when the write fails", async () => {
+      setEntryBackend.failInserts = true;
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+      await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
+      await user.clear(screen.getByLabelText("Load, kg"));
+      await user.type(screen.getByLabelText("Load, kg"), "185");
+
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Log set" })).toBeEnabled();
+      });
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("185");
+    });
+
+    it("should read the sheet in pounds for a pound user, and store 225 as 102,058 grams", async () => {
+      trainBackend.weightUnit = "lb";
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+      await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
+      expect(screen.getByLabelText("Load, lb")).toHaveDisplayValue("396.8");
+
+      await user.clear(screen.getByLabelText("Load, lb"));
+      await user.type(screen.getByLabelText("Load, lb"), "225");
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(setEntryBackend.inserts).toMatchObject([{ load_kg: 102.058 }]);
+      });
     });
   });
 

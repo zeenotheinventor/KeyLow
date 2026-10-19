@@ -409,6 +409,12 @@ describe("the set entry sheet's fixed words", () => {
     });
   });
 
+  it("should say a set did not save, what to check and what to do, with no number in it", () => {
+    expect(SET_ENTRY.saveFailed).toBe(
+      "Your set did not save. Check your connection, then try again.",
+    );
+  });
+
   it("should offer RIR chips from 0 to 6+", () => {
     expect(RIR_CHIP_LABELS).toEqual(["0", "1", "2", "3", "4", "5", "6+"]);
   });

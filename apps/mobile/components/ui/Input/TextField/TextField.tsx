@@ -1,11 +1,12 @@
 import { FOOD_FORM } from "@keylow/core/copy";
 import { useState } from "react";
-import { TextInput, View } from "react-native";
+import { View } from "react-native";
 
 import { useTheme } from "../../../../lib/theme";
 import { Icon } from "../../Icon";
 import { Text } from "../../Text";
 import { FieldError } from "../FieldError";
+import { FieldTextInput } from "../FieldTextInput";
 
 import type { FieldMacro, TextFieldProps } from "./types";
 import type { InputDensity } from "../types";
@@ -33,9 +34,25 @@ const alignClassName = {
   center: "text-center",
 } satisfies Record<NonNullable<TextFieldProps["align"]>, string>;
 
+// The display size is the set entry boards' number: 32 over 40 in a box 64 points high. The design system has
+// no type token between h1 and the numerals for it, so it is written out as the ring numeral's size is.
+const boxHeightClassName = {
+  default: "min-h-control-md",
+  display: "h-16",
+} satisfies Record<NonNullable<TextFieldProps["size"]>, string>;
+
+function valueClassName(size: NonNullable<TextFieldProps["size"]>, strongValue: boolean): string {
+  if (size === "display") {
+    return "text-[32px] font-semibold leading-[40px] tracking-[-0.03em]";
+  }
+  return strongValue ? "text-body-strong font-semibold" : "text-body font-normal";
+}
+
 // A field's text and its box give way to large text only so far, because the box is the design's 44
 // points and the text has only the box to live in.
 const maxFontSizeMultiplier = 1.5;
+// The display number is 32 on a 40 point line in a box of 64, so it grows only a quarter before it would overflow.
+const displayMaxFontSizeMultiplier = 1.25;
 
 function nonEmpty(text: string | undefined): string | undefined {
   return text === undefined || text.trim() === "" ? undefined : text;
@@ -59,6 +76,7 @@ export function TextField({
   missingNote,
   disabled = false,
   density = "comfortable",
+  size = "default",
   inputRef,
   locked = false,
   unit,
@@ -141,9 +159,9 @@ export function TextField({
         </View>
       )}
       <View
-        className={`min-h-control-md flex-row items-center rounded-medium border ${boxSpacingClassName(density, unit !== undefined)} ${borderClassName} ${fillClassName}`}
+        className={`${boxHeightClassName[size]} flex-row items-center rounded-medium border ${boxSpacingClassName(density, unit !== undefined)} ${borderClassName} ${fillClassName}`}
       >
-        <TextInput
+        <FieldTextInput
           {...keyboardProps}
           {...adjustableProps}
           accessibilityHint={accessibilityHint}
@@ -151,11 +169,13 @@ export function TextField({
           // `aria-disabled={false}` would turn a locked field's input back on.
           aria-disabled={disabled ? true : undefined}
           aria-label={accessibilityLabel ?? (unit === undefined ? label : `${label} (${unit})`)}
-          className={`min-h-10 min-w-0 flex-1 p-0 tabular-nums text-text-primary ${strongValue ? "text-body-strong font-semibold" : "text-body font-normal"} ${alignClassName[align]}`}
+          className={`min-h-10 min-w-0 flex-1 p-0 tabular-nums text-text-primary ${valueClassName(size, strongValue)} ${alignClassName[align]}`}
           cursorColor={colors["text-primary"]}
           // `readOnly` is left out because React Native lets it override `editable` even when it is false.
           editable={!disabled && !locked}
-          maxFontSizeMultiplier={maxFontSizeMultiplier}
+          maxFontSizeMultiplier={
+            size === "display" ? displayMaxFontSizeMultiplier : maxFontSizeMultiplier
+          }
           placeholder={placeholder}
           ref={inputRef}
           placeholderTextColor={colors["text-muted"]}
