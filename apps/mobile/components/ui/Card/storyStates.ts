@@ -1,1 +1,1 @@
-export const storyStates = ["Surface", "Raised", "Compact", "Rows"];
+export const storyStates = ["Surface", "Raised", "Compact", "Rows", "Accent"];

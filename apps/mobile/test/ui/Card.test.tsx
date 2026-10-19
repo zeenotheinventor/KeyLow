@@ -82,6 +82,26 @@ describe("Card", () => {
     });
   });
 
+  describe("the border", () => {
+    it.each(schemes)("should be the hairline by default, in the %s scheme", async (scheme) => {
+      await renderCard({}, scheme);
+
+      expect(screen.getByLabelText("Today")).toHaveStyle({
+        borderColor: resolvedColor(scheme, "border"),
+        borderWidth: 1,
+      });
+    });
+
+    it.each(schemes)("should be the accent when asked, in the %s scheme", async (scheme) => {
+      await renderCard({ border: "accent" }, scheme);
+
+      expect(screen.getByLabelText("Today")).toHaveStyle({
+        borderColor: resolvedColor(scheme, "accent"),
+        borderWidth: 1,
+      });
+    });
+  });
+
   it.each([
     { name: "by default", props: {}, points: 16 },
     { name: "at step 4", props: { padding: 4 }, points: 16 },
