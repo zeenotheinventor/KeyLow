@@ -141,6 +141,15 @@ describe("the package index", () => {
     "useTrainingGoals",
     "useTrainingGoalsHistory",
     "useSaveTrainingGoals",
+    "ExerciseRuleError",
+    "getExercise",
+    "searchExercises",
+    "saveExercise",
+    "archiveExercise",
+    "useExercise",
+    "useExerciseSearch",
+    "useSaveExercise",
+    "useArchiveExercise",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

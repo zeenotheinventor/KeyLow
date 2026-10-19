@@ -7,6 +7,7 @@ import {
 import { z } from "zod";
 
 import { idOfRow, parseRow } from "./diaryRows";
+import { escapeLikePattern } from "./escapeLikePattern";
 import { MIN_SEARCH_LENGTH, getFood, listFoodPortions } from "./foods";
 
 import type { Database } from "../database.types";
@@ -117,15 +118,6 @@ export async function getRecipe(
 
   return data === null ? null : parseRow(recipeDetailSchema, data, "load the recipe", idOfRow);
 }
-
-/**
- * Makes `%`, `_` and the escape character itself match as themselves in an `ilike` pattern. PostgREST
- * also reads every `*` in the value as `%` and has no way to escape one, so a `*` cannot be matched
- * literally. It becomes `_`, which finds a name with a star in that place (and, as a known limit, any
- * other single character there) and never lets the star stand for a run of characters.
- */
-const escapeLikePattern = (text: string): string =>
-  text.replace(/[\\%_]/g, (character) => `\\${character}`).replaceAll("*", "_");
 
 /**
  * The user's recipes whose name contains `query`, ignoring case, in the library's order. This is an

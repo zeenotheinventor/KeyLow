@@ -34,9 +34,10 @@ export const keys = {
   /**
    * The training reads. Unlike `recipes` and `weighIns`, these are persisted on mobile: the mobile app
    * keeps each family below by its prefix (`setsAll`, `activeRoutine`, `weekSessionsAll`), so heat, the
-   * plan and the week open without a connection. Nothing here is a search, and any search added later
-   * (exercises by text) must not sit under these prefixes. A key holds dates and fixed words only,
-   * never a set value, a load or a muscle. What is stored is rows: heat, volume and the comparison are
+   * plan and the week open without a connection. The exercise search and the exercise read, at the
+   * end of the family, are not persisted and sit under none of these prefixes. A key holds dates and
+   * fixed words only, never a set value, a load or a muscle (the exercise search holds the text the
+   * person typed, in memory only). What is stored is rows: heat, volume and the comparison are
    * worked out from them at read time, so they are never stale. Every key sits under `["training"]`.
    * `windowStart` and `weekStart` are `YYYY-MM-DD`, and `weekStart` is the Monday.
    *
@@ -119,6 +120,19 @@ export const keys = {
      * a connection. Its second element is not `goals`, so the persisted `goals` prefix does not match it.
      */
     goalsHistory: ["training", "goals-history"] as const,
+    /**
+     * The prefix of every `exerciseSearch` key. Never persisted: searching exercises by text needs a
+     * connection, as the diary's food search does, so it sits under none of the persisted prefixes above.
+     */
+    exerciseSearchAll: ["training", "exercise-search"] as const,
+    /** Exercises whose name contains `q`, the signed in user's own first. The text is the person's search, held in memory only. */
+    exerciseSearch: (q: string) => ["training", "exercise-search", q] as const,
+    /**
+     * One live exercise with its full muscle map, or null: global reference data or the user's own.
+     * Never persisted: it is only read while logging or editing, which needs a connection. An exercise
+     * id is the only thing the key carries besides fixed words.
+     */
+    exercise: (id: string) => ["training", "exercise", id] as const,
   },
   /**
    * The weigh-in reads. A family of its own, outside `diary`, and not in the list a persisted cache keeps,

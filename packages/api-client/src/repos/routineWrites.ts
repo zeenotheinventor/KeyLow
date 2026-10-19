@@ -2,10 +2,12 @@ import { routinePayload, validateRoutineDraft } from "@keylow/core/training";
 
 import { RoutineRuleError } from "../errors";
 import { idOfRow, parseRow } from "./diaryRows";
+import { untypedFunctions } from "./nullableArguments";
 import { assertRoutineId, getRoutine } from "./routines";
 import { ROUTINE_RECORD_COLUMNS, routineRecordSchema } from "./routineSchemas";
 import { trainingRepoError } from "./training";
 
+import type { WithNullable } from "./nullableArguments";
 import type { RoutineDetail, RoutineRecord } from "./routineSchemas";
 import type { Database } from "../database.types";
 import type { RoutineDraft } from "@keylow/core/training";
@@ -28,22 +30,6 @@ export type RoutineSave = {
 };
 
 type Functions = Database["public"]["Functions"];
-
-/** The arguments of a routine function, with the id nullable: null creates a routine, or clears the active one. */
-type WithNullableId<Args extends { p_routine_id: string }> = Omit<Args, "p_routine_id"> & {
-  p_routine_id: string | null;
-};
-
-/**
- * Both functions take a null id, but the generated types name the argument a plain string, because
- * Postgres records no nullability for function arguments, and a type cast would hide a real mismatch.
- * A client typed without the database schema carries the null, and each call site ties its arguments to
- * the generated ones with `satisfies`, so a renamed or retyped argument breaks the build. What comes
- * back is parsed before it is used.
- */
-function untypedFunctions(client: SupabaseClient<Database>): SupabaseClient {
-  return client;
-}
 
 /**
  * Saves a routine with one `save_routine` call, which writes the routine, its days and their exercises
@@ -74,7 +60,7 @@ export async function saveRoutine(
     p_routine,
     // Json arrays are mutable, and the payload's are read-only, so the days and their exercises are copied.
     p_days: p_days.map((day) => ({ ...day, exercises: [...day.exercises] })),
-  } satisfies WithNullableId<Functions["save_routine"]["Args"]>);
+  } satisfies WithNullable<Functions["save_routine"]["Args"], "p_routine_id">);
 
   if (response.error) {
     throw trainingRepoError("save the routine", response.error);
@@ -105,7 +91,7 @@ export async function setActiveRoutine(
 
   const { error } = await untypedFunctions(client).rpc("set_active_routine", {
     p_routine_id: id,
-  } satisfies WithNullableId<Functions["set_active_routine"]["Args"]>);
+  } satisfies WithNullable<Functions["set_active_routine"]["Args"], "p_routine_id">);
 
   if (error) {
     throw trainingRepoError("make the routine active", error);

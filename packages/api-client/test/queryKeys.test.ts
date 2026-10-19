@@ -364,3 +364,50 @@ describe("keys.training", () => {
     }
   });
 });
+
+describe("keys.training, the exercise reads", () => {
+  it("should build a search key scoped to the query text", () => {
+    expect(keys.training.exerciseSearch("raise")).toEqual(["training", "exercise-search", "raise"]);
+  });
+
+  it("should build an exercise key scoped to the exercise id", () => {
+    expect(keys.training.exercise(EXERCISE_ID)).toEqual(["training", "exercise", EXERCISE_ID]);
+  });
+
+  it("should expose the prefix of every search key, to refresh them all after a save", () => {
+    expect(keys.training.exerciseSearchAll).toEqual(["training", "exercise-search"]);
+    expect(keys.training.exerciseSearch("raise").slice(0, 2)).toEqual(
+      keys.training.exerciseSearchAll,
+    );
+  });
+
+  it("should nest the exercise keys under the training root and under none of the persisted families", () => {
+    const persisted = [
+      keys.training.setsAll,
+      keys.training.activeRoutine,
+      keys.training.hasLoggedSession,
+      keys.training.weekSessionsAll,
+      keys.training.sessionsAll,
+      keys.training.activeSession,
+      keys.training.routinesAll,
+      keys.training.routineAll,
+    ];
+    for (const key of [
+      keys.training.exerciseSearch("raise"),
+      keys.training.exercise(EXERCISE_ID),
+    ]) {
+      expect(key.slice(0, 1)).toEqual(keys.training.all);
+      for (const prefix of persisted) {
+        expect(key.slice(0, prefix.length)).not.toEqual(prefix);
+      }
+    }
+  });
+
+  it("should hold an id only in an exercise key, never a name or a muscle", () => {
+    const words =
+      /^(training|exercise|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
+    for (const part of keys.training.exercise(EXERCISE_ID)) {
+      expect(part).toMatch(words);
+    }
+  });
+});
