@@ -17,16 +17,29 @@ import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
 import { useTrainHome } from "./useTrainHome";
 
-import type { TrainScreenProps } from "./types";
+import type { TrainScreenProps, TrainSessionStart } from "./types";
+
+/** The handler a button calls, with what the start needs. No handler means no button, so none is drawn. */
+function bindStart(
+  handler: ((start: TrainSessionStart) => void) | undefined,
+  start: TrainSessionStart,
+): (() => void) | undefined {
+  return handler === undefined
+    ? undefined
+    : () => {
+        handler(start);
+      };
+}
 
 /**
  * The Train tab: the Today card, or the first visit or no routine card when today has no card, under the
  * title. It stays mounted under the terms gate's cover, so its reads wait until the account has accepted the
  * current Terms. Offline it shows what the phone saved, under a notice that says when. Starting a session
  * needs a connection, so the buttons that log or reopen one are dimmed offline. A button is drawn only when
- * its handler is given.
+ * its handler is given, and it passes the handler what the start needs: the routine day and the time zone.
  */
 export function TrainScreen({
+  isStarting = false,
   onLogSession,
   onCreateRoutine,
   onSetGoal,
@@ -74,9 +87,17 @@ export function TrainScreen({
           <TodayCard
             card={home.today.card}
             context={home.today.context}
+            isStarting={isStarting}
             isStartAndResumeDisabled={!isOnline}
             onResume={onResume}
-            onStart={onStart}
+            onStart={
+              home.today.plannedDayId === null
+                ? undefined
+                : bindStart(onStart, {
+                    routineDayId: home.today.plannedDayId,
+                    timeZone: home.timeZone,
+                  })
+            }
             onViewSession={onViewSession}
           />
         ) : null}
@@ -84,13 +105,21 @@ export function TrainScreen({
           home.hasLoggedSession ? (
             <TrainNoRoutine
               isLogDisabled={!isOnline}
+              isStarting={isStarting}
               onCreateRoutine={onCreateRoutine}
-              onLogSession={onLogSession}
+              onLogSession={bindStart(onLogSession, {
+                routineDayId: null,
+                timeZone: home.timeZone,
+              })}
             />
           ) : (
             <TrainFirstTime
               isLogDisabled={!isOnline}
-              onLogSession={onLogSession}
+              isStarting={isStarting}
+              onLogSession={bindStart(onLogSession, {
+                routineDayId: null,
+                timeZone: home.timeZone,
+              })}
               onSetGoal={onSetGoal}
             />
           )

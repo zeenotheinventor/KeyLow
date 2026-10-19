@@ -1,4 +1,5 @@
 import type { WorkoutSessionRow } from "@keylow/core/schemas";
+import type { ReactNode } from "react";
 
 export type SessionClockProps = {
   /** The routine day's name, or null for a session that follows none. */
@@ -9,4 +10,6 @@ export type SessionClockProps = {
   /** 0 when the session follows no routine day. */
   setsPlanned: number;
   onHide: () => void;
+  /** What stands at the right of the header, such as the More control. */
+  trailingSlot?: ReactNode;
 };

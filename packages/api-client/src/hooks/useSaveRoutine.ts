@@ -27,6 +27,7 @@ export function useSaveRoutine() {
   const saveOnce = useSingleFlight((save: RoutineSave) => saveRoutine(client, save));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: saveOnce,
     onSuccess: (routine) => {
       putRoutineInCache(queryClient, routine);

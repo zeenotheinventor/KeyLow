@@ -28,6 +28,7 @@ export function useFinishSession() {
   );
 
   return useMutation({
+    networkMode: "always",
     mutationFn: finishOnce,
     onSuccess: (session) => {
       putSessionInCache(queryClient, session);

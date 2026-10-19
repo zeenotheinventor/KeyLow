@@ -10,6 +10,7 @@ import {
   describeTodayHeading,
   describeTrainWeekCaption,
   describeTrainWeekDay,
+  TRAIN_DISCARD_FAILED,
   TRAIN_ERROR,
   TRAIN_FIRST_TIME,
   TRAIN_HOME,
@@ -18,6 +19,7 @@ import {
   TRAIN_TODAY_CARD,
   TRAIN_OFFLINE_NOTHING_SAVED,
   TRAIN_OFFLINE_TITLE,
+  TRAIN_START_FAILED,
 } from "../../src/copy";
 import * as trainCopy from "../../src/copy/train";
 import {
@@ -705,6 +707,18 @@ describe("the Train tab states", () => {
       body: "Your sessions are safe. Check your connection, then try again.",
       action: "Try again",
     });
+  });
+
+  it("should state the rule when a session did not start, with no value in it", () => {
+    expect(TRAIN_START_FAILED).toBe(
+      "Your session did not start, check your connection and try again",
+    );
+  });
+
+  it("should state the rule and that the session is still there when a discard failed, with no value in it", () => {
+    expect(TRAIN_DISCARD_FAILED).toBe(
+      "Discarding a session needs a connection, your session is still here",
+    );
   });
 
   it("should say what the offline board says, with the time the caller gives", () => {

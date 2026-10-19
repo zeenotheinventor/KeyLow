@@ -19,7 +19,12 @@ const points = [
  * rest, a title and a sentence, three lines with an icon each, and the two ways in. A button is drawn only
  * when its handler is given, so none is a dead control.
  */
-export function TrainFirstTime({ onSetGoal, onLogSession, isLogDisabled }: TrainFirstTimeProps) {
+export function TrainFirstTime({
+  onSetGoal,
+  onLogSession,
+  isLogDisabled,
+  isStarting = false,
+}: TrainFirstTimeProps) {
   return (
     <View className="items-center gap-3 px-2 pt-2">
       <BodyFigure
@@ -49,7 +54,13 @@ export function TrainFirstTime({ onSetGoal, onLogSession, isLogDisabled }: Train
         </Button>
       )}
       {onLogSession === undefined ? null : (
-        <Button disabled={isLogDisabled} fullWidth variant="secondary" onPress={onLogSession}>
+        <Button
+          disabled={isLogDisabled}
+          fullWidth
+          loading={isStarting}
+          variant="secondary"
+          onPress={onLogSession}
+        >
           {TRAIN_FIRST_TIME.logAction}
         </Button>
       )}

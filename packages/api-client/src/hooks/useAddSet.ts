@@ -27,6 +27,7 @@ export function useAddSet() {
   );
 
   return useMutation({
+    networkMode: "always",
     mutationFn: logOnce,
     onSuccess: (set) => {
       putSetInSessionCaches(queryClient, set);

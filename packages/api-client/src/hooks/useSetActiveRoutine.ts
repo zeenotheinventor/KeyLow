@@ -20,6 +20,7 @@ export function useSetActiveRoutine() {
   const activateOnce = useSingleFlight((id: string | null) => setActiveRoutine(client, id));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: activateOnce,
     onSettled: () => {
       refreshTraining(queryClient);

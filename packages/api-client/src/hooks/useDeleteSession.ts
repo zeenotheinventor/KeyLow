@@ -21,6 +21,7 @@ export function useDeleteSession() {
   const deleteOnce = useSingleFlight((id: string) => deleteSession(client, id));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: deleteOnce,
     onSuccess: (_, id) => {
       queryClient.setQueryData(keys.training.session(id), null);

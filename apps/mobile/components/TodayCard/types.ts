@@ -7,6 +7,8 @@ export type TodayCardProps = {
   context: TodayCardContext;
   /** Dims Start and Resume and stops them responding, since starting or reopening a session needs a connection. */
   isStartAndResumeDisabled: boolean;
+  /** Shows a spinner on Start and stops it responding, while the session is being started. */
+  isStarting?: boolean | undefined;
   /** Starts the day's session: "Start Legs". Drawn only when it is given. */
   onStart?: (() => void) | undefined;
   /** Reopens the session in progress: "Resume Legs". Drawn only when it is given. */

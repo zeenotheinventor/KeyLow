@@ -15,7 +15,7 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 import type { TodayCardView, TrainHome } from "./types";
 import type { ActiveRoutine } from "@keylow/api-client";
-import type { TodayCard, WeekSession } from "@keylow/core/training";
+import type { TodayCard, WeekPlan, WeekSession } from "@keylow/core/training";
 
 /**
  * The week's sessions with the one in progress among them, dated today. The session in progress is read on
@@ -51,15 +51,16 @@ function exerciseNameIn(routine: ActiveRoutine | null, exerciseId: string): stri
 function todayViewOf(
   card: TodayCard,
   routine: ActiveRoutine | null,
-  localDate: string,
+  plan: WeekPlan,
 ): TodayCardView | null {
   if (card.kind === "first_time" || card.kind === "no_routine") {
     return null;
   }
   return {
     card,
+    plannedDayId: plan.days.find((day) => day.date === plan.today)?.plannedDay?.id ?? null,
     context: {
-      localDate,
+      localDate: plan.today,
       nextExerciseName:
         card.kind === "in_progress" && card.nextSet !== null
           ? exerciseNameIn(routine, card.nextSet.exerciseId)
@@ -141,7 +142,7 @@ export function useTrainHome(): TrainHome {
     status: "ready",
     hasRoutine: routine.data !== null,
     hasLoggedSession: everLogged.data === true,
-    today: todayViewOf(card, routine.data, plan.today),
+    today: todayViewOf(card, routine.data, plan),
     timeZone: zone,
     savedAt: new Date(Math.min(...reads.map((read) => read.dataUpdatedAt))),
   };

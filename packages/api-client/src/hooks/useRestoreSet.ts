@@ -18,6 +18,7 @@ export function useRestoreSet() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    networkMode: "always",
     scope: SESSION_SET_SCOPE,
     mutationFn: (id: string) => restoreSet(client, id),
     onSuccess: (set) => {

@@ -1,5 +1,9 @@
-import { TrainScreen } from "../../../components/TrainScreen";
+import { TrainScreen, useTrainSessionActions } from "../../../components/TrainScreen";
 
 export default function TrainRoute() {
-  return <TrainScreen />;
+  const { start, resume, isStarting } = useTrainSessionActions();
+
+  return (
+    <TrainScreen isStarting={isStarting} onLogSession={start} onResume={resume} onStart={start} />
+  );
 }

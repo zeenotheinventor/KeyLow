@@ -1,2 +1,3 @@
 export { TrainScreen } from "./TrainScreen";
-export type { TrainScreenProps } from "./types";
+export { useTrainSessionActions } from "./useTrainSessionActions";
+export type { TrainScreenProps, TrainSessionStart } from "./types";

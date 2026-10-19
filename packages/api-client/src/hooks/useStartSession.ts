@@ -24,6 +24,7 @@ export function useStartSession() {
   const startOnce = useSingleFlight((start: SessionStart) => startSession(client, start));
 
   return useMutation({
+    networkMode: "always",
     mutationFn: startOnce,
     onSuccess: (session) => {
       putSessionInCache(queryClient, session);

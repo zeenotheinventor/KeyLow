@@ -5,6 +5,11 @@ import type { LoadUnit, SessionExercise } from "@keylow/core/training";
 export type SessionScreenProps = {
   /** Hides the screen and leaves the session running: the control named "Hide session, it keeps running". */
   onHide: () => void;
+  /**
+   * Called once the session is discarded: the screen then goes on to the tabs. The header's More control
+   * is drawn only when it is given, so none is a dead control.
+   */
+  onDiscarded?: (() => void) | undefined;
 };
 
 /** One exercise card of the session: who it is and how it is planned, with its rows. */

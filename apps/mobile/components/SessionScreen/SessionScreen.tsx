@@ -1,4 +1,9 @@
-import { SESSION_ACTIVE, TRAIN_ERROR, TRAIN_LOADING_NAME } from "@keylow/core/copy";
+import {
+  DIARY_MORE_LABEL,
+  SESSION_ACTIVE,
+  TRAIN_ERROR,
+  TRAIN_LOADING_NAME,
+} from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -6,8 +11,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { SessionClock } from "../SessionClock";
 import { SessionExerciseCard } from "../SessionExerciseCard";
+import { SessionMenu } from "../SessionMenu";
 import { SetEntrySheet } from "../SetEntrySheet";
-import { ErrorState, SheetHeader } from "../ui";
+import { ErrorState, IconButton, SheetHeader } from "../ui";
 import { useSessionScreen } from "./useSessionScreen";
 
 import type { SessionScreenProps } from "./types";
@@ -20,8 +26,10 @@ import type { SetEntryOpening } from "../SetEntrySheet";
  * the set entry sheet, which logs the set. The check, editing a logged set, Add set, Add exercise and Finish
  * have tickets of their own. While the session is read the screen shows a loading status, a failed read shows
  * Try again, and with no open session only the control that hides it is left (no board draws these).
+ * The header's More control, which no board draws, holds Discard session and is drawn only when
+ * `onDiscarded` is given.
  */
-export function SessionScreen({ onHide }: SessionScreenProps) {
+export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
   const view = useSessionScreen();
   // What the set entry opens with is kept while the sheet closes, so it does not change under its exit.
   const [setEntry, setSetEntry] = useState<{
@@ -29,6 +37,7 @@ export function SessionScreen({ onHide }: SessionScreenProps) {
     isOpen: boolean;
     openingId: number;
   } | null>(null);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const insets = useSafeAreaInsets();
 
   return (
@@ -36,7 +45,21 @@ export function SessionScreen({ onHide }: SessionScreenProps) {
       {/* The inset is a runtime value no class can name, so it goes through a variable, as the tab header's does. */}
       <View className="pt-[var(--inset-top)]" style={vars({ "--inset-top": insets.top })}>
         {view.status === "ready" ? (
-          <SessionClock {...view.header} onHide={onHide} />
+          <SessionClock
+            {...view.header}
+            onHide={onHide}
+            trailingSlot={
+              onDiscarded === undefined ? undefined : (
+                <IconButton
+                  icon="Ellipsis"
+                  label={DIARY_MORE_LABEL}
+                  onPress={() => {
+                    setIsMenuOpen(true);
+                  }}
+                />
+              )
+            }
+          />
         ) : (
           <SheetHeader
             isTitleHeading={false}
@@ -96,6 +119,18 @@ export function SessionScreen({ onHide }: SessionScreenProps) {
           onClose={() => {
             setSetEntry({ ...setEntry, isOpen: false });
           }}
+        />
+      ) : null}
+      {view.status === "ready" && onDiscarded !== undefined ? (
+        <SessionMenu
+          dayName={view.header.dayName}
+          open={isMenuOpen}
+          sessionId={view.sessionId}
+          sets={view.sets}
+          onClose={() => {
+            setIsMenuOpen(false);
+          }}
+          onDiscarded={onDiscarded}
         />
       ) : null}
     </View>

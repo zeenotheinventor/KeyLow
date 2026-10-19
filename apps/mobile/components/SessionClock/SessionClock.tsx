@@ -20,6 +20,7 @@ export function SessionClock({
   setsLogged,
   setsPlanned,
   onHide,
+  trailingSlot,
 }: SessionClockProps) {
   const now = useNow(CLOCK_TICK_MILLISECONDS);
   const bar = describeSessionBar({
@@ -34,6 +35,7 @@ export function SessionClock({
       leading={{ icon: "ChevronDown", label: SESSION_ACTIVE.hideSessionName, onPress: onHide }}
       subtitle={bar.detail}
       title={bar.name}
+      trailingSlot={trailingSlot}
     />
   );
 }
