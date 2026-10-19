@@ -9,7 +9,13 @@ import type { SuggestExercise, Suggestion } from "./suggestTypes";
  * it as one, with the set snapshot frozen from the library entry. `id` is the exercise's own id (it is
  * unique in a day) and `position` its place in the suggested day, after the planned exercises.
  */
-export type AcceptedExercise = PlanExercise & Readonly<{ snapshot: SetSnapshot }>;
+export type AcceptedExercise = PlanExercise &
+  Readonly<{
+    snapshot: SetSnapshot;
+    /** The rep range suggested for it. Left out of a row stored before the range was kept. */
+    rep_min?: number | undefined;
+    rep_max?: number | undefined;
+  }>;
 
 /**
  * The exercises a suggestion added, as entries a later ticket stores and the projection
@@ -42,6 +48,8 @@ export const toAcceptedExercises = (
         exercise_id: id,
         target_sets: entry.sets,
         target_rir: entry.target_rir,
+        rep_min: entry.rep_min,
+        rep_max: entry.rep_max,
         exercise: { id, name, equipment, mechanic },
         muscles,
         snapshot: buildSetSnapshot({ id, name, equipment, mechanic }, muscles),

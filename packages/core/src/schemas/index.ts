@@ -35,6 +35,7 @@ export type {
   OffSearchResponse,
 } from "./off";
 export {
+  acceptedSuggestionSchema,
   equipmentSchema,
   exerciseMechanicSchema,
   exerciseMuscleEntrySchema,
@@ -71,6 +72,7 @@ export type {
   RoutineRow,
   SetSnapshot,
   SetSnapshotMuscle,
+  StoredAcceptedSuggestion,
   TrainingGoalsRow,
   WorkoutSessionRow,
   WorkoutSetRow,

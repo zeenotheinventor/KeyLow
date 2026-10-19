@@ -52,7 +52,8 @@ export type PlannedSet = HeatSet & {
   rpe: null;
   deleted_at: null;
   exercise_id: string;
-  routine_day_id: string;
+  /** The routine day the set is planned for, or null for an accepted suggestion that stands alone. */
+  routine_day_id: string | null;
   routine_exercise_id: string;
   /** The week's calendar day the set is planned on, `YYYY-MM-DD` in the week's zone. */
   local_date: string;
@@ -109,13 +110,20 @@ const checkRoutine = (routine: PlanRoutine): void => {
 const byPosition = (first: { position: number }, second: { position: number }): number =>
   first.position - second.position;
 
-const plannedSetsOfDay = (
-  day: PlanRoutineDay & { weekday: number },
+/**
+ * The planned sets of some exercises on one day: the exercises in position order, each exercise's
+ * `target_sets` working sets in a run. An exercise that carries its own snapshot (an accepted
+ * suggestion's, frozen when it was accepted) keeps it, and any other gets one built from its current
+ * muscle map. Shared by the routine's days and the accepted suggestions, so both plan alike.
+ */
+export const plannedSetsOfExercises = (
+  exercises: readonly (PlanExercise & { snapshot?: SetSnapshot })[],
+  routineDayId: string | null,
   localDate: string,
   performedAt: string,
 ): PlannedSet[] => {
   const sets: PlannedSet[] = [];
-  for (const routineExercise of [...day.exercises].sort(byPosition)) {
+  for (const routineExercise of [...exercises].sort(byPosition)) {
     if (routineExercise.exercise.id !== routineExercise.exercise_id) {
       throw new RangeError("A routine exercise's muscle map must be taken from its own exercise");
     }
@@ -124,7 +132,9 @@ const plannedSetsOfDay = (
         `A routine exercise's target sets must be a whole number from ${MIN_TARGET_SETS} to ${MAX_TARGET_SETS}`,
       );
     }
-    const snapshot = buildSetSnapshot(routineExercise.exercise, routineExercise.muscles);
+    const snapshot =
+      routineExercise.snapshot ??
+      buildSetSnapshot(routineExercise.exercise, routineExercise.muscles);
     for (let count = 0; count < routineExercise.target_sets; count += 1) {
       sets.push({
         planned: true,
@@ -134,7 +144,7 @@ const plannedSetsOfDay = (
         performed_at: performedAt,
         deleted_at: null,
         exercise_id: routineExercise.exercise_id,
-        routine_day_id: day.id,
+        routine_day_id: routineDayId,
         routine_exercise_id: routineExercise.id,
         local_date: localDate,
         position: sets.length,
@@ -183,6 +193,6 @@ export const expandPlan = (
         return [];
       }
       const performedAt = instantAtLocalTime(localDate, hour, minute, tz).toISOString();
-      return plannedSetsOfDay(day, localDate, performedAt);
+      return plannedSetsOfExercises(day.exercises, day.id, localDate, performedAt);
     });
 };

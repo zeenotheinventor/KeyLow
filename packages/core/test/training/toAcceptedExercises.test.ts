@@ -47,6 +47,8 @@ describe("toAcceptedExercises", () => {
         exercise_id: press.id,
         target_sets: 3,
         target_rir: 2,
+        rep_min: 8,
+        rep_max: 10,
         exercise: { id: press.id, name: press.name, equipment: "dumbbell", mechanic: "compound" },
         muscles: press.muscles,
         snapshot: buildSetSnapshot(
