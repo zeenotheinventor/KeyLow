@@ -24,5 +24,12 @@ export type BottomSheetProps = {
    * no heading.
    */
   label?: string | undefined;
+  /**
+   * Makes a fixed height sheet: as tall as the first snap point, such as `["90%"]`, and not as tall as its
+   * contents. The contents then fill the sheet (`flex-1`), so a list inside it scrolls in a `SheetScrollView`,
+   * which the library's sheet drags with and does not fight. Leave it out for the usual sheet that sizes
+   * itself to its contents.
+   */
+  snapPoints?: (string | number)[] | undefined;
   children?: ReactNode;
 };

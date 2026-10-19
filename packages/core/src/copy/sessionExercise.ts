@@ -24,6 +24,11 @@ export const ADD_EXERCISE = {
   customPill: "Custom",
   /** The line when no exercise matches. The boards do not draw it. */
   noResults: "No exercise matches your search.",
+  /** The line when the search fails with a connection, so a failure is not read as no matches. The boards do not draw it. */
+  exerciseSearchFailed: "The search did not load. Check your connection, then try again.",
+  /** The line when the phone is offline and the search cannot run. The boards do not draw it. */
+  exerciseSearchOffline:
+    "Searching exercises needs a connection. Try again when you're back online.",
 } as const;
 
 const GROUP_HEADINGS = { yours: "Your exercises", library: "Library" } as const;
@@ -36,6 +41,21 @@ export const describeExerciseGroupHeading = (
 
 /** The name of a row's add button: "Add Side lateral raise". */
 export const describeAddExerciseName = (exerciseName: string): string => `Add ${exerciseName}`;
+
+/**
+ * The name of a row's button: "Add Side lateral raise, Dumbbell", and ", Custom" after the equipment for
+ * the person's own exercise, so a screen reader hears what the row is and what pressing it does.
+ */
+export const describeExerciseRowName = ({
+  name,
+  equipment,
+  isCustom,
+}: Readonly<{ name: string; equipment: Equipment; isCustom: boolean }>): string =>
+  [
+    describeAddExerciseName(name),
+    EQUIPMENT_OPTIONS[equipment].label,
+    ...(isCustom ? [ADD_EXERCISE.customPill] : []),
+  ].join(", ");
 
 const CREATE_HELP = "Your own exercise, with the muscles it works";
 

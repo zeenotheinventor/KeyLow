@@ -16,6 +16,7 @@ import { SessionScreen } from "../components/SessionScreen";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient, diaryBackend } from "./support/diaryBackend";
+import { lateralRaiseExercises, SIDE_LATERAL_RAISE_ID } from "./support/exerciseCatalogue";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import {
@@ -93,6 +94,24 @@ jest.mock("../components/ExerciseCard", () => {
   };
 });
 
+// Jest does not turn the library's scroll handlers into worklets, so its scroll view cannot render here. The
+// plain scroll view stands in for it. How the library drags a sheet with it is on the device.
+jest.mock("@gorhom/bottom-sheet", () => {
+  const { forwardRef } = jest.requireActual<typeof import("react")>("react");
+  const { ScrollView } = jest.requireActual<typeof import("react-native")>("react-native");
+  const actual = jest.requireActual<typeof import("@gorhom/bottom-sheet")>("@gorhom/bottom-sheet");
+  return {
+    __esModule: true,
+    default: actual.default,
+    BottomSheetView: actual.BottomSheetView,
+    BottomSheetTextInput: actual.BottomSheetTextInput,
+    BottomSheetBackdrop: actual.BottomSheetBackdrop,
+    BottomSheetScrollView: forwardRef<never, object>(function FakeSheetScrollView(props, ref) {
+      return <ScrollView ref={ref} {...props} />;
+    }),
+  };
+});
+
 setUpTests();
 
 // Thursday 15 October 2026, 19:00 in Europe/London (BST), where Legs started at 18:30.
@@ -103,8 +122,9 @@ let queryClient: QueryClient;
 async function renderSession(
   props: Partial<SessionScreenProps> = {},
   client: typeof trainClient = trainClient,
+  cache: QueryClient = createDiaryQueryClient(),
 ) {
-  queryClient = createDiaryQueryClient();
+  queryClient = cache;
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={client} queryClient={queryClient}>
@@ -169,6 +189,8 @@ describe("the active session screen", () => {
   beforeAll(async () => {
     kitStyles = await compileKitStyles("", [
       "components/SessionScreen",
+      "components/AddExerciseSheet",
+      "components/ExerciseRow",
       "components/SessionClock",
       "components/SessionExerciseCard",
       "components/ExerciseCard",
@@ -718,6 +740,109 @@ describe("the active session screen", () => {
       await exerciseCard("Leg press");
 
       expect(spies.flatMap((spy) => spy.mock.calls)).toStrictEqual([]);
+    });
+  });
+
+  describe("adding an exercise", () => {
+    beforeEach(() => {
+      seedGoldenThursday();
+      trainBackend.exercises = lateralRaiseExercises;
+    });
+
+    async function addFromPicker(
+      words: string,
+      rowName: string,
+      client: typeof trainClient = trainClient,
+    ) {
+      const user = userEvent.setup();
+      await renderSession({}, client);
+      await user.press(await screen.findByRole("button", { name: "Add exercise" }));
+      await user.type(await screen.findByRole("searchbox", { name: "Search exercises" }), words);
+      await user.press(await screen.findByRole("button", { name: rowName }));
+    }
+
+    it("should put a card for the added exercise on the session, with one row to do", async () => {
+      await addFromPicker("lateral raise", "Add Side lateral raise, Dumbbell");
+
+      const card = await exerciseCard("Side lateral raise");
+      await waitFor(() => {
+        // The name, the target line, the one row's five cells and the Add set button.
+        expect(card.getAllByText(/./)).toHaveLength(TEXTS_BEFORE_ROWS + CELLS_PER_ROW + 1);
+      });
+      expect(card.getByText("Dumbbell")).toBeOnTheScreen();
+    });
+
+    it("should log a set of the added exercise through the set entry, still on one card", async () => {
+      // The set entry reads the exercise for the snapshot a set freezes, and the search finds the same one.
+      const [, sideLateralRaise] = lateralRaiseExercises;
+      setEntryBackend.exercise = sideLateralRaise ?? null;
+      setEntryBackend.liveSets = 8;
+      const user = userEvent.setup();
+      await addFromPicker("lateral raise", "Add Side lateral raise, Dumbbell", setEntryClient);
+      await exerciseCard("Side lateral raise");
+
+      await user.press(await screen.findByRole("button", { name: "Side lateral raise, set 1" }));
+      await user.type(screen.getByLabelText("Load, kg"), "20");
+      await user.type(screen.getByLabelText("Reps"), "12");
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(setEntryBackend.inserts).toHaveLength(1);
+      });
+      expect(setEntryBackend.inserts).toMatchObject([
+        {
+          session_id: GOLDEN_SESSION_ID,
+          exercise_id: SIDE_LATERAL_RAISE_ID,
+          load_kg: 20,
+          reps: 12,
+          set_type: "working",
+        },
+      ]);
+      expect(setEntryBackend.inserts[0]).toHaveProperty("snapshot");
+      expect(screen.getAllByLabelText("Side lateral raise")).toHaveLength(1);
+    });
+
+    it("should keep the added exercise through a refresh of the training reads", async () => {
+      await addFromPicker("lateral raise", "Add Side lateral raise, Dumbbell");
+      await exerciseCard("Side lateral raise");
+
+      await act(async () => {
+        await queryClient.invalidateQueries({ queryKey: keys.training.all });
+        await queryClient.refetchQueries({ queryKey: keys.training.all });
+      });
+      await cleanup();
+      await renderSession({}, trainClient, queryClient);
+
+      expect(await screen.findByLabelText("Side lateral raise")).toBeOnTheScreen();
+    });
+
+    it("should keep the added exercise when the screen is hidden and opened again", async () => {
+      await addFromPicker("lateral raise", "Add Side lateral raise, Dumbbell");
+      await exerciseCard("Side lateral raise");
+
+      // Hiding the session unmounts the screen; the phone's cache stays.
+      await cleanup();
+      await renderSession({}, trainClient, queryClient);
+
+      expect(await screen.findByLabelText("Side lateral raise")).toBeOnTheScreen();
+    });
+
+    it("should show an exercise that already has sets once", async () => {
+      trainBackend.exercises = [
+        {
+          ...lateralRaiseExercises[1],
+          id: "00000006-0000-4000-8000-000000000003",
+          name: "Leg press",
+          equipment: "machine",
+        },
+      ];
+
+      await addFromPicker("leg press", "Add Leg press, Machine");
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog", { name: "Add exercise" })).toBeNull();
+      });
+      expect(screen.getAllByLabelText("Leg press")).toHaveLength(1);
     });
   });
 });

@@ -32,6 +32,7 @@ jest.mock("@gorhom/bottom-sheet", () => {
     default: FakeSheet,
     BottomSheetView: ({ children }: never) => children,
     BottomSheetTextInput: FakeSheetInput,
+    BottomSheetScrollView: ({ children }: never) => children,
   };
 });
 

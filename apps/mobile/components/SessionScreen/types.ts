@@ -1,6 +1,13 @@
+import type { ChosenExercise } from "../AddExerciseSheet";
 import type { ExercisePlan } from "../SetEntrySheet";
 import type { SessionSet } from "@keylow/api-client";
-import type { LoadUnit, SessionExercise, SetType, SetValues } from "@keylow/core/training";
+import type {
+  Equipment,
+  LoadUnit,
+  SessionExercise,
+  SetType,
+  SetValues,
+} from "@keylow/core/training";
 
 export type SessionScreenProps = {
   /** Hides the screen and leaves the session running: the control named "Hide session, it keeps running". */
@@ -88,4 +95,12 @@ export type SessionScreenView =
       unit: LoadUnit;
       sets: readonly ScreenSet[];
       exercises: readonly SessionScreenExercise[];
+      /** Puts a card for the picked exercise on the screen, with one row to do. It exists on screen only until its first set is logged. */
+      addExercise: (exercise: ChosenExercise) => void;
     };
+
+/**
+ * An exercise added to the session that has no logged set yet. The data model stores sets, not exercises,
+ * so until its first set is logged it is held only on this phone, with the name and equipment its card needs.
+ */
+export type AddedExercise = { id: string; name: string; equipment: Equipment };

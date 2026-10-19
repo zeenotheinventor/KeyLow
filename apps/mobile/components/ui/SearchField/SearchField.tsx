@@ -1,11 +1,12 @@
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
-import { TextInput, View } from "react-native";
+import { View } from "react-native";
 
 import { useTheme } from "../../../lib/theme";
 import { useKeyboardLift } from "../../../lib/useKeyboardLift";
 import { Icon } from "../Icon";
 import { IconButton } from "../IconButton";
+import { FieldTextInput } from "../Input/FieldTextInput";
 
 import type { SearchFieldProps } from "./types";
 
@@ -38,7 +39,7 @@ export function SearchField({
       className={`h-control-md flex-row items-center gap-2 rounded-medium border bg-surface-raised pl-4 pr-1 ${isFocused ? "border-accent" : "border-border"} ${disabled ? "opacity-40" : ""}`}
     >
       <Icon name="Search" tone="muted" />
-      <TextInput
+      <FieldTextInput
         // On Android the accessibility state is applied after `editable`, so a false one would make a
         // locked field editable again: it is only ever set when the field is disabled.
         aria-disabled={disabled ? true : undefined}

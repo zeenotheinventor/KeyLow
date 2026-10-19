@@ -36,7 +36,8 @@ const exitAnimation = {
  * A sheet that hosts one focused task above the current screen, as the design system's bottom sheet
  * does: a handle, an optional title, the contents, and a dim behind it. It sizes itself to its contents.
  * It draws inside its parent, so a screen mounts it where the sheet should cover, and the parent sits
- * under a gesture handler root view.
+ * under a gesture handler root view. With `snapPoints` it is a fixed height sheet instead, for contents
+ * that scroll.
  */
 export function BottomSheet({
   open,
@@ -45,8 +46,10 @@ export function BottomSheet({
   isTitleCentred = false,
   isDismissible = true,
   label,
+  snapPoints,
   children,
 }: BottomSheetProps) {
+  const isFixedHeight = snapPoints !== undefined;
   const sheetRef = useRef<ComponentRef<typeof GorhomBottomSheet>>(null);
   const titleRef = useRef<View>(null);
   const { bottom: safeAreaBottom } = useSafeAreaInsets();
@@ -110,6 +113,31 @@ export function BottomSheet({
     return null;
   }
 
+  const dialog = (
+    <>
+      {/* The safe area is a runtime value no class can name, so it goes through a variable. */}
+      <View
+        aria-label={title ?? label}
+        aria-modal
+        className={`px-4 pb-[var(--sheet-bottom-padding)]${isFixedHeight ? " flex-1" : ""}`}
+        role="dialog"
+        style={vars({ "--sheet-bottom-padding": bottomPadding + safeAreaBottom })}
+        onAccessibilityEscape={onClose}
+      >
+        {title === undefined ? null : (
+          // The view carries the heading role and takes the screen reader's focus, because the kit's
+          // Text takes no ref. Its words are read as the heading's name.
+          <View ref={titleRef} accessible className="mb-3" role="heading">
+            <Text className={isTitleCentred ? "text-center" : ""} variant="h2">
+              {title}
+            </Text>
+          </View>
+        )}
+        <IsInsideSheetContext value>{children}</IsInsideSheetContext>
+      </View>
+    </>
+  );
+
   return (
     <SheetBackdropContext.Provider value={{ requestClose: onClose, isOpen: open }}>
       <GorhomBottomSheet
@@ -118,9 +146,11 @@ export function BottomSheet({
         animationConfigs={open ? enterAnimation : exitAnimation}
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
+        enableDynamicSizing={!isFixedHeight}
         enablePanDownToClose={isDismissible}
         handleComponent={SheetHandle}
         index={0}
+        {...(snapPoints === undefined ? {} : { snapPoints })}
         // A field in the sheet (the library's own input, which `TextArea` draws inside a sheet) lifts the
         // sheet with the keyboard, and the sheet goes back down when the keyboard is hidden. Android 15
         // draws edge to edge and does not resize the window for the keyboard, so the sheet pans itself.
@@ -135,28 +165,15 @@ export function BottomSheet({
           }
         }}
       >
-        <BottomSheetView>
-          {/* The safe area is a runtime value no class can name, so it goes through a variable. */}
-          <View
-            aria-label={title ?? label}
-            aria-modal
-            className="px-4 pb-[var(--sheet-bottom-padding)]"
-            role="dialog"
-            style={vars({ "--sheet-bottom-padding": bottomPadding + safeAreaBottom })}
-            onAccessibilityEscape={onClose}
-          >
-            {title === undefined ? null : (
-              // The view carries the heading role and takes the screen reader's focus, because the kit's
-              // Text takes no ref. Its words are read as the heading's name.
-              <View ref={titleRef} accessible className="mb-3" role="heading">
-                <Text className={isTitleCentred ? "text-center" : ""} variant="h2">
-                  {title}
-                </Text>
-              </View>
-            )}
-            <IsInsideSheetContext value>{children}</IsInsideSheetContext>
-          </View>
-        </BottomSheetView>
+        {isFixedHeight ? (
+          // The library's view is absolutely positioned with only its left, top and right set, so a flex-1
+          // child would never fill it: the contents would grow to their own height and a list would not
+          // scroll, nor shrink for the keyboard. The sheet sizes its content area itself in a fixed height
+          // sheet, so a plain view fills that.
+          <View className="flex-1">{dialog}</View>
+        ) : (
+          <BottomSheetView>{dialog}</BottomSheetView>
+        )}
       </GorhomBottomSheet>
     </SheetBackdropContext.Provider>
   );

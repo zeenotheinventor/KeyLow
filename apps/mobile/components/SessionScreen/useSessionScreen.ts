@@ -4,9 +4,16 @@ import { planProgress, scaffoldSession, sessionExercises } from "@keylow/core/tr
 import { useMemo } from "react";
 
 import { NO_PENDING_SETS, withPendingSets } from "./pendingSets";
+import { useAddedExercises } from "./useAddedExercises";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
-import type { PendingSet, ScreenSet, SessionScreenExercise, SessionScreenView } from "./types";
+import type {
+  AddedExercise,
+  PendingSet,
+  ScreenSet,
+  SessionScreenExercise,
+  SessionScreenView,
+} from "./types";
 import type { RoutineDetail } from "@keylow/api-client";
 import type { SessionExercise, SessionScaffold } from "@keylow/core/training";
 
@@ -14,13 +21,15 @@ type RoutineDay = RoutineDetail["days"][number];
 type Plan = { day: RoutineDay; scaffold: SessionScaffold };
 
 /**
- * The exercise's name and target line, from the routine day when it plans the exercise and from the name and
- * equipment frozen on its first logged set when it does not. Null for an exercise with neither, which the
- * rows never produce: a row is planned or logged.
+ * The exercise's name and target line, from the routine day when it plans the exercise, from the name and
+ * equipment frozen on its first logged set when it does not and, for an exercise added on screen with no
+ * set yet, from what was picked. Null for an exercise with none of these, which the rows never produce: a
+ * row is planned, logged or added.
  */
 function describeExercise(
   exercise: SessionExercise<ScreenSet>,
   plan: Plan | null,
+  added: readonly AddedExercise[],
 ): Pick<SessionScreenExercise, "name" | "target" | "plan"> | null {
   const planned = plan?.day.exercises.find((entry) => entry.exercise_id === exercise.exerciseId);
   if (plan !== null && planned !== undefined) {
@@ -46,11 +55,20 @@ function describeExercise(
   const snapshot = exercise.rows.flatMap(({ set }) =>
     set?.snapshot === undefined ? [] : [set.snapshot],
   )[0];
-  return snapshot === undefined
+  if (snapshot !== undefined) {
+    return {
+      name: snapshot.name,
+      target: describeExerciseTarget({ target: null, equipment: snapshot.equipment }),
+      plan: null,
+    };
+  }
+  // An exercise added on screen whose first set is still being saved has no snapshot either.
+  const addedExercise = added.find((entry) => entry.id === exercise.exerciseId);
+  return addedExercise === undefined
     ? null
     : {
-        name: snapshot.name,
-        target: describeExerciseTarget({ target: null, equipment: snapshot.equipment }),
+        name: addedExercise.name,
+        target: describeExerciseTarget({ target: null, equipment: addedExercise.equipment }),
         plan: null,
       };
 }
@@ -75,6 +93,7 @@ export function useSessionScreen(
   const detail = useRoutine(routine.data?.id, { enabled });
 
   const open = session.data;
+  const { added, add: addExercise } = useAddedExercises(open?.id);
   const followsRoutineDay = open?.routine_day_id !== null && open?.routine_day_id !== undefined;
   const detailData = detail.data;
   const content = useMemo(() => {
@@ -90,12 +109,16 @@ export function useSessionScreen(
       sets,
       setsLogged: progress.logged,
       setsPlanned: progress.planned ?? 0,
-      exercises: sessionExercises(scaffold, sets).flatMap((exercise) => {
-        const described = describeExercise(exercise, plan);
+      exercises: sessionExercises(
+        scaffold,
+        sets,
+        added.map((entry) => entry.id),
+      ).flatMap((exercise) => {
+        const described = describeExercise(exercise, plan, added);
         return described === null ? [] : [{ ...described, exercise }];
       }),
     };
-  }, [open, detailData, pendingSets]);
+  }, [open, detailData, pendingSets, added]);
 
   const reads = followsRoutineDay ? [session, unit, routine, detail] : [session, unit];
   if (reads.some((read) => read.isError && read.data === undefined)) {
@@ -138,5 +161,6 @@ export function useSessionScreen(
     unit: unit.data,
     sets: content.sets,
     exercises: content.exercises,
+    addExercise,
   };
 }

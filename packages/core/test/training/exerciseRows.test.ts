@@ -276,6 +276,120 @@ describe("sessionExercises for a session with no plan", () => {
   });
 });
 
+describe("sessionExercises with exercises added and no set logged yet", () => {
+  it("should list an added exercise after the plan's, with one row to do", () => {
+    const exercises = sessionExercises(legs, goldenLegsSets, [ADDED_EXERCISE_ID]);
+
+    expect(exercises.map((exercise) => exercise.exerciseId)).toStrictEqual([
+      SQUAT_ID,
+      ROMANIAN_DEADLIFT_ID,
+      LEG_PRESS_ID,
+      SEATED_LEG_CURL_ID,
+      STANDING_CALF_RAISE_ID,
+      ADDED_EXERCISE_ID,
+    ]);
+    expect(stateAndNumber(exercises[5] ?? { rows: [] })).toStrictEqual(["todo:1"]);
+  });
+
+  it("should leave the plan's own next set as next", () => {
+    const exercises = sessionExercises(legs, goldenLegsSets, [ADDED_EXERCISE_ID]);
+
+    expect(
+      exercises.flatMap((exercise) => exercise.rows).filter((row) => row.state === "next"),
+    ).toHaveLength(1);
+    expect(stateAndNumber(exercises[2] ?? { rows: [] })).toStrictEqual([
+      "done:1",
+      "done:2",
+      "next:3",
+    ]);
+  });
+
+  it("should list the added exercises in the order they were added", () => {
+    const exercises = sessionExercises(null, [], [OTHER_ADDED_EXERCISE_ID, ADDED_EXERCISE_ID]);
+
+    expect(exercises.map((exercise) => exercise.exerciseId)).toStrictEqual([
+      OTHER_ADDED_EXERCISE_ID,
+      ADDED_EXERCISE_ID,
+    ]);
+  });
+
+  it("should make the first added exercise the next set when the plan has none left", () => {
+    const exercises = sessionExercises(null, [], [OTHER_ADDED_EXERCISE_ID, ADDED_EXERCISE_ID]);
+
+    expect(exercises.map(stateAndNumber)).toStrictEqual([["next:1"], ["todo:1"]]);
+  });
+
+  it("should list an added exercise after the exercises that have sets in a session with no plan", () => {
+    const sets = [extraSet(OTHER_ADDED_EXERCISE_ID, 1)];
+
+    const exercises = sessionExercises(null, sets, [ADDED_EXERCISE_ID]);
+
+    expect(exercises.map((exercise) => exercise.exerciseId)).toStrictEqual([
+      OTHER_ADDED_EXERCISE_ID,
+      ADDED_EXERCISE_ID,
+    ]);
+    expect(exercises.map(stateAndNumber)).toStrictEqual([["done:1"], ["next:1"]]);
+  });
+
+  it("should ignore an added exercise that already has sets", () => {
+    const sets = [extraSet(ADDED_EXERCISE_ID, 1), extraSet(ADDED_EXERCISE_ID, 2)];
+
+    const exercises = sessionExercises(null, sets, [ADDED_EXERCISE_ID]);
+
+    expect(exercises.map((exercise) => exercise.exerciseId)).toStrictEqual([ADDED_EXERCISE_ID]);
+    expect(exercises.map(stateAndNumber)).toStrictEqual([["done:1", "done:2"]]);
+  });
+
+  it("should ignore an added exercise whose only set is a warm-up", () => {
+    const sets = [extraSet(ADDED_EXERCISE_ID, 1, { set_type: "warmup" })];
+
+    const exercises = sessionExercises(null, sets, [ADDED_EXERCISE_ID]);
+
+    expect(exercises.map(stateAndNumber)).toStrictEqual([["done:0"]]);
+  });
+
+  it("should ignore an added exercise that the plan already lists", () => {
+    const exercises = sessionExercises(legs, [], [SQUAT_ID]);
+
+    expect(exercises.map((exercise) => exercise.exerciseId)).toStrictEqual([
+      SQUAT_ID,
+      ROMANIAN_DEADLIFT_ID,
+      LEG_PRESS_ID,
+      SEATED_LEG_CURL_ID,
+      STANDING_CALF_RAISE_ID,
+    ]);
+    expect(stateAndNumber(exercises[0] ?? { rows: [] })).toStrictEqual([
+      "next:1",
+      "todo:2",
+      "todo:3",
+    ]);
+  });
+
+  it("should list an exercise added twice once", () => {
+    const exercises = sessionExercises(null, [], [ADDED_EXERCISE_ID, ADDED_EXERCISE_ID]);
+
+    expect(exercises.map(stateAndNumber)).toStrictEqual([["next:1"]]);
+  });
+
+  it("should list the same exercises as before when nothing is added", () => {
+    expect(sessionExercises(legs, goldenLegsSets, [])).toStrictEqual(
+      sessionExercises(legs, goldenLegsSets),
+    );
+  });
+
+  it("should give the row the numbers the next set is opened with", () => {
+    const [added] = sessionExercises(null, [], [ADDED_EXERCISE_ID]);
+    if (added === undefined) {
+      throw new Error("The added exercise is listed");
+    }
+    const previousSets = [lastTimeSet(0, { reps: 12, load_kg: 22.5 })];
+
+    const [row] = exerciseSetRows(added, [], previousSets);
+
+    expect(row?.entry).toStrictEqual({ state: "ready", loadKg: 22.5, reps: 12 });
+  });
+});
+
 describe("sessionExercises for another plan", () => {
   it("should plan the Pull day's first exercise as the next with no sets logged", () => {
     const [first] = sessionExercises(scaffoldSession(goldenPullDay), []);

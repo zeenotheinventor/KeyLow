@@ -9,6 +9,7 @@ import {
   describeCreateExerciseRow,
   describeCustomExerciseIssue,
   describeExerciseGroupHeading,
+  describeExerciseRowName,
   describeExerciseNameLength,
   describeMuscleRowNames,
   describeSaveCustomExerciseAction,
@@ -53,6 +54,38 @@ describe("the Add exercise sheet's fixed words", () => {
 
   it("should name a row's add button with the exercise", () => {
     expect(describeAddExerciseName("Side lateral raise")).toBe("Add Side lateral raise");
+  });
+
+  it("should name a row's button with the exercise and its equipment", () => {
+    expect(
+      describeExerciseRowName({
+        name: "Side lateral raise",
+        equipment: "dumbbell",
+        isCustom: false,
+      }),
+    ).toBe("Add Side lateral raise, Dumbbell");
+  });
+
+  it("should add Custom to the name of the person's own exercise", () => {
+    expect(
+      describeExerciseRowName({
+        name: "Lean-away cable raise",
+        equipment: "cable",
+        isCustom: true,
+      }),
+    ).toBe("Add Lean-away cable raise, Cable, Custom");
+  });
+
+  it("should say the search did not load when it fails, as no board draws it", () => {
+    expect(ADD_EXERCISE.exerciseSearchFailed).toBe(
+      "The search did not load. Check your connection, then try again.",
+    );
+  });
+
+  it("should say searching needs a connection, as no board draws it", () => {
+    expect(ADD_EXERCISE.exerciseSearchOffline).toBe(
+      "Searching exercises needs a connection. Try again when you're back online.",
+    );
   });
 });
 
