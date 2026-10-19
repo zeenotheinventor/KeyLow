@@ -1,6 +1,6 @@
 import type { ExercisePlan } from "../SetEntrySheet";
 import type { SessionSet } from "@keylow/api-client";
-import type { LoadUnit, SessionExercise } from "@keylow/core/training";
+import type { LoadUnit, SessionExercise, SetType, SetValues } from "@keylow/core/training";
 
 export type SessionScreenProps = {
   /** Hides the screen and leaves the session running: the control named "Hide session, it keeps running". */
@@ -12,6 +12,53 @@ export type SessionScreenProps = {
   onDiscarded?: (() => void) | undefined;
 };
 
+/**
+ * A set of the session as the screen draws it: one the database holds, or one being saved, which has no
+ * snapshot yet (its exercise's name comes from the plan or from the exercise's stored sets).
+ */
+export type ScreenSet = Omit<SessionSet, "snapshot"> & {
+  snapshot?: SessionSet["snapshot"] | undefined;
+};
+
+/**
+ * A set that is on its way to the database. `savedId` is the id the database gave it once it has stored
+ * it, kept so the set is hidden the moment the session read holds the stored one, and drawn until then.
+ */
+export type PendingSet = Readonly<{ set: ScreenSet; savedId: string | null }>;
+
+export type PendingSets = {
+  sets: readonly PendingSet[];
+  add: (set: ScreenSet) => void;
+  /** Records the id the database gave a pending set. */
+  markSaved: (pendingId: string, savedId: string) => void;
+  /** Takes a pending set back out, as when it failed to save. */
+  drop: (pendingId: string) => void;
+  /** Takes out the pending sets the stored sets now hold. */
+  prune: (storedIds: ReadonlySet<string>) => void;
+};
+
+/** Logs a set from the values a row shows. */
+export type LogSetRequest = {
+  exerciseId: string;
+  values: SetValues;
+};
+
+/** Removes a logged set, for the toast "Set removed: Romanian deadlift, set 3". */
+export type RemoveSetRequest = {
+  setId: string;
+  exerciseName: string;
+  setType: SetType;
+  setNumber: number;
+};
+
+/** What a card does when a check is pressed. */
+export type SetLogging = {
+  logSet: (request: LogSetRequest) => void;
+  removeSet: (request: RemoveSetRequest) => void;
+  /** Whether a set is one still being saved, whose check does nothing until the database has stored it. */
+  isSaving: (setId: string) => boolean;
+};
+
 /** One exercise card of the session: who it is and how it is planned, with its rows. */
 export type SessionScreenExercise = {
   name: string;
@@ -19,7 +66,7 @@ export type SessionScreenExercise = {
   target: string;
   /** The plan's sets, rep range and RIR for the exercise, or null for one added to the session. */
   plan: ExercisePlan | null;
-  exercise: SessionExercise<SessionSet>;
+  exercise: SessionExercise<ScreenSet>;
 };
 
 /** What the screen has read. */
@@ -39,6 +86,6 @@ export type SessionScreenView =
         setsPlanned: number;
       };
       unit: LoadUnit;
-      sets: readonly SessionSet[];
+      sets: readonly ScreenSet[];
       exercises: readonly SessionScreenExercise[];
     };

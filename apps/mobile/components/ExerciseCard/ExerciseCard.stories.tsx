@@ -118,3 +118,11 @@ export const LongName: Story = {
     target: "3 × 10 to 12 · RIR 1 · Cable",
   },
 };
+
+// The checks that log or remove a set as buttons, and Add set under the rows.
+export const WithCheckButtonsAndAddSet: Story = {
+  args: {
+    rows: legPressRows("kg").map((row) => ({ ...row, onCheck: () => undefined })),
+    onAddSet: () => undefined,
+  },
+};

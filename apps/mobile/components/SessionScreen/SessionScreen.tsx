@@ -14,7 +14,9 @@ import { SessionExerciseCard } from "../SessionExerciseCard";
 import { SessionMenu } from "../SessionMenu";
 import { SetEntrySheet } from "../SetEntrySheet";
 import { ErrorState, IconButton, SheetHeader } from "../ui";
+import { usePendingSets } from "./pendingSets";
 import { useSessionScreen } from "./useSessionScreen";
+import { useSetLogging } from "./useSetLogging";
 
 import type { SessionScreenProps } from "./types";
 import type { SetEntryOpening } from "../SetEntrySheet";
@@ -23,14 +25,18 @@ import type { SetEntryOpening } from "../SetEntrySheet";
  * The active session, a full screen over the tabs, as the `session · active` and `session · from-routine`
  * boards draw it: the control that hides it while the session keeps running, the session's name with its
  * clock and sets logged, and a card for each exercise with its set rows. The cells of a set still to do open
- * the set entry sheet, which logs the set. The check, editing a logged set, Add set, Add exercise and Finish
- * have tickets of their own. While the session is read the screen shows a loading status, a failed read shows
- * Try again, and with no open session only the control that hides it is left (no board draws these).
+ * the set entry sheet, which logs the set. The check logs a set from the numbers its row shows (or opens the
+ * same sheet when it has none) or removes a logged one, and Add set adds a row. Editing a logged set, Add
+ * exercise and Finish have tickets of their own. While the session is read the screen shows a loading
+ * status, a failed read shows Try again, and with no open session only the control that hides it is left (no
+ * board draws these).
  * The header's More control, which no board draws, holds Discard session and is drawn only when
  * `onDiscarded` is given.
  */
 export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
-  const view = useSessionScreen();
+  const pendingSets = usePendingSets();
+  const view = useSessionScreen(pendingSets.sets);
+  const logging = useSetLogging(view, pendingSets);
   // What the set entry opens with is kept while the sheet closes, so it does not change under its exit.
   const [setEntry, setSetEntry] = useState<{
     entry: SetEntryOpening;
@@ -88,6 +94,7 @@ export function SessionScreen({ onHide, onDiscarded }: SessionScreenProps) {
             <SessionExerciseCard
               exercise={exercise}
               key={exercise.exerciseId}
+              logging={logging}
               name={name}
               plan={plan}
               sessionId={view.sessionId}

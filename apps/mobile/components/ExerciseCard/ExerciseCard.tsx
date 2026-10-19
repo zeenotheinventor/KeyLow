@@ -2,7 +2,7 @@ import { SESSION_ACTIVE } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { SetRow, setColumnClassName } from "../SetRow";
-import { Card, Text } from "../ui";
+import { Button, Card, Text } from "../ui";
 
 import type { ExerciseCardProps } from "./types";
 
@@ -13,9 +13,9 @@ const columnHeadingClassName = "text-center";
  * An exercise of the session as the `session · active` board draws it: its name and target line over a table
  * of its set rows. The column headings are hidden from a screen reader, since each row's check names its own
  * numbers. The board's More button waits for its own ticket. The card is a region named for the exercise, and
- * its rows are a list named Sets.
+ * its rows are a list named Sets, with Add set under them when the card is given what it does.
  */
-export function ExerciseCard({ name, target, columns, rows }: ExerciseCardProps) {
+export function ExerciseCard({ name, target, columns, rows, onAddSet }: ExerciseCardProps) {
   return (
     <Card aria-label={name} level="surface" padding={0} role="region">
       <View className="gap-0 pb-1 pt-2">
@@ -58,10 +58,28 @@ export function ExerciseCard({ name, target, columns, rows }: ExerciseCardProps)
           <View className={setColumnClassName.check} />
         </View>
         <View aria-label={SESSION_ACTIVE.setsListName} role="list">
-          {rows.map(({ key, state, setType, copy, edit }) => (
-            <SetRow copy={copy} edit={edit} key={key} setType={setType} state={state} />
+          {rows.map(({ key, state, setType, copy, edit, onCheck }) => (
+            <SetRow
+              copy={copy}
+              edit={edit}
+              key={key}
+              setType={setType}
+              state={state}
+              onCheck={onCheck}
+            />
           ))}
         </View>
+        {onAddSet === undefined ? null : (
+          <Button
+            className="ml-2 self-start"
+            icon="Plus"
+            size="sm"
+            variant="ghost"
+            onPress={onAddSet}
+          >
+            {SESSION_ACTIVE.addSetAction}
+          </Button>
+        )}
       </View>
     </Card>
   );

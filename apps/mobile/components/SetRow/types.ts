@@ -16,4 +16,9 @@ export type SetRowProps = {
   copy: SetRowCopy;
   /** A set still to do has its load, reps and RIR cells as one button that opens the set entry. A row without it only displays. */
   edit?: SetRowEdit | undefined;
+  /**
+   * What pressing the check does: logs the row, or removes it when it is done. With it the check is a
+   * button, named as the copy names it. Without it the check only displays.
+   */
+  onCheck?: (() => void) | undefined;
 };
