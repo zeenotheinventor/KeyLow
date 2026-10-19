@@ -15,7 +15,15 @@ import type { TextInputProps } from "react-native";
 // The classes are written out so Tailwind sees them. The food form boards draw the box 12 across, with
 // 6 between the digits and the unit and 8 between a value and its lock. The sign in boards draw 16 across
 // and 8 between, as the design system card does.
-function boxSpacingClassName(density: InputDensity, hasUnit: boolean): string {
+function boxSpacingClassName(
+  density: InputDensity,
+  hasUnit: boolean,
+  size: NonNullable<TextFieldProps["size"]>,
+): string {
+  // The routine editor's cell has the digits fill the box, which is as wide as they need.
+  if (size === "cell") {
+    return "px-0 gap-0";
+  }
   if (density === "comfortable") {
     return "px-4 gap-2";
   }
@@ -38,6 +46,8 @@ const alignClassName = {
 // no type token between h1 and the numerals for it, so it is written out as the ring numeral's size is.
 const boxHeightClassName = {
   default: "min-h-control-md",
+  // The routine editor board's fields are 36 points high in a row of 48.
+  cell: "h-control-sm",
   display: "h-16",
 } satisfies Record<NonNullable<TextFieldProps["size"]>, string>;
 
@@ -159,7 +169,7 @@ export function TextField({
         </View>
       )}
       <View
-        className={`${boxHeightClassName[size]} flex-row items-center rounded-medium border ${boxSpacingClassName(density, unit !== undefined)} ${borderClassName} ${fillClassName}`}
+        className={`${boxHeightClassName[size]} flex-row items-center rounded-medium border ${boxSpacingClassName(density, unit !== undefined, size)} ${borderClassName} ${fillClassName}`}
       >
         <FieldTextInput
           {...keyboardProps}
@@ -169,7 +179,7 @@ export function TextField({
           // `aria-disabled={false}` would turn a locked field's input back on.
           aria-disabled={disabled ? true : undefined}
           aria-label={accessibilityLabel ?? (unit === undefined ? label : `${label} (${unit})`)}
-          className={`min-h-10 min-w-0 flex-1 p-0 tabular-nums text-text-primary ${valueClassName(size, strongValue)} ${alignClassName[align]}`}
+          className={`${size === "cell" ? "min-h-0" : "min-h-10"} min-w-0 flex-1 p-0 tabular-nums text-text-primary ${valueClassName(size, strongValue)} ${alignClassName[align]}`}
           cursorColor={colors["text-primary"]}
           // `readOnly` is left out because React Native lets it override `editable` even when it is false.
           editable={!disabled && !locked}

@@ -204,3 +204,54 @@ export const DisplaySizeWithError: Story = {
     </View>
   ),
 };
+
+// The routine editor board's sets, reps and RIR: a box 36 points high, the number centred in body strong, in
+// columns of 48, 84 and 48 points. The reps column holds a range, so it asks for the punctuation keyboard.
+export const CellSize: Story = {
+  render: (args) => (
+    <View className="flex-row gap-[6px]">
+      <View className="w-[48px]">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          keyboardType="number-pad"
+          label="Sets for Barbell squat"
+          labelHidden
+          placeholder=""
+          size="cell"
+          strongValue
+          unit={undefined}
+          value="3"
+        />
+      </View>
+      <View className="w-[84px]">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          keyboardType="numbers-and-punctuation"
+          label="Reps for Barbell squat"
+          labelHidden
+          placeholder=""
+          size="cell"
+          strongValue
+          unit={undefined}
+          value="5 to 8"
+        />
+      </View>
+      <View className="w-[48px]">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          keyboardType="number-pad"
+          label="RIR for Barbell squat"
+          labelHidden
+          placeholder=""
+          size="cell"
+          strongValue
+          unit={undefined}
+          value="2"
+        />
+      </View>
+    </View>
+  ),
+};

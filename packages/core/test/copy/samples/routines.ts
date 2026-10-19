@@ -79,6 +79,7 @@ export const samples: Record<string, () => string[]> = {
     const names = copy.describeExerciseFieldNames("Barbell Squat");
     return [names.sets, names.reps, names.rir];
   },
+  describeRemoveExercise: () => [copy.describeRemoveExercise("Barbell squat")],
   describeRepRange: () => [copy.describeRepRange(5, 8), copy.describeRepRange(8, 8)],
   describeRoutineRule: () => [
     ...routineRules.map((rule) => copy.describeRoutineRule(rule, 1)),

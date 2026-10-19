@@ -17,6 +17,7 @@ import {
   describeNewDayName,
   describeOtherRoutineMeta,
   describeProblemsBanner,
+  describeRemoveExercise,
   describeRepRange,
   describeRestoreName,
   describeRoutineRule,
@@ -353,6 +354,12 @@ describe("the routine editor", () => {
         reps: "Reps for Barbell Squat",
         rir: "RIR for Barbell Squat",
       });
+    });
+  });
+
+  describe("describeRemoveExercise", () => {
+    it("should name the button after the exercise it takes out of the day", () => {
+      expect(describeRemoveExercise("Barbell squat")).toBe("Remove Barbell squat");
     });
   });
 

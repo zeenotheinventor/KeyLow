@@ -26,6 +26,7 @@ export function RoutineDayCard({
   onOpenWeekday,
   onOpenMenu,
   onRename,
+  children,
 }: RoutineDayCardProps) {
   const copy = describeEditorDay({ name, weekday, exerciseCount, setCount, isOpen });
 
@@ -85,6 +86,7 @@ export function RoutineDayCard({
           />
         </View>
       ) : null}
+      {isOpen ? children : null}
     </Card>
   );
 }

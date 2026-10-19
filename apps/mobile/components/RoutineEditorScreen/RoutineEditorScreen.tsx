@@ -17,6 +17,7 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { RoutineEditor } from "../RoutineEditor";
 import { ErrorState, SheetHeader } from "../ui";
 
+import type { ExerciseNames } from "../RoutineEditor";
 import type { RoutineEditorScreenProps } from "./types";
 import type { RoutineDraft } from "@keylow/core/training";
 
@@ -38,6 +39,14 @@ const draftOfStoredRoutine = (routine: StoredRoutine): RoutineDraft => ({
     })),
   })),
 });
+
+/** The names of a stored routine's exercises, by exercise id, which the draft does not hold. */
+const exerciseNamesOf = (routine: StoredRoutine): ExerciseNames =>
+  Object.fromEntries(
+    routine.days.flatMap((day) =>
+      day.exercises.map((exercise) => [exercise.exercise_id, exercise.exercise.name]),
+    ),
+  );
 
 /**
  * `/train/routines/<id>`: opens the editor on a stored routine, read from the library and kept on the phone,
@@ -63,7 +72,11 @@ export function RoutineEditorScreen({ id }: RoutineEditorScreenProps) {
 
   if (routine.data !== undefined && routine.data !== null) {
     return (
-      <RoutineEditor key={routine.data.id} initialDraft={draftOfStoredRoutine(routine.data)} />
+      <RoutineEditor
+        key={routine.data.id}
+        exerciseNames={exerciseNamesOf(routine.data)}
+        initialDraft={draftOfStoredRoutine(routine.data)}
+      />
     );
   }
 
