@@ -327,4 +327,41 @@ describe("NumericInput", () => {
       expect(viewsDrawn({ minHeight: 44, borderColor: colorOf("danger") })).toHaveLength(1);
     });
   });
+  describe("the display size", () => {
+    it("should draw the number at 32 over 40 in a box 64 points high, as the set entry boards do", async () => {
+      await renderNumericInput({
+        label: "Load, kg",
+        unit: undefined,
+        value: "180",
+        size: "display",
+        align: "center",
+      });
+
+      expect(screen.getByLabelText("Load, kg")).toHaveStyle({
+        fontSize: 32,
+        lineHeight: 40,
+        fontWeight: "600",
+      });
+      expect(viewsDrawn({ height: 64 })).toHaveLength(1);
+    });
+
+    it("should let large text grow only so far, so the number stays inside its 40 point line and 64 point box", async () => {
+      await renderNumericInput({
+        label: "Load, kg",
+        unit: undefined,
+        value: "180",
+        size: "display",
+      });
+
+      expect(screen.getByLabelText("Load, kg")).toHaveProp("maxFontSizeMultiplier", 1.25);
+    });
+
+    it("should leave the default size as it was: 44 points at least, in body type", async () => {
+      await renderNumericInput({ label: "Load, kg", unit: undefined, value: "180" });
+
+      expect(screen.getByLabelText("Load, kg")).toHaveStyle({ fontSize: 16, lineHeight: 24 });
+      expect(viewsDrawn({ height: 64 })).toHaveLength(0);
+      expect(viewsDrawn({ minHeight: 44 }).length).toBeGreaterThan(0);
+    });
+  });
 });

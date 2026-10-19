@@ -58,8 +58,8 @@ export function ExerciseCard({ name, target, columns, rows }: ExerciseCardProps)
           <View className={setColumnClassName.check} />
         </View>
         <View aria-label={SESSION_ACTIVE.setsListName} role="list">
-          {rows.map(({ key, state, setType, copy }) => (
-            <SetRow copy={copy} key={key} setType={setType} state={state} />
+          {rows.map(({ key, state, setType, copy, edit }) => (
+            <SetRow copy={copy} edit={edit} key={key} setType={setType} state={state} />
           ))}
         </View>
       </View>

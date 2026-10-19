@@ -1,6 +1,6 @@
 import { View } from "react-native";
 
-import { Icon, Text } from "../ui";
+import { Icon, PressableSurface, Text } from "../ui";
 import { setColumnClassName } from "./columnClassName";
 
 import type { SetRowProps } from "./types";
@@ -31,13 +31,34 @@ const fieldBaseClassName = "h-9 items-center justify-center rounded-small";
 
 /**
  * One set of an exercise, as the `session · active` board draws it: the set's mark (W for a warm-up), what the
- * same set made last time, the load, the reps and the RIR, and the check. It only displays: the check is not a
- * button yet, so it is drawn with its accessible name and no role, until the ticket that logs a set makes it
- * one. Every word is `describeSetRow`'s.
+ * same set made last time, the load, the reps and the RIR, and the check. The check is not a button yet, so
+ * it is drawn with its accessible name and no role, until the ticket that logs a set makes it one. A set still
+ * to do has its load, reps and RIR cells as one button that opens the set entry (`edit`); a row without it
+ * only displays. Every word is `describeSetRow`'s.
  */
-export function SetRow({ state, setType, copy }: SetRowProps) {
+export function SetRow({ state, setType, copy, edit }: SetRowProps) {
   const isDone = state === "done";
   const valueTone = isDone ? "primary" : "muted";
+
+  const cells = (
+    <>
+      <View className={`${setColumnClassName.load} ${fieldBaseClassName} ${fieldClassName[state]}`}>
+        <Text tone={valueTone} variant="body-strong">
+          {copy.load}
+        </Text>
+      </View>
+      <View className={`${setColumnClassName.reps} ${fieldBaseClassName} ${fieldClassName[state]}`}>
+        <Text tone={valueTone} variant="body-strong">
+          {copy.reps}
+        </Text>
+      </View>
+      <View className={`${setColumnClassName.rir} ${fieldBaseClassName} ${fieldClassName[state]}`}>
+        <Text tone={valueTone} variant="body-strong">
+          {copy.rir}
+        </Text>
+      </View>
+    </>
+  );
 
   return (
     <View
@@ -59,21 +80,19 @@ export function SetRow({ state, setType, copy }: SetRowProps) {
       >
         {copy.previous}
       </Text>
-      <View className={`${setColumnClassName.load} ${fieldBaseClassName} ${fieldClassName[state]}`}>
-        <Text tone={valueTone} variant="body-strong">
-          {copy.load}
-        </Text>
-      </View>
-      <View className={`${setColumnClassName.reps} ${fieldBaseClassName} ${fieldClassName[state]}`}>
-        <Text tone={valueTone} variant="body-strong">
-          {copy.reps}
-        </Text>
-      </View>
-      <View className={`${setColumnClassName.rir} ${fieldBaseClassName} ${fieldClassName[state]}`}>
-        <Text tone={valueTone} variant="body-strong">
-          {copy.rir}
-        </Text>
-      </View>
+      {edit === undefined ? (
+        <View className="flex-row gap-[6px]">{cells}</View>
+      ) : (
+        // The cells are 36 points high, so the button reaches the 44 point target through its hit slop.
+        <PressableSurface
+          className="flex-row gap-[6px]"
+          hitSlop={{ top: 4, bottom: 4 }}
+          label={edit.name}
+          onPress={edit.onPress}
+        >
+          {cells}
+        </PressableSurface>
+      )}
       <View
         accessible
         aria-label={copy.accessibleName}

@@ -5,7 +5,8 @@
  * written out so Tailwind sees them.
  */
 export const setColumnClassName = {
-  row: "gap-1.5 px-3",
+  // 6 points, as the board draws; `gap-1.5` is 5.25 under the rem base of 14.
+  row: "gap-[6px] px-3",
   mark: "w-8",
   previous: "min-w-0 flex-1",
   load: "w-[60px]",

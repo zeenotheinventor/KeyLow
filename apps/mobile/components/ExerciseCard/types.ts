@@ -1,3 +1,4 @@
+import type { SetRowEdit } from "../SetRow";
 import type { SetColumnsCopy, SetRowCopy } from "@keylow/core/copy";
 import type { SetRowState, SetType } from "@keylow/core/training";
 
@@ -7,6 +8,8 @@ export type ExerciseCardRow = {
   state: SetRowState;
   setType: SetType;
   copy: SetRowCopy;
+  /** Opens the set entry from the row's cells. Only a set still to do has it. */
+  edit?: SetRowEdit | undefined;
 };
 
 export type ExerciseCardProps = {

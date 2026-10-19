@@ -10,6 +10,8 @@ export type TextFieldProps = InputProps & {
   macro?: FieldMacro | undefined;
   /** Defaults to `left`. */
   align?: "left" | "right" | "center";
+  /** `display` is a large centred number in a taller box, as the set entry boards draw the load and the reps. Defaults to `default`. */
+  size?: "default" | "display" | undefined;
   /** Sets the value in strong body text, as the servings stepper's number is. Defaults to regular. */
   strongValue?: boolean | undefined;
   /** Makes the field an adjustable that a swipe steps up and down. */

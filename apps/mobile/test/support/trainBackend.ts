@@ -96,7 +96,10 @@ const jsonResponse = (body: unknown, status = 200): Response =>
     headers: { "Content-Type": "application/json" },
   });
 
-async function trainFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+export async function trainFetch(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const url = new URL(address);
   const table = url.pathname.split("/").pop() ?? "";

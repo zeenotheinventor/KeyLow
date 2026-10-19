@@ -144,3 +144,63 @@ export const WholeNumberBesideLabel: Story = {
     ),
   ],
 };
+
+// The set entry boards' load and reps: a 32 point number centred in a box 64 points high, side by side.
+export const DisplaySize: Story = {
+  render: (args) => (
+    <View className="flex-row gap-3">
+      <View className="flex-1">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          label="Load, kg"
+          size="display"
+          unit={undefined}
+          value="180"
+        />
+      </View>
+      <View className="flex-1">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          keyboardType="number-pad"
+          label="Reps"
+          size="display"
+          unit={undefined}
+          value="11"
+        />
+      </View>
+    </View>
+  ),
+};
+
+// The same two with the rule each breaks: the box turns danger and the sentence sits under its field.
+export const DisplaySizeWithError: Story = {
+  render: (args) => (
+    <View className="flex-row gap-3">
+      <View className="flex-1">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          error="Enter a load from 0 to 1,000 kg."
+          label="Load, kg"
+          size="display"
+          unit={undefined}
+          value="1800"
+        />
+      </View>
+      <View className="flex-1">
+        <TypingNumericInput
+          {...args}
+          align="center"
+          error="Enter whole reps from 1 to 100."
+          keyboardType="number-pad"
+          label="Reps"
+          size="display"
+          unit={undefined}
+          value="11.5"
+        />
+      </View>
+    </View>
+  ),
+};

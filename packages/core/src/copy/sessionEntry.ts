@@ -97,6 +97,8 @@ export const SET_ENTRY = {
   logSetAction: "Log set",
   /** The line when there is nothing to fill the set from. The boards do not draw it. */
   noHistory: "Nothing logged for this exercise yet.",
+  /** The line after a write that failed. The boards do not draw it. */
+  saveFailed: "Your set did not save. Check your connection, then try again.",
 } as const;
 
 /** The RIR chips. The last one stands for six or more. */

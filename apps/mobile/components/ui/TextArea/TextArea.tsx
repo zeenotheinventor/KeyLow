@@ -1,18 +1,13 @@
-import { BottomSheetTextInput } from "@gorhom/bottom-sheet";
-import { cssInterop } from "nativewind";
 import { useContext, useState } from "react";
 import { TextInput, View } from "react-native";
 
 import { useTheme } from "../../../lib/theme";
-import { IsInsideSheetContext } from "../BottomSheet";
+import { IsInsideSheetContext, SheetTextInput } from "../BottomSheet";
 import { FieldError } from "../Input";
 import { Text } from "../Text";
 
 import type { TextAreaProps } from "./types";
 import type { TextInputProps } from "react-native";
-
-// The library's input is its own component, so its classes are mapped to a style as the plain input's are.
-cssInterop(BottomSheetTextInput, { className: "style" });
 
 // The box is the design's multi-line field: at least 96 points, 12 across and 10 down, growing with the
 // text to six lines of the 24 point body type (144 points) and scrolling inside from there.
@@ -83,7 +78,7 @@ export function TextArea({
       <View
         className={`min-h-[96px] rounded-medium border bg-surface-raised px-3 py-[10px] ${borderClassName}`}
       >
-        {isInsideSheet ? <BottomSheetTextInput {...inputProps} /> : <TextInput {...inputProps} />}
+        {isInsideSheet ? <SheetTextInput {...inputProps} /> : <TextInput {...inputProps} />}
       </View>
       {errorText === undefined && counter === undefined ? null : (
         <View className="flex-row items-start justify-between gap-2">

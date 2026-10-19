@@ -128,3 +128,37 @@ export const WrapTenChips: Story = {
 export const MultipleTwoChosen: Story = {
   render: () => <Equipment initial={["barbell", "cable"]} />,
 };
+
+const rirOptions: ChipGroupOption<StoryUnit>[] = ["0", "1", "2", "3", "4", "5", "6+"].map(
+  (label, index) => ({ value: String(index), label }),
+);
+
+// The set entry's RIR: seven short labels share one line in equal columns, 44 points high. Pressing the
+// chosen chip again takes the choice back, since RIR is optional.
+function ClearableRirChips() {
+  const [value, setValue] = useState<StoryUnit | null>("1");
+  return (
+    <ChipGroup
+      allowDeselect
+      label="RIR, reps in reserve"
+      layout="equal"
+      options={rirOptions}
+      value={value}
+      onChange={setValue}
+    />
+  );
+}
+
+export const EqualColumnsRir: Story = {
+  render: () => (
+    <ChipGroup
+      label="RIR, reps in reserve"
+      layout="equal"
+      options={rirOptions}
+      value="1"
+      onChange={() => undefined}
+    />
+  ),
+};
+
+export const ClearableRir: Story = { render: () => <ClearableRirChips /> };
