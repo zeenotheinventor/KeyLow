@@ -169,9 +169,11 @@ describe("the session detail screen", () => {
       await screen.findByRole("heading", { name: "Pull" });
       const pullups = within(exerciseCard("Pullups"));
       expect(pullups.getByText("Bodyweight")).toBeOnTheScreen();
-      expect(pullups.getByRole("listitem", { name: "Set 1, 10 reps, RIR 2" })).toBeOnTheScreen();
-      expect(pullups.getByRole("listitem", { name: "Set 2, 8 reps, RIR 2" })).toBeOnTheScreen();
-      expect(pullups.getByRole("listitem", { name: "Set 3, 7 reps, RIR 2" })).toBeOnTheScreen();
+      expect(
+        pullups.getByRole("button", { name: "Set 1, 10 reps, RIR 2, edit" }),
+      ).toBeOnTheScreen();
+      expect(pullups.getByRole("button", { name: "Set 2, 8 reps, RIR 2, edit" })).toBeOnTheScreen();
+      expect(pullups.getByRole("button", { name: "Set 3, 7 reps, RIR 2, edit" })).toBeOnTheScreen();
     });
 
     it("should mark the warm-up W with no RIR and number the working sets after it from 1", async () => {
@@ -180,13 +182,15 @@ describe("the session detail screen", () => {
       await screen.findByRole("heading", { name: "Pull" });
       const row = within(exerciseCard("Bent Over Barbell Row"));
       expect(
-        row.getByRole("listitem", { name: "Warm-up set, 40 kg by 10, no RIR" }),
+        row.getByRole("button", { name: "Warm-up set, 40 kg by 10, no RIR, edit" }),
       ).toBeOnTheScreen();
       expect(row.getByText("W")).toBeOnTheScreen();
       expect(row.getByText("40 kg × 10")).toBeOnTheScreen();
       expect(row.getByText("No RIR")).toBeOnTheScreen();
-      expect(row.getByRole("listitem", { name: "Set 1, 70 kg by 10, RIR 2" })).toBeOnTheScreen();
-      expect(row.getByRole("listitem", { name: "Set 3, 70 kg by 8, RIR 2" })).toBeOnTheScreen();
+      expect(
+        row.getByRole("button", { name: "Set 1, 70 kg by 10, RIR 2, edit" }),
+      ).toBeOnTheScreen();
+      expect(row.getByRole("button", { name: "Set 3, 70 kg by 8, RIR 2, edit" })).toBeOnTheScreen();
       expect(row.queryByText("Bodyweight")).toBeNull();
     });
 
@@ -196,16 +200,16 @@ describe("the session detail screen", () => {
       await screen.findByRole("heading", { name: "Pull" });
       const pulldown = within(exerciseCard("Wide-Grip Lat Pulldown"));
       expect(pulldown.getByText("2 more than planned")).toBeOnTheScreen();
-      expect(pulldown.getAllByRole("listitem", { name: /^Set \d, / })).toHaveLength(5);
-      expect(pulldown.getAllByRole("listitem", { name: /not in the plan$/ })).toHaveLength(2);
+      expect(pulldown.getAllByRole("button", { name: /^Set \d, / })).toHaveLength(5);
+      expect(pulldown.getAllByRole("button", { name: /not in the plan, edit$/ })).toHaveLength(2);
       expect(
-        pulldown.getByRole("listitem", { name: "Set 3, 60 kg by 10, RIR 1" }),
+        pulldown.getByRole("button", { name: "Set 3, 60 kg by 10, RIR 1, edit" }),
       ).toBeOnTheScreen();
       expect(
-        pulldown.getByRole("listitem", { name: "Set 4, 60 kg by 10, RIR 1, not in the plan" }),
+        pulldown.getByRole("button", { name: "Set 4, 60 kg by 10, RIR 1, not in the plan, edit" }),
       ).toBeOnTheScreen();
       expect(
-        pulldown.getByRole("listitem", { name: "Set 5, 60 kg by 9, RIR 1, not in the plan" }),
+        pulldown.getByRole("button", { name: "Set 5, 60 kg by 9, RIR 1, not in the plan, edit" }),
       ).toBeOnTheScreen();
     });
 
@@ -214,22 +218,6 @@ describe("the session detail screen", () => {
 
       await screen.findByRole("heading", { name: "Pull" });
       expect(within(exerciseCard("Face Pull")).queryByText(/planned|Bodyweight/)).toBeNull();
-    });
-
-    it("should press nothing: a set is not a button until the edit is built", async () => {
-      await renderDetail();
-
-      await screen.findByRole("heading", { name: "Pull" });
-      expect(screen.getAllByRole("button")).toEqual([
-        screen.getByRole("button", { name: "Back to History" }),
-      ]);
-    });
-
-    it("should draw no More control, since the session has no action to offer yet", async () => {
-      await renderDetail();
-
-      await screen.findByRole("heading", { name: "Pull" });
-      expect(screen.queryByRole("button", { name: "More for this session" })).toBeNull();
     });
 
     it("should show the loads in the unit the person trains in", async () => {

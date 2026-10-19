@@ -19,7 +19,32 @@ export type SetEntryOpening = {
   lastWeek: Readonly<{ loadKg: number | null; reps: number }> | null;
 };
 
+/** The logged set the sheet is opened to change: what it holds now, and what its heading says. */
+export type EditSetOpening = {
+  /** The exercise's name as the set's snapshot holds it. */
+  exerciseName: string;
+  setType: SetType;
+  /** Its number among the exercise's working sets. */
+  setNumber: number;
+  /** When the set was performed, an ISO timestamp with a zone. */
+  performedAt: string;
+  /** The person's IANA time zone: the moment is written in it. */
+  tz: string;
+  /** The stored load in kilograms, or null for a set done without one. */
+  loadKg: number | null;
+  reps: number;
+  rir: number | null;
+};
+
+/** What the person changed on a set: only the fields they touched. The load is in kilograms, to the gram. */
+export type SetChanges = {
+  loadKg?: number | null;
+  reps?: number;
+  rir?: number | null;
+};
+
 export type SetEntrySheetProps = {
+  mode?: "log" | undefined;
   open: boolean;
   /** Called when the set is logged and when the person closes the sheet any other way. */
   onClose: () => void;
@@ -35,4 +60,21 @@ export type SetEntrySheetProps = {
   entry: SetEntryOpening;
   /** Opens the set types sheet. The set number at the top is a button only when a screen handles it. */
   onPressSetNumber?: (() => void) | undefined;
+};
+
+/** The sheet when it changes a set of a past session (`history · edit-set`): the same fields, with Delete set and Save changes. */
+export type EditSetSheetProps = {
+  mode: "edit";
+  open: boolean;
+  /** Called when the change is stored, the set is deleted, nothing was changed, and when the person closes the sheet any other way. */
+  onClose: () => void;
+  /** Counted up by the screen on every press of a row, so a form still on its way out never carries its numbers into the next opening. */
+  openingId: number;
+  /** The unit the person trains in: the load is typed and shown in it, and stored in kilograms. */
+  unit: LoadUnit;
+  entry: EditSetOpening;
+  /** Stores the changes. Resolves to whether they were stored: when not, the sheet stays open with the numbers as typed. */
+  onSave: (changes: SetChanges) => Promise<boolean>;
+  /** Deletes the set. Resolves to whether it was deleted: when not, the sheet stays open. */
+  onDelete: () => Promise<boolean>;
 };

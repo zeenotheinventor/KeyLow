@@ -1,27 +1,34 @@
 import {
   HISTORY_ERROR,
   HISTORY_SCREEN,
+  HISTORY_SESSION_DETAIL,
   HISTORY_SESSION_LOADING_NAME,
   HISTORY_SESSION_NOT_FOUND,
   describeSessionBackLabel,
 } from "@keylow/core/copy";
 import { vars } from "nativewind";
+import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ExerciseCard } from "../ExerciseCard";
+import { SessionDetailMenu } from "../SessionDetailMenu";
+import { SetEntrySheet } from "../SetEntrySheet";
 import { StatCard } from "../StatCard";
 import { EmptyState, ErrorState, SheetHeader, Skeleton, Text } from "../ui";
+import { useEditSet } from "./useEditSet";
 import { useSessionDetail } from "./useSessionDetail";
 
-import type { SessionDetailScreenProps } from "./types";
+import type { SessionDetailContent, SessionDetailScreenProps, SessionDetailView } from "./types";
 
 /**
  * A logged session, opened from the history list, the Today card or the week strip, as the
  * `history · session-detail` board draws it: the routine day's name over when it was, three cards (time,
  * sets, and the plan comparison when the session followed a routine day) and the exercises with their
- * sets, read only. A session that is not found, in whatever way, shows a card that leads back to the
- * history. Back is named for the screen the session was opened from. Nothing in it is edited yet, and "More for this session" is drawn only once it holds an action.
+ * sets. A session that is not found, in whatever way, shows a card that leads back to the history. Back is
+ * named for the screen the session was opened from. Pressing a set opens the edit set sheet (change it, or
+ * delete it with an Undo), and "More for this session" holds Delete session, which asks first and then goes
+ * back to the history list.
  */
 export function SessionDetailScreen({
   id,
@@ -30,7 +37,17 @@ export function SessionDetailScreen({
   onOpenHistory,
 }: SessionDetailScreenProps) {
   const insets = useSafeAreaInsets();
-  const detail = useSessionDetail(id);
+  const read = useSessionDetail(id);
+  // Deleting the session takes it out of the cache before the screen has left, so what was shown stays until then.
+  const [isLeaving, setIsLeaving] = useState(false);
+  const [lastContent, setLastContent] = useState<SessionDetailContent | null>(null);
+  if (read.status === "ready" && read.content !== lastContent) {
+    setLastContent(read.content);
+  }
+  const detail: SessionDetailView =
+    isLeaving && lastContent !== null ? { status: "ready", content: lastContent } : read;
+  const editSet = useEditSet(id);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   function renderBody() {
     switch (detail.status) {
@@ -54,7 +71,17 @@ export function SessionDetailScreen({
               )}
             </View>
             {exercises.map(({ exerciseId, ...card }) => (
-              <ExerciseCard key={exerciseId} variant="readOnly" {...card} />
+              <ExerciseCard
+                key={exerciseId}
+                variant="readOnly"
+                {...card}
+                rows={card.rows.map((row) => ({
+                  ...row,
+                  onPress: () => {
+                    editSet.openSet(row.key);
+                  },
+                }))}
+              />
             ))}
           </ScrollView>
         );
@@ -106,8 +133,31 @@ export function SessionDetailScreen({
       <SheetHeader
         leading={{ icon: "ChevronLeft", label: describeSessionBackLabel(origin), onPress: onBack }}
         title={detail.status === "ready" ? detail.content.title : HISTORY_SCREEN.title}
+        trailing={
+          detail.status === "ready" && id !== undefined
+            ? {
+                icon: "Ellipsis",
+                label: HISTORY_SESSION_DETAIL.moreLabel,
+                onPress: () => {
+                  setIsMenuOpen(true);
+                },
+              }
+            : undefined
+        }
       />
       {renderBody()}
+      {editSet.sheet === null ? null : <SetEntrySheet {...editSet.sheet} />}
+      {detail.status === "ready" && id !== undefined ? (
+        <SessionDetailMenu
+          open={isMenuOpen}
+          sessionId={id}
+          onClose={() => {
+            setIsMenuOpen(false);
+          }}
+          onDeleted={onOpenHistory}
+          onDeleting={setIsLeaving}
+        />
+      ) : null}
     </View>
   );
 }
