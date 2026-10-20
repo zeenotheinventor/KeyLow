@@ -71,7 +71,8 @@ export function installTrendFake(
     sets?: unknown[];
     earlier?: unknown[];
     routine?: unknown;
-    timeZone?: string;
+    /** The profile's zone; null is a profile that has none. Europe/London when left out. */
+    timeZone?: string | null;
     /** Answers the rows given whichever exercises the request asks for, as a database that matched none would not. */
     answerAnyExercise?: boolean;
   } = {},
@@ -115,7 +116,9 @@ export function installTrendFake(
       return postgrestRows(request, rows.slice(offset, offset + limit));
     }),
     http.get(`${REST_URL}/profiles`, ({ request }) =>
-      postgrestRows(request, [{ timezone: data.timeZone ?? "Europe/London" }]),
+      postgrestRows(request, [
+        { timezone: data.timeZone === undefined ? "Europe/London" : data.timeZone },
+      ]),
     ),
     http.get(`${REST_URL}/routines`, ({ request }) =>
       postgrestRows(request, data.routine === undefined ? [] : [data.routine]),

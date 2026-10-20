@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
 import { fakeFetch as diaryFetch } from "./diaryBackend";
+import { progressFetch } from "./progressBackend";
 
 import type { Database } from "@keylow/api-client";
 
@@ -9,7 +10,9 @@ type Row = Record<string, unknown>;
 /**
  * The `routines` table as the routines list reads it, and how it answers. The profile, which the list waits
  * on (the Terms acceptance and the time zone), is the diary backend's. A read without
- * `is_archived=eq.false` includes the archived routines, as the list's one request does.
+ * `is_archived=eq.false` includes the archived routines, as the list's one request does. A read by `id` is
+ * the routine's detail, which the Progress section reads for its exercises, and the sets and the weight unit
+ * it works its trend from are the progress backend's, which holds no sets unless a test gives it some.
  */
 export const routinesBackend: {
   /** The rows as PostgREST returns them: each with its `routine_days`, and their `routine_exercises`. */
@@ -50,6 +53,12 @@ async function routinesFetch(input: string | URL | Request, init?: RequestInit):
   ) {
     return new Promise(() => undefined);
   }
+  const readsProgress =
+    table === "workout_sets" ||
+    (table === "profiles" && url.searchParams.get("select") === "weight_unit");
+  if (readsProgress) {
+    return progressFetch(input, init);
+  }
   if (table !== "routines") {
     return diaryFetch(input, init);
   }
@@ -59,6 +68,17 @@ async function routinesFetch(input: string | URL | Request, init?: RequestInit):
   }
   if (routinesBackend.fails) {
     return respond({ code: "XX000", message: "raw database text", details: null, hint: null }, 500);
+  }
+  const id = url.searchParams.get("id")?.replace("eq.", "");
+  if (id !== undefined) {
+    const found = routinesBackend.rows.find((row) => row["id"] === id);
+    const wantsObject = new Headers(init?.headers).get("Accept")?.includes("vnd.pgrst.object+json");
+    if (wantsObject !== true) {
+      return respond(found === undefined ? [] : [found]);
+    }
+    return found === undefined
+      ? respond({ code: "PGRST116", message: "no rows", details: "0 rows", hint: null }, 406)
+      : respond(found);
   }
   const liveOnly = url.searchParams.get("is_archived") === "eq.false";
   return respond(routinesBackend.rows.filter((row) => !liveOnly || row["is_archived"] === false));
@@ -72,6 +92,9 @@ export const routinesClient = createClient<Database>("http://localhost:54321", "
 
 let nextId = 1;
 const uuid = () => `00000000-0000-4000-8000-${String(nextId++).padStart(12, "0")}`;
+
+const exerciseId = (position: number) =>
+  `00000007-0000-4000-8000-${String(position + 1).padStart(12, "0")}`;
 
 export type RoutineRowDay = { name: string; weekday: number | null; sets: number };
 
@@ -94,7 +117,19 @@ export function routineRow(options: {
       position,
       weekday: day.weekday,
       name: day.name,
-      routine_exercises: [{ target_sets: day.sets }],
+      // The list reads the sets alone; the routine's detail reads the exercise as well.
+      routine_exercises: [
+        {
+          id: uuid(),
+          position: 0,
+          exercise_id: exerciseId(position),
+          target_sets: day.sets,
+          rep_min: 5,
+          rep_max: 8,
+          target_rir: 2,
+          exercises: { id: exerciseId(position), name: `${day.name} lift`, equipment: "barbell" },
+        },
+      ],
     })),
   };
 }

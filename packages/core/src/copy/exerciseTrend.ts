@@ -22,34 +22,32 @@ const TRUE_MINUS_SIGN = "−";
 export const describeTrendValue = ({ loadKg, reps }: TrendValue, unit: LoadUnit): string =>
   loadKg === null ? describeCount(reps, "rep", "reps") : `${displayLoad(loadKg, unit)} ${unit}`;
 
-const signed = (amount: number, unitWords: (size: number) => string): string =>
-  `${amount < 0 ? TRUE_MINUS_SIGN : "+"}${unitWords(Math.abs(amount))}`;
+/** Which way a week moved against the last trained week, and by how much: "5 kg", "2 reps". No sign. */
+export type TrendMovement = Readonly<{ direction: "up" | "down"; amount: string }>;
 
-const describeRepsChange = (repsChange: number): string =>
+const repsMovement = (repsChange: number): TrendMovement | null =>
   repsChange === 0
-    ? EXERCISE_TREND.noChange
-    : signed(repsChange, (size) => describeCount(size, "rep", "reps"));
+    ? null
+    : {
+        direction: repsChange < 0 ? "down" : "up",
+        amount: describeCount(Math.abs(repsChange), "rep", "reps"),
+      };
 
 /**
- * The change of a trained week: "+5 kg" or "−5 kg" first, then "+2 reps" when the load is equal,
- * "No change" when nothing moved, "First week", and "Not trained yet" for no change at all (null, a range
- * with no trained week). The load change is the difference
- * of the two loads as they are shown (converted, then rounded to one decimal), so the change in pounds
- * always agrees with the two numbers beside it and never reads "+0.1 lb" from rounding drift. A load
- * change that shows as 0 falls back to the reps change.
+ * How far a trained week moved, or null when it did not (a first week, an equal week, no change at all).
+ * The load change comes first: the difference of the two loads as they are shown (converted, then rounded
+ * to one decimal), so the change in pounds always agrees with the two numbers beside it and never reads
+ * "+0.1 lb" from rounding drift. A load change that shows as 0 falls back to the reps change.
  */
-export const describeTrendChange = (change: TrendChange | null, unit: LoadUnit): string => {
-  if (change === null) {
-    return EXERCISE_TREND.notTrainedYet;
-  }
-  if (change.kind === "same") {
-    return EXERCISE_TREND.noChange;
-  }
-  if (change.kind === "first") {
-    return EXERCISE_TREND.firstWeek;
+export const describeTrendMovement = (
+  change: TrendChange | null,
+  unit: LoadUnit,
+): TrendMovement | null => {
+  if (change === null || change.kind === "first" || change.kind === "same") {
+    return null;
   }
   if (change.kind === "reps") {
-    return describeRepsChange(change.repsChange);
+    return repsMovement(change.repsChange);
   }
 
   const shownDifference =
@@ -59,6 +57,27 @@ export const describeTrendChange = (change: TrendChange | null, unit: LoadUnit):
         10,
     ) / 10;
   return shownDifference === 0
-    ? describeRepsChange(change.repsChange)
-    : signed(shownDifference, (size) => `${size} ${unit}`);
+    ? repsMovement(change.repsChange)
+    : {
+        direction: shownDifference < 0 ? "down" : "up",
+        amount: `${Math.abs(shownDifference)} ${unit}`,
+      };
+};
+
+/**
+ * The change of a trained week: "+5 kg" or "−5 kg" first, then "+2 reps" when the load is equal,
+ * "No change" when nothing moved, "First week", and "Not trained yet" for no change at all (null, a range
+ * with no trained week).
+ */
+export const describeTrendChange = (change: TrendChange | null, unit: LoadUnit): string => {
+  if (change === null) {
+    return EXERCISE_TREND.notTrainedYet;
+  }
+  if (change.kind === "first") {
+    return EXERCISE_TREND.firstWeek;
+  }
+  const movement = describeTrendMovement(change, unit);
+  return movement === null
+    ? EXERCISE_TREND.noChange
+    : `${movement.direction === "down" ? TRUE_MINUS_SIGN : "+"}${movement.amount}`;
 };

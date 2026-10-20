@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { EXERCISE_TREND, describeTrendChange, describeTrendValue } from "../../src/copy";
+import {
+  EXERCISE_TREND,
+  describeTrendChange,
+  describeTrendMovement,
+  describeTrendValue,
+} from "../../src/copy";
 
 describe("EXERCISE_TREND", () => {
   it("should hold the words of the states with no number", () => {
@@ -107,5 +112,51 @@ describe("describeTrendChange", () => {
         "kg",
       ),
     ).toBe("−10 kg");
+  });
+});
+
+describe("describeTrendMovement", () => {
+  it("should say nothing moved for a state with no change, a same week and a first week", () => {
+    expect(describeTrendMovement(null, "kg")).toBeNull();
+    expect(describeTrendMovement({ kind: "first" }, "kg")).toBeNull();
+    expect(describeTrendMovement({ kind: "same" }, "kg")).toBeNull();
+    expect(describeTrendMovement({ kind: "reps", repsChange: 0 }, "kg")).toBeNull();
+  });
+
+  it("should give the direction and the amount of a load change, without a sign", () => {
+    const load = (previousLoadKg: number, latestLoadKg: number) =>
+      ({ kind: "load", previousLoadKg, latestLoadKg, repsChange: 0 }) as const;
+
+    expect(describeTrendMovement(load(60, 65), "kg")).toEqual({ direction: "up", amount: "5 kg" });
+    expect(describeTrendMovement(load(65, 60), "kg")).toEqual({
+      direction: "down",
+      amount: "5 kg",
+    });
+  });
+
+  it("should give the amount in pounds as the difference of the two values shown", () => {
+    expect(
+      describeTrendMovement(
+        { kind: "load", previousLoadKg: 50, latestLoadKg: 50.1, repsChange: 0 },
+        "lb",
+      ),
+    ).toEqual({ direction: "up", amount: "0.3 lb" });
+  });
+
+  it("should give the reps when the load is equal, or when the load change shows as nothing", () => {
+    expect(describeTrendMovement({ kind: "reps", repsChange: 2 }, "kg")).toEqual({
+      direction: "up",
+      amount: "2 reps",
+    });
+    expect(describeTrendMovement({ kind: "reps", repsChange: -1 }, "kg")).toEqual({
+      direction: "down",
+      amount: "1 rep",
+    });
+    expect(
+      describeTrendMovement(
+        { kind: "load", previousLoadKg: 60, latestLoadKg: 60.04, repsChange: -2 },
+        "kg",
+      ),
+    ).toEqual({ direction: "down", amount: "2 reps" });
   });
 });

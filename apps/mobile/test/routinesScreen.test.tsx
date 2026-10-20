@@ -158,6 +158,12 @@ describe("the routines screens", () => {
       expect(screen.getByText("4 days · Mon, Tue, Thu, Fri · 60 sets a week")).toBeOnTheScreen();
       expect(screen.getByText("Full body")).toBeOnTheScreen();
       expect(screen.getByText("3 days · Mon, Wed, Fri · 45 sets a week")).toBeOnTheScreen();
+      // The Progress section loads too: its days are there, an exercise with no set is not trained yet, and
+      // there is no error card among the list.
+      expect(
+        await screen.findAllByRole("button", { name: "Legs lift, not trained yet" }),
+      ).toHaveLength(1);
+      expect(screen.queryByText(GENERIC_ERROR)).not.toBeOnTheScreen();
     });
 
     it("should keep the archived routines off the list and count them in the link", async () => {
@@ -192,7 +198,8 @@ describe("the routines screens", () => {
 
       expect(await screen.findByRole("heading", { name: "Push Pull Legs" })).toBeOnTheScreen();
       expect(screen.getByText("4 days · 63 sets a week")).toBeOnTheScreen();
-      expect(screen.queryByText(GENERIC_ERROR)).not.toBeOnTheScreen();
+      // The list stands. The one error is the Progress section's, which cannot be worked out without the zone.
+      expect(await screen.findAllByText(GENERIC_ERROR)).toHaveLength(1);
     });
 
     it("should show the list without the date while the time zone is still loading", async () => {

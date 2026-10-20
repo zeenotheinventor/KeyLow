@@ -38,7 +38,9 @@ export function useRoutineTrendSets(
   const queryClient = useQueryClient();
   const timeZone = useProfileTimeZone({ enabled });
 
-  const window = timeZone.data ? trendReadWindow(range, now, timeZone.data) : null;
+  // A profile with no zone reads in UTC, as every other screen does; the zone not read yet reads nothing.
+  const window =
+    timeZone.data === undefined ? null : trendReadWindow(range, now, timeZone.data ?? "UTC");
 
   const rows = useQuery<TrendSetRows>({
     queryKey: keys.training.routineTrend(routineId ?? "", window?.fromWeek ?? ""),

@@ -22,4 +22,12 @@ export const samples: Record<string, () => string[]> = {
       "lb",
     ),
   ],
+  describeTrendMovement: () =>
+    [
+      copy.describeTrendMovement({ kind: "reps", repsChange: 2 }, "kg"),
+      copy.describeTrendMovement(
+        { kind: "load", previousLoadKg: 62.5, latestLoadKg: 60, repsChange: 0 },
+        "lb",
+      ),
+    ].flatMap((movement) => (movement === null ? [] : [movement.amount])),
 };

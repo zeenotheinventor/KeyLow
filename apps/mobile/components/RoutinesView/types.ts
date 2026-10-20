@@ -1,3 +1,4 @@
+import type { RoutineProgressState } from "../RoutineProgressDay";
 import type { RoutineCardInput } from "@keylow/core/copy";
 
 /** A routine of the list: its id, its name, its days with their weekdays and the sets in a week. */
@@ -36,6 +37,14 @@ export type RoutinesViewProps = {
   onEditRoutine?: ((routine: RoutineRef) => void) | undefined;
   /** Makes a routine active. Draws Make active on each other routine. */
   onMakeActive?: ((routine: RoutineRef) => void) | undefined;
+  /**
+   * The active routine's progress, drawn under the routines as a Progress section when it is given, with the
+   * routine's days as its groups. Only a `ready` list with an active routine draws it, and a routine with no
+   * exercise draws nothing.
+   */
+  progress?: RoutineProgressState | undefined;
+  /** Opens an exercise's graph by its id. The progress rows are plain information without it. */
+  onOpenExercise?: ((exerciseId: string) => void) | undefined;
 } & (
   | { status: "loading" }
   | { status: "error"; onRetry: () => void }
