@@ -53,9 +53,9 @@ export function putSetInSessionCaches(queryClient: QueryClient, set: SessionSet)
 
 /**
  * Marks stale everything a session write can change: the sessions, the one in progress, the sets, the
- * week sessions and the history that heat, the week and the body map are worked out from, and the "previous"
- * values of every exercise, which a logged, changed or removed set moves. The plan and the routines
- * are not touched.
+ * week sessions and the history that heat, the week and the body map are worked out from, the "previous"
+ * values of every exercise, which a logged, changed or removed set moves, and the rows of the weekly
+ * exercise trends. The plan and the routines are not touched.
  */
 export function refreshSessions(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: keys.training.sessionsAll });
@@ -64,4 +64,6 @@ export function refreshSessions(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: keys.training.weekSessionsAll });
   void queryClient.invalidateQueries({ queryKey: keys.training.historyAll });
   void queryClient.invalidateQueries({ queryKey: keys.training.lastPerformanceAll });
+  void queryClient.invalidateQueries({ queryKey: keys.training.exerciseTrendAll });
+  void queryClient.invalidateQueries({ queryKey: keys.training.routineTrendAll });
 }

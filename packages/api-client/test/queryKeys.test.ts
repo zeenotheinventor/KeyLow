@@ -420,3 +420,72 @@ describe("keys.training, the exercise reads", () => {
     }
   });
 });
+
+describe("keys.training weekly trend", () => {
+  it("should key one exercise's trend rows by its id and the Monday the range starts on", () => {
+    expect(keys.training.exerciseTrendAll).toEqual(["training", "exercise-trend"]);
+    expect(keys.training.exerciseTrend(EXERCISE_ID, "2026-09-28")).toEqual([
+      "training",
+      "exercise-trend",
+      EXERCISE_ID,
+      "2026-09-28",
+    ]);
+    expect(keys.training.exerciseTrend(EXERCISE_ID, "2026-09-28").slice(0, 2)).toEqual(
+      keys.training.exerciseTrendAll,
+    );
+  });
+
+  it("should key a routine's trend rows by its id and the Monday the range starts on", () => {
+    expect(keys.training.routineTrendAll).toEqual(["training", "routine-trend"]);
+    expect(keys.training.routineTrend(ROUTINE_ID, "2026-07-27")).toEqual([
+      "training",
+      "routine-trend",
+      ROUTINE_ID,
+      "2026-07-27",
+    ]);
+    expect(keys.training.routineTrend(ROUTINE_ID, "2026-07-27").slice(0, 2)).toEqual(
+      keys.training.routineTrendAll,
+    );
+  });
+
+  it("should keep the two trend families apart from each other and from every other training family", () => {
+    const trendKeys = [
+      keys.training.exerciseTrend(EXERCISE_ID, "2026-09-28"),
+      keys.training.routineTrend(ROUTINE_ID, "2026-09-28"),
+    ];
+    const others = [
+      keys.training.setsAll,
+      keys.training.weekSessionsAll,
+      keys.training.historyAll,
+      keys.training.sessionsAll,
+      keys.training.routinesAll,
+      keys.training.routineAll,
+      keys.training.lastPerformanceAll,
+      keys.training.exerciseSearchAll,
+      keys.training.goals,
+      ["training", "exercise"],
+    ];
+    for (const key of trendKeys) {
+      for (const prefix of others) {
+        expect(key.slice(0, prefix.length)).not.toEqual(prefix);
+      }
+    }
+    expect(trendKeys[0]?.slice(0, 2)).not.toEqual(keys.training.routineTrendAll);
+    expect(trendKeys[1]?.slice(0, 2)).not.toEqual(keys.training.exerciseTrendAll);
+  });
+
+  it("should hold fixed words, an id and a date only in a trend key, never a name or a number from a set", () => {
+    const uuid = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+    const allowed = new RegExp(
+      `^(training|exercise-trend|routine-trend|${uuid}|\\d{4}-\\d{2}-\\d{2})$`,
+    );
+    for (const key of [
+      keys.training.exerciseTrend(EXERCISE_ID, "2026-09-28"),
+      keys.training.routineTrend(ROUTINE_ID, "2026-09-28"),
+    ]) {
+      for (const part of key) {
+        expect(part).toMatch(allowed);
+      }
+    }
+  });
+});

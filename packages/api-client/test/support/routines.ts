@@ -207,6 +207,8 @@ export function seedTrainingQueries(queryClient: QueryClient) {
     lastPerformance: keys.training.lastPerformance(EXERCISE_ID),
     routines: keys.training.routines(false),
     routine: keys.training.routine(OTHER_ROUTINE_ID),
+    exerciseTrend: keys.training.exerciseTrend(EXERCISE_ID, "2026-09-28"),
+    routineTrend: keys.training.routineTrend(OTHER_ROUTINE_ID, "2026-09-28"),
   };
   for (const queryKey of Object.values(queryKeys)) {
     queryClient.setQueryData(queryKey, null);

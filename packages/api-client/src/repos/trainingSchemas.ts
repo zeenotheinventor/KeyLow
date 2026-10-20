@@ -43,6 +43,37 @@ export type TrainingSet = Omit<z.output<typeof setColumnsSchema>, "snapshot"> & 
   snapshot: SetSnapshot;
 };
 
+/**
+ * The columns of a `workout_sets` row the weekly exercise trend reads, with the day of its session
+ * joined in, as PostgREST returns them. Only what the trend works from is read, because the rows are kept
+ * on the device: no id, no snapshot, no effort, no time. A set and a session that are deleted are filtered
+ * out by the query, so their `deleted_at` is not read.
+ */
+export const trendSetRowSchema = z
+  .object({
+    exercise_id: setShape.exercise_id,
+    set_type: setShape.set_type,
+    reps: setShape.reps,
+    load_kg: setShape.load_kg,
+    workout_sessions: z.object({ local_date: workoutSessionRowSchema.shape.local_date }),
+  })
+  .transform(({ workout_sessions, ...set }) => ({
+    ...set,
+    local_date: workout_sessions.local_date,
+  }));
+
+export const TREND_SET_SELECT =
+  "exercise_id,set_type,reps,load_kg,workout_sessions!inner(local_date)";
+
+/** A set of the trend: its exercise, type, reps and load, and its session's day beside them. Core's `TrendSet` plus the exercise. */
+export type TrendSetRow = z.output<typeof trendSetRowSchema>;
+
+/**
+ * What the trend reads for its exercises: the best set of each exercise and week of the range, and the
+ * sets of the last week each was trained before it.
+ */
+export type TrendSetRows = { sets: TrendSetRow[]; earlier: TrendSetRow[] };
+
 const sessionShape = workoutSessionRowSchema.shape;
 
 /** The columns of a `workout_sessions` row the week comparison reads, as PostgREST returns them. */

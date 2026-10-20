@@ -108,6 +108,25 @@ export const keys = {
       excludeSessionId === undefined
         ? (["training", "last-performance", exerciseId] as const)
         : (["training", "last-performance", exerciseId, excludeSessionId] as const),
+    /** The prefix of every `exerciseTrend` key. */
+    exerciseTrendAll: ["training", "exercise-trend"] as const,
+    /**
+     * The rows one exercise's weekly trend is worked out from: its live working sets from the Monday
+     * `fromWeek` (`YYYY-MM-DD`) to the day they were read, and the sets of the last week it was trained
+     * before. Persisted on mobile, as narrow rows: the trend is worked out from them at read time. The
+     * key is an exercise id and a date, never a name or a load, and the range is not in it: each range
+     * starts on a Monday of its own.
+     */
+    exerciseTrend: (exerciseId: string, fromWeek: string) =>
+      ["training", "exercise-trend", exerciseId, fromWeek] as const,
+    /** The prefix of every `routineTrend` key. */
+    routineTrendAll: ["training", "routine-trend"] as const,
+    /**
+     * The same rows for every exercise of one routine, read in one request. Persisted on mobile, as rows.
+     * A routine save refreshes it, since the exercises it reads can change.
+     */
+    routineTrend: (routineId: string, fromWeek: string) =>
+      ["training", "routine-trend", routineId, fromWeek] as const,
     /**
      * The signed in user's current training goal (the `training_goals` row that has not ended), or null
      * when there is none. Persisted on mobile, as the row: the priorities are read from it at read time

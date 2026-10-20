@@ -132,6 +132,8 @@ describe("useAddSet", () => {
       "historyList",
       "lastPerformance",
       "otherExerciseLastPerformance",
+      "exerciseTrend",
+      "routineTrend",
     ] as const) {
       expect(seeded.isStale(seeded.queryKeys[name])).toBe(true);
     }

@@ -8,10 +8,14 @@ export function putRoutineInCache(queryClient: QueryClient, routine: RoutineDeta
   queryClient.setQueryData(keys.training.routine(routine.id), routine);
 }
 
-/** Marks the routine library and every routine stale after a write. Nothing of the plan is touched. */
+/**
+ * Marks the routine library, every routine and the routines' trend rows stale after a write: a saved
+ * routine can hold other exercises than the trend rows were read for. Nothing of the plan is touched.
+ */
 export function refreshRoutines(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: keys.training.routinesAll });
   void queryClient.invalidateQueries({ queryKey: keys.training.routineAll });
+  void queryClient.invalidateQueries({ queryKey: keys.training.routineTrendAll });
 }
 
 /**

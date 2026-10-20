@@ -294,3 +294,15 @@ export type {
   SessionRowEntry,
   SetRowState,
 } from "./exerciseRows";
+export { TREND_RANGES, TREND_RANGE_WEEKS, exerciseWeeklyTrend } from "./exerciseTrend";
+export type {
+  ExerciseTrend,
+  TrendChange,
+  TrendEntry,
+  TrendRange,
+  TrendSet,
+  TrendValue,
+} from "./exerciseTrend";
+export { bestSetPerWeek } from "./bestSetPerWeek";
+export { routineTrendsByDay } from "./routineTrends";
+export type { RoutineDayTrends } from "./routineTrends";

@@ -81,6 +81,8 @@ describe("useSaveRoutine", () => {
 
     expect(seeded.isStale(seeded.queryKeys.routines)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.routine)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.routineTrend)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.exerciseTrend)).toBe(false);
     expect(seeded.isStale(seeded.queryKeys.activeRoutine)).toBe(false);
     expect(seeded.isStale(seeded.queryKeys.weekSessions)).toBe(false);
     expect(seeded.isStale(seeded.queryKeys.sets)).toBe(false);
