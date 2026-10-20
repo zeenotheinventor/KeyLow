@@ -28,6 +28,11 @@ export type ListRowToPressProps = ListRowBaseProps & {
   /** A row without it goes nowhere: it is drawn as plain information, with no press feedback. */
   onPress?: (() => void) | undefined;
   /**
+   * Marks the row busy while what pressing it started is under way: the row stops responding and a spinner
+   * takes the chevron's place. Unlike `disabled` it does not dim the row. No board draws it (KEY-505).
+   */
+  loading?: boolean | undefined;
+  /**
    * `footer` is the row that closes a card of rows with an action, such as the recipe editor's Add ingredient:
    * its icon bare and not in a tile, a 52 point row, no subtitle and no chevron. Leave it out for the usual row.
    */
@@ -45,6 +50,7 @@ export type ListRowToPressProps = ListRowBaseProps & {
  */
 export type ListRowWithControlProps = ListRowBaseProps & {
   onPress?: undefined;
+  loading?: undefined;
   variant?: undefined;
   ref?: undefined;
   children?: ReactNode;

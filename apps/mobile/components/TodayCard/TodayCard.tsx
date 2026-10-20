@@ -1,4 +1,4 @@
-import { TRAIN_HOME, describeTodayCard } from "@keylow/core/copy";
+import { TRAIN_HOME, TRAIN_PICK_DAY, describeTodayCard } from "@keylow/core/copy";
 import { View } from "react-native";
 
 import { Badge, Button, Card, Text } from "../ui";
@@ -11,10 +11,11 @@ import type { TodayCardProps } from "./types";
  * `train · rest-day` boards draw them: the planned day with Start, the session in progress with its sets and
  * Resume, the finished session with View session, and the rest day with the next day and the muscles still
  * recovering. Every word is core's (`describeTodayCard`). A button is drawn only when its handler is given,
- * so none is a dead control. Start, Resume, Log another session and Log a session are dimmed when
+ * so none is a dead control. Start, Resume, Pick day, Log another session and Log a session are dimmed when
  * `isStartAndResumeDisabled`, and View session is not, since it reads what is saved. Log another session
  * (Done) and Log a session (rest day) are drawn on no board (KEY-492): they are secondary buttons like the
- * no routine card's, under the card's copy.
+ * no routine card's, under the card's copy. Pick day is drawn on no board either: it is a secondary button
+ * under Start, Log another session and Log a session, and not on the card of a session in progress.
  */
 export function TodayCard({
   card,
@@ -26,8 +27,22 @@ export function TodayCard({
   onViewSession,
   onLogAnother,
   onLogSession,
+  onPickDay,
 }: TodayCardProps) {
   const copy = describeTodayCard(card, context);
+  const pickDay =
+    onPickDay === undefined ? null : (
+      <Button
+        className="mt-2"
+        disabled={isStartAndResumeDisabled}
+        fullWidth
+        loading={isStarting}
+        variant="secondary"
+        onPress={onPickDay}
+      >
+        {TRAIN_PICK_DAY.action}
+      </Button>
+    );
 
   return (
     <Card aria-label={TRAIN_HOME.todaySectionName} role="region">
@@ -60,6 +75,7 @@ export function TodayCard({
                 {copy.action}
               </Button>
             )}
+            {pickDay}
           </>
         ) : null}
         {copy.kind === "in_progress" ? (
@@ -127,6 +143,7 @@ export function TodayCard({
                 {copy.logAnotherAction}
               </Button>
             )}
+            {pickDay}
           </>
         ) : null}
         {copy.kind === "rest" ? (
@@ -147,6 +164,7 @@ export function TodayCard({
                 {copy.logSessionAction}
               </Button>
             )}
+            {pickDay}
           </>
         ) : null}
       </View>

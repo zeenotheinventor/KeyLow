@@ -13,6 +13,7 @@ import {
   legsDayId,
   MONDAY,
   pullDayId,
+  pushSaturdayDayId,
   pushMondayDayId,
   romanianDeadliftId,
   SATURDAY,
@@ -367,19 +368,24 @@ describe("weekPlanDays", () => {
       expect(dayOf(plan, THURSDAY).status).toBe("logged");
     });
 
-    it("should count a session of a planned day as that day whichever date it was logged on", () => {
-      const legsOnWednesday = sessionOn(1, "2026-10-14", { routine_day_id: legsDayId });
+    it("should read a day done on a rest day as an extra day, and leave its own date planned", () => {
+      const legsOnWednesday = sessionOn(1, "2026-10-14", {
+        routine_day_id: legsDayId,
+        sets: workingSets(squatId, 4),
+      });
 
       const plan = goldenWeekPlan({
         sessions: [legsOnWednesday],
-        now: "2026-10-16T09:00:00+01:00",
+        now: "2026-10-14T20:00:00+01:00",
       });
 
       expect([dayOf(plan, WEDNESDAY).status, dayOf(plan, THURSDAY).status]).toStrictEqual([
-        "logged",
-        "logged",
+        "extra",
+        "planned",
       ]);
+      expect(dayOf(plan, WEDNESDAY).sessions).toStrictEqual([legsOnWednesday]);
       expect(dayOf(plan, WEDNESDAY).plannedDay).toBeNull();
+      expect(weekCaption(plan).loggedDayCount).toBe(0);
     });
 
     it("should not count a session still open as logging the planned day it names", () => {
@@ -396,19 +402,19 @@ describe("weekPlanDays", () => {
       expect(dayOf(plan, THURSDAY).status).toBe("missed");
     });
 
-    it("should credit a Pull session logged on Monday to Pull, leaving Monday's Push missed", () => {
+    it("should fill Monday's slot with a Pull session logged on Monday, carrying its sets, and leave Tuesday's Pull planned", () => {
       const pullOnMonday = sessionOn(1, "2026-10-12", {
         routine_day_id: pullDayId,
         sets: workingSets(squatId, 3),
       });
 
-      const plan = goldenWeekPlan({ sessions: [pullOnMonday] });
+      const plan = goldenWeekPlan({ sessions: [pullOnMonday], now: "2026-10-12T19:30:00+01:00" });
 
       expect(statusesOf(plan)).toStrictEqual([
-        "missed",
         "logged",
+        "planned",
         "rest",
-        "today",
+        "planned",
         "rest",
         "planned",
         "rest",
@@ -417,6 +423,8 @@ describe("weekPlanDays", () => {
         [pullOnMonday],
         3,
       ]);
+      expect(dayOf(plan, MONDAY).sessionDay).toStrictEqual({ id: pullDayId, name: "Pull" });
+      expect(dayOf(plan, MONDAY).plannedDay?.name).toBe("Push");
       expect(weekCaption(plan)).toStrictEqual({
         plannedDayCount: 4,
         loggedDayCount: 1,
@@ -424,29 +432,153 @@ describe("weekPlanDays", () => {
       });
     });
 
-    it("should read Monday today, not logged, when the Pull session of the swap is on Monday itself", () => {
-      const pullOnMonday = sessionOn(1, "2026-10-12", { routine_day_id: pullDayId });
+    it("should read Monday logged with Legs' sets and Thursday planned when Legs is finished on Monday", () => {
+      const legsOnMonday = sessionOn(1, "2026-10-12", {
+        routine_day_id: legsDayId,
+        started_at: "2026-10-12T18:00:00+01:00",
+        ended_at: "2026-10-12T18:50:00+01:00",
+        sets: workingSets(squatId, 4),
+      });
 
-      const plan = goldenWeekPlan({ sessions: [pullOnMonday], now: "2026-10-12T19:30:00+01:00" });
+      const plan = goldenWeekPlan({ sessions: [legsOnMonday], now: "2026-10-12T19:00:00+01:00" });
 
-      expect([dayOf(plan, MONDAY).status, dayOf(plan, TUESDAY).status]).toStrictEqual([
-        "today",
+      expect([dayOf(plan, MONDAY).status, dayOf(plan, THURSDAY).status]).toStrictEqual([
         "logged",
+        "planned",
+      ]);
+      expect([dayOf(plan, MONDAY).setsLogged, dayOf(plan, MONDAY).sessionDay]).toStrictEqual([
+        4,
+        { id: legsDayId, name: "Legs" },
+      ]);
+      expect(weekCaption(plan)).toStrictEqual({
+        plannedDayCount: 4,
+        loggedDayCount: 1,
+        loggedSessionCount: 1,
+      });
+    });
+
+    it("should leave the day done planned, then missed once its date has passed, however many days were picked in its place", () => {
+      const legsOnMonday = sessionOn(1, "2026-10-12", { routine_day_id: legsDayId });
+
+      const onFriday = goldenWeekPlan({
+        sessions: [legsOnMonday],
+        now: "2026-10-16T09:00:00+01:00",
+      });
+
+      expect([dayOf(onFriday, MONDAY).status, dayOf(onFriday, THURSDAY).status]).toStrictEqual([
+        "logged",
+        "missed",
       ]);
     });
 
-    it("should credit an unplaced day logged on a planned date to the unplaced day only", () => {
-      const armsOnMonday = sessionOn(1, "2026-10-12", { routine_day_id: anyDay.id });
+    it("should read a date done twice in place of its planned day as one logged day", () => {
+      const first = sessionOn(1, "2026-10-12", { routine_day_id: legsDayId });
+      const second = sessionOn(2, "2026-10-12", { routine_day_id: pullDayId });
+
+      const plan = goldenWeekPlan({ sessions: [first, second], now: "2026-10-12T21:00:00+01:00" });
+
+      expect(weekCaption(plan)).toStrictEqual({
+        plannedDayCount: 4,
+        loggedDayCount: 1,
+        loggedSessionCount: 2,
+      });
+    });
+
+    it("should read a day done on its own date as before: that date logged and nothing else", () => {
+      const legsOnThursday = sessionOn(1, "2026-10-15", { routine_day_id: legsDayId });
+
+      const plan = goldenWeekPlan({ sessions: [legsOnThursday], now: "2026-10-15T20:00:00+01:00" });
+
+      expect(statusesOf(plan)).toStrictEqual([
+        "missed",
+        "missed",
+        "rest",
+        "logged",
+        "rest",
+        "planned",
+        "rest",
+      ]);
+      expect(dayOf(plan, THURSDAY).sessionDay).toStrictEqual({ id: legsDayId, name: "Legs" });
+    });
+
+    it("should read Thursday logged for Saturday's Push, with Saturday still planned, when it is finished on Thursday", () => {
+      const saturdayPushOnThursday = sessionOn(1, "2026-10-15", {
+        routine_day_id: pushSaturdayDayId,
+        sets: workingSets(squatId, 3),
+      });
+
+      const plan = goldenWeekPlan({ sessions: [saturdayPushOnThursday] });
+
+      expect([dayOf(plan, THURSDAY).status, dayOf(plan, SATURDAY).status]).toStrictEqual([
+        "logged",
+        "planned",
+      ]);
+      expect(dayOf(plan, THURSDAY).sessions).toStrictEqual([saturdayPushOnThursday]);
+      expect(dayOf(plan, SATURDAY).sessions).toStrictEqual([]);
+    });
+
+    it("should read Thursday in progress with Pull's sets planned, and Tuesday's Pull not credited, while Pull is open on Thursday", () => {
+      const openPullOnThursday = sessionOn(1, "2026-10-15", {
+        routine_day_id: pullDayId,
+        ended_at: null,
+      });
+
+      const plan = goldenWeekPlan({ sessions: [openPullOnThursday] });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({
+        status: "in_progress",
+        setsPlanned: 15,
+        sessionDay: { id: pullDayId, name: "Pull" },
+      });
+      expect(dayOf(plan, TUESDAY).status).toBe("missed");
+    });
+
+    it("should plan Legs' sets for an open session that follows no routine day", () => {
+      const free = sessionOn(1, "2026-10-15", { ended_at: null });
+
+      const plan = goldenWeekPlan({ sessions: [free] });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({
+        status: "in_progress",
+        setsPlanned: 16,
+        sessionDay: null,
+      });
+    });
+
+    it("should fill the slot of a planned date with an unplaced day done on it, and leave the unplaced day undone", () => {
+      const armsOnMonday = sessionOn(1, "2026-10-12", {
+        routine_day_id: anyDay.id,
+        sets: workingSets(squatId, 4),
+      });
 
       const plan = goldenWeekPlan({ routine: routineWithAnyDay, sessions: [armsOnMonday] });
 
-      expect(dayOf(plan, MONDAY).status).toBe("missed");
-      expect(plan.unplaced.map((unplacedDay) => unplacedDay.logged)).toStrictEqual([true]);
+      expect(dayOf(plan, MONDAY)).toMatchObject({
+        status: "logged",
+        setsLogged: 4,
+        sessionDay: { id: anyDay.id },
+      });
+      expect(dayOf(plan, MONDAY).sessions).toStrictEqual([armsOnMonday]);
+      expect(plan.unplaced.map((unplacedDay) => unplacedDay.logged)).toStrictEqual([false]);
       expect(weekCaption(plan)).toStrictEqual({
         plannedDayCount: 5,
         loggedDayCount: 1,
         loggedSessionCount: 1,
       });
+    });
+
+    it("should credit an unplaced day done on a rest day to the unplaced day, and read the date logged", () => {
+      const armsOnWednesday = sessionOn(1, "2026-10-14", { routine_day_id: anyDay.id });
+
+      const plan = goldenWeekPlan({
+        routine: routineWithAnyDay,
+        sessions: [armsOnWednesday],
+        now: "2026-10-14T20:00:00+01:00",
+      });
+
+      expect(dayOf(plan, WEDNESDAY).status).toBe("logged");
+      expect(plan.unplaced.map((unplacedDay) => unplacedDay.logged)).toStrictEqual([true]);
+      expect(weekCaption(plan).loggedDayCount).toBe(1);
     });
 
     it("should read a past date in progress for good when its session was never finished", () => {
@@ -779,13 +911,31 @@ describe("weekCaption", () => {
     });
   });
 
-  it("should count a planned day logged on another date once", () => {
+  it("should not count a day done on a rest day as a planned day done, though it is a session logged", () => {
     const plan = goldenWeekPlan({
       sessions: [sessionOn(1, "2026-10-14", { routine_day_id: legsDayId })],
       now: "2026-10-16T09:00:00+01:00",
     });
 
-    expect(weekCaption(plan).loggedDayCount).toBe(1);
+    expect(weekCaption(plan)).toStrictEqual({
+      plannedDayCount: 4,
+      loggedDayCount: 0,
+      loggedSessionCount: 1,
+    });
+  });
+
+  it("should count 2 of 4 done after Monday's Push and Tuesday's Pull, whatever a rest day or a swapped day adds", () => {
+    const legsOnWednesday = sessionOn(1, "2026-10-14", { routine_day_id: legsDayId });
+    const plan = goldenWeekPlan({
+      sessions: [goldenMondaySession, goldenTuesdaySession, legsOnWednesday],
+      now: "2026-10-14T20:00:00+01:00",
+    });
+
+    expect(weekCaption(plan)).toStrictEqual({
+      plannedDayCount: 4,
+      loggedDayCount: 2,
+      loggedSessionCount: 3,
+    });
   });
 
   it("should count the sessions logged for a week with no routine", () => {

@@ -119,8 +119,17 @@ export type WeekPlanDay = Readonly<{
   sessions: readonly WeekSession[];
   /** The working sets of those sessions. */
   setsLogged: number;
-  /** The sets the planned day plans, or 0 when there is none. */
+  /**
+   * The sets the day on this date plans: the routine day an open session of the date names, otherwise the
+   * planned day, or 0 when there is none.
+   */
   setsPlanned: number;
+  /**
+   * The routine day the sessions of this date name (the first in routine order), or null when none names
+   * one. It is the day actually done or being done, which is not the planned day when a session was started
+   * for another day (Pick day).
+   */
+  sessionDay: Readonly<{ id: string; name: string }> | null;
   status: WeekDayStatus;
 }>;
 
@@ -242,22 +251,28 @@ const statusOfUnloggedPlannedDay = (
 };
 
 /**
- * The routine day a finished session is credited to: the day it names, when that is one of the
- * routine's days, otherwise the day planned on its date, otherwise none. An open session credits none.
+ * The routine day a finished session is credited to. A finished session fills the slot of its own date: it
+ * credits the day planned on its date, whichever routine day it names (a day picked in place of the planned
+ * one counts for the planned one's slot, and the day it names keeps its own date). A date with no planned
+ * day has no slot, so a session that names a day with no weekday credits that day instead, and any other
+ * credits none. One session credits at most one day. An open session credits none.
  */
 const creditedDayIdOf = (
   session: WeekSession,
-  routineDayIds: ReadonlySet<string>,
+  unplacedDayIds: ReadonlySet<string>,
   dates: readonly string[],
   plannedByWeekday: ReadonlyMap<number, PlannedDay>,
 ): string | null => {
   if (isOpenSession(session)) {
     return null;
   }
-  if (session.routine_day_id !== null && routineDayIds.has(session.routine_day_id)) {
-    return session.routine_day_id;
+  const slotDay = plannedByWeekday.get(dates.indexOf(session.local_date));
+  if (slotDay !== undefined) {
+    return slotDay.id;
   }
-  return plannedByWeekday.get(dates.indexOf(session.local_date))?.id ?? null;
+  return session.routine_day_id !== null && unplacedDayIds.has(session.routine_day_id)
+    ? session.routine_day_id
+    : null;
 };
 
 type StatusInput = Readonly<{
@@ -267,7 +282,8 @@ type StatusInput = Readonly<{
   sessions: readonly WeekSession[];
   /** The ids of the routine days a finished session of the week is credited to. */
   loggedDayIds: ReadonlySet<string>;
-  routineDayIds: ReadonlySet<string>;
+  /** The ids of the routine days with no weekday. */
+  unplacedDayIds: ReadonlySet<string>;
   /** The local day the routine became active, when it has one. */
   activeFrom: string | undefined;
 }>;
@@ -278,7 +294,7 @@ const statusOf = ({
   plannedDay,
   sessions,
   loggedDayIds,
-  routineDayIds,
+  unplacedDayIds,
   activeFrom,
 }: StatusInput): WeekDayStatus => {
   if (sessions.some(isOpenSession)) {
@@ -292,10 +308,10 @@ const statusOf = ({
   if (sessions.length === 0) {
     return "rest";
   }
-  const followsRoutine = sessions.some(
-    (session) => session.routine_day_id !== null && routineDayIds.has(session.routine_day_id),
+  const followsUnplacedDay = sessions.some(
+    (session) => session.routine_day_id !== null && unplacedDayIds.has(session.routine_day_id),
   );
-  return followsRoutine ? "logged" : "extra";
+  return followsUnplacedDay ? "logged" : "extra";
 };
 
 /**
@@ -304,17 +320,18 @@ const statusOf = ({
  *
  * - A session is on the date of its `local_date`, the user's calendar day of its start, so one just
  *   after local midnight on Monday is Monday whatever the UTC date. Today is the date of `now` in `tz`.
- * - A finished session is credited to one routine day (logged replaces planned): the day it names, when
- *   that is one of the routine's days, placed or unplaced, and otherwise the day planned on its date.
- *   An open session is credited to none. A session credited to a day on another date leaves that
- *   date's own planned day uncredited.
+ * - A finished session fills the slot of the date it is on (a day picked in place of the planned one counts
+ *   for the planned one's slot, and the picked day keeps its own date, which stays planned). It credits the
+ *   day planned on its date, whichever routine day it names. On a date with no planned day, one that names
+ *   a routine day with no weekday credits that day instead, since that day has no date of its own. One
+ *   session credits at most one day. An open session credits none.
  * - A date with a planned day reads `logged` when its day is credited, `in_progress` when a session
  *   there is open, and otherwise `today`, `planned` or `missed` by its date against today, or `rest`
  *   when its date is before the routine's `activeFrom` (the routine plans from the day it was made
- *   active). Its sessions and sets stay on the date whoever they are credited to.
+ *   active). Its `sessionDay` is the day its sessions name, which is the day actually done.
  * - A date with no planned day reads `in_progress` when a session there is open, `logged` when a
- *   finished one names a routine day (the plan was followed on another date), `extra` when a finished
- *   one does not, and `rest` otherwise.
+ *   finished one names a routine day with no weekday, `extra` when a finished one does not, and `rest`
+ *   otherwise: a day picked on a rest day is an extra day.
  * - Two sessions credited to one planned day are still one logged day.
  * - A routine day with no weekday is never put on a date. It is listed in `unplaced`.
  *
@@ -363,10 +380,10 @@ export const weekPlanDays = ({
     plannedDated.map(({ weekday, plannedDay }) => [weekday, plannedDay]),
   );
 
-  const routineDayIds = new Set(planned.map((day) => day.id));
+  const unplacedDayIds = new Set(plannedUnplaced.map((day) => day.id));
   const loggedDayIds = new Set<string>();
   for (const session of weekSessions) {
-    const creditedDayId = creditedDayIdOf(session, routineDayIds, dates, plannedByWeekday);
+    const creditedDayId = creditedDayIdOf(session, unplacedDayIds, dates, plannedByWeekday);
     if (creditedDayId !== null) {
       loggedDayIds.add(creditedDayId);
     }
@@ -379,6 +396,10 @@ export const weekPlanDays = ({
     days: dates.map((date, weekday) => {
       const plannedDay = plannedByWeekday.get(weekday) ?? null;
       const daySessions = weekSessions.filter((session) => session.local_date === date);
+      const sessionDay =
+        planned.find((day) => daySessions.some((session) => session.routine_day_id === day.id)) ??
+        null;
+      const openDay = daySessions.some(isOpenSession) ? sessionDay : null;
       return {
         date,
         weekday,
@@ -386,14 +407,15 @@ export const weekPlanDays = ({
         plannedDay,
         sessions: daySessions,
         setsLogged: daySessions.reduce((sets, session) => sets + workingSetsOf(session).length, 0),
-        setsPlanned: plannedDay?.setCount ?? 0,
+        setsPlanned: (openDay ?? plannedDay)?.setCount ?? 0,
+        sessionDay: sessionDay === null ? null : { id: sessionDay.id, name: sessionDay.name },
         status: statusOf({
           date,
           today,
           plannedDay,
           sessions: daySessions,
           loggedDayIds,
-          routineDayIds,
+          unplacedDayIds,
           activeFrom: routine?.activeFrom,
         }),
       };

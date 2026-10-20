@@ -45,6 +45,7 @@ const weekDay = {
   date: "2026-10-15",
   isToday: true,
   plannedDay: legsDay,
+  sessionDay: legsDay,
   setsLogged: 8,
   setsPlanned: 16,
 } as const;
@@ -115,5 +116,14 @@ export const samples: Record<string, () => string[]> = {
       const { name, detail, accessibleName } = copy.describeSessionBar(input);
       return [name, detail, accessibleName];
     }),
+  describePickDayRow: () => {
+    const row = copy.describePickDayRow({
+      name: "Legs",
+      date: "2026-10-15",
+      exerciseCount: 5,
+      setCount: 16,
+    });
+    return [row.title, row.meta, row.weekdayLabel];
+  },
   describeOfflineBanner: () => [copy.describeOfflineBanner("17:52")],
 };

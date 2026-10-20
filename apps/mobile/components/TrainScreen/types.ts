@@ -1,3 +1,4 @@
+import type { PickDayOption } from "../PickDaySheet";
 import type { TodayCardContext, TodayCardWithSession } from "@keylow/core/copy";
 import type { WeekPlan } from "@keylow/core/training";
 
@@ -22,7 +23,10 @@ export type TrainScreenProps = {
   onOpenRoutines?: (() => void) | undefined;
   /** Opens the goal questionnaire: "Set your goal". Drawn only when it is given. */
   onSetGoal?: (() => void) | undefined;
-  /** Starts the day's session: "Start Legs" on the Today card. Drawn only when it is given. */
+  /**
+   * Starts the day's session: "Start Legs" on the Today card, and the day picked in the Pick day sheet.
+   * Both are drawn only when it is given.
+   */
   onStart?: ((start: TrainSessionStart) => void) | undefined;
   /** Reopens the session in progress: "Resume Legs" on the Today card. Drawn only when it is given. */
   onResume?: (() => void) | undefined;
@@ -68,6 +72,8 @@ export type TrainHome =
       today: TodayCardView | null;
       /** The week strip's week, or null when there is nothing to show: no routine day and no session in the week. */
       week: TrainWeekView | null;
+      /** The active routine's days in routine order, which Pick day lists. Empty with no routine. */
+      routineDays: readonly PickDayOption[];
       /** The profile's IANA time zone, UTC when the profile row is missing. */
       timeZone: string;
       /** When the oldest of the reads was made, which is how old the screen's content is. */

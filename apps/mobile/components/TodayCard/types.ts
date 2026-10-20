@@ -6,11 +6,11 @@ export type TodayCardProps = {
   /** What the words need besides the card: today's date, the next set's exercise and the muscles recovering. */
   context: TodayCardContext;
   /**
-   * Dims Start, Resume, Log another session and Log a session and stops them responding, since starting or
-   * reopening a session needs a connection.
+   * Dims Start, Resume, Pick day, Log another session and Log a session and stops them responding, since
+   * starting or reopening a session needs a connection.
    */
   isStartAndResumeDisabled: boolean;
-  /** Shows a spinner on Start, Log another session and Log a session and stops them responding, while the session is being started. */
+  /** Shows a spinner on Start, Pick day, Log another session and Log a session and stops them responding, while the session is being started. */
   isStarting?: boolean | undefined;
   /** Starts the day's session: "Start Legs". Drawn only when it is given. */
   onStart?: (() => void) | undefined;
@@ -22,4 +22,10 @@ export type TodayCardProps = {
   onLogAnother?: (() => void) | undefined;
   /** Starts a free session on a rest day: "Log a session". Drawn only when it is given. */
   onLogSession?: (() => void) | undefined;
+  /**
+   * Opens the sheet of the routine's days, to start the session of any of them: "Pick day", under Start on
+   * the planned card and under Log another session and Log a session on the Done and rest cards. Drawn only
+   * when it is given, and never on the card of a session in progress, which keeps Resume.
+   */
+  onPickDay?: (() => void) | undefined;
 };

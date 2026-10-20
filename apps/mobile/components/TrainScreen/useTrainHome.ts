@@ -19,6 +19,7 @@ import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 import type { TodayCardView, TrainHome, TrainWeekView } from "./types";
+import type { PickDayOption } from "../PickDaySheet";
 import type { ActiveRoutine } from "@keylow/api-client";
 import type { TodayCard, WeekPlan, WeekSession } from "@keylow/core/training";
 
@@ -100,6 +101,17 @@ function weekViewOf(plan: WeekPlan, weekStart: string): TrainWeekView | null {
   return plan.routineDayCount > 0 || plan.sessions.length > 0 ? { plan, weekStart } : null;
 }
 
+/** The routine's days in routine order, each with the date it falls on this week, or null when it has no weekday. */
+function pickDayOptionsOf(plan: WeekPlan): readonly PickDayOption[] {
+  return plan.routineDays.map((day) => ({
+    id: day.id,
+    name: day.name,
+    date: plan.days.find((planDay) => planDay.plannedDay?.id === day.id)?.date ?? null,
+    exerciseCount: day.exercises.length,
+    setCount: day.setCount,
+  }));
+}
+
 /**
  * What the Train home shows, from the reads it waits on: the profile's time zone, the active routine, the
  * sessions of the week that holds today, the session in progress and, only when there is no routine,
@@ -178,6 +190,7 @@ export function useTrainHome(): TrainHome {
     hasRoutine: routine.data !== null,
     hasLoggedSession: everLogged.data === true,
     today: todayViewOf(card, routine.data, plan),
+    routineDays: pickDayOptionsOf(plan),
     week: weekViewOf(stripPlan, weekStart),
     timeZone: zone,
     savedAt: new Date(Math.min(...reads.map((read) => read.dataUpdatedAt))),

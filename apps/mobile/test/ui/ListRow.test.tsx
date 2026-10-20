@@ -286,6 +286,26 @@ describe("ListRow", () => {
     });
   });
 
+  describe("loading", () => {
+    it("should be a busy button with a spinner in place of the chevron, and not call onPress", async () => {
+      const onPress = jest.fn();
+      const user = userEvent.setup();
+      await renderRow({ onPress, loading: true });
+
+      await user.press(await screen.findByRole("button", { busy: true }));
+
+      expect(screen.getByRole("progressbar", { name: "Loading" })).toBeOnTheScreen();
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("should be a plain button with no spinner when it is not loading", async () => {
+      await renderRow({ loading: false });
+
+      expect(await screen.findByRole("button")).not.toBeBusy();
+      expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
+    });
+  });
+
   describe("press feedback", () => {
     it("should compress to the row press scale, 0.985, show the overlay and spring back", async () => {
       await renderRow();

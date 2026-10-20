@@ -49,6 +49,49 @@ export const TRAIN_TODAY_CARD = {
   resumeSessionAction: "Resume session",
 } as const;
 
+/**
+ * The fixed words of Pick day, which starts a session of any day of the routine: the button on the Today
+ * card, the sheet it opens and the sheet's close control. No board draws them (Zee ruled the button on
+ * 2026-10-20), so they are an undrawn design request.
+ */
+export const TRAIN_PICK_DAY = {
+  action: "Pick day",
+  sheetTitle: "Pick a day",
+  closeName: "Close",
+} as const;
+
+const ANY_WEEKDAY_LABEL = "Any day";
+
+export type PickDayRowInput = Readonly<{
+  /** The routine day's name, as the routine stores it. */
+  name: string;
+  /** The date of the day this week, `YYYY-MM-DD`, or null for a day with no weekday. */
+  date: string | null;
+  exerciseCount: number;
+  setCount: number;
+}>;
+
+export type PickDayRowCopy = {
+  /** "Legs". */
+  title: string;
+  /** "5 exercises · 16 sets". */
+  meta: string;
+  /** The weekday: "Thursday", or "Any day" for a day with no weekday. */
+  weekdayLabel: string;
+};
+
+/** The words of one routine day in the Pick day sheet. */
+export const describePickDayRow = ({
+  name,
+  date,
+  exerciseCount,
+  setCount,
+}: PickDayRowInput): PickDayRowCopy => ({
+  title: name,
+  meta: [describeCount(exerciseCount, "exercise", "exercises"), describeSets(setCount)].join(" · "),
+  weekdayLabel: date === null ? ANY_WEEKDAY_LABEL : describeWeekdayName(date),
+});
+
 /** The card shown when there is no routine yet. */
 export const TRAIN_NO_ROUTINE = {
   sectionName: "No routine",
@@ -308,7 +351,11 @@ export type TrainWeekDayInput = Pick<
   WeekPlanDay,
   "date" | "isToday" | "status" | "setsLogged" | "setsPlanned"
 > &
-  Readonly<{ plannedDay: Pick<PlannedDay, "name"> | null }>;
+  Readonly<{
+    plannedDay: Pick<PlannedDay, "name"> | null;
+    /** The routine day the date's sessions name, which is the day done when it is not the planned one. */
+    sessionDay: Pick<PlannedDay, "name"> | null;
+  }>;
 
 export type TrainWeekDayCopy = {
   /** The column head: "Mon". */
@@ -321,8 +368,19 @@ export type TrainWeekDayCopy = {
 
 const REST_LABEL = "Rest";
 
+/**
+ * The routine day a cell is named for. A logged or running cell is named for the day actually done, which
+ * is not the planned one when a day was picked in its place, and an extra cell for the day picked on a rest
+ * day; the others are named for the planned day.
+ */
+const dayNamedBy = (day: TrainWeekDayInput): Pick<PlannedDay, "name"> | null =>
+  day.status === "logged" || day.status === "in_progress" || day.status === "extra"
+    ? (day.sessionDay ?? day.plannedDay)
+    : day.plannedDay;
+
 const describeWeekDayState = (day: TrainWeekDayInput, hasRoutine: boolean): string[] => {
-  const routineDay = day.plannedDay === null ? [] : [day.plannedDay.name];
+  const named = dayNamedBy(day);
+  const routineDay = named === null ? [] : [named.name];
   switch (day.status) {
     case "logged":
       return [...routineDay, "logged", describeSets(day.setsLogged)];
@@ -336,7 +394,7 @@ const describeWeekDayState = (day: TrainWeekDayInput, hasRoutine: boolean): stri
     case "rest":
       return [hasRoutine ? "rest day" : "nothing logged"];
     case "extra":
-      return ["session logged", describeSets(day.setsLogged)];
+      return [...routineDay, "session logged", describeSets(day.setsLogged)];
   }
 };
 
@@ -352,7 +410,7 @@ export const describeTrainWeekDay = (
   return {
     weekday: describeWeekdayShortName(day.date),
     label:
-      day.status === "rest" ? restLabel : (day.plannedDay?.name ?? describeSets(day.setsLogged)),
+      day.status === "rest" ? restLabel : (dayNamedBy(day)?.name ?? describeSets(day.setsLogged)),
     accessibleName: [
       describeDateInWords(day.date),
       ...(day.isToday ? ["today"] : []),

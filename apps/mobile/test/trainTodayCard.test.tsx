@@ -1,5 +1,6 @@
 import {
   TRAIN_HOME,
+  TRAIN_PICK_DAY,
   TRAIN_TODAY_CARD,
   describeTodayCard,
   describeTodayHeading,
@@ -491,6 +492,75 @@ describe("the Today card", () => {
       await renderCard(rest, wednesday, { onLogSession: jest.fn(), isStarting: true });
 
       expect(screen.getByRole("button", { name: /Log a session/, busy: true })).toBeOnTheScreen();
+    });
+  });
+  describe("Pick day", () => {
+    it.each([
+      ["planned", planned, thursday],
+      ["done", done, thursday],
+      ["rest", rest, wednesday],
+    ] as const)(
+      "should draw Pick day on the %s card and call onPickDay when pressed",
+      async (_name, card, context) => {
+        const onPickDay = jest.fn();
+        const user = userEvent.setup();
+        await renderCard(card, context, { onPickDay });
+
+        await user.press(screen.getByRole("button", { name: TRAIN_PICK_DAY.action }));
+
+        expect(onPickDay).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it("should say Pick day in core's words", () => {
+      expect(TRAIN_PICK_DAY.action).toBe("Pick day");
+    });
+
+    it("should draw it beside Start Legs, Log another session and Log a session, not instead of them", async () => {
+      const handlers = { onPickDay: jest.fn(), onStart: jest.fn() };
+      await renderCard(planned, thursday, handlers);
+      expect(screen.getByRole("button", { name: "Start Legs" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Pick day" })).toBeOnTheScreen();
+      await cleanup();
+
+      await renderCard(done, thursday, { onPickDay: jest.fn(), onLogAnother: jest.fn() });
+      expect(screen.getByRole("button", { name: "Log another session" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Pick day" })).toBeOnTheScreen();
+      await cleanup();
+
+      await renderCard(rest, wednesday, { onPickDay: jest.fn(), onLogSession: jest.fn() });
+      expect(screen.getByRole("button", { name: "Log a session" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Pick day" })).toBeOnTheScreen();
+    });
+
+    it("should draw no Pick day while a session is open, whatever handler it is given", async () => {
+      await renderCard(inProgress, thursday, { onResume: jest.fn(), onPickDay: jest.fn() });
+
+      expect(screen.getByRole("button", { name: "Resume Legs" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Pick day" })).not.toBeOnTheScreen();
+    });
+
+    it("should draw no Pick day when no handler is given", async () => {
+      await renderCard(planned, thursday, { onStart: jest.fn() });
+
+      expect(screen.queryByRole("button", { name: "Pick day" })).not.toBeOnTheScreen();
+    });
+
+    it("should dim Pick day and stop it responding when starting is disabled", async () => {
+      const onPickDay = jest.fn();
+      const user = userEvent.setup();
+      await renderCard(planned, thursday, { onPickDay, isStartAndResumeDisabled: true });
+
+      await user.press(screen.getByRole("button", { name: "Pick day" }));
+
+      expect(screen.getByRole("button", { name: "Pick day" })).toBeDisabled();
+      expect(onPickDay).not.toHaveBeenCalled();
+    });
+
+    it("should show Pick day as busy while a session is starting", async () => {
+      await renderCard(planned, thursday, { onPickDay: jest.fn(), isStarting: true });
+
+      expect(screen.getByRole("button", { name: /Pick day/, busy: true })).toBeOnTheScreen();
     });
   });
 });

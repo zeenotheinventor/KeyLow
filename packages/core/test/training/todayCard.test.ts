@@ -11,6 +11,7 @@ import {
   legPressId,
   legsDayId,
   pullDayId,
+  pushSaturdayDayId,
   romanianDeadliftId,
   sessionOn,
   squatId,
@@ -23,7 +24,7 @@ import {
   weekPlanDays,
 } from "../../src/training";
 
-import type { TodayCardInput, WeekPlanInput, WeekRoutine } from "../../src/training";
+import type { TodayCardInput, WeekPlanInput, WeekRoutine, WeekSession } from "../../src/training";
 
 const THURSDAY_BEFORE_LEGS = "2026-10-15T17:55:00+01:00";
 const THURSDAY_MID_LEGS = "2026-10-15T19:00:00+01:00";
@@ -181,6 +182,19 @@ describe("todayCard", () => {
       });
     });
 
+    it("should read Legs in progress on a rest day when Legs is picked there, with Legs' sets planned", () => {
+      const legsOnWednesday = sessionOn(1, "2026-10-14", {
+        ended_at: null,
+        routine_day_id: legsDayId,
+        started_at: "2026-10-14T18:00:00+01:00",
+        sets: workingSets(squatId, 2),
+      });
+
+      expect(
+        cardFor({ sessions: [legsOnWednesday], now: "2026-10-14T18:20:00+01:00" }),
+      ).toMatchObject({ kind: "in_progress", dayName: "Legs", setsLogged: 2, setsPlanned: 16 });
+    });
+
     it("should read a free session on a rest day with no day name and nothing planned", () => {
       const free = sessionOn(1, "2026-10-14", {
         ended_at: null,
@@ -241,7 +255,7 @@ describe("todayCard", () => {
       });
     });
 
-    it("should read a planned day done when its session was logged on an earlier date", () => {
+    it("should leave a planned day planned when its own session was logged on an earlier date", () => {
       const legsOnWednesday = sessionOn(1, "2026-10-14", {
         routine_day_id: legsDayId,
         started_at: "2026-10-14T18:00:00+01:00",
@@ -250,17 +264,11 @@ describe("todayCard", () => {
       });
 
       expect(done({ sessions: [legsOnWednesday], now: "2026-10-15T09:00:00+01:00" })).toMatchObject(
-        {
-          kind: "done",
-          dayName: "Legs",
-          minutes: 50,
-          setsLogged: 9,
-          setsPlanned: 16,
-        },
+        { kind: "planned", dayName: "Legs" },
       );
     });
 
-    it("should skip a planned day that is already logged when it names the next one", () => {
+    it("should name Legs on Thursday next after Legs done on Wednesday, since the day done leaves its own date planned", () => {
       const legsOnWednesday = sessionOn(1, "2026-10-14", {
         routine_day_id: legsDayId,
         started_at: "2026-10-14T18:00:00+01:00",
@@ -271,7 +279,7 @@ describe("todayCard", () => {
         {
           kind: "done",
           dayName: "Legs",
-          next: { date: "2026-10-17", name: "Push", id: "00000003-0000-4000-8000-000000000004" },
+          next: { date: "2026-10-15", name: "Legs", id: legsDayId },
         },
       );
     });
@@ -330,6 +338,71 @@ describe("todayCard", () => {
     });
   });
 
+  describe("a session of another routine day, started from Pick day on a planned day", () => {
+    // Thursday plans Legs, which holds 16 sets. Pull holds 15, so a card that read Legs' plan would show.
+    const onThursday = (routineDayId: string, overrides: Partial<WeekSession> = {}) =>
+      sessionOn(1, "2026-10-15", {
+        routine_day_id: routineDayId,
+        started_at: "2026-10-15T17:00:00+01:00",
+        ended_at: "2026-10-15T17:40:00+01:00",
+        sets: workingSets(squatId, 3),
+        ...overrides,
+      });
+
+    it("should read Pull in progress, with Pull's sets planned, while it is open on Legs' Thursday", () => {
+      const open = onThursday(pullDayId, { ended_at: null });
+
+      expect(cardFor({ sessions: [open], now: "2026-10-15T17:20:00+01:00" })).toMatchObject({
+        kind: "in_progress",
+        dayName: "Pull",
+        minutesSoFar: 20,
+        setsLogged: 3,
+        setsPlanned: 15,
+      });
+    });
+
+    it("should read Pull done, not Legs, once it is finished on Legs' Thursday", () => {
+      expect(
+        cardFor({ sessions: [onThursday(pullDayId)], now: "2026-10-15T18:00:00+01:00" }),
+      ).toMatchObject({
+        kind: "done",
+        dayName: "Pull",
+        minutes: 40,
+        setsLogged: 3,
+        setsPlanned: 15,
+      });
+    });
+
+    it("should read Legs done on Monday's Push day, and name Tuesday's Pull next, not Legs", () => {
+      const legsOnMonday = sessionOn(1, "2026-10-12", {
+        routine_day_id: legsDayId,
+        started_at: "2026-10-12T18:00:00+01:00",
+        ended_at: "2026-10-12T18:50:00+01:00",
+        sets: workingSets(squatId, 4),
+      });
+
+      expect(cardFor({ sessions: [legsOnMonday], now: "2026-10-12T19:00:00+01:00" })).toMatchObject(
+        {
+          kind: "done",
+          dayName: "Legs",
+          minutes: 50,
+          setsLogged: 4,
+          setsPlanned: 16,
+          next: { date: "2026-10-13", id: pullDayId },
+        },
+      );
+    });
+
+    it("should name Saturday's Push next after it is done on Thursday, since its own date stays planned", () => {
+      const card = cardFor({
+        sessions: [...finishedWeek, onThursday(pushSaturdayDayId)],
+        now: "2026-10-15T18:00:00+01:00",
+      });
+
+      expect(card).toMatchObject({ next: { date: "2026-10-17", id: pushSaturdayDayId } });
+    });
+  });
+
   describe("a rest day", () => {
     it("should name Monday of the following week as next on the Sunday for a routine active from Thursday", () => {
       const activeFromThursday: WeekRoutine = { ...goldenRoutine, activeFrom: "2026-10-15" };
@@ -356,7 +429,7 @@ describe("todayCard", () => {
       });
     });
 
-    it("should skip a planned day that is already logged when it names the next one", () => {
+    it("should still name Legs on Thursday next when Legs was done on Tuesday, since its own date stays planned", () => {
       const legsOnTuesday = sessionOn(1, "2026-10-13", {
         routine_day_id: legsDayId,
         started_at: "2026-10-13T18:00:00+01:00",
@@ -367,7 +440,7 @@ describe("todayCard", () => {
         cardFor({ sessions: [legsOnTuesday], now: "2026-10-14T12:00:00+01:00" }),
       ).toStrictEqual({
         kind: "rest",
-        next: { date: "2026-10-17", id: "00000003-0000-4000-8000-000000000004", name: "Push" },
+        next: { date: "2026-10-15", id: legsDayId, name: "Legs" },
       });
     });
 
@@ -452,16 +525,14 @@ describe("todaySessionToView", () => {
     expect(todaySessionToView(weekAt([evening, morning], THURSDAY_AFTER_LEGS))).toBe(evening);
   });
 
-  it("should give a planned day's own session logged on an earlier date, as the Done card counts it", () => {
+  it("should give null for a planned day's own session logged on an earlier date, since the Done card does not count it", () => {
     const legsOnWednesday = sessionOn(1, "2026-10-14", {
       routine_day_id: legsDayId,
       started_at: "2026-10-14T18:00:00+01:00",
       ended_at: "2026-10-14T18:50:00+01:00",
     });
 
-    expect(todaySessionToView(weekAt([legsOnWednesday], "2026-10-15T09:00:00+01:00"))).toBe(
-      legsOnWednesday,
-    );
+    expect(todaySessionToView(weekAt([legsOnWednesday], "2026-10-15T09:00:00+01:00"))).toBeNull();
   });
 
   it("should give null while today's session is still open and nothing else finished", () => {

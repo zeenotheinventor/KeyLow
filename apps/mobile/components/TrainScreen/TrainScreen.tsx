@@ -7,9 +7,11 @@ import {
   describeOfflineBanner,
 } from "@keylow/core/copy";
 import { formatClockTime } from "@keylow/core/dates";
+import { useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { useIsOnline } from "../../lib/connectivity";
+import { PickDaySheet } from "../PickDaySheet";
 import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
 import { TodayCard } from "../TodayCard";
@@ -46,7 +48,8 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * shows what the phone saved, under a notice that says when. Starting a session needs a connection, so the
  * buttons that log or reopen one are dimmed offline. A button is drawn only when its handler is given, and
  * it passes the handler what the start needs: the routine day and the time zone. View session and a logged day
- * of the week strip pass the id of the session they open.
+ * of the week strip pass the id of the session they open. Pick day, under Start on the Today card, opens a
+ * sheet of the routine's days and starts the one pressed the way Start does.
  */
 export function TrainScreen({
   isStarting = false,
@@ -61,6 +64,24 @@ export function TrainScreen({
 }: TrainScreenProps) {
   const home = useTrainHome();
   const isOnline = useIsOnline();
+  const [isPickDayOpen, setIsPickDayOpen] = useState(false);
+  const [pickedDayId, setPickedDayId] = useState<string | null>(null);
+  // The day pressed first in this tick. Neither `isStarting` nor the state is new to a second press in the same
+  // moment, so this is what keeps that press from moving the spinner. A press after the tick sees `isStarting`.
+  const pickedDayRef = useRef<string | null>(null);
+
+  // Pick day is on every Today card but the one of a session in progress, which keeps Resume, and needs a
+  // routine to pick a day of. Once the card stops offering it the sheet is closed, so it does not come back
+  // open when the session is discarded.
+  const canPickDay =
+    onStart !== undefined &&
+    home.status === "ready" &&
+    home.today !== null &&
+    home.today.card.kind !== "in_progress" &&
+    home.routineDays.length > 0;
+  if (!canPickDay && isPickDayOpen) {
+    setIsPickDayOpen(false);
+  }
 
   if (home.status === "error") {
     return (
@@ -136,6 +157,13 @@ export function TrainScreen({
                     timeZone: home.timeZone,
                   })
             }
+            onPickDay={
+              canPickDay
+                ? () => {
+                    setIsPickDayOpen(true);
+                  }
+                : undefined
+            }
             onLogAnother={bindStart(onLogSession, { routineDayId: null, timeZone: home.timeZone })}
             onLogSession={bindStart(onLogSession, { routineDayId: null, timeZone: home.timeZone })}
             onViewSession={
@@ -176,6 +204,28 @@ export function TrainScreen({
           />
         ) : null}
       </ScrollView>
+      {home.status === "ready" ? (
+        <PickDaySheet
+          days={home.routineDays}
+          isDisabled={!isOnline || isStarting}
+          open={isPickDayOpen}
+          startingDayId={isStarting ? pickedDayId : null}
+          onClose={() => {
+            setIsPickDayOpen(false);
+          }}
+          onPick={(routineDayId) => {
+            if (isStarting || pickedDayRef.current !== null) {
+              return;
+            }
+            pickedDayRef.current = routineDayId;
+            queueMicrotask(() => {
+              pickedDayRef.current = null;
+            });
+            setPickedDayId(routineDayId);
+            bindStart(onStart, { routineDayId, timeZone: home.timeZone })?.();
+          }}
+        />
+      ) : null}
     </View>
   );
 }

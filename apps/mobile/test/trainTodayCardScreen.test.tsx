@@ -351,11 +351,12 @@ describe("the Train home's Today card", () => {
       expect(screen.getByText("Next: Legs on Thursday.")).toBeOnTheScreen();
     });
 
-    it("should draw no button on the card, even with every handler, and only the two logged days on the strip", async () => {
+    it("should draw only Pick day on the card, even with every handler, and only the two logged days on the strip", async () => {
       await renderTrain(allHandlers());
       await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle });
 
-      expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(screen.getAllByRole("button")).toHaveLength(3);
+      expect(screen.getByRole("button", { name: "Pick day" })).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /Start|Resume|View session|Log/ })).toBeNull();
     });
   });
