@@ -93,6 +93,11 @@
 13-077 # Beans, chick peas, Kabuli, split, dried, boiled in unsalted water
 13-089 # Lentils, green and brown, whole, dried, raw
 13-109 # Beans, red kidney, dried, raw
+13-244 # Garlic, raw
+13-316 # Peppers, capsicum, chilli, green, raw
+13-317 # Peppers, capsicum, chilli, red, raw
+13-318 # Peppers, capsicum, green, raw
+13-352 # Spring onions, bulbs and tops, raw
 13-448 # Carrots, young, raw
 13-463 # Sweet potato, raw, flesh only
 13-485 # Potato chips, fried in commercial oil, from takeaway fish and chip shops
@@ -108,9 +113,12 @@
 13-500 # Onions, boiled in unsalted water
 13-502 # Broccoli, green, raw
 13-503 # Broccoli, green, boiled in unsalted water
+13-505 # Mushrooms, white, raw
 13-517 # Tomatoes, standard, raw
 13-519 # Tomatoes, cherry, raw
 13-521 # Spinach, baby, raw
+13-523 # Cucumber, raw, flesh and skin
+13-524 # Pepper, capsicum, red, raw
 13-530 # Tomatoes, canned, whole contents
 13-531 # Tomato puree
 13-553 # Potatoes, old, mashed with butter
@@ -120,6 +128,9 @@
 13-573 # Spinach, mature, boiled in unsalted water
 13-618 # Potatoes, new and salad, flesh only, raw
 13-620 # Potatoes, old, baked, flesh only
+13-624 # Leeks, raw
+13-627 # Courgette, raw
+13-636 # Celery, raw
 13-646 # Sweet potato, flesh only, boiled in unsalted water
 13-657 # Lentils, red, split, dried, raw
 13-658 # Lentils, red, split, dried, boiled in unsalted water
@@ -130,10 +141,15 @@
 13-670 # Beans, chick peas, canned, re-heated, drained
 13-671 # Sweet potato, steamed
 13-879 # Paprika
+14-129 # Lemons, peeled, flesh only
+14-131 # Limes, flesh only
+14-299 # Peaches, raw, flesh and skin
 14-318 # Bananas, flesh only
 14-319 # Apples, eating, raw, flesh and skin
 14-320 # Apples, cooking, stewed without sugar, flesh only
+14-321 # Pears, raw, flesh and skin
 14-324 # Strawberries, raw
+14-326 # Citrus fruit, soft/easy peelers, flesh only
 14-327 # Oranges, flesh only
 14-329 # Orange juice, chilled
 14-331 # Apple juice, clear, ambient and chilled
@@ -141,6 +157,10 @@
 14-346 # Apples, eating, raw, flesh and skin, weighed with core
 14-347 # Bananas, raw, flesh only, weighed with skin
 14-369 # Orange juice, freshly squeezed
+14-371 # Kiwi fruit, flesh only, raw
+14-372 # Plums, dessert, flesh and skin, raw
+14-378 # Mangoes, ripe, flesh only, raw
+14-386 # Avocado, Hass, flesh only
 14-870 # Almonds, flaked and ground
 14-892 # Peanut butter, smooth
 15-107 # Curry, chick pea, whole and tomato, Punjabi, with butter, homemade
