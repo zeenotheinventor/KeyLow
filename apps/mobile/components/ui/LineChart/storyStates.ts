@@ -1,0 +1,13 @@
+export const storyStates = [
+  "ThirteenWeeks",
+  "FourWeeks",
+  "FiftyTwoWeeks",
+  "WithGap",
+  "IsolatedPoint",
+  "SinglePoint",
+  "NoData",
+  "FlatLine",
+  "DecimalSeries",
+  "LargeValues",
+  "SelectedWeek",
+];
