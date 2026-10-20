@@ -33,6 +33,8 @@ const meta = {
     onViewSession: () => undefined,
     onLogAnother: () => undefined,
     onLogSession: () => undefined,
+    // Pick day is drawn on no board (KEY-505): under Start, Log another session and Log a session, and not while a session is open.
+    onPickDay: () => undefined,
   },
 } satisfies Meta<typeof TodayCard>;
 

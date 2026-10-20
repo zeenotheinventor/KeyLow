@@ -4,6 +4,7 @@ import { collectStrings } from "./collectStrings";
 import { samples } from "./samples/train";
 import {
   describeOfflineBanner,
+  describePickDayRow,
   describeSessionBar,
   describeSessionClock,
   describeTodayCard,
@@ -19,6 +20,7 @@ import {
   TRAIN_TODAY_CARD,
   TRAIN_OFFLINE_NOTHING_SAVED,
   TRAIN_OFFLINE_TITLE,
+  TRAIN_PICK_DAY,
   TRAIN_START_FAILED,
 } from "../../src/copy";
 import * as trainCopy from "../../src/copy/train";
@@ -39,11 +41,16 @@ import {
   goldenTimeZone,
   goldenTuesdaySession,
   goldenWeekStart,
+  legsDayId,
   MONDAY,
+  pullDayId,
   SATURDAY,
+  sessionOn,
+  squatId,
   THURSDAY,
   TUESDAY,
   WEDNESDAY,
+  workingSets,
 } from "../training/weekPlanRows";
 
 import type { TodayCardContext, TodayCardWithSession } from "../../src/copy";
@@ -113,6 +120,30 @@ describe("the Today card's fixed words", () => {
       sessionName: "Session",
       resumeSessionAction: "Resume session",
     });
+  });
+});
+
+describe("the Pick day words", () => {
+  it("should name the button, the sheet and its close control", () => {
+    expect(TRAIN_PICK_DAY).toStrictEqual({
+      action: "Pick day",
+      sheetTitle: "Pick a day",
+      closeName: "Close",
+    });
+  });
+});
+
+describe("describePickDayRow", () => {
+  it("should read a dated day as its name, its load and its weekday", () => {
+    expect(
+      describePickDayRow({ name: "Legs", date: "2026-10-15", exerciseCount: 5, setCount: 16 }),
+    ).toStrictEqual({ title: "Legs", meta: "5 exercises · 16 sets", weekdayLabel: "Thursday" });
+  });
+
+  it("should read a day with no weekday as Any day", () => {
+    expect(
+      describePickDayRow({ name: "Pull", date: null, exerciseCount: 1, setCount: 1 }),
+    ).toStrictEqual({ title: "Pull", meta: "1 exercise · 1 set", weekdayLabel: "Any day" });
   });
 });
 
@@ -508,6 +539,39 @@ describe("describeTrainWeekDay", () => {
     });
   });
 
+  it("should name a logged day for the day actually done, not the planned one, when a day was picked in its place", () => {
+    const legsOnMonday = sessionOn(1, "2026-10-12", {
+      routine_day_id: legsDayId,
+      sets: workingSets(squatId, 4),
+    });
+    const plan = weekFor({ sessions: [legsOnMonday], now: "2026-10-12T19:00:00+01:00" });
+
+    expect(dayCopy(plan, MONDAY)).toStrictEqual({
+      weekday: "Mon",
+      label: "Legs",
+      accessibleName: "Monday 12 October, today, Legs, logged, 4 sets",
+    });
+    expect(dayCopy(plan, THURSDAY).label).toBe("Legs");
+    expect(dayCopy(plan, THURSDAY).accessibleName).toBe(
+      "Thursday 15 October, Legs, planned, 16 sets",
+    );
+  });
+
+  it("should name a running day for the day picked, with that day's sets planned", () => {
+    const pullOnMonday = sessionOn(1, "2026-10-12", {
+      routine_day_id: pullDayId,
+      ended_at: null,
+      sets: workingSets(squatId, 3),
+    });
+    const plan = weekFor({ sessions: [pullOnMonday], now: "2026-10-12T19:00:00+01:00" });
+
+    expect(dayCopy(plan, MONDAY)).toStrictEqual({
+      weekday: "Mon",
+      label: "Pull",
+      accessibleName: "Monday 12 October, today, Pull, in progress, 3 of 15 sets",
+    });
+  });
+
   it("should read a rest day as Rest, with no sets", () => {
     expect(dayCopy(week, WEDNESDAY)).toStrictEqual({
       weekday: "Wed",
@@ -592,6 +656,7 @@ describe("describeTrainWeekDay", () => {
       isToday: false,
       status: "rest",
       plannedDay: null,
+      sessionDay: null,
       setsLogged: 0,
       setsPlanned: 0,
     } as const;
@@ -620,6 +685,23 @@ describe("describeTrainWeekDay", () => {
       });
     });
 
+    it("should name an extra day for the day picked on it, and say the session was logged", () => {
+      expect(
+        noRoutine({
+          ...emptyDay,
+          date: "2026-10-14",
+          isToday: true,
+          status: "extra",
+          setsLogged: 3,
+          sessionDay: { name: "Pull" },
+        }),
+      ).toStrictEqual({
+        weekday: "Wed",
+        label: "Pull",
+        accessibleName: "Wednesday 14 October, today, Pull, session logged, 3 sets",
+      });
+    });
+
     it("should use the singular for one set", () => {
       expect(
         noRoutine({ ...emptyDay, date: "2026-10-12", status: "extra", setsLogged: 1 }),
@@ -638,6 +720,7 @@ describe("describeTrainWeekDay", () => {
           isToday: true,
           status: "in_progress",
           plannedDay: null,
+          sessionDay: null,
           setsLogged: 3,
           setsPlanned: 0,
         },

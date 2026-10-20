@@ -33,6 +33,11 @@ export const Default: Story = {
   args: { subtitle: "Foods you created or copied", onPress: () => undefined },
 };
 
+// A row whose press is under way (KEY-505): busy, with a spinner in place of the chevron.
+export const Loading: Story = {
+  args: { subtitle: "Foods you created or copied", onPress: () => undefined, loading: true },
+};
+
 // A row with a trailing value and unit that goes nowhere, so it has no chevron.
 export const WithValue: Story = {
   args: {

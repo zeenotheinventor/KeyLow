@@ -2,6 +2,7 @@ import { Children } from "react";
 import { View } from "react-native";
 
 import { rowPressScale } from "../../../lib/motion";
+import { ButtonSpinner } from "../Button";
 import { useGroupedRowPosition } from "../GroupedList";
 import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
@@ -19,6 +20,7 @@ export function ListRow({
   valueLook = "numeral",
   chevron = true,
   onPress,
+  loading = false,
   disabled = false,
   variant,
   ref,
@@ -66,7 +68,12 @@ export function ListRow({
           )}
         </View>
       )}
-      {chevron && !isFooter && onPress !== undefined ? (
+      {loading ? (
+        // The spinner is drawn over the middle of a box the size of its 18 point ring, so the row keeps its height.
+        <View className="h-[18px] w-[18px] shrink-0">
+          <ButtonSpinner variant="secondary" />
+        </View>
+      ) : chevron && !isFooter && onPress !== undefined ? (
         <Icon name="ChevronRight" size="sm" tone="muted" />
       ) : null}
     </>
@@ -102,6 +109,7 @@ export function ListRow({
   return (
     <PressableSurface
       className={rowClassName}
+      busy={loading || undefined}
       disabled={disabled}
       label={label}
       pressScale={rowPressScale}

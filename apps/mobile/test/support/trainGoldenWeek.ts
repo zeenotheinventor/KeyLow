@@ -54,6 +54,7 @@ const routineDay = (
 
 const PUSH_EXERCISES = [["bench", 3]] as const;
 
+export const PULL_ID = idWith("3", 2);
 export const LEGS_ID = idWith("3", 3);
 
 /** Push Pull Legs, with the plan placed on Monday, Tuesday, Thursday and Saturday. Legs holds 5 exercises and 16 sets. */

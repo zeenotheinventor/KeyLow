@@ -72,12 +72,10 @@ const DAYS_PER_WEEK = 7;
 
 const nextPlannedDayAfter = (week: WeekPlan, date: string): NextPlannedDay | null => {
   const placed = week.days.flatMap((day) =>
-    day.plannedDay === null
-      ? []
-      : [{ date: day.date, plannedDay: day.plannedDay, status: day.status }],
+    day.plannedDay === null ? [] : [{ date: day.date, plannedDay: day.plannedDay }],
   );
-  // A planned day already logged, on its date or another, is not next.
-  const upcoming = placed.find((day) => day.date > date && day.status !== "logged");
+  // The next planned day after the date. A day done in place of another leaves that day's date planned.
+  const upcoming = placed.find((day) => day.date > date);
   if (upcoming !== undefined) {
     return { date: upcoming.date, id: upcoming.plannedDay.id, name: upcoming.plannedDay.name };
   }
@@ -104,17 +102,15 @@ const dayOfSessions = (
 };
 
 /**
- * The finished sessions that count as today: the ones on its date, and a planned day's own session logged
- * on another date.
+ * The finished sessions that count as today: the ones on its date, whichever routine day they were started
+ * for. A planned day's own session logged on another date is that date's, and leaves today planned.
  */
 const finishedSessionsOfToday = (
   week: WeekPlan,
   today: WeekPlanDay,
 ): { session: WeekSession; endedAt: string }[] =>
   week.sessions.flatMap((session) =>
-    session.ended_at !== null &&
-    (session.local_date === today.date ||
-      (today.plannedDay !== null && session.routine_day_id === today.plannedDay.id))
+    session.ended_at !== null && session.local_date === today.date
       ? [{ session, endedAt: session.ended_at }]
       : [],
   );
@@ -157,7 +153,9 @@ const setsOf = (sessions: readonly WeekSession[]): number =>
  *   logged today of the day's planned sets, and the next set to log.
  * - `done` when a session counts as today and every one is finished: the minutes and sets of those
  *   sessions, and the next planned day. A session that follows no routine day (or a routine day that is
- *   not today's) gives its own day, and a session on a rest day gives no day name.
+ *   not today's, as when a day was picked in place of it) gives its own day, and a session on a rest day
+ *   gives no day name. The next planned day is the next one after today whatever was done today, since a
+ *   day picked in place of another leaves that day planned.
  * - `planned` when today is a planned day with nothing started: the day, its place in the routine, its
  *   exercises and sets, and about how long it takes (`estimateSessionMinutes` with `sessionTimeParams`).
  * - `rest` on a rest day: the next planned day only. Which muscles are recovering is the screen's job.

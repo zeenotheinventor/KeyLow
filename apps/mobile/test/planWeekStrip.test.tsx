@@ -407,7 +407,7 @@ describe("PlanWeekStrip", () => {
     });
 
     it("should leave a planned day alone when its session was logged on another date, since nothing was logged on it", async () => {
-      // Legs, planned for Thursday, was logged on Wednesday: Thursday reads logged with no session of its own.
+      // Legs, planned for Thursday, was logged on Wednesday: Wednesday opens it, and Thursday stays missed with no session.
       const legsOnWednesday = session(
         "legs",
         "2026-10-14",
@@ -424,8 +424,33 @@ describe("PlanWeekStrip", () => {
       expect(screen.getByRole("button", { name: /^Wednesday 14 October/ })).toBeOnTheScreen();
     });
 
-    it("should leave a day that is not logged alone even when a session of another routine day finished on it", async () => {
-      // Pull was done on Thursday, which plans Legs: the day is still Legs to do, so it only informs.
+    it("should open the session of a day picked in place of the planned one from the date it was done on", async () => {
+      // Pull was done on Thursday, which plans Legs: Thursday reads logged for Pull and opens that session.
+      const pullOnThursday = session(
+        "pull-thursday",
+        "2026-10-15",
+        "pull",
+        6,
+        "2026-10-15T17:00:00+01:00",
+      );
+      const onViewSession = jest.fn();
+      const user = userEvent.setup();
+      await renderStrip(
+        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, pullOnThursday]),
+        onViewSession,
+      );
+
+      await user.press(
+        screen.getByRole("button", {
+          name: "Thursday 15 October, today, Pull, logged, 6 sets, open session",
+        }),
+      );
+
+      expect(onViewSession).toHaveBeenCalledWith("pull-thursday");
+    });
+
+    it("should leave the picked day's own date alone, since nothing was logged on it", async () => {
+      // Pull, planned for Tuesday, was done on Thursday: Tuesday stays a planned day (here missed) with no session.
       const pullOnThursday = session(
         "pull-thursday",
         "2026-10-15",
@@ -438,7 +463,8 @@ describe("PlanWeekStrip", () => {
         jest.fn(),
       );
 
-      expect(screen.queryByRole("button", { name: /^Thursday/ })).toBeNull();
+      expect(screen.queryByRole("button", { name: /^Tuesday/ })).toBeNull();
+      expect(screen.getByLabelText("Tuesday 13 October, Pull, missed")).toBeOnTheScreen();
     });
   });
 });
