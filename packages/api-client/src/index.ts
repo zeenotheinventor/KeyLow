@@ -163,11 +163,13 @@ export {
   useActiveSession,
   useBodyMap,
   useDashboardBodyMap,
+  useExerciseTrendSets,
   useHasLoggedSession,
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,
   useMuscleState,
+  useRoutineTrendSets,
   useSession,
   useWeekComparison,
   useWeekSessionRows,
@@ -193,6 +195,7 @@ export {
   getLastPerformance,
   getSession,
   listSetsFrom,
+  listTrendSets,
   listWeekSessions,
 } from "./repos";
 export type {
@@ -203,6 +206,8 @@ export type {
   SessionSet,
   SessionWithSets,
   TrainingSet,
+  TrendSetRow,
+  TrendSetRows,
   WeekSession,
 } from "./repos";
 export {
@@ -212,7 +217,7 @@ export {
   useSaveRoutine,
   useSetActiveRoutine,
 } from "./hooks";
-export type { UseRoutinesOptions } from "./hooks";
+export type { UseRoutinesOptions, UseTrendSetsOptions } from "./hooks";
 export { RoutineRuleError } from "./errors";
 export type { RoutineRule } from "./errors";
 export {

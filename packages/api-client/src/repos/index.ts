@@ -86,6 +86,8 @@ export type {
 } from "./trainingSchemas";
 export { getActiveSession, getLastPerformance, getSession } from "./trainingSessions";
 export type { LastPerformanceOptions } from "./trainingSessions";
+export { listTrendSets } from "./trainingTrend";
+export type { TrendSetRow, TrendSetRows } from "./trainingSchemas";
 export { getRoutine, listRoutines } from "./routines";
 export type { ListRoutinesOptions } from "./routines";
 export { saveRoutine, setActiveRoutine, setRoutineArchived } from "./routineWrites";

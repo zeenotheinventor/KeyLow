@@ -99,6 +99,8 @@ describe("useFinishSession", () => {
     expect(seeded.isStale(seeded.queryKeys.weekSessions)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.history)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.historyList)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.exerciseTrend)).toBe(true);
+    expect(seeded.isStale(seeded.queryKeys.routineTrend)).toBe(true);
     expect(seeded.isStale(seeded.queryKeys.activeRoutine)).toBe(false);
     expect(seeded.isStale(seeded.queryKeys.routines)).toBe(false);
   });

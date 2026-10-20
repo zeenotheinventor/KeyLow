@@ -9,8 +9,8 @@ import { keys } from "@keylow/api-client";
  * workout opens without a connection, and the routines with their days and exercises, so the plan
  * opens too. The last performance of an exercise is not kept: it is only read while logging, which
  * needs a connection. The current training goal is kept as its row, the priorities of the muscles it
- * ranks are worked out from it at read time. No search is kept, the training ones included (exercises
- * by text).
+ * ranks are worked out from it at read time. The weekly exercise trends are kept as narrow rows, for a
+ * routine and for one exercise. No search is kept, the training ones included (exercises by text).
  */
 export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.diary.days,
@@ -39,4 +39,9 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   // The current goal, as the row, so the targeted muscles are worked out without a connection. The history
   // of past goals is not kept, and the goal is saved only with a connection: nothing is replayed from here.
   keys.training.goals,
+  // The rows of the weekly exercise trends (one exercise, and every exercise of a routine), narrow: a load,
+  // the reps and the day of each working set. The trend is worked out from them at read time, so the
+  // Routines page and the graph open without a connection.
+  keys.training.exerciseTrendAll,
+  keys.training.routineTrendAll,
 ];

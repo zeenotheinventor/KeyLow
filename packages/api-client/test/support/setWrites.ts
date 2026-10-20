@@ -270,6 +270,8 @@ export function seedSetQueries(queryClient: QueryClient) {
     activeRoutine: keys.training.activeRoutine,
     routines: keys.training.routines(false),
     routine: keys.training.routine("88888888-8888-4888-8888-999999999999"),
+    exerciseTrend: keys.training.exerciseTrend(EXERCISE_ID, "2026-09-28"),
+    routineTrend: keys.training.routineTrend("88888888-8888-4888-8888-999999999999", "2026-09-28"),
   };
   for (const queryKey of Object.values(queryKeys)) {
     queryClient.setQueryData(queryKey, null);
