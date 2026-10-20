@@ -3,6 +3,7 @@ import { describeMakeActiveDialog } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { useRouter } from "expo-router";
 
+import { exerciseProgressPath } from "../../lib/progressRoutes";
 import {
   archivedRoutinesPath,
   editRoutinePath,
@@ -15,6 +16,7 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { RoutinesView } from "../RoutinesView";
 import { ConfirmDialog } from "../ui";
 import { useMakeRoutineActive } from "./useMakeRoutineActive";
+import { useRoutineProgress } from "./useRoutineProgress";
 
 import type { RoutineItem, RoutineRef } from "../RoutinesView";
 
@@ -36,7 +38,8 @@ const routineItemOf = (routine: StoredRoutine): RoutineItem => ({
  * Make active on an other routine asks first, as the `routines · set-active` board draws it, with today in
  * the profile's zone: the routine plans from that day. Until the zone is known the question cannot name
  * the day, so Make active is not drawn. A routine's card or row opens its editor, and New routine and
- * Create routine open the editor for a new one.
+ * Create routine open the editor for a new one. The active routine's progress follows the list, and an
+ * exercise of it opens its graph.
  */
 export function RoutinesScreen() {
   const router = useRouter();
@@ -45,6 +48,10 @@ export function RoutinesScreen() {
   const timeZone = useProfileTimeZone({ enabled });
   const now = useNow();
   const makeActive = useMakeRoutineActive();
+  // Only the active routine's progress is read: another routine opens its editor, which has no progress to show.
+  const progress = useRoutineProgress(
+    routines.data?.find((routine) => !routine.is_archived && routine.is_active)?.id,
+  );
   // A second tap while an editor is sliding in would stack it twice.
   const openOnce = useOpenOnce();
 
@@ -67,6 +74,11 @@ export function RoutinesScreen() {
     onCreateRoutine: () => {
       openOnce(() => {
         router.push(newRoutinePath());
+      });
+    },
+    onOpenExercise: (exerciseId: string) => {
+      openOnce(() => {
+        router.push(exerciseProgressPath(exerciseId));
       });
     },
     onEditRoutine: ({ id }: RoutineRef) => {
@@ -127,6 +139,7 @@ export function RoutinesScreen() {
               }
         }
         archivedCount={routines.data.length - live.length}
+        progress={progress}
         others={live.filter((routine) => routine !== active).map(routineItemOf)}
         status="ready"
       />

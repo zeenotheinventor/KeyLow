@@ -304,5 +304,7 @@ export type {
   TrendValue,
 } from "./exerciseTrend";
 export { bestSetPerWeek } from "./bestSetPerWeek";
+export { trendSeries } from "./trendSeries";
+export type { TrendSeries, TrendSeriesPoint } from "./trendSeries";
 export { routineTrendsByDay } from "./routineTrends";
 export type { RoutineDayTrends } from "./routineTrends";

@@ -2,6 +2,7 @@ import { View } from "react-native";
 
 import { RoutinesView } from "./RoutinesView";
 import { sampleActiveRoutine, sampleOtherRoutines } from "./sampleRoutines";
+import { sampleProgressDay } from "../RoutineProgressDay/sampleProgressDay";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
 
@@ -85,4 +86,31 @@ export const Loading: Story = {
 // Not drawn: the first read failed.
 export const Failed: Story = {
   render: () => <RoutinesView {...navigation} status="error" onRetry={() => undefined} />,
+};
+
+// The Progress section under the list, which no board draws: a group for each routine day.
+export const WithProgress: Story = {
+  render: () => (
+    <RoutinesView
+      {...navigation}
+      {...ready}
+      progress={{ status: "ready", days: [sampleProgressDay] }}
+      onOpenExercise={() => undefined}
+    />
+  ),
+};
+
+// The progress is on its way, or could not be read.
+export const ProgressLoading: Story = {
+  render: () => <RoutinesView {...navigation} {...ready} progress={{ status: "loading" }} />,
+};
+
+export const ProgressFailed: Story = {
+  render: () => (
+    <RoutinesView
+      {...navigation}
+      {...ready}
+      progress={{ status: "error", onRetry: () => undefined }}
+    />
+  ),
 };

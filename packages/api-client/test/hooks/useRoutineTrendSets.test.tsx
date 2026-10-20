@@ -108,6 +108,24 @@ describe("useRoutineTrendSets", () => {
     );
   });
 
+  it("should read a profile with no time zone as UTC, as every other screen does", async () => {
+    // 00:30 on Monday 26 October is already the new week in UTC, where a zone behind UTC would still read Sunday.
+    const fake = installTrendFake(server, { routine: routineOfTwoDays, timeZone: null });
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(
+      () => useRoutineTrendSets(ROUTINE_ID, "4w", { now: "2026-10-26T00:30:00Z" }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(
+      fake.rangeRequests()[0]?.searchParams.getAll("workout_sessions.local_date").sort(),
+    ).toEqual(["gte.2026-10-05", "lte.2026-10-26"]);
+  });
+
   it("should give no rows and make no trend request for a routine that is not there", async () => {
     const fake = installTrendFake(server, { routine: undefined });
     const { wrapper } = createWrapper();
