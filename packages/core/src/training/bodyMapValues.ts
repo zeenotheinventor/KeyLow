@@ -30,10 +30,16 @@ const byMuscle = <Value>(valueOf: (muscle: MuscleId) => Value): Record<MuscleId,
   >;
 
 /**
+ * The rounded percent of heat from which a muscle counts as loaded: where the map reaches step 4, "Very
+ * hot". The training reminders read it too ("Take it easy"), so the map and the reminder cannot disagree.
+ */
+export const LOADED_HEAT_PERCENT = 60;
+
+/**
  * The rounded percent of heat at which heat steps 1 to 5 start: under the first cut a muscle is at step
  * 0 (rested), and from the last it is at step 5 (peak). Pinned by a test, so a change is deliberate.
  */
-export const HEAT_STEP_CUTS_V1 = [5, 20, 40, 60, 80] as const;
+export const HEAT_STEP_CUTS_V1 = [5, 20, 40, LOADED_HEAT_PERCENT, 80] as const;
 
 const percentOf = (heat: number): number => Math.round(heat * 100);
 

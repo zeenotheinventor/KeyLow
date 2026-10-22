@@ -15,6 +15,7 @@ import {
   compareWeek,
   GAP_VALUES,
   HEAT_STEP_CUTS_V1,
+  LOADED_HEAT_PERCENT,
   gapValues,
   heatValues,
   MUSCLE_IDS,
@@ -41,6 +42,15 @@ const statesWith = (heatByMuscle: Partial<Record<MuscleId, number>>) =>
 describe("HEAT_STEP_CUTS_V1", () => {
   it("should be the rounded percents at which steps 1 to 5 start", () => {
     expect(HEAT_STEP_CUTS_V1).toStrictEqual([5, 20, 40, 60, 80]);
+  });
+});
+
+describe("LOADED_HEAT_PERCENT", () => {
+  it("should be the rounded percent where the map reaches its very hot step, 4", () => {
+    expect(LOADED_HEAT_PERCENT).toBe(60);
+    expect(HEAT_STEP_CUTS_V1[3]).toBe(LOADED_HEAT_PERCENT);
+    expect(heatValues(statesWith({ quads: 0.6, calves: 0.59 })).quads).toBe(4);
+    expect(heatValues(statesWith({ quads: 0.6, calves: 0.59 })).calves).toBe(3);
   });
 });
 
