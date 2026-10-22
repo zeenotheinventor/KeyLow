@@ -285,6 +285,7 @@ describe("BarcodeLookup", () => {
           quantity: 1,
           unit: "portion",
           portion: handful,
+          foodPortions: [handful],
           loggedAt: "2026-10-15T12:40:30.000Z",
           localDate: "2026-10-15",
         });
