@@ -16,6 +16,7 @@ const PNG_WIDTH_OFFSET = 16;
 const PNG_HEIGHT_OFFSET = 20;
 const PNG_COLOR_TYPE_OFFSET = 25;
 const PNG_COLOR_TYPE_RGB = 2;
+const PNG_COLOR_TYPE_RGBA = 6;
 
 function readPngHeader(path: string) {
   const bytes = readFileSync(path);
@@ -128,6 +129,28 @@ describe("app.json", () => {
       expect(
         pluginOptions("@kingstinct/react-native-healthkit")?.NSHealthUpdateUsageDescription,
       ).toBe(false);
+    });
+  });
+
+  describe("reminders", () => {
+    it("should list the notifications plugin so the scheduling and permission pieces reach the native project", () => {
+      expect(plugins.map(pluginName)).toContain("expo-notifications");
+    });
+
+    it("should give the Android notification a 96 pixel icon with a transparent background", () => {
+      const iconPath = pluginOptions("expo-notifications")?.icon;
+
+      expect(iconPath).toBe("./assets/notification-icon.png");
+      const path = `${__dirname}/../${String(iconPath)}`;
+      expect(existsSync(path)).toBe(true);
+      const { width, height, colorType } = readPngHeader(path);
+      expect([width, height, colorType]).toEqual([96, 96, PNG_COLOR_TYPE_RGBA]);
+    });
+
+    it("should tint the Android notification icon with the accent colour of the design tokens", () => {
+      expect(String(pluginOptions("expo-notifications")?.color).toLowerCase()).toBe(
+        themes.dark.accent.toLowerCase(),
+      );
     });
   });
 
