@@ -149,6 +149,7 @@ export {
   gapValues,
   HEAT_STEP_CUTS_V1,
   heatValues,
+  LOADED_HEAT_PERCENT,
   volumeValues,
   warmestMuscles,
 } from "./bodyMapValues";
@@ -308,3 +309,16 @@ export { trendSeries } from "./trendSeries";
 export type { TrendSeries, TrendSeriesPoint } from "./trendSeries";
 export { routineTrendsByDay } from "./routineTrends";
 export type { RoutineDayTrends } from "./routineTrends";
+
+export {
+  DEFAULT_TRAINING_REMINDER_SETTINGS,
+  hasExerciseGainThisWeek,
+  planTrainingReminders,
+} from "./trainingReminders";
+export type {
+  PlannedTrainingReminder,
+  TrainingReminderInput,
+  TrainingReminderRoutineDay,
+  TrainingReminderSession,
+  TrainingReminderSettings,
+} from "./trainingReminders";
