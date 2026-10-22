@@ -234,16 +234,28 @@ jobs:
     if: needs.scope.outputs.db == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    # packages: read lets the job's token log in to GitHub's registry below.
+    permissions:
+      contents: read
+      packages: read
     steps:
       - uses: actions/checkout@v7
       # Pinned to the CLI version used locally. The action also accepts "latest".
       - uses: supabase/setup-cli@v3
         with:
           version: 2.106.0
+      # Anonymous pulls from GitHub's registry are throttled on busy days ("toomanyrequests: ...
+      # allowed: 44000/minute"). Logging in with the job's own token makes every pull below, and the
+      # ones `supabase start` makes itself, an authenticated one. No secret to manage.
+      - name: Log in to GitHub's registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
       # The CLI pulls some of its images from public.ecr.aws, which refuses anonymous pulls with
       # "toomanyrequests: Rate exceeded" once a runner's address has used its quota. The same images
       # are on GitHub's registry, which does not share that quota. Pulling them from there and tagging
-      # them with the names the CLI looks for means it finds them locally and never calls ECR.
+      # them with the names the CLI looks for means it finds them locally and never calls ECR. Each
+      # pull is tried up to five times, a few seconds apart, and a pull that never lands fails the tag.
       # postgres-meta v0.96.6 is what `supabase start` runs for the meta service and v0.96.1 is
       # what `supabase gen types` runs (the failed log named it), so both are pulled.
       # edge-runtime is what `supabase functions serve` runs and pg_prove is what `supabase test
@@ -265,7 +277,7 @@ jobs:
             (
               set -e
               printf "%s\n" postgres-meta:v0.96.1 postgres-meta:v0.96.6 edge-runtime:v1.74.1 pg_prove:3.36 |
-                xargs -P 4 -I {} sh -c "docker pull ghcr.io/supabase/{} && docker tag ghcr.io/supabase/{} public.ecr.aws/supabase/{}"
+                xargs -P 4 -I {} sh -c "for try in 1 2 3 4 5; do docker pull ghcr.io/supabase/{} && break; sleep \$((try * 5)); done; docker tag ghcr.io/supabase/{} public.ecr.aws/supabase/{}"
               supabase start -x analytics,edge-runtime,functions,imgproxy,inbucket,realtime,storage,studio,vector
             )
             echo $? > "$RUNNER_TEMP/supabase-start.status.tmp"
