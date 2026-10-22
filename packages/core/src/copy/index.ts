@@ -46,3 +46,4 @@ export * from "./suggestion";
 export * from "./exerciseTrend";
 export * from "./exerciseProgress";
 export * from "./trainingReminders";
+export * from "./remindersScreen";

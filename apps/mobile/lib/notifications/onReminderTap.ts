@@ -37,10 +37,15 @@ export function onReminderTap(handler: (type: ReminderType) => void): () => void
     }
   };
 
-  const openingTap = notifications.getLastNotificationResponse();
-  if (openingTap !== null) {
-    notifications.clearLastNotificationResponse();
-    handle(openingTap);
+  // A tap the system cannot hand over is lost, but it must not stop the app from starting.
+  try {
+    const openingTap = notifications.getLastNotificationResponse();
+    if (openingTap !== null) {
+      notifications.clearLastNotificationResponse();
+      handle(openingTap);
+    }
+  } catch {
+    // The listener below still hears every tap from here on.
   }
   const subscription = notifications.addNotificationResponseReceivedListener(handle);
   return () => {

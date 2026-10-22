@@ -43,6 +43,7 @@ export const MORE_SCREEN = {
       title: "Appearance",
       options: { dark: "Dark", light: "Light", system: "Match device" },
     },
+    reminders: { title: "Reminders" },
     about: { title: "About" },
   },
   account: { title: "Account", signOut: "Sign out" },

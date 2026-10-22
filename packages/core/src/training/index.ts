@@ -312,6 +312,8 @@ export type { RoutineDayTrends } from "./routineTrends";
 
 export {
   DEFAULT_TRAINING_REMINDER_SETTINGS,
+  EASE_REMINDER_TIME,
+  PROGRESS_REMINDER_TIME,
   hasExerciseGainThisWeek,
   planTrainingReminders,
 } from "./trainingReminders";

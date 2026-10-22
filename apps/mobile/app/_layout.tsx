@@ -12,6 +12,7 @@ import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
+import { setUpReminderNotifications } from "../lib/notifications";
 import { initSentry } from "../lib/sentry/init";
 import { readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
@@ -31,6 +32,10 @@ feedOnlineManager();
 // React Native has no window focus event either, so the queries are told when the app is back in the
 // foreground, and a stale one refetches. Reads that the terms gate keeps off stay off.
 feedFocusManager();
+
+// Creates the reminders' Android channel and lets a reminder show while the app is open. A build without the
+// notifications module does nothing, and a failure leaves the app as it was.
+setUpReminderNotifications().catch(() => undefined);
 
 const queryClient = createQueryClient();
 

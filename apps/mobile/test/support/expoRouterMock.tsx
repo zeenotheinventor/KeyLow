@@ -8,6 +8,7 @@ const noSegments: string[] = [];
 const noSearchParams: Record<string, string | string[]> = {};
 
 export const routerMock = {
+  navigate: jest.fn<undefined, [string]>(),
   push: jest.fn<undefined, [string]>(),
   replace: jest.fn<undefined, [string]>(),
   dismissTo: jest.fn<undefined, [string]>(),
@@ -29,6 +30,7 @@ export const routerMock = {
 };
 
 export function resetRouterMock(): void {
+  routerMock.navigate.mockReset();
   routerMock.push.mockReset();
   routerMock.replace.mockReset();
   routerMock.dismissTo.mockReset();
@@ -49,6 +51,7 @@ export function resetRouterMock(): void {
 
 // The real useRouter returns one stable object, so effects that depend on it do not rerun.
 const router = {
+  navigate: routerMock.navigate,
   replace: routerMock.replace,
   dismissTo: routerMock.dismissTo,
   setParams: routerMock.setParams,

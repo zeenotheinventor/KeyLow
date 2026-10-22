@@ -69,6 +69,7 @@ export { useImportWeighIns } from "./useImportWeighIns";
 export { useUpdateWeighIn } from "./useUpdateWeighIn";
 export { useWeighIns } from "./useWeighIns";
 export { useWeightTrend } from "./useWeightTrend";
+export { useHeatSets } from "./useHeatSets";
 export { useMuscleState } from "./useMuscleState";
 export { useWeekComparison } from "./useWeekComparison";
 export { useActiveRoutine } from "./useActiveRoutine";

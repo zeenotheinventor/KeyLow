@@ -12,8 +12,8 @@ import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 // The sections of the `tab-shell.more` board, with Nutrition between Food and Body. Your foods opens the search
 // sheet in its own-foods mode, Targets opens the Targets screen and shows the calorie target once one is set,
-// Weight waits for its screen, Appearance is set here, and Sign out is Account's one row. About is under
-// Settings and opens the About screen. No board draws it.
+// Weight waits for its screen, Appearance is set here, and Sign out is Account's one row. Reminders and About
+// are under Settings and open their screens. No board draws Reminders, and its icon is the clock because the kit has no bell.
 export default function MoreRoute() {
   const router = useRouter();
   const targets = useTargets({ enabled: useReadsEnabled() });
@@ -55,6 +55,13 @@ export default function MoreRoute() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title}>
           <AppearanceSetting />
+          <ListRow
+            icon="Clock"
+            title={MORE_SCREEN.settings.reminders.title}
+            onPress={() => {
+              router.push("/reminders");
+            }}
+          />
           <ListRow
             icon="Info"
             title={MORE_SCREEN.settings.about.title}

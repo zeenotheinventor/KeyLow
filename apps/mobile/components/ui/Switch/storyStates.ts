@@ -1,1 +1,1 @@
-export const storyStates = ["Off", "On"];
+export const storyStates = ["Off", "On", "Disabled"];

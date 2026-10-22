@@ -165,6 +165,7 @@ export {
   useDashboardBodyMap,
   useExerciseTrendSets,
   useHasLoggedSession,
+  useHeatSets,
   useLastPerformance,
   useMuscleDetail,
   useMuscleList,

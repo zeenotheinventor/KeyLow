@@ -1,0 +1,1 @@
+export { ReminderTapRouting } from "./ReminderTapRouting";
