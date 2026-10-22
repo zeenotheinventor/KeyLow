@@ -3,6 +3,7 @@ import { foodEntryFields } from "./foodEntryFields";
 import { SNAPSHOT_VERSION } from "./versions";
 
 import type { FoodLogEntryInsert, QuickLogEntryInsert } from "./schemas";
+import type { PortionForDensity } from "../nutrition/labelDensity";
 import type { QuantityUnit } from "../nutrition/units";
 import type { Food, FoodPortion } from "../schemas/food";
 
@@ -23,6 +24,8 @@ export type BuildLogEntryInput = EntryTiming & {
   unit: QuantityUnit;
   /** Read only when the unit is `portion`. Its id becomes the entry's `portion_id`. */
   portion?: Pick<FoodPortion, "id" | "label" | "grams" | "ml">;
+  /** The food's own portions, for the density of a serving label. See `FoodSnapshotInput`. */
+  foodPortions?: readonly PortionForDensity[];
 };
 
 export type BuildQuickEntryInput = EntryTiming & {

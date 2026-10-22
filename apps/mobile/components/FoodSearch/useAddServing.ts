@@ -110,6 +110,7 @@ export function useAddServing(context: LogContext): AddServing {
         quantity: amount.quantity,
         unit: amount.unit,
         ...(amount.unit === "portion" ? { portion: amount.portion } : {}),
+        foodPortions: portions,
         loggedAt: loggedAt.toISOString(),
         localDate,
       });

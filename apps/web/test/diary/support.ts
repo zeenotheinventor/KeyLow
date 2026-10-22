@@ -4,6 +4,7 @@ import { buildChickenAndRiceRecipe, buildFood } from "@keylow/core/testing";
 
 import type { DayTotals, DiaryDay, DiaryWeekDay, LogEntry, Targets } from "@keylow/api-client";
 import type { RecipeComputed } from "@keylow/core/recipes";
+import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 const FOOD_ID = "22222222-2222-4222-8222-222222222222";
 let entryCount = 0;
@@ -61,6 +62,30 @@ export function foodEntry(options: FoodEntryOptions): LogEntry {
       fibre_g: null,
     },
   };
+}
+
+/**
+ * A food entry logged from a given food, the way the diary reads it from the database. `foodPortions` are the
+ * portions the food had when it was logged (left out for an entry logged before a density was read from them).
+ */
+export function entryLoggedFrom(options: {
+  food: Food;
+  foodPortions?: readonly FoodPortion[];
+  quantity: number;
+  unit: "g" | "ml";
+  date: string;
+  time: string;
+}): LogEntry {
+  const entry = buildLogEntry({
+    food: options.food,
+    quantity: options.quantity,
+    unit: options.unit,
+    localDate: options.date,
+    loggedAt: `${options.date}T${options.time}:00+00:00`,
+    ...(options.foodPortions === undefined ? {} : { foodPortions: options.foodPortions }),
+  });
+
+  return { ...entry, ...databaseColumns(), kcal: entry.nutrients.kcal };
 }
 
 export function quickEntry(options: {

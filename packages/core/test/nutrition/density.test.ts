@@ -167,3 +167,61 @@ describe("the density tables", () => {
     },
   );
 });
+
+describe("estimateDensity from the food's own serving", () => {
+  const tablespoonOfSauce = [{ label: "1 tbsp (15 g)", grams: 15, ml: null }];
+  const brandedFood = (overrides: Partial<DensityFood> = {}): DensityFood => ({
+    source: "off",
+    source_ref: "5000000000000",
+    food_group: "sauces",
+    density_g_per_ml: null,
+    ...overrides,
+  });
+
+  it("should derive the density of a branded food from a serving in spoons", () => {
+    expect(estimateDensity(brandedFood(), tablespoonOfSauce)).toEqual({
+      gPerMl: 1,
+      basis: "label",
+    });
+  });
+
+  it("should derive the density of a user's food from a serving in spoons", () => {
+    const own = brandedFood({ source: "user", source_ref: null, food_group: null });
+
+    expect(estimateDensity(own, [{ label: "2 tsp (4 g)", grams: 4, ml: null }])).toEqual({
+      gPerMl: 0.4,
+      basis: "label",
+    });
+  });
+
+  it("should have no density without portions, or when none reads as a volume", () => {
+    expect(estimateDensity(brandedFood())).toBeNull();
+    expect(estimateDensity(brandedFood(), [])).toBeNull();
+    expect(estimateDensity(brandedFood(), [{ label: "1 bar", grams: 40, ml: null }])).toBeNull();
+  });
+
+  it("should keep the food's own density before the label's", () => {
+    expect(estimateDensity(brandedFood({ density_g_per_ml: 0.7 }), tablespoonOfSauce)).toEqual({
+      gPerMl: 0.7,
+      basis: "food",
+    });
+  });
+
+  it("should keep a cited CoFID override before the label's", () => {
+    const honey = cofidFood({ source_ref: "17-050", food_group: "SC" });
+
+    expect(estimateDensity(honey, tablespoonOfSauce)).toEqual({ gPerMl: 1.42, basis: "override" });
+  });
+
+  it("should keep a CoFID group density before the label's", () => {
+    const milk = cofidFood({ source_ref: "12-313", food_group: "BAH" });
+
+    expect(estimateDensity(milk, tablespoonOfSauce)).toEqual({ gPerMl: 1.03, basis: "group" });
+  });
+
+  it("should use the label for a CoFID food whose group has no density", () => {
+    const chicken = cofidFood({ source_ref: "18-323", food_group: "MCA" });
+
+    expect(estimateDensity(chicken, tablespoonOfSauce)).toEqual({ gPerMl: 1, basis: "label" });
+  });
+});

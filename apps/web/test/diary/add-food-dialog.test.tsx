@@ -365,6 +365,7 @@ describe("the add food dialog", () => {
         quantity: 1,
         unit: "portion",
         portion: breast,
+        foodPortions: [breast],
         loggedAt: "2026-10-15T12:00:00.000Z",
         localDate: "2026-10-15",
       });
@@ -383,6 +384,7 @@ describe("the add food dialog", () => {
         food: rice,
         quantity: 100,
         unit: "g",
+        foodPortions: [],
         loggedAt: "2026-10-15T12:40:30.000Z",
         localDate: "2026-10-15",
       });
@@ -672,6 +674,7 @@ describe("the add food dialog", () => {
         food: chicken,
         quantity: 200,
         unit: "g",
+        foodPortions: [breast],
         loggedAt: "2026-10-15T12:40:30.000Z",
         localDate: "2026-10-15",
       });
@@ -787,6 +790,7 @@ describe("the add food dialog", () => {
         quantity: 1,
         unit: "portion",
         portion: breast,
+        foodPortions: [breast],
         loggedAt: "2026-10-15T12:40:30.000Z",
         localDate: "2026-10-15",
       });

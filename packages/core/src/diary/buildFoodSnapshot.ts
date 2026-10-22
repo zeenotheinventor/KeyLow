@@ -3,6 +3,7 @@ import { SNAPSHOT_VERSION } from "./versions";
 import { densityForLogging } from "../nutrition/volume";
 
 import type { FoodSnapshot, SnapshotPortion } from "./schemas";
+import type { PortionForDensity } from "../nutrition/labelDensity";
 import type { QuantityUnit } from "../nutrition/units";
 import type { Food, FoodPortion } from "../schemas/food";
 import type { NullableNutrients } from "../schemas/nutrients";
@@ -12,6 +13,13 @@ export type FoodSnapshotInput = {
   unit: QuantityUnit;
   /** Read only when the unit is `portion`. */
   portion?: Pick<FoodPortion, "label" | "grams" | "ml">;
+  /**
+   * The food's own portions, which a density is read from when the food and the tables give none (a
+   * serving such as "1 tbsp (15 g)", see `estimateDensity`). Give the portions the picker was drawn from, so
+   * the entry freezes the density its chips and its hero used. Left out, only the food's own density and
+   * the tables apply.
+   */
+  foodPortions?: readonly PortionForDensity[];
 };
 
 const optionalNutrientKeys = ["sat_fat_g", "sugars_g", "salt_g"] as const;
@@ -48,7 +56,8 @@ const toSnapshotPortion = (
 
 /**
  * Freezes a food at the moment it is logged: its name, basis, per 100 values and density (its own, else
- * the estimate for its group, so a later change to the density table never changes the entry), plus the
+ * the estimate for its group or from its serving label, so a later change to the density table or to the
+ * food's portions never changes the entry), plus the
  * quantity, unit and portion it was logged with and the grams that resolves to. Optional nutrients
  * the food does not record are left out of `per100` (ADR 0003, Amendment 2), and micronutrients are
  * never carried.
@@ -65,7 +74,7 @@ export const buildFoodSnapshot = (food: Food, input: FoodSnapshotInput): FoodSna
       name: food.name,
       basis: food.basis,
       per100: buildPer100(food),
-      density: densityForLogging(food),
+      density: densityForLogging(food, input.foodPortions),
     },
     {
       quantity: input.quantity,

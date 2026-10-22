@@ -107,3 +107,15 @@ describe("spoonPortionOf", () => {
     expect(spoonPortionOf(portion)).toBeUndefined();
   });
 });
+
+describe("label densities", () => {
+  const tablespoonOfSauce = [{ label: "1 tbsp (15 g)", grams: 15, ml: null }];
+
+  it("should hand the portions to the estimate", () => {
+    estimateOf(1);
+
+    expect(canMeasureByVolume(buildFood({ basis: "per_100g" }), tablespoonOfSauce)).toBe(true);
+    expect(densityForLogging(buildFood({ density_g_per_ml: null }), tablespoonOfSauce)).toBe(1);
+    expect(estimateDensity).toHaveBeenCalledWith(expect.anything(), tablespoonOfSauce);
+  });
+});

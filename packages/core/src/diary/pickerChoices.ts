@@ -49,7 +49,8 @@ export function choicesFor<Portion extends AmountPortion>(
 /**
  * The picker's chips for a food and its portions, in this order: the food's own portions by `position`
  * (the default one is the one the picker opens on, not necessarily the first), then g, then, only when the
- * food can be measured by volume, ml, 1 tsp and 1 tbsp. A food that cannot gets no volume chip at all.
+ * food can be measured by volume, ml, 1 tsp and 1 tbsp. A food that cannot gets no volume chip at all. A
+ * food measured by volume can have its density from a portion's label, such as "1 tbsp (15 g)".
  * Read the starting amount from `portions`, which holds the spoons that the chips name.
  */
 export function pickerChoices<Portion extends AmountPortion & Pick<FoodPortion, "position">>(
@@ -58,5 +59,5 @@ export function pickerChoices<Portion extends AmountPortion & Pick<FoodPortion, 
 ): PickerChoices<Portion> {
   const inOrder = [...portions].sort((first, second) => first.position - second.position);
 
-  return choicesFor(inOrder, canMeasureByVolume(food));
+  return choicesFor(inOrder, canMeasureByVolume(food, portions));
 }

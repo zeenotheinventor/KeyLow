@@ -9,6 +9,7 @@ import {
   banana,
   chickenBreast,
   chickenThigh,
+  ketchup,
   milk,
   oliveOil,
   syrup,
@@ -266,6 +267,23 @@ describe("the add dialog's chips", () => {
       expect(entry.snapshot.portion).toBeNull();
       expect(entry.snapshot.density).toBe(MILK_DENSITY);
       expect(entry.resolved_grams).toBeCloseTo(250 * MILK_DENSITY);
+    });
+
+    it("should offer a branded food spoons from its own serving, and log them at the label's weight", async () => {
+      openFood(ketchup);
+
+      expect(chipNames()).toEqual(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
+      fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+      typeAmount("tbsp", "2");
+
+      expect(
+        screen.getByRole("group", { name: "Energy and macros, For 2 tbsp (30 ml, 30 g)" }),
+      ).toBeTruthy();
+      fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+      const entry = await loggedEntry();
+      expect(entry.snapshot.density).toBe(1);
+      expect(entry.resolved_grams).toBeCloseTo(30, 10);
     });
 
     it("should never write about, or note an estimated density, anywhere in the dialog", () => {

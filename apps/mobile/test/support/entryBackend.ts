@@ -57,6 +57,9 @@ async function entryFetch(input: string | URL | Request, init?: RequestInit): Pr
   }
   if (method === "GET" && table === "food_portions") {
     diaryBackend.requests.push({ table, search: searchParams.toString(), method });
+    if (diaryBackend.hungTables.has(table)) {
+      return new Promise(() => undefined);
+    }
 
     return jsonResponse(
       entryBackend.foodPortions.filter(

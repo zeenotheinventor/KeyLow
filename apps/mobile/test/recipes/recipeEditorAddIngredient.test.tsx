@@ -171,6 +171,16 @@ const mysteryBar = buildFood({
   carbs_g: null,
 });
 
+const ketchup = buildFood({
+  id: uuidOf("9"),
+  source: "off",
+  name: "Tomato ketchup",
+  kcal: 100,
+  protein_g: 1,
+  carbs_g: 25,
+  fat_g: 0,
+});
+
 const largeEgg = buildFoodPortion({
   id: uuidOf("b"),
   food_id: eggs.id,
@@ -186,6 +196,15 @@ const mediumOnion = buildFoodPortion({
   is_default: true,
 });
 const portionsOfFood: Record<string, ReturnType<typeof buildFoodPortion>[]> = {
+  [ketchup.id]: [
+    buildFoodPortion({
+      id: uuidOf("f"),
+      food_id: ketchup.id,
+      label: "1 tbsp (15 g)",
+      grams: 15,
+      is_default: true,
+    }),
+  ],
   [onions.id]: [
     buildFoodPortion({
       id: uuidOf("c"),
@@ -204,7 +223,7 @@ const portionsOfFood: Record<string, ReturnType<typeof buildFoodPortion>[]> = {
     }),
   ],
 };
-const allFoods = [eggs, milk, oil, onions, spinach, matureSpinach, cheddar, mysteryBar];
+const allFoods = [eggs, milk, oil, onions, spinach, matureSpinach, cheddar, mysteryBar, ketchup];
 
 function hitOf(food: ReturnType<typeof buildFood>, score: number): FoodSearchHit {
   return {
@@ -655,6 +674,26 @@ describe("adding an ingredient from the recipe editor", () => {
       await letTypingStop();
 
       expect(card().getByText("217")).toBeOnTheScreen();
+    });
+
+    it("should freeze the density of the food's serving label into the ingredient it adds", async () => {
+      mockUpdateRecipe.mockResolvedValue({ ...frittata });
+      mockFoodSearch.mockReturnValue({ ...idleSearch, local: [hitOf(ketchup, 0.9)] });
+      const user = await showEditor();
+      await user.press(addRow());
+      await type("ketchup");
+      await user.press(resultRow("Tomato ketchup", "100 g"));
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+      await user.press(screen.getByRole("button", { name: "Add to recipe" }));
+
+      await user.press(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRecipe).toHaveBeenCalledTimes(1);
+      });
+      const added = mockUpdateRecipe.mock.calls[0]?.[0].ingredients.at(-1);
+      expect(added?.snapshot.density).toBe(1);
+      expect(added?.resolved_grams).toBeCloseTo(15, 10);
     });
 
     it("should save nothing until the recipe is saved, and then send it with the others", async () => {

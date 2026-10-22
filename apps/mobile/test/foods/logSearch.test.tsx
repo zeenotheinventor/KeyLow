@@ -527,6 +527,31 @@ describe("food search sheet in log mode", () => {
       });
     });
 
+    it("should freeze the density of the food's serving label into the entry the plus logs", async () => {
+      mockListFoodPortions.mockResolvedValue([
+        {
+          ...buildFoodPortion(),
+          id: mediumPortionId,
+          food_id: bananaId,
+          label: "1 tbsp (15 g)",
+          grams: 15,
+          is_default: true,
+        },
+      ]);
+      const user = await renderLogSearch();
+      await type("ba");
+
+      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
+
+      const input = mockLogFood.mock.calls[0]?.[0];
+      if (input === undefined) {
+        throw new Error("Nothing was logged");
+      }
+      const entry = buildLogEntry(input);
+      expect(entry.snapshot.density).toBe(1);
+      expect(entry.resolved_grams).toBe(15);
+    });
+
     it("should log 100 g when the food has no default portion", async () => {
       const user = await renderLogSearch();
       await type("ch");

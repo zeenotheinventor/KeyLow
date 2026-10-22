@@ -2,6 +2,7 @@ import { buildFoodSnapshot } from "../diary/buildFoodSnapshot";
 import { foodEntryFields } from "../diary/foodEntryFields";
 
 import type { RecipeIngredient } from "./schemas";
+import type { PortionForDensity } from "../nutrition/labelDensity";
 import type { QuantityUnit } from "../nutrition/units";
 import type { Food, FoodPortion } from "../schemas/food";
 
@@ -10,11 +11,13 @@ export type RecipeIngredientInput = {
   unit: QuantityUnit;
   /** Read only when the unit is `portion`. Its id becomes the ingredient's `portion_id`, except for a spoon. */
   portion?: Pick<FoodPortion, "id" | "label" | "grams" | "ml">;
+  /** The food's own portions, for the density of a serving label. See `FoodSnapshotInput`. */
+  foodPortions?: readonly PortionForDensity[];
 };
 
 /**
  * Builds one recipe ingredient from a food and an amount. The food is frozen with `buildFoodSnapshot`,
- * so its nutrients, basis and density (its own, else the estimate for its group) are fixed when the
+ * so its nutrients, basis and density (its own, else the estimate for its group or from its serving label) are fixed when the
  * ingredient is added, and a later change to the food or to the density table never moves the recipe
  * (ADR 0003, Amendment 8). The columns are derived from the snapshot as for a log entry, so
  * `portion_id` is the portion's id for a portion that is a table row and null for every other unit

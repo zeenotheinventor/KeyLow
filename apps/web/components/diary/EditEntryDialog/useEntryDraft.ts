@@ -156,7 +156,9 @@ export function useEntryDraft(entry: FoodLogEntry | QuickLogEntry): EntryDraft {
       liveFood.data !== undefined &&
       liveFood.data !== null &&
       liveFood.data.deleted_at === null &&
-      foodChangedSinceLogged(liveFood.data, snapshot),
+      // The density of a serving label comes from the portions, so wait for them to be there to compare it.
+      livePortions.data !== undefined &&
+      foodChangedSinceLogged(liveFood.data, snapshot, livePortions.data),
     // A food that cannot be read at all is as good as deleted: there is nothing to update from.
     isFoodDeleted:
       snapshot !== undefined &&

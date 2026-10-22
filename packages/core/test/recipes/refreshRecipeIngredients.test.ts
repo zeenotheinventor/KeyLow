@@ -32,6 +32,35 @@ const recipeOf = <Ingredient extends RecipeIngredient>(ingredients: readonly Ing
 });
 
 describe("refreshRecipeIngredients", () => {
+  describe("when an ingredient froze the density of its food's serving label", () => {
+    const ketchup = buildFood({ id: "00000000-0000-4000-8000-0000000000f2", name: "Ketchup" });
+    const servingOf = (label: string, grams: number) => [
+      buildFoodPortion({ food_id: ketchup.id, label, grams, is_default: true }),
+    ];
+    const ingredient = buildRecipeIngredient(ketchup, {
+      quantity: 30,
+      unit: "g",
+      foodPortions: servingOf("1 tbsp (15 g)", 15),
+    });
+    const refreshWith = (portions: readonly FoodPortion[]) =>
+      refreshRecipeIngredients({
+        ...recipeOf([ingredient]),
+        foods: new Map([[ketchup.id, { food: ketchup, portions }]]),
+      });
+
+    it("should say nothing changed while the serving is the same", () => {
+      expect(ingredient.snapshot.density).toBe(1);
+      expect(refreshWith(servingOf("1 tbsp (15 g)", 15)).hasChanges).toBe(false);
+    });
+
+    it("should refresh the density once the serving has changed", () => {
+      const result = refreshWith(servingOf("1 tbsp (20 g)", 20));
+
+      expect(result.hasChanges).toBe(true);
+      expect(result.ingredients[0]?.snapshot.density).toBeCloseTo(20 / 15, 10);
+    });
+  });
+
   describe("when no food has changed", () => {
     const awkward = buildFood({
       id: "00000000-0000-4000-8000-0000000000f1",

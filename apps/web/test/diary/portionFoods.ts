@@ -20,6 +20,7 @@ const OIL_ID = idOf(4);
 const MILK_ID = idOf(5);
 const YOGHURT_ID = idOf(6);
 const SYRUP_ID = idOf(7);
+const KETCHUP_ID = idOf(8);
 
 /** CSV rows 14-318: 1 small 101 g, 1 medium 118 g (default, position 1), 1 large 136 g. */
 export const banana: FoodWithPortions = {
@@ -165,6 +166,30 @@ export const syrup: FoodWithPortions = {
       food_id: SYRUP_ID,
       label: "1 tbsp",
       grams: 21,
+      is_default: true,
+      position: 0,
+    }),
+  ],
+};
+
+/** A branded sauce as Open Food Facts gives it: no density, and a serving of "1 tbsp (15 g)" that holds one. */
+export const ketchup: FoodWithPortions = {
+  food: makeFood({
+    id: KETCHUP_ID,
+    name: "Tomato ketchup",
+    source: "off",
+    source_ref: "5000000010011",
+    kcal: 100,
+    protein_g: 1,
+    fat_g: 0,
+    carbs_g: 25,
+  }),
+  portions: [
+    makePortion({
+      id: idOf(81),
+      food_id: KETCHUP_ID,
+      label: "1 tbsp (15 g)",
+      grams: 15,
       is_default: true,
       position: 0,
     }),

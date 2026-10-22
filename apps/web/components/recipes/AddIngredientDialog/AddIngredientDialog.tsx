@@ -48,7 +48,7 @@ export function AddIngredientDialog({ opener, onClose, onAdd }: AddIngredientDia
 
   function handleAdd() {
     if (draft.status === "ready" && draft.preview.amount !== null) {
-      onAdd(newIngredient(draft.food, draft.preview.amount));
+      onAdd(newIngredient(draft.food, draft.preview.amount, draft.portions));
     }
   }
 

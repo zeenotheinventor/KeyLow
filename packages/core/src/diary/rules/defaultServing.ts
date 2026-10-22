@@ -31,7 +31,11 @@ export function defaultServing(food: Food, portions: readonly FoodPortion[]): Se
   const portion = portions.find((candidate) => candidate.is_default);
 
   if (portion === undefined) {
-    const snapshot = buildFoodSnapshot(food, { quantity: DEFAULT_AMOUNT_IN_GRAMS, unit: "g" });
+    const snapshot = buildFoodSnapshot(food, {
+      quantity: DEFAULT_AMOUNT_IN_GRAMS,
+      unit: "g",
+      foodPortions: portions,
+    });
     return {
       quantity: DEFAULT_AMOUNT_IN_GRAMS,
       unit: "g",
@@ -41,7 +45,12 @@ export function defaultServing(food: Food, portions: readonly FoodPortion[]): Se
     };
   }
 
-  const snapshot = buildFoodSnapshot(food, { quantity: 1, unit: "portion", portion });
+  const snapshot = buildFoodSnapshot(food, {
+    quantity: 1,
+    unit: "portion",
+    portion,
+    foodPortions: portions,
+  });
   return {
     quantity: 1,
     unit: "portion",
