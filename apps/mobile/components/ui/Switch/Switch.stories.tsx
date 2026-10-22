@@ -11,12 +11,12 @@ import type { Meta, StoryObj } from "@storybook/react-native";
 type InteractiveSwitchProps = Extract<SwitchProps, { isDecorative?: false }>;
 
 // The food form draws the switch at the end of a row whose words are the screen's, so a story does too.
-function PortionDefaultRow({ initial }: { initial: boolean }) {
+function PortionDefaultRow({ initial, disabled }: { initial: boolean; disabled?: boolean }) {
   const [isOn, setIsOn] = useState(initial);
   return (
     <View className="h-control-md flex-row items-center justify-between">
       <Text variant="label-small">{FOOD_FORM.makeDefault}</Text>
-      <Switch isOn={isOn} label="Default portion" onValueChange={setIsOn} />
+      <Switch disabled={disabled} isOn={isOn} label="Default portion" onValueChange={setIsOn} />
     </View>
   );
 }
@@ -45,3 +45,6 @@ type Story = StoryObj<typeof meta>;
 export const Off: Story = { render: () => <PortionDefaultRow initial={false} /> };
 
 export const On: Story = { render: () => <PortionDefaultRow initial /> };
+
+// Not drawn: the switch dimmed to half, as a row whose setting cannot be changed has it.
+export const Disabled: Story = { render: () => <PortionDefaultRow disabled initial /> };

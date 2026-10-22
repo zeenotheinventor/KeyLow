@@ -93,6 +93,7 @@ describe("the package index", () => {
     "useRoutineTrendSets",
     "listTrendSets",
     "useMuscleState",
+    "useHeatSets",
     "useSession",
     "useWeightUnit",
     "useWeekComparison",

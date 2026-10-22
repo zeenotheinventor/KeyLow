@@ -136,6 +136,31 @@ describe("Switch", () => {
   });
 
   // The day complete row is the switch, and it draws the track and knob inside itself.
+  describe("when it is disabled", () => {
+    it("should be a disabled switch itself, and enabled by default", async () => {
+      await renderSwitch({ disabled: true });
+
+      expect(screen.getByRole("switch", { name: "Default portion" })).toBeDisabled();
+    });
+
+    it("should not be disabled unless asked", async () => {
+      await renderSwitch();
+
+      expect(screen.getByRole("switch", { name: "Default portion" })).toBeEnabled();
+    });
+
+    it("should neither hand on a change nor play the haptic when pressed", async () => {
+      const user = userEvent.setup();
+      const onValueChange = jest.fn();
+      await renderSwitch({ disabled: true, onValueChange });
+
+      await user.press(screen.getByRole("switch", { name: "Default portion" }));
+
+      expect(onValueChange).not.toHaveBeenCalled();
+      expect(mockImpact).not.toHaveBeenCalled();
+    });
+  });
+
   describe("as a drawing inside a switch of its own", () => {
     it("should add no switch of its own, so the row around it is the only one", async () => {
       await render(

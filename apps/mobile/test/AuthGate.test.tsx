@@ -2,11 +2,13 @@ import { KeyLowProvider } from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
 import { setUser } from "@sentry/react-native";
 import { AuthApiError, AuthRetryableFetchError } from "@supabase/supabase-js";
-import { act, cleanup, render, screen } from "@testing-library/react-native";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
+import { scheduledRemindersStorageKey } from "../lib/reminderScheduler";
 import { ThemeProvider } from "../lib/theme";
+import { notificationsState, resetNotificationsMock } from "./support/expoNotificationsMock";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import {
   emitAuthStateChange,
@@ -28,10 +30,24 @@ jest.mock(
   "expo-router",
   () => jest.requireActual<{ mockExpoRouter: unknown }>("./support/expoRouterMock").mockExpoRouter,
 );
+const mockStorageItems = new Map<string, string>();
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(mockStorageItems.get(key) ?? null),
+    setItem: (key: string, value: string) => {
+      mockStorageItems.set(key, value);
+      return Promise.resolve();
+    },
+  },
 }));
+jest.mock(
+  "expo-notifications",
+  () =>
+    jest.requireActual<typeof import("./support/expoNotificationsMock")>(
+      "./support/expoNotificationsMock",
+    ).mockExpoNotifications,
+);
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -58,6 +74,8 @@ async function renderGate(
 describe("AuthGate", () => {
   beforeEach(() => {
     resetRouterMock();
+    resetNotificationsMock();
+    mockStorageItems.clear();
     resetSupabaseMock();
     resetTermsBackend();
     termsBackend.row = {
@@ -197,6 +215,69 @@ describe("AuthGate", () => {
     });
 
     expect(routerMock.replace).toHaveBeenCalledWith("/(auth)/sign-in");
+  });
+
+  describe("the reminders when nobody is signed in", () => {
+    const scheduleOurs = () => {
+      for (const identifier of ["keylow-reminder:train:1", "someone-else:1"]) {
+        notificationsState.scheduled.set(identifier, {
+          identifier,
+          content: {},
+          trigger: { type: "date", date: 1 },
+        });
+      }
+      mockStorageItems.set(
+        scheduledRemindersStorageKey,
+        JSON.stringify([
+          { type: "train", fireAt: "2026-10-21T16:30:00.000Z", variantId: "train-1" },
+        ]),
+      );
+    };
+
+    it("should cancel ours and no other app's, and forget the stored plan, when the start finds no session", async () => {
+      scheduleOurs();
+      routerMock.segments = ["(auth)", "sign-in"];
+
+      await renderGate();
+
+      await waitFor(() => {
+        expect([...notificationsState.scheduled.keys()]).toEqual(["someone-else:1"]);
+      });
+      await waitFor(() => {
+        expect(mockStorageItems.get(scheduledRemindersStorageKey)).toBe("[]");
+      });
+    });
+
+    it("should cancel ours when a signed in user signs out while it is mounted", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: fakeSession },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "more"];
+      await renderGate();
+      scheduleOurs();
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+      });
+
+      await waitFor(() => {
+        expect([...notificationsState.scheduled.keys()]).toEqual(["someone-else:1"]);
+      });
+    });
+
+    it("should leave them alone while a user is signed in", async () => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: fakeSession },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "more"];
+      scheduleOurs();
+
+      await renderGate();
+
+      expect(notificationsState.scheduled.size).toBe(2);
+    });
   });
 
   describe("the user Sentry reports errors for", () => {

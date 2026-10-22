@@ -223,6 +223,20 @@ describe("reminder notifications", () => {
     });
   });
 
+  describe("a tap that opened the app and cannot be read", () => {
+    it("should still listen for taps, and not fail", () => {
+      mockExpoNotifications.getLastNotificationResponse.mockImplementationOnce(() => {
+        throw new TypeError("Cannot read properties of undefined");
+      });
+      const handler = jest.fn();
+
+      expect(() => onReminderTap(handler)).not.toThrow();
+      tapNotification("keylow-reminder:train:1", { type: "train" });
+
+      expect(handler).toHaveBeenCalledWith("train");
+    });
+  });
+
   describe("set up", () => {
     afterEach(() => {
       Platform.OS = "ios";

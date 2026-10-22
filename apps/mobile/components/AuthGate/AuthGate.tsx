@@ -3,9 +3,12 @@ import { useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 
+import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
 import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
 import { DeviceTimeZoneSync } from "../DeviceTimeZoneSync";
+import { ReminderScheduler } from "../ReminderScheduler";
+import { ReminderTapRouting } from "../ReminderTapRouting";
 import { SessionCover } from "../SessionCover";
 import { TermsGate } from "../TermsGate";
 
@@ -86,6 +89,9 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
     };
   }, [readStoredUserId]);
 
+  // Reminders are made from one person's training, so they go when the session does, a dead one at start-up too.
+  useCancelRemindersWhenSignedOut(isSessionLoaded && !isSignedIn);
+
   const firstSegment: string | undefined = segments[0];
   // A gate still loading has not decided yet, so a deep link to a modal is kept for an account that turns out to have accepted.
   const isTermsGateBlocking = termsGateState === "failed" || termsGateState === "accept";
@@ -122,7 +128,8 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
   // The children stay mounted so the navigator exists before the first redirect. The cover hides them until the stored session is read.
   // The terms gate is drawn over them the same way, and hides them from a screen reader, until the signed in
   // account is known to have accepted the current Terms. It mounts only with a session, so nothing reads
-  // the acceptance for a signed out user. The time zone sync mounts with it, for the same reason.
+  // the acceptance for a signed out user. The time zone sync, the reminder scheduler and the reminder tap
+  // routing mount with it, for the same reason.
   return (
     <>
       <View aria-hidden={termsGateState !== "open"} className="flex-1">
@@ -133,6 +140,8 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
         <>
           <TermsGate onStateChange={setTermsGateState} />
           <DeviceTimeZoneSync />
+          <ReminderScheduler />
+          <ReminderTapRouting />
         </>
       ) : null}
     </>

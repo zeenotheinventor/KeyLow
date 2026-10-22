@@ -13,6 +13,8 @@ type InteractiveSwitchProps = SwitchBaseProps & {
   /** The accessible name, such as "Default portion". The words beside the switch are the screen's. */
   label: string;
   onValueChange: (isOn: boolean) => void;
+  /** Dims the switch to half and stops it responding. A screen reader hears it is disabled. */
+  disabled?: boolean | undefined;
 };
 
 /**

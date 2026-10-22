@@ -260,6 +260,31 @@ describe("the More screen", () => {
     );
   });
 
+  describe("Reminders", () => {
+    it("should be an enabled row in Settings, above About, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const settings = within(screen.getByLabelText("Settings"));
+      const row = settings.getByRole("button", { name: "Reminders" });
+
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
+      const rows = settings.getAllByRole("button");
+      expect(rows.indexOf(row)).toBeLessThan(
+        rows.indexOf(settings.getByRole("button", { name: "About" })),
+      );
+    });
+
+    it("should open the Reminders screen when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "Reminders" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/reminders");
+    });
+  });
+
   describe("About", () => {
     it("should be an enabled row in Settings, with its icon and a chevron because it goes somewhere", async () => {
       await renderMore();

@@ -51,11 +51,12 @@ export function Switch(props: SwitchProps) {
     );
   }
 
-  const { isOn, label, onValueChange } = props;
+  const { isOn, label, onValueChange, disabled = false } = props;
   return (
     <PressableSurface
       checked={isOn}
-      className={`${trackClassName} ${look.trackClassName}`}
+      className={`${trackClassName} ${look.trackClassName} ${disabled ? "opacity-50" : ""}`}
+      disabled={disabled}
       haptic="select"
       hitSlop={trackHitSlop}
       label={label}

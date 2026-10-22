@@ -193,6 +193,58 @@ describe("reminder settings", () => {
       expect(await readReminderSettings()).toEqual(expected);
     });
 
+    it("should share one set of settings between two instances, and read storage once", async () => {
+      const first = await renderHook(() => useReminderSettings());
+      const second = await renderHook(() => useReminderSettings());
+      await waitFor(() => {
+        expect(second.result.current.isLoaded).toBe(true);
+      });
+
+      await act(async () => {
+        await first.result.current.update({ easeEnabled: true, trainTime: "06:15" });
+      });
+
+      expect(second.result.current.settings).toEqual(first.result.current.settings);
+      expect(second.result.current.settings.easeEnabled).toBe(true);
+      expect(second.result.current.settings.trainTime).toBe("06:15");
+      expect(mockGetItem).toHaveBeenCalledTimes(1);
+    });
+
+    it("should let an instance mounted later see a change made by one already mounted", async () => {
+      const first = await renderHook(() => useReminderSettings());
+      await waitFor(() => {
+        expect(first.result.current.isLoaded).toBe(true);
+      });
+      await act(async () => {
+        await first.result.current.update({ progressEnabled: true });
+      });
+
+      const second = await renderHook(() => useReminderSettings());
+
+      expect(second.result.current.isLoaded).toBe(true);
+      expect(second.result.current.settings.progressEnabled).toBe(true);
+    });
+
+    it("should read storage again once every instance has unmounted", async () => {
+      const first = await renderHook(() => useReminderSettings());
+      await waitFor(() => {
+        expect(first.result.current.isLoaded).toBe(true);
+      });
+      await first.unmount();
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ ...defaultReminderSettings, trainEnabled: true }),
+      );
+
+      const second = await renderHook(() => useReminderSettings());
+
+      await waitFor(() => {
+        expect(second.result.current.isLoaded).toBe(true);
+      });
+      expect(second.result.current.settings.trainEnabled).toBe(true);
+      expect(mockGetItem).toHaveBeenCalledTimes(2);
+    });
+
     it.each(["25:99", "24:00", "99:00"])(
       "should ignore a train time of %s, keeping the time it had and applying the other changes",
       async (trainTime) => {

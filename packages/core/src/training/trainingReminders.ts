@@ -93,8 +93,10 @@ const REMINDER_WINDOW_DAYS = 7;
  * sessions planned in between are not known to have happened.
  */
 const EASE_JUDGED_DAYS = 2;
-const EASE_TIME = { hour: 8, minute: 0 };
-const PROGRESS_TIME = { hour: 19, minute: 0 };
+/** When "Take it easy" fires, and the moment of the day the heat is judged at. The Reminders screen's words say it. */
+export const EASE_REMINDER_TIME = { hour: 8, minute: 0 };
+/** When "See your progress" fires, on a Sunday. The Reminders screen's words say it. */
+export const PROGRESS_REMINDER_TIME = { hour: 19, minute: 0 };
 const SUNDAY = 6;
 
 type Candidate = { type: TrainingReminderType; date: string; fireAt: Date };
@@ -189,7 +191,7 @@ export const planTrainingReminders = ({
     instantAtLocalTime(date, hour, minute, timeZone);
 
   const isLoaded = (day: TrainingReminderRoutineDay, date: string): boolean => {
-    const judgedAt = fireTime(date, EASE_TIME).toISOString();
+    const judgedAt = fireTime(date, EASE_REMINDER_TIME).toISOString();
     const states = muscleState(performedSets, judgedAt, params);
     return primaryMusclesOf(day).some(
       (muscle) => heatPercentOf(states[muscle].heat) >= LOADED_HEAT_PERCENT,
@@ -218,13 +220,13 @@ export const planTrainingReminders = ({
     if (day !== undefined && !finishedDates.has(date)) {
       const eased = settings.easeEnabled && offset < EASE_JUDGED_DAYS && isLoaded(day, date);
       if (eased) {
-        pushIfAhead("ease", date, fireTime(date, EASE_TIME));
+        pushIfAhead("ease", date, fireTime(date, EASE_REMINDER_TIME));
       } else if (settings.trainEnabled) {
         pushIfAhead("train", date, fireTime(date, trainTime));
       }
     }
     if (settings.progressEnabled && weeklyGain && weekday === SUNDAY) {
-      pushIfAhead("progress", date, fireTime(date, PROGRESS_TIME));
+      pushIfAhead("progress", date, fireTime(date, PROGRESS_REMINDER_TIME));
     }
   }
 
