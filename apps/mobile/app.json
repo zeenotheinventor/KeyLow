@@ -82,6 +82,13 @@
       ],
       "expo-system-ui",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#CCF249"
+        }
+      ],
+      [
         "@sentry/react-native/expo",
         {
           "url": "https://de.sentry.io/",
