@@ -146,9 +146,9 @@ describe("the density tables", () => {
   });
 
   it.each([...groupDensities, ...overrides])(
-    "should hold a plausible density for $code, between 0.3 and 1.6 g/ml",
+    "should hold a plausible density for $code, between 0.1 and 1.6 g/ml",
     ({ gPerMl }) => {
-      expect(gPerMl).toBeGreaterThanOrEqual(0.3);
+      expect(gPerMl).toBeGreaterThanOrEqual(0.1);
       expect(gPerMl).toBeLessThanOrEqual(1.6);
     },
   );

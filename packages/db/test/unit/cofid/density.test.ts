@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { COFID_GROUP_DENSITIES, estimateDensity } from "@keylow/core";
+import { COFID_DENSITY_OVERRIDES, COFID_GROUP_DENSITIES, estimateDensity } from "@keylow/core";
 import { describe, expect, it } from "vitest";
 
 import { parseCsv } from "../../../scripts/cofid/csv";
@@ -14,6 +14,7 @@ const [header = [], ...rows] = parseCsv(
 );
 const codeColumn = header.indexOf("food_code");
 const groupColumn = header.indexOf("food_group");
+const nameColumn = header.indexOf("food_name");
 
 const cofidFoodGroups = [...new Set(rows.map((row) => row[groupColumn] ?? ""))].sort();
 
@@ -51,6 +52,45 @@ describe("the CoFID group density table against the real CSV", () => {
     );
 
     expect(unused, `listed groups with no food: ${unused.join(", ")}`).toEqual([]);
+  });
+});
+
+describe("the CoFID per-food density overrides against the real CSV", () => {
+  const csvCodes = new Set(rows.map((row) => row[codeColumn]));
+
+  it("should only key an override by a food code that is in the CSV", () => {
+    const unknown = Object.keys(COFID_DENSITY_OVERRIDES).filter((code) => !csvCodes.has(code));
+
+    expect(unknown, `override codes not in the CoFID CSV: ${unknown.join(", ")}`).toEqual([]);
+  });
+
+  it.each([
+    ["13-830", "Garlic powder"],
+    ["13-880", "Pepper, black"],
+    ["13-881", "Pepper, white"],
+    ["13-879", "Paprika"],
+    ["13-873", "Chilli powder"],
+    ["13-874", "Cinnamon, ground"],
+    ["13-861", "Turmeric, ground"],
+    ["13-832", "Ginger, ground"],
+    ["13-889", "Cumin seeds"],
+    ["13-876", "Curry powder"],
+    ["13-878", "Oregano, dried, ground"],
+    ["17-367", "Salt"],
+    ["17-356", "Bicarbonate of soda"],
+    ["17-355", "Baking powder"],
+  ])("should give %s (%s) a cited density, so tsp and tbsp appear", (code, name) => {
+    const row = rows.find((candidate) => candidate[codeColumn] === code);
+
+    expect(row?.[nameColumn]).toBe(name);
+    expect(estimateDensity(cofidFoodByCode(code))?.basis).toBe("override");
+  });
+
+  it.each([
+    ["13-884", "mixed herbs, dried, a recipe of four herbs with no USDA twin"],
+    ["13-891", "oregano, fresh, which USDA does not weigh by the spoon"],
+  ])("should leave %s (%s) without a density", (code) => {
+    expect(estimateDensity(cofidFoodByCode(code))).toBeNull();
   });
 });
 

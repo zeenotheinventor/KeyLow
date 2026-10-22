@@ -45,6 +45,38 @@ const KING_ARTHUR_WEIGHT_CHART =
 const FAO_HONEY_SPECIFIC_GRAVITY =
   "FAO Value-added products from beekeeping, chapter 2 Honey, Table 2.4 (White, 1975): true specific gravity at 20 C is 1.4237 at 17 percent water and 1.4171 at 18 percent";
 
+const USDA_FDC_SR_LEGACY = "USDA FoodData Central SR Legacy https://fdc.nal.usda.gov";
+
+/** The US customary measures USDA weighs its household portions in, in millilitres. */
+const US_MEASURES = {
+  tsp: { name: "teaspoon", ml: 4.92892 },
+  tbsp: { name: "tablespoon", ml: 14.7868 },
+  cup: { name: "cup", ml: 236.588 },
+} as const;
+
+type UsMeasure = keyof typeof US_MEASURES;
+
+/**
+ * A density worked out from one USDA portion row: grams per US measure, divided by that measure's
+ * millilitres, to 3 significant figures. USDA rounds its weights to 0.1 g or 1 g, so the portion with the
+ * most grams has the least rounding error, and the rest are cross-checks in `detail`. `qualifier` is the
+ * text USDA adds to the measure, such as ", ground". The app's own spoons are 5 and 15 ml, a little larger
+ * than the US ones, so a spoon logged here weighs about 1.4 percent more than USDA's.
+ */
+const usdaPortionDensity = (
+  foods: string,
+  measure: UsMeasure,
+  grams: number,
+  qualifier = "",
+  detail = "",
+): DensityEntry => {
+  const { name, ml } = US_MEASURES[measure];
+  return {
+    gPerMl: Number((grams / ml).toPrecision(3)),
+    source: `${USDA_FDC_SR_LEGACY}, ${foods}: 1 ${measure}${qualifier} weighs ${grams} g, over the US ${name} of ${ml} ml${detail}`,
+  };
+};
+
 const milkDensity: DensityEntry = {
   gPerMl: 1.03,
   source: `${COFID_SPECIFIC_GRAVITY}: 1.03 for 12-313, 12-314, 12-418 and 12-419 (semi-skimmed), 12-320 (whole UHT) and 12-554 (skimmed UHT)`,
@@ -227,7 +259,7 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     gPerMl: 1.42,
     source: `${FAO_HONEY_SPECIFIC_GRAVITY}, and CoFID honey holds 17.5 percent water; King Arthur Baking weight chart agrees at 21 g per US tablespoon (14.787 ml)`,
   },
-  // Every entry below is the King Arthur Baking ingredient weight chart: grams per US cup (236.588 ml), or
+  // Every entry down to the butter is the King Arthur Baking ingredient weight chart: grams per US cup (236.588 ml), or
   // per half cup (118.294 ml) for butter. The chart states no filling method for flours, so read those as a
   // level spoon of loose flour. Brown sugar is the chart's packed figure and icing sugar its unsifted one.
   // Flours: the plain soft, strong white and self raising rows match a chart entry directly.
@@ -281,6 +313,197 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     gPerMl: 0.96,
     source: `${KING_ARTHUR_WEIGHT_CHART}: butter 113 g per half US cup (8 tablespoons, 118.294 ml), 0.955`,
   },
+  // Every entry below is a USDA FoodData Central SR Legacy household portion (a "1 tbsp", "1 tsp" or "1 cup"
+  // row of the food), read through the public API. Where a CoFID food has no USDA twin of its own the detail
+  // says which USDA food stands in for it. Foods with no row, or rows that disagree, have no entry.
+  // Porridge oats, unfortified
+  "11-788": usdaPortionDensity(
+    "FDC 173904 (Cereals, oats, regular and quick, not fortified, dry)",
+    "cup",
+    81,
+  ),
+  // Rice, white, long grain, raw
+  "11-861": usdaPortionDensity(
+    "FDC 168877 (Rice, white, long-grain, regular, raw, enriched)",
+    "cup",
+    185,
+  ),
+  // Cocoa powder
+  "12-545": usdaPortionDensity(
+    "FDC 169593 (Cocoa, dry powder, unsweetened)",
+    "cup",
+    86,
+    "",
+    "; its 1 tbsp row of 5.4 g gives 0.365",
+  ),
+  // Allspice, ground
+  "13-801": usdaPortionDensity("FDC 171315 (Spices, allspice, ground)", "tbsp", 6.0),
+  // Anise seeds
+  "13-802": usdaPortionDensity("FDC 171316 (Spices, anise seed)", "tbsp", 6.7, ", whole"),
+  // Basil, dried, ground
+  "13-805": usdaPortionDensity("FDC 171317 (Spices, basil, dried)", "tbsp", 4.5, ", ground"),
+  // Caraway seeds
+  "13-808": usdaPortionDensity("FDC 170918 (Spices, caraway seed)", "tbsp", 6.7),
+  // Cardamom, ground
+  "13-809": usdaPortionDensity("FDC 170919 (Spices, cardamom)", "tbsp", 5.8, ", ground"),
+  // Celery seeds
+  "13-810": usdaPortionDensity("FDC 170920 (Spices, celery seed)", "tbsp", 6.5),
+  // Coriander leaves, dried
+  "13-818": usdaPortionDensity("FDC 170921 (Spices, coriander leaf, dried)", "tbsp", 1.8),
+  // Curry powder, mixed flavours
+  "13-823": usdaPortionDensity("FDC 170924 (Spices, curry powder)", "tbsp", 6.3),
+  // Dill, dried
+  "13-825": usdaPortionDensity("FDC 171322 (Spices, dill weed, dried)", "tbsp", 3.1),
+  // Dill seeds
+  "13-826": usdaPortionDensity("FDC 170925 (Spices, dill seed)", "tbsp", 6.6),
+  // Fennel seeds
+  "13-827": usdaPortionDensity("FDC 171323 (Spices, fennel seed)", "tbsp", 5.8, ", whole"),
+  // Fenugreek seeds
+  "13-828": usdaPortionDensity("FDC 171324 (Spices, fenugreek seed)", "tbsp", 11.1),
+  // Garlic powder
+  "13-830": usdaPortionDensity("FDC 171325 (Spices, garlic powder)", "tbsp", 9.7),
+  // Ginger, ground
+  "13-832": usdaPortionDensity("FDC 170926 (Spices, ginger, ground)", "tbsp", 5.2),
+  // Marjoram, dried
+  "13-835": usdaPortionDensity("FDC 170928 (Spices, marjoram, dried)", "tbsp", 1.7),
+  // Mint, dried
+  "13-837": usdaPortionDensity(
+    "FDC 172239 (Spearmint, dried)",
+    "tbsp",
+    1.6,
+    "",
+    "; spearmint stands in for mint",
+  ),
+  // Parsley, dried
+  "13-845": usdaPortionDensity("FDC 170930 (Spices, parsley, dried)", "tbsp", 1.6),
+  // Pepper, cayenne, ground
+  "13-847": usdaPortionDensity("FDC 170932 (Spices, pepper, red or cayenne)", "tbsp", 5.3),
+  // Poppy seeds
+  "13-849": usdaPortionDensity("FDC 171330 (Spices, poppy seed)", "tbsp", 8.8),
+  // Sage, dried, ground
+  "13-854": usdaPortionDensity("FDC 170935 (Spices, sage, ground)", "tbsp", 2.0),
+  // Tarragon, dried, ground
+  "13-858": usdaPortionDensity("FDC 170937 (Spices, tarragon, dried)", "tbsp", 4.8, ", ground"),
+  // Turmeric, ground
+  "13-861": usdaPortionDensity("FDC 172231 (Spices, turmeric, ground)", "tbsp", 9.4),
+  // Chilli powder
+  "13-873": usdaPortionDensity(
+    "FDC 171319 (Spices, chili powder)",
+    "tbsp",
+    8.0,
+    "",
+    "; USDA chili powder is a seasoned blend, so a pure chilli powder may differ",
+  ),
+  // Cinnamon, ground
+  "13-874": usdaPortionDensity("FDC 171320 (Spices, cinnamon, ground)", "tbsp", 7.8),
+  // Coriander seeds
+  "13-875": usdaPortionDensity("FDC 170922 (Spices, coriander seed)", "tbsp", 5.0),
+  // Curry powder
+  "13-876": usdaPortionDensity("FDC 170924 (Spices, curry powder)", "tbsp", 6.3),
+  // Nutmeg, ground
+  "13-877": usdaPortionDensity("FDC 171326 (Spices, nutmeg, ground)", "tbsp", 7.0),
+  // Oregano, dried, ground
+  "13-878": usdaPortionDensity(
+    "FDC 171328 (Spices, oregano, dried)",
+    "tsp",
+    1.8,
+    ", ground",
+    "; USDA lists no tablespoon of ground oregano",
+  ),
+  // Paprika
+  "13-879": usdaPortionDensity("FDC 171329 (Spices, paprika)", "tbsp", 6.8),
+  // Pepper, black
+  "13-880": usdaPortionDensity("FDC 170931 (Spices, pepper, black)", "tbsp", 6.9, ", ground"),
+  // Pepper, white
+  "13-881": usdaPortionDensity("FDC 170933 (Spices, pepper, white)", "tbsp", 7.1, ", ground"),
+  // Rosemary, dried
+  "13-882": usdaPortionDensity("FDC 171333 (Spices, rosemary, dried)", "tbsp", 3.3),
+  // Thyme, dried, ground
+  "13-883": usdaPortionDensity("FDC 170938 (Spices, thyme, dried)", "tbsp", 4.3, ", ground"),
+  // Cumin seeds
+  "13-889": usdaPortionDensity("FDC 170923 (Spices, cumin seed)", "tbsp", 6.0, ", whole"),
+  // Peanut butter, smooth
+  "14-892": usdaPortionDensity(
+    "FDC 174266 (Peanut butter, smooth style, with salt) and FDC 172470 (Peanut butter, smooth style, without salt)",
+    "cup",
+    258,
+    "",
+    "; both foods weigh the same, and their 2 tbsp row of 32 g gives 1.08",
+  ),
+  // Syrup, corn, dark
+  "17-064": usdaPortionDensity(
+    "FDC 168836 (Syrups, corn, dark)",
+    "cup",
+    328,
+    "",
+    "; its 1 tbsp row is a whole 20 g, which rounds too coarsely to use",
+  ),
+  // Vinegar
+  "17-339": usdaPortionDensity(
+    "FDC 173469 (Vinegar, cider) and FDC 172240 (Vinegar, red wine)",
+    "cup",
+    239,
+    "",
+    "; FDC 172237 (Vinegar, distilled) is 238 g, which gives the same figure to 2 places",
+  ),
+  // Baking powder
+  "17-355": usdaPortionDensity(
+    "FDC 172803 (Leavening agents, baking powder, double-acting, sodium aluminum sulfate) and FDC 172804 (Leavening agents, baking powder, double-acting, straight phosphate)",
+    "tsp",
+    4.6,
+    "",
+    "; both foods weigh the same",
+  ),
+  // Bicarbonate of soda
+  "17-356": usdaPortionDensity("FDC 175040 (Leavening agents, baking soda)", "tsp", 4.6),
+  // Cream of tartar
+  "17-358": usdaPortionDensity("FDC 175041 (Leavening agents, cream of tartar)", "tsp", 3.0),
+  // Mustard powder
+  "17-362": usdaPortionDensity(
+    "FDC 170929 (Spices, mustard seed, ground)",
+    "tbsp",
+    6.3,
+    "",
+    "; mustard powder is ground mustard seed",
+  ),
+  // Mustard, smooth
+  "17-364": usdaPortionDensity(
+    "FDC 172234 (Mustard, prepared, yellow)",
+    "cup",
+    249,
+    "",
+    "; prepared yellow mustard stands in for smooth mustard",
+  ),
+  // Salt
+  "17-367": usdaPortionDensity(
+    "FDC 173468 (Salt, table)",
+    "cup",
+    292,
+    "",
+    "; its 1 tbsp row of 18 g gives 1.22",
+  ),
+  // Yeast, dried
+  "17-379": usdaPortionDensity(
+    "FDC 175043 (Leavening agents, yeast, baker's, active dry)",
+    "tbsp",
+    12.0,
+  ),
+  // Mayonnaise, standard, retail
+  "17-654": usdaPortionDensity(
+    "FDC 171009 (Salad dressing, mayonnaise, regular)",
+    "cup",
+    220,
+    "",
+    "; its 1 tbsp row of 13.8 g gives 0.93",
+  ),
+  // Soy sauce, light and dark varieties
+  "17-721": usdaPortionDensity(
+    "FDC 174277 (Soy sauce made from soy and wheat (shoyu))",
+    "cup",
+    255,
+    "",
+    "; its 1 tbsp row of 16 g gives 1.08",
+  ),
 };
 
 const lookUp = <Entry>(table: Readonly<Record<string, Entry>>, key: string): Entry | undefined =>
