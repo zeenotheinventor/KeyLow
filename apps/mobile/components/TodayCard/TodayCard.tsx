@@ -15,7 +15,9 @@ import type { TodayCardProps } from "./types";
  * `isStartAndResumeDisabled`, and View session is not, since it reads what is saved. Log another session
  * (Done) and Log a session (rest day) are drawn on no board (KEY-492): they are secondary buttons like the
  * no routine card's, under the card's copy. Pick day is drawn on no board either: it is a secondary button
- * under Start, Log another session and Log a session, and not on the card of a session in progress.
+ * under Start, Log another session and Log a session, and not on the card of a session in progress. The
+ * planned and rest cards carry one caption line when today's session made up an earlier day (KEY-531, drawn
+ * on no board): it sits under the load line, or under the rest day's body.
  */
 export function TodayCard({
   card,
@@ -30,6 +32,12 @@ export function TodayCard({
   onPickDay,
 }: TodayCardProps) {
   const copy = describeTodayCard(card, context);
+  const madeUpLine =
+    (copy.kind === "planned" || copy.kind === "rest") && copy.madeUpLine !== undefined ? (
+      <Text tone="secondary" variant="caption">
+        {copy.madeUpLine}
+      </Text>
+    ) : null;
   const pickDay =
     onPickDay === undefined ? null : (
       <Button
@@ -63,6 +71,7 @@ export function TodayCard({
             <Text tone="secondary" variant="caption">
               {copy.loadLine}
             </Text>
+            {madeUpLine}
             {onStart === undefined ? null : (
               <Button
                 className="mt-3"
@@ -152,6 +161,7 @@ export function TodayCard({
               {copy.title}
             </Text>
             {copy.body === null ? null : <Text tone="secondary">{copy.body}</Text>}
+            {madeUpLine}
             {onLogSession === undefined ? null : (
               <Button
                 className="mt-3"

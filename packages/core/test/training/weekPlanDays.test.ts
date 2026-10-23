@@ -1057,3 +1057,337 @@ describe("latestFinishedSession", () => {
     expect(latestFinishedSession([sameTimes, laterStart])).toBe(sameTimes);
   });
 });
+
+describe("a late make-up counts for the day it replaced (KEY-531)", () => {
+  /** The golden routine with a day moved to another weekday, to make the dates the cases need. */
+  const withDayOn = (dayId: string, weekday: number): WeekRoutine => ({
+    ...goldenRoutine,
+    days: goldenRoutine.days.map((day) => (day.id === dayId ? { ...day, weekday } : day)),
+  });
+  // Push Monday, Pull Tuesday, Legs Thursday and Push Friday: Saturday is a rest day.
+  const fridayRoutine = withDayOn(pushSaturdayDayId, 4);
+  // The last Push on Sunday, so a missed Sunday can be made up on the next Monday.
+  const sundayRoutine = withDayOn(pushSaturdayDayId, 6);
+
+  const FRIDAY_EVENING = "2026-10-16T20:00:00+01:00";
+  const SATURDAY_MORNING = "2026-10-17T09:00:00+01:00";
+
+  const legsOnFriday = sessionOn(1, "2026-10-16", {
+    routine_day_id: legsDayId,
+    sets: workingSets(squatId, 4),
+  });
+
+  describe("Thursday's Legs missed and done on Friday, a planned Push day", () => {
+    const plan = goldenWeekPlan({
+      routine: fridayRoutine,
+      sessions: [legsOnFriday],
+      now: FRIDAY_EVENING,
+    });
+
+    it("should read Thursday logged for Legs, made up by the Friday session, with its sets", () => {
+      expect(dayOf(plan, THURSDAY)).toMatchObject({
+        status: "logged",
+        madeUpBy: legsOnFriday,
+        sessionDay: { id: legsDayId, name: "Legs" },
+        sessions: [],
+        setsLogged: 4,
+      });
+    });
+
+    it("should read Friday as it would without the session: today, with nothing logged", () => {
+      expect(dayOf(plan, FRIDAY)).toMatchObject({
+        status: "today",
+        madeUpBy: null,
+        sessions: [],
+        setsLogged: 0,
+        sessionDay: null,
+      });
+    });
+
+    it("should read Friday missed once its date has passed, never extra", () => {
+      const later = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [legsOnFriday],
+        now: SATURDAY_MORNING,
+      });
+
+      expect(dayOf(later, FRIDAY).status).toBe("missed");
+    });
+
+    it("should keep the session in the week's sessions and count Thursday among the days done", () => {
+      expect(plan.sessions).toStrictEqual([legsOnFriday]);
+      expect(weekCaption(plan)).toStrictEqual({
+        plannedDayCount: 4,
+        loggedDayCount: 1,
+        loggedSessionCount: 1,
+      });
+    });
+
+    it("should leave madeUpBy null on every other day", () => {
+      expect(plan.days.map((day) => day.madeUpBy !== null)).toStrictEqual([
+        false,
+        false,
+        false,
+        true,
+        false,
+        false,
+        false,
+      ]);
+    });
+  });
+
+  it("should read a rest-day Saturday as rest, not extra, when Thursday's Legs is made up on it", () => {
+    const legsOnSaturday = sessionOn(1, "2026-10-17", { routine_day_id: legsDayId });
+
+    const plan = goldenWeekPlan({
+      routine: fridayRoutine,
+      sessions: [legsOnSaturday],
+      now: SATURDAY_MORNING,
+    });
+
+    expect(dayOf(plan, THURSDAY)).toMatchObject({ status: "logged", madeUpBy: legsOnSaturday });
+    expect(dayOf(plan, SATURDAY)).toMatchObject({ status: "rest", sessions: [], setsLogged: 0 });
+  });
+
+  describe("two make-ups for one missed day", () => {
+    const legsOnSaturday = sessionOn(2, "2026-10-17", { routine_day_id: legsDayId });
+
+    it("should credit Thursday with the first and read the second as an extra session on a rest Saturday", () => {
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [legsOnFriday, legsOnSaturday],
+        now: "2026-10-17T20:00:00+01:00",
+      });
+
+      expect(dayOf(plan, THURSDAY).madeUpBy).toBe(legsOnFriday);
+      expect(dayOf(plan, FRIDAY).status).toBe("missed");
+      expect(dayOf(plan, SATURDAY)).toMatchObject({
+        status: "extra",
+        sessions: [legsOnSaturday],
+        madeUpBy: null,
+      });
+    });
+
+    it("should fill the planned Saturday's slot with the second", () => {
+      const plan = goldenWeekPlan({
+        sessions: [legsOnFriday, legsOnSaturday],
+        now: "2026-10-17T20:00:00+01:00",
+      });
+
+      expect(dayOf(plan, THURSDAY).madeUpBy).toBe(legsOnFriday);
+      expect(dayOf(plan, SATURDAY)).toMatchObject({ status: "logged", sessions: [legsOnSaturday] });
+    });
+
+    it("should credit the one that started first on one date, comparing moments and not text", () => {
+      // 10:00+01:00 is 09:00Z, before 09:30Z, though its text sorts after.
+      const earlier = sessionOn(8, "2026-10-16", {
+        routine_day_id: legsDayId,
+        started_at: "2026-10-16T10:00:00+01:00",
+        ended_at: "2026-10-16T11:00:00+01:00",
+      });
+      const later = sessionOn(3, "2026-10-16", {
+        routine_day_id: legsDayId,
+        started_at: "2026-10-16T09:30:00Z",
+        ended_at: "2026-10-16T10:30:00Z",
+      });
+
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [later, earlier],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY).madeUpBy).toBe(earlier);
+      expect(dayOf(plan, FRIDAY)).toMatchObject({ status: "logged", sessions: [later] });
+    });
+
+    it("should break a tie on the start by the id", () => {
+      const first = sessionOn(4, "2026-10-16", { routine_day_id: legsDayId });
+      const second = sessionOn(5, "2026-10-16", { routine_day_id: legsDayId });
+
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [second, first],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY).madeUpBy).toBe(first);
+    });
+  });
+
+  describe("a pick that is not a make-up", () => {
+    it("should fill Tuesday's slot when Tuesday does Thursday's Legs, and leave Thursday planned", () => {
+      const legsOnTuesday = sessionOn(1, "2026-10-13", { routine_day_id: legsDayId });
+
+      const plan = goldenWeekPlan({ sessions: [legsOnTuesday], now: "2026-10-13T21:00:00+01:00" });
+
+      expect(dayOf(plan, TUESDAY)).toMatchObject({ status: "logged", sessions: [legsOnTuesday] });
+      expect(dayOf(plan, THURSDAY)).toMatchObject({ status: "planned", madeUpBy: null });
+    });
+
+    it("should fill the slot of the date it names when a day is done on its own date", () => {
+      const legsOnThursday = sessionOn(1, "2026-10-15", { routine_day_id: legsDayId });
+
+      const plan = goldenWeekPlan({ sessions: [legsOnThursday], now: "2026-10-15T21:00:00+01:00" });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({ status: "logged", madeUpBy: null });
+    });
+  });
+
+  describe("a missed day that is not open to a make-up", () => {
+    it("should fall back when Thursday has a session of its own, though Friday does Legs", () => {
+      const mondayPush = sessionOn(1, "2026-10-12", { routine_day_id: pushMondayDayId });
+      const tuesdayPull = sessionOn(2, "2026-10-13", { routine_day_id: pullDayId });
+      const pullOnThursday = sessionOn(3, "2026-10-15", { routine_day_id: pullDayId });
+      const legsOnFridayAgain = sessionOn(4, "2026-10-16", { routine_day_id: legsDayId });
+
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [mondayPush, tuesdayPull, pullOnThursday, legsOnFridayAgain],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({
+        status: "logged",
+        sessions: [pullOnThursday],
+        madeUpBy: null,
+      });
+      expect(dayOf(plan, FRIDAY)).toMatchObject({
+        status: "logged",
+        sessions: [legsOnFridayAgain],
+      });
+    });
+
+    it("should fall back when the date is before the routine was made active", () => {
+      const plan = goldenWeekPlan({
+        routine: { ...fridayRoutine, activeFrom: "2026-10-16" },
+        sessions: [legsOnFriday],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({ status: "rest", madeUpBy: null });
+      expect(dayOf(plan, FRIDAY)).toMatchObject({ status: "logged", sessions: [legsOnFriday] });
+    });
+
+    it("should make Legs up on the day the routine was made active", () => {
+      const plan = goldenWeekPlan({
+        routine: { ...fridayRoutine, activeFrom: "2026-10-15" },
+        sessions: [legsOnFriday],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY).madeUpBy).toBe(legsOnFriday);
+    });
+
+    it("should fall back when Thursday's own session is still open", () => {
+      const openLegsOnThursday = sessionOn(5, "2026-10-15", {
+        routine_day_id: legsDayId,
+        ended_at: null,
+      });
+
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [openLegsOnThursday, legsOnFriday],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({ status: "in_progress", madeUpBy: null });
+      expect(dayOf(plan, FRIDAY)).toMatchObject({ status: "logged", sessions: [legsOnFriday] });
+    });
+
+    it("should never make a day up with a session that is still open", () => {
+      const openLegsOnFriday = sessionOn(5, "2026-10-16", {
+        routine_day_id: legsDayId,
+        ended_at: null,
+      });
+
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [openLegsOnFriday],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY)).toMatchObject({ status: "missed", madeUpBy: null });
+      expect(dayOf(plan, FRIDAY).status).toBe("in_progress");
+    });
+
+    it("should not count a deleted session on Thursday as one of its own", () => {
+      const deleted = sessionOn(6, "2026-10-15", { deleted_at: "2026-10-15T20:00:00Z" });
+
+      const plan = goldenWeekPlan({
+        routine: fridayRoutine,
+        sessions: [deleted, legsOnFriday],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(dayOf(plan, THURSDAY).madeUpBy).toBe(legsOnFriday);
+    });
+
+    it("should credit nothing in either week for a missed Sunday done on the next Monday", () => {
+      const pushOnNextMonday = sessionOn(1, "2026-10-19", { routine_day_id: pushSaturdayDayId });
+
+      const thisWeek = goldenWeekPlan({
+        routine: sundayRoutine,
+        sessions: [pushOnNextMonday],
+        now: "2026-10-19T20:00:00+01:00",
+      });
+      const nextWeek = goldenWeekPlan({
+        routine: sundayRoutine,
+        sessions: [pushOnNextMonday],
+        weekStart: "2026-10-19",
+        now: "2026-10-19T20:00:00+01:00",
+      });
+
+      expect(thisWeek.days.map((day) => day.madeUpBy)).toStrictEqual(Array(7).fill(null));
+      expect(dayOf(thisWeek, SUNDAY).status).toBe("missed");
+      expect(nextWeek.days.map((day) => day.madeUpBy)).toStrictEqual(Array(7).fill(null));
+      expect(dayOf(nextWeek, MONDAY)).toMatchObject({
+        status: "logged",
+        sessions: [pushOnNextMonday],
+      });
+      expect(dayOf(nextWeek, SUNDAY).status).toBe("planned");
+    });
+
+    it("should leave a session that names a day with no weekday as it was", () => {
+      const armsOnFriday = sessionOn(1, "2026-10-16", { routine_day_id: anyDay.id });
+
+      const plan = goldenWeekPlan({
+        routine: routineWithAnyDay,
+        sessions: [armsOnFriday],
+        now: FRIDAY_EVENING,
+      });
+
+      expect(plan.days.map((day) => day.madeUpBy)).toStrictEqual(Array(7).fill(null));
+      expect(dayOf(plan, FRIDAY)).toMatchObject({ status: "logged", sessions: [armsOnFriday] });
+    });
+  });
+
+  describe("a chain: Monday missed, Tuesday does Monday's day, Wednesday does Tuesday's day", () => {
+    const pushOnTuesday = sessionOn(1, "2026-10-13", { routine_day_id: pushMondayDayId });
+    const pullOnWednesday = sessionOn(2, "2026-10-14", { routine_day_id: pullDayId });
+    const input = { sessions: [pushOnTuesday, pullOnWednesday], now: "2026-10-14T20:00:00+01:00" };
+
+    it("should credit Monday with Tuesday's session and Tuesday with Wednesday's", () => {
+      const plan = goldenWeekPlan(input);
+
+      expect(statusesOf(plan)).toStrictEqual([
+        "logged",
+        "logged",
+        "rest",
+        "planned",
+        "rest",
+        "planned",
+        "rest",
+      ]);
+      expect(dayOf(plan, MONDAY).madeUpBy).toBe(pushOnTuesday);
+      expect(dayOf(plan, TUESDAY)).toMatchObject({ madeUpBy: pullOnWednesday, sessions: [] });
+      expect(dayOf(plan, WEDNESDAY)).toMatchObject({ status: "rest", sessions: [] });
+    });
+
+    it("should give the same week whatever order the sessions come in", () => {
+      expect(
+        goldenWeekPlan({ ...input, sessions: [pullOnWednesday, pushOnTuesday] }).days,
+      ).toStrictEqual(goldenWeekPlan(input).days);
+    });
+  });
+});

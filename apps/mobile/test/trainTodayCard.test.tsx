@@ -430,6 +430,31 @@ describe("the Today card", () => {
     });
   });
 
+  describe("when today's session made up an earlier day (KEY-531)", () => {
+    const madeUp = [{ date: "2026-10-13", dayName: "Pull" }];
+
+    it("should say the day was made up, and still offer to start today's day", async () => {
+      const onStart = jest.fn();
+      await renderCard({ ...planned, madeUp }, thursday, { onStart });
+
+      expect(screen.getByText("Pull made up for Tuesday")).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Start Legs" })).toBeOnTheScreen();
+    });
+
+    it("should say it on the rest day card too", async () => {
+      await renderCard({ ...rest, madeUp }, wednesday);
+
+      expect(screen.getByText("Pull made up for Tuesday")).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: TRAIN_TODAY_CARD.restTitle })).toBeOnTheScreen();
+    });
+
+    it("should say nothing about it when no day was made up", async () => {
+      await renderCard(planned, thursday);
+
+      expect(screen.queryByText(/made up/)).not.toBeOnTheScreen();
+    });
+  });
+
   describe("rest", () => {
     it("should show the rest day with the next day and the muscles still recovering", async () => {
       await renderCard(rest, wednesday);

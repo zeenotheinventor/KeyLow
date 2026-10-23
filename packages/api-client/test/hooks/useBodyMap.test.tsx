@@ -15,7 +15,12 @@ import { z } from "zod";
 import { useBodyMap } from "../../src/hooks/useBodyMap";
 import { getActiveRoutine, listWeekSessions } from "../../src/repos/training";
 import { createTestClient } from "../createTestClient";
-import { GOLDEN_WEEK_START, goldenWeekData } from "../support/goldenWeekRows";
+import {
+  GOLDEN_WEEK_START,
+  goldenRoutine,
+  goldenSessions,
+  goldenWeekData,
+} from "../support/goldenWeekRows";
 import { installTrainingFake, routineRow, sessionRow, setRow } from "../support/training";
 import { trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
@@ -600,6 +605,36 @@ describe("useBodyMap, the scrubber days", () => {
 
     expect(sunday.result.current.data?.days[5]?.status).toBe("missed");
     expect(saturday.result.current.data?.days[5]?.status).toBe("today");
+  });
+
+  it("should dot Tuesday logged and Wednesday rest when Tuesday's Pull is made up on Wednesday (KEY-531)", async () => {
+    const [monday, , thursday] = goldenSessions;
+    const pullDay = goldenRoutine.routine_days[1];
+    installTrainingFake(server, {
+      ...goldenWeekData,
+      sessions: [
+        monday,
+        thursday,
+        sessionRow({
+          local_date: "2026-10-14",
+          routine_day_id: pullDay?.id,
+          started_at: "2026-10-14T17:00:00+01:00",
+          ended_at: "2026-10-14T18:00:00+01:00",
+        }),
+      ],
+    });
+
+    const { result } = renderBodyMap();
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.days.slice(0, 4).map((day) => day.status)).toStrictEqual([
+      "logged",
+      "logged",
+      "rest",
+      "in_progress",
+    ]);
   });
 
   it("should let every day be picked in Projected", async () => {

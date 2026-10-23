@@ -425,7 +425,8 @@ describe("PlanWeekStrip", () => {
     });
 
     it("should open the session of a day picked in place of the planned one from the date it was done on", async () => {
-      // Pull was done on Thursday, which plans Legs: Thursday reads logged for Pull and opens that session.
+      // Pull was done on Thursday, which plans Legs, after Tuesday's Pull was done on time: Thursday reads
+      // logged for Pull and opens that session. Without Tuesday's Pull it would make Tuesday up (KEY-531).
       const pullOnThursday = session(
         "pull-thursday",
         "2026-10-15",
@@ -436,7 +437,7 @@ describe("PlanWeekStrip", () => {
       const onViewSession = jest.fn();
       const user = userEvent.setup();
       await renderStrip(
-        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, pullOnThursday]),
+        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, tuesdayPull, pullOnThursday]),
         onViewSession,
       );
 
@@ -450,21 +451,82 @@ describe("PlanWeekStrip", () => {
     });
 
     it("should leave the picked day's own date alone, since nothing was logged on it", async () => {
-      // Pull, planned for Tuesday, was done on Thursday: Tuesday stays a planned day (here missed) with no session.
-      const pullOnThursday = session(
-        "pull-thursday",
-        "2026-10-15",
-        "pull",
+      // Legs, planned for Thursday, was done on Tuesday: Tuesday opens it, and Thursday stays planned with no session.
+      const legsOnTuesday = session(
+        "legs-tuesday",
+        "2026-10-13",
+        "legs",
         6,
-        "2026-10-15T17:00:00+01:00",
+        "2026-10-13T19:00:00+01:00",
       );
       await renderStrip(
-        planAt("2026-10-15T16:55:00Z", goldenRoutine, [mondayPush, pullOnThursday]),
+        planAt("2026-10-14T16:55:00Z", goldenRoutine, [mondayPush, legsOnTuesday]),
         jest.fn(),
       );
 
-      expect(screen.queryByRole("button", { name: /^Tuesday/ })).toBeNull();
-      expect(screen.getByLabelText("Tuesday 13 October, Pull, missed")).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: /^Tuesday 13 October/ })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Thursday/ })).toBeNull();
+      expect(
+        screen.getByLabelText("Thursday 15 October, Legs, planned, 16 sets"),
+      ).toBeOnTheScreen();
+    });
+  });
+
+  describe("with a day made up later in the week (KEY-531)", () => {
+    // Tuesday's Pull was missed and done on Wednesday, a rest day, at 18:00 to 18:51.
+    const pullOnWednesday = session(
+      "pull-wednesday",
+      "2026-10-14",
+      "pull",
+      12,
+      "2026-10-14T18:51:00+01:00",
+    );
+    const wednesdayEvening = () =>
+      planAt("2026-10-14T19:30:00+01:00", goldenRoutine, [mondayPush, pullOnWednesday]);
+
+    it("should say Tuesday's Pull was made up on Wednesday, with the sets of the make-up", async () => {
+      await renderStrip(wednesdayEvening());
+
+      expect(
+        screen.getByLabelText("Tuesday 13 October, Pull, made up on Wednesday, 12 sets"),
+      ).toBeOnTheScreen();
+    });
+
+    it("should draw the made-up day as the tick of any logged day", async () => {
+      await renderStrip(wednesdayEvening());
+
+      const mark = markOf("Tuesday 13 October, Pull, made up on Wednesday, 12 sets");
+
+      expect(mark).toHaveStyle({ backgroundColor: mutedColor("success-muted") });
+      expect(within(mark).getByTestId("week-day-check")).toBeOnTheScreen();
+    });
+
+    it("should read Wednesday as a rest day, since the make-up is not Wednesday's", async () => {
+      await renderStrip(wednesdayEvening());
+
+      expect(screen.getByLabelText("Wednesday 14 October, today, rest day")).toBeOnTheScreen();
+    });
+
+    it("should count Tuesday in the caption", async () => {
+      await renderStrip(wednesdayEvening());
+
+      expect(screen.getByText("Mon 12 to Sun 18 Oct · 2 of 4 done")).toBeOnTheScreen();
+    });
+
+    it("should make Tuesday a button that opens the make-up session, and not Wednesday", async () => {
+      const onViewSession = jest.fn();
+      const user = userEvent.setup();
+      await renderStrip(wednesdayEvening(), onViewSession);
+
+      expect(screen.queryByRole("button", { name: /^Wednesday/ })).toBeNull();
+      await user.press(
+        screen.getByRole("button", {
+          name: "Tuesday 13 October, Pull, made up on Wednesday, 12 sets, open session",
+        }),
+      );
+
+      expect(onViewSession).toHaveBeenCalledTimes(1);
+      expect(onViewSession).toHaveBeenCalledWith("pull-wednesday");
     });
   });
 });

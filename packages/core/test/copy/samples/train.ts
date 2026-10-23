@@ -48,6 +48,7 @@ const weekDay = {
   sessionDay: legsDay,
   setsLogged: 8,
   setsPlanned: 16,
+  madeUpBy: null,
 } as const;
 
 /** Every sentence of a Today card's copy, whatever its kind. */
@@ -60,6 +61,18 @@ export const samples: Record<string, () => string[]> = {
   describeTodayHeading: () => [copy.describeTodayHeading("2026-10-15")],
   describeTodayCard: () => [
     ...sentencesOf(copy.describeTodayCard(planned, thursday)),
+    ...sentencesOf(
+      copy.describeTodayCard(
+        {
+          ...planned,
+          madeUp: [
+            { date: "2026-10-12", dayName: "Push" },
+            { date: "2026-10-13", dayName: "Pull" },
+          ],
+        },
+        thursday,
+      ),
+    ),
     ...sentencesOf(copy.describeTodayCard(inProgress, thursday)),
     ...sentencesOf(
       copy.describeTodayCard({ ...inProgress, dayName: null, setsPlanned: 0 }, thursday),
@@ -69,6 +82,12 @@ export const samples: Record<string, () => string[]> = {
     ...sentencesOf(
       copy.describeTodayCard(
         { kind: "rest", next: { date: "2026-10-15", id: "legs", name: "Legs" } },
+        wednesday,
+      ),
+    ),
+    ...sentencesOf(
+      copy.describeTodayCard(
+        { kind: "rest", next: null, madeUp: [{ date: "2026-10-13", dayName: "Legs" }] },
         wednesday,
       ),
     ),
@@ -99,8 +118,12 @@ export const samples: Record<string, () => string[]> = {
             { ...weekDay, status },
             hasRoutine,
           );
+          const madeUp = copy.describeTrainWeekDay(
+            { ...weekDay, status, madeUpBy: { local_date: "2026-10-16" } },
+            hasRoutine,
+          );
           // A rest day with no routine has no label to say, which is the one empty string by design.
-          return [weekday, ...(label === "" ? [] : [label]), accessibleName];
+          return [weekday, ...(label === "" ? [] : [label]), accessibleName, madeUp.accessibleName];
         }),
     ),
   describeSessionClock: () => [

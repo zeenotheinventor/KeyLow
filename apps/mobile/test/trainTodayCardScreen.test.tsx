@@ -361,6 +361,47 @@ describe("the Train home's Today card", () => {
     });
   });
 
+  describe("on Wednesday at 12:00, with Tuesday's Pull made up that morning (KEY-531)", () => {
+    const pullOnWednesday = {
+      ...tuesdayPull,
+      id: "44444444-4444-4444-8444-000000000099",
+      local_date: "2026-10-14",
+      started_at: "2026-10-14T09:00:00+01:00",
+      ended_at: "2026-10-14T09:50:00+01:00",
+    };
+
+    beforeEach(() => {
+      trainBackend.routine = goldenRoutine;
+      trainBackend.weekSessions = [mondayPush, pullOnWednesday];
+      mockNow = new Date(WEDNESDAY_1200);
+    });
+
+    it("should keep the rest day card, with a line saying Pull was made up for Tuesday", async () => {
+      await renderTrain(allHandlers());
+
+      expect(
+        await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText("Pull made up for Tuesday")).toBeOnTheScreen();
+      expect(screen.getByText("Next: Legs on Thursday.")).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "View session" })).toBeNull();
+    });
+
+    it("should read Tuesday as made up on the strip, and open the session that made it up", async () => {
+      const handlers = allHandlers();
+      const user = userEvent.setup();
+      await renderTrain(handlers);
+
+      await user.press(
+        await screen.findByRole("button", {
+          name: "Tuesday 13 October, Pull, made up on Wednesday, 0 sets, open session",
+        }),
+      );
+
+      expect(handlers.onViewSession).toHaveBeenCalledWith("44444444-4444-4444-8444-000000000099");
+    });
+  });
+
   describe("in the user's time zone, not UTC", () => {
     it("should show Friday's rest day at 00:30 BST on Friday, which is still Thursday in UTC", async () => {
       seedGoldenWeekThrough("rest");
