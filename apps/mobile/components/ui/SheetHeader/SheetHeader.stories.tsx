@@ -1,6 +1,7 @@
 import { View } from "react-native";
 
 import { SheetHeader } from "./SheetHeader";
+import { Button } from "../Button";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
 
@@ -77,6 +78,18 @@ export const TwoControlsDisabled: Story = {
       { ...editAndMore[1], disabled: true },
     ],
   },
+};
+
+// The routine editor: Cancel editing, the title, More and then Save. A control and a slot together draw the
+// control first. No board draws the More control. The slot is a React element, which a story's args cannot
+// hold, so the story renders the header itself.
+export const ControlAndSlot: Story = {
+  args: {
+    title: "Edit routine",
+    leading: { icon: "ChevronLeft", label: "Cancel editing", onPress: () => undefined },
+    trailing: { icon: "Ellipsis", label: "More for this routine", onPress: () => undefined },
+  },
+  render: (args) => <SheetHeader {...args} trailingSlot={<Button size="sm">Save</Button>} />,
 };
 
 // The title stays on one line, truncated, in the space the controls leave.

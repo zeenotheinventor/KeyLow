@@ -23,6 +23,8 @@ import {
   describeRestoreName,
   describeRoutineRule,
   describeWeekdayPickerTitle,
+  ROUTINE_ARCHIVE_FAILED,
+  ROUTINE_ARCHIVE_UNSAVED,
   ROUTINE_ARCHIVED_TOAST,
   ROUTINE_DAY_CONTROLS,
   ROUTINE_DISCARD,
@@ -94,6 +96,16 @@ describe("the Routines screen's fixed words", () => {
     expect(ROUTINE_RESTORE_FAILED).toBe(
       "Your routine was not restored. Check your connection, then try again.",
     );
+  });
+
+  it("should say an archive that did not go through, worded as the restore", () => {
+    expect(ROUTINE_ARCHIVE_FAILED).toBe(
+      "Your routine was not archived. Check your connection, then try again.",
+    );
+  });
+
+  it("should say why Archive routine is dimmed while the draft has unsaved changes", () => {
+    expect(ROUTINE_ARCHIVE_UNSAVED).toBe("Save or cancel your changes first.");
   });
 
   it("should count the archived routines on the link", () => {
@@ -274,6 +286,8 @@ describe("the routine editor", () => {
       repsHeading: "Reps",
       rirHeading: "RIR",
       addExerciseAction: "Add exercise",
+      moreLabel: "More for this routine",
+      archiveAction: "Archive routine",
     });
   });
 

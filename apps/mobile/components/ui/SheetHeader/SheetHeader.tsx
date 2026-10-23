@@ -42,7 +42,8 @@ const variants = {
  * The top of a sheet: a control at the left, a centred title and an optional control at the right, or two.
  * The screen gives the top inset and the header gives the 12 points under it, as the search field's dock
  * gives the 12 above the bottom inset. With two controls on the right the title is centred in the space
- * between the left control and the pair.
+ * between the left control and the pair. A control and a slot together draw the control first and the slot
+ * after it, with 8 points between, and the title sits in what they leave.
  */
 export function SheetHeader({
   variant = "sheet",
@@ -69,17 +70,30 @@ export function SheetHeader({
     );
   }
 
+  function renderTrailingControls(controls: NonNullable<SheetHeaderProps["trailing"]>) {
+    if ("icon" in controls) {
+      return renderControl(controls, look.trailingIconSize);
+    }
+    return (
+      <View className="shrink-0 flex-row gap-2" testID="sheet-header-trailing">
+        {controls.map((control) => renderControl(control, look.trailingIconSize))}
+      </View>
+    );
+  }
+
   function renderTrailing() {
     if (trailing === undefined) {
       // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
       return trailingSlot ?? <View className="w-touch-target" testID="sheet-header-empty-slot" />;
     }
-    if ("icon" in trailing) {
-      return renderControl(trailing, look.trailingIconSize);
+    if (trailingSlot === undefined) {
+      return renderTrailingControls(trailing);
     }
+    // Controls and a slot together, as the routine editor has More and Save: the controls first, then the slot.
     return (
-      <View className="shrink-0 flex-row gap-2" testID="sheet-header-trailing">
-        {trailing.map((control) => renderControl(control, look.trailingIconSize))}
+      <View className="shrink-0 flex-row items-center gap-2">
+        {renderTrailingControls(trailing)}
+        {trailingSlot}
       </View>
     );
   }

@@ -1,5 +1,7 @@
 import { useSaveRoutine } from "@keylow/api-client";
 import {
+  ARCHIVE_ACTIVE_REFUSAL,
+  ROUTINE_ARCHIVE_UNSAVED,
   ROUTINE_DAY_CONTROLS,
   ROUTINE_DISCARD,
   ROUTINE_EDITOR,
@@ -27,6 +29,7 @@ import {
   summaryOf,
 } from "./routineDraftReducer";
 import { routineMarksOf } from "./routineMarks";
+import { useArchiveRoutineWithUndo } from "./useArchiveRoutineWithUndo";
 import { leaveRoutineEditor, leaveRoutineEditorSaved } from "../../lib/leaveRoutineEditor";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
@@ -129,10 +132,17 @@ const moveItems = (isFirst: boolean, isLast: boolean, move: (by: MoveDirection) 
  * and down. Closing with changes asks first, by the header's Cancel, the Android back button and the iOS
  * swipe back alike, but never after a save.
  */
-export function RoutineEditor({ initialDraft, exerciseNames, routineId }: RoutineEditorProps) {
+export function RoutineEditor({
+  initialDraft,
+  exerciseNames,
+  routineId,
+  isActive = false,
+  isArchived = false,
+}: RoutineEditorProps) {
   const router = useRouter();
   const toast = useToast();
   const saveRoutine = useSaveRoutine();
+  const archiveRoutine = useArchiveRoutineWithUndo();
   const insets = useSafeAreaInsets();
   const [startingState] = useState(() =>
     startingStateOf(initialDraft ?? emptyDraft, exerciseNames),
@@ -141,7 +151,8 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
   const [openSheet, setOpenSheet] = useState<OpenSheet | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
-  const [exit, setExit] = useState<"discarded" | "saved" | null>(null);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+  const [exit, setExit] = useState<"discarded" | "saved" | "archived" | null>(null);
   const isLeaving = exit !== null;
   // Marks show from the first press of Save with problems, and follow the draft after.
   const [areMarksShown, setAreMarksShown] = useState(false);
@@ -184,7 +195,7 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
   useEffect(() => {
     if (exit === "discarded") {
       leaveRoutineEditor(router);
-    } else if (exit === "saved") {
+    } else if (exit === "saved" || exit === "archived") {
       leaveRoutineEditorSaved(router);
     }
   }, [exit, router]);
@@ -266,6 +277,33 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
     toast.show({ message: ROUTINE_SAVE_FAILED, tone: "danger", icon: "CircleAlert" });
   }
 
+  // Why Archive routine is dimmed, if it is. The active routine is told first, since saving does not change it.
+  // A save on its way counts as unsaved changes even when the draft is unchanged, or the save and the archive
+  // would each leave the screen.
+  const archiveDimmedReason = isActive
+    ? ARCHIVE_ACTIVE_REFUSAL
+    : isChanged || saveRoutine.isPending
+      ? ROUTINE_ARCHIVE_UNSAVED
+      : undefined;
+
+  async function archive() {
+    if (routineId === undefined || archiveDimmedReason !== undefined) {
+      return;
+    }
+    const isArchivedNow = await archiveRoutine(routineId);
+    setIsMoreOpen(false);
+    if (isArchivedNow) {
+      // The hold on leaving lifts first, and the way out runs after the render that lifted it.
+      setExit("archived");
+    }
+  }
+
+  function openMore() {
+    // A focused field would keep the keyboard up over the sheet.
+    Keyboard.dismiss();
+    setIsMoreOpen(true);
+  }
+
   function close() {
     // The save is on its way and cannot be taken back, so leaving would only look like a discard.
     if (isSaveHolding) {
@@ -309,6 +347,11 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
       <SheetHeader
         leading={{ icon: "ChevronLeft", label: ROUTINE_EDITOR.cancelLabel, onPress: close }}
         title={initialDraft === undefined ? ROUTINE_EDITOR.newTitle : ROUTINE_EDITOR.title}
+        trailing={
+          routineId === undefined || isArchived
+            ? undefined
+            : { icon: "Ellipsis", label: ROUTINE_EDITOR.moreLabel, onPress: openMore }
+        }
         trailingSlot={
           <Button
             loading={saveRoutine.isPending}
@@ -507,6 +550,27 @@ export function RoutineEditor({ initialDraft, exerciseNames, routineId }: Routin
                   });
                 }
                 closeSheet();
+              },
+            },
+          ]}
+        />
+      </BottomSheet>
+      <BottomSheet
+        label={ROUTINE_EDITOR.moreLabel}
+        open={isMoreOpen}
+        onClose={() => {
+          setIsMoreOpen(false);
+        }}
+      >
+        <ActionMenu
+          items={[
+            {
+              label: ROUTINE_EDITOR.archiveAction,
+              icon: "Archive",
+              caption: archiveDimmedReason,
+              disabled: archiveDimmedReason !== undefined,
+              onPress: () => {
+                void archive();
               },
             },
           ]}

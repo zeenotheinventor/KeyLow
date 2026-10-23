@@ -6,5 +6,6 @@ export const storyStates = [
   "TwoControls",
   "TwoControlsStack",
   "TwoControlsDisabled",
+  "ControlAndSlot",
   "LongTitle",
 ];

@@ -25,7 +25,8 @@ export type StoredRoutine = {
 /**
  * The `routines` table as the routines screens and the Train home read it, with the two writes that change
  * a routine's status: making one active and archiving or restoring one. It answers as the database would:
- * making a routine active clears the one that was, and stamps the moment, and a restore flips one flag.
+ * making a routine active clears the one that was, and stamps the moment, a restore flips one flag, and
+ * archiving the active routine is refused by the table's check.
  * Every other table is `trainBackend`'s, so the Train home reads its week and its profile from there.
  */
 export const routineStatusBackend: {
@@ -40,6 +41,10 @@ export const routineStatusBackend: {
   holdWrites: Promise<void> | null;
   /** Fails the writes with a database error. */
   failWrites: boolean;
+  /** Holds the answer to `save_routine` until this settles, so a test can act while a save is on its way. */
+  holdSave: Promise<void> | null;
+  /** How many `save_routine` calls were answered or held. */
+  saveRequests: number;
 } = {
   routines: [],
   now: "2026-10-15T16:55:00+00:00",
@@ -47,6 +52,8 @@ export const routineStatusBackend: {
   archiveUpdates: [],
   holdWrites: null,
   failWrites: false,
+  holdSave: null,
+  saveRequests: 0,
 };
 
 export function resetRoutineStatusBackend(): void {
@@ -56,6 +63,8 @@ export function resetRoutineStatusBackend(): void {
   routineStatusBackend.archiveUpdates = [];
   routineStatusBackend.holdWrites = null;
   routineStatusBackend.failWrites = false;
+  routineStatusBackend.holdSave = null;
+  routineStatusBackend.saveRequests = 0;
 }
 
 let nextId = 1;
@@ -121,6 +130,18 @@ const respond = (body: unknown, status = 200) =>
 const databaseError = () =>
   respond({ code: "XX000", message: "raw database text", details: null, hint: null }, 500);
 
+const activeNotArchived = () =>
+  respond(
+    {
+      code: "23514",
+      message:
+        'new row for relation "routines" violates check constraint "routines_active_not_archived"',
+      details: null,
+      hint: null,
+    },
+    400,
+  );
+
 const wantsOneObject = (init?: RequestInit): boolean =>
   new Headers(init?.headers).get("Accept")?.includes("vnd.pgrst.object") === true;
 
@@ -162,6 +183,14 @@ async function routinesFetch(input: string | URL | Request, init?: RequestInit):
   const table = url.pathname.split("/").pop();
   const { routines } = routineStatusBackend;
 
+  if (table === "save_routine") {
+    routineStatusBackend.saveRequests += 1;
+    if (routineStatusBackend.holdSave !== null) {
+      await routineStatusBackend.holdSave;
+    }
+    return respond(String(bodyOf(init)["p_routine_id"]));
+  }
+
   if (table === "set_active_routine") {
     const id = String(bodyOf(init)["p_routine_id"]);
     routineStatusBackend.activations.push(id);
@@ -191,6 +220,10 @@ async function routinesFetch(input: string | URL | Request, init?: RequestInit):
       return failed;
     }
     const routine = routines.find((candidate) => candidate.id === id);
+    // The table refuses the active routine, as the real one does.
+    if (archived && routine?.isActive === true) {
+      return activeNotArchived();
+    }
     if (routine !== undefined) {
       routine.isArchived = archived;
     }

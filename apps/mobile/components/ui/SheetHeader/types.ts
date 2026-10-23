@@ -35,8 +35,9 @@ export type SheetHeaderProps = {
   /** A line under the title in the secondary caption, such as a session's clock. */
   subtitle?: string | undefined;
   /**
-   * Anything else at the right, such as a primary button, drawn when there is no `trailing` control. It
-   * takes the place of the empty slot, so it sets the space the title is centred in.
+   * Anything else at the right, such as a primary button. With no `trailing` control it takes the place of
+   * the empty slot. With one, it is drawn after the control, as the routine editor has More and then Save.
+   * Either way it sets the space the title is centred in.
    */
   trailingSlot?: ReactNode;
   /**

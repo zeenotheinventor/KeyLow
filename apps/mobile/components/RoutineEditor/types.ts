@@ -8,6 +8,10 @@ export type RoutineEditorProps = {
   exerciseNames?: ExerciseNames | undefined;
   /** The id of the routine being edited, which Save replaces. Leave it out to create a routine. */
   routineId?: string | undefined;
+  /** Whether the routine being edited is the active one, which cannot be archived. */
+  isActive?: boolean | undefined;
+  /** Whether the routine being edited is archived, which has nothing left to archive. */
+  isArchived?: boolean | undefined;
 };
 
 /** A day of the draft with what only the editor needs: a key that stays with it, and whether its body is showing. */
