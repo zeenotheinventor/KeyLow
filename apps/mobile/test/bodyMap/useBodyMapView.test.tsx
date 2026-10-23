@@ -78,6 +78,21 @@ describe("useBodyMapView", () => {
     expect(mockSetItem).toHaveBeenCalledWith("bodyMap.view", "projected");
   });
 
+  it("should change the view of every screen that holds it, so the list and the map agree", async () => {
+    const map = await renderHook(() => useBodyMapView());
+    const list = await renderHook(() => useBodyMapView());
+    await waitFor(() => {
+      expect(map.result.current.isRead && list.result.current.isRead).toBe(true);
+    });
+
+    await act(() => {
+      list.result.current.setView("projected");
+    });
+
+    expect(map.result.current.view).toBe("projected");
+    expect(list.result.current.view).toBe("projected");
+  });
+
   describe("when the store never answers", () => {
     beforeEach(() => {
       jest.useFakeTimers();

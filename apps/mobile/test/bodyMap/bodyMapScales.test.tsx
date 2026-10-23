@@ -10,6 +10,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { fillsIn, gapFill, heatFill, volumeFill } from "../support/figureFills";
+import { withMuscleListHint } from "../support/figureNames";
 import { tapFigures } from "../support/figuresResponder";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -218,12 +219,14 @@ async function switchTo(name: "Heat" | "Volume" | "Gap") {
   await userEvent.setup().press(screen.getByRole("radio", { name }));
 }
 
-const figureName = (view: string, scale: string, side: "front" | "back") =>
-  `Body map, ${view}, ${scale}, ${side}`;
+const figureName = (view: string, scale: string, side: "front" | "back") => {
+  const name = `Body map, ${view}, ${scale}, ${side}`;
+  return side === "front" ? withMuscleListHint(name) : name;
+};
 
 // The quads are on the front only and the lats on the back only, so each side reads the muscle it shows.
 function fillOf(muscle: MuscleId, name: string) {
-  const side = name.endsWith("front") ? "front" : "back";
+  const side = name.includes(", front") ? "front" : "back";
   return fillsIn(screen.getByRole("img", { name }), side).get(muscle);
 }
 
@@ -268,6 +271,7 @@ describe("the body map scales", () => {
       "components/BodyMapScreen",
       "components/BodyMapCard",
       "components/BodyMapLegend",
+      "components/HeatSwatch",
       "components/ViewLabel",
     ]);
   });

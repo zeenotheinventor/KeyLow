@@ -21,6 +21,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { fillsIn, heatFill } from "../support/figureFills";
+import { withMuscleListHint } from "../support/figureNames";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -215,10 +216,19 @@ const press = async (name: string) => {
 const pressSideBySide = () => press("Show side by side");
 
 // A figure's muscles are each drawn in the heat step the hook gave them.
-function expectFigureAt(view: "Actual" | "Projected", side: "front" | "back", key: string) {
+// The single view's front figure says where the muscle list is, which the side by side view's does not.
+function expectFigureAt(
+  view: "Actual" | "Projected",
+  side: "front" | "back",
+  key: string,
+  hasMuscleListHint = false,
+) {
   const values = { ...RESTING_HEAT, ...goldenSteps[key] };
+  const name = `Body map, ${view}, heat, ${side}`;
   const fills = fillsIn(
-    screen.getByRole("img", { name: `Body map, ${view}, heat, ${side}` }),
+    screen.getByRole("img", {
+      name: hasMuscleListHint && side === "front" ? withMuscleListHint(name) : name,
+    }),
     side,
   );
   expect(fills.size).toBeGreaterThan(0);
@@ -559,7 +569,7 @@ describe("the body map screen, side by side", () => {
         screen.getByRole("button", { name: "Show side by side", selected: false }),
       ).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Show projected" })).toBeOnTheScreen();
-      expectFigureAt("Actual", "front", "actual now");
+      expectFigureAt("Actual", "front", "actual now", true);
       expectFigureAt("Actual", "back", "actual now");
       expect(screen.getByLabelText("Day shown")).toHaveProp("role", "group");
       expect(screen.queryByRole("radio", { name: "Front" })).not.toBeOnTheScreen();

@@ -1,5 +1,6 @@
 import { screen } from "@testing-library/react-native";
 
+import { anyFrontFigureName } from "./figureNames";
 import { touchAt, touchDown } from "./swipeResponder";
 
 import type { SwipeTouch } from "./swipeResponder";
@@ -29,7 +30,7 @@ type FiguresResponder = Record<
  * are looked up on every call, as the responder system reads the view's current props for each event.
  */
 function figuresResponder(): FiguresResponder {
-  let element: Element | null = screen.getByRole("img", { name: /, front$/ });
+  let element: Element | null = screen.getByRole("img", { name: anyFrontFigureName });
   while (element !== null && handlerOf(element, "onResponderRelease") === undefined) {
     element = element.parent;
   }

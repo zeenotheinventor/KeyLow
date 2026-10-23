@@ -43,4 +43,6 @@ export type BodyMapFiguresProps = {
   onLongPressMuscle?: ((muscle: MuscleId, view: BodyMapView) => void) | undefined;
   /** Draws Actual and Projected together instead of the front and the back of the view shown. A tap does nothing there. */
   sideBySide?: BodyMapSideBySide | undefined;
+  /** Whether the screen offers the muscle list. The front figure's name then ends with where each muscle's values are. It does not apply to the side by side layout. Defaults to false. */
+  hasMuscleList?: boolean | undefined;
 };

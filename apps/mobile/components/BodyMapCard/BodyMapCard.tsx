@@ -53,6 +53,7 @@ export function BodyMapCard({
   onSideChange,
   onToggleSideBySide,
   isSideBySideEnabled = true,
+  hasMuscleList = false,
 }: BodyMapCardProps) {
   const { width: screenWidth } = useWindowDimensions();
   const isSideBySide = sideBySide !== undefined;
@@ -104,6 +105,7 @@ export function BodyMapCard({
             actualValues={actualValues}
             body={body}
             figureWidth={figureWidth}
+            hasMuscleList={hasMuscleList}
             onLongPressMuscle={onLongPressMuscle}
             onTap={isToggleEnabled && !isSideBySide ? onToggle : undefined}
             projectedValues={projectedValues}
