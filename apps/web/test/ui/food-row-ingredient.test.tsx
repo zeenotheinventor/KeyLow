@@ -52,6 +52,22 @@ describe("FoodTable with the ingredient variant", () => {
     ).toEqual(["Onions, raw", "1 medium (110 g)", "1.1 g", "8.8 g", "0.1 g", "39 kcal", ""]);
   });
 
+  it("should draw each macro as the bare number and keep the unit for a screen reader", () => {
+    renderIngredients();
+    const row = screen.getByRole("row", { name: /Onions, raw/ });
+
+    for (const [value, name] of [
+      ["1.1", "1.1 g"],
+      ["8.8", "8.8 g"],
+      ["0.1", "0.1 g"],
+    ] as const) {
+      const cell = within(row).getByRole("cell", { name });
+
+      expect(within(cell).getByText(value).className).not.toContain("sr-only");
+      expect(within(cell).getByText("g").className).toContain("sr-only");
+    }
+  });
+
   it("should write a dash for a macro that is not given, and for no energy", () => {
     renderIngredients({ energy: undefined, macros: { protein: null, carbs: "8.8", fat: "0.1" } });
     const row = screen.getByRole("row", { name: /Onions, raw/ });
