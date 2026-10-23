@@ -16,7 +16,7 @@ import {
   weighInRow,
 } from "../support/weightBackend";
 
-// The controls the boards draw on this screen open screens that later tickets build, so none is drawn yet.
+// The controls the boards draw on this screen that open screens later tickets build are not drawn yet.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -52,7 +52,7 @@ const states = [
       weightBackend.weighInReadsHang = true;
     },
     settled: () => screen.getByRole("status", { name: "Loading your weigh-ins" }),
-    buttons: ["Back to More"],
+    buttons: ["Back to More", "Add weigh-in"],
   },
   {
     name: "error",
@@ -60,13 +60,13 @@ const states = [
       weightBackend.weighInReadsFail = true;
     },
     settled: () => screen.findByRole("button", { name: "Try again" }),
-    buttons: ["Back to More", "Try again"],
+    buttons: ["Back to More", "Add weigh-in", "Try again"],
   },
   {
     name: "empty",
     prepare: () => undefined,
     settled: () => screen.findByRole("heading", { name: "No weigh-ins yet" }),
-    buttons: ["Back to More"],
+    buttons: ["Back to More", "Add weigh-in", "Add weigh-in"],
   },
   {
     name: "list",
@@ -86,7 +86,13 @@ const states = [
       ];
     },
     settled: () => screen.findByRole("heading", { name: "Weigh-ins" }),
-    buttons: ["Back to More"],
+    // Each row opens its weigh-in in the sheet. The times are the London clock of the day, so they are not fixed.
+    buttons: [
+      "Back to More",
+      "Add weigh-in",
+      /^Today, \d\d:\d\d · Health Connect, 81\.6 kg$/,
+      /^Yesterday, \d\d:\d\d · Added by you, 81\.9 kg$/,
+    ],
   },
 ];
 
@@ -104,7 +110,7 @@ describe("the Weight screen's controls", () => {
       await settled();
 
       expectAccessibleNamesInOrder(screen.getAllByRole("button"), buttons);
-      for (const name of ["Add weigh-in", "How the trend works", "Connect Health Connect"]) {
+      for (const name of ["How the trend works", "Connect Health Connect"]) {
         expect(screen.queryByRole("button", { name })).not.toBeOnTheScreen();
         expect(screen.queryByRole("link", { name })).not.toBeOnTheScreen();
       }

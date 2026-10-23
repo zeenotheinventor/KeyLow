@@ -305,6 +305,18 @@ describe("NumericInput", () => {
       expect(field.props.style).toMatchObject({ fontVariant: "tabular-nums" });
     });
 
+    it("should left align its digits, with the unit at the far end, when asked", async () => {
+      await renderNumericInput(
+        { value: "81.4", unit: "kg", align: "left", label: "Weight" },
+        scheme,
+      );
+
+      const field = await screen.findByLabelText("Weight (kg)");
+      // Digits start at the left whatever the unit, so it sets no alignment of its own.
+      expect(field).not.toHaveProp("textAlign", "right");
+      expect(field).not.toHaveProp("textAlign", "center");
+    });
+
     it("should set the unit in muted body text", async () => {
       await renderNumericInput({}, scheme);
 

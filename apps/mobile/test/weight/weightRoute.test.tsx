@@ -1,7 +1,7 @@
 import "../support/gestureHandler";
 
 import { KeyLowProvider } from "@keylow/api-client";
-import { act, cleanup, render, screen, userEvent } from "@testing-library/react-native";
+import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { ExpoRoot, Slot, router } from "expo-router";
 import { getMockContext } from "expo-router/testing-library";
 import { Text } from "react-native";
@@ -9,6 +9,7 @@ import { Text } from "react-native";
 import TabsLayout from "../../app/(tabs)/_layout";
 import MoreLayout from "../../app/(tabs)/more/_layout";
 import WeightLayout from "../../app/(tabs)/more/weight/_layout";
+import WeighInEntryRoute from "../../app/(tabs)/more/weight/entry";
 import WeightRoute from "../../app/(tabs)/more/weight/index";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
@@ -32,6 +33,26 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
+
+// The router's test library replaces the animation library with a mock the bottom sheet cannot run on, so the
+// sheet is a stand-in here. The sheet itself is tested in weighInSheetAdd and weighInSheetDateTime.
+jest.mock("../../components/WeighInSheet", () => {
+  const {
+    Pressable,
+    Text: NativeText,
+    View,
+  } = jest.requireActual<typeof import("react-native")>("react-native");
+  return {
+    WeighInSheet: ({ onClose }: { onClose: () => void }) => (
+      <View aria-label="Add weigh-in" role="dialog">
+        <NativeText role="heading">Add weigh-in</NativeText>
+        <Pressable role="button" onPress={onClose}>
+          <NativeText>Cancel</NativeText>
+        </Pressable>
+      </View>
+    ),
+  };
+});
 
 let queryClient: QueryClient;
 
@@ -63,6 +84,7 @@ const routes = {
   "(tabs)/more/index": standIn("More"),
   "(tabs)/more/weight/_layout": WeightLayout,
   "(tabs)/more/weight/index": WeightRoute,
+  "(tabs)/more/weight/entry": WeighInEntryRoute,
   "foods/index": standIn("Search"),
 };
 
@@ -102,5 +124,66 @@ describe("the Weight route", () => {
 
     expect(await screen.findByRole("heading", { name: "More" })).toBeOnTheScreen();
     expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+  });
+});
+
+describe("the weigh-in entry route", () => {
+  beforeEach(() => {
+    resetWeightBackend();
+    queryClient = createWeightQueryClient();
+  });
+
+  afterEach(async () => {
+    await cleanup();
+    queryClient.clear();
+  });
+
+  it("should open the add sheet over the Weight screen from the header's Add weigh-in, and close back to it with Cancel", async () => {
+    const user = userEvent.setup();
+    await renderApp("/more/weight");
+    await user.press(await screen.findByRole("button", { name: "Add weigh-in" }));
+
+    expect(await screen.findByLabelText("Add weigh-in", { exact: true })).toHaveProp(
+      "role",
+      "dialog",
+    );
+
+    await user.press(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(await screen.findByRole("heading", { name: "Weight" })).toBeOnTheScreen();
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Add weigh-in" })).not.toBeOnTheScreen();
+    });
+  });
+
+  it("should open the add sheet from the empty state's Add weigh-in", async () => {
+    const user = userEvent.setup();
+    await renderApp("/more/weight");
+    await screen.findByRole("heading", { name: "No weigh-ins yet" });
+    const [headerAdd, emptyStateAdd] = screen.getAllByRole("button", { name: "Add weigh-in" });
+    if (headerAdd === undefined || emptyStateAdd === undefined) {
+      throw new Error("The screen needs both Add weigh-in buttons");
+    }
+
+    await user.press(emptyStateAdd);
+
+    expect(await screen.findByRole("heading", { name: "Add weigh-in" })).toBeOnTheScreen();
+  });
+
+  it("should open the sheet on its own address too, for a link", async () => {
+    await renderApp("/more/weight/entry");
+
+    expect(await screen.findByRole("heading", { name: "Add weigh-in" })).toBeOnTheScreen();
+  });
+
+  it("should go to the Weight screen, and not throw, when Cancel is pressed on a link that opened the sheet cold", async () => {
+    const user = userEvent.setup();
+    await renderApp("/more/weight/entry");
+    await user.press(await screen.findByRole("button", { name: "Cancel" }));
+
+    expect(await screen.findByRole("heading", { name: "Weight" })).toBeOnTheScreen();
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Add weigh-in" })).not.toBeOnTheScreen();
+    });
   });
 });

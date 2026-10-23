@@ -25,12 +25,13 @@ const insets = { top: 47, right: 0, bottom: 34, left: 0 };
 type HarnessProps = {
   initialTime?: string;
   initiallyOpen?: boolean;
+  latest?: string;
   onChange?: (time: string) => void;
 };
 
 // A screen as the portion picker is: it keeps the time and whether the picker is showing, and the row
 // opens the picker. What the picker hands back is what the row then reads.
-function Harness({ initialTime = "12:40", initiallyOpen = false, onChange }: HarnessProps) {
+function Harness({ initialTime = "12:40", initiallyOpen = false, latest, onChange }: HarnessProps) {
   const [time, setTime] = useState(initialTime);
   const [open, setOpen] = useState(initiallyOpen);
 
@@ -44,6 +45,7 @@ function Harness({ initialTime = "12:40", initiallyOpen = false, onChange }: Har
         }}
       />
       <TimePicker
+        latest={latest}
         open={open}
         value={time}
         onChange={(next) => {
@@ -218,6 +220,65 @@ describe("TimePicker", () => {
       await user.press(screen.getByRole("button", { name: "Done" }));
 
       expect(onChange).toHaveBeenCalledWith("17:05");
+    });
+  });
+
+  describe("with a latest time", () => {
+    it("should offer no hour after the latest hour", async () => {
+      await renderPicker({ initialTime: "08:15", latest: "14:30" });
+
+      expect(within(hours()).getAllByRole("option")).toHaveLength(15);
+      expect(within(hours()).getByRole("option", { name: "14" })).toBeOnTheScreen();
+      expect(within(hours()).queryByRole("option", { name: "15" })).not.toBeOnTheScreen();
+      expect(hours()).toHaveProp("aria-valuemax", 14);
+    });
+
+    it("should offer every minute while the hour is before the latest hour", async () => {
+      await renderPicker({ initialTime: "08:15", latest: "14:30" });
+
+      expect(within(minutes()).getAllByRole("option")).toHaveLength(60);
+      expect(within(minutes()).getByRole("option", { name: "59" })).toBeOnTheScreen();
+    });
+
+    it("should offer no minute after the latest minute once the hour is the latest hour", async () => {
+      const { user } = await renderPicker({ initialTime: "08:15", latest: "14:30" });
+
+      await user.press(within(hours()).getByRole("option", { name: "14" }));
+
+      expect(within(minutes()).getAllByRole("option")).toHaveLength(31);
+      expect(within(minutes()).getByRole("option", { name: "30" })).toBeOnTheScreen();
+      expect(within(minutes()).queryByRole("option", { name: "31" })).not.toBeOnTheScreen();
+    });
+
+    it("should bring the minute down to the latest minute when the hour moves to the latest hour", async () => {
+      const { user, onChange } = await renderPicker({ initialTime: "08:45", latest: "14:30" });
+
+      await user.press(within(hours()).getByRole("option", { name: "14" }));
+      await user.press(screen.getByRole("button", { name: "Done" }));
+
+      expect(onChange).toHaveBeenCalledWith("14:30");
+    });
+
+    it("should bring a time after the latest time that it opens with down to the latest time", async () => {
+      await renderPicker({ initialTime: "20:10", latest: "14:30" });
+
+      expect(within(chosen(hours())).getByText("14")).toBeOnTheScreen();
+      expect(within(chosen(minutes())).getByText("30")).toBeOnTheScreen();
+    });
+
+    it("should wrap the hours at the latest hour on a screen reader's increment", async () => {
+      await renderPicker({ initialTime: "14:10", latest: "14:30" });
+
+      await adjust(hours(), "increment");
+
+      expect(within(chosen(hours())).getByText("00")).toBeOnTheScreen();
+    });
+
+    it("should leave every hour and minute on offer when no latest time is given", async () => {
+      await renderPicker({ initialTime: "08:15" });
+
+      expect(within(hours()).getAllByRole("option")).toHaveLength(24);
+      expect(within(minutes()).getAllByRole("option")).toHaveLength(60);
     });
   });
 

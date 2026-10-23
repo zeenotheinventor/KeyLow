@@ -12,8 +12,8 @@ export type NumericInputProps = FieldFrameProps &
     unit?: string | undefined;
     /** Puts the macro's colour beside the label, as the food form draws Protein, Carbohydrate and Fat. */
     macro?: NumericInputMacro | undefined;
-    /** Defaults to `right`. The servings stepper centres its number. */
-    align?: "right" | "center" | undefined;
+    /** Defaults to `right`. The servings stepper centres its number. `left` puts the digits at the start with the unit at the far end, as the weigh-in sheet's weight is drawn. */
+    align?: "left" | "right" | "center" | undefined;
     /**
      * Defaults to the decimal pad. A count of whole things asks for the number pad, which has no decimal key.
      * A range such as the reps "8 to 12" asks for the punctuation keyboard, which has the hyphen and the space.

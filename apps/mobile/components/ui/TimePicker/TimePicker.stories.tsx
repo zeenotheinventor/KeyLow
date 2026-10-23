@@ -29,3 +29,7 @@ export const At0000: Story = { args: { value: "00:00" } };
 
 // The last row of both wheels, with nothing below it.
 export const At2359: Story = { args: { value: "23:59" } };
+
+// Chosen up to now (the weigh-in sheet on today's date): at the latest time, 14:30, the hours end at 14 and
+// the minutes of that hour end at 30.
+export const UpToLatest: Story = { args: { value: "14:30", latest: "14:30" } };
