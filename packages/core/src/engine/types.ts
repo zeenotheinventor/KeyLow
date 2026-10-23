@@ -22,3 +22,13 @@ export type TrendPoint = Readonly<{
   /** Accepted reading days in the segment up to and including this day. */
   nObs: number;
 }>;
+
+/** The sexes the engine's BMR knows. The wizard stores "prefer not to say" as `other`. */
+export const SEXES = ["female", "male", "other"] as const;
+
+export type Sex = (typeof SEXES)[number];
+
+/** The five activity levels, from least to most active. The database enum and the screens use this list. */
+export const ACTIVITY_LEVELS = ["sedentary", "light", "moderate", "very", "extra"] as const;
+
+export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
