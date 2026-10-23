@@ -87,6 +87,7 @@ describe("the trend explainer route", () => {
         await screen.findByRole("heading", { name: "How your trend works" }),
       ).toBeOnTheScreen();
       expect(screen.getByRole("heading", { name: "Weekly rate" })).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Body fat and lean mass" })).toBeOnTheScreen();
       expect(screen.queryByRole("note")).not.toBeOnTheScreen();
       expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
     });

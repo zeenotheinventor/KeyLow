@@ -101,6 +101,7 @@ describe("the trend explainer's console output and errors", () => {
     await renderRoute();
 
     await screen.findByRole("note", { name: "Your trend is settling: 2 of 7 weigh-ins" });
+    expect(screen.getByRole("heading", { name: "Body fat and lean mass" })).toBeOnTheScreen();
     await user.press(screen.getByRole("button", { name: "Done" }));
 
     expectNothingPrivateWritten();
@@ -111,6 +112,7 @@ describe("the trend explainer's console output and errors", () => {
     await renderRoute();
 
     await screen.findByRole("heading", { name: "Why a trend" });
+    expect(screen.getByRole("heading", { name: "Body fat and lean mass" })).toBeOnTheScreen();
 
     expectNothingPrivateWritten();
     expect(written.join("\n")).not.toContain("raw database text");
