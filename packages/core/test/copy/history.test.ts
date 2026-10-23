@@ -38,18 +38,12 @@ import type { SessionSummary } from "../../src/training";
  * them. Where the canvas and core differ, the test follows core: the golden Thursday is open, so it has
  * no minutes.
  */
-const WIDE_GRIP_LAT_PULLDOWN = "00000000-0000-4000-8000-0000000000a8";
-
 const pullSummary: SessionSummary = {
   durationMinutes: 51,
   workingSets: 17,
   warmupSets: 1,
   topMuscles: ["lats", "biceps", "traps_mid"],
   titleSource: "Pull",
-  planComparison: {
-    setsOverPlan: [{ exerciseId: WIDE_GRIP_LAT_PULLDOWN, setsOver: 2 }],
-    exercisesNotLogged: [],
-  },
 };
 
 const pushSummary: SessionSummary = {
@@ -58,7 +52,6 @@ const pushSummary: SessionSummary = {
   warmupSets: 1,
   topMuscles: ["triceps", "delt_front", "delt_side"],
   titleSource: "Push",
-  planComparison: { setsOverPlan: [], exercisesNotLogged: [] },
 };
 
 const legsSummary: SessionSummary = {
@@ -67,10 +60,6 @@ const legsSummary: SessionSummary = {
   warmupSets: 2,
   topMuscles: ["hamstrings", "quads", "glute_max"],
   titleSource: "Legs",
-  planComparison: {
-    setsOverPlan: [],
-    exercisesNotLogged: ["seated-leg-curl", "standing-calf-raises"],
-  },
 };
 
 describe("the History screen's fixed words", () => {
@@ -95,7 +84,6 @@ describe("the History screen's fixed words", () => {
       deleteSessionAction: "Delete session",
       timeLabel: "Time",
       setsLabel: "Sets",
-      planLabel: "Plan",
       setsListName: "Sets",
     });
   });
@@ -301,84 +289,32 @@ describe("describeSessionWhen", () => {
 });
 
 describe("describeSessionStats", () => {
-  it("should read the golden Tuesday Pull as the history · session-detail board draws it", () => {
-    expect(describeSessionStats(pullSummary)).toStrictEqual({
+  it("should read the golden Tuesday Pull as Time, Sets and Exercises, with no plan card", () => {
+    expect(describeSessionStats(pullSummary, 5)).toStrictEqual({
       time: { label: "Time", value: "51 min", note: null },
       sets: { label: "Sets", value: "17", note: "and 1 warm-up" },
-      plan: { label: "Plan", value: "+2", note: "sets over" },
+      exercises: { label: "Exercises", value: "5", note: null },
     });
   });
 
-  it("should use the singular for one set over the plan", () => {
-    expect(
-      describeSessionStats({
-        ...pullSummary,
-        planComparison: {
-          setsOverPlan: [{ exerciseId: WIDE_GRIP_LAT_PULLDOWN, setsOver: 1 }],
-          exercisesNotLogged: [],
-        },
-      }).plan,
-    ).toStrictEqual({ label: "Plan", value: "+1", note: "set over" });
-  });
-
-  it("should add up the sets over the plan across exercises", () => {
-    expect(
-      describeSessionStats({
-        ...pullSummary,
-        planComparison: {
-          setsOverPlan: [
-            { exerciseId: "a", setsOver: 2 },
-            { exerciseId: "b", setsOver: 1 },
-          ],
-          exercisesNotLogged: [],
-        },
-      }).plan?.value,
-    ).toBe("+3");
-  });
-
-  it("should say on plan when every planned exercise was logged and none went over", () => {
-    expect(describeSessionStats(pushSummary).plan).toStrictEqual({
-      label: "Plan",
-      value: "On plan",
+  it("should count the exercises it is given, whatever the routine holds", () => {
+    expect(describeSessionStats(pushSummary, 0).exercises).toStrictEqual({
+      label: "Exercises",
+      value: "0",
       note: null,
     });
   });
 
-  it("should say under when planned exercises were not logged, and count them", () => {
-    expect(describeSessionStats(legsSummary).plan).toStrictEqual({
-      label: "Plan",
-      value: "Under",
-      note: "2 exercises not logged",
+  it("should draw the Exercises card for a session that follows no routine day", () => {
+    expect(describeSessionStats({ ...pullSummary, titleSource: null }, 3).exercises).toStrictEqual({
+      label: "Exercises",
+      value: "3",
+      note: null,
     });
   });
 
-  it("should use the singular for one exercise not logged", () => {
-    expect(
-      describeSessionStats({
-        ...legsSummary,
-        planComparison: { setsOverPlan: [], exercisesNotLogged: ["seated-leg-curl"] },
-      }).plan?.note,
-    ).toBe("1 exercise not logged");
-  });
-
-  it("should show the sets over when a session is both over on one exercise and short on another", () => {
-    expect(
-      describeSessionStats({
-        ...pullSummary,
-        planComparison: {
-          setsOverPlan: [{ exerciseId: WIDE_GRIP_LAT_PULLDOWN, setsOver: 2 }],
-          exercisesNotLogged: ["face-pull"],
-        },
-      }).plan,
-    ).toStrictEqual({ label: "Plan", value: "+2", note: "sets over" });
-  });
-
-  it("should have no Plan card for a session that follows no routine day", () => {
-    expect(describeSessionStats({ ...pullSummary, planComparison: null }).plan).toBeNull();
-  });
-
   it("should say in progress where an open session has no minutes", () => {
-    expect(describeSessionStats(legsSummary).time).toStrictEqual({
+    expect(describeSessionStats(legsSummary, 4).time).toStrictEqual({
       label: "Time",
       value: "In progress",
       note: null,
@@ -386,33 +322,18 @@ describe("describeSessionStats", () => {
   });
 
   it("should pluralise the warm-ups and leave the note out when there are none", () => {
-    expect(describeSessionStats(legsSummary).sets.note).toBe("and 2 warm-ups");
-    expect(describeSessionStats({ ...pullSummary, warmupSets: 0 }).sets.note).toBeNull();
+    expect(describeSessionStats(legsSummary, 4).sets.note).toBe("and 2 warm-ups");
+    expect(describeSessionStats({ ...pullSummary, warmupSets: 0 }, 5).sets.note).toBeNull();
   });
 });
 
 describe("describeSessionExerciseNote", () => {
   it("should say Bodyweight for an exercise done without a load, as the board does for pullups", () => {
-    expect(describeSessionExerciseNote({ isBodyweight: true, setsOver: 0 })).toBe("Bodyweight");
+    expect(describeSessionExerciseNote({ isBodyweight: true })).toBe("Bodyweight");
   });
 
-  it("should say how many more sets than planned, as the board does for the lat pulldown", () => {
-    expect(describeSessionExerciseNote({ isBodyweight: false, setsOver: 2 })).toBe(
-      "2 more than planned",
-    );
-    expect(describeSessionExerciseNote({ isBodyweight: false, setsOver: 1 })).toBe(
-      "1 more than planned",
-    );
-  });
-
-  it("should say both when an exercise is bodyweight and over the plan", () => {
-    expect(describeSessionExerciseNote({ isBodyweight: true, setsOver: 1 })).toBe(
-      "Bodyweight · 1 more than planned",
-    );
-  });
-
-  it("should have no note otherwise", () => {
-    expect(describeSessionExerciseNote({ isBodyweight: false, setsOver: 0 })).toBeNull();
+  it("should have no note otherwise, and never a word about the plan", () => {
+    expect(describeSessionExerciseNote({ isBodyweight: false })).toBeNull();
   });
 });
 
@@ -423,7 +344,6 @@ describe("describeHistorySet", () => {
     loadKg: null,
     reps: 10,
     rir: 2,
-    isNotInPlan: false,
     unit: "kg",
   };
 
@@ -449,23 +369,12 @@ describe("describeHistorySet", () => {
     });
   });
 
-  it("should say a set is not in the plan on its accessible name", () => {
-    expect(
-      describeHistorySet({
-        ...working,
-        setNumber: 4,
-        loadKg: 60,
-        reps: 10,
-        rir: 1,
-        isNotInPlan: true,
-      }),
-    ).toStrictEqual({
-      label: "4",
-      what: "60 kg × 10",
-      rir: "RIR 1",
-      description: "Set 4, 60 kg by 10, RIR 1, not in the plan",
-      accessibleName: "Set 4, 60 kg by 10, RIR 1, not in the plan, edit",
-    });
+  it("should say nothing about the plan for a set beyond what a plan would target", () => {
+    const copy = describeHistorySet({ ...working, setNumber: 6, loadKg: 60, reps: 8, rir: 1 });
+
+    expect(copy.description).toBe("Set 6, 60 kg by 8, RIR 1");
+    expect(copy.accessibleName).toBe("Set 6, 60 kg by 8, RIR 1, edit");
+    expect(`${copy.description} ${copy.accessibleName}`).not.toMatch(/plan/i);
   });
 
   it("should mark drop and failure sets as the session set types board does", () => {

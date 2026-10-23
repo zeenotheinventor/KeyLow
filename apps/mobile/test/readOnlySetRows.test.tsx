@@ -25,7 +25,6 @@ const workingInput: HistorySetInput = {
   loadKg: 70,
   reps: 10,
   rir: 2,
-  isNotInPlan: false,
   unit: "kg",
 };
 
@@ -38,7 +37,6 @@ function readOnlyRow(
     variant: "readOnly",
     setType: set.setType,
     copy: describeHistorySet(set),
-    isNotInPlan: set.isNotInPlan,
     onPress,
   };
 }
@@ -87,14 +85,6 @@ describe("a read-only set row", () => {
       expect(screen.queryByRole("button")).toBeNull();
     });
 
-    it("should say a set is not in the plan on its name", async () => {
-      await renderRow(readOnlyRow({ setNumber: 4, isNotInPlan: true }));
-
-      expect(
-        screen.getByRole("listitem", { name: "Set 4, 70 kg by 10, RIR 2, not in the plan" }),
-      ).toBeOnTheScreen();
-    });
-
     it("should read a set with no load as its reps and one with no RIR as No RIR", async () => {
       await renderRow(readOnlyRow({ loadKg: null, rir: null }));
 
@@ -124,18 +114,16 @@ describe("a read-only set row", () => {
   });
 
   describe("how it is drawn", () => {
-    it("should tint a set that is not in the plan with the accent fill, and no other", async () => {
-      await renderRow(readOnlyRow({ isNotInPlan: true }));
-      const notInPlan = screen.getByRole("listitem");
-      expect(notInPlan).toHaveStyle({ backgroundColor: themes.dark["accent-muted"] });
-      await cleanup();
+    it.each([1, 3, 4, 6, 9])(
+      "should not tint set %i, since a past session is not compared with a plan",
+      async (setNumber) => {
+        await renderRow(readOnlyRow({ setNumber }));
 
-      await renderRow(readOnlyRow());
-
-      expect(screen.getByRole("listitem")).not.toHaveStyle({
-        backgroundColor: themes.dark["accent-muted"],
-      });
-    });
+        expect(screen.getByRole("listitem")).not.toHaveStyle({
+          backgroundColor: themes.dark["accent-muted"],
+        });
+      },
+    );
 
     it("should draw the warm-up's mark in the warning ink and a working set's in the secondary ink", async () => {
       await renderRow(readOnlyRow({ setType: "warmup", setNumber: 0 }));
@@ -240,9 +228,9 @@ describe("a read-only exercise card", () => {
   });
 
   it("should draw the note beside the name when there is one", async () => {
-    await renderCard("2 more than planned", [row(1)]);
+    await renderCard("Bodyweight", [row(1)]);
 
-    expect(screen.getByText("2 more than planned")).toBeOnTheScreen();
+    expect(screen.getByText("Bodyweight")).toBeOnTheScreen();
   });
 
   it("should draw no note when there is none", async () => {

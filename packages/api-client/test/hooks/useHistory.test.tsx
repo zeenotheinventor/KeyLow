@@ -57,7 +57,7 @@ describe("useHistory", () => {
     ]);
   });
 
-  it("should summarise without the plan, and read no routine, since the list shows no plan comparison", async () => {
+  it("should read no routine, since the list shows no plan comparison", async () => {
     const fake = installHistoryFake(server, { sessions: twoWeeks, routine: goldenRoutine });
     const { wrapper } = createWrapper();
 
@@ -66,9 +66,6 @@ describe("useHistory", () => {
     await waitFor(() => {
       expect(result.current.data).toHaveLength(1);
     });
-    expect(result.current.data?.[0]?.sessions.map(({ summary }) => summary.planComparison)).toEqual(
-      [null, null, null],
-    );
     expect(fake.requestsTo("routines")).toEqual([]);
   });
 

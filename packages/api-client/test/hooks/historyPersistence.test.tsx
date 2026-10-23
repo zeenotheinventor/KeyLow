@@ -51,7 +51,6 @@ const DERIVED_NAMES = [
   "warmupSets",
   "durationMinutes",
   "topMuscles",
-  "planComparison",
   "titleSource",
   "sessionCount",
   "workingSetTotal",
@@ -168,11 +167,6 @@ describe("a week of the history stored without the routine", () => {
     await waitFor(() => {
       expect(result.current.data).toHaveLength(3);
     });
-    expect(result.current.data?.map(({ summary }) => summary.planComparison)).toEqual([
-      null,
-      null,
-      null,
-    ]);
     expect(result.current.data?.map(({ summary }) => summary.titleSource)).toEqual([
       "Legs",
       "Pull",

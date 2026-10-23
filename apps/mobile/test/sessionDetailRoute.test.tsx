@@ -16,12 +16,10 @@ import { registerAppStyles } from "./support/nativeWindStyles";
 import {
   GOLDEN_PULL_ID,
   goldenPull,
-  pullRoutine,
   resetSessionDetailBackend,
   sessionDetailBackend,
   sessionDetailClient,
 } from "./support/sessionDetailBackend";
-import { trainBackend } from "./support/trainBackend";
 import HistoryRoute from "../app/(tabs)/train/history";
 
 import type { QueryClient } from "@tanstack/react-query";
@@ -111,7 +109,6 @@ describe("the session detail's address beside the history list's", () => {
 
   it("should open the session whose id is in the address", async () => {
     sessionDetailBackend.sessions = [goldenPull];
-    trainBackend.routine = pullRoutine;
 
     await openAt(`/train/history/${GOLDEN_PULL_ID}`);
 
@@ -136,7 +133,6 @@ describe("the session detail's address beside the history list's", () => {
 
   it("should go to the history list from Back to History when nothing is before it", async () => {
     sessionDetailBackend.sessions = [goldenPull];
-    trainBackend.routine = pullRoutine;
     const user = userEvent.setup();
     await openAt(`/train/history/${GOLDEN_PULL_ID}`);
 
@@ -148,7 +144,6 @@ describe("the session detail's address beside the history list's", () => {
   describe("opened from the Train home, with ?from=train", () => {
     it("should name Back for the Train home", async () => {
       sessionDetailBackend.sessions = [goldenPull];
-      trainBackend.routine = pullRoutine;
 
       await openAt(`/train/history/${GOLDEN_PULL_ID}?from=train`);
 
@@ -157,7 +152,6 @@ describe("the session detail's address beside the history list's", () => {
 
     it("should go to the Train home from Back to Train when nothing is before it", async () => {
       sessionDetailBackend.sessions = [goldenPull];
-      trainBackend.routine = pullRoutine;
       const user = userEvent.setup();
       await openAt(`/train/history/${GOLDEN_PULL_ID}?from=train`);
 
@@ -176,7 +170,6 @@ describe("the session detail's address beside the history list's", () => {
   describe("opened from the history list, with no origin", () => {
     it("should name Back for the history list", async () => {
       sessionDetailBackend.sessions = [goldenPull];
-      trainBackend.routine = pullRoutine;
 
       await openAt(`/train/history/${GOLDEN_PULL_ID}`);
 

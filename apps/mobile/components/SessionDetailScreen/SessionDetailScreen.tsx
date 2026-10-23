@@ -31,7 +31,8 @@ const MINIMUM_DOCK_BOTTOM_PADDING = 34;
 /**
  * A logged session, opened from the history list, the Today card or the week strip, as the
  * `history · session-detail` board draws it: the routine day's name over when it was, three cards (time,
- * sets, and the plan comparison when the session followed a routine day), the Muscles trained card (no board
+ * sets and exercises, which state what was done and never compare it with a plan: the board still draws a Plan
+ * card and notes, and Zee's ruling of 2026-10-23 overrides it), the Muscles trained card (no board
  * draws it here; it is the finish screen's, kept so a past session shows what it did) and the exercises with
  * their sets. A session that is not found, in whatever way, shows a card that leads back to the history. Back is
  * named for the screen the session was opened from. Pressing a set opens the edit set sheet (change it, or
@@ -69,16 +70,9 @@ export function SessionDetailScreen({
               {when}
             </Text>
             <View className="flex-row gap-2">
-              {[stats.time, stats.sets, ...(stats.plan === null ? [] : [stats.plan])].map(
-                (stat) => (
-                  <StatCard
-                    key={stat.label}
-                    label={stat.label}
-                    note={stat.note}
-                    value={stat.value}
-                  />
-                ),
-              )}
+              {[stats.time, stats.sets, stats.exercises].map((stat) => (
+                <StatCard key={stat.label} label={stat.label} note={stat.note} value={stat.value} />
+              ))}
             </View>
             <MusclesTrainedCard {...musclesTrained} />
             {exercises.map(({ exerciseId, ...card }) => (

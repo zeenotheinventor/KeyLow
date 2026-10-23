@@ -10,16 +10,11 @@ const summary: SessionSummary = {
   warmupSets: 1,
   topMuscles: ["lats", "biceps", "traps_mid"],
   titleSource: "Pull",
-  planComparison: {
-    setsOverPlan: [{ exerciseId: "wide-grip-lat-pulldown", setsOver: 2 }],
-    exercisesNotLogged: [],
-  },
 };
 const openSummary: SessionSummary = {
   ...summary,
   durationMinutes: null,
   titleSource: null,
-  planComparison: { setsOverPlan: [], exercisesNotLogged: ["face-pull"] },
 };
 const workingSet: copy.HistorySetInput = {
   setType: "working",
@@ -27,7 +22,6 @@ const workingSet: copy.HistorySetInput = {
   loadKg: 70,
   reps: 10,
   rir: 2,
-  isNotInPlan: false,
   unit: "kg",
 };
 const sheet: copy.EditSetSheetInput = {
@@ -87,17 +81,17 @@ export const samples: Record<string, () => string[]> = {
     }),
   ],
   describeSessionStats: () =>
-    [summary, openSummary, { ...summary, planComparison: null }].flatMap((statsSummary) => {
-      const { time, sets, plan } = copy.describeSessionStats(statsSummary);
-      return [time, sets, ...(plan === null ? [] : [plan])].flatMap(({ label, value, note }) => [
+    [summary, openSummary].flatMap((statsSummary) => {
+      const { time, sets, exercises } = copy.describeSessionStats(statsSummary, 5);
+      return [time, sets, exercises].flatMap(({ label, value, note }) => [
         label,
         value,
         ...present(note),
       ]);
     }),
   describeSessionExerciseNote: () => [
-    ...present(copy.describeSessionExerciseNote({ isBodyweight: true, setsOver: 1 })),
-    ...present(copy.describeSessionExerciseNote({ isBodyweight: false, setsOver: 2 })),
+    ...present(copy.describeSessionExerciseNote({ isBodyweight: true })),
+    ...present(copy.describeSessionExerciseNote({ isBodyweight: false })),
   ],
   describeHistorySet: () =>
     (["warmup", "working", "drop", "failure"] as const).flatMap((setType) => {

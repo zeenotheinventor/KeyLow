@@ -108,23 +108,12 @@ const sessionOfDay = (dayName: string) => {
     ended_at: session.endedAt,
     local_date: session.localDate,
   });
-  const plannedDay = {
-    name: day.name,
-    exercises: day.exercises.map((routineExercise) => ({
-      exercise_id: requireExercise(routineExercise.exercise).id,
-      target_sets: routineExercise.targetSets,
-    })),
-  };
-  return { row, plannedDay, sets: setsOfSession(session.id) };
+  return { row, sets: setsOfSession(session.id) };
 };
 
 const push = sessionOfDay("Push");
 const pull = sessionOfDay("Pull");
 const legs = sessionOfDay("Legs");
-
-const WIDE_GRIP_LAT_PULLDOWN = requireExercise("Wide-Grip_Lat_Pulldown").id;
-const SEATED_LEG_CURL = requireExercise("Seated_Leg_Curl").id;
-const STANDING_CALF_RAISES = requireExercise("Standing_Calf_Raises").id;
 
 describe("history of the golden week", () => {
   it("should group the three sessions into the week of Monday 12 October, newest first, with 41 working sets", () => {
@@ -144,7 +133,7 @@ describe("history of the golden week", () => {
   });
 
   describe("Monday's Push", () => {
-    const summary = summariseSession(push.row, push.sets, push.plannedDay);
+    const summary = summariseSession(push.row, push.sets);
 
     it("should be 48 minutes, 16 working sets and 1 warm-up", () => {
       expect(summary.durationMinutes).toBe(48);
@@ -155,15 +144,10 @@ describe("history of the golden week", () => {
     it("should train triceps, front delts and side delts the most", () => {
       expect(summary.topMuscles).toStrictEqual(["triceps", "delt_front", "delt_side"]);
     });
-
-    it("should be named Push, on plan with every exercise logged", () => {
-      expect(summary.titleSource).toBe("Push");
-      expect(summary.planComparison).toStrictEqual({ setsOverPlan: [], exercisesNotLogged: [] });
-    });
   });
 
   describe("Tuesday's Pull", () => {
-    const summary = summariseSession(pull.row, pull.sets, pull.plannedDay);
+    const summary = summariseSession(pull.row, pull.sets);
 
     it("should be 51 minutes, 17 working sets and 1 warm-up", () => {
       expect(summary.durationMinutes).toBe(51);
@@ -174,18 +158,10 @@ describe("history of the golden week", () => {
     it("should train lats, biceps and mid traps the most", () => {
       expect(summary.topMuscles).toStrictEqual(["lats", "biceps", "traps_mid"]);
     });
-
-    it("should be 2 sets over the plan, all on the wide-grip lat pulldown (5 of 3)", () => {
-      expect(summary.titleSource).toBe("Pull");
-      expect(summary.planComparison).toStrictEqual({
-        setsOverPlan: [{ exerciseId: WIDE_GRIP_LAT_PULLDOWN, setsOver: 2 }],
-        exercisesNotLogged: [],
-      });
-    });
   });
 
   describe("Thursday's Legs", () => {
-    const summary = summariseSession(legs.row, legs.sets, legs.plannedDay);
+    const summary = summariseSession(legs.row, legs.sets);
 
     it("should be open, with 8 working sets and 2 warm-ups", () => {
       expect(summary.durationMinutes).toBeNull();
@@ -195,14 +171,6 @@ describe("history of the golden week", () => {
 
     it("should train hamstrings, quads and glutes the most", () => {
       expect(summary.topMuscles).toStrictEqual(["hamstrings", "quads", "glute_max"]);
-    });
-
-    it("should not have logged the seated leg curl or the calf raises, and be over on nothing", () => {
-      expect(summary.titleSource).toBe("Legs");
-      expect(summary.planComparison).toStrictEqual({
-        setsOverPlan: [],
-        exercisesNotLogged: [SEATED_LEG_CURL, STANDING_CALF_RAISES],
-      });
     });
   });
 });

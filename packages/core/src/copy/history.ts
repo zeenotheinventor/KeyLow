@@ -8,6 +8,7 @@ import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MONTH_NAMES_LONG } from "./diaryDay";
 import { MUSCLE_NAMES } from "./muscleNames";
+import { FINISH_SCREEN } from "./sessionFinish";
 import { SET_MARKS, SET_PHRASES } from "./sessionWording";
 import { TRAIN_TODAY_CARD } from "./train";
 import { addCalendarDays, parseCalendarDay } from "../dates/calendarDay";
@@ -45,7 +46,6 @@ export const HISTORY_SESSION_DETAIL = {
   deleteSessionAction: "Delete session",
   timeLabel: "Time",
   setsLabel: "Sets",
-  planLabel: "Plan",
   /** The name of the list of one exercise's sets, for a screen reader. */
   setsListName: "Sets",
 } as const;
@@ -261,31 +261,20 @@ export type SessionStatCopy = {
 export type SessionStatsCopy = {
   time: SessionStatCopy;
   sets: SessionStatCopy;
-  /** Null for a session that follows no routine day, since it has no plan to compare with. */
-  plan: SessionStatCopy | null;
-};
-
-const describePlanStat = (comparison: NonNullable<SessionSummary["planComparison"]>) => {
-  const setsOver = comparison.setsOverPlan.reduce((total, { setsOver: over }) => total + over, 0);
-  const notLogged = comparison.exercisesNotLogged.length;
-  if (setsOver > 0) {
-    return { value: `+${setsOver}`, note: setsOver === 1 ? "set over" : "sets over" };
-  }
-  if (notLogged > 0) {
-    return {
-      value: "Under",
-      note: `${describeCount(notLogged, "exercise", "exercises")} not logged`,
-    };
-  }
-  return { value: "On plan", note: null };
+  exercises: SessionStatCopy;
 };
 
 /**
- * The three cards under the session detail's title. The Plan card shows the sets over the plan when
- * there are any, then the exercises not logged, then that the session was on plan.
+ * The three cards under the session detail's title: Time, Sets and Exercises. They state what was done and
+ * never compare it with a routine. `exerciseCount` is the exercises the detail lists below, which is every
+ * exercise with at least one live set, so an exercise logged with warm-ups alone counts. A free session
+ * draws the same three cards.
  */
-export const describeSessionStats = (summary: SessionSummary): SessionStatsCopy => {
-  const { durationMinutes, workingSets, warmupSets, planComparison } = summary;
+export const describeSessionStats = (
+  summary: SessionSummary,
+  exerciseCount: number,
+): SessionStatsCopy => {
+  const { durationMinutes, workingSets, warmupSets } = summary;
   return {
     time: {
       label: HISTORY_SESSION_DETAIL.timeLabel,
@@ -300,31 +289,23 @@ export const describeSessionStats = (summary: SessionSummary): SessionStatsCopy 
       value: String(workingSets),
       note: warmupSets === 0 ? null : `and ${describeCount(warmupSets, "warm-up", "warm-ups")}`,
     },
-    plan:
-      planComparison === null
-        ? null
-        : { label: HISTORY_SESSION_DETAIL.planLabel, ...describePlanStat(planComparison) },
+    exercises: {
+      label: FINISH_SCREEN.exercisesLabel,
+      value: String(exerciseCount),
+      note: null,
+    },
   };
 };
 
 export type SessionExerciseNoteInput = Readonly<{
   /** Whether the exercise's sets carry no load. */
   isBodyweight: boolean;
-  /** The sets logged beyond the plan's target, 0 for none. */
-  setsOver: number;
 }>;
 
-/** The note beside an exercise's name: "Bodyweight", "2 more than planned", both, or null for neither. */
+/** The note beside an exercise's name: "Bodyweight", or null for none. */
 export const describeSessionExerciseNote = ({
   isBodyweight,
-  setsOver,
-}: SessionExerciseNoteInput): string | null => {
-  const notes = [
-    ...(isBodyweight ? ["Bodyweight"] : []),
-    ...(setsOver > 0 ? [`${setsOver} more than planned`] : []),
-  ];
-  return notes.length === 0 ? null : notes.join(SEPARATOR);
-};
+}: SessionExerciseNoteInput): string | null => (isBodyweight ? "Bodyweight" : null);
 
 export type HistorySetInput = Readonly<{
   setType: SetType;
@@ -335,8 +316,6 @@ export type HistorySetInput = Readonly<{
   reps: number;
   /** Null when no RIR was entered. */
   rir: number | null;
-  /** Whether the set is beyond what the plan targets for the exercise. */
-  isNotInPlan: boolean;
   /** The unit the person trains in. */
   unit: LoadUnit;
 }>;
@@ -348,7 +327,7 @@ export type HistorySetCopy = {
   what: string;
   /** "RIR 2" or "No RIR". */
   rir: string;
-  /** "Set 3, 70 kg by 10, RIR 2": the name of a row that opens nothing. A set not in the plan adds "not in the plan". */
+  /** "Set 3, 70 kg by 10, RIR 2": the name of a row that opens nothing. */
   description: string;
   /** The description and "edit": "Set 3, 70 kg by 10, RIR 2, edit", for a row that opens the edit. */
   accessibleName: string;
@@ -361,7 +340,6 @@ export const describeHistorySet = ({
   loadKg,
   reps,
   rir,
-  isNotInPlan,
   unit,
 }: HistorySetInput): HistorySetCopy => {
   const loadText = loadKg === null ? null : `${displayLoad(loadKg, unit)} ${unit}`;
@@ -370,7 +348,6 @@ export const describeHistorySet = ({
     SET_PHRASES[setType](setNumber),
     loadText === null ? repsText : `${loadText} by ${reps}`,
     rir === null ? "no RIR" : `RIR ${rir}`,
-    ...(isNotInPlan ? ["not in the plan"] : []),
   ].join(", ");
   return {
     label: SET_MARKS[setType](setNumber),
