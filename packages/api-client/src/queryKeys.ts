@@ -9,6 +9,8 @@ export const keys = {
     timeZone: ["profiles", "time-zone"] as const,
     /** The weight unit the signed in user's profile shows loads in, `kg` or `lb`. */
     weightUnit: ["profiles", "weight-unit"] as const,
+    /** What the setup wizard starts from: set up or not, the stats, the active program, the latest weigh-in. Health data, never persisted. */
+    setupState: ["profiles", "setup-state"] as const,
   },
   foods: {
     all: ["foods"] as const,

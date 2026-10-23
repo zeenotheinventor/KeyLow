@@ -49,6 +49,8 @@ export {
   updateMyTimeZone,
 } from "./targets";
 export type { Targets } from "./targets";
+export { getMySetupState } from "./setup";
+export type { SetupProgram, SetupState, SetupStats, SetupWeighIn } from "./setup";
 export { acceptTerms, getMyTermsAcceptance } from "./terms";
 export { createRecipe, duplicateRecipe, setRecipeArchived, updateRecipe } from "./recipeWrites";
 export type { DuplicateRecipeInput, RecipeSave, RecipeUpdate } from "./recipeWrites";

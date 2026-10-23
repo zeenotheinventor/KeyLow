@@ -136,6 +136,9 @@ export type {
   RecipeUpdate,
   Targets,
 } from "./repos";
+export { useSetupState } from "./hooks";
+export { getMySetupState } from "./repos";
+export type { SetupProgram, SetupState, SetupStats, SetupWeighIn } from "./repos";
 export { useLogRecipeServing } from "./hooks";
 export { logRecipe } from "./repos";
 export type { LogRecipeInput, RecipeLogEntry } from "./repos";
