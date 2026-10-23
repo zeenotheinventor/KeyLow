@@ -265,6 +265,111 @@ describe("adding sets and exercises to a past session from the session detail", 
       });
     });
 
+    it("should open the Set type control on Working and offer no set types sheet from the set number", async () => {
+      const user = await renderDetail();
+
+      await openAddSetOnLatPulldown(user);
+
+      expect(screen.getByLabelText("Set type")).toHaveProp("role", "radiogroup");
+      expect(
+        within(screen.getByLabelText("Set type")).getByRole("radio", { name: "Working" }),
+      ).toBeChecked();
+      expect(screen.queryByRole("button", { name: /^Set type/ })).not.toBeOnTheScreen();
+    });
+
+    it("should keep the typed load and reps when the type is changed", async () => {
+      const user = await renderDetail();
+      await openAddSetOnLatPulldown(user);
+      await user.clear(screen.getByLabelText("Load, kg"));
+      await user.type(screen.getByLabelText("Load, kg"), "42.5");
+      await user.clear(screen.getByLabelText("Reps"));
+      await user.type(screen.getByLabelText("Reps"), "7");
+
+      await user.press(
+        within(screen.getByLabelText("Set type")).getByRole("radio", { name: "Drop" }),
+      );
+
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("42.5");
+      expect(screen.getByLabelText("Reps")).toHaveDisplayValue("7");
+    });
+
+    it("should store the type chosen in the control, and leave the History count where it was for a warm-up", async () => {
+      const user = await renderDetail();
+      await screen.findByText("History: 17 working sets");
+      await openAddSetOnLatPulldown(user);
+
+      await user.press(
+        within(screen.getByLabelText("Set type")).getByRole("radio", { name: "Warm-up" }),
+      );
+      expect(screen.getByLabelText("Wide-Grip Lat Pulldown, warm-up set")).toBeOnTheScreen();
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(historyEditBackend.inserts).toHaveLength(1);
+      });
+      expect(historyEditBackend.inserts[0]).toMatchObject({
+        set_type: "warmup",
+        exercise_id: latPulldown.id,
+        load_kg: 60,
+        reps: 9,
+      });
+      await waitForTheSheetToHaveLeft();
+      expect(screen.getByText("History: 17 working sets")).toBeOnTheScreen();
+    });
+
+    it("should store a drop set, which counts as a working set", async () => {
+      const user = await renderDetail();
+      await screen.findByText("History: 17 working sets");
+      await openAddSetOnLatPulldown(user);
+
+      await user.press(
+        within(screen.getByLabelText("Set type")).getByRole("radio", { name: "Drop" }),
+      );
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(historyEditBackend.inserts).toHaveLength(1);
+      });
+      expect(historyEditBackend.inserts[0]).toMatchObject({ set_type: "drop" });
+      await waitFor(() => {
+        expect(screen.getByText("History: 18 working sets")).toBeOnTheScreen();
+      });
+    });
+
+    it("should store the chosen type for Same again", async () => {
+      const user = await renderDetail();
+      await openAddSetOnLatPulldown(user);
+
+      await user.press(
+        within(screen.getByLabelText("Set type")).getByRole("radio", { name: "Failure" }),
+      );
+      await user.press(screen.getByRole("button", { name: /^Same again/ }));
+
+      await waitFor(() => {
+        expect(historyEditBackend.inserts).toHaveLength(1);
+      });
+      expect(historyEditBackend.inserts[0]).toMatchObject({ set_type: "failure", reps: 9 });
+    });
+
+    it("should open the next set on Working again after a warm-up was chosen", async () => {
+      const user = await renderDetail();
+      await openAddSetOnLatPulldown(user);
+      await user.press(
+        within(screen.getByLabelText("Set type")).getByRole("radio", { name: "Warm-up" }),
+      );
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+      await waitFor(() => {
+        expect(historyEditBackend.inserts).toHaveLength(1);
+      });
+      await waitForTheSheetToHaveLeft();
+
+      await user.press(latPulldownCard().getByRole("button", { name: "Add set" }));
+
+      expect(
+        within(await screen.findByLabelText("Set type")).getByRole("radio", { name: "Working" }),
+      ).toBeChecked();
+    });
+
     it("should show the set in its card and move the History count, once it is stored", async () => {
       const user = await renderDetail();
       await screen.findByText("History: 17 working sets");

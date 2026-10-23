@@ -17,10 +17,13 @@ import { useToast } from "../ui";
 import type { AddExerciseSheetProps, ChosenExercise } from "../AddExerciseSheet";
 import type { SetEntrySheetProps, SetLogRequest } from "../SetEntrySheet";
 import type { LastPerformanceSet } from "@keylow/api-client";
+import type { SetType } from "@keylow/core/training";
 
 type Opening = {
   /** The set entry the sheet was opened with, kept while the sheet closes so it does not change under its exit. */
   entry: SetEntrySheetProps["entry"];
+  /** The type the set will be logged with: the entry's own at first, then the Set type control's. A change leaves `openingId` as it is. */
+  setType: SetType;
   isOpen: boolean;
   /** Counted up on every opening, so a form still on its way out never carries its numbers into the next. */
   openingId: number;
@@ -89,6 +92,7 @@ export function useAddToSession(sessionId: string | undefined): AddToSession {
     setOpening((current) => ({
       isOpen: true,
       openingId: (current?.openingId ?? 0) + 1,
+      setType: "working",
       entry: {
         exerciseId,
         exerciseName,
@@ -158,6 +162,15 @@ export function useAddToSession(sessionId: string | undefined): AddToSession {
           sessionId,
           unit: unitData,
           entry: opening.entry,
+          setType: opening.setType,
+          // A change of type keeps the opening, so what was typed stays. There is no set number to press here, so the control is the only way.
+          onChangeSetType: (setType) => {
+            setOpening((current) =>
+              current !== null && current.openingId === opening.openingId
+                ? { ...current, setType }
+                : current,
+            );
+          },
           // Closes this opening only: a write still on its way from an earlier one must not close a newer sheet.
           onClose: () => {
             setOpening((current) =>

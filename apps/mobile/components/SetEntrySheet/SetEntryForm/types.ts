@@ -1,6 +1,9 @@
 import type { SetEntryOpening, SetEntrySheetProps } from "../types";
 
-export type SetEntryFormProps = Pick<SetEntrySheetProps, "sessionId" | "unit" | "onLogSet"> & {
+export type SetEntryFormProps = Pick<
+  SetEntrySheetProps,
+  "sessionId" | "unit" | "setType" | "onChangeSetType" | "onLogSet"
+> & {
   entry: SetEntryOpening;
   /** Called once the set is stored. */
   onLogged: () => void;
