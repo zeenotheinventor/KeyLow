@@ -49,7 +49,15 @@ export function IngredientTableRow({
           aria-label={macros[macro] === null ? NOT_GIVEN : undefined}
           className="text-right text-body tabular-nums"
         >
-          {macros[macro] === null ? FOOD_ROW.notGivenMark : `${macros[macro]} ${FOOD_ROW.gramUnit}`}
+          {macros[macro] === null ? (
+            FOOD_ROW.notGivenMark
+          ) : (
+            <>
+              {macros[macro]}
+              {/* The board draws the bare number, so the unit is only read out. */}{" "}
+              <span className="sr-only">{FOOD_ROW.gramUnit}</span>
+            </>
+          )}
         </div>
       ))}
       <div
