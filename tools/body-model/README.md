@@ -1,6 +1,6 @@
 # @keylow/body-model
 
-Tools for the 3D body (KEY-342). They build the male body that the app will show in 3D: the real muscles from **Z-Anatomy**, grouped into the 22 muscle ids, seen through a see-through skin and a dark core that are generated here, with a CC0 realistic male head ("head A") grafted at the neck and drawn in neutral clay. The result is rendered to `renders/muscles/`, which are the pictures the 3D tickets are built to match. Nothing here exports a `.glb` yet. Decimation and the export to phone size come in a later ticket and write to `dist/`.
+Tools for the 3D body (KEY-342). They build the male body that the app will show in 3D: the real muscles from **Z-Anatomy**, grouped into the 22 muscle ids, seen through a see-through skin and a dark core that are generated here, with a CC0 realistic male head ("head A") grafted at the neck and drawn in neutral clay. The result is rendered to `renders/muscles/`, which are the pictures the 3D tickets are built to match. The same scratch files are decimated to phone size and exported to `dist/male.glb` (KEY-556), with its licence notice beside it and two pictures of it in `renders/muscles/`.
 
 It is a development tool. Nothing in `apps/*` or `packages/*` depends on it, CI never runs Blender, and neither source file is ever committed. The committed pictures are CC BY-SA 4.0, see `ASSETS-LICENCE.md`.
 
@@ -50,6 +50,8 @@ pnpm --filter @keylow/body-model zanatomy:muscles --source <folder holding Start
 pnpm --filter @keylow/body-model zanatomy:skin --work $WORK
 pnpm --filter @keylow/body-model zanatomy:head --work $WORK --head-source <folder holding human_base_meshes_bundle.blend>
 pnpm --filter @keylow/body-model zanatomy:render --work $WORK [--set debug|heat|closeup|all] [--view front|back|three-quarter|three-quarter-back]
+pnpm --filter @keylow/body-model export --work $WORK
+pnpm --filter @keylow/body-model zanatomy:phone-render
 pnpm --filter @keylow/body-model lint
 pnpm --filter @keylow/body-model typecheck
 pnpm --filter @keylow/body-model test
@@ -59,6 +61,8 @@ pnpm --filter @keylow/body-model test
 - `zanatomy:skin` builds the skin and the core, about ten seconds.
 - `zanatomy:head` grafts head A on.
 - `zanatomy:render` writes the seven pictures in `renders/muscles/`, about half a minute.
+- `export` decimates the body and writes `dist/male.glb`, 10 to 25 seconds (see The phone file). It prints the triangles per mesh, the skin check and the sha256 of the file.
+- `zanatomy:phone-render` imports `dist/male.glb` into a fresh scene and writes the two pictures `male-phone-front.png` and `male-phone-three-quarter.png` in `renders/muscles/`. It needs no `--work`.
 - Two more steps are optional. `pnpm --filter @keylow/body-model inspect --source <bundle folder>` writes `inspection/bundle.json` and `pnpm --filter @keylow/body-model render --source <bundle folder>` writes the nine pictures in `renders/bases/`. `node --experimental-strip-types src/run.ts zanatomy_inspect --source <folder> --out <json>` lists every Z-Anatomy muscle and bone object with its face count, bounds and collections.
 
 There is no `build` script on purpose. The root turbo `build` task would run it in CI, where there is no Blender.
@@ -196,13 +200,74 @@ The first renders showed a skull-like head: the face and head muscles seen throu
 
 Looked at in the renders: the head reads as a calm clay mannequin head with eyes, neither skull nor caricature. The seam is a soft fade at the base of the neck. Two small dark neck muscle tips (the sternocleidomastoid and the splenius) show at the sides of the neck where the clay fades, and in the back view the top of the spine muscles shows as a dark blot at the nape. The scale and cut heights are constants at the top of `zanatomy_head.py`.
 
-### To phone size
+### The phone file
 
-The drawn muscles are 855k triangles and the skin 42k. A phone `.glb` of 150k to 250k triangles needs the muscles at about 18 to 29 percent. Dropping most of the hand, foot and face muscles that carry no id (they are most of the 219k neutral triangles, not measured) and decimating the skin to 10k to 15k would let the 22 ids keep about 30 percent of their triangles, which the muscle shapes survive: they are smooth shapes with a fibre texture, and the fibre texture is what goes first. Each id is one mesh and the borders between muscles are not shared, so no border needs pinning. `forearms` (144k) and `lower_back` (62k) are the heaviest and would be cut hardest, the first because the finger tendons are many thin pieces.
+`pnpm --filter @keylow/body-model export --work $WORK` runs `blender/zanatomy_export.py` and then `src/exportMale.ts`. The first reads `zanatomy-body-head.blend`, decimates every mesh to the `budget` block of `muscles/male/zanatomy-map.json` and writes `male-raw.glb` in `$WORK`. The second quantises that file into `dist/male.glb`, because Blender's glTF exporter has no quantisation of its own (its Draco and meshopt options need a decoder the app does not have, and its gltfpack option needs an outside program). The quantiser is `src/quantiseGlb.ts`, with no dependency.
+
+**What it does.** The muscles of `other` that are hand, foot or the superficial masseter are dropped (`phoneDropFromOther` in the map data, flagged on the faces by `zanatomy:muscles`, so run that step again after changing the list). Each mesh is triangulated and collapsed with Blender's Decimate modifier, with no border pinned, until it is within 3 percent of its budget. The ids share `idsTriangles` in proportion to the square root of their source triangles, so the heaviest are cut hardest, and an id in `idFloors` has its own higher minimum (`abs`). Then each mesh is rebuilt as plain triangles with smooth normals (no UVs, no masks, no custom normals), moved so the feet are on y = 0 and the skin is centred on x and z, and the skin check is run again on the decimated meshes. Building a mesh validates it, which drops degenerate triangles (44 of them in the committed file), so every count and every check below is taken after validation, and the export prints how many were dropped. The export stops if the total is over 250,000, an id is under 1,000, the skin is outside 10,000 to 15,000, the head and eyes together are over 15,000 (the eyes are not decimated), or more than 0.1 percent of the drawn muscle vertices are outside the skin.
+
+**The file contract.** `src/maleExport.ts` holds the copyright text and `test/maleGlb.test.ts` checks the file against this table.
+
+| Part       | Contract                                                                                                                                                                                                                            |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Axes       | Y up, metres, feet on y = 0, the skin centred on x and z, facing +z                                                                                                                                                                 |
+| Nodes      | 27, named exactly as in the mesh naming contract below, once each, in the order of `MUSCLE_IDS` and then `other`, `skin`, `core`, `head`, `eyes`. One mesh and one primitive per node                                               |
+| Materials  | One per mesh, named `mat_<name>`, plain colour, no textures. `mat_skin` is `BLEND` with alpha 0.12 and single sided, the rest are opaque. The app sets its own materials by mesh name                                               |
+| Colours    | Vertex colours (`COLOR_0`) on `eyes` only, for the white, iris and pupil, found from the direction out of each eye. Every other mesh has none                                                                                       |
+| Attributes | `POSITION` and `NORMAL` only (and `COLOR_0` on `eyes`). Smooth normals                                                                                                                                                              |
+| Encoding   | `KHR_mesh_quantization`, used and required, and no other extension. Positions are normalised 16 bit integers (about 0.03 mm) with a uniform scale and a translation on the node, normals are normalised bytes. No Draco, no meshopt |
+| Not in it  | Cameras, lights, animation, skins, textures, images                                                                                                                                                                                 |
+| Asset      | `generator` is `Ki-Lo body-model zanatomy_export`. `copyright` is `CC BY-SA 4.0` and both attribution lines. No dates, no paths                                                                                                     |
+
+**Numbers** (Blender 5.2.3 LTS, hash e13b728c6880, on macOS):
+
+- Size 2,623,436 bytes (2.50 MiB), 27 draw calls, 214,105 triangles (counted after validation), export 4 to 25 seconds depending on the load of the machine. The raw file before quantising is 3.8 MB.
+- Skin check on the decimated meshes: 6 of 85,091 drawn muscle vertices outside the skin (0.007 percent, the limit is 0.1).
+
+| Mesh          | Triangles |
+| ------------- | --------: |
+| `chest_upper` |     1,684 |
+| `chest_lower` |     3,972 |
+| `delt_front`  |     3,112 |
+| `delt_side`   |     3,144 |
+| `delt_rear`   |     3,822 |
+| `lats`        |     6,402 |
+| `traps_upper` |     3,216 |
+| `traps_mid`   |     7,318 |
+| `lower_back`  |    10,168 |
+| `biceps`      |     5,598 |
+| `triceps`     |     6,248 |
+| `forearms`    |    15,518 |
+| `abs`         |    16,000 |
+| `obliques`    |     6,378 |
+| `glute_max`   |     3,332 |
+| `glute_med`   |     6,172 |
+| `quads`       |    10,048 |
+| `hamstrings`  |     8,466 |
+| `adductors`   |     8,520 |
+| `calves`      |     7,776 |
+| `tibialis`    |     3,430 |
+| `neck`        |     7,134 |
+| `other`       |    19,998 |
+| `skin`        |    12,000 |
+| `core`        |    19,973 |
+| `head`        |    12,500 |
+| `eyes`        |     2,176 |
+| **Total**     |   214,105 |
+
+**Repeatable.** Two runs give the same bytes: the order of the nodes is fixed, the exporter options are fixed, Blender's decimation gives the same result for the same input, and the quantiser writes the JSON in a fixed order with a fixed generator string and no dates. The committed file was made by Blender 5.2.3 LTS (hash e13b728c6880) from scratch files made by `zanatomy:muscles`, `zanatomy:skin` and `zanatomy:head` of this same commit. A different Blender version, or a different CPU architecture (the committed file was made on Apple silicon), may decimate differently and give different bytes, so compare the sha256 of a re-export only on the same machine and Blender version.
+
+**What the phone file loses against the full renders** (`male-phone-front.png` against `male-heat-front.png`, `male-phone-three-quarter.png` against the debug three-quarter picture):
+
+- The abs keep their notches and read as in the full picture, but the fine fibre relief on them is gone. This took some finding. With `core` at 6,000 triangles the abs looked like ragged islands, and the cause was not the abs: the core is a dark shell only 4 mm under the muscles, a coarse decimation of it moves it by more than that, and it poked through the abs and the kneecaps. Raising the abs to 28,000 or even to their full 43,432 triangles changed nothing, pinning the abs boundary is moot (the abs mesh is closed, it has no boundary edges), and `core` at 10,000 was better but not enough. `core` at 20,000 matches the full picture. Cheapest way to save those triangles again: move the decimated core in along its normals by a few millimetres, which costs no triangles.
+- The fibre texture and fine relief on the legs, forearms and back are gone, so those muscles are smoother and flatter. Cheapest fix: raise `idsTriangles` (the total has about 36,000 triangles of room under the cap).
+- The hands and feet are the skin alone, because their muscles are dropped, so the fingers and toes are fused and webbed and the knuckles are soft. Cheapest fix: raise `skin` towards 15,000, or keep a few hand muscles in `other`.
+- The eyes keep their white, iris and pupil but the iris edge is a soft blend, because the colours are per vertex. Cheapest fix: duplicate the vertices along the iris ring so the colour edge is hard, or add a small texture.
+- The head is the bundle's head cut from 117,000 to 12,500 triangles, so the ears and the lips are slightly softer. Cheapest fix: raise `head` (the head and eyes together may use 15,000).
 
 ## Mesh naming contract
 
-The export that follows this tool produces a body in which **every mesh is named, and the names are these**:
+`dist/male.glb` is a body in which **every mesh is named, and the names are these**:
 
 - One mesh per id of `MUSCLE_IDS` in [`packages/core/src/training/muscles.ts`](../../packages/core/src/training/muscles.ts), 22 in all: `chest_upper`, `chest_lower`, `delt_front`, `delt_side`, `delt_rear`, `lats`, `traps_upper`, `traps_mid`, `lower_back`, `biceps`, `triceps`, `forearms`, `abs`, `obliques`, `glute_max`, `glute_med`, `quads`, `hamstrings`, `adductors`, `calves`, `tibialis`, `neck`. A muscle id names **both sides** of the body, so left and right are one mesh.
 - `other`: the superficial muscles that have no id, drawn in one neutral colour.
@@ -217,7 +282,7 @@ The scratch files written by the steps above name their objects `muscle_<id>`, `
 
 ## Notes
 
-- Blender writes nothing into the repository. The scripts write only `inspection/bundle.json`, `inspection/zanatomy-objects.json`, `renders/bases/` and `renders/muscles/`, and the package `.gitignore` keeps Python bytecode and any `.blend`, `.blend1` and `.blend@` file out.
+- Blender writes nothing into the repository except the files named here. The scripts write only `inspection/bundle.json`, `inspection/zanatomy-objects.json`, `renders/bases/`, `renders/muscles/` and (through `export`) `dist/male.glb`, and the package `.gitignore` keeps Python bytecode and any `.blend`, `.blend1` and `.blend@` file out.
 - PNG text stamps (the `.blend` path, date and render time Blender adds by default) are off on purpose, so no local path reaches the public repository. A test fails if a committed render holds a text chunk or `/Users/`.
-- The Blender steps are not part of `pnpm check`. `lint`, `typecheck` and `test` are, and the tests cover how the Blender command line is built, the package scripts, the Z-Anatomy mapping data (every id has objects and no object matches two ids) and that no committed render holds metadata.
+- The Blender steps are not part of `pnpm check`. `lint`, `typecheck` and `test` are, and the tests cover how the Blender command line is built, the package scripts, the Z-Anatomy mapping data (every id has objects and no object matches two ids), the budget and the drop list, the quantiser, the committed `dist/male.glb` against the file contract and that no committed render holds metadata.
 - `inspection/` is excluded from Prettier in the root `.prettierignore` because it is written exactly as the script builds it.

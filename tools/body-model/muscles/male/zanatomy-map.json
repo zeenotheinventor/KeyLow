@@ -124,6 +124,26 @@
       "withinMetres": 0.012
     }
   ],
+  "phoneDropFromOther": {
+    "note": "Neutral muscles that the phone file leaves out: nobody sees them through the skin at phone size. Everything else in other is kept.",
+    "collections": ["Muscles of hand", "Muscles of foot"],
+    "patterns": ["Superficial part of masseter\\.[lr]"]
+  },
+  "budget": {
+    "note": "Triangles per exported mesh for the phone file. The export fails when the total is over maximumTriangles, when an id is under minimumIdTriangles (unless its source has fewer, and an id in idFloors has its own higher minimum), when the skin is outside minimumSkinTriangles to maximumSkinTriangles, when head and eyes together are over maximumHeadAndEyesTriangles (the eyes are not decimated, they keep their source triangles), or when more than maximumPercentOutsideSkin of the drawn muscle vertices end up outside the decimated skin. All counts are taken after the meshes are validated, which drops degenerate triangles. The core is a dark shell 4 mm under the muscles, so it needs enough triangles to stay under them (at 6,000 it poked through the abs). The heaviest ids are cut hardest: the ids share idsTriangles in proportion to the square root of their source triangles.",
+    "maximumTriangles": 250000,
+    "minimumIdTriangles": 1000,
+    "maximumPercentOutsideSkin": 0.1,
+    "idsTriangles": 140000,
+    "idFloors": { "abs": 16000 },
+    "other": 20000,
+    "skin": 12000,
+    "core": 20000,
+    "head": 12500,
+    "minimumSkinTriangles": 10000,
+    "maximumSkinTriangles": 15000,
+    "maximumHeadAndEyesTriangles": 15000
+  },
   "skeleton": {
     "maximumAbsoluteX": 0.4,
     "maximumAbsoluteY": 0.2

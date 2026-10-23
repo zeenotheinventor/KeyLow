@@ -1,6 +1,7 @@
 """Shared by the Z-Anatomy scripts. Runs inside Blender's Python."""
 
 import hashlib
+import json
 import os
 import sys
 
@@ -17,6 +18,11 @@ REPOSITORY_ROOT = os.path.dirname(os.path.dirname(TOOL_FOLDER))
 HEAD_BLEND_START_METRES = 1.445
 HEAD_BLEND_END_METRES = 1.492
 MAP_PATH = os.path.join(TOOL_FOLDER, "muscles", "male", "zanatomy-map.json")
+
+
+def load_json(path):
+    with open(path) as handle:
+        return json.load(handle)
 
 
 def script_arguments():

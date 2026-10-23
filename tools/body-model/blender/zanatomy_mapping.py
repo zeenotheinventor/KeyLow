@@ -27,6 +27,8 @@ def compile_map(mapping):
         "ids": {muscle_id: [re.compile(p) for p in patterns] for muscle_id, patterns in mapping["ids"].items()},
         "neutral_collections": set(mapping["neutral"]["collections"]),
         "neutral": [re.compile(pattern) for pattern in mapping["neutral"]["patterns"]],
+        "phone_drop_collections": set(mapping["phoneDropFromOther"]["collections"]),
+        "phone_drop": [re.compile(pattern) for pattern in mapping["phoneDropFromOther"]["patterns"]],
     }
 
 
@@ -48,3 +50,10 @@ def classify(compiled, name, collection_names):
     ):
         return NEUTRAL
     return DEEP
+
+
+def is_phone_drop(compiled, name, collection_names):
+    """True for a neutral muscle that the phone file leaves out (see phoneDropFromOther in the mapping data)."""
+    if set(collection_names) & compiled["phone_drop_collections"]:
+        return True
+    return any(pattern.fullmatch(name) for pattern in compiled["phone_drop"])

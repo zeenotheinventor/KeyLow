@@ -4,8 +4,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const packageFolder = join(import.meta.dirname, "..");
-const { scripts } = JSON.parse(readFileSync(join(packageFolder, "package.json"), "utf8")) as {
+const { scripts, exports } = JSON.parse(
+  readFileSync(join(packageFolder, "package.json"), "utf8"),
+) as {
   scripts: Record<string, string>;
+  exports: Record<string, string>;
 };
 const blenderScripts = Object.entries(scripts).filter(([, command]) =>
   command.includes("src/run.ts"),
@@ -21,6 +24,27 @@ describe("package scripts that run Blender", () => {
         "zanatomy:render",
       ]),
     );
+  });
+
+  it("includes the phone render step", () => {
+    expect(blenderScripts.map(([name]) => name)).toContain("zanatomy:phone-render");
+  });
+
+  it("exports the phone model with a script that is not named build", () => {
+    expect(scripts.export).toContain("src/exportMale.ts");
+  });
+
+  it("exports the one committed copy of the phone model", () => {
+    expect(exports["./male.glb"]).toBe("./dist/male.glb");
+  });
+
+  it("runs the export through runBlender, so it gets the safety flags", () => {
+    const source = readFileSync(join(packageFolder, "src", "exportMale.ts"), "utf8");
+
+    expect(source).toContain('import { runBlender } from "./runBlender.ts"');
+    expect(source).toContain('runBlender("zanatomy_export"');
+    expect(source).not.toContain("child_process");
+    expect(existsSync(join(packageFolder, "blender", "zanatomy_export.py"))).toBe(true);
   });
 
   it("has no build script, because CI has no Blender", () => {
