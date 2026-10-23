@@ -1,2 +1,2 @@
 export { Banner } from "./Banner";
-export type { BannerAction, BannerProps, BannerVariant } from "./types";
+export type { BannerAction, BannerProps, BannerSize, BannerVariant } from "./types";

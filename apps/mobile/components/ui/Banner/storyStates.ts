@@ -7,4 +7,7 @@ export const storyStates = [
   "AddFailed",
   "Sentence",
   "PartialSave",
+  "WithChildren",
+  "WithoutIcon",
+  "Compact",
 ];

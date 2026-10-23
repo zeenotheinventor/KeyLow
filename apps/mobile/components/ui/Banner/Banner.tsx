@@ -18,7 +18,8 @@ import type { TextTone } from "../Text";
 const variants: Record<
   BannerVariant,
   {
-    boxClassName: string;
+    fillClassName: string;
+    borderClassName: string;
     icon: IconName;
     iconTone: IconTone;
     titleTone: TextTone;
@@ -29,7 +30,8 @@ const variants: Record<
   }
 > = {
   review: {
-    boxClassName: "border-warning bg-warning-muted",
+    fillClassName: "bg-warning-muted",
+    borderClassName: "border-warning",
     icon: "CircleAlert",
     iconTone: "warning",
     titleTone: "warning-ink",
@@ -37,7 +39,8 @@ const variants: Record<
     role: "note",
   },
   error: {
-    boxClassName: "border-danger bg-danger-muted",
+    fillClassName: "bg-danger-muted",
+    borderClassName: "border-danger",
     icon: "CircleAlert",
     iconTone: "danger",
     titleTone: "primary",
@@ -46,7 +49,8 @@ const variants: Record<
     liveRegion: "assertive",
   },
   offline: {
-    boxClassName: "border-border bg-surface-raised",
+    fillClassName: "bg-surface-raised",
+    borderClassName: "border-border",
     icon: "WifiOff",
     iconTone: "secondary",
     titleTone: "primary",
@@ -54,7 +58,8 @@ const variants: Record<
     role: "status",
   },
   info: {
-    boxClassName: "border-border bg-surface-raised",
+    fillClassName: "bg-surface-raised",
+    borderClassName: "border-border",
     icon: "Info",
     iconTone: "secondary",
     titleTone: "primary",
@@ -64,21 +69,31 @@ const variants: Record<
 };
 
 /**
- * A notice in the flow of a view: an icon, a title, a sentence and one optional action. It fades in, in
- * place of the design's cut-in from the side, which waits for a motion review on a device. The copy is
- * the screen's, from `@keylow/core/copy`.
+ * A notice in the flow of a view: an icon, a title, a sentence and one optional action, and a slot for
+ * something drawn under the words, such as a progress bar. It fades in, in place of the design's cut-in
+ * from the side, which waits for a motion review on a device. The copy is the screen's, from
+ * `@keylow/core/copy`.
  */
 export function Banner({
   variant = "info",
   title,
   body,
   icon,
+  hasIcon = true,
+  size = "default",
   sentence,
   action,
   announce,
+  children,
 }: BannerProps) {
   const animatedStyle = useFadeInStyle();
   const look = variants[variant];
+  const isCompact = size === "compact";
+  // The compact size is the trend explainer's: no border, 12 points all round, and the title in the 14 over 20
+  // label style. The default is the design system card's.
+  const boxClassName = isCompact
+    ? `p-3 ${look.fillClassName}`
+    : `border px-4 py-3 ${look.borderClassName} ${look.fillClassName}`;
   // Only the review notice can be raised: the quiet ones are never an alert, and the error already is.
   const isRaised = announce === true && variant === "review";
 
@@ -86,12 +101,14 @@ export function Banner({
   return (
     <Animated.View style={animatedStyle} testID="banner-fade">
       <View
-        className={`flex-row items-start gap-3 rounded-medium border px-4 py-3 ${look.boxClassName}`}
+        className={`flex-row items-start gap-3 rounded-medium ${boxClassName}`}
         testID="banner-box"
       >
-        <View className="pt-[2px]">
-          <Icon name={icon ?? look.icon} tone={look.iconTone} />
-        </View>
+        {hasIcon ? (
+          <View className="pt-[2px]">
+            <Icon name={icon ?? look.icon} tone={look.iconTone} />
+          </View>
+        ) : null}
         <View className="min-w-0 flex-1 gap-[2px]">
           {/* The words are announced as one group, and the action stays outside it so it can be reached. */}
           <View
@@ -102,8 +119,14 @@ export function Banner({
           >
             {/* The title is strong, as the design system card draws it. Only a sentence the screen asks for is regular. */}
             <Text
-              tone={look.titleTone}
-              variant={sentence === true && body === undefined ? "body" : "body-strong"}
+              tone={isCompact ? "primary" : look.titleTone}
+              variant={
+                isCompact
+                  ? "label-small"
+                  : sentence === true && body === undefined
+                    ? "body"
+                    : "body-strong"
+              }
             >
               {title}
             </Text>
@@ -113,6 +136,11 @@ export function Banner({
               </Text>
             )}
           </View>
+          {children == null || children === false ? null : (
+            // The slot sits outside the announced words too, so the words are read alone. The 6 points
+            // with the column's 2 give the 8 the boards leave between the words and a bar.
+            <View className="pt-[6px]">{children}</View>
+          )}
           {action === undefined ? null : (
             // The action reaches the 44 point touch target by growing past its text, and the negative
             // margins give back the room it takes, as the boards draw it.

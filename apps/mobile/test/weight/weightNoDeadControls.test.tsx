@@ -52,7 +52,7 @@ const states = [
       weightBackend.weighInReadsHang = true;
     },
     settled: () => screen.getByRole("status", { name: "Loading your weigh-ins" }),
-    buttons: ["Back to More", "Add weigh-in"],
+    buttons: ["Back to More", "How the trend works", "Add weigh-in"],
   },
   {
     name: "error",
@@ -60,13 +60,13 @@ const states = [
       weightBackend.weighInReadsFail = true;
     },
     settled: () => screen.findByRole("button", { name: "Try again" }),
-    buttons: ["Back to More", "Add weigh-in", "Try again"],
+    buttons: ["Back to More", "How the trend works", "Add weigh-in", "Try again"],
   },
   {
     name: "empty",
     prepare: () => undefined,
     settled: () => screen.findByRole("heading", { name: "No weigh-ins yet" }),
-    buttons: ["Back to More", "Add weigh-in", "Add weigh-in"],
+    buttons: ["Back to More", "How the trend works", "Add weigh-in", "Add weigh-in"],
   },
   {
     name: "list",
@@ -89,6 +89,7 @@ const states = [
     // Each row opens its weigh-in in the sheet. The times are the London clock of the day, so they are not fixed.
     buttons: [
       "Back to More",
+      "How the trend works",
       "Add weigh-in",
       /^Today, \d\d:\d\d · Health Connect, 81\.6 kg$/,
       /^Yesterday, \d\d:\d\d · Added by you, 81\.9 kg$/,
@@ -110,7 +111,7 @@ describe("the Weight screen's controls", () => {
       await settled();
 
       expectAccessibleNamesInOrder(screen.getAllByRole("button"), buttons);
-      for (const name of ["How the trend works", "Connect Health Connect"]) {
+      for (const name of ["Connect Health Connect"]) {
         expect(screen.queryByRole("button", { name })).not.toBeOnTheScreen();
         expect(screen.queryByRole("link", { name })).not.toBeOnTheScreen();
       }
