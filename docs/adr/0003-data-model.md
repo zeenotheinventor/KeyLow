@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23.
 
 ## Context
 
@@ -1386,3 +1386,224 @@ The Privacy Policy lists the health data the app imports. KEY-574 names body fat
 ### Consequences of Amendment 11
 
 The migration (KEY-569) creates the enum, the table, the constraint, the index, the grants and the policies, and `packages/db/src/types.gen.ts` gains `body_measurements` and `body_measurement_kind`. Core and the api-client build to the numbers above. The M7 export brief must add `body_measurements`. Any further deviation from the frozen Decision, from Amendments 1 to 10 or from this amendment needs an Amendment 12 before the migration or code that implements it lands.
+
+## Amendment 12 (Setup wizard: programs, and the profile fields the wizard writes, 2026-10-23)
+
+### Status
+
+Recorded on 2026-10-23 under KEY-594, part of KEY-6 (the M6 brief, scopes 1 and 5). It implements Zee's rulings of 2026-10-23 on the setup wizard, quoted below. The frozen Decision names `programs` and lists its columns with no types, defaults or checks. This amendment gives them, and adds what the wizard needs around it: two enums, a type change and a check on `profiles`, and the marking of existing accounts as set up. ADR 0002, Amendment 1, holds the engine side (the starting estimate and how the wizard uses it). The remaining details are interpretations made for implementation. They are, in full:
+
+- the enum `activity_level`, its values and their order, and the conversion of `profiles.activity` with a check that every value is null first.
+- the check `sex in ('female', 'male', 'other')`, and that "prefer not to say" is stored as `other`.
+- the enum `goal_type`, its values and their order.
+- the types, defaults and checks of every `programs` column, among them that `rate_pct_per_week` is a magnitude checked together with `goal` in one check, the bounds of each numeric column, and that `split_preset` is `text` with a check and not an enum.
+- that `dow_offsets_kcal` is an `int[]` with a length check and not `int[7]`, and that its elements are never null.
+- the `updated_at` column, and that the client writes it.
+- the partial unique index that makes one program active per user, that a recalculation updates the active row in place, and that the api-client reads the active row and does not upsert against that index.
+- the column grants, among them that `user_id` is in no insert or update list, and the four policies. `anon` and `service_role` get nothing.
+- that every profile that exists when the migration runs, with `onboarding_completed_at` null, is marked set up.
+- that the wizard records the weight it was given as a `manual` weigh-in, the order in which it saves (weigh-in, program, profile last), and that "I'll set my own targets" stamps `onboarding_completed_at` and nothing else.
+- that `handle_new_user()` is not changed by this amendment.
+- the export and account deletion contract recorded for M7.
+- the health data rules for programs.
+- that `TERMS_VERSION` does not change.
+
+Decided by the orchestrator on review, 2026-10-23. These are not Zee's rulings:
+
+- what the wizard writes to `programs` on insert and on update, that `started_on` is insert only, and that a unique violation (SQLSTATE 23505) from a double press or a second device is step 2 with the code, after which a retry updates the active row.
+- that the wizard writes `weight_unit` as `kg` or `lb` only when the stored value is null, never overwrites a stored value (`st` included), and enters weights in lb when `st` is stored.
+- that the wizard skips the weigh-in whenever the weight entered equals the value of the user's latest weigh-in, not only today's.
+- the exact check on `dow_offsets_kcal`, and that KEY-600 verifies its accept and reject cases.
+- that `split_preset` values are the keys of the engine's params directly, with no mapping.
+- that KEY-600's `seed.sql` marks the demo user set up.
+- that how M6 sets the prior for an account with no stats is open.
+
+The first list comes from the KEY-594 ticket's plan and the second was decided on review. Neither list is a ruling of Zee's: his rulings are quoted below, and he can overturn any interpretation here by a later amendment. Amendments 1 to 11 are unchanged. The frozen Decision text is unchanged except that two things on the `programs` line are realised in a form Postgres allows: `int[7]` becomes `int[]` with a length check, and "one active per user" becomes a partial unique index. Both are in "`programs`" below. This amendment adds one table and two enums, converts one `profiles` column and adds one `profiles` check.
+
+### Zee's rulings
+
+Zee, 2026-10-23, approved the ten recommended setup wizard answers on KEY-6 and KEY-594:
+
+> "Yes, start M6 in its own session now, with the ten recommended setup wizard answers."
+
+The ten answers, as approved, quoted in full with their original numbers:
+
+> **1.** Questions. Sex (female, male, prefer not to say), date of birth, height, weight, one activity question with five levels, goal, rate, protein (moderate 1.6, high 2.0, very high 2.2 g/kg) and diet style (balanced, low fat, low carb). No keto, training type or workouts per week.
+>
+> **2.** Existing users. No forced wizard. Existing accounts are marked set up, and "Estimate my targets" on Targets runs the wizard prefilled.
+>
+> **3.** Body fat. Not asked.
+>
+> **4.** Safety.
+>
+> - Under 18 from the birth date: no "lose" goal, with a line to talk to a professional.
+> - Under 13: not accepted.
+> - Pregnancy and breastfeeding: a note on the goal step, with no question and nothing stored.
+> - The engine guardrails apply to everyone and are shown when they change the result.
+>
+> **5.** Web. Mobile first. Web boards and tickets (W1 to W3) come after the mobile wizard has shipped and Zee has used it.
+>
+> **6.** Escape. First run offers "I'll set my own targets". Single questions cannot be skipped.
+>
+> **7.** Rates. Lose 0.25, 0.5, 0.75 or 1.0% a week, default 0.5. Gain 0.1, 0.25 or 0.5% a week, default 0.25. Each is also shown as kg (or lb) a week.
+>
+> **8.** Check-in weekday. Not asked now. M6 decides it.
+>
+> **9.** Landing. First run ends on the Diary. A recalculation returns to Targets.
+>
+> **10.** Milestone. The tickets are filed under M6, and the non-UI tickets start now.
+
+Answers 1, 2, 3, 4, 6, 7 and 8 touch the data model, and the sections below apply them. Answers 5 (web), 9 (landing) and 10 (milestone) do not.
+
+"Prefer not to say" is stored as `other`, as the KEY-594 comment of the same date records.
+
+### What the wizard writes on `profiles`
+
+The wizard adds no column to `profiles` and changes no grant. Every column it writes exists and is already granted for `insert` and `update` by Amendments 3 and 4:
+
+| Column                                                                                    | What the wizard writes                                                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sex`                                                                                     | `female`, `male` or `other`. The check below applies.                                                                                                                                                                                                                  |
+| `birth_date`                                                                              | The date of birth. Nothing is stored for an age under 13, which is not accepted.                                                                                                                                                                                       |
+| `height_cm`                                                                               | The height.                                                                                                                                                                                                                                                            |
+| `onboarding_weight_kg`                                                                    | The weight entered, on every run, so it is the weight of the most recent run. M6's first snapshot takes it as part of its prior (ADR 0002, Amendment 1).                                                                                                               |
+| `activity`                                                                                | One of the five `activity_level` values.                                                                                                                                                                                                                               |
+| `weight_unit`                                                                             | `kg` or `lb`, only when the stored `weight_unit` is null (the first set up). The wizard never overwrites a stored value, including `st`. When `st` is stored, the wizard's weight entry uses lb. The same goes for any other stored setting the wizard does not offer. |
+| `target_kcal`, `target_protein_g`, `target_carbs_g`, `target_fat_g`, `targets_updated_at` | The result of `deriveTargets`, as the manual target (Amendment 4).                                                                                                                                                                                                     |
+| `onboarding_completed_at`                                                                 | Set by the final update of a save, or alone by the escape. See "How the wizard saves".                                                                                                                                                                                 |
+
+The wizard sets no `checkin_weekday` (Zee's ruling 8). Nothing about pregnancy or breastfeeding is stored (ruling 4), and there is no column for it. There is no body fat column (ruling 3). The wizard leaves `energy_unit` as it is, and any other stored setting it does not offer.
+
+A column grant names the column and not its type, so converting `activity` below does not change any grant.
+
+### How the wizard saves
+
+"The stats" below means `sex`, `birth_date`, `height_cm`, `activity`, `weight_unit` and `onboarding_weight_kg`, the profile fields the core `startingPlan` hands the api-client (KEY-599). The api-client saves in this order (KEY-602):
+
+1. **The weigh-in.** The weight entered is recorded as a `manual` weigh-in for today (Amendment 9), through the existing `addWeighIn` repo. It is skipped whenever the weight entered equals the value of the user's latest weigh-in, not only today's, so a recalculation does not write a stale value dated today.
+2. **The program.** The active program is updated in place if there is one, and inserted if there is not. What each write carries is in "What the wizard writes to `programs`" below.
+3. **The profile, last, in one update of the user's own row.** The stats, the four target columns, `targets_updated_at` and `onboarding_completed_at`, which is the client's time.
+
+Because the profile is last, a failure at step 1 or 2 leaves `onboarding_completed_at` as it was, so the account is not marked set up and the user can try again. A retry after a failure in step 2 or 3 may add a second `manual` weigh-in for today. That is accepted, because the weight trend uses the median of a day's weigh-ins.
+
+`onboarding_weight_kg` is the weight the wizard was given, written with the stats in step 3. The same weight is also the `manual` weigh-in of step 1, unless that step is skipped for the reason above, when a weigh-in of the same value already exists. M6's first snapshot reads `onboarding_weight_kg` as its prior's weight (ADR 0002, Amendment 1) and is not told to look at the weigh-in.
+
+**The escape.** "I'll set my own targets" (Zee's ruling 6) writes `onboarding_completed_at` and nothing else, then opens Targets, so the first-run wizard does not appear again. It writes no stats, no program and no targets. This is how the draft of the first-run screen ticket (S7, in the KEY-6 document "Setup wizard UI tickets, to file when the canvas is approved") follows ruling 6.
+
+### `activity_level` and `profiles.activity`
+
+Answer: an enum `public.activity_level ('sedentary', 'light', 'moderate', 'very', 'extra')`, in that order, which is the order of the factors 1.2, 1.375, 1.55, 1.725 and 1.9 in ADR 0002, Amendment 1. The order is part of the contract.
+
+`profiles.activity`, which `0001_init.sql` made `text`, becomes `public.activity_level`. No code writes the column today. The migration asserts that every value is null before it converts, and fails if one is not, so no value is ever guessed or lost.
+
+### `profiles.sex`
+
+`profiles.sex` stays `text` and gets the check `sex in ('female', 'male', 'other')`. A check passes on null, so a profile with no sex is valid. No code writes the column today, so the migration's new check fails loudly if a row holds another value, and the migration needs no separate assertion.
+
+`other` is what the wizard stores for "prefer not to say". It is the value the engine reads as a BMR offset of −78, the mean of the two (ADR 0002, Amendment 1).
+
+### `goal_type`
+
+Answer: an enum `public.goal_type ('lose', 'maintain', 'gain')`, in that order.
+
+### `programs`
+
+| Column                      | Definition                                                                                                                                            |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                        | `uuid primary key default gen_random_uuid()` (Amendment 1).                                                                                           |
+| `user_id`                   | `uuid not null default auth.uid() references auth.users (id) on delete cascade`.                                                                      |
+| `goal`                      | `public.goal_type not null`, with no default.                                                                                                         |
+| `rate_pct_per_week`         | `numeric not null`. A magnitude, in percent of body weight a week. Covered by the goal and rate check below.                                          |
+| `protein_g_per_kg`          | `numeric not null`. Check: above 0 and at most 3.0.                                                                                                   |
+| `fat_fraction_of_remaining` | `numeric not null`. Check: above 0 and below 1.                                                                                                       |
+| `split_preset`              | `text not null`. Check: `split_preset in ('balanced', 'low_fat', 'low_carb')`.                                                                        |
+| `dow_offsets_kcal`          | `int[] not null default '{0,0,0,0,0,0,0}'`. Check: length 7, no null element, elements sum to 0.                                                      |
+| `goal_weight_kg`            | `numeric`, nullable. Check: null, or from 20 to 400 inclusive.                                                                                        |
+| `started_on`                | `date not null`, with no default. The user's local date, sent by the client.                                                                          |
+| `ended_on`                  | `date`, nullable. Null means the program is active. Check: null, or on or after `started_on`.                                                         |
+| `next_checkin_date`         | `date`, nullable. M6 sets it. The wizard leaves it null.                                                                                              |
+| `created_at`                | `timestamptz not null default now()` (Amendment 1).                                                                                                   |
+| `updated_at`                | `timestamptz not null default now()`. The client writes it on every update, as it writes `targets_updated_at` (Amendment 4), and there is no trigger. |
+
+- The goal and rate check is one check, so that the three goals cannot drift apart: `(goal = 'maintain' and rate_pct_per_week = 0) or (goal = 'lose' and rate_pct_per_week > 0 and rate_pct_per_week <= 1.0) or (goal = 'gain' and rate_pct_per_week > 0 and rate_pct_per_week <= 0.5)`. The rate is a magnitude, so a `lose` row holds 0.5, not −0.5, and the direction is the goal. The bounds are the engine's rate caps (1.0 a week to lose, 0.5 a week to gain). The wizard offers fewer rates than the check admits (Zee's ruling 7: lose 0.25, 0.5, 0.75 or 1.0, default 0.5, gain 0.1, 0.25 or 0.5, default 0.25). Because the bounds equal the engine's rate caps, a stored rate never makes the engine record `max_rate`.
+- `protein_g_per_kg` and `fat_fraction_of_remaining` are the engine's protein and fat inputs. The wizard's protein presets (1.6, 2.0 and 2.2 g/kg) and the fat fractions that go with the diet styles (balanced 0.40, low fat 0.28, low carb 0.60) are core's, in `@keylow/core/setup`. No check pairs `split_preset` with `fat_fraction_of_remaining`.
+- `split_preset` is stored in snake_case (`balanced`, `low_fat`, `low_carb`) and is `text` with a check, not an enum. These three values are the keys of the engine's fat fraction params directly (ADR 0002, Amendment 1), so no mapping is needed.
+- `dow_offsets_kcal` is `int[]` and not the frozen `int[7]`, because Postgres ignores a declared array size, so the length is a check. The elements must not be null, because a null element would make the sum null and a check passes on null. A check cannot use a subquery, so the check is written out in full, and the migration uses it: `cardinality(dow_offsets_kcal) = 7 and array_position(dow_offsets_kcal, null) is null and dow_offsets_kcal[1] + dow_offsets_kcal[2] + dow_offsets_kcal[3] + dow_offsets_kcal[4] + dow_offsets_kcal[5] + dow_offsets_kcal[6] + dow_offsets_kcal[7] = 0`. KEY-600 verifies its accept and reject cases (seven zeros, a sum that is not 0, six or eight elements, a null element) in a rolled-back transaction. The wizard leaves the default of seven zeros, and the day-of-week UI is v2. The engine and the column support offsets in v1 (the Build Plan).
+- `goal_weight_kg` is not asked by the wizard and stays null. It uses the same 20 to 400 range as a weight (Amendment 9).
+- The names of the constraints are the migration's call. The rules are the contract.
+
+### One active program per user
+
+A unique index on `(user_id) where ended_on is null`. A user has at most one row with a null `ended_on`, which is the frozen "one active per user".
+
+- A recalculation (the wizard run again from "Estimate my targets") updates the active row in place, and so does M6's "edit program". It does not end one row and insert another.
+- Ending a program is setting `ended_on`. After that the user may start another.
+- The index is partial, so PostgREST's `on_conflict` cannot name it, for the reason Amendment 9 gives in "The import key outlives a delete". The api-client therefore reads the active row (`ended_on is null`) and then inserts or updates it. It does not upsert.
+- The index leads with `user_id`, so the cascade from `auth.users` has an index on the referencing column. No other index is added.
+
+### What the wizard writes to `programs`
+
+- **On insert** (the first save): `goal`, `rate_pct_per_week`, `protein_g_per_kg`, `fat_fraction_of_remaining`, `split_preset`, `started_on` (today, the user's local date) and `updated_at`.
+- **On update of the active row** (a recalculation): `goal`, `rate_pct_per_week`, `protein_g_per_kg`, `fat_fraction_of_remaining`, `split_preset` and `updated_at` only. `started_on` is insert only, so a recalculation does not move it.
+- **Never written by the wizard:** `dow_offsets_kcal`, `goal_weight_kg`, `next_checkin_date` and `ended_on`.
+- A double press, or a second device saving for the first time at the same moment, can make two inserts race. The one-active index refuses the second with a unique violation (SQLSTATE 23505). That surfaces as step 2 plus the code, and a retry then finds the active row and updates it.
+
+### Privileges and row level security
+
+In the style of Amendments 8 and 9: `revoke all` on the table from `anon`, `authenticated` and `service_role`, then explicit grants to `authenticated`. RLS is enabled.
+
+- `select` and `delete` on the table.
+- `insert` and `update` on every column except `id`, `user_id` and `created_at`. That is `goal`, `rate_pct_per_week`, `protein_g_per_kg`, `fat_fraction_of_remaining`, `split_preset`, `dow_offsets_kcal`, `goal_weight_kg`, `started_on`, `ended_on`, `next_checkin_date` and `updated_at`.
+- `user_id` is in neither list. A column default applies to a column the caller cannot write, so every inserted row gets `auth.uid()`, a row can never be inserted for another user, and no row ever changes owner.
+- `anon` gets nothing, and `service_role` gets nothing. Nothing server side reads or writes programs yet. M6's amendment grants the service role what `run-checkin` needs.
+
+Policies, as predicates, all for `authenticated` and all using `(select auth.uid())`:
+
+- `programs_select_own`: using `user_id = (select auth.uid())`.
+- `programs_insert_own`: with check `user_id = (select auth.uid())`.
+- `programs_update_own`: using and with check `user_id = (select auth.uid())`.
+- `programs_delete_own`: using `user_id = (select auth.uid())`.
+
+Terms acceptance is not in the policies, as in Amendment 9. A column added later is not writable by clients until a migration grants it, the rule of Amendments 3 and 4.
+
+### Existing accounts are marked set up
+
+Zee's ruling 2 is that there is no forced wizard and that existing accounts are marked set up. The migration therefore sets `onboarding_completed_at = now()` on every profile that exists when it runs and has `onboarding_completed_at` null. A profile that already has a value keeps it.
+
+An account created later has `onboarding_completed_at` null, because `handle_new_user()` is not changed by this amendment (see Amendment 3), and so sees the first-run wizard. "Estimate my targets" on Targets runs the wizard prefilled for an account already marked set up.
+
+### Health data
+
+A program row is health data: the goal, the rate and the goal weight are, as are the profile stats the wizard writes (Zee, 2026-10-14, in the KEY-6 brief). They are collected because the engine uses them, and nothing beyond them is. A value from a program or from the wizard's inputs never appears in a log, an error report or an analytics event. Only row ids and counts do. No client code reads, logs or reports the message or detail of a database error from a program read or write. An error carries the action and the code only. The migration, the seed and the tests neither log a value nor raise a notice with one.
+
+The safety rules of ADR 0002, Amendment 1 (no "lose" goal under 18, nothing accepted under 13) are product rules in `@keylow/core/setup`. The database holds no check on age, and nothing about pregnancy or breastfeeding is stored.
+
+### Export and account deletion
+
+There is no data export and no in-app account deletion today (Amendment 9, "Export and account deletion"). This amendment adds to the contract M7 will use:
+
+- Export includes every column of every `programs` row of the user, ended rows included. The M7 export brief (KEY-7) must add this table to its list. The `service_role` grant that an export path needs is M7's to add.
+- Account deletion works through the `on delete cascade` foreign key from `auth.users` (`programs.user_id`) and needs no code.
+
+### Terms
+
+The Privacy Policy already lists "Your profile stats." and "Your goals, your targets and your expenditure estimates.", in `packages/core/src/copy/legal.ts`. The wizard stores nothing that is not on that list, so no policy copy changes and `TERMS_VERSION` does not change.
+
+### Open
+
+- The check-in weekday and `next_checkin_date`. Zee's ruling 8 is that M6 decides the weekday. The wizard writes neither.
+- The service role's grants on `programs`, and the tables `expenditure_snapshots` and `targets`. M6 builds them, with their own amendment.
+- The web wizard. Zee's ruling 5 puts the web boards and tickets (W1 to W3) after the mobile wizard has shipped and Zee has used it. They need no schema change.
+- The prior for an account with no stats. An existing account marked set up whose profile has null stats, and a user who took the escape, has nothing to compute the starting estimate from. M6 decides what its first snapshot uses (ADR 0002, Amendment 1).
+
+### Implemented by
+
+- KEY-600, the migration and seed: the enums `activity_level` and `goal_type`, the conversion of `profiles.activity`, the check on `profiles.sex`, `programs` with its checks, the partial unique index, the grants and policies, existing accounts marked set up, `seed.sql` marking the demo user set up, pgTAP (every policy, the exact privileges, each check, the one-active index and the account deletion cascade), and the regenerated `packages/db/src/types.gen.ts`.
+- `seed.sql` marks the demo user set up (`onboarding_completed_at` set). `handle_new_user` creates the demo profile with `onboarding_completed_at` null, after the migration's backfill has run, so without this the first-run gate would trap the demo user and any end-to-end flow. It is a file change only. Nobody reseeds the shared stack.
+- KEY-601 and KEY-602, the api-client: reading and saving the setup, including the read of the active program and the insert or update that follows.
+- KEY-595 to KEY-599, the core side, ADR 0002 Amendment 1.
+- KEY-7 (M7), outside this amendment: the export, which must include this table.
+
+### Consequences of Amendment 12
+
+The migration (KEY-600) creates the enums, the table, the checks, the index, the grants and the policies, converts `profiles.activity`, adds the check on `profiles.sex` and marks existing accounts set up, and `packages/db/src/types.gen.ts` gains `programs`, `activity_level` and `goal_type`. Core and the api-client build to the numbers above. The M7 export brief must add `programs`. Any further deviation from the frozen Decision, from Amendments 1 to 11 or from this amendment needs an Amendment 13 before the migration or code that implements it lands.
