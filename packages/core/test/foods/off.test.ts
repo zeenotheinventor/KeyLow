@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { henEggTags } from "./naturalUnitFixtures";
 import { fixtures, normalisableFixtures, normaliseOk } from "./offFixtures";
 import {
   normaliseOffCandidate,
@@ -386,6 +387,77 @@ describe("normaliseOffProduct", () => {
     it("should offer the pack alone, not as the default, without a serving", () => {
       const { portions } = normaliseOk(fixtures.macrosOnly);
       expect(portions).toEqual([{ label: "1 pack", grams: 250, ml: null, isDefault: false }]);
+    });
+  });
+
+  describe("borrowed natural units", () => {
+    // 3282070015314, a real box of ten free-range hen eggs, with the energy OFF holds for it.
+    const boxOfEggs = {
+      ...fixtures.kcalPresent,
+      code: "3282070015314",
+      quantity: "10",
+      packaging_tags: ["en:cardboard", "en:box"],
+      categories_tags: henEggTags,
+      serving_size: undefined,
+      serving_quantity: undefined,
+      nutriments: { "energy-kcal_100g": 140 },
+    };
+
+    it("should offer the four egg sizes, large the default, from the resolved energy", () => {
+      const { portions } = normaliseOk(boxOfEggs);
+      expect(portions.map(({ label, isDefault }) => [label, isDefault])).toEqual([
+        ["1 small", false],
+        ["1 medium", false],
+        ["1 large", true],
+        ["1 extra large", false],
+      ]);
+    });
+
+    it("should read the energy from kJ when kcal is missing", () => {
+      const { portions } = normaliseOk({
+        ...boxOfEggs,
+        nutriments: { "energy-kj_100g": 586 },
+      });
+      expect(portions).toHaveLength(4);
+    });
+
+    it("should borrow on energy converted from a per-serving figure", () => {
+      // 84 kcal in a 60 g serving is 140 kcal per 100 g.
+      const { food, portions } = normaliseOk({
+        ...boxOfEggs,
+        nutrition_data_per: "serving",
+        serving_size: "1 egg (60 g)",
+        serving_quantity: 60,
+        nutriments: { "energy-kcal_serving": 84 },
+      });
+      expect(food.kcal).toBe(140);
+      expect(portions.map(({ label, isDefault }) => [label, isDefault])).toEqual([
+        ["1 egg (60 g)", true],
+        ["1 small", false],
+        ["1 medium", false],
+        ["1 large", false],
+        ["1 extra large", false],
+      ]);
+    });
+
+    it("should borrow nothing when the energy is not that of an egg", () => {
+      const { portions } = normaliseOk({ ...boxOfEggs, nutriments: { "energy-kcal_100g": 0 } });
+      expect(portions).toEqual([]);
+    });
+
+    it("should keep the serving as the default of a box of eggs", () => {
+      const { portions } = normaliseOk({
+        ...boxOfEggs,
+        serving_size: "1 egg (60 g)",
+        serving_quantity: 60,
+      });
+      expect(portions.map(({ label, isDefault }) => [label, isDefault])).toEqual([
+        ["1 egg (60 g)", true],
+        ["1 small", false],
+        ["1 medium", false],
+        ["1 large", false],
+        ["1 extra large", false],
+      ]);
     });
   });
 
