@@ -9,6 +9,7 @@ import { useIsOnline } from "../../lib/connectivity";
 import { foodSearchHref, withLogContext } from "../../lib/navigation";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { useViewedDay } from "../../lib/viewedDay";
+import { SessionBar, useSessionBar } from "../SessionBar";
 import { RouterTabBar, SearchLauncher, useToastClearance } from "../ui";
 
 import type { BottomTabBarProps } from "expo-router/js-tabs";
@@ -24,8 +25,10 @@ const screensWithLauncher: readonly string[] = ["dashboard", "diary"];
  * Diary for the day on view, and on every other tab for today in the profile's time zone. Browsing foods
  * without logging is More, Your foods. Offline, or until the profile's zone is known, so that there is a
  * right "today", the launcher and the centre plus are dimmed and open nothing.
- * The launcher stands on the tab bar, so a toast would sit behind it: the bar measures the launcher and
- * raises every toast by its height while it is drawn, whichever screen raises the toast.
+ * While a session runs the session bar stands between the launcher and the tab bar, on every tab, and opens
+ * the session. The launcher and the session bar stand on the tab bar, so a toast would sit behind them: the
+ * bar measures each and raises every toast by their heights while they are drawn, whichever screen raises
+ * the toast.
  */
 export function MainTabBar(props: BottomTabBarProps) {
   const router = useRouter();
@@ -35,8 +38,12 @@ export function MainTabBar(props: BottomTabBarProps) {
   const viewedDay = useViewedDay();
   const timeZone = useProfileTimeZone({ enabled: useReadsEnabled() }).data;
   const [launcherHeight, setLauncherHeight] = useState(0);
+  const sessionBar = useSessionBar();
+  const [sessionBarHeight, setSessionBarHeight] = useState(0);
 
-  useToastClearance(hasLauncher ? launcherHeight : 0);
+  useToastClearance(
+    (hasLauncher ? launcherHeight : 0) + (sessionBar === null ? 0 : sessionBarHeight),
+  );
 
   // With no zone there is no right "today", and guessing UTC would log to the wrong day near midnight.
   const canLog = isOnline && timeZone !== undefined;
@@ -81,6 +88,15 @@ export function MainTabBar(props: BottomTabBarProps) {
           />
         </View>
       ) : null}
+      {sessionBar === null ? null : (
+        <View
+          onLayout={(event) => {
+            setSessionBarHeight(event.nativeEvent.layout.height);
+          }}
+        >
+          <SessionBar {...sessionBar} />
+        </View>
+      )}
       <RouterTabBar
         {...props}
         addDisabled={!canLog}

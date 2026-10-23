@@ -91,6 +91,10 @@ export const mockUseRefreshOutdatedOffFood = jest.fn<undefined, [Food | null | u
 export const recipeState: { current: RecipeState } = { current: { status: "loading" } };
 export const mockUseRecipe = jest.fn<RecipeState, [string | undefined, { enabled?: boolean }?]>();
 
+// The session bar of the tab bar reads the session in progress and, for its plan, the active routine. These tests are
+// about other things, so no session is open and the reads have answered. The session bar's own tests use the real hooks.
+const noSessionRead = { data: null, isPending: false, isError: false, fetchStatus: "idle" };
+
 export const foodQuery: QueryState<Food | null> = {
   data: foodFixture,
   isPending: false,
@@ -179,6 +183,9 @@ export const mockApiClient = {
   useFoodWithPortions: mockUseFoodWithPortions,
   useRefreshOutdatedOffFood: mockUseRefreshOutdatedOffFood,
   useRecipe: mockUseRecipe,
+  useActiveSession: () => noSessionRead,
+  useActiveRoutine: () => noSessionRead,
+  useRoutine: () => noSessionRead,
   // A signed in user here has accepted the current Terms, so the AuthGate's terms gate stays out of the way.
   useTermsAcceptance: () => ({
     isPending: false,
