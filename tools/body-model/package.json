@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "exports": {
-    "./male.glb": "./dist/male.glb"
+    "./male.glb": "./dist/male.glb",
+    "./meshNames": "./src/meshNames.ts"
   },
   "scripts": {
     "inspect": "node --experimental-strip-types src/run.ts inspect_bundle",
@@ -17,7 +18,8 @@
     "zanatomy:phone-render": "node --experimental-strip-types src/run.ts zanatomy_phone_render",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify": "node --experimental-strip-types src/verify.ts"
   },
   "devDependencies": {
     "@keylow/config": "workspace:*",
@@ -25,5 +27,8 @@
     "eslint": "^9.39.5",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "@keylow/core": "workspace:*"
   }
 }

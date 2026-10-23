@@ -1,0 +1,5 @@
+{
+  "extends": "@keylow/config/tsconfig/base.json",
+  "compilerOptions": { "lib": ["ES2022"], "types": [] },
+  "include": ["../../src/meshNames.ts"]
+}
