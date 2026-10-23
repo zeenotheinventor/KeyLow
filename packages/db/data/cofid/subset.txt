@@ -141,8 +141,13 @@
 13-670 # Beans, chick peas, canned, re-heated, drained
 13-671 # Sweet potato, steamed
 13-879 # Paprika
+14-025 # Apricots, raw, flesh and skin
+14-091 # Figs, whole green fruit, raw
+14-125 # Kumquats, whole fruit, raw
 14-129 # Lemons, peeled, flesh only
 14-131 # Limes, flesh only
+14-142 # Lychees, raw, flesh only
+14-178 # Passion fruit, flesh and pips
 14-299 # Peaches, raw, flesh and skin
 14-318 # Bananas, flesh only
 14-319 # Apples, eating, raw, flesh and skin
@@ -153,14 +158,23 @@
 14-327 # Oranges, flesh only
 14-329 # Orange juice, chilled
 14-331 # Apple juice, clear, ambient and chilled
+14-339 # Melon, Canteloupe-type, flesh only
 14-342 # Apples, cooking, baked without sugar, flesh only
 14-346 # Apples, eating, raw, flesh and skin, weighed with core
 14-347 # Bananas, raw, flesh only, weighed with skin
 14-369 # Orange juice, freshly squeezed
 14-371 # Kiwi fruit, flesh only, raw
 14-372 # Plums, dessert, flesh and skin, raw
+14-376 # Pineapple, flesh only, raw
 14-378 # Mangoes, ripe, flesh only, raw
+14-380 # Nectarines, flesh and skin, raw
+14-382 # Cherries, flesh and skin, raw
+14-384 # Grapefruit, flesh only, raw
 14-386 # Avocado, Hass, flesh only
+14-391 # Prunes, ready-to-eat, semi-dried
+14-392 # Apricots, ready-to-eat, semi-dried
+14-394 # Dates, dried, flesh and skin
+14-395 # Figs, ready-to-eat, semi-dried
 14-870 # Almonds, flaked and ground
 14-892 # Peanut butter, smooth
 15-107 # Curry, chick pea, whole and tomato, Punjabi, with butter, homemade

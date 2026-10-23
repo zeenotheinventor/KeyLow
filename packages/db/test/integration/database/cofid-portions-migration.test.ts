@@ -30,9 +30,9 @@ const deletePortionsOf = (codes: readonly string[]): string =>
 const listPortionsOf = (codes: readonly string[]): string =>
   `select food.source_ref, portion.label, portion.grams, portion.is_default, portion.position ${sharedPortionsOf(codes)} order by food.source_ref, portion.position;`;
 
-/** A fingerprint of the rows, created_at included, so a row that is rewritten differently shows. */
+/** The row count and a fingerprint of the rows, created_at included, so a row that is rewritten differently shows. */
 const fingerprintOf = (codes: readonly string[]): string =>
-  `select md5(coalesce(string_agg(portion::text, '|' order by portion.id), '')) ${sharedPortionsOf(codes)};`;
+  `select count(*), md5(coalesce(string_agg(portion::text, '|' order by portion.id), '')) ${sharedPortionsOf(codes)};`;
 
 /** Runs the script in a transaction that is rolled back, and returns what its selects printed, one line per row. */
 function runRolledBack(script: string): string[] {
@@ -81,7 +81,102 @@ describe("the CoFID portions migration, applied to a database that has the foods
     );
 
     expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toMatch(/^0\|/);
     expect(lines[1]).toBe(lines[0]);
+  });
+});
+
+// KEY-523, the fruit batch. The expected rows are the FoodData Central rows the portions file cites.
+const fruitBatchCodes = [
+  "14-025", // apricot
+  "14-091", // fig
+  "14-125", // kumquat
+  "14-142", // lychee
+  "14-178", // passion fruit
+  "14-339", // cantaloupe wedges
+  "14-376", // pineapple slices
+  "14-380", // nectarine
+  "14-382", // cherry
+  "14-384", // grapefruit halves
+  "14-391", // prune
+  "14-392", // dried apricot
+  "14-394", // date
+  "14-395", // dried fig
+] as const;
+const nectarineCode = "14-380";
+const dateCode = "14-394";
+
+describe("the CoFID portions migration, applied to a database that has the fruit but no portions for it", () => {
+  it("should give nectarines small, medium and large, with medium the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([nectarineCode])}\n${migrationSql}\n${listPortionsOf([nectarineCode])}`,
+    );
+
+    expect(lines).toEqual([
+      "14-380|1 small|129|f|0",
+      "14-380|1 medium|142|t|1",
+      "14-380|1 large|156|f|2",
+    ]);
+  });
+
+  it("should give grapefruit its three half sizes, with the medium half the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(["14-384"])}\n${migrationSql}\n${listPortionsOf(["14-384"])}`,
+    );
+
+    expect(lines).toEqual([
+      "14-384|1/2 small|100|f|0",
+      "14-384|1/2 medium|128|t|1",
+      "14-384|1/2 large|166|f|2",
+    ]);
+  });
+
+  it("should give dried dates both varieties, with Deglet Noor the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([dateCode])}\n${migrationSql}\n${listPortionsOf([dateCode])}`,
+    );
+
+    expect(lines).toEqual(["14-394|1 Deglet Noor date|7.1|t|0", "14-394|1 Medjool date|24|f|1"]);
+  });
+
+  it("should leave every fruit with exactly one default portion", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(fruitBatchCodes)}\n${migrationSql}\nselect food.source_ref, count(*) filter (where portion.is_default) ${sharedPortionsOf(fruitBatchCodes)} group by food.source_ref order by food.source_ref;`,
+    );
+
+    expect(lines).toEqual(fruitBatchCodes.map((code) => `${code}|1`));
+  });
+
+  it("should change nothing when its SQL is applied a second time", () => {
+    const lines = runRolledBack(
+      [
+        deletePortionsOf(fruitBatchCodes),
+        migrationSql,
+        fingerprintOf(fruitBatchCodes),
+        migrationSql,
+        fingerprintOf(fruitBatchCodes),
+      ].join("\n"),
+    );
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toMatch(/^0\|/);
+    expect(lines[1]).toBe(lines[0]);
+  });
+
+  it("should skip a fruit the database lacks without failing, and still write the other fruit", () => {
+    const withoutNectarine = migrationSql.replaceAll(`'${nectarineCode}'`, "'99-999'");
+    expect(withoutNectarine).not.toBe(migrationSql);
+
+    const lines = runRolledBack(
+      [
+        deletePortionsOf([nectarineCode, dateCode]),
+        withoutNectarine,
+        `select count(*) ${sharedPortionsOf([nectarineCode])};`,
+        `select count(*) ${sharedPortionsOf([dateCode])};`,
+      ].join("\n"),
+    );
+
+    expect(lines).toEqual(["0", "2"]);
   });
 });
 
