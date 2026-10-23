@@ -1,6 +1,6 @@
 import { useFoodWithPortions } from "@keylow/api-client";
+import { frozenFoodOf, withAmount } from "@keylow/core/recipes";
 
-import { frozenFoodOf, ingredientWithAmount } from "../../lib/ingredientFromAmount";
 import { PortionPicker } from "../PortionPicker";
 
 import type { IngredientAmountStepProps } from "./types";
@@ -34,7 +34,7 @@ export function IngredientAmountStep({
       onBack={onBack}
       onRemove={onRemove}
       onSubmit={(amount) => {
-        onSave(ingredientWithAmount(ingredient, amount));
+        onSave(withAmount(ingredient, amount));
       }}
     />
   );

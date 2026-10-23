@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 import {
+  archivedRecipesPath,
   editRecipePath,
   newRecipePath,
   logRecipePath,
@@ -60,6 +61,10 @@ function routeFileFor(address: string): string | undefined {
 describe("the recipe addresses and the screens under app/", () => {
   it("should open a screen at the library's address", () => {
     expect(routeFileFor(recipesPath())).toBeDefined();
+  });
+
+  it("should open the archived recipes inside the Recipes tab", () => {
+    expect(routeFileFor(archivedRecipesPath())).toBe("(tabs)/recipes/archived.tsx");
   });
 
   it("should open the new recipe editor, with or without a typed name", () => {

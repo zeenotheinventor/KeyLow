@@ -26,7 +26,6 @@ const directories = [
 const sourceFiles = [
   "lib/recipeRoutes.ts",
   "lib/useSettledValue.ts",
-  "lib/ingredientFromAmount.ts",
   ...directories.flatMap((directory) =>
     readdirSync(directory, { encoding: "utf8" })
       .filter((file) => /\.tsx?$/.test(file))

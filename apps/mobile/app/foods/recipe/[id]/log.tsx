@@ -1,6 +1,6 @@
 import { keys, useLogRecipeServing, useProfileTimeZone, useRecipe } from "@keylow/api-client";
 import { ADDED_TOAST } from "@keylow/core/copy";
-import { clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
+import { canLogRecipe, clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
 import { isRecipeId } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
@@ -9,7 +9,6 @@ import { useRef, useState } from "react";
 import { PortionPicker } from "../../../../components/PortionPicker";
 import { RecipeLoadState } from "../../../../components/RecipeLoadState";
 import { useToast } from "../../../../components/ui";
-import { canLogRecipe } from "../../../../lib/canLogRecipe";
 import { useIsOnline } from "../../../../lib/connectivity";
 import {
   readLogContext,
