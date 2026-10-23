@@ -184,6 +184,45 @@ describe("the body map screen's states", () => {
     });
   });
 
+  describe("switching the scale", () => {
+    const tables = ["profiles", "routines", "workout_sessions", "workout_sets"] as const;
+    const requestCounts = () => tables.map((table) => requestsTo(table));
+
+    // The reads are made on open; wait until they stop, so a count taken next is the count at rest.
+    async function settled() {
+      let previous = requestCounts();
+      let unchangedPolls = 0;
+      while (unchangedPolls < 3) {
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+        const current = requestCounts();
+        unchangedPolls = current.join() === previous.join() ? unchangedPolls + 1 : 0;
+        previous = current;
+      }
+    }
+
+    it("should make no request and show no skeleton when the scale changes", async () => {
+      seedCachedRows([latsSet]);
+      await renderScreen();
+      await screen.findByRole("img", { name: /, front$/ });
+      await settled();
+      const countsBefore = requestCounts();
+      const user = userEvent.setup();
+
+      for (const scale of ["Volume", "Gap", "Heat"]) {
+        await user.press(screen.getByRole("radio", { name: scale }));
+
+        expect(await screen.findByRole("group", { name: `${scale} legend` })).toBeOnTheScreen();
+        expect(
+          screen.queryByRole("status", { name: "Loading the body map" }),
+        ).not.toBeOnTheScreen();
+      }
+      await settled();
+      expect(requestCounts()).toEqual(countsBefore);
+    });
+  });
+
   describe("with nothing logged in the last 14 days", () => {
     beforeEach(() => {
       seedCachedRows([]);

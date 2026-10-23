@@ -561,6 +561,7 @@ describe("the body map view toggle", () => {
             note={null}
             onToggle={() => undefined}
             projectedValues={RESTING_HEAT}
+            scale="heat"
             subLine="Now · Thu 15 Oct, 19:00"
             toggleLabel={null}
             view="actual"

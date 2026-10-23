@@ -42,3 +42,23 @@ export function heatFill(scheme: ThemeScheme, step: number) {
   }
   return paint(hex);
 }
+
+/** The fill a volume status (an index in core's `VOLUME_STATUSES`) is drawn with, as react-native-svg holds it. */
+export function volumeFill(scheme: ThemeScheme, status: number) {
+  const { under, maintaining, productive, over, notTargeted } = bodyMapPalette(scheme).volume;
+  const hex = [under, maintaining, productive, over, notTargeted][status];
+  if (hex === undefined) {
+    throw new RangeError("A volume status must be a whole number from 0 to 4");
+  }
+  return paint(hex);
+}
+
+/** The fill a gap value (an index in core's `GAP_VALUES`) is drawn with, as react-native-svg holds it. */
+export function gapFill(scheme: ThemeScheme, value: number) {
+  const { behind, onPlan, ahead, notInPlan } = bodyMapPalette(scheme).gap;
+  const hex = [behind, onPlan, ahead, notInPlan][value];
+  if (hex === undefined) {
+    throw new RangeError("A gap value must be a whole number from 0 to 3");
+  }
+  return paint(hex);
+}

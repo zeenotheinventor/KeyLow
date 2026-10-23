@@ -1,12 +1,15 @@
 import type { BodyFigureValues } from "../ui";
+import type { BodyMapScale } from "@keylow/core/copy";
 import type { BodyMapView } from "@keylow/core/training";
 
 export type BodyMapCardProps = {
-  /** The view shown. */
+  /** The scale the figures are coloured by. */
+  scale: BodyMapScale;
+  /** The view shown. On Gap, which has no Actual or Projected, both views hold the same numbers and the label is not Projected. */
   view: BodyMapView;
-  /** The heat step of each muscle in Actual, as `useBodyMap` gives them. A muscle left out is at rest. */
+  /** The value of each muscle in Actual, as `useBodyMap` gives them for the scale. A muscle left out is drawn at rest. */
   actualValues: BodyFigureValues;
-  /** The heat step of each muscle in Projected. A muscle left out is at rest. */
+  /** The value of each muscle in Projected. A muscle left out is drawn at rest. */
   projectedValues: BodyFigureValues;
   /** The view named, such as "Actual". */
   viewLabel: string;

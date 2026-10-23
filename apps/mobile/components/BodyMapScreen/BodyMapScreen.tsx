@@ -10,6 +10,7 @@ import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/date
 import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
+import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -19,20 +20,34 @@ import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
-import { EmptyState, ErrorState, SheetHeader, Skeleton } from "../ui";
+import { EmptyState, ErrorState, SegmentedControl, SheetHeader, Skeleton } from "../ui";
+import { describeGap } from "./gapNote";
+
+import type { BodyMapScale } from "@keylow/core/copy";
 
 const MINIMUM_BOTTOM_PADDING = 16;
 
+const SCALE_OPTIONS = [
+  { value: "heat", label: BODY_MAP.scaleSwitch.heat },
+  { value: "volume", label: BODY_MAP.scaleSwitch.volume },
+  { value: "gap", label: BODY_MAP.scaleSwitch.gap },
+] as const;
+
 /**
- * The body map screen, pushed over the tabs from the dashboard card: heat now, front and back, with the
- * heat legend, in the view last chosen on this device (Actual until one is). A tap on the figures or the
- * button under them switches between Actual and Projected. The colours are the hook's steps and nothing
- * here works heat out. Both views are read, from the cached rows, so it opens offline and a switch is at
- * once, and the clock ticks once a minute without a new read. Nothing is read while the terms gate is up.
+ * The body map screen, pushed over the tabs from the dashboard card: front and back, with the legend of
+ * the scale, in the view last chosen on this device (Actual until one is). The scale switch above the card
+ * picks Heat (now), Volume (the week's sets against each muscle's target) or Gap (done against the plan),
+ * opens on Heat every time and is not remembered. A tap on the figures or the button under them switches
+ * between Actual and Projected on Heat and Volume; Gap has neither, so it has no button and no tap, and
+ * leaves the view that is remembered as it was. The colours are the hook's numbers and nothing here works
+ * them out. Every scale is read (Heat and Volume in both views, Gap in one) from the same cached rows, so
+ * it opens offline and a switch of scale is at once with no request, and the clock ticks once a minute without a
+ * new read. Nothing is read while the terms gate is up.
  * With no routine Projected is off and the screen shows Actual, keeping the view chosen for when there
- * is one. With no sets in the last 14 days the figures are at rest and the empty state says why, with no
- * legend. It has no Start a session button until the Train tab it opens is mounted, and none of the
- * controls the next tickets add.
+ * is one. With no sets in the last 14 days Heat shows the figures at rest and the empty state says why,
+ * with no legend; Volume and Gap draw as usual, since a week with nothing logged is still a plan to compare
+ * with. It has no Start a session button until the Train tab it opens is mounted, and none of the controls
+ * the next tickets add.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -45,22 +60,41 @@ export function BodyMapScreen() {
   const zone = timeZone.data ?? "UTC";
   const today = toLocalDate(now, zone);
   const weekStart = addCalendarDays(today, -daysSinceMonday(today));
+  const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
+  const [scale, setScale] = useState<BodyMapScale>("heat");
   const nowIso = now.toISOString();
-  const actual = useBodyMap({
+  // Every scale is read here and the scale on screen picks which result is shown. The reads share their
+  // queries, so a read switched off and on again with the scale would fetch what is already held; all of
+  // them stay on, and a switch of scale makes no request and shows no skeleton.
+  const moment = { weekStart, now: nowIso, enabled: isReadEnabled };
+  const heatActual = useBodyMap({
+    ...moment,
     scale: "heat",
     view: "actual",
-    weekStart,
-    now: nowIso,
-    enabled: isReadEnabled,
   });
-  const projected = useBodyMap({
+  const heatProjected = useBodyMap({
+    ...moment,
     scale: "heat",
     view: "projected",
-    weekStart,
-    now: nowIso,
-    enabled: isReadEnabled,
   });
+  const volumeActual = useBodyMap({
+    ...moment,
+    scale: "volume",
+    view: "actual",
+  });
+  const volumeProjected = useBodyMap({
+    ...moment,
+    scale: "volume",
+    view: "projected",
+  });
+  // Gap has no Actual or Projected, so it is read once.
+  const gap = useBodyMap({ ...moment, scale: "gap", view: "actual" });
+  const { actual, projected } = {
+    heat: { actual: heatActual, projected: heatProjected },
+    volume: { actual: volumeActual, projected: volumeProjected },
+    gap: { actual: gap, projected: gap },
+  }[scale];
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Dashboard instead.
@@ -74,7 +108,7 @@ export function BodyMapScreen() {
   // The body map is worked out from several reads, so Try again reads every one of them that failed, and
   // nothing else on screen.
   function readAgain() {
-    void Promise.all([actual.refetch(), projected.refetch()]);
+    void Promise.all([...new Set([actual, projected])].map((shown) => shown.refetch()));
   }
 
   function renderBody() {
@@ -82,32 +116,43 @@ export function BodyMapScreen() {
     const { data: projectedData } = projected;
     if (isViewRead && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
+      // Gap has no Actual or Projected, so the view that is remembered only matters to Heat and Volume.
       const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
       const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
-        scale: "heat",
+        scale,
         view,
         at: actualData.computedAt,
         tz: zone,
         isToday: true,
-        weekEnd: addCalendarDays(weekStart, 6),
+        weekEnd,
         plannedSessions: [],
       });
-      const note = !projectedAvailable
-        ? BODY_MAP.toggle.projectedNeedsRoutine
-        : view === "projected" && todayProjectedIsActual
+      // The line under the button. Heat says why Projected is what is logged today, Volume does not, and
+      // Gap says what the plan left behind.
+      const { values, days } = actualData;
+      function noteUnderFigures() {
+        if (scale === "gap") {
+          return describeGap({ values, days, countsWholeWeek: today >= weekEnd });
+        }
+        if (!projectedAvailable) {
+          return BODY_MAP.toggle.projectedNeedsRoutine;
+        }
+        return scale === "heat" && view === "projected" && todayProjectedIsActual
           ? BODY_MAP.notes.todayProjected
           : null;
+      }
       const card = (
         <BodyMapCard
           actualValues={actualData.values}
-          isToggleEnabled={projectedAvailable}
-          note={note}
+          isToggleEnabled={scale !== "gap" && projectedAvailable}
+          note={noteUnderFigures()}
           onToggle={() => {
             setView(view === "projected" ? "actual" : "projected");
           }}
           projectedValues={projectedData.values}
+          scale={scale}
           subLine={
-            actualData.nothingLogged
+            scale === "heat" && actualData.nothingLogged
               ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays)
               : subLine
           }
@@ -116,9 +161,19 @@ export function BodyMapScreen() {
           viewLabel={viewLabel}
         />
       );
+      const scaleSwitch = (
+        <SegmentedControl
+          label={BODY_MAP.scaleSwitch.name}
+          onChange={setScale}
+          options={SCALE_OPTIONS}
+          value={scale}
+        />
+      );
 
-      return actualData.nothingLogged ? (
+      // Nothing logged in the 14 days is about heat; a week with nothing logged is still a plan to compare with.
+      return scale === "heat" && actualData.nothingLogged ? (
         <>
+          {scaleSwitch}
           {card}
           <EmptyState
             body={BODY_MAP.emptyState.body}
@@ -128,8 +183,9 @@ export function BodyMapScreen() {
         </>
       ) : (
         <>
+          {scaleSwitch}
           {card}
-          <BodyMapLegend />
+          <BodyMapLegend scale={scale} />
         </>
       );
     }
