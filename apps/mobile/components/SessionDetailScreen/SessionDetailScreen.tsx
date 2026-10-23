@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddExerciseSheet } from "../AddExerciseSheet";
 import { ExerciseCard } from "../ExerciseCard";
+import { MusclesTrainedCard } from "../MusclesTrainedCard";
 import { SessionDetailMenu } from "../SessionDetailMenu";
 import { SetEntrySheet } from "../SetEntrySheet";
 import { StatCard } from "../StatCard";
@@ -30,8 +31,9 @@ const MINIMUM_DOCK_BOTTOM_PADDING = 34;
 /**
  * A logged session, opened from the history list, the Today card or the week strip, as the
  * `history · session-detail` board draws it: the routine day's name over when it was, three cards (time,
- * sets, and the plan comparison when the session followed a routine day) and the exercises with their
- * sets. A session that is not found, in whatever way, shows a card that leads back to the history. Back is
+ * sets, and the plan comparison when the session followed a routine day), the Muscles trained card (no board
+ * draws it here; it is the finish screen's, kept so a past session shows what it did) and the exercises with
+ * their sets. A session that is not found, in whatever way, shows a card that leads back to the history. Back is
  * named for the screen the session was opened from. Pressing a set opens the edit set sheet (change it, or
  * delete it with an Undo), and "More for this session" holds Delete session, which asks first and then goes
  * back to the history list. Add set under an exercise and Add exercise under the cards (no board draws them)
@@ -60,7 +62,7 @@ export function SessionDetailScreen({
   function renderBody() {
     switch (detail.status) {
       case "ready": {
-        const { when, stats, exercises } = detail.content;
+        const { when, stats, musclesTrained, exercises } = detail.content;
         return (
           <ScrollView className="flex-1" contentContainerClassName="grow gap-3 px-4 pb-4 pt-1">
             <Text className="-mt-[6px] text-center" tone="secondary" variant="caption">
@@ -78,6 +80,7 @@ export function SessionDetailScreen({
                 ),
               )}
             </View>
+            <MusclesTrainedCard {...musclesTrained} />
             {exercises.map(({ exerciseId, ...card }) => (
               <ExerciseCard
                 key={exerciseId}

@@ -1,7 +1,8 @@
+import { heatValues } from "./bodyMapValues";
 import { orderSessionSets } from "./historySummary";
 import { isWorkingType } from "./liveSets";
 import { MUSCLE_IDS } from "./muscles";
-import { parseMoment, weightedSetsByMuscle } from "./muscleState";
+import { muscleState, parseMoment, weightedSetsByMuscle } from "./muscleState";
 
 import type { OrderableSet } from "./historySummary";
 import type { MuscleId } from "./muscles";
@@ -130,6 +131,19 @@ export type MuscleSessionSets = Readonly<{
   /** `weight × effort` summed over the session's sets, rounded as weekly sets are. */
   effectiveSets: number;
 }>;
+
+/**
+ * The heat step, from 0 to 5, each muscle reaches from the sets given alone at `at`, for the figures of
+ * "Muscles trained": what the session did, with none of the fatigue left from earlier days. The caller
+ * gives the sets of the session and, for a session that has ended, its end.
+ *
+ * Throws a `RangeError` naming the rule when `at` or a set's `performed_at` is not an ISO timestamp with a zone.
+ */
+export const sessionHeatValues = (
+  loggedSets: readonly HeatSet[],
+  at: string,
+  params: TrainingParams,
+): Record<MuscleId, number> => heatValues(muscleState(loggedSets, at, params), params);
 
 /**
  * The effective sets each muscle took in a session, for "Muscles trained" on the finish screen: most

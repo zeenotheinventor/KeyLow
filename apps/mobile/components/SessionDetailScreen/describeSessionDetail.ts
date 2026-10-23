@@ -11,6 +11,14 @@ import type { SessionDetailContent } from "./types";
 import type { SessionWithSets } from "@keylow/api-client";
 import type { HistoryPlanDay, LoadUnit } from "@keylow/core/training";
 
+/** The time of the latest set, or null for none. Every set is a live one, since the read leaves the removed ones out. */
+const latestSetTime = (sets: SessionWithSets["sets"]): string | null =>
+  sets.reduce<string | null>(
+    (latest, { performed_at }) =>
+      latest === null || Date.parse(performed_at) > Date.parse(latest) ? performed_at : latest,
+    null,
+  );
+
 /**
  * What the session detail draws, from the session and the routine day it was planned from (when the active
  * routine still holds it): core's summary of the session, its three cards, and each exercise with its sets.
@@ -37,6 +45,11 @@ export function describeSessionDetail(
       tz: timeZone,
     }),
     stats: describeSessionStats(summary),
+    // A session still open has no end, so its heat is read at its latest set. The sets are listed by position, not by time.
+    musclesTrained: {
+      sets: session.sets,
+      at: session.ended_at ?? latestSetTime(session.sets) ?? session.started_at,
+    },
     exercises: sessionExercises(null, session.sets).flatMap(({ exerciseId, rows }) => {
       const logged = rows.flatMap(({ set, setType, setNumber }) =>
         set === null ? [] : [{ set, setType, setNumber }],

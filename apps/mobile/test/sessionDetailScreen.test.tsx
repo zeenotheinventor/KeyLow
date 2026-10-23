@@ -17,11 +17,13 @@ import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
+import { expectAccessibleNamesInOrder } from "./support/namesInOrder";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import {
   GOLDEN_PULL_ID,
   freeSession,
   goldenPull,
+  pullSession,
   pullRoutine,
   resetSessionDetailBackend,
   sessionDetailBackend,
@@ -94,6 +96,7 @@ describe("the session detail screen", () => {
       "components/SessionDetailScreen",
       "components/SetRow",
       "components/ExerciseCard",
+      "components/MusclesTrainedCard",
     ]);
   });
 
@@ -144,12 +147,47 @@ describe("the session detail screen", () => {
       expect(screen.getByText("sets over")).toBeOnTheScreen();
     });
 
+    it("should draw the Muscles trained card under the three cards and over the exercises", async () => {
+      await renderDetail();
+
+      await screen.findByRole("heading", { name: "Pull" });
+      const card = screen.getByLabelText("Muscles trained");
+      expect(card).toHaveProp("role", "region");
+      expect(within(card).getByText("Effective sets")).toBeOnTheScreen();
+      expect(screen.getAllByRole("heading")[1]).toHaveAccessibleName("Muscles trained");
+      expect(screen.getByRole("img", { name: "This session's heat, front" })).toBeOnTheScreen();
+      expect(screen.getByRole("img", { name: "This session's heat, back" })).toBeOnTheScreen();
+    });
+
+    it("should list the muscles the session trained, most sets first, with the heat at its end", async () => {
+      await renderDetail();
+
+      await screen.findByRole("heading", { name: "Pull" });
+      expectAccessibleNamesInOrder(screen.getAllByRole("listitem"), [
+        "Lats, 16 sets, Peak",
+        "Biceps, 9.6 sets, Peak",
+      ]);
+    });
+
+    it("should read the heat of a session with no end at its latest set, wherever the sets are listed", async () => {
+      // The sets are listed by position but were performed in the opposite order, so the last listed is the earliest.
+      sessionDetailBackend.sessions = [pullSession({ endedAt: null, isReversed: true })];
+      await renderDetail();
+
+      await screen.findByRole("heading", { name: "Pull" });
+      expectAccessibleNamesInOrder(screen.getAllByRole("listitem"), [
+        "Lats, 16 sets, Peak",
+        "Biceps, 9.6 sets, Peak",
+      ]);
+    });
+
     it("should list the exercises in the order they were first logged", async () => {
       await renderDetail();
 
       await screen.findByRole("heading", { name: "Pull" });
       const names = [
         "Pull",
+        "Muscles trained",
         "Pullups",
         "Bent Over Barbell Row",
         "Wide-Grip Lat Pulldown",

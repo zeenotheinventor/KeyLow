@@ -92,7 +92,7 @@ const pullSets: readonly PullSet[] = [
 const MINUTE_MS = 60_000;
 const PULL_STARTED_AT = Date.parse("2026-10-13T17:00:00Z");
 
-const setRows = (sessionId: string, sets: readonly PullSet[]): Row[] =>
+const setRows = (sessionId: string, sets: readonly PullSet[], isReversed: boolean): Row[] =>
   sets.map(([exercise, setType, loadKg, reps, rir], position) => ({
     id: idWith("5", position + 1),
     session_id: sessionId,
@@ -100,7 +100,9 @@ const setRows = (sessionId: string, sets: readonly PullSet[]): Row[] =>
     set_type: setType,
     rir,
     rpe: null,
-    performed_at: new Date(PULL_STARTED_AT + (position + 1) * MINUTE_MS)
+    performed_at: new Date(
+      PULL_STARTED_AT + (isReversed ? sets.length - position : position + 1) * MINUTE_MS,
+    )
       .toISOString()
       .replace(".000Z", "+00:00"),
     snapshot: buildSetSnapshot(
@@ -115,7 +117,13 @@ const setRows = (sessionId: string, sets: readonly PullSet[]): Row[] =>
 
 /** A finished Pull session as the read of one session returns it. */
 export function pullSession(
-  overrides: Partial<{ id: string; endedAt: string | null; sets: readonly PullSet[] }> = {},
+  overrides: Partial<{
+    id: string;
+    endedAt: string | null;
+    sets: readonly PullSet[];
+    /** Performs the sets in the opposite order to their positions, as a reordered session lists them. */
+    isReversed: boolean;
+  }> = {},
 ): Row {
   const id = overrides.id ?? GOLDEN_PULL_ID;
   return {
@@ -127,7 +135,7 @@ export function pullSession(
     note: null,
     deleted_at: null,
     routine_days: { name: "Pull" },
-    workout_sets: setRows(id, overrides.sets ?? pullSets),
+    workout_sets: setRows(id, overrides.sets ?? pullSets, overrides.isReversed ?? false),
   };
 }
 
