@@ -34,6 +34,24 @@ describe("the About screen copy", () => {
     expect(ABOUT_SCREEN.dataSources.off.url).toBe("https://world.openfoodfacts.org");
   });
 
+  it("should carry the BodyParts3D attribution line exactly, then one plain sentence, and its address", () => {
+    expect(ABOUT_SCREEN.dataSources.bodyParts3d.name).toBe("BodyParts3D");
+    expect(ABOUT_SCREEN.dataSources.bodyParts3d.text).toBe(
+      "BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan. Ki-Lo's 3D body is adapted from BodyParts3D and shared under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).",
+    );
+    expect(ABOUT_SCREEN.dataSources.bodyParts3d.url).toBe("https://lifesciencedb.jp/bp3d/");
+  });
+
+  it("should carry the Z-Anatomy attribution line exactly, then one plain sentence, and its address", () => {
+    expect(ABOUT_SCREEN.dataSources.zAnatomy.name).toBe("Z-Anatomy");
+    expect(ABOUT_SCREEN.dataSources.zAnatomy.text).toBe(
+      "Z-Anatomy - The libre 3D atlas of anatomy - CC-BY-SA 4.0. Ki-Lo's 3D body is adapted from Z-Anatomy and shared under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).",
+    );
+    expect(ABOUT_SCREEN.dataSources.zAnatomy.url).toBe(
+      "https://github.com/Z-Anatomy/Models-of-human-anatomy",
+    );
+  });
+
   it("should reuse the attribution the food detail credit used, not a copy of it", () => {
     expect(ABOUT_SCREEN.dataSources.cofid).toBe(DATA_SOURCE_ATTRIBUTION.cofid);
     expect(ABOUT_SCREEN.dataSources.off).toBe(DATA_SOURCE_ATTRIBUTION.off);

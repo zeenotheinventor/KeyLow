@@ -130,9 +130,48 @@ describe("the About screen", () => {
       expect(screen.getByRole("link", { name: DATA_SOURCE_ATTRIBUTION.off.url })).toBeOnTheScreen();
     });
 
+    it("should credit BodyParts3D with its attribution line and link", async () => {
+      await renderAbout();
+
+      expect(screen.getByText("BodyParts3D")).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan. Ki-Lo's 3D body is adapted from BodyParts3D and shared under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).",
+        ),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("link", { name: "https://lifesciencedb.jp/bp3d/" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should credit Z-Anatomy with its attribution line and link", async () => {
+      await renderAbout();
+
+      expect(screen.getByText("Z-Anatomy")).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "Z-Anatomy - The libre 3D atlas of anatomy - CC-BY-SA 4.0. Ki-Lo's 3D body is adapted from Z-Anatomy and shared under CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).",
+        ),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("link", { name: "https://github.com/Z-Anatomy/Models-of-human-anatomy" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should list the 3D body credits after the food datasets", async () => {
+      await renderAbout();
+
+      const links = screen.getAllByRole("link");
+      expect(links).toHaveLength(4);
+      expect(links[2]).toHaveAccessibleName("https://lifesciencedb.jp/bp3d/");
+      expect(links[3]).toHaveAccessibleName("https://github.com/Z-Anatomy/Models-of-human-anatomy");
+    });
+
     it.each([
       ["CoFID", DATA_SOURCE_ATTRIBUTION.cofid.url],
       ["Open Food Facts", DATA_SOURCE_ATTRIBUTION.off.url],
+      ["BodyParts3D", "https://lifesciencedb.jp/bp3d/"],
+      ["Z-Anatomy", "https://github.com/Z-Anatomy/Models-of-human-anatomy"],
     ])("should open the %s address in the browser when it is pressed", async (_source, url) => {
       const openURL = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
       const user = await renderAbout();
