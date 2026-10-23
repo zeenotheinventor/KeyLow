@@ -12,3 +12,4 @@ export type { ClockTime } from "./clockTime";
 export { addMonths, monthOf, monthWeeks } from "./monthGrid";
 export { addCalendarDays, daysSinceMonday, isCalendarDay } from "./calendarDay";
 export { isValidTimeZone } from "./isValidTimeZone";
+export { ageInYears } from "./ageInYears";
