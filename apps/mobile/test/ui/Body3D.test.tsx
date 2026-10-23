@@ -16,9 +16,9 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 // GL does not run in Jest, and the canvas module brings in three, which Jest does not transform. The canvas
 // is stood in for, so the test reaches the component's own markup and what it hands to the canvas.
-const mockCanvas = jest.fn<null, [{ color: string }]>(() => null);
+const mockCanvas = jest.fn<null, [{ color: string; onFirstFrame?: () => void }]>(() => null);
 jest.mock("../../components/ui/Body3D/Body3DCanvas", () => ({
-  Body3DCanvas: (props: { color: string }) => mockCanvas(props),
+  Body3DCanvas: (props: { color: string; onFirstFrame?: () => void }) => mockCanvas(props),
 }));
 
 const label = "Body, 3D test shape";
@@ -61,9 +61,51 @@ describe("Body3D", () => {
     async (scheme) => {
       await renderBody({}, scheme);
 
-      expect(mockCanvas).toHaveBeenCalledWith({ color: bodyMapPalette(scheme).silhouette });
+      expect(mockCanvas).toHaveBeenCalledWith(
+        expect.objectContaining({ color: bodyMapPalette(scheme).silhouette }),
+      );
     },
   );
+
+  it("should call onFirstFrame when the canvas draws its first frame", async () => {
+    const onFirstFrame = jest.fn();
+    mockCanvas.mockImplementation(({ onFirstFrame: drawn }) => {
+      drawn?.();
+      return null;
+    });
+
+    await renderBody({ onFirstFrame });
+
+    expect(onFirstFrame).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not call onFirstFrame while the canvas has drawn nothing", async () => {
+    const onFirstFrame = jest.fn();
+
+    await renderBody({ onFirstFrame });
+
+    expect(onFirstFrame).not.toHaveBeenCalled();
+  });
+
+  it("should call onError once when the canvas throws", async () => {
+    jest.spyOn(console, "error").mockImplementation(() => undefined);
+    const onError = jest.fn();
+    mockCanvas.mockImplementation(() => {
+      throw new Error("The GL context could not start.");
+    });
+
+    await renderBody({ onError });
+
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not call onError when the canvas draws", async () => {
+    const onError = jest.fn();
+
+    await renderBody({ onError });
+
+    expect(onError).not.toHaveBeenCalled();
+  });
 
   it("should keep the figure's place, and not throw, when the canvas fails", async () => {
     jest.spyOn(console, "error").mockImplementation(() => undefined);

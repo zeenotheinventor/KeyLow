@@ -8,6 +8,7 @@ import Svg, { Defs, FeGaussianBlur, FeMerge, FeMergeNode, Filter, G, Path } from
 
 import { figureHeightOf, hitBoxes } from "./hitBoxes";
 import { readMuscle } from "./muscleReading";
+import { defaultBodyFigure } from "../../../lib/bodyFigure";
 import { useTheme } from "../../../lib/theme";
 
 import type { BodyFigureProps } from "./types";
@@ -43,7 +44,7 @@ export function BodyFigure({
   side,
   scale,
   values,
-  body = "male",
+  body = defaultBodyFigure,
   selected,
   dim = 1,
   unselectedOpacity = 1,
