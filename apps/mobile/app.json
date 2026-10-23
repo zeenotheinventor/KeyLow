@@ -26,7 +26,11 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.sojisoft.keylow",
       "backgroundColor": "#0B0E13",
-      "permissions": ["android.permission.health.READ_WEIGHT"]
+      "permissions": [
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_LEAN_BODY_MASS"
+      ]
     },
     "plugins": [
       "expo-router",

@@ -92,12 +92,16 @@ describe("app.json", () => {
   });
 
   describe("health data (M5)", () => {
-    it("should ask Health Connect for the weight read permission and nothing else from it", () => {
+    it("should ask Health Connect for the weight, body fat and lean mass read permissions and nothing else from it", () => {
       const healthPermissions = expo.android.permissions.filter((permission) =>
         permission.startsWith("android.permission.health."),
       );
 
-      expect(healthPermissions).toEqual(["android.permission.health.READ_WEIGHT"]);
+      expect(healthPermissions).toEqual([
+        "android.permission.health.READ_WEIGHT",
+        "android.permission.health.READ_BODY_FAT",
+        "android.permission.health.READ_LEAN_BODY_MASS",
+      ]);
     });
 
     it("should list the Health Connect plugin so the permission rationale activity reaches the manifest", () => {

@@ -1,6 +1,13 @@
 /** The provider calls that can fail. `availability` never throws, it reports `unsupported` instead. */
 export type HealthProviderAction =
-  "hasPermission" | "requestPermission" | "readWeightSince" | "openInstallPage" | "openSettings";
+  | "hasPermission"
+  | "requestPermission"
+  | "readWeightSince"
+  | "openInstallPage"
+  | "openSettings"
+  | "bodyCompositionAccess"
+  | "requestBodyCompositionPermission"
+  | "readBodyCompositionSince";
 
 /**
  * `permission` means the platform refused the call for want of access (for example a permission
