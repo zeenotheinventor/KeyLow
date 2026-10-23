@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildRecipeLogEntry } from "../../src/diary";
-import { computeRecipe, recipeOfSnapshot } from "../../src/recipes";
+import { computeRecipe, per100gOf, recipeOfSnapshot } from "../../src/recipes";
 import { buildChickenAndRiceRecipe } from "../../src/testing";
 
 import type { LoggableRecipe } from "../../src/diary";
@@ -67,5 +67,24 @@ describe("recipeOfSnapshot", () => {
     expect(recipeOfSnapshot(snapshotOf(original, 2.5)).computed).toEqual(
       recipeOfSnapshot(snapshotOf(original, 1)).computed,
     );
+  });
+
+  it("should agree with computeRecipe per 100 g for the same totals and weight", () => {
+    const original = chickenAndRice(1100);
+    const snapshot = snapshotOf(original);
+
+    expect(recipeOfSnapshot(snapshot).computed.per100g).toEqual(
+      per100gOf(snapshot.total, snapshot.effectiveGrams),
+    );
+    expect(per100gOf(original.computed.total, original.computed.effectiveGrams)).toEqual(
+      original.computed.per100g,
+    );
+  });
+
+  it("should give 136.07 kcal per 100 g of an 1100 g cooked weight, the figure the recipe card gives", () => {
+    const recipe = recipeOfSnapshot(snapshotOf(chickenAndRice(1100)));
+
+    expect(recipe.computed.per100g.kcal).toBeCloseTo(136.0727, 4);
+    expect(recipe.computed.per100g.kcal).toBe((1496.8 / 1100) * 100);
   });
 });

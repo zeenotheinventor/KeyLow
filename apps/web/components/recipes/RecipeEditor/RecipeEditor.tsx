@@ -10,6 +10,7 @@ import {
   RECIPE_TOASTS,
   SAVE_FAILED_BANNER,
   TAB_TITLES,
+  problemSentences,
 } from "@keylow/core/copy";
 import {
   isRecipeDraftChanged,
@@ -22,7 +23,6 @@ import { Check, WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { problemSentences } from "./problemSentences";
 import { useIngredientEdits } from "./useIngredientEdits";
 import { useStepEdits } from "./useStepEdits";
 import { AddIngredientDialog } from "../AddIngredientDialog";
@@ -35,9 +35,9 @@ import { RecipeEditorLayout } from "../RecipeEditorLayout";
 import { RecipeIngredientsCard } from "../RecipeIngredientsCard";
 import { RecipeStepsCard } from "../RecipeStepsCard";
 
-import type { ProblemSentences } from "./problemSentences";
 import type { RecipeEditorProps } from "./types";
 import type { RecipeDetailsField } from "../RecipeDetailsCard";
+import type { ProblemSentences } from "@keylow/core/copy";
 import type { RecipeDraft } from "@keylow/core/recipes";
 import type { MouseEvent, SubmitEvent } from "react";
 

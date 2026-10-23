@@ -22,6 +22,12 @@ const perServing = { kcal: 374.2, protein_g: 31.625, carbs_g: 42.55, fat_g: 8.12
 // when a function has no row, so no sentence escapes the sweep.
 export const samples: Record<string, () => string[]> = {
   describeRecipeProblem: () => problemCodes.map(copy.describeRecipeProblem),
+  problemSentences: () => {
+    const { name, servings, cookedWeight, ingredients } = copy.problemSentences(problemCodes);
+    return [name, servings, cookedWeight, ...ingredients].flatMap((sentence) =>
+      sentence === undefined ? [] : [sentence],
+    );
+  },
   describeServingsFieldSuffix: () => ["1", "4"].map(copy.describeServingsFieldSuffix),
   describeCookedWeightHelper: () => [
     copy.describeCookedWeightHelper([{ resolved_grams: 500 }, { resolved_grams: 220 }]),

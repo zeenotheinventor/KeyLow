@@ -6,6 +6,7 @@ import {
   RECIPE_EDITOR,
   RECIPE_TOASTS,
   SAVE_FAILED_BANNER,
+  problemSentences,
 } from "@keylow/core/copy";
 import {
   MAX_RECIPE_INGREDIENTS,
@@ -29,7 +30,6 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { problemSentences } from "./problemSentences";
 import { useIngredientEdits } from "./useIngredientEdits";
 import { useStepEdits } from "./useStepEdits";
 import { useStepSheet } from "./useStepSheet";
@@ -49,10 +49,10 @@ import { RecipeStepsSection } from "../RecipeStepsSection";
 import { StepSheet } from "../StepSheet";
 import { Banner, Button, SheetHeader, useToast, useToastAboveBar } from "../ui";
 
-import type { ProblemSentences } from "./problemSentences";
 import type { RecipeEditorProps } from "./types";
 import type { ChosenFood } from "../AddIngredientSheet";
 import type { RecipeDetailsField } from "../RecipeDetailsFields";
+import type { ProblemSentences } from "@keylow/core/copy";
 import type { RecipeDraft, RecipeIngredient } from "@keylow/core/recipes";
 import type {
   HostInstance,

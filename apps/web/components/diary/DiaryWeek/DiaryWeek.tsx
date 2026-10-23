@@ -7,7 +7,7 @@ import {
   describeCopiedEntriesToToday,
   describeWeekGridTitle,
 } from "@keylow/core/copy";
-import { weekOf } from "@keylow/core/diary";
+import { weekDayTotals, weekOf } from "@keylow/core/diary";
 import { Copy } from "lucide-react";
 
 import type { DiaryWeekProps } from "./types";
@@ -18,7 +18,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { WeekGrid } from "@/components/ui/WeekGrid";
-import { diaryHref, weekDayTotals } from "@/lib/diary";
+import { diaryHref } from "@/lib/diary";
 import { useKeyboardUndo } from "@/lib/keyboardUndo";
 import { useIsOnline } from "@/lib/useIsOnline";
 

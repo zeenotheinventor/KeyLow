@@ -1,4 +1,4 @@
-import { mapNutrients } from "./computeRecipe";
+import { per100gOf } from "./computeRecipe";
 
 import type { RecipeComputed } from "./schemas";
 import type { LoggableRecipe } from "../diary/recipeSnapshotQuantity";
@@ -23,6 +23,6 @@ export const recipeOfSnapshot = (snapshot: RecipeSnapshot): RecipeOfSnapshot => 
   computed: {
     total: snapshot.total,
     effectiveGrams: snapshot.effectiveGrams,
-    per100g: mapNutrients(snapshot.total, (value) => (value / snapshot.effectiveGrams) * 100),
+    per100g: per100gOf(snapshot.total, snapshot.effectiveGrams),
   },
 });

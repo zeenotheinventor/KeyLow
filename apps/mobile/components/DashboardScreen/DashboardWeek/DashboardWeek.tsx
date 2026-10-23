@@ -1,10 +1,9 @@
 import { useDiaryWeek, useTargets } from "@keylow/api-client";
-import { weekOf, weekSummary } from "@keylow/core/diary";
+import { weekDayTotals, weekOf, weekSummary } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
 
 import { useIsOnline } from "../../../lib/connectivity";
 import { diaryHref } from "../../../lib/navigation";
-import { weekDayTotals } from "../../../lib/weekDayTotals";
 import { ThisWeekCard } from "../ThisWeekCard";
 import { ThisWeekLoading } from "../ThisWeekLoading";
 import { ThisWeekMessage } from "../ThisWeekMessage";
