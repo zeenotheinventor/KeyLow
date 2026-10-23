@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Health access board</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 2620px; height: 3744px; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 40px; background: #D5D8DE; font-family: Geist, system-ui, sans-serif; color: #1A1D24">
+<sc-for list="{{rows}}" as="th" hint-placeholder-count="4">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<sc-if value="{{th.hasNote}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: 14px; line-height: 20px">{{th.note}}</p></sc-if>
+<div style="display: grid; grid-template-columns: {{th.cols}}; gap: 40px">
+<sc-for list="{{th.cells}}" as="c" hint-placeholder-count="6">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{c.label}}</span>
+<dc-import name="HealthAccessScreen" state="{{c.state}}" theme="{{c.theme}}" hint-size="390px,844px"></dc-import>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2620,"height":3744}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const groups = [
+      { states: [
+        ['explain', 'explain (changed): before the system prompt'],
+        ['install', 'Install Health Connect (Android 13 and below)'],
+        ['connecting', 'connecting (changed): importing'],
+        ['denied', 'Permission denied'],
+        ['import-error', 'Import error'],
+        ['connected', 'connected (changed): with the counts line'],
+      ] },
+      { note: 'Body fat and lean mass (v10). explain · end is the explain screen scrolled to the end. The counts line on connected shows only when some body readings came in. On connecting, weight only keeps "Reading your weight history." connected · partial with one kind missing reads "Lean mass wasn\'t allowed, so Ki-Lo doesn\'t read it." and "Add lean mass" (or the same for body fat).',
+        states: [
+        ['explain-end', 'explain · end: scrolled to the end'],
+        ['explain-body-composition', 'explain · body-composition: already connected'],
+        ['denied-body-composition', 'denied · body-composition'],
+        ['connected-partial', 'connected · partial: weight only'],
+      ] },
+    ];
+    const rows = [];
+    for (const g of groups) {
+      ['dark', 'light'].forEach((theme, i) => {
+        const note = i === 0 ? (g.note ?? '') : '';
+        rows.push({
+          hasNote: !!note, note,
+          cols: `repeat(${g.states.length}, 390px)`,
+          cells: g.states.map(([state, label]) => ({ state, theme, label: `${label} · ${theme}` })),
+        });
+      });
+    }
+    return { rows };
+  }
+}
+</script>
+</body>
+</html>

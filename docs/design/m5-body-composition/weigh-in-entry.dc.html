@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Weigh-in entry board</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 3050px; height: 1904px; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 40px; background: #D5D8DE; font-family: Geist, system-ui, sans-serif; color: #1A1D24">
+<sc-for list="{{themes}}" as="th" hint-placeholder-count="2">
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 40px">
+<sc-for list="{{th.cells}}" as="c" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{c.label}}</span>
+<dc-import name="WeighInSheet" state="{{c.state}}" theme="{{c.theme}}" hint-size="390px,844px"></dc-import>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":3050,"height":1904}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const states = [
+      ['new', 'New, empty'],
+      ['filled', 'New, filled'],
+      ['invalid', 'Out of range'],
+      ['saving', 'Saving'],
+      ['save-error', 'Save error'],
+      ['edit-manual', 'Your entry, edit or delete'],
+      ['edit-imported', 'Imported entry, delete'],
+    ];
+    const themes = ['dark', 'light'].map((theme) => ({
+      cells: states.map(([state, label]) => ({ state, theme, label: `${label} · ${theme}` })),
+    }));
+    return { themes };
+  }
+}
+</script>
+</body>
+</html>
