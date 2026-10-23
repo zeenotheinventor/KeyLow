@@ -17,6 +17,7 @@ import {
   RIR_CHIP_LABELS,
   SESSION_ACTIVE,
   SET_ENTRY,
+  SET_MARKS,
   SET_TYPE_OPTIONS,
 } from "../../src/copy";
 import * as sessionActiveCopy from "../../src/copy/sessionActive";
@@ -390,6 +391,10 @@ describe("the set types", () => {
       describeSetTypeSheet({ exerciseName: "EZ bar curl", setType: "working", setNumber: 2 })
         .accessibleName,
     ).toBe("Set type, EZ bar curl set 2");
+  });
+
+  it("should mark a warm-up W, a working set by its number, a drop D and a failure F", () => {
+    expect(SET_TYPES.map((setType) => SET_MARKS[setType](2))).toEqual(["W", "2", "D", "F"]);
   });
 
   it("should label the sheet and its group", () => {

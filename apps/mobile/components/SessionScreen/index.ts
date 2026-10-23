@@ -8,4 +8,5 @@ export type {
   ScreenSet,
   SessionScreenProps,
   SetLogging,
+  SetTypeOpening,
 } from "./types";

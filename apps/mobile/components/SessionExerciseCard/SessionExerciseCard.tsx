@@ -1,5 +1,10 @@
 import { useLastPerformance } from "@keylow/api-client";
-import { describeSetColumns, describeSetEntryName, describeSetRow } from "@keylow/core/copy";
+import {
+  describeSetColumns,
+  describeSetEntryName,
+  describeSetRow,
+  describeSetTypeSheet,
+} from "@keylow/core/copy";
 import { exerciseSetRows, prefillNextSet, sameAgain } from "@keylow/core/training";
 import { useState } from "react";
 
@@ -31,6 +36,11 @@ function valuesOfPrefill(prefill: SetPrefill): SetValues | null {
  * open the set entry, which the screen hosts, for the exercise's next free slot and with the numbers it is
  * filled from.
  *
+ * The mark of a logged set opens the set types sheet, which the screen hosts, for that set: its number is the
+ * one it has among the working sets, or would have as one. A set still being saved has no stored id, so its
+ * mark does nothing until it is stored, as its check does, and nor does the mark of a set whose type is
+ * being changed, until that write lands.
+ *
  * The check of a row to log writes the numbers the next row opens with (`prefillNextSet`), and the check of a
  * logged row removes it. A row with no numbers to log opens that same set entry from its check. Add set adds
  * one more row, filled with the same again of the exercise's last set (its type, load, reps and effort), or
@@ -46,8 +56,10 @@ export function SessionExerciseCard({
   unit,
   exercise,
   sessionSets,
+  isChangingType,
   logging,
   onEditSet,
+  onEditSetType,
 }: SessionExerciseCardProps) {
   const enabled = useReadsEnabled();
   const lastPerformance = useLastPerformance(exercise.exerciseId, {
@@ -103,7 +115,7 @@ export function SessionExerciseCard({
     setType === "warmup" || plan === null || workingDoneCount > plan.sets;
 
   const loggedRows = rows.map(
-    ({ setId, state, setType, setNumber, previous, entry }): ExerciseCardRow => {
+    ({ setId, state, setType, setNumber, previous, entry }, index): ExerciseCardRow => {
       const copy = describeSetRow({ setType, setNumber, unit, previous, entry });
       if (setId === null) {
         return {
@@ -120,11 +132,29 @@ export function SessionExerciseCard({
           onCheck: checkOf(valuesToLog, setType, setNumber),
         };
       }
+      // A warm-up has no number of its own, so it is shown the one it would have as a working set.
+      const workingNumber =
+        setType === "warmup"
+          ? rows.slice(0, index).filter((row) => row.setType !== "warmup").length + 1
+          : setNumber;
       return {
         key: setId,
         state,
         setType,
         copy,
+        typeEdit:
+          logging.isSaving(setId) || isChangingType(setId)
+            ? undefined
+            : {
+                name: describeSetTypeSheet({
+                  exerciseName: name,
+                  setType,
+                  setNumber: workingNumber,
+                }).accessibleName,
+                onPress: () => {
+                  onEditSetType({ setId, exerciseName: name, setType, setNumber: workingNumber });
+                },
+              },
         onCheck: logging.isSaving(setId)
           ? undefined
           : () => {

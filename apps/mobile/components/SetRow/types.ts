@@ -8,6 +8,12 @@ export type SetRowEdit = {
   onPress: () => void;
 };
 
+/** Opens the set types sheet for a logged set: the name of its mark as a button, and what pressing it does. */
+export type SetRowTypeEdit = {
+  name: string;
+  onPress: () => void;
+};
+
 export type ActiveSetRowProps = {
   /** The row of the session in progress. This is the default. */
   variant?: "active" | undefined;
@@ -19,6 +25,11 @@ export type ActiveSetRowProps = {
   copy: SetRowCopy;
   /** A set still to do has its load, reps and RIR cells as one button that opens the set entry. A row without it only displays. */
   edit?: SetRowEdit | undefined;
+  /**
+   * A logged set has its mark as a button that opens the set types sheet. The mark of a row to do, and of a
+   * row without this, only displays.
+   */
+  typeEdit?: SetRowTypeEdit | undefined;
   /**
    * What pressing the check does: logs the row, or removes it when it is done. With it the check is a
    * button, named as the copy names it. Without it the check only displays.

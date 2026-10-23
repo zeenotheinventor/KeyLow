@@ -35,7 +35,8 @@ const fieldBaseClassName = "h-9 items-center justify-center rounded-small";
  * same set made last time, the load, the reps and the RIR, and the check. The check is a button when the
  * row is given what it does (`onCheck`), named as `describeSetRow` names it; without one it is drawn with its
  * accessible name and no role. A set still to do has its load, reps and RIR cells as one button that opens
- * the set entry (`edit`); a row without it only displays. Every word is `describeSetRow`'s. With
+ * the set entry (`edit`); a row without it only displays. A logged set's mark is a button that opens the set
+ * types sheet when the row is given what it does (`typeEdit`). Every word is `describeSetRow`'s. With
  * `variant="readOnly"` it is a set of a logged session instead (`ReadOnlySetRow`).
  */
 export function SetRow(props: SetRowProps) {
@@ -45,8 +46,9 @@ export function SetRow(props: SetRowProps) {
   return <ActiveSetRow {...props} />;
 }
 
-function ActiveSetRow({ state, setType, copy, edit, onCheck }: ActiveSetRowProps) {
+function ActiveSetRow({ state, setType, copy, edit, typeEdit, onCheck }: ActiveSetRowProps) {
   const isDone = state === "done";
+  const markTone = setType === "warmup" ? "warning-ink" : "secondary";
   const valueTone = isDone ? "primary" : "muted";
   const checkBoxClassName = `h-10 ${setColumnClassName.check} items-center justify-center rounded-small border ${checkClassName[state]}`;
   const checkIcon = (
@@ -78,13 +80,23 @@ function ActiveSetRow({ state, setType, copy, edit, onCheck }: ActiveSetRowProps
       className={`min-h-11 flex-row items-center ${setColumnClassName.row} ${rowClassName[state]}`}
       role="listitem"
     >
-      <Text
-        className={setColumnClassName.mark}
-        tone={setType === "warmup" ? "warning-ink" : "secondary"}
-        variant="label-small"
-      >
-        {copy.label}
-      </Text>
+      {typeEdit === undefined ? (
+        <Text className={setColumnClassName.mark} tone={markTone} variant="label-small">
+          {copy.label}
+        </Text>
+      ) : (
+        // The mark's column is 32 points wide and the row 44 high, so the slop reaches the 44 point target.
+        <PressableSurface
+          className={`h-8 justify-center ${setColumnClassName.mark}`}
+          hitSlop={6}
+          label={typeEdit.name}
+          onPress={typeEdit.onPress}
+        >
+          <Text tone={markTone} variant="label-small">
+            {copy.label}
+          </Text>
+        </PressableSurface>
+      )}
       <Text
         className={setColumnClassName.previous}
         numberOfLines={1}

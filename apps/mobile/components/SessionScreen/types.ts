@@ -65,6 +65,20 @@ export type RemoveSetRequest = {
   setNumber: number;
 };
 
+/** The logged set the set types sheet is opened for: who it is, and the number it has among the working sets or would have as one. */
+export type SetTypeOpening = {
+  setId: string;
+  exerciseName: string;
+  setType: SetType;
+  setNumber: number;
+};
+
+/** Changes the type of a logged set. */
+export type ChangeSetTypeRequest = {
+  setId: string;
+  setType: SetType;
+};
+
 /** What a card does when a check is pressed. */
 export type SetLogging = {
   logSet: (request: LogSetRequest) => void;

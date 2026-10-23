@@ -1,4 +1,4 @@
-import type { ScreenSet, SetLogging } from "../SessionScreen";
+import type { ScreenSet, SetLogging, SetTypeOpening } from "../SessionScreen";
 import type { ExercisePlan, SetEntryOpening } from "../SetEntrySheet";
 import type { LoadUnit, SessionExercise } from "@keylow/core/training";
 
@@ -15,8 +15,12 @@ export type SessionExerciseCardProps = {
   exercise: SessionExercise<ScreenSet>;
   /** Every set of the session, which the next row's numbers are opened from. */
   sessionSets: readonly ScreenSet[];
+  /** Whether a change of the set's type is on its way, which leaves its mark inert until the write lands. */
+  isChangingType: (setId: string) => boolean;
   /** What the checks do. */
   logging: SetLogging;
   /** Asked for when the cells of a set still to do are pressed, or the check of a row with no numbers to log, with what the set entry opens with. */
   onEditSet: (entry: SetEntryOpening) => void;
+  /** Asked for when the mark of a logged set is pressed, with the set the set types sheet opens for. */
+  onEditSetType: (opening: SetTypeOpening) => void;
 };

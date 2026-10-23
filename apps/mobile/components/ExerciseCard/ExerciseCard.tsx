@@ -67,13 +67,14 @@ function ActiveExerciseCard({ name, target, columns, rows, onAddSet }: ActiveExe
           <View className={setColumnClassName.check} />
         </View>
         <View aria-label={SESSION_ACTIVE.setsListName} role="list">
-          {rows.map(({ key, state, setType, copy, edit, onCheck }) => (
+          {rows.map(({ key, state, setType, copy, edit, typeEdit, onCheck }) => (
             <SetRow
               copy={copy}
               edit={edit}
               key={key}
               setType={setType}
               state={state}
+              typeEdit={typeEdit}
               onCheck={onCheck}
             />
           ))}

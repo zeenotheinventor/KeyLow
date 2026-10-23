@@ -26,6 +26,9 @@ import type { SetInputRule } from "../training/setInput";
 
 const SEPARATOR = " · ";
 
+/** The mark at the start of a set's row, which the set types sheet draws on each type's row too. */
+export { SET_MARKS } from "./sessionWording";
+
 /** The name of the set entry sheet: "Leg press, set 3". */
 export const describeSetEntryName = (
   exerciseName: string,

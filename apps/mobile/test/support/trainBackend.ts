@@ -34,12 +34,14 @@ export const trainBackend: {
    * `last_performance` names that read in the tables above.
    */
   lastPerformance: Row[];
-  /** The writes made to `workout_sets`, in order: `add_set`, `remove_set` and `restore_set`. */
+  /** The writes made to `workout_sets`, in order: `add_set`, `update_set`, `remove_set` and `restore_set`. */
   writes: string[];
   /** Fails the writes with a database error, as a refused or dropped connection does. */
   failingWrites: boolean;
   /** Holds the answer to a set insert until the test calls it, so a test can look at the screen while the write is on its way. */
   holdAddSet: Promise<void> | null;
+  /** Holds the answer to a set edit until the test calls it, so a test can look at the screen while the write is on its way. */
+  holdUpdateSet: Promise<void> | null;
   /** The sets removed from the active session, which Undo brings back. */
   removedSets: Row[];
   /** The `exercises` rows the search answers with, whatever the words, each with its `exercise_muscles`, in the order the database sorts them: the person's own first, then by name. */
@@ -57,6 +59,7 @@ export const trainBackend: {
   writes: [],
   failingWrites: false,
   holdAddSet: null,
+  holdUpdateSet: null,
   removedSets: [],
   exercises: [],
 };
@@ -75,6 +78,7 @@ export function resetTrainBackend(): void {
   trainBackend.writes = [];
   trainBackend.failingWrites = false;
   trainBackend.holdAddSet = null;
+  trainBackend.holdUpdateSet = null;
   trainBackend.removedSets = [];
   nextSetNumber = 0;
   trainBackend.exercises = [];
@@ -159,6 +163,34 @@ function exerciseRead(url: URL, init?: RequestInit): Response {
   return oneRow(found === undefined ? [] : [found], init);
 }
 
+/** An edit of a live set: its changed columns are stored on the row, and the row is answered as stored. */
+async function updateWrite(
+  id: string,
+  changes: Row,
+  sets: Row[],
+  init?: RequestInit,
+): Promise<Response> {
+  trainBackend.writes.push("update_set");
+  if (trainBackend.holdUpdateSet !== null) {
+    await trainBackend.holdUpdateSet;
+  }
+  if (trainBackend.failingWrites) {
+    return jsonResponse(
+      { code: "XX000", message: "raw database text", details: null, hint: null },
+      500,
+    );
+  }
+  const index = sets.findIndex((row) => row["id"] === id && row["deleted_at"] === null);
+  const current = sets[index];
+  if (current === undefined) {
+    return oneRow([], init);
+  }
+  const updated = { ...current, ...changes };
+  sets[index] = updated;
+  saveSetsOfActiveSession(sets);
+  return oneRow([updated], init);
+}
+
 /** The writes and the reads that go with them: the count of live sets, the insert, remove and restore. */
 async function setWrite(url: URL, init?: RequestInit): Promise<Response | null> {
   const method = init?.method ?? "GET";
@@ -200,6 +232,9 @@ async function setWrite(url: URL, init?: RequestInit): Promise<Response | null> 
   if (method === "PATCH") {
     const id = (url.searchParams.get("id") ?? "").replace("eq.", "");
     const body = bodyOf(init);
+    if (!("deleted_at" in body)) {
+      return updateWrite(id, body, sets, init);
+    }
     const isRemoval = body["deleted_at"] !== null;
     trainBackend.writes.push(isRemoval ? "remove_set" : "restore_set");
     if (trainBackend.failingWrites) {
