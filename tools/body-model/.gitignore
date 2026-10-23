@@ -1,0 +1,9 @@
+# Python bytecode written next to the Blender scripts
+__pycache__/
+*.pyc
+
+# Blender backups, autosaves and crash files, in case a script is ever run by hand with a save
+*.blend
+*.blend1
+*.blend@
+*.crash.txt
