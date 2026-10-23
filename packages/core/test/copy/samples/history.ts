@@ -55,6 +55,7 @@ export const samples: Record<string, () => string[]> = {
     copy.describeSessionBackLabel("train"),
   ],
   describeOpenSessionName: () => [copy.describeOpenSessionName("Pull, Tue 13 October")],
+  describeResumeSessionName: () => [copy.describeResumeSessionName("Pull, Tue 13 October")],
   describeHistorySessionName: () => [
     copy.describeHistorySessionName("Pull"),
     copy.describeHistorySessionName(null),

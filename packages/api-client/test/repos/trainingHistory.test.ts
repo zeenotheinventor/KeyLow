@@ -48,14 +48,14 @@ const textOf = (error: Error | null) =>
 const firstRequest = (requests: { url: URL }[]) => requests[0]?.url ?? new URL("http://none");
 
 describe("listSessionsInWeek", () => {
-  it("should ask for the live sessions of the Monday to Sunday week, newest first, with the routine day's name and the live sets", async () => {
+  it("should ask for the live sessions of the Monday to Sunday week that hold a live set, newest first, with the routine day's name and the live sets", async () => {
     const fake = installHistoryFake(server, { sessions: [] });
 
     await listSessionsInWeek(createTestClient(), "2026-10-12");
 
     const url = firstRequest(fake.requestsTo("workout_sessions"));
     expect(url.searchParams.get("select")).toBe(
-      `${SESSION_COLUMNS},routine_days(name),workout_sets(${SET_COLUMNS})`,
+      `${SESSION_COLUMNS},routine_days(name),workout_sets!inner(${SET_COLUMNS})`,
     );
     expect(url.searchParams.get("deleted_at")).toBe("is.null");
     expect(url.searchParams.getAll("local_date").sort()).toEqual([
@@ -131,6 +131,46 @@ describe("listSessionsInWeek", () => {
     const sessions = await listSessionsInWeek(createTestClient(), "2026-10-12");
 
     expect(sessions.map(({ id }) => id)).toEqual([inWeek.id]);
+  });
+
+  it("should leave out a session with no sets, and one whose sets were all deleted", async () => {
+    const logged = historySessionRow({ local_date: "2026-10-14" });
+    installHistoryFake(server, {
+      sessions: [
+        historySessionRow({ local_date: "2026-10-13", workout_sets: [] }),
+        historySessionRow({
+          local_date: "2026-10-15",
+          workout_sets: [historySetRow({ deleted_at: "2026-10-16T09:00:00+00:00" })],
+        }),
+        logged,
+      ],
+    });
+
+    const sessions = await listSessionsInWeek(createTestClient(), "2026-10-12");
+
+    expect(sessions.map(({ id }) => id)).toEqual([logged.id]);
+  });
+
+  it("should list a session that was never ended, however it strayed from the plan", async () => {
+    const open = historySessionRow({ local_date: "2026-10-14", ended_at: null });
+    installHistoryFake(server, { sessions: [open] });
+
+    const sessions = await listSessionsInWeek(createTestClient(), "2026-10-12");
+
+    expect(sessions.map(({ id }) => id)).toEqual([open.id]);
+    expect(sessions[0]?.ended_at).toBeNull();
+  });
+
+  it("should list a session whose only set is a warm-up", async () => {
+    const warmupOnly = historySessionRow({
+      local_date: "2026-10-14",
+      workout_sets: [historySetRow({ set_type: "warmup" })],
+    });
+    installHistoryFake(server, { sessions: [warmupOnly] });
+
+    const sessions = await listSessionsInWeek(createTestClient(), "2026-10-12");
+
+    expect(sessions.map(({ id }) => id)).toEqual([warmupOnly.id]);
   });
 
   it("should resolve to an empty list for a week with nothing logged", async () => {
@@ -219,8 +259,9 @@ describe("findPreviousSessionWeek", () => {
     await findPreviousSessionWeek(createTestClient(), "2026-10-12");
 
     const url = firstRequest(fake.requestsTo("workout_sessions"));
-    expect(url.searchParams.get("select")).toBe("local_date");
+    expect(url.searchParams.get("select")).toBe("local_date,workout_sets!inner(id)");
     expect(url.searchParams.get("deleted_at")).toBe("is.null");
+    expect(url.searchParams.get("workout_sets.deleted_at")).toBe("is.null");
     expect(url.searchParams.get("local_date")).toBe("lt.2026-10-12");
     expect(url.searchParams.get("order")).toBe("local_date.desc");
     expect(url.searchParams.get("limit")).toBe("1");
@@ -273,6 +314,33 @@ describe("findPreviousSessionWeek", () => {
 
     await expect(findPreviousSessionWeek(createTestClient(), "2026-10-12")).resolves.toBe(
       "2026-09-28",
+    );
+  });
+
+  it("should skip a week whose sessions hold no live set, so load earlier weeks never lands on an empty one", async () => {
+    installHistoryFake(server, {
+      sessions: [
+        historySessionRow({ local_date: "2026-10-08", workout_sets: [] }),
+        historySessionRow({
+          local_date: "2026-10-07",
+          workout_sets: [historySetRow({ deleted_at: "2026-10-09T09:00:00+00:00" })],
+        }),
+        historySessionRow({ local_date: "2026-09-30" }),
+      ],
+    });
+
+    await expect(findPreviousSessionWeek(createTestClient(), "2026-10-12")).resolves.toBe(
+      "2026-09-28",
+    );
+  });
+
+  it("should count a week whose only session was never ended", async () => {
+    installHistoryFake(server, {
+      sessions: [historySessionRow({ local_date: "2026-10-08", ended_at: null })],
+    });
+
+    await expect(findPreviousSessionWeek(createTestClient(), "2026-10-12")).resolves.toBe(
+      "2026-10-05",
     );
   });
 

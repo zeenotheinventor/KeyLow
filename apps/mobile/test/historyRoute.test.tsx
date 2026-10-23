@@ -14,6 +14,7 @@ import {
   goldenHistoryWeek,
   historyBackend,
   historyClient,
+  historySession,
   resetHistoryBackend,
 } from "./support/historyBackend";
 import { compileKitStyles } from "./support/kitStyles";
@@ -141,6 +142,29 @@ describe("the history in the Train tab", () => {
       expect(routerMock.push).toHaveBeenCalledWith(
         `/train/history/${String(goldenHistoryWeek[1]?.["id"])}`,
       );
+    });
+
+    it("should open the live session, not the detail, from the In progress row", async () => {
+      historyBackend.sessions = [
+        ...goldenHistoryWeek.slice(0, 2),
+        historySession({
+          localDate: "2026-10-15",
+          dayName: "Legs",
+          kind: "legs",
+          minutes: null,
+          workingSets: 8,
+        }),
+      ];
+      const user = await renderRoute(<HistoryRoute />);
+
+      await user.press(
+        await screen.findByRole("button", {
+          name: "Legs, Thu 15 October, 8 sets, in progress, resume session",
+        }),
+      );
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith("/session");
     });
 
     it("should go to the Train home when there is nothing to go back to", async () => {

@@ -8,7 +8,7 @@ import { sessionDetailPath } from "../../../lib/historyRoutes";
 // the stack above gives it no header.
 export default function HistoryRoute() {
   const router = useRouter();
-  const { start, isStarting } = useTrainSessionActions();
+  const { start, resume, isStarting } = useTrainSessionActions();
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Train home instead.
@@ -26,6 +26,7 @@ export default function HistoryRoute() {
       onOpenSession={(sessionId) => {
         router.push(sessionDetailPath(sessionId));
       }}
+      onResumeSession={resume}
       onStartSession={start}
     />
   );

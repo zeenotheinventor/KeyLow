@@ -181,6 +181,17 @@ describe("the session detail screen", () => {
       ]);
     });
 
+    it("should give a session with no end its start alone, and In progress on the Time card", async () => {
+      sessionDetailBackend.sessions = [pullSession({ endedAt: null })];
+      await renderDetail();
+
+      await screen.findByRole("heading", { name: "Pull" });
+      expect(screen.getByText("Tuesday 13 October · 18:00")).toBeOnTheScreen();
+      expect(screen.getByText("Time")).toBeOnTheScreen();
+      expect(screen.getByText("In progress")).toBeOnTheScreen();
+      expect(screen.queryByText(/ min$/)).toBeNull();
+    });
+
     it("should list the exercises in the order they were first logged", async () => {
       await renderDetail();
 

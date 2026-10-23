@@ -158,7 +158,7 @@ describe("useHistory", () => {
     expect(result.current.hasEarlierWeeks).toBe(false);
     const sessionReads = fake
       .requestsTo("workout_sessions")
-      .filter(({ url }) => url.searchParams.get("select") !== "local_date");
+      .filter(({ url }) => url.searchParams.get("select") !== "local_date,workout_sets!inner(id)");
     expect(sessionReads).toHaveLength(1);
   });
 

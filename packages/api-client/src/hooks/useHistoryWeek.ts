@@ -15,8 +15,8 @@ import type { TrainingReadResult } from "./trainingReadResult";
 import type { HistorySessionRow } from "../repos/trainingSchemas";
 
 /**
- * The live sessions of the week that starts on the Monday `weekStart` (`YYYY-MM-DD`), newest first,
- * each with its summary (core's `summariseSession`) and, when the active routine still holds the day it
+ * The live sessions of the week that starts on the Monday `weekStart` (`YYYY-MM-DD`) that hold a live
+ * set, ended or not, newest first, each with its summary (core's `summariseSession`) and, when the active routine still holds the day it
  * was planned from, the comparison with that day. The week is Monday to Sunday by the local date of each
  * session.
  *

@@ -1,8 +1,10 @@
 import type { TrainSessionStart } from "../TrainScreen";
 
 export type HistoryScreenProps = {
-  /** Opens a session of the list, given its id: a row was pressed. */
+  /** Opens a finished session of the list, given its id: a row was pressed. */
   onOpenSession: (sessionId: string) => void;
+  /** Resumes the session in progress: its row was pressed. */
+  onResumeSession: () => void;
   /** Goes back to the Train home. */
   onBack: () => void;
   /**
