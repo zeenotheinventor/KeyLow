@@ -1,11 +1,11 @@
 import { useFoodWithPortions } from "@keylow/api-client";
 import { ADD_INGREDIENT, FOOD_FORM } from "@keylow/core/copy";
+import { newIngredient } from "@keylow/core/recipes";
 import { vars } from "nativewind";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { amountForPicker, amountLastLogged } from "../../lib/amountLastLogged";
-import { newIngredient } from "../../lib/ingredientFromAmount";
 import { FoodLoadStateBody } from "../FoodLoadState";
 import { PortionPicker } from "../PortionPicker";
 import { SheetHeader } from "../ui";

@@ -6,12 +6,11 @@ import {
   snapshotAmountStart,
   snapshotAsFood,
 } from "@keylow/core/diary";
+import { withAmount } from "@keylow/core/recipes";
 import { useState } from "react";
 
 import type { AmountFood, AmountPortion, AmountPreview, UnitOption } from "@keylow/core/diary";
 import type { RecipeIngredient } from "@keylow/core/recipes";
-
-import { editedIngredient } from "@/lib/ingredientFromAmount";
 
 type Edits = { quantityText?: string; unitValue?: string };
 
@@ -72,7 +71,7 @@ export function useIngredientEditDraft(ingredient: RecipeIngredient): Ingredient
       preview.amount === null
         ? null
         : isAmountChanged
-          ? editedIngredient(ingredient, preview.amount)
+          ? withAmount(ingredient, preview.amount)
           : ingredient,
   };
 }

@@ -1,6 +1,6 @@
 import { useRecipeSearch } from "@keylow/api-client";
+import { canLogRecipe } from "@keylow/core/diary";
 
-import { canLogRecipe } from "../../../lib/canLogRecipe";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 import { LogIdle } from "../LogIdle";
 import { SearchResults } from "../SearchResults";

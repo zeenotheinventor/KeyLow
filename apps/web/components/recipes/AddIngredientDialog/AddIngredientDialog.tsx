@@ -1,6 +1,7 @@
 "use client";
 
 import { ADD_FOOD_DIALOG, ADD_INGREDIENT, RECIPE_EDITOR } from "@keylow/core/copy";
+import { newIngredient } from "@keylow/core/recipes";
 import { useEffect, useRef, useState } from "react";
 
 import type { AddIngredientDialogProps } from "./types";
@@ -9,7 +10,6 @@ import { PortionStep, SearchStep, useAmountDraft } from "@/components/diary/AddF
 import { DIARY_DIALOG_CLASSES } from "@/components/diary/diaryDialogClasses";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { newIngredient } from "@/lib/ingredientFromAmount";
 
 /**
  * The add food dialog in ingredient mode, for the recipe editor: a search of foods whose rows all open the
