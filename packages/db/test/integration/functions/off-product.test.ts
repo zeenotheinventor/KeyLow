@@ -73,6 +73,30 @@ async function waitFor(condition: () => Promise<boolean>, timeoutMilliseconds = 
   }
 }
 
+// 3282070015314, a real box of ten free-range hen eggs, as Open Food Facts holds it (captured 2026-10-23):
+// OFF lists every ancestor category, and the energy is 140 kcal per 100 g. The quantity is a bare count
+// with no unit, so there is no pack portion to read.
+const boxOfEggsOverrides = {
+  product_name_en: "Test Box of Eggs",
+  quantity: "10",
+  serving_size: null,
+  serving_quantity: null,
+  packaging_tags: ["en:cardboard", "en:box"],
+  categories_tags: [
+    "en:eggs-and-their-products",
+    "en:farming-products",
+    "en:eggs",
+    "en:chicken-eggs",
+    "en:free-range-chicken-eggs",
+  ],
+  nutriments: {
+    "energy-kcal_100g": 140,
+    proteins_100g: 12.5,
+    fat_100g: 9.5,
+    carbohydrates_100g: 0.7,
+  },
+};
+
 describe("off-product", () => {
   describe("when the barcode is not cached", () => {
     it("fetches it once and stores one OFF row, sending the configured User-Agent", async () => {
@@ -125,6 +149,61 @@ describe("off-product", () => {
       const stored = await readOffFoods(code);
       expect(stored).toHaveLength(1);
       expect(stored[0]?.fetched_at).not.toBeNull();
+    });
+
+    it("stores the four egg sizes of a box of eggs with no serving, large the only default", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      await offMock.register({
+        code,
+        fixture: "kcal-present",
+        productOverrides: boxOfEggsOverrides,
+      });
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const { portions } = offProductResponseSchema.parse(response.body);
+      expect(
+        portions.map(({ label, grams, ml, is_default, position }) => ({
+          label,
+          grams,
+          ml,
+          is_default,
+          position,
+        })),
+      ).toEqual([
+        { label: "1 small", grams: 38, ml: null, is_default: false, position: 0 },
+        { label: "1 medium", grams: 44, ml: null, is_default: false, position: 1 },
+        { label: "1 large", grams: 50, ml: null, is_default: true, position: 2 },
+        { label: "1 extra large", grams: 56, ml: null, is_default: false, position: 3 },
+      ]);
+    });
+
+    it("keeps the serving as the only default of a box of eggs, ahead of the egg sizes", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      await offMock.register({
+        code,
+        fixture: "kcal-present",
+        productOverrides: {
+          ...boxOfEggsOverrides,
+          serving_size: "1 egg (60 g)",
+          serving_quantity: 60,
+        },
+      });
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const { portions } = offProductResponseSchema.parse(response.body);
+      expect(portions.map(({ label, is_default }) => [label, is_default])).toEqual([
+        ["1 egg (60 g)", true],
+        ["1 small", false],
+        ["1 medium", false],
+        ["1 large", false],
+        ["1 extra large", false],
+      ]);
     });
 
     it("answers every one of several simultaneous first lookups, and stores one set of portions", async () => {

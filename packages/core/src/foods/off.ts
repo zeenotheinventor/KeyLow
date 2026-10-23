@@ -129,6 +129,7 @@ export function normaliseOffProduct(raw: unknown): NormaliseOffResult {
     basis,
     packagingTags: product.packaging_tags,
     categoriesTags: product.categories_tags,
+    kcal,
   });
 
   return {
