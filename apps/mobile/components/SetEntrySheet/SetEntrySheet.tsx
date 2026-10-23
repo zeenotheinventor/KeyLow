@@ -50,12 +50,14 @@ function LogSetSheet({
   unit,
   entry,
   openingId,
+  setType,
+  onChangeSetType,
   onPressSetNumber,
   onLogSet,
 }: SetEntrySheetProps) {
   return (
     <BottomSheet
-      label={describeSetEntryName(entry.exerciseName, entry.setType, entry.setNumber)}
+      label={describeSetEntryName(entry.exerciseName, setType, entry.setNumber)}
       open={open}
       onClose={onClose}
     >
@@ -63,7 +65,9 @@ function LogSetSheet({
         key={openingId}
         entry={entry}
         sessionId={sessionId}
+        setType={setType}
         unit={unit}
+        onChangeSetType={onChangeSetType}
         onLogged={onClose}
         onLogSet={onLogSet}
         onPressSetNumber={onPressSetNumber}

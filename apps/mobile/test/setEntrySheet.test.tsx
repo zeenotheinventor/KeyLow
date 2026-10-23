@@ -8,6 +8,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react-native";
+import { useState } from "react";
 import { setUpTests } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -22,7 +23,7 @@ import { resetSetEntryBackend, setEntryBackend, setEntryClient } from "./support
 import { resetTrainBackend } from "./support/trainBackend";
 
 import type { SetEntryOpening, SetEntrySheetProps } from "../components/SetEntrySheet";
-import type { SetPrefill } from "@keylow/core/training";
+import type { SetPrefill, SetType } from "@keylow/core/training";
 import type { QueryClient } from "@tanstack/react-query";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -65,12 +66,32 @@ const nothingLogged: SetEntryOpening = {
 
 let queryClient: QueryClient;
 
-function sheetElement(props: Partial<SetEntrySheetProps> = {}, opening = goldenOpening) {
+type HostedSheetProps = Omit<SetEntrySheetProps, "setType" | "onChangeSetType"> & {
+  onChangeSetType?: (setType: SetType) => void;
+};
+
+/** The screen's part: the set type is held beside the opening, and the sheet changes it through the callback. */
+function HostedSheet({ onChangeSetType, ...props }: HostedSheetProps) {
+  const [setType, setSetType] = useState<SetType>(props.entry.setType);
+
+  return (
+    <SetEntrySheet
+      {...props}
+      setType={setType}
+      onChangeSetType={(chosen) => {
+        setSetType(chosen);
+        onChangeSetType?.(chosen);
+      }}
+    />
+  );
+}
+
+function sheetElement(props: Partial<HostedSheetProps> = {}, opening = goldenOpening) {
   return (
     <SafeAreaProvider initialMetrics={{ frame, insets }}>
       <ThemeProvider fixedPreference="dark">
         <KeyLowProvider client={setEntryClient} queryClient={queryClient}>
-          <SetEntrySheet
+          <HostedSheet
             entry={opening}
             open
             openingId={1}
@@ -85,7 +106,7 @@ function sheetElement(props: Partial<SetEntrySheetProps> = {}, opening = goldenO
   );
 }
 
-async function renderSheet(props: Partial<SetEntrySheetProps> = {}, opening = goldenOpening) {
+async function renderSheet(props: Partial<HostedSheetProps> = {}, opening = goldenOpening) {
   const onClose = props.onClose ?? jest.fn();
   const view = await render(sheetElement({ ...props, onClose }, opening));
   return { onClose, view };
@@ -202,7 +223,11 @@ describe("the set entry sheet", () => {
       expect(screen.getByText("Nothing logged for this exercise yet.")).toBeOnTheScreen();
       expect(loadField()).toHaveDisplayValue("");
       expect(repsField()).toHaveDisplayValue("");
-      expect(screen.queryByRole("radio", { checked: true })).not.toBeOnTheScreen();
+      expect(
+        within(screen.getByLabelText("RIR, reps in reserve")).queryByRole("radio", {
+          checked: true,
+        }),
+      ).not.toBeOnTheScreen();
     });
 
     it("should offer RIR from 0 to 6+ as a radio group with its help line", async () => {
@@ -251,6 +276,126 @@ describe("the set entry sheet", () => {
       await user.press(screen.getByRole("button", { name: "Set type, leg press set 3" }));
 
       expect(onPressSetNumber).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("the Set type control", () => {
+    const setTypeControl = () => within(screen.getByLabelText("Set type"));
+
+    it("should be a radiogroup named Set type holding the four types, with the slot's own type checked", async () => {
+      await renderSheet();
+
+      expect(screen.getByLabelText("Set type")).toHaveProp("role", "radiogroup");
+      expect(setTypeControl().getAllByRole("radio")).toHaveLength(4);
+      expect(setTypeControl().getByRole("radio", { name: "Working" })).toBeChecked();
+      for (const name of ["Warm-up", "Drop", "Failure"]) {
+        expect(setTypeControl().getByRole("radio", { name })).not.toBeChecked();
+      }
+    });
+
+    it("should open on a warm-up slot with Warm-up checked", async () => {
+      await renderSheet({}, { ...goldenOpening, setType: "warmup" });
+
+      expect(setTypeControl().getByRole("radio", { name: "Warm-up" })).toBeChecked();
+      expect(setTypeControl().getByRole("radio", { name: "Working" })).not.toBeChecked();
+    });
+
+    it("should hand the chosen type to the screen", async () => {
+      const onChangeSetType = jest.fn();
+      const user = userEvent.setup();
+      await renderSheet({ onChangeSetType });
+
+      await user.press(setTypeControl().getByRole("radio", { name: "Drop" }));
+
+      expect(onChangeSetType).toHaveBeenCalledWith("drop");
+      expect(setTypeControl().getByRole("radio", { name: "Drop" })).toBeChecked();
+    });
+
+    it("should name the sheet and the subtitle for a warm-up, which carries no target", async () => {
+      const user = userEvent.setup();
+      await renderSheet();
+
+      await user.press(setTypeControl().getByRole("radio", { name: "Warm-up" }));
+
+      expect(screen.getByLabelText("Leg press, warm-up set")).toHaveProp("role", "dialog");
+      expect(screen.getByText("Warm-up set")).toBeOnTheScreen();
+    });
+
+    it("should name the subtitle for a drop set with its target", async () => {
+      const user = userEvent.setup();
+      await renderSheet();
+
+      await user.press(setTypeControl().getByRole("radio", { name: "Drop" }));
+
+      expect(screen.getByLabelText("Leg press, drop set")).toHaveProp("role", "dialog");
+      expect(screen.getByText("Drop set · target 10 to 12 reps at RIR 1")).toBeOnTheScreen();
+    });
+
+    it("should keep what was typed when the type changes", async () => {
+      const user = userEvent.setup();
+      await renderSheet();
+      await user.clear(loadField());
+      await user.type(loadField(), "182.5");
+      await user.clear(repsField());
+      await user.type(repsField(), "10");
+
+      await user.press(setTypeControl().getByRole("radio", { name: "Warm-up" }));
+
+      expect(loadField()).toHaveDisplayValue("182.5");
+      expect(repsField()).toHaveDisplayValue("10");
+    });
+
+    it("should store the chosen type with what was typed when Log set is pressed", async () => {
+      const user = userEvent.setup();
+      const { onClose } = await renderSheet();
+      await user.clear(loadField());
+      await user.type(loadField(), "60");
+      await user.press(setTypeControl().getByRole("radio", { name: "Warm-up" }));
+
+      await user.press(logSet());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+      expect(setEntryBackend.inserts).toMatchObject([
+        { set_type: "warmup", load_kg: 60, reps: 11 },
+      ]);
+    });
+
+    it("should store the chosen type when the prefilled numbers are logged unchanged", async () => {
+      const user = userEvent.setup();
+      const { onClose } = await renderSheet();
+      await user.press(setTypeControl().getByRole("radio", { name: "Failure" }));
+
+      await user.press(logSet());
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+      expect(setEntryBackend.inserts).toMatchObject([
+        { set_type: "failure", load_kg: 180, reps: 11, rir: 1 },
+      ]);
+    });
+
+    it("should have Same again repeat the last set's numbers with the chosen type", async () => {
+      const user = userEvent.setup();
+      const { onClose } = await renderSheet();
+      await user.press(setTypeControl().getByRole("radio", { name: "Drop" }));
+
+      await user.press(screen.getByRole("button", { name: /^Same again/ }));
+
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+      expect(setEntryBackend.inserts).toMatchObject([
+        { set_type: "drop", load_kg: 180, reps: 11, rir: 1 },
+      ]);
+    });
+
+    it("should be drawn when there is nothing to fill the set from", async () => {
+      await renderSheet({}, nothingLogged);
+
+      expect(setTypeControl().getByRole("radio", { name: "Working" })).toBeChecked();
     });
   });
 
@@ -585,7 +730,11 @@ describe("the set entry sheet", () => {
 
       await user.press(screen.getByRole("radio", { name: "1" }));
 
-      expect(screen.queryByRole("radio", { checked: true })).not.toBeOnTheScreen();
+      expect(
+        within(screen.getByLabelText("RIR, reps in reserve")).queryByRole("radio", {
+          checked: true,
+        }),
+      ).not.toBeOnTheScreen();
       await user.press(logSet());
       await waitFor(() => {
         expect(onClose).toHaveBeenCalledTimes(1);

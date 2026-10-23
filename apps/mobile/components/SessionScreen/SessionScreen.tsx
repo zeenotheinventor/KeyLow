@@ -7,7 +7,7 @@ import {
 } from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { Keyboard, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddExerciseSheet } from "../AddExerciseSheet";
@@ -27,6 +27,7 @@ import { useSetLogging } from "./useSetLogging";
 import type { FinishDetails } from "../FinishScreen";
 import type { SessionScreenProps, SetTypeOpening } from "./types";
 import type { SetEntryOpening } from "../SetEntrySheet";
+import type { SetType } from "@keylow/core/training";
 
 // The board's padding under the Add exercise button, which a phone with a taller inset outgrows.
 const MINIMUM_DOCK_BOTTOM_PADDING = 34;
@@ -38,7 +39,9 @@ const MINIMUM_DOCK_BOTTOM_PADDING = 34;
  * set rows, with Add exercise docked under them. An exercise added with no set yet is a card too, held by
  * `useAddedExercises`. The cells of a set still to do open the set entry sheet, which logs the set. The check
  * logs a set from the numbers its row shows (or opens the same sheet when it has none) or removes a logged
- * one, and Add set adds a row. The mark of a logged set opens the set types sheet, which changes its type.
+ * one, and Add set adds a row. The entry sheet has a Set type control, and its set number opens the set types
+ * sheet over it, so the type is chosen before the set is logged. The mark of a logged set opens the same
+ * sheet, which changes the type of that set.
  * Editing a logged set's numbers has a ticket of its own. Finish opens the finish screen
  * in place of the session, and Keep logging brings the session back. Finish is off while no set is logged,
  * with a line that says what to do (no board draws it). While the session is read the screen shows a
@@ -51,12 +54,25 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
   const pendingSets = usePendingSets();
   const view = useSessionScreen(pendingSets.sets);
   const logging = useSetLogging(view, pendingSets);
-  // What the set entry opens with is kept while the sheet closes, so it does not change under its exit.
+  // What the set entry opens with is kept while the sheet closes, so it does not change under its exit. The
+  // type the set will be logged with starts as the slot's own and is held here, so the entry's control and the
+  // types sheet its set number opens change the same value, and a change does not count up `openingId`.
   const [setEntry, setSetEntry] = useState<{
     entry: SetEntryOpening;
+    setType: SetType;
     isOpen: boolean;
     openingId: number;
   } | null>(null);
+  const [isEntryTypeSheetOpen, setIsEntryTypeSheetOpen] = useState(false);
+  // Each change names the opening it was made for, so a call that arrives late never restores an older one.
+  const updateOpening = (
+    openingId: number,
+    change: Partial<{ setType: SetType; isOpen: boolean }>,
+  ) => {
+    setSetEntry((current) =>
+      current?.openingId === openingId ? { ...current, ...change } : current,
+    );
+  };
   // The set the types sheet is opened for is kept while the sheet closes, so it does not change under its exit.
   const [setTypeSheet, setSetTypeSheet] = useState<{
     opening: SetTypeOpening;
@@ -158,6 +174,7 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
               onEditSet={(entry) => {
                 setSetEntry((current) => ({
                   entry,
+                  setType: entry.setType,
                   isOpen: true,
                   openingId: (current?.openingId ?? 0) + 1,
                 }));
@@ -193,9 +210,35 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
           open={setEntry.isOpen}
           openingId={setEntry.openingId}
           sessionId={view.sessionId}
+          setType={setEntry.setType}
           unit={view.unit}
+          onChangeSetType={(setType) => {
+            updateOpening(setEntry.openingId, { setType });
+          }}
           onClose={() => {
-            setSetEntry({ ...setEntry, isOpen: false });
+            setIsEntryTypeSheetOpen(false);
+            updateOpening(setEntry.openingId, { isOpen: false });
+          }}
+          onPressSetNumber={() => {
+            // The types sheet opens over the entry sheet, so the keyboard must not be left in front of it.
+            Keyboard.dismiss();
+            setIsEntryTypeSheetOpen(true);
+          }}
+        />
+      ) : null}
+      {view.status === "ready" && setEntry !== null ? (
+        // Over the entry sheet, which stays under it with what was typed. Choosing a type changes the entry's own.
+        <SetTypeSheet
+          exerciseName={setEntry.entry.exerciseName}
+          open={isEntryTypeSheetOpen}
+          setNumber={setEntry.entry.setNumber}
+          setType={setEntry.setType}
+          onChoose={(setType) => {
+            setIsEntryTypeSheetOpen(false);
+            updateOpening(setEntry.openingId, { setType });
+          }}
+          onClose={() => {
+            setIsEntryTypeSheetOpen(false);
           }}
         />
       ) : null}

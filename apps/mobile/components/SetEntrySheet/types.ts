@@ -8,8 +8,9 @@ export type ExercisePlan = NonNullable<ExerciseTargetInput["target"]>;
 export type SetEntryOpening = {
   exerciseId: string;
   exerciseName: string;
+  /** The slot's own type, which the screen's chosen type starts as. */
   setType: SetType;
-  /** Its number among the exercise's working sets. */
+  /** Its number among the exercise's working sets, or the one it would have as one. */
   setNumber: number;
   /** The exercise's plan, or null for one added to the session. */
   plan: ExercisePlan | null;
@@ -64,6 +65,13 @@ export type SetEntrySheetProps = {
   /** The unit the person trains in: the load is typed and shown in it, and stored in kilograms. */
   unit: LoadUnit;
   entry: SetEntryOpening;
+  /**
+   * The type the set will be logged with, held by the screen beside the opening: it starts as the slot's own
+   * type (`entry.setType`). The control and the set types sheet the set number opens both change it through
+   * `onChangeSetType`. The screen must not count up `openingId` for a change, or the typed numbers are lost.
+   */
+  setType: SetType;
+  onChangeSetType: (setType: SetType) => void;
   /** Opens the set types sheet. The set number at the top is a button only when a screen handles it. */
   onPressSetNumber?: (() => void) | undefined;
   /**

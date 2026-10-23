@@ -1,6 +1,7 @@
 import { useAddSet } from "@keylow/api-client";
 import {
   SET_ENTRY,
+  SET_TYPE_OPTIONS,
   describePrefillLine,
   describeSameAgainName,
   describeSetEntrySubtitle,
@@ -8,16 +9,16 @@ import {
   describeSetTypeSheet,
   isWordedSetInputRule,
 } from "@keylow/core/copy";
-import { displayLoad, sameAgain, validateSetDraft } from "@keylow/core/training";
+import { SET_TYPES, displayLoad, sameAgain, validateSetDraft } from "@keylow/core/training";
 import { useRef, useState } from "react";
 import { View } from "react-native";
 
-import { Button, PressableSurface, Text } from "../../ui";
+import { Button, PressableSurface, SegmentedControl, Text } from "../../ui";
 import { LoadRepsFields } from "../LoadRepsFields";
 import { RirField } from "../RirField";
 
 import type { SetEntryFormProps } from "./types";
-import type { SetDraft, SetPrefill, SetValues } from "@keylow/core/training";
+import type { SetDraft, SetPrefill, SetType, SetValues } from "@keylow/core/training";
 
 type EditedFields = Readonly<{ load: boolean; reps: boolean }>;
 
@@ -34,9 +35,9 @@ function openingDraft(prefill: SetPrefill, unit: SetEntryFormProps["unit"]) {
 // thousands separator typed by hand, so it is written with a fourth decimal, which the rule leaves alone.
 const exactKilograms = (kilograms: number): string => kilograms.toFixed(4);
 
-function sameAgainDraft(values: SetValues): SetDraft {
+function sameAgainDraft(values: SetValues, setType: SetType): SetDraft {
   return {
-    setType: values.setType,
+    setType,
     load: values.loadKg === null ? "" : exactKilograms(values.loadKg),
     reps: String(values.reps),
     rir: values.rir === null ? "" : String(values.rir),
@@ -44,9 +45,16 @@ function sameAgainDraft(values: SetValues): SetDraft {
   };
 }
 
+const setTypeOptions = SET_TYPES.map((type) => ({
+  value: type,
+  label: SET_TYPE_OPTIONS[type].name,
+}));
+
 /**
- * The inside of the set entry sheet: the exercise and set, the load and reps fields, RIR, and Same again and
- * Log set. A field shows its rule once it has been edited, and Log set is off while any field breaks one.
+ * The inside of the set entry sheet: the exercise and set, the Set type control, the load and reps fields,
+ * RIR, and Same again and Log set. The type is the screen's to hold (`setType`), so a change of it leaves what
+ * was typed alone, and both Log set and Same again store it. A field shows its rule once it has been edited,
+ * and Log set is off while any field breaks one.
  * The typed values are held here and a failed write leaves them as they are, with a line saying the set did
  * not save that the next try clears. Given `onLogSet` (a session that is not the one in progress) the form
  * hands it the set instead of writing, and the screen that owns it says what went wrong, so no line is drawn
@@ -55,12 +63,14 @@ function sameAgainDraft(values: SetValues): SetDraft {
 export function SetEntryForm({
   entry,
   sessionId,
+  setType,
   unit,
+  onChangeSetType,
   onLogged,
   onLogSet,
   onPressSetNumber,
 }: SetEntryFormProps) {
-  const { exerciseId, exerciseName, setType, setNumber, plan, prefill, lastWeek } = entry;
+  const { exerciseId, exerciseName, setNumber, plan, prefill, lastWeek } = entry;
   const [typed, setTyped] = useState(() => openingDraft(prefill, unit));
   const [edited, setEdited] = useState<EditedFields>({ load: false, reps: false });
   const addSet = useAddSet();
@@ -141,6 +151,12 @@ export function SetEntryForm({
           </PressableSurface>
         )}
       </View>
+      <SegmentedControl
+        label={SET_ENTRY.setTypeGroupName}
+        options={setTypeOptions}
+        value={setType}
+        onChange={onChangeSetType}
+      />
       <LoadRepsFields
         load={typed.load}
         loadError={loadError}
@@ -187,7 +203,7 @@ export function SetEntryForm({
             icon="Repeat2"
             variant="secondary"
             onPress={() => {
-              log({ draft: sameAgainDraft(repeat), unit: "kg" });
+              log({ draft: sameAgainDraft(repeat, setType), unit: "kg" });
             }}
           >
             {SET_ENTRY.sameAgainAction}
