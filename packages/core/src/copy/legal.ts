@@ -4,7 +4,7 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
  * The version of the Terms of Use and the Privacy Policy that people accept at sign-up. It is the date
  * the current wording took effect. A later version asks people to accept again.
  */
-export const TERMS_VERSION = "2026-10-18";
+export const TERMS_VERSION = "2026-10-23";
 
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {
@@ -81,7 +81,8 @@ export const PRIVACY_POLICY: LegalDocument = {
         "Your email address and, if you sign in with email, a password. The password is kept only in a form that cannot be read back.",
         "If you sign in with Google, your Google account name, email address and a link to your profile picture.",
         "Your profile stats.",
-        "Your weigh-ins, including any imported from Apple Health or Health Connect.",
+        "Your weigh-ins, including any imported from Health Connect.",
+        "Your body fat and lean mass readings, imported from Health Connect. Ki-Lo keeps only the value and the time of each reading.",
         "Your food diary.",
         "Your custom foods and recipes.",
         "Your workouts: sessions, sets, loads and the exercises you create.",
@@ -101,7 +102,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       paragraphs: [
         "UK GDPR says a lawful basis is needed to use your information.",
         "For your account and the service you signed up for, the basis is providing that service to you.",
-        "Your weight, food diary, body stats, workouts, routines and training goals are health data. For health data, the basis is your explicit consent. You give it when you tick the box at sign-up.",
+        "Your weight, body fat, lean mass, food diary, body stats, workouts, routines and training goals are health data. For health data, the basis is your explicit consent. You give it when you tick the box at sign-up.",
         "You can withdraw your consent at any time by deleting your account. See how to do that under How to use your rights.",
       ],
     },
@@ -120,7 +121,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         "Supabase: the database and sign-in.",
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
-        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
+        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body composition, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ],
     },

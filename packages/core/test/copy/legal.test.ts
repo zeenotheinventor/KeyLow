@@ -42,13 +42,13 @@ function allTextOf(document: LegalDocument): string {
 describe("the legal copy", () => {
   describe("the terms version", () => {
     it("should be the date the current terms took effect", () => {
-      expect(TERMS_VERSION).toBe("2026-10-18");
+      expect(TERMS_VERSION).toBe("2026-10-23");
     });
 
-    it("should ask someone who accepted the terms of 16 October 2026 to accept again", () => {
+    it("should ask someone who accepted the terms of 18 October 2026 to accept again", () => {
       expect(
         needsTermsAcceptance(
-          { terms_accepted_at: "2026-10-17T09:30:00+00:00", terms_version: "2026-10-16" },
+          { terms_accepted_at: "2026-10-19T09:30:00+00:00", terms_version: "2026-10-18" },
           TERMS_VERSION,
         ),
       ).toBe(true);
@@ -57,7 +57,7 @@ describe("the legal copy", () => {
     it("should not ask someone who accepted the current terms again", () => {
       expect(
         needsTermsAcceptance(
-          { terms_accepted_at: "2026-10-18T09:30:00+00:00", terms_version: TERMS_VERSION },
+          { terms_accepted_at: "2026-10-23T09:30:00+00:00", terms_version: TERMS_VERSION },
           TERMS_VERSION,
         ),
       ).toBe(false);
@@ -135,7 +135,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 18 October 2026");
+      expect(document.lastUpdated).toBe("Last updated 23 October 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
@@ -210,13 +210,18 @@ describe("the legal copy", () => {
         "Your email address and, if you sign in with email, a password. The password is kept only in a form that cannot be read back.",
         "If you sign in with Google, your Google account name, email address and a link to your profile picture.",
         "Your profile stats.",
-        "Your weigh-ins, including any imported from Apple Health or Health Connect.",
+        "Your weigh-ins, including any imported from Health Connect.",
+        "Your body fat and lean mass readings, imported from Health Connect. Ki-Lo keeps only the value and the time of each reading.",
         "Your food diary.",
         "Your custom foods and recipes.",
         "Your workouts: sessions, sets, loads and the exercises you create.",
         "Your routines and training goals.",
         "Your goals, your targets and your expenditure estimates.",
       ]);
+    });
+
+    it("should name neither Apple nor HealthKit", () => {
+      expect(text).not.toMatch(/Apple|HealthKit/);
     });
 
     it("should say the information runs the food diary, the workout log and the adaptive engine", () => {
@@ -231,7 +236,7 @@ describe("the legal copy", () => {
     it("should name workouts, routines and training goals as health data", () => {
       const basis = PRIVACY_POLICY.sections.find((section) => section.heading === "Lawful basis");
       expect(basis?.paragraphs).toContain(
-        "Your weight, food diary, body stats, workouts, routines and training goals are health data. For health data, the basis is your explicit consent. You give it when you tick the box at sign-up.",
+        "Your weight, body fat, lean mass, food diary, body stats, workouts, routines and training goals are health data. For health data, the basis is your explicit consent. You give it when you tick the box at sign-up.",
       );
     });
 
@@ -274,7 +279,7 @@ describe("the legal copy", () => {
         "Supabase: the database and sign-in.",
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
-        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
+        "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body composition, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ]);
     });
