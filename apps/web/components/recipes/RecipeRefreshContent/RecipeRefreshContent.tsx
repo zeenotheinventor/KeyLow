@@ -1,13 +1,18 @@
-import { FOOD_MACRO_LABELS, RECIPE_EDITOR, REFRESH, describeCountSuffix } from "@keylow/core/copy";
+import {
+  FOOD_MACRO_LABELS,
+  RECIPE_EDITOR,
+  REFRESH,
+  amountCaptionOf,
+  beforeAfterFigures,
+  describeCountSuffix,
+} from "@keylow/core/copy";
 import { CircleCheck } from "lucide-react";
 import { useId } from "react";
-
-import { amountCaptionOf } from "./amountCaption";
 
 import type { RecipeRefreshContentProps } from "./types";
 import type { ReactNode } from "react";
 
-import { BeforeAfterRow, beforeAfterFigures } from "@/components/recipes/BeforeAfterRow";
+import { BeforeAfterRow } from "@/components/recipes/BeforeAfterRow";
 import { ChangedIngredientCard } from "@/components/recipes/ChangedIngredientCard";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";

@@ -2,13 +2,14 @@ import { useFood } from "@keylow/api-client";
 import {
   REFRESH,
   REFRESH_PER_100_LABELS,
+  beforeAfterFigures,
   describePer100Heading,
   describePortionFellBack,
 } from "@keylow/core/copy";
 
 import type { ChangedIngredientCardProps } from "./types";
 
-import { BeforeAfterRow, beforeAfterFigures } from "@/components/recipes/BeforeAfterRow";
+import { BeforeAfterRow } from "@/components/recipes/BeforeAfterRow";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 

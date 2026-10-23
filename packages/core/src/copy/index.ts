@@ -27,6 +27,8 @@ export * from "./recipes";
 export * from "./recipeLog";
 export * from "./recipeEditor";
 export * from "./recipeRefresh";
+export * from "./beforeAfterFigures";
+export * from "./amountCaption";
 export * from "./scaledAmount";
 export * from "./recipeView";
 export * from "./weight";

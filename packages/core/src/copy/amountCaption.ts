@@ -1,6 +1,6 @@
-import { describeLoggedAmount } from "@keylow/core/copy";
+import { describeLoggedAmount } from "./diary";
 
-import type { StoredRecipeIngredient } from "@keylow/core/recipes";
+import type { StoredRecipeIngredient } from "../recipes/schemas";
 
 /** How much of an ingredient the recipe has, as the diary writes an amount: "500 g", "1 medium (110 g)". */
 export const amountCaptionOf = (ingredient: StoredRecipeIngredient): string =>
