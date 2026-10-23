@@ -12,7 +12,7 @@ import type { WeightRange } from "../weight/types";
 
 /**
  * The words of the Weight screen, the weigh-in sheet, the Health access screen and the trend explainer (M5), written out here so every platform prints the
- * same text. They come from the canvas "Ki-Lo M5 screens", version 9, and the board of each is named below.
+ * same text. They come from the canvas "Ki-Lo M5 screens", versions 9 and 10, and the board of each is named below.
  * Health Connect is the only service Ki-Lo reads from, so no string names any other.
  */
 
@@ -406,13 +406,17 @@ export const describeSheetTime = (instant: Date, timeZone: string): string =>
 /**
  * The Health access screen, one entry per state of `health-access: permissions flow`. The heading of
  * `connected` is `describeImportedCount`, because it carries the number. The explain state's four points
- * are `HEALTH_ACCESS_POINTS`.
+ * are `HEALTH_ACCESS_POINTS`. The body composition states of version 10 are `explainOptionalNote`,
+ * `explainBodyComposition`, `deniedBodyComposition`, `connecting.bodyWithBodyComposition` and `connectedPartial`.
  */
 export const HEALTH_ACCESS = {
   /** The name of the close button in the header. */
   closeLabel: "Close",
   /** The link under the points in `explain`. */
   privacyPolicyLink: "Read the privacy policy",
+  /** The caption under the points, on `explain` only. */
+  explainOptionalNote:
+    "Body fat and lean mass are optional. You can leave them off in the Health Connect sheet.",
   explain: {
     heading: `Bring in weigh-ins from ${HEALTH_CONNECT_NAME}`,
     body: `If your smart scale saves to ${HEALTH_CONNECT_NAME}, Ki-Lo can read those readings so you don't have to type them.`,
@@ -433,6 +437,9 @@ export const HEALTH_ACCESS = {
   connecting: {
     heading: `Importing from ${HEALTH_CONNECT_NAME}`,
     body: "Reading your weight history. This only happens while Ki-Lo is open.",
+    /** The body once the body types are allowed too. `body` stays for when they are not. */
+    bodyWithBodyComposition:
+      "Reading your weight and body composition history. This only happens while Ki-Lo is open.",
     /** The disabled button while the import runs. */
     primary: "Importing",
   },
@@ -442,6 +449,40 @@ export const HEALTH_ACCESS = {
     primary: `Open ${HEALTH_CONNECT_NAME}`,
     secondary: "Not now",
     steps: [`Open ${HEALTH_CONNECT_NAME}.`, "Tap App permissions, then Ki-Lo.", "Turn on Weight."],
+  },
+  /** `explain · body-composition`: asked for on its own once weight is already connected. The points are `HEALTH_ACCESS_BODY_POINTS`. */
+  explainBodyComposition: {
+    heading: "Add body fat and lean mass",
+    body: `If your smart scale records them, Ki-Lo can read them from ${HEALTH_CONNECT_NAME} and show a trend for each, beside your weight.`,
+    primary: "Continue",
+    secondary: "Not now",
+  },
+  /** `denied · body-composition`. "Lean body mass" is Health Connect's own name for the permission. */
+  deniedBodyComposition: {
+    heading: "Ki-Lo can't read body fat or lean mass",
+    body: "Permission was not given. Your weight still comes in as before, and you can turn these on at any time.",
+    primary: `Open ${HEALTH_CONNECT_NAME}`,
+    secondary: "Not now",
+    steps: [
+      `Open ${HEALTH_CONNECT_NAME}.`,
+      "Tap App permissions, then Ki-Lo.",
+      "Turn on Body fat and Lean body mass.",
+    ],
+  },
+  /** The quiet block under the heading of `connected · partial`, by what was not allowed. */
+  connectedPartial: {
+    neither: {
+      text: "Body fat and lean mass weren't allowed, so Ki-Lo only reads your weight.",
+      action: "Add body fat and lean mass",
+    },
+    leanMassMissing: {
+      text: "Lean mass wasn't allowed, so Ki-Lo doesn't read it.",
+      action: "Add lean mass",
+    },
+    bodyFatMissing: {
+      text: "Body fat wasn't allowed, so Ki-Lo doesn't read it.",
+      action: "Add body fat",
+    },
   },
   importError: {
     heading: "Couldn't import your weigh-ins",
@@ -474,6 +515,35 @@ export const HEALTH_ACCESS_POINTS = [
     text: `Write to ${HEALTH_CONNECT_NAME}, share your readings, or use them for advertising.`,
   },
   { title: "When", text: "Only while Ki-Lo is open, or when you pull down to refresh." },
+] as const;
+
+/**
+ * The four points of the explain state once body fat and lean mass are asked for too. The permission flow
+ * switches the screen to this list and removes `HEALTH_ACCESS_POINTS`.
+ */
+export const HEALTH_ACCESS_EXPLAIN_POINTS = [
+  {
+    title: "What Ki-Lo reads",
+    text: "Your weight, and body fat and lean mass if your scale records them, with the time of each. Nothing else.",
+  },
+  { title: "Why", text: "To draw your trends and, later, to set your calorie targets." },
+  {
+    title: "What it never does",
+    text: `Write to ${HEALTH_CONNECT_NAME}, share your readings, or use them for advertising.`,
+  },
+  { title: "When", text: "Only while Ki-Lo is open, or when you pull down to refresh." },
+] as const;
+
+/** The two points of `explain · body-composition`. */
+export const HEALTH_ACCESS_BODY_POINTS = [
+  {
+    title: "What Ki-Lo reads",
+    text: "Body fat and lean mass, with the time of each, to show their trends. Nothing else.",
+  },
+  {
+    title: "What it never does",
+    text: `Write to ${HEALTH_CONNECT_NAME}, share your readings, or use them for advertising.`,
+  },
 ] as const;
 
 /**
@@ -514,3 +584,12 @@ export const TREND_EXPLAINER = {
 /** The banner over the explainer while the trend settles: "Your trend is settling: 3 of 7 weigh-ins". */
 export const describeSettlingBanner = (observationCount: number): string =>
   `Your trend is settling: ${countOrZero(observationCount)} of ${TREND_SETTLED_OBS} weigh-ins`;
+
+/**
+ * The sixth section of the explainer, on the board after Weekly rate. It is not in
+ * `TREND_EXPLAINER.sections` because the sheet maps that list, so the sheet adds it when it is ready.
+ */
+export const TREND_EXPLAINER_BODY_SECTION = {
+  title: "Body fat and lean mass",
+  text: "Smoothed like your weight. Scales estimate them and readings change with the water you hold, so the trend matters more than any one reading. Lean mass includes bone and water as well as muscle.",
+} as const;
