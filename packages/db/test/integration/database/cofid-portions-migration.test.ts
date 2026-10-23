@@ -180,6 +180,80 @@ describe("the CoFID portions migration, applied to a database that has the fruit
   });
 });
 
+// KEY-524, the vegetable and salad batch. The expected rows are the FoodData Central rows the portions file cites.
+const vegetableBatchCodes = [
+  "13-157", // asparagus spears
+  "13-177", // Brussels sprout
+  "13-190", // red cabbage leaf
+  "13-502", // broccoli, raw
+  "13-503", // broccoli, boiled
+  "13-512", // cauliflower floret
+  "13-582", // cabbage leaf
+  "13-622", // sweetcorn ear, raw kernels
+  "13-630", // Brussels sprout, boiled
+  "13-631", // parsnip, boiled
+  "13-634", // baby corn, boiled
+  "13-656", // radish
+] as const;
+const asparagusCode = "13-157";
+const broccoliCode = "13-502";
+const sweetcornCode = "13-622";
+
+describe("the CoFID portions migration, applied to a database that has the vegetables but no portions for them", () => {
+  it("should give asparagus four spear sizes, with medium the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([asparagusCode])}\n${migrationSql}\n${listPortionsOf([asparagusCode])}`,
+    );
+
+    expect(lines).toEqual([
+      "13-157|1 small spear|12|f|0",
+      "13-157|1 medium spear|16|t|1",
+      "13-157|1 large spear|20|f|2",
+      "13-157|1 extra large spear|24|f|3",
+    ]);
+  });
+
+  it("should give raw broccoli a floret and a spear, with the floret the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([broccoliCode])}\n${migrationSql}\n${listPortionsOf([broccoliCode])}`,
+    );
+
+    expect(lines).toEqual(["13-502|1 floret|11|t|0", "13-502|1 spear|31|f|1"]);
+  });
+
+  it("should give sweetcorn kernels the medium and large ear, with medium the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([sweetcornCode])}\n${migrationSql}\n${listPortionsOf([sweetcornCode])}`,
+    );
+
+    expect(lines).toEqual(["13-622|1 medium ear|102|t|0", "13-622|1 large ear|143|f|1"]);
+  });
+
+  it("should leave every vegetable with exactly one default portion", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(vegetableBatchCodes)}\n${migrationSql}\nselect food.source_ref, count(*) filter (where portion.is_default) ${sharedPortionsOf(vegetableBatchCodes)} group by food.source_ref order by food.source_ref;`,
+    );
+
+    expect(lines).toEqual(vegetableBatchCodes.map((code) => `${code}|1`));
+  });
+
+  it("should change nothing when its SQL is applied a second time", () => {
+    const lines = runRolledBack(
+      [
+        deletePortionsOf(vegetableBatchCodes),
+        migrationSql,
+        fingerprintOf(vegetableBatchCodes),
+        migrationSql,
+        fingerprintOf(vegetableBatchCodes),
+      ].join("\n"),
+    );
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toMatch(/^0\|/);
+    expect(lines[1]).toBe(lines[0]);
+  });
+});
+
 // Each test applies the migration once first, so there are portions to change before it runs again.
 describe("the CoFID portions migration, applied again to portions that differ from the file", () => {
   it("should correct a weight and a label under the same id", () => {
