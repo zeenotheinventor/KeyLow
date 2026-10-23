@@ -1,6 +1,14 @@
-export { holdSplashScreen, splashHoldCeilingMilliseconds } from "./holdSplashScreen";
-export { startOnLatestUpdate, updateCheckTimeoutMilliseconds } from "./startOnLatestUpdate";
-export type { UpdateOutcome } from "./startOnLatestUpdate";
+export {
+  cancelSplashHoldCeiling,
+  holdSplashScreen,
+  splashHoldCeilingMilliseconds,
+} from "./holdSplashScreen";
+export {
+  startOnLatestUpdate,
+  updateCheckTimeoutMilliseconds,
+  updateStallTimeoutMilliseconds,
+} from "./startOnLatestUpdate";
+export type { UpdateCallbacks, UpdateOutcome } from "./startOnLatestUpdate";
 export {
   reloadFailsafeMilliseconds,
   useHideSplashAfterUpdateCheck,

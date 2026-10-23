@@ -18,6 +18,12 @@ export const SEARCH_LAUNCHER = {
   scanLabel: "Scan barcode",
 };
 
+/**
+ * The accessible name of the progress bar on the screen that shows while an app update downloads. That
+ * screen is the logo and the bar and no words, so this is only said, never shown.
+ */
+export const UPDATING_LABEL = "Updating Ki-Lo";
+
 /** The title every placeholder screen shows until its content is built. */
 export const COMING_SOON_TITLE = "Coming soon";
 
