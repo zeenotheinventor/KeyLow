@@ -369,10 +369,10 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
   });
 
   describe("only what this ticket builds", () => {
-    it("should show the scale switch, and no side switch, day scrubber or muscle list yet", async () => {
+    it("should show the scale switch, and no side switch or muscle list yet", async () => {
       await renderScreen();
 
-      for (const name of [/side/i, /day shown/i, /muscle list/i, /long-press/i]) {
+      for (const name of [/side/i, /muscle list/i, /long-press/i]) {
         expect(screen.queryByLabelText(name)).not.toBeOnTheScreen();
         expect(screen.queryByText(name)).not.toBeOnTheScreen();
       }

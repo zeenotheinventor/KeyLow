@@ -34,6 +34,12 @@ export type BodyMapDay = {
   status: WeekDayStatus;
   /** The name of the routine day planned for the date, or null when none is. */
   plannedDayName: string | null;
+  /**
+   * The name of the routine day a logged or running session was done as, or null when none is. It is the
+   * day the session was started for (Pick day) and, for a day a late make-up replaced, the make-up's day,
+   * so it is not always `plannedDayName`.
+   */
+  sessionDayName: string | null;
   /** Whether the day can be picked in the view asked for: Actual stops at today, Projected goes to Sunday. */
   selectable: boolean;
 };
@@ -89,6 +95,7 @@ export function useBodyMap({
             isToday,
             status: planned.status,
             plannedDayName: planned.plannedDay?.name ?? null,
+            sessionDayName: planned.sessionDay?.name ?? null,
             selectable: selectable[view],
           };
         }),

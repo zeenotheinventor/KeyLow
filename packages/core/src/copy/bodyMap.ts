@@ -123,7 +123,11 @@ export const BODY_MAP = {
     body: "Log a session and the muscles you train warm up here, then cool over a day or two as they recover.",
     action: "Start a session",
   },
-  scrubber: { name: "Day shown", availableInProjected: "available in Projected" },
+  scrubber: {
+    name: "Day shown",
+    availableInProjected: "available in Projected",
+    projectedNeedsRoutine: "Projected needs a routine",
+  },
   figureLabels: {
     finishCard: { front: "This session's heat, front", back: "This session's heat, back" },
     goalsSummary: {
@@ -363,6 +367,8 @@ export type ScrubberDayInput = Readonly<{
     | { kind: "rest" };
   /** The day is after today, so only Projected can show it. */
   onlyInProjected: boolean;
+  /** There is no routine, so Projected is off. A day only Projected can show then says why it cannot be picked. */
+  projectedNeedsRoutine: boolean;
 }>;
 
 export type ScrubberDay = {
@@ -389,12 +395,16 @@ export const describeScrubberDay = ({
   isToday,
   state,
   onlyInProjected,
+  projectedNeedsRoutine,
 }: ScrubberDayInput): ScrubberDay => {
+  const whyNotPickable = projectedNeedsRoutine
+    ? BODY_MAP.scrubber.projectedNeedsRoutine
+    : BODY_MAP.scrubber.availableInProjected;
   const parts = [
     describeDateInWords(localDate),
     ...(isToday ? ["today"] : []),
     describeScrubberState(state),
-    ...(onlyInProjected ? [BODY_MAP.scrubber.availableInProjected] : []),
+    ...(onlyInProjected ? [whyNotPickable] : []),
   ];
   return {
     weekday: describeWeekdayShortName(localDate),

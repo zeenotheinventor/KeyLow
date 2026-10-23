@@ -180,7 +180,11 @@ describe("the fixed words of the body map, as the boards draw them", () => {
         body: "Log a session and the muscles you train warm up here, then cool over a day or two as they recover.",
         action: "Start a session",
       },
-      scrubber: { name: "Day shown", availableInProjected: "available in Projected" },
+      scrubber: {
+        name: "Day shown",
+        availableInProjected: "available in Projected",
+        projectedNeedsRoutine: "Projected needs a routine",
+      },
       figureLabels: {
         finishCard: { front: "This session's heat, front", back: "This session's heat, back" },
         goalsSummary: {
@@ -403,6 +407,7 @@ describe("describeScrubberDay", () => {
       localDate: "2026-10-12",
       isToday: false,
       onlyInProjected: false,
+      projectedNeedsRoutine: false,
       state,
       ...rest,
     });
@@ -437,6 +442,24 @@ describe("describeScrubberDay", () => {
         { localDate: "2026-10-17", onlyInProjected: true },
       ).accessibleName,
     ).toBe("Saturday 17 October, Push, planned, available in Projected");
+  });
+
+  it("should say Projected needs a routine, in place of the suffix, when there is no routine to project", () => {
+    expect(
+      scrubberDay(
+        { kind: "rest" },
+        { localDate: "2026-10-17", onlyInProjected: true, projectedNeedsRoutine: true },
+      ).accessibleName,
+    ).toBe("Saturday 17 October, rest day, Projected needs a routine");
+  });
+
+  it("should not add the routine phrase to a day the view can pick", () => {
+    expect(
+      scrubberDay(
+        { kind: "rest" },
+        { localDate: "2026-10-14", onlyInProjected: false, projectedNeedsRoutine: true },
+      ).accessibleName,
+    ).toBe("Wednesday 14 October, rest day");
   });
 
   it("should name a missed day missed, and a session with no name by its state alone", () => {

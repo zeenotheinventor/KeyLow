@@ -21,11 +21,13 @@ import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
+import { DayScrubber } from "../DayScrubber";
 import { FigureSettingSheet } from "../FigureSettingSheet";
 import { EmptyState, ErrorState, SegmentedControl, SheetHeader, Skeleton } from "../ui";
 import { describeGap } from "./gapNote";
+import { scrubberDaysOf } from "./scrubberDays";
 
-import type { BodyMapScale } from "@keylow/core/copy";
+import type { BodyMapScale, PlannedSession } from "@keylow/core/copy";
 
 const MINIMUM_BOTTOM_PADDING = 16;
 
@@ -48,11 +50,15 @@ const SCALE_OPTIONS = [
  * With no routine Projected is off and the screen shows Actual, keeping the view chosen for when there
  * is one. With no sets in the last 14 days Heat shows the figures at rest and the empty state says why,
  * with no legend; Volume and Gap draw as usual, since a week with nothing logged is still a plan to compare
- * with. It has no Start a session button until the Train tab it opens is mounted, and none of the controls
- * the next tickets add. The body is drawn as the figure setting has it, male or female, which the screen
- * waits for with the view. The first time it opens it asks which figure, and closing that question without
- * an answer records Male so it is not asked again; the button in the header opens the same sheet at any
- * time.
+ * with. On Heat a row of seven days under the card picks the day shown: Actual reads the heat at 20:00 of
+ * a day up to today, Projected any day of the week, and today is always the current moment. The day chosen
+ * is kept in one place, `chosenDate`, and everything on the screen that depends on it is worked out from the
+ * one `selectedDate`. A day that the view shown cannot choose falls back to today, the day is not remembered
+ * when the screen closes, and Volume and Gap are read for now whatever the day. It has no Start a session
+ * button until the Train tab it opens is mounted, and none of the controls the next tickets add. The body
+ * is drawn as the figure setting has it, male or female, which the screen waits for with the view. The
+ * first time it opens it asks which figure, and closing that question without an answer records Male so it
+ * is not asked again; the button in the header opens the same sheet at any time.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -78,20 +84,31 @@ export function BodyMapScreen() {
     setHasAskedFigure(true);
     setIsFigureSheetOpen(true);
   }
+  // The scrubber day picked, or null for today. Only Heat has it. It is the day as picked: whether the view
+  // shown can choose it is worked out where the view is known.
+  const [chosenDate, setChosenDate] = useState<string | null>(null);
   const nowIso = now.toISOString();
   // Every scale is read here and the scale on screen picks which result is shown. The reads share their
   // queries, so a read switched off and on again with the scale would fetch what is already held; all of
   // them stay on, and a switch of scale makes no request and shows no skeleton.
   const moment = { weekStart, now: nowIso, enabled: isReadEnabled };
+  // Today is the current moment, so it is read with no day. Actual stops at today, so it is never asked for
+  // a day after it, and the Projected reading does not follow the day picked in Actual's place.
+  const heatDate =
+    chosenDate !== null && chosenDate !== today && chosenDate >= weekStart && chosenDate <= weekEnd
+      ? chosenDate
+      : undefined;
   const heatActual = useBodyMap({
     ...moment,
     scale: "heat",
     view: "actual",
+    at: heatDate !== undefined && heatDate < today ? heatDate : undefined,
   });
   const heatProjected = useBodyMap({
     ...moment,
     scale: "heat",
     view: "projected",
+    at: heatDate,
   });
   const volumeActual = useBodyMap({
     ...moment,
@@ -141,14 +158,28 @@ export function BodyMapScreen() {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
       // Gap has no Actual or Projected, so the view that is remembered only matters to Heat and Volume.
       const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
+      const shown = view === "projected" ? projectedData : actualData;
+      // The day shown: the one picked when the view shown can choose it, and otherwise today. This is the one
+      // place the day is decided, and the figures, the line under the label, the nothing logged check and
+      // the scrubber all follow `shown`, which was read at it.
+      const selectedDate =
+        scale === "heat" &&
+        shown.days.some(({ date, selectable }) => date === heatDate && selectable)
+          ? (heatDate ?? today)
+          : today;
+      const isSelectedToday = selectedDate === today;
+      // A planned session counts from the day after today up to the day shown (ruling D).
+      const plannedSessions: PlannedSession[] = shown.days
+        .filter(({ date, status }) => status === "planned" && date > today && date <= selectedDate)
+        .map(({ date, plannedDayName }) => ({ localDate: date, routineDayName: plannedDayName }));
       const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
         scale,
         view,
-        at: actualData.computedAt,
+        at: shown.computedAt,
         tz: zone,
-        isToday: true,
+        isToday: isSelectedToday,
         weekEnd,
-        plannedSessions: [],
+        plannedSessions,
       });
       // The line under the button. Heat says why Projected is what is logged today, Volume does not, and
       // Gap says what the plan left behind.
@@ -160,10 +191,11 @@ export function BodyMapScreen() {
         if (!projectedAvailable) {
           return BODY_MAP.toggle.projectedNeedsRoutine;
         }
-        return scale === "heat" && view === "projected" && todayProjectedIsActual
+        return scale === "heat" && view === "projected" && todayProjectedIsActual && isSelectedToday
           ? BODY_MAP.notes.todayProjected
           : null;
       }
+      const isNothingLogged = scale === "heat" && shown.nothingLogged;
       const card = (
         <BodyMapCard
           actualValues={actualData.values}
@@ -171,20 +203,36 @@ export function BodyMapScreen() {
           isToggleEnabled={scale !== "gap" && projectedAvailable}
           note={noteUnderFigures()}
           onToggle={() => {
-            setView(view === "projected" ? "actual" : "projected");
+            const nextView = view === "projected" ? "actual" : "projected";
+            // Going to Actual from a day after today leaves that day behind for good, as the row falls back to today.
+            if (nextView === "actual" && chosenDate !== null && chosenDate > today) {
+              setChosenDate(null);
+            }
+            setView(nextView);
           }}
           projectedValues={projectedData.values}
           scale={scale}
           subLine={
-            scale === "heat" && actualData.nothingLogged
-              ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays)
-              : subLine
+            isNothingLogged ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays) : subLine
           }
           toggleLabel={toggleLabel}
           view={view}
           viewLabel={viewLabel}
         />
       );
+      // The scrubber is a Heat control. It stays out of the nothing logged state on today, as the board has
+      // it, and on any other day it stays so there is a way back to today.
+      const scrubber =
+        scale === "heat" && shown.days.length > 0 && !(isNothingLogged && isSelectedToday) ? (
+          <DayScrubber
+            days={scrubberDaysOf(projectedAvailable, shown.days)}
+            selectedDate={selectedDate}
+            // Today is kept as no pick, so it follows the clock past midnight and is never yesterday.
+            onSelect={(date) => {
+              setChosenDate(date === today ? null : date);
+            }}
+          />
+        ) : null;
       const scaleSwitch = (
         <SegmentedControl
           label={BODY_MAP.scaleSwitch.name}
@@ -195,10 +243,11 @@ export function BodyMapScreen() {
       );
 
       // Nothing logged in the 14 days is about heat; a week with nothing logged is still a plan to compare with.
-      return scale === "heat" && actualData.nothingLogged ? (
+      return isNothingLogged ? (
         <>
           {scaleSwitch}
           {card}
+          {scrubber}
           <EmptyState
             body={BODY_MAP.emptyState.body}
             title={BODY_MAP.emptyState.title}
@@ -209,6 +258,7 @@ export function BodyMapScreen() {
         <>
           {scaleSwitch}
           {card}
+          {scrubber}
           <BodyMapLegend scale={scale} />
         </>
       );
