@@ -570,3 +570,69 @@ An accepted suggestion shows how a person trains, so it is health data under Ame
 - KEY-397, migration 5: `accepted_suggestions`, its checks, indexes, grants and policies, its pgTAP (`accepted_suggestions.test.sql`) and the regenerated `packages/db/src/types.gen.ts`.
 - KEY-402, core: `acceptedSuggestionSchema`, the shape of `exercises` (a planned exercise with its set snapshot) and of `reasons` (`{ picks: [{ exercise_id, reasons }] }`, one entry per added exercise holding the numbers behind its pick), and `projectWeek` reading `acceptedSuggestions`.
 - KEY-406, the accepted-suggestions api-client.
+
+## Amendment 5 (T6: the 3D body, 2026-10-23)
+
+### Status
+
+Recorded on 2026-10-23 under KEY-586, part of KEY-342. It adds to "The body map: 2D first, 3D behind the same interface" and overrides only the lines named below. Nothing else in this ADR changes, and no other ADR changes. Zee's rulings of 2026-10-23 on KEY-342 settle the source model, the head, the licence, and 2D as the default with 3D opt-in. He settled what the female figure sees in 3D on KEY-590. Some of what follows comes from the tickets and not from a Zee comment, and is an interpretation: the mesh contract and the budget in point 2 (written from the spike, `tools/body-model/README.md`, section "Z-Anatomy male (the muscle spike)"), the quantisation in point 3, "per device" in point 5 (which follows KEY-587), the fallback that shows no error, and the small cards staying 2D. Zee confirms them by approving the pull request that carries this amendment, as Amendment 1 does.
+
+It overrides four things. "This amendment's point" means a numbered section below, not the numbered list in "The body map".
+
+- "The asset is a glTF binary of about 2 to 4 MB, male and female, each muscle a mesh named by its id" (this amendment's points 2 and 4).
+- "Draco or meshopt compression" (its point 3).
+- "The source model is a human decision taken before the 3D milestone starts" (its point 1), together with the last bullet of "Consequences", "Choosing the 3D source model and its licence is a human decision recorded before the 3D milestone starts", which this amendment discharges.
+- The sequencing "2D (first)" and "3D (later)" in the list of "The body map", and the "Consequences" bullet "so the 3D work is a renderer swap and never blocks the tracker" (its point 5). The ADR never says 3D replaces 2D, but it does treat 3D as the later renderer that takes the 2D map's place. The 2D map stays, and a setting chooses which renderer the body map uses.
+
+The earlier choice of the Blender Studio Human Base Meshes as the source for hand-cut bodies (KEY-342, 2026-10-23) is superseded by point 1. That CC0 base survives only as the head.
+
+### 1. Source and licence
+
+- **Male muscles:** Z-Anatomy, licensed CC BY-SA 4.0 and built on BodyParts3D, licensed CC BY-SA 2.1 JP. Only its muscle collection and its skeleton are read, because some organs in the file carry non-commercial licences. The skeleton is used to build the skin and is never exported.
+- **Head:** "head A", the CC0 Blender Studio realistic male head, grafted at the neck and drawn in neutral clay. It is drawn with the Z-Anatomy face muscles hidden, so no skull shows through.
+- **Licence of the asset:** CC0 material mixed into a CC BY-SA 4.0 work gives a combined asset that is CC BY-SA 4.0. It carries both attribution lines word for word:
+  - BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan
+  - Z-Anatomy - The libre 3D atlas of anatomy - CC-BY-SA 4.0
+- **Where they appear:** the app credits both lines on the About screen, and a licence notice sits beside the committed `.glb`.
+- **Rejected and never used:** painting regions onto a smooth CC0 body (it read as coloured patches on a mannequin), a blank smooth head, and a MakeHuman head.
+
+### 2. The mesh contract
+
+The exported body holds these meshes and no others:
+
+| Mesh                 | What it is                                                                      |
+| -------------------- | ------------------------------------------------------------------------------- |
+| One per `MUSCLE_IDS` | The 22 muscle ids of "The muscle list is the contract", both sides in one mesh. |
+| `other`              | The visible muscles that have no id, drawn in one neutral colour.               |
+| `skin`               | A see-through shell over the muscles.                                           |
+| `core`               | A dark fill under the muscles, so the gaps between them read as flesh.          |
+| `head`               | The grafted head, in clay.                                                      |
+| `eyes`               | The eyes of the head.                                                           |
+
+Deep muscles, head muscles and the skeleton are used to build the skin and are never exported. A muscle id still names one mesh, and the check in the export fails when an id is missing or appears twice. The meshes with no id are fixed names, so they never collide with a muscle id.
+
+Budget per body: at most 250,000 triangles and 4 MB. This replaces "about 2 to 4 MB" with a ceiling.
+
+### 3. Compression is quantisation
+
+Positions and normals are quantised with the glTF extension `KHR_mesh_quantization`, which three's loader reads with no decoder. There is no Draco and no meshopt, because both decoders need WebAssembly and Hermes, the JavaScript engine of the mobile app, has none. This replaces "Draco or meshopt compression" in "The body map".
+
+### 4. Male only in T6
+
+T6 ships the male body only. The female body is deferred and Zee chooses its source later, so "male and female" in "The body map" is not met by T6. Until the female body exists, a person with the female figure who picks 3D sees the 2D map, with a note in the More row that reads "3D shows the male body for now". Zee chose this on KEY-590, so it is decided and nothing waits on this pull request for it.
+
+### 5. 2D and 3D both stay
+
+- The 2D map is the default. 3D is a per-device setting in More, with two choices, 2D or 3D.
+- Both renderers take the same props, the `BodyMap` contract above. Callers, values, scales, views and gestures do not change, and a screen never knows which renderer it has.
+- When 3D is chosen but cannot run (the GL module is missing, there is no GL context, or the asset fails to load), the 2D map shows and no error is shown.
+- The small cards (the dashboard and Train home) stay 2D whatever the setting says.
+- Two more rulings of Zee's on KEY-590. Zoom is limited to 2x and has a reset control. When 3D is chosen, the 2D figure shows first and cross-fades to 3D once it has loaded.
+
+### Implemented by
+
+- KEY-586, this amendment.
+- KEY-553, the spike landing in `tools/body-model`, and KEY-556, the export of the asset to this contract, with KEY-555, the CI check of the contract and the budget.
+- KEY-587, the 2D or 3D preference, and KEY-592, its More row.
+- KEY-588, the About credit.
+- KEY-561, `BodyView` and the fallback to 2D.
