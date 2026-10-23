@@ -33,18 +33,21 @@ export type GltfNode = {
   rotation?: number[];
   scale?: number[];
   matrix?: number[];
+  extensions?: Record<string, unknown>;
 };
 
 export type GltfPrimitive = {
   attributes: Record<string, number>;
   indices?: number;
   material?: number;
+  mode?: number;
 };
 
 export type Gltf = {
   asset: { version: string; generator?: string; copyright?: string };
   extensionsUsed?: string[];
   extensionsRequired?: string[];
+  extensions?: Record<string, unknown>;
   scene?: number;
   scenes?: { nodes?: number[] }[];
   nodes: GltfNode[];

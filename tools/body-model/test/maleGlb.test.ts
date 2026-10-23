@@ -1,16 +1,16 @@
-import { readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { MUSCLE_IDS } from "../../../packages/core/src/training/muscles.ts";
 import { item, readGlb } from "../src/glb.ts";
-import { ATTRIBUTION_LINES } from "../src/maleExport.ts";
+import { BODY_MESH_NAMES } from "../src/meshNames.ts";
+import { trianglesByMeshName } from "../src/verifyGlb.ts";
 
 const distFolder = join(import.meta.dirname, "../dist");
 const glbPath = join(distFolder, "male.glb");
 const { json, binary } = readGlb(readFileSync(glbPath));
-const EXPECTED_NAMES = [...MUSCLE_IDS, "other", "skin", "core", "head", "eyes"];
+const EXPECTED_NAMES = BODY_MESH_NAMES;
 const POSITION_RANGE = 32767;
 const UNSIGNED_INT = 5125;
 
@@ -18,34 +18,7 @@ function sceneNodes() {
   return (json.scenes?.[0]?.nodes ?? []).map((index) => item(json.nodes, index));
 }
 
-function triangleCount(meshIndex: number): number {
-  const primitive = item(item(json.meshes, meshIndex).primitives, 0);
-  return item(json.accessors, primitive.indices ?? -1).count / 3;
-}
-
-function trianglesByName(): Record<string, number> {
-  const counts: Record<string, number> = {};
-  sceneNodes().forEach((node) => {
-    counts[node.name ?? ""] = triangleCount(node.mesh ?? -1);
-  });
-  return counts;
-}
-
-/** The world space bounds of one mesh: its node's translation plus scale times the normalised integer bounds. */
-function worldBounds(nodeName: string): { low: number[]; high: number[] } {
-  const node = item(
-    sceneNodes().filter((candidate) => candidate.name === nodeName),
-    0,
-  );
-  const primitive = item(item(json.meshes, node.mesh ?? -1).primitives, 0);
-  const accessor = item(json.accessors, primitive.attributes.POSITION ?? -1);
-  const place = (axis: number, stored: number) =>
-    item(node.translation ?? [], axis) + (stored / POSITION_RANGE) * item(node.scale ?? [], axis);
-  return {
-    low: [0, 1, 2].map((axis) => place(axis, item(accessor.min ?? [], axis))),
-    high: [0, 1, 2].map((axis) => place(axis, item(accessor.max ?? [], axis))),
-  };
-}
+const trianglesByName = () => trianglesByMeshName(json);
 
 type DecodedMesh = {
   /** Positions as stored, one row of x, y, z per vertex. */
@@ -173,25 +146,6 @@ describe("the integers stored in dist/male.glb", () => {
 });
 
 describe("dist/male.glb", () => {
-  it("should be at most 4 MB", () => {
-    expect(statSync(glbPath).size).toBeLessThanOrEqual(4 * 1024 * 1024);
-  });
-
-  it("should hold the 27 meshes of the contract, once each, in order", () => {
-    expect(sceneNodes().map((node) => node.name)).toEqual(EXPECTED_NAMES);
-    expect(json.meshes.map((mesh) => mesh.name)).toHaveLength(27);
-  });
-
-  it("should draw at most 250,000 triangles", () => {
-    const total = Object.values(trianglesByName()).reduce((sum, count) => sum + count, 0);
-
-    expect(total).toBeLessThanOrEqual(250_000);
-  });
-
-  it.each(MUSCLE_IDS)("should give %s at least 1,000 triangles", (muscleId) => {
-    expect(trianglesByName()[muscleId]).toBeGreaterThanOrEqual(1000);
-  });
-
   it("should keep the skin to 10,000 to 15,000 triangles and the head and eyes to 15,000 together", () => {
     const counts = trianglesByName();
 
@@ -203,31 +157,6 @@ describe("dist/male.glb", () => {
   it("should use KHR_mesh_quantization and no other extension", () => {
     expect(json.extensionsUsed).toEqual(["KHR_mesh_quantization"]);
     expect(json.extensionsRequired).toEqual(["KHR_mesh_quantization"]);
-  });
-
-  it("should carry the licence and both attribution lines in asset.copyright", () => {
-    expect(json.asset.copyright).toContain("CC BY-SA 4.0");
-    ATTRIBUTION_LINES.forEach((line) => {
-      expect(json.asset.copyright).toContain(line);
-    });
-  });
-
-  it("should have no cameras, lights, animation, skins, textures or images", () => {
-    expect(json.cameras).toBeUndefined();
-    expect(json.animations).toBeUndefined();
-    expect(json.skins).toBeUndefined();
-    expect(json.textures).toBeUndefined();
-    expect(json.images).toBeUndefined();
-    expect(JSON.stringify(json)).not.toContain("KHR_lights");
-  });
-
-  it("should give every mesh its own material named mat_<name>", () => {
-    const materialNames = sceneNodes().map((node) => {
-      const primitive = item(item(json.meshes, node.mesh ?? -1).primitives, 0);
-      return item(json.materials ?? [], primitive.material ?? -1).name;
-    });
-
-    expect(materialNames).toEqual(EXPECTED_NAMES.map((name) => `mat_${name}`));
   });
 
   it("should have normals on every mesh and vertex colours on the eyes only", () => {
@@ -242,24 +171,6 @@ describe("dist/male.glb", () => {
     });
   });
 
-  it("should stand on y = 0, centred on x and z, about 1.7 m tall", () => {
-    const skin = worldBounds("skin");
-
-    expect(
-      Math.abs(Math.min(...EXPECTED_NAMES.map((name) => item(worldBounds(name).low, 1)))),
-    ).toBeLessThan(0.002);
-    expect(Math.abs((item(skin.low, 0) + item(skin.high, 0)) / 2)).toBeLessThan(0.002);
-    expect(Math.abs((item(skin.low, 2) + item(skin.high, 2)) / 2)).toBeLessThan(0.002);
-    expect(item(worldBounds("head").high, 1)).toBeGreaterThan(1.6);
-    expect(item(worldBounds("head").high, 1)).toBeLessThan(1.8);
-  });
-
-  it("should face +z, so the eyes are in front of the middle of the body", () => {
-    const eyes = worldBounds("eyes");
-
-    expect((item(eyes.low, 2) + item(eyes.high, 2)) / 2).toBeGreaterThan(0.03);
-  });
-
   it("should name its generator and nothing that changes between runs", () => {
     expect(json.asset.generator).toBe("Ki-Lo body-model zanatomy_export");
   });
@@ -267,10 +178,6 @@ describe("dist/male.glb", () => {
 
 describe("dist/LICENCE.md", () => {
   const notice = readFileSync(join(distFolder, "LICENCE.md"), "utf8");
-
-  it.each(ATTRIBUTION_LINES)("should carry the line %s word for word", (line) => {
-    expect(notice).toContain(line);
-  });
 
   it("should link the licence", () => {
     expect(notice).toContain("https://creativecommons.org/licenses/by-sa/4.0/");

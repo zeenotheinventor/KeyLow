@@ -2,6 +2,7 @@
 import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
+import { MESHES_WITHOUT_AN_ID } from "./meshesWithoutAnId.ts";
 import { quantiseGlb } from "./quantiseGlb.ts";
 
 export const ATTRIBUTION_LINES = [
@@ -11,11 +12,10 @@ export const ATTRIBUTION_LINES = [
 export const COPYRIGHT = ["CC BY-SA 4.0", ...ATTRIBUTION_LINES].join("\n");
 export const GENERATOR = "Ki-Lo body-model zanatomy_export";
 export const RAW_GLB_NAME = "male-raw.glb";
-const MESHES_AFTER_THE_IDS = ["other", "skin", "core", "head", "eyes"];
 
 /** The 27 mesh names in the order of the contract: the muscle ids, then the meshes that have no id. */
 export function meshNames(muscleIds: string[]): string[] {
-  return [...muscleIds, ...MESHES_AFTER_THE_IDS];
+  return [...muscleIds, ...MESHES_WITHOUT_AN_ID];
 }
 
 export function finishMaleExport(rawGlb: Buffer, muscleIds: string[]): Buffer {
