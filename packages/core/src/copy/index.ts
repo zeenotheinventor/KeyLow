@@ -32,6 +32,7 @@ export * from "./amountCaption";
 export * from "./scaledAmount";
 export * from "./recipeView";
 export * from "./weight";
+export * from "./bodyComposition";
 export * from "./muscleNames";
 export * from "./bodyMap";
 export * from "./bodyMapSheet";

@@ -6,6 +6,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { collectStrings } from "./collectStrings";
 import {
   HEALTH_ACCESS,
+  HEALTH_ACCESS_BODY_POINTS,
+  HEALTH_ACCESS_EXPLAIN_POINTS,
   HEALTH_ACCESS_POINTS,
   HEALTH_CONNECT_NAME,
   WEIGHT_EMPTY,
@@ -14,6 +16,7 @@ import {
   WEIGHT_RANGE_LABELS,
   WEIGHT_SCREEN,
   TREND_EXPLAINER,
+  TREND_EXPLAINER_BODY_SECTION,
   WEIGH_IN_SHEET,
   describeChartDate,
   describeChartName,
@@ -30,7 +33,7 @@ import {
   parseWeightInput,
 } from "../../src";
 
-// The boards are "Ki-Lo M5 screens", canvas version 9. Every expected value below is copied from a
+// The boards are "Ki-Lo M5 screens", canvas versions 9 and 10. Every expected value below is copied from a
 // board file, never computed from the module under test. Boards are named as the canvas names them.
 const TODAY = "2026-10-17";
 const LONDON = "Europe/London";
@@ -533,6 +536,8 @@ describe("health-access: permissions flow", () => {
       expect(HEALTH_ACCESS.connecting).toEqual({
         heading: "Importing from Health Connect",
         body: "Reading your weight history. This only happens while Ki-Lo is open.",
+        bodyWithBodyComposition:
+          "Reading your weight and body composition history. This only happens while Ki-Lo is open.",
         primary: "Importing",
       });
     });
@@ -576,6 +581,107 @@ describe("health-access: permissions flow", () => {
       [64, "64 weigh-ins imported"],
     ])("should write the heading for %i readings as %j", (importedCount, expected) => {
       expect(describeImportedCount(importedCount)).toBe(expected);
+    });
+  });
+});
+
+describe("health-access: permissions flow · body composition (v10)", () => {
+  it("should pin the optional note under the points of explain", () => {
+    expect(HEALTH_ACCESS.explainOptionalNote).toBe(
+      "Body fat and lean mass are optional. You can leave them off in the Health Connect sheet.",
+    );
+  });
+
+  it("should pin the four rewritten points of explain and leave the old four alone", () => {
+    expect(HEALTH_ACCESS_EXPLAIN_POINTS).toEqual([
+      {
+        title: "What Ki-Lo reads",
+        text: "Your weight, and body fat and lean mass if your scale records them, with the time of each. Nothing else.",
+      },
+      { title: "Why", text: "To draw your trends and, later, to set your calorie targets." },
+      {
+        title: "What it never does",
+        text: "Write to Health Connect, share your readings, or use them for advertising.",
+      },
+      { title: "When", text: "Only while Ki-Lo is open, or when you pull down to refresh." },
+    ]);
+    expect(HEALTH_ACCESS_POINTS[0].text).toBe(
+      "Your body weight readings and the time each was taken. Nothing else.",
+    );
+  });
+
+  it("should pin explain · body-composition: heading, body, buttons and two points", () => {
+    expect(HEALTH_ACCESS.explainBodyComposition).toEqual({
+      heading: "Add body fat and lean mass",
+      body: "If your smart scale records them, Ki-Lo can read them from Health Connect and show a trend for each, beside your weight.",
+      primary: "Continue",
+      secondary: "Not now",
+    });
+    expect(HEALTH_ACCESS_BODY_POINTS).toEqual([
+      {
+        title: "What Ki-Lo reads",
+        text: "Body fat and lean mass, with the time of each, to show their trends. Nothing else.",
+      },
+      {
+        title: "What it never does",
+        text: "Write to Health Connect, share your readings, or use them for advertising.",
+      },
+    ]);
+  });
+
+  it("should pin denied · body-composition: heading, body, buttons and three steps", () => {
+    expect(HEALTH_ACCESS.deniedBodyComposition).toEqual({
+      heading: "Ki-Lo can't read body fat or lean mass",
+      body: "Permission was not given. Your weight still comes in as before, and you can turn these on at any time.",
+      primary: "Open Health Connect",
+      secondary: "Not now",
+      steps: [
+        "Open Health Connect.",
+        "Tap App permissions, then Ki-Lo.",
+        "Turn on Body fat and Lean body mass.",
+      ],
+    });
+  });
+
+  it("should keep the weight only connecting body beside the one with body composition", () => {
+    expect(HEALTH_ACCESS.connecting.body).toBe(
+      "Reading your weight history. This only happens while Ki-Lo is open.",
+    );
+    expect(HEALTH_ACCESS.connecting.bodyWithBodyComposition).toBe(
+      "Reading your weight and body composition history. This only happens while Ki-Lo is open.",
+    );
+  });
+
+  it("should pin connected · partial for neither kind, lean mass and body fat missing", () => {
+    expect(HEALTH_ACCESS.connectedPartial).toEqual({
+      neither: {
+        text: "Body fat and lean mass weren't allowed, so Ki-Lo only reads your weight.",
+        action: "Add body fat and lean mass",
+      },
+      leanMassMissing: {
+        text: "Lean mass wasn't allowed, so Ki-Lo doesn't read it.",
+        action: "Add lean mass",
+      },
+      bodyFatMissing: {
+        text: "Body fat wasn't allowed, so Ki-Lo doesn't read it.",
+        action: "Add body fat",
+      },
+    });
+  });
+
+  it("should keep the connected words as they were", () => {
+    expect(HEALTH_ACCESS.connected).toEqual({
+      body: "New readings come in each time you open Ki-Lo, or when you pull down on the Weight screen. Ki-Lo never writes to Health Connect.",
+      primary: "See your trend",
+    });
+  });
+});
+
+describe("trend-explainer · body fat and lean mass section (v10)", () => {
+  it("should pin the new section", () => {
+    expect(TREND_EXPLAINER_BODY_SECTION).toEqual({
+      title: "Body fat and lean mass",
+      text: "Smoothed like your weight. Scales estimate them and readings change with the water you hold, so the trend matters more than any one reading. Lean mass includes bone and water as well as muscle.",
     });
   });
 });
@@ -720,7 +826,10 @@ describe("every export", () => {
     WEIGH_IN_SHEET,
     HEALTH_ACCESS,
     HEALTH_ACCESS_POINTS,
+    HEALTH_ACCESS_EXPLAIN_POINTS,
+    HEALTH_ACCESS_BODY_POINTS,
     TREND_EXPLAINER,
+    TREND_EXPLAINER_BODY_SECTION,
   };
 
   const everyString = collectStrings([constants, describerOutputs]);
