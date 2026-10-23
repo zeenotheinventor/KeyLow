@@ -3,7 +3,7 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-const rendersFolder = join(import.meta.dirname, "../renders/bases");
+const rendersRoot = join(import.meta.dirname, "../renders");
 const textChunkTypes = ["tEXt", "iTXt", "zTXt"];
 const pngSignatureLength = 8;
 
@@ -18,15 +18,22 @@ function chunkTypes(png: Buffer): string[] {
   return types;
 }
 
-describe("committed renders", () => {
-  const files = readdirSync(rendersFolder).filter((name) => name.endsWith(".png"));
+function pngFiles(folderName: string): string[] {
+  return readdirSync(join(rendersRoot, folderName)).filter((name) => name.endsWith(".png"));
+}
 
-  it("holds the eight renders and the contact sheet", () => {
-    expect(files).toHaveLength(9);
+describe.each([
+  ["bases", 9],
+  ["regions", 4],
+])("committed renders in renders/%s", (folderName, expectedCount) => {
+  const files = pngFiles(folderName);
+
+  it(`holds ${expectedCount} pictures`, () => {
+    expect(files).toHaveLength(expectedCount);
   });
 
   it.each(files)("%s carries no text metadata and no local path", (name) => {
-    const png = readFileSync(join(rendersFolder, name));
+    const png = readFileSync(join(rendersRoot, folderName, name));
 
     expect(chunkTypes(png).filter((type) => textChunkTypes.includes(type))).toEqual([]);
     expect(png.includes("/Users/")).toBe(false);
