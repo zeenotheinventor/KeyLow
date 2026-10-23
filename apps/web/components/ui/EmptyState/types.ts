@@ -14,6 +14,9 @@ export type EmptyStateAction = {
  */
 export type EmptyStateSize = "list" | "section" | "page" | "placeholder";
 
+/** The icon tile's colour: neutral, danger for a failure, and success for a state that is good news, such as nothing left to do. */
+export type EmptyStateTone = "neutral" | "danger" | "success";
+
 export type EmptyStateProps = {
   icon: LucideIcon;
   title: string;
@@ -22,8 +25,8 @@ export type EmptyStateProps = {
   headingLevel?: 1 | 2;
   /** The one thing to do next. It is a button, or a link when it goes to a page. */
   action?: EmptyStateAction | undefined;
-  /** Danger toned icon, for a failure. `ErrorState` sets it. */
-  tone?: "neutral" | "danger";
+  /** Danger toned icon, for a failure (`ErrorState` sets it), or success toned for good news. */
+  tone?: EmptyStateTone;
   /** Set `alert` for a failure so it is announced. */
   role?: "alert" | "status";
   size?: EmptyStateSize;

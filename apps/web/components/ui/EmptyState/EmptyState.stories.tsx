@@ -1,4 +1,4 @@
-import { ChefHat, Plus, SearchX } from "lucide-react";
+import { ChefHat, CircleCheck, Plus, SearchX } from "lucide-react";
 
 import { EmptyState } from "./EmptyState";
 
@@ -65,5 +65,15 @@ export const Placeholder: Story = {
     title: "Coming soon",
     body: "Your recipes will appear here.",
     size: "placeholder",
+  },
+};
+
+// Good news, such as a check that found nothing to do.
+export const Success: Story = {
+  args: {
+    icon: CircleCheck,
+    tone: "success",
+    title: "Nothing to refresh",
+    body: "Every ingredient matches its food today.",
   },
 };
