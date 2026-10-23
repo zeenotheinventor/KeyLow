@@ -11,6 +11,7 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 
 import type { FoodWithPortionsState, RecentFood } from "@keylow/api-client";
 import type { RecipeIngredient } from "@keylow/core/recipes";
+import type { Food } from "@keylow/core/schemas";
 
 // The amount step of a food about to join a recipe: what it shows, which chips it offers, where the amount
 // starts, and what Add to recipe hands back. The food's read is stood in for, so each test says what the food is.
@@ -26,8 +27,12 @@ jest.mock(
 );
 
 const mockFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
+const mockRefreshOutdatedOffFood = jest.fn<undefined, [Food | null | undefined]>();
 jest.mock("@keylow/api-client", () => ({
   useFoodWithPortions: (id: string) => mockFoodWithPortions(id),
+  useRefreshOutdatedOffFood: (food: Food | null | undefined) => {
+    mockRefreshOutdatedOffFood(food);
+  },
 }));
 
 setUpTests();
@@ -127,6 +132,7 @@ describe("the amount step of a food being added to a recipe", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     registerAppStyles(kitStyles);
+    mockRefreshOutdatedOffFood.mockReset();
     mockFoodWithPortions.mockReset();
     mockFoodWithPortions.mockImplementation((id) => {
       const food = [onions, oil, mysteryBar].find((candidate) => candidate.id === id);
@@ -276,6 +282,36 @@ describe("the amount step of a food being added to a recipe", () => {
       await showStep("44444444-4444-4444-8444-444444444444");
 
       expect(screen.getByText("Food not found")).toBeOnTheScreen();
+    });
+  });
+
+  describe("the refresh of a branded food stored before the portion rules", () => {
+    it("should ask for the refresh of the food once it has loaded", async () => {
+      await showStep(onions.id);
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(onions);
+    });
+
+    it("should ask for the refresh of no food while the food loads", async () => {
+      mockFoodWithPortions.mockReturnValue({ status: "loading" });
+
+      await showStep(onions.id);
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("should ask for the refresh of no food that could not be loaded", async () => {
+      mockFoodWithPortions.mockReturnValue({ status: "error", debugMessage: "secret detail" });
+
+      await showStep(onions.id);
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("should ask for the refresh of no food that was not found", async () => {
+      await showStep("44444444-4444-4444-8444-444444444444");
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(undefined);
     });
   });
 });
