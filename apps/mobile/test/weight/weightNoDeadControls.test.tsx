@@ -1,3 +1,5 @@
+import "../support/gestureHandler";
+
 import { KeyLowProvider } from "@keylow/api-client";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
 import { render, screen, waitFor } from "@testing-library/react-native";

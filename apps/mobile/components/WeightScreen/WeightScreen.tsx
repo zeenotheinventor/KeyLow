@@ -7,6 +7,7 @@ import { View } from "react-native";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ErrorState, Skeleton } from "../ui";
+import { WeightTrendCard } from "../WeightTrendCard";
 import { WeightEmptyState } from "./WeightEmptyState";
 import { WeightHeader } from "./WeightHeader";
 import { WeightList } from "./WeightList";
@@ -41,10 +42,13 @@ export function WeightScreen() {
     // The day names wait for the zone, so "Today" does not flip when it arrives. A profile always has a zone.
     // If the read fails or finds no row the day is UTC, as the other screens read it.
     if (weighIns.data !== undefined && !timeZone.isPending) {
+      const today = toLocalDate(now, timeZone.data ?? "UTC");
+
       return (
         <WeightList
+          header={<WeightTrendCard today={today} trend={trend} weighIns={weighIns.data} />}
           isLeftOut={(localDate) => trend.byDate.get(localDate)?.rejected === true}
-          today={toLocalDate(now, timeZone.data ?? "UTC")}
+          today={today}
           weighIns={weighIns.data}
         />
       );
