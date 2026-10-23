@@ -32,6 +32,7 @@ export function BodyMapCard({
   note,
   selected,
   onLongPressMuscle,
+  overlay,
 }: BodyMapCardProps) {
   const { width: screenWidth } = useWindowDimensions();
   const figureWidth = Math.min(FIGURE_WIDTH, Math.floor((screenWidth - SIDES_AND_GAP_WIDTH) / 2));
@@ -44,17 +45,20 @@ export function BodyMapCard({
           label={viewLabel}
           subLine={subLine}
         />
-        <BodyMapFigures
-          actualValues={actualValues}
-          body={body}
-          figureWidth={figureWidth}
-          onLongPressMuscle={onLongPressMuscle}
-          onTap={isToggleEnabled ? onToggle : undefined}
-          projectedValues={projectedValues}
-          scale={scale}
-          selected={selected}
-          view={view}
-        />
+        <View>
+          <BodyMapFigures
+            actualValues={actualValues}
+            body={body}
+            figureWidth={figureWidth}
+            onLongPressMuscle={onLongPressMuscle}
+            onTap={isToggleEnabled ? onToggle : undefined}
+            projectedValues={projectedValues}
+            scale={scale}
+            selected={selected}
+            view={view}
+          />
+          {overlay}
+        </View>
         {toggleLabel === null ? null : (
           <Button
             className="self-center"

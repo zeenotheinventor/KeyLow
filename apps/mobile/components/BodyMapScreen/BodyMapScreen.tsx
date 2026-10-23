@@ -15,12 +15,14 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useBodyFigure } from "../../lib/bodyFigure";
+import { useBodyMapHint } from "../../lib/bodyMapHint";
 import { bodyMapOriginOf } from "../../lib/bodyMapRoutes";
 import { useBodyMapView } from "../../lib/bodyMapView";
 import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyMapCard } from "../BodyMapCard";
+import { BodyMapHint } from "../BodyMapHint";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { DayScrubber } from "../DayScrubber";
 import { FigureSettingSheet } from "../FigureSettingSheet";
@@ -66,6 +68,9 @@ const SCALE_OPTIONS = [
  * "Back" otherwise. A long press on a muscle opens its sheet, for the view and the day on screen, and
  * outlines the muscle and dims the rest until the sheet closes. A short press on a muscle is still a tap
  * on the figures.
+ * The first time it opens on a device a hint over the figures says to long-press a muscle. It waits for
+ * the figure question to be answered, stays until Got it or a muscle's sheet is opened, and is never
+ * drawn in the nothing logged state.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -86,6 +91,7 @@ export function BodyMapScreen() {
   const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
   const [isFigureSheetOpen, setIsFigureSheetOpen] = useState(false);
   const [hasAskedFigure, setHasAskedFigure] = useState(false);
+  const { isRead: isHintRead, hasSeen: hasSeenHint, markSeen: markHintSeen } = useBodyMapHint();
   // The first visit asks once, as soon as the stored figure is known to be none. The sheet then stays open
   // through the choice, so the preview shows it, and the answer is only recorded when it closes. The
   // state is set while rendering on purpose, as the Train screen does, so the sheet opens in this render.
@@ -146,10 +152,11 @@ export function BodyMapScreen() {
     setIsFigureSheetOpen(false);
   }
 
-  // The one place a muscle's sheet is opened from the figures. What follows opening a sheet, such as marking
-  // the first-open hint seen, hooks in here.
+  // The one place a muscle's sheet is opened from the figures. Opening one is the answer to the first-open
+  // hint, so it marks the hint seen.
   function openMuscleSheet(muscle: MuscleId) {
     setSheetMuscle(muscle);
+    markHintSeen();
   }
 
   function goBack() {
@@ -216,6 +223,9 @@ export function BodyMapScreen() {
           : null;
       }
       const isNothingLogged = scale === "heat" && shown.nothingLogged;
+      // The hint waits for the store to be read and for the figure question to be answered, and has no
+      // figures to point at when nothing is logged.
+      const isHintShown = isHintRead && !hasSeenHint && !isFigureSheetOpen && !isNothingLogged;
       const card = (
         <BodyMapCard
           actualValues={actualData.values}
@@ -224,6 +234,7 @@ export function BodyMapScreen() {
           note={noteUnderFigures()}
           selected={sheetMuscle ?? undefined}
           onLongPressMuscle={openMuscleSheet}
+          overlay={isHintShown ? <BodyMapHint onDismiss={markHintSeen} /> : undefined}
           onToggle={() => {
             const nextView = view === "projected" ? "actual" : "projected";
             // Going to Actual from a day after today leaves that day behind for good, as the row falls back to today.
