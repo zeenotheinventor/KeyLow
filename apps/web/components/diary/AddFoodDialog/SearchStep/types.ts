@@ -21,6 +21,8 @@ export type LogSearchStepProps = CommonSearchStepProps & {
   onTimeChange: (time: string) => void;
   /** A press on a row's plus: log its serving at once. */
   onAddServing: (hit: FoodSearchHit) => void;
+  /** A press on a recipe row: go to the amount step for that recipe. */
+  onOpenRecipe: (recipe: RecipeSummary) => void;
   /** A press on a recipe row's plus: log one serving of it at once. */
   onAddRecipeServing: (recipe: RecipeSummary) => void;
   /** A press on the Quick add row, which the idle search offers: calories and macros by hand. */

@@ -12,13 +12,16 @@ import {
   describeRecipeYield,
   describeServingSuffix,
 } from "@keylow/core/copy";
-import { amountOnUnitChange, recipeAmountStart } from "@keylow/core/diary";
+import {
+  amountOnUnitChange,
+  previewTypedRecipeAmount,
+  recipeAmountStart,
+} from "@keylow/core/diary";
 import { vars } from "nativewind";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { previewTypedRecipeAmount } from "./previewTypedRecipeAmount";
 import { dockBottomPadding } from "../../../lib/dockBottomPadding";
 import { useKeyboardLift } from "../../../lib/useKeyboardLift";
 import { MacroHero } from "../../FoodDetail/MacroHero";

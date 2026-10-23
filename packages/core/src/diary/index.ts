@@ -7,6 +7,8 @@ export type { BuildRecipeLogEntryInput } from "./buildRecipeLogEntry";
 export { canLogRecipe } from "./canLogRecipe";
 export { previewRecipeAmount, recipeAmountStart } from "./previewRecipeAmount";
 export type { RecipeAmountValues } from "./previewRecipeAmount";
+export { previewTypedRecipeAmount } from "./previewTypedRecipeAmount";
+export type { TypedRecipeAmount } from "./previewTypedRecipeAmount";
 export { recomputeRecipeEntry } from "./recomputeRecipeEntry";
 export { nutrientsOfRecipeSnapshot } from "./recipeSnapshotQuantity";
 export type { FrozenRecipe, LoggableRecipe, RecipeAmount } from "./recipeSnapshotQuantity";
