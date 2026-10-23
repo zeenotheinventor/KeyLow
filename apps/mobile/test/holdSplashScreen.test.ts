@@ -1,6 +1,7 @@
 import * as SplashScreen from "expo-splash-screen";
 
 import {
+  cancelSplashHoldCeiling,
   holdSplashScreen,
   reloadFailsafeMilliseconds,
   splashHoldCeilingMilliseconds,
@@ -41,6 +42,21 @@ describe("holdSplashScreen", () => {
     expect(hideAsync).not.toHaveBeenCalled();
     jest.advanceTimersByTime(1);
     expect(hideAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it("should not let go at the ceiling once the ceiling is cancelled, as the update screen takes over", () => {
+    holdSplashScreen();
+
+    cancelSplashHoldCeiling();
+    jest.advanceTimersByTime(splashHoldCeilingMilliseconds * 10);
+
+    expect(hideAsync).not.toHaveBeenCalled();
+  });
+
+  it("should do nothing when the ceiling is cancelled without a hold", () => {
+    expect(() => {
+      cancelSplashHoldCeiling();
+    }).not.toThrow();
   });
 
   it("should allow the check and the reload failsafe to run their course first", () => {

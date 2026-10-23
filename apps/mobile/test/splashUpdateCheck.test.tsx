@@ -1,6 +1,7 @@
 import "./support/gestureHandler";
 
-import { act, render, screen } from "@testing-library/react-native";
+import { UPDATING_LABEL } from "@keylow/core/copy";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import * as SplashScreen from "expo-splash-screen";
 import { Text } from "react-native";
 
@@ -10,7 +11,7 @@ import { registerAppStyles } from "./support/nativeWindStyles";
 import { resetSupabaseMock } from "./support/supabaseMock";
 import { startOnLatestUpdate } from "../lib/updates";
 
-import type { UpdateOutcome } from "../lib/updates";
+import type { UpdateCallbacks, UpdateOutcome } from "../lib/updates";
 
 // Metro compiles the stylesheet. Jest cannot read it.
 jest.mock(
@@ -58,11 +59,15 @@ function holdCheckOpen() {
     }),
   );
 
-  return (outcome: UpdateOutcome) =>
-    act(() => {
-      settle(outcome);
-      return Promise.resolve();
-    });
+  return {
+    settleCheck: (outcome: UpdateOutcome) =>
+      act(() => {
+        settle(outcome);
+        return Promise.resolve();
+      }),
+    // What the layout's hook handed to the check, called as the update goes.
+    callbacks: (): UpdateCallbacks => jest.mocked(startOnLatestUpdate).mock.lastCall?.[0] ?? {},
+  };
 }
 
 describe("the splash screen and the update check", () => {
@@ -87,12 +92,94 @@ describe("the splash screen and the update check", () => {
   });
 
   it("should hide once the check settles", async () => {
-    const settleCheck = holdCheckOpen();
+    const { settleCheck } = holdCheckOpen();
     await render(<RootLayout />);
     await screen.findByText("Screens");
 
     await settleCheck("up-to-date");
 
     expect(hideSplashScreen).toHaveBeenCalledTimes(1);
+  });
+
+  describe("when an update is found", () => {
+    const updateScreen = () => screen.getByTestId("update-screen");
+
+    async function renderWithUpdateFound() {
+      const check = holdCheckOpen();
+      await render(<RootLayout />);
+      await screen.findByText("Screens");
+      await act(() => {
+        check.callbacks().onUpdateFound?.();
+        return Promise.resolve();
+      });
+
+      return check;
+    }
+
+    it("should show the update screen, and keep the splash screen until it has been laid out", async () => {
+      await renderWithUpdateFound();
+
+      expect(screen.getByRole("progressbar", { name: UPDATING_LABEL })).toBeOnTheScreen();
+      expect(hideSplashScreen).not.toHaveBeenCalled();
+    });
+
+    it("should hide the screens behind the update screen from a screen reader, and show them again after", async () => {
+      const { settleCheck } = await renderWithUpdateFound();
+
+      expect(screen.queryByText("Screens")).not.toBeOnTheScreen();
+      expect(screen.getByText("Screens", { includeHiddenElements: true })).toBeOnTheScreen();
+
+      await settleCheck("stalled");
+
+      expect(screen.getByText("Screens")).toBeOnTheScreen();
+    });
+
+    it("should hide the splash screen once the update screen has been laid out", async () => {
+      await renderWithUpdateFound();
+
+      await fireEvent(updateScreen(), "layout", {
+        nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },
+      });
+
+      expect(hideSplashScreen).toHaveBeenCalledTimes(1);
+    });
+
+    it("should follow the download with the bar", async () => {
+      const { callbacks } = await renderWithUpdateFound();
+
+      await act(() => {
+        callbacks().onProgress?.(0.4);
+        return Promise.resolve();
+      });
+
+      expect(screen.getByRole("progressbar", { name: UPDATING_LABEL })).toHaveAccessibilityValue({
+        now: 40,
+      });
+    });
+
+    it.each<UpdateOutcome>(["stalled", "failed"])(
+      "should remove the update screen and carry on with the app when the update ends as %s",
+      async (outcome) => {
+        const { settleCheck } = await renderWithUpdateFound();
+
+        await settleCheck(outcome);
+
+        expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
+        expect(screen.getByText("Screens")).toBeOnTheScreen();
+        expect(hideSplashScreen).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it("should keep the update screen and the splash screen's hand-off while the app reloads", async () => {
+      const { settleCheck } = await renderWithUpdateFound();
+      await fireEvent(updateScreen(), "layout", {
+        nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } },
+      });
+
+      await settleCheck("reloading");
+
+      expect(screen.getByRole("progressbar", { name: UPDATING_LABEL })).toBeOnTheScreen();
+      expect(hideSplashScreen).toHaveBeenCalledTimes(1);
+    });
   });
 });

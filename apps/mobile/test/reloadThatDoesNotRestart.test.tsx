@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react-native";
+import { act, render, renderHook } from "@testing-library/react-native";
 import * as SplashScreen from "expo-splash-screen";
 import * as Updates from "expo-updates";
 
@@ -13,9 +13,15 @@ jest.mock("expo-updates", () => ({
   checkForUpdateAsync: jest.fn(),
   fetchUpdateAsync: jest.fn(),
   reloadAsync: jest.fn(),
+  addUpdatesStateChangeListener: jest.fn(() => ({ remove: jest.fn() })),
 }));
 
 const hideAsync = jest.mocked(SplashScreen.hideAsync);
+
+// The hook sets state from its timers, so the time passes inside act.
+function advance(milliseconds: number) {
+  return act(() => jest.advanceTimersByTimeAsync(milliseconds));
+}
 
 function Probe() {
   useHideSplashAfterUpdateCheck();
@@ -41,18 +47,29 @@ describe("an update reload that leaves the app running", () => {
 
   it("should keep the splash screen up while the reload gets going", async () => {
     await render(<Probe />);
-    await jest.advanceTimersByTimeAsync(reloadFailsafeMilliseconds - 1);
+    await advance(reloadFailsafeMilliseconds - 1);
 
     expect(Updates.reloadAsync).toHaveBeenCalledTimes(1);
     expect(hideAsync).not.toHaveBeenCalled();
   });
 
+  it("should keep the update screen up while the reload gets going, and remove it after the failsafe", async () => {
+    const { result } = await renderHook(() => useHideSplashAfterUpdateCheck());
+
+    await advance(reloadFailsafeMilliseconds - 1);
+    expect(result.current.isUpdateScreenShown).toBe(true);
+    expect(result.current.progress).toBe(1);
+    await advance(1);
+
+    expect(result.current.isUpdateScreenShown).toBe(false);
+  });
+
   it("should not hide the splash screen from the failsafe once the screen is gone", async () => {
     const { unmount } = await render(<Probe />);
-    await jest.advanceTimersByTimeAsync(0);
+    await advance(0);
 
     await unmount();
-    await jest.advanceTimersByTimeAsync(reloadFailsafeMilliseconds);
+    await advance(reloadFailsafeMilliseconds);
 
     expect(hideAsync).not.toHaveBeenCalled();
   });
@@ -60,7 +77,7 @@ describe("an update reload that leaves the app running", () => {
   it("should hide the splash screen when the app is still running after the failsafe", async () => {
     await render(<Probe />);
 
-    await jest.advanceTimersByTimeAsync(reloadFailsafeMilliseconds);
+    await advance(reloadFailsafeMilliseconds);
 
     expect(hideAsync).toHaveBeenCalledTimes(1);
   });
