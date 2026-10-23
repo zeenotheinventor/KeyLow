@@ -1,6 +1,6 @@
 import type { BodyFigureValues } from "../ui";
 import type { BodyMapScale } from "@keylow/core/copy";
-import type { BodyMapView } from "@keylow/core/training";
+import type { BodyArtworkFigure, BodyMapView } from "@keylow/core/training";
 
 export type BodyMapFiguresProps = {
   /** The scale the figures are coloured by, which their labels name. */
@@ -11,6 +11,8 @@ export type BodyMapFiguresProps = {
   actualValues: BodyFigureValues;
   /** The value of each muscle in Projected, in the encoding of `scale`. A muscle left out is at rest. */
   projectedValues: BodyFigureValues;
+  /** The figure drawn, from the figure setting. Defaults to male. */
+  body?: BodyArtworkFigure | undefined;
   /** The width of each figure in points. */
   figureWidth: number;
   /** Called for a tap anywhere on the figures: a touch that lifts within the slop of where it went down. Left out, a tap does nothing. */

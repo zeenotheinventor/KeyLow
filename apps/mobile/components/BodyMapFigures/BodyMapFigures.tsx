@@ -43,6 +43,7 @@ export function BodyMapFigures({
   view,
   actualValues,
   projectedValues,
+  body,
   figureWidth,
   onTap,
 }: BodyMapFiguresProps) {
@@ -75,6 +76,7 @@ export function BodyMapFigures({
               <View aria-hidden className="absolute inset-0" pointerEvents="none">
                 <Animated.View style={outgoingStyle}>
                   <BodyFigure
+                    body={body}
                     label={describeBodyFigureLabel({
                       scale,
                       view: outgoing,
@@ -91,6 +93,7 @@ export function BodyMapFigures({
             )}
             <Animated.View style={incomingLayerStyle}>
               <BodyFigure
+                body={body}
                 label={describeBodyFigureLabel({ scale, view, side, hint: null })}
                 scale={scale}
                 side={side}

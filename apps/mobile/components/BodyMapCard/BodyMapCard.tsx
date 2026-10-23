@@ -14,8 +14,8 @@ const SIDES_AND_GAP_WIDTH = 2 * 16 + 2 * (12 + 1) + 40;
 /**
  * The body map as its boards draw it: the view label over the front and the back of the body side by side,
  * each with its name under it, and under them the button that switches between Actual and Projected, with
- * the line that goes with it. A tap on the figures switches too. The figures are drawn male until the
- * figure setting exists, and are plain images. The scale colours them. They are 140 points wide, or
+ * the line that goes with it. A tap on the figures switches too. The figures are drawn as the figure setting
+ * has them, male unless said, and are plain images. The scale colours them. They are 140 points wide, or
  * narrower on a phone too narrow to hold two of that width.
  */
 export function BodyMapCard({
@@ -23,6 +23,7 @@ export function BodyMapCard({
   view,
   actualValues,
   projectedValues,
+  body,
   viewLabel,
   subLine,
   toggleLabel,
@@ -43,6 +44,7 @@ export function BodyMapCard({
         />
         <BodyMapFigures
           actualValues={actualValues}
+          body={body}
           figureWidth={figureWidth}
           onTap={isToggleEnabled ? onToggle : undefined}
           projectedValues={projectedValues}

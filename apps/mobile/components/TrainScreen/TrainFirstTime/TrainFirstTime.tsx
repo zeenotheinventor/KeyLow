@@ -1,6 +1,7 @@
 import { TRAIN_FIRST_TIME } from "@keylow/core/copy";
 import { View } from "react-native";
 
+import { useBodyFigure } from "../../../lib/bodyFigure";
 import { BodyFigure, Button, Text } from "../../ui";
 import { TrainIconTile } from "../TrainIconTile";
 
@@ -17,7 +18,8 @@ const points = [
 /**
  * The first visit, when nothing has been logged, ever, as the first time board draws it: the body map at
  * rest, a title and a sentence, three lines with an icon each, and the two ways in. A button is drawn only
- * when its handler is given, so none is a dead control.
+ * when its handler is given, so none is a dead control. The figure is drawn as the figure setting has it,
+ * and waits for the stored setting, which the phone gives at once, so it is never the wrong one first.
  */
 export function TrainFirstTime({
   onSetGoal,
@@ -25,15 +27,20 @@ export function TrainFirstTime({
   isLogDisabled,
   isStarting = false,
 }: TrainFirstTimeProps) {
+  const { figure, isReady: isFigureReady } = useBodyFigure();
+
   return (
     <View className="items-center gap-3 px-2 pt-2">
-      <BodyFigure
-        label={TRAIN_FIRST_TIME.figureLabel}
-        scale="heat"
-        side="front"
-        values={{}}
-        w={84}
-      />
+      {isFigureReady ? (
+        <BodyFigure
+          body={figure}
+          label={TRAIN_FIRST_TIME.figureLabel}
+          scale="heat"
+          side="front"
+          values={{}}
+          w={84}
+        />
+      ) : null}
       <Text className="mt-2 text-center" role="heading" variant="h2">
         {TRAIN_FIRST_TIME.title}
       </Text>

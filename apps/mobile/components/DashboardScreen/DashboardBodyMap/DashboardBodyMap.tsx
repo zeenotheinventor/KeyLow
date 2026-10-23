@@ -1,6 +1,7 @@
 import { useDashboardBodyMap } from "@keylow/api-client";
 import { useRouter } from "expo-router";
 
+import { useBodyFigure } from "../../../lib/bodyFigure";
 import { useIsOnline } from "../../../lib/connectivity";
 import { useNow } from "../../../lib/useNow";
 import { DashboardBodyMapCard } from "../DashboardBodyMapCard";
@@ -15,21 +16,27 @@ import type { DashboardBodyMapProps } from "./types";
  * the day goes on. It loads and fails on its own, so the cards above it are unaffected: a skeleton while
  * it loads, and a quiet line when a read failed. Offline with no rows saved there is nothing to wait for,
  * so it says so rather than loading for ever. A refetch that fails keeps the numbers already on screen,
- * which the hook holds. Pressing the card opens the body map screen.
+ * which the hook holds. The figure is the one the figure setting has, which the card waits for. Pressing
+ * the card opens the body map screen.
  */
 export function DashboardBodyMap({ isReadEnabled }: DashboardBodyMapProps) {
   const router = useRouter();
   const isOnline = useIsOnline();
   const bodyMap = useDashboardBodyMap({ now: useNow().toISOString(), enabled: isReadEnabled });
+  const { figure, isReady: isFigureReady } = useBodyFigure();
 
   if (bodyMap.data !== undefined) {
-    return (
+    // The card waits for the stored figure, which the phone gives at once, so it never draws the wrong one first.
+    return isFigureReady ? (
       <DashboardBodyMapCard
+        body={figure}
         bodyMap={bodyMap.data}
         onOpen={() => {
           router.push("/body-map");
         }}
       />
+    ) : (
+      <DashboardBodyMapLoading />
     );
   }
   if (bodyMap.isError) {

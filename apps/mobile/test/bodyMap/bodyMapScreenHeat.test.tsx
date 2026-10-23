@@ -28,9 +28,13 @@ import type { MuscleId } from "@keylow/core/training";
 import type { ThemeScheme } from "@keylow/tokens";
 import type { QueryClient } from "@tanstack/react-query";
 
+// The figure is already chosen (Male), so the screen does not stop to ask. The figure tests cover the question.
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(key === "bodyMap.figure" ? "male" : null),
+    setItem: () => Promise.resolve(),
+  },
 }));
 jest.mock(
   "expo-router",
@@ -260,8 +264,10 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
     it("should leave the figures plain images: no muscle is a button before the long-press exists", async () => {
       await renderScreen();
 
-      expect(screen.getAllByRole("button")).toHaveLength(2);
+      // Back, the figure setting in the header, and the view toggle under the figures.
+      expect(screen.getAllByRole("button")).toHaveLength(3);
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Figure: male or female" })).toBeOnTheScreen();
     });
   });
 

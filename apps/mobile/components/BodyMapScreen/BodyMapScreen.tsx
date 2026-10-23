@@ -14,12 +14,14 @@ import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useBodyFigure } from "../../lib/bodyFigure";
 import { useBodyMapView } from "../../lib/bodyMapView";
 import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
+import { FigureSettingSheet } from "../FigureSettingSheet";
 import { EmptyState, ErrorState, SegmentedControl, SheetHeader, Skeleton } from "../ui";
 import { describeGap } from "./gapNote";
 
@@ -47,7 +49,10 @@ const SCALE_OPTIONS = [
  * is one. With no sets in the last 14 days Heat shows the figures at rest and the empty state says why,
  * with no legend; Volume and Gap draw as usual, since a week with nothing logged is still a plan to compare
  * with. It has no Start a session button until the Train tab it opens is mounted, and none of the controls
- * the next tickets add.
+ * the next tickets add. The body is drawn as the figure setting has it, male or female, which the screen
+ * waits for with the view. The first time it opens it asks which figure, and closing that question without
+ * an answer records Male so it is not asked again; the button in the header opens the same sheet at any
+ * time.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -63,6 +68,16 @@ export function BodyMapScreen() {
   const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
   const [scale, setScale] = useState<BodyMapScale>("heat");
+  const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
+  const [isFigureSheetOpen, setIsFigureSheetOpen] = useState(false);
+  const [hasAskedFigure, setHasAskedFigure] = useState(false);
+  // The first visit asks once, as soon as the stored figure is known to be none. The sheet then stays open
+  // through the choice, so the preview shows it, and the answer is only recorded when it closes. The
+  // state is set while rendering on purpose, as the Train screen does, so the sheet opens in this render.
+  if (isFigureReady && !hasChosen && !hasAskedFigure) {
+    setHasAskedFigure(true);
+    setIsFigureSheetOpen(true);
+  }
   const nowIso = now.toISOString();
   // Every scale is read here and the scale on screen picks which result is shown. The reads share their
   // queries, so a read switched off and on again with the scale would fetch what is already held; all of
@@ -96,6 +111,14 @@ export function BodyMapScreen() {
     gap: { actual: gap, projected: gap },
   }[scale];
 
+  function closeFigureSheet() {
+    // Closing the question without choosing is an answer: Male, which is not asked about again.
+    if (isFigureReady && !hasChosen) {
+      setFigure("male");
+    }
+    setIsFigureSheetOpen(false);
+  }
+
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Dashboard instead.
     if (router.canGoBack()) {
@@ -114,7 +137,7 @@ export function BodyMapScreen() {
   function renderBody() {
     const { data: actualData } = actual;
     const { data: projectedData } = projected;
-    if (isViewRead && actualData !== undefined && projectedData !== undefined) {
+    if (isViewRead && isFigureReady && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
       // Gap has no Actual or Projected, so the view that is remembered only matters to Heat and Volume.
       const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
@@ -144,6 +167,7 @@ export function BodyMapScreen() {
       const card = (
         <BodyMapCard
           actualValues={actualData.values}
+          body={figure}
           isToggleEnabled={scale !== "gap" && projectedAvailable}
           note={noteUnderFigures()}
           onToggle={() => {
@@ -199,7 +223,7 @@ export function BodyMapScreen() {
       );
     }
     // Offline, a read that has not arrived will not: there is no saved body map to show. Rows that are
-    // there are only waiting for the stored view, which is read from the phone and comes at once.
+    // there are only waiting for the stored view and figure, which are read from the phone and come at once.
     const isWaitingForView = actual.data !== undefined && projected.data !== undefined;
     return isOnline || isWaitingForView ? (
       <View accessible aria-label={BODY_MAP.dashboardCard.loadingLabel} role="status">
@@ -223,6 +247,18 @@ export function BodyMapScreen() {
       <SheetHeader
         leading={{ icon: "ChevronLeft", label: BODY_MAP.back, onPress: goBack }}
         title={BODY_MAP.title}
+        // Left out until the stored figure is known, so closing the sheet can never write over it.
+        trailing={
+          isFigureReady
+            ? {
+                icon: "PersonStanding",
+                label: BODY_MAP.figureSetting.label,
+                onPress: () => {
+                  setIsFigureSheetOpen(true);
+                },
+              }
+            : undefined
+        }
       />
       <ScrollView className="flex-1" contentContainerClassName="grow">
         <View
@@ -232,6 +268,12 @@ export function BodyMapScreen() {
           {renderBody()}
         </View>
       </ScrollView>
+      <FigureSettingSheet
+        figure={figure}
+        open={isFigureSheetOpen}
+        onChange={setFigure}
+        onClose={closeFigureSheet}
+      />
     </View>
   );
 }

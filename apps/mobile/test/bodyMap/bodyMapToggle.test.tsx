@@ -9,6 +9,7 @@ import { setUpTests } from "react-native-reanimated";
 import { BodyMapCard } from "../../components/BodyMapCard";
 import { BodyMapScreen } from "../../components/BodyMapScreen";
 import { RESTING_HEAT } from "../../components/DashboardScreen/DashboardBodyMapCard";
+import { resetBodyFigureForTests } from "../../lib/bodyFigure/testing";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
@@ -163,6 +164,9 @@ describe("the body map view toggle", () => {
     resetRouterMock();
     resetDiaryBackend();
     mockStorageItems.clear();
+    // The figure is already chosen (Male), so the screen does not stop to ask. The figure tests cover the question.
+    mockStorageItems.set("bodyMap.figure", "male");
+    resetBodyFigureForTests();
     mockGetItem.mockClear();
     mockSetItem.mockClear();
     jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);

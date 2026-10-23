@@ -5,6 +5,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { BodyMapScreen } from "../../components/BodyMapScreen";
 import { RESTING_HEAT } from "../../components/DashboardScreen/DashboardBodyMapCard";
+import { resetBodyFigureForTests } from "../../lib/bodyFigure/testing";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
@@ -275,6 +276,9 @@ describe("the body map scales", () => {
     resetRouterMock();
     resetDiaryBackend();
     mockStorageItems.clear();
+    // The figure is already chosen (Male), so the screen does not stop to ask. The figure tests cover the question.
+    mockStorageItems.set("bodyMap.figure", "male");
+    resetBodyFigureForTests();
     mockSetItem.mockClear();
     mockNow = SUNDAY;
     showScales();
