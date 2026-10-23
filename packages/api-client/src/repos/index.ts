@@ -74,6 +74,9 @@ export {
 } from "./weighIns";
 export type { ImportResult, WeighInChange } from "./weighIns";
 export type { WeighIn } from "./weighInSchemas";
+export { importBodyMeasurements, listBodyMeasurements } from "./bodyMeasurements";
+export type { BodyMeasurementImportResult } from "./bodyMeasurements";
+export type { BodyMeasurement } from "./bodyMeasurementSchemas";
 export { getActiveRoutine, listSetsFrom, listWeekSessions } from "./training";
 export type {
   ActiveRoutine,

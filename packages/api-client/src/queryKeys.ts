@@ -1,3 +1,5 @@
+import type { BodyMeasurementKind } from "@keylow/core/weight";
+
 export const keys = {
   profiles: {
     all: ["profiles"] as const,
@@ -175,6 +177,17 @@ export const keys = {
     all: ["weigh-ins"] as const,
     /** Every live weigh-in of the signed in user, newest first. */
     list: ["weigh-ins", "list"] as const,
+  },
+  /**
+   * The body composition reads (body fat and lean mass). A family of its own, outside `diary`, and not in
+   * the list a persisted cache keeps, so no measurement is stored on the device by the diary cache. The
+   * trend is derived from `list` and has no key. Every key sits under `["body-measurements"]`, so one
+   * invalidation of `keys.bodyMeasurements.all` refreshes everything after an import.
+   */
+  bodyMeasurements: {
+    all: ["body-measurements"] as const,
+    /** Every live measurement of one kind for the signed in user, newest first. */
+    list: (kind: BodyMeasurementKind) => ["body-measurements", "list", kind] as const,
   },
   /**
    * The diary reads. `day` and `week` are the two a persisted cache keeps. Every key sits under

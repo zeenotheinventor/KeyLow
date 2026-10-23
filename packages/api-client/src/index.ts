@@ -160,6 +160,9 @@ export {
   updateWeighIn,
 } from "./repos";
 export type { ImportResult, WeighIn, WeighInChange } from "./repos";
+export { useBodyMeasurements, useBodyTrend, useImportBodyMeasurements } from "./hooks";
+export { importBodyMeasurements, listBodyMeasurements } from "./repos";
+export type { BodyMeasurement, BodyMeasurementImportResult } from "./repos";
 export {
   useActiveRoutine,
   useActiveSession,

@@ -178,6 +178,28 @@ describe("keys.weighIns", () => {
   });
 });
 
+describe("keys.bodyMeasurements", () => {
+  it("should expose the body measurements root key", () => {
+    expect(keys.bodyMeasurements.all).toEqual(["body-measurements"]);
+  });
+
+  it.each(["body_fat_pct", "lean_mass_kg"] as const)(
+    "should key the %s list by its kind, nested under the root",
+    (kind) => {
+      expect(keys.bodyMeasurements.list(kind)).toEqual(["body-measurements", "list", kind]);
+      expect(keys.bodyMeasurements.list(kind).slice(0, 1)).toEqual(keys.bodyMeasurements.all);
+    },
+  );
+
+  it("should keep the two kinds apart and sit outside the diary and weigh-in families", () => {
+    expect(keys.bodyMeasurements.list("body_fat_pct")).not.toEqual(
+      keys.bodyMeasurements.list("lean_mass_kg"),
+    );
+    expect(keys.bodyMeasurements.all[0]).not.toBe(keys.diary.all[0]);
+    expect(keys.bodyMeasurements.all[0]).not.toBe(keys.weighIns.all[0]);
+  });
+});
+
 describe("keys.training", () => {
   it("should expose the training root key", () => {
     expect(keys.training.all).toEqual(["training"]);
