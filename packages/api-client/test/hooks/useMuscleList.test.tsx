@@ -64,7 +64,7 @@ describe("useMuscleList", () => {
     expect(board("lats")).toStrictEqual({
       muscle: "lats",
       heatPercent: 24,
-      heatStep: 2,
+      heatStep: 1,
       readyInHours: 0,
     });
     expect(board("glute_max")).toStrictEqual({

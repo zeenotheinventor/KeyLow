@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-import { HEAT_STEP_CUTS_V1 } from "./bodyMapValues";
 import { parseMoment } from "./muscleState";
 
 /*
@@ -23,10 +22,6 @@ export const parseInstant = (timestamp: string, rule: string): number => {
 
 /** A muscle's heat, from 0 to 1, as a whole percent. Half a percent rounds up. */
 export const heatPercentOf = (heat: number): number => Math.round(heat * 100);
-
-/** The step, from 0 to 5, that a whole heat percent falls in. */
-export const heatStepOf = (heatPercent: number): number =>
-  HEAT_STEP_CUTS_V1.filter((cut) => heatPercent >= cut).length;
 
 /**
  * The whole hours from `now` until `readyAt`, to the nearest hour, and 0 when the muscle is ready already.

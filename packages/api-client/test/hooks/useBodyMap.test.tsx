@@ -110,15 +110,15 @@ describe("useBodyMap, heat", () => {
         chest_upper: 1,
         chest_lower: 1,
         delt_rear: 1,
-        lats: 2,
+        lats: 1,
         traps_mid: 1,
-        lower_back: 2,
+        lower_back: 1,
         biceps: 1,
         triceps: 1,
         glute_max: 3,
         quads: 3,
         hamstrings: 3,
-        calves: 2,
+        calves: 1,
       }),
     );
     expect(result.current.data?.computedAt).toBe(THURSDAY_EVENING);
@@ -134,10 +134,10 @@ describe("useBodyMap, heat", () => {
     });
     expect(result.current.data?.values).toStrictEqual(
       withOthersAtZero({
-        chest_upper: 2,
-        chest_lower: 2,
+        chest_upper: 1,
+        chest_lower: 1,
         delt_front: 2,
-        delt_side: 2,
+        delt_side: 1,
         delt_rear: 4,
         lats: 5,
         traps_mid: 4,
@@ -159,10 +159,10 @@ describe("useBodyMap, heat", () => {
     });
     expect(result.current.data?.values).toStrictEqual(
       withOthersAtZero({
-        chest_upper: 2,
-        chest_lower: 2,
+        chest_upper: 1,
+        chest_lower: 1,
         delt_front: 2,
-        delt_side: 2,
+        delt_side: 1,
         triceps: 2,
         glute_max: 1,
         quads: 1,

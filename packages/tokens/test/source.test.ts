@@ -84,7 +84,7 @@ describe("the training additions", () => {
     expect(() =>
       buildTokens({
         ...sources,
-        trainingCss: sources.trainingCss.replace("--heat-3:#CC7A22;", ""),
+        trainingCss: sources.trainingCss.replace("--heat-3:#BE7E19;", ""),
       }),
     ).toThrow(/heat-3/);
   });

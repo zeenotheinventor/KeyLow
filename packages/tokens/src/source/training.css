@@ -1,6 +1,9 @@
-/* Ki-Lo training canvas: token PROPOSALS for the body map (KEY-339, KEY-340). Not in packages/tokens yet.
-   Dark on :root, light under [data-theme="light"], as kilo-tokens.css. Three scales plus the figure itself.
-   heat: sequential, neutral at rest, through amber, to red; step 5 also glows.
+/* Ki-Lo training canvas: the colours of the 2D body map (KEY-339, KEY-340). Dark on :root, light under
+   [data-theme="light"], as kilo-tokens.css. Three scales plus the figure itself.
+   heat (KEY-515, the v3 "tokens · body-map-scales" board): sequential, neutral grey at rest (0, Rested), then
+   green when ready (1), through yellow (2, Warm) and amber (3, Hot) to orange (4, Very hot) and red (5, Peak);
+   step 5 also glows. Light steps 2 and 3 are a shade darker than the board's mockup so every coloured step
+   keeps 3:1 on the surface.
    volume: blue under, pale blue maintaining, green productive, red over (productive and over reuse success and danger).
    gap: diverging around the plan; blue behind, neutral on plan, amber ahead.
    v2 (second pass, 2026-10-18): --volume-not-targeted for a muscle the routine and goal do not train (KEY-356),
@@ -10,12 +13,12 @@
 --body-silhouette:#262D3A;
 --body-separator:#141821;
 --heat-0:#3A4355;
---heat-1:#5E5647;
---heat-2:#8F6D3A;
---heat-3:#C98B2E;
---heat-4:#F2803A;
---heat-5:#FF7A6B;
---heat-glow:rgba(255,122,107,0.55);
+--heat-1:#3FA463;
+--heat-2:#C8C13A;
+--heat-3:#E5A13A;
+--heat-4:#EE6E36;
+--heat-5:#F04848;
+--heat-glow:rgba(240,72,72,0.55);
 --volume-under:#4A86F7;
 --volume-maintaining:#8DB0E8;
 --volume-productive:#5CD67A;
@@ -29,12 +32,12 @@
 --body-silhouette:#E2E6EC;
 --body-separator:#F7F8FA;
 --heat-0:#C9CED8;
---heat-1:#DDB577;
---heat-2:#D99A45;
---heat-3:#CC7A22;
---heat-4:#BF5424;
---heat-5:#A8231D;
---heat-glow:rgba(168,35,29,0.35);
+--heat-1:#2F8F4E;
+--heat-2:#9E8E19;
+--heat-3:#BE7E19;
+--heat-4:#CF5A26;
+--heat-5:#C9313A;
+--heat-glow:rgba(201,49,58,0.35);
 --volume-under:#1F5BD6;
 --volume-maintaining:#6E92D6;
 --volume-productive:#1F9D4E;

@@ -72,7 +72,7 @@ describe("the card for the golden suggestion, for a day that is tomorrow", () =>
         kind: "volume",
         text: "Upper chest: 4.8 sets in the last 7 days, target 12, a V-taper priority",
       },
-      { kind: "heat", text: "Upper chest is ready now: heat 13 %, light" },
+      { kind: "heat", text: "Upper chest is ready now: heat 13 %" },
       { kind: "length", text: "Thursday goes from 16 to 19 sets, about 60 minutes" },
     ]);
   });
@@ -474,8 +474,16 @@ describe("ready now is only said of a muscle that is ready", () => {
     describeSuggestionDetail(withHeat(heat), detailForThursday).rows[5]?.why;
 
   it("should keep the claim at 13 % and exactly at the ready share", () => {
-    expect(heatLineOf(0.13)).toBe("Upper chest is ready now: heat 13 %, light");
-    expect(heatLineOf(0.25)).toBe("Upper chest is ready now: heat 25 %, warm");
+    expect(heatLineOf(0.13)).toBe("Upper chest is ready now: heat 13 %");
+    expect(heatLineOf(0.25)).toBe("Upper chest is ready now: heat 25 %");
+  });
+
+  it("should keep the step word for a rested muscle, and never say ready twice", () => {
+    expect(heatLineOf(0.02)).toBe("Upper chest is ready now: heat 2 %, rested");
+  });
+
+  it("should drop the claim just above the ready share, even where it rounds to 25 %", () => {
+    expect(heatLineOf(0.254)).toBe("Upper chest: heat 25 %, warm");
   });
 
   it("should drop the claim at 30 % and at 45 %", () => {
