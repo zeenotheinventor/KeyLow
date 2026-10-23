@@ -63,7 +63,11 @@ export function MacroHero(props: MacroHeroProps) {
         {...(amount === undefined
           ? { "aria-label": FOOD_DETAIL.macrosLabel }
           : region === undefined
-            ? { role: "group", "aria-label": `${FOOD_DETAIL.macrosLabel}, ${basis}` }
+            ? {
+                role: "group",
+                "aria-label": `${FOOD_DETAIL.macrosLabel}, ${basis}`,
+                "aria-describedby": amount.describedBy,
+              }
             : { "aria-label": region.name })}
       >
         {hasNameLine && (

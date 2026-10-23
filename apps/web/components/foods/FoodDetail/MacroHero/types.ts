@@ -15,6 +15,11 @@ export type MacroHeroAmount = {
   /** The food's name, written on the card's first line with the caption beside it. Leave it out where the screen already names the food. */
   name?: string | undefined;
   /**
+   * The id of a note under the card that says more about the amount, such as which grams a recipe's are of.
+   * It becomes the group's accessible description. The note stays real text on the page.
+   */
+  describedBy?: string | undefined;
+  /**
    * Opt-in, for a card that sums something other than one food, such as the recipe editor's Per serving. It
    * becomes a named region with its own polite announcement and a line under the macros in place of the
    * shares note, and the macros are rows at every width.
@@ -52,5 +57,5 @@ export type MacroHeroRegionProps = {
 
 export type MacroHeroProps =
   | { food: MacroHeroFood; amount?: undefined }
-  | { food: MacroHeroFood; amount: MacroHeroAmount }
+  | { food?: MacroHeroFood | undefined; amount: MacroHeroAmount }
   | MacroHeroRegionProps;

@@ -63,7 +63,8 @@ function limitsFor(
  * found, each with the serving its one-tap plus logs. The rows keep the database's ranking order. A row
  * shows the food's serving and the values for that serving, a food with a missing value shows Needs review
  * and a chevron in place of the plus, and a press on the row goes to the portion step. The user's recipes
- * that match come first, in their own group, each with a plus that logs one serving. In `ingredient` mode,
+ * that match come first, in their own group, each with a plus that logs one serving, and a press on the row
+ * goes to the amount step for the recipe. In `ingredient` mode,
  * a recipe's, there is no Time field, no plus, no Quick add row and no recipes (a recipe is not an
  * ingredient of itself): a press on a row is the only way on.
  */
@@ -160,6 +161,7 @@ function SearchStepView(props: SearchStepProps & RecipeResults) {
             recipes={recipes}
             query={trimmedQuery}
             addDisabled={!isOnline}
+            onOpen={props.onOpenRecipe}
             onAdd={props.onAddRecipeServing}
           />
         )}

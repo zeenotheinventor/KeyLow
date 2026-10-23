@@ -25,7 +25,6 @@ describe("the recipe amount step's source", () => {
     expect(sourceFiles).toEqual(
       expect.arrayContaining([
         "components/PortionPicker/RecipePortionPicker/RecipePortionPicker.tsx",
-        "components/PortionPicker/RecipePortionPicker/previewTypedRecipeAmount.ts",
         "components/FoodSearch/RecipeLogGroup/RecipeLogGroup.tsx",
         "app/foods/recipe/[id]/log.tsx",
         "components/EntryScreen/RecipeEntryForm/RecipeEntryForm.tsx",

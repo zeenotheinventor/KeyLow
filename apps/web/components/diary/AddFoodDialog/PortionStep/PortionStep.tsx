@@ -1,5 +1,4 @@
 import {
-  ADD_FOOD_DIALOG,
   FOOD_DETAIL,
   FOOD_NOT_FOUND,
   FOOD_NOT_LOADED,
@@ -9,14 +8,14 @@ import {
   describeMissingValuesBeforeLogging,
 } from "@keylow/core/copy";
 import { missingFieldsOf } from "@keylow/core/diary";
-import { iconStroke } from "@keylow/tokens";
-import { ChevronLeft, SearchX } from "lucide-react";
+import { SearchX } from "lucide-react";
+
+import { BackToResults } from "../BackToResults";
 
 import type { PortionStepProps } from "./types";
 
 import { PortionFields } from "@/components/diary/PortionFields";
 import { Banner } from "@/components/ui/Banner";
-import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -34,17 +33,7 @@ export function PortionStep({
   amountRef,
   ...timeProps
 }: PortionStepProps) {
-  const back = (
-    <Button
-      type="button"
-      variant="ghost"
-      className="-ml-3 gap-0.5 self-start px-3 text-label-small"
-      onClick={onBack}
-    >
-      <ChevronLeft aria-hidden strokeWidth={iconStroke} />
-      {ADD_FOOD_DIALOG.backToResults}
-    </Button>
-  );
+  const back = <BackToResults onClick={onBack} />;
 
   if (draft.status !== "ready") {
     return (

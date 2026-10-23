@@ -47,7 +47,7 @@ function sampleRecipeNamed(name: string): RecipeSummary {
 const chickenAndRice = sampleRecipeNamed("Chicken and rice");
 
 const rowName =
-  "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
+  "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount";
 const plusName = "Add Chicken and rice, 1 serving (275 g)";
 
 const breastFillets = makeSearchHit({
@@ -283,7 +283,7 @@ describe("the add food dialog, recipes", () => {
   });
 
   describe("the row", () => {
-    it("should be named in words, without choose amount, because it opens nothing yet", async () => {
+    it("should be named in words, ending in choose amount, because a press opens the amount step", async () => {
       renderDialog();
       search("chicken");
 
@@ -315,17 +315,27 @@ describe("the add food dialog, recipes", () => {
       );
     });
 
-    it("should be plain text with only the plus to press, until the amount step can open", async () => {
+    it("should have the row to press, which opens the amount step, and the plus, which logs", async () => {
       renderDialog();
       search("chicken");
 
       const row = await recipeRow();
 
-      expect(
-        within(row)
-          .getAllByRole("button")
-          .map((button) => button.getAttribute("aria-label")),
-      ).toEqual([plusName]);
+      expect(within(row).getAllByRole("button")).toHaveLength(2);
+      expect(within(row).getByRole("button", { name: plusName })).toBeTruthy();
+      expect(within(row).getByRole("button", { name: /^Chicken\s*and rice/ })).toBeTruthy();
+    });
+
+    it("should open the amount step on a press, and log nothing", async () => {
+      renderDialog();
+      search("chicken");
+
+      fireEvent.click(
+        within(await recipeRow()).getByRole("button", { name: /^Chicken\s*and rice/ }),
+      );
+
+      expect(await screen.findByRole("button", { name: "Results" })).toBeTruthy();
+      expect(recipeLogBackend.inserts).toEqual([]);
     });
   });
 

@@ -233,3 +233,40 @@ describe("MacroHero as a named region", () => {
     expect(within(region).queryByText(/Per 100 g/)).toBeNull();
   });
 });
+
+describe("MacroHero with an amount and no food", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("should draw the amount of something that is not a food, such as a recipe", () => {
+    render(
+      <MacroHero amount={{ ...chicken, name: "Chicken and rice", caption: "For 1 serving" }} />,
+    );
+
+    const group = screen.getByRole("group", { name: "Energy and macros, For 1 serving" });
+    expect(within(group).getByText("222")).toBeTruthy();
+    expect(within(group).getByText("Chicken and rice")).toBeTruthy();
+  });
+
+  it("should be described by the note it is given", () => {
+    render(
+      <>
+        <MacroHero amount={{ ...chicken, describedBy: "grams-note" }} />
+        <p id="grams-note">These grams are of the raw ingredients.</p>
+      </>,
+    );
+
+    expect(
+      screen.getByRole("group", { name: /Energy and macros/ }).getAttribute("aria-describedby"),
+    ).toBe("grams-note");
+  });
+
+  it("should have no description when it is not given a note", () => {
+    render(<MacroHero amount={chicken} />);
+
+    expect(
+      screen.getByRole("group", { name: /Energy and macros/ }).hasAttribute("aria-describedby"),
+    ).toBe(false);
+  });
+});
