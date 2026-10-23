@@ -6,6 +6,8 @@
   "scripts": {
     "inspect": "node --experimental-strip-types src/run.ts inspect_bundle",
     "render": "node --experimental-strip-types src/run.ts render_bases",
+    "assign": "node --experimental-strip-types src/run.ts assign_regions",
+    "regions": "node --experimental-strip-types src/run.ts render_regions",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
