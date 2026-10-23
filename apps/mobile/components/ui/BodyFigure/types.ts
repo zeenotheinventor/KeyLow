@@ -18,9 +18,15 @@ export type BodyFigureProps = {
   /** The figure to draw. Defaults to male. */
   body?: BodyArtworkFigure | undefined;
   /** The muscle to outline in the primary text colour. */
-  selected?: MuscleId;
+  selected?: MuscleId | undefined;
   /** The opacity of the whole figure, from 0 to 1, as the canvas component's `dim` has it. Defaults to 1. */
   dim?: number;
+  /**
+   * The opacity of every muscle but the selected one, from 0 to 1, so the selected muscle stands out from
+   * the rest while its sheet is open. Unlike `dim` it leaves the selected muscle and its outline at full
+   * strength. Defaults to 1, and does nothing without a selected muscle.
+   */
+  unselectedOpacity?: number;
   /** The figure's accessible name, from core copy. */
   label: string;
   /** The width in points. The height follows from the 200 by 440 drawing. */

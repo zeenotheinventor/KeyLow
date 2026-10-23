@@ -182,6 +182,8 @@ export type {
   RangePosition,
   WeeklySetsDetail,
 } from "./muscleDetail";
+export { setsBarPositionsOf, upcomingSessionsOf, weightingExampleOf } from "./muscleSheetContext";
+export type { LabelAnchor, SetsBarPositions } from "./muscleSheetContext";
 export { muscleListGroups } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow } from "./muscleList";
 

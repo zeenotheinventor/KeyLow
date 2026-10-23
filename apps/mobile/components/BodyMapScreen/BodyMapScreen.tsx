@@ -24,11 +24,13 @@ import { BodyMapCard } from "../BodyMapCard";
 import { BodyMapLegend } from "../BodyMapLegend";
 import { DayScrubber } from "../DayScrubber";
 import { FigureSettingSheet } from "../FigureSettingSheet";
+import { MuscleSheet } from "../MuscleSheet";
 import { EmptyState, ErrorState, SegmentedControl, SheetHeader, Skeleton } from "../ui";
 import { describeGap } from "./gapNote";
 import { scrubberDaysOf } from "./scrubberDays";
 
 import type { BodyMapScale, PlannedSession } from "@keylow/core/copy";
+import type { MuscleId } from "@keylow/core/training";
 
 const MINIMUM_BOTTOM_PADDING = 16;
 
@@ -59,9 +61,11 @@ const SCALE_OPTIONS = [
  * button until the Train tab it opens is mounted, and none of the controls the next tickets add. The body
  * is drawn as the figure setting has it, male or female, which the screen waits for with the view. The
  * first time it opens it asks which figure, and closing that question without an answer records Male so it
- * is not asked again; the button in the header opens the same sheet at any time. Its
- * Back control reads "Back to Train" when the Train home opened it (`?from=train`) and there is a screen
- * to go back to, and "Back" otherwise.
+ * is not asked again; the button in the header opens the same sheet at any time. Its Back control reads
+ * "Back to Train" when the Train home opened it (`?from=train`) and there is a screen to go back to, and
+ * "Back" otherwise. A long press on a muscle opens its sheet, for the view and the day on screen, and
+ * outlines the muscle and dims the rest until the sheet closes. A short press on a muscle is still a tap
+ * on the figures.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -92,6 +96,7 @@ export function BodyMapScreen() {
   // The scrubber day picked, or null for today. Only Heat has it. It is the day as picked: whether the view
   // shown can choose it is worked out where the view is known.
   const [chosenDate, setChosenDate] = useState<string | null>(null);
+  const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
   const nowIso = now.toISOString();
   // Every scale is read here and the scale on screen picks which result is shown. The reads share their
   // queries, so a read switched off and on again with the scale would fetch what is already held; all of
@@ -141,6 +146,12 @@ export function BodyMapScreen() {
     setIsFigureSheetOpen(false);
   }
 
+  // The one place a muscle's sheet is opened from the figures. What follows opening a sheet, such as marking
+  // the first-open hint seen, hooks in here.
+  function openMuscleSheet(muscle: MuscleId) {
+    setSheetMuscle(muscle);
+  }
+
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to the Dashboard instead.
     if (router.canGoBack()) {
@@ -156,22 +167,26 @@ export function BodyMapScreen() {
     void Promise.all([...new Set([actual, projected])].map((shown) => shown.refetch()));
   }
 
+  // Gap has no Actual or Projected, so the view that is remembered only matters to Heat and Volume.
+  const view =
+    chosenView === "projected" && projected.data?.projectedAvailable === true
+      ? "projected"
+      : "actual";
+  // The day shown: the one picked when the view shown can choose it, and otherwise today. This is the one
+  // place the day is decided, and the figures, the line under the label, the nothing logged check, the
+  // scrubber and the muscle sheet all follow it, and the view shown was read at it.
+  const shownDays = (view === "projected" ? projected.data : actual.data)?.days ?? [];
+  const selectedDate =
+    scale === "heat" && shownDays.some(({ date, selectable }) => date === heatDate && selectable)
+      ? (heatDate ?? today)
+      : today;
+
   function renderBody() {
     const { data: actualData } = actual;
     const { data: projectedData } = projected;
     if (isViewRead && isFigureReady && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
-      // Gap has no Actual or Projected, so the view that is remembered only matters to Heat and Volume.
-      const view = chosenView === "projected" && projectedAvailable ? "projected" : "actual";
       const shown = view === "projected" ? projectedData : actualData;
-      // The day shown: the one picked when the view shown can choose it, and otherwise today. This is the one
-      // place the day is decided, and the figures, the line under the label, the nothing logged check and
-      // the scrubber all follow `shown`, which was read at it.
-      const selectedDate =
-        scale === "heat" &&
-        shown.days.some(({ date, selectable }) => date === heatDate && selectable)
-          ? (heatDate ?? today)
-          : today;
       const isSelectedToday = selectedDate === today;
       // A planned session counts from the day after today up to the day shown (ruling D).
       const plannedSessions: PlannedSession[] = shown.days
@@ -207,6 +222,8 @@ export function BodyMapScreen() {
           body={figure}
           isToggleEnabled={scale !== "gap" && projectedAvailable}
           note={noteUnderFigures()}
+          selected={sheetMuscle ?? undefined}
+          onLongPressMuscle={openMuscleSheet}
           onToggle={() => {
             const nextView = view === "projected" ? "actual" : "projected";
             // Going to Actual from a day after today leaves that day behind for good, as the row falls back to today.
@@ -336,6 +353,19 @@ export function BodyMapScreen() {
         open={isFigureSheetOpen}
         onChange={setFigure}
         onClose={closeFigureSheet}
+      />
+      <MuscleSheet
+        days={shownDays}
+        enabled={isReadEnabled}
+        muscle={sheetMuscle}
+        now={nowIso}
+        // Today is the current moment, so it is read with no day.
+        at={selectedDate === today ? undefined : selectedDate}
+        view={scale === "gap" ? "actual" : view}
+        weekStart={weekStart}
+        onClose={() => {
+          setSheetMuscle(null);
+        }}
       />
     </View>
   );

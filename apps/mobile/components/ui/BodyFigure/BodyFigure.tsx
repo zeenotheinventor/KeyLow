@@ -1,8 +1,8 @@
-import { MUSCLE_NAMES } from "@keylow/core/copy";
+import { BODY_MAP, MUSCLE_NAMES } from "@keylow/core/copy";
 import { BODY_ARTWORK, BODY_GLOW_FILTER, isMuscleId } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 import { vars } from "nativewind";
-import { useId, useMemo } from "react";
+import { useId, useMemo, useRef } from "react";
 import { Pressable, View } from "react-native";
 import Svg, { Defs, FeGaussianBlur, FeMerge, FeMergeNode, Filter, G, Path } from "react-native-svg";
 
@@ -11,14 +11,32 @@ import { readMuscle } from "./muscleReading";
 import { useTheme } from "../../../lib/theme";
 
 import type { BodyFigureProps } from "./types";
+import type { AccessibilityActionEvent, GestureResponderEvent } from "react-native";
 
 const OUTLINE_WIDTH = 1.4;
 const SELECTED_OUTLINE_WIDTH = 2.6;
+
+// A finger that moves further than this from where it went down on a muscle is dragging, and neither
+// presses nor long presses it.
+const TAP_SLOP = 10;
+
+// The screen reader action that does what a long press does for a finger.
+const DETAILS_ACTION = "details";
+
+type TouchPoint = { x: number; y: number };
+
+const pointOf = ({ nativeEvent }: GestureResponderEvent): TouchPoint => ({
+  x: nativeEvent.pageX,
+  y: nativeEvent.pageY,
+});
 
 /**
  * One side of the body as a drawing of the 22 muscles, filled from the heat, volume or gap scale. It is
  * one image with the label. With a handler, each muscle is also a button named by the muscle and its value,
  * so a screen reader reaches every one, and a press anywhere else on the figure goes to the press around it.
+ * A finger that drags more than 10 points from where it went down on a muscle neither presses nor long
+ * presses it. With a long press handler each muscle also offers a Show details action, so a screen reader
+ * can do what a long press does.
  * The fills are concrete colours from the palette, because an SVG fill cannot read a CSS variable.
  */
 export function BodyFigure({
@@ -28,6 +46,7 @@ export function BodyFigure({
   body = "male",
   selected,
   dim = 1,
+  unselectedOpacity = 1,
   label,
   w,
   onPressMuscle,
@@ -41,6 +60,17 @@ export function BodyFigure({
   const artwork = BODY_ARTWORK[body][side];
   const hasHandler = onPressMuscle !== undefined || onLongPressMuscle !== undefined;
   const boxes = useMemo(() => hitBoxes(side, body, w), [side, body, w]);
+  // Where the finger on this figure went down and where it is now, which the pressables do not keep.
+  const touch = useRef<{ origin: TouchPoint | null; latest: TouchPoint | null }>({
+    origin: null,
+    latest: null,
+  });
+  const isDragged = () => {
+    const { origin, latest } = touch.current;
+    return origin !== null && latest !== null
+      ? Math.hypot(latest.x - origin.x, latest.y - origin.y) > TAP_SLOP
+      : false;
+  };
 
   const muscles = Object.entries(artwork.muscles).flatMap(([id, path]) => {
     if (!isMuscleId(id)) {
@@ -91,6 +121,7 @@ export function BodyFigure({
                 d={muscle.path}
                 fill={muscle.fill}
                 stroke={muscle.id === selected ? colors["text-primary"] : palette.separator}
+                opacity={selected !== undefined && muscle.id !== selected ? unselectedOpacity : 1}
                 strokeLinejoin="round"
                 strokeWidth={muscle.id === selected ? SELECTED_OUTLINE_WIDTH : OUTLINE_WIDTH}
                 {...(muscle.isPeak ? { filter: `url(#${glowName})` } : {})}
@@ -115,18 +146,42 @@ export function BodyFigure({
                 "--hit-width": box.width,
                 "--hit-height": box.height,
               })}
+              {...(onLongPressMuscle === undefined
+                ? {}
+                : {
+                    accessibilityActions: [
+                      { name: DETAILS_ACTION, label: BODY_MAP.muscleDetailsAction },
+                    ],
+                    onAccessibilityAction: ({ nativeEvent }: AccessibilityActionEvent) => {
+                      if (nativeEvent.actionName === DETAILS_ACTION) {
+                        onLongPressMuscle(box.muscle);
+                      }
+                    },
+                  })}
               onLongPress={
                 onLongPressMuscle &&
                 (() => {
-                  onLongPressMuscle(box.muscle);
+                  if (!isDragged()) {
+                    onLongPressMuscle(box.muscle);
+                  }
                 })
               }
               onPress={
                 onPressMuscle &&
-                (() => {
-                  onPressMuscle(box.muscle);
+                ((event) => {
+                  touch.current.latest = pointOf(event);
+                  if (!isDragged()) {
+                    onPressMuscle(box.muscle);
+                  }
                 })
               }
+              onPressIn={(event) => {
+                const point = pointOf(event);
+                touch.current = { origin: point, latest: point };
+              }}
+              onTouchMove={(event) => {
+                touch.current.latest = pointOf(event);
+              }}
             />
           );
         })}

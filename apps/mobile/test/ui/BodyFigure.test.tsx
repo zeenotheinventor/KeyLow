@@ -201,6 +201,32 @@ describe("BodyFigure", () => {
     });
   });
 
+  describe("the muscles that are not selected", () => {
+    it("should draw every muscle but the selected one at the opacity asked for, and the selected one in full", async () => {
+      await renderFigure({ selected: "chest_upper", unselectedOpacity: 0.4 });
+
+      musclesOf("male", "front").forEach(([id]) => {
+        expect(propOf(drawingOf(id).props, "opacity")).toBe(id === "chest_upper" ? 1 : 0.4);
+      });
+    });
+
+    it("should leave every muscle in full when there is no selected muscle", async () => {
+      await renderFigure({ unselectedOpacity: 0.4 });
+
+      musclesOf("male", "front").forEach(([id]) => {
+        expect(propOf(drawingOf(id).props, "opacity")).toBe(1);
+      });
+    });
+
+    it("should leave every muscle in full when no opacity is asked for", async () => {
+      await renderFigure({ selected: "chest_upper" });
+
+      musclesOf("male", "front").forEach(([id]) => {
+        expect(propOf(drawingOf(id).props, "opacity")).toBe(1);
+      });
+    });
+  });
+
   describe("the muscles", () => {
     it.each(bodies)(
       "should draw the %s figure's muscles in the order of the artwork",

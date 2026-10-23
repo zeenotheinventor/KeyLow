@@ -1,6 +1,6 @@
 import type { BodyFigureValues } from "../ui";
 import type { BodyMapScale } from "@keylow/core/copy";
-import type { BodyArtworkFigure, BodyMapView } from "@keylow/core/training";
+import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
 
 export type BodyMapCardProps = {
   /** The scale the figures are coloured by. */
@@ -25,4 +25,8 @@ export type BodyMapCardProps = {
   onToggle: () => void;
   /** A line under the button, or null for none: why the two views match, or why Projected is off. */
   note: string | null;
+  /** The muscle outlined, whose sheet is open. */
+  selected?: MuscleId | undefined;
+  /** Called when a muscle is pressed and held. Left out, the figures are plain images. */
+  onLongPressMuscle?: ((muscle: MuscleId) => void) | undefined;
 };
