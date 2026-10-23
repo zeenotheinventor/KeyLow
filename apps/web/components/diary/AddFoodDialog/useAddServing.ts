@@ -90,6 +90,7 @@ export function useAddServing(resolveLoggedAt: () => LoggedAt): AddServing {
       quantity: amount.quantity,
       unit: amount.unit,
       ...(amount.unit === "portion" ? { portion: amount.portion } : {}),
+      foodPortions: portions,
       loggedAt: loggedAt.toISOString(),
       localDate,
     });

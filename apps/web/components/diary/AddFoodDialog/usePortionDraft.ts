@@ -48,6 +48,7 @@ export function usePortionDraft(foodId: string | undefined): PortionDraft {
           quantity: chosen.quantity,
           unit: chosen.unit,
           ...(chosen.unit === "portion" ? { portion: chosen.portion } : {}),
+          foodPortions: amount.portions,
           loggedAt: loggedAt.toISOString(),
           localDate,
         });

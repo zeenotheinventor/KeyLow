@@ -38,12 +38,13 @@ export const refreshSnapshotFromFood = (
           portions,
         )
       : undefined;
-  const input: FoodSnapshotInput =
+  const amount =
     matched === undefined
       ? { quantity: snapshot.quantity, unit: snapshot.unit }
       : matched.unit === "portion"
         ? { quantity: matched.quantity, unit: matched.unit, portion: matched.portion }
         : { quantity: matched.quantity, unit: matched.unit };
+  const input: FoodSnapshotInput = { ...amount, foodPortions: portions };
   return {
     snapshot: buildFoodSnapshot(food, input),
     portionId: matched?.portion?.id ?? null,

@@ -7,6 +7,7 @@ import {
 import { buildRecipeIngredient } from "@keylow/core/recipes";
 
 import type { ChosenAmount } from "@keylow/core/diary";
+import type { PortionForDensity } from "@keylow/core/nutrition";
 import type { RecipeIngredient } from "@keylow/core/recipes";
 import type { Food } from "@keylow/core/schemas";
 
@@ -23,9 +24,15 @@ const inputOf = (amount: ChosenAmount) => ({
   ...(amount.unit === "portion" ? { portion: amount.portion } : {}),
 });
 
-/** An ingredient of `amount` of `food`, with the food's values as they are now frozen into it. */
-export const newIngredient = (food: Food, amount: ChosenAmount): RecipeIngredient =>
-  buildRecipeIngredient(food, inputOf(amount));
+/**
+ * An ingredient of `amount` of `food`, with the food's values as they are now frozen into it. `foodPortions`
+ * are the food's own, the ones the amount step was drawn from, so the density of a serving label is frozen too.
+ */
+export const newIngredient = (
+  food: Food,
+  amount: ChosenAmount,
+  foodPortions: readonly PortionForDensity[],
+): RecipeIngredient => buildRecipeIngredient(food, { ...inputOf(amount), foodPortions });
 
 /**
  * The ingredient with the amount the amount step handed over. The food's values stay the ones it was added
@@ -42,7 +49,8 @@ export function ingredientWithAmount(
     return ingredient;
   }
 
-  const rebuilt = newIngredient(frozenFoodOf(ingredient), amount);
+  // The food is the frozen one, which holds the density already, so it needs no portions to read one from.
+  const rebuilt = newIngredient(frozenFoodOf(ingredient), amount, []);
 
   return amount.unit === "portion" && amount.portion.id === SNAPSHOT_PORTION_ID
     ? { ...rebuilt, portion_id: ingredient.portion_id }

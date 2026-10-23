@@ -132,7 +132,7 @@ const refreshIngredient = <Ingredient extends RecipeIngredient>(
   if (live.food.id !== ingredient.food_id) {
     throw new RangeError("The food is not the one this ingredient was added from");
   }
-  if (!foodChangedSinceLogged(live.food, ingredient.snapshot)) {
+  if (!foodChangedSinceLogged(live.food, ingredient.snapshot, live.portions)) {
     return kept({ foodGone: false });
   }
   const refreshed = refreshSnapshotFromFood(

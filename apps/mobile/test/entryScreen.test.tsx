@@ -1110,6 +1110,113 @@ describe("the entry screen", () => {
     });
   });
 
+  describe("a food whose serving label gives a density", () => {
+    const KETCHUP_ID = "55555555-5555-4555-8555-555555555555";
+    const ketchup = buildFood({ id: KETCHUP_ID, name: "Tomato ketchup", source: "off" });
+    const servingOf = (label: string, grams: number): FoodPortion[] => [
+      buildFoodPortion({ food_id: KETCHUP_ID, label, grams, is_default: true }),
+    ];
+    const ENTRY_ID = "00000000-0000-4000-8000-0000000000cc";
+    const bannerText = "This food has changed since you logged it.";
+
+    function logLabelled() {
+      const entry = buildLogEntry({
+        food: ketchup,
+        foodPortions: servingOf("1 tbsp (15 g)", 15),
+        quantity: 30,
+        unit: "g",
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: ENTRY_ID,
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+      entryBackend.foods = [ketchup];
+    }
+
+    it("should not call the food changed when the serving the entry froze is still there", async () => {
+      logLabelled();
+      entryBackend.foodPortions = servingOf("1 tbsp (15 g)", 15);
+      await renderEntry(ENTRY_ID);
+      await screen.findByRole("heading", { name: "Tomato ketchup" });
+      await screen.findByRole("radio", { name: "1 tbsp (15 g)" });
+
+      expect(screen.queryByText(bannerText)).not.toBeOnTheScreen();
+    });
+
+    it("should call the food changed once the serving it froze has changed", async () => {
+      logLabelled();
+      entryBackend.foodPortions = servingOf("1 tbsp (20 g)", 20);
+      await renderEntry(ENTRY_ID);
+
+      expect(await screen.findByText(bannerText)).toBeOnTheScreen();
+    });
+
+    it("should say nothing about a change while the food's portions have not loaded", async () => {
+      logLabelled();
+      entryBackend.foodPortions = servingOf("1 tbsp (15 g)", 15);
+      diaryBackend.hungTables.add("food_portions");
+      await renderEntry(ENTRY_ID);
+      await screen.findByRole("heading", { name: "Tomato ketchup" });
+      await waitFor(() => {
+        expect(diaryBackend.requests.some((request) => request.table === "food_portions")).toBe(
+          true,
+        );
+      });
+      await act(async () => {
+        await Promise.resolve();
+      });
+
+      expect(screen.queryByText(bannerText)).not.toBeOnTheScreen();
+    });
+
+    it("should show in the hero what Save stores for an entry that froze no density", async () => {
+      const drink = buildFood({
+        id: KETCHUP_ID,
+        name: "Cola",
+        basis: "per_100ml",
+        kcal: 300,
+        protein_g: 0,
+        fat_g: 0,
+        carbs_g: 75,
+      });
+      const entry = buildLogEntry({
+        food: drink,
+        quantity: 100,
+        unit: "ml",
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: ENTRY_ID,
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+      entryBackend.foods = [drink];
+      entryBackend.foodPortions = [
+        buildFoodPortion({ food_id: KETCHUP_ID, label: "100 ml (103 g)", grams: null, ml: 100 }),
+      ];
+      const user = await renderEntry(ENTRY_ID);
+      await screen.findByRole("heading", { name: "Cola" });
+      await screen.findByRole("radio", { name: "100 ml (103 g)" });
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+      await user.clear(amountField());
+      await user.type(amountField(), "100");
+
+      // No density was frozen, so 100 g is read as 100 ml: 300 kcal, as Save stores.
+      expect(heroKcal("For 100 g").getByText("300")).toBeOnTheScreen();
+    });
+  });
+
   describe("a food logged as a portion", () => {
     it("should set 100 when g is pressed, not read 1 g", async () => {
       const user = await renderEntry(2);

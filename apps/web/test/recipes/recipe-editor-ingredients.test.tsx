@@ -5,7 +5,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { oliveOil } from "../diary/portionFoods";
+import { ketchup, oliveOil } from "../diary/portionFoods";
 import { makeFood, makePortion, makeSearchHit } from "../foods/support";
 
 import type { RecipeEditorExisting } from "@/components/recipes";
@@ -340,6 +340,36 @@ describe("adding an ingredient", () => {
     });
   });
 
+  it("should freeze the density of a branded food's serving label into the ingredient it adds", async () => {
+    api.hits = [hitOf(ketchup.food)];
+    api.foods.set(ketchup.food.id, ketchup.food);
+    api.portions.set(ketchup.food.id, ketchup.portions);
+    let saved: RecipeEditorExisting["ingredients"] = [];
+    updateRecipe.mockImplementation(
+      (save: { ingredients: RecipeEditorExisting["ingredients"] }) => {
+        saved = save.ingredients;
+        return Promise.resolve(recipeWith(save.ingredients));
+      },
+    );
+    showEditor();
+    fireEvent.click(addIngredientButton());
+    search("ketchup");
+    chooseResult(/Tomato ketchup/);
+    expect(chipNames()).toEqual(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+    typeAmount("2");
+    fireEvent.click(inDialog().getByRole("button", { name: "Add to recipe" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(updateRecipe).toHaveBeenCalledOnce();
+    });
+    const added = saved.at(-1);
+    expect(added?.snapshot.density).toBe(1);
+    expect(added?.resolved_grams).toBeCloseTo(30, 10);
+  });
+
   it("should add an ingredient at 1 medium as 1 medium (110 g)", () => {
     showEditor();
     fireEvent.click(addIngredientButton());
@@ -591,6 +621,40 @@ describe("editing an ingredient", () => {
     expect(
       within(table().getByRole("row", { name: /Onions/ })).getAllByRole("cell")[5]?.textContent,
     ).toBe("70 kcal");
+  });
+
+  it("should show what Save stores for an ingredient that froze no density, though its food now has a serving label", () => {
+    const drink = makeFood({
+      id: idOf(51),
+      name: "Cola",
+      basis: "per_100ml",
+      kcal: 300,
+      protein_g: 0,
+      fat_g: 0,
+      carbs_g: 75,
+    });
+    api.foods.set(drink.id, drink);
+    api.portions.set(drink.id, [
+      makePortion({
+        id: idOf(52),
+        food_id: drink.id,
+        label: "100 ml (103 g)",
+        grams: null,
+        ml: 100,
+      }),
+    ]);
+    showEditor(recipeWith([buildRecipeIngredient(drink, { quantity: 100, unit: "ml" })]));
+    openEdit("Cola");
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+    typeAmount("100");
+
+    // The ingredient froze no density, so 100 g is read as 100 ml: 300 kcal, as Save stores.
+    expect(inDialog().getByText("300")).toBeTruthy();
+    fireEvent.click(inDialog().getByRole("button", { name: "Save" }));
+    expect(
+      within(table().getByRole("row", { name: /Cola/ })).getAllByRole("cell")[5]?.textContent,
+    ).toBe("300 kcal");
   });
 
   it("should still open when the food has gone, from the ingredient's own values", () => {

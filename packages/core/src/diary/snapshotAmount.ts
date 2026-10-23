@@ -24,6 +24,7 @@ export function snapshotAsFood(snapshot: FoodSnapshot): AmountFood {
     fat_g: snapshot.per100.fat_g,
     carbs_g: snapshot.per100.carbs_g,
     fibre_g: snapshot.per100.fibre_g,
+    isSnapshot: true,
   };
 }
 

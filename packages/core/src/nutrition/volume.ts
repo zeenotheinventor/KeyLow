@@ -1,9 +1,10 @@
 import { estimateDensity } from "./density";
+import { ML_PER_TBSP, ML_PER_TSP } from "./units";
 
+import type { PortionForDensity } from "./labelDensity";
 import type { Food } from "../schemas/food";
 
-export const ML_PER_TSP = 5;
-export const ML_PER_TBSP = 15;
+export { ML_PER_TBSP, ML_PER_TSP };
 
 const TSP_LABEL = "1 tsp";
 const TBSP_LABEL = "1 tbsp";
@@ -48,14 +49,21 @@ type VolumeFood = Pick<Food, "source" | "source_ref" | "food_group" | "density_g
 /**
  * Whether a food can be logged in millilitres and spoons. A food measured per 100 ml can without a
  * density; any other food needs one, its own or an estimate, because `estimateDensity` returning null
- * is only "no volume measure" for a food that is not already measured per 100 ml.
+ * is only "no volume measure" for a food that is not already measured per 100 ml. `portions` are the
+ * food's own: one such as "1 tbsp (15 g)" is a density for a food that has no other (see `estimateDensity`).
  */
-export const canMeasureByVolume = (food: VolumeFood & Pick<Food, "basis">): boolean =>
-  food.basis === "per_100ml" || estimateDensity(food) !== null;
+export const canMeasureByVolume = (
+  food: VolumeFood & Pick<Food, "basis">,
+  portions: readonly PortionForDensity[] = [],
+): boolean => food.basis === "per_100ml" || estimateDensity(food, portions) !== null;
 
 /**
  * The density a log freezes into the snapshot: the food's own, else the estimate, else null. Freezing it
- * is what keeps an entry from changing when the density table is retuned.
+ * is what keeps an entry from changing when the density table is retuned, or when the food's portions
+ * are edited. Pass the same `portions` that `canMeasureByVolume` was given, so the entry agrees with the
+ * chips the person chose from.
  */
-export const densityForLogging = (food: VolumeFood): number | null =>
-  food.density_g_per_ml ?? estimateDensity(food)?.gPerMl ?? null;
+export const densityForLogging = (
+  food: VolumeFood,
+  portions: readonly PortionForDensity[] = [],
+): number | null => food.density_g_per_ml ?? estimateDensity(food, portions)?.gPerMl ?? null;

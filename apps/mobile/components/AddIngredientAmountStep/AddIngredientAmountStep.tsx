@@ -56,7 +56,7 @@ export function AddIngredientAmountStep({
       portions={portions}
       onBack={onBack}
       onSubmit={(amount) => {
-        onAdd(newIngredient(food, amount));
+        onAdd(newIngredient(food, amount, portions));
       }}
     />
   );

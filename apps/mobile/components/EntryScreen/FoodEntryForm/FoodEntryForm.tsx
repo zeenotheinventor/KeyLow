@@ -42,7 +42,9 @@ export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) 
     liveFood.data !== undefined &&
     liveFood.data !== null &&
     !isFoodGone &&
-    foodChangedSinceLogged(liveFood.data, entry.snapshot);
+    // The density of a serving label comes from the portions, so wait for them to be there to compare it.
+    livePortions.data !== undefined &&
+    foodChangedSinceLogged(liveFood.data, entry.snapshot, livePortions.data);
 
   return (
     <PortionPicker

@@ -379,6 +379,7 @@ describe("portion picker", () => {
         quantity: 1,
         unit: "portion",
         portion: portionFixtures[0],
+        foodPortions: portionFixtures,
         loggedAt: "2026-10-15T11:40:30.000Z",
         localDate: "2026-10-15",
       });
@@ -883,6 +884,33 @@ describe("the portion picker's unit chips", () => {
         portion_id: null,
         snapshot: { portion: { label: "1 tsp", ml: 5 } },
       });
+    });
+  });
+
+  describe("a branded food whose serving is in spoons", () => {
+    it("should offer spoons from the serving and log them at the label's weight", async () => {
+      showFood(buildFood({ ...foodFixture, source: "off", density_g_per_ml: null }));
+      Object.assign(portionsQuery, {
+        data: [
+          buildFoodPortion({
+            id: "ketchup-serving",
+            label: "1 tbsp (15 g)",
+            grams: 15,
+            is_default: true,
+          }),
+        ],
+      });
+      const user = await renderPicker({ day: "2026-10-15" });
+      expectChips(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+      await typeAmount(user, "2");
+      expect(hero("For 2 tbsp (30 ml, 30 g)")).toBeOnTheScreen();
+      await user.press(addButton());
+
+      const entry = loggedEntry();
+      expect(entry.snapshot.density).toBe(1);
+      expect(entry.resolved_grams).toBeCloseTo(30, 10);
     });
   });
 

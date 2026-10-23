@@ -103,6 +103,7 @@ export default function PortionPickerRoute() {
         quantity: selection.quantity,
         unit: selection.unit,
         ...(selection.unit === "portion" ? { portion: selection.portion } : {}),
+        foodPortions: portions,
         loggedAt: loggedAt.toISOString(),
         localDate,
       });

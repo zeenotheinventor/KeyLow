@@ -3,11 +3,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { useRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { diaryDay, foodEntry, quickEntry, recipeEntry } from "./support";
-import { makeFood } from "../foods/support";
+import { diaryDay, entryLoggedFrom, foodEntry, quickEntry, recipeEntry } from "./support";
+import { makeFood, makePortion } from "../foods/support";
 
 import type { DiaryDay, EntryUpdate, LogEntry } from "@keylow/api-client";
-import type { Food } from "@keylow/core/schemas";
+import type { Food, FoodPortion } from "@keylow/core/schemas";
 
 import { EditEntryDialog } from "@/components/diary/EditEntryDialog";
 import { ToastProvider } from "@/components/ui/Toast";
@@ -16,6 +16,7 @@ type Api = {
   timeZone: string;
   entries: LogEntry[];
   food: Food | null | undefined;
+  portions: FoodPortion[] | undefined;
   updateEntry: {
     mutateAsync: ReturnType<typeof vi.fn<(update: EntryUpdate) => Promise<LogEntry>>>;
   };
@@ -27,6 +28,7 @@ const api = vi.hoisted((): Api => ({
   timeZone: "UTC",
   entries: [],
   food: undefined,
+  portions: [],
   updateEntry: { mutateAsync: undefined as never },
   deleteEntry: { mutateAsync: undefined as never },
   restoreEntry: { mutateAsync: undefined as never },
@@ -37,7 +39,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   useProfileTimeZone: () => ({ data: api.timeZone }),
   useDiaryDay: (date: string): { data: DiaryDay } => ({ data: diaryDay(date, api.entries) }),
   useFood: () => ({ data: api.food }),
-  useFoodPortions: () => ({ data: undefined }),
+  useFoodPortions: () => ({ data: api.portions }),
   useUpdateEntry: () => api.updateEntry,
   useDeleteEntry: () => api.deleteEntry,
   useRestoreEntry: () => api.restoreEntry,
@@ -106,6 +108,7 @@ const amount = () => screen.getByRole("textbox", { name: /^Amount/ });
 beforeEach(() => {
   api.timeZone = "UTC";
   api.food = loggedFood();
+  api.portions = [];
   api.updateEntry.mutateAsync = vi.fn((update: EntryUpdate) => Promise.resolve(update.entry));
   api.deleteEntry.mutateAsync = vi.fn(() => Promise.resolve());
   api.restoreEntry.mutateAsync = vi.fn(() => Promise.resolve());
@@ -442,6 +445,73 @@ describe("the edit entry dialog for a logged food", () => {
 
     expect(screen.queryByText("This food has changed since you logged it.")).toBeNull();
     expect(screen.queryByRole("button", { name: "Update to current food data" })).toBeNull();
+  });
+
+  describe("a food whose serving label gives a density", () => {
+    const ketchup = makeFood({ id: "55555555-5555-4555-8555-555555555555", name: "Ketchup" });
+    const servingOf = (label: string, grams: number): FoodPortion[] => [
+      makePortion({ food_id: ketchup.id, label, grams, is_default: true }),
+    ];
+    const bannerText = "This food has changed since you logged it.";
+    const loggedWithLabel = () =>
+      entryLoggedFrom({
+        food: ketchup,
+        foodPortions: servingOf("1 tbsp (15 g)", 15),
+        quantity: 30,
+        unit: "g",
+        date: TODAY,
+        time: "12:40",
+      });
+
+    beforeEach(() => {
+      api.food = ketchup;
+    });
+
+    it("should not call the food changed when the entry froze the density of the serving it still has", () => {
+      api.portions = servingOf("1 tbsp (15 g)", 15);
+      renderDialog(loggedWithLabel());
+
+      expect(screen.queryByText(bannerText)).toBeNull();
+    });
+
+    it("should call the food changed once the serving it froze has changed", () => {
+      api.portions = servingOf("1 tbsp (20 g)", 20);
+      renderDialog(loggedWithLabel());
+
+      expect(screen.getByText(bannerText)).toBeTruthy();
+    });
+
+    it("should say nothing about a change until the food's portions have loaded", () => {
+      api.portions = undefined;
+      renderDialog(loggedWithLabel());
+
+      expect(screen.queryByText(bannerText)).toBeNull();
+    });
+  });
+
+  describe("an entry that froze no density, on a drink that now has a serving label", () => {
+    it("should show in the hero what saving stores, not a weight read from the label", () => {
+      const drink = makeFood({
+        id: "66666666-6666-4666-8666-666666666666",
+        name: "Cola",
+        basis: "per_100ml",
+        kcal: 300,
+      });
+      api.food = drink;
+      api.portions = [
+        makePortion({ food_id: drink.id, label: "100 ml (103 g)", ml: 100, grams: null }),
+      ];
+      renderDialog(
+        entryLoggedFrom({ food: drink, quantity: 100, unit: "ml", date: TODAY, time: "12:40" }),
+      );
+
+      fireEvent.click(screen.getByRole("radio", { name: "g" }));
+      fireEvent.change(amount(), { target: { value: "100" } });
+
+      // The snapshot froze no density, so 100 g is read as 100 ml, which is what saving stores (300 kcal).
+      const hero = screen.getByRole("group", { name: "Energy and macros, For 100 g" });
+      expect(within(hero).getByText("300")).toBeTruthy();
+    });
   });
 
   describe("when the food has been deleted", () => {

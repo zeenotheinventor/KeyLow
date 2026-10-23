@@ -1,6 +1,7 @@
 import { buildFoodSnapshot } from "./buildFoodSnapshot";
 
 import type { FoodSnapshot } from "./schemas";
+import type { PortionForDensity } from "../nutrition/labelDensity";
 import type { Food } from "../schemas/food";
 import type { NullableNutrients } from "../schemas/nutrients";
 
@@ -34,12 +35,18 @@ const densityChanged = (food: Food, current: FoodSnapshot, snapshot: FoodSnapsho
  * offers "Update to current food data".
  *
  * The live food is frozen the way a log freezes it, so what is compared is exactly what an update would
- * write.
+ * write. That includes a density read from a portion's label, so give the food's current `portions`: without
+ * them an entry that froze such a density would read as changed.
  */
-export const foodChangedSinceLogged = (food: Food, snapshot: FoodSnapshot): boolean => {
+export const foodChangedSinceLogged = (
+  food: Food,
+  snapshot: FoodSnapshot,
+  portions: readonly PortionForDensity[] = [],
+): boolean => {
   const current = buildFoodSnapshot(food, {
     quantity: 1,
     unit: food.basis === "per_100ml" ? "ml" : "g",
+    foodPortions: portions,
   });
 
   return (

@@ -1,3 +1,6 @@
+import { densityFromPortions } from "./labelDensity";
+
+import type { PortionForDensity } from "./labelDensity";
 import type { Food } from "../schemas/food";
 
 /*
@@ -9,6 +12,10 @@ import type { Food } from "../schemas/food";
  *               density is known and differs from its group.
  *   "group"     the entry for the food's CoFID food group, found by the longest matching prefix of the
  *               group code (BAH, else BA, else B). Only CoFID foods get one.
+ *   "label"     the density of the food's own serving, from a portion such as "1 tbsp (15 g)" (see
+ *               `densityFromPortions`). The manufacturer's figure, used only where the rules above give none,
+ *               so it is how a branded or user food gets spoons. It is read from the portions each time, so
+ *               a food cached before this rule existed has it too, and a log freezes it like the others.
  * It returns null when none applies: measuring this food by volume is not sensible (a chicken breast, a
  * banana), or its group is too mixed for one honest number. Null does not mean the food cannot be measured
  * in millilitres: a food whose nutrient basis is per_100ml (CoFID group Q, the alcoholic drinks) is
@@ -28,7 +35,7 @@ import type { Food } from "../schemas/food";
  * so it is used here as g/ml.
  */
 
-export type DensityBasis = "food" | "override" | "group";
+export type DensityBasis = "food" | "override" | "group" | "label";
 
 export type DensityEstimate = { gPerMl: number; basis: DensityBasis };
 
@@ -520,29 +527,39 @@ const findGroupEntry = (groupCode: string): CofidGroupEntry | undefined => {
   return undefined;
 };
 
-/**
- * A food's density in grams per millilitre and where it came from, or null when no density applies.
- * Null does not mean the food cannot be measured in millilitres: a food whose nutrient basis is per_100ml
- * (CoFID group Q) is measured in millilitres without a density, so check the basis before treating null as
- * "no volume measure".
- */
-export const estimateDensity = (
-  food: Pick<Food, "source" | "source_ref" | "food_group" | "density_g_per_ml">,
+const estimateFromCofidTables = (
+  food: Pick<Food, "source_ref" | "food_group">,
 ): DensityEstimate | null => {
-  if (food.density_g_per_ml !== null) {
-    return { gPerMl: food.density_g_per_ml, basis: "food" };
-  }
-  if (food.source !== "cofid") {
-    return null;
-  }
   const override =
     food.source_ref === null ? undefined : lookUp(COFID_DENSITY_OVERRIDES, food.source_ref);
   if (override !== undefined) {
     return { gPerMl: override.gPerMl, basis: "override" };
   }
   const group = food.food_group === null ? undefined : findGroupEntry(food.food_group);
-  if (group === undefined || group.gPerMl === null) {
-    return null;
+  return group === undefined || group.gPerMl === null
+    ? null
+    : { gPerMl: group.gPerMl, basis: "group" };
+};
+
+/**
+ * A food's density in grams per millilitre and where it came from, or null when no density applies. It
+ * is the one place that decides the density, in the order of the list at the top of this file. `portions`
+ * are the food's own, and only the "label" rule reads them; leave them out and it does not apply.
+ * Null does not mean the food cannot be measured in millilitres: a food whose nutrient basis is per_100ml
+ * (CoFID group Q) is measured in millilitres without a density, so check the basis before treating null as
+ * "no volume measure".
+ */
+export const estimateDensity = (
+  food: Pick<Food, "source" | "source_ref" | "food_group" | "density_g_per_ml">,
+  portions: readonly PortionForDensity[] = [],
+): DensityEstimate | null => {
+  if (food.density_g_per_ml !== null) {
+    return { gPerMl: food.density_g_per_ml, basis: "food" };
   }
-  return { gPerMl: group.gPerMl, basis: "group" };
+  const fromTables = food.source === "cofid" ? estimateFromCofidTables(food) : null;
+  if (fromTables !== null) {
+    return fromTables;
+  }
+  const gPerMl = densityFromPortions(portions);
+  return gPerMl === null ? null : { gPerMl, basis: "label" };
 };

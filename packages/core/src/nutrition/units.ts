@@ -4,6 +4,9 @@ import type { Food, FoodPortion, NutrientBasis } from "../schemas/food";
 
 export const GRAMS_PER_OUNCE = 28.3495;
 export const ML_PER_FLUID_OUNCE = 29.5735;
+/** The app's spoons are the metric ones, not the larger US customary measures. */
+export const ML_PER_TSP = 5;
+export const ML_PER_TBSP = 15;
 
 /** The units a quantity can be logged in. Recipe servings are resolved elsewhere. */
 export const quantityUnitSchema = z.enum(["g", "ml", "oz", "fl_oz", "portion"]);

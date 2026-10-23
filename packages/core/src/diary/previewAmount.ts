@@ -26,7 +26,13 @@ export type AmountFood = Pick<
   Food,
   "basis" | "density_g_per_ml" | "kcal" | "protein_g" | "fat_g" | "carbs_g" | "fibre_g"
 > &
-  Partial<Pick<Food, "source" | "source_ref" | "food_group">>;
+  Partial<Pick<Food, "source" | "source_ref" | "food_group">> & {
+    /**
+     * True for the values a logged entry froze (`snapshotAsFood`). Its density is whatever it froze, so
+     * none is read from portions: saving the entry uses only the snapshot's, and the hero must agree.
+     */
+    isSnapshot?: true;
+  };
 
 /** What an amount comes to: the values for it and the caption that says what it is, such as "For 150 g". Values are null while there is no valid amount. */
 export type AmountSummary = {
@@ -63,13 +69,16 @@ function amountOf<Portion extends AmountPortion>(
 }
 
 // The density `buildLogEntry` freezes for the food, so the hero and the entry it makes agree to the digit.
-const densityOf = (food: AmountFood): number | null =>
-  densityForLogging({
-    density_g_per_ml: food.density_g_per_ml,
-    source: food.source ?? "user",
-    source_ref: food.source_ref ?? null,
-    food_group: food.food_group ?? null,
-  });
+const densityOf = (food: AmountFood, portions: readonly AmountPortion[]): number | null =>
+  densityForLogging(
+    {
+      density_g_per_ml: food.density_g_per_ml,
+      source: food.source ?? "user",
+      source_ref: food.source_ref ?? null,
+      food_group: food.food_group ?? null,
+    },
+    food.isSnapshot === true ? [] : portions,
+  );
 
 function weightOf(amount: ChosenAmount, density: number | null): number | null {
   if (density === null) {
@@ -137,7 +146,7 @@ export function previewAmount<Portion extends AmountPortion>(
   }
 
   try {
-    const density = densityOf(food);
+    const density = densityOf(food, portions);
     const { amount: inBasisUnit } = resolveQuantity(
       { basis: food.basis, density_g_per_ml: density },
       amount.quantity,
