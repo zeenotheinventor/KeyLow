@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23.
 
 ## Context
 
@@ -1234,3 +1234,155 @@ Whoever changes the portion rules sets `OFF_PORTION_RULES_FROM` to the moment th
 ### Consequences of Amendment 10
 
 `off-product` gains one branch and no migration. The app asking for the lookup of a product it already holds is KEY-522. Any further deviation from the frozen Decision, from Amendments 1 to 9 or from this amendment needs an Amendment 11 before the migration or code that implements it lands.
+
+## Amendment 11 (Body measurements: body fat and lean mass, 2026-10-23)
+
+### Status
+
+Recorded on 2026-10-23 under KEY-569, part of KEY-5 (the M5 brief, body composition). It implements Zee's ruling of 2026-10-23 on KEY-5: body fat percentage and lean mass in kilograms are imported from Health Connect only, there is no manual entry in v1, and a smoothed trend comes later in core. The remaining details are interpretations made for implementation. They are, in full:
+
+- that the readings live in a new table, `body_measurements`, and not in new columns on `weigh_ins`.
+- the enum `body_measurement_kind` and its two values, and that the `weigh_in_source` enum is reused.
+- the single `value` column, its type, and the per-kind bounds and rounding.
+- the columns and the `external_id` pairing check.
+- the plain import key, with `kind` in it.
+- the column grants (`update` on `deleted_at` only), the three policies, and that `service_role` gets nothing.
+- the list index.
+- that the table is import only.
+- the export and account deletion contract recorded for M7.
+- the health data rules for body measurements.
+
+Zee confirms them by approving the PR that carries this amendment. Amendments 1 to 10 are unchanged. The frozen Decision text is unchanged, because it names no table for body composition. This amendment adds one enum and one table.
+
+### Why a new table
+
+Health Connect delivers body fat (a `BodyFat` record) and lean mass (a `LeanBodyMass` record) as records of their own, each with its own sample id and timestamp. A smart scale writes the three at the same instant, but nothing ties them together, and either of the new two can arrive without a weight (a body fat reading from a different app, or a weight with no body composition). Columns on `weigh_ins` would need a second import key for each new column, would allow rows with no weight, and would force every weight list and the weight trend to hide them. A `kind` column also leaves room for bone mass or body water later without another table.
+
+### The kind enum and the source enum
+
+Answer: an enum `public.body_measurement_kind ('body_fat_pct', 'lean_mass_kg')`, in the style of Amendment 9's `weigh_in_source`. The values are listed in that order, and the order is part of the contract.
+
+`source` reuses `public.weigh_in_source ('manual', 'healthkit', 'health_connect', 'import')`. The enum keeps its name, for three reasons:
+
+- Renaming an enum, or adding a second one with the same four values, would touch a type that `weigh_ins` already uses in production, for no gain.
+- The enum names where a reading came from, which is the same fact for a weight and for a body measurement. Both come from the same two platform stores or from a file import.
+- A type name in the generated types is a name clients import. One source type for every body reading is simpler to read than two that must be kept equal.
+
+M5 writes only `health_connect` to `body_measurements`. `manual`, `healthkit` and `import` stay valid so that a later entry screen or HealthKit needs no migration, and nothing writes them or reads them specially.
+
+### The numbers
+
+Every figure this amendment sets is in this table, so that the migration and core use the same ones.
+
+| What                             | Rule                                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Body fat (`body_fat_pct`)        | Percentage points, from 1 to 75 inclusive.                                                        |
+| Lean mass (`lean_mass_kg`)       | Kilograms, from 10 to 300 inclusive.                                                              |
+| Value column                     | `numeric(6,3)` for both kinds. Three decimals is one thousandth of a point or of a kilogram.      |
+| Value stored                     | The column rounds to 3 decimals, half away from zero, and the check applies to the rounded value. |
+| Health sample id (`external_id`) | When present, 1 to 200 characters, counted in characters.                                         |
+
+- The bounds are the planner's and they are written as one table check, so that the two kinds cannot drift apart: `(kind = 'body_fat_pct' and value between 1 and 75) or (kind = 'lean_mass_kg' and value between 10 and 300)`.
+- A zero or an implausible reading is a sensor fault. Core skips it before it is sent (KEY-570), so the check is a backstop and not the first line.
+- If a later amendment moves a bound, core's constants follow it. If they ever differ, this table wins.
+- Kilograms are the only stored mass unit, as for weights. Pounds are display only.
+
+### `body_measurements`
+
+| Column        | Definition                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | `uuid primary key default gen_random_uuid()` (Amendment 1).                                                                             |
+| `user_id`     | `uuid not null default auth.uid() references auth.users (id) on delete cascade`. The RLS with-check rejects any value but the caller's. |
+| `kind`        | `public.body_measurement_kind not null`, with no default.                                                                               |
+| `measured_at` | `timestamptz not null`, with no default. The instant of the reading, always sent by the client.                                         |
+| `local_date`  | `date not null`. The rules of Amendment 9, "`local_date` and `tz`", apply unchanged.                                                    |
+| `tz`          | `text not null`. The database does not validate it.                                                                                     |
+| `value`       | `numeric(6,3) not null`, with the per-kind check in "The numbers".                                                                      |
+| `source`      | `public.weigh_in_source not null`, with no default.                                                                                     |
+| `external_id` | `text`, nullable, with the pairing check below.                                                                                         |
+| `deleted_at`  | `timestamptz`, nullable. Null means live.                                                                                               |
+| `created_at`  | `timestamptz not null default now()` (Amendment 1).                                                                                     |
+
+- There is no `note` column. Nothing in M5 lets a user type against a body reading.
+- Rounding works as Amendment 9 describes for the weight. So for body fat, 0.9996 is stored as 1.000 and passes, 0.9994 is stored as 0.999 and fails, 75.0004 is stored as 75.000 and passes, and 75.0006 is stored as 75.001 and fails. For lean mass, 9.9996 is stored as 10.000 and passes. A value of 1000 or more cannot be stored in `numeric(6,3)` and fails with "numeric field overflow" (SQLSTATE 22003) before the check runs.
+- The check is cross-kind. A value of 30 is valid for both kinds, 5 is valid as body fat and refused as lean mass, and 150 is refused as body fat and valid as lean mass.
+- Several readings of one kind on one date are allowed. A later trend takes the median of a date's readings, as the weight trend does.
+- `user_id` references `auth.users` with `on delete cascade`, so deleting the account deletes its body measurements, soft-deleted rows included.
+- The names of the constraints are the migration's call. The rules are the contract.
+
+### `external_id` and the import key
+
+`external_id` pairs with `source` in the same check as Amendment 9 sets for `weigh_ins`:
+
+- a `manual` row has a null `external_id`.
+- a `healthkit` or `health_connect` row has an `external_id`, the Health sample id, of 1 to 200 characters.
+- an `import` row may have either, and when it has one, it is 1 to 200 characters.
+
+A check passes when its expression is null, and `char_length(null)` is null, so each branch that requires an id spells out `external_id is not null`. Core's Health sample mapper returns null, and so skips the sample, for a sample id outside 1 to 200 characters.
+
+The import key is a plain constraint, `unique (user_id, kind, source, external_id)`. It is not a partial index, and it covers every row, soft-deleted ones included. Amendment 9, "The import key outlives a delete", gives the two reasons: a deleted import must never come back at the next import, and PostgREST's `on_conflict` takes column names only, so a partial index fails with SQLSTATE 42P10. Those reasons hold here without change, and the proof recorded there is not repeated.
+
+`kind` is in the key so that a sample id shared by two record types could never drop a reading silently. Health Connect gives each record its own id, and nothing promises that an id of a `BodyFat` record differs from an id of a `LeanBodyMass` record. With `kind` in the key, the same id under the other kind is a different reading and both are stored.
+
+The bulk import is one insert that ignores duplicates (`on conflict (user_id, kind, source, external_id) do nothing`, which PostgREST sends for an upsert with `ignoreDuplicates`). It needs no `update` grant on any key column.
+
+### Import only
+
+M5 imports body fat and lean mass from Health Connect and builds no manual entry for them (Zee, 2026-10-23, who prefers sourced data to typing). If a typed body fat entry is wanted later, it is a screen and a core builder and needs no migration, because the insert grant, the `manual` source and the pairing check are already here.
+
+Because the rows are imported, there is no edit of a value. A wrong reading is removed, not corrected, and the next import cannot bring it back, since the soft-deleted row holds the import key. Soft-deleted rows are kept for good, until the account is deleted, for the reason Amendment 9 gives in "Edit and delete rules".
+
+### Privileges and row level security
+
+In the style of Amendments 8 and 9: `revoke all` on the table from `anon`, `authenticated` and `service_role`, then explicit column grants to `authenticated`. RLS is enabled.
+
+- `select` on all columns.
+- `insert` on `user_id`, `kind`, `measured_at`, `local_date`, `tz`, `value`, `source` and `external_id`.
+- `update` on `deleted_at` only. `user_id`, `kind`, `measured_at`, `local_date`, `tz`, `value`, `source` and `external_id` are insert only, so a row never changes owner, kind, value or key. The soft delete grant is there so that a later "remove this reading" screen needs no migration.
+- No `delete`. `id` and `created_at` are in neither list. Account deletion cascades regardless of grants, because a foreign key action does not run as the caller.
+- `anon` gets nothing, and `service_role` gets nothing. Nothing server side reads or writes body measurements yet. The M7 export grants what it needs in its own migration.
+
+Policies, as predicates, all for `authenticated` and all using `(select auth.uid())`:
+
+- `body_measurements_select_own`: using `user_id = (select auth.uid())`.
+- `body_measurements_insert_own`: with check `user_id = (select auth.uid())`.
+- `body_measurements_update_own`: using and with check `user_id = (select auth.uid())`.
+
+There is no `delete` policy, because there is no grant. The select policy does not filter `deleted_at`, and the clients filter it. Terms acceptance is not in the policies, as in Amendment 9. A column added later is not writable by clients until a migration grants it.
+
+### Indexes
+
+- The unique constraint above. Its index leads with `user_id`.
+- One list index, `(user_id, kind, local_date desc, measured_at desc)`. It serves the list of one kind, the trend over the whole history of a kind, and the range windows (a `local_date` window of one kind). Ties are broken by `id` in the read and not in the index, as in Amendment 5.
+
+Both indexes lead with `user_id`, so the cascade from `auth.users` has an index on the referencing column. No other index is added.
+
+### Health data
+
+A body fat or lean mass reading is health data, under the same rules as a weigh-in (Amendment 9, "Health data"). A value and anything read from a Health sample (its id, its time and its value) never appear in a log, an error report or an analytics event. Only row ids and counts do.
+
+- An imported row keeps only the value, the timestamp and the sample id from the Health record. Nothing else the record carries is read or stored.
+- The rule binds the code we write. PostgreSQL's own error log, and so the Supabase logs, can hold a failing row in the DETAIL of a check violation, which no client can prevent. Core therefore checks the value and the sample id before they are sent (KEY-570).
+- No client code reads, logs or reports the message or detail of a database error from a body measurement read or write. An error carries the action and the code only.
+- The migration, the seed and the tests of KEY-569 neither log a value nor raise a notice with one.
+
+### Export and account deletion
+
+There is no data export and no in-app account deletion today (Amendment 9, "Export and account deletion"). This amendment adds to the contract M7 will use:
+
+- Export includes every column of every `body_measurements` row of the user, soft-deleted rows included. The M7 export brief (KEY-7) must add this table to its list. The `service_role` grant that an export path needs is M7's to add.
+- Account deletion works through the `on delete cascade` foreign key from `auth.users` (`body_measurements.user_id`) and needs no code.
+
+The Privacy Policy lists the health data the app imports. KEY-574 names body fat and lean mass in the Privacy Policy and raises `TERMS_VERSION`, so this amendment changes no policy copy.
+
+### Implemented by
+
+- KEY-569, the migration and seed: the enum `body_measurement_kind`, `body_measurements` with its checks, the plain unique constraint and the list index, the grants and policies, pgTAP (every policy, the exact privileges, the bounds per kind, the import key and the account deletion cascade), the regenerated `packages/db/src/types.gen.ts`, and body measurements in the seed.
+- KEY-570, the core helpers: the constants in "The numbers", the Health sample mappers and the smoothed trend. It builds to the numbers above and must not merge before this amendment is approved.
+- KEY-571, the api-client: the list, the bulk import that ignores duplicates, and the trend over the cached list.
+- KEY-574, the Privacy Policy: it names body fat and lean mass and raises `TERMS_VERSION`.
+- KEY-7 (M7), outside this amendment: the export, which must include this table.
+
+### Consequences of Amendment 11
+
+The migration (KEY-569) creates the enum, the table, the constraint, the index, the grants and the policies, and `packages/db/src/types.gen.ts` gains `body_measurements` and `body_measurement_kind`. Core and the api-client build to the numbers above. The M7 export brief must add `body_measurements`. Any further deviation from the frozen Decision, from Amendments 1 to 10 or from this amendment needs an Amendment 12 before the migration or code that implements it lands.
