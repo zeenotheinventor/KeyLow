@@ -1,4 +1,5 @@
 import { BODY_MAP, describeBodyFigureLabel } from "@keylow/core/copy";
+import { vars } from "nativewind";
 import { useEffect, useState } from "react";
 import { PanResponder, View } from "react-native";
 import Animated from "react-native-reanimated";
@@ -6,11 +7,13 @@ import Animated from "react-native-reanimated";
 import { useCrossFade } from "../../lib/motion";
 import { useScreenReaderEnabled } from "../../lib/screenReader";
 import { BodyFigure, Text } from "../ui";
+import { ViewName } from "../ViewLabel";
 
 import type { BodyMapFiguresProps } from "./types";
-import type { BodyMapView } from "@keylow/core/training";
+import type { BodyMapView, MuscleId } from "@keylow/core/training";
 
 const SIDES = ["front", "back"] as const;
+const SIDE_BY_SIDE_VIEWS = ["actual", "projected"] as const;
 
 // A touch that moves further than this from where it went down is a pan, and never a tap. A muscle button
 // applies the same slop to its own press.
@@ -18,6 +21,10 @@ const TAP_SLOP = 10;
 
 // How strongly the muscles that are not the selected one show while a sheet is open on it.
 const UNSELECTED_OPACITY = 0.4;
+
+function noop() {
+  // A short press on a muscle of the side by side view changes nothing.
+}
 
 // Passes a tap on to whichever `onTap` is listening, which changes as the screen draws again.
 function createTapRelay() {
@@ -46,6 +53,11 @@ function createTapRelay() {
  * `onLongPressMuscle` and the muscle offers Show details as well. `selected` outlines a muscle and dims the others. When
  * the view changes the old figures fade out under the new ones over 220 ms, and are hidden from a screen
  * reader while they do.
+ *
+ * With `sideBySide` the figures are Actual and Projected together, one side of each at the one figure width,
+ * with the view's name over it and its moment under it. Both views show, so a tap on them does nothing,
+ * a short press on a muscle does nothing, and a long press calls `onLongPressMuscle` with the view of the
+ * figure it was on. `selected` outlines its muscle on the figure of `selectedView` only.
  */
 export function BodyMapFigures({
   scale,
@@ -55,8 +67,10 @@ export function BodyMapFigures({
   body,
   figureWidth,
   selected,
+  selectedView,
   onTap,
   onLongPressMuscle,
+  sideBySide,
 }: BodyMapFiguresProps) {
   const { outgoing, incomingStyle, outgoingStyle } = useCrossFade(view, view);
   const isScreenReaderEnabled = useScreenReaderEnabled();
@@ -78,6 +92,60 @@ export function BodyMapFigures({
       },
     }),
   );
+
+  if (sideBySide !== undefined) {
+    return (
+      <View className="flex-row justify-center gap-6">
+        {SIDE_BY_SIDE_VIEWS.map((shown) => (
+          // The column is no wider than its figure, so a long caption wraps under it and cannot push the
+          // row past the card. The width is the figure's, which the screen's width decides.
+          <View
+            key={shown}
+            className="w-[var(--figure-width)] items-center gap-2"
+            style={vars({ "--figure-width": figureWidth })}
+          >
+            <ViewName
+              isProjected={shown === "projected"}
+              label={BODY_MAP.views[shown]}
+              textVariant="label-small"
+            />
+            <BodyFigure
+              body={body}
+              label={describeBodyFigureLabel({
+                scale,
+                view: shown,
+                side: sideBySide.side,
+                hint: null,
+              })}
+              scale={scale}
+              side={sideBySide.side}
+              values={valuesOf(shown)}
+              w={figureWidth}
+              selected={selectedView === shown ? selected : undefined}
+              unselectedOpacity={UNSELECTED_OPACITY}
+              // A short press does nothing here, since both views show. A screen reader has no long
+              // press, so there the plain activation opens the details.
+              {...(onLongPressMuscle === undefined
+                ? {}
+                : {
+                    onLongPressMuscle: (muscle: MuscleId) => {
+                      onLongPressMuscle(muscle, shown);
+                    },
+                    onPressMuscle: isScreenReaderEnabled
+                      ? (muscle: MuscleId) => {
+                          onLongPressMuscle(muscle, shown);
+                        }
+                      : noop,
+                  })}
+            />
+            <Text className="text-center" tone="muted" variant="caption">
+              {shown === "projected" ? sideBySide.projectedCaption : sideBySide.actualCaption}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  }
 
   return (
     <View className="flex-row justify-center gap-10" {...panResponder.panHandlers}>
@@ -119,8 +187,14 @@ export function BodyMapFigures({
                 {...(onLongPressMuscle === undefined
                   ? {}
                   : {
-                      onLongPressMuscle,
-                      onPressMuscle: isScreenReaderEnabled ? onLongPressMuscle : tapRelay.tap,
+                      onLongPressMuscle: (muscle: MuscleId) => {
+                        onLongPressMuscle(muscle, view);
+                      },
+                      onPressMuscle: isScreenReaderEnabled
+                        ? (muscle: MuscleId) => {
+                            onLongPressMuscle(muscle, view);
+                          }
+                        : tapRelay.tap,
                     })}
               />
             </Animated.View>

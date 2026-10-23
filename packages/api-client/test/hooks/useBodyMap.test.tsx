@@ -177,6 +177,20 @@ describe("useBodyMap, heat", () => {
     expect(result.current.data?.computedAt).toBe("2026-10-18T19:00:00.000Z");
   });
 
+  it("should step Sunday 18 October 20:00 Actual as the logged sets cooled, a day after today, for the side by side view", async () => {
+    installTrainingFake(server, goldenWeekData);
+
+    const { result } = renderBodyMap({ view: "actual", at: "2026-10-18" });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.values).toStrictEqual(
+      withOthersAtZero({ glute_max: 1, quads: 1, hamstrings: 1 }),
+    );
+    expect(result.current.data?.computedAt).toBe("2026-10-18T19:00:00.000Z");
+  });
+
   describe("Projected on a plan with one Monday day of bench press and nothing logged", () => {
     const MONDAY_EVENING = "2026-10-12T20:00:00+01:00";
 

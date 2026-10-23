@@ -44,6 +44,17 @@ export const Primary: Story = {
   args: { variant: "primary", icon: "Plus", label: "Add weigh-in" },
 };
 
+// The body map card's Show side by side while side by side is on: the 40 point card size, pressed in with
+// the accent fill, border and glyph, next to the same button off.
+export const Selected: Story = {
+  render: (args) => (
+    <View className="flex-row items-center gap-4">
+      <IconButton {...args} icon="Columns2" isSelected label="Show side by side" size="card" />
+      <IconButton {...args} icon="Columns2" label="Show side by side" size="card" />
+    </View>
+  ),
+};
+
 export const Disabled: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">

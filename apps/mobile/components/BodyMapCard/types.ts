@@ -1,6 +1,12 @@
+import type { BodyMapSideBySide } from "../BodyMapFigures";
 import type { BodyFigureValues } from "../ui";
 import type { BodyMapScale } from "@keylow/core/copy";
-import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
+import type {
+  BodyArtworkFigure,
+  BodyArtworkSide,
+  BodyMapView,
+  MuscleId,
+} from "@keylow/core/training";
 import type { ReactNode } from "react";
 
 export type BodyMapCardProps = {
@@ -28,8 +34,18 @@ export type BodyMapCardProps = {
   note: string | null;
   /** The muscle outlined, whose sheet is open. */
   selected?: MuscleId | undefined;
-  /** Called when a muscle is pressed and held. Left out, the figures are plain images. */
-  onLongPressMuscle?: ((muscle: MuscleId) => void) | undefined;
+  /** The view whose figure the selected muscle is outlined on in the side by side view. */
+  selectedView?: BodyMapView | undefined;
+  /** Called when a muscle is pressed and held, with the view of the figure it was on. Left out, the figures are plain images. */
+  onLongPressMuscle?: ((muscle: MuscleId, view: BodyMapView) => void) | undefined;
+  /** Draws the side by side view: Actual and Projected together, in place of the view label and the front and back. */
+  sideBySide?: BodyMapSideBySide | undefined;
+  /** Called when the Front and Back switch of the side by side view picks a side. */
+  onSideChange?: ((side: BodyArtworkSide) => void) | undefined;
+  /** Called when the Show side by side button is pressed. Left out, the card has no such button, as on Volume and Gap. */
+  onToggleSideBySide?: (() => void) | undefined;
+  /** False turns the Show side by side button off, as when there is no routine for Projected to show. Defaults to true. */
+  isSideBySideEnabled?: boolean | undefined;
   /** Laid over the figures, such as the first-open hint. It positions itself. */
   overlay?: ReactNode;
 };

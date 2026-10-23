@@ -4,19 +4,23 @@ import Animated from "react-native-reanimated";
 import { useCrossFade } from "../../lib/motion";
 import { Text } from "../ui";
 
-import type { ViewLabelProps } from "./types";
+import type { ViewLabelProps, ViewNameProps } from "./types";
 
-type ViewName = Pick<ViewLabelProps, "label" | "isProjected">;
-
-// The board's dot is 8 across with a 1.5 border: filled for Actual, a dashed ring for Projected.
-function ViewName({ label, isProjected = false }: ViewName) {
+// The board's dot is 8 across with a 1.5 border: filled for Actual, a dashed ring for Projected. The name
+// beside it is the body strong style on the view label, and the label small style over a figure of the
+// side by side view.
+export function ViewName({
+  label,
+  isProjected = false,
+  textVariant = "body-strong",
+}: ViewNameProps) {
   return (
     <View className="flex-row items-center gap-2">
       <View
         aria-hidden
         className={`h-2 w-2 rounded-full border-[1.5px] border-text-primary ${isProjected ? "border-dashed bg-transparent" : "bg-text-primary"}`}
       />
-      <Text variant="body-strong">{label}</Text>
+      <Text variant={textVariant}>{label}</Text>
     </View>
   );
 }

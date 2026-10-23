@@ -10,8 +10,11 @@ import type { View } from "react-native";
  */
 export type IconButtonVariant = "secondary" | "ghost" | "ring" | "primary";
 
-/** Medium is a 44 point square. Small is a 36 point square that still reaches a 44 point touch target. */
-export type IconButtonSize = "md" | "sm";
+/**
+ * Medium is a 44 point square. Small is a 36 point square that still reaches a 44 point touch target. Card is
+ * the 40 point square the body map card's header row draws, and reaches a 44 point touch target the same way.
+ */
+export type IconButtonSize = "md" | "sm" | "card";
 
 /** The text tones a glyph can be drawn in. */
 export type IconButtonTone = "primary" | "secondary";
@@ -34,6 +37,12 @@ export type IconButtonProps = {
    * ingredient row. The ring is always secondary. Defaults to `primary`.
    */
   tone?: IconButtonTone;
+  /**
+   * Draws a secondary button as pressed in and announces it as selected: an accent muted fill, an accent
+   * border and an accent ink glyph. For a button that switches something on and off, such as the body map's
+   * Show side by side. The other variants draw as they are. Defaults to false.
+   */
+  isSelected?: boolean;
   /** Dims the button to 40 percent and stops it responding, with no motion. */
   disabled?: boolean;
   /**

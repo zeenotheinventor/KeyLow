@@ -303,12 +303,14 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
       expect(sized).toHaveLength(2);
     });
 
-    it("should make each muscle a button for the long press, beside Back, the figure setting and the view toggle", async () => {
+    it("should make each muscle a button for the long press, beside Back, the figure setting, Show side by side and the view toggle", async () => {
       await renderScreen();
 
-      // Back, the figure setting in the header and the view toggle under the figures, then one button for
-      // each of the 22 muscles, which the screen reader reaches as the figure's own read-out.
-      expect(screen.getAllByRole("button")).toHaveLength(3 + MUSCLE_IDS.length);
+      // Back, the figure setting in the header, Show side by side in the card's header row and the view toggle
+      // under the figures, then one button for each of the 22 muscles, which the screen reader reaches as the
+      // figure's own read-out.
+      expect(screen.getAllByRole("button")).toHaveLength(4 + MUSCLE_IDS.length);
+      expect(screen.getByRole("button", { name: "Show side by side" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Figure: male or female" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Show projected" })).toBeOnTheScreen();
@@ -437,9 +439,12 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
 
       const label = screen.getByRole("status", { name: "Actual" });
 
-      // The label sits with its line in a pair, in the card's column.
-      expect(label.parent?.parent).toHaveStyle({ rowGap: 8 });
-      expect(label.parent?.parent?.parent).toHaveStyle({ padding: 12, borderWidth: 1 });
+      // The label sits with its line in a pair, in the header row, in the card's column.
+      expect(label.parent?.parent?.parent?.parent).toHaveStyle({ rowGap: 8 });
+      expect(label.parent?.parent?.parent?.parent?.parent).toHaveStyle({
+        padding: 12,
+        borderWidth: 1,
+      });
     });
 
     it("should put 40 points between the figures and 4 between each and its name", async () => {
