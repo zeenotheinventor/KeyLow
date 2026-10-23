@@ -1,14 +1,11 @@
 import { useStartSession } from "@keylow/api-client";
 import { TRAIN_START_FAILED } from "@keylow/core/copy";
-import { useRouter } from "expo-router";
 import { useRef } from "react";
 
+import { useOpenSession } from "../../lib/useOpenSession";
 import { useToast } from "../ui";
 
 import type { TrainSessionStart } from "./types";
-
-// A second press of Start or Resume within this long is the same press: pushing the screen twice would stack it.
-const OPEN_COOLDOWN_MILLISECONDS = 1000;
 
 type TrainSessionActions = {
   /** Starts the session a start describes, then opens the session screen. A press while a start is under way does nothing. */
@@ -28,20 +25,10 @@ type TrainSessionActions = {
  * the second comes.
  */
 export function useTrainSessionActions(): TrainSessionActions {
-  const router = useRouter();
+  const openSession = useOpenSession();
   const toast = useToast();
   const startSession = useStartSession();
   const isStarting = useRef(false);
-  const lastOpenedAt = useRef<number | null>(null);
-
-  function openSession() {
-    const now = Date.now();
-    if (lastOpenedAt.current !== null && now - lastOpenedAt.current < OPEN_COOLDOWN_MILLISECONDS) {
-      return;
-    }
-    lastOpenedAt.current = now;
-    router.push("/session");
-  }
 
   return {
     isStarting: startSession.isPending,
