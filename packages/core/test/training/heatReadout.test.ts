@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { heatPercentOf, heatStepOf, readyInHoursOf } from "../../src/training/heatReadout";
+import { heatPercentOf, readyInHoursOf } from "../../src/training/heatReadout";
 
 const NOW = "2026-10-15T18:00:00.000Z";
 const MILLISECONDS_PER_MINUTE = 60_000;
@@ -24,25 +24,6 @@ describe("heatPercentOf", () => {
   it("should round half a percent up", () => {
     expect(heatPercentOf(0.045)).toBe(5);
     expect(heatPercentOf(0.0449)).toBe(4);
-  });
-});
-
-describe("heatStepOf", () => {
-  it.each([
-    [0, 0],
-    [4, 0],
-    [5, 1],
-    [19, 1],
-    [20, 2],
-    [39, 2],
-    [40, 3],
-    [59, 3],
-    [60, 4],
-    [79, 4],
-    [80, 5],
-    [100, 5],
-  ])("should place %d percent in step %d", (percent, step) => {
-    expect(heatStepOf(percent)).toBe(step);
   });
 });
 

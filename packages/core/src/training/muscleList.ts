@@ -1,4 +1,5 @@
-import { heatPercentOf, heatStepOf, readyInHoursOf } from "./heatReadout";
+import { heatStepOf } from "./bodyMapValues";
+import { heatPercentOf, readyInHoursOf } from "./heatReadout";
 import { MUSCLE_GROUPS, MUSCLE_IDS, MUSCLES } from "./muscles";
 
 import type { MuscleGroup, MuscleId } from "./muscles";
@@ -7,7 +8,7 @@ import type { MuscleState } from "./muscleState";
 /*
  * The muscle list of the body map (`body · muscle-list`): the 22 muscles in 7 groups, each row holding what
  * the screen writes. Pure under the ADR 0002 rule: `now` is an argument. The screen builds its sentences
- * ("Light · ready in 19 h") from these fields, so no maths lives in it.
+ * ("Warm · ready in 19 h") from these fields, so no maths lives in it.
  */
 
 export type MuscleListRow = {
@@ -44,7 +45,7 @@ export const muscleListGroups = (
       return {
         muscle,
         heatPercent,
-        heatStep: heatStepOf(heatPercent),
+        heatStep: heatStepOf(muscle, states[muscle].heat),
         readyInHours: readyInHoursOf(states[muscle].readyAt, now),
       };
     }),

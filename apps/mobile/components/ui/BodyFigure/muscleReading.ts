@@ -1,14 +1,15 @@
+import { describeHeatStep } from "@keylow/core/copy";
+
 import type { BodyFigureScale } from "./types";
 import type { BodyMapPalette } from "@keylow/tokens";
 
 /*
  * What a value means on each scale: the colour a muscle is filled with and the word the screen reader
  * says. The order of each list is the encoding core pins in `bodyMapValues`: the heat step, the index
- * in `VOLUME_STATUSES` and the index in `GAP_VALUES`. The words are the legends of the `tokens ·
- * body-map scales` board.
+ * in `VOLUME_STATUSES` and the index in `GAP_VALUES`. The heat words are core's `HEAT_STEP_NAMES`, the
+ * others are the legends of the `tokens · body-map scales` board.
  */
 
-const HEAT_NAMES = ["Rested", "Light", "Warm", "Hot", "Very hot", "Peak"] as const;
 const VOLUME_NAMES = ["Under", "Maintaining", "Productive", "Over", "Not targeted"] as const;
 const GAP_NAMES = ["Behind", "On plan", "Ahead", "Not in plan"] as const;
 
@@ -54,7 +55,7 @@ export function readMuscle(
     const step = heatStepOf(value);
     return {
       fill: pick(palette.heat, step, palette.heat[0]),
-      valueName: pick(HEAT_NAMES, step, HEAT_NAMES[0]),
+      valueName: describeHeatStep(step),
       isPeak: step === PEAK_HEAT_STEP,
     };
   }

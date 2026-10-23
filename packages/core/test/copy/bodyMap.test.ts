@@ -33,10 +33,10 @@ import {
 import {
   GAP_VALUES,
   HEAT_STEP_CUTS_V1,
+  heatStepOf,
   muscleListGroups,
   VOLUME_STATUSES,
 } from "../../src/training";
-import { heatStepOf } from "../../src/training/heatReadout";
 import { actualStateAt, GOLDEN_TIME_ZONE, THURSDAY_EVENING } from "../training/goldenWeekInputs";
 
 import type { BodyMapHeaderInput } from "../../src/copy";
@@ -62,7 +62,7 @@ describe("the value words of the body map, keyed by the value itself", () => {
   it("should name heat steps 0 to 5 as the heat legend does", () => {
     expect(HEAT_STEP_NAMES).toStrictEqual({
       0: "Rested",
-      1: "Light",
+      1: "Ready",
       2: "Warm",
       3: "Hot",
       4: "Very hot",
@@ -74,8 +74,8 @@ describe("the value words of the body map, keyed by the value itself", () => {
     expect(Object.keys(HEAT_STEP_NAMES).map(Number)).toStrictEqual([
       ...Array(HEAT_STEP_CUTS_V1.length + 1).keys(),
     ]);
-    for (const percent of [0, 4, 5, 19, 20, 39, 40, 59, 60, 79, 80, 100]) {
-      expect(describeHeatStep(heatStepOf(percent))).not.toBe("");
+    for (const heat of [0, 0.04, 0.05, 0.2, 0.25, 0.26, 0.4, 0.6, 0.8, 1]) {
+      expect(describeHeatStep(heatStepOf("lats", heat))).not.toBe("");
     }
   });
 
@@ -119,7 +119,7 @@ describe("the value words of the body map, keyed by the value itself", () => {
 
   it("should list the legend items in the order the boards draw them, with the same words", () => {
     expect(BODY_MAP_LEGEND_ITEMS).toStrictEqual({
-      heat: ["Rested", "Light", "Warm", "Hot", "Very hot", "Peak"],
+      heat: ["Rested", "Ready", "Warm", "Hot", "Very hot", "Peak"],
       volume: ["Not targeted", "Under", "Maintaining", "Productive", "Over"],
       gap: ["Not in plan", "Behind", "On plan", "Ahead"],
     });

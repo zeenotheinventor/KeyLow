@@ -296,7 +296,7 @@ describe("DashboardBodyMapCard", () => {
       expectTextsInOrder(within(legend).getAllByText(/./, hidden), ["Peak", "Rested"]);
       // Only the peak glows, in the heat glow colour: 6 points of blur, with no offset.
       expect(swatches[0]).toHaveStyle({
-        shadowColor: "rgba(255,122,107,0.55)",
+        shadowColor: "rgba(240,72,72,0.55)",
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 0 },
         elevation: 6,

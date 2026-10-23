@@ -3,7 +3,7 @@ import { themes } from "./theme";
 import type { ThemeScheme } from "./theme";
 
 export type BodyMapPalette = {
-  /** Rested, light, warm, hot, very hot and peak, in that order. */
+  /** Rested, ready, warm, hot, very hot and peak, in that order. */
   heat: [string, string, string, string, string, string];
   heatGlow: string;
   volume: {

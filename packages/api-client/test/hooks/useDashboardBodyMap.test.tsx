@@ -49,7 +49,7 @@ describe("useDashboardBodyMap", () => {
       expect(result.current.data).toBeDefined();
     });
     expect(result.current.data?.values).toMatchObject({
-      lats: 2,
+      lats: 1,
       traps_mid: 1,
       biceps: 1,
       neck: 0,

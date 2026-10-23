@@ -36,24 +36,54 @@ const byMuscle = <Value>(valueOf: (muscle: MuscleId) => Value): Record<MuscleId,
 export const LOADED_HEAT_PERCENT = 60;
 
 /**
- * The rounded percent of heat at which heat steps 1 to 5 start: under the first cut a muscle is at step
- * 0 (rested), and from the last it is at step 5 (peak). Pinned by a test, so a change is deliberate.
+ * The heat steps (ADR 0005, "The body map"), 0 rested, 1 ready, 2 warm, 3 hot, 4 very hot, 5 peak. Pinned
+ * by a test, so a change is deliberate. The cuts are the rounded percents of heat at which steps 1, 3, 4
+ * and 5 start: 5, 40, 60 and 80. The second, 25, is the ready share of a muscle's capacity, not a rounded
+ * percent: step 1 holds up to and including it, and step 2 starts above it, decided by `isReadyHeat`, so
+ * a muscle just above 25 % that rounds to 25 is warm, never ready.
  */
-export const HEAT_STEP_CUTS_V1 = [5, 20, 40, LOADED_HEAT_PERCENT, 80] as const;
+export const HEAT_STEP_CUTS_V1 = [5, 25, 40, LOADED_HEAT_PERCENT, 80] as const;
 
 const percentOf = (heat: number): number => Math.round(heat * 100);
 
 /**
- * Each muscle's heat as a step from 0 to 5: the number of `HEAT_STEP_CUTS_V1` its rounded percent of
- * heat has reached.
+ * Whether a muscle is ready: its heat is at or below the ready share of its capacity (0.25 in v1), that
+ * is its fatigue is at or below the threshold, as `muscleState` counts when it sets `readyAt` to `now`.
+ * The one ready test of the map, the list, the sheet and the suggestion copy.
  */
+export const isReadyHeat = (
+  muscle: MuscleId,
+  heat: number,
+  params: TrainingParams = TRAINING_PARAMS_V1,
+): boolean => {
+  const { threshold, capacity } = muscleParams(muscle, params);
+  return heat <= threshold / capacity;
+};
+
+/**
+ * A muscle's heat as a step from 0 to 5, the one rule of every surface: a ready muscle is step 0 (rested)
+ * under the first cut of the rounded percent and step 1 (ready) from it, and a muscle that is not ready
+ * is step 2 plus the number of the three hotter cuts its rounded percent has reached.
+ */
+export const heatStepOf = (
+  muscle: MuscleId,
+  heat: number,
+  params: TrainingParams = TRAINING_PARAMS_V1,
+): number => {
+  const percent = percentOf(heat);
+  const [readyFrom, , ...hotterCuts] = HEAT_STEP_CUTS_V1;
+  if (isReadyHeat(muscle, heat, params)) {
+    return percent >= readyFrom ? 1 : 0;
+  }
+  return 2 + hotterCuts.filter((cut) => percent >= cut).length;
+};
+
+/** Each muscle's heat as a step from 0 to 5, by `heatStepOf`. */
 export const heatValues = (
   states: Readonly<Record<MuscleId, Pick<MuscleState, "heat">>>,
+  params: TrainingParams = TRAINING_PARAMS_V1,
 ): Record<MuscleId, number> =>
-  byMuscle((muscle) => {
-    const percent = percentOf(states[muscle].heat);
-    return HEAT_STEP_CUTS_V1.filter((cut) => percent >= cut).length;
-  });
+  byMuscle((muscle) => heatStepOf(muscle, states[muscle].heat, params));
 
 /**
  * Each muscle's volume status as its index in `VOLUME_STATUSES`: 0 under, 1 maintaining, 2 productive,

@@ -308,7 +308,7 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
 
       expectTextsInOrder(within(legend).getAllByText(/./), [
         "Rested",
-        "Light",
+        "Ready",
         "Warm",
         "Hot",
         "Very hot",

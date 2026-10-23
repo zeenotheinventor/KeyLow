@@ -8,10 +8,9 @@ import {
 import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
+import { heatStepOf, isReadyHeat } from "../training/bodyMapValues";
 import { GOAL_PRESETS_V1 } from "../training/goalPresets";
-import { heatPercentOf, heatStepOf } from "../training/heatReadout";
-import { muscleParams } from "../training/muscleState";
-import { TRAINING_PARAMS_V1 } from "../training/params";
+import { heatPercentOf } from "../training/heatReadout";
 
 import type { TrainingFocus, TrainingGoal } from "../training/enums";
 import type { MuscleId } from "../training/muscles";
@@ -238,21 +237,23 @@ const describeVolumeLine = (
 
 const describeHeatPercent = (heat: number): string => `heat ${heatPercentOf(heat)} %`;
 
-const describeHeat = (heat: number): string =>
-  `${describeHeatPercent(heat)}, ${describeHeatStep(heatStepOf(heatPercentOf(heat))).toLowerCase()}`;
+/** Heat step 1, "Ready" (`HEAT_STEP_NAMES`). */
+const READY_HEAT_STEP = 1;
 
-/** Whether the muscle is ready: its heat is at or below the ready share of its capacity, 0.25 in v1. */
-const isReady = ({ muscle_id, heat }: SuggestionReason): boolean => {
-  const { threshold, capacity } = muscleParams(muscle_id, TRAINING_PARAMS_V1);
-  return heat <= threshold / capacity;
+/** The step word follows the percent, but not for step 1: a ready muscle is already said to be ready. */
+const describeHeat = ({ muscle_id, heat }: SuggestionReason): string => {
+  const step = heatStepOf(muscle_id, heat);
+  return step === READY_HEAT_STEP
+    ? describeHeatPercent(heat)
+    : `${describeHeatPercent(heat)}, ${describeHeatStep(step).toLowerCase()}`;
 };
 
-/** "Upper chest is ready now: heat 13 %, light", or without the claim above the ready share: "Upper chest: heat 35 %, warm". */
+/** "Upper chest is ready now: heat 13 %", or without the claim above the ready share: "Upper chest: heat 35 %, warm". */
 const describeHeatLine = (reason: SuggestionReason): SuggestionReasonLine => ({
   kind: "heat",
-  text: isReady(reason)
-    ? `${MUSCLE_NAMES[reason.muscle_id]} ${isOrAre([reason.muscle_id])} ready now: ${describeHeat(reason.heat)}`
-    : `${MUSCLE_NAMES[reason.muscle_id]}: ${describeHeat(reason.heat)}`,
+  text: isReadyHeat(reason.muscle_id, reason.heat)
+    ? `${MUSCLE_NAMES[reason.muscle_id]} ${isOrAre([reason.muscle_id])} ready now: ${describeHeat(reason)}`
+    : `${MUSCLE_NAMES[reason.muscle_id]}: ${describeHeat(reason)}`,
 });
 
 /** A day with a plan has at most two additions, all named. A fresh session names its first pick only. */
@@ -424,7 +425,7 @@ const describeAddedWhy = (
     lead === undefined
       ? []
       : [
-          `${MUSCLE_NAMES[lead.muscle_id]} ${isOrAre([lead.muscle_id])} ${describePriority(lead, goals)}, at ${formatSetCount(lead.logged_sets)} of ${formatSetCount(lead.mav_low)} sets ${IN_THE_LAST_7_DAYS}, and ${isReady(lead) ? "ready now at" : "at"} ${describeHeatPercent(lead.heat)}.`,
+          `${MUSCLE_NAMES[lead.muscle_id]} ${isOrAre([lead.muscle_id])} ${describePriority(lead, goals)}, at ${formatSetCount(lead.logged_sets)} of ${formatSetCount(lead.mav_low)} sets ${IN_THE_LAST_7_DAYS}, and ${isReadyHeat(lead.muscle_id, lead.heat) ? "ready now at" : "at"} ${describeHeatPercent(lead.heat)}.`,
         ];
   return [
     "Added.",

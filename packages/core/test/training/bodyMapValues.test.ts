@@ -17,7 +17,9 @@ import {
   HEAT_STEP_CUTS_V1,
   LOADED_HEAT_PERCENT,
   gapValues,
+  heatStepOf,
   heatValues,
+  isReadyHeat,
   MUSCLE_IDS,
   muscleState,
   projectedState,
@@ -28,6 +30,7 @@ import {
   warmestMuscles,
   weeklyVolume,
 } from "../../src/training";
+import { heatPercentOf } from "../../src/training/heatReadout";
 
 import type { LoggedSet, MuscleId, MusclePlanComparison } from "../../src/training";
 
@@ -40,8 +43,8 @@ const statesWith = (heatByMuscle: Partial<Record<MuscleId, number>>) =>
   recordOfMuscles((muscle) => ({ heat: heatByMuscle[muscle] ?? 0 }));
 
 describe("HEAT_STEP_CUTS_V1", () => {
-  it("should be the rounded percents at which steps 1 to 5 start", () => {
-    expect(HEAT_STEP_CUTS_V1).toStrictEqual([5, 20, 40, 60, 80]);
+  it("should be the rounded percents at which steps 1, 3, 4 and 5 start, and the ready share that step 2 starts above", () => {
+    expect(HEAT_STEP_CUTS_V1).toStrictEqual([5, 25, 40, 60, 80]);
   });
 });
 
@@ -54,6 +57,36 @@ describe("LOADED_HEAT_PERCENT", () => {
   });
 });
 
+describe("isReadyHeat", () => {
+  it.each([
+    [0, true],
+    [0.25, true],
+    [0.2501, false],
+    [1, false],
+  ])("should say a heat of %s is ready: %s", (heat, ready) => {
+    expect(isReadyHeat("lats", heat)).toBe(ready);
+  });
+});
+
+describe("heatStepOf", () => {
+  it.each([
+    [0.044, 0],
+    [0.045, 1],
+    [0.25, 1],
+    [0.2501, 2],
+    [0.395, 3],
+    [0.595, 4],
+    [0.795, 5],
+  ])("should put a heat of %s at step %s", (heat, step) => {
+    expect(heatStepOf("quads", heat)).toBe(step);
+  });
+
+  it("should put a heat that rounds to 25 % at step 2 when it is above the ready share", () => {
+    expect(heatPercentOf(0.254)).toBe(25);
+    expect(heatStepOf("quads", 0.254)).toBe(2);
+  });
+});
+
 describe("heatValues", () => {
   it.each([
     [0, 0],
@@ -61,8 +94,12 @@ describe("heatValues", () => {
     [0.045, 1],
     [0.05, 1],
     [0.194, 1],
-    [0.195, 2],
-    [0.2, 2],
+    [0.195, 1],
+    [0.2, 1],
+    [0.25, 1],
+    [0.2501, 2],
+    [0.254, 2],
+    [0.255, 2],
     [0.394, 2],
     [0.395, 3],
     [0.4, 3],
@@ -90,15 +127,15 @@ describe("heatValues", () => {
           chest_upper: 1,
           chest_lower: 1,
           delt_rear: 1,
-          lats: 2,
+          lats: 1,
           traps_mid: 1,
-          lower_back: 2,
+          lower_back: 1,
           biceps: 1,
           triceps: 1,
           glute_max: 3,
           quads: 3,
           hamstrings: 3,
-          calves: 2,
+          calves: 1,
         }),
       );
     });
@@ -108,10 +145,10 @@ describe("heatValues", () => {
 
       expect(heatValues(states)).toStrictEqual(
         withOthersAtZero({
-          chest_upper: 2,
-          chest_lower: 2,
+          chest_upper: 1,
+          chest_lower: 1,
           delt_front: 2,
-          delt_side: 2,
+          delt_side: 1,
           delt_rear: 4,
           lats: 5,
           traps_mid: 4,
@@ -132,10 +169,10 @@ describe("heatValues", () => {
 
       expect(heatValues(states)).toStrictEqual(
         withOthersAtZero({
-          chest_upper: 2,
-          chest_lower: 2,
+          chest_upper: 1,
+          chest_lower: 1,
           delt_front: 2,
-          delt_side: 2,
+          delt_side: 1,
           triceps: 2,
           glute_max: 1,
           quads: 1,

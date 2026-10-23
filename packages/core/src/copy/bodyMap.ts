@@ -30,13 +30,13 @@ export type GapValue = (typeof GAP_VALUES)[number];
 /** A session of the week's plan, named by its calendar day (`YYYY-MM-DD`) and the routine day it is. */
 export type PlannedSession = Readonly<{ localDate: string; routineDayName: string | null }>;
 
-/** A heat step: the number of `HEAT_STEP_CUTS_V1` a heat percent has reached, 0 (rested) to 5 (peak). */
+/** A heat step as `heatStepOf` writes it, 0 (rested), 1 (ready) to 5 (peak). */
 export type HeatStep = 0 | 1 | 2 | 3 | 4 | 5;
 
 /** The name of each heat step, keyed by the step. */
 export const HEAT_STEP_NAMES: Readonly<Record<HeatStep, string>> = {
   0: "Rested",
-  1: "Light",
+  1: "Ready",
   2: "Warm",
   3: "Hot",
   4: "Very hot",

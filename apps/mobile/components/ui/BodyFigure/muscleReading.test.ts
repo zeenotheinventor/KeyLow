@@ -17,7 +17,7 @@ describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
 
     it("should name each step", () => {
       expect([0, 1, 2, 3, 4, 5].map((step) => readMuscle("heat", step, palette).valueName)).toEqual(
-        ["Rested", "Light", "Warm", "Hot", "Very hot", "Peak"],
+        ["Rested", "Ready", "Warm", "Hot", "Very hot", "Peak"],
       );
     });
 

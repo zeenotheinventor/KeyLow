@@ -39,10 +39,10 @@ const boardGroups: [string, [string, number, number, number][]][] = [
   [
     "Back",
     [
-      ["Lats", 24, 2, 0],
+      ["Lats", 24, 1, 0],
       ["Upper traps", 0, 0, 0],
       ["Mid traps", 17, 1, 0],
-      ["Lower back", 21, 2, 0],
+      ["Lower back", 21, 1, 0],
     ],
   ],
   [
@@ -68,7 +68,7 @@ const boardGroups: [string, [string, number, number, number][]][] = [
       ["Quads", 50, 3, 27],
       ["Hamstrings", 55, 3, 31],
       ["Adductors", 0, 0, 0],
-      ["Calves", 20, 2, 0],
+      ["Calves", 20, 1, 0],
       ["Shins", 0, 0, 0],
     ],
   ],

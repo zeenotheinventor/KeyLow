@@ -2,11 +2,14 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import { recordOfMuscles } from "./goldenWeekInputs";
+import { at, DAY, heatSet, MORNING } from "./heatSets";
 import {
   gapValues,
   heatValues,
   MUSCLE_IDS,
+  muscleState,
   PLAN_STATUSES,
+  TRAINING_PARAMS_V1,
   volumeValues,
   warmestMuscles,
 } from "../../src/training";
@@ -143,6 +146,80 @@ describe("the body map values", () => {
         warmest.slice(1).forEach(({ muscle }, index) => {
           const before = warmest[index]?.muscle ?? muscle;
           expect(states[before].heat).toBeGreaterThanOrEqual(states[muscle].heat);
+        });
+      }),
+    );
+  });
+});
+
+describe("the heat step and the ready test", () => {
+  // Few muscles share the sets, so some get hot while the rest stay rested.
+  const anyLoggedSet = fc.record({
+    muscle: fc.constantFrom(...MUSCLE_IDS.slice(0, 2)),
+    weight: fc.double({ min: 0.1, max: 1, noNaN: true }),
+    daysBefore: fc.oneof(
+      fc.double({ min: 0, max: 2, noNaN: true }),
+      fc.double({ min: 0, max: 15, noNaN: true }),
+    ),
+  });
+  const anyLoggedSets = fc.array(anyLoggedSet, { minLength: 10, maxLength: 120 });
+
+  it("should give a muscle step 0 or 1 if and only if it is ready, and never step 1 to one that is not", () => {
+    fc.assert(
+      fc.property(anyLoggedSets, (logged) => {
+        const now = at(MORNING);
+        const sets = logged.map(({ muscle, weight, daysBefore }) =>
+          heatSet([{ muscle_id: muscle, role: "primary", weight }], {
+            performed_at: at(MORNING - Math.floor(daysBefore * DAY)),
+          }),
+        );
+        const states = muscleState(sets, now, TRAINING_PARAMS_V1);
+        const steps = heatValues(states);
+
+        for (const muscle of MUSCLE_IDS) {
+          const ready = states[muscle].readyAt === now;
+          expect(steps[muscle] <= 1).toBe(ready);
+          if (!ready) {
+            expect(steps[muscle]).toBeGreaterThanOrEqual(2);
+          }
+        }
+      }),
+      { numRuns: 500 },
+    );
+  });
+
+  it("should agree with the ready time where the sets bring fatigue to the threshold", () => {
+    const now = at(MORNING);
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 60 }),
+        fc.constantFrom(0.1, 0.2, 0.25, 0.3, 0.5, 1),
+        (count, weight) => {
+          const sets = Array.from({ length: count }, () =>
+            heatSet([{ muscle_id: "lats", role: "primary", weight }]),
+          );
+          const state = muscleState(sets, now, TRAINING_PARAMS_V1).lats;
+
+          expect(
+            heatValues({ ...recordOfMuscles(() => ({ heat: 0 })), lats: state }).lats <= 1,
+          ).toBe(state.readyAt === now);
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
+
+  it("should keep the steps in the order of the heat", () => {
+    fc.assert(
+      fc.property(anyHeatStates, (states) => {
+        const steps = heatValues(states);
+        const byHeat = [...MUSCLE_IDS].sort(
+          (first, second) => states[first].heat - states[second].heat,
+        );
+
+        byHeat.slice(1).forEach((muscle, index) => {
+          const cooler = byHeat[index] ?? muscle;
+          expect(steps[muscle]).toBeGreaterThanOrEqual(steps[cooler]);
         });
       }),
     );

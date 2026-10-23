@@ -172,7 +172,7 @@ describe("dayMoments", () => {
     it("should read Projected heat on Sunday evening with Saturday's planned Push counted", () => {
       const states = projectedState(week.projected, momentOn("2026-10-18"), LONDON, params);
 
-      expect(heatValues(states).chest_upper).toBe(2);
+      expect(heatValues(states).chest_upper).toBe(1);
       expect(
         heatValues(muscleState(loggedSets, momentOn("2026-10-18"), params.training)).chest_upper,
       ).toBe(0);

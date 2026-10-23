@@ -1,4 +1,5 @@
-import { heatPercentOf, heatStepOf, parseInstant, readyInHoursOf } from "./heatReadout";
+import { heatStepOf } from "./bodyMapValues";
+import { heatPercentOf, parseInstant, readyInHoursOf } from "./heatReadout";
 import { muscleParams, parseMoment, volumeStatusOf } from "./muscleState";
 import { setEffort } from "./setEffort";
 import { targetedMuscles } from "./targetedMuscles";
@@ -244,7 +245,7 @@ export const muscleDetail = ({
   return {
     muscle,
     heatPercent,
-    heatStep: heatStepOf(heatPercent),
+    heatStep: heatStepOf(muscle, state[muscle].heat, params.training),
     readyInHours: readyInHoursOf(state[muscle].readyAt, now),
     weeklySets: {
       actual,
