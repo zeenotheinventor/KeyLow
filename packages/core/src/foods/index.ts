@@ -32,6 +32,8 @@ export { OFF_FRESHNESS_MS, offFreshness } from "./freshness";
 export type { OffFreshness } from "./freshness";
 export { normaliseOffCandidate, normaliseOffProduct, offProductPayloadSchema } from "./off";
 export type { NormaliseOffResult, OffFoodInput, OffPortionInput, OffProductPayload } from "./off";
+export { NATURAL_UNIT_PROCESSED_TAGS, NATURAL_UNIT_TYPES, naturalUnitsFor } from "./naturalUnits";
+export type { NaturalUnitPortion, NaturalUnitType } from "./naturalUnits";
 export { readPackSize } from "./packSize";
 export type { PackSize } from "./packSize";
 export { requiresConfirmation } from "./quality";
