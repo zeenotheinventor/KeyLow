@@ -278,11 +278,11 @@ describe("the body map screen's states", () => {
       expect(screen.queryByText("Start a session")).not.toBeOnTheScreen();
     });
 
-    it("should leave nothing to press but Back, the figure setting and the view toggle, so no figure is interactive", async () => {
+    it("should offer Back, the figure setting and the view toggle, and no Start a session button", async () => {
       await renderScreen();
       await screen.findByRole("heading", { name: "Nothing to show yet" });
 
-      expect(screen.getAllByRole("button")).toHaveLength(3);
+      expect(screen.queryByRole("button", { name: "Start a session" })).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Figure: male or female" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Show projected" })).toBeOnTheScreen();

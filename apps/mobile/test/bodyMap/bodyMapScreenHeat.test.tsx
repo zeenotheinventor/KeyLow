@@ -1,4 +1,5 @@
 import { KeyLowProvider, keys, useBodyMap } from "@keylow/api-client";
+import { MUSCLE_IDS } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 import { onlineManager } from "@tanstack/react-query";
 import {
@@ -298,13 +299,15 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
       expect(sized).toHaveLength(2);
     });
 
-    it("should leave the figures plain images: no muscle is a button before the long-press exists", async () => {
+    it("should make each muscle a button for the long press, beside Back, the figure setting and the view toggle", async () => {
       await renderScreen();
 
-      // Back, the figure setting in the header, and the view toggle under the figures.
-      expect(screen.getAllByRole("button")).toHaveLength(3);
+      // Back, the figure setting in the header and the view toggle under the figures, then one button for
+      // each of the 22 muscles, which the screen reader reaches as the figure's own read-out.
+      expect(screen.getAllByRole("button")).toHaveLength(3 + MUSCLE_IDS.length);
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Figure: male or female" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Show projected" })).toBeOnTheScreen();
     });
   });
 
@@ -409,7 +412,7 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
     it("should show the scale switch, and no side switch or muscle list yet", async () => {
       await renderScreen();
 
-      for (const name of [/side/i, /muscle list/i, /long-press/i]) {
+      for (const name of [/side shown/i, /muscle list/i, /long-press/i]) {
         expect(screen.queryByLabelText(name)).not.toBeOnTheScreen();
         expect(screen.queryByText(name)).not.toBeOnTheScreen();
       }

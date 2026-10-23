@@ -100,6 +100,8 @@ export const BODY_MAP = {
   backToTrain: "Back to Train",
   muscleListButton: "Muscle list",
   closeSheet: "Close",
+  /** The screen reader action on a muscle that opens its sheet, which a long press does for a finger. */
+  muscleDetailsAction: "Show details",
   sideBySideName: "Show side by side",
   scaleSwitch: { name: "Scale", heat: "Heat", volume: "Volume", gap: "Gap" },
   sideSwitch: { name: "Side shown", front: "Front", back: "Back" },

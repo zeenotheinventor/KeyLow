@@ -157,6 +157,7 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       backToTrain: "Back to Train",
       muscleListButton: "Muscle list",
       closeSheet: "Close",
+      muscleDetailsAction: "Show details",
       sideBySideName: "Show side by side",
       scaleSwitch: { name: "Scale", heat: "Heat", volume: "Volume", gap: "Gap" },
       sideSwitch: { name: "Side shown", front: "Front", back: "Back" },

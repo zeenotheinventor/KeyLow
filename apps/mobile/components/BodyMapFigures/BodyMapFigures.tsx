@@ -4,6 +4,7 @@ import { PanResponder, View } from "react-native";
 import Animated from "react-native-reanimated";
 
 import { useCrossFade } from "../../lib/motion";
+import { useScreenReaderEnabled } from "../../lib/screenReader";
 import { BodyFigure, Text } from "../ui";
 
 import type { BodyMapFiguresProps } from "./types";
@@ -11,8 +12,12 @@ import type { BodyMapView } from "@keylow/core/training";
 
 const SIDES = ["front", "back"] as const;
 
-// A touch that moves further than this from where it went down is a pan, and never a tap.
+// A touch that moves further than this from where it went down is a pan, and never a tap. A muscle button
+// applies the same slop to its own press.
 const TAP_SLOP = 10;
+
+// How strongly the muscles that are not the selected one show while a sheet is open on it.
+const UNSELECTED_OPACITY = 0.4;
 
 // Passes a tap on to whichever `onTap` is listening, which changes as the screen draws again.
 function createTapRelay() {
@@ -33,8 +38,12 @@ function createTapRelay() {
 
 /**
  * The front and the back of the body side by side, each with its name under it, coloured by the scale. A tap anywhere on them
- * calls `onTap`; a pan, or a touch the screen takes over to scroll, never does. The figures stay plain
- * images, so a screen reader reaches the view through the toggle button and not through this tap. When
+ * calls `onTap`; a pan, or a touch the screen takes over to scroll, never does. Without a long press handler
+ * the figures stay plain images, so a screen reader reaches the view through the toggle button and not
+ * through this tap. With one, each muscle is a button as `BodyFigure` makes it: a long press on it calls
+ * `onLongPressMuscle`, and a short press that lifts within the slop of where it went down is still a tap on
+ * the figures. A screen reader has no long press, so while one is running a muscle's plain activation calls
+ * `onLongPressMuscle` and the muscle offers Show details as well. `selected` outlines a muscle and dims the others. When
  * the view changes the old figures fade out under the new ones over 220 ms, and are hidden from a screen
  * reader while they do.
  */
@@ -45,9 +54,12 @@ export function BodyMapFigures({
   projectedValues,
   body,
   figureWidth,
+  selected,
   onTap,
+  onLongPressMuscle,
 }: BodyMapFiguresProps) {
   const { outgoing, incomingStyle, outgoingStyle } = useCrossFade(view, view);
+  const isScreenReaderEnabled = useScreenReaderEnabled();
   // Only a fade in progress styles the new layer; at rest it is drawn plain.
   const incomingLayerStyle = outgoing === null ? undefined : incomingStyle;
   const valuesOf = (shown: BodyMapView) => (shown === "projected" ? projectedValues : actualValues);
@@ -99,6 +111,17 @@ export function BodyMapFigures({
                 side={side}
                 values={valuesOf(view)}
                 w={figureWidth}
+                selected={selected}
+                unselectedOpacity={UNSELECTED_OPACITY}
+                // A handler makes every muscle a button that takes the touch first, so a short press on one
+                // is handed on as the tap of the figures, and a long press goes to the screen. A screen
+                // reader has no long press, so there the plain activation opens the details.
+                {...(onLongPressMuscle === undefined
+                  ? {}
+                  : {
+                      onLongPressMuscle,
+                      onPressMuscle: isScreenReaderEnabled ? onLongPressMuscle : tapRelay.tap,
+                    })}
               />
             </Animated.View>
           </View>

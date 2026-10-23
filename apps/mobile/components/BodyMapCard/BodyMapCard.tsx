@@ -30,6 +30,8 @@ export function BodyMapCard({
   isToggleEnabled,
   onToggle,
   note,
+  selected,
+  onLongPressMuscle,
 }: BodyMapCardProps) {
   const { width: screenWidth } = useWindowDimensions();
   const figureWidth = Math.min(FIGURE_WIDTH, Math.floor((screenWidth - SIDES_AND_GAP_WIDTH) / 2));
@@ -46,9 +48,11 @@ export function BodyMapCard({
           actualValues={actualValues}
           body={body}
           figureWidth={figureWidth}
+          onLongPressMuscle={onLongPressMuscle}
           onTap={isToggleEnabled ? onToggle : undefined}
           projectedValues={projectedValues}
           scale={scale}
+          selected={selected}
           view={view}
         />
         {toggleLabel === null ? null : (
