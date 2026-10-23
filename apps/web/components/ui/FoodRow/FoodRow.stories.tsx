@@ -244,7 +244,7 @@ export const StackedNeedsReview: Story = {
 const recipeRowName =
   "18:00, Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams";
 
-// A recipe the diary holds: a chef's hat before the name, which stays on one line, and nothing to open.
+// A recipe the diary holds: a chef's hat before the name, which stays on one line. This story gives it no press handler; in the diary the row opens the edit dialog.
 export const StackedRecipe: Story = {
   render: () => (
     <FoodRow
@@ -269,7 +269,7 @@ export const Search: Story = {
 };
 
 // A recipe in the add dialog's results: the chef's hat tile, the name with the match in bold, the serving, the
-// stats line of one serving and the add button. The row opens nothing yet, so it has no chevron.
+// stats line of one serving and the add button. This story gives the row no press handler, so it has no chevron.
 export const SearchRecipe: Story = {
   render: () => (
     <FoodRow

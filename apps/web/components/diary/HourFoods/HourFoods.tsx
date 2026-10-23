@@ -9,7 +9,7 @@ import { FoodTable } from "@/components/ui/FoodTable";
 
 /**
  * An hour's foods in two shapes, one of which the width hides: at 768 px and up a table with Edit and
- * Delete on each row, below it stacked rows that open the edit dialog when pressed. A recipe entry's row opens nothing yet. Both are in the page,
+ * Delete on each row, below it stacked rows that open the edit dialog when pressed. Both are in the page,
  * because the width decides which is shown.
  */
 export function HourFoods({
@@ -25,8 +25,6 @@ export function HourFoods({
       <FoodTable label={describeFoodsAtHour(label)}>
         {entries.map((entry) => {
           const row = entryRowFields(entry, timeZone);
-          // A recipe entry has nothing to open yet: its row is plain text with no Edit and no chevron.
-          const isRecipe = entry.item_type === "recipe";
 
           return (
             <FoodRow
@@ -38,13 +36,9 @@ export function HourFoods({
               macros={row.cells}
               recipeRowName={row.recipeRowName}
               deleteDisabled={deleteDisabled}
-              onEdit={
-                isRecipe
-                  ? undefined
-                  : () => {
-                      onEdit(entry);
-                    }
-              }
+              onEdit={() => {
+                onEdit(entry);
+              }}
               onDelete={() => {
                 onDelete(entry);
               }}
@@ -55,8 +49,6 @@ export function HourFoods({
       <ul className="divide-y divide-border md:hidden">
         {entries.map((entry) => {
           const row = entryRowFields(entry, timeZone);
-          // A recipe entry has nothing to open yet: its row is plain text with no Edit and no chevron.
-          const isRecipe = entry.item_type === "recipe";
 
           return (
             <FoodRow
@@ -68,13 +60,9 @@ export function HourFoods({
               macros={row.macros}
               recipeRowName={row.recipeRowName}
               needsReview={row.macros === undefined}
-              onClick={
-                isRecipe
-                  ? undefined
-                  : () => {
-                      onEdit(entry);
-                    }
-              }
+              onClick={() => {
+                onEdit(entry);
+              }}
             />
           );
         })}
