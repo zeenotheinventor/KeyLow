@@ -1,4 +1,9 @@
-import { HEALTH_ACCESS, LEGAL_URLS } from "@keylow/core/copy";
+import {
+  HEALTH_ACCESS,
+  HEALTH_ACCESS_BODY_POINTS,
+  HEALTH_ACCESS_EXPLAIN_POINTS,
+  LEGAL_URLS,
+} from "@keylow/core/copy";
 import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { AppState, Linking } from "react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -46,6 +51,23 @@ const imported = (inserted: number): HealthImportResult => ({
   inserted,
   body: bodyNotRun,
 });
+// An import that read body composition too: the weight count, then each body kind's stored rows.
+const importedWithBody = (
+  inserted: number,
+  bodyFatInserted: number,
+  leanMassInserted: number,
+): HealthImportResult => ({
+  ...imported(inserted),
+  body: {
+    bodyFat: { status: "imported", read: bodyFatInserted, skipped: 0, inserted: bodyFatInserted },
+    leanMass: {
+      status: "imported",
+      read: leanMassInserted,
+      skipped: 0,
+      inserted: leanMassInserted,
+    },
+  },
+});
 const withStatus = (status: HealthImportResult["status"]): HealthImportResult => ({
   status,
   read: 0,
@@ -67,6 +89,10 @@ async function renderRoute() {
     </SafeAreaProvider>,
   );
 }
+
+const addBodyComposition = { add: "body-composition" };
+const bodyFatOnly = { bodyFat: true, leanMass: false };
+const leanMassOnly = { bodyFat: false, leanMass: true };
 
 const names = (method: FakeHealthProvider["calls"][number]["method"]) =>
   provider.calls.filter((call) => call.method === method);
@@ -132,6 +158,37 @@ describe("the Health access route", () => {
     );
   });
 
+  describe("when the body composition access cannot be read", () => {
+    beforeEach(() => {
+      jest.spyOn(provider, "bodyCompositionAccess").mockRejectedValue(new Error("x"));
+    });
+
+    it("should still reach explain in the first-time flow", async () => {
+      await renderRoute();
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.explain.heading }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should still reach explain · body-composition, and ask, in the add-later flow", async () => {
+      routerMock.searchParams = addBodyComposition;
+      provider.state.permissionGranted = true;
+      provider.state.grantBodyCompositionOnRequest = { bodyFat: false, leanMass: false };
+      await renderRoute();
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      await user().press(screen.getByRole("button", { name: "Continue" }));
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.deniedBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(names("requestBodyCompositionPermission")).toHaveLength(1);
+    });
+  });
+
   describe("install", () => {
     beforeEach(() => {
       provider.state.availability = "needs-install";
@@ -176,6 +233,17 @@ describe("the Health access route", () => {
       expect(screen.getByRole("button", { name: "See your trend" })).toBeOnTheScreen();
       expect(names("requestPermission")).toHaveLength(1);
       expect(mockHealthImport.importNow).toHaveBeenCalledTimes(1);
+    });
+
+    it("should ask for weight, body fat and lean mass in one request", async () => {
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+      await screen.findByRole("heading", { name: "5 weigh-ins imported" });
+
+      expect(names("requestPermission")).toEqual([
+        { method: "requestPermission", includeBodyComposition: true },
+      ]);
+      expect(names("requestBodyCompositionPermission")).toHaveLength(0);
     });
 
     it("should read zero for a repeat import that stored nothing", async () => {
@@ -447,6 +515,352 @@ describe("the Health access route", () => {
 
       expect(screen.getByRole("heading", { name: "64 weigh-ins imported" })).toBeOnTheScreen();
       expect(mockHealthImport.importNow).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("the points and the optional caption of explain", () => {
+    it("should say the body types are optional under the four rewritten points", async () => {
+      await renderRoute();
+
+      expect(await screen.findByText(HEALTH_ACCESS.explainOptionalNote)).toBeOnTheScreen();
+      HEALTH_ACCESS_EXPLAIN_POINTS.forEach((point) => {
+        expect(screen.getByText(point.text)).toBeOnTheScreen();
+      });
+    });
+  });
+
+  describe("the first-time flow with body composition", () => {
+    beforeEach(() => {
+      mockHealthImport.importNow.mockResolvedValue(importedWithBody(64, 12, 12));
+    });
+
+    it("should show the counts line on connected when both kinds came in", async () => {
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(
+        await screen.findByRole("heading", { name: "64 weigh-ins imported" }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText("Also 12 body fat and 12 lean mass readings.")).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", { name: HEALTH_ACCESS.connectedPartial.neither.action }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should show no counts line when no body reading came in", async () => {
+      mockHealthImport.importNow.mockResolvedValue(importedWithBody(64, 0, 0));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+      await screen.findByRole("heading", { name: "64 weigh-ins imported" });
+
+      expect(screen.queryByText(/^Also /)).not.toBeOnTheScreen();
+    });
+
+    it("should say body composition is being read while it imports, with both types allowed", async () => {
+      mockHealthImport.importNow.mockReturnValue(new Promise(() => undefined));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByRole("button", { name: "Importing" })).toBeDisabled();
+      expect(screen.getByText(HEALTH_ACCESS.connecting.bodyWithBodyComposition)).toBeOnTheScreen();
+    });
+
+    it("should keep the weight-only words while it imports, with neither type allowed", async () => {
+      provider.state.grantBodyCompositionOnRequest = { bodyFat: false, leanMass: false };
+      mockHealthImport.importNow.mockReturnValue(new Promise(() => undefined));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByRole("button", { name: "Importing" })).toBeDisabled();
+      expect(
+        screen.getByText("Reading your weight history. This only happens while Ki-Lo is open."),
+      ).toBeOnTheScreen();
+    });
+
+    it.each([
+      ["neither type", { bodyFat: false, leanMass: false }, "neither"],
+      ["body fat alone", bodyFatOnly, "leanMassMissing"],
+      ["lean mass alone", leanMassOnly, "bodyFatMissing"],
+    ] as const)(
+      "should end on connected · partial, with its own sentence and action, when %s is allowed",
+      async (_name, granted, missing) => {
+        provider.state.grantBodyCompositionOnRequest = granted;
+        mockHealthImport.importNow.mockResolvedValue(imported(64));
+        await renderRoute();
+        await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+        expect(
+          await screen.findByRole("heading", { name: "64 weigh-ins imported" }),
+        ).toBeOnTheScreen();
+        expect(screen.getByText(HEALTH_ACCESS.connectedPartial[missing].text)).toBeOnTheScreen();
+        expect(
+          screen.getByRole("button", { name: HEALTH_ACCESS.connectedPartial[missing].action }),
+        ).toBeOnTheScreen();
+        expect(screen.getByRole("button", { name: "See your trend" })).toBeOnTheScreen();
+      },
+    );
+
+    it("should show denied when weight is refused, whatever the body types answered", async () => {
+      provider.state.grantOnRequest = false;
+      provider.state.bodyCompositionAccess = { bodyFat: true, leanMass: true };
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.denied.heading }),
+      ).toBeOnTheScreen();
+      expect(mockHealthImport.importNow).not.toHaveBeenCalled();
+    });
+
+    it("should show denied when the import finds weight access gone, whatever the body result says", async () => {
+      mockHealthImport.importNow.mockResolvedValue({
+        ...importedWithBody(0, 3, 3),
+        status: "no-permission",
+      });
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.denied.heading }),
+      ).toBeOnTheScreen();
+    });
+  });
+
+  describe("the add-later flow", () => {
+    beforeEach(() => {
+      routerMock.searchParams = addBodyComposition;
+      provider.state.permissionGranted = true;
+      mockHealthImport.importNow.mockResolvedValue(importedWithBody(0, 12, 12));
+    });
+
+    it("should show explain · body-composition with its two points and the privacy link, but no caption", async () => {
+      await renderRoute();
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText(HEALTH_ACCESS.explainBodyComposition.body)).toBeOnTheScreen();
+      HEALTH_ACCESS_BODY_POINTS.forEach((point) => {
+        expect(screen.getByText(point.title)).toBeOnTheScreen();
+        expect(screen.getByText(point.text)).toBeOnTheScreen();
+      });
+      expect(screen.queryByText(HEALTH_ACCESS.explainOptionalNote)).not.toBeOnTheScreen();
+      expect(screen.getByRole("link", { name: HEALTH_ACCESS.privacyPolicyLink })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Continue" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Not now" })).toBeOnTheScreen();
+    });
+
+    it("should ask for the two body types only, never weight, and import once", async () => {
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(
+        await screen.findByRole("heading", { name: "0 weigh-ins imported" }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText("Also 12 body fat and 12 lean mass readings.")).toBeOnTheScreen();
+      expect(names("requestBodyCompositionPermission")).toHaveLength(1);
+      expect(names("requestPermission")).toHaveLength(0);
+      expect(mockHealthImport.importNow).toHaveBeenCalledTimes(1);
+    });
+
+    it("should show connecting with the body composition words while it imports", async () => {
+      mockHealthImport.importNow.mockReturnValue(new Promise(() => undefined));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByRole("button", { name: "Importing" })).toBeDisabled();
+      expect(screen.getByText(HEALTH_ACCESS.connecting.bodyWithBodyComposition)).toBeOnTheScreen();
+    });
+
+    it("should end on connected · partial when one type was granted", async () => {
+      provider.state.grantBodyCompositionOnRequest = leanMassOnly;
+      mockHealthImport.importNow.mockResolvedValue(importedWithBody(0, 0, 4));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByText("Also 4 lean mass readings.")).toBeOnTheScreen();
+      expect(
+        screen.getByText(HEALTH_ACCESS.connectedPartial.bodyFatMissing.text),
+      ).toBeOnTheScreen();
+    });
+
+    it("should show denied · body-composition, and import nothing, when neither type was granted", async () => {
+      provider.state.grantBodyCompositionOnRequest = { bodyFat: false, leanMass: false };
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.deniedBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText(HEALTH_ACCESS.deniedBodyComposition.body)).toBeOnTheScreen();
+      HEALTH_ACCESS.deniedBodyComposition.steps.forEach((step) => {
+        expect(screen.getByText(step)).toBeOnTheScreen();
+      });
+      expect(mockHealthImport.importNow).not.toHaveBeenCalled();
+
+      await user().press(screen.getByRole("button", { name: "Open Health Connect" }));
+
+      expect(names("openSettings")).toHaveLength(1);
+    });
+
+    it("should import, and not show explain again, once a type is turned on in Health Connect", async () => {
+      provider.state.grantBodyCompositionOnRequest = { bodyFat: false, leanMass: false };
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+      await screen.findByRole("heading", { name: HEALTH_ACCESS.deniedBodyComposition.heading });
+
+      provider.state.bodyCompositionAccess = { bodyFat: true, leanMass: true };
+      await act(() => {
+        foregroundListeners.forEach((listener) => {
+          listener("active");
+        });
+      });
+
+      expect(
+        await screen.findByRole("heading", { name: "0 weigh-ins imported" }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).not.toBeOnTheScreen();
+      expect(mockHealthImport.importNow).toHaveBeenCalledTimes(1);
+      expect(names("requestPermission")).toHaveLength(0);
+    });
+
+    it("should not join an import that is already running before anything is asked", async () => {
+      mockHealthImport.isImporting = true;
+      await renderRoute();
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(mockHealthImport.importNow).not.toHaveBeenCalled();
+    });
+
+    it("should leave from Not now and from Close", async () => {
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Not now" }));
+      await user().press(screen.getByRole("button", { name: "Close" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(2);
+    });
+
+    it("should stay on connecting while the first import runs when weight was not held on opening", async () => {
+      provider.state.permissionGranted = false;
+      mockHealthImport.importNow.mockReturnValue(new Promise(() => undefined));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByRole("button", { name: "Importing" })).toBeDisabled();
+      expect(
+        screen.queryByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).not.toBeOnTheScreen();
+      expect(names("requestBodyCompositionPermission")).toHaveLength(0);
+    });
+
+    it("should ask for the body types once when Continue is pressed twice before the sheet answers", async () => {
+      const request = jest
+        .spyOn(provider, "requestBodyCompositionPermission")
+        .mockReturnValue(new Promise(() => undefined));
+      await renderRoute();
+      const continueButton = await screen.findByRole("button", { name: "Continue" });
+      await user().press(continueButton);
+      await user().press(continueButton);
+
+      expect(request).toHaveBeenCalledTimes(1);
+    });
+
+    it("should run the first-time flow when weight permission is not held", async () => {
+      provider.state.permissionGranted = false;
+      await renderRoute();
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.explain.heading }),
+      ).toBeOnTheScreen();
+      await user().press(screen.getByRole("button", { name: "Continue" }));
+      await screen.findByRole("heading", { name: /weigh-ins? imported/ });
+
+      expect(names("requestPermission")).toEqual([
+        { method: "requestPermission", includeBodyComposition: true },
+      ]);
+      expect(names("requestBodyCompositionPermission")).toHaveLength(0);
+    });
+
+    it.each([{ add: "weight" }, { add: ["body-composition", "weight"] }, { add: "" }, {}])(
+      "should run the first-time flow for the parameter %j",
+      async (searchParams) => {
+        routerMock.searchParams = searchParams;
+        await renderRoute();
+
+        expect(
+          await screen.findByRole("heading", { name: HEALTH_ACCESS.explain.heading }),
+        ).toBeOnTheScreen();
+        await user().press(screen.getByRole("button", { name: "Continue" }));
+        await screen.findByRole("heading", { name: /weigh-ins? imported/ });
+
+        expect(names("requestPermission")).toHaveLength(1);
+        expect(names("requestBodyCompositionPermission")).toHaveLength(0);
+      },
+    );
+  });
+
+  describe("connected · partial", () => {
+    async function renderPartial() {
+      provider.state.grantBodyCompositionOnRequest = bodyFatOnly;
+      mockHealthImport.importNow.mockResolvedValue(importedWithBody(64, 3, 0));
+      await renderRoute();
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+      await screen.findByRole("heading", { name: "64 weigh-ins imported" });
+    }
+
+    it("should move the same screen to explain · body-composition from its action, without closing", async () => {
+      await renderPartial();
+      await user().press(
+        screen.getByRole("button", { name: HEALTH_ACCESS.connectedPartial.leanMassMissing.action }),
+      );
+
+      expect(
+        await screen.findByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("should ask for the body types only, never weight again, and import again from there", async () => {
+      await renderPartial();
+      provider.state.grantBodyCompositionOnRequest = { bodyFat: true, leanMass: true };
+      mockHealthImport.importNow.mockResolvedValue(importedWithBody(0, 0, 6));
+      await user().press(
+        screen.getByRole("button", { name: HEALTH_ACCESS.connectedPartial.leanMassMissing.action }),
+      );
+      await user().press(await screen.findByRole("button", { name: "Continue" }));
+
+      expect(await screen.findByText("Also 6 lean mass readings.")).toBeOnTheScreen();
+      expect(names("requestPermission")).toHaveLength(1);
+      expect(names("requestBodyCompositionPermission")).toHaveLength(1);
+      expect(mockHealthImport.importNow).toHaveBeenCalledTimes(2);
+      expect(
+        screen.queryByRole("button", {
+          name: HEALTH_ACCESS.connectedPartial.leanMassMissing.action,
+        }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should leave from See your trend and from Close", async () => {
+      await renderPartial();
+      await user().press(screen.getByRole("button", { name: "See your trend" }));
+      await user().press(screen.getByRole("button", { name: "Close" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(2);
+    });
+
+    it("should leave from Not now on the explain screen it opens", async () => {
+      await renderPartial();
+      await user().press(
+        screen.getByRole("button", { name: HEALTH_ACCESS.connectedPartial.leanMassMissing.action }),
+      );
+      await user().press(await screen.findByRole("button", { name: "Not now" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
     });
   });
 

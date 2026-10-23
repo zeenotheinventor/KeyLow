@@ -406,7 +406,7 @@ export const describeSheetTime = (instant: Date, timeZone: string): string =>
 /**
  * The Health access screen, one entry per state of `health-access: permissions flow`. The heading of
  * `connected` is `describeImportedCount`, because it carries the number. The explain state's four points
- * are `HEALTH_ACCESS_POINTS`. The body composition states of version 10 are `explainOptionalNote`,
+ * are `HEALTH_ACCESS_EXPLAIN_POINTS`. The body composition states of version 10 are `explainOptionalNote`,
  * `explainBodyComposition`, `deniedBodyComposition`, `connecting.bodyWithBodyComposition` and `connectedPartial`.
  */
 export const HEALTH_ACCESS = {
@@ -504,23 +504,6 @@ export const describeImportedCount = (importedCount: number): string => {
 };
 
 /** The four points of the explain state, each a title and its text. */
-export const HEALTH_ACCESS_POINTS = [
-  {
-    title: "What Ki-Lo reads",
-    text: "Your body weight readings and the time each was taken. Nothing else.",
-  },
-  { title: "Why", text: "To draw your weight trend and, later, to set your calorie targets." },
-  {
-    title: "What it never does",
-    text: `Write to ${HEALTH_CONNECT_NAME}, share your readings, or use them for advertising.`,
-  },
-  { title: "When", text: "Only while Ki-Lo is open, or when you pull down to refresh." },
-] as const;
-
-/**
- * The four points of the explain state once body fat and lean mass are asked for too. The permission flow
- * switches the screen to this list and removes `HEALTH_ACCESS_POINTS`.
- */
 export const HEALTH_ACCESS_EXPLAIN_POINTS = [
   {
     title: "What Ki-Lo reads",
