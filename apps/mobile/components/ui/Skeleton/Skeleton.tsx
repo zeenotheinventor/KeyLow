@@ -395,6 +395,20 @@ function SkeletonHistoryList() {
   );
 }
 
+// The Weight screen as its loading board draws it: the Trend weight card, the range control, the chart, the
+// Weigh-ins heading as a short bar and the list, 12 points apart. The screen gives their sides.
+function SkeletonWeight() {
+  return (
+    <View className="gap-3" testID="skeleton-weight">
+      <SkeletonBone className="h-[112px] rounded-large" />
+      <SkeletonBone className="h-[44px] rounded-medium" />
+      <SkeletonBone className="h-[220px] rounded-large" />
+      <SkeletonBone className="h-[18px] w-[120px]" />
+      <SkeletonBone className="h-[168px] rounded-large" />
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -417,6 +431,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "trainHome" ? <SkeletonTrainHome /> : null}
       {variant === "bodyMap" ? <SkeletonBodyMap /> : null}
       {variant === "historyList" ? <SkeletonHistoryList /> : null}
+      {variant === "weight" ? <SkeletonWeight /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View

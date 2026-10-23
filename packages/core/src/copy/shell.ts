@@ -36,7 +36,7 @@ export const MORE_SCREEN = {
     title: "Nutrition",
     targets: { title: "Targets", subtitle: "Set by you" },
   },
-  body: { title: "Body", weight: { title: "Weight", subtitle: COMING_SOON_TITLE } },
+  body: { title: "Body", weight: { title: "Weight" } },
   settings: {
     title: "Settings",
     appearance: {

@@ -1,12 +1,24 @@
+import type { BadgeTone } from "../Badge";
 import type { IconName } from "../Icon";
 import type { ReactNode, Ref } from "react";
 import type { View } from "react-native";
+
+export type ListRowBadge = {
+  /** One short phrase from `@keylow/core/copy`. */
+  label: string;
+  tone: BadgeTone;
+};
 
 type ListRowBaseProps = {
   /** A leading icon, by name, in a small tile. */
   icon?: IconName | undefined;
   title: string;
   subtitle?: string | undefined;
+  /**
+   * A short status drawn before the value, such as the weigh-in list's "Left out of trend" in the warning
+   * tone. Its label is added to the row's accessible name, after the subtitle and before the value.
+   */
+  badge?: ListRowBadge | undefined;
   /** The trailing value, already formatted: write it with `@keylow/core/format`. */
   value?: string | undefined;
   /** The unit after the value, such as `kcal`. */
@@ -17,6 +29,15 @@ type ListRowBaseProps = {
    * recipes row draws it.
    */
   valueLook?: "numeral" | "quiet" | undefined;
+  /**
+   * `compact` is the weigh-in list's row as `weight: chart and weigh-ins` draws it: 52 points tall, a 32 point
+   * tile with an 18 point icon, a 14 over 20 semibold title over a 12 over 16 muted caption with no gap between
+   * them, and a 16 over 24 semibold value that the unit is drawn with in one piece. The subtitle may wrap to a
+   * second line. Leave it out for the usual row.
+   */
+  size?: "compact" | undefined;
+  /** `muted` draws the value and the unit in the muted text colour, as the weigh-in the trend left out. */
+  valueTone?: "muted" | undefined;
   /** Whether the chevron that says the row navigates is drawn. Only a row with `onPress` has one. Defaults to true. */
   chevron?: boolean | undefined;
   /** Dims the row to half and stops it responding. */

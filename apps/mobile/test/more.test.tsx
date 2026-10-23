@@ -172,19 +172,29 @@ describe("the More screen", () => {
   });
 
   describe("Weight", () => {
-    it("should be a disabled row marked Coming soon", async () => {
+    it("should be an enabled row in Body, named Weight, with its icon and a chevron because it goes somewhere", async () => {
       await renderMore();
 
-      const row = screen.getByLabelText("Weight, Coming soon");
+      const row = within(screen.getByLabelText("Body")).getByRole("button", { name: "Weight" });
 
-      expect(row).toBeDisabled();
+      expect(row).toBeEnabled();
+      expect(drawingsIn(row)).toHaveLength(2);
     });
 
-    it("should not be offered as a button, and go nowhere", async () => {
+    it("should no longer say Coming soon", async () => {
       await renderMore();
 
-      expect(screen.queryByRole("button", { name: /^Weight/ })).not.toBeOnTheScreen();
-      expect(routerMock.push).not.toHaveBeenCalled();
+      expect(screen.queryByText(/coming soon/i)).not.toBeOnTheScreen();
+      expect(screen.queryByLabelText(/coming soon/i)).not.toBeOnTheScreen();
+    });
+
+    it("should open the Weight screen inside the More tab when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("button", { name: "Weight" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/weight");
     });
   });
 

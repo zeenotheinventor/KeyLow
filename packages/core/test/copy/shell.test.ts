@@ -44,7 +44,7 @@ describe("the tab shell copy", () => {
         title: "Nutrition",
         targets: { title: "Targets", subtitle: "Set by you" },
       },
-      body: { title: "Body", weight: { title: "Weight", subtitle: "Coming soon" } },
+      body: { title: "Body", weight: { title: "Weight" } },
       settings: {
         title: "Settings",
         appearance: {

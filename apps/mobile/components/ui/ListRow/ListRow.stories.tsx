@@ -49,6 +49,46 @@ export const WithValue: Story = {
   },
 };
 
+// The Weight screen's weigh-in row that the trend left out: a warning badge before the value, and no chevron
+// because the row goes nowhere.
+export const WithBadge: Story = {
+  args: {
+    icon: "Pencil",
+    title: "Sat 10 Oct",
+    subtitle: "08:00 · Added by you",
+    badge: { label: "Left out of trend", tone: "warning" },
+    value: "99.0",
+    unit: "kg",
+  },
+};
+
+// The weigh-in list's row as the Weight board draws it: 52 points, a 32 point tile, a label-small title over a
+// muted caption, and the weight and unit as one semibold figure.
+export const Compact: Story = {
+  args: {
+    size: "compact",
+    icon: "Heart",
+    title: "Today",
+    subtitle: "07:42 · Health Connect",
+    value: "81.6",
+    unit: "kg",
+  },
+};
+
+// The same row for a weigh-in the trend left out: the badge before the value, and the value muted.
+export const CompactLeftOut: Story = {
+  args: {
+    size: "compact",
+    icon: "Pencil",
+    title: "Sat 10 Oct",
+    subtitle: "08:00 · Added by you",
+    badge: { label: "Left out of trend", tone: "warning" },
+    value: "99.0",
+    unit: "kg",
+    valueTone: "muted",
+  },
+};
+
 // The recipe library's Archived recipes row: a count in secondary text, and a chevron.
 export const WithQuietValue: Story = {
   args: {
@@ -65,7 +105,7 @@ export const TitleOnly: Story = {
   args: { icon: "X", title: "Sign out", chevron: false, onPress: () => undefined },
 };
 
-// The More screen's Weight row: it is not there yet, so it is dimmed and does nothing.
+// A row that is not available yet: dimmed, and it does nothing.
 export const Disabled: Story = {
   args: { icon: "ScanBarcode", title: "Weight", subtitle: "Coming soon", disabled: true },
 };
