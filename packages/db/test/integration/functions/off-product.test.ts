@@ -95,8 +95,26 @@ describe("off-product", () => {
         protein_g: 9.5,
       });
       expect(food.fetched_at).not.toBeNull();
+      // The fixture's serving is 40 g and its quantity is 500 g with no packaging or pack category.
       expect(portions).toEqual([
-        expect.objectContaining({ food_id: food.id, owner_id: null, grams: 40, is_default: true }),
+        expect.objectContaining({
+          food_id: food.id,
+          owner_id: null,
+          label: "40 g",
+          grams: 40,
+          ml: null,
+          is_default: true,
+          position: 0,
+        }),
+        expect.objectContaining({
+          food_id: food.id,
+          owner_id: null,
+          label: "1 pack",
+          grams: 500,
+          ml: null,
+          is_default: false,
+          position: 1,
+        }),
       ]);
 
       const calls = await offMock.calls(code);
@@ -124,10 +142,14 @@ describe("off-product", () => {
       expect(await readOffFoods(code)).toHaveLength(1);
       const { data: portions, error } = await adminClient()
         .from("food_portions")
-        .select("label, grams, is_default")
-        .eq("food_id", [...foodIds][0] ?? "");
+        .select("label, grams, ml, is_default, position")
+        .eq("food_id", [...foodIds][0] ?? "")
+        .order("position");
       expect(error).toBeNull();
-      expect(portions).toEqual([{ label: "40 g", grams: 40, is_default: true }]);
+      expect(portions).toEqual([
+        { label: "40 g", grams: 40, ml: null, is_default: true, position: 0 },
+        { label: "1 pack", grams: 500, ml: null, is_default: false, position: 1 },
+      ]);
     });
 
     it("keeps the raw OFF product, without an import run, in food_source_data", async () => {
