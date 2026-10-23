@@ -45,6 +45,25 @@ type Story = StoryObj<typeof meta>;
 // The day ahead, with Start.
 export const Planned: Story = {};
 
+// Tuesday 13 October: Monday's Push was missed and made up today, so today's Pull is still to do (KEY-531).
+// The line is drawn on no board.
+export const PlannedAfterMakeUp: Story = {
+  args: {
+    card: {
+      kind: "planned",
+      routineName: "Push Pull Legs",
+      dayName: "Pull",
+      dayNumber: 2,
+      dayCount: 4,
+      exerciseCount: 5,
+      setCount: 15,
+      estimatedMinutes: 47,
+      madeUp: [{ date: "2026-10-12", dayName: "Push" }],
+    },
+    context: { localDate: "2026-10-13", nextExerciseName: null, recovery: null },
+  },
+};
+
 // Offline: the card shows from the cache and Start is dimmed.
 export const PlannedOffline: Story = { args: { isStartAndResumeDisabled: true } };
 

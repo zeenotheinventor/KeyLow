@@ -115,9 +115,12 @@ export type WeekPlanDay = Readonly<{
   weekday: number;
   isToday: boolean;
   plannedDay: PlannedDay | null;
-  /** The live sessions whose `local_date` is this date, in the order they were given. */
+  /**
+   * The live sessions whose `local_date` is this date, in the order they were given, without the ones that
+   * make up an earlier day (`madeUpBy` of that day).
+   */
   sessions: readonly WeekSession[];
-  /** The working sets of those sessions. */
+  /** The working sets of those sessions, and of the session that makes this day up. */
   setsLogged: number;
   /**
    * The sets the day on this date plans: the routine day an open session of the date names, otherwise the
@@ -130,6 +133,12 @@ export type WeekPlanDay = Readonly<{
    * for another day (Pick day).
    */
   sessionDay: Readonly<{ id: string; name: string }> | null;
+  /**
+   * The finished session that makes this day up, or null. A day that was missed and is done later in the same
+   * week reads `logged` and holds that session here: its `sessions` stay those of its own date, and its
+   * `setsLogged` and `sessionDay` are the make-up's.
+   */
+  madeUpBy: WeekSession | null;
   status: WeekDayStatus;
 }>;
 
@@ -275,6 +284,61 @@ const creditedDayIdOf = (
     : null;
 };
 
+type MakeUpsInput = Readonly<{
+  /** The live sessions of the week. */
+  sessions: readonly WeekSession[];
+  dates: readonly string[];
+  /** The ids of the routine days with a weekday, with that weekday. */
+  weekdayByDayId: ReadonlyMap<string, number>;
+  activeFrom: string | undefined;
+}>;
+
+type FinishedSession = Readonly<{ session: WeekSession; startedAt: number }>;
+
+/** Oldest first: by date, then by the moment the session started, then by id. */
+const compareOldestFirst = (first: FinishedSession, second: FinishedSession): number =>
+  compareText(first.session.local_date, second.session.local_date) ||
+  first.startedAt - second.startedAt ||
+  compareText(first.session.id, second.session.id);
+
+/**
+ * The finished sessions that make up an earlier day of their week, by the date they make up. Sessions are
+ * judged oldest first, so every date before the one judged is settled: a finished session of routine day X
+ * on date D makes up X's date P when P is in the week before D, is not before the routine's `activeFrom`, no
+ * session counts for P (an open one does, a session that itself makes up a day does not), and no earlier
+ * session already made P up. Otherwise it counts for D, which is what makes P taken for later sessions.
+ */
+const settleMakeUps = ({
+  sessions,
+  dates,
+  weekdayByDayId,
+  activeFrom,
+}: MakeUpsInput): ReadonlyMap<string, WeekSession> => {
+  const takenDates = new Set(sessions.filter(isOpenSession).map((session) => session.local_date));
+  const madeUpByDate = new Map<string, WeekSession>();
+  const finished = sessions
+    .filter((session) => !isOpenSession(session))
+    .map((session) => ({ session, startedAt: parseMoment(session.started_at, SESSION_END_RULE) }))
+    .sort(compareOldestFirst);
+  for (const { session } of finished) {
+    const weekday =
+      session.routine_day_id === null ? undefined : weekdayByDayId.get(session.routine_day_id);
+    const madeUpDate = weekday === undefined ? undefined : dates[weekday];
+    const canMakeUp =
+      madeUpDate !== undefined &&
+      madeUpDate < session.local_date &&
+      (activeFrom === undefined || madeUpDate >= activeFrom) &&
+      !takenDates.has(madeUpDate) &&
+      !madeUpByDate.has(madeUpDate);
+    if (canMakeUp) {
+      madeUpByDate.set(madeUpDate, session);
+    } else {
+      takenDates.add(session.local_date);
+    }
+  }
+  return madeUpByDate;
+};
+
 type StatusInput = Readonly<{
   date: string;
   today: string;
@@ -320,11 +384,19 @@ const statusOf = ({
  *
  * - A session is on the date of its `local_date`, the user's calendar day of its start, so one just
  *   after local midnight on Monday is Monday whatever the UTC date. Today is the date of `now` in `tz`.
- * - A finished session fills the slot of the date it is on (a day picked in place of the planned one counts
+ * - Otherwise a finished session fills the slot of the date it is on (a day picked in place of the planned one counts
  *   for the planned one's slot, and the picked day keeps its own date, which stays planned). It credits the
  *   day planned on its date, whichever routine day it names. On a date with no planned day, one that names
  *   a routine day with no weekday credits that day instead, since that day has no date of its own. One
  *   session credits at most one day. An open session credits none.
+ * - A late make-up counts for the day it replaced. A finished session that names a routine day whose date
+ *   this week is earlier than the session's own date makes that earlier day up, when the routine was active
+ *   on it, no session counts for it (an open one does, one that itself makes up a day does not) and no
+ *   earlier session already made it up. The earlier day then reads `logged` with the session in
+ *   `madeUpBy`, and the session does not count for its own date, which reads as without it (planned,
+ *   missed, rest, never extra). Sessions are judged oldest first (date, then the moment they started, then
+ *   id), so a chain holds: Monday missed, Tuesday does Monday's day, Wednesday does Tuesday's day. A missed
+ *   day done in the next week credits nothing. Any other session is credited as below.
  * - A date with a planned day reads `logged` when its day is credited, `in_progress` when a session
  *   there is open, and otherwise `today`, `planned` or `missed` by its date against today, or `rest`
  *   when its date is before the routine's `activeFrom` (the routine plans from the day it was made
@@ -381,11 +453,27 @@ export const weekPlanDays = ({
   );
 
   const unplacedDayIds = new Set(plannedUnplaced.map((day) => day.id));
+  const madeUpByDate = settleMakeUps({
+    sessions: weekSessions,
+    dates,
+    weekdayByDayId: new Map(
+      plannedDated.map(({ weekday, plannedDay }) => [plannedDay.id, weekday]),
+    ),
+    activeFrom: routine?.activeFrom,
+  });
+  const madeUpSessions = new Set(madeUpByDate.values());
+  const countedSessions = weekSessions.filter((session) => !madeUpSessions.has(session));
   const loggedDayIds = new Set<string>();
-  for (const session of weekSessions) {
+  for (const session of countedSessions) {
     const creditedDayId = creditedDayIdOf(session, unplacedDayIds, dates, plannedByWeekday);
     if (creditedDayId !== null) {
       loggedDayIds.add(creditedDayId);
+    }
+  }
+  for (const date of madeUpByDate.keys()) {
+    const madeUpDay = plannedByWeekday.get(dates.indexOf(date));
+    if (madeUpDay !== undefined) {
+      loggedDayIds.add(madeUpDay.id);
     }
   }
 
@@ -395,10 +483,14 @@ export const weekPlanDays = ({
     routineDayCount: planned.length,
     days: dates.map((date, weekday) => {
       const plannedDay = plannedByWeekday.get(weekday) ?? null;
-      const daySessions = weekSessions.filter((session) => session.local_date === date);
+      const daySessions = countedSessions.filter((session) => session.local_date === date);
+      const madeUpBy = madeUpByDate.get(date) ?? null;
       const sessionDay =
-        planned.find((day) => daySessions.some((session) => session.routine_day_id === day.id)) ??
-        null;
+        madeUpBy === null
+          ? (planned.find((day) =>
+              daySessions.some((session) => session.routine_day_id === day.id),
+            ) ?? null)
+          : plannedDay;
       const openDay = daySessions.some(isOpenSession) ? sessionDay : null;
       return {
         date,
@@ -406,9 +498,13 @@ export const weekPlanDays = ({
         isToday: date === today,
         plannedDay,
         sessions: daySessions,
-        setsLogged: daySessions.reduce((sets, session) => sets + workingSetsOf(session).length, 0),
+        setsLogged: [...daySessions, ...(madeUpBy === null ? [] : [madeUpBy])].reduce(
+          (sets, session) => sets + workingSetsOf(session).length,
+          0,
+        ),
         setsPlanned: (openDay ?? plannedDay)?.setCount ?? 0,
         sessionDay: sessionDay === null ? null : { id: sessionDay.id, name: sessionDay.name },
+        madeUpBy,
         status: statusOf({
           date,
           today,

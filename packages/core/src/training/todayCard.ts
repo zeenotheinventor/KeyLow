@@ -19,6 +19,14 @@ export type NextPlannedDay = Readonly<{
   name: string;
 }>;
 
+/** An earlier day of the week that today's session made up. */
+export type MadeUpDay = Readonly<{
+  /** The date of the day made up, `YYYY-MM-DD`. */
+  date: string;
+  /** The routine day it planned, as the routine names it. */
+  dayName: string;
+}>;
+
 /** The first planned set not yet logged: the exercise, and which of its sets, from 1. */
 export type NextSet = Readonly<{ exerciseId: string; setNumber: number }>;
 
@@ -33,6 +41,8 @@ export type TodayCard =
       exerciseCount: number;
       setCount: number;
       estimatedMinutes: number;
+      /** The earlier days today's finished sessions made up, when they made any up. */
+      madeUp?: readonly MadeUpDay[];
     }>
   | Readonly<{
       kind: "in_progress";
@@ -54,7 +64,12 @@ export type TodayCard =
       setsPlanned: number;
       next: NextPlannedDay | null;
     }>
-  | Readonly<{ kind: "rest"; next: NextPlannedDay | null }>
+  | Readonly<{
+      kind: "rest";
+      next: NextPlannedDay | null;
+      /** The earlier days today's finished sessions made up, when they made any up. */
+      madeUp?: readonly MadeUpDay[];
+    }>
   | Readonly<{ kind: "no_routine" }>
   | Readonly<{ kind: "first_time" }>;
 
@@ -103,17 +118,27 @@ const dayOfSessions = (
 
 /**
  * The finished sessions that count as today: the ones on its date, whichever routine day they were started
- * for. A planned day's own session logged on another date is that date's, and leaves today planned.
+ * for, except one that makes up an earlier day, which counts for that day. A planned day's own session
+ * logged on another date is that date's, and leaves today planned.
  */
-const finishedSessionsOfToday = (
-  week: WeekPlan,
-  today: WeekPlanDay,
-): { session: WeekSession; endedAt: string }[] =>
-  week.sessions.flatMap((session) =>
-    session.ended_at !== null && session.local_date === today.date
-      ? [{ session, endedAt: session.ended_at }]
+const finishedSessionsOfToday = (today: WeekPlanDay): { session: WeekSession; endedAt: string }[] =>
+  today.sessions.flatMap((session) =>
+    session.ended_at === null ? [] : [{ session, endedAt: session.ended_at }],
+  );
+
+/** The earlier days of the week that a session of today made up, oldest first. */
+const daysMadeUpToday = (week: WeekPlan, today: WeekPlanDay): MadeUpDay[] =>
+  week.days.flatMap((day) =>
+    day.madeUpBy?.local_date === today.date && day.plannedDay !== null
+      ? [{ date: day.date, dayName: day.plannedDay.name }]
       : [],
   );
+
+/** The field a planned or rest card holds for the days made up today, left out when none were. */
+const madeUpFieldOf = (week: WeekPlan, today: WeekPlanDay): { madeUp?: readonly MadeUpDay[] } => {
+  const madeUp = daysMadeUpToday(week, today);
+  return madeUp.length === 0 ? {} : { madeUp };
+};
 
 const nextSetOf = (day: PlannedDay | null, sessions: readonly WeekSession[]): NextSet | null => {
   if (day === null) {
@@ -147,7 +172,10 @@ const setsOf = (sessions: readonly WeekSession[]): number =>
   sessions.reduce((sets, session) => sets + workingSetsOf(session).length, 0);
 
 /**
- * The block at the top of the Train home, for the day `week` holds as today:
+ * The block at the top of the Train home, for the day `week` holds as today. A session of today that makes
+ * up an earlier day counts for that day, so it leaves today's own slot open (KEY-531): the card reads
+ * `planned` or `rest` as usual, with the days made up in `madeUp`. A session picked in place of today's
+ * day that makes up nothing still fills today's slot, and reads `done`.
  *
  * - `in_progress` when a session of today is open: the minutes since it started, the working sets
  *   logged today of the day's planned sets, and the next set to log.
@@ -194,7 +222,7 @@ export const todayCard = ({
     };
   }
 
-  const counted = finishedSessionsOfToday(week, today);
+  const counted = finishedSessionsOfToday(today);
   if (counted.length > 0) {
     const sessions = counted.map(({ session }) => session);
     const day = dayOfSessions(week, sessions, today);
@@ -216,7 +244,11 @@ export const todayCard = ({
   }
   // A `rest` day that still carries a planned day is one before the routine was made active.
   if (today.plannedDay === null || today.status === "rest") {
-    return { kind: "rest", next: nextPlannedDayAfter(week, today.date) };
+    return {
+      kind: "rest",
+      next: nextPlannedDayAfter(week, today.date),
+      ...madeUpFieldOf(week, today),
+    };
   }
   return {
     kind: "planned",
@@ -230,6 +262,7 @@ export const todayCard = ({
       { exercises: today.plannedDay.exercises.length, sets: today.plannedDay.setCount },
       sessionTimeParams,
     ),
+    ...madeUpFieldOf(week, today),
   };
 };
 
@@ -246,5 +279,5 @@ export const todaySessionToView = (week: WeekPlan): WeekSession | null => {
   if (today === undefined) {
     throw new RangeError("The today card needs a week that holds today");
   }
-  return latestFinishedSession(finishedSessionsOfToday(week, today).map(({ session }) => session));
+  return latestFinishedSession(finishedSessionsOfToday(today).map(({ session }) => session));
 };

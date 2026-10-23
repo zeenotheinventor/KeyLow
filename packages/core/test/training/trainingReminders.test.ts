@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { benchPress, heatSet, repeat } from "./heatSets";
+import { goldenRoutine, goldenTimeZone, pushMondayDayId, sessionOn } from "./weekPlanRows";
 import {
   describeTrainingReminder,
   TRAINING_REMINDER_TITLES,
@@ -13,6 +14,7 @@ import {
   muscleState,
   planTrainingReminders,
   TRAINING_PARAMS_V1,
+  weekPlanDays,
 } from "../../src/training";
 import { heatPercentOf } from "../../src/training/heatReadout";
 
@@ -177,6 +179,32 @@ describe("Time to train", () => {
     ];
 
     expect(firesOf("train", { sessions: others })).toHaveLength(3);
+  });
+
+  it("should skip today for a session that makes up an earlier day, though the week then reads today as planned (KEY-531)", () => {
+    // Monday's Push is missed and made up on Thursday, so the strip leaves Thursday's own slot open.
+    const pushOnThursday = sessionOn(1, "2026-10-22", {
+      routine_day_id: pushMondayDayId,
+      ended_at: "2026-10-22T08:00:00Z",
+    });
+    const week = weekPlanDays({
+      routine: goldenRoutine,
+      sessions: [pushOnThursday],
+      now: NOW,
+      tz: goldenTimeZone,
+      weekStart: "2026-10-19",
+    });
+
+    expect(week.days.map((day) => day.status).slice(0, 4)).toEqual([
+      "logged",
+      "missed",
+      "rest",
+      "today",
+    ]);
+    expect(firesOf("train", { sessions: [pushOnThursday] })).toEqual([
+      "2026-10-23T16:30:00.000Z",
+      "2026-10-26T17:30:00.000Z",
+    ]);
   });
 
   it("should skip a later day that is already logged", () => {

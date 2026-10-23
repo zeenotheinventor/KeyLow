@@ -361,9 +361,13 @@ describe("todayCard", () => {
       });
     });
 
-    it("should read Pull done, not Legs, once it is finished on Legs' Thursday", () => {
+    it("should read Pull done, not Legs, once it is finished on Legs' Thursday, when Tuesday's Pull was done on time", () => {
+      // Without Tuesday's own Pull, Pull on Thursday would make Tuesday up and leave Thursday's Legs planned.
       expect(
-        cardFor({ sessions: [onThursday(pullDayId)], now: "2026-10-15T18:00:00+01:00" }),
+        cardFor({
+          sessions: [goldenTuesdaySession, onThursday(pullDayId)],
+          now: "2026-10-15T18:00:00+01:00",
+        }),
       ).toMatchObject({
         kind: "done",
         dayName: "Pull",
@@ -543,5 +547,113 @@ describe("todaySessionToView", () => {
 
   it("should give null on a day with nothing logged", () => {
     expect(todaySessionToView(weekAt(finishedWeek, THURSDAY_BEFORE_LEGS))).toBeNull();
+  });
+});
+
+describe("todayCard, when today's session makes up an earlier day (KEY-531)", () => {
+  const pushMondayDayId = "00000003-0000-4000-8000-000000000001";
+  const MONDAY_PUSH = { date: "2026-10-12", dayName: "Push" };
+  const THURSDAY_LEGS = { date: "2026-10-15", dayName: "Legs" };
+
+  const makeUpSession = (number: number, localDate: string, routineDayId: string): WeekSession =>
+    sessionOn(number, localDate, {
+      routine_day_id: routineDayId,
+      started_at: `${localDate}T18:00:00+01:00`,
+      ended_at: `${localDate}T18:50:00+01:00`,
+      sets: workingSets(squatId, 4),
+    });
+
+  it("should read Pull planned, not done, on a planned Tuesday that makes up Monday's Push", () => {
+    const pushOnTuesday = makeUpSession(1, "2026-10-13", pushMondayDayId);
+
+    const card = cardFor({ sessions: [pushOnTuesday], now: "2026-10-13T19:00:00+01:00" });
+
+    expect(card).toMatchObject({
+      kind: "planned",
+      routineName: "Push Pull Legs",
+      dayName: "Pull",
+      dayNumber: 2,
+      dayCount: 4,
+      exerciseCount: 5,
+      setCount: 15,
+      madeUp: [MONDAY_PUSH],
+    });
+  });
+
+  it("should read the rest day card on a rest Friday that makes up Thursday's Legs, naming Saturday's Push next", () => {
+    const legsOnFriday = makeUpSession(1, "2026-10-16", legsDayId);
+
+    expect(cardFor({ sessions: [legsOnFriday], now: "2026-10-16T19:00:00+01:00" })).toStrictEqual({
+      kind: "rest",
+      next: { date: "2026-10-17", id: pushSaturdayDayId, name: "Push" },
+      madeUp: [THURSDAY_LEGS],
+    });
+  });
+
+  it("should wrap next to the Monday of the following week when the missed day is the week's first", () => {
+    const pushOnSunday = makeUpSession(1, "2026-10-18", pushMondayDayId);
+
+    expect(cardFor({ sessions: [pushOnSunday], now: "2026-10-18T19:00:00+01:00" })).toStrictEqual({
+      kind: "rest",
+      next: { date: "2026-10-19", id: pushMondayDayId, name: "Push" },
+      madeUp: [MONDAY_PUSH],
+    });
+  });
+
+  it("should name every day made up today, oldest first", () => {
+    const pushOnWednesday = makeUpSession(1, "2026-10-14", pushMondayDayId);
+    const pullOnWednesday = makeUpSession(2, "2026-10-14", pullDayId);
+
+    expect(
+      cardFor({ sessions: [pullOnWednesday, pushOnWednesday], now: "2026-10-14T20:00:00+01:00" }),
+    ).toMatchObject({
+      kind: "rest",
+      madeUp: [MONDAY_PUSH, { date: "2026-10-13", dayName: "Pull" }],
+    });
+  });
+
+  it("should give no session to view, since the card is not a done card", () => {
+    const legsOnFriday = makeUpSession(1, "2026-10-16", legsDayId);
+
+    const week = weekPlanDays({
+      routine: goldenRoutine,
+      sessions: [legsOnFriday],
+      now: "2026-10-16T19:00:00+01:00",
+      tz: goldenTimeZone,
+      weekStart: goldenWeekStart,
+    });
+
+    expect(todaySessionToView(week)).toBeNull();
+  });
+
+  it("should leave an ordinary pick as it was: Legs picked on Tuesday reads done, with no make-up line", () => {
+    const legsOnTuesday = makeUpSession(1, "2026-10-13", legsDayId);
+
+    const card = cardFor({ sessions: [legsOnTuesday], now: "2026-10-13T19:00:00+01:00" });
+
+    expect(card).toMatchObject({ kind: "done", dayName: "Legs" });
+    expect(card).not.toHaveProperty("madeUp");
+  });
+
+  it("should keep the done card when a make-up and an ordinary session share today", () => {
+    const legsOnFriday = makeUpSession(1, "2026-10-16", legsDayId);
+    const freeOnFriday = sessionOn(2, "2026-10-16", {
+      started_at: "2026-10-16T19:00:00+01:00",
+      ended_at: "2026-10-16T19:30:00+01:00",
+      sets: workingSets(squatId, 2),
+    });
+
+    expect(
+      cardFor({ sessions: [legsOnFriday, freeOnFriday], now: "2026-10-16T20:00:00+01:00" }),
+    ).toMatchObject({ kind: "done", dayName: null, setsLogged: 2, minutes: 30 });
+  });
+
+  it("should name no make-up when yesterday's session made a day up and today has none", () => {
+    const legsOnFriday = makeUpSession(1, "2026-10-16", legsDayId);
+
+    const card = cardFor({ sessions: [legsOnFriday], now: "2026-10-17T09:00:00+01:00" });
+
+    expect(card).toMatchObject({ kind: "planned", dayName: "Push" });
+    expect(card).not.toHaveProperty("madeUp");
   });
 });

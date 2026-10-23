@@ -11,8 +11,8 @@ import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
 import { dayNumber } from "../dates/calendarDay";
 
 import type { MuscleId } from "../training/muscles";
-import type { NextPlannedDay, TodayCard } from "../training/todayCard";
-import type { PlannedDay, WeekCaption, WeekPlanDay } from "../training/weekPlanDays";
+import type { MadeUpDay, NextPlannedDay, TodayCard } from "../training/todayCard";
+import type { PlannedDay, WeekCaption, WeekPlanDay, WeekSession } from "../training/weekPlanDays";
 
 /*
  * The words of the Train home, the session bar and the Train tab states, as the boards `train · *` and
@@ -190,6 +190,8 @@ export type TodayCardCopy =
       loadLine: string;
       /** "Start Legs". */
       action: string;
+      /** "Push made up for Monday". Present only when today's session made up an earlier day. */
+      madeUpLine?: string;
     }>
   | Readonly<{
       kind: "in_progress";
@@ -220,6 +222,8 @@ export type TodayCardCopy =
       body: string | null;
       /** "Log a session". */
       logSessionAction: string;
+      /** "Push made up for Monday". Present only when today's session made up an earlier day. */
+      madeUpLine?: string;
     }>;
 
 /**
@@ -257,6 +261,19 @@ const describeRecovery = ({ muscles, trainedOn }: RecoveringMuscles): string | n
   return `${capitaliseFirst(names)} ${verb} still recovering from ${describeWeekdayName(trainedOn)}.`;
 };
 
+/**
+ * The line under a planned or rest card that says an earlier day was made up today: "Legs made up for
+ * Thursday". It is left out when none was.
+ */
+const madeUpLineOf = (madeUp: readonly MadeUpDay[] | undefined): { madeUpLine?: string } =>
+  madeUp === undefined || madeUp.length === 0
+    ? {}
+    : {
+        madeUpLine: joinInWords(
+          madeUp.map(({ dayName, date }) => `${dayName} made up for ${describeWeekdayName(date)}`),
+        ),
+      };
+
 const describeRestBody = (
   next: NextPlannedDay | null,
   { localDate, recovery }: TodayCardContext,
@@ -287,6 +304,7 @@ export const describeTodayCard = (
           `about ${describeMinutes(card.estimatedMinutes)}`,
         ].join(" · "),
         action: `Start ${card.dayName}`,
+        ...madeUpLineOf(card.madeUp),
       };
     case "in_progress": {
       const nextSet =
@@ -331,6 +349,7 @@ export const describeTodayCard = (
         title: TRAIN_TODAY_CARD.restTitle,
         body: describeRestBody(card.next, context),
         logSessionAction: TRAIN_TODAY_CARD.logSessionAction,
+        ...madeUpLineOf(card.madeUp),
       };
   }
 };
@@ -355,6 +374,8 @@ export type TrainWeekDayInput = Pick<
     plannedDay: Pick<PlannedDay, "name"> | null;
     /** The routine day the date's sessions name, which is the day done when it is not the planned one. */
     sessionDay: Pick<PlannedDay, "name"> | null;
+    /** The finished session that makes the day up, when it was missed and done later in the week. */
+    madeUpBy: Pick<WeekSession, "local_date"> | null;
   }>;
 
 export type TrainWeekDayCopy = {
@@ -383,7 +404,13 @@ const describeWeekDayState = (day: TrainWeekDayInput, hasRoutine: boolean): stri
   const routineDay = named === null ? [] : [named.name];
   switch (day.status) {
     case "logged":
-      return [...routineDay, "logged", describeSets(day.setsLogged)];
+      return [
+        ...routineDay,
+        day.madeUpBy === null
+          ? "logged"
+          : `made up on ${describeWeekdayName(day.madeUpBy.local_date)}`,
+        describeSets(day.setsLogged),
+      ];
     case "in_progress":
       return [...routineDay, "in progress", describeSetsOfPlanned(day.setsLogged, day.setsPlanned)];
     case "today":

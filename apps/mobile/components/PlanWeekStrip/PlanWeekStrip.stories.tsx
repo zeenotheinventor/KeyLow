@@ -122,3 +122,20 @@ export const NoRoutine: Story = {
     }),
   },
 };
+
+// Wednesday 20:00: Tuesday's Pull was missed and done on Wednesday, so Tuesday reads done (KEY-531). It is
+// drawn on no board and looks like any done day; only its spoken name says it was made up.
+export const MadeUp: Story = {
+  args: {
+    week: weekPlanDays({
+      routine,
+      sessions: [
+        monday,
+        session("pull-wednesday", "2026-10-14", "pull", "2026-10-14T18:51:00+01:00"),
+      ],
+      now: "2026-10-14T19:00:00Z",
+      tz: "Europe/London",
+      weekStart: WEEK_START,
+    }),
+  },
+};

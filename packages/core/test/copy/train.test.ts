@@ -154,6 +154,74 @@ describe("describeTodayHeading", () => {
   });
 });
 
+describe("describeTodayCard, when today's session made up an earlier day (KEY-531)", () => {
+  const plannedCard: TodayCardWithSession = {
+    kind: "planned",
+    routineName: "Push Pull Legs",
+    dayName: "Pull",
+    dayNumber: 2,
+    dayCount: 4,
+    exerciseCount: 5,
+    setCount: 15,
+    estimatedMinutes: 47,
+  };
+  const context: TodayCardContext = {
+    localDate: "2026-10-13",
+    nextExerciseName: null,
+    recovery: null,
+  };
+
+  it("should say Push was made up for Monday under the planned day, which still offers Start Pull", () => {
+    expect(
+      describeTodayCard(
+        { ...plannedCard, madeUp: [{ date: "2026-10-12", dayName: "Push" }] },
+        context,
+      ),
+    ).toMatchObject({
+      kind: "planned",
+      title: "Pull",
+      action: "Start Pull",
+      madeUpLine: "Push made up for Monday",
+    });
+  });
+
+  it("should say it on the rest day card too", () => {
+    expect(
+      describeTodayCard(
+        {
+          kind: "rest",
+          next: { date: "2026-10-17", id: "push", name: "Push" },
+          madeUp: [{ date: "2026-10-15", dayName: "Legs" }],
+        },
+        { ...context, localDate: "2026-10-16" },
+      ),
+    ).toMatchObject({
+      kind: "rest",
+      body: "Next: Push on Saturday.",
+      madeUpLine: "Legs made up for Thursday",
+    });
+  });
+
+  it("should name every day made up, in words", () => {
+    expect(
+      describeTodayCard(
+        {
+          ...plannedCard,
+          madeUp: [
+            { date: "2026-10-12", dayName: "Push" },
+            { date: "2026-10-13", dayName: "Pull" },
+          ],
+        },
+        { ...context, localDate: "2026-10-14" },
+      ),
+    ).toMatchObject({ madeUpLine: "Push made up for Monday and Pull made up for Tuesday" });
+  });
+
+  it("should add no line when no day was made up", () => {
+    expect(describeTodayCard(plannedCard, context)).not.toHaveProperty("madeUpLine");
+  });
+});
+
 describe("describeTodayCard", () => {
   describe("a planned day, nothing started", () => {
     const card = cardOf(weekFor(), THURSDAY_BEFORE_LEGS);
@@ -648,6 +716,33 @@ describe("describeTrainWeekDay", () => {
     });
   });
 
+  describe("a day made up later in the week (KEY-531)", () => {
+    const pullOnWednesday = sessionOn(1, "2026-10-14", {
+      routine_day_id: pullDayId,
+      sets: workingSets(squatId, 4),
+    });
+    const plan = weekFor({
+      sessions: [goldenMondaySession, pullOnWednesday],
+      now: "2026-10-14T20:00:00+01:00",
+    });
+
+    it("should say the day was made up, with the weekday it was made up on and the make-up's sets", () => {
+      expect(dayCopy(plan, TUESDAY)).toStrictEqual({
+        weekday: "Tue",
+        label: "Pull",
+        accessibleName: "Tuesday 13 October, Pull, made up on Wednesday, 4 sets",
+      });
+    });
+
+    it("should read the day of the make-up as it would read without it", () => {
+      expect(dayCopy(plan, WEDNESDAY)).toStrictEqual({
+        weekday: "Wed",
+        label: "Rest",
+        accessibleName: "Wednesday 14 October, today, rest day",
+      });
+    });
+  });
+
   describe("a week with no routine", () => {
     const noRoutine = (day: Parameters<typeof describeTrainWeekDay>[0]) =>
       describeTrainWeekDay(day, false);
@@ -659,6 +754,7 @@ describe("describeTrainWeekDay", () => {
       sessionDay: null,
       setsLogged: 0,
       setsPlanned: 0,
+      madeUpBy: null,
     } as const;
 
     it("should read a day with nothing logged as nothing logged, with no label", () => {
@@ -723,6 +819,7 @@ describe("describeTrainWeekDay", () => {
           sessionDay: null,
           setsLogged: 3,
           setsPlanned: 0,
+          madeUpBy: null,
         },
         true,
       ),

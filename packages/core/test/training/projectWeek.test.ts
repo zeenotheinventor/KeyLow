@@ -108,6 +108,17 @@ describe("projectWeek", () => {
     expect(compareWeek(week.actual, week.projected, params).chest_lower.gap).toBe(0);
   });
 
+  it("should leave Wednesday's planned Legs out of the projection when Legs is logged on Friday, a make-up (KEY-531)", () => {
+    const friday = session(1, "2026-10-23", legs.id);
+    const sets = loggedSets(friday, squat, squatMuscles, 4, "2026-10-23T08:00:00.000Z");
+    const week = projectWeek(routine, WEEK, LONDON, { sessions: [friday], sets }, params);
+
+    expect(week.projected.some((set) => "planned" in set && set.routine_day_id === legs.id)).toBe(
+      false,
+    );
+    expect(compareWeek(week.actual, week.projected, params).quads.gap).toBe(0);
+  });
+
   it("should count an unplanned session in actual only", () => {
     const saturday = session(1, "2026-10-24", null);
     const sets = loggedSets(saturday, curl, curlMuscles, 3, "2026-10-24T10:00:00.000Z");
