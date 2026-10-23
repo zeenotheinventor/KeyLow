@@ -1054,6 +1054,74 @@ describe("the entry screen", () => {
     });
   });
 
+  describe("a food that stores a 1 tbsp portion of its own", () => {
+    const storedTablespoon = buildFoodPortion({
+      food_id: oilFood.id,
+      label: "1 tbsp",
+      grams: 14,
+      is_default: true,
+    });
+
+    // The stored portion is only read once the food has loaded, so wait for that read to land.
+    async function portionsHaveLoaded() {
+      await waitFor(() => {
+        expect(diaryBackend.requests.some((request) => request.table === "food_portions")).toBe(
+          true,
+        );
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+    }
+
+    beforeEach(() => {
+      entryBackend.foods = [oilFood];
+      entryBackend.foodPortions = [storedTablespoon];
+    });
+
+    it("should show one 1 tbsp chip, selected, with the count, for an entry logged in tablespoons", async () => {
+      const entryId = "00000000-0000-4000-8000-0000000000aa";
+      diaryBackend.entries = [{ ...oilEntry({ id: entryId }) }];
+      await renderEntry(entryId);
+      await screen.findByRole("heading", { name: "Oil, olive" });
+
+      await portionsHaveLoaded();
+
+      expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
+      expect(amountField()).toHaveDisplayValue("2");
+      expect(heroKcal("For 2 tbsp (30 ml, 28 g)").getByText("248")).toBeOnTheScreen();
+    });
+
+    it("should show one 1 tbsp chip, the stored one, for an entry logged in grams", async () => {
+      const entry = buildLogEntry({
+        food: oilFood,
+        quantity: 50,
+        unit: "g",
+        localDate: "2026-10-15",
+        loggedAt: "2026-10-15T11:40:10.000Z",
+      });
+      const entryId = "00000000-0000-4000-8000-0000000000bb";
+      diaryBackend.entries = [
+        {
+          ...entry,
+          id: entryId,
+          created_at: "2026-10-15T11:40:31+00:00",
+          kcal: entry.nutrients.kcal,
+        },
+      ];
+      const user = await renderEntry(entryId);
+      await screen.findByRole("heading", { name: "Oil, olive" });
+
+      await portionsHaveLoaded();
+      expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
+
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+
+      expect(heroKcal("For 1 tbsp (14 g)").getByText("126")).toBeOnTheScreen();
+    });
+  });
+
   describe("a food logged in grams that has a density", () => {
     it("should offer ml and the spoons after g, with g chosen", async () => {
       const entry = buildLogEntry({

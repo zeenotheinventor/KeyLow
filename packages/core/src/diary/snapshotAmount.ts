@@ -1,6 +1,6 @@
 import { amountInPickerUnits } from "./amountInPickerUnits";
 import { matchPortionOnFood } from "./matchPortionOnFood";
-import { choicesFor } from "./pickerChoices";
+import { choicesFor, isSameLabel, withoutRepeatedSpoons } from "./pickerChoices";
 import { spoonPortionOf } from "../nutrition/volume";
 
 import type { PickerChoices } from "./pickerChoices";
@@ -97,7 +97,9 @@ function portionsWithTheEntrysOwn(
  *
  * A snapshot has no food group, so the volume chips are offered when it holds a density or is measured per
  * 100 ml (or was logged in spoons); a volume amount is worked out from that density. An entry logged in
- * spoons shows its spoon chip once, in the spoon's place; a gram portion with a spoon's label stays its own chip.
+ * spoons shows its spoon chip once, in the spoon's place, and not the food's own portions with that label. A
+ * spoon whose label an own portion has is left out of the chips (see `pickerChoices`), so a gram portion with a
+ * spoon's label stays the one chip of that name.
  */
 export function entryPickerChoices(snapshot: FoodSnapshot, live?: LiveFoodPortions): PickerChoices {
   const spoon = spoonOfSnapshot(snapshot);
@@ -108,9 +110,11 @@ export function entryPickerChoices(snapshot: FoodSnapshot, live?: LiveFoodPortio
       ? spoon === undefined
         ? snapshotPortions(snapshot)
         : []
-      : portionsWithTheEntrysOwn(snapshot, live);
+      : portionsWithTheEntrysOwn(snapshot, live).filter(
+          (portion) => spoon === undefined || !isSameLabel(portion.label, spoon.label),
+        );
 
-  return choicesFor(ownPortions, isMeasuredByVolume);
+  return withoutRepeatedSpoons(choicesFor(ownPortions, isMeasuredByVolume), ownPortions);
 }
 
 /**

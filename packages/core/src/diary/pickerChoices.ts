@@ -24,7 +24,9 @@ export type PickerChoices<Portion extends AmountPortion = AmountPortion> = {
 const GRAMS_OPTION: UnitOption = { value: "g", label: "g" };
 const MILLILITRES_OPTION: UnitOption = { value: "ml", label: "ml" };
 
-const comparableLabel = (label: string): string => label.trim().toLowerCase();
+/** Whether two labels read the same to a person: the same words, in any case, with any spacing around them. */
+export const isSameLabel = (first: string, second: string): boolean =>
+  first.trim().toLowerCase() === second.trim().toLowerCase();
 
 /**
  * The chips for portions the food already has: those portions in the order given, then g, and, when the
@@ -64,11 +66,22 @@ export function pickerChoices<Portion extends AmountPortion & Pick<FoodPortion, 
   const inOrder = [...portions].sort((first, second) => first.position - second.position);
   const choices = choicesFor(inOrder, canMeasureByVolume(food, portions));
 
-  const ownLabels = new Set(inOrder.map((portion) => comparableLabel(portion.label)));
+  return withoutRepeatedSpoons(choices, inOrder);
+}
+
+/**
+ * The chips with every generated spoon left out whose label an own portion already has ("1 tbsp", in any
+ * case), from both lists, so a picker never shows two chips that read the same and `previewAmount` is
+ * never given a chip the screen does not show. The add and the edit screens both use it.
+ */
+export function withoutRepeatedSpoons<Portion extends AmountPortion>(
+  choices: PickerChoices<Portion>,
+  ownPortions: readonly AmountPortion[],
+): PickerChoices<Portion> {
   const repeatedSpoonIds = new Set(
-    SPOON_PORTIONS.filter((spoon) => ownLabels.has(comparableLabel(spoon.label))).map(
-      (spoon) => spoon.id,
-    ),
+    SPOON_PORTIONS.filter((spoon) =>
+      ownPortions.some((portion) => isSameLabel(portion.label, spoon.label)),
+    ).map((spoon) => spoon.id),
   );
 
   return {
