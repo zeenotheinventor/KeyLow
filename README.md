@@ -1,50 +1,20 @@
 # Ki-Lo
 
-Ki-Lo is a MacroFactor-style nutrition app: food and recipe logging and calorie and macro tracking
-today, with a weight trend and an adaptive engine (it estimates energy expenditure from logged
-intake and weigh-ins and adjusts targets weekly) still to come. It is an Expo app, built for Android
-first, and a Next.js web app, both on one Supabase backend.
+Ki-Lo is a MacroFactor-style nutrition app with a strength training tracker beside it: food and
+recipe logging, calorie and macro tracking, a weight trend from manual and Health Connect weigh-ins,
+an adaptive engine that adjusts targets weekly, workout logging with routines, and a body map that
+shows which muscles are warm and which are behind plan. It is an Expo app, built for Android first,
+and a Next.js web app, both on one Supabase backend.
 
 Zee built it for Zee, and to showcase quality: it must look and behave like a product anyone could
 sign into. The product has been called Ki-Lo since 2026-10-08. The repository, the `@keylow/*`
 packages, the bundle ids (`com.sojisoft.keylow`) and the Linear key `KEY` keep the KeyLow name on
 purpose, so nothing that depends on them had to move.
 
-## What works today
-
-Everything below is merged to `main` and reachable through a route in `apps/*/app`.
-
-**Mobile (Android dev client and production build)**
-
-- Sign-up and sign-in with email or Google. Accepting the terms is required before anything else.
-- Dashboard with today's nutrition and a this-week card.
-- Food search over CoFID and Open Food Facts, with camera barcode scanning.
-- Custom foods: create, edit and copy a food.
-- Diary: an hour-by-hour timeline, portion picker, quick add, edit, delete with undo, copy
-  yesterday, and a day-complete flag.
-- Recipes: editor, library, archive, and logging a serving to the diary.
-- Targets, appearance (light and dark), and About with the version and commit.
-
-**Web (Next.js)**
-
-- The same sign-up, sign-in and terms acceptance flows.
-- Dashboard, food search (the barcode is typed, as the web has no camera) and custom foods.
-- Diary day and week views with quick add, edit, delete with undo, copy yesterday and a day-complete flag for food entries.
-- Recipes: editor, library and archive. The Your recipes group in Add food logs one serving with a tap. Choosing another amount, refreshing ingredients and editing a logged recipe are not on the web yet.
-- Targets, appearance, About, and the public `/privacy` and `/terms` pages.
-
-**Milestones** in the Linear project [KeyLow v1](https://linear.app/sojisoft/project/keylow-v1-7d18906a267f):
-
-- M1 Foundations: done.
-- M2 Food data and search: done.
-- M3 Food diary: built on both apps, with a few polish tickets still open.
-- M4 Recipes: built on mobile and mostly on the web, then its exit gate.
-- M5 Weight and trend: under way. Weigh-in screens are not in the apps yet.
-- M6 Adaptive engine and program, M7 Stats, QA and personal install, M8 AI assistant, and M9 Assistant: palate, recipe generation and meal plans are planned.
-
-Strength training is a second Linear project,
+This file is about the architecture, the tooling and how to run the app. What is built and what is
+next lives in Linear: [KeyLow v1](https://linear.app/sojisoft/project/keylow-v1-7d18906a267f) and
 [KeyLow Strength Training](https://linear.app/sojisoft/project/keylow-strength-training-16f672df3163).
-Its data model and heat model are in, and it has no screens yet.
+The ticket you are working on is the spec for its own change.
 
 ## Architecture
 
@@ -57,27 +27,28 @@ with Tailwind and `@supabase/ssr`.
 keylow/
 ├── apps/mobile          @keylow/mobile      Expo app
 ├── apps/web             @keylow/web         Next.js app, plus its Storybook
-├── packages/core        @keylow/core        pure domain logic: schemas, nutrient maths, engine, dates, copy
+├── packages/core        @keylow/core        pure domain logic: schemas, nutrient maths, the weight trend, training, dates, copy
 ├── packages/db          @keylow/db          Supabase migrations, seeds, Edge Functions, pgTAP tests, generated types
 ├── packages/api-client  @keylow/api-client  query keys, repos and TanStack Query hooks over Supabase
 ├── packages/tokens      @keylow/tokens      colours, spacing and type as a Tailwind preset for both apps
-├── packages/config      @keylow/config      eslint, prettier and tsconfig fragments
-├── tools/               design-export, expo-doctor-gate, generate-lists
+├── packages/config      @keylow/config      eslint, prettier and tsconfig fragments, and the source guard
+├── tools/               body-model, design-export, expo-doctor-gate, generate-lists
 ├── scripts/             ci-scope.mjs, which picks what a change affects
 └── docs/
     ├── adr/             architecture decisions
     ├── runbooks/        local-dev.md, error-monitoring.md
-    ├── design/          the approved screen designs, exported
+    ├── design/          the approved M2 screen designs, exported
     └── ci.md            CI and deployment
 ```
 
 Two rules shape the code. Anything with a branch lives in `@keylow/core` (see
 [the recipe cache in ADR 0003](docs/adr/0003-data-model.md#the-computed-cache)), and only plain
 arithmetic is repeated in SQL. Core has no platform dependencies and runs in React Native, Node and
-Deno. Snapshots (a diary entry's nutrients, a recipe ingredient's food) are computed in core at
-write time, so editing a food later never rewrites history.
+Deno. Snapshots (a diary entry's nutrients, a recipe ingredient's food, a workout set's muscle map)
+are computed in core at write time, so editing a food or an exercise later never rewrites history.
 
-The decisions are recorded as ADRs:
+The decisions are recorded as ADRs. The data model and the training ADR grow by amendment, never
+by editing an accepted decision.
 
 - [0001: Monorepo, package layout and TypeScript source consumption](docs/adr/0001-monorepo.md)
 - [0002: Adaptive engine shape, keylow-engine-v1](docs/adr/0002-engine-v1.md)
@@ -117,10 +88,11 @@ CI should never be the first place a formatting or lint error shows up. The para
 
 - **Web:** Vercel deploys `main` only. Pull requests get no preview (see [`docs/ci.md`](docs/ci.md)).
 - **Database and Edge Functions:** `deploy-supabase.yml` applies migrations and deploys functions
-  when a merge touches `packages/db/supabase` or `packages/core/src`.
+  when a merge touches `packages/db/supabase` or `packages/core/src`. Reference data (the exercise
+  library, curated portions) ships as generated migrations, never as a terminal step.
 - **Mobile, JavaScript changes:** `eas-update.yml` publishes an over-the-air update to the
   `production` channel on every qualifying merge. It sets the commit in `EXPO_PUBLIC_COMMIT_SHA`,
-  which About shows.
+  which About shows, and uploads the source maps to Sentry when the token is set.
 - **Mobile, native changes:** a new native dependency, config plugin or SDK bump moves the
   fingerprint. OTA updates stop reaching old builds, so a new `production-apk` build is needed.
 
@@ -146,10 +118,14 @@ Food data comes with licence conditions that the apps show on About:
 
 ## Conventions
 
+The working rules for agents and people are in [`AGENTS.md`](AGENTS.md), which `CLAUDE.md`
+imports. The ones that bite most often:
+
 - No em dashes in prose, and no `--` standing in for one.
 - No raw hex colours and no inline `style`. Use design tokens and Tailwind or NativeWind utilities.
 - In tests, query by role and accessible name first. A test id is the last resort.
-- No frame, no screen ticket: UI work follows an approved design in
-  [`docs/design`](docs/design/README.md), and a design change goes back to Zee, not into the code.
+- No frame, no screen ticket: UI work follows an approved frame in
+  [`docs/design`](docs/design/README.md) or the design canvas, and a design change goes back to
+  Zee, not into the code.
 - One ticket per pull request, and every pull request has a QA section with the click-path.
 - Work in a git worktree per ticket, and never commit from the main checkout.
