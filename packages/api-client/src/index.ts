@@ -32,6 +32,7 @@ export {
   useRecipe,
   useRecipes,
   useRecipeSearch,
+  useRefreshOutdatedOffFood,
   useRestoreEntry,
   useSetDayComplete,
   useProfileTimeZone,

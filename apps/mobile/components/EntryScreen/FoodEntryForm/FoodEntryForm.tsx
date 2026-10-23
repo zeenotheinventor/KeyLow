@@ -1,4 +1,4 @@
-import { useFood, useFoodPortions } from "@keylow/api-client";
+import { useFood, useFoodPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import { FOOD_CHANGED_BANNER, FOOD_DELETED_NOTICE } from "@keylow/core/copy";
 import { formatClockTime } from "@keylow/core/dates";
 import { foodChangedSinceLogged, foodOfSnapshot } from "@keylow/core/diary";
@@ -35,6 +35,8 @@ export function FoodEntryForm({ entry, timeZone, onLeave }: FoodEntryFormProps) 
     liveFood.data !== undefined && (liveFood.data === null || liveFood.data.deleted_at !== null);
   // The food's portions are offered as chips only while the food is there to take them from.
   const isFoodThere = liveFood.data !== undefined && !isFoodGone;
+  // A branded food stored before the current portion rules gets its new portions in the background.
+  useRefreshOutdatedOffFood(isFoodThere ? liveFood.data : undefined);
   const livePortions = useFoodPortions(
     areReadsEnabled && isFoodThere ? entry.snapshot.ref : undefined,
   );

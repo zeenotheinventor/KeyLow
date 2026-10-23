@@ -75,3 +75,28 @@ export function amountOnUnitChange(
     nextUnitValue === "g" || nextUnitValue === "ml" ? AMOUNT_OF_THE_BASIS : AMOUNT_OF_A_PORTION,
   );
 }
+
+/**
+ * Where a picker stands once its chips were replaced: a refresh of a branded food deletes its portions and
+ * inserts them again with new ids, so the chosen chip's id can be gone. The chip stays as it is while it is
+ * still offered; otherwise the chip with the same label takes over and the typed amount is kept; otherwise
+ * the picker moves to `fallbackUnitValue` (the food's default portion, or g) and the amount starts again as
+ * `amountOnUnitChange` says.
+ */
+export function reselectUnit(
+  chosen: { unitValue: string; label: string; quantityText: string },
+  options: readonly UnitOption[],
+  fallbackUnitValue: string,
+): { unitValue: string; quantity: string } {
+  const sameChip =
+    options.find((option) => option.value === chosen.unitValue) ??
+    options.find((option) => option.label === chosen.label);
+  if (sameChip !== undefined) {
+    return { unitValue: sameChip.value, quantity: chosen.quantityText };
+  }
+
+  return {
+    unitValue: fallbackUnitValue,
+    quantity: amountOnUnitChange(chosen.unitValue, fallbackUnitValue, chosen.quantityText),
+  };
+}

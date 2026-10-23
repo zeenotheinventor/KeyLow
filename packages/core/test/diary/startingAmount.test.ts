@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { amountOnUnitChange, startingAmount, unitValueOf } from "../../src/diary/startingAmount";
+import {
+  amountOnUnitChange,
+  reselectUnit,
+  startingAmount,
+  unitValueOf,
+} from "../../src/diary/startingAmount";
 import { SPOON_PORTIONS } from "../../src/nutrition/volume";
 import { buildFood, buildFoodPortion } from "../../src/testing";
 
@@ -153,5 +158,37 @@ describe("amountOnUnitChange", () => {
   it("should replace a typed 2.5 on a real change", () => {
     expect(amountOnUnitChange("portion-medium", "g", "2.5")).toBe("100");
     expect(amountOnUnitChange("g", "portion-medium", "2.5")).toBe("1");
+  });
+});
+
+describe("reselectUnit", () => {
+  const bar = { value: "new-bar", label: "1 bar" };
+  const box = { value: "new-box", label: "Box of 6" };
+  const gram = { value: "g", label: "g" };
+  const chosen = { unitValue: "old-bar", label: "1 bar", quantityText: "2.5" };
+
+  it("should stay on the chip it is on, with the typed amount, while the chip is still offered", () => {
+    expect(reselectUnit({ ...chosen, unitValue: "new-bar" }, [bar, box, gram], "new-box")).toEqual({
+      unitValue: "new-bar",
+      quantity: "2.5",
+    });
+  });
+
+  it("should move to the chip with the same label and keep the typed amount when the id is gone", () => {
+    expect(reselectUnit(chosen, [box, bar, gram], "new-box")).toEqual({
+      unitValue: "new-bar",
+      quantity: "2.5",
+    });
+  });
+
+  it("should fall back to the given unit and reset the amount when no chip has the label", () => {
+    expect(reselectUnit(chosen, [box, gram], "new-box")).toEqual({
+      unitValue: "new-box",
+      quantity: "1",
+    });
+  });
+
+  it("should reset the amount to 100 when the fallback is g", () => {
+    expect(reselectUnit(chosen, [gram], "g")).toEqual({ unitValue: "g", quantity: "100" });
   });
 });

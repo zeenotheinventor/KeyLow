@@ -3,6 +3,7 @@ import {
   useLogFood,
   useProfileTimeZone,
   useRecentFoods,
+  useRefreshOutdatedOffFood,
 } from "@keylow/api-client";
 import {
   ADDED_TOAST,
@@ -49,6 +50,8 @@ export default function PortionPickerRoute() {
   }>();
   const isValidId = isFoodId(id);
   const state = useFoodWithPortions(isValidId ? id : "");
+  // A branded food stored before the current portion rules gets its new portions in the background.
+  useRefreshOutdatedOffFood(state.status === "ready" ? state.food : undefined);
   // The diary reads its days and hours in the profile's zone, so the time logged here is read in it too.
   const isReadEnabled = useReadsEnabled();
   const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled });

@@ -7,6 +7,7 @@ import {
 } from "@keylow/core/recipes";
 import { z } from "zod";
 
+import { isDeadPortionRefusal } from "./deadPortion";
 import {
   LIBRARY_COLUMNS,
   getRecipe,
@@ -95,6 +96,39 @@ function callSaveRecipe(
 }
 
 /**
+ * The ingredients with no portion on the ones whose portion no longer exists (a refresh of a branded food
+ * replaces its portions), or null when there is nothing to change: no ingredient has a portion, every portion
+ * is still there, or the portions could not be read. The snapshot of an ingredient keeps its label and amount.
+ */
+async function withoutDeadPortions(
+  client: SupabaseClient<Database>,
+  ingredients: readonly RecipeIngredient[],
+): Promise<RecipeIngredient[] | null> {
+  const portionIds = [
+    ...new Set(ingredients.flatMap(({ portion_id }) => (portion_id === null ? [] : [portion_id]))),
+  ];
+  if (portionIds.length === 0) {
+    return null;
+  }
+
+  const { data, error } = await client.from("food_portions").select("id").in("id", portionIds);
+  if (error) {
+    return null;
+  }
+
+  const livePortionIds = new Set(data.map(({ id }) => id));
+  if (portionIds.every((portionId) => livePortionIds.has(portionId))) {
+    return null;
+  }
+
+  return ingredients.map((ingredient) =>
+    ingredient.portion_id === null || livePortionIds.has(ingredient.portion_id)
+      ? ingredient
+      : { ...ingredient, portion_id: null },
+  );
+}
+
+/**
  * The one way a recipe is written, for a new recipe (`recipeId` null) and for a replaced one: a single
  * `save_recipe` call writes the recipe, its ingredients, its steps and its cache, or none of them. The
  * recipe is read back afterwards, so what is returned is what the database stored.
@@ -106,18 +140,25 @@ async function saveRecipe(
 ): Promise<RecipeDetail> {
   const { name, servings, yieldGrams, steps, ingredients } = checkedSave(save);
 
-  const { data: savedId, error } = await callSaveRecipe(
-    client,
-    recipeId,
-    {
-      name,
-      servings,
-      yield_grams: yieldGrams,
-      instructions: steps,
-      computed: computeRecipe({ servings, yieldGrams, ingredients }),
-    },
-    ingredients,
-  );
+  const recipe = {
+    name,
+    servings,
+    yield_grams: yieldGrams,
+    instructions: steps,
+    computed: computeRecipe({ servings, yieldGrams, ingredients }),
+  };
+
+  let saved = await callSaveRecipe(client, recipeId, recipe, ingredients);
+
+  // A refusal for a portion that is gone is saved again once, with no portion on the ingredients that lost it.
+  if (saved.error && isDeadPortionRefusal(saved.error)) {
+    const withoutDead = await withoutDeadPortions(client, ingredients);
+    if (withoutDead !== null) {
+      saved = await callSaveRecipe(client, recipeId, recipe, withoutDead);
+    }
+  }
+
+  const { data: savedId, error } = saved;
 
   if (error) {
     throw recipeRepoError("save the recipe", error);

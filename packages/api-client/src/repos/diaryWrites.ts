@@ -9,6 +9,7 @@ import {
 } from "@keylow/core/diary";
 import { z } from "zod";
 
+import { writeWithoutDeadPortion } from "./deadPortion";
 import { ENTRY_COLUMNS, idOfRow, insertDiaryEntry, parseRow, repoError } from "./diaryRows";
 import {
   diaryInsertSchema,
@@ -62,6 +63,12 @@ function build<Built>(action: string, builder: () => Built): Built {
   }
 }
 
+const portionIdOf = (entry: DiaryInsert) => (entry.item_type === "food" ? entry.portion_id : null);
+
+/** The entry with another portion. Only a food entry has one, so the others are returned as they are. */
+const withPortionId = (entry: DiaryInsert, portionId: string | null): DiaryInsert =>
+  entry.item_type === "food" ? { ...entry, portion_id: portionId } : entry;
+
 async function insertEntry<Schema extends z.ZodType<LogEntry>>(
   client: SupabaseClient<Database>,
   entry: DiaryInsert,
@@ -71,7 +78,9 @@ async function insertEntry<Schema extends z.ZodType<LogEntry>>(
   // The builders store the time and the day as given, so a malformed one is caught here, before any request.
   parseRow(diaryInsertSchema, entry, action, () => "(new)");
 
-  const { data, error } = await insertDiaryEntry(client, entry).select(ENTRY_COLUMNS).single();
+  const { data, error } = await writeWithoutDeadPortion(portionIdOf(entry), (portionId) =>
+    insertDiaryEntry(client, withPortionId(entry, portionId)).select(ENTRY_COLUMNS).single(),
+  );
 
   if (error) {
     throw repoError(action, error);
@@ -335,13 +344,18 @@ export async function updateLogEntry(
       ? recipeAmountColumns(update)
       : await currentFoodColumns(client, update);
 
-  const { data, error } = await client
-    .from("food_log_entries")
-    .update({ ...food, ...quickValues, ...timing })
-    .eq("id", entry.id)
-    .is("deleted_at", null)
-    .select(ENTRY_COLUMNS)
-    .maybeSingle();
+  const columns: EntryRow = { ...food, ...quickValues, ...timing };
+  const writtenPortionId = columns.portion_id ?? null;
+
+  const { data, error } = await writeWithoutDeadPortion(writtenPortionId, (portionId) =>
+    client
+      .from("food_log_entries")
+      .update(portionId === writtenPortionId ? columns : { ...columns, portion_id: null })
+      .eq("id", entry.id)
+      .is("deleted_at", null)
+      .select(ENTRY_COLUMNS)
+      .maybeSingle(),
+  );
 
   if (error) {
     throw repoError("update the entry", error);

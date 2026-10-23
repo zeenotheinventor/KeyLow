@@ -67,7 +67,7 @@ export {
   snapshotPortions,
 } from "./snapshotAmount";
 export type { LiveFoodPortions } from "./snapshotAmount";
-export { amountOnUnitChange, startingAmount, unitValueOf } from "./startingAmount";
+export { amountOnUnitChange, reselectUnit, startingAmount, unitValueOf } from "./startingAmount";
 export type { UnitOption } from "./startingAmount";
 export { foodNeedsReview, missingFieldsOf } from "./foodNeedsReview";
 export { isNumberBeingTyped } from "./isNumberBeingTyped";
