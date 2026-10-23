@@ -17,7 +17,7 @@ const MICROGRAMS_PER_KILOGRAM = 1_000_000_000;
  * 19.9995 kg, where a multiplication by 0.001 might not. A unit outside the list, which a native
  * module could return, gives NaN and so a skipped sample.
  */
-function toKilograms(value: number, unit: HealthMassUnit): number {
+export function toKilograms(value: number, unit: HealthMassUnit): number {
   switch (unit) {
     case "kilograms":
       return value;
@@ -37,7 +37,7 @@ function toKilograms(value: number, unit: HealthMassUnit): number {
 }
 
 /** 1 to 200 characters, as the `external_id` check wants. A native module could give anything, so it is not trusted to be a string. */
-function isUsableSampleId(sampleId: unknown): sampleId is string {
+export function isUsableSampleId(sampleId: unknown): sampleId is string {
   if (typeof sampleId !== "string") {
     return false;
   }
@@ -45,7 +45,7 @@ function isUsableSampleId(sampleId: unknown): sampleId is string {
   return length >= 1 && length <= HEALTH_SAMPLE_ID_MAX_CHARS;
 }
 
-type HealthImportOptions = Readonly<{
+export type HealthImportOptions = Readonly<{
   /** The IANA zone of the profile. The sample's own offset is not a zone and is not used for the day. */
   timeZone: string;
 }>;
