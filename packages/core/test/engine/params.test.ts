@@ -30,10 +30,71 @@ describe("DEFAULT_ENGINE_PARAMS", () => {
     expect(DEFAULT_ENGINE_PARAMS.trend.winsorPct).toBe(0.025);
   });
 
-  it("should hold exactly the trend defaults and nothing else", () => {
-    expect(DEFAULT_ENGINE_PARAMS).toStrictEqual({
-      version: "keylow-engine-v1",
-      trend: { alpha: 0.1, winsorPct: 0.025, rejectPct: 0.15, winsorMinObs: 5, maxGapDays: 30 },
+  it("should hold only the version and the trend and expenditure groups at the top level", () => {
+    expect(Object.keys(DEFAULT_ENGINE_PARAMS).sort()).toStrictEqual([
+      "expenditure",
+      "trend",
+      "version",
+    ]);
+  });
+
+  it("should hold exactly the trend defaults in the trend group", () => {
+    expect(DEFAULT_ENGINE_PARAMS.trend).toStrictEqual({
+      alpha: 0.1,
+      winsorPct: 0.025,
+      rejectPct: 0.15,
+      winsorMinObs: 5,
+      maxGapDays: 30,
     });
+  });
+});
+
+describe("DEFAULT_ENGINE_PARAMS expenditure group", () => {
+  it("should use an energy density of 7700 kcal per kg", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.energyDensityKcalPerKg).toBe(7700);
+  });
+
+  it("should start the expenditure estimate with a coefficient of variation of 0.15", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.priorCv).toBe(0.15);
+  });
+
+  it("should clamp the expenditure estimate to 800 to 6000 kcal", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.zClampKcal).toStrictEqual({ min: 800, max: 6000 });
+  });
+
+  it("should add 5 kcal for male, take off 161 for female and 78 for other", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.sexOffsetKcal).toStrictEqual({
+      male: 5,
+      female: -161,
+      other: -78,
+    });
+  });
+
+  it("should use the five activity factors 1.2, 1.375, 1.55, 1.725 and 1.9", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.activityFactors).toStrictEqual({
+      sedentary: 1.2,
+      light: 1.375,
+      moderate: 1.55,
+      very: 1.725,
+      extra: 1.9,
+    });
+  });
+
+  it("should accept an activity factor override from 1.2 to 1.9", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.activityFactorBand).toStrictEqual({
+      min: 1.2,
+      max: 1.9,
+    });
+  });
+
+  it("should hold exactly these expenditure defaults and nothing else", () => {
+    expect(Object.keys(DEFAULT_ENGINE_PARAMS.expenditure).sort()).toStrictEqual([
+      "activityFactorBand",
+      "activityFactors",
+      "energyDensityKcalPerKg",
+      "priorCv",
+      "sexOffsetKcal",
+      "zClampKcal",
+    ]);
   });
 });
