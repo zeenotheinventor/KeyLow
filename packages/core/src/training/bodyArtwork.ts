@@ -16,6 +16,11 @@ export type BodyArtworkFigure = "male" | "female";
 
 export type BodyArtworkSide = "front" | "back";
 
+/** The renderers the body map can draw with, 2D first because 2D is the default and 3D is opt-in. */
+export const BODY_MAP_RENDERERS = ["2d", "3d"] as const;
+
+export type BodyMapRenderer = (typeof BODY_MAP_RENDERERS)[number];
+
 export type FrontMuscleId = Extract<
   MuscleId,
   | "neck"
