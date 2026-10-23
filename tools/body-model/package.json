@@ -6,8 +6,10 @@
   "scripts": {
     "inspect": "node --experimental-strip-types src/run.ts inspect_bundle",
     "render": "node --experimental-strip-types src/run.ts render_bases",
-    "assign": "node --experimental-strip-types src/run.ts assign_regions",
-    "regions": "node --experimental-strip-types src/run.ts render_regions",
+    "zanatomy:muscles": "node --experimental-strip-types src/run.ts zanatomy_muscles",
+    "zanatomy:skin": "node --experimental-strip-types src/run.ts zanatomy_skin",
+    "zanatomy:head": "node --experimental-strip-types src/run.ts zanatomy_head",
+    "zanatomy:render": "node --experimental-strip-types src/run.ts zanatomy_render",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"

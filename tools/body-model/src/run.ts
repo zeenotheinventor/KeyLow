@@ -2,6 +2,9 @@
 //
 //   pnpm --filter @keylow/body-model inspect --source <folder holding the bundle>
 //   pnpm --filter @keylow/body-model render --source <folder holding the bundle>
+//   pnpm --filter @keylow/body-model zanatomy:muscles --source <folder holding Startup.blend> --work <folder>
+//
+// Every Blender step goes through here so --factory-startup and --disable-autoexec live in one place.
 import { runBlender } from "./runBlender.ts";
 
 const [scriptName, ...scriptArgs] = process.argv.slice(2);

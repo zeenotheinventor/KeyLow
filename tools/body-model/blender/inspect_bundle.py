@@ -140,7 +140,7 @@ def arm_angle_degrees(points, centre_x, bottom, height):
 
 def silhouette_widths(points, bottom, height, steps=20):
     """Width and depth of the body at evenly spaced heights, as a fraction of its height. Shows where the head,
-    neck and shoulders are, which is what the region cuts depend on."""
+    neck and shoulders are."""
     rows = []
     for step in range(steps + 1):
         fraction = step / steps

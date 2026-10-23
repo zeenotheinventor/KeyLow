@@ -1,0 +1,131 @@
+{
+  "source": {
+    "file": "Startup.blend",
+    "sha256": "9f08a17ea0115fed80b2a73ecdf0a1bc2ab2f6956f37c593ce23d513ea35afcd",
+    "repository": "https://github.com/Z-Anatomy/Models-of-human-anatomy",
+    "commit": "22d77228e500b88a2e4802c1135e75c8834cdaaa"
+  },
+  "note": "Patterns are regular expressions matched against the whole object name. An object is excluded first, then mapped to the first id that matches (no object may match two ids), then put in the head group when it lies in a head collection (never drawn, the face is the CC0 head or the smooth shell, but still part of the body the skin is built from), then hidden when it matches a hidden pattern, then drawn neutral when it matches the neutral rules, and is otherwise deep and not drawn. A trim removes the faces of one id that lie within a distance of another id's surface, which is how the external oblique aponeurosis is cut away from the rectus abdominis. Z-Anatomy names the trapezius parts the wrong way round: its Ascending part is the upper fibres at the neck and its Descending part is the lower fibres between the shoulder blades, so traps_upper takes the Ascending part and traps_mid takes the Descending part.",
+  "exclude": {
+    "collections": ["Bursae", "Tendon sheaths", "Fascia"],
+    "patterns": [
+      ".*\\.[jg]",
+      "Iliotibial tract\\.[lr]",
+      "Epicranial aponeurosis\\.[lr]",
+      ".*retinaculum.*",
+      ".*ligament.*",
+      "Plantar aponeurosis\\.[lr]",
+      "Common tendinous ring\\.[lr]",
+      "Cruciform part of fibrous sheath of digit of hand\\.[lr]"
+    ]
+  },
+  "head": {
+    "collections": ["Head", "Muscles of head", "Facial muscles"]
+  },
+  "hidden": {
+    "patterns": ["Platysma\\.[lr]", "Temporoparietalis muscle\\.[lr]", "Temporalis muscle\\.[lr]"]
+  },
+  "ids": {
+    "chest_upper": ["Clavicular head of pectoralis major muscle\\.[lr]"],
+    "chest_lower": [
+      "Sternocostal head of pectoralis major muscle\\.[lr]",
+      "\\(Abdominal part of pectoralis major muscle\\)\\.[lr]"
+    ],
+    "delt_front": ["Clavicular part of deltoid muscle\\.[lr]"],
+    "delt_side": ["Acromial part of deltoid muscle\\.[lr]"],
+    "delt_rear": ["Scapular spinal part of deltoid muscle\\.[lr]"],
+    "lats": ["Latissimus dorsi muscle\\.[lr]"],
+    "traps_upper": ["Ascending part of trapezius muscle\\.[lr]"],
+    "traps_mid": [
+      "Transverse part of trapezius muscle\\.[lr]",
+      "Descending part of trapezius muscle\\.[lr]",
+      "Rhomboid (?:major|minor) muscle\\.[lr]"
+    ],
+    "lower_back": [
+      "Iliocostalis (?:lumborum|thoracis) muscle\\.[lr]",
+      "Longissimus thoracis muscle\\.[lr]",
+      "Spinalis thoracis muscle\\.[lr]"
+    ],
+    "biceps": ["(?:Long|Short) head of biceps brachii\\.[lr]", "Brachialis muscle\\.[lr]"],
+    "triceps": ["(?:Long|Lateral|Medial) head of triceps brachii\\.[lr]", "Anconeus muscle\\.[lr]"],
+    "forearms": [
+      "Brachioradialis muscle\\.[lr]",
+      "Extensor carpi radialis (?:longus|brevis)\\.[lr]",
+      "Extensor digitorum\\.[lr]",
+      "Extensor digiti minimi\\.[lr]",
+      "Extensor indicis\\.[lr]",
+      "Extensor pollicis (?:longus|brevis)\\.[lr]",
+      "Abductor pollicis longus\\.[lr]",
+      "(?:Humeral|Ulnar) head of extensor carpi ulnaris\\.[lr]",
+      "(?:Humeral|Ulnar) head of flexor carpi ulnaris\\.[lr]",
+      "Flexor carpi radialis\\.[lr]",
+      "Palmaris longus muscle\\.[lr]",
+      "(?:Deep|Superficial) head of pronator teres\\.[lr]",
+      "(?:Humero-ulnar|Radial) head of flexor digitorum superficialis\\.[lr]",
+      "Flexor digitorum profundus\\.[lr]",
+      "Flexor pollicis longus\\.[lr]",
+      "Supinator\\.[lr]",
+      "Pronator quadratus\\.[lr]"
+    ],
+    "abs": ["Rectus abdominis muscle\\.[lr]", "Pyramidalis muscle\\.[lr]"],
+    "obliques": ["External abdominal oblique muscle\\.[lr]"],
+    "glute_max": ["Gluteus maximus muscle\\.[lr]"],
+    "glute_med": ["Gluteus (?:medius|minimus) muscle\\.[lr]"],
+    "quads": [
+      "Rectus femoris muscle\\.[lr]",
+      "Vastus (?:lateralis|medialis|intermedius) muscle\\.[lr]"
+    ],
+    "hamstrings": [
+      "(?:Long|Short) head of biceps femoris\\.[lr]",
+      "Semitendinosus muscle\\.[lr]",
+      "Semimembranosus muscle\\.[lr]"
+    ],
+    "adductors": [
+      "Adductor (?:longus|brevis|magnus)\\.[lr]",
+      "\\(Adductor minimus\\)\\.[lr]",
+      "Gracilis muscle\\.[lr]",
+      "Pectineus muscle\\.[lr]"
+    ],
+    "calves": ["(?:Medial|Lateral) head of gastrocnemius\\.[lr]", "Soleus muscle\\.[lr]"],
+    "tibialis": ["Tibialis anterior muscle\\.[lr]"],
+    "neck": [
+      "Sternocleidomastoid muscle\\.[lr]",
+      "Scalenus (?:anterior|medius|posterior) muscle\\.[lr]",
+      "Splenius (?:capitis|colli) muscle\\.[lr]"
+    ]
+  },
+  "neutral": {
+    "collections": ["Superficial muscles", "Muscles of hand", "Muscles of foot"],
+    "patterns": [
+      "Serratus anterior muscle\\.[lr]",
+      "Infraspinatus muscle\\.[lr]",
+      "Teres (?:major|minor) muscle\\.[lr]",
+      "Linea alba",
+      "Calcaneal tendon\\.[lr]",
+      "Tendon of extensor digitorum longus\\.[lr]",
+      "Sartorius muscle\\.[lr]",
+      "Tensor fasciae latae\\.[lr]",
+      "Extensor digitorum longus\\.[lr]",
+      "Fibularis (?:brevis|tertius) muscle\\.[lr]",
+      "Coracobrachialis muscle\\.[lr]",
+      "Superficial part of masseter\\.[lr]",
+      "Levator scapulae\\.[lr]"
+    ]
+  },
+  "trim": [
+    {
+      "id": "obliques",
+      "awayFrom": "abs",
+      "withinMetres": 0.01
+    },
+    {
+      "id": "lats",
+      "awayFrom": "lower_back",
+      "withinMetres": 0.012
+    }
+  ],
+  "skeleton": {
+    "maximumAbsoluteX": 0.4,
+    "maximumAbsoluteY": 0.2
+  }
+}
