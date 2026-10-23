@@ -1,55 +1,71 @@
 # @keylow/body-model
 
-Tools for the 3D body (KEY-342). Ki-Lo builds its own stylised male and female bodies from the Blender Studio Human Base Meshes, cuts them into one mesh per muscle, and shows them in the app. This package holds the first steps. It looks inside the bundle and renders the four base bodies so the base can be chosen before any muscle is cut. Later tickets add the cutting and the export to the same package.
+Tools for the 3D body (KEY-342). They build the male body that the app will show in 3D: the real muscles from **Z-Anatomy**, grouped into the 22 muscle ids, seen through a see-through skin and a dark core that are generated here, with a CC0 realistic male head ("head A") grafted at the neck and drawn in neutral clay. The result is rendered to `renders/muscles/`, which are the pictures the 3D tickets are built to match. Nothing here exports a `.glb` yet. Decimation and the export to phone size come in a later ticket and write to `dist/`.
 
-It is a development tool. Nothing in `apps/*` or `packages/*` depends on it, CI never runs Blender, and the bundle is never committed.
+It is a development tool. Nothing in `apps/*` or `packages/*` depends on it, CI never runs Blender, and neither source file is ever committed. The committed pictures are CC BY-SA 4.0, see `ASSETS-LICENCE.md`.
 
 ## Source and licence
 
-- **Blender Studio Human Base Meshes**, bundle v1.4.1, licence **CC0 1.0** (public domain, no attribution required).
-- Download page: https://www.blender.org/download/demo-files/ (the file is `human-base-meshes-bundle-v1.4.1.zip`, 50.6 MB, served from https://mirror.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip).
+Two sources, both outside the repository. Check each hash before use.
+
+**Z-Anatomy** (the muscles, CC BY-SA 4.0 on BodyParts3D, which is CC BY-SA 2.1 Japan). The licence text is at https://creativecommons.org/licenses/by-sa/4.0/
+
+- "Z-Anatomy, the libre 3D atlas of anatomy", `Startup.blend` from `Z-Anatomy.zip` in https://github.com/Z-Anatomy/Models-of-human-anatomy at commit `22d77228e500b88a2e4802c1135e75c8834cdaaa`.
+- sha256 of the zip: `e029688545627bd0214b269e1063143abb580aad72b2c2445d6d8a9a0d9da736`
+- sha256 of `Startup.blend` as unpacked (306 MB): `9f08a17ea0115fed80b2a73ecdf0a1bc2ab2f6956f37c593ce23d513ea35afcd`
+- Anything derived from the meshes carries the licence and the two attribution lines below, word for word:
+  - BodyParts3D - The Database Center for Life Science - CC-BY-SA 2.1 Japan
+  - Z-Anatomy - The libre 3D atlas of anatomy - CC-BY-SA 4.0
+- Some organs in the file carry non-commercial licences (the inner ear and the kidney). The scripts read **only** the muscle collection (`4: Muscular system`) and the skeleton (`1: Skeletal system`, used to build the skin and never drawn), and the scratch files they write hold nothing else.
+- **The file embeds a Python script (`z-anatomy.py`). It is never run.** Only `zanatomy:muscles` and `zanatomy_inspect.py` open the file. They open it with `--disable-autoexec` and `use_scripts=False`, stop before opening it if Auto Run Python Scripts is on, check its sha256 first and stop if it differs, and `zanatomy:muscles` removes the script text from the scratch `.blend` it saves.
+
+**Blender Studio Human Base Meshes** (head A, CC0 1.0, public domain, no attribution required)
+
+- Bundle v1.4.1. Download page: https://www.blender.org/download/demo-files/ (the file is `human-base-meshes-bundle-v1.4.1.zip`, 50.6 MB, served from https://mirror.blender.org/demo/asset-bundles/human-base-meshes/human-base-meshes-bundle-v1.4.1.zip).
 - sha256 of the `.blend` as unpacked (49,420,489 bytes): `3c121505651140ceb4d69fd1d8923f7788ffadd81672f5be14845a5f2c75c137`
 - sha256 of the zip as downloaded: `811f43accbb31a88266d932f8f5563b2d13586fca0ba2693aad1f5fe582b3515`
 
-Unpack it anywhere outside the repository and check the hash before using it:
+The head is CC0 material combined with a CC BY-SA 4.0 asset, so **the combined pictures (and any `.glb` made from them) are CC BY-SA 4.0** and carry both attribution lines. This notice does not cover the code in this package.
+
+Unpack both anywhere outside the repository and check the hashes:
 
 ```sh
 mkdir -p ~/body-model-source && unzip human-base-meshes-bundle-v1.4.1.zip -d ~/body-model-source
 shasum -a 256 ~/body-model-source/human-base-meshes-bundle-v1.4.1/human_base_meshes_bundle.blend
+shasum -a 256 <folder holding Startup.blend>/Startup.blend
 ```
 
-`--source` takes the folder that holds `human_base_meshes_bundle.blend`. `BODY_MODEL_SOURCE` does the same when the flag is left out.
+`--source` takes the folder that holds the file. For the bundle, `BODY_MODEL_SOURCE` does the same when the flag is left out (and is the default for `--head-source`). For Z-Anatomy, `ZANATOMY_SOURCE` does.
 
 ## Blender
 
-Written and run against **Blender 5.2.3 LTS** on macOS (Homebrew, `/opt/homebrew/bin/blender`). Blender 4.2 or later should work, but only 5.2.3 has been run. `src/runBlender.ts` finds Blender in this order: the `BLENDER` environment variable, `/opt/homebrew/bin/blender`, then `blender` on the path. It runs `blender --background --factory-startup --disable-autoexec --python blender/<script>.py -- <arguments>` and passes Blender's exit code through, or exits 127 with a message when Blender is not installed. Because the bundle is a download, it is opened without its UI and without its scripts (`load_ui=False, use_scripts=False`), with `--disable-autoexec` on the command line, and the scripts refuse to open it at all if Blender's Auto Run Python Scripts preference is on.
+Written and run against **Blender 5.2.3 LTS** on macOS (Homebrew, `/opt/homebrew/bin/blender`). Blender 4.2 or later should work, but only 5.2.3 has been run. `src/runBlender.ts` finds Blender in this order: the `BLENDER` environment variable, `/opt/homebrew/bin/blender`, then `blender` on the path. It runs `blender --background --factory-startup --disable-autoexec --python blender/<script>.py -- <arguments>` and passes Blender's exit code through, or exits 127 with a message when Blender is not installed. Both sources are downloads. Every `.blend` the scripts open is opened without its UI and without its scripts (`load_ui=False, use_scripts=False`), with `--disable-autoexec` on the command line. The steps that open a downloaded file as a whole (`zanatomy:muscles`, `inspect`, `render` and `zanatomy_inspect.py`) also refuse to run if Blender's Auto Run Python Scripts preference is on, and `zanatomy:head` only reads meshes out of the bundle.
 
 ## Commands
 
-Run from the repository root. Blender is not needed for `lint`, `typecheck` or `test`.
+Run from the repository root, in this order. Blender is not needed for `lint`, `typecheck` or `test`. `WORK` is a scratch folder that holds the `.blend` files the steps pass on (70 to 80 MB each, never committed). All four steps refuse a `--work` folder inside the repository, links followed.
 
 ```sh
-pnpm --filter @keylow/body-model inspect --source <folder>   # prints the findings, writes inspection/bundle.json
-pnpm --filter @keylow/body-model render --source <folder>    # writes the eight PNGs and the contact sheet
-pnpm --filter @keylow/body-model regions --source <folder>   # assigns the trunk regions, prints the coverage, writes the two renders
-pnpm --filter @keylow/body-model assign --source <folder>    # the assignment and the report alone, no renders
+pnpm --filter @keylow/body-model zanatomy:muscles --source <folder holding Startup.blend> --work $WORK --names inspection/zanatomy-objects.json
+pnpm --filter @keylow/body-model zanatomy:skin --work $WORK
+pnpm --filter @keylow/body-model zanatomy:head --work $WORK --head-source <folder holding human_base_meshes_bundle.blend>
+pnpm --filter @keylow/body-model zanatomy:render --work $WORK [--set debug|heat|closeup|all] [--view front|back|three-quarter|three-quarter-back]
 pnpm --filter @keylow/body-model lint
 pnpm --filter @keylow/body-model typecheck
 pnpm --filter @keylow/body-model test
 ```
 
+- `zanatomy:muscles` groups the muscles into the 22 ids and takes about two minutes (the trims are slow Python loops). `--names` rewrites `inspection/zanatomy-objects.json`.
+- `zanatomy:skin` builds the skin and the core, about ten seconds.
+- `zanatomy:head` grafts head A on.
+- `zanatomy:render` writes the seven pictures in `renders/muscles/`, about half a minute.
+- Two more steps are optional. `pnpm --filter @keylow/body-model inspect --source <bundle folder>` writes `inspection/bundle.json` and `pnpm --filter @keylow/body-model render --source <bundle folder>` writes the nine pictures in `renders/bases/`. `node --experimental-strip-types src/run.ts zanatomy_inspect --source <folder> --out <json>` lists every Z-Anatomy muscle and bone object with its face count, bounds and collections.
+
 There is no `build` script on purpose. The root turbo `build` task would run it in CI, where there is no Blender.
 
-`render` takes about ten seconds on an Apple silicon Mac (EEVEE, headless). It writes to `renders/bases/`:
+## The Blender Studio bundle (head A's source)
 
-- `<style>-<sex>-front.png` and `<style>-<sex>-three-quarter.png` for `realistic` and `stylized` (the bundle's spelling) and `male` and `female`. Each is 800 by 1200 pixels, under 300 KB, and the script fails if one is not.
-- `bases-compare.png`, the four front views side by side and labelled, at one scale.
-
-Every body gets the same flat clay material, the same three area lights and the same orthographic camera at the same scale, so the pictures compare proportions and nothing else. The three-quarter view turns the camera 35 degrees toward the body's left. Face and hair detail, skin and clothing are deliberately absent.
-
-## Findings
-
-These come from `inspection/bundle.json` (Blender 5.2.3). The file also holds each body's attributes, silhouette widths and the full face set table. Run `inspect` again after any change to this section.
+The muscle pictures use only the realistic male's head and eyes from this bundle. `inspect_bundle.py` and `render_bases.py` look inside it and render the four base bodies. These findings come from `inspection/bundle.json` (Blender 5.2.3). The file also holds each body's attributes, silhouette widths and the full face set table. Run `inspect` again after any change to this section.
 
 ### What the bundle holds
 
@@ -80,130 +96,128 @@ These come from `inspection/bundle.json` (Blender 5.2.3). The file also holds ea
 - **The realistic bodies carry their detail in Multires.** The base mesh has 10,590 faces and the displacement is stored in three levels above it. A cut made on the base mesh keeps the high-resolution detail only if the Multires is applied or baked afterwards. The mesh data name `female_v006lowresUV` on the male is the bundle's own and is misleading. The male and female realistic meshes have identical topology (same vertex and face counts).
 - **The stylised bodies have no modifiers** and the bundle has stale drivers on them that point at `mask_legs` and `mask_arms` modifiers that do not exist. Blender prints "Invalid driver" warnings on load. They are harmless.
 - **Up is Z, the body faces -Y** (Blender's front view looks along +Y, so it sees the front). The body's left is +X. Units are metres.
-- **Pose: a relaxed A-pose in all four.** The arms hang about 14 to 23 degrees away from the body (fitted arm angle below horizontal: 70 degrees realistic male, 67 realistic female, 76 stylised male, 73 stylised female), feet slightly apart. It is not a T-pose and not a neutral pose with the arms at the sides, and the span between the hands (about 0.88 m for the male bodies) comes from the arms hanging out. The render camera and the region cuts must allow for hands that are 0.2 m or more clear of the hips.
+- **Pose: a relaxed A-pose in all four.** The arms hang about 14 to 23 degrees away from the body (fitted arm angle below horizontal: 70 degrees realistic male, 67 realistic female, 76 stylised male, 73 stylised female), feet slightly apart. It is not a T-pose and not a neutral pose with the arms at the sides, and the span between the hands (about 0.88 m for the male bodies) comes from the arms hanging out.
 - **Head, hands and feet are in the body object.** The same mesh holds the head with ears, nose, mouth and eye sockets (the eyeballs are the two child objects), both hands with five separate fingers, and both feet with five separate toes. The stylised bodies have a large head, hands and feet, and the realistic bodies have adult proportions, head about 1 in 7.3 of the height on the male and 1 in 7.1 on the female (1 in 5.4 on the stylised male and 1 in 5.8 on the stylised female, measured from the top of the head to the chin and written to `inspection/bundle.json`). The male bodies include anatomical groin geometry and the realistic female has breasts, so the app will need a decision on how the base is covered before it is shown to users.
 - **Face sets are body parts, not muscles, and have no names.** They are an integer face attribute (`.sculpt_face_set`), shown in sculpt mode as colours.
   - Realistic: 102 sets. 95 sit on one side and 92 of those have a mirrored partner of the same size, so left and right are separate sets. 7 span both sides: the head and neck (about 2,025 faces), the torso (about 705) and five more midline pieces in the neck and trunk (100 to 494 faces). Fingers and toes are cut into many small sets (77 of the 102 have 78 faces or fewer, down to 4).
   - Stylised: 42 sets. Every one spans both sides, so each set is a segment of both arms or both legs together (for example 1,680 faces for both lower legs), plus the head, torso and pelvis. The stylised sets are coarser than the muscle list and are not split left from right.
   - Neither set family follows the 22 muscle ids. They are a starting point for the cuts, not a replacement for them.
 
-### Recommendation
+## Z-Anatomy male (the muscle spike)
 
-The realistic male is the recommended base: on the contact sheet its adult proportions (a head about 1 in 7.3 of the height, long limbs, a defined shoulder, chest and abdomen) read as real anatomy, which is what a muscle map needs. The stylised pair has a head about 1 in 5.4 of the height and thick, soft limbs, so its muscle regions would be coarse and look cartoonish beside the app's data. This does not decide anything: Zee decides at the approval ticket.
+The pipeline in the four `zanatomy:*` steps above, and what it reads, builds and draws.
 
-## Muscle regions
+### The mapping data
 
-The 22 muscle ids are aesthetic regions, not anatomical muscles. They are cut on the surface of one base body, the realistic male (`GEO-body_male_realistic`), by rules held as data in `regions/male/`. `blender/regions.py` is the engine (pure Python, no Blender import, so the Vitest tests run it), `blender/assign_regions.py` applies it to the body and `blender/render_regions.py` draws the result.
+`muscles/male/zanatomy-map.json` holds the whole mapping as data, so a different atlas or a changed idea of a muscle is an edit to the file and not to the scripts. Patterns are regular expressions that must match the whole object name. An object is sorted in this order:
 
-```sh
-pnpm --filter @keylow/body-model regions --source <folder> [--scratch <folder>]
-```
+1. **exclude**: the collections `Bursae`, `Tendon sheaths` and `Fascia`, the leader lines and label points (`.j` and `.g`), the iliotibial tract, the scalp aponeurosis, retinacula, ligaments and the plantar aponeurosis. These are not muscles and are never drawn or used for the skin.
+2. **ids**: the first of the 22 ids with a matching pattern. No object may match two (a test checks it).
+3. **head**: muscles in the collections `Head`, `Muscles of head` and `Facial muscles` with no id. They are never drawn (the face is the grafted CC0 head), but they stay part of the body the skin is built from.
+4. **hidden**: muscles no one can see through the skin (platysma and the temporalis sheet, which would hide the neck and the temple).
+5. **neutral**: superficial muscles with no id (the `Superficial muscles` collection, hand and foot muscles, serratus anterior, the rotator cuff muscles at the back, sartorius and a few more), drawn in one neutral colour.
+6. everything else is **deep**: not drawn, but still part of the body the skin is built from.
 
-runs headless in about fifteen seconds, prints the coverage report and writes `renders/regions/male-trunk-{front,three-quarter,back,three-quarter-back}.png`. `render_regions.py` also takes `--group <name>|all` (one data file only, or `all` colours every file in one picture) and `--view front|three-quarter|side|three-quarter-back|back` (all but `side` when left out), so the next tickets need no edit to the script. Without `--group` every file in `regions/male/` gets its own set of renders named `male-<group>-<view>.png` (trunk now, `shoulders_arms` and `legs` when their files exist). `--scratch` is the folder for the scratch `.blend` and the unframed render, default `<system temp>/keylow-body-model`. It must be outside any git checkout (the run refuses a path inside the repository or inside another checkout).
+`trim` removes the faces of one id that lie within a distance of another id's surface. Z-Anatomy models the external oblique aponeurosis and the latissimus dorsi as sheets lying over the rectus abdominis and the erector spinae, and they hide those muscles completely from outside. Trimming 1 cm (obliques from abs) and 1.2 cm (lats from lower back) shows them. This is a judgement for the picture, not anatomy, and it is the one place the data is edited.
 
-### The cut is on Multires level 3
+`inspection/zanatomy-objects.json` is the list of all 789 muscle-collection objects (name, faces, collections) so the Vitest test can check the mapping without Blender.
 
-The base mesh has 10,590 quads and its detail lives in three Multires levels above it. A cut on the base steps along quads of about 2 cm and reads as patches, so the regions are cut on **level 3 (677,440 faces, about 64 times the base)**, with the sculpted detail, and the borders follow smooth lines. Level 2 (169,360 faces) was tried and still showed a saw tooth along gently sloping borders. The export ticket decimates to the budget (about 30,000 triangles) and pins the muscle borders, so the face count here costs nothing in the final size. The bundle's own body is left as it was. `assign_regions.py` evaluates a copy at the level and cuts that. The level is a contract, not a setting. Every file names it in `multiresLevel` (0 is the base mesh, 3 the top) and the files must agree. A face number is only valid for the bundle's sha256, that level, the face count (`faceCount`, 677,440 at level 3) and the order of the faces (`faceFingerprint`, the sha256 of the centre of every 1,000th face, rounded to two decimals of the height, so float noise does not change it). The run stops, with no clamping, when the body has fewer Multires levels than the file names, when its face count differs from `faceCount` (a file set to level 2 stops with "cut on 677440 faces but the body has 169360"), or when the fingerprint differs, which catches a Blender version that numbers the faces differently. The indices of `addFaces` and `removeFaces` mean faces of that level. The scratch `.blend` (about 73 MB) holds the level mesh with the result as an integer face attribute `muscle_region` (an index into the JSON list in the mesh property `muscle_region_ids`, `body` first) and the level in `multires_level`.
+### What the data holds (what blocks and what does not)
 
-### Data format
+- **`.j` and `.g` objects are not geometry.** The 105 `.j` objects (and the one `.g`) have zero faces and two vertices: they are the leader lines of the atlas labels. Nothing is double drawn, and no whole-structure parent exists in the muscle collection. The `.l` and `.r` suffixes are the side, one object per side.
+- **Four objects have no side suffix**: `Iliocostalis colli muscle` (the left one, its partner ends in `.r`), `Transverse arytenoid muscle`, `Diaphragm` and `Linea alba`. None is mapped to an id. `Linea alba` is drawn neutral.
+- **The trapezius parts are named the wrong way round.** The file's `Ascending part` is the upper fibres at the neck and its `Descending part` is the lower fibres between the shoulder blades. The mapping follows the position and not the name: `traps_upper` takes the Ascending part, `traps_mid` takes the Descending part, the Transverse part and the rhomboids. The brief's draft had them the other way and the first render showed it.
+- **The external oblique and the lats are sheets over other muscles** (see the trims). Without them the abs and the lower back would be invisible from outside.
+- **Gaps in the rectus abdominis.** The mesh has holes at the tendinous inscriptions, so the abs show dark notches. They read as the abs' segments, but they are holes.
+- **Intersections.** Neighbouring muscles overlap by a millimetre or two (the quadriceps heads, the three deltoid parts), so borders show small interpenetrations in a close-up. They are in the source.
+- **No eyes, no face skin, no ears, no hair in the source.** The first renders showed a skull-like head: facial muscles seen through a bald bubble. The head is now the CC0 head grafted on (see The head).
+- **One stray bone** (450 faces) sits about a metre to the side of the body in the skeleton collection. The skeleton step drops bones whose centre is further than 0.4 m sideways or 0.2 m front to back (`skeleton` in the data).
+- **Other "other" muscles are not placed under the 22 ids on purpose**: the rotator cuff, serratus anterior, sartorius and the tensor fasciae latae are visible on a body but have no id in the muscle list (ADR 0005), so they are neutral.
+- Face counts are polygons of the base meshes. The muscles are almost all triangles already (see the table). Z-Anatomy puts subdivision modifiers on a few bones and ligaments, which are ignored.
 
-One file per group in `regions/male/`, named after the group: `trunk.json` here, `shoulders_arms.json` and `legs.json` in the next two tickets. The loader reads every `.json` file in the folder and no file refers to another.
+### Faces per id
 
-```json
-{
-  "sourceSha256": "3c12...c137",
-  "multiresLevel": 3,
-  "faceCount": 677440,
-  "faceFingerprint": "651c...3b0b",
-  "regions": [
-    {
-      "id": "abs",
-      "priority": 130,
-      "facing": "front",
-      "shape": {
-        "type": "outline",
-        "mirror": true,
-        "depth": [0, 1],
-        "points": [
-          [0, 0.689],
-          [0.036, 0.676],
-          [0.045, 0.615],
-          [0.028, 0.563],
-          [0, 0.556]
-        ]
-      },
-      "addFaces": [],
-      "removeFaces": []
-    }
-  ]
-}
-```
+The 23 drawn groups after the trims (the hidden deep muscles, the skeleton and the excluded objects are not drawn):
 
-- `sourceSha256`: the sha256 of the bundle's `.blend` the regions were cut against (the value in the Source section above). The run compares it with the file passed in `--source` before it opens it and stops with a message naming both hashes when they differ, because the face numbers would point at different faces.
-- `multiresLevel`, `faceCount`, `faceFingerprint`: the Multires level of the body the face numbers belong to (0 to 3, the same in every file), the number of faces the body has at that level and the order fingerprint. The run prints the current fingerprint on its first line. See the contract above.
-- `id`: one of the 22 ids. A region names both sides of the body.
-- `priority`: a whole number in the group's reserved band. A higher number wins where regions overlap. Trunk is 100 to 199, `shoulders_arms` 200 to 299 (wins over the trunk where they overlap) and `legs` 300 to 399 (wins over the trunk below the hip). Two overlapping regions with the same priority stop the run, because the winner would be a guess.
-- `facing`: `front`, `back` or `any` (the default). A face counts as front when its normal points at least 0.3 toward the front (the body faces -Y) and as back when it points that far the other way. A flank face is neither, so a rule that has to reach round the side uses `any` and a `depth` range.
-- `shape`: where the face centre has to lie. Shapes are written in the **normalised body frame**, so the same rules can be re-fitted to the female body with small changes:
-  - `side`: the distance from the midline as a fraction of the body's height. It is always positive, so a rule written for one side covers both.
-  - `height`: 0 at the soles, 1 at the crown.
-  - `depth`: the distance in front of the body's centre as a fraction of the height, negative behind it.
-  - `{"type": "box", "side": [min, max], "height": [min, max], "depth": [min, max]}`, an axis left out is unbounded.
-  - `{"type": "outline", "points": [[side, height], ...], "mirror": true|false, "smooth": true|false, "depth": [min, max]}`: a closed curve in the side and height plane, projected through the body, so it needs `facing` or a `depth` range to keep to one surface. `smooth` (the default) draws a closed Catmull-Rom curve through the points, so a handful of points give a rounded anatomical edge, and `false` joins them with straight lines. `mirror` takes the points as the outer edge of a shape that touches the midline: the list runs from the top midline point, out and round, to the bottom midline point (both with side 0), and the other half is added for you. A shape beside the midline (the lats, the lower back columns) is a plain closed list.
-  - `{"type": "ellipsoid", "centre": [side, height, depth], "radii": [side, height, depth]}`.
-  - `{"type": "plane", "point": [side, height, depth], "normal": [side, height, depth]}`: the half-space on the side the normal points to.
-  - `{"type": "union", "of": [shape, ...]}`, `{"type": "intersection", "of": [shape, ...]}` and `{"type": "difference", "from": shape, "minus": shape}`.
-- `addFaces` and `removeFaces`: hand-tuned boundaries. Face indices of the level mesh added to the region or taken out of it, applied after the shape and before priority. They are only valid for the bundle named by `sourceSha256`.
+| Group                   |       Faces |   Triangles |
+| ----------------------- | ----------: | ----------: |
+| `chest_upper`           |       1,700 |       1,700 |
+| `chest_lower`           |       9,450 |       9,460 |
+| `delt_front`            |       5,804 |       5,804 |
+| `delt_side`             |       5,928 |       5,928 |
+| `delt_rear`             |       8,756 |       8,756 |
+| `lats`                  |      24,564 |      24,564 |
+| `traps_upper`           |       9,192 |       9,192 |
+| `traps_mid`             |      32,092 |      32,092 |
+| `lower_back`            |      61,988 |      61,988 |
+| `biceps`                |      18,784 |      18,784 |
+| `triceps`               |      23,412 |      23,412 |
+| `forearms`              |     144,430 |     144,436 |
+| `abs`                   |      43,432 |      43,432 |
+| `obliques`              |      24,384 |      24,384 |
+| `glute_max`             |       6,652 |       6,652 |
+| `glute_med`             |      22,852 |      22,852 |
+| `quads`                 |      60,512 |      60,512 |
+| `hamstrings`            |      42,984 |      42,984 |
+| `adductors`             |      43,500 |      43,500 |
+| `calves`                |      36,288 |      36,288 |
+| `tibialis`              |       7,052 |       7,052 |
+| `neck`                  |      38,636 |      38,636 |
+| other muscles (neutral) |     182,186 |     182,276 |
+| **Drawn total**         | **854,578** | **854,684** |
 
-The frame is made from the bounds of the level mesh: the soles and crown set height 0 and 1 (about 1.69 m for the realistic male), the mean of the vertices' X is the midline and the middle of the Y range is depth 0.
+Not drawn: 776,983 faces of deep muscles, 125,928 of face and head muscles (the `head` group, 76 objects), 577,420 of skeleton, 234,800 excluded. The source's muscle collection is 2,045,745 faces. Each id has objects and the run stops if one does not. The run prints the list of muscle objects that mapped to nothing (the deep ones, about 166 objects, and the 76 head objects) so the unmapped set can be read at a glance.
 
-### The coverage report
+### The skin
 
-The run prints the faces per id, the unclaimed faces (counted in bands of one tenth of the height), the faces claimed by more than one region before priority and which pair won, and the connected pieces of each id with any single-face island listed. A face no region claims goes to `body`. The trunk files leave the head, arms, legs, hands and feet there until the next tickets.
+Z-Anatomy has no skin (its `Integument` collection is empty), so `zanatomy_skin.py` builds a shell from the body:
 
-### Counts to compare a run against
+1. join every muscle and bone (deep ones too) and voxel-remesh the union at 5 mm, which gives one closed envelope of the whole body, head, hands and feet included.
+2. the **core** is that envelope pulled in 4 mm. It is a dark fill under the muscles so the gaps between them read as flesh and not as holes.
+3. the **skin** is the envelope pushed out 10 mm, closed again with an 8 mm remesh and smoothed 40 times, so it reads as one smooth outline and not as lumpy muscle.
 
-The trunk run at level 3 (677,440 faces) gives these faces per id. A reviewer can run `regions` and compare. If the numbers differ, the data, the bundle or Blender changed.
+The run checks the result: 14 of 428,643 drawn muscle vertices (0.00 percent) end up outside the skin. The skin material is a faint see-through shell (alpha 0.05 face on, 0.5 at the edge, from a fresnel weight), so the silhouette reads and the coloured muscles show clearly. The skeleton is hidden. It is only used to build the shell, and drawn faint it would add clutter in front of the deep gaps. The CC0 fallback was not needed.
 
-| Id            | Faces   |
-| ------------- | ------- |
-| `chest_upper` | 5,984   |
-| `chest_lower` | 5,258   |
-| `abs`         | 2,380   |
-| `obliques`    | 7,719   |
-| `lats`        | 6,880   |
-| `traps_mid`   | 2,302   |
-| `lower_back`  | 3,923   |
-| `body`        | 642,994 |
+### The renders
 
-### The trunk, second cut
+EEVEE, one orthographic camera, the same for every view, 760 by 1160 pixels, each under 400 KB, no PNG text chunk and no local path (a test checks both).
 
-All numbers are fractions of the body's height, and every region except the traps is an `outline`. Landmarks on the realistic male: clavicle at 0.78 to 0.79, nipples at 0.72, navel at 0.61, the torso is about 0.105 from the midline at the chest and 0.09 at the waist. Regions overlap on purpose where the priority decides the border, so the borders tuck under the stronger region and leave no gap.
+- `male-debug-{front,back,three-quarter,three-quarter-back}.png`: one high-contrast colour per id with a legend, `other` muscles in grey, on a dark background.
+- `male-heat-{front,back}.png`: the v3 heat colours read from `packages/tokens/src/source/training.css` (dark values) on the dark surface colour, for a push day: chest (both ids) peak, `delt_front` very hot, `triceps` hot, `delt_side` warm, `abs` ready, every other id rested, other muscles in the body silhouette colour.
+- `male-heat-torso-three-quarter.png`: a close-up of the torso and head at 620 by 900 pixels.
 
-| Id            | Rule                                                                                                                                                                                                                                            |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `chest_upper` | the whole pectoral on the front: a clavicle curve rising from the sternal notch (0.776) to the shoulder (0.797), an outer edge that tapers in toward the front delt, and a lower edge sweeping up from the sternum (0.678) to the armpit (0.74) |
-| `chest_lower` | the pectoral below a split that rises from the nipple line at the sternum (0.732) to the armpit (0.752), so the lower pec is a full wedge and not a crescent. Priority 125, so it wins over `chest_upper`                                       |
-| `abs`         | the rectus strip, 0.09 wide at the navel with rounded ends from just under the sternum (0.689) to the groin line (0.556), front only                                                                                                            |
-| `obliques`    | the flank outside the abs from the pectoral edge down, tapering to the hip with a V cut at the groin side, wrapping back to depth -0.06                                                                                                         |
-| `lats`        | the wing from the armpit (0.748) down and in to the waist (0.60), back and flank up to the mid-axillary line                                                                                                                                    |
-| `traps_mid`   | a smooth diamond from 0.79 to 0.69 at the spine, 0.07 wide at its middle                                                                                                                                                                        |
-| `lower_back`  | two tapered erector columns either side of the spine (0.008 to 0.06 from the midline, 0.706 down to 0.562), back only                                                                                                                           |
+### The head
 
-The groin and the nipples are not cut out. The base body is anatomically complete there, the groin area goes to `body` (the split and export ticket gives it a smooth, neutral finish) and the nipples sit inside `chest_upper` or `chest_lower`.
+The first renders showed a skull-like head: the face and head muscles seen through the see-through skin of a bald bubble. The chosen head, called head A, is a real face, so every muscle in the `head` group is hidden and the head is the CC0 realistic male's, drawn nearly opaque in clay. Everything below the neck is the generated body.
+
+`zanatomy_head.py` takes the head and upper neck of `GEO-body_male_realistic` and its two eyes from the CC0 Human Base Meshes bundle (see Source and licence at the top), at Multires level 2, cut at z 1.415 m with the shoulder slope dropped. It scales it by 0.92 about the eyes (the Z-Anatomy head is smaller than the bundle's) and puts the eyes at the Z-Anatomy eye height. It then puts the lowest neck ring on the skin's ring at that height and widens the lower neck to the skin's width with a smooth falloff up to 1.52 m, so the seam does not step. The skin and the core stop at 1.492 m, so the generated head bubble is gone, and every drawn muscle loses its faces above 1.497 m, so nothing sticks out of the face. The render draws the head in lit clay (`#b3a79b`) that fades in over the neck between 1.445 and 1.492 m (the material reads the world height), so it dissolves into the faint skin. The bundle's eyes have no material, so the render gives them a white, a grey iris and a pupil, found from the direction out of the eye. There is no hair, no beard, no eyelashes and no teeth.
+
+**Licence of the head.** The bundle is CC0 (public domain), so it may be mixed freely. But **the grafted head is CC0 material combined with the CC BY-SA 4.0 Z-Anatomy asset, so the combined asset (the renders and any `.glb` made from them) is CC BY-SA 4.0** and carries the two attribution lines above. The bundle's sha256 values are in Source and licence above. `ASSETS-LICENCE.md` is the notice for the committed pictures.
+
+Looked at in the renders: the head reads as a calm clay mannequin head with eyes, neither skull nor caricature. The seam is a soft fade at the base of the neck. Two small dark neck muscle tips (the sternocleidomastoid and the splenius) show at the sides of the neck where the clay fades, and in the back view the top of the spine muscles shows as a dark blot at the nape. The scale and cut heights are constants at the top of `zanatomy_head.py`.
+
+### To phone size
+
+The drawn muscles are 855k triangles and the skin 42k. A phone `.glb` of 150k to 250k triangles needs the muscles at about 18 to 29 percent. Dropping most of the hand, foot and face muscles that carry no id (they are most of the 219k neutral triangles, not measured) and decimating the skin to 10k to 15k would let the 22 ids keep about 30 percent of their triangles, which the muscle shapes survive: they are smooth shapes with a fibre texture, and the fibre texture is what goes first. Each id is one mesh and the borders between muscles are not shared, so no border needs pinning. `forearms` (144k) and `lower_back` (62k) are the heaviest and would be cut hardest, the first because the finger tendons are many thin pieces.
 
 ## Mesh naming contract
 
-The tools that follow this one produce a body in which **every mesh is named by a muscle id**, and nothing else is named:
+The export that follows this tool produces a body in which **every mesh is named, and the names are these**:
 
-- One mesh per id of `MUSCLE_IDS` in [`packages/core/src/training/muscles.ts`](../../packages/core/src/training/muscles.ts), 22 in all: `chest_upper`, `chest_lower`, `delt_front`, `delt_side`, `delt_rear`, `lats`, `traps_upper`, `traps_mid`, `lower_back`, `biceps`, `triceps`, `forearms`, `abs`, `obliques`, `glute_max`, `glute_med`, `quads`, `hamstrings`, `adductors`, `calves`, `tibialis`, `neck`.
-- One mesh named `body` for everything no muscle covers: head, hands, feet and joints.
-- A muscle id names **both sides** of the body. The left and right of one muscle are one mesh, because the ids carry no side.
-- Adding or splitting an id is a new muscle list version (ADR 0005), so this list changes only with it.
+- One mesh per id of `MUSCLE_IDS` in [`packages/core/src/training/muscles.ts`](../../packages/core/src/training/muscles.ts), 22 in all: `chest_upper`, `chest_lower`, `delt_front`, `delt_side`, `delt_rear`, `lats`, `traps_upper`, `traps_mid`, `lower_back`, `biceps`, `triceps`, `forearms`, `abs`, `obliques`, `glute_max`, `glute_med`, `quads`, `hamstrings`, `adductors`, `calves`, `tibialis`, `neck`. A muscle id names **both sides** of the body, so left and right are one mesh.
+- `other`: the superficial muscles that have no id, drawn in one neutral colour.
+- `skin`: the generated see-through shell.
+- `core`: the dark fill under the muscles.
+- `head`: head A, the grafted CC0 head and upper neck.
+- `eyes`: the two eyes of head A.
+- Nothing else is exported. The deep muscles, the head muscles and the skeleton build the skin and are never exported.
+- Adding or splitting an id is a new muscle list version (ADR 0005), so the list of ids changes only with it.
+
+The scratch files written by the steps above name their objects `muscle_<id>`, `muscle_other`, `muscle_head`, `muscle_deep`, `skeleton`, `skin` and `core`, plus the head and eyes. They are working names and are not this contract.
 
 ## Notes
 
-- Blender writes nothing into the repository. The scripts write only `inspection/bundle.json`, `renders/bases/` and `renders/regions/`, and the package `.gitignore` keeps Python bytecode and any `.blend`, `.blend1` and `.blend@` file out.
+- Blender writes nothing into the repository. The scripts write only `inspection/bundle.json`, `inspection/zanatomy-objects.json`, `renders/bases/` and `renders/muscles/`, and the package `.gitignore` keeps Python bytecode and any `.blend`, `.blend1` and `.blend@` file out.
 - PNG text stamps (the `.blend` path, date and render time Blender adds by default) are off on purpose, so no local path reaches the public repository. A test fails if a committed render holds a text chunk or `/Users/`.
-- The Blender steps are not part of `pnpm check`. `lint`, `typecheck` and `test` are, and the tests cover how the Blender command line is built, the region engine (they run `blender/regions.py` with `python3`, which the CI runners have) and that no committed render holds metadata.
+- The Blender steps are not part of `pnpm check`. `lint`, `typecheck` and `test` are, and the tests cover how the Blender command line is built, the package scripts, the Z-Anatomy mapping data (every id has objects and no object matches two ids) and that no committed render holds metadata.
 - `inspection/` is excluded from Prettier in the root `.prettierignore` because it is written exactly as the script builds it.

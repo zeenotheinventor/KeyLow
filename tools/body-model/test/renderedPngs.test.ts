@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 const rendersRoot = join(import.meta.dirname, "../renders");
 const textChunkTypes = ["tEXt", "iTXt", "zTXt"];
 const pngSignatureLength = 8;
+const largestMusclePictureBytes = 400_000;
 
 /** The chunk types of a PNG, in file order. Each chunk is a 4 byte length, a 4 byte type, the data and a 4 byte CRC. */
 function chunkTypes(png: Buffer): string[] {
@@ -24,7 +25,7 @@ function pngFiles(folderName: string): string[] {
 
 describe.each([
   ["bases", 9],
-  ["regions", 4],
+  ["muscles", 7],
 ])("committed renders in renders/%s", (folderName, expectedCount) => {
   const files = pngFiles(folderName);
 
@@ -37,5 +38,13 @@ describe.each([
 
     expect(chunkTypes(png).filter((type) => textChunkTypes.includes(type))).toEqual([]);
     expect(png.includes("/Users/")).toBe(false);
+  });
+});
+
+describe("committed renders in renders/muscles", () => {
+  it.each(pngFiles("muscles"))("%s is under 400 KB", (name) => {
+    const { size } = statSync(join(rendersRoot, "muscles", name));
+
+    expect(size).toBeLessThan(largestMusclePictureBytes);
   });
 });
