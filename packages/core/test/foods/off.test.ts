@@ -50,7 +50,10 @@ const goldens = [
         quality: {},
         food_group: "breakfast-cereals",
       },
-      portions: [{ label: "40 g", grams: 40, ml: null, isDefault: true }],
+      portions: [
+        { label: "40 g", grams: 40, ml: null, isDefault: true },
+        { label: "1 pack", grams: 500, ml: null, isDefault: false },
+      ],
     },
   },
   {
@@ -74,7 +77,7 @@ const goldens = [
         quality: {},
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 pack", grams: 200, ml: null, isDefault: false }],
     },
   },
   {
@@ -98,7 +101,7 @@ const goldens = [
         quality: { kcal_derived: true },
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 pack", grams: 250, ml: null, isDefault: false }],
     },
   },
   {
@@ -124,7 +127,10 @@ const goldens = [
         quality: { per_serving_converted: true },
         food_group: null,
       },
-      portions: [{ label: "30 g", grams: 30, ml: null, isDefault: true }],
+      portions: [
+        { label: "30 g", grams: 30, ml: null, isDefault: true },
+        { label: "1 pack", grams: 150, ml: null, isDefault: false },
+      ],
     },
   },
   {
@@ -166,7 +172,7 @@ const goldens = [
         quality: { suspect: true, fields_missing: ["protein_g"] },
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 pack", grams: 300, ml: null, isDefault: false }],
     },
   },
   {
@@ -192,7 +198,10 @@ const goldens = [
         quality: {},
         food_group: "beverages",
       },
-      portions: [{ label: "250 ml", grams: null, ml: 250, isDefault: true }],
+      portions: [
+        { label: "250 ml", grams: null, ml: 250, isDefault: true },
+        { label: "1 pack", grams: null, ml: 1000, isDefault: false },
+      ],
     },
   },
   {
@@ -243,7 +252,7 @@ const goldens = [
         },
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 pack", grams: 200, ml: null, isDefault: false }],
     },
   },
   {
@@ -268,7 +277,7 @@ const goldens = [
         quality: {},
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 pack", grams: 100, ml: null, isDefault: false }],
     },
   },
   {
@@ -287,7 +296,7 @@ const goldens = [
         quality: allFourMacrosMissing,
         food_group: null,
       },
-      portions: [],
+      portions: [{ label: "1 pack", grams: 800, ml: null, isDefault: false }],
     },
   },
   {
@@ -313,7 +322,10 @@ const goldens = [
         quality: {},
         food_group: null,
       },
-      portions: [{ label: "50 g", grams: 50, ml: null, isDefault: true }],
+      portions: [
+        { label: "50 g", grams: 50, ml: null, isDefault: true },
+        { label: "1 pack", grams: 400, ml: null, isDefault: false },
+      ],
     },
   },
   {
@@ -355,6 +367,25 @@ describe("normaliseOffProduct", () => {
     it("should never turn missing nutriments into 0", () => {
       const { food } = normaliseOk(fixtures.emptyNutriments);
       expect(food).toMatchObject(noNutrients);
+    });
+  });
+
+  describe("portions", () => {
+    it("should offer the serving then the pack named from the packaging", () => {
+      const { portions } = normaliseOk({
+        ...fixtures.kcalPresent,
+        quantity: "415g",
+        packaging_tags: ["en:metal", "en:can", "en:canned", "en:food-can"],
+      });
+      expect(portions).toEqual([
+        { label: "40 g", grams: 40, ml: null, isDefault: true },
+        { label: "1 can", grams: 415, ml: null, isDefault: false },
+      ]);
+    });
+
+    it("should offer the pack alone, not as the default, without a serving", () => {
+      const { portions } = normaliseOk(fixtures.macrosOnly);
+      expect(portions).toEqual([{ label: "1 pack", grams: 250, ml: null, isDefault: false }]);
     });
   });
 
@@ -415,6 +446,14 @@ describe("normaliseOffProduct", () => {
         protein_g: null,
         fat_g: null,
       });
+    });
+
+    it("should offer just the serving when the packaging tags are the wrong type", () => {
+      const { portions } = normaliseOk({
+        ...fixtures.kcalPresent,
+        packaging_tags: "en:can",
+      });
+      expect(portions.map((portion) => portion.label)).toEqual(["40 g", "1 pack"]);
     });
 
     it("should treat nutriments that is not an object as empty", () => {
@@ -479,6 +518,23 @@ describe("offProductPayloadSchema", () => {
 
   it("should coerce a numeric string serving quantity to a number", () => {
     expect(offProductPayloadSchema.parse({ serving_quantity: "30" }).serving_quantity).toBe(30);
+  });
+
+  it("should keep the packaging tags", () => {
+    expect(offProductPayloadSchema.parse({ packaging_tags: ["en:can", "en:metal"] })).toEqual({
+      packaging_tags: ["en:can", "en:metal"],
+    });
+  });
+
+  it.each([
+    ["a string", "en:can"],
+    ["a number", 3],
+    ["null", null],
+    ["a list with a number in it", ["en:can", 3]],
+  ])("should read packaging tags that are %s as missing", (_description, packagingTags) => {
+    expect(offProductPayloadSchema.parse({ packaging_tags: packagingTags }).packaging_tags).toBe(
+      undefined,
+    );
   });
 
   it("should leave absent fields undefined rather than defaulting them", () => {

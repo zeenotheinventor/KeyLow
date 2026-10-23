@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { normaliseBarcode } from "./barcode";
+import { deriveOffPortions } from "./deriveOffPortions";
 import {
   buildQuality,
   collectMicros,
@@ -14,7 +15,6 @@ import {
   resolveEnergy,
   resolvePer100Amounts,
   resolveSalt,
-  servingPortion,
   toNonNegativeNumber,
 } from "./offRules";
 
@@ -48,6 +48,7 @@ export const offProductPayloadSchema = z.looseObject({
   nutrition_data_per: lenient(z.string()),
   countries_tags: lenient(stringArraySchema),
   categories_tags: lenient(stringArraySchema),
+  packaging_tags: lenient(stringArraySchema),
   nutriments: lenient(z.record(z.string(), lenient(numberOrStringSchema))),
 });
 
@@ -121,10 +122,13 @@ export function normaliseOffProduct(raw: unknown): NormaliseOffResult {
     fat_g: fat,
     carbs_g: carbs,
   });
-  const portion = servingPortion({
+  const portions = deriveOffPortions({
     servingSize: product.serving_size,
     servingQuantity: product.serving_quantity,
+    quantity: product.quantity,
     basis,
+    packagingTags: product.packaging_tags,
+    categoriesTags: product.categories_tags,
   });
 
   return {
@@ -152,7 +156,7 @@ export function normaliseOffProduct(raw: unknown): NormaliseOffResult {
       }),
       food_group: pickFoodGroup(product.categories_tags),
     },
-    portions: portion === null ? [] : [portion],
+    portions,
   };
 }
 
