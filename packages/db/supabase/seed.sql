@@ -73,3 +73,10 @@ begin
   end if;
 end;
 $$;
+
+-- The demo user is marked set up. handle_new_user creates the demo profile with onboarding_completed_at
+-- null, after the programs_and_setup migration has marked the accounts that already existed, so without
+-- this the first-run gate would trap the demo user and any end-to-end flow (ADR 0003, Amendment 12).
+update public.profiles
+  set onboarding_completed_at = now()
+  where id = '11111111-1111-4111-8111-111111111111';

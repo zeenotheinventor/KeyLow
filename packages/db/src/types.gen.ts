@@ -593,7 +593,7 @@ export type Database = {
       };
       profiles: {
         Row: {
-          activity: string | null;
+          activity: Database["public"]["Enums"]["activity_level"] | null;
           birth_date: string | null;
           checkin_weekday: number | null;
           created_at: string;
@@ -614,7 +614,7 @@ export type Database = {
           weight_unit: string | null;
         };
         Insert: {
-          activity?: string | null;
+          activity?: Database["public"]["Enums"]["activity_level"] | null;
           birth_date?: string | null;
           checkin_weekday?: number | null;
           created_at?: string;
@@ -635,7 +635,7 @@ export type Database = {
           weight_unit?: string | null;
         };
         Update: {
-          activity?: string | null;
+          activity?: Database["public"]["Enums"]["activity_level"] | null;
           birth_date?: string | null;
           checkin_weekday?: number | null;
           created_at?: string;
@@ -654,6 +654,57 @@ export type Database = {
           terms_version?: string | null;
           timezone?: string;
           weight_unit?: string | null;
+        };
+        Relationships: [];
+      };
+      programs: {
+        Row: {
+          created_at: string;
+          dow_offsets_kcal: number[];
+          ended_on: string | null;
+          fat_fraction_of_remaining: number;
+          goal: Database["public"]["Enums"]["goal_type"];
+          goal_weight_kg: number | null;
+          id: string;
+          next_checkin_date: string | null;
+          protein_g_per_kg: number;
+          rate_pct_per_week: number;
+          split_preset: string;
+          started_on: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          dow_offsets_kcal?: number[];
+          ended_on?: string | null;
+          fat_fraction_of_remaining: number;
+          goal: Database["public"]["Enums"]["goal_type"];
+          goal_weight_kg?: number | null;
+          id?: string;
+          next_checkin_date?: string | null;
+          protein_g_per_kg: number;
+          rate_pct_per_week: number;
+          split_preset: string;
+          started_on: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          dow_offsets_kcal?: number[];
+          ended_on?: string | null;
+          fat_fraction_of_remaining?: number;
+          goal?: Database["public"]["Enums"]["goal_type"];
+          goal_weight_kg?: number | null;
+          id?: string;
+          next_checkin_date?: string | null;
+          protein_g_per_kg?: number;
+          rate_pct_per_week?: number;
+          split_preset?: string;
+          started_on?: string;
+          updated_at?: string;
+          user_id?: string;
         };
         Relationships: [];
       };
@@ -1186,6 +1237,7 @@ export type Database = {
       training_focus_is_valid: { Args: { focus: string[] }; Returns: boolean };
     };
     Enums: {
+      activity_level: "sedentary" | "light" | "moderate" | "very" | "extra";
       body_measurement_kind: "body_fat_pct" | "lean_mass_kg";
       equipment:
         | "barbell"
@@ -1202,6 +1254,7 @@ export type Database = {
       exercise_source: "free_exercise_db" | "user";
       experience_level: "beginner" | "intermediate" | "advanced";
       food_source: "off" | "cofid" | "user";
+      goal_type: "lose" | "maintain" | "gain";
       log_item_type: "food" | "recipe" | "quick";
       muscle_group: "chest" | "shoulders" | "back" | "arms" | "core" | "legs" | "neck";
       muscle_role: "primary" | "secondary" | "stabiliser";
@@ -1334,6 +1387,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      activity_level: ["sedentary", "light", "moderate", "very", "extra"],
       body_measurement_kind: ["body_fat_pct", "lean_mass_kg"],
       equipment: [
         "barbell",
@@ -1351,6 +1405,7 @@ export const Constants = {
       exercise_source: ["free_exercise_db", "user"],
       experience_level: ["beginner", "intermediate", "advanced"],
       food_source: ["off", "cofid", "user"],
+      goal_type: ["lose", "maintain", "gain"],
       log_item_type: ["food", "recipe", "quick"],
       muscle_group: ["chest", "shoulders", "back", "arms", "core", "legs", "neck"],
       muscle_role: ["primary", "secondary", "stabiliser"],
