@@ -5,6 +5,7 @@ import {
   RECIPES_LIBRARY,
   RECIPES_SEARCH_EMPTY,
   SEARCH_EMPTY,
+  WEIGHT_EMPTY,
   YOUR_FOODS_EMPTY,
 } from "@keylow/core/copy";
 import { View } from "react-native";
@@ -87,6 +88,17 @@ export const DisabledAction: Story = {
       disabled: true,
       onPress: () => undefined,
     },
+  },
+};
+
+// The empty Weight board: Add weigh-in, and under it a secondary way in, Connect Health Connect.
+export const SecondaryAction: Story = {
+  args: {
+    icon: "Weight",
+    title: WEIGHT_EMPTY.title,
+    body: WEIGHT_EMPTY.body,
+    action: { label: WEIGHT_EMPTY.addWeighIn, variant: "primary", onPress: () => undefined },
+    secondaryAction: { label: WEIGHT_EMPTY.connectHealth, icon: "Heart", onPress: () => undefined },
   },
 };
 

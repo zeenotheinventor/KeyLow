@@ -7,11 +7,29 @@ import { Card } from "../Card";
 import { Icon } from "../Icon";
 import { Text } from "../Text";
 
-import type { EmptyStateProps } from "./types";
+import type { EmptyStateAction, EmptyStateProps } from "./types";
+
+function renderAction(
+  action: EmptyStateAction,
+  { className = "", isFullWidth = false }: { className?: string; isFullWidth?: boolean },
+) {
+  return (
+    <Button
+      className={className}
+      disabled={action.disabled ?? false}
+      fullWidth={isFullWidth}
+      icon={action.icon}
+      variant={action.variant ?? "secondary"}
+      onPress={action.onPress}
+    >
+      {action.label}
+    </Button>
+  );
+}
 
 /**
  * What fills a view when there is nothing to show: a muted icon in a tile, a title, a sentence and an
- * optional action. It fills the height of its parent and sits in the middle of it, as the boards draw it,
+ * optional action, or two. It fills the height of its parent and sits in the middle of it, as the boards draw it,
  * unless it is a `card`, which takes the height of its words and sits among the other cards of a screen.
  * The copy is the screen's, from `@keylow/core/copy`. It fades in once, in place of the design's cut-in.
  */
@@ -20,6 +38,7 @@ export function EmptyState({
   title,
   body,
   action,
+  secondaryAction,
   inset = "default",
   variant = "page",
 }: EmptyStateProps) {
@@ -46,16 +65,14 @@ export function EmptyState({
           {body}
         </Text>
       )}
-      {action === undefined ? null : (
-        <Button
-          className={isCard ? "mt-2" : "mt-3"}
-          disabled={action.disabled ?? false}
-          icon={action.icon}
-          variant={action.variant ?? "secondary"}
-          onPress={action.onPress}
-        >
-          {action.label}
-        </Button>
+      {action === undefined ? null : secondaryAction === undefined ? (
+        renderAction(action, { className: isCard ? "mt-2" : "mt-3" })
+      ) : (
+        // The two buttons run the width of the words, 8 points apart with 16 above, as the empty Weight board draws them.
+        <View className={`w-full gap-2 ${isCard ? "mt-2" : "mt-4"}`}>
+          {renderAction(action, { isFullWidth: true })}
+          {renderAction(secondaryAction, { isFullWidth: true })}
+        </View>
       )}
     </View>
   );

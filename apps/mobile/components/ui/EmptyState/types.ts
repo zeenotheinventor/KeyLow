@@ -21,6 +21,12 @@ export type EmptyStateProps = {
   body?: string | undefined;
   /** The one thing to do about it, drawn as a button: secondary unless its `variant` says otherwise. */
   action?: EmptyStateAction | undefined;
+  /**
+   * A second, quieter thing to do, drawn under `action` in the same shape, such as the empty Weight screen's
+   * Connect Health Connect beside its Add weigh-in. With one the two buttons run the width of the words, one
+   * above the other, as the empty Weight board draws them. It is for a state that has an `action`.
+   */
+  secondaryAction?: EmptyStateAction | undefined;
   /** How far the words are from the sides: 24 points by default, 32 when wide, as the food not found board draws it. */
   inset?: "default" | "wide" | undefined;
   /**

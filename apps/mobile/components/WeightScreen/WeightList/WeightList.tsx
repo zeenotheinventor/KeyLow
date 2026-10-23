@@ -1,6 +1,7 @@
 import { WEIGHT_SCREEN } from "@keylow/core/copy";
-import { FlatList, View } from "react-native";
+import { FlatList, RefreshControl, View } from "react-native";
 
+import { useTheme } from "../../../lib/theme";
 import { GroupedRowPositionContext, Text } from "../../ui";
 import { WeighInRow } from "../WeighInRow";
 
@@ -17,9 +18,20 @@ const followingRow = { isFirst: false };
  * The Weigh-ins heading over the weigh-ins, newest first, in one list that scrolls with whatever the
  * screen puts above it (`header`). The board draws the rows in a single card. A virtualised list draws
  * only some of its rows, so each row draws its own part of the card's edge: the first its top and sides,
- * the last its bottom, and the ones between their sides. The board's list card has no shadow.
+ * the last its bottom, and the ones between their sides. The board's list card has no shadow. Pulling the
+ * list down asks the screen to refresh, which spins while `isRefreshing`.
  */
-export function WeightList({ weighIns, today, isLeftOut, header }: WeightListProps) {
+export function WeightList({
+  weighIns,
+  today,
+  isLeftOut,
+  header,
+  status,
+  isRefreshing,
+  onRefresh,
+}: WeightListProps) {
+  const { colors } = useTheme();
+
   function renderRow({ item, index }: { item: WeighIn; index: number }) {
     const edgeClassName = [
       index === 0 ? "rounded-t-large border-t" : "",
@@ -37,6 +49,7 @@ export function WeightList({ weighIns, today, isLeftOut, header }: WeightListPro
 
   return (
     <FlatList
+      aria-label={WEIGHT_SCREEN.listHeading}
       className="flex-1"
       contentContainerClassName="pb-4"
       data={weighIns}
@@ -45,10 +58,23 @@ export function WeightList({ weighIns, today, isLeftOut, header }: WeightListPro
       ListHeaderComponent={
         <View className="gap-3 pb-2">
           {header}
-          <Text className="px-1" role="heading" variant="body-strong">
-            {WEIGHT_SCREEN.listHeading}
-          </Text>
+          <View className="flex-row items-baseline justify-between px-1">
+            <Text role="heading" variant="body-strong">
+              {WEIGHT_SCREEN.listHeading}
+            </Text>
+            {status}
+          </View>
         </View>
+      }
+      refreshControl={
+        // The spinner's colours are native props no class can reach, so they are read from the theme.
+        <RefreshControl
+          colors={[colors["accent-ink"]]}
+          progressBackgroundColor={colors["surface-raised"]}
+          refreshing={isRefreshing}
+          tintColor={colors["accent-ink"]}
+          onRefresh={onRefresh}
+        />
       }
       renderItem={renderRow}
     />

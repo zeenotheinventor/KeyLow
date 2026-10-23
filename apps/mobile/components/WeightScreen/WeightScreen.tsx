@@ -2,14 +2,18 @@ import { useProfileTimeZone, useWeighIns, useWeightTrend } from "@keylow/api-cli
 import { WEIGHT_ERROR, WEIGHT_SCREEN } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { useRouter } from "expo-router";
+import { useRef, useState } from "react";
 import { View } from "react-native";
 
+import { useHealthImport } from "../../lib/health";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { ErrorState, Skeleton } from "../ui";
 import { WeightTrendCard } from "../WeightTrendCard";
+import { useHealthConnection } from "./useHealthConnection";
 import { WeightEmptyState } from "./WeightEmptyState";
 import { WeightHeader } from "./WeightHeader";
+import { WeightImportStatus, WeightImportingLine } from "./WeightImportStatus";
 import { WeightList } from "./WeightList";
 
 /**
@@ -25,6 +29,33 @@ export function WeightScreen() {
   const trend = useWeightTrend({ enabled: isReadEnabled });
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
   const now = useNow();
+  const connection = useHealthConnection();
+  const { importNow, isImporting, lastImportedAt } = useHealthImport();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  // A second pull while one runs is the same import, and the control does not ask while it spins, but a
+  // ref is read at once where the state is read on the next render.
+  const isRefreshingRef = useRef(false);
+
+  function openHealthAccess() {
+    router.push("/more/weight/health");
+  }
+
+  // The import goes first, so the read that follows has what it stored. Where Health Connect is not
+  // connected it answers at once with nothing imported, and the pull is only the read.
+  async function refresh() {
+    if (isRefreshingRef.current) {
+      return;
+    }
+    isRefreshingRef.current = true;
+    setIsRefreshing(true);
+    try {
+      await importNow();
+      await weighIns.refetch();
+    } finally {
+      isRefreshingRef.current = false;
+      setIsRefreshing(false);
+    }
+  }
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to More instead.
@@ -37,7 +68,11 @@ export function WeightScreen() {
 
   function renderBody() {
     if (weighIns.data?.length === 0) {
-      return <WeightEmptyState />;
+      return (
+        <WeightEmptyState
+          onConnectHealth={connection === "not-connected" ? openHealthAccess : undefined}
+        />
+      );
     }
     // The day names wait for the zone, so "Today" does not flip when it arrives. A profile always has a zone.
     // If the read fails or finds no row the day is UTC, as the other screens read it.
@@ -48,6 +83,19 @@ export function WeightScreen() {
         <WeightList
           header={<WeightTrendCard today={today} trend={trend} weighIns={weighIns.data} />}
           isLeftOut={(localDate) => trend.byDate.get(localDate)?.rejected === true}
+          isRefreshing={isRefreshing}
+          status={
+            <WeightImportStatus
+              connection={connection}
+              isImporting={isImporting}
+              lastImportedAt={lastImportedAt}
+              now={now}
+              onConnect={openHealthAccess}
+            />
+          }
+          onRefresh={() => {
+            void refresh();
+          }}
           today={today}
           weighIns={weighIns.data}
         />
@@ -79,6 +127,7 @@ export function WeightScreen() {
   return (
     <View className="flex-1 bg-background">
       <WeightHeader onBack={goBack} />
+      {isImporting ? <WeightImportingLine /> : null}
       <View className="flex-1 px-4 pb-4 pt-1">{renderBody()}</View>
     </View>
   );
