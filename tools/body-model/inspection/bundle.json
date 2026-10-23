@@ -1,0 +1,3895 @@
+{
+  "blenderVersion": "5.2.3 LTS",
+  "bundleFile": "human_base_meshes_bundle.blend",
+  "objectCount": 407,
+  "scene": {
+    "unitSystem": "METRIC",
+    "unitScale": 1.0,
+    "armatureCount": 0,
+    "materialCount": 0
+  },
+  "bodies": {
+    "realistic_body_male": {
+      "key": "realistic_body_male",
+      "object": "GEO-body_male_realistic",
+      "mesh": "female_v006lowresUV",
+      "collections": [
+        "Body Male - Realistic"
+      ],
+      "parent": null,
+      "cameraObjectsParentedToBody": [
+        "realistic_body_male"
+      ],
+      "counts": {
+        "baseMesh": {
+          "vertices": 10582,
+          "edges": 21170,
+          "faces": 10590,
+          "triangles": 21160
+        },
+        "evaluatedAtViewportLevel": {
+          "vertices": 677442,
+          "faces": 677440,
+          "triangles": 1354880
+        }
+      },
+      "modifiers": [
+        {
+          "name": "Multires",
+          "type": "MULTIRES",
+          "totalLevels": 3,
+          "viewportLevels": 3,
+          "sculptLevels": 3,
+          "renderLevels": 3,
+          "showViewport": true,
+          "showRender": true
+        }
+      ],
+      "hasMirrorModifier": false,
+      "faceSets": {
+        "present": true,
+        "count": 102,
+        "oneSidedSetsWithAMirroredPartner": 92,
+        "setsSpanningBothSides": 7,
+        "sets": [
+          {
+            "id": 1,
+            "faces": 704,
+            "facesOnLeft": 351,
+            "facesOnRight": 352,
+            "side": "both",
+            "lowestHeightFraction": 0.63,
+            "highestHeightFraction": 0.923
+          },
+          {
+            "id": 2,
+            "faces": 225,
+            "facesOnLeft": 225,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.927,
+            "highestHeightFraction": 0.942
+          },
+          {
+            "id": 3,
+            "faces": 225,
+            "facesOnLeft": 0,
+            "facesOnRight": 225,
+            "side": "right",
+            "lowestHeightFraction": 0.927,
+            "highestHeightFraction": 0.942
+          },
+          {
+            "id": 4,
+            "faces": 225,
+            "facesOnLeft": 225,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.906,
+            "highestHeightFraction": 0.938
+          },
+          {
+            "id": 5,
+            "faces": 225,
+            "facesOnLeft": 0,
+            "facesOnRight": 225,
+            "side": "right",
+            "lowestHeightFraction": 0.906,
+            "highestHeightFraction": 0.938
+          },
+          {
+            "id": 7,
+            "faces": 190,
+            "facesOnLeft": 86,
+            "facesOnRight": 86,
+            "side": "both",
+            "lowestHeightFraction": 0.892,
+            "highestHeightFraction": 0.914
+          },
+          {
+            "id": 8,
+            "faces": 100,
+            "facesOnLeft": 49,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.877,
+            "highestHeightFraction": 0.895
+          },
+          {
+            "id": 9,
+            "faces": 254,
+            "facesOnLeft": 254,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.464,
+            "highestHeightFraction": 0.529
+          },
+          {
+            "id": 10,
+            "faces": 254,
+            "facesOnLeft": 0,
+            "facesOnRight": 254,
+            "side": "right",
+            "lowestHeightFraction": 0.464,
+            "highestHeightFraction": 0.529
+          },
+          {
+            "id": 11,
+            "faces": 285,
+            "facesOnLeft": 0,
+            "facesOnRight": 285,
+            "side": "right",
+            "lowestHeightFraction": 0.517,
+            "highestHeightFraction": 0.655
+          },
+          {
+            "id": 12,
+            "faces": 285,
+            "facesOnLeft": 285,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.517,
+            "highestHeightFraction": 0.655
+          },
+          {
+            "id": 13,
+            "faces": 482,
+            "facesOnLeft": 0,
+            "facesOnRight": 482,
+            "side": "right",
+            "lowestHeightFraction": 0.0,
+            "highestHeightFraction": 0.051
+          },
+          {
+            "id": 14,
+            "faces": 482,
+            "facesOnLeft": 482,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.0,
+            "highestHeightFraction": 0.051
+          },
+          {
+            "id": 15,
+            "faces": 409,
+            "facesOnLeft": 409,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.037,
+            "highestHeightFraction": 0.268
+          },
+          {
+            "id": 16,
+            "faces": 409,
+            "facesOnLeft": 0,
+            "facesOnRight": 409,
+            "side": "right",
+            "lowestHeightFraction": 0.037,
+            "highestHeightFraction": 0.268
+          },
+          {
+            "id": 17,
+            "faces": 2026,
+            "facesOnLeft": 963,
+            "facesOnRight": 962,
+            "side": "both",
+            "lowestHeightFraction": 0.817,
+            "highestHeightFraction": 1.0
+          },
+          {
+            "id": 18,
+            "faces": 168,
+            "facesOnLeft": 83,
+            "facesOnRight": 82,
+            "side": "both",
+            "lowestHeightFraction": 0.451,
+            "highestHeightFraction": 0.564
+          },
+          {
+            "id": 19,
+            "faces": 128,
+            "facesOnLeft": 64,
+            "facesOnRight": 64,
+            "side": "both",
+            "lowestHeightFraction": 0.569,
+            "highestHeightFraction": 0.636
+          },
+          {
+            "id": 20,
+            "faces": 291,
+            "facesOnLeft": 0,
+            "facesOnRight": 291,
+            "side": "right",
+            "lowestHeightFraction": 0.639,
+            "highestHeightFraction": 0.823
+          },
+          {
+            "id": 21,
+            "faces": 291,
+            "facesOnLeft": 291,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.639,
+            "highestHeightFraction": 0.823
+          },
+          {
+            "id": 22,
+            "faces": 494,
+            "facesOnLeft": 221,
+            "facesOnRight": 221,
+            "side": "both",
+            "lowestHeightFraction": 0.862,
+            "highestHeightFraction": 0.904
+          },
+          {
+            "id": 23,
+            "faces": 198,
+            "facesOnLeft": 0,
+            "facesOnRight": 198,
+            "side": "right",
+            "lowestHeightFraction": 0.268,
+            "highestHeightFraction": 0.483
+          },
+          {
+            "id": 24,
+            "faces": 198,
+            "facesOnLeft": 198,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.268,
+            "highestHeightFraction": 0.483
+          },
+          {
+            "id": 25,
+            "faces": 168,
+            "facesOnLeft": 168,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.024
+          },
+          {
+            "id": 26,
+            "faces": 126,
+            "facesOnLeft": 0,
+            "facesOnRight": 126,
+            "side": "right",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.024
+          },
+          {
+            "id": 27,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.018
+          },
+          {
+            "id": 28,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.009,
+            "highestHeightFraction": 0.018
+          },
+          {
+            "id": 29,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.009,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 30,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.008,
+            "highestHeightFraction": 0.014
+          },
+          {
+            "id": 31,
+            "faces": 42,
+            "facesOnLeft": 0,
+            "facesOnRight": 42,
+            "side": "right",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.02
+          },
+          {
+            "id": 32,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 33,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.005,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 34,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 35,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 36,
+            "faces": 78,
+            "facesOnLeft": 0,
+            "facesOnRight": 78,
+            "side": "right",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.017
+          },
+          {
+            "id": 37,
+            "faces": 6,
+            "facesOnLeft": 0,
+            "facesOnRight": 6,
+            "side": "right",
+            "lowestHeightFraction": 0.014,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 38,
+            "faces": 40,
+            "facesOnLeft": 0,
+            "facesOnRight": 40,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 39,
+            "faces": 40,
+            "facesOnLeft": 0,
+            "facesOnRight": 40,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 40,
+            "faces": 48,
+            "facesOnLeft": 0,
+            "facesOnRight": 48,
+            "side": "right",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 41,
+            "faces": 48,
+            "facesOnLeft": 0,
+            "facesOnRight": 48,
+            "side": "right",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 42,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.011,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 43,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.01,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 44,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.011,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 45,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.01,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 46,
+            "faces": 78,
+            "facesOnLeft": 78,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.017
+          },
+          {
+            "id": 47,
+            "faces": 6,
+            "facesOnLeft": 6,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.014,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 48,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.018
+          },
+          {
+            "id": 49,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 50,
+            "faces": 40,
+            "facesOnLeft": 40,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 51,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.011,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 52,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.009,
+            "highestHeightFraction": 0.018
+          },
+          {
+            "id": 53,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.005,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 54,
+            "faces": 40,
+            "facesOnLeft": 40,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 55,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.01,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 56,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.009,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 57,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 58,
+            "faces": 48,
+            "facesOnLeft": 48,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 59,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.011,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 60,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.008,
+            "highestHeightFraction": 0.014
+          },
+          {
+            "id": 61,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 62,
+            "faces": 48,
+            "facesOnLeft": 48,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 63,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.01,
+            "highestHeightFraction": 0.011
+          },
+          {
+            "id": 64,
+            "faces": 30,
+            "facesOnLeft": 30,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.471
+          },
+          {
+            "id": 65,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.443,
+            "highestHeightFraction": 0.45
+          },
+          {
+            "id": 66,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.43,
+            "highestHeightFraction": 0.439
+          },
+          {
+            "id": 67,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.432,
+            "highestHeightFraction": 0.434
+          },
+          {
+            "id": 68,
+            "faces": 26,
+            "facesOnLeft": 26,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.454,
+            "highestHeightFraction": 0.475
+          },
+          {
+            "id": 69,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.438,
+            "highestHeightFraction": 0.452
+          },
+          {
+            "id": 70,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.425,
+            "highestHeightFraction": 0.436
+          },
+          {
+            "id": 71,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.427,
+            "highestHeightFraction": 0.43
+          },
+          {
+            "id": 72,
+            "faces": 26,
+            "facesOnLeft": 26,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.458,
+            "highestHeightFraction": 0.48
+          },
+          {
+            "id": 73,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.442,
+            "highestHeightFraction": 0.458
+          },
+          {
+            "id": 74,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.428,
+            "highestHeightFraction": 0.44
+          },
+          {
+            "id": 75,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.431,
+            "highestHeightFraction": 0.434
+          },
+          {
+            "id": 76,
+            "faces": 30,
+            "facesOnLeft": 30,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.466,
+            "highestHeightFraction": 0.484
+          },
+          {
+            "id": 77,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.467
+          },
+          {
+            "id": 78,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.442,
+            "highestHeightFraction": 0.452
+          },
+          {
+            "id": 79,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.444,
+            "highestHeightFraction": 0.446
+          },
+          {
+            "id": 80,
+            "faces": 21,
+            "facesOnLeft": 21,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.492,
+            "highestHeightFraction": 0.511
+          },
+          {
+            "id": 81,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.485,
+            "highestHeightFraction": 0.505
+          },
+          {
+            "id": 82,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.479,
+            "highestHeightFraction": 0.49
+          },
+          {
+            "id": 83,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.485,
+            "highestHeightFraction": 0.486
+          },
+          {
+            "id": 84,
+            "faces": 21,
+            "facesOnLeft": 0,
+            "facesOnRight": 21,
+            "side": "right",
+            "lowestHeightFraction": 0.492,
+            "highestHeightFraction": 0.511
+          },
+          {
+            "id": 85,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.485,
+            "highestHeightFraction": 0.505
+          },
+          {
+            "id": 86,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.479,
+            "highestHeightFraction": 0.49
+          },
+          {
+            "id": 87,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.484,
+            "highestHeightFraction": 0.486
+          },
+          {
+            "id": 88,
+            "faces": 30,
+            "facesOnLeft": 0,
+            "facesOnRight": 30,
+            "side": "right",
+            "lowestHeightFraction": 0.466,
+            "highestHeightFraction": 0.484
+          },
+          {
+            "id": 89,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.467
+          },
+          {
+            "id": 90,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.442,
+            "highestHeightFraction": 0.452
+          },
+          {
+            "id": 91,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.444,
+            "highestHeightFraction": 0.446
+          },
+          {
+            "id": 92,
+            "faces": 26,
+            "facesOnLeft": 0,
+            "facesOnRight": 26,
+            "side": "right",
+            "lowestHeightFraction": 0.458,
+            "highestHeightFraction": 0.48
+          },
+          {
+            "id": 93,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.442,
+            "highestHeightFraction": 0.458
+          },
+          {
+            "id": 94,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.428,
+            "highestHeightFraction": 0.44
+          },
+          {
+            "id": 95,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.432,
+            "highestHeightFraction": 0.434
+          },
+          {
+            "id": 96,
+            "faces": 26,
+            "facesOnLeft": 0,
+            "facesOnRight": 26,
+            "side": "right",
+            "lowestHeightFraction": 0.454,
+            "highestHeightFraction": 0.475
+          },
+          {
+            "id": 97,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.438,
+            "highestHeightFraction": 0.452
+          },
+          {
+            "id": 98,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.425,
+            "highestHeightFraction": 0.436
+          },
+          {
+            "id": 99,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.427,
+            "highestHeightFraction": 0.43
+          },
+          {
+            "id": 100,
+            "faces": 30,
+            "facesOnLeft": 0,
+            "facesOnRight": 30,
+            "side": "right",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.471
+          },
+          {
+            "id": 101,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.443,
+            "highestHeightFraction": 0.45
+          },
+          {
+            "id": 102,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.43,
+            "highestHeightFraction": 0.439
+          },
+          {
+            "id": 103,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.432,
+            "highestHeightFraction": 0.434
+          }
+        ]
+      },
+      "vertexGroups": [],
+      "uvLayers": [
+        "UVMap"
+      ],
+      "attributes": [
+        {
+          "name": ".sculpt_mask",
+          "domain": "POINT",
+          "type": "FLOAT"
+        },
+        {
+          "name": "position",
+          "domain": "POINT",
+          "type": "FLOAT_VECTOR"
+        },
+        {
+          "name": ".edge_verts",
+          "domain": "EDGE",
+          "type": "INT32_2D"
+        },
+        {
+          "name": ".sculpt_face_set",
+          "domain": "FACE",
+          "type": "INT"
+        },
+        {
+          "name": ".corner_vert",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": ".corner_edge",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": "UVMap",
+          "domain": "CORNER",
+          "type": "FLOAT2"
+        }
+      ],
+      "materials": [],
+      "shapeKeys": [],
+      "armatureModifier": false,
+      "transform": {
+        "location": [
+          -2.2643,
+          0.0,
+          0.0
+        ],
+        "rotationEulerDegrees": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "dimensionsMetres": {
+        "width": 0.883,
+        "depth": 0.2919,
+        "height": 1.6901
+      },
+      "worldBoundsMetres": {
+        "minimum": [
+          -2.7059,
+          -0.1798,
+          -0.0056
+        ],
+        "maximum": [
+          -1.8229,
+          0.1121,
+          1.6844
+        ]
+      },
+      "upAxis": "Z",
+      "facing": "-Y",
+      "poseArmAngleBelowHorizontalDegrees": 70.1,
+      "head": {
+        "topToChinMetres": 0.23,
+        "bodyHeightInHeads": 7.3
+      },
+      "silhouette": [
+        {
+          "heightFraction": 0.0,
+          "widthMetres": 0.5503,
+          "depthMetres": 0.2386
+        },
+        {
+          "heightFraction": 0.05,
+          "widthMetres": 0.4813,
+          "depthMetres": 0.1755
+        },
+        {
+          "heightFraction": 0.1,
+          "widthMetres": 0.4114,
+          "depthMetres": 0.0834
+        },
+        {
+          "heightFraction": 0.15,
+          "widthMetres": 0.4224,
+          "depthMetres": 0.1096
+        },
+        {
+          "heightFraction": 0.2,
+          "widthMetres": 0.4243,
+          "depthMetres": 0.1219
+        },
+        {
+          "heightFraction": 0.25,
+          "widthMetres": 0.4102,
+          "depthMetres": 0.1506
+        },
+        {
+          "heightFraction": 0.3,
+          "widthMetres": 0.3723,
+          "depthMetres": 0.1456
+        },
+        {
+          "heightFraction": 0.35,
+          "widthMetres": 0.3794,
+          "depthMetres": 0.1701
+        },
+        {
+          "heightFraction": 0.4,
+          "widthMetres": 0.8585,
+          "depthMetres": 0.1858
+        },
+        {
+          "heightFraction": 0.45,
+          "widthMetres": 0.883,
+          "depthMetres": 0.2729
+        },
+        {
+          "heightFraction": 0.5,
+          "widthMetres": 0.8593,
+          "depthMetres": 0.2889
+        },
+        {
+          "heightFraction": 0.55,
+          "widthMetres": 0.7945,
+          "depthMetres": 0.2394
+        },
+        {
+          "heightFraction": 0.6,
+          "widthMetres": 0.7591,
+          "depthMetres": 0.206
+        },
+        {
+          "heightFraction": 0.65,
+          "widthMetres": 0.7082,
+          "depthMetres": 0.2282
+        },
+        {
+          "heightFraction": 0.7,
+          "widthMetres": 0.6254,
+          "depthMetres": 0.2483
+        },
+        {
+          "heightFraction": 0.75,
+          "widthMetres": 0.5683,
+          "depthMetres": 0.2563
+        },
+        {
+          "heightFraction": 0.8,
+          "widthMetres": 0.497,
+          "depthMetres": 0.2145
+        },
+        {
+          "heightFraction": 0.85,
+          "widthMetres": 0.321,
+          "depthMetres": 0.2237
+        },
+        {
+          "heightFraction": 0.9,
+          "widthMetres": 0.1806,
+          "depthMetres": 0.2097
+        },
+        {
+          "heightFraction": 0.95,
+          "widthMetres": 0.1837,
+          "depthMetres": 0.2094
+        },
+        {
+          "heightFraction": 1.0,
+          "widthMetres": 0.1442,
+          "depthMetres": 0.1676
+        }
+      ],
+      "children": [
+        {
+          "name": "GEO-body_male_realistic.eye.L",
+          "type": "MESH",
+          "mesh": "male_v008Eyes"
+        },
+        {
+          "name": "GEO-body_male_realistic.eye.R",
+          "type": "MESH",
+          "mesh": "male_v008Eyes.001"
+        },
+        {
+          "name": "realistic_body_male",
+          "type": "CAMERA",
+          "mesh": "Camera.007"
+        }
+      ]
+    },
+    "realistic_body_female": {
+      "key": "realistic_body_female",
+      "object": "GEO-body_female_realistic",
+      "mesh": "GEO-body_female_realistic",
+      "collections": [
+        "Body Female - Realistic"
+      ],
+      "parent": null,
+      "cameraObjectsParentedToBody": [
+        "realistic_body_emale"
+      ],
+      "counts": {
+        "baseMesh": {
+          "vertices": 10582,
+          "edges": 21170,
+          "faces": 10590,
+          "triangles": 21160
+        },
+        "evaluatedAtViewportLevel": {
+          "vertices": 677442,
+          "faces": 677440,
+          "triangles": 1354880
+        }
+      },
+      "modifiers": [
+        {
+          "name": "Multires",
+          "type": "MULTIRES",
+          "totalLevels": 3,
+          "viewportLevels": 3,
+          "sculptLevels": 3,
+          "renderLevels": 3,
+          "showViewport": true,
+          "showRender": true
+        }
+      ],
+      "hasMirrorModifier": false,
+      "faceSets": {
+        "present": true,
+        "count": 102,
+        "oneSidedSetsWithAMirroredPartner": 92,
+        "setsSpanningBothSides": 7,
+        "sets": [
+          {
+            "id": 1,
+            "faces": 706,
+            "facesOnLeft": 351,
+            "facesOnRight": 350,
+            "side": "both",
+            "lowestHeightFraction": 0.639,
+            "highestHeightFraction": 0.922
+          },
+          {
+            "id": 2,
+            "faces": 225,
+            "facesOnLeft": 225,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.927,
+            "highestHeightFraction": 0.943
+          },
+          {
+            "id": 3,
+            "faces": 225,
+            "facesOnLeft": 0,
+            "facesOnRight": 225,
+            "side": "right",
+            "lowestHeightFraction": 0.927,
+            "highestHeightFraction": 0.943
+          },
+          {
+            "id": 4,
+            "faces": 225,
+            "facesOnLeft": 225,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.903,
+            "highestHeightFraction": 0.934
+          },
+          {
+            "id": 5,
+            "faces": 225,
+            "facesOnLeft": 0,
+            "facesOnRight": 225,
+            "side": "right",
+            "lowestHeightFraction": 0.903,
+            "highestHeightFraction": 0.934
+          },
+          {
+            "id": 7,
+            "faces": 190,
+            "facesOnLeft": 79,
+            "facesOnRight": 80,
+            "side": "both",
+            "lowestHeightFraction": 0.893,
+            "highestHeightFraction": 0.917
+          },
+          {
+            "id": 8,
+            "faces": 100,
+            "facesOnLeft": 47,
+            "facesOnRight": 46,
+            "side": "both",
+            "lowestHeightFraction": 0.877,
+            "highestHeightFraction": 0.897
+          },
+          {
+            "id": 9,
+            "faces": 254,
+            "facesOnLeft": 254,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.464,
+            "highestHeightFraction": 0.531
+          },
+          {
+            "id": 10,
+            "faces": 254,
+            "facesOnLeft": 0,
+            "facesOnRight": 254,
+            "side": "right",
+            "lowestHeightFraction": 0.464,
+            "highestHeightFraction": 0.53
+          },
+          {
+            "id": 11,
+            "faces": 285,
+            "facesOnLeft": 0,
+            "facesOnRight": 285,
+            "side": "right",
+            "lowestHeightFraction": 0.518,
+            "highestHeightFraction": 0.654
+          },
+          {
+            "id": 12,
+            "faces": 285,
+            "facesOnLeft": 285,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.518,
+            "highestHeightFraction": 0.654
+          },
+          {
+            "id": 13,
+            "faces": 482,
+            "facesOnLeft": 0,
+            "facesOnRight": 482,
+            "side": "right",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.053
+          },
+          {
+            "id": 14,
+            "faces": 482,
+            "facesOnLeft": 482,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.053
+          },
+          {
+            "id": 15,
+            "faces": 409,
+            "facesOnLeft": 409,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.042,
+            "highestHeightFraction": 0.271
+          },
+          {
+            "id": 16,
+            "faces": 409,
+            "facesOnLeft": 0,
+            "facesOnRight": 409,
+            "side": "right",
+            "lowestHeightFraction": 0.042,
+            "highestHeightFraction": 0.271
+          },
+          {
+            "id": 17,
+            "faces": 2024,
+            "facesOnLeft": 944,
+            "facesOnRight": 946,
+            "side": "both",
+            "lowestHeightFraction": 0.819,
+            "highestHeightFraction": 1.0
+          },
+          {
+            "id": 18,
+            "faces": 168,
+            "facesOnLeft": 84,
+            "facesOnRight": 84,
+            "side": "both",
+            "lowestHeightFraction": 0.463,
+            "highestHeightFraction": 0.573
+          },
+          {
+            "id": 19,
+            "faces": 128,
+            "facesOnLeft": 64,
+            "facesOnRight": 64,
+            "side": "both",
+            "lowestHeightFraction": 0.579,
+            "highestHeightFraction": 0.642
+          },
+          {
+            "id": 20,
+            "faces": 291,
+            "facesOnLeft": 0,
+            "facesOnRight": 291,
+            "side": "right",
+            "lowestHeightFraction": 0.643,
+            "highestHeightFraction": 0.829
+          },
+          {
+            "id": 21,
+            "faces": 291,
+            "facesOnLeft": 291,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.643,
+            "highestHeightFraction": 0.829
+          },
+          {
+            "id": 22,
+            "faces": 494,
+            "facesOnLeft": 221,
+            "facesOnRight": 221,
+            "side": "both",
+            "lowestHeightFraction": 0.863,
+            "highestHeightFraction": 0.902
+          },
+          {
+            "id": 23,
+            "faces": 198,
+            "facesOnLeft": 0,
+            "facesOnRight": 198,
+            "side": "right",
+            "lowestHeightFraction": 0.28,
+            "highestHeightFraction": 0.49
+          },
+          {
+            "id": 24,
+            "faces": 198,
+            "facesOnLeft": 198,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.28,
+            "highestHeightFraction": 0.491
+          },
+          {
+            "id": 25,
+            "faces": 168,
+            "facesOnLeft": 168,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.0,
+            "highestHeightFraction": 0.023
+          },
+          {
+            "id": 26,
+            "faces": 126,
+            "facesOnLeft": 0,
+            "facesOnRight": 126,
+            "side": "right",
+            "lowestHeightFraction": 0.0,
+            "highestHeightFraction": 0.023
+          },
+          {
+            "id": 27,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 28,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 29,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.014
+          },
+          {
+            "id": 30,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 31,
+            "faces": 42,
+            "facesOnLeft": 0,
+            "facesOnRight": 42,
+            "side": "right",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.017
+          },
+          {
+            "id": 32,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 33,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 34,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 35,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 36,
+            "faces": 78,
+            "facesOnLeft": 0,
+            "facesOnRight": 78,
+            "side": "right",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.014
+          },
+          {
+            "id": 37,
+            "faces": 6,
+            "facesOnLeft": 0,
+            "facesOnRight": 6,
+            "side": "right",
+            "lowestHeightFraction": 0.012,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 38,
+            "faces": 40,
+            "facesOnLeft": 0,
+            "facesOnRight": 40,
+            "side": "right",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 39,
+            "faces": 40,
+            "facesOnLeft": 0,
+            "facesOnRight": 40,
+            "side": "right",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 40,
+            "faces": 48,
+            "facesOnLeft": 0,
+            "facesOnRight": 48,
+            "side": "right",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 41,
+            "faces": 48,
+            "facesOnLeft": 0,
+            "facesOnRight": 48,
+            "side": "right",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.007
+          },
+          {
+            "id": 42,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.008
+          },
+          {
+            "id": 43,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.007
+          },
+          {
+            "id": 44,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.007
+          },
+          {
+            "id": 45,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.005,
+            "highestHeightFraction": 0.006
+          },
+          {
+            "id": 46,
+            "faces": 78,
+            "facesOnLeft": 78,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.014
+          },
+          {
+            "id": 47,
+            "faces": 6,
+            "facesOnLeft": 6,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.012,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 48,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 49,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 50,
+            "faces": 40,
+            "facesOnLeft": 40,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 51,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.008
+          },
+          {
+            "id": 52,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.007,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 53,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 54,
+            "faces": 40,
+            "facesOnLeft": 40,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 55,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.007
+          },
+          {
+            "id": 56,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.014
+          },
+          {
+            "id": 57,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 58,
+            "faces": 48,
+            "facesOnLeft": 48,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 59,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.006,
+            "highestHeightFraction": 0.007
+          },
+          {
+            "id": 60,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.004,
+            "highestHeightFraction": 0.012
+          },
+          {
+            "id": 61,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.003,
+            "highestHeightFraction": 0.009
+          },
+          {
+            "id": 62,
+            "faces": 48,
+            "facesOnLeft": 48,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.007
+          },
+          {
+            "id": 63,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.005,
+            "highestHeightFraction": 0.006
+          },
+          {
+            "id": 64,
+            "faces": 30,
+            "facesOnLeft": 30,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.471
+          },
+          {
+            "id": 65,
+            "faces": 16,
+            "facesOnLeft": 16,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.443,
+            "highestHeightFraction": 0.451
+          },
+          {
+            "id": 66,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.43,
+            "highestHeightFraction": 0.44
+          },
+          {
+            "id": 67,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.432,
+            "highestHeightFraction": 0.435
+          },
+          {
+            "id": 68,
+            "faces": 26,
+            "facesOnLeft": 26,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.474
+          },
+          {
+            "id": 69,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.438,
+            "highestHeightFraction": 0.451
+          },
+          {
+            "id": 70,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.423,
+            "highestHeightFraction": 0.435
+          },
+          {
+            "id": 71,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.426,
+            "highestHeightFraction": 0.429
+          },
+          {
+            "id": 72,
+            "faces": 26,
+            "facesOnLeft": 26,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.456,
+            "highestHeightFraction": 0.478
+          },
+          {
+            "id": 73,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.44,
+            "highestHeightFraction": 0.456
+          },
+          {
+            "id": 74,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.425,
+            "highestHeightFraction": 0.437
+          },
+          {
+            "id": 75,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.428,
+            "highestHeightFraction": 0.431
+          },
+          {
+            "id": 76,
+            "faces": 30,
+            "facesOnLeft": 30,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.463,
+            "highestHeightFraction": 0.482
+          },
+          {
+            "id": 77,
+            "faces": 24,
+            "facesOnLeft": 24,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.451,
+            "highestHeightFraction": 0.465
+          },
+          {
+            "id": 78,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.439,
+            "highestHeightFraction": 0.45
+          },
+          {
+            "id": 79,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.441,
+            "highestHeightFraction": 0.444
+          },
+          {
+            "id": 80,
+            "faces": 21,
+            "facesOnLeft": 21,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.492,
+            "highestHeightFraction": 0.512
+          },
+          {
+            "id": 81,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.487,
+            "highestHeightFraction": 0.506
+          },
+          {
+            "id": 82,
+            "faces": 32,
+            "facesOnLeft": 32,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.48,
+            "highestHeightFraction": 0.491
+          },
+          {
+            "id": 83,
+            "faces": 4,
+            "facesOnLeft": 4,
+            "facesOnRight": 0,
+            "side": "left",
+            "lowestHeightFraction": 0.485,
+            "highestHeightFraction": 0.487
+          },
+          {
+            "id": 84,
+            "faces": 21,
+            "facesOnLeft": 0,
+            "facesOnRight": 21,
+            "side": "right",
+            "lowestHeightFraction": 0.492,
+            "highestHeightFraction": 0.512
+          },
+          {
+            "id": 85,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.487,
+            "highestHeightFraction": 0.506
+          },
+          {
+            "id": 86,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.48,
+            "highestHeightFraction": 0.491
+          },
+          {
+            "id": 87,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.485,
+            "highestHeightFraction": 0.487
+          },
+          {
+            "id": 88,
+            "faces": 30,
+            "facesOnLeft": 0,
+            "facesOnRight": 30,
+            "side": "right",
+            "lowestHeightFraction": 0.463,
+            "highestHeightFraction": 0.482
+          },
+          {
+            "id": 89,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.451,
+            "highestHeightFraction": 0.465
+          },
+          {
+            "id": 90,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.439,
+            "highestHeightFraction": 0.45
+          },
+          {
+            "id": 91,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.441,
+            "highestHeightFraction": 0.444
+          },
+          {
+            "id": 92,
+            "faces": 26,
+            "facesOnLeft": 0,
+            "facesOnRight": 26,
+            "side": "right",
+            "lowestHeightFraction": 0.456,
+            "highestHeightFraction": 0.478
+          },
+          {
+            "id": 93,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.44,
+            "highestHeightFraction": 0.456
+          },
+          {
+            "id": 94,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.425,
+            "highestHeightFraction": 0.437
+          },
+          {
+            "id": 95,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.428,
+            "highestHeightFraction": 0.431
+          },
+          {
+            "id": 96,
+            "faces": 26,
+            "facesOnLeft": 0,
+            "facesOnRight": 26,
+            "side": "right",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.474
+          },
+          {
+            "id": 97,
+            "faces": 24,
+            "facesOnLeft": 0,
+            "facesOnRight": 24,
+            "side": "right",
+            "lowestHeightFraction": 0.438,
+            "highestHeightFraction": 0.451
+          },
+          {
+            "id": 98,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.424,
+            "highestHeightFraction": 0.435
+          },
+          {
+            "id": 99,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.426,
+            "highestHeightFraction": 0.429
+          },
+          {
+            "id": 100,
+            "faces": 30,
+            "facesOnLeft": 0,
+            "facesOnRight": 30,
+            "side": "right",
+            "lowestHeightFraction": 0.453,
+            "highestHeightFraction": 0.471
+          },
+          {
+            "id": 101,
+            "faces": 16,
+            "facesOnLeft": 0,
+            "facesOnRight": 16,
+            "side": "right",
+            "lowestHeightFraction": 0.443,
+            "highestHeightFraction": 0.451
+          },
+          {
+            "id": 102,
+            "faces": 32,
+            "facesOnLeft": 0,
+            "facesOnRight": 32,
+            "side": "right",
+            "lowestHeightFraction": 0.43,
+            "highestHeightFraction": 0.44
+          },
+          {
+            "id": 103,
+            "faces": 4,
+            "facesOnLeft": 0,
+            "facesOnRight": 4,
+            "side": "right",
+            "lowestHeightFraction": 0.432,
+            "highestHeightFraction": 0.435
+          }
+        ]
+      },
+      "vertexGroups": [],
+      "uvLayers": [
+        "UVMap"
+      ],
+      "attributes": [
+        {
+          "name": ".sculpt_mask",
+          "domain": "POINT",
+          "type": "FLOAT"
+        },
+        {
+          "name": "position",
+          "domain": "POINT",
+          "type": "FLOAT_VECTOR"
+        },
+        {
+          "name": ".select_vert",
+          "domain": "POINT",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".edge_verts",
+          "domain": "EDGE",
+          "type": "INT32_2D"
+        },
+        {
+          "name": ".select_edge",
+          "domain": "EDGE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".sculpt_face_set",
+          "domain": "FACE",
+          "type": "INT"
+        },
+        {
+          "name": ".select_poly",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "sharp_face",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".uv_select_face",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".corner_vert",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": ".corner_edge",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": "custom_normal",
+          "domain": "CORNER",
+          "type": "INT16_2D"
+        },
+        {
+          "name": "UVMap",
+          "domain": "CORNER",
+          "type": "FLOAT2"
+        },
+        {
+          "name": ".uv_select_vert",
+          "domain": "CORNER",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".uv_select_edge",
+          "domain": "CORNER",
+          "type": "BOOLEAN"
+        }
+      ],
+      "materials": [],
+      "shapeKeys": [],
+      "armatureModifier": false,
+      "transform": {
+        "location": [
+          -1.3401,
+          0.0,
+          0.0
+        ],
+        "rotationEulerDegrees": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "dimensionsMetres": {
+        "width": 0.8423,
+        "depth": 0.2845,
+        "height": 1.6395
+      },
+      "worldBoundsMetres": {
+        "minimum": [
+          -1.7613,
+          -0.1676,
+          0.002
+        ],
+        "maximum": [
+          -0.9189,
+          0.1169,
+          1.6414
+        ]
+      },
+      "upAxis": "Z",
+      "facing": "-Y",
+      "poseArmAngleBelowHorizontalDegrees": 66.8,
+      "head": {
+        "topToChinMetres": 0.23,
+        "bodyHeightInHeads": 7.1
+      },
+      "silhouette": [
+        {
+          "heightFraction": 0.0,
+          "widthMetres": 0.3987,
+          "depthMetres": 0.2351
+        },
+        {
+          "heightFraction": 0.05,
+          "widthMetres": 0.3454,
+          "depthMetres": 0.1685
+        },
+        {
+          "heightFraction": 0.1,
+          "widthMetres": 0.3226,
+          "depthMetres": 0.0792
+        },
+        {
+          "heightFraction": 0.15,
+          "widthMetres": 0.3433,
+          "depthMetres": 0.1014
+        },
+        {
+          "heightFraction": 0.2,
+          "widthMetres": 0.3479,
+          "depthMetres": 0.1131
+        },
+        {
+          "heightFraction": 0.25,
+          "widthMetres": 0.341,
+          "depthMetres": 0.131
+        },
+        {
+          "heightFraction": 0.3,
+          "widthMetres": 0.3148,
+          "depthMetres": 0.1272
+        },
+        {
+          "heightFraction": 0.35,
+          "widthMetres": 0.3379,
+          "depthMetres": 0.1488
+        },
+        {
+          "heightFraction": 0.4,
+          "widthMetres": 0.8413,
+          "depthMetres": 0.1714
+        },
+        {
+          "heightFraction": 0.45,
+          "widthMetres": 0.8423,
+          "depthMetres": 0.2386
+        },
+        {
+          "heightFraction": 0.5,
+          "widthMetres": 0.8093,
+          "depthMetres": 0.2619
+        },
+        {
+          "heightFraction": 0.55,
+          "widthMetres": 0.7256,
+          "depthMetres": 0.2472
+        },
+        {
+          "heightFraction": 0.6,
+          "widthMetres": 0.6595,
+          "depthMetres": 0.208
+        },
+        {
+          "heightFraction": 0.65,
+          "widthMetres": 0.5959,
+          "depthMetres": 0.2105
+        },
+        {
+          "heightFraction": 0.7,
+          "widthMetres": 0.5131,
+          "depthMetres": 0.2251
+        },
+        {
+          "heightFraction": 0.75,
+          "widthMetres": 0.4679,
+          "depthMetres": 0.2367
+        },
+        {
+          "heightFraction": 0.8,
+          "widthMetres": 0.4396,
+          "depthMetres": 0.1831
+        },
+        {
+          "heightFraction": 0.85,
+          "widthMetres": 0.3517,
+          "depthMetres": 0.2073
+        },
+        {
+          "heightFraction": 0.9,
+          "widthMetres": 0.1766,
+          "depthMetres": 0.2072
+        },
+        {
+          "heightFraction": 0.95,
+          "widthMetres": 0.1767,
+          "depthMetres": 0.2039
+        },
+        {
+          "heightFraction": 1.0,
+          "widthMetres": 0.1356,
+          "depthMetres": 0.1615
+        }
+      ],
+      "children": [
+        {
+          "name": "GEO-body_female_realistic.eye.L",
+          "type": "MESH",
+          "mesh": "GEO-body_female_realistic.eye.L"
+        },
+        {
+          "name": "GEO-body_female_realistic.eye.R",
+          "type": "MESH",
+          "mesh": "GEO-body_female_realistic.eye.R"
+        },
+        {
+          "name": "realistic_body_emale",
+          "type": "CAMERA",
+          "mesh": "Camera.003"
+        }
+      ]
+    },
+    "stylized_body_male": {
+      "key": "stylized_body_male",
+      "object": "GEO-body_male_stylized",
+      "mesh": "GEO-body_male_stylized",
+      "collections": [
+        "Body Male - Stylized"
+      ],
+      "parent": null,
+      "cameraObjectsParentedToBody": [
+        "stylized_body_male"
+      ],
+      "counts": {
+        "baseMesh": {
+          "vertices": 12502,
+          "edges": 25000,
+          "faces": 12500,
+          "triangles": 25000
+        },
+        "evaluatedAtViewportLevel": {
+          "vertices": 12502,
+          "faces": 12500,
+          "triangles": 25000
+        }
+      },
+      "modifiers": [],
+      "hasMirrorModifier": false,
+      "faceSets": {
+        "present": true,
+        "count": 42,
+        "oneSidedSetsWithAMirroredPartner": 0,
+        "setsSpanningBothSides": 42,
+        "sets": [
+          {
+            "id": 6,
+            "faces": 506,
+            "facesOnLeft": 242,
+            "facesOnRight": 242,
+            "side": "both",
+            "lowestHeightFraction": 0.783,
+            "highestHeightFraction": 0.868
+          },
+          {
+            "id": 27,
+            "faces": 288,
+            "facesOnLeft": 144,
+            "facesOnRight": 144,
+            "side": "both",
+            "lowestHeightFraction": 0.883,
+            "highestHeightFraction": 0.925
+          },
+          {
+            "id": 28,
+            "faces": 288,
+            "facesOnLeft": 144,
+            "facesOnRight": 144,
+            "side": "both",
+            "lowestHeightFraction": 0.896,
+            "highestHeightFraction": 0.919
+          },
+          {
+            "id": 29,
+            "faces": 488,
+            "facesOnLeft": 244,
+            "facesOnRight": 244,
+            "side": "both",
+            "lowestHeightFraction": 0.869,
+            "highestHeightFraction": 0.929
+          },
+          {
+            "id": 37,
+            "faces": 448,
+            "facesOnLeft": 224,
+            "facesOnRight": 224,
+            "side": "both",
+            "lowestHeightFraction": 0.891,
+            "highestHeightFraction": 0.924
+          },
+          {
+            "id": 44,
+            "faces": 880,
+            "facesOnLeft": 420,
+            "facesOnRight": 420,
+            "side": "both",
+            "lowestHeightFraction": 0.858,
+            "highestHeightFraction": 0.999
+          },
+          {
+            "id": 45,
+            "faces": 262,
+            "facesOnLeft": 120,
+            "facesOnRight": 120,
+            "side": "both",
+            "lowestHeightFraction": 0.873,
+            "highestHeightFraction": 0.896
+          },
+          {
+            "id": 46,
+            "faces": 280,
+            "facesOnLeft": 132,
+            "facesOnRight": 132,
+            "side": "both",
+            "lowestHeightFraction": 0.819,
+            "highestHeightFraction": 0.869
+          },
+          {
+            "id": 47,
+            "faces": 182,
+            "facesOnLeft": 84,
+            "facesOnRight": 84,
+            "side": "both",
+            "lowestHeightFraction": 0.858,
+            "highestHeightFraction": 0.886
+          },
+          {
+            "id": 48,
+            "faces": 168,
+            "facesOnLeft": 72,
+            "facesOnRight": 72,
+            "side": "both",
+            "lowestHeightFraction": 0.841,
+            "highestHeightFraction": 0.863
+          },
+          {
+            "id": 49,
+            "faces": 272,
+            "facesOnLeft": 110,
+            "facesOnRight": 110,
+            "side": "both",
+            "lowestHeightFraction": 0.821,
+            "highestHeightFraction": 0.872
+          },
+          {
+            "id": 256,
+            "faces": 1008,
+            "facesOnLeft": 504,
+            "facesOnRight": 504,
+            "side": "both",
+            "lowestHeightFraction": 0.271,
+            "highestHeightFraction": 0.467
+          },
+          {
+            "id": 257,
+            "faces": 1680,
+            "facesOnLeft": 840,
+            "facesOnRight": 840,
+            "side": "both",
+            "lowestHeightFraction": 0.061,
+            "highestHeightFraction": 0.274
+          },
+          {
+            "id": 258,
+            "faces": 496,
+            "facesOnLeft": 238,
+            "facesOnRight": 238,
+            "side": "both",
+            "lowestHeightFraction": 0.445,
+            "highestHeightFraction": 0.583
+          },
+          {
+            "id": 259,
+            "faces": 694,
+            "facesOnLeft": 347,
+            "facesOnRight": 347,
+            "side": "both",
+            "lowestHeightFraction": 0.591,
+            "highestHeightFraction": 0.806
+          },
+          {
+            "id": 260,
+            "faces": 260,
+            "facesOnLeft": 130,
+            "facesOnRight": 130,
+            "side": "both",
+            "lowestHeightFraction": 0.71,
+            "highestHeightFraction": 0.797
+          },
+          {
+            "id": 262,
+            "faces": 704,
+            "facesOnLeft": 352,
+            "facesOnRight": 352,
+            "side": "both",
+            "lowestHeightFraction": 0.521,
+            "highestHeightFraction": 0.646
+          },
+          {
+            "id": 263,
+            "faces": 572,
+            "facesOnLeft": 286,
+            "facesOnRight": 286,
+            "side": "both",
+            "lowestHeightFraction": 0.631,
+            "highestHeightFraction": 0.748
+          },
+          {
+            "id": 272,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.398,
+            "highestHeightFraction": 0.415
+          },
+          {
+            "id": 273,
+            "faces": 420,
+            "facesOnLeft": 210,
+            "facesOnRight": 210,
+            "side": "both",
+            "lowestHeightFraction": 0.455,
+            "highestHeightFraction": 0.522
+          },
+          {
+            "id": 274,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.417,
+            "highestHeightFraction": 0.435
+          },
+          {
+            "id": 275,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.402,
+            "highestHeightFraction": 0.418
+          },
+          {
+            "id": 276,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.418,
+            "highestHeightFraction": 0.431
+          },
+          {
+            "id": 277,
+            "faces": 88,
+            "facesOnLeft": 44,
+            "facesOnRight": 44,
+            "side": "both",
+            "lowestHeightFraction": 0.433,
+            "highestHeightFraction": 0.455
+          },
+          {
+            "id": 278,
+            "faces": 84,
+            "facesOnLeft": 42,
+            "facesOnRight": 42,
+            "side": "both",
+            "lowestHeightFraction": 0.438,
+            "highestHeightFraction": 0.458
+          },
+          {
+            "id": 279,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.414,
+            "highestHeightFraction": 0.433
+          },
+          {
+            "id": 280,
+            "faces": 88,
+            "facesOnLeft": 44,
+            "facesOnRight": 44,
+            "side": "both",
+            "lowestHeightFraction": 0.436,
+            "highestHeightFraction": 0.457
+          },
+          {
+            "id": 281,
+            "faces": 84,
+            "facesOnLeft": 42,
+            "facesOnRight": 42,
+            "side": "both",
+            "lowestHeightFraction": 0.443,
+            "highestHeightFraction": 0.459
+          },
+          {
+            "id": 282,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.406,
+            "highestHeightFraction": 0.423
+          },
+          {
+            "id": 283,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.422,
+            "highestHeightFraction": 0.439
+          },
+          {
+            "id": 284,
+            "faces": 88,
+            "facesOnLeft": 44,
+            "facesOnRight": 44,
+            "side": "both",
+            "lowestHeightFraction": 0.456,
+            "highestHeightFraction": 0.473
+          },
+          {
+            "id": 285,
+            "faces": 80,
+            "facesOnLeft": 40,
+            "facesOnRight": 40,
+            "side": "both",
+            "lowestHeightFraction": 0.469,
+            "highestHeightFraction": 0.497
+          },
+          {
+            "id": 286,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.431,
+            "highestHeightFraction": 0.444
+          },
+          {
+            "id": 288,
+            "faces": 224,
+            "facesOnLeft": 112,
+            "facesOnRight": 112,
+            "side": "both",
+            "lowestHeightFraction": 0.037,
+            "highestHeightFraction": 0.061
+          },
+          {
+            "id": 316,
+            "faces": 580,
+            "facesOnLeft": 290,
+            "facesOnRight": 290,
+            "side": "both",
+            "lowestHeightFraction": 0.0,
+            "highestHeightFraction": 0.048
+          },
+          {
+            "id": 317,
+            "faces": 208,
+            "facesOnLeft": 104,
+            "facesOnRight": 104,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.031
+          },
+          {
+            "id": 318,
+            "faces": 92,
+            "facesOnLeft": 46,
+            "facesOnRight": 46,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.02
+          },
+          {
+            "id": 319,
+            "faces": 96,
+            "facesOnLeft": 48,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.02
+          },
+          {
+            "id": 320,
+            "faces": 96,
+            "facesOnLeft": 48,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.019
+          },
+          {
+            "id": 321,
+            "faces": 96,
+            "facesOnLeft": 48,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.016
+          },
+          {
+            "id": 322,
+            "faces": 92,
+            "facesOnLeft": 46,
+            "facesOnRight": 46,
+            "side": "both",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 359,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.483,
+            "highestHeightFraction": 0.517
+          }
+        ]
+      },
+      "vertexGroups": [],
+      "uvLayers": [
+        "UVMap"
+      ],
+      "attributes": [
+        {
+          "name": ".sculpt_mask",
+          "domain": "POINT",
+          "type": "FLOAT"
+        },
+        {
+          "name": "position",
+          "domain": "POINT",
+          "type": "FLOAT_VECTOR"
+        },
+        {
+          "name": ".select_vert",
+          "domain": "POINT",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "crease_edge",
+          "domain": "EDGE",
+          "type": "FLOAT"
+        },
+        {
+          "name": ".edge_verts",
+          "domain": "EDGE",
+          "type": "INT32_2D"
+        },
+        {
+          "name": ".select_edge",
+          "domain": "EDGE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "uv_seam",
+          "domain": "EDGE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".sculpt_face_set",
+          "domain": "FACE",
+          "type": "INT"
+        },
+        {
+          "name": ".select_poly",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "sharp_face",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".corner_vert",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": ".corner_edge",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": "UVMap",
+          "domain": "CORNER",
+          "type": "FLOAT2"
+        }
+      ],
+      "materials": [],
+      "shapeKeys": [],
+      "armatureModifier": false,
+      "transform": {
+        "location": [
+          -0.2703,
+          0.0,
+          0.0
+        ],
+        "rotationEulerDegrees": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "dimensionsMetres": {
+        "width": 0.8793,
+        "depth": 0.3084,
+        "height": 1.798
+      },
+      "worldBoundsMetres": {
+        "minimum": [
+          -0.71,
+          -0.1944,
+          -0.0038
+        ],
+        "maximum": [
+          0.1693,
+          0.114,
+          1.7942
+        ]
+      },
+      "upAxis": "Z",
+      "facing": "-Y",
+      "poseArmAngleBelowHorizontalDegrees": 76.0,
+      "head": {
+        "topToChinMetres": 0.33,
+        "bodyHeightInHeads": 5.4
+      },
+      "silhouette": [
+        {
+          "heightFraction": 0.0,
+          "widthMetres": 0.3752,
+          "depthMetres": 0.2596
+        },
+        {
+          "heightFraction": 0.05,
+          "widthMetres": 0.3418,
+          "depthMetres": 0.1907
+        },
+        {
+          "heightFraction": 0.1,
+          "widthMetres": 0.2637,
+          "depthMetres": 0.0821
+        },
+        {
+          "heightFraction": 0.15,
+          "widthMetres": 0.2998,
+          "depthMetres": 0.1085
+        },
+        {
+          "heightFraction": 0.2,
+          "widthMetres": 0.31,
+          "depthMetres": 0.126
+        },
+        {
+          "heightFraction": 0.25,
+          "widthMetres": 0.2975,
+          "depthMetres": 0.1316
+        },
+        {
+          "heightFraction": 0.3,
+          "widthMetres": 0.2736,
+          "depthMetres": 0.1268
+        },
+        {
+          "heightFraction": 0.35,
+          "widthMetres": 0.3049,
+          "depthMetres": 0.1581
+        },
+        {
+          "heightFraction": 0.4,
+          "widthMetres": 0.8516,
+          "depthMetres": 0.1694
+        },
+        {
+          "heightFraction": 0.45,
+          "widthMetres": 0.8793,
+          "depthMetres": 0.1991
+        },
+        {
+          "heightFraction": 0.5,
+          "widthMetres": 0.8714,
+          "depthMetres": 0.2091
+        },
+        {
+          "heightFraction": 0.55,
+          "widthMetres": 0.8557,
+          "depthMetres": 0.1992
+        },
+        {
+          "heightFraction": 0.6,
+          "widthMetres": 0.8152,
+          "depthMetres": 0.2276
+        },
+        {
+          "heightFraction": 0.65,
+          "widthMetres": 0.7726,
+          "depthMetres": 0.2376
+        },
+        {
+          "heightFraction": 0.7,
+          "widthMetres": 0.6578,
+          "depthMetres": 0.253
+        },
+        {
+          "heightFraction": 0.75,
+          "widthMetres": 0.5472,
+          "depthMetres": 0.2368
+        },
+        {
+          "heightFraction": 0.8,
+          "widthMetres": 0.4654,
+          "depthMetres": 0.2493
+        },
+        {
+          "heightFraction": 0.85,
+          "widthMetres": 0.2258,
+          "depthMetres": 0.2408
+        },
+        {
+          "heightFraction": 0.9,
+          "widthMetres": 0.2799,
+          "depthMetres": 0.2811
+        },
+        {
+          "heightFraction": 0.95,
+          "widthMetres": 0.2684,
+          "depthMetres": 0.2548
+        },
+        {
+          "heightFraction": 1.0,
+          "widthMetres": 0.1831,
+          "depthMetres": 0.1803
+        }
+      ],
+      "children": [
+        {
+          "name": "GEO-body_male_stylized.eye.L",
+          "type": "MESH",
+          "mesh": "GEO-body_male_stylized.eye.L"
+        },
+        {
+          "name": "GEO-body_male_stylized.eye.R",
+          "type": "MESH",
+          "mesh": "GEO-body_male_stylized.eye.R"
+        },
+        {
+          "name": "stylized_body_male",
+          "type": "CAMERA",
+          "mesh": "Camera.004"
+        }
+      ]
+    },
+    "stylized_body_female": {
+      "key": "stylized_body_female",
+      "object": "GEO-body_female_stylized",
+      "mesh": "GEO-body_female_stylized",
+      "collections": [
+        "Body Female - Stylized"
+      ],
+      "parent": null,
+      "cameraObjectsParentedToBody": [
+        "stylized_body_female"
+      ],
+      "counts": {
+        "baseMesh": {
+          "vertices": 12502,
+          "edges": 25000,
+          "faces": 12500,
+          "triangles": 25000
+        },
+        "evaluatedAtViewportLevel": {
+          "vertices": 12502,
+          "faces": 12500,
+          "triangles": 25000
+        }
+      },
+      "modifiers": [],
+      "hasMirrorModifier": false,
+      "faceSets": {
+        "present": true,
+        "count": 42,
+        "oneSidedSetsWithAMirroredPartner": 0,
+        "setsSpanningBothSides": 42,
+        "sets": [
+          {
+            "id": 6,
+            "faces": 506,
+            "facesOnLeft": 231,
+            "facesOnRight": 231,
+            "side": "both",
+            "lowestHeightFraction": 0.787,
+            "highestHeightFraction": 0.867
+          },
+          {
+            "id": 27,
+            "faces": 288,
+            "facesOnLeft": 144,
+            "facesOnRight": 144,
+            "side": "both",
+            "lowestHeightFraction": 0.877,
+            "highestHeightFraction": 0.926
+          },
+          {
+            "id": 28,
+            "faces": 288,
+            "facesOnLeft": 144,
+            "facesOnRight": 144,
+            "side": "both",
+            "lowestHeightFraction": 0.891,
+            "highestHeightFraction": 0.918
+          },
+          {
+            "id": 29,
+            "faces": 488,
+            "facesOnLeft": 244,
+            "facesOnRight": 244,
+            "side": "both",
+            "lowestHeightFraction": 0.872,
+            "highestHeightFraction": 0.923
+          },
+          {
+            "id": 37,
+            "faces": 448,
+            "facesOnLeft": 224,
+            "facesOnRight": 224,
+            "side": "both",
+            "lowestHeightFraction": 0.886,
+            "highestHeightFraction": 0.926
+          },
+          {
+            "id": 44,
+            "faces": 880,
+            "facesOnLeft": 421,
+            "facesOnRight": 421,
+            "side": "both",
+            "lowestHeightFraction": 0.854,
+            "highestHeightFraction": 1.0
+          },
+          {
+            "id": 45,
+            "faces": 262,
+            "facesOnLeft": 120,
+            "facesOnRight": 120,
+            "side": "both",
+            "lowestHeightFraction": 0.869,
+            "highestHeightFraction": 0.889
+          },
+          {
+            "id": 46,
+            "faces": 280,
+            "facesOnLeft": 126,
+            "facesOnRight": 126,
+            "side": "both",
+            "lowestHeightFraction": 0.826,
+            "highestHeightFraction": 0.865
+          },
+          {
+            "id": 47,
+            "faces": 182,
+            "facesOnLeft": 84,
+            "facesOnRight": 84,
+            "side": "both",
+            "lowestHeightFraction": 0.855,
+            "highestHeightFraction": 0.88
+          },
+          {
+            "id": 48,
+            "faces": 168,
+            "facesOnLeft": 72,
+            "facesOnRight": 72,
+            "side": "both",
+            "lowestHeightFraction": 0.841,
+            "highestHeightFraction": 0.857
+          },
+          {
+            "id": 49,
+            "faces": 272,
+            "facesOnLeft": 105,
+            "facesOnRight": 105,
+            "side": "both",
+            "lowestHeightFraction": 0.809,
+            "highestHeightFraction": 0.864
+          },
+          {
+            "id": 256,
+            "faces": 1008,
+            "facesOnLeft": 504,
+            "facesOnRight": 504,
+            "side": "both",
+            "lowestHeightFraction": 0.299,
+            "highestHeightFraction": 0.52
+          },
+          {
+            "id": 257,
+            "faces": 1680,
+            "facesOnLeft": 840,
+            "facesOnRight": 840,
+            "side": "both",
+            "lowestHeightFraction": 0.064,
+            "highestHeightFraction": 0.302
+          },
+          {
+            "id": 258,
+            "faces": 496,
+            "facesOnLeft": 236,
+            "facesOnRight": 236,
+            "side": "both",
+            "lowestHeightFraction": 0.489,
+            "highestHeightFraction": 0.632
+          },
+          {
+            "id": 259,
+            "faces": 694,
+            "facesOnLeft": 339,
+            "facesOnRight": 339,
+            "side": "both",
+            "lowestHeightFraction": 0.636,
+            "highestHeightFraction": 0.804
+          },
+          {
+            "id": 260,
+            "faces": 260,
+            "facesOnLeft": 130,
+            "facesOnRight": 130,
+            "side": "both",
+            "lowestHeightFraction": 0.734,
+            "highestHeightFraction": 0.796
+          },
+          {
+            "id": 262,
+            "faces": 704,
+            "facesOnLeft": 352,
+            "facesOnRight": 352,
+            "side": "both",
+            "lowestHeightFraction": 0.552,
+            "highestHeightFraction": 0.665
+          },
+          {
+            "id": 263,
+            "faces": 572,
+            "facesOnLeft": 286,
+            "facesOnRight": 286,
+            "side": "both",
+            "lowestHeightFraction": 0.649,
+            "highestHeightFraction": 0.753
+          },
+          {
+            "id": 272,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.443,
+            "highestHeightFraction": 0.456
+          },
+          {
+            "id": 273,
+            "faces": 420,
+            "facesOnLeft": 210,
+            "facesOnRight": 210,
+            "side": "both",
+            "lowestHeightFraction": 0.493,
+            "highestHeightFraction": 0.553
+          },
+          {
+            "id": 274,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.461,
+            "highestHeightFraction": 0.475
+          },
+          {
+            "id": 275,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.448,
+            "highestHeightFraction": 0.461
+          },
+          {
+            "id": 276,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.464,
+            "highestHeightFraction": 0.474
+          },
+          {
+            "id": 277,
+            "faces": 88,
+            "facesOnLeft": 44,
+            "facesOnRight": 44,
+            "side": "both",
+            "lowestHeightFraction": 0.474,
+            "highestHeightFraction": 0.492
+          },
+          {
+            "id": 278,
+            "faces": 84,
+            "facesOnLeft": 42,
+            "facesOnRight": 42,
+            "side": "both",
+            "lowestHeightFraction": 0.476,
+            "highestHeightFraction": 0.493
+          },
+          {
+            "id": 279,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.457,
+            "highestHeightFraction": 0.472
+          },
+          {
+            "id": 280,
+            "faces": 88,
+            "facesOnLeft": 44,
+            "facesOnRight": 44,
+            "side": "both",
+            "lowestHeightFraction": 0.477,
+            "highestHeightFraction": 0.497
+          },
+          {
+            "id": 281,
+            "faces": 84,
+            "facesOnLeft": 42,
+            "facesOnRight": 42,
+            "side": "both",
+            "lowestHeightFraction": 0.486,
+            "highestHeightFraction": 0.5
+          },
+          {
+            "id": 282,
+            "faces": 72,
+            "facesOnLeft": 36,
+            "facesOnRight": 36,
+            "side": "both",
+            "lowestHeightFraction": 0.449,
+            "highestHeightFraction": 0.461
+          },
+          {
+            "id": 283,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.461,
+            "highestHeightFraction": 0.476
+          },
+          {
+            "id": 284,
+            "faces": 88,
+            "facesOnLeft": 44,
+            "facesOnRight": 44,
+            "side": "both",
+            "lowestHeightFraction": 0.487,
+            "highestHeightFraction": 0.504
+          },
+          {
+            "id": 285,
+            "faces": 80,
+            "facesOnLeft": 40,
+            "facesOnRight": 40,
+            "side": "both",
+            "lowestHeightFraction": 0.501,
+            "highestHeightFraction": 0.524
+          },
+          {
+            "id": 286,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.474,
+            "highestHeightFraction": 0.485
+          },
+          {
+            "id": 288,
+            "faces": 224,
+            "facesOnLeft": 112,
+            "facesOnRight": 112,
+            "side": "both",
+            "lowestHeightFraction": 0.04,
+            "highestHeightFraction": 0.062
+          },
+          {
+            "id": 316,
+            "faces": 580,
+            "facesOnLeft": 290,
+            "facesOnRight": 290,
+            "side": "both",
+            "lowestHeightFraction": 0.002,
+            "highestHeightFraction": 0.043
+          },
+          {
+            "id": 317,
+            "faces": 208,
+            "facesOnLeft": 104,
+            "facesOnRight": 104,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.028
+          },
+          {
+            "id": 318,
+            "faces": 92,
+            "facesOnLeft": 46,
+            "facesOnRight": 46,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.019
+          },
+          {
+            "id": 319,
+            "faces": 96,
+            "facesOnLeft": 48,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.018
+          },
+          {
+            "id": 320,
+            "faces": 96,
+            "facesOnLeft": 48,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.017
+          },
+          {
+            "id": 321,
+            "faces": 96,
+            "facesOnLeft": 48,
+            "facesOnRight": 48,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.015
+          },
+          {
+            "id": 322,
+            "faces": 92,
+            "facesOnLeft": 46,
+            "facesOnRight": 46,
+            "side": "both",
+            "lowestHeightFraction": 0.001,
+            "highestHeightFraction": 0.013
+          },
+          {
+            "id": 359,
+            "faces": 64,
+            "facesOnLeft": 32,
+            "facesOnRight": 32,
+            "side": "both",
+            "lowestHeightFraction": 0.513,
+            "highestHeightFraction": 0.545
+          }
+        ]
+      },
+      "vertexGroups": [],
+      "uvLayers": [
+        "UVMap"
+      ],
+      "attributes": [
+        {
+          "name": ".sculpt_mask",
+          "domain": "POINT",
+          "type": "FLOAT"
+        },
+        {
+          "name": "position",
+          "domain": "POINT",
+          "type": "FLOAT_VECTOR"
+        },
+        {
+          "name": ".select_vert",
+          "domain": "POINT",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "crease_edge",
+          "domain": "EDGE",
+          "type": "FLOAT"
+        },
+        {
+          "name": ".edge_verts",
+          "domain": "EDGE",
+          "type": "INT32_2D"
+        },
+        {
+          "name": ".select_edge",
+          "domain": "EDGE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "uv_seam",
+          "domain": "EDGE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".sculpt_face_set",
+          "domain": "FACE",
+          "type": "INT"
+        },
+        {
+          "name": ".select_poly",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": "sharp_face",
+          "domain": "FACE",
+          "type": "BOOLEAN"
+        },
+        {
+          "name": ".corner_vert",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": ".corner_edge",
+          "domain": "CORNER",
+          "type": "INT"
+        },
+        {
+          "name": "UVMap",
+          "domain": "CORNER",
+          "type": "FLOAT2"
+        }
+      ],
+      "materials": [],
+      "shapeKeys": [],
+      "armatureModifier": false,
+      "transform": {
+        "location": [
+          0.636,
+          0.0,
+          0.0
+        ],
+        "rotationEulerDegrees": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "dimensionsMetres": {
+        "width": 0.7209,
+        "depth": 0.2732,
+        "height": 1.6169
+      },
+      "worldBoundsMetres": {
+        "minimum": [
+          0.2755,
+          -0.1805,
+          -0.0038
+        ],
+        "maximum": [
+          0.9964,
+          0.0926,
+          1.6132
+        ]
+      },
+      "upAxis": "Z",
+      "facing": "-Y",
+      "poseArmAngleBelowHorizontalDegrees": 73.1,
+      "head": {
+        "topToChinMetres": 0.28,
+        "bodyHeightInHeads": 5.8
+      },
+      "silhouette": [
+        {
+          "heightFraction": 0.0,
+          "widthMetres": 0.2782,
+          "depthMetres": 0.2162
+        },
+        {
+          "heightFraction": 0.05,
+          "widthMetres": 0.2236,
+          "depthMetres": 0.1458
+        },
+        {
+          "heightFraction": 0.1,
+          "widthMetres": 0.2163,
+          "depthMetres": 0.0608
+        },
+        {
+          "heightFraction": 0.15,
+          "widthMetres": 0.2568,
+          "depthMetres": 0.0842
+        },
+        {
+          "heightFraction": 0.2,
+          "widthMetres": 0.2796,
+          "depthMetres": 0.1015
+        },
+        {
+          "heightFraction": 0.25,
+          "widthMetres": 0.2783,
+          "depthMetres": 0.1155
+        },
+        {
+          "heightFraction": 0.3,
+          "widthMetres": 0.242,
+          "depthMetres": 0.1051
+        },
+        {
+          "heightFraction": 0.35,
+          "widthMetres": 0.2763,
+          "depthMetres": 0.1232
+        },
+        {
+          "heightFraction": 0.4,
+          "widthMetres": 0.3154,
+          "depthMetres": 0.1441
+        },
+        {
+          "heightFraction": 0.45,
+          "widthMetres": 0.7138,
+          "depthMetres": 0.1533
+        },
+        {
+          "heightFraction": 0.5,
+          "widthMetres": 0.7209,
+          "depthMetres": 0.1839
+        },
+        {
+          "heightFraction": 0.55,
+          "widthMetres": 0.7069,
+          "depthMetres": 0.1855
+        },
+        {
+          "heightFraction": 0.6,
+          "widthMetres": 0.6626,
+          "depthMetres": 0.1668
+        },
+        {
+          "heightFraction": 0.65,
+          "widthMetres": 0.5999,
+          "depthMetres": 0.1705
+        },
+        {
+          "heightFraction": 0.7,
+          "widthMetres": 0.4931,
+          "depthMetres": 0.181
+        },
+        {
+          "heightFraction": 0.75,
+          "widthMetres": 0.3919,
+          "depthMetres": 0.1791
+        },
+        {
+          "heightFraction": 0.8,
+          "widthMetres": 0.298,
+          "depthMetres": 0.1356
+        },
+        {
+          "heightFraction": 0.85,
+          "widthMetres": 0.223,
+          "depthMetres": 0.2167
+        },
+        {
+          "heightFraction": 0.9,
+          "widthMetres": 0.2798,
+          "depthMetres": 0.2537
+        },
+        {
+          "heightFraction": 0.95,
+          "widthMetres": 0.1997,
+          "depthMetres": 0.2381
+        },
+        {
+          "heightFraction": 1.0,
+          "widthMetres": 0.1672,
+          "depthMetres": 0.1598
+        }
+      ],
+      "children": [
+        {
+          "name": "GEO-body_female_stylized.eye.L",
+          "type": "MESH",
+          "mesh": "GEO-body_female_stylized.eye.L"
+        },
+        {
+          "name": "GEO-body_female_stylized.eye.R",
+          "type": "MESH",
+          "mesh": "GEO-body_female_stylized.eye.R"
+        },
+        {
+          "name": "stylized_body_female",
+          "type": "CAMERA",
+          "mesh": "Camera.005"
+        }
+      ]
+    }
+  },
+  "objectsNamedAfterHairOrFacialExtras": [],
+  "standaloneParts": [
+    {
+      "name": "Eye - Realistic",
+      "collections": [
+        "Realistic"
+      ],
+      "dimensionsMetres": [
+        0.0337,
+        0.0337,
+        0.0337
+      ],
+      "modifiers": []
+    },
+    {
+      "name": "Eye - Stylized",
+      "collections": [
+        "Stylized"
+      ],
+      "dimensionsMetres": [
+        0.0768,
+        0.0733,
+        0.0768
+      ],
+      "modifiers": []
+    },
+    {
+      "name": "Foot - Realistic",
+      "collections": [
+        "Realistic"
+      ],
+      "dimensionsMetres": [
+        0.0914,
+        0.2363,
+        0.1785
+      ],
+      "modifiers": [
+        "MULTIRES"
+      ]
+    },
+    {
+      "name": "Foot - Stylized ",
+      "collections": [
+        "Stylized"
+      ],
+      "dimensionsMetres": [
+        0.1,
+        0.237,
+        0.1084
+      ],
+      "modifiers": []
+    },
+    {
+      "name": "Hand  - Realistic",
+      "collections": [
+        "Realistic"
+      ],
+      "dimensionsMetres": [
+        0.1512,
+        0.0651,
+        0.2829
+      ],
+      "modifiers": [
+        "MULTIRES"
+      ]
+    },
+    {
+      "name": "Hand - Stylized ",
+      "collections": [
+        "Stylized"
+      ],
+      "dimensionsMetres": [
+        0.1326,
+        0.0679,
+        0.2351
+      ],
+      "modifiers": []
+    },
+    {
+      "name": "Head - Generic Topology",
+      "collections": [
+        "Primitves"
+      ],
+      "dimensionsMetres": [
+        0.1719,
+        0.2237,
+        0.234
+      ],
+      "modifiers": [
+        "SUBSURF"
+      ]
+    },
+    {
+      "name": "Head - Planar",
+      "collections": [
+        "Planar"
+      ],
+      "dimensionsMetres": [
+        0.169,
+        0.2152,
+        0.2254
+      ],
+      "modifiers": [
+        "MULTIRES"
+      ]
+    },
+    {
+      "name": "Jaw - Realistic",
+      "collections": [
+        "Realistic"
+      ],
+      "dimensionsMetres": [
+        0.0749,
+        0.1018,
+        0.0582
+      ],
+      "modifiers": []
+    },
+    {
+      "name": "Jaw - Stylized ",
+      "collections": [
+        "Stylized"
+      ],
+      "dimensionsMetres": [
+        0.0771,
+        0.1025,
+        0.0628
+      ],
+      "modifiers": []
+    },
+    {
+      "name": "Skull - Planar",
+      "collections": [
+        "Planar"
+      ],
+      "dimensionsMetres": [
+        0.1391,
+        0.2034,
+        0.2148
+      ],
+      "modifiers": [
+        "SUBSURF"
+      ]
+    },
+    {
+      "name": "Skull - Realistic",
+      "collections": [
+        "Realistic"
+      ],
+      "dimensionsMetres": [
+        0.1425,
+        0.2002,
+        0.2144
+      ],
+      "modifiers": [
+        "MULTIRES"
+      ]
+    }
+  ],
+  "standaloneHeads": [
+    {
+      "name": "GEO-head_animation_realistic",
+      "collections": [
+        "Head (Animation) - Realistic"
+      ],
+      "parent": null
+    },
+    {
+      "name": "GEO-head_sculpting_realistic",
+      "collections": [
+        "Head (Sculpting) - Realistic"
+      ],
+      "parent": null
+    },
+    {
+      "name": "GEO-head_stylized",
+      "collections": [
+        "Head - Stylized"
+      ],
+      "parent": null
+    }
+  ],
+  "bodyCollections": [
+    "Body Female - Primitive (Stylized)",
+    "Body Female - Primitve (Realistic)",
+    "Body Female - Realistic",
+    "Body Female - Stylized",
+    "Body Male - Primitve (Realistic)",
+    "Body Male - Primitve (Stylized)",
+    "Body Male - Realistic",
+    "Body Male - Stylized"
+  ]
+}
