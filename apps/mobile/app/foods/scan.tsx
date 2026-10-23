@@ -18,6 +18,7 @@ import {
   readIngredientRequestId,
   readLogContext,
   useCloseFoodsSheet,
+  withIngredientRequest,
   withLogContext,
 } from "../../lib/navigation";
 
@@ -120,14 +121,15 @@ export default function ScanRoute() {
           code={scan.rawCode}
           outcome={toScanOutcome(lookup)}
           onScanAgain={clearScan}
-          // A recipe has no way to continue from the form yet, and the diary's leads to the portion picker.
-          onCreateFood={
-            ingredientRequestId === undefined
-              ? (code) => {
-                  router.push(withLogContext("/foods/new", logContext, { barcode: code }));
-                }
-              : undefined
-          }
+          // Both modes can create the food. From the diary the form continues to the portion picker. From the
+          // recipe editor it carries the request, so the saved food goes back to the editor's amount step.
+          onCreateFood={(code) => {
+            router.push(
+              ingredientRequestId === undefined
+                ? withLogContext("/foods/new", logContext, { barcode: code })
+                : withIngredientRequest("/foods/new", ingredientRequestId, { barcode: code }),
+            );
+          }}
         />
       )}
       <BarcodeScanner

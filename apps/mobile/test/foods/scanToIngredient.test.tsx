@@ -151,26 +151,45 @@ describe("scan screen in ingredient mode", () => {
       setLookupOutcome({ result: { status: "not_found", code: cola } });
     });
 
-    it("should offer to scan again and nothing to create", async () => {
+    it("should offer to create the food with this barcode as well as to scan again", async () => {
       const requestId = beginIngredientScan();
       await renderScanner({ ingredient: requestId });
 
       await scanCola();
 
-      expect(await screen.findByRole("button", { name: "Scan again" })).toBeOnTheScreen();
       expect(
-        screen.queryByRole("button", { name: "Create food with this barcode" }),
-      ).not.toBeOnTheScreen();
+        await screen.findByRole("button", { name: "Create food with this barcode" }),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Scan again" })).toBeOnTheScreen();
     });
 
-    it("should say it is not known without telling the person to create the food", async () => {
+    it("should say the code can be used to create the food", async () => {
       const requestId = beginIngredientScan();
       await renderScanner({ ingredient: requestId });
 
       await scanCola();
 
       expect(await screen.findByText("Not in Ki-Lo or Open Food Facts")).toBeOnTheScreen();
-      expect(screen.queryByText(/Create the food/)).not.toBeOnTheScreen();
+      expect(screen.getByText(/Create the food/)).toBeOnTheScreen();
+    });
+
+    it("should push the new food form with the code and the request, and no day or time", async () => {
+      const requestId = beginIngredientScan();
+      const user = await renderScanner({
+        ingredient: requestId,
+        day: "2026-10-15",
+        time: "12:00",
+      });
+      await scanCola();
+
+      await user.press(
+        await screen.findByRole("button", { name: "Create food with this barcode" }),
+      );
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith(
+        `/foods/new?barcode=${cola}&ingredient=${requestId}`,
+      );
     });
 
     it("should hand nothing back and close nothing", async () => {
