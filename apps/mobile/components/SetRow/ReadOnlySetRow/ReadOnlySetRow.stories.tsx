@@ -18,14 +18,12 @@ const meta = {
   // Set 3 of the bent over barbell row of the golden Tuesday Pull, as the `history · session-detail` board draws it.
   args: {
     setType: "working",
-    isNotInPlan: false,
     copy: describeHistorySet({
       setType: "working",
       setNumber: 3,
       loadKg: 70,
       reps: 8,
       rir: 2,
-      isNotInPlan: false,
       unit: "kg",
     }),
   },
@@ -51,23 +49,6 @@ export const WarmUp: Story = {
       loadKg: 40,
       reps: 10,
       rir: null,
-      isNotInPlan: false,
-      unit: "kg",
-    }),
-  },
-};
-
-// A set beyond what the plan targets is tinted.
-export const NotInPlan: Story = {
-  args: {
-    isNotInPlan: true,
-    copy: describeHistorySet({
-      setType: "working",
-      setNumber: 4,
-      loadKg: 60,
-      reps: 10,
-      rir: 1,
-      isNotInPlan: true,
       unit: "kg",
     }),
   },

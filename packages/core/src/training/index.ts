@@ -112,11 +112,9 @@ export type { WorkoutSetInsert, WorkoutSetInsertInput } from "./buildWorkoutSetI
 
 export { groupSessionsByWeek, orderSessionSets, summariseSession } from "./historySummary";
 export type {
-  HistoryPlanDay,
   HistorySession,
   HistorySessionWithSets,
   HistorySet,
-  SessionPlanComparison,
   SessionSummary,
   SessionWeek,
 } from "./historySummary";

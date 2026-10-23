@@ -6,17 +6,15 @@ import { ReadOnlyExerciseCard } from "./ReadOnlyExerciseCard";
 import type { ReadOnlyExerciseCardRow } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
-const row = (setNumber: number, reps: number, isNotInPlan: boolean): ReadOnlyExerciseCardRow => ({
+const row = (setNumber: number, reps: number): ReadOnlyExerciseCardRow => ({
   key: `set-${setNumber}`,
   setType: "working",
-  isNotInPlan,
   copy: describeHistorySet({
     setType: "working",
     setNumber,
     loadKg: 60,
     reps,
     rir: 1,
-    isNotInPlan,
     unit: "kg",
   }),
 });
@@ -32,17 +30,11 @@ const meta = {
     ),
   ],
   // The wide-grip lat pulldown of the golden Tuesday Pull, as the `history · session-detail` board draws it:
-  // five sets against three planned, the last two beyond the plan.
+  // five sets, drawn alike: a past session is not compared with a plan.
   args: {
     name: "Wide-Grip Lat Pulldown",
-    note: "2 more than planned",
-    rows: [
-      row(1, 12, false),
-      row(2, 11, false),
-      row(3, 10, false),
-      row(4, 10, true),
-      row(5, 9, true),
-    ],
+    note: null,
+    rows: [row(1, 12), row(2, 11), row(3, 10), row(4, 10), row(5, 9)],
   },
 } satisfies Meta<typeof ReadOnlyExerciseCard>;
 
@@ -52,8 +44,8 @@ type Story = StoryObj<typeof meta>;
 
 export const Normal: Story = {};
 
-// An exercise done as planned has no note.
-export const NoNote: Story = { args: { note: null, rows: [row(1, 12, false), row(2, 11, false)] } };
+// An exercise done without a load carries the note Bodyweight.
+export const Bodyweight: Story = { args: { note: "Bodyweight", rows: [row(1, 12), row(2, 11)] } };
 
 // With Add set under the sets, which the session detail gives every card.
 export const WithAddSet: Story = { args: { onAddSet: () => undefined } };
@@ -61,7 +53,7 @@ export const WithAddSet: Story = { args: { onAddSet: () => undefined } };
 // With what pressing a set does, which the edit builds: every row is a button with a chevron.
 export const Pressable: Story = {
   args: {
-    rows: [row(1, 12, false), row(2, 11, false)].map((entry) => ({
+    rows: [row(1, 12), row(2, 11)].map((entry) => ({
       ...entry,
       onPress: () => undefined,
     })),

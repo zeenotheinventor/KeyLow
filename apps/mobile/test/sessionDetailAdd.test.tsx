@@ -277,7 +277,7 @@ describe("adding sets and exercises to a past session from the session detail", 
       await waitFor(() => {
         expect(
           latPulldownCard().getByRole("button", {
-            name: "Set 6, 60 kg by 8, RIR 1, not in the plan, edit",
+            name: "Set 6, 60 kg by 8, RIR 1, edit",
           }),
         ).toBeOnTheScreen();
       });
@@ -301,7 +301,7 @@ describe("adding sets and exercises to a past session from the session detail", 
         await waitFor(() => {
           expect(
             latPulldownCard().getByRole("button", {
-              name: `Set ${reps === "8" ? 6 : 7}, 60 kg by ${reps}, RIR 1, not in the plan, edit`,
+              name: `Set ${reps === "8" ? 6 : 7}, 60 kg by ${reps}, RIR 1, edit`,
             }),
           ).toBeOnTheScreen();
         });
@@ -395,7 +395,7 @@ describe("adding sets and exercises to a past session from the session detail", 
       await waitFor(() => {
         expect(
           latPulldownCard().getByRole("button", {
-            name: "Set 6, 60 kg by 9, RIR 1, not in the plan, edit",
+            name: "Set 6, 60 kg by 9, RIR 1, edit",
           }),
         ).toBeOnTheScreen();
       });

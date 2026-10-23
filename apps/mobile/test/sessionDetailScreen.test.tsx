@@ -28,8 +28,9 @@ import {
   resetSessionDetailBackend,
   sessionDetailBackend,
   sessionDetailClient,
+  warmupOnlyAndDeletedSession,
 } from "./support/sessionDetailBackend";
-import { trainBackend } from "./support/trainBackend";
+import { activeRoutine, trainBackend, trainRequestsTo } from "./support/trainBackend";
 
 import type { SessionDetailScreenProps } from "../components/SessionDetailScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -78,6 +79,14 @@ function seedGoldenPull() {
   sessionDetailBackend.sessions = [goldenPull];
   trainBackend.routine = pullRoutine;
 }
+
+// A stat card is not an accessibility element: the card holding a label is found from the label's text.
+const statCardOf = (label: string) => {
+  const card = screen.getByText(label).parent?.parent;
+  expect(card).toBeTruthy();
+
+  return card;
+};
 
 // A card is a region that holds its rows, so it is not an accessibility element itself (that would fold the
 // rows into one): it is found by its name, and its role is checked on the element.
@@ -133,7 +142,7 @@ describe("the session detail screen", () => {
       expect(await screen.findByText("Tuesday 13 October · 18:00 to 18:51")).toBeOnTheScreen();
     });
 
-    it("should draw the three cards: 51 min, 17 sets and 1 warm-up, and +2 sets over the plan", async () => {
+    it("should draw three cards: Time, Sets and Exercises, with Exercises equal to the exercise cards below", async () => {
       await renderDetail();
 
       await screen.findByRole("heading", { name: "Pull" });
@@ -142,9 +151,26 @@ describe("the session detail screen", () => {
       expect(screen.getByText("Sets")).toBeOnTheScreen();
       expect(screen.getByText("17")).toBeOnTheScreen();
       expect(screen.getByText("and 1 warm-up")).toBeOnTheScreen();
-      expect(screen.getByText("Plan")).toBeOnTheScreen();
-      expect(screen.getByText("+2")).toBeOnTheScreen();
-      expect(screen.getByText("sets over")).toBeOnTheScreen();
+      expect(statCardOf("Exercises")).toHaveTextContent("Exercises5");
+      for (const name of [
+        "Pullups",
+        "Bent Over Barbell Row",
+        "Wide-Grip Lat Pulldown",
+        "Face Pull",
+        "Seated Cable Row",
+      ]) {
+        expect(exerciseCard(name)).toBeOnTheScreen();
+      }
+    });
+
+    it("should say nothing about the plan: no card, note, phrase or tint", async () => {
+      await renderDetail();
+
+      await screen.findByRole("heading", { name: "Pull" });
+      expect(screen.queryByText(/plan/i)).toBeNull();
+      expect(screen.queryByText(/sets over|On plan|Under/)).toBeNull();
+      expect(screen.queryByRole("button", { name: /plan/i })).toBeNull();
+      expect(screen.queryAllByRole("listitem", { name: /plan/i })).toHaveLength(0);
     });
 
     it("should draw the Muscles trained card under the three cards and over the exercises", async () => {
@@ -243,26 +269,26 @@ describe("the session detail screen", () => {
       expect(row.queryByText("Bodyweight")).toBeNull();
     });
 
-    it("should say the lat pulldown has 2 more than planned and name only sets 4 and 5 as not in the plan", async () => {
+    it("should list all five sets of the lat pulldown alike, with no note and no word about the plan", async () => {
       await renderDetail();
 
       await screen.findByRole("heading", { name: "Pull" });
       const pulldown = within(exerciseCard("Wide-Grip Lat Pulldown"));
-      expect(pulldown.getByText("2 more than planned")).toBeOnTheScreen();
+      expect(pulldown.queryByText(/planned/)).toBeNull();
       expect(pulldown.getAllByRole("button", { name: /^Set \d, / })).toHaveLength(5);
-      expect(pulldown.getAllByRole("button", { name: /not in the plan, edit$/ })).toHaveLength(2);
+      expect(pulldown.queryAllByRole("button", { name: /plan/i })).toHaveLength(0);
       expect(
         pulldown.getByRole("button", { name: "Set 3, 60 kg by 10, RIR 1, edit" }),
       ).toBeOnTheScreen();
       expect(
-        pulldown.getByRole("button", { name: "Set 4, 60 kg by 10, RIR 1, not in the plan, edit" }),
+        pulldown.getByRole("button", { name: "Set 4, 60 kg by 10, RIR 1, edit" }),
       ).toBeOnTheScreen();
       expect(
-        pulldown.getByRole("button", { name: "Set 5, 60 kg by 9, RIR 1, not in the plan, edit" }),
+        pulldown.getByRole("button", { name: "Set 5, 60 kg by 9, RIR 1, edit" }),
       ).toBeOnTheScreen();
     });
 
-    it("should note nothing on an exercise done as planned", async () => {
+    it("should note nothing on an exercise that has a load", async () => {
       await renderDetail();
 
       await screen.findByRole("heading", { name: "Pull" });
@@ -320,26 +346,67 @@ describe("the session detail screen", () => {
   });
 
   describe("a session that follows no routine day", () => {
-    it("should be called Session, with the time and sets cards and no plan card", async () => {
+    it("should be called Session, with the same three cards: Time, Sets and Exercises", async () => {
       sessionDetailBackend.sessions = [freeSession(GOLDEN_PULL_ID)];
       await renderDetail();
 
       expect(await screen.findByRole("heading", { name: "Session" })).toBeOnTheScreen();
       expect(screen.getByText("Time")).toBeOnTheScreen();
       expect(screen.getByText("Sets")).toBeOnTheScreen();
-      expect(screen.queryByText("Plan")).toBeNull();
+      expect(statCardOf("Exercises")).toHaveTextContent("Exercises1");
+      expect(screen.queryByText(/plan/i)).toBeNull();
     });
   });
 
-  describe("a session whose routine day is no longer in the active routine", () => {
-    it("should draw the session with no plan card, and not wait for the plan", async () => {
+  describe("an exercise logged with warm-ups only, and one whose sets were all deleted", () => {
+    it("should count the first, which has a card, and not the second, which has none", async () => {
+      sessionDetailBackend.sessions = [warmupOnlyAndDeletedSession];
+      await renderDetail();
+
+      await screen.findByRole("heading", { name: "Pull" });
+      expect(statCardOf("Exercises")).toHaveTextContent("Exercises2");
+      expect(exerciseCard("Pullups")).toBeOnTheScreen();
+      expect(exerciseCard("Bent Over Barbell Row")).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Face Pull")).toBeNull();
+    });
+  });
+
+  describe("a session whose routine has changed since", () => {
+    it("should read the same when the routine no longer holds the day", async () => {
       sessionDetailBackend.sessions = [goldenPull];
       trainBackend.routine = null;
       await renderDetail();
 
       expect(await screen.findByRole("heading", { name: "Pull" })).toBeOnTheScreen();
-      expect(screen.queryByText("Plan")).toBeNull();
-      expect(screen.queryByText(/more than planned/)).toBeNull();
+      expect(statCardOf("Exercises")).toHaveTextContent("Exercises5");
+      expect(screen.queryByText(/plan/i)).toBeNull();
+    });
+
+    it("should read the same when the routine was edited and no longer lists the day's exercises", async () => {
+      sessionDetailBackend.sessions = [goldenPull];
+      trainBackend.routine = activeRoutine;
+      await renderDetail();
+
+      expect(await screen.findByRole("heading", { name: "Pull" })).toBeOnTheScreen();
+      expect(statCardOf("Exercises")).toHaveTextContent("Exercises5");
+      expect(screen.queryByText(/plan/i)).toBeNull();
+    });
+
+    it("should open without reading the routine at all, so it never waits on it", async () => {
+      seedGoldenPull();
+      await renderDetail();
+
+      expect(await screen.findByRole("heading", { name: "Pull" })).toBeOnTheScreen();
+      expect(trainRequestsTo("routines")).toBe(0);
+    });
+
+    it("should open when a routine read would fail", async () => {
+      seedGoldenPull();
+      trainBackend.failingTables.add("routines");
+      await renderDetail();
+
+      expect(await screen.findByRole("heading", { name: "Pull" })).toBeOnTheScreen();
+      expect(screen.queryByRole("alert")).toBeNull();
     });
   });
 

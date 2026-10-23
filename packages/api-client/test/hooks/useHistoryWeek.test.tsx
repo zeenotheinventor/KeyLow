@@ -55,8 +55,11 @@ describe("useHistoryWeek", () => {
     ]);
   });
 
-  it("should compare each session with the routine day it was planned from", async () => {
-    installHistoryFake(server, { sessions: goldenHistorySessions, routine: goldenRoutine });
+  it("should read no routine, so a summary compares nothing with the plan", async () => {
+    const fake = installHistoryFake(server, {
+      sessions: goldenHistorySessions,
+      routine: goldenRoutine,
+    });
     const { wrapper } = createWrapper();
 
     const { result } = renderHook(() => useHistoryWeek(GOLDEN_WEEK), { wrapper });
@@ -64,11 +67,8 @@ describe("useHistoryWeek", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    const [legs, pull, push] = result.current.data ?? [];
-    expect(push?.summary.planComparison).toEqual({ setsOverPlan: [], exercisesNotLogged: [] });
-    expect(pull?.summary.planComparison?.setsOverPlan.map(({ setsOver }) => setsOver)).toEqual([2]);
-    expect(pull?.summary.planComparison?.exercisesNotLogged).toEqual([]);
-    expect(legs?.summary.planComparison?.exercisesNotLogged).toHaveLength(2);
+    expect(fake.requestsTo("routines")).toEqual([]);
+    expect(result.current.data?.every(({ summary }) => !("planComparison" in summary))).toBe(true);
   });
 
   it("should keep the stored rows free of summaries, so a summary is never stale", async () => {
@@ -85,21 +85,7 @@ describe("useHistoryWeek", () => {
     expect(stored?.every((row) => !("summary" in row))).toBe(true);
   });
 
-  it("should give the sessions with no plan comparison and the day's name when the user has no active routine", async () => {
-    installHistoryFake(server, { sessions: goldenHistorySessions });
-    const { wrapper } = createWrapper();
-
-    const { result } = renderHook(() => useHistoryWeek(GOLDEN_WEEK), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.data).toBeDefined();
-    });
-    const sessions = result.current.data ?? [];
-    expect(sessions.map(({ summary }) => summary.planComparison)).toEqual([null, null, null]);
-    expect(sessions.map(({ summary }) => summary.titleSource)).toEqual(["Legs", "Pull", "Push"]);
-  });
-
-  it("should give a free session no title and no plan comparison", async () => {
+  it("should give a free session no title", async () => {
     installHistoryFake(server, {
       sessions: [historySessionRow({ local_date: GOLDEN_WEEK })],
       routine: goldenRoutine,
@@ -113,12 +99,11 @@ describe("useHistoryWeek", () => {
     });
     expect(result.current.data?.[0]?.summary).toMatchObject({
       titleSource: null,
-      planComparison: null,
       workingSets: 1,
     });
   });
 
-  it("should keep the day's name and give no comparison for a day that is not in the active routine", async () => {
+  it("should keep the day's name for a day that is not in the active routine", async () => {
     installHistoryFake(server, {
       sessions: [
         historySessionRow({
@@ -137,34 +122,7 @@ describe("useHistoryWeek", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    expect(result.current.data?.[0]?.summary).toMatchObject({
-      titleSource: "An old day",
-      planComparison: null,
-    });
-  });
-
-  it("should give no sessions before the routine has been read, so a summary never shows without its comparison", async () => {
-    installHistoryFake(server, { sessions: goldenHistorySessions, routine: goldenRoutine });
-    const { wrapper } = createWrapper();
-    const seen: unknown[] = [];
-
-    const { result } = renderHook(
-      () => {
-        const week = useHistoryWeek(GOLDEN_WEEK);
-        if (week.data !== undefined) {
-          seen.push(week.data.map(({ summary }) => summary.planComparison));
-        }
-        return week;
-      },
-      { wrapper },
-    );
-
-    await waitFor(() => {
-      expect(result.current.data).toBeDefined();
-    });
-    expect(
-      seen.every((comparisons) => Array.isArray(comparisons) && comparisons.every(Boolean)),
-    ).toBe(true);
+    expect(result.current.data?.[0]?.summary.titleSource).toBe("An old day");
   });
 
   it("should give an empty list for a week with nothing logged", async () => {
@@ -179,7 +137,7 @@ describe("useHistoryWeek", () => {
     expect(result.current.isPending).toBe(false);
   });
 
-  it("should still give the sessions, with no comparison, when the routine cannot be read", async () => {
+  it("should give the sessions whatever the state of the routine, since it never reads it", async () => {
     const fake = installHistoryFake(server, { sessions: goldenHistorySessions });
     fake.failWith("42501", "routines");
     const { wrapper } = createWrapper();
@@ -189,11 +147,7 @@ describe("useHistoryWeek", () => {
     await waitFor(() => {
       expect(result.current.data).toHaveLength(3);
     });
-    expect(result.current.data?.map(({ summary }) => summary.planComparison)).toEqual([
-      null,
-      null,
-      null,
-    ]);
+    expect(fake.requestsTo("routines")).toEqual([]);
   });
 
   it("should make no request at all when it is not enabled", async () => {

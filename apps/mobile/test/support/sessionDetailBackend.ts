@@ -92,7 +92,12 @@ const pullSets: readonly PullSet[] = [
 const MINUTE_MS = 60_000;
 const PULL_STARTED_AT = Date.parse("2026-10-13T17:00:00Z");
 
-const setRows = (sessionId: string, sets: readonly PullSet[], isReversed: boolean): Row[] =>
+const setRows = (
+  sessionId: string,
+  sets: readonly PullSet[],
+  isReversed: boolean,
+  deletedExercise?: PullExercise,
+): Row[] =>
   sets.map(([exercise, setType, loadKg, reps, rir], position) => ({
     id: idWith("5", position + 1),
     session_id: sessionId,
@@ -109,7 +114,7 @@ const setRows = (sessionId: string, sets: readonly PullSet[], isReversed: boolea
       { id: exercise.id, name: exercise.name, equipment: "barbell", mechanic: "compound" },
       LATS,
     ),
-    deleted_at: null,
+    deleted_at: exercise === deletedExercise ? "2026-10-13T18:30:00+01:00" : null,
     position,
     reps,
     load_kg: loadKg,
@@ -123,6 +128,8 @@ export function pullSession(
     sets: readonly PullSet[];
     /** Performs the sets in the opposite order to their positions, as a reordered session lists them. */
     isReversed: boolean;
+    /** Marks every set of this exercise as deleted, as a session whose set was removed still holds the row. */
+    deletedExercise: PullExercise;
   }> = {},
 ): Row {
   const id = overrides.id ?? GOLDEN_PULL_ID;
@@ -135,7 +142,12 @@ export function pullSession(
     note: null,
     deleted_at: null,
     routine_days: { name: "Pull" },
-    workout_sets: setRows(id, overrides.sets ?? pullSets, overrides.isReversed ?? false),
+    workout_sets: setRows(
+      id,
+      overrides.sets ?? pullSets,
+      overrides.isReversed ?? false,
+      overrides.deletedExercise,
+    ),
   };
 }
 
@@ -226,4 +238,20 @@ export async function sessionDetailFetch(
 export const sessionDetailClient = createClient<Database>("http://localhost:54321", "anon-key", {
   auth: { persistSession: false, autoRefreshToken: false },
   global: { fetch: sessionDetailFetch },
+});
+
+/**
+ * A session of two exercises that count and two that do not: pullups with working sets, bent over row with
+ * warm-ups only (listed, and counted by the Exercises card), and face pull with every set deleted (neither).
+ */
+export const warmupOnlyAndDeletedSession: Row = pullSession({
+  sets: [
+    set(pullups, "working", null, 10, 2),
+    set(pullups, "working", null, 8, 2),
+    set(bentOverRow, "warmup", 40, 10, null),
+    set(bentOverRow, "warmup", 50, 8, null),
+    set(facePull, "working", 20, 20, 4),
+    set(facePull, "working", 20, 18, 4),
+  ],
+  deletedExercise: facePull,
 });

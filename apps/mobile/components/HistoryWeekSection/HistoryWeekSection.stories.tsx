@@ -20,7 +20,6 @@ const entry = (
     warmupSets: 0,
     topMuscles,
     titleSource,
-    planComparison: null,
   };
   return {
     id,

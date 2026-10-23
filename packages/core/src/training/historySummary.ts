@@ -44,19 +44,6 @@ export type SessionWeek<Session extends HistorySessionWithSets = HistorySessionW
   sessions: Session[];
 };
 
-/** The routine day a session was planned from, as far as the summary reads it. */
-export type HistoryPlanDay = Readonly<{
-  name: string;
-  exercises: readonly Readonly<{ exercise_id: string; target_sets: number }>[];
-}>;
-
-export type SessionPlanComparison = {
-  /** The planned exercises logged with more working sets than the plan targets, in the plan's order. */
-  setsOverPlan: { exerciseId: string; setsOver: number }[];
-  /** The planned exercises with no working set logged, in the plan's order. */
-  exercisesNotLogged: string[];
-};
-
 export type SessionSummary = {
   /** Whole minutes from start to end, or null while the session is open. */
   durationMinutes: number | null;
@@ -64,10 +51,11 @@ export type SessionSummary = {
   warmupSets: number;
   /** Up to three muscles, those with the most effective sets first. */
   topMuscles: MuscleId[];
-  /** The routine day's name, or null for a free session. The wording "Session" is copy (`TRAIN_TODAY_CARD.sessionName`). */
+  /**
+   * The routine day's name, or null for a free session. The wording "Session" is copy (`TRAIN_TODAY_CARD.sessionName`).
+   * `summariseSession` leaves it null: the session row holds the name, and the caller sets it.
+   */
   titleSource: string | null;
-  /** Null when no planned day was given. */
-  planComparison: SessionPlanComparison | null;
 };
 
 const TOP_MUSCLE_COUNT = 3;
@@ -194,31 +182,6 @@ const topMusclesOf = (workingSets: readonly HistorySet[], params: TrainingParams
     .slice(0, TOP_MUSCLE_COUNT);
 };
 
-const planComparisonOf = (
-  workingSets: readonly HistorySet[],
-  plannedDay: HistoryPlanDay,
-): SessionPlanComparison => {
-  const logged = new Map<string, number>();
-  for (const { exercise_id } of workingSets) {
-    logged.set(exercise_id, (logged.get(exercise_id) ?? 0) + 1);
-  }
-  // A day can plan one exercise twice, so its targets add up. The map keeps the plan's order.
-  const targets = new Map<string, number>();
-  for (const { exercise_id, target_sets } of plannedDay.exercises) {
-    targets.set(exercise_id, (targets.get(exercise_id) ?? 0) + target_sets);
-  }
-  const comparison: SessionPlanComparison = { setsOverPlan: [], exercisesNotLogged: [] };
-  for (const [exerciseId, target] of targets) {
-    const count = logged.get(exerciseId) ?? 0;
-    if (count === 0) {
-      comparison.exercisesNotLogged.push(exerciseId);
-    } else if (count > target) {
-      comparison.setsOverPlan.push({ exerciseId, setsOver: count - target });
-    }
-  }
-  return comparison;
-};
-
 /**
  * What the history list shows of one session, from the session and the sets read from it. Working sets
  * are working, drop and failure sets. Warm-ups are counted apart and never in the total. The top muscles
@@ -226,9 +189,8 @@ const planComparisonOf = (
  * exercise later changes nothing), ties broken by the muscle list order, and a muscle with no effective
  * set is left out. Soft-deleted sets count for nothing.
  *
- * With `plannedDay` (the routine day the session was planned from), the summary also names its title
- * and compares the sets with the plan: an exercise logged beyond its target sets, and an exercise with
- * no working set logged. An exercise the plan does not hold is in neither list.
+ * The summary never compares the sets with a routine: a past session shows what was done, and a routine
+ * edited since would make any comparison wrong.
  *
  * `params` defaults to the current version, so a summary of an old session follows the current effort
  * numbers, as the heat of an old session does.
@@ -238,7 +200,6 @@ const planComparisonOf = (
 export const summariseSession = (
   session: Pick<HistorySession, "started_at" | "ended_at">,
   sets: readonly HistorySet[],
-  plannedDay?: HistoryPlanDay,
   params: TrainingParams = TRAINING_PARAMS_V1,
 ): SessionSummary => {
   const workingSets = workingSetsOf(sets);
@@ -247,7 +208,6 @@ export const summariseSession = (
     workingSets: workingSets.length,
     warmupSets: sets.filter((set) => isLive(set) && set.set_type === WARMUP).length,
     topMuscles: topMusclesOf(workingSets, params),
-    titleSource: plannedDay?.name ?? null,
-    planComparison: plannedDay === undefined ? null : planComparisonOf(workingSets, plannedDay),
+    titleSource: null,
   };
 };

@@ -71,8 +71,7 @@ export type UseHistoryResult = TrainingReadResult<HistoryWeek[]> & {
  * `groupSessionsByWeek`), each with its session count and working-set total. A session shows whether or
  * not it was ended and however far it strayed from the plan, so the open session is in its week; a
  * session with no live set, or deleted, never is. Each session carries its summary (name, duration,
- * sets and top muscles). The list shows no comparison with the plan, which belongs to the session
- * detail, so the summary is worked out with no planned day and the routine is not read.
+ * sets and top muscles). A summary compares nothing with the plan, and the routine is not read.
  *
  * It is an infinite read whose pages are weeks. A page is found with `findPreviousSessionWeek`, so a
  * week with no logged set is never a page, and `loadEarlierWeeks` loads the next one. At least `weeks`
@@ -96,7 +95,7 @@ export function useHistory({ weeks, enabled = true }: UseHistoryOptions): UseHis
         return undefined;
       }
       const sessions = data.pages.flatMap((page) => page.sessions);
-      return groupSessionsByWeek(toHistoryEntries(sessions, undefined), zone);
+      return groupSessionsByWeek(toHistoryEntries(sessions), zone);
     },
     [zone],
   );
