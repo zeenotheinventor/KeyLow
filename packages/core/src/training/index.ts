@@ -187,11 +187,17 @@ export type { LabelAnchor, SetsBarPositions } from "./muscleSheetContext";
 export { muscleListGroups } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow } from "./muscleList";
 
-export { BODY_ARTWORK, BODY_ARTWORK_SIDE_OF, BODY_GLOW_FILTER } from "./bodyArtwork";
+export {
+  BODY_ARTWORK,
+  BODY_ARTWORK_SIDE_OF,
+  BODY_GLOW_FILTER,
+  BODY_MAP_RENDERERS,
+} from "./bodyArtwork";
 export type {
   BackMuscleId,
   BodyArtworkFigure,
   BodyArtworkSide,
+  BodyMapRenderer,
   FrontMuscleId,
 } from "./bodyArtwork";
 

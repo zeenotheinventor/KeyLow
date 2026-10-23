@@ -6,6 +6,7 @@ import {
   BODY_ARTWORK,
   BODY_ARTWORK_SIDE_OF,
   BODY_GLOW_FILTER,
+  BODY_MAP_RENDERERS,
   MUSCLE_IDS,
 } from "../../src/training";
 
@@ -332,5 +333,11 @@ describe("the glow filter", () => {
       standardDeviation: 3.2,
       mergeLayers: ["blur", "blur", "source"],
     });
+  });
+});
+
+describe("the body map renderers", () => {
+  it("should list 2D first, then 3D, so 2D reads as the default", () => {
+    expect(BODY_MAP_RENDERERS).toEqual(["2d", "3d"]);
   });
 });
