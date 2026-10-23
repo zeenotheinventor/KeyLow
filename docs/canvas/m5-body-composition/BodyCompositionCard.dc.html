@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Body composition card</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="BodyCompositionCard" style="width: 390px; height: 220px; box-sizing: border-box; padding: var(--space-4); display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+<sc-if value="{{loading}}" hint-placeholder-val="{{ false }}">
+<div role="status" aria-label="Loading body fat" data-kilo="Skeleton bodyComposition" style="height: 104px; border-radius: var(--radius-large); background: var(--surface)"></div>
+</sc-if>
+<sc-for list="{{cards}}" as="b" hint-placeholder-count="1">
+<section data-kilo="BodyCompositionCard" aria-label="{{b.label}}" style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2)">
+<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary)">{{b.label}}</span>
+<sc-if value="{{b.settling}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge warning" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--warning-muted); color: var(--warning-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600">Settling</span></sc-if>
+<sc-if value="{{b.hasChange}}" hint-placeholder-val="{{ true }}"><span data-kilo="Badge" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--accent-muted); color: var(--accent-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600; font-feature-settings: var(--font-numeric)">{{b.change}}</span></sc-if>
+</div>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3)">
+<div style="display: flex; align-items: baseline; gap: var(--space-1); font-feature-settings: var(--font-numeric)"><span style="font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em">{{b.value}}</span><span style="font-size: var(--type-body-size); color: var(--text-secondary)">{{b.unit}}</span></div>
+<sc-if value="{{b.hasLine}}" hint-placeholder-val="{{ true }}"><svg data-kilo="Sparkline wide" role="img" aria-label="{{b.chartLabel}}" width="128" height="40" viewBox="0 0 128 40" style="flex-shrink: 0; display: block">
+<path d="{{b.linePath}}" fill="none" stroke="var(--chart-trend)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="{{b.markerPath}}" fill="var(--chart-marker)" stroke="var(--surface)" stroke-width="2"></path>
+</svg></sc-if>
+</div>
+<sc-if value="{{b.hasNote}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary); font-feature-settings: var(--font-numeric)">{{b.note}}</span></sc-if>
+</section>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["body-fat","lean-mass","settling","range-empty","loading"],"default":"body-fat"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":220}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Mock data only: the card as the Weight screen draws it, over the 90-day range.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const state = this.props.state ?? 'body-fat';
+    const lean = state === 'lean-mass';
+    const W = 128, H = 40;
+    const vals = Array.from({ length: 30 }, (_, i) => (lean ? 0.2 : 0.6) * (1 - i / 29) + Math.sin(i * 0.9) * 0.04);
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    const xs = (i) => 4 + i / 29 * (W - 8);
+    const ys = (v) => 4 + (hi - v) / (hi - lo) * (H - 8);
+    const linePath = vals.map((v, i) => `${i ? 'L' : 'M'}${xs(i).toFixed(1)} ${ys(v).toFixed(1)}`).join('');
+    const r = 3.5, ly = ys(vals[29]);
+    const markerPath = `M${(xs(29) - r).toFixed(1)} ${ly.toFixed(1)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+    const base = lean
+      ? { label: 'Lean mass', unit: 'kg', value: '63.1', change: '−0.2 kg over 90 days', chartLabel: 'Lean mass over the last 90 days, trend 63.1 kg' }
+      : { label: 'Body fat', unit: '%', value: '22.4', change: '−0.6 points over 90 days', chartLabel: 'Body fat over the last 90 days, trend 22.4 %' };
+    const byState = {
+      'body-fat': { hasChange: true, hasLine: true },
+      'lean-mass': { hasChange: true, hasLine: true },
+      settling: { settling: true, value: '22.6', hasNote: true, note: 'Settles after 7 readings. 3 of 7 so far.' },
+      'range-empty': { hasNote: true, note: 'Not enough readings in the last week to show a change.' },
+    };
+    const card = { settling: false, hasChange: false, hasLine: false, hasNote: false, note: '', linePath, markerPath, ...base, ...(byState[state] ?? {}) };
+    return { theme, loading: state === 'loading', cards: state === 'loading' ? [] : [card] };
+  }
+}
+</script>
+</body>
+</html>

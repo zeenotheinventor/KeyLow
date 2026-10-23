@@ -1,0 +1,106 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-17T12:00:00Z"
+  },
+  "title": "Ki-Lo M5 screens",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 3480,
+      "h": 3744,
+      "title": "weight: chart and weigh-ins"
+    },
+    "weigh-in-entry.dc.html": {
+      "x": 0,
+      "y": 3864,
+      "w": 3050,
+      "h": 1904,
+      "title": "weigh-in-entry: add and edit"
+    },
+    "health-access.dc.html": {
+      "x": 0,
+      "y": 5888,
+      "w": 2620,
+      "h": 3744,
+      "title": "health-access: permissions flow"
+    },
+    "trend-explainer.dc.html": {
+      "x": 0,
+      "y": 9752,
+      "w": 1330,
+      "h": 1904,
+      "title": "trend-explainer"
+    },
+    "WeightScreen.dc.html": {
+      "x": 1450,
+      "y": 9752,
+      "w": 390,
+      "h": 844,
+      "title": "WeightScreen component"
+    },
+    "WeighInSheet.dc.html": {
+      "x": 1920,
+      "y": 9752,
+      "w": 390,
+      "h": 844,
+      "title": "WeighInSheet component"
+    },
+    "HealthAccessScreen.dc.html": {
+      "x": 2390,
+      "y": 9752,
+      "w": 390,
+      "h": 844,
+      "title": "HealthAccessScreen component"
+    },
+    "TrendExplainerSheet.dc.html": {
+      "x": 2860,
+      "y": 9752,
+      "w": 390,
+      "h": 844,
+      "title": "TrendExplainerSheet component"
+    },
+    "BodyCompositionCard.dc.html": {
+      "x": 3330,
+      "y": 9752,
+      "w": 390,
+      "h": 220,
+      "title": "BodyCompositionCard component"
+    },
+    "BodyCompositionPrompt.dc.html": {
+      "x": 3330,
+      "y": 10092,
+      "w": 390,
+      "h": 220,
+      "title": "BodyCompositionPrompt component"
+    },
+    "body-composition.dc.html": {
+      "x": 1450,
+      "y": 10716,
+      "w": 2190,
+      "h": 1200,
+      "title": "body-composition: components"
+    }
+  },
+  "order": [
+    "WeightScreen.dc.html",
+    "WeighInSheet.dc.html",
+    "HealthAccessScreen.dc.html",
+    "TrendExplainerSheet.dc.html",
+    "BodyCompositionCard.dc.html",
+    "BodyCompositionPrompt.dc.html",
+    "Main.dc.html",
+    "weigh-in-entry.dc.html",
+    "health-access.dc.html",
+    "trend-explainer.dc.html",
+    "body-composition.dc.html"
+  ],
+  "notes": {},
+  "designSystems": []
+}

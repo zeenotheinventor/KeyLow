@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Connect Health</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="HealthAccessScreen" style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+
+<header style="flex-shrink: 0; display: flex; align-items: center; padding: 52px var(--space-2) 0">
+<button data-kilo="Button ghost icon" type="button" aria-label="Close" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; color: var(--text-primary)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+</header>
+
+<main style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-5); padding: var(--space-4) var(--space-6) 0">
+<span style="flex-shrink: 0; margin-top: {{scrollShift}}; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-large); background: {{iconBg}}; color: {{iconFg}}">
+<sc-if value="{{spin}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg></sc-if>
+<sc-if value="{{heart}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+<sc-if value="{{alert}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></sc-if>
+<sc-if value="{{tick}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+</span>
+
+<div style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h1 style="margin: 0; font-size: var(--type-h1-size); line-height: var(--type-h1-line); font-weight: var(--type-h1-weight); letter-spacing: var(--type-h1-tracking)">{{heading}}</h1>
+<sc-if value="{{hasCounts}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--text-secondary); font-feature-settings: var(--font-numeric)">{{counts}}</p></sc-if>
+<p role="{{bodyRole}}" style="margin: 0; color: var(--text-secondary)">{{body}}</p>
+</div>
+
+<sc-if value="{{explain}}" hint-placeholder-val="{{ true }}">
+<ul data-kilo="Card" style="margin: 0; padding: 0; list-style: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<sc-for list="{{points}}" as="p" hint-placeholder-count="3">
+<li style="display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border)">
+<span style="flex-shrink: 0; margin-top: 2px; color: var(--accent-ink)"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<span style="display: flex; flex-direction: column"><span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600">{{p.title}}</span><span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">{{p.text}}</span></span>
+</li>
+</sc-for>
+</ul>
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}"><p style="margin: calc(-1 * var(--space-2)) 0 0; padding: 0 var(--space-1); font-size: var(--type-caption-size); line-height: var(--type-caption-line); color: var(--text-muted)">{{note}}</p></sc-if>
+</sc-if>
+
+<sc-if value="{{partial}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="BodyCompositionPrompt compact" style="display: flex; flex-direction: column; gap: 2px; padding: var(--space-3) var(--space-4) var(--space-1); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">{{partialText}}</span>
+<a href="health-access.dc.html" data-kilo="Button ghost small" style="align-self: flex-start; display: flex; align-items: center; min-height: 44px; margin: 0 calc(-1 * var(--space-1)); padding: 0 var(--space-1); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">{{partialAction}}</a>
+</div>
+</sc-if>
+
+<sc-if value="{{steps}}" hint-placeholder-val="{{ false }}">
+<ol style="margin: 0; padding: var(--space-3) var(--space-4) var(--space-3) var(--space-8); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); font-size: var(--type-label-small-size); line-height: 22px; color: var(--text-secondary)">
+<sc-for list="{{stepList}}" as="s" hint-placeholder-count="3"><li>{{s}}</li></sc-for>
+</ol>
+</sc-if>
+</main>
+
+<footer style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4) var(--space-6) 42px">
+<sc-if value="{{explain}}" hint-placeholder-val="{{ true }}"><a href="#privacy" style="align-self: center; padding: var(--space-2); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">Read the privacy policy</a></sc-if>
+<sc-if value="{{hasPrimary}}" hint-placeholder-val="{{ true }}">
+<button data-kilo="Button primary" type="button" disabled="{{busy}}" style="height: 52px; background: var(--accent); border: 0; border-radius: var(--radius-medium); font-family: var(--font-sans); font-size: var(--type-body-strong-size); font-weight: 600; color: var(--accent-foreground); opacity: {{primaryOpacity}}">{{primary}}</button>
+</sc-if>
+<sc-if value="{{hasSecondary}}" hint-placeholder-val="{{ true }}">
+<button data-kilo="Button ghost" type="button" style="height: 48px; background: transparent; border: 0; font-family: var(--font-sans); font-size: var(--type-body-strong-size); font-weight: 600; color: var(--text-secondary)">{{secondary}}</button>
+</sc-if>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["explain","explain-end","install","connecting","denied","import-error","connected","explain-body-composition","denied-body-composition","connected-partial"],"default":"explain"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    // 'explain-end' is the explain screen drawn scrolled to the end, so the points and the optional line show.
+    const scrolled = this.props.state === 'explain-end';
+    const state = scrolled ? 'explain' : (this.props.state ?? 'explain');
+    const hn = 'Health Connect';
+    const muted = { bg: 'var(--surface-raised)', fg: 'var(--text-secondary)' };
+    const copy = {
+      explain: {
+        heading: `Bring in weigh-ins from ${hn}`,
+        body: `If your smart scale saves to ${hn}, Ki-Lo can read those readings so you don't have to type them.`,
+        primary: 'Continue', secondary: 'Not now', icon: 'heart', tone: { bg: 'var(--accent-muted)', fg: 'var(--accent-ink)' },
+      },
+      install: {
+        heading: 'Get Health Connect first',
+        body: 'On Android 13 and earlier, Health Connect is a separate app from Google Play. Install it, then come back here.',
+        primary: 'Get Health Connect', secondary: 'Not now', icon: 'alert', tone: muted,
+        steps: ['Tap Get Health Connect and install it.', 'Return to Ki-Lo.', 'Tap Continue to choose what Ki-Lo can read.'],
+      },
+      connecting: {
+        heading: `Importing from ${hn}`,
+        body: 'Reading your weight and body composition history. This only happens while Ki-Lo is open.',
+        primary: 'Importing', icon: 'spin', tone: { bg: 'var(--accent-muted)', fg: 'var(--accent-ink)' }, busy: true,
+      },
+      denied: {
+        heading: "Ki-Lo can't read your weight",
+        body: 'Permission to read weight was not given. You can change that at any time.',
+        primary: 'Open Health Connect', secondary: 'Not now', icon: 'alert', tone: muted,
+        steps: ['Open Health Connect.', 'Tap App permissions, then Ki-Lo.', 'Turn on Weight.'],
+      },
+      'import-error': {
+        heading: "Couldn't import your weigh-ins",
+        body: `Something went wrong reading from ${hn}. Your weigh-ins in Ki-Lo are safe. Pull down on the Weight screen to try again later.`,
+        primary: 'Try again', secondary: 'Close', icon: 'alert', tone: { bg: 'var(--danger-muted)', fg: 'var(--danger)' }, alertRole: true,
+      },
+      connected: {
+        heading: '64 weigh-ins imported',
+        body: `New readings come in each time you open Ki-Lo, or when you pull down on the Weight screen. Ki-Lo never writes to ${hn}.`,
+        primary: 'See your trend', icon: 'tick', tone: { bg: 'var(--success-muted)', fg: 'var(--success-ink)' },
+        counts: 'Also 12 body fat and 12 lean mass readings.',
+      },
+      'explain-body-composition': {
+        heading: 'Add body fat and lean mass',
+        body: `If your smart scale records them, Ki-Lo can read them from ${hn} and show a trend for each, beside your weight.`,
+        primary: 'Continue', secondary: 'Not now', icon: 'heart', tone: { bg: 'var(--accent-muted)', fg: 'var(--accent-ink)' },
+        points: [
+          { title: 'What Ki-Lo reads', text: 'Body fat and lean mass, with the time of each, to show their trends. Nothing else.' },
+          { title: 'What it never does', text: `Write to ${hn}, share your readings, or use them for advertising.` },
+        ],
+      },
+      'denied-body-composition': {
+        heading: "Ki-Lo can't read body fat or lean mass",
+        body: 'Permission was not given. Your weight still comes in as before, and you can turn these on at any time.',
+        primary: 'Open Health Connect', secondary: 'Not now', icon: 'alert', tone: muted,
+        steps: ['Open Health Connect.', 'Tap App permissions, then Ki-Lo.', 'Turn on Body fat and Lean body mass.'],
+      },
+      'connected-partial': {
+        heading: '64 weigh-ins imported',
+        body: `New readings come in each time you open Ki-Lo, or when you pull down on the Weight screen. Ki-Lo never writes to ${hn}.`,
+        primary: 'See your trend', icon: 'tick', tone: { bg: 'var(--success-muted)', fg: 'var(--success-ink)' },
+        partialText: "Body fat and lean mass weren't allowed, so Ki-Lo only reads your weight.",
+        partialAction: 'Add body fat and lean mass',
+      },
+    }[state];
+    return {
+      theme,
+      heading: copy.heading, body: copy.body,
+      bodyRole: copy.alertRole ? 'alert' : 'none',
+      primary: copy.primary, secondary: copy.secondary,
+      hasPrimary: !!copy.primary, hasSecondary: !!copy.secondary,
+      busy: !!copy.busy, primaryOpacity: copy.busy ? 0.6 : 1,
+      iconBg: copy.tone.bg, iconFg: copy.tone.fg,
+      spin: copy.icon === 'spin', heart: copy.icon === 'heart', alert: copy.icon === 'alert', tick: copy.icon === 'tick',
+      explain: state === 'explain' || state === 'explain-body-composition',
+      scrollShift: scrolled ? '-176px' : '0px',
+      hasCounts: !!copy.counts, counts: copy.counts ?? '',
+      hasNote: state === 'explain', note: 'Body fat and lean mass are optional. You can leave them off in the Health Connect sheet.',
+      partial: !!copy.partialText, partialText: copy.partialText ?? '', partialAction: copy.partialAction ?? '',
+      steps: !!copy.steps, stepList: copy.steps ?? [],
+      points: copy.points ?? [
+        { title: 'What Ki-Lo reads', text: 'Your weight, and body fat and lean mass if your scale records them, with the time of each. Nothing else.' },
+        { title: 'Why', text: 'To draw your trends and, later, to set your calorie targets.' },
+        { title: 'What it never does', text: `Write to ${hn}, share your readings, or use them for advertising.` },
+        { title: 'When', text: 'Only while Ki-Lo is open, or when you pull down to refresh.' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

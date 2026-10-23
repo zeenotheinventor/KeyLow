@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Body composition prompt</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="BodyCompositionPrompt" style="width: 390px; height: 220px; box-sizing: border-box; padding: var(--space-4); display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+<sc-for list="{{prompts}}" as="p" hint-placeholder-count="1">
+<sc-if value="{{p.full}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="BodyCompositionPrompt" role="{{p.role}}" style="display: flex; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: {{p.iconBg}}; color: {{p.iconFg}}">
+<sc-if value="{{p.heart}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+<sc-if value="{{p.scale}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"></circle><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z"></path></svg></sc-if>
+<sc-if value="{{p.alert}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></sc-if>
+</span>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600">{{p.title}}</span>
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">{{p.text}}</span>
+<sc-if value="{{p.hasAction}}" hint-placeholder-val="{{ true }}"><a href="{{p.href}}" data-kilo="Button ghost small" style="align-self: flex-start; display: flex; align-items: center; min-height: 44px; margin: 0 calc(-1 * var(--space-1)) calc(-1 * var(--space-3)); padding: 0 var(--space-1); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">{{p.action}}</a></sc-if>
+<sc-if value="{{p.hasRetry}}" hint-placeholder-val="{{ false }}"><button data-kilo="Button ghost small" type="button" style="align-self: flex-start; min-height: 44px; margin: 0 calc(-1 * var(--space-1)) calc(-1 * var(--space-3)); padding: 0 var(--space-1); background: transparent; border: 0; font-family: var(--font-sans); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">Try again</button></sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{p.compact}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="BodyCompositionPrompt compact" style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">{{p.text}}</span>
+<a href="{{p.href}}" data-kilo="Button ghost small" style="flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding: 0 var(--space-1); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">{{p.action}}</a>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["not-allowed","no-readings-yet","partial-lean-mass","partial-body-fat","error"],"default":"not-allowed"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":220}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const state = this.props.state ?? 'not-allowed';
+    const hn = 'Health Connect';
+    const hcHref = 'health-access.dc.html';
+    const prompts = {
+      'not-allowed': { full: true, heart: true, iconBg: 'var(--accent-muted)', iconFg: 'var(--accent-ink)',
+        title: 'See body fat and lean mass here',
+        text: `If your smart scale records them, Ki-Lo can read them from ${hn} and show a trend for each.`,
+        hasAction: true, action: 'Add body fat and lean mass', href: hcHref },
+      'no-readings-yet': { full: true, scale: true, iconBg: 'var(--surface-raised)', iconFg: 'var(--text-secondary)',
+        title: 'No body fat or lean mass readings yet',
+        text: `Weigh in on a smart scale that saves body fat and lean mass to ${hn}. New readings show here the next time you open Ki-Lo.` },
+      'partial-lean-mass': { compact: true, text: "Ki-Lo can't read lean mass yet.", action: 'Add lean mass', href: hcHref },
+      'partial-body-fat': { compact: true, text: "Ki-Lo can't read body fat yet.", action: 'Add body fat', href: hcHref },
+      error: { full: true, alert: true, role: 'alert', iconBg: 'var(--danger-muted)', iconFg: 'var(--danger)',
+        title: "Couldn't load body fat and lean mass",
+        text: 'Check your connection and try again.',
+        hasRetry: true },
+    };
+    const p = { full: false, compact: false, heart: false, scale: false, alert: false, hasAction: false, hasRetry: false, role: 'none', ...prompts[state] };
+    return { theme, prompts: [p] };
+  }
+}
+</script>
+</body>
+</html>

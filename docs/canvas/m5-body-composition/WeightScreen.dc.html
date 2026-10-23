@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Weight</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="WeightScreen" style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); font-size: var(--type-body-size); line-height: var(--type-body-line); background: var(--background); color: var(--text-primary)">
+
+<header style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-1); padding: 52px var(--space-2) var(--space-2)">
+<button data-kilo="Button ghost icon" type="button" aria-label="Back to More" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; color: var(--text-primary)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+<h1 style="flex: 1; margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight); letter-spacing: var(--type-h2-tracking)">Weight</h1>
+<a href="trend-explainer.dc.html" data-kilo="Button ghost icon" aria-label="How the trend works" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary)"><svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></a>
+<a href="weigh-in-entry.dc.html" data-kilo="Button primary icon" aria-label="Add weigh-in" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; margin-right: var(--space-2)"><span style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-foreground)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span></a>
+</header>
+
+<sc-if value="{{importing}}" hint-placeholder-val="{{ false }}">
+<div role="status" style="flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2) 0 var(--space-3); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 500; color: var(--text-secondary)">
+<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-ink)"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+Importing from {{healthName}}
+</div>
+</sc-if>
+
+<main style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-1) var(--space-4) var(--space-4)">
+
+<sc-if value="{{loading}}" hint-placeholder-val="{{ false }}">
+<div role="status" aria-label="Loading your weigh-ins" style="display: flex; flex-direction: column; gap: var(--space-3)">
+<div style="height: 112px; border-radius: var(--radius-large); background: var(--surface)"></div>
+<div style="height: 44px; border-radius: var(--radius-medium); background: var(--surface)"></div>
+<div style="height: 220px; border-radius: var(--radius-large); background: var(--surface)"></div>
+<div style="height: 18px; width: 120px; border-radius: var(--radius-small); background: var(--surface)"></div>
+<div style="height: 168px; border-radius: var(--radius-large); background: var(--surface)"></div>
+</div>
+</sc-if>
+
+<sc-if value="{{error}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="EmptyState" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-6) var(--space-16); text-align: center">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--danger-muted); color: var(--danger)"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></span>
+<h2 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight)">Couldn't load your weigh-ins</h2>
+<p style="margin: 0; color: var(--text-secondary)">Check your connection and try again. Nothing you logged has been lost.</p>
+<button data-kilo="Button secondary" type="button" style="margin-top: var(--space-3); height: var(--control-height-md); padding: 0 var(--space-6); background: var(--surface-raised); border: 1px solid var(--border-strong); border-radius: var(--radius-medium); font-family: var(--font-sans); font-size: var(--type-body-strong-size); font-weight: 600; color: var(--text-primary)">Try again</button>
+</div>
+</sc-if>
+
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="EmptyState" style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-6) var(--space-12); text-align: center">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--surface-raised); color: var(--text-muted)"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"></circle><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z"></path></svg></span>
+<h2 style="margin: 0; font-size: var(--type-h2-size); line-height: var(--type-h2-line); font-weight: var(--type-h2-weight)">No weigh-ins yet</h2>
+<p style="margin: 0; color: var(--text-secondary)">Add one now, or bring in readings from your smart scale through {{healthName}}. Your trend starts after the first weigh-in.</p>
+<div style="width: 100%; display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-4)">
+<a href="weigh-in-entry.dc.html" data-kilo="Button primary" style="height: var(--control-height-md); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--accent); color: var(--accent-foreground); text-decoration: none; font-weight: 600">Add weigh-in</a>
+<a href="health-access.dc.html" data-kilo="Button secondary" style="height: var(--control-height-md); display: flex; align-items: center; justify-content: center; gap: var(--space-2); border-radius: var(--radius-medium); background: var(--surface-raised); border: 1px solid var(--border-strong); color: var(--text-primary); text-decoration: none; font-weight: 600"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg>Connect {{healthName}}</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasData}}" hint-placeholder-val="{{ true }}">
+<section data-kilo="Card" aria-label="Trend weight" style="flex-shrink: 0; margin-top: {{scrollShift}}; display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary)">Trend weight</span>
+<sc-if value="{{settling}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge warning" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--warning-muted); color: var(--warning-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600">Settling</span></sc-if>
+<sc-if value="{{settled}}" hint-placeholder-val="{{ true }}"><span data-kilo="Badge" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--accent-muted); color: var(--accent-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600; font-feature-settings: var(--font-numeric)">{{rateLabel}}</span></sc-if>
+</div>
+<div style="display: flex; align-items: baseline; gap: var(--space-1); font-feature-settings: var(--font-numeric)"><span style="font-size: 40px; line-height: 46px; font-weight: 600; letter-spacing: -0.02em">{{trendNow}}</span><span style="font-size: var(--type-body-size); color: var(--text-secondary)">kg</span></div>
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary); font-feature-settings: var(--font-numeric)">{{subline}}</span>
+</section>
+
+<div data-kilo="SegmentedControl" role="radiogroup" aria-label="Chart range" style="flex-shrink: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); height: var(--control-height-md); box-sizing: border-box; padding: 3px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<sc-for list="{{ranges}}" as="r" hint-placeholder-count="4">
+<button type="button" role="radio" aria-checked="{{r.on}}" onClick="{{r.pick}}" style="border: 0; border-radius: calc(var(--radius-medium) - 3px); background: {{r.bg}}; color: {{r.fg}}; font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 600">{{r.label}}</button>
+</sc-for>
+</div>
+
+<figure aria-label="{{chartLabel}}" style="flex-shrink: 0; margin: 0; position: relative; height: 196px; padding: var(--space-3) 0 0; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<svg aria-hidden="true" width="356" height="160" viewBox="0 0 356 160" style="display: block">
+<path d="{{gridPath}}" fill="none" stroke="var(--chart-grid)" stroke-width="1"></path>
+<path d="{{pointsPath}}" fill="var(--chart-point)" stroke="none"></path>
+<path d="{{fillPath}}" fill="none" stroke="var(--chart-point)" stroke-width="1.25" stroke-dasharray="2 2"></path>
+<path d="{{rejectedPath}}" fill="none" stroke="var(--warning)" stroke-width="1.75"></path>
+<path d="{{trendPath}}" fill="none" stroke="var(--chart-trend)" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="{{trendDash}}"></path>
+<path d="{{markerPath}}" fill="var(--chart-marker)" stroke="var(--surface)" stroke-width="2"></path>
+</svg>
+<sc-for list="{{yTicks}}" as="t" hint-placeholder-count="3">
+<span style="position: absolute; right: var(--space-2); top: {{t.top}}; font-size: 11px; line-height: 14px; color: var(--text-muted); font-feature-settings: var(--font-numeric)">{{t.label}}</span>
+</sc-for>
+<div style="display: flex; justify-content: space-between; padding: var(--space-1) 44px 0 var(--space-3); font-size: 11px; line-height: 14px; color: var(--text-muted)">
+<sc-for list="{{xTicks}}" as="x" hint-placeholder-count="3"><span>{{x}}</span></sc-for>
+</div>
+</figure>
+
+<div style="flex-shrink: 0; display: flex; gap: var(--space-4); padding: 0 var(--space-1); font-size: var(--type-caption-size); line-height: var(--type-caption-line); color: var(--text-secondary)">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 2px; border-radius: 1px; background: var(--chart-trend)"></span>Trend</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 3px; background: var(--chart-point)"></span>Weigh-in</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 6px; height: 6px; border-radius: 3px; border: 1.5px solid var(--warning)"></span>Left out</span>
+</div>
+
+<sc-if value="{{body}}" hint-placeholder-val="{{ false }}">
+<section data-kilo="BodyCompositionSection" aria-labelledby="bc-head" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 id="bc-head" style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: 600">Body composition</h2>
+
+<sc-if value="{{bodyLoading}}" hint-placeholder-val="{{ false }}">
+<div role="status" aria-label="Loading body fat and lean mass" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<div data-kilo="Skeleton bodyComposition" style="height: 104px; border-radius: var(--radius-large); background: var(--surface)"></div>
+<div data-kilo="Skeleton bodyComposition" style="height: 104px; border-radius: var(--radius-large); background: var(--surface)"></div>
+</div>
+</sc-if>
+
+<sc-for list="{{bodyCards}}" as="b" hint-placeholder-count="2">
+<section data-kilo="BodyCompositionCard" aria-label="{{b.label}}" style="display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large); box-shadow: var(--elevation-card)">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-2)">
+<span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: var(--type-caption-weight); letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary)">{{b.label}}</span>
+<sc-if value="{{b.settling}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge warning" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--warning-muted); color: var(--warning-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600">Settling</span></sc-if>
+<sc-if value="{{b.hasChange}}" hint-placeholder-val="{{ true }}"><span data-kilo="Badge" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--accent-muted); color: var(--accent-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600; font-feature-settings: var(--font-numeric)">{{b.change}}</span></sc-if>
+</div>
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-3)">
+<div style="display: flex; align-items: baseline; gap: var(--space-1); font-feature-settings: var(--font-numeric)"><span style="font-size: 32px; line-height: 38px; font-weight: 600; letter-spacing: -0.02em">{{b.value}}</span><span style="font-size: var(--type-body-size); color: var(--text-secondary)">{{b.unit}}</span></div>
+<sc-if value="{{b.hasLine}}" hint-placeholder-val="{{ true }}"><svg data-kilo="Sparkline wide" role="img" aria-label="{{b.chartLabel}}" width="128" height="40" viewBox="0 0 128 40" style="flex-shrink: 0; display: block">
+<path d="{{b.linePath}}" fill="none" stroke="var(--chart-trend)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="{{b.markerPath}}" fill="var(--chart-marker)" stroke="var(--surface)" stroke-width="2"></path>
+</svg></sc-if>
+</div>
+<sc-if value="{{b.hasNote}}" hint-placeholder-val="{{ false }}"><span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary); font-feature-settings: var(--font-numeric)">{{b.note}}</span></sc-if>
+</section>
+</sc-for>
+
+<sc-for list="{{bodyPrompts}}" as="p" hint-placeholder-count="1">
+<sc-if value="{{p.full}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="BodyCompositionPrompt" role="{{p.role}}" style="display: flex; gap: var(--space-3); padding: var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span aria-hidden="true" style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: {{p.iconBg}}; color: {{p.iconFg}}">
+<sc-if value="{{p.heart}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+<sc-if value="{{p.scale}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"></circle><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z"></path></svg></sc-if>
+<sc-if value="{{p.alert}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 8v4"></path><path d="M12 16h.01"></path></svg></sc-if>
+</span>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600">{{p.title}}</span>
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">{{p.text}}</span>
+<sc-if value="{{p.hasAction}}" hint-placeholder-val="{{ true }}"><a href="{{p.href}}" data-kilo="Button ghost small" style="align-self: flex-start; display: flex; align-items: center; min-height: 44px; margin: 0 calc(-1 * var(--space-1)) calc(-1 * var(--space-3)); padding: 0 var(--space-1); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">{{p.action}}</a></sc-if>
+<sc-if value="{{p.hasRetry}}" hint-placeholder-val="{{ false }}"><button data-kilo="Button ghost small" type="button" style="align-self: flex-start; min-height: 44px; margin: 0 calc(-1 * var(--space-1)) calc(-1 * var(--space-3)); padding: 0 var(--space-1); background: transparent; border: 0; font-family: var(--font-sans); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">Try again</button></sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{p.compact}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="BodyCompositionPrompt compact" style="display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); color: var(--text-secondary)">{{p.text}}</span>
+<a href="{{p.href}}" data-kilo="Button ghost small" style="flex-shrink: 0; display: flex; align-items: center; min-height: 44px; padding: 0 var(--space-1); font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600; color: var(--accent-ink)">{{p.action}}</a>
+</div>
+</sc-if>
+</sc-for>
+
+<sc-if value="{{bodyCaption}}" hint-placeholder-val="{{ false }}"><p style="margin: 0; padding: 0 var(--space-1); font-size: var(--type-caption-size); line-height: var(--type-caption-line); color: var(--text-muted)">Lean mass includes bone and water as well as muscle.</p></sc-if>
+</section>
+</sc-if>
+
+<section aria-labelledby="wi-head" style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-2)">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 var(--space-1)">
+<h2 id="wi-head" style="margin: 0; font-size: var(--type-body-strong-size); line-height: var(--type-body-strong-line); font-weight: 600">Weigh-ins</h2>
+<sc-if value="{{notConnected}}" hint-placeholder-val="{{ false }}"><a href="health-access.dc.html" style="display: flex; align-items: center; min-height: 44px; padding: 0 var(--space-1); margin: -12px calc(-1 * var(--space-1)); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600; color: var(--accent-ink)">Connect Health Connect</a></sc-if>
+<sc-if value="{{connected}}" hint-placeholder-val="{{ true }}"><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); color: var(--text-muted)">{{healthStatus}}</span></sc-if>
+</div>
+<div data-kilo="Card" style="overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-large)">
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="4">
+<a href="weigh-in-entry.dc.html" data-kilo="ListRow" style="min-height: 52px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--border); text-decoration: none; color: var(--text-primary)">
+<span aria-label="{{row.sourceLabel}}" role="img" style="width: 32px; height: 32px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)">
+<sc-if value="{{row.imported}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"></path></svg></sc-if>
+<sc-if value="{{row.manual}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path></svg></sc-if>
+</span>
+<span style="flex: 1; display: flex; flex-direction: column"><span style="font-size: var(--type-label-small-size); line-height: var(--type-label-small-line); font-weight: 600">{{row.day}}</span><span style="font-size: var(--type-caption-size); line-height: var(--type-caption-line); color: var(--text-muted)">{{row.meta}}</span></span>
+<sc-if value="{{row.rejected}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge warning" style="padding: 2px var(--space-2); border-radius: var(--radius-pill); background: var(--warning-muted); color: var(--warning-ink); font-size: var(--type-caption-size); line-height: var(--type-caption-line); font-weight: 600">Left out of trend</span></sc-if>
+<span style="font-size: var(--type-body-strong-size); font-weight: 600; font-feature-settings: var(--font-numeric); color: {{row.valueColor}}">{{row.value}}</span>
+</a>
+</sc-for>
+</div>
+</section>
+</sc-if>
+</main>
+
+<nav data-kilo="TabBar" aria-label="Main" style="flex-shrink: 0; height: 83px; box-sizing: border-box; padding-bottom: 34px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border); font-size: 10px; line-height: 12px; color: var(--text-muted)">
+<span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</span>
+<span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Diary</span>
+<span style="display: flex; align-items: center; justify-content: center"><span style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); background: var(--accent); color: var(--accent-foreground)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span></span>
+<span style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"></path><path d="M6 17h12"></path></svg>Recipes</span>
+<span aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--accent-ink); font-weight: 600"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>More</span>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"state":{"editor":"enum","options":["chart","settling","importing","not-connected","empty","loading","error","body-composition-chart","body-composition-settling","body-composition-no-readings-yet","body-composition-not-allowed","body-composition-partial","body-composition-loading","body-composition-error","body-composition-one-range-empty"],"default":"chart"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { range: null };
+  }
+  renderVals() {
+    // Mock data only: a 90-day series with gaps, an interpolated day and one rejected spike, run through
+    // the brief's bias-corrected EWMA (alpha 0.10) so the drawn trend behaves like computeTrend will.
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const state = this.props.state ?? 'chart';
+    const healthName = 'Health Connect';
+    const settling = state === 'settling';
+    const notConnected = state === 'not-connected';
+    // Body composition states: weight is connected and settled, as in 'chart'. Drawn scrolled by 160 pt
+    // so the section shows under the range control, chart and legend it follows.
+    const body = state.startsWith('body-composition-');
+    const bodyState = body ? state.slice('body-composition-'.length) : '';
+    const hasData = state === 'chart' || state === 'settling' || state === 'importing' || notConnected || body;
+    const range = this.state.range ?? (bodyState === 'one-range-empty' ? 7 : 90);
+
+    const today = new Date(2026, 9, 17);
+    const DAYS = 365;
+    const series = [];
+    for (let i = 0; i < DAYS; i++) {
+      const daysAgo = DAYS - 1 - i;
+      let w = null;
+      if (daysAgo < 92) {
+        const noise = Math.sin(i * 12.9898) * 0.45 + Math.sin(i * 3.1) * 0.2;
+        w = 84.6 - (91 - daysAgo) * 0.033 + noise;
+        if (daysAgo % 6 === 4) w = null;
+      }
+      series.push({ daysAgo, w, rejected: false, filled: false, imported: !notConnected && daysAgo % 5 !== 3 });
+    }
+    series[DAYS - 1 - 3].w = 88.9;
+    series[DAYS - 1 - 3].rejected = true;
+    series[DAYS - 1 - 3].imported = false;
+    if (settling) {
+      for (const d of series) { if (d.daysAgo > 5) d.w = null; }
+      series[DAYS - 1 - 3].w = null;
+      series[DAYS - 1 - 2].w = null;
+    }
+
+    let num = 0, den = 0, last = null, nObs = 0, firstIdx = -1;
+    for (const d of series) {
+      let x = d.w;
+      if (x === null && last !== null) { x = last; d.filled = true; }
+      if (d.rejected) x = last;
+      if (x === null) { d.trend = null; continue; }
+      if (firstIdx < 0) firstIdx = d.daysAgo;
+      if (d.w !== null && !d.rejected) nObs++;
+      if (d.w !== null && !d.rejected) last = d.w;
+      num = 0.9 * num + 0.1 * x;
+      den = 0.9 * den + 0.1;
+      d.trend = num / den;
+    }
+
+    const shown = series.filter((d) => d.daysAgo < range);
+    const vals = [];
+    for (const d of shown) { if (d.w !== null) vals.push(d.w); if (d.trend != null) vals.push(d.trend); }
+    const lo = Math.floor(Math.min(...vals) - 0.5);
+    const hi = Math.ceil(Math.max(...vals) + 0.5);
+    const W = 312, H = 140, top = 8;
+    const xOf = (daysAgo) => 12 + (range - 1 - daysAgo) / (range - 1) * (W - 12);
+    const yOf = (v) => top + (hi - v) / (hi - lo) * H;
+    const dot = (x, y, r) => `M${(x - r).toFixed(1)} ${y.toFixed(1)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0`;
+    const pr = range > 120 ? 1.6 : 2.6;
+
+    let pointsPath = '', rejectedPath = '', fillPath = '', trendPath = '';
+    for (const d of shown) {
+      const x = xOf(d.daysAgo);
+      if (d.w !== null && !d.rejected) pointsPath += dot(x, yOf(d.w), pr);
+      if (d.rejected) rejectedPath += dot(x, yOf(d.w), 3.5);
+      if (d.filled && d.trend != null && d.daysAgo < 60 && range <= 90) fillPath += dot(x, yOf(d.trend), 2.2);
+      if (d.trend != null) trendPath += `${trendPath ? 'L' : 'M'}${x.toFixed(1)} ${yOf(d.trend).toFixed(1)}`;
+    }
+    const lastD = series[DAYS - 1];
+    const markerPath = lastD.trend != null ? dot(xOf(0), yOf(lastD.trend), 4.5) : '';
+
+    const ticks = [];
+    const step = hi - lo > 6 ? 2 : 1;
+    let gridPath = '';
+    for (let v = lo; v <= hi; v += step) {
+      const y = yOf(v);
+      gridPath += `M0 ${y.toFixed(1)}H${W + 4}`;
+      ticks.push({ label: String(v), top: `${(y + 12 - 7).toFixed(0)}px` });
+    }
+    const fmt = (dt) => dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    const ago = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d; };
+    const xTicks = [fmt(ago(range - 1)), fmt(ago(Math.round((range - 1) / 2))), 'Today'];
+
+    const t7 = series[DAYS - 1 - 7].trend;
+    const rate = lastD.trend - t7;
+    const sign = rate < 0 ? '−' : '+';
+    const rateLabel = `${sign}${Math.abs(rate).toFixed(1)} kg a week`;
+
+    const lastObs = [...series].reverse().find((d) => d.w !== null && !d.rejected);
+    const subline = settling
+      ? `Settles after 7 weigh-ins. ${nObs} of 7 so far.`
+      : `Last weigh-in ${lastObs.w.toFixed(1)} kg today. Average ${rate < 0 ? 'loss' : 'gain'} over the last 7 days.`;
+
+    const rows = [];
+    for (const d of [...series].reverse()) {
+      if (d.w === null) continue;
+      const dt = ago(d.daysAgo);
+      const day = d.daysAgo === 0 ? 'Today' : d.daysAgo === 1 ? 'Yesterday' : dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+      const time = `0${7 + (d.daysAgo % 2)}:${String(10 + (d.daysAgo * 7) % 50).padStart(2, '0')}`;
+      rows.push({
+        day,
+        meta: `${time} · ${d.imported ? healthName : 'Added by you'}`,
+        value: `${d.w.toFixed(1)} kg`,
+        imported: d.imported, manual: !d.imported, rejected: d.rejected,
+        sourceLabel: d.imported ? `From ${healthName}` : 'Added by you',
+        valueColor: d.rejected ? 'var(--text-muted)' : 'var(--text-primary)',
+      });
+      if (rows.length === 4) break;
+    }
+
+    // Body fat and lean mass: readings come with the imported weigh-ins (same smart scale), smoothed
+    // per reading with the same bias-corrected EWMA. Mock data only.
+    const rangeWords = (n) => (n === 7 ? '1 week' : n === 365 ? '1 year' : `${n} days`);
+    const lastWords = (n) => (n === 7 ? 'the last week' : n === 365 ? 'the last year' : `the last ${n} days`);
+    const kinds = {
+      fat: { label: 'Body fat', unit: '%', unitWord: 'points', start: 23.5, target: 22.4, noise: 0.35, phase: 1.7 },
+      lean: { label: 'Lean mass', unit: 'kg', unitWord: 'kg', start: 63.15, target: 63.1, noise: 0.15, phase: 4.1 },
+    };
+    const readingDays = series.filter((d) => d.daysAgo < 92 && d.w !== null && !d.rejected && d.imported).map((d) => d.daysAgo);
+    const smooth = (pts) => {
+      let n = 0, dd = 0;
+      return pts.map((p) => { n = 0.9 * n + 0.1 * p.v; dd = 0.9 * dd + 0.1; return { daysAgo: p.daysAgo, t: n / dd }; });
+    };
+    const bodyCard = (key) => {
+      const k = kinds[key];
+      const raw = readingDays.map((daysAgo) => ({
+        daysAgo,
+        v: k.start + (k.target - k.start) * ((91 - daysAgo) / 91) + Math.sin(daysAgo * 7.3 + k.phase) * k.noise,
+      }));
+      const full = smooth(raw);
+      const offset = k.target - full[full.length - 1].t;
+      let pts = raw.map((p) => ({ daysAgo: p.daysAgo, v: p.v + offset }));
+      if (bodyState === 'settling') pts = pts.slice(-3);
+      if (bodyState === 'one-range-empty') pts = pts.filter((p) => p.daysAgo >= 7 || p.daysAgo === 5);
+      const trend = smooth(pts);
+      const now = trend[trend.length - 1].t;
+      const isSettling = pts.length < 7;
+      const inRange = trend.filter((p) => p.daysAgo < range);
+      const W = 128, H = 40;
+      const tv = inRange.map((p) => p.t);
+      const mid = (Math.min(...tv) + Math.max(...tv)) / 2;
+      const half = Math.max((Math.max(...tv) - Math.min(...tv)) / 2, 0.3);
+      const xs = (daysAgo) => 4 + (range - 1 - daysAgo) / (range - 1) * (W - 8);
+      const ys = (v) => 4 + (mid + half - v) / (2 * half) * (H - 8);
+      let linePath = '';
+      if (inRange.length > 1) for (const p of inRange) linePath += `${linePath ? 'L' : 'M'}${xs(p.daysAgo).toFixed(1)} ${ys(p.t).toFixed(1)}`;
+      const lastP = inRange[inRange.length - 1];
+      const r = 3.5;
+      const markerPath = lastP ? `M${(xs(lastP.daysAgo) - r).toFixed(1)} ${ys(lastP.t).toFixed(1)}a${r} ${r} 0 1 0 ${2 * r} 0a${r} ${r} 0 1 0 ${-2 * r} 0` : '';
+      const enough = inRange.length >= 2;
+      const delta = enough ? Math.round((now - inRange[0].t) * 10) / 10 : 0;
+      const signed = delta === 0 ? '0.0' : `${delta < 0 ? '−' : '+'}${Math.abs(delta).toFixed(1)}`;
+      const note = isSettling
+        ? `Settles after 7 readings. ${pts.length} of 7 so far.`
+        : !enough ? `Not enough readings in ${lastWords(range)} to show a change.` : '';
+      return {
+        label: k.label, unit: k.unit, value: now.toFixed(1),
+        settling: isSettling, hasChange: !isSettling && enough,
+        change: `${signed} ${k.unitWord} over ${rangeWords(range)}`,
+        hasNote: !!note, note,
+        hasLine: !isSettling && enough, linePath, markerPath,
+        chartLabel: `${k.label} over ${lastWords(range)}, trend ${now.toFixed(1)} ${k.unit}`,
+      };
+    };
+    const hcHref = 'health-access.dc.html';
+    const prompts = {
+      'no-readings-yet': [{ full: true, scale: true, iconBg: 'var(--surface-raised)', iconFg: 'var(--text-secondary)',
+        title: 'No body fat or lean mass readings yet',
+        text: `Weigh in on a smart scale that saves body fat and lean mass to ${healthName}. New readings show here the next time you open Ki-Lo.` }],
+      'not-allowed': [{ full: true, heart: true, iconBg: 'var(--accent-muted)', iconFg: 'var(--accent-ink)',
+        title: 'See body fat and lean mass here',
+        text: `If your smart scale records them, Ki-Lo can read them from ${healthName} and show a trend for each.`,
+        hasAction: true, action: 'Add body fat and lean mass', href: hcHref }],
+      partial: [{ compact: true, text: "Ki-Lo can't read lean mass yet.", action: 'Add lean mass', href: hcHref }],
+      error: [{ full: true, alert: true, role: 'alert', iconBg: 'var(--danger-muted)', iconFg: 'var(--danger)',
+        title: "Couldn't load body fat and lean mass",
+        text: 'Check your connection and try again.',
+        hasRetry: true }],
+    };
+    const cardKinds = { chart: ['fat', 'lean'], settling: ['fat', 'lean'], 'one-range-empty': ['fat', 'lean'], partial: ['fat'] }[bodyState] ?? [];
+    const bodyCards = cardKinds.map(bodyCard);
+    const bodyPrompts = (prompts[bodyState] ?? []).map((p) => ({ full: false, compact: false, heart: false, scale: false, alert: false, hasAction: false, hasRetry: false, role: 'none', ...p }));
+
+    const rangeLabel = (n) => (n === 7 ? '1 week' : n === 365 ? '1 year' : `${n} days`);
+    const ranges = [7, 30, 90, 365].map((n) => {
+      const on = n === range;
+      return { label: rangeLabel(n), on: on ? 'true' : 'false', bg: on ? 'var(--text-primary)' : 'transparent', fg: on ? 'var(--background)' : 'var(--text-secondary)', pick: () => this.setState({ range: n }) };
+    });
+
+    return {
+      body, bodyLoading: bodyState === 'loading', bodyCards, bodyPrompts,
+      bodyCaption: cardKinds.includes('lean'),
+      scrollShift: body ? '-160px' : '0px',
+      theme, healthName, settling, settled: !settling, hasData, notConnected, connected: !notConnected,
+      importing: state === 'importing', empty: state === 'empty', loading: state === 'loading', error: state === 'error',
+      trendNow: lastD.trend != null ? lastD.trend.toFixed(1) : '',
+      rateLabel, subline, ranges, rows, gridPath, pointsPath, rejectedPath, fillPath, trendPath, markerPath,
+      trendDash: settling ? '5 4' : 'none',
+      yTicks: ticks, xTicks,
+      chartLabel: `Weight over the last ${range === 7 ? 'week' : range === 365 ? 'year' : `${range} days`}, trend ${lastD.trend != null ? lastD.trend.toFixed(1) : ''} kg`,
+      healthStatus: state === 'importing' ? 'Checking for new readings' : `${healthName} · updated 2 min ago`,
+    };
+  }
+}
+</script>
+</body>
+</html>

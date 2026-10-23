@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Body composition components board</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/ada61090711893f25bb9f30acdefcc93">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 2190px; height: 1200px; box-sizing: border-box; padding: 40px; display: flex; flex-direction: column; gap: 40px; background: #D5D8DE; font-family: Geist, system-ui, sans-serif; color: #1A1D24">
+<sc-for list="{{themes}}" as="th" hint-placeholder-count="2">
+<div style="display: grid; grid-template-columns: repeat(5, 390px); gap: 40px">
+<sc-for list="{{th.cards}}" as="c" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{c.label}}</span>
+<dc-import name="BodyCompositionCard" state="{{c.state}}" theme="{{c.theme}}" hint-size="390px,220px"></dc-import>
+</div>
+</sc-for>
+</div>
+<div style="display: grid; grid-template-columns: repeat(5, 390px); gap: 40px">
+<sc-for list="{{th.prompts}}" as="c" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600">{{c.label}}</span>
+<dc-import name="BodyCompositionPrompt" state="{{c.state}}" theme="{{c.theme}}" hint-size="390px,220px"></dc-import>
+</div>
+</sc-for>
+</div>
+</sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2190,"height":1200}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cards = [
+      ['body-fat', 'BodyCompositionCard · body-fat'],
+      ['lean-mass', 'BodyCompositionCard · lean-mass'],
+      ['settling', 'BodyCompositionCard · settling'],
+      ['range-empty', 'BodyCompositionCard · range-empty'],
+      ['loading', 'BodyCompositionCard · loading'],
+    ];
+    const prompts = [
+      ['not-allowed', 'BodyCompositionPrompt · not-allowed'],
+      ['no-readings-yet', 'BodyCompositionPrompt · no-readings-yet'],
+      ['partial-lean-mass', 'BodyCompositionPrompt · partial-lean-mass'],
+      ['partial-body-fat', 'BodyCompositionPrompt · partial-body-fat'],
+      ['error', 'BodyCompositionPrompt · error'],
+    ];
+    const themes = ['dark', 'light'].map((theme) => ({
+      cards: cards.map(([state, label]) => ({ state, theme, label: `${label} · ${theme}` })),
+      prompts: prompts.map(([state, label]) => ({ state, theme, label: `${label} · ${theme}` })),
+    }));
+    return { themes };
+  }
+}
+</script>
+</body>
+</html>
