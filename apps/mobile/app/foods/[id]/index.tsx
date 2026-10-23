@@ -1,4 +1,4 @@
-import { useFoodWithPortions } from "@keylow/api-client";
+import { useFoodWithPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import { isFoodId } from "@keylow/core/foods";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
@@ -11,6 +11,8 @@ export default function FoodDetailRoute() {
   // An id that is not a food id is a food that is not there, so it is never asked for. An empty id is idle.
   const isValidId = isFoodId(id);
   const state = useFoodWithPortions(isValidId ? id : "");
+  // A branded food stored before the current portion rules gets its new portions in the background.
+  useRefreshOutdatedOffFood(state.status === "ready" ? state.food : undefined);
 
   if (!isValidId) {
     return <FoodLoadState state="notFound" />;

@@ -17,6 +17,7 @@ import {
   missingFieldsOf,
   pickerChoices,
   previewAmount,
+  reselectUnit,
   snapshotAmountStart,
   snapshotAsFood,
   startingAmount,
@@ -95,11 +96,33 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
   );
   const [quantityText, setQuantityText] = useState(start.quantity);
   const [unitValue, setUnitValue] = useState(start.unitValue);
+  // The words on the chosen chip, because a refresh of the food replaces its portions with new ids and the
+  // label is what is left to find the chip by.
+  const [unitLabel, setUnitLabel] = useState(
+    () => choices.options.find((option) => option.value === start.unitValue)?.label ?? "",
+  );
   // A different chip starts at its own amount, so a typed 100 never reads as 100 tbsp or 1 as 1 g.
   const chooseUnit = (next: string) => {
     setQuantityText(amountOnUnitChange(unitValue, next, quantityText));
     setUnitValue(next);
+    setUnitLabel(choices.options.find((option) => option.value === next)?.label ?? "");
   };
+  // The portions of a food being added can be replaced while the picker is open. When the chosen chip's id is
+  // gone, the chip with the same label takes over and the typed amount stays; with no such chip the picker
+  // moves to the food's default and starts the amount again. A logged entry works from its snapshot instead.
+  const isAdding = props.mode === "add" || props.mode === "add-ingredient";
+  if (isAdding && !choices.options.some((option) => option.value === unitValue)) {
+    const reselected = reselectUnit(
+      { unitValue, label: unitLabel, quantityText },
+      choices.options,
+      startingAmount(food, choices.portions).unitValue,
+    );
+    setUnitValue(reselected.unitValue);
+    setUnitLabel(
+      choices.options.find((option) => option.value === reselected.unitValue)?.label ?? "",
+    );
+    setQuantityText(reselected.quantity);
+  }
   const [chosenTime, setChosenTime] = useState(logging?.time ?? "");
   const [isTimeStillNow, setIsTimeStillNow] = useState(logging?.isNow ?? false);
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);

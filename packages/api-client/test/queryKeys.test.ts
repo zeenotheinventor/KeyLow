@@ -29,6 +29,13 @@ describe("keys.profiles", () => {
   });
 });
 
+describe("keys.offRefresh", () => {
+  it("should be scoped to the Open Food Facts code, outside the foods family a foods invalidation reaches", () => {
+    expect(keys.offRefresh("4006381333931")).toEqual(["off-refresh", "4006381333931"]);
+    expect(keys.offRefresh("4006381333931")[0]).not.toBe(keys.foods.all[0]);
+  });
+});
+
 describe("keys.foods", () => {
   it("should expose the foods root key", () => {
     expect(keys.foods.all).toEqual(["foods"]);

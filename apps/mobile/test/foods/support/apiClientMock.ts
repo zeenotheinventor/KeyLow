@@ -84,6 +84,9 @@ export const termsAccepted = { current: true };
 export const mockUseFood = jest.fn<QueryState<Food | null>, [string | undefined]>();
 export const mockUseFoodPortions = jest.fn<QueryState<FoodPortion[]>, [string | undefined]>();
 export const mockUseFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
+// The refresh of a branded food stored before the portion rules. It asks the network, so the screens' tests
+// only look at which food it was given.
+export const mockUseRefreshOutdatedOffFood = jest.fn<undefined, [Food | null | undefined]>();
 // The recipe the amount step reads by id, as the real hook states it. A test sets `recipeState` for a case.
 export const recipeState: { current: RecipeState } = { current: { status: "loading" } };
 export const mockUseRecipe = jest.fn<RecipeState, [string | undefined, { enabled?: boolean }?]>();
@@ -146,6 +149,7 @@ export function resetApiClientMock(): void {
   mockUseFoodPortions.mockImplementation(() => portionsQuery);
   mockUseFoodWithPortions.mockReset();
   mockUseFoodWithPortions.mockImplementation(foodWithPortionsState);
+  mockUseRefreshOutdatedOffFood.mockReset();
   recipeState.current = { status: "loading" };
   mockUseRecipe.mockReset();
   mockUseRecipe.mockImplementation(() => recipeState.current);
@@ -173,6 +177,7 @@ export const mockApiClient = {
   useFood: mockUseFood,
   useFoodPortions: mockUseFoodPortions,
   useFoodWithPortions: mockUseFoodWithPortions,
+  useRefreshOutdatedOffFood: mockUseRefreshOutdatedOffFood,
   useRecipe: mockUseRecipe,
   // A signed in user here has accepted the current Terms, so the AuthGate's terms gate stays out of the way.
   useTermsAcceptance: () => ({

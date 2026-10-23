@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { diaryBackend, fakeFetch, resetDiaryBackend } from "./diaryBackend";
 
 import type { Database } from "@keylow/api-client";
-import type { Food, FoodPortion } from "@keylow/core/schemas";
+import type { Food, FoodPortion, OffProductResponse } from "@keylow/core/schemas";
 
 /**
  * The fake database of `diaryBackend` plus what the entry screen reads beyond a day: one entry by its id,
@@ -16,12 +16,18 @@ export const entryBackend: {
   /** The foods the database holds, deleted ones included: an entry reads its food unfiltered. */
   foods: Food[];
   foodPortions: FoodPortion[];
-} = { foods: [], foodPortions: [] };
+  /** What `off-product` answers with, or null for a product Open Food Facts does not know. */
+  offProduct: OffProductResponse | null;
+  /** The codes `off-product` was asked for, in order. */
+  offProductCodes: string[];
+} = { foods: [], foodPortions: [], offProduct: null, offProductCodes: [] };
 
 export function resetEntryBackend(): void {
   resetDiaryBackend();
   entryBackend.foods = [];
   entryBackend.foodPortions = [];
+  entryBackend.offProduct = null;
+  entryBackend.offProductCodes = [];
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -49,6 +55,15 @@ async function entryFetch(input: string | URL | Request, init?: RequestInit): Pr
   const table = pathname.split("/").pop() ?? "";
   const method = init?.method ?? "GET";
 
+  if (method === "POST" && table === "off-product") {
+    const body: unknown = JSON.parse(typeof init?.body === "string" ? init.body : "{}");
+    const code = typeof body === "object" && body !== null && "code" in body ? body.code : "";
+    entryBackend.offProductCodes.push(String(code));
+
+    return entryBackend.offProduct === null
+      ? jsonResponse({ error: { code: "not_found", message: "No such product" } }, 404)
+      : jsonResponse(entryBackend.offProduct);
+  }
   if (method === "GET" && table === "foods") {
     const food = entryBackend.foods.find((candidate) => candidate.id === idOf(searchParams, "id"));
     diaryBackend.requests.push({ table, search: searchParams.toString(), method });

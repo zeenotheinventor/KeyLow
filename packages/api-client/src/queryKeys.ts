@@ -18,6 +18,12 @@ export const keys = {
     own: ["foods", "own"] as const,
   },
   /**
+   * That a branded food was asked of `off-product` to refresh its portions, so it is asked once while the app
+   * runs. A family of its own, outside `foods`, because a foods invalidation would ask again. The code is the
+   * food's Open Food Facts code. Never persisted.
+   */
+  offRefresh: (code: string) => ["off-refresh", code] as const,
+  /**
    * The recipe reads. A family of its own, outside `diary` and the lists a persisted cache keeps, so
    * nothing about a recipe is stored on the device by the diary cache. Every key sits under
    * `["recipes"]`, so one invalidation of `keys.recipes.all` refreshes the library, a recipe and a search.

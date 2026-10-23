@@ -47,6 +47,7 @@ export type {
 } from "./useRecipeSearch";
 export { useRecipes } from "./useRecipes";
 export type { UseRecipesOptions } from "./useRecipes";
+export { useRefreshOutdatedOffFood } from "./useRefreshOutdatedOffFood";
 export { useRestoreEntry } from "./useRestoreEntry";
 export { useSetDayComplete } from "./useSetDayComplete";
 export { useProfileTimeZone } from "./useProfileTimeZone";
