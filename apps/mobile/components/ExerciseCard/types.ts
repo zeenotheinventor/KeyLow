@@ -1,5 +1,5 @@
 import type { ReadOnlyExerciseCardProps } from "./ReadOnlyExerciseCard";
-import type { SetRowEdit } from "../SetRow";
+import type { SetRowEdit, SetRowTypeEdit } from "../SetRow";
 import type { SetColumnsCopy, SetRowCopy } from "@keylow/core/copy";
 import type { SetRowState, SetType } from "@keylow/core/training";
 
@@ -11,6 +11,8 @@ export type ExerciseCardRow = {
   copy: SetRowCopy;
   /** Opens the set entry from the row's cells. Only a set still to do has it. */
   edit?: SetRowEdit | undefined;
+  /** Opens the set types sheet from the row's mark. Only a logged set has it. */
+  typeEdit?: SetRowTypeEdit | undefined;
   /** What the row's check does. Without it the check only displays. */
   onCheck?: (() => void) | undefined;
 };

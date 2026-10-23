@@ -37,6 +37,13 @@ type Story = StoryObj<typeof meta>;
 // A logged set: the success tint and the filled check.
 export const Done: Story = {};
 
+// A logged set whose mark is a button that opens the set types sheet.
+export const DoneWithTypeButton: Story = {
+  args: {
+    typeEdit: { name: "Set type, leg press set 2", onPress: () => undefined },
+  },
+};
+
 // The set to log now, opened on the numbers of the last one, with no RIR yet.
 export const Next: Story = {
   args: {
