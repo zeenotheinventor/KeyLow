@@ -1,15 +1,21 @@
-import { HEALTH_ACCESS, HEALTH_ACCESS_POINTS, describeImportedCount } from "@keylow/core/copy";
+import {
+  HEALTH_ACCESS,
+  HEALTH_ACCESS_BODY_POINTS,
+  HEALTH_ACCESS_EXPLAIN_POINTS,
+  describeImportedCount,
+} from "@keylow/core/copy";
 import { elevation } from "@keylow/tokens";
 import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { HealthAccessView } from "../../components/HealthAccessScreen";
+import { HealthAccessTile } from "../../components/HealthAccessScreen/HealthAccessTile";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
-import type { HealthAccessStep } from "../../components/HealthAccessScreen";
+import type { HealthAccessStep, HealthAccessViewProps } from "../../components/HealthAccessScreen";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -24,16 +30,32 @@ jest.mock(
 setUpTests();
 
 const handlers = {
+  onAddBodyComposition: jest.fn<undefined, []>(),
   onClose: jest.fn<undefined, []>(),
   onPrimary: jest.fn<undefined, []>(),
   onSecondary: jest.fn<undefined, []>(),
   onOpenPrivacyPolicy: jest.fn<undefined, []>(),
 };
 
-async function renderStep(step: HealthAccessStep, importedCount = 64) {
+const noBodyCounts = { bodyFat: 0, leanMass: 0 };
+const noBodyComposition = { bodyFat: false, leanMass: false };
+const bothBodyComposition = { bodyFat: true, leanMass: true };
+
+type StepExtras = Partial<
+  Pick<HealthAccessViewProps, "bodyCompositionAccess" | "bodyCounts" | "importedCount">
+>;
+
+async function renderStep(step: HealthAccessStep, extras: StepExtras = {}) {
   await render(
     <ThemeProvider fixedPreference="dark">
-      <HealthAccessView {...handlers} importedCount={importedCount} step={step} />
+      <HealthAccessView
+        {...handlers}
+        bodyCompositionAccess={noBodyComposition}
+        bodyCounts={noBodyCounts}
+        importedCount={64}
+        step={step}
+        {...extras}
+      />
     </ThemeProvider>,
   );
 }
@@ -84,16 +106,25 @@ describe("HealthAccessView", () => {
     it("should say what is read and why in the four points", async () => {
       await renderStep("explain");
 
-      expect(HEALTH_ACCESS_POINTS.map((point) => point.title)).toEqual([
+      expect(HEALTH_ACCESS_EXPLAIN_POINTS.map((point) => point.title)).toEqual([
         "What Ki-Lo reads",
         "Why",
         "What it never does",
         "When",
       ]);
-      HEALTH_ACCESS_POINTS.forEach((point) => {
+      HEALTH_ACCESS_EXPLAIN_POINTS.forEach((point) => {
         expect(screen.getByText(point.title)).toBeOnTheScreen();
         expect(screen.getByText(point.text)).toBeOnTheScreen();
       });
+    });
+
+    it("should say under the points that body fat and lean mass are optional", async () => {
+      await renderStep("explain");
+
+      expect(screen.getByText(HEALTH_ACCESS.explainOptionalNote)).toBeOnTheScreen();
+      expect(HEALTH_ACCESS.explainOptionalNote).toBe(
+        "Body fat and lean mass are optional. You can leave them off in the Health Connect sheet.",
+      );
     });
 
     it("should open the privacy policy from its link", async () => {
@@ -147,7 +178,75 @@ describe("HealthAccessView", () => {
     });
   });
 
+  describe("explain · body-composition", () => {
+    it("should show the heading, the body, the two points and the Continue and Not now buttons", async () => {
+      await renderStep("explain-body-composition");
+
+      expect(
+        screen.getByRole("heading", { name: HEALTH_ACCESS.explainBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText(HEALTH_ACCESS.explainBodyComposition.body)).toBeOnTheScreen();
+      expect(screen.getAllByRole("listitem")).toHaveLength(2);
+      HEALTH_ACCESS_BODY_POINTS.forEach((point) => {
+        expect(screen.getByText(point.title)).toBeOnTheScreen();
+        expect(screen.getByText(point.text)).toBeOnTheScreen();
+      });
+      expect(screen.getByRole("button", { name: "Continue" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Not now" })).toBeOnTheScreen();
+    });
+
+    it("should have no caption, and open the privacy policy from its link", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      await renderStep("explain-body-composition");
+
+      expect(screen.queryByText(HEALTH_ACCESS.explainOptionalNote)).not.toBeOnTheScreen();
+      await user.press(screen.getByRole("link", { name: "Read the privacy policy" }));
+
+      expect(handlers.onOpenPrivacyPolicy).toHaveBeenCalledTimes(1);
+    });
+
+    it("should call the primary handler from Continue and close from Not now", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      await renderStep("explain-body-composition");
+
+      await user.press(screen.getByRole("button", { name: "Continue" }));
+      await user.press(screen.getByRole("button", { name: "Not now" }));
+
+      expect(handlers.onPrimary).toHaveBeenCalledTimes(1);
+      expect(handlers.onSecondary).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("denied · body-composition", () => {
+    it("should show the heading, the body, the three steps and the two buttons", async () => {
+      await renderStep("denied-body-composition");
+
+      expect(
+        screen.getByRole("heading", { name: HEALTH_ACCESS.deniedBodyComposition.heading }),
+      ).toBeOnTheScreen();
+      expect(screen.getByText(HEALTH_ACCESS.deniedBodyComposition.body)).toBeOnTheScreen();
+      expectSteps(HEALTH_ACCESS.deniedBodyComposition.steps);
+      expect(screen.getByRole("button", { name: "Open Health Connect" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Not now" })).toBeOnTheScreen();
+    });
+  });
+
   describe("connecting", () => {
+    it("should say body composition is read too when either type is allowed", async () => {
+      await renderStep("connecting", { bodyCompositionAccess: { bodyFat: true, leanMass: false } });
+
+      expect(screen.getByText(HEALTH_ACCESS.connecting.bodyWithBodyComposition)).toBeOnTheScreen();
+      expect(screen.queryByText(HEALTH_ACCESS.connecting.body)).not.toBeOnTheScreen();
+    });
+
+    it("should keep the weight-only sentence when neither type is allowed", async () => {
+      await renderStep("connecting");
+
+      expect(
+        screen.getByText("Reading your weight history. This only happens while Ki-Lo is open."),
+      ).toBeOnTheScreen();
+    });
+
     it("should show the heading, the body and a disabled Importing button that does nothing", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       await renderStep("connecting");
@@ -208,19 +307,85 @@ describe("HealthAccessView", () => {
 
   describe("connected", () => {
     it("should show the count as the heading, the body and See your trend", async () => {
-      await renderStep("connected", 5);
+      await renderStep("connected", { importedCount: 5 });
 
       expect(screen.getByRole("heading", { name: "5 weigh-ins imported" })).toBeOnTheScreen();
       expect(screen.getByText(HEALTH_ACCESS.connected.body)).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "See your trend" })).toBeOnTheScreen();
     });
 
+    it("should show the counts line when some body readings came in", async () => {
+      await renderStep("connected", {
+        bodyCompositionAccess: bothBodyComposition,
+        bodyCounts: { bodyFat: 12, leanMass: 12 },
+      });
+
+      expect(screen.getByText("Also 12 body fat and 12 lean mass readings.")).toBeOnTheScreen();
+    });
+
+    it("should show no counts line when none came in", async () => {
+      await renderStep("connected", { bodyCompositionAccess: bothBodyComposition });
+
+      expect(screen.queryByText(/^Also /)).not.toBeOnTheScreen();
+    });
+
+    it("should not offer to add body fat or lean mass", async () => {
+      await renderStep("connected", { bodyCompositionAccess: bothBodyComposition });
+
+      expect(screen.queryByRole("button", { name: /^Add / })).not.toBeOnTheScreen();
+    });
+
     it("should read zero as the heading for a repeat import", async () => {
-      await renderStep("connected", 0);
+      await renderStep("connected", { importedCount: 0 });
 
       expect(screen.getByRole("heading", { name: describeImportedCount(0) })).toHaveTextContent(
         "0 weigh-ins imported",
       );
+    });
+  });
+
+  describe("connected · partial", () => {
+    it("should show the connected words and See your trend", async () => {
+      await renderStep("connected-partial", { importedCount: 64 });
+
+      expect(screen.getByRole("heading", { name: "64 weigh-ins imported" })).toBeOnTheScreen();
+      expect(screen.getByText(HEALTH_ACCESS.connected.body)).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "See your trend" })).toBeOnTheScreen();
+    });
+
+    it.each([
+      ["neither type", noBodyComposition, "neither"],
+      ["body fat alone", { bodyFat: true, leanMass: false }, "leanMassMissing"],
+      ["lean mass alone", { bodyFat: false, leanMass: true }, "bodyFatMissing"],
+    ] as const)(
+      "should say what was not allowed, with its action, when %s is allowed",
+      async (_name, access, missing) => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        await renderStep("connected-partial", { bodyCompositionAccess: access });
+
+        expect(screen.getByText(HEALTH_ACCESS.connectedPartial[missing].text)).toBeOnTheScreen();
+        await user.press(
+          screen.getByRole("button", { name: HEALTH_ACCESS.connectedPartial[missing].action }),
+        );
+
+        expect(handlers.onAddBodyComposition).toHaveBeenCalledTimes(1);
+        expect(handlers.onPrimary).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should show the counts line of the kind that came in", async () => {
+      await renderStep("connected-partial", {
+        bodyCompositionAccess: { bodyFat: true, leanMass: false },
+        bodyCounts: { bodyFat: 5, leanMass: 0 },
+      });
+
+      expect(screen.getByText("Also 5 body fat readings.")).toBeOnTheScreen();
+    });
+
+    it("should show no counts line when none came in", async () => {
+      await renderStep("connected-partial");
+
+      expect(screen.queryByText(/^Also /)).not.toBeOnTheScreen();
     });
   });
 
@@ -231,16 +396,77 @@ describe("HealthAccessView", () => {
     "denied",
     "import-error",
     "connected",
-  ])("should not mention Apple or HealthKit in the %s state", async (step) => {
-    await renderStep(step);
+    "explain-body-composition",
+    "denied-body-composition",
+    "connected-partial",
+  ])("should not mention Apple, HealthKit or muscle in the %s state", async (step) => {
+    await renderStep(step, {
+      bodyCompositionAccess: bothBodyComposition,
+      bodyCounts: { bodyFat: 12, leanMass: 12 },
+    });
 
-    expect(screen.root).not.toHaveTextContent(/apple|healthkit/i);
+    expect(screen.root).not.toHaveTextContent(/apple|healthkit|muscle/i);
+  });
+
+  it("should not mention Apple, HealthKit or muscle in the partial words for either missing kind", async () => {
+    await renderStep("connected-partial", {
+      bodyCompositionAccess: { bodyFat: true, leanMass: false },
+    });
+
+    expect(screen.root).not.toHaveTextContent(/apple|healthkit|muscle/i);
   });
 
   it("should not show an alert in the states that are not an error", async () => {
     await renderStep("denied");
 
     expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
+  });
+});
+
+describe("the layout of the screen", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
+  beforeEach(() => {
+    registerAppStyles(kitStyles);
+    jest.useFakeTimers();
+    jest.spyOn(AccessibilityInfo, "isReduceMotionEnabled").mockResolvedValue(false);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
+  it("should scroll the main area, so the points and the caption are reachable on a short screen", async () => {
+    await renderStep("explain");
+
+    const kindsAbove: string[] = [];
+    for (
+      let element = screen.getByRole("heading").parent;
+      element !== null;
+      element = element.parent
+    ) {
+      kindsAbove.push(element.type);
+    }
+
+    expect(kindsAbove).toContain("RCTScrollView");
+  });
+
+  it("should not let the 64 point tile shrink when the area scrolls", async () => {
+    await render(
+      <ThemeProvider fixedPreference="dark">
+        <HealthAccessTile step="explain" />
+      </ThemeProvider>,
+    );
+
+    // The theme's wrapper is the root, and the tile is the one view inside it.
+    const tile = screen.root?.children.find((child) => typeof child !== "string");
+
+    expect(tile).toHaveStyle({ flexShrink: 0, height: 64, width: 64 });
   });
 });
 

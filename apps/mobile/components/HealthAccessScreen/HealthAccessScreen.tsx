@@ -10,10 +10,10 @@ import type { HealthAccessScreenProps } from "./types";
 /**
  * The Health Connect permissions flow: the state it is in, chosen from what the provider and the import
  * say, drawn by the view. Where the device has no Health Connect at all it replaces itself with the Weight
- * screen. Close, Not now and See your trend all call `onClose`.
+ * screen. Close, Not now and See your trend all call `onClose`. The `mode` is the flow the route asks for.
  */
-export function HealthAccessScreen({ provider, onClose }: HealthAccessScreenProps) {
-  const flow = useHealthAccessFlow(provider, onClose);
+export function HealthAccessScreen({ provider, mode = "first", onClose }: HealthAccessScreenProps) {
+  const flow = useHealthAccessFlow(provider, onClose, mode);
 
   if (flow.phase === "unsupported") {
     return <Redirect href="/more/weight" />;
@@ -25,8 +25,11 @@ export function HealthAccessScreen({ provider, onClose }: HealthAccessScreenProp
 
   return (
     <HealthAccessView
+      bodyCompositionAccess={flow.bodyCompositionAccess}
+      bodyCounts={flow.bodyCounts}
       importedCount={flow.importedCount}
       step={flow.step}
+      onAddBodyComposition={flow.onAddBodyComposition}
       onClose={onClose}
       onOpenPrivacyPolicy={() => {
         // A device with no browser rejects, and there is nothing else to do about it, so the screen stays as it is.

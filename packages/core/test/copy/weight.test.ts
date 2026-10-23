@@ -8,7 +8,6 @@ import {
   HEALTH_ACCESS,
   HEALTH_ACCESS_BODY_POINTS,
   HEALTH_ACCESS_EXPLAIN_POINTS,
-  HEALTH_ACCESS_POINTS,
   HEALTH_CONNECT_NAME,
   WEIGHT_EMPTY,
   WEIGHT_ERROR,
@@ -490,28 +489,13 @@ describe("health-access: permissions flow", () => {
   });
 
   describe("· explain", () => {
-    it("should pin the heading, body, buttons and the four points", () => {
+    it("should pin the heading, body and buttons", () => {
       expect(HEALTH_ACCESS.explain).toEqual({
         heading: "Bring in weigh-ins from Health Connect",
         body: "If your smart scale saves to Health Connect, Ki-Lo can read those readings so you don't have to type them.",
         primary: "Continue",
         secondary: "Not now",
       });
-      expect(HEALTH_ACCESS_POINTS).toEqual([
-        {
-          title: "What Ki-Lo reads",
-          text: "Your body weight readings and the time each was taken. Nothing else.",
-        },
-        {
-          title: "Why",
-          text: "To draw your weight trend and, later, to set your calorie targets.",
-        },
-        {
-          title: "What it never does",
-          text: "Write to Health Connect, share your readings, or use them for advertising.",
-        },
-        { title: "When", text: "Only while Ki-Lo is open, or when you pull down to refresh." },
-      ]);
     });
   });
 
@@ -592,7 +576,7 @@ describe("health-access: permissions flow · body composition (v10)", () => {
     );
   });
 
-  it("should pin the four rewritten points of explain and leave the old four alone", () => {
+  it("should pin the four rewritten points of explain", () => {
     expect(HEALTH_ACCESS_EXPLAIN_POINTS).toEqual([
       {
         title: "What Ki-Lo reads",
@@ -605,9 +589,6 @@ describe("health-access: permissions flow · body composition (v10)", () => {
       },
       { title: "When", text: "Only while Ki-Lo is open, or when you pull down to refresh." },
     ]);
-    expect(HEALTH_ACCESS_POINTS[0].text).toBe(
-      "Your body weight readings and the time each was taken. Nothing else.",
-    );
   });
 
   it("should pin explain · body-composition: heading, body, buttons and two points", () => {
@@ -825,7 +806,6 @@ describe("every export", () => {
     WEIGHT_RANGE_LABELS,
     WEIGH_IN_SHEET,
     HEALTH_ACCESS,
-    HEALTH_ACCESS_POINTS,
     HEALTH_ACCESS_EXPLAIN_POINTS,
     HEALTH_ACCESS_BODY_POINTS,
     TREND_EXPLAINER,
@@ -941,9 +921,9 @@ describe("every export", () => {
       "Bring in weigh-ins from Health Connect",
       "If your smart scale saves to Health Connect, Ki-Lo can read those readings so you don't have to type them.",
       "What Ki-Lo reads",
-      "Your body weight readings and the time each was taken. Nothing else.",
+      "Your weight, and body fat and lean mass if your scale records them, with the time of each. Nothing else.",
       "Why",
-      "To draw your weight trend and, later, to set your calorie targets.",
+      "To draw your trends and, later, to set your calorie targets.",
       "What it never does",
       "Write to Health Connect, share your readings, or use them for advertising.",
       "When",

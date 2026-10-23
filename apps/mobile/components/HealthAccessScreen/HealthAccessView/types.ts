@@ -1,9 +1,14 @@
+import type { BodyCompositionAccess } from "../../../lib/health";
 import type { HealthAccessStep } from "../types";
 
 export type HealthAccessViewProps = {
   step: HealthAccessStep;
   /** The rows the import stored, for the heading of the connected state. */
   importedCount: number;
+  /** The body composition rows the import stored, for the counts line of the connected states. */
+  bodyCounts: Readonly<{ bodyFat: number; leanMass: number }>;
+  /** The body types Ki-Lo may read: the connecting words, and which sentence the partial block says. */
+  bodyCompositionAccess: BodyCompositionAccess;
   /** The Close button in the header. */
   onClose: () => void;
   /** The footer's main button: Continue, Get Health Connect, Open Health Connect, Try again or See your trend. */
@@ -11,4 +16,6 @@ export type HealthAccessViewProps = {
   /** The footer's quiet button: Not now or Close. */
   onSecondary: () => void;
   onOpenPrivacyPolicy: () => void;
+  /** The action of the partial block: it opens the add-later flow. */
+  onAddBodyComposition: () => void;
 };

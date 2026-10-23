@@ -1,4 +1,4 @@
-import { Redirect, Stack, useRouter } from "expo-router";
+import { Redirect, Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
 
 import { HealthAccessScreen } from "../../../../components/HealthAccessScreen";
@@ -6,8 +6,12 @@ import { getHealthProvider } from "../../../../lib/health";
 
 // The Health Connect permissions flow, pushed over the Weight screen as a modal, with its own Close button.
 // Its presentation is set here and not in the stack's layout, which holds none of the screens' options.
+// The search parameter `add=body-composition` asks for body fat and lean mass alone, for a person whose
+// weight is already connected. Any other value, and weight not held, run the first-time flow.
 export default function HealthAccessRoute() {
   const router = useRouter();
+  const { add } = useLocalSearchParams<{ add?: string }>();
+  const mode = add === "body-composition" ? "add-body-composition" : "first";
   // One provider for the life of the screen: asking for one makes a new object each time.
   const [provider] = useState(getHealthProvider);
 
@@ -29,7 +33,7 @@ export default function HealthAccessRoute() {
   return (
     <>
       <Stack.Screen options={{ presentation: "modal" }} />
-      <HealthAccessScreen provider={provider} onClose={close} />
+      <HealthAccessScreen mode={mode} provider={provider} onClose={close} />
     </>
   );
 }

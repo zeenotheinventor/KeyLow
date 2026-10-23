@@ -11,15 +11,38 @@ const stepOfImport: Record<HealthImportStatus, HealthAccessStep> = {
   unavailable: "import-error",
 };
 
-/** Which state of the permissions flow the screen draws, from what the flow has learned so far. */
+/**
+ * Which state of the permissions flow the screen draws, from what the flow has learned so far. Weight is what
+ * connected means: an import that ended well is `connected-partial` unless both body types are allowed, and
+ * `denied` when weight access is gone, whatever the body result says.
+ */
 export function healthAccessStep(inputs: HealthAccessInputs): HealthAccessStep {
-  const { availability, hasPermission, permissionAnswer, isImporting, importStatus } = inputs;
+  const {
+    availability,
+    hasPermission,
+    permissionAnswer,
+    bodyCompositionAccess,
+    mode,
+    hasAskedBodyComposition,
+    isImporting,
+    importStatus,
+  } = inputs;
+  const hasEitherBodyType = bodyCompositionAccess.bodyFat || bodyCompositionAccess.leanMass;
+  const hasBothBodyTypes = bodyCompositionAccess.bodyFat && bodyCompositionAccess.leanMass;
 
   if (importStatus !== null) {
-    return stepOfImport[importStatus];
+    const step = stepOfImport[importStatus];
+    return step === "connected" && !hasBothBodyTypes ? "connected-partial" : step;
   }
   if (availability === "needs-install") {
     return "install";
+  }
+  // The add-later flow needs weight to be held already. Without it the first-time flow runs.
+  if (mode === "add-body-composition" && hasPermission) {
+    if (!hasAskedBodyComposition) {
+      return "explain-body-composition";
+    }
+    return hasEitherBodyType ? "connecting" : "denied-body-composition";
   }
   if (permissionAnswer === "denied") {
     return "denied";
