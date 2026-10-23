@@ -1,4 +1,4 @@
-import { edgeErrorSchema, offProductResponseSchema } from "@keylow/core";
+import { OFF_PORTION_RULES_FROM, edgeErrorSchema, offProductResponseSchema } from "@keylow/core";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { generateBarcode } from "../support/barcodes";
@@ -13,6 +13,7 @@ import { createTestUser, deleteCreatedTestUsers } from "../support/users";
 const configuredUserAgent = requireFunctionEnvironmentValue("OFF_USER_AGENT");
 const perUserLimit = Number(requireFunctionEnvironmentValue("OFF_PRODUCT_PER_USER_PER_MIN"));
 const millisecondsPerDay = 24 * 60 * 60 * 1000;
+const portionRulesFromMilliseconds = new Date(OFF_PORTION_RULES_FROM).getTime();
 
 afterAll(async () => {
   try {
@@ -50,8 +51,11 @@ async function readFetchedAt(code: string): Promise<number> {
   return new Date(food.fetched_at).getTime();
 }
 
+// A food fetched after the portion rules is not 90 days old until long after them, and one fetched
+// before them is refreshed inline. So the stale seed is two days in the future: offFreshness reads a
+// fetch time more than a day ahead as corrupt, and therefore stale, and the table allows it.
 async function makeStale(code: string): Promise<string> {
-  const staleFetchedAt = new Date(Date.now() - 91 * millisecondsPerDay).toISOString();
+  const staleFetchedAt = new Date(Date.now() + 2 * millisecondsPerDay).toISOString();
   const { error } = await adminClient()
     .from("foods")
     .update({ fetched_at: staleFetchedAt })
@@ -61,6 +65,31 @@ async function makeStale(code: string): Promise<string> {
     throw new Error("Could not make the food stale", { cause: error });
   }
   return staleFetchedAt;
+}
+
+async function setFetchedAt(code: string, fetchedAt: string): Promise<void> {
+  const { error } = await adminClient()
+    .from("foods")
+    .update({ fetched_at: fetchedAt })
+    .eq("source", "off")
+    .eq("source_ref", code);
+  if (error) {
+    throw new Error("Could not set the fetch time", { cause: error });
+  }
+}
+
+// Stores a product the way the app did before the pack portion: the box has no quantity, so it gets
+// its serving and nothing else. Then moves its fetch time to a day before the portion rules.
+async function storeProductFromBeforePortionRules(code: string, accessToken: string) {
+  await offMock.register({
+    code,
+    fixture: "kcal-present",
+    productOverrides: { quantity: null },
+  });
+  await lookUp(code, accessToken);
+  const fetchedAt = new Date(portionRulesFromMilliseconds - millisecondsPerDay).toISOString();
+  await setFetchedAt(code, fetchedAt);
+  return fetchedAt;
 }
 
 async function waitFor(condition: () => Promise<boolean>, timeoutMilliseconds = 10_000) {
@@ -361,7 +390,8 @@ describe("off-product", () => {
 
       await waitFor(async () => (await readOffFoods(code))[0]?.name === "Refreshed Oat Crunch");
       expect(await offMock.calls(code)).toHaveLength(2);
-      expect(await readFetchedAt(code)).toBeGreaterThan(new Date(staleFetchedAt).getTime());
+      // The claim and the store move the fetch time to now, which is before the future seed.
+      expect(await readFetchedAt(code)).toBeLessThan(new Date(staleFetchedAt).getTime());
     });
 
     it("refreshes once when several lookups find the row stale at the same time", async () => {
@@ -403,6 +433,134 @@ describe("off-product", () => {
       expect(second.status).toBe(200);
       expect(await offMock.calls(code)).toHaveLength(2);
       expect((await readOffFoods(code))[0]?.name).toBe("Test Oat Crunch");
+    });
+  });
+
+  describe("when the barcode was stored before the current portion rules", () => {
+    it("fetches it again at once and answers with the new portions and a new fetch time", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      const storedFetchedAt = await storeProductFromBeforePortionRules(code, user.accessToken);
+      expect(await readFetchedAt(code)).toBe(new Date(storedFetchedAt).getTime());
+      // The box has its quantity now, so the rules derive the pack portion. The name changes too.
+      await offMock.register({
+        code,
+        fixture: "kcal-present",
+        productOverrides: { product_name_en: "Refreshed Oat Crunch" },
+      });
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const { food, portions } = offProductResponseSchema.parse(response.body);
+      expect(food.name).toBe("Refreshed Oat Crunch");
+      expect(new Date(food.fetched_at ?? "").getTime()).toBeGreaterThanOrEqual(
+        portionRulesFromMilliseconds,
+      );
+      expect(portions.map(({ label, grams, is_default }) => [label, grams, is_default])).toEqual([
+        ["40 g", 40, true],
+        ["1 pack", 500, false],
+      ]);
+      expect(await offMock.calls(code)).toHaveLength(2);
+      expect(await readFetchedAt(code)).toBeGreaterThanOrEqual(portionRulesFromMilliseconds);
+    });
+
+    it("does not call OFF again on the next lookup", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      await storeProductFromBeforePortionRules(code, user.accessToken);
+      await offMock.register({ code, fixture: "kcal-present" });
+      const refreshed = offProductResponseSchema.parse((await lookUp(code, user.accessToken)).body);
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const again = offProductResponseSchema.parse(response.body);
+      expect(again.food.fetched_at).toBe(refreshed.food.fetched_at);
+      expect(again.portions.map(({ label }) => label)).toEqual(["40 g", "1 pack"]);
+      expect(await offMock.calls(code)).toHaveLength(2);
+    });
+
+    it("answers from the cache, with no error, when OFF fails", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      const storedFetchedAt = await storeProductFromBeforePortionRules(code, user.accessToken);
+      await offMock.register({ code, status: 500, body: { error: "down" } });
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const { food, portions } = offProductResponseSchema.parse(response.body);
+      expect(food.name).toBe("Test Oat Crunch");
+      expect(portions.map(({ label }) => label)).toEqual(["40 g"]);
+      expect(await offMock.calls(code)).toHaveLength(2);
+      expect(await readFetchedAt(code)).toBe(new Date(storedFetchedAt).getTime());
+    });
+
+    it("answers from the cache, with no error, when OFF no longer has the product", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      const storedFetchedAt = await storeProductFromBeforePortionRules(code, user.accessToken);
+      await offMock.register({ code, status: 404, body: { code, status: 0 } });
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const { food, portions } = offProductResponseSchema.parse(response.body);
+      expect(food.name).toBe("Test Oat Crunch");
+      expect(portions.map(({ label }) => label)).toEqual(["40 g"]);
+      expect(await readFetchedAt(code)).toBe(new Date(storedFetchedAt).getTime());
+    });
+
+    it("answers from the cache, with no error, when OFF returns a product that cannot be used", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      await storeProductFromBeforePortionRules(code, user.accessToken);
+      await offMock.register({ code, fixture: "no-name" });
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(offProductResponseSchema.parse(response.body).food.name).toBe("Test Oat Crunch");
+    });
+
+    it("answers from the cache, without calling OFF, once the user is over the per-user limit", async () => {
+      const code = generateBarcode();
+      await storeProductFromBeforePortionRules(code, (await newUser()).accessToken);
+      await offMock.register({ code, fixture: "kcal-present" });
+      const user = await newUser();
+
+      await waitForFreshRateLimitWindow();
+      for (let attempt = 0; attempt < perUserLimit; attempt += 1) {
+        const allowed = await lookUp(generateBarcode(), user.accessToken);
+        expect(allowed.status).toBe(404);
+      }
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      const { portions } = offProductResponseSchema.parse(response.body);
+      expect(portions.map(({ label }) => label)).toEqual(["40 g"]);
+      expect(await offMock.calls(code)).toHaveLength(1);
+    });
+
+    it("answers from the cache, without calling OFF, for a food fetched at the moment of the rules", async () => {
+      const user = await newUser();
+      const code = generateBarcode();
+      await offMock.register({
+        code,
+        fixture: "kcal-present",
+        productOverrides: { quantity: null },
+      });
+      await lookUp(code, user.accessToken);
+      await setFetchedAt(code, OFF_PORTION_RULES_FROM);
+
+      const response = await lookUp(code, user.accessToken);
+
+      expect(response.status).toBe(200);
+      expect(
+        offProductResponseSchema.parse(response.body).portions.map(({ label }) => label),
+      ).toEqual(["40 g"]);
+      expect(await offMock.calls(code)).toHaveLength(1);
     });
   });
 

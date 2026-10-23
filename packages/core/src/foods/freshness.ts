@@ -18,3 +18,23 @@ export function offFreshness(fetchedAt: string | Date, now: Date): OffFreshness 
   const isFresh = ageMilliseconds >= -MAX_CLOCK_SKEW_MS && ageMilliseconds < OFF_FRESHNESS_MS;
   return isFresh ? "fresh" : "stale";
 }
+
+/**
+ * When the current portion rules (the pack portion of KEY-518 and the borrowed natural units of KEY-520)
+ * went live in production: the Deploy Supabase run for KEY-520 completed at this instant. Products
+ * stored from Open Food Facts before it lack those portions.
+ *
+ * Bump this date whenever the portion rules change and stored products should be re-derived. Set it to
+ * the moment the new rules are live in production, never earlier, or a lookup in between would store
+ * the old rules' portions and not be refreshed again.
+ */
+export const OFF_PORTION_RULES_FROM = "2026-10-23T02:16:15Z";
+
+/**
+ * True when a food was fetched before `OFF_PORTION_RULES_FROM`, so its portions were derived under older
+ * rules and the food should be fetched again. A timestamp that cannot be parsed also reads true, as in
+ * `offFreshness`, which refetches the food. Core never reads the clock, and this needs none.
+ */
+export function isBeforePortionRules(fetchedAt: string | Date): boolean {
+  return !(new Date(fetchedAt).getTime() >= new Date(OFF_PORTION_RULES_FROM).getTime());
+}

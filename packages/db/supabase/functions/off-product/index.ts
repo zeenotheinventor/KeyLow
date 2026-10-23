@@ -1,6 +1,8 @@
 // off-product: the only writer of shared Open Food Facts rows. Given a barcode it returns the cached
 // food and its portions. A missing barcode is fetched from OFF, normalised and stored. A stale one
-// is returned at once and refreshed after the response. Fetching is limited per user and globally.
+// is returned at once and refreshed after the response. A food stored before the current portion
+// rules is fetched again first, so its answer carries the new portions. Fetching is limited per user
+// and globally.
 //
 // Things to know when changing this file:
 // - A store is one call to the database function `store_off_product`, which upserts the food,
@@ -20,6 +22,15 @@
 //   with `fetched_at` advanced, so it is tried again after the next 90 days, not on every lookup.
 //   A claim that errors is reported and counts as not claimed, so a stale row is still served from the
 //   cache and the next lookup tries again.
+// - A food whose `fetched_at` is before `OFF_PORTION_RULES_FROM` (core) was stored under older portion
+//   rules, so it lacks the portions the current rules derive. It is fetched and stored inline, as a
+//   first lookup is and charged like one, and the response carries the new portions. The store
+//   advances `fetched_at`, so each product is refreshed once. If OFF fails, the product has vanished,
+//   the limit is reached or the store fails, the cached product is returned as it is and nothing is
+//   thrown. `fetched_at` stays where it was then, so the next lookup tries again, and each try is
+//   charged. This takes the place of the 90 day claim for such a food. To bring stored products up to
+//   date after a change to the portion rules, bump `OFF_PORTION_RULES_FROM` to the moment the change
+//   is live in production (ADR 0003, Amendment 10). The 90 day path below is for the rest.
 // - The row is stored under the barcode that was asked for (`source_ref`), and `barcode` is the code
 //   OFF reports for the product. They are equal for every normal product. If OFF reports another
 //   code, a lookup of that code finds no row and fetches it again as its own row.
@@ -30,11 +41,11 @@ import { createServiceClient } from "../_shared/clients.ts";
 import {
   normaliseBarcode,
   normaliseOffProduct,
-  offFreshness,
   offProductPayloadSchema,
   offProductRequestSchema,
   offProductResponseSchema,
 } from "../_shared/core.ts";
+import { planCachedLookup } from "../_shared/cachedLookupPlan.ts";
 import { error, handle, json } from "../_shared/http.ts";
 import { offRequest } from "../_shared/off.ts";
 import { reportError } from "../_shared/report.ts";
@@ -84,7 +95,11 @@ Deno.serve(
     const service = createServiceClient();
     const cached = await findCachedProduct(service, code);
     if (cached !== null) {
-      if (isStale(cached.food) && (await claimRefresh(service, cached.food))) {
+      const plan = planCachedLookup(cached.food.fetched_at, new Date());
+      if (plan === "refresh_before_answering") {
+        return respond(await refreshBeforeAnswering(service, user.id, code, cached));
+      }
+      if (plan === "answer_then_refresh" && (await claimRefresh(service, cached.food))) {
         runInBackground(refreshProduct(service, code));
       }
       return respond(cached);
@@ -149,10 +164,6 @@ function toOffFood(food: DatabaseFoodRow): FoodRow {
   return { ...food, fetched_at: food.fetched_at };
 }
 
-function isStale(food: FoodRow): boolean {
-  return offFreshness(food.fetched_at, new Date()) === "stale";
-}
-
 // Moves `fetched_at` forward only while it still has the value this request read. The update that
 // changes a row wins the right to refresh, so a burst of lookups of one stale row refreshes it once.
 async function claimRefresh(service: Service, food: FoodRow): Promise<boolean> {
@@ -179,6 +190,34 @@ async function chargeLookup(userId: string): Promise<Response | null> {
     (await consume(`off-product:user:${userId}`, perUserLimit, rateLimitWindowSeconds)) ??
     (await consume(globalBucket, globalLimit, rateLimitWindowSeconds))
   );
+}
+
+// For a food stored before the current portion rules. The user asked for this product, so the lookup
+// is charged like a first one. Whatever stops the refresh, the cached product still answers: the
+// person gets the old portions, never an error for a product we hold.
+async function refreshBeforeAnswering(
+  service: Service,
+  userId: string,
+  code: string,
+  cached: StoredProduct,
+): Promise<StoredProduct | OffProductResponse> {
+  try {
+    if ((await chargeLookup(userId)) !== null) {
+      console.warn(`off-product kept the old portions of ${code}, a limit is reached`);
+      return cached;
+    }
+    const refreshed = await fetchAndStoreProduct(service, code);
+    if (!refreshed.ok) {
+      console.warn(
+        `off-product kept the old portions of ${code}, the refresh answered ${refreshed.failure.status}`,
+      );
+      return cached;
+    }
+    return refreshed;
+  } catch (caught) {
+    reportError("off-product", "internal_error", caught);
+    return cached;
+  }
 }
 
 // Server initiated, so it costs the global bucket only. It runs after the response, so it catches

@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23.
 
 ## Context
 
@@ -1206,3 +1206,31 @@ Implemented by KEY-360 (the cascade and its proof). The screens are KEY-7's.
 ### Consequences of Amendment 9
 
 The migration (KEY-360) creates the enum, the table, the constraint, the index, the grants and the policies, and `packages/db/src/types.gen.ts` gains `weigh_ins` and `weigh_in_source`. Core, the api-client and the mobile app build to the numbers and the shapes above. Any further deviation from the frozen Decision, from Amendments 1 to 8 or from this amendment needs an Amendment 10 before the migration or code that implements it lands.
+
+## Amendment 10 (Open Food Facts: products stored before the portion rules are fetched again, 2026-10-23)
+
+### Status
+
+Recorded on 2026-10-23 under KEY-521, part of KEY-516. It adds a rule to the `off-product` Edge Function, with no table, column, function or policy. The details are interpretations made for implementation. Zee confirms them by approving the PR that carries this amendment. The frozen Decision text and Amendments 1 to 9 are unchanged.
+
+### The rule
+
+Portions are written when an Open Food Facts product is stored, so a product stored before the pack portion (KEY-518) and the borrowed natural units (KEY-520) lacks them. Core exports `OFF_PORTION_RULES_FROM`, an ISO instant, and `isBeforePortionRules(fetchedAt)`, which is true when the fetch time is before it or cannot be parsed. The constant is `2026-10-23T02:16:15Z`: the moment the Deploy Supabase run for KEY-520, which also carried KEY-518, completed in production.
+
+When `off-product` finds a cached food with `isBeforePortionRules(fetched_at)`, it fetches and stores the product inline, with the same call a first lookup makes, and charges the user and the global bucket as a first lookup does. The response carries the new portions and the new `fetched_at`. The store sets `fetched_at` from the database clock, which is after the constant, so each product is fetched again once. Re-requesting the product also brings its `packaging_tags`, so a refreshed product gets the best pack name.
+
+If OFF fails, answers with something that cannot be used, no longer has the product (a 404), or a rate limit is reached, the cached product is returned as it is and no error is thrown. `fetched_at` is not moved then, so the next lookup tries again and is charged again. This is accepted: a product OFF has dropped, or returns in an unusable form, costs one call per lookup, which the per-user and global limits cap, and the alternative (moving `fetched_at` first, as the 90 day claim does) would leave a product that met a passing OFF failure with the old portions for 90 days.
+
+The 90 day stale-while-revalidate rule and its claim (Amendment 7) are unchanged and apply to a food fetched at or after the constant. A food that is both before the constant and over 90 days old takes the new path.
+
+### Changing the portion rules
+
+Whoever changes the portion rules sets `OFF_PORTION_RULES_FROM` to the moment the change is live in production, in a change made after the deploy that carries the new rules has completed. The next lookup of each stored product then fetches it again. The date is never set earlier than the deploy: a product stored by the old rules after that date would not be fetched again. A product stored between that deploy and the date change is fetched once more, which is harmless. There is no backfill and no script. Logged diary entries are not touched: the snapshot, not the link, is the record (Amendment 2). As Amendment 2 accepts for any OFF refresh, the store replaces the food's portions, so `portion_id` is null on an entry that pointed at one of the old portions.
+
+### Implemented by
+
+- KEY-521: the constant and the predicate in `packages/core/src/foods/freshness.ts`, the decision in `supabase/functions/_shared/cachedLookupPlan.ts` and its use in `off-product`.
+
+### Consequences of Amendment 10
+
+`off-product` gains one branch and no migration. The app asking for the lookup of a product it already holds is KEY-522. Any further deviation from the frozen Decision, from Amendments 1 to 9 or from this amendment needs an Amendment 11 before the migration or code that implements it lands.

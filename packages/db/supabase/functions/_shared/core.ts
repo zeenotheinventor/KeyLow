@@ -3,6 +3,7 @@
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type { EdgeError, EdgeErrorCode, OffProductResponse } from "./core/index.js";
 export {
+  isBeforePortionRules,
   normaliseBarcode,
   normaliseOffCandidate,
   normaliseOffProduct,
