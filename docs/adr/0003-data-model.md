@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23.
 
 ## Context
 
@@ -1613,3 +1613,222 @@ The Privacy Policy already lists "Your profile stats." and "Your goals, your tar
 ### Consequences of Amendment 12
 
 The migration (KEY-600) creates the enums, the table, the checks, the index, the grants and the policies, converts `profiles.activity`, adds the check on `profiles.sex` and marks existing accounts set up, and `packages/db/src/types.gen.ts` gains `programs`, `activity_level` and `goal_type`. Core and the api-client build to the numbers above. The M7 export brief must add `programs`. Any further deviation from the frozen Decision, from Amendments 1 to 11 or from this amendment needs an Amendment 13 before the migration or code that implements it lands.
+
+## Amendment 13 (The weekly check-in: snapshots, targets, the writer functions and the backstop, 2026-10-23)
+
+### Status
+
+Recorded on 2026-10-23 under KEY-604, part of KEY-6 (the M6 brief, scopes 1, 4 and 6). It implements Zee's answers of 2026-10-23 to the open questions Q1 to Q8, recorded in ADR 0002, Amendment 2, which holds the engine side (the check-in's rules, the schedule, the run-checkin contract and the golden numbers). The frozen Decision names `expenditure_snapshots` and `targets` and lists their columns with no types, defaults or checks. This amendment gives them, and adds what the check-in needs around them: the two functions that are the only writers, the service role's reads, a check on `profiles.checkin_weekday`, and the hourly backstop. The remaining details are interpretations made for implementation. They are, in full:
+
+- the added columns of `expenditure_snapshots` (`id`, `program_id`, `kind`, `created_at`) and of `targets` (`id`, `created_at`, and `params jsonb not null`, which the frozen list does not have), and that `kind` is `text` with a check and not an enum.
+- the checks of both tables: the ranges of `mu_kcal`, `var_kcal2` and `trend_weight_kg`, `measurement` null exactly when `kind = 'start'`, the range and sign checks on `targets`, the length of `dow_calories_kcal`, and `effective_to` null or on or after `effective_from`.
+- the foreign keys and what each does on delete: the user cascades, and `program_id` and `expenditure_snapshot_id` are set null.
+- that `effective_from` is inclusive and `effective_to` is exclusive, and that a replacement on the same day closes the old row at its own `effective_from`.
+- the unique constraint on `(user_id, as_of_date)`, the unique index that allows one current target per user, the list index, and the three indexes on the foreign keys.
+- that clients get `select` only, with an owner-only policy on each table, and that `anon` and `service_role` get no privilege on the two tables.
+- that every write goes through two `security definer` functions, `record_checkin` and `record_targets`, with `set search_path = ''` and execute granted to `service_role` only, and what each does in one transaction.
+- that `record_checkin` answers `duplicate` and writes nothing when the snapshot for `(user_id, as_of_date)` exists, and `recorded` otherwise.
+- the service role's `select` on `profiles`, `programs`, `weigh_ins`, `food_log_entries`, `day_logs`, `day_totals`, `expenditure_snapshots` and `targets`.
+- the check `profiles.checkin_weekday between 1 and 7`.
+- the backstop: the extensions `pg_cron` and `pg_net`, the function `invoke_checkin_backstop()` with its Vault secrets, that it does nothing when either secret is missing, and the schedule `17 * * * *`.
+- that the two Vault secrets are created by hand in the hosted dashboard and never in a migration, because the repository is public.
+- the export and account deletion contract recorded for M7 and the health data rules for both tables.
+- that `TERMS_VERSION` does not change.
+
+Zee's answers, recorded below, settle two of these directly. Q5 (an active program's targets win, saving your own ends the program) is why `targets` is the table the diary reads, and Q7 (the backstop runs hourly at minute 17) is the schedule above. The rest of the questions are engine rules (ADR 0002, Amendment 2).
+
+Decided by the orchestrator on review, 2026-10-23. These are not Zee's rulings:
+
+- that a check-in's targets row has `effective_from` equal to the later of `as_of_date` and the current row's `effective_from`, and a recompute's the later of the user's today and the current row's, that the current row closes at that same date, that intervals never overlap, and that the latest write wins. With no current row the writers only insert.
+- that `record_checkin` moves `next_checkin_date` on the program its snapshot names (`program_id`), and `record_targets` on the program its targets row names.
+- that replacing the start snapshot updates the row in place, keeping its `id` and `created_at`, so that earlier targets rows still point at it, and that `record_targets` raises `start_conflict` when the date it is given names a `checkin` row.
+- that `record_targets` answers the `id` of the new targets row, which is `{ targetsId }` of `run-checkin`'s recompute mode, and that a `null` `p_next_checkin_date` or `p_checkin_weekday` leaves that column as it is.
+- that both writers lock the user's `profiles` row first, which serialises writers per user, and that after a `duplicate` answer `run-checkin` re-reads the newest snapshot and `next_checkin_date` and continues from the stored values.
+- that every column is built from named keys of the jsonb, that `user_id`, `id`, `created_at` and `effective_to` are never read from it, that the program update is limited to the user's own row, that `program_id` and `expenditure_snapshot_id` must belong to `p_user_id` or the function raises `not_owner`, and that KEY-611's pgTAP includes a hostile jsonb.
+- that every object in the functions is schema-qualified.
+- that a start snapshot's `trend_weight_kg` is the trend weight on `as_of_date − 1` when a weigh-in exists on or before it, and null otherwise.
+- that the foreign keys get three indexes: on `targets.program_id`, on `targets.expenditure_snapshot_id` and on `expenditure_snapshots.program_id`.
+- that a measurement with no update fields (an ineligible one) is valid in `measurement`.
+- that the checks the ticket does not name are the ones above and no more, in particular no check on the elements of `dow_calories_kcal`, which the engine builds.
+- the column types, for which the frozen list gives none (`numeric` for the estimate, the variance, the weight and the grams, which hold whole grams, `integer` for calories, and `integer[]` for `dow_calories_kcal`).
+- that the check on `profiles.checkin_weekday` is KEY-611's, with the function that writes it.
+- that the backstop passes no `Authorization` header, sets a request timeout of 30 000 milliseconds, and takes `keylow_project_url` as the base URL with no trailing slash, to which the function appends `/functions/v1/run-checkin`.
+- that a program's end leaves its last targets row with `effective_to` null, and that a history reader must not label it current after the program ends.
+- a known minor point about the cascade and a partial index, recorded under "Known minor points" below, with no change to the merged text of Amendment 12.
+
+The frozen Decision text is not edited. Where it says `int[7]` on the `targets` line, `int[]` with a length check is what is built, as Amendment 12 did for `programs`, and where it says "one current per user", a partial unique index is. Amendments 1 to 12 are unchanged. This amendment adds no table beyond the two the Decision names, adds one check on `profiles`, two functions, a job, and the service role's reads.
+
+### Zee's rulings
+
+Zee's words on 2026-10-23, on KEY-604 and KEY-6, are one sentence:
+
+> "Take all the recommended answers: Q1 to Q8 for the rest of M6 and the six setup canvas questions."
+
+The orchestrator's record of the answers, on KEY-604, 2026-10-23. These are the recommended answers as they stand in the ticket, which that sentence took. They are not Zee's words:
+
+- Q1: the check-in weekday is the weekday the user set up, the first check-in two weeks later, then weekly.
+- Q2: one check-in per missed week, oldest first.
+- Q3: the check-in uses the trend weight, so the end-to-end gate is 2140 kcal / P 126 / F 73 / C 245, and 2150 / 126 / 73 / 247 stays as `deriveTargets`' unit golden.
+- Q4: during settling, a recalculation restarts from the new answers. After the first measurement, it keeps the measured expenditure.
+- Q5: an active program's targets win, and saving your own targets ends the program.
+- Q6: an 80% band.
+- Q7: the backstop runs hourly at minute 17.
+- Q8: the gate case is a check-in whose window has fewer than 10 complete days.
+
+Ruling 8 of the setup wizard answers (Zee, 2026-10-23, quoted in Amendment 12) left the weekday to M6:
+
+> "8. Check-in weekday. Not asked now. M6 decides it."
+
+KEY-6's health data rules (Zee, 2026-10-14) apply to both tables:
+
+> "profile stats (sex, date of birth, height, activity), goals, expenditure snapshots and targets are health data, including the derived values. They are all used by the engine, so they are collected; nothing beyond them is. Rules for every sub-ticket: `run-checkin` logs user ids, counts and durations only, never intake, weight or expenditure values; the replay harness runs on seed or exported data, never against production; estimates are labelled as estimates and the program screen carries the not-medical-advice note."
+
+### `expenditure_snapshots`
+
+The frozen columns plus four:
+
+| Column            | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `uuid primary key default gen_random_uuid()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `user_id`         | `uuid not null references auth.users (id) on delete cascade`. No default, because no client inserts.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `program_id`      | `uuid references public.programs (id) on delete set null`.                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `as_of_date`      | `date not null`. The user's local date of the check-in, or of the start snapshot.                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| `kind`            | `text not null`. Check: `kind in ('start', 'checkin')`.                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `mu_kcal`         | `numeric not null`. Check: from 800 to 6000 inclusive, the engine's `z` clamp (ADR 0002, Amendment 1).                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `var_kcal2`       | `numeric not null`. Check: above 0.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `measurement`     | `jsonb`. Null exactly when `kind = 'start'` (the check below), and otherwise the key set of ADR 0002, Amendment 2: the measurement, plus the update fields when it is eligible.                                                                                                                                                                                                                                                                                                                                       |
+| `trend_weight_kg` | `numeric`. Check: null, or from 20 to 400 inclusive, the weight range (Amendment 9). On a `checkin` row it is the trend weight the targets used, or null when the user had no weigh-in and the onboarding weight stood in (`basis.trendWeightKg` on the targets row always holds the weight `deriveTargets` was given). On a `start` row it is the trend weight on `as_of_date − 1` when a weigh-in exists on or before it, and null otherwise, so a column named for the trend never holds a weight that is not one. |
+| `engine_version`  | `text not null`. The `EngineParams` version the row was computed with.                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| `params`          | `jsonb not null`. The `EngineParams` the row was computed with, so retuning never rewrites history (ADR 0002 Decision). Every snapshot and target row carries them.                                                                                                                                                                                                                                                                                                                                                   |
+| `created_at`      | `timestamptz not null default now()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+
+- The kind check is one check: `(kind = 'start') = (measurement is null)`. A `start` row has no measurement, and a `checkin` row always has one. A `checkin` row whose measurement is ineligible carries that ineligible object (`eligible: false`, with no update fields), because a drifting week is a check-in and its summary says why.
+- Unique `(user_id, as_of_date)`, a plain constraint. It is the idempotency key of `run-checkin`, and it leads with `user_id`, so the cascade from `auth.users` has an index on the referencing column.
+- An index on `program_id`, so that deleting a program does not scan the table to set the column null.
+- `program_id` is set null on delete, so ending or deleting a program leaves its history.
+- The names of the constraints and indexes are the migration's call. The rules are the contract.
+
+### `targets`
+
+The frozen columns plus three:
+
+| Column                          | Definition                                                                                                                                                                                                 |
+| ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                            | `uuid primary key default gen_random_uuid()`.                                                                                                                                                              |
+| `user_id`                       | `uuid not null references auth.users (id) on delete cascade`. No default, because no client inserts.                                                                                                       |
+| `program_id`                    | `uuid references public.programs (id) on delete set null`.                                                                                                                                                 |
+| `expenditure_snapshot_id`       | `uuid references public.expenditure_snapshots (id) on delete set null`.                                                                                                                                    |
+| `effective_from`                | `date not null`. Inclusive.                                                                                                                                                                                |
+| `effective_to`                  | `date`. Exclusive, and null means the row is current. Check: null, or on or after `effective_from`.                                                                                                        |
+| `calories_kcal`                 | `integer not null`. Check: from 800 to 6000 inclusive, the range of `profiles_target_kcal_range` (Amendment 4).                                                                                            |
+| `protein_g`, `fat_g`, `carbs_g` | `numeric not null`, each with a `>= 0` check. They hold whole grams, rounded to nearest.                                                                                                                   |
+| `dow_calories_kcal`             | `integer[] not null`. Check: `cardinality(dow_calories_kcal) = 7`. `int[]` and not the frozen `int[7]`, for the reason Amendment 12 gives.                                                                 |
+| `basis`                         | `jsonb not null`. The key set of ADR 0002, Amendment 2: `{ source, tdeeKcal, trendWeightKg, bmrKcal, goal, ratePctPerWeek, effectiveRatePctPerWeek, proteinGPerKg, fatFraction, dowOffsetsKcal, clamps }`. |
+| `engine_version`                | `text not null`.                                                                                                                                                                                           |
+| `params`                        | `jsonb not null`. The brief's acceptance says every target row carries the params, and the frozen list has only `engine_version`.                                                                          |
+| `created_at`                    | `timestamptz not null default now()`.                                                                                                                                                                      |
+
+- **One current target per user**: a unique index on `(user_id) where effective_to is null`. It is the frozen "one current per user". Being partial, it does not serve the cascade from `auth.users`, which looks up every row of the user. The list index below does.
+- **The list index**: `(user_id, effective_from desc)`, for the targets history and for the cascade.
+- **Indexes on the foreign keys**: one on `program_id` and one on `expenditure_snapshot_id`, so that deleting a program or a snapshot does not scan the table to set the column null.
+- **The interval.** A row applies from `effective_from` (inclusive) to `effective_to` (exclusive). A replacement on the same day closes the old row at its own `effective_from`, so the old row is empty, and the check admits it because `effective_to` may equal `effective_from`.
+- **Which date a new row takes.** The new row's `effective_from` is the later of the date it is for (`as_of_date` for a check-in, the user's today for a recompute) and the current row's `effective_from`. The current row closes at that same date, which is an empty interval when the two are equal. Intervals never overlap, there is one current row, and the latest write wins. A catch-up check-in written after a recompute on the same day therefore replaces the recompute's row. With no current row, the writers only insert.
+- `calories_kcal` and each day of `dow_calories_kcal` are within 800 to 6000 because the engine keeps them so (ADR 0002, Amendment 2, "Day-of-week offsets"). The database checks the weekly figure and the length, and does not check each day.
+- `program_id` and `expenditure_snapshot_id` are set null on delete, so a deleted program or snapshot leaves the target history readable.
+- **After a program ends.** Ending a program writes `ended_on` and leaves its last targets row with `effective_to` null. That row is in force only while the active program exists, which is the read rule of ADR 0002, Amendment 2 ("Engine targets and manual targets"). A history reader (KEY-620) must not label it current after the program ends.
+
+### Privileges and row level security
+
+In the style of Amendments 8, 9 and 12: `revoke all` on each table from `anon`, `authenticated` and `service_role`, then explicit grants. RLS is enabled on both.
+
+- `authenticated`: `select` on both tables and nothing else. No `insert`, `update` or `delete`, so a client cannot write a target, a snapshot or its `params`. This is the brief's "select-only for clients".
+- `anon`: nothing.
+- `service_role`: no privilege on these two tables except the `select` below. It writes only through the two functions.
+
+Policies, as predicates, for `authenticated` and using `(select auth.uid())`:
+
+- `expenditure_snapshots_select_own`: using `user_id = (select auth.uid())`.
+- `targets_select_own`: using `user_id = (select auth.uid())`.
+
+Terms acceptance is not in the policies, as in Amendments 9 and 12.
+
+**The service role's reads.** Amendment 12 left "the service role's grants on `programs`, and the tables `expenditure_snapshots` and `targets`" to M6. This closes it: `service_role` gets `select` on what `run-checkin` reads, namely `profiles`, `programs`, `weigh_ins`, `food_log_entries`, `day_logs`, `day_totals`, `expenditure_snapshots` and `targets`. `day_totals` is a `security_invoker` view, so the role needs `select` on its source tables as well as on the view, and `food_log_entries` is on the list for that reason. A grant the role already has stays as it is. No other privilege is added to any table.
+
+### The writer functions
+
+Two functions in `public`, both `security definer` with `set search_path = ''`, every object named with its schema (`public.`, `pg_catalog.`), `revoke execute` from `public`, `anon` and `authenticated`, and `execute` granted to `service_role` only. They take the user as `p_user_id`, because the caller is the service role and there is no `auth.uid()`, and `run-checkin` has already verified the user's JWT. An error carries a code and never a value.
+
+**What the jsonb may carry.** Every column of a row is built from a named key of the jsonb. `user_id`, `id`, `created_at` and `effective_to` are never read from it, and `expenditure_snapshot_id` is read only by `record_targets`, from `p_targets`. The program update is `where id = ... and user_id = p_user_id`. `program_id` and `expenditure_snapshot_id` must belong to `p_user_id`, or the function raises `not_owner`. So whatever the caller sends, no row is written for, or points at, another user. KEY-611's pgTAP includes a hostile jsonb that names another user's `user_id`, `program_id` and `expenditure_snapshot_id`.
+
+**Serialising.** Both functions begin with `select 1 from public.profiles where id = p_user_id for update`, which serialises writers per user. It is the row lock of Amendment 7 ("Concurrency"), and there is no advisory lock. A missing profile raises `no_profile`.
+
+**`record_checkin(p_user_id uuid, p_snapshot jsonb, p_targets jsonb, p_next_checkin_date date)`** returns `text`, `recorded` or `duplicate`. In one transaction:
+
+1. It takes the lock above.
+2. It inserts the snapshot `on conflict (user_id, as_of_date) do nothing`. When nothing was inserted, it writes nothing else and returns `duplicate`.
+3. Otherwise it closes the current target and inserts the new one with `expenditure_snapshot_id` pointing at the snapshot (dates as in "Which date a new row takes"), and moves the `next_checkin_date` of the program the snapshot names to `p_next_checkin_date`.
+4. It returns `recorded`.
+
+After `duplicate`, `run-checkin` re-reads the newest snapshot and `next_checkin_date` and continues from the stored values. So `run-checkin` twice for the same user and date leaves one snapshot and one targets row, which is the brief's acceptance.
+
+**`record_targets(p_user_id uuid, p_targets jsonb, p_start_snapshot jsonb, p_next_checkin_date date, p_checkin_weekday int)`** returns `uuid`, the new targets row's `id`. In one transaction:
+
+1. It takes the lock above.
+2. When `p_start_snapshot` is not null, it writes the start snapshot, or replaces it. A snapshot for `(user_id, as_of_date)` that is a `start` row is updated in place, keeping its `id` and `created_at`. When that row is a `checkin` row, the function raises `start_conflict`. The new targets row then points at this snapshot. When `p_start_snapshot` is null, `p_targets` carries the `expenditure_snapshot_id` of the newest snapshot, which the recompute read.
+3. It closes the current target and inserts the new one.
+4. When `p_next_checkin_date` is not null it sets the named program's `next_checkin_date`, and when `p_checkin_weekday` is not null it sets `profiles.checkin_weekday`. This is "the schedule" of ADR 0002, Amendment 2, and it is how a null `next_checkin_date` becomes set. A null argument leaves the column as it is.
+
+### `profiles.checkin_weekday`
+
+The column stays `int` (it is `int` in `0001_init.sql`) and gets the check `checkin_weekday between 1 and 7`, ISO 1 (Monday) to 7 (Sunday). A check passes on null, so a profile with no weekday is valid, and every profile has none today, because the wizard never writes it (Amendment 12). The migration's new check fails loudly if a row holds another value, so it needs no separate assertion. The grants of Amendments 3 and 4 are unchanged, so a client can still write the column, which the app does not do. A client can likewise still write `programs.next_checkin_date`, which Amendment 12 grants. The schedule runs on `programs.next_checkin_date` and the engine reads whatever is stored, so a stray weekday moves no check-in.
+
+### The backstop
+
+An hourly job that makes the check-in happen in the first hour of each user's local day, whether or not the app was opened (Q7). `pg_net` lets the database call the function and `pg_cron` runs it on a schedule.
+
+- The extensions `pg_cron` and `pg_net` are created.
+- The function `invoke_checkin_backstop()` is `security definer` with `set search_path = ''`, and execute is revoked from everyone. Its objects are schema-qualified (`net.http_post`, `vault.decrypted_secrets`). It reads two Vault secrets, `keylow_project_url` and `checkin_cron_secret`. `keylow_project_url` holds the base URL with no trailing slash, and the function appends `/functions/v1/run-checkin`. It posts `{ "mode": "backstop" }` there with the header `x-checkin-secret` set to the second secret, and no `Authorization` header. `net.http_post` gets an explicit `timeout_milliseconds` of 30000. It does nothing when either secret is missing, which is true of a local stack and of CI, so neither calls anything.
+- The job is `cron.schedule('run-checkin-backstop', '17 * * * *', ...)`, calling that function. It runs at minute 17 of every hour. One run handles at most the oldest 200 due users (ADR 0002, Amendment 2), and the hourly cadence drains the rest.
+- **The secrets are created by hand** in the hosted dashboard and never in a migration, because the repository is public. `checkin_cron_secret` holds the same value as the function secret `CHECKIN_CRON_SECRET` that `run-checkin` compares the header with. KEY-615 is that human step, and it comes before the job (KEY-616). No secret, URL or key is written in any file, issue or pull request.
+- The function `run-checkin` is deployed with `verify_jwt = false` (ADR 0002, Amendment 2, "`run-checkin`"). CI serves the functions with `--no-verify-jwt`, so the hosted gateway check, that one hourly run answers 200 and not 401, is a post-deploy check for KEY-615 or KEY-625.
+- The frozen "daily pg_cron backstop" of ADR 0002 is hourly by Q7.
+
+### Health data
+
+A snapshot and a targets row are health data, with their derived values: the expenditure estimate and its variance, the measurement, the trend weight, the targets and the basis (Zee, 2026-10-14, in the KEY-6 brief). They are collected because the engine uses them, and nothing beyond them is. A value from either table never appears in a log, an error report or an analytics event. Only row ids and counts do. `run-checkin` and the functions above log user ids, counts, durations and error codes, never a value. No client code reads, logs or reports the message or detail of a database error from these tables. An error carries the action and the code only. The migration, the seed and the tests neither log a value nor raise a notice with one. The replay harness runs on a fixture and never against production.
+
+### Export and account deletion
+
+There is no data export and no in-app account deletion today (Amendment 9, "Export and account deletion"). This amendment adds to the contract M7 will use:
+
+- Export includes every column of every `expenditure_snapshots` row and every `targets` row of the user, ended and closed rows included, with their `measurement`, `basis` and `params`. The M7 export brief (KEY-7) must add both tables to its list, next to `programs` (Amendment 12). The `service_role` grant that an export path needs is M7's to add.
+- Account deletion works through the `on delete cascade` foreign key from `auth.users` (`user_id` on both tables) and needs no code. Deleting a program, or a snapshot, sets the `program_id` and `expenditure_snapshot_id` of the rows that name it to null and deletes none of them.
+
+### Terms
+
+The Privacy Policy already lists "Your goals, your targets and your expenditure estimates.", in `packages/core/src/copy/legal.ts`, as Amendment 12 records. These two tables hold nothing that is not on that list, so no policy copy changes and `TERMS_VERSION` does not change.
+
+### What this closes
+
+From Amendment 12, "Open": the check-in weekday and `next_checkin_date` (the check, `record_targets` and ADR 0002, Amendment 2), the service role's grants on `programs` and on the two tables (above), and the prior for an account with no stats (ADR 0002, Amendment 2, which makes no snapshot without stats). The web wizard stays open.
+
+### Known minor points
+
+- Amendment 12 says the partial unique index on `programs (user_id) where ended_on is null` gives the cascade from `auth.users` an index on the referencing column. That is not exact. The partial index serves a lookup of `user_id` for active rows, but a cascade for a user who has only ended programs scans the table. It is minor, because `programs` is small and a user has few rows. The merged text of Amendment 12 is not changed, and this records the point.
+
+### Open
+
+Nothing is open in this amendment.
+
+### Implemented by
+
+- KEY-610, the migration for the tables: `expenditure_snapshots` and `targets` with their checks, the unique constraint and indexes (including the three foreign key indexes), the select-only grants and policies, pgTAP (every policy, the exact privileges, each check and its accept and reject cases, the unique `(user_id, as_of_date)`, the one-current index, and the deletion cascade and the set null), and the regenerated `packages/db/src/types.gen.ts`.
+- KEY-611, the migration for the writers: `record_checkin` and `record_targets`, the service role's reads, the check on `profiles.checkin_weekday`, and pgTAP (the privileges of the two functions, `recorded` and `duplicate`, the rollback of a failed write, the schedule, the in-place replacement of a start snapshot, `start_conflict`, the target dates, and a hostile jsonb that names another user's `user_id`, `program_id` and `expenditure_snapshot_id`).
+- KEY-616, the migration for the job: the extensions, `invoke_checkin_backstop()` and the schedule, with pgTAP that proves the job exists, runs at `17 * * * *` and that the function does nothing without its secrets. KEY-615 is the hand step that creates the secrets in the hosted project.
+- KEY-612, KEY-613 and KEY-614, `run-checkin`, which calls the functions through the service role.
+- KEY-617, the diary on live targets, and KEY-620, the api-client reads, which do not label a program's last row current after it ends.
+- KEY-7 (M7), outside this amendment: the export, which must include both tables.
+
+### Consequences of Amendment 13
+
+The migrations (KEY-610, KEY-611 and KEY-616) create the tables, the checks, the indexes, the grants, the policies, the two functions, the check on `profiles.checkin_weekday` and the job, and `packages/db/src/types.gen.ts` gains `expenditure_snapshots` and `targets` and the two functions. Core, the functions and the api-client build to the numbers above and to ADR 0002, Amendment 2. The M7 export brief must add both tables. Any further deviation from the frozen Decision, from Amendments 1 to 12 or from this amendment needs an Amendment 14 before the migration or code that implements it lands.
