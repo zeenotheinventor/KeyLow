@@ -2,6 +2,7 @@ export type { Database } from "./database.types";
 export { invokeEdgeFunction } from "./edge";
 export { KeyLowProvider, useSupabase } from "./KeyLowProvider";
 export { keys } from "./queryKeys";
+export { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "./recipeCache";
 export { CustomFoodValidationError } from "./customFoodInput";
 export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./errors";
 export type { EdgeErrorKind } from "./errors";

@@ -1,4 +1,12 @@
-import { keys, useArchiveRecipe, useDuplicateRecipe } from "@keylow/api-client";
+import {
+  addToLibrary,
+  keys,
+  libraryNames,
+  setLibraryFlag,
+  summaryOf,
+  useArchiveRecipe,
+  useDuplicateRecipe,
+} from "@keylow/api-client";
 import { GENERIC_ERROR, RECIPE_TOASTS, UNDO_LABEL, describeDuplicateName } from "@keylow/core/copy";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRef } from "react";
@@ -6,10 +14,6 @@ import { useRef } from "react";
 import { useToast } from "../ui";
 
 import type { RecipeActions } from "./types";
-import type { RecipeSummary } from "@keylow/api-client";
-
-// The library reads archived recipes with the live ones in one request, so every recipe is in this list.
-const libraryKey = keys.recipes.list(true);
 
 // The write has worked and its toast must still show, so a screen's follow-up that throws is not allowed to
 // stop it. The user is left where they were, with the toast.
@@ -44,35 +48,15 @@ export function useRecipeActions(): RecipeActions {
     toast.show({ message: GENERIC_ERROR, icon: "CircleAlert", tone: "danger" });
   };
 
-  const setLibraryFlag = (id: string, isArchived: boolean) => {
-    queryClient.setQueryData<RecipeSummary[]>(libraryKey, (recipes) =>
-      recipes?.map((recipe) =>
-        recipe.id === id ? { ...recipe, is_archived: isArchived } : recipe,
-      ),
-    );
-  };
-
-  // The copy goes in straight after its original until the library is read again, which puts it in name order.
-  const addToLibrary = (originalId: string, copy: RecipeSummary) => {
-    queryClient.setQueryData<RecipeSummary[]>(libraryKey, (recipes) => {
-      // The library may have been read again already, and then the copy is in it.
-      if (recipes === undefined || recipes.some((recipe) => recipe.id === copy.id)) {
-        return recipes;
-      }
-      const at = recipes.findIndex((recipe) => recipe.id === originalId) + 1;
-      return [...recipes.slice(0, at), copy, ...recipes.slice(at)];
-    });
-  };
-
   // Resolves to whether the write worked. A fetch under way is stopped first, so it cannot bring the old flag back.
   async function setArchived(id: string, isArchived: boolean): Promise<boolean> {
     await queryClient.cancelQueries({ queryKey: keys.recipes.all });
-    setLibraryFlag(id, isArchived);
+    const rollback = setLibraryFlag(queryClient, id, isArchived);
     try {
       await archiveRecipe.mutateAsync({ id, archived: isArchived });
       return true;
     } catch {
-      setLibraryFlag(id, !isArchived);
+      rollback();
       showFailure();
       return false;
     }
@@ -84,15 +68,16 @@ export function useRecipeActions(): RecipeActions {
 
   return {
     duplicate: (recipe, followUp) => {
-      const names = (queryClient.getQueryData<RecipeSummary[]>(libraryKey) ?? []).map(
-        ({ name }) => name,
-      );
-      const name = describeDuplicateName(recipe.name, [...names, ...namesBeingSaved.current]);
+      const name = describeDuplicateName(recipe.name, [
+        ...libraryNames(queryClient),
+        ...namesBeingSaved.current,
+      ]);
       namesBeingSaved.current.add(name);
       duplicateRecipe
         .mutateAsync({ recipeId: recipe.id, name })
-        .then((copy) => {
-          addToLibrary(recipe.id, copy);
+        .then((saved) => {
+          const copy = summaryOf(saved);
+          addToLibrary(queryClient, recipe.id, copy);
           runFollowUp(() => followUp?.onSaved?.(copy));
           toast.show({
             message: RECIPE_TOASTS.duplicated,

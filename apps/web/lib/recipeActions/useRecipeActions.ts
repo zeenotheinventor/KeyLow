@@ -1,16 +1,20 @@
-import { keys, useArchiveRecipe, useDuplicateRecipe } from "@keylow/api-client";
+import {
+  addToLibrary,
+  keys,
+  libraryNames,
+  setLibraryFlag,
+  summaryOf,
+  useArchiveRecipe,
+  useDuplicateRecipe,
+} from "@keylow/api-client";
 import { GENERIC_ERROR, RECIPE_TOASTS, UNDO_LABEL, describeDuplicateName } from "@keylow/core/copy";
 import { useQueryClient } from "@tanstack/react-query";
 import { Archive, Check, CircleAlert, Copy } from "lucide-react";
 import { useRef, useState } from "react";
 
 import type { RecipeActions } from "./types";
-import type { RecipeDetail, RecipeSummary } from "@keylow/api-client";
 
 import { useToast } from "@/components/ui/Toast";
-
-// The library reads archived recipes with the live ones in one request, so every recipe is in this list.
-const libraryKey = keys.recipes.list(true);
 
 // The write has worked and its toast must still show, so a screen's follow-up that throws is not allowed to
 // stop it. The user is left where they were, with the toast.
@@ -21,16 +25,6 @@ function runFollowUp(followUp: () => void): void {
     // Nothing to report: the failure is the screen's own and carries no recipe data worth logging.
   }
 }
-
-// The library list holds the lean columns, and a saved copy comes with its ingredients and steps too.
-const summaryOf = ({
-  id,
-  name,
-  servings,
-  yield_grams,
-  is_archived,
-  computed,
-}: RecipeDetail): RecipeSummary => ({ id, name, servings, yield_grams, is_archived, computed });
 
 /**
  * Duplicate, archive and restore for a recipe, each with its toast, shared by the library, the archived
@@ -62,26 +56,6 @@ export function useRecipeActions(): RecipeActions {
     toast.show({ message: GENERIC_ERROR, icon: CircleAlert, tone: "danger" });
   };
 
-  const setLibraryFlag = (id: string, isArchived: boolean) => {
-    queryClient.setQueryData<RecipeSummary[]>(libraryKey, (recipes) =>
-      recipes?.map((recipe) =>
-        recipe.id === id ? { ...recipe, is_archived: isArchived } : recipe,
-      ),
-    );
-  };
-
-  // The copy goes in straight after its original until the library is read again, which puts it in name order.
-  const addToLibrary = (originalId: string, copy: RecipeSummary) => {
-    queryClient.setQueryData<RecipeSummary[]>(libraryKey, (recipes) => {
-      // The library may have been read again already, and then the copy is in it.
-      if (recipes === undefined || recipes.some((recipe) => recipe.id === copy.id)) {
-        return recipes;
-      }
-      const at = recipes.findIndex((recipe) => recipe.id === originalId) + 1;
-      return [...recipes.slice(0, at), copy, ...recipes.slice(at)];
-    });
-  };
-
   const markDuplicating = (id: string, isDuplicating: boolean) => {
     if (isDuplicating) {
       duplicatesUnderWay.current.add(id);
@@ -104,12 +78,12 @@ export function useRecipeActions(): RecipeActions {
     }
     try {
       await queryClient.cancelQueries({ queryKey: keys.recipes.all });
-      setLibraryFlag(id, isArchived);
+      const rollback = setLibraryFlag(queryClient, id, isArchived);
       try {
         await archiveRecipe.mutateAsync({ id, archived: isArchived });
         return true;
       } catch {
-        setLibraryFlag(id, !isArchived);
+        rollback();
         showFailure();
         return false;
       }
@@ -133,16 +107,16 @@ export function useRecipeActions(): RecipeActions {
         return;
       }
       markDuplicating(recipe.id, true);
-      const names = (queryClient.getQueryData<RecipeSummary[]>(libraryKey) ?? []).map(
-        ({ name }) => name,
-      );
-      const name = describeDuplicateName(recipe.name, [...names, ...namesBeingSaved.current]);
+      const name = describeDuplicateName(recipe.name, [
+        ...libraryNames(queryClient),
+        ...namesBeingSaved.current,
+      ]);
       namesBeingSaved.current.add(name);
       duplicateRecipe
         .mutateAsync({ recipeId: recipe.id, name })
         .then((saved) => {
           const copy = summaryOf(saved);
-          addToLibrary(recipe.id, copy);
+          addToLibrary(queryClient, recipe.id, copy);
           runFollowUp(() => followUp?.onSaved?.(copy));
           toast.show({
             message: RECIPE_TOASTS.duplicated,

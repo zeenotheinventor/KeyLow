@@ -279,6 +279,38 @@ describe("the library's row menu", () => {
       ]);
     });
 
+    it("should put only the library columns of the copy in the cached list, as the web twin does", async () => {
+      const user = await renderLibrary();
+      const editedLists: RecipeSummary[][] = [];
+      queryClient.getQueryCache().subscribe((event) => {
+        const isEditByHand =
+          event.type === "updated" && event.action.type === "success" && event.action.manual;
+        const list = queryClient.getQueryData<RecipeSummary[]>(keys.recipes.list(true));
+        if (isEditByHand && list !== undefined) {
+          editedLists.push(list);
+        }
+      });
+
+      await user.press(moreButton("Chicken and rice"));
+      await user.press(
+        await screen.findByRole("button", { name: "Duplicate, Makes a copy you can change" }),
+      );
+      await toast("Recipe duplicated");
+
+      const withCopy = editedLists.find((list) =>
+        list.some(({ name }) => name === "Chicken and rice (copy)"),
+      );
+      const copy = withCopy?.find(({ name }) => name === "Chicken and rice (copy)");
+      expect(Object.keys(copy ?? {}).sort()).toEqual([
+        "computed",
+        "id",
+        "is_archived",
+        "name",
+        "servings",
+        "yield_grams",
+      ]);
+    });
+
     it("should keep the original as it was", async () => {
       await duplicate("Chicken and rice");
       await toast("Recipe duplicated");
