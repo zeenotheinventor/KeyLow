@@ -167,6 +167,9 @@
 14-131 # Limes, flesh only
 14-142 # Lychees, raw, flesh only
 14-178 # Passion fruit, flesh and pips
+14-188 # Peaches, canned in juice, whole contents
+14-189 # Peaches, canned in syrup, whole contents
+14-197 # Pears, canned in juice, whole contents
 14-299 # Peaches, raw, flesh and skin
 14-318 # Bananas, flesh only
 14-319 # Apples, eating, raw, flesh and skin
@@ -194,8 +197,11 @@
 14-392 # Apricots, ready-to-eat, semi-dried
 14-394 # Dates, dried, flesh and skin
 14-395 # Figs, ready-to-eat, semi-dried
+14-840 # Pistachio nuts, kernel only, roasted and salted
 14-870 # Almonds, flaked and ground
+14-871 # Brazil nuts, kernel only
 14-892 # Peanut butter, smooth
+14-896 # Almonds, whole kernels
 15-107 # Curry, chick pea, whole and tomato, Punjabi, with butter, homemade
 15-641 # Curry, chick pea dhal, homemade
 15-744 # Curry, chick pea, whole, Gujerati type, homemade
@@ -211,6 +217,7 @@
 16-412 # Salmon, smoked (cold-smoked)
 16-416 # Tuna, canned in brine, drained
 16-417 # Tuna, canned in sunflower oil, drained
+16-448 # Anchovies, canned in oil, drained
 17-031 # Oil, coconut
 17-038 # Oil, olive
 17-041 # Oil, rapeseed
@@ -218,6 +225,7 @@
 17-073 # Jam, fruit with edible seeds
 17-078 # Marmalade
 17-091 # Chocolate, white
+17-114 # Marshmallows
 17-212 # Lager, alcohol-free
 17-222 # Cider, dry
 17-247 # Spirits, 40% volume
