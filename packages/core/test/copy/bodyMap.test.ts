@@ -251,6 +251,24 @@ describe("describeLegendCaption", () => {
 });
 
 describe("describeBodyMapHeader", () => {
+  it.each(["heat", "volume"] as const)(
+    "should give the %s toggle name as a string, so a caller needs no fallback",
+    (scale) => {
+      const { toggleLabel } = describeBodyMapHeader({
+        scale,
+        view: "actual",
+        at: THURSDAY_19_00,
+        tz: GOLDEN_TIME_ZONE,
+        isToday: true,
+        weekEnd: "2026-10-18",
+        plannedSessions: [],
+      });
+      const name: string = toggleLabel;
+
+      expect(name).toBe("Show projected");
+    },
+  );
+
   it("should read Actual now on Thursday as the actual heat board does", () => {
     expect(header({})).toStrictEqual({
       viewLabel: "Actual",

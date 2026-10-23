@@ -37,6 +37,8 @@ export type TrainScreenProps = {
   onViewSession?: ((sessionId: string) => void) | undefined;
   /** Opens the history list: "History" in the header. Drawn only when it is given. */
   onOpenHistory?: (() => void) | undefined;
+  /** Opens the body map: the chevron button on the body map card. Drawn only when it is given. */
+  onOpenBodyMap?: (() => void) | undefined;
 };
 
 /** The Today card for today: what `todayCard` gave and what its words need besides it. */

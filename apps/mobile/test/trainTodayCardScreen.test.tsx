@@ -6,6 +6,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { TrainScreen } from "../components/TrainScreen";
 import { ThemeProvider } from "../lib/theme";
+import { buttonsBesidesTheBodyMapCard } from "./support/bodyMapCardButtons";
 import { createDiaryQueryClient, diaryBackend } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -151,7 +152,7 @@ describe("the Train home's Today card", () => {
       await renderTrain();
       await screen.findByRole("heading", { name: "Legs" });
 
-      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", buttonsBesidesTheBodyMapCard)).not.toBeOnTheScreen();
     });
 
     it("should draw Start Legs when onStart is given, and call it", async () => {
@@ -299,7 +300,7 @@ describe("the Train home's Today card", () => {
       await renderTrain();
       await screen.findByText(TRAIN_TODAY_CARD.doneLabel);
 
-      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", buttonsBesidesTheBodyMapCard)).not.toBeOnTheScreen();
     });
   });
 
@@ -355,7 +356,7 @@ describe("the Train home's Today card", () => {
       await renderTrain(allHandlers());
       await screen.findByRole("heading", { name: TRAIN_TODAY_CARD.restTitle });
 
-      expect(screen.getAllByRole("button")).toHaveLength(3);
+      expect(screen.getAllByRole("button", buttonsBesidesTheBodyMapCard)).toHaveLength(3);
       expect(screen.getByRole("button", { name: "Pick day" })).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /Start|Resume|View session|Log/ })).toBeNull();
     });

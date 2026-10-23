@@ -6,6 +6,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { TrainScreen } from "../components/TrainScreen";
 import { ThemeProvider } from "../lib/theme";
+import { buttonsBesidesTheBodyMapCard } from "./support/bodyMapCardButtons";
 import { createDiaryQueryClient } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -134,7 +135,7 @@ describe("the Train home's week strip", () => {
       await renderTrain();
       await weekCard();
 
-      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", buttonsBesidesTheBodyMapCard)).not.toBeOnTheScreen();
     });
   });
 

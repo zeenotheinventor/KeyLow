@@ -16,6 +16,7 @@ import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
 import { TodayCard } from "../TodayCard";
 import { Banner, Button, ErrorState, Skeleton } from "../ui";
+import { TrainBodyMap } from "./TrainBodyMap";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
 import { useTrainHome } from "./useTrainHome";
@@ -49,7 +50,9 @@ function bindViewSession(handler: (sessionId: string) => void, sessionId: string
  * buttons that log or reopen one are dimmed offline. A button is drawn only when its handler is given, and
  * it passes the handler what the start needs: the routine day and the time zone. View session and a logged day
  * of the week strip pass the id of the session they open. Pick day, under Start on the Today card, opens a
- * sheet of the routine's days and starts the one pressed the way Start does.
+ * sheet of the routine's days and starts the one pressed the way Start does. The body map card sits under the
+ * Today card or the no routine card and above the week strip, on every home but the first visit's, and
+ * opens the body map when it is given a handler.
  */
 export function TrainScreen({
   isStarting = false,
@@ -61,6 +64,7 @@ export function TrainScreen({
   onResume,
   onViewSession,
   onOpenHistory,
+  onOpenBodyMap,
 }: TrainScreenProps) {
   const home = useTrainHome();
   const isOnline = useIsOnline();
@@ -195,6 +199,13 @@ export function TrainScreen({
               onSetGoal={onSetGoal}
             />
           )
+        ) : null}
+        {home.status === "ready" && !isFirstTime ? (
+          <TrainBodyMap
+            savedAt={home.savedAt}
+            timeZone={home.timeZone}
+            onOpenBodyMap={onOpenBodyMap}
+          />
         ) : null}
         {home.status === "ready" && home.week !== null ? (
           <PlanWeekStrip

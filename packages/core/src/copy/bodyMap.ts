@@ -268,8 +268,8 @@ export const describeLegendCaption = ({
     : `${VOLUME_LEGEND_CAPTION} Over means above the maximum.`;
 };
 
-export type BodyMapHeaderInput = Readonly<{
-  scale: BodyMapScale;
+export type BodyMapHeaderInput<Scale extends BodyMapScale = BodyMapScale> = Readonly<{
+  scale: Scale;
   view: BodyMapView;
   /** The instant the map shows: `now` on today, 20:00 on another day. */
   at: string;
@@ -288,8 +288,15 @@ export type BodyMapHeader = {
   toggleLabel: string | null;
 };
 
-/** The view label, the line under it and the toggle button's name, for the scale and view shown. */
-export const describeBodyMapHeader = ({
+/**
+ * The view label, the line under it and the toggle button's name, for the scale and view shown. Heat and
+ * Volume always have a toggle, so for those scales the name is a string and never null.
+ */
+export function describeBodyMapHeader(
+  input: BodyMapHeaderInput<"heat" | "volume">,
+): BodyMapHeader & { toggleLabel: string };
+export function describeBodyMapHeader(input: BodyMapHeaderInput): BodyMapHeader;
+export function describeBodyMapHeader({
   scale,
   view,
   at,
@@ -297,7 +304,7 @@ export const describeBodyMapHeader = ({
   isToday,
   weekEnd,
   plannedSessions,
-}: BodyMapHeaderInput): BodyMapHeader => {
+}: BodyMapHeaderInput): BodyMapHeader {
   const moment = describeMoment(at, tz);
   const weekSoFar = `This week · as of ${moment}`;
   if (scale === "gap") {
@@ -318,7 +325,7 @@ export const describeBodyMapHeader = ({
   const assumption =
     projected && plannedSessions.length > 0 ? ` · ${ifYouDo(plannedSessions)}` : "";
   return { viewLabel, subLine: `${moment}${assumption}`, toggleLabel };
-};
+}
 
 /**
  * The note under the gap map: it has no Actual or Projected, and when planned sessions were missed it

@@ -4,23 +4,12 @@ import { View } from "react-native";
 
 import { todayPlanOf } from "./todayPlanOf";
 import { rowPressScale } from "../../../lib/motion";
-import { BodyFigure, Card, Icon, PressableSurface, Text } from "../../ui";
+import { BodyFigure, Card, HeatLegendStrip, Icon, PressableSurface, Text } from "../../ui";
 
 import type { DashboardBodyMapCardProps } from "./types";
 
 const FIGURE_WIDTH = 100;
 const TITLE_ICON_SIZE = 14;
-
-// The legend reads from the hottest step down to the rested one, as the board draws it, and only the peak
-// glows. The classes are written out so Tailwind sees them.
-const heatSwatchClassNames = [
-  "bg-heat-5 shadow-[0_0_6px_0] shadow-heat-glow",
-  "bg-heat-4",
-  "bg-heat-3",
-  "bg-heat-2",
-  "bg-heat-1",
-  "bg-heat-0",
-];
 
 /**
  * The body map on the dashboard as its board draws it: the title and the view with a Body map link and its
@@ -84,25 +73,7 @@ export function DashboardBodyMapCard({ bodyMap, body, onOpen }: DashboardBodyMap
               values={bodyMap.values}
               w={FIGURE_WIDTH}
             />
-            <View
-              accessible
-              aria-label={BODY_MAP.legendNames.heat}
-              className="items-start gap-[3px] pb-[6px]"
-              role="img"
-            >
-              <Text tone="muted" variant="caption">
-                {BODY_MAP.dashboardCard.hottestStep}
-              </Text>
-              {heatSwatchClassNames.map((swatchClassName) => (
-                <View
-                  key={swatchClassName}
-                  className={`h-[14px] w-[10px] rounded-[3px] ${swatchClassName}`}
-                />
-              ))}
-              <Text tone="muted" variant="caption">
-                {BODY_MAP.dashboardCard.coolestStep}
-              </Text>
-            </View>
+            <HeatLegendStrip />
           </View>
           <View className="flex-row items-baseline justify-between gap-3 border-t border-border pt-2">
             <Text className="flex-1" tone="secondary" variant="caption">

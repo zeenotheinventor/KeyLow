@@ -173,6 +173,43 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
     });
 
+    it("should read Back to Train when it was opened from the Train home", async () => {
+      routerMock.searchParams = { from: "train" };
+      await renderScreen();
+
+      expect(screen.getByRole("button", { name: "Back to Train" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Back" })).not.toBeOnTheScreen();
+    });
+
+    it("should go back when Back to Train is pressed", async () => {
+      routerMock.searchParams = { from: "train" };
+      await renderScreen();
+      const user = userEvent.setup();
+
+      await user.press(screen.getByRole("button", { name: "Back to Train" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+    });
+
+    it("should read Back, and go to the Dashboard, when the link naming the Train home was opened cold", async () => {
+      routerMock.searchParams = { from: "train" };
+      routerMock.canGoBack.mockReturnValue(false);
+      await renderScreen();
+      const user = userEvent.setup();
+
+      await user.press(screen.getByRole("button", { name: "Back" }));
+
+      expect(screen.queryByRole("button", { name: "Back to Train" })).not.toBeOnTheScreen();
+      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/dashboard");
+    });
+
+    it("should read Back for any other origin", async () => {
+      routerMock.searchParams = { from: "somewhere" };
+      await renderScreen();
+
+      expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+    });
+
     it("should go back when Back is pressed", async () => {
       await renderScreen();
       const user = userEvent.setup();
