@@ -98,6 +98,88 @@ describe("pickerChoices", () => {
     });
   });
 
+  describe("a stored portion with a spoon's label", () => {
+    const storedTablespoon = buildFoodPortion({
+      id: "portion-stored-tbsp",
+      label: "1 tbsp",
+      grams: 15,
+      is_default: true,
+    });
+    const storedTeaspoon = buildFoodPortion({
+      id: "portion-stored-tsp",
+      label: "1 tsp",
+      grams: 5,
+    });
+
+    it("should give one 1 tbsp chip and one entry in the list, and still the teaspoon", () => {
+      const choices = pickerChoices(oil, [storedTablespoon]);
+
+      expect(labelsOf(choices)).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(choices.portions.map((portion) => portion.id)).toEqual([
+        "portion-stored-tbsp",
+        "spoon-tsp",
+      ]);
+    });
+
+    it("should keep the stored portion, not the generated one", () => {
+      const choices = pickerChoices(oil, [storedTablespoon]);
+
+      expect(choices.options[0]).toEqual({ value: "portion-stored-tbsp", label: "1 tbsp" });
+      expect(valuesOf(choices)).not.toContain("spoon-tbsp");
+    });
+
+    it("should compare the labels trimmed and whatever the case", () => {
+      const shouted = buildFoodPortion({ id: "portion-shouted", label: " 1 Tbsp ", grams: 15 });
+
+      expect(valuesOf(pickerChoices(oil, [shouted]))).toEqual([
+        "portion-shouted",
+        "g",
+        "ml",
+        "spoon-tsp",
+      ]);
+    });
+
+    it("should give one 1 tsp chip and still the tablespoon", () => {
+      const choices = pickerChoices(oil, [storedTeaspoon]);
+
+      expect(labelsOf(choices)).toEqual(["1 tsp", "g", "ml", "1 tbsp"]);
+      expect(valuesOf(choices)).toContain("spoon-tbsp");
+      expect(valuesOf(choices)).not.toContain("spoon-tsp");
+    });
+
+    it("should do the same for a food measured per 100 ml", () => {
+      const choices = pickerChoices(drink, [storedTablespoon]);
+
+      expect(labelsOf(choices)).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(choices.portions.map((portion) => portion.id)).toEqual([
+        "portion-stored-tbsp",
+        "spoon-tsp",
+      ]);
+    });
+
+    it("should drop both spoons when the food stores both", () => {
+      const choices = pickerChoices(oil, [storedTablespoon, storedTeaspoon]);
+
+      expect(labelsOf(choices)).toEqual(["1 tbsp", "1 tsp", "g", "ml"]);
+    });
+
+    it("should keep both chips when the label only starts like the spoon's", () => {
+      const withWeight = buildFoodPortion({
+        id: "portion-weighed",
+        label: "1 tbsp (15 g)",
+        grams: 15,
+      });
+
+      expect(labelsOf(pickerChoices(oil, [withWeight]))).toEqual([
+        "1 tbsp (15 g)",
+        "g",
+        "ml",
+        "1 tsp",
+        "1 tbsp",
+      ]);
+    });
+  });
+
   describe("the order of the chips", () => {
     it("should list the food's portions in position order whatever order they come in", () => {
       const choices = pickerChoices(banana, [...bananaPortions].reverse());
