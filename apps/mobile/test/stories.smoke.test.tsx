@@ -25,6 +25,10 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// GL does not run in Jest, and the canvas module brings in three, which Jest does not transform. The 3D
+// body's story renders its figure with nothing in it.
+jest.mock("../components/ui/Body3D/Body3DCanvas", () => ({ Body3DCanvas: () => null }));
+
 // Jest does not turn the library's scroll handlers into worklets, so a story with a sheet that scrolls would
 // not render. The plain scroll view stands in for the library's, as it does in the sheets' own tests.
 jest.mock("@gorhom/bottom-sheet", () =>

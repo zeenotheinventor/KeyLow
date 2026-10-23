@@ -1,0 +1,29 @@
+{
+  "name": "@keylow/body-3d",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./fixtures/quantised-cube.glb": "./test/fixtures/quantised-cube.glb"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.src.json",
+    "test": "vitest run",
+    "make-fixture": "node --experimental-strip-types --no-warnings test/fixtures/makeQuantisedCube.ts"
+  },
+  "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/extensions": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1",
+    "@keylow/config": "workspace:*",
+    "@types/three": "0.186.0",
+    "eslint": "^9.39.5",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "three": "0.186.1"
+  }
+}

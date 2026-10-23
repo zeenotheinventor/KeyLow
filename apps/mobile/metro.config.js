@@ -28,6 +28,8 @@ execFileSync(
 const config = getSentryExpoConfig(projectRoot);
 
 config.watchFolders = [workspaceRoot];
+// The 3D body is a glb, which Metro bundles as an asset only when it knows the extension.
+config.resolver.assetExts.push("glb");
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, "node_modules"),
   path.resolve(workspaceRoot, "node_modules"),
@@ -44,7 +46,23 @@ if (isStorybookEnabled) {
 // Without EXPO_PUBLIC_STORYBOOK=true, Storybook is left out of the bundle: its imports resolve to empty modules
 // and app/storybook.tsx gets a stub in place of the Storybook screen. With it, Metro writes the story index
 // (.rnstorybook/storybook.requires.ts) on every start.
-module.exports = withStorybook(withNativeWind(config, { input: "./global.css" }), {
+const finalConfig = withStorybook(withNativeWind(config, { input: "./global.css" }), {
   enabled: isStorybookEnabled,
   configPath: path.resolve(projectRoot, ".rnstorybook"),
 });
+
+// three's CommonJS build (build/three.cjs, which react-three-fiber's native build reaches with
+// require("three")) calls process.emitWarning with no check, and React Native's process has no
+// emitWarning, so it throws on first render. The ES module build has no such call. Every import of
+// "three" goes to it, so the app also holds one copy of three. The resolvers that NativeWind and
+// Storybook set are kept and still answer every other import.
+const threeModuleBuild = path.join(path.dirname(require.resolve("three")), "three.module.js");
+const resolveOtherImports = finalConfig.resolver.resolveRequest;
+finalConfig.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === "three") {
+    return { type: "sourceFile", filePath: threeModuleBuild };
+  }
+  return (resolveOtherImports ?? context.resolveRequest)(context, moduleName, platform);
+};
+
+module.exports = finalConfig;
