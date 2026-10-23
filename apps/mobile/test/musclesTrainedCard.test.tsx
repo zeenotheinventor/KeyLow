@@ -86,7 +86,10 @@ describe("the Muscles trained card", () => {
   let kitStyles: string;
 
   beforeAll(async () => {
-    kitStyles = await compileKitStyles("", ["components/MusclesTrainedCard"]);
+    kitStyles = await compileKitStyles("", [
+      "components/MusclesTrainedCard",
+      "components/HeatSwatch",
+    ]);
   });
 
   beforeEach(() => {

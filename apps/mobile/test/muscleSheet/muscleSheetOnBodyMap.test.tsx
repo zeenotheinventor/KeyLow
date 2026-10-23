@@ -20,6 +20,7 @@ import { resetBodyFigureForTests } from "../../lib/bodyFigure/testing";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
+import { anyFrontFigureName } from "../support/figureNames";
 import { tapFigures } from "../support/figuresResponder";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -226,7 +227,7 @@ function drawingProp(
   prop: "strokeWidth" | "opacity",
 ): unknown {
   const figure = screen.getByRole("img", {
-    name: /^Body map, .*, front$/,
+    name: anyFrontFigureName,
     includeHiddenElements: true,
   });
   const [path] = figure.queryAll(

@@ -14,6 +14,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { fillsIn, heatFill } from "../support/figureFills";
+import { withMuscleListHint } from "../support/figureNames";
 import {
   beginDragFigures,
   dragFigures,
@@ -125,7 +126,7 @@ async function renderScreen() {
   return render(screenTree());
 }
 
-const frontOf = (view: string) => `Body map, ${view}, heat, front`;
+const frontOf = (view: string) => withMuscleListHint(`Body map, ${view}, heat, front`);
 const backOf = (view: string) => `Body map, ${view}, heat, back`;
 
 async function openWith(view: BodyMapView | null) {

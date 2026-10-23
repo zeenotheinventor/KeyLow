@@ -2,22 +2,16 @@ import { BODY_MAP, BODY_MAP_LEGEND_ITEMS, describeLegendCaption } from "@keylow/
 import { COMPARE_PARAMS_V1 } from "@keylow/core/training";
 import { View } from "react-native";
 
+import { heatSwatchClassNames } from "../HeatSwatch";
 import { Text } from "../ui";
 
 import type { BodyMapLegendProps } from "./types";
 
 // Each swatch is written next to its name, in the order of the boards, so a legend item can never be left
 // without a colour. The names are core's `BODY_MAP_LEGEND_ITEMS` and the classes are written out so Tailwind
-// sees them. The heat legend goes from the rested step up to the peak and only the peak glows. Volume starts
-// with Not targeted, and Gap with Not in plan, which is drawn in the same colour.
-const heatSwatches = [
-  "bg-heat-0",
-  "bg-heat-1",
-  "bg-heat-2",
-  "bg-heat-3",
-  "bg-heat-4",
-  "bg-heat-5 shadow-[0_0_8px_0] shadow-heat-glow",
-] as const;
+// sees them. The heat legend goes from the rested step up to the peak, with the classes every heat swatch
+// shares, and only the peak glows. Volume starts with Not targeted, and Gap with Not in plan, which is drawn
+// in the same colour.
 const volumeSwatches = [
   "bg-volume-not-targeted",
   "bg-volume-under",
@@ -35,7 +29,7 @@ const gapSwatches = [
 const legendItems = {
   heat: BODY_MAP_LEGEND_ITEMS.heat.map((name, position) => ({
     name,
-    swatchClassName: heatSwatches[position],
+    swatchClassName: heatSwatchClassNames[position],
   })),
   volume: BODY_MAP_LEGEND_ITEMS.volume.map((name, position) => ({
     name,

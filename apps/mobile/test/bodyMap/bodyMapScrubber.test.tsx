@@ -20,6 +20,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { fillsIn, heatFill } from "../support/figureFills";
+import { withMuscleListHint } from "../support/figureNames";
 import { compileKitStyles } from "../support/kitStyles";
 import { expectAccessibleNamesInOrder } from "../support/namesInOrder";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -242,7 +243,12 @@ function expectFiguresAt(view: "Actual" | "Projected", key: string) {
   const values = { ...RESTING_HEAT, ...goldenSteps[key] };
   for (const side of ["front", "back"] as const) {
     const fills = fillsIn(
-      screen.getByRole("img", { name: `Body map, ${view}, heat, ${side}` }),
+      screen.getByRole("img", {
+        name:
+          side === "front"
+            ? withMuscleListHint(`Body map, ${view}, heat, ${side}`)
+            : `Body map, ${view}, heat, ${side}`,
+      }),
       side,
     );
     expect(fills.size).toBeGreaterThan(0);

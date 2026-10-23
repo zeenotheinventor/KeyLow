@@ -48,4 +48,6 @@ export type BodyMapCardProps = {
   isSideBySideEnabled?: boolean | undefined;
   /** Laid over the figures, such as the first-open hint. It positions itself. */
   overlay?: ReactNode;
+  /** Whether the screen offers the muscle list, so the front figure's name says where each muscle's values are. Defaults to false. */
+  hasMuscleList?: boolean | undefined;
 };

@@ -71,12 +71,16 @@ export function BodyMapFigures({
   onTap,
   onLongPressMuscle,
   sideBySide,
+  hasMuscleList = false,
 }: BodyMapFiguresProps) {
   const { outgoing, incomingStyle, outgoingStyle } = useCrossFade(view, view);
   const isScreenReaderEnabled = useScreenReaderEnabled();
   // Only a fade in progress styles the new layer; at rest it is drawn plain.
   const incomingLayerStyle = outgoing === null ? undefined : incomingStyle;
   const valuesOf = (shown: BodyMapView) => (shown === "projected" ? projectedValues : actualValues);
+  // Only the front figure says where each muscle's values are, once there is a muscle list.
+  const hintOf = (side: (typeof SIDES)[number]) =>
+    hasMuscleList && side === "front" ? "muscleList" : null;
 
   // The responder is made once, because one made again in the middle of a touch would start with no memory
   // of where the finger went down. The relay hands a tap to the latest `onTap`.
@@ -161,7 +165,7 @@ export function BodyMapFigures({
                       scale,
                       view: outgoing,
                       side,
-                      hint: null,
+                      hint: hintOf(side),
                     })}
                     scale={scale}
                     side={side}
@@ -174,7 +178,7 @@ export function BodyMapFigures({
             <Animated.View style={incomingLayerStyle}>
               <BodyFigure
                 body={body}
-                label={describeBodyFigureLabel({ scale, view, side, hint: null })}
+                label={describeBodyFigureLabel({ scale, view, side, hint: hintOf(side) })}
                 scale={scale}
                 side={side}
                 values={valuesOf(view)}

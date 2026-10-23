@@ -18,6 +18,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { fillsIn } from "../support/figureFills";
+import { withMuscleListHint } from "../support/figureNames";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -89,7 +90,8 @@ async function renderScreen() {
 
 const figureHeader = () => screen.getByRole("button", { name: "Figure: male or female" });
 const sheet = () => screen.queryByLabelText("Figure");
-const front = () => screen.getByRole("img", { name: "Body map, Actual, heat, front" });
+const front = () =>
+  screen.getByRole("img", { name: withMuscleListHint("Body map, Actual, heat, front") });
 
 // The sheet is mounted while it slides out, and the screen behind it is hidden from a screen reader meanwhile.
 async function sheetClosed() {
@@ -282,7 +284,10 @@ describe("the figure setting on the body map screen", () => {
       // The figures being left are hidden from a screen reader while they fade, so they are found among the hidden.
       for (const side of ["front", "back"] as const) {
         const leaving = screen.getByRole("img", {
-          name: `Body map, Actual, heat, ${side}`,
+          name:
+            side === "front"
+              ? withMuscleListHint("Body map, Actual, heat, front")
+              : "Body map, Actual, heat, back",
           hidden: true,
         });
         expect(
@@ -344,7 +349,7 @@ describe("the figure setting on the body map screen", () => {
 
     expect(screen.getByRole("status", { name: "Loading the body map" })).toBeOnTheScreen();
     expect(
-      screen.queryByRole("img", { name: "Body map, Actual, heat, front" }),
+      screen.queryByRole("img", { name: withMuscleListHint("Body map, Actual, heat, front") }),
     ).not.toBeOnTheScreen();
     finishRead("female");
     await screen.findByRole("button", { name: "Show projected" });

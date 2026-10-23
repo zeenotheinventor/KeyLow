@@ -1,4 +1,5 @@
 import { KeyLowProvider, keys, useBodyMap } from "@keylow/api-client";
+import { BODY_MAP } from "@keylow/core/copy";
 import { MUSCLE_IDS } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 import { onlineManager } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { fillsIn, heatFill } from "../support/figureFills";
+import { withMuscleListHint } from "../support/figureNames";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { expectTextsInOrder } from "../support/textsInOrder";
@@ -122,7 +124,7 @@ async function renderScreen(scheme: ThemeScheme = "dark") {
   await screen.findByRole("button", { name: "Show projected" });
 }
 
-const frontName = "Body map, Actual, heat, front";
+const frontName = withMuscleListHint("Body map, Actual, heat, front");
 const backName = "Body map, Actual, heat, back";
 
 describe("the body map screen, Actual heat at Thursday 19:00", () => {
@@ -133,6 +135,7 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
       "components/BodyMapScreen",
       "components/BodyMapCard",
       "components/BodyMapLegend",
+      "components/HeatSwatch",
       "components/ViewLabel",
     ]);
   });
@@ -308,8 +311,8 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
 
       // Back, the figure setting in the header, Show side by side in the card's header row and the view toggle
       // under the figures, then one button for each of the 22 muscles, which the screen reader reaches as the
-      // figure's own read-out.
-      expect(screen.getAllByRole("button")).toHaveLength(4 + MUSCLE_IDS.length);
+      // figure's own read-out, and the Muscle list row under the legend.
+      expect(screen.getAllByRole("button")).toHaveLength(4 + MUSCLE_IDS.length + 1);
       expect(screen.getByRole("button", { name: "Show side by side" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Figure: male or female" })).toBeOnTheScreen();
@@ -415,10 +418,11 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
   });
 
   describe("only what this ticket builds", () => {
-    it("should show the scale switch, and no side switch or muscle list yet", async () => {
+    it("should show the scale switch and the muscle list row, and no side switch yet", async () => {
       await renderScreen();
 
-      for (const name of [/side shown/i, /muscle list/i, /long-press/i]) {
+      expect(screen.getByRole("button", { name: BODY_MAP.muscleListButton })).toBeOnTheScreen();
+      for (const name of [/side shown/i, /long-press/i]) {
         expect(screen.queryByLabelText(name)).not.toBeOnTheScreen();
         expect(screen.queryByText(name)).not.toBeOnTheScreen();
       }

@@ -15,6 +15,7 @@ import {
 } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { fillsIn, heatFill } from "../support/figureFills";
+import { anyFrontFigureName, withMuscleListHint } from "../support/figureNames";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -149,7 +150,7 @@ describe("the body map screen's states", () => {
       });
       await renderScreen();
 
-      expect(await screen.findByRole("img", { name: /, front$/ })).toBeOnTheScreen();
+      expect(await screen.findByRole("img", { name: anyFrontFigureName })).toBeOnTheScreen();
       expect(screen.queryByText("The body map isn't available offline.")).not.toBeOnTheScreen();
     });
   });
@@ -157,7 +158,9 @@ describe("the body map screen's states", () => {
   describe("Projected, from the cached rows", () => {
     async function figuresOf(view: string) {
       const back = await screen.findByRole("img", { name: `Body map, ${view}, heat, back` });
-      const front = await screen.findByRole("img", { name: `Body map, ${view}, heat, front` });
+      const front = await screen.findByRole("img", {
+        name: withMuscleListHint(`Body map, ${view}, heat, front`),
+      });
       return [fillsIn(front, "front"), fillsIn(back, "back")];
     }
 
@@ -209,7 +212,7 @@ describe("the body map screen's states", () => {
     it("should make no request and show no skeleton when the scale changes", async () => {
       seedCachedRows([latsSet]);
       await renderScreen();
-      await screen.findByRole("img", { name: /, front$/ });
+      await screen.findByRole("img", { name: anyFrontFigureName });
       await settled();
       const countsBefore = requestCounts();
       const user = userEvent.setup();

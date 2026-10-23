@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useBodyFigure } from "../../lib/bodyFigure";
 import { useBodyMapHint } from "../../lib/bodyMapHint";
-import { bodyMapOriginOf } from "../../lib/bodyMapRoutes";
+import { bodyMapOriginOf, muscleListPath } from "../../lib/bodyMapRoutes";
 import { useBodyMapView } from "../../lib/bodyMapView";
 import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
@@ -28,7 +28,15 @@ import { BodyMapLegend } from "../BodyMapLegend";
 import { DayScrubber } from "../DayScrubber";
 import { FigureSettingSheet } from "../FigureSettingSheet";
 import { MuscleSheet } from "../MuscleSheet";
-import { EmptyState, ErrorState, SegmentedControl, SheetHeader, Skeleton } from "../ui";
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  ListRow,
+  SegmentedControl,
+  SheetHeader,
+  Skeleton,
+} from "../ui";
 import { describeGap } from "./gapNote";
 import { scrubberDaysOf } from "./scrubberDays";
 
@@ -68,7 +76,8 @@ const SCALE_OPTIONS = [
  * "Back to Train" when the Train home opened it (`?from=train`) and there is a screen to go back to, and
  * "Back" otherwise. A long press on a muscle opens its sheet, for the view and the day on screen, and
  * outlines the muscle and dims the rest until the sheet closes. A short press on a muscle is still a tap
- * on the figures.
+ * on the figures. A Muscle list row under the legend opens the list of all 22 muscles for the view and the day on
+ * screen, so no muscle depends on a long press. It is left out when nothing is logged and in the side by side view.
  *
  * The first time it opens on a device a hint over the figures says to long-press a muscle. It waits for
  * the figure question to be answered, stays until Got it or a muscle's sheet is opened, and is never
@@ -223,6 +232,8 @@ export function BodyMapScreen() {
       : "actual";
   // Side by side needs a plan to show next to what is logged.
   const isSideBySide = isSideBySideAsked && projected.data?.projectedAvailable === true;
+  // The day and view resolution here mirrors `MuscleListScreen`'s (apart from side by side, which the list never
+  // opens from), so a change to one needs the same change in the other.
   // The day shown: the one picked when the view shown can choose it, and otherwise today. This is the one
   // place the day is decided, and the figures, the line under the label, the nothing logged check, the
   // scrubber and the muscle sheet all follow it, and the view shown was read at it.
@@ -320,6 +331,7 @@ export function BodyMapScreen() {
           toggleLabel={isSideBySide ? null : toggleLabel}
           view={view}
           viewLabel={viewLabel}
+          hasMuscleList={!isNothingLogged && !isSideBySide}
         />
       );
       // The scrubber is a Heat control. It stays out of the nothing logged state on today, as the board has
@@ -344,6 +356,22 @@ export function BodyMapScreen() {
         />
       );
 
+      // The row under the legend that leads to the muscle list, with the day on screen. It is left out when
+      // nothing is logged and in the side by side view, as the board has it. It stays on Projected today, where the board gives its room to
+      // the note, so that no muscle is out of reach there. It shows on Volume and Gap too, as the board has it,
+      // though the list itself is about heat.
+      const muscleListEntry = (
+        <Card padding={0}>
+          <ListRow
+            icon="List"
+            title={BODY_MAP.muscleListButton}
+            onPress={() => {
+              router.push(muscleListPath(isSelectedToday ? undefined : selectedDate));
+            }}
+          />
+        </Card>
+      );
+
       // Nothing logged in the 14 days is about heat; a week with nothing logged is still a plan to compare with.
       return isNothingLogged ? (
         <>
@@ -362,6 +390,7 @@ export function BodyMapScreen() {
           {card}
           {scrubber}
           <BodyMapLegend scale={scale} />
+          {isSideBySide ? null : muscleListEntry}
         </>
       );
     }

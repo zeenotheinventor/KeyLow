@@ -1,20 +1,10 @@
 import { describeMuscleTrainedName } from "@keylow/core/copy";
 import { View } from "react-native";
 
+import { heatSwatchClassNames } from "../HeatSwatch";
 import { Text } from "../ui";
 
 import type { TrainedMuscleRowProps } from "./types";
-
-// The swatches are the heat step's colours, from rested up to peak, as the figures are filled, and only the
-// peak glows, as the legend's does. The classes are written out so Tailwind sees them.
-const heatSwatchClassNames = [
-  "bg-heat-0",
-  "bg-heat-1",
-  "bg-heat-2",
-  "bg-heat-3",
-  "bg-heat-4",
-  "bg-heat-5 shadow-[0_0_8px_0] shadow-heat-glow",
-];
 
 /**
  * One muscle of the Muscles trained card: its heat step as a swatch, its name and its effective sets. The

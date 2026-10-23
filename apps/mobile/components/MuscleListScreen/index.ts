@@ -1,0 +1,1 @@
+export { MuscleListScreen } from "./MuscleListScreen";

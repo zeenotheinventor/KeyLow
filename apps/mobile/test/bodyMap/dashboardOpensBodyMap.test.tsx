@@ -18,6 +18,7 @@ import {
   resetDiaryBackend,
   sampleDay,
 } from "../support/diaryBackend";
+import { withMuscleListHint } from "../support/figureNames";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { showSampleWeek } from "../support/weekFixtures";
@@ -135,7 +136,7 @@ describe("the dashboard card opening the body map", () => {
 
     expect(await screen.findByRole("heading", { name: "Body map" })).toBeOnTheScreen();
     expect(
-      await screen.findByRole("img", { name: "Body map, Actual, heat, front" }),
+      await screen.findByRole("img", { name: withMuscleListHint("Body map, Actual, heat, front") }),
     ).toBeOnTheScreen();
     expect(screen.getByRole("group", { name: "Heat legend" })).toBeOnTheScreen();
   });
