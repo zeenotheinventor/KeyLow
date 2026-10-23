@@ -11,8 +11,8 @@ import type { WeightHeaderProps } from "./types";
 /**
  * The top of the Weight screen as `weight: chart and weigh-ins` draws it: the back control, 4 points from
  * the title at the start of the row, with 8 points at the sides and below. The add button, the kit's primary
- * icon button, opens the sheet that adds a weigh-in. The trend explainer's
- * control is added by the screen it opens.
+ * icon button, opens the sheet that adds a weigh-in. The info control before it, a ghost icon button with a 22
+ * point glyph in the secondary text colour, opens the trend explainer in every state of the screen.
  */
 export function WeightHeader({ onBack }: WeightHeaderProps) {
   const insets = useSafeAreaInsets();
@@ -32,6 +32,16 @@ export function WeightHeader({ onBack }: WeightHeaderProps) {
         <Text className="min-w-0 flex-1" role="heading" variant="h2">
           {WEIGHT_SCREEN.title}
         </Text>
+        <IconButton
+          icon="Info"
+          iconSize={22}
+          label={WEIGHT_SCREEN.explainerLabel}
+          tone="secondary"
+          variant="ghost"
+          onPress={() => {
+            router.push("/more/weight/explainer");
+          }}
+        />
         <IconButton
           className="mr-2"
           icon="Plus"

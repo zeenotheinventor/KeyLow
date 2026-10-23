@@ -25,6 +25,14 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   },
 }));
 
+// Jest does not turn the library's scroll handlers into worklets, so a story with a sheet that scrolls would
+// not render. The plain scroll view stands in for the library's, as it does in the sheets' own tests.
+jest.mock("@gorhom/bottom-sheet", () =>
+  jest
+    .requireActual<{ mockBottomSheet: () => unknown }>("./support/sheetScrollViewMock")
+    .mockBottomSheet(),
+);
+
 const componentsDirectory = path.join(__dirname, "..", "components");
 const storyFilePattern = /\.stories\.(ts|tsx)$/;
 

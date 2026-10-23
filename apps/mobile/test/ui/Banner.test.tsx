@@ -1,6 +1,6 @@
 import { motionDuration, themes, touchTarget } from "@keylow/tokens";
-import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
-import { AccessibilityInfo } from "react-native";
+import { act, fireEvent, render, screen, userEvent, within } from "@testing-library/react-native";
+import { AccessibilityInfo, Text, View } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
 
 import { Banner } from "../../components/ui";
@@ -8,6 +8,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { animatedScale } from "../support/animatedStyle";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { expectTextsInOrder } from "../support/textsInOrder";
 import { resolvedColor } from "../support/themeColor";
 
 import type { BannerProps, BannerVariant } from "../../components/ui";
@@ -356,6 +357,142 @@ describe("Banner", () => {
         borderRadius: 12,
         columnGap: 12,
       });
+    });
+  });
+
+  describe("the children slot", () => {
+    it("should draw its children under the words", async () => {
+      await renderBanner({
+        variant: "review",
+        children: <View accessible role="progressbar" aria-label="Progress" />,
+      });
+
+      expect(screen.getByRole("progressbar", { name: "Progress" })).toBeOnTheScreen();
+    });
+
+    it("should keep the children out of the words' announcement", async () => {
+      await renderBanner({
+        variant: "review",
+        children: <View accessible role="progressbar" aria-label="Progress" />,
+      });
+
+      expect(screen.getByRole("progressbar", { name: "Progress" })).toBeOnTheScreen();
+      expect(
+        within(screen.getByRole("note", { name: reviewName })).queryByRole("progressbar"),
+      ).toBeNull();
+    });
+
+    it.each([null, false, undefined])(
+      "should draw no slot for %s children, so no empty gap is left under the words",
+      async (children) => {
+        await renderBanner({ variant: "review", children });
+
+        // The words' group is the only thing in the column beside them, so no empty block sits under it.
+        expect(screen.getByRole("note", { name: reviewName }).parent?.children).toHaveLength(1);
+      },
+    );
+
+    it("should draw nothing extra without children", async () => {
+      await renderBanner({ variant: "review" });
+
+      expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
+    });
+
+    it("should draw its children above the action", async () => {
+      await renderBanner({
+        variant: "review",
+        action: { label: "Copy to your foods", onPress: () => undefined },
+        children: <Text>Slot</Text>,
+      });
+
+      expectTextsInOrder(screen.getAllByText(/./), [
+        "Needs review",
+        "Energy and carbohydrate are not given. Fill them in to save your own copy of this food.",
+        "Slot",
+        "Copy to your foods",
+      ]);
+    });
+  });
+
+  describe("the icon", () => {
+    it("should draw the variant's icon by default", async () => {
+      await renderBanner({ variant: "review" });
+
+      expect(drawings()).toHaveLength(1);
+    });
+
+    it("should draw no icon when the caller turns it off", async () => {
+      await renderBanner({ variant: "review", hasIcon: false });
+
+      expect(drawings()).toHaveLength(0);
+    });
+  });
+
+  describe("the compact size", () => {
+    it("should pad 12 on every side with no border, in a 12 point radius", async () => {
+      await renderBanner({ variant: "review", size: "compact" });
+
+      expect(box()).toHaveStyle({
+        padding: 12,
+        borderRadius: 12,
+      });
+      expect(box()).not.toHaveStyle({ borderWidth: 1 });
+    });
+
+    it("should set the title in label-small semibold, 14 over 20", async () => {
+      await renderBanner({ variant: "review", size: "compact", body: undefined });
+
+      expect(screen.getByText("Needs review")).toHaveStyle({
+        fontFamily: "Geist-SemiBold",
+        fontSize: 14,
+        lineHeight: 20,
+      });
+    });
+
+    it("should set the title in the primary text colour in dark, not the warning ink", async () => {
+      await renderBanner({ variant: "review", size: "compact" }, "dark");
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({
+        color: resolvedColor("dark", "text-primary"),
+      });
+    });
+
+    it("should keep the default size's review title in the warning ink", async () => {
+      await renderBanner({ variant: "review" }, "dark");
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({
+        color: resolvedColor("dark", "warning-ink"),
+      });
+    });
+
+    it("should keep the body in secondary caption text", async () => {
+      await renderBanner({ variant: "review", size: "compact" });
+
+      expect(screen.getByText(/Energy and carbohydrate/)).toHaveStyle({
+        fontFamily: "Geist-Medium",
+        fontSize: 12,
+        lineHeight: 16,
+      });
+    });
+
+    it("should announce the same way as the default size", async () => {
+      await renderBanner({ variant: "review", size: "compact" });
+
+      expect(screen.getByRole("note", { name: reviewName })).toBeOnTheScreen();
+    });
+
+    it.each(schemes)("should keep the warning tint in the %s scheme", async (scheme) => {
+      await renderBanner({ variant: "review", size: "compact" }, scheme);
+
+      expect(await screen.findByTestId("banner-box")).toHaveStyle({
+        backgroundColor: themes[scheme]["warning-muted"],
+      });
+    });
+
+    it("should leave the default size unchanged when no size is given", async () => {
+      await renderBanner({ variant: "review" });
+
+      expect(box()).toHaveStyle({ paddingLeft: 16, borderWidth: 1 });
     });
   });
 

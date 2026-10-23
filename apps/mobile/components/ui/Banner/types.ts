@@ -1,4 +1,5 @@
 import type { IconName } from "../Icon";
+import type { ReactNode } from "react";
 
 /**
  * `review` is the warning-toned "Needs review" notice. `error` is the danger-toned notice of a failed
@@ -6,6 +7,12 @@ import type { IconName } from "../Icon";
  * `offline` and `info` are quiet and neutral.
  */
 export type BannerVariant = "review" | "offline" | "info" | "error";
+
+/**
+ * `default` is the design system card's notice. `compact` is the trend explainer's: no border, 12 points of
+ * padding on every side and the title in 14 over 20 semibold.
+ */
+export type BannerSize = "default" | "compact";
 
 export type BannerAction = {
   /** The action's label: short, sentence case, no full stop, such as "Copy to your foods". */
@@ -26,6 +33,13 @@ export type BannerProps = {
    */
   icon?: IconName | undefined;
   /**
+   * Whether to draw the leading icon. Defaults to true. The trend explainer's board draws its warning
+   * with no icon, and `icon` can only change one.
+   */
+  hasIcon?: boolean | undefined;
+  /** Defaults to `default`. */
+  size?: BannerSize | undefined;
+  /**
    * Draws a title with no body in regular body text, as the sign in error board draws its one sentence.
    * Without it a title is always strong body text, as the design system card draws it.
    */
@@ -38,4 +52,6 @@ export type BannerProps = {
    * ignore this.
    */
   announce?: boolean | undefined;
+  /** Drawn under the words and above the action, outside the words' announcement, such as a progress bar. */
+  children?: ReactNode;
 };

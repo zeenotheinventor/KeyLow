@@ -106,3 +106,56 @@ export const PartialSave: Story = {
     body: "Your food was saved but its portions were not. Save again to add them.",
   },
 };
+
+// An element in a story's args breaks the on-device story index (KEY-220), so the slot is drawn in render.
+// A stand-in for what a screen draws under the words, here a bar as the trend explainer's board has it.
+function Bar() {
+  return (
+    <View className="h-[6px] overflow-hidden rounded-[3px] bg-surface-raised">
+      <View className="h-[6px] w-[43%] bg-warning" />
+    </View>
+  );
+}
+
+// The children slot: anything the screen draws under the words, with the icon kept.
+export const WithChildren: Story = {
+  args: {
+    variant: "review",
+    title: "Your trend is settling: 3 of 7 weigh-ins",
+  },
+  render: (args) => (
+    <Banner {...args}>
+      <Bar />
+    </Banner>
+  ),
+};
+
+// The trend explainer's settling board: the warning notice with no leading icon and a bar under its words.
+export const WithoutIcon: Story = {
+  args: {
+    variant: "review",
+    hasIcon: false,
+    title: "Your trend is settling: 3 of 7 weigh-ins",
+  },
+  render: (args) => (
+    <Banner {...args}>
+      <Bar />
+    </Banner>
+  ),
+};
+
+// The trend explainer's settling board: the warning notice at the compact size, with no border, 12 points all
+// round, a 14 over 20 title, no icon and a bar under it.
+export const Compact: Story = {
+  args: {
+    variant: "review",
+    size: "compact",
+    hasIcon: false,
+    title: "Your trend is settling: 3 of 7 weigh-ins",
+  },
+  render: (args) => (
+    <Banner {...args}>
+      <Bar />
+    </Banner>
+  ),
+};

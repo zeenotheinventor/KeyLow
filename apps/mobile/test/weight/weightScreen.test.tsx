@@ -43,6 +43,7 @@ async function renderWeightScreen() {
 }
 
 const backControl = () => screen.getByRole("button", { name: "Back to More" });
+const infoControl = () => screen.getByRole("button", { name: "How the trend works" });
 const addControls = () => screen.getAllByRole("button", { name: "Add weigh-in" });
 const addControl = (index: number) => {
   const control = addControls()[index];
@@ -118,10 +119,10 @@ describe("the Weight screen", () => {
       expect(screen.getByRole("status", { name: "Loading your weigh-ins" })).toBeOnTheScreen();
     });
 
-    it("should keep the back control and the add control, and draw no other", async () => {
+    it("should keep the back, info and add controls, and draw no other", async () => {
       await renderWeightScreen();
 
-      expect(screen.getAllByRole("button")).toEqual([backControl(), addControl(0)]);
+      expect(screen.getAllByRole("button")).toEqual([backControl(), infoControl(), addControl(0)]);
     });
   });
 
@@ -182,11 +183,15 @@ describe("the Weight screen", () => {
       ).toBeOnTheScreen();
     });
 
-    it("should have no button but Back and the two that add a weigh-in", async () => {
+    it("should have no button but Back, the info control and the two that add a weigh-in", async () => {
       await renderWeightScreen();
       await screen.findByRole("heading", { name: "No weigh-ins yet" });
 
-      expect(screen.getAllByRole("button")).toEqual([backControl(), ...addControls()]);
+      expect(screen.getAllByRole("button")).toEqual([
+        backControl(),
+        infoControl(),
+        ...addControls(),
+      ]);
     });
   });
 
