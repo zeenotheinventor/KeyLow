@@ -1,4 +1,5 @@
 import { buildLogEntry } from "@keylow/core/diary";
+import { buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -245,6 +246,41 @@ describe("the edit dialog's chips", () => {
       expect(chipNames()).toEqual(["1 medium", "g"]);
       expect(screen.getByRole("radio", { name: "1 medium", checked: true })).toBeTruthy();
     });
+  });
+});
+
+describe("the edit dialog's chips for a food that stores a 1 tbsp portion", () => {
+  const storedTablespoon = buildFoodPortion({
+    food_id: oliveOil.food.id,
+    label: "1 tbsp",
+    grams: 14,
+    is_default: true,
+  });
+
+  beforeEach(() => {
+    api.portions = [storedTablespoon];
+  });
+
+  it("should show one 1 tbsp chip, selected, with the count, for an entry logged in tablespoons", () => {
+    renderDialog(oilEntry({ quantity: 2, unit: "portion", portion: tablespoon }));
+
+    expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+    expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
+    expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
+    expect(amountField("tbsp")).toHaveProperty("value", "2");
+  });
+
+  it("should show one 1 tbsp chip, the stored one, for an entry logged in grams", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+    expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+
+    expect(
+      screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (14 g)" }),
+    ).toBeTruthy();
   });
 });
 

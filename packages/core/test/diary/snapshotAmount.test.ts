@@ -234,7 +234,7 @@ describe("entryPickerChoices", () => {
   });
 
   describe("a gram portion that shares a spoon's label", () => {
-    it("should keep two chips, its own and the spoon, and start on its own", () => {
+    it("should keep its own chip alone, without the spoon of the same name, and start on it", () => {
       const ownTablespoon = buildFoodPortion({ id: "portion-own", label: "1 tbsp", grams: 14 });
       const entry = buildLogEntry({
         food: oil,
@@ -251,7 +251,6 @@ describe("entryPickerChoices", () => {
         { value: "g", label: "g" },
         { value: "ml", label: "ml" },
         { value: "spoon-tsp", label: "1 tsp" },
-        { value: "spoon-tbsp", label: "1 tbsp" },
       ]);
       expect(snapshotAmountStart(entry).unitValue).toBe(SNAPSHOT_PORTION_ID);
     });
