@@ -12,6 +12,7 @@ export const storyStates = [
   "Disabled",
   "WholeNumberBesideLabel",
   "DisplaySize",
+  "LeftAligned",
   "DisplaySizeWithError",
   "CellSize",
 ];

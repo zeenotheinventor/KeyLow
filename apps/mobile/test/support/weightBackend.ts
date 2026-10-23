@@ -22,6 +22,18 @@ export const weightBackend: {
   weighInReadsHang: boolean;
   /** The number of requests made for the weigh-ins. */
   weighInRequestCount: number;
+  /** Fails every write to the weigh-ins (add, edit or delete) with a database error. */
+  weighInWritesFail: boolean;
+  /** Holds every write to the weigh-ins until it settles. */
+  weighInWriteGate: Promise<void> | undefined;
+  /** The bodies of the rows the app added, in order. */
+  addedRows: Row[];
+  /** The columns the app changed on a weigh-in, one entry for each update that matched a row. */
+  updatedRows: { id: string; change: Row }[];
+  /** The ids of the weigh-ins the app deleted. */
+  deletedIds: string[];
+  /** Makes an update find no manual row to change, as one for an imported or already deleted row does. */
+  updatesMatchNoRow: boolean;
 } = {
   weighIns: [],
   timeZone: "Europe/London",
@@ -30,6 +42,12 @@ export const weightBackend: {
   weighInReadsFail: false,
   weighInReadsHang: false,
   weighInRequestCount: 0,
+  weighInWritesFail: false,
+  weighInWriteGate: undefined,
+  addedRows: [],
+  updatedRows: [],
+  deletedIds: [],
+  updatesMatchNoRow: false,
 };
 
 export function resetWeightBackend(): void {
@@ -40,6 +58,12 @@ export function resetWeightBackend(): void {
   weightBackend.weighInReadsFail = false;
   weightBackend.weighInReadsHang = false;
   weightBackend.weighInRequestCount = 0;
+  weightBackend.weighInWritesFail = false;
+  weightBackend.weighInWriteGate = undefined;
+  weightBackend.addedRows = [];
+  weightBackend.updatedRows = [];
+  weightBackend.deletedIds = [];
+  weightBackend.updatesMatchNoRow = false;
 }
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -112,6 +136,75 @@ async function answerTimeZoneRead(): Promise<Response> {
   );
 }
 
+const READ_COLUMNS = ["id", "measured_at", "local_date", "tz", "weight_kg", "source", "note"];
+
+// An insert stores the row as the database would, with an id of its own, and answers with the columns the list reads.
+async function answerWeighInInsert(body: unknown): Promise<Response> {
+  await weightBackend.weighInWriteGate;
+  if (weightBackend.weighInWritesFail || typeof body !== "string") {
+    return databaseFailure();
+  }
+  const parsed: unknown = JSON.parse(body);
+  if (typeof parsed !== "object" || parsed === null) {
+    return databaseFailure();
+  }
+  const sent: Row = Object.fromEntries(Object.entries(parsed));
+  weightBackend.addedRows.push(sent);
+  weighInCount += 1;
+  const stored = Object.fromEntries(READ_COLUMNS.map((column) => [column, sent[column] ?? null]));
+  stored.id = `00000000-0000-4000-8000-${String(weighInCount).padStart(12, "0")}`;
+  weightBackend.weighIns = [stored, ...weightBackend.weighIns];
+
+  return jsonResponse(stored, 201);
+}
+
+const NO_ROW_FOUND = {
+  code: "PGRST116",
+  message: "JSON object requested, multiple (or no) rows returned",
+  details: "The result contains 0 rows",
+  hint: null,
+};
+
+// An update changes the columns sent, as the database would, and answers with the row. One that matches no
+// row is the database's "0 rows" answer. A body with `deleted_at` is a delete, and the row leaves the list.
+async function answerWeighInUpdate(
+  searchParams: URLSearchParams,
+  body: unknown,
+): Promise<Response> {
+  await weightBackend.weighInWriteGate;
+  if (weightBackend.weighInWritesFail || typeof body !== "string") {
+    return databaseFailure();
+  }
+  const parsed: unknown = JSON.parse(body);
+  if (typeof parsed !== "object" || parsed === null) {
+    return databaseFailure();
+  }
+  const change: Row = Object.fromEntries(Object.entries(parsed));
+  const id = (searchParams.get("id") ?? "").replace("eq.", "");
+  const isDelete = "deleted_at" in change;
+  const row = weightBackend.weighIns.find((candidate) => candidate.id === id);
+  const needsManual = searchParams.get("source") === "eq.manual";
+  if (
+    row === undefined ||
+    (!isDelete && weightBackend.updatesMatchNoRow) ||
+    (needsManual && row.source !== "manual")
+  ) {
+    return jsonResponse(NO_ROW_FOUND, 406);
+  }
+  if (isDelete) {
+    weightBackend.deletedIds.push(id);
+    weightBackend.weighIns = weightBackend.weighIns.filter((candidate) => candidate.id !== id);
+    return jsonResponse({ id }, 200);
+  }
+  const stored = { ...row, ...change };
+  weightBackend.updatedRows.push({ id, change });
+  weightBackend.weighIns = weightBackend.weighIns.map((candidate) =>
+    candidate.id === id ? stored : candidate,
+  );
+
+  return jsonResponse(stored, 200);
+}
+
 function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
@@ -131,6 +224,12 @@ function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<R
             ]),
           );
     case "weigh_ins":
+      if (init?.method === "POST") {
+        return answerWeighInInsert(init.body);
+      }
+      if (init?.method === "PATCH") {
+        return answerWeighInUpdate(searchParams, init.body);
+      }
       weightBackend.weighInRequestCount += 1;
       if (weightBackend.weighInReadsHang) {
         return new Promise(() => undefined);

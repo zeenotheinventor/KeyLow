@@ -38,6 +38,12 @@ export function TimeWheel({ label, count, value, onChange }: TimeWheelProps) {
     valueRef.current = value;
   });
 
+  // A wheel that loses its last rows, such as the minutes when the hour moves to the latest one, keeps the
+  // chosen row in view.
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: valueRef.current * rowHeight, animated: false });
+  }, [count]);
+
   function choose(row: number) {
     scrollRef.current?.scrollTo({ y: row * rowHeight, animated: true });
     onChange(row);

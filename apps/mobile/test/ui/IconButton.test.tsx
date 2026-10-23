@@ -331,6 +331,62 @@ describe("IconButton", () => {
     );
   });
 
+  describe("primary", () => {
+    // The circle is a view with no role of its own, so it is found by the look it was drawn with.
+    function primaryCircle() {
+      return viewsDrawn({ height: 36, width: 36, borderRadius: 999 });
+    }
+
+    it("should be a 44 point touch target itself, with no hit slop", async () => {
+      await renderIconButton({ variant: "primary", icon: "Plus" });
+
+      const button = screen.getByRole("button", { name: "Close" });
+      expect(button).toHaveStyle({ height: touchTarget, width: touchTarget });
+      expect(button.props.hitSlop).toBeUndefined();
+    });
+
+    it.each(schemes)(
+      "should hold a 36 point accent circle inside the target, with the plus in accent-foreground at 20 points and a 2.25 stroke, in the %s scheme",
+      async (scheme) => {
+        await renderIconButton({ variant: "primary", icon: "Plus" }, scheme);
+
+        await screen.findByRole("button", { name: "Close" });
+        expect(primaryCircle()).toHaveLength(1);
+        expect(primaryCircle()[0]).toHaveStyle({
+          backgroundColor: resolvedColor(scheme, "accent"),
+        });
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-foreground"]);
+        expect(drawings()[0]).toHaveProp("width", iconSize.md);
+        expect(drawings()[0]).toHaveProp("strokeWidth", 2.25);
+      },
+    );
+
+    it("should keep the accent-foreground plus whatever tone is asked for", async () => {
+      await renderIconButton({ variant: "primary", icon: "Plus", tone: "secondary" });
+
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-foreground"]);
+    });
+
+    it("should be dimmed to 40 percent and disabled when disabled, and do nothing when pressed", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onPress = jest.fn();
+      await renderIconButton({ variant: "primary", icon: "Plus", disabled: true, onPress });
+      const button = screen.getByRole("button", { name: "Close" });
+
+      await user.press(button);
+
+      expect(button).toBeDisabled();
+      expect(button).toHaveStyle({ opacity: Math.fround(0.4) });
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("should leave the other variants without the accent circle", async () => {
+      await renderIconButton({ variant: "ring", icon: "Plus" });
+
+      expect(primaryCircle()).toHaveLength(0);
+    });
+  });
+
   describe("tone", () => {
     it.each(schemes)(
       "should draw the glyph in primary text unless asked for secondary, in the %s scheme",

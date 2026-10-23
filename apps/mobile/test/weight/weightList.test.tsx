@@ -88,7 +88,7 @@ function drawingsIn(row: Instance) {
 // A row ends in its weight after a comma. The trend card's chart is named "..., trend 81.9 kg", which is not a row.
 const rowLabel = /, \d+\.\d kg$/;
 const rowNames = () =>
-  screen.getAllByLabelText(rowLabel).map((row) => String(row.props["aria-label"]));
+  screen.getAllByLabelText(rowLabel).map((row) => String(row.props.accessibilityLabel));
 
 describe("the Weight screen's list", () => {
   beforeEach(() => {
@@ -127,7 +127,7 @@ describe("the Weight screen's list", () => {
     expect(screen.getAllByText("Left out of trend")).toHaveLength(1);
   });
 
-  it("should draw only the source icon in a row, with no chevron, because a row goes nowhere", async () => {
+  it("should draw only the source icon in a row, with no chevron, because the board draws none", async () => {
     seedWeighIns();
     await renderWeightScreen();
     await screen.findByRole("heading", { name: "Weigh-ins" });
@@ -140,12 +140,14 @@ describe("the Weight screen's list", () => {
     }
   });
 
-  it("should not offer a row as a button", async () => {
+  it("should offer a row as a button named by its reading", async () => {
     seedWeighIns();
     await renderWeightScreen();
     await screen.findByRole("heading", { name: "Weigh-ins" });
 
-    expect(screen.queryByRole("button", { name: / kg$/ })).not.toBeOnTheScreen();
+    expect(screen.getAllByRole("button", { name: /, \d+\.\d kg$/ })).toHaveLength(
+      screen.getAllByLabelText(/, \d+\.\d kg$/).length,
+    );
   });
 
   it("should tell a manual row from an imported one by its words, not by colour alone", async () => {

@@ -39,6 +39,11 @@ export const Quiet: Story = {
   args: { variant: "ghost", tone: "secondary", label: "Remove Onions, raw" },
 };
 
+// The Weight screen's add control: a 36 point accent circle with the plus, reached out to 44 points to touch.
+export const Primary: Story = {
+  args: { variant: "primary", icon: "Plus", label: "Add weigh-in" },
+};
+
 export const Disabled: Story = {
   render: (args) => (
     <View className="flex-row items-center gap-4">

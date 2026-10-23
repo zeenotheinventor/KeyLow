@@ -43,6 +43,14 @@ async function renderWeightScreen() {
 }
 
 const backControl = () => screen.getByRole("button", { name: "Back to More" });
+const addControls = () => screen.getAllByRole("button", { name: "Add weigh-in" });
+const addControl = (index: number) => {
+  const control = addControls()[index];
+  if (control === undefined) {
+    throw new Error(`The screen has no Add weigh-in button at ${index}`);
+  }
+  return control;
+};
 
 describe("the Weight screen", () => {
   beforeEach(() => {
@@ -78,6 +86,15 @@ describe("the Weight screen", () => {
       expect(routerMock.back).toHaveBeenCalledTimes(1);
     });
 
+    it("should open the add sheet when the header's Add weigh-in is pressed", async () => {
+      const user = userEvent.setup();
+      await renderWeightScreen();
+
+      await user.press(addControl(0));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/weight/entry");
+    });
+
     it("should go to More when a link opened it cold, with nothing to go back to", async () => {
       const user = userEvent.setup();
       routerMock.canGoBack.mockReturnValue(false);
@@ -101,10 +118,10 @@ describe("the Weight screen", () => {
       expect(screen.getByRole("status", { name: "Loading your weigh-ins" })).toBeOnTheScreen();
     });
 
-    it("should keep the back control, and draw no other", async () => {
+    it("should keep the back control and the add control, and draw no other", async () => {
       await renderWeightScreen();
 
-      expect(screen.getAllByRole("button")).toEqual([backControl()]);
+      expect(screen.getAllByRole("button")).toEqual([backControl(), addControl(0)]);
     });
   });
 
@@ -165,11 +182,37 @@ describe("the Weight screen", () => {
       ).toBeOnTheScreen();
     });
 
-    it("should have no button but Back, because what they would open is not built yet", async () => {
+    it("should have no button but Back and the two that add a weigh-in", async () => {
       await renderWeightScreen();
       await screen.findByRole("heading", { name: "No weigh-ins yet" });
 
-      expect(screen.getAllByRole("button")).toEqual([backControl()]);
+      expect(screen.getAllByRole("button")).toEqual([backControl(), ...addControls()]);
+    });
+  });
+
+  describe("the empty state's Add weigh-in", () => {
+    it("should open the add sheet, as the header's does", async () => {
+      const user = userEvent.setup();
+      await renderWeightScreen();
+      await screen.findByRole("heading", { name: "No weigh-ins yet" });
+
+      expect(addControls()).toHaveLength(2);
+      await user.press(addControl(1));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/weight/entry");
+    });
+  });
+
+  describe("a row of the list", () => {
+    it("should open that weigh-in in the sheet when it is pressed", async () => {
+      const user = userEvent.setup();
+      const row = weighInRow({ localDate: "2026-10-17", utcTime: "06:42", weightKg: 81.6 });
+      weightBackend.weighIns = [row];
+      await renderWeightScreen();
+
+      await user.press(await screen.findByRole("button", { name: /81\.6/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith(`/more/weight/entry?id=${String(row.id)}`);
     });
   });
 

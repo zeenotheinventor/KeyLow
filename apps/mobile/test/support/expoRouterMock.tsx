@@ -27,6 +27,8 @@ export const routerMock = {
   // The address of the screen in front, as `usePathname` gives it to every screen, whichever it is on.
   pathname: "",
   searchParams: noSearchParams,
+  // The options each rendered `Stack.Screen` set, so a test can read how a screen presents itself.
+  screenOptions: [] as unknown[],
 };
 
 export function resetRouterMock(): void {
@@ -47,6 +49,7 @@ export function resetRouterMock(): void {
   routerMock.segments = [];
   routerMock.pathname = "";
   routerMock.searchParams = {};
+  routerMock.screenOptions = [];
 }
 
 // The real useRouter returns one stable object, so effects that depend on it do not rerun.
@@ -78,7 +81,16 @@ function useFocusEffect(effect: EffectCallback): void {
   useEffect(() => (isFocused ? effect() : undefined), [effect, isFocused]);
 }
 
+// A screen sets its own presentation through `Stack.Screen`, which draws nothing.
+const Stack = {
+  Screen: ({ options }: { options?: unknown }) => {
+    routerMock.screenOptions.push(options);
+    return null;
+  },
+};
+
 export const mockExpoRouter = {
+  Stack,
   useRouter: () => router,
   useNavigation: () => navigation,
   useIsFocused,

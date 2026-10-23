@@ -145,6 +145,18 @@ export const WholeNumberBesideLabel: Story = {
   ],
 };
 
+// The weigh-in sheet's weight: a 32 point number at the start of a box 64 points high, with the unit at the far end.
+export const LeftAligned: Story = {
+  args: {
+    align: "left",
+    density: "comfortable",
+    label: "Weight",
+    size: "display",
+    unit: "kg",
+    value: "81.4",
+  },
+};
+
 // The set entry boards' load and reps: a 32 point number centred in a box 64 points high, side by side.
 export const DisplaySize: Story = {
   render: (args) => (

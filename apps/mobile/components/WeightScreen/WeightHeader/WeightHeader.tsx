@@ -1,4 +1,5 @@
 import { WEIGHT_SCREEN } from "@keylow/core/copy";
+import { useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,11 +10,13 @@ import type { WeightHeaderProps } from "./types";
 
 /**
  * The top of the Weight screen as `weight: chart and weigh-ins` draws it: the back control, 4 points from
- * the title at the start of the row, with 8 points at the sides and below. Its other controls, the add
- * button and the trend explainer's, are added by the screens they open.
+ * the title at the start of the row, with 8 points at the sides and below. The add button, the kit's primary
+ * icon button, opens the sheet that adds a weigh-in. The trend explainer's
+ * control is added by the screen it opens.
  */
 export function WeightHeader({ onBack }: WeightHeaderProps) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     // The inset is a runtime value no class can name, so it goes through a variable, as the tab screens' do.
@@ -29,6 +32,15 @@ export function WeightHeader({ onBack }: WeightHeaderProps) {
         <Text className="min-w-0 flex-1" role="heading" variant="h2">
           {WEIGHT_SCREEN.title}
         </Text>
+        <IconButton
+          className="mr-2"
+          icon="Plus"
+          label={WEIGHT_SCREEN.addLabel}
+          variant="primary"
+          onPress={() => {
+            router.push("/more/weight/entry");
+          }}
+        />
       </View>
     </View>
   );
