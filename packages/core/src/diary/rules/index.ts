@@ -29,5 +29,7 @@ export type { EnteredNumber, MacroField, ValidationResult } from "./validation";
 export { enteredNumber, fieldText } from "./enteredNumber";
 export { weekAverage } from "./weekAverage";
 export type { WeekAverageDay, WeekDayTotals } from "./weekAverage";
+export { weekDayTotals } from "./weekDayTotals";
+export type { WeekDayNutrients } from "./weekDayTotals";
 export { weekSummary } from "./weekSummary";
 export type { WeekDayMarker, WeekSummary, WeekSummaryDay, WeekSummaryInput } from "./weekSummary";

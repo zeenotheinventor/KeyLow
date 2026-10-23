@@ -17,7 +17,7 @@ export type { Recipe, RecipeComputed, RecipeIngredient, StoredRecipeIngredient }
 export { buildRecipeIngredient } from "./buildRecipeIngredient";
 export type { RecipeIngredientInput } from "./buildRecipeIngredient";
 export { frozenFoodOf, newIngredient, withAmount } from "./ingredientAmount";
-export { computeRecipe } from "./computeRecipe";
+export { computeRecipe, per100gOf } from "./computeRecipe";
 export { recipeOfSnapshot } from "./recipeOfSnapshot";
 export type { RecipeOfSnapshot } from "./recipeOfSnapshot";
 export type { ComputeRecipeInput } from "./computeRecipe";

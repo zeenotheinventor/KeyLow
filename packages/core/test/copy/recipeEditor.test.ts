@@ -28,6 +28,7 @@ import {
   describeStepRowName,
   describeStepTextName,
   describeStepTitle,
+  problemSentences,
 } from "../../src/copy";
 import {
   MAX_RECIPE_INGREDIENTS,
@@ -440,5 +441,67 @@ describe("the count after a heading", () => {
   it("should join a heading and its count", () => {
     expect(describeCountedHeading(RECIPE_EDITOR.ingredients, 3)).toBe("Ingredients · 3");
     expect(describeCountedHeading(RECIPE_EDITOR.instructions, 0)).toBe("Instructions");
+  });
+});
+
+describe("problemSentences", () => {
+  it("should give no sentence for no problem", () => {
+    expect(problemSentences([])).toEqual({ ingredients: [] });
+  });
+
+  it("should put each field's problem in that field", () => {
+    expect(
+      problemSentences(["name_required", "servings_invalid", "cooked_weight_invalid"]),
+    ).toEqual({
+      name: describeRecipeProblem("name_required"),
+      servings: describeRecipeProblem("servings_invalid"),
+      cookedWeight: describeRecipeProblem("cooked_weight_invalid"),
+      ingredients: [],
+    });
+  });
+
+  it.each<[RecipeDraftProblem, "name" | "servings" | "cookedWeight"]>([
+    ["name_too_long", "name"],
+    ["servings_too_many", "servings"],
+    ["cooked_weight_too_large", "cookedWeight"],
+  ])("should file %s under %s", (problem, field) => {
+    expect(problemSentences([problem])[field]).toBe(describeRecipeProblem(problem));
+  });
+
+  it("should keep the first sentence when a field has two problems", () => {
+    expect(problemSentences(["name_required", "name_too_long"]).name).toBe(
+      describeRecipeProblem("name_required"),
+    );
+  });
+
+  it("should list every ingredient problem, in the order found", () => {
+    expect(
+      problemSentences(["ingredients_none", "ingredients_too_many", "ingredient_invalid"])
+        .ingredients,
+    ).toEqual([
+      describeRecipeProblem("ingredients_none"),
+      describeRecipeProblem("ingredients_too_many"),
+      describeRecipeProblem("ingredient_invalid"),
+    ]);
+  });
+
+  it("should show nothing for a step problem, which has no field on the editor page", () => {
+    expect(problemSentences(["steps_too_many", "step_too_long"])).toEqual({ ingredients: [] });
+  });
+
+  it("should give one sentence per field for a draft with nothing filled in", () => {
+    const result = validateRecipeDraft({
+      name: "",
+      servings: "0",
+      cookedWeight: "",
+      ingredients: [],
+      steps: [],
+    });
+
+    expect(!result.ok && problemSentences(result.problems)).toEqual({
+      name: describeRecipeProblem("name_required"),
+      servings: describeRecipeProblem("servings_invalid"),
+      ingredients: [describeRecipeProblem("ingredients_none")],
+    });
   });
 });

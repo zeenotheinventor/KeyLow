@@ -1,5 +1,5 @@
 import { useDiaryWeek, useTargets } from "@keylow/api-client";
-import { weekOf, weekSummary } from "@keylow/core/diary";
+import { weekDayTotals, weekOf, weekSummary } from "@keylow/core/diary";
 
 import { ThisWeekCard } from "../ThisWeekCard";
 import { ThisWeekLoading } from "../ThisWeekLoading";
@@ -7,7 +7,6 @@ import { ThisWeekMessage } from "../ThisWeekMessage";
 
 import type { DashboardWeekProps } from "./types";
 
-import { weekDayTotals } from "@/lib/diary";
 import { useIsOnline } from "@/lib/useIsOnline";
 
 /**
