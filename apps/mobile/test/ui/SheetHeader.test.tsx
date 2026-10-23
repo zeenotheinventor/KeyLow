@@ -3,7 +3,7 @@ import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { SheetHeader, Text } from "../../components/ui";
+import { Button, SheetHeader, Text } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -52,6 +52,14 @@ function drawings() {
 const transparent = "#00000000";
 
 const schemes: ThemeScheme[] = ["dark", "light"];
+
+function expectButtonsInOrder(names: readonly string[]) {
+  const buttons = screen.getAllByRole("button");
+  expect(buttons).toHaveLength(names.length);
+  names.forEach((name, position) => {
+    expect(buttons[position]).toHaveAccessibleName(name);
+  });
+}
 
 describe("SheetHeader", () => {
   let kitStyles: string;
@@ -377,6 +385,32 @@ describe("SheetHeader", () => {
 
       expect(screen.getByText("Finish")).toBeOnTheScreen();
       expect(screen.queryByTestId("sheet-header-empty-slot")).not.toBeOnTheScreen();
+    });
+
+    it("should draw a trailing control first and the slot after it, as the routine editor has More and Save", async () => {
+      await renderHeader({
+        ...searchHeader,
+        leading: { icon: "ChevronLeft", label: "Cancel editing", onPress: () => undefined },
+        trailing: { icon: "Ellipsis", label: "More for this routine", onPress: () => undefined },
+        trailingSlot: <Button size="sm">Save</Button>,
+      });
+
+      expectButtonsInOrder(["Cancel editing", "More for this routine", "Save"]);
+      expect(screen.queryByTestId("sheet-header-empty-slot")).not.toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+    });
+
+    it("should draw a pair of trailing controls first and the slot after them", async () => {
+      await renderHeader({
+        ...searchHeader,
+        trailing: [
+          { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
+          { icon: "Ellipsis", label: "More", onPress: () => undefined },
+        ],
+        trailingSlot: <Button size="sm">Save</Button>,
+      });
+
+      expectButtonsInOrder(["Close", "Edit Chicken and rice", "More", "Save"]);
     });
 
     it("should leave the empty slot as it was when neither is given", async () => {

@@ -56,13 +56,19 @@ export const ROUTINES_ARCHIVED = {
   note: "Archived routines keep the sessions you logged with them. Restore one to plan with it again.",
 } as const;
 
-/** The toast after a routine is archived. The boards do not draw it. */
+/**
+ * The toast after a routine is archived from its editor, with Undo. The boards do not draw it: no board
+ * draws Archive, its menu or this toast.
+ */
 export const ROUTINE_ARCHIVED_TOAST = {
   message: "Routine archived",
   undoAction: "Undo",
 } as const;
 
-/** The refusal when the active routine is archived. The boards do not draw it. */
+/**
+ * The refusal when the active routine is archived: the caption under the dimmed Archive routine item, and
+ * the toast when the database refuses an archive the screen did not know was refused. The boards do not draw it.
+ */
 export const ARCHIVE_ACTIVE_REFUSAL = "Make another routine active first.";
 
 /**
@@ -76,6 +82,13 @@ export const ROUTINE_MAKE_ACTIVE_FAILED =
 /** The toast when restoring a routine did not go through, worded as the one above. The boards do not draw it. */
 export const ROUTINE_RESTORE_FAILED =
   "Your routine was not restored. Check your connection, then try again.";
+
+/** The toast when archiving a routine did not go through, worded as the one above. The boards do not draw it. */
+export const ROUTINE_ARCHIVE_FAILED =
+  "Your routine was not archived. Check your connection, then try again.";
+
+/** The caption under the dimmed Archive routine item while the draft has changes that are not saved. The boards do not draw it. */
+export const ROUTINE_ARCHIVE_UNSAVED = "Save or cancel your changes first.";
 
 /** The fixed words of the routine editor. */
 export const ROUTINE_EDITOR = {
@@ -91,6 +104,10 @@ export const ROUTINE_EDITOR = {
   repsHeading: "Reps",
   rirHeading: "RIR",
   addExerciseAction: "Add exercise",
+  /** The name of the header's menu control and of the sheet it opens. The boards do not draw them. */
+  moreLabel: "More for this routine",
+  /** The one item in that menu. The boards do not draw it. */
+  archiveAction: "Archive routine",
 } as const;
 
 const SEPARATOR = " · ";
