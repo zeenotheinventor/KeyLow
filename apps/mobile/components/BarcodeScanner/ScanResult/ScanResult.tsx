@@ -18,14 +18,20 @@ import { Banner, Button, ErrorState } from "../../ui";
 import type { ScanResultProps } from "./types";
 import type { ScanOutcome } from "../types";
 
-function renderOutcome(outcome: ScanOutcome) {
+function renderOutcome(outcome: ScanOutcome, canCreateFood: boolean) {
   switch (outcome.status) {
     case "looking_up":
       return <LookupProgress message={BARCODE_LOOKUP_PROGRESS.lookingUp} />;
     case "opening_food":
       return <LookupProgress message={BARCODE_LOOKUP_PROGRESS.openingFood} />;
     case "not_found":
-      return <ScanMessage body={BARCODE_NOT_FOUND.scannedBody} title={BARCODE_NOT_FOUND.title} />;
+      // The sentence tells the person to create the food, so it is left out where they cannot.
+      return (
+        <ScanMessage
+          body={canCreateFood ? BARCODE_NOT_FOUND.scannedBody : undefined}
+          title={BARCODE_NOT_FOUND.title}
+        />
+      );
     case "invalid":
       return (
         <ScanMessage
@@ -59,7 +65,7 @@ function renderOutcome(outcome: ScanOutcome) {
  * What the screen shows once a scan was accepted: the code that was read, then what became of it, then
  * the actions at the foot. Nothing can be done while the lookup is in flight or the food is opening, so
  * those have none. Every result that ends there offers to scan again, and a code nobody has also offers
- * to create the food. The foot pads itself with the screen's `--inset-bottom` variable.
+ * to create the food, where the screen can. The foot pads itself with the screen's `--inset-bottom` variable.
  */
 export function ScanResult({ outcome, code, onScanAgain, onCreateFood }: ScanResultProps) {
   const isWaiting = outcome.status === "looking_up" || outcome.status === "opening_food";
@@ -67,9 +73,9 @@ export function ScanResult({ outcome, code, onScanAgain, onCreateFood }: ScanRes
   return (
     <View className="flex-1 gap-4 px-4 pt-2">
       <BarcodeReadCard code={code} />
-      {renderOutcome(outcome)}
+      {renderOutcome(outcome, onCreateFood !== undefined)}
       <View className="mt-auto gap-2 pb-[var(--inset-bottom)]">
-        {outcome.status === "not_found" ? (
+        {outcome.status === "not_found" && onCreateFood !== undefined ? (
           <Button
             fullWidth
             icon="Plus"

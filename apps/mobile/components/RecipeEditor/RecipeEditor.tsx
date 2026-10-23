@@ -35,6 +35,13 @@ import { useStepEdits } from "./useStepEdits";
 import { useStepSheet } from "./useStepSheet";
 import { useIsOnline } from "../../lib/connectivity";
 import { dockBottomPadding } from "../../lib/dockBottomPadding";
+import {
+  beginIngredientScan,
+  cancelIngredientScan,
+  subscribeIngredientScan,
+  takeIngredientScan,
+} from "../../lib/ingredientScan";
+import { withIngredientRequest } from "../../lib/navigation";
 import { recipePath, recipesPath } from "../../lib/recipeRoutes";
 import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
@@ -113,6 +120,9 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   // The food search for a new ingredient, over the editor, and the food whose amount step it has open.
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [chosenFood, setChosenFood] = useState<ChosenFood | undefined>(undefined);
+  // The scan the Add ingredient search has open, if one is: the scanner is a route over the editor, and
+  // this is the id it answers with.
+  const scanRequestId = useRef<string | undefined>(undefined);
   const shouldFocusAddRow = useRef(false);
   const shouldScrollToAdded = useRef(false);
   const scrollOffset = useRef(0);
@@ -219,6 +229,28 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     }
   }, [isAddOpen, isFull]);
 
+  // A food the scanner found for this editor's request opens its amount step over the search, as a row
+  // picked from the results does. The scanner answers while it slides away, so the step is already there.
+  // The request ends with the editor, so a late answer to an editor that has gone is ignored.
+  useEffect(() => {
+    const unsubscribe = subscribeIngredientScan(() => {
+      const requestId = scanRequestId.current;
+      const foodId = requestId === undefined ? undefined : takeIngredientScan(requestId);
+      if (foodId !== undefined) {
+        scanRequestId.current = undefined;
+        setChosenFood({ foodId });
+        setIsAddOpen(true);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      if (scanRequestId.current !== undefined) {
+        cancelIngredientScan(scanRequestId.current);
+      }
+    };
+  }, []);
+
   // The way out runs after the render that lifted the hold, or the navigator would still refuse it. A new
   // `exit` each time, so a way out that led nowhere (the editor's own page) can be asked for again.
   useEffect(() => {
@@ -282,6 +314,15 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
     toast.dismiss();
     setChosenFood(undefined);
     setIsAddOpen(true);
+  }
+
+  // The scanner opens over the editor, which stays mounted under it with its draft, its scroll place and the
+  // search with the words typed, so nothing is lost if the scan is cancelled.
+  function scanIngredient() {
+    Keyboard.dismiss();
+    const requestId = beginIngredientScan();
+    scanRequestId.current = requestId;
+    router.push(withIngredientRequest("/foods/scan", requestId));
   }
 
   function closeAddIngredient() {
@@ -597,6 +638,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
             }}
             onChoose={setChosenFood}
             onClose={closeAddIngredient}
+            onScanBarcode={scanIngredient}
           />
         </View>
       ) : null}

@@ -15,6 +15,8 @@ export type AddIngredientSheetProps = {
   onBackToResults: () => void;
   /** Close, from the search: back to the editor with nothing changed. */
   onClose: () => void;
+  /** Scan barcode, from the search. The editor opens the scanner over itself, and a food the scanner finds comes back as the chosen one. */
+  onScanBarcode: () => void;
   /** Add to recipe: the ingredient that joins the draft. */
   onAdd: (ingredient: RecipeIngredient) => void;
 };

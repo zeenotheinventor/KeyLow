@@ -24,6 +24,8 @@ export type FoodSearchIngredient = {
 type FoodSearchSharedProps = {
   onClose: () => void;
   onOpenFood: (foodId: string) => void;
+  /** Opens the scanner from the search field's Scan barcode button. */
+  onScanBarcode: () => void;
 };
 
 /** The sheet that finds food to look at or to log, which can also create a food and scan a barcode. */
@@ -31,7 +33,6 @@ type FoodSearchFoodsProps = FoodSearchSharedProps & {
   /** Defaults to `all`. */
   scope?: FoodSearchScope;
   onCreateFood: () => void;
-  onScanBarcode: () => void;
   /** Puts the sheet in log mode: titled "Log food", with servings and a plus on each row. Leave it out for the plain search. */
   logging?: FoodSearchLogging | undefined;
   ingredient?: undefined;
@@ -39,14 +40,14 @@ type FoodSearchFoodsProps = FoodSearchSharedProps & {
 
 /**
  * The sheet that finds an ingredient for a recipe: titled "Add ingredient", every result a row that opens
- * the amount step (no plus, no Quick add, no recipes). It cannot create a food or scan a barcode, because
- * both leave the recipe, whose draft is unsaved, for a form or a camera.
+ * the amount step (no plus, no Quick add, no recipes). It cannot create a food, because the form would leave
+ * the recipe, whose draft is unsaved. It can scan a barcode: the scanner opens over the recipe and hands the
+ * food it finds back to it.
  */
 type FoodSearchIngredientProps = FoodSearchSharedProps & {
   ingredient: FoodSearchIngredient;
   scope?: undefined;
   onCreateFood?: undefined;
-  onScanBarcode?: undefined;
   logging?: undefined;
 };
 

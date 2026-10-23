@@ -445,14 +445,14 @@ describe("adding an ingredient from the recipe editor", () => {
       expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
     });
 
-    it("should offer no Quick add row, no create control and no scanner", async () => {
+    it("should offer no Quick add row and no create control, but the scanner", async () => {
       const user = await showEditor();
 
       await user.press(addRow());
 
       expect(screen.queryByRole("button", { name: /Quick add/ })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Create a food" })).not.toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: "Scan barcode" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Scan barcode" })).toBeOnTheScreen();
     });
 
     it("should hide the editor from a screen reader while it is open", async () => {
