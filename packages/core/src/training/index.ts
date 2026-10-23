@@ -221,7 +221,12 @@ export type {
   WeekSet,
 } from "./weekPlanDays";
 
-export { planProgress, sessionClock, sessionMuscleSets } from "./sessionProgress";
+export {
+  planProgress,
+  sessionClock,
+  sessionHeatValues,
+  sessionMuscleSets,
+} from "./sessionProgress";
 export type {
   ExerciseProgress,
   MuscleSessionSets,

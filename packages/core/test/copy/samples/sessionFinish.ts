@@ -57,6 +57,9 @@ export const samples: Record<string, () => string[]> = {
         { muscle: "calves", effectiveSets: 1 },
       ])
       .flatMap((row) => [row.name, row.value]),
+  describeMuscleTrainedName: () => [
+    copy.describeMuscleTrainedName({ name: "Hamstrings", value: "5.5 sets", heatStep: 3 }),
+  ],
   describeNoteLength: () => ["", "Felt strong."].map(copy.describeNoteLength),
   describeSessionSaveFailure: () => [0, 1, 8].map(copy.describeSessionSaveFailure),
 };

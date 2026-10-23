@@ -8,6 +8,7 @@ import {
   screen,
   userEvent,
   waitFor,
+  within,
 } from "@testing-library/react-native";
 import { BackHandler } from "react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -16,17 +17,21 @@ import { SessionScreen } from "../components/SessionScreen";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
 import { createDiaryQueryClient } from "./support/diaryBackend";
+import { fillsIn, heatFill } from "./support/figureFills";
 import { finishClient, finishWrites, resetFinishWrites } from "./support/finishBackend";
 import { compileKitStyles } from "./support/kitStyles";
+import { expectAccessibleNamesInOrder } from "./support/namesInOrder";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import {
   FRESH_SESSION_ID,
   freshLegsOpen,
   GOLDEN_SESSION_ID,
   goldenLegsOpen,
+  LEGS_DAY_ID,
   legsRoutine,
   loggedSetRow,
   previousThursdayAndOpenSession,
+  snapshotOf,
 } from "./support/sessionGoldenLegs";
 import { resetTrainBackend, trainBackend } from "./support/trainBackend";
 
@@ -96,7 +101,7 @@ async function renderSession(props: Partial<SessionScreenProps> = {}) {
 
 function seedGoldenThursday() {
   trainBackend.routine = legsRoutine;
-  trainBackend.activeSession = goldenLegsOpen();
+  trainBackend.activeSession = goldenLegsOpen(LEGS_DAY_ID, [], "legs");
   trainBackend.lastPerformance = previousThursdayAndOpenSession;
   mockNow = new Date(THURSDAY_1900);
 }
@@ -118,6 +123,7 @@ describe("finishing a session", () => {
       "components/SessionClock",
       "components/SessionHeaderActions",
       "components/FinishScreen",
+      "components/MusclesTrainedCard",
       "components/SessionExerciseCard",
       "components/ExerciseCard",
       "components/SetRow",
@@ -207,11 +213,72 @@ describe("finishing a session", () => {
       ).toBeOnTheScreen();
     });
 
-    it("should leave the Muscles trained card out, since the next ticket draws it", async () => {
+    it("should draw the Muscles trained card, headed and captioned", async () => {
       await renderSession();
       await openFinish();
 
-      expect(screen.queryByText("Muscles trained")).not.toBeOnTheScreen();
+      const card = screen.getByLabelText("Muscles trained");
+      expect(card).toHaveProp("role", "region");
+      expect(within(card).getByRole("heading", { name: "Muscles trained" })).toBeOnTheScreen();
+      expect(within(card).getByText("Effective sets")).toBeOnTheScreen();
+    });
+
+    it("should list the golden Legs muscles by effective sets, each with its heat step in words", async () => {
+      await renderSession();
+      await openFinish();
+
+      expectAccessibleNamesInOrder(screen.getAllByRole("listitem"), [
+        "Hamstrings, 5.5 sets, Hot",
+        "Quads, 5 sets, Hot",
+        "Glutes, 4 sets, Hot",
+        "Lower back, 2.1 sets, Ready",
+        "Calves, 1.6 sets, Ready",
+      ]);
+    });
+
+    it("should name the front and the back figure for this session's heat and fill them with the rows' steps", async () => {
+      await renderSession();
+      await openFinish();
+
+      const front = fillsIn(
+        screen.getByRole("img", { name: "This session's heat, front" }),
+        "front",
+      );
+      const back = fillsIn(screen.getByRole("img", { name: "This session's heat, back" }), "back");
+
+      expect(front.get("quads")).toEqual(heatFill("dark", 3));
+      expect(back.get("hamstrings")).toEqual(heatFill("dark", 3));
+      expect(back.get("lower_back")).toEqual(heatFill("dark", 1));
+      expect(back.get("calves")).toEqual(heatFill("dark", 1));
+      expect(front.get("biceps")).toEqual(heatFill("dark", 0));
+    });
+
+    it("should count this session's own sets only, not the fatigue left by earlier sets of the same day", async () => {
+      // Twelve hard leg curls that morning would leave the hamstrings hotter than the session did on its own.
+      trainBackend.weekSessions = [
+        {
+          ...goldenLegsOpen(LEGS_DAY_ID, [], "legs"),
+          id: "00000006-0000-4000-8000-000000000060",
+          started_at: "2026-10-15T09:00:00+01:00",
+          ended_at: "2026-10-15T10:00:00+01:00",
+          workout_sets: Array.from({ length: 12 }, (_, index) =>
+            loggedSetRow("00000006-0000-4000-8000-000000000060", "legCurl", 200 + index, {
+              performed_at: `2026-10-15T09:${String(10 + index)}:00+01:00`,
+              rir: 0,
+              snapshot: snapshotOf("legCurl", "legs"),
+            }),
+          ),
+        },
+      ];
+      await renderSession();
+      await openFinish();
+
+      expect(screen.getAllByRole("listitem")[0]).toHaveAccessibleName("Hamstrings, 5.5 sets, Hot");
+      expect(
+        fillsIn(screen.getByRole("img", { name: "This session's heat, back" }), "back").get(
+          "hamstrings",
+        ),
+      ).toEqual(heatFill("dark", 3));
     });
 
     it("should go back to the session with Keep logging, saving nothing", async () => {

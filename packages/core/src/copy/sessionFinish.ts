@@ -1,4 +1,4 @@
-import { describeSets, joinInWords } from "./bodyMap";
+import { describeHeatStep, describeSets, joinInWords } from "./bodyMap";
 import { describeCount } from "./counts";
 import { MUSCLE_NAMES } from "./muscleNames";
 import { lowerFirst, SET_PHRASES } from "./sessionWording";
@@ -8,6 +8,7 @@ import { characterCount } from "../recipes/characterCount";
 import { MAX_SESSION_NOTE_LENGTH } from "../training/bounds";
 
 import type { SetType } from "../training/enums";
+import type { MuscleId } from "../training/muscles";
 import type { MuscleSessionSets } from "../training/sessionProgress";
 
 /*
@@ -189,14 +190,34 @@ export const describeNotLoggedNote = (exercises: readonly NotLoggedExercise[]): 
   return `${count} ${verb} not logged: ${joinInWords(exercises.map(describeNotLogged))}. Only logged sets are saved.`;
 };
 
-/** The rows of the Muscles trained card: the muscle's name with its effective sets, "5.5 sets". */
+/** The rows of the Muscles trained card: the muscle, its name and its effective sets, "5.5 sets". */
 export const describeMusclesTrained = (
   rows: readonly MuscleSessionSets[],
-): Readonly<{ name: string; value: string }>[] =>
+): Readonly<{ muscle: MuscleId; name: string; value: string }>[] =>
   rows.map(({ muscle, effectiveSets }) => ({
+    muscle,
     name: MUSCLE_NAMES[muscle],
     value: describeSets(effectiveSets),
   }));
+
+export type MuscleTrainedNameInput = Readonly<{
+  /** The muscle's name, from `describeMusclesTrained`. */
+  name: string;
+  /** Its effective sets, from `describeMusclesTrained`: "5.5 sets". */
+  value: string;
+  /** The heat step of the row's swatch, from 0 to 5. */
+  heatStep: number;
+}>;
+
+/**
+ * The accessible name of a row of the Muscles trained card, which says in words what the swatch shows:
+ * "Hamstrings, 5.5 sets, Hot". Throws a `RangeError` naming the rule for a step that is not from 0 to 5.
+ */
+export const describeMuscleTrainedName = ({
+  name,
+  value,
+  heatStep,
+}: MuscleTrainedNameInput): string => `${name}, ${value}, ${describeHeatStep(heatStep)}`;
 
 /** The note counter: "0 / 1,000". Counted in code points, as the database counts them, as typed. */
 export const describeNoteLength = (note: string): string =>

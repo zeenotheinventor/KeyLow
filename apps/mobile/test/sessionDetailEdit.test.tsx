@@ -112,6 +112,7 @@ describe("editing a past session from the session detail", () => {
       "components/SetEntrySheet",
       "components/SetRow",
       "components/ExerciseCard",
+      "components/MusclesTrainedCard",
     ]);
   });
 
@@ -217,6 +218,25 @@ describe("editing a past session from the session detail", () => {
         expect(latPulldown().getAllByLabelText(/^Set \d, /)).toHaveLength(5);
       });
       expect(historyEditBackend.restoredIds).toStrictEqual(historyEditBackend.removedIds);
+    });
+
+    it("should redraw the Muscles trained card when a set is removed, and again on Undo", async () => {
+      const user = await renderDetail();
+      const lats = () => screen.getAllByRole("listitem")[0];
+      expect(lats()).toHaveAccessibleName("Lats, 16 sets, Peak");
+
+      await user.press(setRow(SET_3));
+      await user.press(await screen.findByRole("button", { name: "Delete set" }));
+
+      await waitFor(() => {
+        expect(lats()).toHaveAccessibleName("Lats, 15 sets, Peak");
+      });
+
+      await user.press(screen.getByRole("button", { name: "Undo" }));
+
+      await waitFor(() => {
+        expect(lats()).toHaveAccessibleName("Lats, 16 sets, Peak");
+      });
     });
 
     it("should remove the set once for two presses of Delete set in the same moment", async () => {

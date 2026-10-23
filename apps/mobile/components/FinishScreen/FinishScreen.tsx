@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { MusclesTrainedCard } from "../MusclesTrainedCard";
 import { StatCard } from "../StatCard";
 import { Banner, Button, SheetHeader, Text, TextArea } from "../ui";
 import { useSaveSession } from "./useSaveSession";
@@ -26,10 +27,12 @@ const SECONDS_PER_MINUTE = 60;
 
 /**
  * The finish screen, as the `session · finish`, `session · saving` and `session · save-error` boards draw
- * it: the Time, Sets and Exercises cards, the planned sets left alone, the optional note and Save session.
+ * it: the Time, Sets and Exercises cards, the planned sets left alone, the Muscles trained card, the
+ * optional note and Save session.
  * The session ends when the screen opens, so the Time card and the end that is saved are the same moment.
  * While it saves the button reads Saving session and the note cannot change. A failure keeps the note and
- * offers Try again. The note is the session screen's, so it also survives Keep logging. The Muscles trained card waits for its own ticket, and its place is left empty.
+ * offers Try again. The note is the session screen's, so it also survives Keep logging. The Muscles trained
+ * card shows the heat of the session's own sets at the moment it ends.
  */
 export function FinishScreen({
   details,
@@ -101,7 +104,7 @@ export function FinishScreen({
           />
         </View>
         {details.notLoggedNote === null ? null : <Banner sentence title={details.notLoggedNote} />}
-        {/* The Muscles trained card goes here (its own ticket), between the planned sets left alone and the note. */}
+        <MusclesTrainedCard at={endedAtText} sets={details.sets} />
         <View className="gap-1">
           <View aria-hidden>
             <Text tone="secondary" variant="caption">

@@ -1,4 +1,5 @@
 import type { ReadOnlyExerciseCardProps } from "../ExerciseCard";
+import type { MusclesTrainedCardProps } from "../MusclesTrainedCard";
 import type { SessionOrigin, SessionStatsCopy } from "@keylow/core/copy";
 
 export type SessionDetailScreenProps = {
@@ -19,6 +20,8 @@ export type SessionDetailContent = {
   /** "Tuesday 13 October · 18:00 to 18:51". */
   when: string;
   stats: SessionStatsCopy;
+  /** What the Muscles trained card draws: the session's sets, and the heat read at its end. */
+  musclesTrained: MusclesTrainedCardProps;
   /** In the order each was first logged. */
   exercises: readonly (ReadOnlyExerciseCardProps & { exerciseId: string })[];
 };

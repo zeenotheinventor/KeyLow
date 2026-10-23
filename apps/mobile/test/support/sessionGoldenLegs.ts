@@ -1,6 +1,6 @@
 import { buildSetSnapshot } from "@keylow/core/training";
 
-import type { Equipment } from "@keylow/core/training";
+import type { Equipment, HeatSet, MuscleId } from "@keylow/core/training";
 
 type Row = Record<string, unknown>;
 
@@ -75,6 +75,8 @@ const EXERCISES: Record<
   },
 };
 
+type Muscle = { muscle_id: MuscleId; role: "primary" | "secondary" | "stabiliser"; weight: number };
+
 const QUADS = [{ muscle_id: "quads", role: "primary", weight: 1 }] as const;
 
 export const LEGS_DAY_ID = idWith(6, 90);
@@ -113,7 +115,36 @@ export const legsRoutine: Row = {
   ],
 };
 
-const snapshotOf = (key: ExerciseKey): unknown =>
+// The muscles the exercises really work, as the golden week's fixture has them: squatting, pressing and
+// pulling the leg train hamstrings, glutes, lower back and calves as well as the quads.
+const LEG_MUSCLES: Record<ExerciseKey, readonly Muscle[]> = {
+  squat: [
+    { muscle_id: "quads", role: "primary", weight: 1 },
+    { muscle_id: "glute_max", role: "secondary", weight: 0.5 },
+    { muscle_id: "hamstrings", role: "secondary", weight: 0.5 },
+    { muscle_id: "lower_back", role: "stabiliser", weight: 0.2 },
+    { muscle_id: "calves", role: "stabiliser", weight: 0.2 },
+  ],
+  romanianDeadlift: [
+    { muscle_id: "hamstrings", role: "primary", weight: 1 },
+    { muscle_id: "lower_back", role: "secondary", weight: 0.5 },
+    { muscle_id: "glute_max", role: "secondary", weight: 0.5 },
+    { muscle_id: "calves", role: "stabiliser", weight: 0.2 },
+  ],
+  legPress: [
+    { muscle_id: "quads", role: "primary", weight: 1 },
+    { muscle_id: "glute_max", role: "secondary", weight: 0.5 },
+    { muscle_id: "hamstrings", role: "secondary", weight: 0.5 },
+    { muscle_id: "calves", role: "stabiliser", weight: 0.2 },
+  ],
+  legCurl: [{ muscle_id: "hamstrings", role: "primary", weight: 1 }],
+  calf: [{ muscle_id: "calves", role: "primary", weight: 1 }],
+};
+
+/** Which muscles the sets of a session are snapshotted with: every exercise on the quads alone, or what each really works. */
+export type SnapshotMuscles = "quads" | "legs";
+
+export const snapshotOf = (key: ExerciseKey, muscles: SnapshotMuscles = "quads") =>
   buildSetSnapshot(
     {
       id: EXERCISES[key].id,
@@ -121,7 +152,7 @@ const snapshotOf = (key: ExerciseKey): unknown =>
       equipment: EXERCISES[key].equipment,
       mechanic: "compound",
     },
-    QUADS,
+    muscles === "legs" ? LEG_MUSCLES[key] : QUADS,
   );
 
 export const GOLDEN_SESSION_ID = idWith(6, 80);
@@ -151,6 +182,16 @@ const GOLDEN_SETS: readonly LoggedSet[] = [
   ["legPress", "working", "18:54", 180, 12, 1],
   ["legPress", "working", "18:57", 180, 11, 1],
 ];
+
+/** The golden Legs sets as core's heat model reads them, snapshotted with the muscles each exercise really works. */
+export const goldenLegsHeatSets: HeatSet[] = GOLDEN_SETS.map(([key, setType, time, , , rir]) => ({
+  set_type: setType,
+  rir,
+  rpe: null,
+  performed_at: `2026-10-15T${time}:00+01:00`,
+  deleted_at: null,
+  snapshot: snapshotOf(key, "legs"),
+}));
 
 /** One logged set as the read of the session in progress returns it. `n` keeps ids and positions apart. */
 export const loggedSetRow = (
@@ -195,6 +236,7 @@ const sessionRow = (
 export const goldenLegsOpen = (
   dayId: string | null = LEGS_DAY_ID,
   extraSets: readonly Row[] = [],
+  snapshotMuscles: SnapshotMuscles = "quads",
 ): Row =>
   sessionRow(
     GOLDEN_SESSION_ID,
@@ -207,6 +249,7 @@ export const goldenLegsOpen = (
           load_kg: load,
           reps,
           rir,
+          snapshot: snapshotOf(key, snapshotMuscles),
         }),
       ),
       ...extraSets,

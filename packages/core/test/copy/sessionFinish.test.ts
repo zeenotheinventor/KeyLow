@@ -8,6 +8,7 @@ import {
   describeFinishTime,
   describeFinishTitle,
   describeMusclesTrained,
+  describeMuscleTrainedName,
   describeNoteLength,
   describeNotLoggedNote,
   describeSessionSaveFailure,
@@ -273,17 +274,17 @@ describe("the muscles trained", () => {
         { muscle: "calves", effectiveSets: 1.6 },
       ]),
     ).toEqual([
-      { name: "Hamstrings", value: "5.5 sets" },
-      { name: "Quads", value: "5 sets" },
-      { name: "Glutes", value: "4 sets" },
-      { name: "Lower back", value: "2.1 sets" },
-      { name: "Calves", value: "1.6 sets" },
+      { muscle: "hamstrings", name: "Hamstrings", value: "5.5 sets" },
+      { muscle: "quads", name: "Quads", value: "5 sets" },
+      { muscle: "glute_max", name: "Glutes", value: "4 sets" },
+      { muscle: "lower_back", name: "Lower back", value: "2.1 sets" },
+      { muscle: "calves", name: "Calves", value: "1.6 sets" },
     ]);
   });
 
   it("should use the singular for exactly one set", () => {
     expect(describeMusclesTrained([{ muscle: "calves", effectiveSets: 1 }])).toEqual([
-      { name: "Calves", value: "1 set" },
+      { muscle: "calves", name: "Calves", value: "1 set" },
     ]);
   });
 
@@ -294,6 +295,26 @@ describe("the muscles trained", () => {
 
   it("should give no rows for a session that trained nothing", () => {
     expect(describeMusclesTrained([])).toEqual([]);
+  });
+});
+
+describe("the name of a muscles trained row", () => {
+  it("should read the muscle, its sets and its heat step in words", () => {
+    expect(describeMuscleTrainedName({ name: "Hamstrings", value: "5.5 sets", heatStep: 3 })).toBe(
+      "Hamstrings, 5.5 sets, Hot",
+    );
+  });
+
+  it("should name the step the swatch is drawn in", () => {
+    expect(describeMuscleTrainedName({ name: "Calves", value: "1 set", heatStep: 5 })).toBe(
+      "Calves, 1 set, Peak",
+    );
+  });
+
+  it("should refuse a step that is not from 0 to 5", () => {
+    expect(() =>
+      describeMuscleTrainedName({ name: "Calves", value: "1 set", heatStep: 6 }),
+    ).toThrow(RangeError);
   });
 });
 

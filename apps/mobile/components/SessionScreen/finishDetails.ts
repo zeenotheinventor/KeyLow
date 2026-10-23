@@ -1,13 +1,13 @@
 import { describeNotLoggedNote } from "@keylow/core/copy";
 
+import type { ScreenSet } from "./types";
 import type { FinishDetails } from "../FinishScreen";
-import type { SessionSet } from "@keylow/api-client";
 import type { PlanProgress } from "@keylow/core/training";
 
 type OpenSession = {
   id: string;
   started_at: string;
-  sets: readonly Pick<SessionSet, "exercise_id" | "set_type">[];
+  sets: readonly ScreenSet[];
 };
 
 /** The exercise's name from the plan's day, which names every exercise the plan has. */
@@ -46,5 +46,8 @@ export function describeFinishDetails(
     exercisesPlanned:
       plannedNames === null ? null : new Set(plannedNames.map((entry) => entry.exerciseId)).size,
     notLoggedNote: describeNotLoggedNote(notLogged),
+    sets: open.sets.flatMap(({ snapshot, ...set }) =>
+      snapshot === undefined ? [] : [{ ...set, snapshot }],
+    ),
   };
 }

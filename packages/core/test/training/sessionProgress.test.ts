@@ -13,7 +13,15 @@ import {
   SQUAT_ID,
   STANDING_CALF_RAISE_ID,
 } from "./sessionRows";
-import { planProgress, scaffoldSession, sessionClock, sessionMuscleSets } from "../../src/training";
+import {
+  heatValues,
+  muscleState,
+  planProgress,
+  scaffoldSession,
+  sessionClock,
+  sessionHeatValues,
+  sessionMuscleSets,
+} from "../../src/training";
 
 import type { HistorySet } from "../../src/training";
 
@@ -294,6 +302,29 @@ describe("sessionMuscleSets", () => {
       { muscle: "biceps", effectiveSets: 1 },
       { muscle: "triceps", effectiveSets: 1 },
     ]);
+  });
+});
+
+describe("sessionHeatValues", () => {
+  const atLegsEnd = "2026-10-15T18:00:00Z";
+
+  it("should be the heat step of each muscle's own heat from the sets given", () => {
+    expect(sessionHeatValues(goldenLegsSets, atLegsEnd, params.training)).toStrictEqual(
+      heatValues(muscleState(goldenLegsSets, atLegsEnd, params.training), params.training),
+    );
+  });
+
+  it("should leave a muscle the session did not train at step 0", () => {
+    const steps = sessionHeatValues(goldenLegsSets, atLegsEnd, params.training);
+
+    expect(steps.biceps).toBe(0);
+    expect(steps.hamstrings).toBeGreaterThan(0);
+  });
+
+  it("should have every muscle at step 0 for no sets", () => {
+    expect(
+      Object.values(sessionHeatValues([], atLegsEnd, params.training)).every((step) => step === 0),
+    ).toBe(true);
   });
 });
 
