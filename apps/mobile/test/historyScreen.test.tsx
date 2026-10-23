@@ -21,8 +21,10 @@ import {
   goldenHistoryWeek,
   historyBackend,
   historyClient,
+  historySession,
   historyWeeks,
   resetHistoryBackend,
+  withEverySetDeleted,
 } from "./support/historyBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -59,7 +61,12 @@ async function renderHistory(props: Partial<HistoryScreenProps> = {}, client = q
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={historyClient} queryClient={client}>
         <ToastProvider>
-          <HistoryScreen onBack={() => undefined} onOpenSession={() => undefined} {...props} />
+          <HistoryScreen
+            onBack={() => undefined}
+            onOpenSession={() => undefined}
+            onResumeSession={() => undefined}
+            {...props}
+          />
         </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
@@ -177,6 +184,118 @@ describe("the history screen", () => {
 
       await screen.findByLabelText(LAST_WEEK);
       expect(screen.queryByRole("button", { name: "Load earlier weeks" })).toBeNull();
+    });
+  });
+
+  describe("with a session that was started and never ended", () => {
+    const openLegs = historySession({
+      localDate: "2026-10-15",
+      dayName: "Legs",
+      kind: "legs",
+      minutes: null,
+      workingSets: 8,
+    });
+    const OPEN_ROW = "Legs, Thu 15 October, 8 sets, in progress, resume session";
+
+    beforeEach(() => {
+      historyBackend.sessions = [...goldenHistoryWeek.slice(0, 2), openLegs, ...earlierHistoryWeek];
+    });
+
+    it("should draw it once, in its week and its newest first place, as In progress with its sets", async () => {
+      await renderHistory();
+
+      const thisWeek = await screen.findByLabelText(THIS_WEEK);
+      const rows = within(thisWeek).getAllByLabelText(/October/);
+      expect(rows).toHaveLength(3);
+      expect(rows[0]).toHaveAccessibleName(OPEN_ROW);
+      const open = within(thisWeek).getByRole("button", { name: OPEN_ROW });
+      expect(within(open).getByText("In progress · 8 sets")).toBeOnTheScreen();
+      expect(within(open).queryByText(/min/)).toBeNull();
+      expect(screen.getAllByRole("button", { name: OPEN_ROW })).toHaveLength(1);
+    });
+
+    it("should count its sets in the week's total like any other session", async () => {
+      await renderHistory();
+
+      expect(await screen.findByText("3 sessions · 41 sets")).toBeOnTheScreen();
+    });
+
+    it("should resume the session, and open no detail, when its row is pressed", async () => {
+      const onOpenSession = jest.fn();
+      const onResumeSession = jest.fn();
+      const user = await renderHistory({ onOpenSession, onResumeSession });
+      await screen.findByLabelText(THIS_WEEK);
+
+      await user.press(screen.getByRole("button", { name: OPEN_ROW }));
+
+      expect(onResumeSession).toHaveBeenCalledTimes(1);
+      expect(onOpenSession).not.toHaveBeenCalled();
+    });
+
+    it("should still open the detail, and not resume, when a finished session's row is pressed", async () => {
+      const onOpenSession = jest.fn();
+      const onResumeSession = jest.fn();
+      const user = await renderHistory({ onOpenSession, onResumeSession });
+      await screen.findByLabelText(THIS_WEEK);
+
+      await user.press(screen.getByRole("button", { name: /^Pull, Tue 13 October/ }));
+
+      expect(onOpenSession).toHaveBeenCalledWith(String(goldenHistoryWeek[1]?.["id"]));
+      expect(onResumeSession).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("with sessions that have no logged set", () => {
+    const emptySession = (localDate: string) =>
+      historySession({ localDate, dayName: "Push", kind: "push", minutes: 40, workingSets: 0 });
+
+    it("should leave out a started session with no set, and one whose sets were all deleted", async () => {
+      historyBackend.sessions = [
+        ...goldenHistoryWeek,
+        emptySession("2026-10-14"),
+        withEverySetDeleted(
+          historySession({
+            localDate: "2026-10-16",
+            dayName: "Pull",
+            kind: "pull",
+            minutes: 40,
+            workingSets: 6,
+          }),
+        ),
+      ];
+      await renderHistory();
+
+      const thisWeek = await screen.findByLabelText(THIS_WEEK);
+      expect(within(thisWeek).getAllByLabelText(/October/)).toHaveLength(3);
+      expect(screen.getByText("3 sessions · 41 sets")).toBeOnTheScreen();
+      expect(screen.queryByLabelText(/Wed 14 October/)).toBeNull();
+      expect(screen.queryByLabelText(/Fri 16 October/)).toBeNull();
+    });
+
+    it("should skip a week that holds only empty sessions, in the list and in Load earlier weeks", async () => {
+      historyBackend.sessions = [
+        ...goldenHistoryWeek,
+        emptySession("2026-10-06"),
+        emptySession("2026-10-08"),
+        ...historyWeeks("2026-09-28", 1),
+      ];
+      await renderHistory();
+
+      await screen.findByLabelText(THIS_WEEK);
+      await waitFor(() => {
+        expect(weekLists()).toHaveLength(2);
+      });
+      expect(screen.getByLabelText("Mon 28 Sep to Sun 4 Oct")).toBeOnTheScreen();
+      expect(screen.queryByLabelText(/Mon 5 to Sun 11 Oct/)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Load earlier weeks" })).toBeNull();
+    });
+
+    it("should show the empty state when no session anywhere has a logged set", async () => {
+      historyBackend.sessions = [emptySession("2026-10-14"), emptySession("2026-10-06")];
+      await renderHistory();
+
+      expect(await screen.findByRole("heading", { name: "No sessions yet" })).toBeOnTheScreen();
+      expect(weekLists()).toHaveLength(0);
     });
   });
 

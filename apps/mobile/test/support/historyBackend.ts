@@ -76,6 +76,7 @@ export type HistorySessionSpec = {
   kind: SessionKind;
   /** Whole minutes; null leaves the session open. */
   minutes: number | null;
+  /** How many sets it holds; 0 is a started session with nothing logged. */
   workingSets: number;
 };
 
@@ -163,6 +164,26 @@ export function historyWeeks(newestMonday: string, weeks: number): Row[] {
     .map(historySession);
 }
 
+const isRow = (value: unknown): value is Row =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** A session's sets that are not soft-deleted. */
+const liveSetsOf = (session: Row): Row[] => {
+  const sets = session["workout_sets"];
+  return Array.isArray(sets) ? sets.filter(isRow).filter((set) => set["deleted_at"] === null) : [];
+};
+
+/** The session with every one of its sets soft-deleted, as Delete set leaves it. */
+export function withEverySetDeleted(session: Row): Row {
+  const sets = session["workout_sets"];
+  return {
+    ...session,
+    workout_sets: Array.isArray(sets)
+      ? sets.filter(isRow).map((set) => ({ ...set, deleted_at: "2026-10-16T09:00:00+00:00" }))
+      : [],
+  };
+}
+
 const jsonResponse = (body: unknown, status = 200): Response =>
   new Response(JSON.stringify(body), {
     status,
@@ -194,7 +215,7 @@ const compareText = (first: string, second: string): number =>
   first < second ? -1 : first > second ? 1 : 0;
 
 async function historyReads(url: URL): Promise<Response> {
-  const isPreviousWeek = url.searchParams.get("select") === "local_date";
+  const isPreviousWeek = (url.searchParams.get("select") ?? "").startsWith("local_date,");
   historyBackend.requests.push(isPreviousWeek ? "previous_week" : "week");
   if (historyBackend.hung) {
     return new Promise(() => undefined);
@@ -205,9 +226,10 @@ async function historyReads(url: URL): Promise<Response> {
       500,
     );
   }
-  const matching = historyBackend.sessions.filter((session) =>
-    matchesDate(String(session["local_date"]), url),
-  );
+  // The reads join the sets inner, so a session with no live set is never returned.
+  const matching = historyBackend.sessions
+    .filter((session) => matchesDate(String(session["local_date"]), url))
+    .filter((session) => liveSetsOf(session).length > 0);
   if (isPreviousWeek) {
     const newest = matching
       .map((session) => String(session["local_date"]))
@@ -215,11 +237,13 @@ async function historyReads(url: URL): Promise<Response> {
     return jsonResponse(newest === undefined ? [] : [{ local_date: newest }]);
   }
   return jsonResponse(
-    [...matching].sort(
-      (first, second) =>
-        compareText(String(second["started_at"]), String(first["started_at"])) ||
-        compareText(String(second["id"]), String(first["id"])),
-    ),
+    [...matching]
+      .sort(
+        (first, second) =>
+          compareText(String(second["started_at"]), String(first["started_at"])) ||
+          compareText(String(second["id"]), String(first["id"])),
+      )
+      .map((session) => ({ ...session, workout_sets: liveSetsOf(session) })),
   );
 }
 
@@ -234,7 +258,7 @@ export async function historyFetch(
     (init?.method ?? "GET") === "GET" &&
     url.pathname.endsWith("/workout_sessions") &&
     // The read of the session just started also embeds its routine day, and names its id.
-    (select === "local_date" ||
+    (select.startsWith("local_date,") ||
       (select.includes("routine_days(name)") && url.searchParams.has("local_date")));
 
   return isHistoryRead ? historyReads(url) : writesFetch(input, init);

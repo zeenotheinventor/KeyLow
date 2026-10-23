@@ -174,10 +174,48 @@ describe("listSessionsInWeek", () => {
     await expect(listSessionsInWeek(user.client, "2026-10-12")).resolves.toEqual([]);
   });
 
+  it("should list a session that was never ended, and one whose only sets are warm-ups", async () => {
+    const user = await createTestUser("key529");
+    const open = await startSession(user, "2026-10-12", {
+      startedAt: "2026-10-12T09:00:00Z",
+      endedAt: null,
+    });
+    await logWorking(user, open, "2026-10-12T09:00:00Z", 2);
+    const warmupOnly = await startSession(user, "2026-10-13", {
+      startedAt: "2026-10-13T09:00:00Z",
+    });
+    await logSets(user, warmupOnly, exercise, [
+      { performedAt: "2026-10-13T09:01:00Z", setType: "warmup" },
+    ]);
+
+    const week = await listSessionsInWeek(user.client, "2026-10-12");
+
+    expect(week.map(({ id }) => id)).toEqual([warmupOnly, open]);
+    expect(week.map(({ ended_at }) => ended_at === null)).toEqual([false, true]);
+  });
+
+  it("should leave out a session with no set and one whose sets were all deleted", async () => {
+    const user = await createTestUser("key529");
+    const kept = await startSession(user, "2026-10-12", { startedAt: "2026-10-12T09:00:00Z" });
+    await logWorking(user, kept, "2026-10-12T09:00:00Z", 1);
+    await startSession(user, "2026-10-13", { startedAt: "2026-10-13T09:00:00Z" });
+    const emptied = await startSession(user, "2026-10-14", { startedAt: "2026-10-14T09:00:00Z" });
+    const sets = await logWorking(user, emptied, "2026-10-14T09:00:00Z", 2);
+    for (const set of sets) {
+      await softDeleteSet(user, set);
+    }
+
+    const week = await listSessionsInWeek(user.client, "2026-10-12");
+
+    expect(week.map(({ id }) => id)).toEqual([kept]);
+  });
+
   it("should order two sessions that started at the same moment by id, newest id first", async () => {
     const user = await createTestUser("key387");
     const first = await startSession(user, "2026-10-12", { startedAt: "2026-10-12T09:00:00Z" });
+    await logWorking(user, first, "2026-10-12T09:00:00Z", 1);
     const second = await startSession(user, "2026-10-12", { startedAt: "2026-10-12T09:00:00Z" });
+    await logWorking(user, second, "2026-10-12T09:00:00Z", 1);
 
     const week = await listSessionsInWeek(user.client, "2026-10-12");
 
@@ -193,8 +231,12 @@ describe("findPreviousSessionWeek", () => {
     [owner, stranger] = await Promise.all([createTestUser("key387"), createTestUser("key387")]);
     await logTwoWeeks(owner);
     // Newer and older than every session of the owner, so a leak would show in both directions.
-    await startSession(stranger, "2026-11-02");
-    await startSession(stranger, "2026-08-03");
+    for (const localDate of ["2026-11-02", "2026-08-03"]) {
+      const session = await startSession(stranger, localDate, {
+        startedAt: `${localDate}T09:00:00Z`,
+      });
+      await logWorking(stranger, session, `${localDate}T09:00:00Z`, 1);
+    }
   });
 
   it("should give the Monday of the week before the golden week", async () => {
@@ -222,10 +264,28 @@ describe("findPreviousSessionWeek", () => {
 
   it("should skip a soft-deleted session", async () => {
     const user = await createTestUser("key387");
-    await startSession(user, "2026-09-30");
-    const removed = await startSession(user, "2026-10-07");
+    const kept = await startSession(user, "2026-09-30", { startedAt: "2026-09-30T09:00:00Z" });
+    await logWorking(user, kept, "2026-09-30T09:00:00Z", 1);
+    const removed = await startSession(user, "2026-10-07", { startedAt: "2026-10-07T09:00:00Z" });
+    await logWorking(user, removed, "2026-10-07T09:00:00Z", 1);
     await softDeleteSession(user, removed);
 
     await expect(findPreviousSessionWeek(user.client, "2026-10-12")).resolves.toBe("2026-09-28");
+  });
+
+  it("should skip a week of sessions with no set or with every set deleted, and count one never ended", async () => {
+    const user = await createTestUser("key529");
+    const open = await startSession(user, "2026-09-30", {
+      startedAt: "2026-09-30T09:00:00Z",
+      endedAt: null,
+    });
+    await logWorking(user, open, "2026-09-30T09:00:00Z", 1);
+    await startSession(user, "2026-10-06", { startedAt: "2026-10-06T09:00:00Z" });
+    const emptied = await startSession(user, "2026-10-08", { startedAt: "2026-10-08T09:00:00Z" });
+    const [set] = await logWorking(user, emptied, "2026-10-08T09:00:00Z", 1);
+    await softDeleteSet(user, present(set, "a set"));
+
+    await expect(findPreviousSessionWeek(user.client, "2026-10-12")).resolves.toBe("2026-09-28");
+    await expect(findPreviousSessionWeek(user.client)).resolves.toBe("2026-09-28");
   });
 });

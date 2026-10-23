@@ -123,9 +123,16 @@ export function installHistoryFake(
       }
       const url = new URL(request.url);
       const liveOnly = url.searchParams.get("deleted_at") === "is.null";
+      const select = url.searchParams.get("select") ?? "";
+      const liveSets = url.searchParams.get("workout_sets.deleted_at") === "is.null";
+      const setsOf = (row: Row) =>
+        asRows(row.workout_sets).filter((set) => !liveSets || set.deleted_at === null);
+      // An inner embed drops the sessions that have no set once the embed's filters are applied.
+      const needsSets = select.includes("workout_sets!inner");
       const live = sessions
         .filter((row) => !liveOnly || row.deleted_at === null)
-        .filter((row) => matchesDate(String(row.local_date), url));
+        .filter((row) => matchesDate(String(row.local_date), url))
+        .filter((row) => !needsSets || setsOf(row).length > 0);
 
       // The first term of the order says the column and the direction. The id only settles a tie.
       const [firstTerm = ""] = (url.searchParams.get("order") ?? "").split(",");
@@ -142,21 +149,15 @@ export function installHistoryFake(
       const limit = Number(url.searchParams.get("limit") ?? ordered.length);
       const page = ordered.slice(offset, offset + limit);
 
-      if (url.searchParams.get("select") === "local_date") {
+      if (select.startsWith("local_date,")) {
         return postgrestRows(
           request,
           page.map(({ local_date }) => ({ local_date })),
         );
       }
-      const liveSets = url.searchParams.get("workout_sets.deleted_at") === "is.null";
       return postgrestRows(
         request,
-        page.map((row) => ({
-          ...row,
-          workout_sets: asRows(row.workout_sets).filter(
-            (set) => !liveSets || set.deleted_at === null,
-          ),
-        })),
+        page.map((row) => ({ ...row, workout_sets: setsOf(row) })),
       );
     }),
     http.get(`${REST_URL}/profiles`, ({ request }) => {

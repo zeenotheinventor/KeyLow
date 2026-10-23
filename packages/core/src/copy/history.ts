@@ -111,6 +111,7 @@ export const HISTORY_DELETE_SESSION = {
 
 const MINUTES_ABBREVIATION = "min";
 const OPEN_SESSION = "open session";
+const RESUME_SESSION = "resume session";
 const SEPARATOR = " · ";
 const DAYS_PER_WEEK = 7;
 
@@ -163,13 +164,18 @@ export type HistoryRowCopy = {
   dayOfMonth: string;
   /** "Pull". */
   name: string;
-  /** "51 min · 17 sets". An open session has no minutes yet, so it reads "8 sets". */
+  /** "51 min · 17 sets". An open session has no minutes yet, so it reads "In progress · 8 sets". */
   meta: string;
+  /** Whether the session is open: its row resumes it where the others open their detail. */
+  isInProgress: boolean;
   /** "Lats · biceps · mid traps", or null when no muscle worked. */
   muscles: string | null;
   /** "Pull, Tue 13 October, 51 minutes · 17 sets", for a row that opens nothing. An open session adds "in progress". */
   description: string;
-  /** The description and "open session": "Pull, Tue 13 October, 51 minutes · 17 sets, open session". */
+  /**
+   * The description and "open session": "Pull, Tue 13 October, 51 minutes · 17 sets, open session". An open
+   * session says "resume session" instead: "Pull, Tue 13 October, 8 sets, in progress, resume session".
+   */
   accessibleName: string;
 };
 
@@ -190,16 +196,20 @@ const describeRowDate = (localDate: string): string => {
 /** The name of a control that opens a session, given the name of what it holds: "Pull, Tue 13 October, 51 minutes · 17 sets, open session". */
 export const describeOpenSessionName = (name: string): string => `${name}, ${OPEN_SESSION}`;
 
+/** The name of a control that resumes a session, given the name of what it holds: "Pull, Tue 13 October, 8 sets, in progress, resume session". */
+export const describeResumeSessionName = (name: string): string => `${name}, ${RESUME_SESSION}`;
+
 /** One session of the list. */
 export const describeHistoryRow = ({ localDate, summary }: HistoryRowInput): HistoryRowCopy => {
   const { durationMinutes, workingSets } = summary;
   const name = describeHistorySessionName(summary.titleSource);
   const sets = describeSets(workingSets);
-  const minutes = durationMinutes === null ? [] : [`${durationMinutes} ${MINUTES_ABBREVIATION}`];
-  const spokenMinutes =
-    durationMinutes === null ? [] : [describeCount(durationMinutes, "minute", "minutes")];
-  const openState =
-    durationMinutes === null ? [TRAIN_TODAY_CARD.inProgressLabel.toLowerCase()] : [];
+  const isInProgress = durationMinutes === null;
+  const minutes = isInProgress
+    ? [TRAIN_TODAY_CARD.inProgressLabel]
+    : [`${durationMinutes} ${MINUTES_ABBREVIATION}`];
+  const spokenMinutes = isInProgress ? [] : [describeCount(durationMinutes, "minute", "minutes")];
+  const openState = isInProgress ? [TRAIN_TODAY_CARD.inProgressLabel.toLowerCase()] : [];
   const description = [
     name,
     describeRowDate(localDate),
@@ -211,9 +221,12 @@ export const describeHistoryRow = ({ localDate, summary }: HistoryRowInput): His
     dayOfMonth: String(parseCalendarDay(localDate).day),
     name,
     meta: [...minutes, sets].join(SEPARATOR),
+    isInProgress,
     muscles: describeMusclesLine(summary.topMuscles),
     description,
-    accessibleName: describeOpenSessionName(description),
+    accessibleName: isInProgress
+      ? describeResumeSessionName(description)
+      : describeOpenSessionName(description),
   };
 };
 

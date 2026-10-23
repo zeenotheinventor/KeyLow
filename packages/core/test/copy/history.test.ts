@@ -11,6 +11,7 @@ import {
   describeHistoryWeek,
   describeLoadFieldLabel,
   describeOpenSessionName,
+  describeResumeSessionName,
   describeSessionBackLabel,
   describeSessionExerciseNote,
   describeSessionStats,
@@ -197,6 +198,7 @@ describe("describeHistoryRow", () => {
       name: "Pull",
       meta: "51 min · 17 sets",
       muscles: "Lats · biceps · mid traps",
+      isInProgress: false,
       description: "Pull, Tue 13 October, 51 minutes · 17 sets",
       accessibleName: "Pull, Tue 13 October, 51 minutes · 17 sets, open session",
     });
@@ -211,13 +213,26 @@ describe("describeHistoryRow", () => {
     expect(row.muscles).toBe("Triceps · front delts · side delts");
   });
 
-  it("should leave the minutes out of an open session, which has none yet", () => {
+  it("should mark an open session In progress in place of its minutes, which it has none of yet", () => {
     const row = describeHistoryRow({ localDate: "2026-10-15", summary: legsSummary });
 
-    expect(row.meta).toBe("8 sets");
+    expect(row.meta).toBe("In progress · 8 sets");
+    expect(row.isInProgress).toBe(true);
     expect(row.muscles).toBe("Hamstrings · quads · glutes");
     expect(row.description).toBe("Legs, Thu 15 October, 8 sets, in progress");
-    expect(row.accessibleName).toBe("Legs, Thu 15 October, 8 sets, in progress, open session");
+  });
+
+  it("should name an open session's control as one that resumes it, not one that opens it", () => {
+    const row = describeHistoryRow({ localDate: "2026-10-15", summary: legsSummary });
+
+    expect(row.accessibleName).toBe("Legs, Thu 15 October, 8 sets, in progress, resume session");
+  });
+
+  it("should not mark a finished session In progress", () => {
+    const row = describeHistoryRow({ localDate: "2026-10-13", summary: pullSummary });
+
+    expect(row.meta).not.toContain("In progress");
+    expect(row.isInProgress).toBe(false);
   });
 
   it("should use the singular for one minute and one set", () => {
@@ -603,6 +618,14 @@ describe("describeOpenSessionName", () => {
   it("should add that a control opens the session to the name of what it holds", () => {
     expect(describeOpenSessionName("Tuesday 13 October, Pull, logged, 17 sets")).toBe(
       "Tuesday 13 October, Pull, logged, 17 sets, open session",
+    );
+  });
+});
+
+describe("describeResumeSessionName", () => {
+  it("should add that a control resumes the session to the name of what it holds", () => {
+    expect(describeResumeSessionName("Pull, Tue 13 October, 8 sets, in progress")).toBe(
+      "Pull, Tue 13 October, 8 sets, in progress, resume session",
     );
   });
 });

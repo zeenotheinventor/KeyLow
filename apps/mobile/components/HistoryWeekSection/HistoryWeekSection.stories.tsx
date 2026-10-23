@@ -57,7 +57,12 @@ const meta = {
       </View>
     ),
   ],
-  args: { week: goldenWeek, thisWeekStart: "2026-10-12", onOpenSession: () => undefined },
+  args: {
+    week: goldenWeek,
+    thisWeekStart: "2026-10-12",
+    onOpenSession: () => undefined,
+    onResumeSession: () => undefined,
+  },
 } satisfies Meta<typeof HistoryWeekSection>;
 
 export default meta;
@@ -74,4 +79,17 @@ export const LastWeek: Story = {
 
 export const OlderWeek: Story = {
   args: { thisWeekStart: "2026-11-02" },
+};
+
+// The session still open is a row of its week, marked In progress, and pressing it resumes the session.
+export const WithSessionInProgress: Story = {
+  args: {
+    week: {
+      ...goldenWeek,
+      sessions: [
+        entry("legs", "2026-10-15", "Legs", null, 8, ["hamstrings", "quads", "glute_max"]),
+        ...goldenWeek.sessions.slice(1),
+      ],
+    },
+  },
 };

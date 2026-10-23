@@ -19,9 +19,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { InfiniteData } from "@tanstack/react-query";
 
 /**
- * One page of the history list: a week that has a live session, its sessions as rows, and the Monday of
- * the week before it that has one (null when there is none). A page with no week is the whole history
- * of a user who has not logged a session.
+ * One page of the history list: a week that has a session with a logged set, its sessions as rows, and
+ * the Monday of the week before it that has one (null when there is none). A page with no week is the
+ * whole history of a user who has not logged a set.
  */
 type HistoryPage = {
   weekStart: string | null;
@@ -67,13 +67,15 @@ export type UseHistoryResult = TrainingReadResult<HistoryWeek[]> & {
 
 /**
  * The history list: the calendar weeks (Monday to Sunday, by each session's local date) that have a
- * live session, newest week first and newest session first within a week (core's `groupSessionsByWeek`),
- * each with its session count and working-set total. Each session carries its summary (name, duration,
+ * session with at least one logged set, newest week first and newest session first within a week (core's
+ * `groupSessionsByWeek`), each with its session count and working-set total. A session shows whether or
+ * not it was ended and however far it strayed from the plan, so the open session is in its week; a
+ * session with no live set, or deleted, never is. Each session carries its summary (name, duration,
  * sets and top muscles). The list shows no comparison with the plan, which belongs to the session
  * detail, so the summary is worked out with no planned day and the routine is not read.
  *
  * It is an infinite read whose pages are weeks. A page is found with `findPreviousSessionWeek`, so a
- * week with nothing logged is never a page, and `loadEarlierWeeks` loads the next one. At least `weeks`
+ * week with no logged set is never a page, and `loadEarlierWeeks` loads the next one. At least `weeks`
  * weeks are loaded without being asked, as far as the history goes.
  *
  * What is cached is rows, under `keys.training.historyList`: the pages with their sessions and sets,

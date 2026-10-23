@@ -9,12 +9,14 @@ import type { HistoryWeekSectionProps } from "./types";
 /**
  * One calendar week of the history list, as the `history · list` board draws it: its name and its total
  * over a card of the week's sessions, newest first. The words are core's (`describeHistoryWeek` and
- * `describeHistoryRow`).
+ * `describeHistoryRow`). The session in progress is a row like the others, in its week, that resumes the
+ * session where the others open their detail.
  */
 export function HistoryWeekSection({
   week,
   thisWeekStart,
   onOpenSession,
+  onResumeSession,
 }: HistoryWeekSectionProps) {
   const copy = describeHistoryWeek(week, thisWeekStart);
 
@@ -45,7 +47,11 @@ export function HistoryWeekSection({
               title={row.name}
               weekday={row.weekday}
               onPress={() => {
-                onOpenSession(session.id);
+                if (row.isInProgress) {
+                  onResumeSession();
+                } else {
+                  onOpenSession(session.id);
+                }
               }}
             />
           );
