@@ -125,7 +125,7 @@ A fresh stack loads `seed.sql` first and then every file in `packages/db/supabas
 | `20_off_sample.sql`     | Five Open Food Facts products for the barcode path and the suspect review gate with no network. Hand written. Their barcodes start with 2, the range GS1 keeps for internal use, so no real product has one.                                                                 |
 | `30_cofid_portions.sql` | The natural portions of 46 CoFID foods (1 medium banana, 1 chicken thigh, 1 garlic clove, 1 celery stalk, eggs by size, slices, potatoes by size), each weight copied from a USDA FoodData Central portion. Generated from `data/portions/cofid-portions.csv`, never edited. |
 
-The seeds never reach production. `supabase db push` does not run seeds unless it is given `--include-seed`, and `deploy-supabase.yml` does not give it. The exercise library is not a seed for that reason: it is a migration (see Exercise library below). Production gets the natural portions of `30_cofid_portions.sql` only through the portions loader, which Zee runs himself (see Loading the portions into production below).
+The seeds never reach production. `supabase db push` does not run seeds unless it is given `--include-seed`, and `deploy-supabase.yml` does not give it. The exercise library is not a seed for that reason: it is a migration (see Exercise library below). The natural portions of `30_cofid_portions.sql` reach production the same way, through a generated migration (see CoFID portions below).
 
 To load the seeds into a stack that is already running, which is how a database that was started before the seeds existed gets them, run these from the repository root:
 
@@ -151,7 +151,7 @@ To regenerate the portions seed after editing `packages/db/data/portions/cofid-p
 pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv --emit-sql supabase/seeds/30_cofid_portions.sql
 ```
 
-It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV. The file lists one portion per row. Every weight is copied from a USDA FoodData Central portion row (Foundation Foods or SR Legacy, public domain under CC0), and `fdc_id`, `fdc_description` and `source` name the food and the portion it came from so a reviewer can check each one. The loader ignores those columns. A CoFID food is matched to an FDC food by name and state (raw or cooked, flesh only or meat and skin, with or without bone), and a food with no clear match is left out of the file. Each portion has a deterministic id made from its food code and label, so loading the file again changes nothing, a corrected weight updates the same row, and the diary entries that link to a portion keep working. The loader never deletes a portion that a later edition of the file drops. A portion that is relabelled gets a new id, because the id comes from the label, and the old row stays, so a rename leaves a duplicate chip until the old row is removed by hand.
+It writes the file without connecting to any database, and a unit test fails when the seed is out of step with the CSV. The seed is for a local stack. Production gets the same portions from a migration (see CoFID portions below), so regenerate the seed and add a migration together. The file lists one portion per row. Every weight is copied from a USDA FoodData Central portion row (Foundation Foods or SR Legacy, public domain under CC0), and `fdc_id`, `fdc_description` and `source` name the food and the portion it came from so a reviewer can check each one. The loader ignores those columns. A CoFID food is matched to an FDC food by name and state (raw or cooked, flesh only or meat and skin, with or without bone), and a food with no clear match is left out of the file. Each portion has a deterministic id made from its food code and label, so loading the file again changes nothing, a corrected weight updates the same row, and the diary entries that link to a portion keep working. The loader never deletes a portion that a later edition of the file drops. A portion that is relabelled gets a new id, because the id comes from the label, and the old row stays, so a rename leaves a duplicate chip until the old row is removed by hand.
 
 ### Exercise library
 
@@ -177,19 +177,28 @@ docker exec -i supabase_db_keylow psql -U postgres -v ON_ERROR_STOP=1 < packages
 
 The file is one transaction and every row has a fixed id, so running it again moves the same rows to today and adds none. The dates are relative, so load it again on a later day to keep the chart's ranges full. The integration test `packages/db/test/integration/database/weigh-ins-seed.test.ts` needs it loaded and says so when it fails because it is not, or because it was loaded on an earlier day. The seed never reaches production.
 
-### Loading the portions into production
+### CoFID portions
 
-Production gets the portions only through the loader, run by Zee from the repository root in his own terminal. It writes with the service role key, which belongs in no chat, ticket, pull request or agent session. The prompt reads the key without echoing it. Run the dry run first: it prints how many foods matched and which codes are not in production. If the full CoFID import was never run there, the matched count is low or zero, and the fix is `pnpm --filter @keylow/db import:cofid` first. Running the load again is safe.
+The natural portions in `packages/db/data/portions/cofid-portions.csv` (86 rows for 46 CoFID foods, such as 1 garlic clove and the three celery stalks) reach production through a generated migration, `packages/db/supabase/migrations/20261023120000_cofid_portions.sql`. Deploy Supabase runs `supabase db push` when it lands on `main`, so production gets the portions on that deploy and nobody runs anything, and nobody holds the service role key for it. Each row is upserted under the same id the seed and the loader use (made from the food code and label), so a row an earlier load wrote is updated, never duplicated. Each row is selected from the CoFID food with its code, so a database that lacks a food gets no row for it and the migration does not fail. It clears and sets defaults in an order that never leaves two defaults on a food, touches only shared portions (`owner_id is null`) and never deletes anything. The migration does not import foods: the portions attach to the CoFID foods production is expected to have already, and a missing food is skipped.
+
+On a fresh local `supabase db reset` the migrations run before the seeds, so the CoFID foods are not there yet and the migration writes nothing. `30_cofid_portions.sql` then loads the portions. The migration matters for a database that already holds the foods, which is production.
+
+A change to the portions file ships as a new generated migration with a later timestamp. An applied migration is never edited, and never regenerated over. Generate it from the repository root:
 
 ```sh
-export SUPABASE_URL=https://kixqmrugtcwqdmvzazik.supabase.co
-read -rs "SUPABASE_SERVICE_ROLE_KEY?Service role key: " && export SUPABASE_SERVICE_ROLE_KEY
-pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv --dry-run
-pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv
-unset SUPABASE_SERVICE_ROLE_KEY
+pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv --emit-migration supabase/migrations/<timestamp>_cofid_portions.sql
 ```
 
-Add `--strict` to either import line to make it exit 1 when a food code in the file is not in the database.
+It writes the file without connecting to any database, and refuses a path that holds a file already. Commit the result, and regenerate the seed too (see Food seeds above). A unit test regenerates the newest `*_cofid_portions.sql` from the CSV and fails when the two differ, and the integration test `cofid-portions-migration.test.ts` applies the migration to the running stack inside a transaction that is rolled back and checks garlic, celery, applying it twice, a moved default and a missing food. A migration only adds and updates: a portion that leaves the file, or is relabelled (the label is part of its id), stays until a migration of its own removes it.
+
+The terminal loader stays for a local stack or a one-off at most. Production does not use it:
+
+```sh
+pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv --dry-run
+pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv
+```
+
+It targets the local stack unless `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set, and `--strict` makes it exit 1 when a food code in the file is not in the database.
 
 ### Edge Functions
 
