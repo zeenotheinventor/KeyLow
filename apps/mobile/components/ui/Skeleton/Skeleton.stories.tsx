@@ -62,3 +62,6 @@ export const BodyMap: Story = { args: { variant: "bodyMap" } };
 
 // The history list while it loads: a week heading and a card of three rows, each a date block, a name and a line.
 export const HistoryList: Story = { args: { variant: "historyList" } };
+
+// The Weight screen while it loads: the Trend weight card, the range control, the chart, a heading bar and the list.
+export const Weight: Story = { args: { variant: "weight" } };

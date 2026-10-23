@@ -15,7 +15,8 @@ import {
 } from "./support/supabaseMock";
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
-import MoreRoute from "../app/(tabs)/more";
+import MoreLayout from "../app/(tabs)/more/_layout";
+import MoreRoute from "../app/(tabs)/more/index";
 import RecipesLayout from "../app/(tabs)/recipes/_layout";
 import RootLayout from "../app/_layout";
 import FoodsLayout from "../app/foods/_layout";
@@ -82,6 +83,11 @@ function ArchivedStandIn() {
   return <Text role="heading">Archived recipes</Text>;
 }
 
+// The Weight screen has its own tests. Here it is a heading, because these tests are about the shell.
+function WeightStandIn() {
+  return <Text role="heading">Weight</Text>;
+}
+
 const routes = {
   _layout: RootLayout,
   index: IndexRoute,
@@ -93,7 +99,9 @@ const routes = {
   "(tabs)/recipes/index": RecipesStandIn,
   "(tabs)/recipes/archived": ArchivedStandIn,
   "(tabs)/train": TrainStandIn,
-  "(tabs)/more": MoreRoute,
+  "(tabs)/more/_layout": MoreLayout,
+  "(tabs)/more/index": MoreRoute,
+  "(tabs)/more/weight/index": WeightStandIn,
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
   "foods/new": standIn("New food screen"),
@@ -350,11 +358,27 @@ describe("the tab shell", () => {
       expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
-    it("should leave Weight as a disabled row, with no screen to open", async () => {
+    it("should open Weight inside the More tab from its row, with the tab bar and More selected", async () => {
+      const user = userEvent.setup();
       await renderApp("/more");
 
-      expect(await screen.findByLabelText("Weight, Coming soon")).toBeDisabled();
-      expect(screen.queryByRole("button", { name: /^Weight/ })).not.toBeOnTheScreen();
+      await user.press(await screen.findByRole("button", { name: "Weight" }));
+
+      expect(await screen.findByRole("heading", { name: "Weight" })).toBeOnTheScreen();
+      expect(screen.getAllByRole("tab")).toHaveLength(5);
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should go back from Weight to the More screen", async () => {
+      const user = userEvent.setup();
+      await renderApp("/more");
+      await user.press(await screen.findByRole("button", { name: "Weight" }));
+      await screen.findByRole("heading", { name: "Weight" });
+
+      await goBack();
+
+      expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
     it("should choose the appearance in place, in the root's theme", async () => {

@@ -2,6 +2,7 @@ import { Children } from "react";
 import { View } from "react-native";
 
 import { rowPressScale } from "../../../lib/motion";
+import { Badge } from "../Badge";
 import { ButtonSpinner } from "../Button";
 import { useGroupedRowPosition } from "../GroupedList";
 import { Icon } from "../Icon";
@@ -15,9 +16,12 @@ export function ListRow({
   icon,
   title,
   subtitle,
+  badge,
   value,
   unit,
   valueLook = "numeral",
+  size,
+  valueTone,
   chevron = true,
   onPress,
   loading = false,
@@ -27,34 +31,51 @@ export function ListRow({
   children,
 }: ListRowProps) {
   const isFooter = variant === "footer";
+  const isCompact = size === "compact";
   const { isFirst } = useGroupedRowPosition();
   const trailingValue = value === undefined ? undefined : [value, unit].filter(Boolean).join(" ");
-  const label = [title, subtitle, trailingValue].filter(Boolean).join(", ");
+  const label = [title, subtitle, badge?.label, trailingValue].filter(Boolean).join(", ");
   const separatorClassName = isFirst ? "" : "border-t border-border";
   const dimClassName = disabled ? "opacity-50" : "";
-  const sizeClassName = isFooter ? "min-h-[52px] px-4" : "min-h-[56px] px-3";
+  const sizeClassName = isFooter
+    ? "min-h-[52px] px-4"
+    : isCompact
+      ? "min-h-[52px] px-3"
+      : "min-h-[56px] px-3";
   const rowClassName = `${sizeClassName} flex-row items-center gap-3 py-2 ${separatorClassName} ${dimClassName}`;
+  const valueToneName = valueTone === "muted" ? "muted" : "primary";
 
   const contents = (
     <>
       {icon === undefined ? null : isFooter ? (
         <Icon name={icon} />
       ) : (
-        <View className="h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised">
-          <Icon name={icon} tone="secondary" />
+        <View
+          className={`${isCompact ? "h-8 w-8" : "h-control-sm w-control-sm"} shrink-0 items-center justify-center rounded-small bg-surface-raised`}
+        >
+          <Icon name={icon} size={isCompact ? 18 : "md"} tone="secondary" />
         </View>
       )}
-      <View className="flex-1 gap-[2px]">
-        <Text numberOfLines={1} variant="body-strong">
+      <View className={isCompact ? "flex-1" : "flex-1 gap-[2px]"}>
+        <Text numberOfLines={1} variant={isCompact ? "label-small" : "body-strong"}>
           {title}
         </Text>
         {subtitle === undefined ? null : (
-          <Text numberOfLines={1} tone="muted" variant="caption">
+          <Text numberOfLines={isCompact ? 2 : 1} tone="muted" variant="caption">
             {subtitle}
           </Text>
         )}
       </View>
-      {value === undefined ? null : (
+      {badge === undefined ? null : (
+        <View className="shrink-0">
+          <Badge tone={badge.tone}>{badge.label}</Badge>
+        </View>
+      )}
+      {value === undefined ? null : isCompact ? (
+        <Text className="shrink-0" tone={valueToneName} variant="body-strong">
+          {trailingValue}
+        </Text>
+      ) : (
         <View className="shrink-0 flex-row items-baseline gap-[3px]">
           {valueLook === "quiet" ? (
             <Text tone="secondary">{value}</Text>
