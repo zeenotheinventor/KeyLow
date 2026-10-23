@@ -1,4 +1,8 @@
-import { TREND_EXPLAINER, describeSettlingBanner } from "@keylow/core/copy";
+import {
+  TREND_EXPLAINER,
+  TREND_EXPLAINER_BODY_SECTION,
+  describeSettlingBanner,
+} from "@keylow/core/copy";
 import { Text as NativeText, View } from "react-native";
 
 import { Banner, BottomSheet, Button, SheetScrollView, Text } from "../ui";
@@ -9,9 +13,12 @@ import type { TrendExplainerSheetProps } from "./types";
 // The board's sheet starts 60 points down a 844 point screen. A shorter phone scrolls what does not fit.
 const SNAP_POINTS = ["93%"];
 
+// Body fat and lean mass is the sixth section, after Weekly rate and before the footer.
+const SECTIONS = [...TREND_EXPLAINER.sections, TREND_EXPLAINER_BODY_SECTION];
+
 /**
  * The sheet that explains the trend weight, as `trend-explainer` draws it: the title with Done on one row,
- * then the five sections and the line that the trend is an estimate. While the trend settles a warning
+ * then the six sections and the line that the trend is an estimate. While the trend settles a warning
  * banner with no icon, and a progress bar under its words, says how many of the 7 weigh-ins it has. The
  * title and Done stay put and the rest scrolls.
  */
@@ -50,7 +57,7 @@ export function TrendExplainerSheet({
             </Banner>
           )}
           <View className="gap-4">
-            {TREND_EXPLAINER.sections.map((section) => (
+            {SECTIONS.map((section) => (
               <View key={section.title} className="gap-1">
                 <Text role="heading" variant="body-strong">
                   {section.title}

@@ -25,7 +25,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The trend-explainer board: the title and Done, the five sections and the line that it is an estimate.
+// The trend-explainer board: the title and Done, the six sections and the line that it is an estimate.
 export const Default: Story = {};
 
 // The same while the trend settles: the warning banner with no icon and the bar under its words, at 3 of 7.

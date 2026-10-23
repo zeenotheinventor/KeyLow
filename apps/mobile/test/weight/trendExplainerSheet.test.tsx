@@ -1,4 +1,4 @@
-import { TREND_EXPLAINER } from "@keylow/core/copy";
+import { TREND_EXPLAINER, TREND_EXPLAINER_BODY_SECTION } from "@keylow/core/copy";
 import { render, screen, userEvent } from "@testing-library/react-native";
 import { StyleSheet } from "react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -79,6 +79,8 @@ function drawings() {
 const sectionTitles = TREND_EXPLAINER.sections.map((section) => section.title);
 // Each section's heading and then its paragraph.
 const sectionTexts = TREND_EXPLAINER.sections.flatMap((section) => [section.title, section.text]);
+// The sixth section follows the five, as the board draws it, and only then the footer.
+const bodySectionTexts = [TREND_EXPLAINER_BODY_SECTION.title, TREND_EXPLAINER_BODY_SECTION.text];
 
 describe("the trend explainer sheet", () => {
   let kitStyles: string;
@@ -99,19 +101,44 @@ describe("the trend explainer sheet", () => {
       expect(screen.getByRole("heading", { name: "How your trend works" })).toBeOnTheScreen();
     });
 
-    it("should show the five sections in order, each heading over its paragraph", async () => {
+    it("should show the five sections in order, then body fat and lean mass, each heading over its paragraph", async () => {
       await renderSheet();
 
       expectTextsInOrder(screen.getAllByRole("heading"), [
         "How your trend works",
         ...sectionTitles,
+        "Body fat and lean mass",
       ]);
       expectTextsInOrder(screen.getAllByText(/./), [
         "How your trend works",
         "Done",
         ...sectionTexts,
+        ...bodySectionTexts,
         FOOTER,
       ]);
+    });
+
+    it("should say the body fat and lean mass trend is smoothed, that scales estimate it and that lean mass is more than muscle", async () => {
+      await renderSheet();
+
+      expect(screen.getByRole("heading", { name: "Body fat and lean mass" })).toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "Smoothed like your weight. Scales estimate them and readings change with the water you hold, so the trend matters more than any one reading. Lean mass includes bone and water as well as muscle.",
+        ),
+      ).toBeOnTheScreen();
+    });
+
+    it("should say lean mass in the heading and muscle only in the phrase as well as muscle", async () => {
+      await renderSheet();
+
+      expect(screen.getByRole("heading", { name: /lean mass/ })).toBeOnTheScreen();
+      // Only the body fat and lean mass paragraph says muscle, once, in that phrase.
+      const mentions = screen.getAllByText(/muscle/i);
+      expect(mentions).toHaveLength(1);
+      expect(mentions[0]).toHaveTextContent(TREND_EXPLAINER_BODY_SECTION.text, { exact: true });
+      expect(TREND_EXPLAINER_BODY_SECTION.text.match(/muscle/gi)).toHaveLength(1);
+      expect(TREND_EXPLAINER_BODY_SECTION.text).toContain("as well as muscle.");
     });
 
     it("should say the trend needs 7 weigh-ins and starts again after 30 days", async () => {
@@ -134,8 +161,11 @@ describe("the trend explainer sheet", () => {
       expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
     });
 
-    it("should name neither Apple nor HealthKit", async () => {
-      await renderSheet({ settlingObservationCount: 3 });
+    it.each([
+      ["settled", undefined],
+      ["settling", 3],
+    ])("should name neither Apple nor HealthKit in the %s sheet", async (_state, count) => {
+      await renderSheet({ settlingObservationCount: count });
 
       expect(screen.queryByText(/Apple|HealthKit/)).not.toBeOnTheScreen();
     });
@@ -200,10 +230,10 @@ describe("the trend explainer sheet", () => {
       });
     });
 
-    it("should keep the five sections and the footer", async () => {
+    it("should keep the five sections, body fat and lean mass, and the footer", async () => {
       await renderSheet({ settlingObservationCount: 3 });
 
-      for (const title of sectionTitles) {
+      for (const title of [...sectionTitles, "Body fat and lean mass"]) {
         expect(screen.getByRole("heading", { name: title })).toBeOnTheScreen();
       }
       expect(screen.getByText(FOOTER)).toBeOnTheScreen();
@@ -217,8 +247,16 @@ describe("the trend explainer sheet", () => {
         "Done",
         "Your trend is settling: 3 of 7 weigh-ins",
         ...sectionTexts,
+        ...bodySectionTexts,
         FOOTER,
       ]);
+    });
+
+    it("should say the same about body fat and lean mass as the settled sheet", async () => {
+      await renderSheet({ settlingObservationCount: 3 });
+
+      expect(screen.getByRole("heading", { name: "Body fat and lean mass" })).toBeOnTheScreen();
+      expect(screen.getByText(TREND_EXPLAINER_BODY_SECTION.text)).toBeOnTheScreen();
     });
   });
 
@@ -246,12 +284,26 @@ describe("the trend explainer sheet", () => {
   });
 
   describe("on a small phone", () => {
+    it("should scroll body fat and lean mass and the footer, with the title and Done fixed above, when the trend is settled", async () => {
+      await renderSheet({}, { metrics: smallPhone });
+
+      expect(
+        isInsideScrollView(screen.getByRole("heading", { name: "Body fat and lean mass" })),
+      ).toBe(true);
+      expect(isInsideScrollView(screen.getByText(TREND_EXPLAINER_BODY_SECTION.text))).toBe(true);
+      expect(isInsideScrollView(screen.getByText(FOOTER))).toBe(true);
+      expect(isInsideScrollView(screen.getByRole("button", { name: "Done" }))).toBe(false);
+    });
+
     it("should scroll the banner, sections and footer, with the title and Done fixed above", async () => {
       await renderSheet({ settlingObservationCount: 3 }, { metrics: smallPhone });
 
       expect(isInsideScrollView(screen.getByText(FOOTER))).toBe(true);
       expect(isInsideScrollView(screen.getByRole("note"))).toBe(true);
       expect(isInsideScrollView(screen.getByRole("heading", { name: "Why a trend" }))).toBe(true);
+      expect(
+        isInsideScrollView(screen.getByRole("heading", { name: "Body fat and lean mass" })),
+      ).toBe(true);
       expect(isInsideScrollView(screen.getByRole("button", { name: "Done" }))).toBe(false);
       expect(
         isInsideScrollView(screen.getByRole("heading", { name: "How your trend works" })),
@@ -271,6 +323,17 @@ describe("the trend explainer sheet", () => {
         fontSize: 12,
         lineHeight: 16,
         color: resolvedColor(scheme, "text-muted"),
+      });
+    });
+
+    it("should set body fat and lean mass as the other sections are set", async () => {
+      await renderSheet({}, { scheme });
+
+      expect(await screen.findByText(TREND_EXPLAINER_BODY_SECTION.text)).toHaveStyle({
+        fontFamily: "Geist-Regular",
+        fontSize: 14,
+        lineHeight: 21,
+        color: resolvedColor(scheme, "text-secondary"),
       });
     });
 
