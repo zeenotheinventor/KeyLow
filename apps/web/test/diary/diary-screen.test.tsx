@@ -454,7 +454,7 @@ describe("the diary screen", () => {
       expect(within(row).getByText("374")).toBeTruthy();
     });
 
-    it("should write the same on the stacked row, as plain text with no button", () => {
+    it("should write the same on the stacked row, as a button that opens the entry", () => {
       showDayWithRecipe();
       renderDiary();
 
@@ -464,7 +464,7 @@ describe("the diary screen", () => {
 
       expect(within(stacked).getByText("Chicken and rice")).toBeTruthy();
       expect(within(stacked).getByText("18:00 · 1 serving (275 g)")).toBeTruthy();
-      expect(within(stacked).queryByRole("button")).toBeNull();
+      expect(within(stacked).getByRole("button")).toBeTruthy();
     });
 
     it("should add the serving to the day's bars: 1,413 of 2,200 kcal", () => {
@@ -474,19 +474,22 @@ describe("the diary screen", () => {
       expect(strip().getAttribute("aria-label")).toContain("Calories: 1,413 of 2,200 kilocalories");
     });
 
-    it("should open nothing when its row is pressed, and offer no Edit", () => {
+    it("should open the entry in the edit dialog from its Edit button and from the stacked row", () => {
       showDayWithRecipe();
       renderDiary();
+      const recipe = entryOnShow(7);
       const table = within(tableOf("18:00"));
       const stacked = within(screen.getByRole("region", { name: "Foods at 18:00" })).getByRole(
         "list",
       );
 
-      fireEvent.click(table.getByRole("row", { name: /Chicken and rice/ }));
+      fireEvent.click(table.getByRole("button", { name: "Edit Chicken and rice" }));
       fireEvent.click(within(stacked).getByText("Chicken and rice"));
 
-      expect(openEditEntry).not.toHaveBeenCalled();
-      expect(table.queryByRole("button", { name: "Edit Chicken and rice" })).toBeNull();
+      expect(recipe?.item_type).toBe("recipe");
+      expect(openEditEntry).toHaveBeenCalledTimes(2);
+      expect(openEditEntry).toHaveBeenNthCalledWith(1, recipe?.id);
+      expect(openEditEntry).toHaveBeenNthCalledWith(2, recipe?.id);
     });
 
     it("should still delete it from its Delete button, with the entry the diary holds", () => {
@@ -606,7 +609,7 @@ describe("the diary screen", () => {
       });
       expect(within(row).getByText("18:00 · 1 serving (275 g)")).toBeTruthy();
       expect(row.querySelector("svg.lucide-chef-hat")).not.toBeNull();
-      expect(within(row).queryByRole("button", { name: "Edit Chicken and rice" })).toBeNull();
+      expect(within(row).getByRole("button", { name: "Edit Chicken and rice" })).toBeTruthy();
     });
   });
 

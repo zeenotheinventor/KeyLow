@@ -132,10 +132,14 @@ export function recipeEntry(options: {
   time: string;
   quantity?: number;
   unit?: "serving" | "g";
+  /** The cooked weight the recipe was saved with, or null for a recipe with none. Defaults to 1,100 g. */
+  yieldGrams?: number | null;
   /** The whole recipe's nutrients, when a test needs the boards' (see `boardRecipeTotal`) over the ingredients'. */
   total?: RecipeComputed["total"];
 }): LogEntry {
-  const golden = buildChickenAndRiceRecipe({ yieldGrams: 1100 });
+  const golden = buildChickenAndRiceRecipe({
+    yieldGrams: options.yieldGrams === undefined ? 1100 : options.yieldGrams,
+  });
   const entry = buildRecipeLogEntry({
     recipe: {
       id: "44444444-4444-4444-8444-444444444444",
