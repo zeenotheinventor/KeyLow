@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from "react";
 
+import { bodyNotRun } from "../../lib/health";
+
 import type { HealthImportResult } from "../../lib/health";
 
 type FakeHealthImportState = {
@@ -38,6 +40,7 @@ export const fakeHealthImport = {
       read: 0,
       skipped: 0,
       inserted: 0,
+      body: bodyNotRun,
     });
   },
 };

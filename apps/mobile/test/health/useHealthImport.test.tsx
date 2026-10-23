@@ -1,15 +1,26 @@
-import { useImportWeighIns, useProfileTimeZone, useSupabase } from "@keylow/api-client";
+import {
+  useImportBodyMeasurements,
+  useImportWeighIns,
+  useProfileTimeZone,
+  useSupabase,
+} from "@keylow/api-client";
 import { act, cleanup, render, renderHook, screen, waitFor } from "@testing-library/react-native";
 import * as SecureStore from "expo-secure-store";
 import { AppState, Text } from "react-native";
 
 import { HealthImportRunner } from "../../components/HealthImportRunner";
-import { getHealthProvider, useHealthImport } from "../../lib/health";
+import { bodyNotRun, getHealthProvider, useHealthImport } from "../../lib/health";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { createFakeHealthProvider } from "../support/fakeHealthProvider";
 
 import type { FakeHealthProvider } from "../support/fakeHealthProvider";
-import type { HealthWeighInInsert, HealthWeightSample } from "@keylow/core/weight";
+import type {
+  BodyMeasurementInsert,
+  HealthBodyFatSample,
+  HealthLeanMassSample,
+  HealthWeighInInsert,
+  HealthWeightSample,
+} from "@keylow/core/weight";
 import type { AppStateStatus, NativeEventSubscription } from "react-native";
 
 const mockSecureStoreItems = new Map<string, string>();
@@ -23,6 +34,7 @@ jest.mock("expo-secure-store", () => ({
   deleteItemAsync: jest.fn(),
 }));
 jest.mock("@keylow/api-client", () => ({
+  useImportBodyMeasurements: jest.fn(),
   useImportWeighIns: jest.fn(),
   useProfileTimeZone: jest.fn(),
   useSupabase: jest.fn(),
@@ -33,6 +45,10 @@ jest.mock("../../lib/health/getHealthProvider", () => ({ getHealthProvider: jest
 const importWeighIns = jest.fn<
   Promise<{ inserted: number; skipped: number }>,
   [readonly HealthWeighInInsert[]]
+>();
+const importBodyMeasurements = jest.fn<
+  Promise<{ inserted: number; skipped: number }>,
+  [readonly BodyMeasurementInsert[]]
 >();
 const removeForegroundListener = jest.fn();
 let foregroundListeners: ((state: AppStateStatus) => void)[];
@@ -48,6 +64,26 @@ const samples: HealthWeightSample[] = [1, 2, 3].map((day) => ({
   value: 81.234,
   unit: "kilograms",
 }));
+
+const bodyFatSamples: HealthBodyFatSample[] = [1, 2].map((day) => ({
+  sampleId: `fat-id-${day}`,
+  measuredAt: `2026-10-0${day}T07:35:00.000Z`,
+  value: 23.456,
+}));
+
+const leanMassSamples: HealthLeanMassSample[] = [1, 2, 3, 4].map((day) => ({
+  sampleId: `lean-id-${day}`,
+  measuredAt: `2026-10-0${day}T07:40:00.000Z`,
+  value: 54.321,
+  unit: "kilograms",
+}));
+
+/** Both body composition kinds allowed, with their samples, so a pass imports them after the weight. */
+function allowBodyComposition() {
+  provider.state.bodyCompositionAccess = { bodyFat: true, leanMass: true };
+  provider.state.bodyFatSamples = bodyFatSamples;
+  provider.state.leanMassSamples = leanMassSamples;
+}
 
 const readSinces = () =>
   provider.calls.flatMap((call) => (call.method === "readWeightSince" ? [call.since] : []));
@@ -92,6 +128,16 @@ beforeEach(() => {
   mockSession("user-1");
   jest.mocked(useReadsEnabled).mockReturnValue(true);
   mockProfileTimeZone("Europe/London");
+  importBodyMeasurements.mockReset();
+  importBodyMeasurements.mockImplementation((rows) =>
+    Promise.resolve({ inserted: rows.length, skipped: 0 }),
+  );
+  jest
+    .mocked(useImportBodyMeasurements)
+    // The hook reads only `mutateAsync`.
+    .mockReturnValue({ mutateAsync: importBodyMeasurements } as unknown as ReturnType<
+      typeof useImportBodyMeasurements
+    >);
   importWeighIns.mockReset();
   importWeighIns.mockImplementation((rows) =>
     Promise.resolve({ inserted: rows.length, skipped: 0 }),
@@ -205,6 +251,7 @@ describe("the import runner", () => {
 
       expect(foregroundListeners).toEqual([]);
       expect(jest.mocked(useImportWeighIns)).not.toHaveBeenCalled();
+      expect(jest.mocked(useImportBodyMeasurements)).not.toHaveBeenCalled();
       expect(jest.mocked(useProfileTimeZone)).not.toHaveBeenCalled();
       expect(supabaseClient.auth.getSession).not.toHaveBeenCalled();
     });
@@ -287,13 +334,21 @@ describe("the import runner", () => {
         outcome = await reader.result.current.importNow();
       });
 
-      expect(outcome).toEqual({ status: "unavailable", read: 0, skipped: 0, inserted: 0 });
+      expect(outcome).toEqual({
+        status: "unavailable",
+        read: 0,
+        skipped: 0,
+        inserted: 0,
+        body: bodyNotRun,
+      });
       expect(readSinces()).toEqual([]);
       expect(reader.result.current.lastResult).toBeNull();
       expect(reader.result.current.isImporting).toBe(false);
     });
   });
 });
+
+const leakedValue = /81\.234|23\.456|54\.321|sample-id|fat-id|lean-id/;
 
 describe("useHealthImport", () => {
   describe("a reader on its own", () => {
@@ -319,7 +374,13 @@ describe("useHealthImport", () => {
         outcome = await result.current.importNow();
       });
 
-      expect(outcome).toEqual({ status: "unavailable", read: 0, skipped: 0, inserted: 0 });
+      expect(outcome).toEqual({
+        status: "unavailable",
+        read: 0,
+        skipped: 0,
+        inserted: 0,
+        body: bodyNotRun,
+      });
       expect(provider.calls).toEqual([]);
       expect(result.current.lastResult).toBeNull();
     });
@@ -336,7 +397,16 @@ describe("useHealthImport", () => {
         outcome = await result.current.importNow();
       });
 
-      expect(outcome).toEqual({ status: "imported", read: 3, skipped: 0, inserted: 3 });
+      expect(outcome).toEqual({
+        status: "imported",
+        read: 3,
+        skipped: 0,
+        inserted: 3,
+        body: {
+          bodyFat: { status: "no-permission", read: 0, skipped: 0, inserted: 0 },
+          leanMass: { status: "no-permission", read: 0, skipped: 0, inserted: 0 },
+        },
+      });
       expect(readSinces()).toHaveLength(2);
     });
 
@@ -399,6 +469,70 @@ describe("useHealthImport", () => {
       expect(weightText.replace("weight", "")).toBe(healthText.replace("health", ""));
       expect(weightText).toMatch(/\|false\|\d{4}-\d{2}-\d{2}T[\d:.]+Z\|imported\|3$/);
       expect(readSinces()).toEqual([null]);
+    });
+
+    it("should show both readers importing until the body step has ended, then the same result with the body counts", async () => {
+      allowBodyComposition();
+      let finishBodyFatSave: (outcome: { inserted: number; skipped: number }) => void = () =>
+        undefined;
+      importBodyMeasurements.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishBodyFatSave = resolve;
+          }),
+      );
+      const firstReader = await renderHook(() => useHealthImport());
+      const secondReader = await renderHook(() => useHealthImport());
+      await render(<HealthImportRunner />);
+      await settle();
+
+      // The weight is finished and saved, and the body step is mid-save.
+      expect(importWeighIns).toHaveBeenCalledTimes(1);
+      expect(firstReader.result.current.isImporting).toBe(true);
+      expect(secondReader.result.current.isImporting).toBe(true);
+      expect(firstReader.result.current.lastResult).toBeNull();
+
+      finishBodyFatSave({ inserted: 2, skipped: 0 });
+      await settle();
+
+      const expected = {
+        status: "imported",
+        read: 3,
+        skipped: 0,
+        inserted: 3,
+        body: {
+          bodyFat: { status: "imported", read: 2, skipped: 0, inserted: 2 },
+          leanMass: { status: "imported", read: 4, skipped: 0, inserted: 4 },
+        },
+      };
+      expect(firstReader.result.current.isImporting).toBe(false);
+      expect(firstReader.result.current.lastResult).toEqual(expected);
+      expect(secondReader.result.current.lastResult).toBe(firstReader.result.current.lastResult);
+      expect(importBodyMeasurements).toHaveBeenCalledTimes(2);
+    });
+
+    it("should start no second pass for a foreground event while the body step is running", async () => {
+      allowBodyComposition();
+      let finishBodyFatSave: (outcome: { inserted: number; skipped: number }) => void = () =>
+        undefined;
+      importBodyMeasurements.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            finishBodyFatSave = resolve;
+          }),
+      );
+      await render(<HealthImportRunner />);
+      await settle();
+
+      await emitForeground();
+      await settle();
+      finishBodyFatSave({ inserted: 2, skipped: 0 });
+      await settle();
+
+      expect(readSinces()).toEqual([null]);
+      expect(
+        provider.calls.filter((call) => call.method === "readBodyCompositionSince"),
+      ).toHaveLength(1);
     });
 
     it("should load the last import time when the runner mounts", async () => {
@@ -502,7 +636,9 @@ describe("useHealthImport", () => {
       const spies = (["log", "info", "warn", "error"] as const).map((method) =>
         jest.spyOn(console, method).mockImplementation(),
       );
+      allowBodyComposition();
       importWeighIns.mockRejectedValueOnce(new Error("could not store sample-id-2 at 81.234"));
+      importBodyMeasurements.mockRejectedValueOnce(new Error("could not store fat-id-1 at 23.456"));
       await render(<HealthImportRunner />);
       const { result } = await renderHook(() => useHealthImport());
       await settle();
@@ -515,8 +651,8 @@ describe("useHealthImport", () => {
         .flat()
         .map(String)
         .join(" ");
-      expect(written).not.toMatch(/81\.234|sample-id/);
-      expect(JSON.stringify(result.current)).not.toMatch(/81\.234|sample-id/);
+      expect(written).not.toMatch(leakedValue);
+      expect(JSON.stringify(result.current)).not.toMatch(leakedValue);
     });
   });
 });

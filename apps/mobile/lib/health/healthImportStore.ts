@@ -1,5 +1,12 @@
-import { getLastImport, getAnchor, setAnchor, setLastImport } from "./healthAnchorStore";
-import { runHealthImport } from "./importRunner";
+import {
+  getAnchor,
+  getBodyAnchor,
+  getLastImport,
+  setAnchor,
+  setBodyAnchor,
+  setLastImport,
+} from "./healthAnchorStore";
+import { bodyNotRun, runHealthImport } from "./importRunner";
 
 import type { HealthImportDependencies, HealthImportResult } from "./importRunner";
 
@@ -63,6 +70,7 @@ const unavailableResult: HealthImportResult = {
   read: 0,
   skipped: 0,
   inserted: 0,
+  body: bodyNotRun,
 };
 
 /**
@@ -102,7 +110,14 @@ export async function loadLastImport(userId: string): Promise<void> {
 }
 
 /** The anchor store the app uses, in the shape the runner takes. */
-const storedAnchors = { getAnchor, setAnchor, getLastImport, setLastImport };
+const storedAnchors = {
+  getAnchor,
+  setAnchor,
+  getBodyAnchor,
+  setBodyAnchor,
+  getLastImport,
+  setLastImport,
+};
 
 type StartHealthImportInputs = Omit<HealthImportDependencies, "anchorStore">;
 

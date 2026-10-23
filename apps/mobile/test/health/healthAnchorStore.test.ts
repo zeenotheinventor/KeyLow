@@ -3,8 +3,10 @@ import * as SecureStore from "expo-secure-store";
 import {
   clearAnchor,
   getAnchor,
+  getBodyAnchor,
   getLastImport,
   setAnchor,
+  setBodyAnchor,
   setLastImport,
 } from "../../lib/health/healthAnchorStore";
 
@@ -78,6 +80,81 @@ describe("the anchor", () => {
     jest.mocked(SecureStore.deleteItemAsync).mockRejectedValueOnce(new Error("keystore locked"));
 
     await expect(clearAnchor(userId)).resolves.toBeUndefined();
+  });
+});
+
+describe("the body composition anchors", () => {
+  const bodyKinds = ["body_fat_pct", "lean_mass_kg"] as const;
+
+  it.each(bodyKinds)("should be none for %s until one is set", async (kind) => {
+    await expect(getBodyAnchor(userId, kind)).resolves.toBeNull();
+  });
+
+  it.each(bodyKinds)("should read back what was set for %s", async (kind) => {
+    await setBodyAnchor(userId, kind, anchor);
+
+    await expect(getBodyAnchor(userId, kind)).resolves.toBe(anchor);
+  });
+
+  it.each(bodyKinds)("should be stored for %s under the key the ticket names", async (kind) => {
+    await setBodyAnchor(userId, kind, anchor);
+
+    expect(mockSecureStoreItems.get(`health-import-anchor.${userId}.${kind}`)).toBe(anchor);
+  });
+
+  it("should keep each kind apart from the other and from the weight anchor", async () => {
+    await setBodyAnchor(userId, "body_fat_pct", anchor);
+
+    await expect(getBodyAnchor(userId, "lean_mass_kg")).resolves.toBeNull();
+    await expect(getAnchor(userId)).resolves.toBeNull();
+  });
+
+  it("should not move the weight anchor when one is set", async () => {
+    await setAnchor(userId, anchor);
+    await setBodyAnchor(userId, "body_fat_pct", "2026-10-10T07:30:00.000Z");
+
+    await expect(getAnchor(userId)).resolves.toBe(anchor);
+  });
+
+  it("should be kept per user", async () => {
+    await setBodyAnchor(userId, "body_fat_pct", anchor);
+
+    await expect(getBodyAnchor(otherUserId, "body_fat_pct")).resolves.toBeNull();
+  });
+
+  it.each(bodyKinds)("should be none for %s when the store cannot be read", async (kind) => {
+    jest.mocked(SecureStore.getItemAsync).mockRejectedValueOnce(new Error("keystore locked"));
+
+    await expect(getBodyAnchor(userId, kind)).resolves.toBeNull();
+  });
+
+  it.each(bodyKinds)("should not throw for %s when the store cannot be written", async (kind) => {
+    jest.mocked(SecureStore.setItemAsync).mockRejectedValueOnce(new Error("keystore locked"));
+
+    await expect(setBodyAnchor(userId, kind, anchor)).resolves.toBeUndefined();
+  });
+
+  it("should be removed along with the weight anchor when the anchors are cleared", async () => {
+    await setAnchor(userId, anchor);
+    await setBodyAnchor(userId, "body_fat_pct", anchor);
+    await setBodyAnchor(userId, "lean_mass_kg", anchor);
+    await setBodyAnchor(otherUserId, "body_fat_pct", anchor);
+
+    await clearAnchor(userId);
+
+    await expect(getAnchor(userId)).resolves.toBeNull();
+    await expect(getBodyAnchor(userId, "body_fat_pct")).resolves.toBeNull();
+    await expect(getBodyAnchor(userId, "lean_mass_kg")).resolves.toBeNull();
+    await expect(getBodyAnchor(otherUserId, "body_fat_pct")).resolves.toBe(anchor);
+  });
+
+  it("should still clear the others when one key cannot be deleted", async () => {
+    await setBodyAnchor(userId, "lean_mass_kg", anchor);
+    jest.mocked(SecureStore.deleteItemAsync).mockRejectedValueOnce(new Error("keystore locked"));
+
+    await expect(clearAnchor(userId)).resolves.toBeUndefined();
+
+    await expect(getBodyAnchor(userId, "lean_mass_kg")).resolves.toBeNull();
   });
 });
 
