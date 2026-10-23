@@ -159,6 +159,8 @@ describe("the package index", () => {
     "useExerciseSearch",
     "useSaveExercise",
     "useArchiveExercise",
+    "getMySetupState",
+    "useSetupState",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

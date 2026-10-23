@@ -27,6 +27,10 @@ describe("keys.profiles", () => {
   it("should expose a key for the signed in user's weight unit, under the profiles root", () => {
     expect(keys.profiles.weightUnit).toEqual(["profiles", "weight-unit"]);
   });
+
+  it("should expose a key for the signed in user's setup state, under the profiles root", () => {
+    expect(keys.profiles.setupState).toEqual(["profiles", "setup-state"]);
+  });
 });
 
 describe("keys.offRefresh", () => {
