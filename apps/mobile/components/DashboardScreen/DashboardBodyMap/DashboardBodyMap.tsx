@@ -2,6 +2,7 @@ import { useDashboardBodyMap } from "@keylow/api-client";
 import { useRouter } from "expo-router";
 
 import { useBodyFigure } from "../../../lib/bodyFigure";
+import { bodyMapPath } from "../../../lib/bodyMapRoutes";
 import { useIsOnline } from "../../../lib/connectivity";
 import { useNow } from "../../../lib/useNow";
 import { DashboardBodyMapCard } from "../DashboardBodyMapCard";
@@ -32,7 +33,7 @@ export function DashboardBodyMap({ isReadEnabled }: DashboardBodyMapProps) {
         body={figure}
         bodyMap={bodyMap.data}
         onOpen={() => {
-          router.push("/body-map");
+          router.push(bodyMapPath());
         }}
       />
     ) : (

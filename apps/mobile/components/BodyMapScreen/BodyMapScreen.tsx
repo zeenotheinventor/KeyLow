@@ -8,13 +8,14 @@ import {
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
 import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useBodyFigure } from "../../lib/bodyFigure";
+import { bodyMapOriginOf } from "../../lib/bodyMapRoutes";
 import { useBodyMapView } from "../../lib/bodyMapView";
 import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
@@ -38,7 +39,7 @@ const SCALE_OPTIONS = [
 ] as const;
 
 /**
- * The body map screen, pushed over the tabs from the dashboard card: front and back, with the legend of
+ * The body map screen, pushed over the tabs from the dashboard card or the Train home's card: front and back, with the legend of
  * the scale, in the view last chosen on this device (Actual until one is). The scale switch above the card
  * picks Heat (now), Volume (the week's sets against each muscle's target) or Gap (done against the plan),
  * opens on Heat every time and is not remembered. A tap on the figures or the button under them switches
@@ -58,11 +59,15 @@ const SCALE_OPTIONS = [
  * button until the Train tab it opens is mounted, and none of the controls the next tickets add. The body
  * is drawn as the figure setting has it, male or female, which the screen waits for with the view. The
  * first time it opens it asks which figure, and closing that question without an answer records Male so it
- * is not asked again; the button in the header opens the same sheet at any time.
+ * is not asked again; the button in the header opens the same sheet at any time. Its
+ * Back control reads "Back to Train" when the Train home opened it (`?from=train`) and there is a screen
+ * to go back to, and "Back" otherwise.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // The Train home opens the screen with `?from=train`, so its Back control names the screen it returns to.
+  const { from } = useLocalSearchParams<{ from?: string }>();
   const isOnline = useIsOnline();
   const isReadEnabled = useReadsEnabled();
   const now = useNow();
@@ -295,7 +300,15 @@ export function BodyMapScreen() {
       style={vars({ "--inset-top": insets.top })}
     >
       <SheetHeader
-        leading={{ icon: "ChevronLeft", label: BODY_MAP.back, onPress: goBack }}
+        leading={{
+          icon: "ChevronLeft",
+          // A cold link has nothing to go back to, so it goes to the Dashboard and reads "Back" whatever it names.
+          label:
+            bodyMapOriginOf(from) === "train" && router.canGoBack()
+              ? BODY_MAP.backToTrain
+              : BODY_MAP.back,
+          onPress: goBack,
+        }}
         title={BODY_MAP.title}
         // Left out until the stored figure is known, so closing the sheet can never write over it.
         trailing={
