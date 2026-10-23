@@ -8,24 +8,24 @@ The published canvas is <https://claude.ai/artifact/5QqoJKy2c4G6tJewGRVoPK>. The
 
 Components. Each has a `state` and a `theme` prop, and its states are listed in the `data-props` enum at the end of the file.
 
-| File | What it draws |
-| -- | -- |
-| `WeightScreen.dc.html` | The Weight screen, including the Body composition section |
-| `HealthAccessScreen.dc.html` | The Health Connect permission flow |
-| `TrendExplainerSheet.dc.html` | The trend explainer sheet |
-| `WeighInSheet.dc.html` | The weigh-in sheet (unchanged since version 9) |
-| `BodyCompositionCard.dc.html` | One body fat or lean mass card |
+| File                            | What it draws                                                   |
+| ------------------------------- | --------------------------------------------------------------- |
+| `WeightScreen.dc.html`          | The Weight screen, including the Body composition section       |
+| `HealthAccessScreen.dc.html`    | The Health Connect permission flow                              |
+| `TrendExplainerSheet.dc.html`   | The trend explainer sheet                                       |
+| `WeighInSheet.dc.html`          | The weigh-in sheet (unchanged since version 9)                  |
+| `BodyCompositionCard.dc.html`   | One body fat or lean mass card                                  |
 | `BodyCompositionPrompt.dc.html` | The prompt cards (not allowed, no readings yet, partial, error) |
 
 Boards. Each lays out one component's states, dark and light. The board headings are in `canvas.json`.
 
-| File | Board heading |
-| -- | -- |
-| `Main.dc.html` | weight: chart and weigh-ins |
-| `weigh-in-entry.dc.html` | weigh-in-entry: add and edit |
-| `health-access.dc.html` | health-access: permissions flow |
-| `trend-explainer.dc.html` | trend-explainer |
-| `body-composition.dc.html` | body-composition: components |
+| File                       | Board heading                   |
+| -------------------------- | ------------------------------- |
+| `Main.dc.html`             | weight: chart and weigh-ins     |
+| `weigh-in-entry.dc.html`   | weigh-in-entry: add and edit    |
+| `health-access.dc.html`    | health-access: permissions flow |
+| `trend-explainer.dc.html`  | trend-explainer                 |
+| `body-composition.dc.html` | body-composition: components    |
 
 ## What version 10 added
 
@@ -44,3 +44,7 @@ The `explain-end` and `settling-end` states exist only to show scrolled content 
 - Each kind has a smoothed trend that settles after 7 readings. The change is shown over the range picked on the weight chart's range control.
 - Labels say "lean mass", not "muscle". The caption "Lean mass includes bone and water as well as muscle." explains the difference.
 - If code and a board disagree, the board wins unless Zee has ruled otherwise. Rulings are recorded on [KEY-5](https://linear.app/sojisoft/issue/KEY-5).
+
+## Why this is not under docs/design
+
+`docs/design/` holds the rendered M2 export, and a test in `tools/design-export` checks that every file there belongs to the M2 canvas. These are canvas sources without renders, so they live here.
