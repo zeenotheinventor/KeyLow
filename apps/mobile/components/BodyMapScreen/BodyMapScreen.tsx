@@ -5,6 +5,7 @@ import {
   TRAIN_OFFLINE_TITLE,
   describeBodyMapHeader,
   describeNothingLogged,
+  describeProjectedAssumption,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
 import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
@@ -32,7 +33,7 @@ import { describeGap } from "./gapNote";
 import { scrubberDaysOf } from "./scrubberDays";
 
 import type { BodyMapScale, PlannedSession } from "@keylow/core/copy";
-import type { MuscleId } from "@keylow/core/training";
+import type { BodyArtworkSide, BodyMapView, MuscleId } from "@keylow/core/training";
 
 const MINIMUM_BOTTOM_PADDING = 16;
 
@@ -68,9 +69,18 @@ const SCALE_OPTIONS = [
  * "Back" otherwise. A long press on a muscle opens its sheet, for the view and the day on screen, and
  * outlines the muscle and dims the rest until the sheet closes. A short press on a muscle is still a tap
  * on the figures.
+ *
  * The first time it opens on a device a hint over the figures says to long-press a muscle. It waits for
  * the figure question to be answered, stays until Got it or a muscle's sheet is opened, and is never
- * drawn in the nothing logged state.
+ * drawn in the nothing logged state or in the side by side view.
+ *
+ * On Heat a button in the card's header row turns on the side by side view: Actual and Projected together at
+ * the day shown, front only, with one Front and Back switch for both. Both views show, so every day of the
+ * week can be picked, Actual's too (the heat of the logged sets cooled to that day), a tap on the figures and
+ * a short press on a muscle do nothing, and a long press opens the sheet of the muscle for the view of the
+ * figure it was on. It is local to the visit and not remembered, it goes when the scale leaves Heat, and
+ * the button is off when there is no routine for Projected to show. Turning it off restores the single
+ * view in the view that is remembered, and a day after today, which Actual cannot show, falls back to today.
  */
 export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
@@ -103,6 +113,10 @@ export function BodyMapScreen() {
   // shown can choose it is worked out where the view is known.
   const [chosenDate, setChosenDate] = useState<string | null>(null);
   const [sheetMuscle, setSheetMuscle] = useState<MuscleId | null>(null);
+  // The view of the figure the sheet was opened from, which the side by side view has two of.
+  const [sheetView, setSheetView] = useState<BodyMapView>("actual");
+  const [wantsSideBySide, setWantsSideBySide] = useState(false);
+  const [sideBySideSide, setSideBySideSide] = useState<BodyArtworkSide>("front");
   const nowIso = now.toISOString();
   // Every scale is read here and the scale on screen picks which result is shown. The reads share their
   // queries, so a read switched off and on again with the scale would fetch what is already held; all of
@@ -114,11 +128,13 @@ export function BodyMapScreen() {
     chosenDate !== null && chosenDate !== today && chosenDate >= weekStart && chosenDate <= weekEnd
       ? chosenDate
       : undefined;
+  // Side by side shows both views on any day of the week, so Actual is read at a day after today too.
+  const isSideBySideAsked = wantsSideBySide && scale === "heat";
   const heatActual = useBodyMap({
     ...moment,
     scale: "heat",
     view: "actual",
-    at: heatDate !== undefined && heatDate < today ? heatDate : undefined,
+    at: heatDate !== undefined && (isSideBySideAsked || heatDate < today) ? heatDate : undefined,
   });
   const heatProjected = useBodyMap({
     ...moment,
@@ -154,9 +170,35 @@ export function BodyMapScreen() {
 
   // The one place a muscle's sheet is opened from the figures. Opening one is the answer to the first-open
   // hint, so it marks the hint seen.
-  function openMuscleSheet(muscle: MuscleId) {
+  function openMuscleSheet(muscle: MuscleId, shownView: BodyMapView) {
+    setSheetView(shownView);
     setSheetMuscle(muscle);
     markHintSeen();
+  }
+
+  // A day after today is one only Projected can show, so leaving the view that showed it for Actual leaves
+  // the day behind for good, as the row falls back to today.
+  function forgetDayAfterToday() {
+    if (chosenDate !== null && chosenDate > today) {
+      setChosenDate(null);
+    }
+  }
+
+  function changeScale(next: BodyMapScale) {
+    if (next !== "heat" && wantsSideBySide) {
+      setWantsSideBySide(false);
+      if (view === "actual") {
+        forgetDayAfterToday();
+      }
+    }
+    setScale(next);
+  }
+
+  function toggleSideBySide() {
+    if (isSideBySide && view === "actual") {
+      forgetDayAfterToday();
+    }
+    setWantsSideBySide(!isSideBySide);
   }
 
   function goBack() {
@@ -179,10 +221,13 @@ export function BodyMapScreen() {
     chosenView === "projected" && projected.data?.projectedAvailable === true
       ? "projected"
       : "actual";
+  // Side by side needs a plan to show next to what is logged.
+  const isSideBySide = isSideBySideAsked && projected.data?.projectedAvailable === true;
   // The day shown: the one picked when the view shown can choose it, and otherwise today. This is the one
   // place the day is decided, and the figures, the line under the label, the nothing logged check, the
   // scrubber and the muscle sheet all follow it, and the view shown was read at it.
-  const shownDays = (view === "projected" ? projected.data : actual.data)?.days ?? [];
+  const shownDays =
+    (view === "projected" || isSideBySide ? projected.data : actual.data)?.days ?? [];
   const selectedDate =
     scale === "heat" && shownDays.some(({ date, selectable }) => date === heatDate && selectable)
       ? (heatDate ?? today)
@@ -193,21 +238,37 @@ export function BodyMapScreen() {
     const { data: projectedData } = projected;
     if (isViewRead && isFigureReady && actualData !== undefined && projectedData !== undefined) {
       const { projectedAvailable, todayProjectedIsActual } = projectedData;
-      const shown = view === "projected" ? projectedData : actualData;
+      // The side by side view is read from Projected's days, which every day of the week can be picked in.
+      const shown = view === "projected" || isSideBySide ? projectedData : actualData;
       const isSelectedToday = selectedDate === today;
       // A planned session counts from the day after today up to the day shown (ruling D).
       const plannedSessions: PlannedSession[] = shown.days
         .filter(({ date, status }) => status === "planned" && date > today && date <= selectedDate)
         .map(({ date, plannedDayName }) => ({ localDate: date, routineDayName: plannedDayName }));
-      const { viewLabel, subLine, toggleLabel } = describeBodyMapHeader({
-        scale,
-        view,
-        at: shown.computedAt,
-        tz: zone,
-        isToday: isSelectedToday,
-        weekEnd,
-        plannedSessions,
-      });
+      function headerOf(headerView: BodyMapView, at: string) {
+        return describeBodyMapHeader({
+          scale,
+          view: headerView,
+          at,
+          tz: zone,
+          isToday: isSelectedToday,
+          weekEnd,
+          plannedSessions: headerView === "projected" ? plannedSessions : [],
+        });
+      }
+      const { viewLabel, subLine, toggleLabel } = headerOf(view, shown.computedAt);
+      // Under each figure of the side by side view: Actual's moment, and Projected's assumption, or its
+      // moment when no planned session lies before the day.
+      const sideBySide = isSideBySide
+        ? {
+            side: sideBySideSide,
+            actualCaption: headerOf("actual", actualData.computedAt).subLine,
+            projectedCaption:
+              plannedSessions.length > 0
+                ? describeProjectedAssumption(plannedSessions)
+                : headerOf("projected", projectedData.computedAt).subLine,
+          }
+        : undefined;
       // The line under the button. Heat says why Projected is what is logged today, Volume does not, and
       // Gap says what the plan left behind.
       const { values, days } = actualData;
@@ -222,19 +283,27 @@ export function BodyMapScreen() {
           ? BODY_MAP.notes.todayProjected
           : null;
       }
-      const isNothingLogged = scale === "heat" && shown.nothingLogged;
+      // Side by side has the plan to show whatever was logged, so it has no empty state.
+      const isNothingLogged = scale === "heat" && !isSideBySide && shown.nothingLogged;
       // The hint waits for the store to be read and for the figure question to be answered, and has no
-      // figures to point at when nothing is logged.
-      const isHintShown = isHintRead && !hasSeenHint && !isFigureSheetOpen && !isNothingLogged;
+      // figures to point at when nothing is logged. Side by side is only reached by someone who is already
+      // using the map, so it is never drawn there.
+      const isHintShown =
+        isHintRead && !hasSeenHint && !isFigureSheetOpen && !isNothingLogged && !isSideBySide;
       const card = (
         <BodyMapCard
           actualValues={actualData.values}
           body={figure}
+          isSideBySideEnabled={projectedAvailable}
           isToggleEnabled={scale !== "gap" && projectedAvailable}
-          note={noteUnderFigures()}
+          note={isSideBySide ? BODY_MAP.notes.sideBySide : noteUnderFigures()}
           selected={sheetMuscle ?? undefined}
+          selectedView={sheetView}
+          sideBySide={sideBySide}
           onLongPressMuscle={openMuscleSheet}
           overlay={isHintShown ? <BodyMapHint onDismiss={markHintSeen} /> : undefined}
+          onSideChange={setSideBySideSide}
+          onToggleSideBySide={scale === "heat" ? toggleSideBySide : undefined}
           onToggle={() => {
             const nextView = view === "projected" ? "actual" : "projected";
             // Going to Actual from a day after today leaves that day behind for good, as the row falls back to today.
@@ -248,7 +317,7 @@ export function BodyMapScreen() {
           subLine={
             isNothingLogged ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays) : subLine
           }
-          toggleLabel={toggleLabel}
+          toggleLabel={isSideBySide ? null : toggleLabel}
           view={view}
           viewLabel={viewLabel}
         />
@@ -269,7 +338,7 @@ export function BodyMapScreen() {
       const scaleSwitch = (
         <SegmentedControl
           label={BODY_MAP.scaleSwitch.name}
-          onChange={setScale}
+          onChange={changeScale}
           options={SCALE_OPTIONS}
           value={scale}
         />
@@ -372,7 +441,8 @@ export function BodyMapScreen() {
         now={nowIso}
         // Today is the current moment, so it is read with no day.
         at={selectedDate === today ? undefined : selectedDate}
-        view={scale === "gap" ? "actual" : view}
+        // Side by side has two figures, so the sheet follows the one it was opened from. Otherwise it follows the view shown.
+        view={scale === "gap" ? "actual" : isSideBySide ? sheetView : view}
         weekStart={weekStart}
         onClose={() => {
           setSheetMuscle(null);

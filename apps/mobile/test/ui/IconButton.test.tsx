@@ -387,6 +387,65 @@ describe("IconButton", () => {
     });
   });
 
+  describe("card size", () => {
+    it("should be a 40 point square with the medium radius, as the body map card's side by side board draws it", async () => {
+      await renderIconButton({ size: "card" });
+
+      expect(screen.getByRole("button", { name: "Close" })).toHaveStyle({
+        height: 40,
+        width: 40,
+        borderRadius: 12,
+      });
+    });
+
+    it("should reach a 44 point touch target with the extra reach outside its edge", async () => {
+      await renderIconButton({ size: "card" });
+
+      expect(screen.getByRole("button", { name: "Close" })).toHaveProp("hitSlop", 2);
+    });
+  });
+
+  describe("selected", () => {
+    it("should not be announced as selected unless it is", async () => {
+      await renderIconButton();
+
+      expect(screen.getByRole("button", { name: "Close", selected: false })).toBeOnTheScreen();
+    });
+
+    it("should be announced as selected when it is", async () => {
+      await renderIconButton({ isSelected: true });
+
+      expect(screen.getByRole("button", { name: "Close", selected: true })).toBeOnTheScreen();
+    });
+
+    it.each(schemes)(
+      "should draw an accent muted fill, an accent border and an accent ink glyph, in the %s scheme",
+      async (scheme) => {
+        await renderIconButton({ isSelected: true }, scheme);
+
+        expect(await screen.findByRole("button", { name: "Close", selected: true })).toHaveStyle({
+          backgroundColor: themes[scheme]["accent-muted"],
+          borderColor: resolvedColor(scheme, "accent"),
+          borderWidth: 1,
+        });
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-ink"]);
+      },
+    );
+
+    it.each(schemes)(
+      "should keep the raised surface, the border and the primary text glyph when not selected, in the %s scheme",
+      async (scheme) => {
+        await renderIconButton({ isSelected: false }, scheme);
+
+        expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
+          backgroundColor: resolvedColor(scheme, "surface-raised"),
+          borderColor: resolvedColor(scheme, "border"),
+        });
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-primary"]);
+      },
+    );
+  });
+
   describe("tone", () => {
     it.each(schemes)(
       "should draw the glyph in primary text unless asked for secondary, in the %s scheme",

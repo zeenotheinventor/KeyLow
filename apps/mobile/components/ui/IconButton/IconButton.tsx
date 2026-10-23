@@ -18,10 +18,24 @@ const variantClassName: Record<IconButtonVariant, string> = {
   primary: "",
 };
 
+// The card size is the board's 40 points, which no token names. It must match the h-[40px] class below.
+const cardSize = 40;
+
 const sizeClassName: Record<IconButtonSize, string> = {
   md: "h-control-md w-touch-target rounded-medium",
   sm: "h-control-sm w-control-sm rounded-small",
+  card: "h-[40px] w-[40px] rounded-medium",
 };
+
+// The height each size is drawn at, which the reach to the 44 point touch target is worked out from.
+const sizeHeight: Record<IconButtonSize, number> = {
+  md: controlHeight.md,
+  sm: controlHeight.sm,
+  card: cardSize,
+};
+
+// A selected secondary button swaps its raised fill and border for the accent's, and its glyph for accent ink.
+const selectedSecondaryClassName = "border border-accent bg-accent-muted";
 
 // The ring and the primary variant have one shape whatever the size: a circle (32 points for the ring, 36
 // for the primary) inside a 44 point touch target. The target is the pressable itself, because a touch
@@ -43,6 +57,7 @@ export function IconButton({
   variant = "secondary",
   size = "md",
   tone = "primary",
+  isSelected = false,
   disabled = false,
   dimsWhenDisabled = true,
   haptic,
@@ -51,24 +66,30 @@ export function IconButton({
   className = "",
 }: IconButtonProps) {
   const isCircle = variant === "ring" || variant === "primary";
+  const isSelectedSecondary = isSelected && variant === "secondary";
   const glyph =
     variant === "primary" ? (
       <Icon name={icon} size={iconSize} strokeWidth={primaryStrokeWidth} tone="accent-foreground" />
     ) : (
-      <Icon name={icon} size={iconSize} tone={variant === "ring" ? "secondary" : tone} />
+      <Icon
+        name={icon}
+        size={iconSize}
+        tone={isSelectedSecondary ? "accent-ink" : variant === "ring" ? "secondary" : tone}
+      />
     );
 
   return (
     <View className={className}>
       <PressableSurface
-        className={`items-center justify-center overflow-hidden ${isCircle ? circleTargetClassName : sizeClassName[size]} ${variantClassName[variant]} ${disabled && dimsWhenDisabled ? "opacity-40" : ""}`}
+        className={`items-center justify-center overflow-hidden ${isCircle ? circleTargetClassName : sizeClassName[size]} ${isSelectedSecondary ? selectedSecondaryClassName : variantClassName[variant]} ${disabled && dimsWhenDisabled ? "opacity-40" : ""}`}
         disabled={disabled}
         haptic={haptic}
         // A control smaller than the touch target reaches out to it. The reach is invisible. A circle
         // is the touch target itself and needs none.
-        hitSlop={isCircle ? undefined : (touchTarget - controlHeight[size]) / 2}
+        hitSlop={isCircle ? undefined : (touchTarget - sizeHeight[size]) / 2}
         label={label}
         ref={ref}
+        selected={isSelectedSecondary ? true : undefined}
         onPress={onPress}
       >
         {variant === "ring" || variant === "primary" ? (

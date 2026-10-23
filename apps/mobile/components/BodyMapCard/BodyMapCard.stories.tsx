@@ -23,6 +23,9 @@ const goldenThursday = {
   calves: 2,
 };
 
+// The Show side by side button is on every Heat state of the map, and absent on Volume and Gap.
+const sideBySideButton = { onToggleSideBySide: () => undefined };
+
 const meta = {
   title: "BodyMap/BodyMapCard",
   component: BodyMapCard,
@@ -52,11 +55,12 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // Actual heat now: the legs warmest, the arms and back light, and the button that shows Projected.
-export const ActualHeat: Story = {};
+export const ActualHeat: Story = { args: sideBySideButton };
 
 // Projected on today, as the `body · projected-today` board draws it: the same figures, and the line that says why.
 export const ProjectedToday: Story = {
   args: {
+    ...sideBySideButton,
     view: "projected",
     viewLabel: "Projected",
     toggleLabel: "Show actual",
@@ -64,14 +68,66 @@ export const ProjectedToday: Story = {
   },
 };
 
+// Side by side on the golden Sunday 18 October 20:00, as the `body · side-by-side` board draws it: Actual is only
+// what was logged, cooled, and Projected has Saturday's Push on top. The button is pressed.
+export const SideBySide: Story = {
+  args: {
+    actualValues: { ...RESTING_HEAT, glute_max: 1, quads: 1, hamstrings: 1 },
+    projectedValues: {
+      ...RESTING_HEAT,
+      chest_upper: 1,
+      chest_lower: 1,
+      delt_front: 2,
+      delt_side: 1,
+      triceps: 2,
+      glute_max: 1,
+      quads: 1,
+      hamstrings: 1,
+    },
+    toggleLabel: null,
+    note: "Both views show, so tapping the figures changes nothing here.",
+    sideBySide: {
+      side: "front",
+      actualCaption: "Sun 18 Oct, 20:00",
+      projectedCaption: "If you do Saturday's Push",
+    },
+    ...sideBySideButton,
+    onSideChange: () => undefined,
+  },
+};
+
+// Side by side with two planned sessions before the day: the long caption wraps under its figure and does
+// not push the row past the card.
+export const SideBySideTwoSessions: Story = {
+  args: {
+    actualValues: { ...RESTING_HEAT, glute_max: 1, quads: 1, hamstrings: 1 },
+    projectedValues: { ...RESTING_HEAT, lats: 2, biceps: 2, chest_upper: 1, triceps: 2 },
+    toggleLabel: null,
+    note: "Both views show, so tapping the figures changes nothing here.",
+    sideBySide: {
+      side: "front",
+      actualCaption: "Sun 18 Oct, 20:00",
+      projectedCaption: "If you do Friday's Pull and Saturday's Push",
+    },
+    ...sideBySideButton,
+    onSideChange: () => undefined,
+  },
+};
+
 // No routine, so there is no plan to project: the button is off and the line says why.
 export const NoRoutine: Story = {
-  args: { isToggleEnabled: false, note: "Projected needs a routine." },
+  args: {
+    ...sideBySideButton,
+    isToggleEnabled: false,
+    isSideBySideEnabled: false,
+    note: "Projected needs a routine.",
+  },
 };
 
 // Nothing logged in the last 14 days: both figures at rest, and the line says why.
 export const NothingLogged: Story = {
   args: {
+    ...sideBySideButton,
     subLine: "Nothing logged in the last 14 days",
     actualValues: RESTING_HEAT,
     projectedValues: RESTING_HEAT,

@@ -1,1 +1,9 @@
-export const storyStates = ["Secondary", "Ghost", "Ring", "Primary", "Quiet", "Disabled"];
+export const storyStates = [
+  "Secondary",
+  "Ghost",
+  "Ring",
+  "Primary",
+  "Quiet",
+  "Selected",
+  "Disabled",
+];

@@ -259,4 +259,18 @@ describe("the first-open hint on the body map", () => {
     expect(hint()).not.toBeOnTheScreen();
     expect(gotIt()).not.toBeOnTheScreen();
   });
+
+  it("should not draw the hint in the side by side view, and bring it back when that is left", async () => {
+    await openScreen();
+    const user = userEvent.setup();
+
+    await user.press(screen.getByRole("button", { name: "Show side by side" }));
+
+    expect(hint()).not.toBeOnTheScreen();
+    expect(gotIt()).not.toBeOnTheScreen();
+
+    await user.press(screen.getByRole("button", { name: "Show side by side" }));
+
+    expect(hint()).toBeOnTheScreen();
+  });
 });
