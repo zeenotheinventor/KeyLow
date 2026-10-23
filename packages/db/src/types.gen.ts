@@ -294,6 +294,59 @@ export type Database = {
         };
         Relationships: [];
       };
+      expenditure_snapshots: {
+        Row: {
+          as_of_date: string;
+          created_at: string;
+          engine_version: string;
+          id: string;
+          kind: string;
+          measurement: Json | null;
+          mu_kcal: number;
+          params: Json;
+          program_id: string | null;
+          trend_weight_kg: number | null;
+          user_id: string;
+          var_kcal2: number;
+        };
+        Insert: {
+          as_of_date: string;
+          created_at?: string;
+          engine_version: string;
+          id?: string;
+          kind: string;
+          measurement?: Json | null;
+          mu_kcal: number;
+          params: Json;
+          program_id?: string | null;
+          trend_weight_kg?: number | null;
+          user_id: string;
+          var_kcal2: number;
+        };
+        Update: {
+          as_of_date?: string;
+          created_at?: string;
+          engine_version?: string;
+          id?: string;
+          kind?: string;
+          measurement?: Json | null;
+          mu_kcal?: number;
+          params?: Json;
+          program_id?: string | null;
+          trend_weight_kg?: number | null;
+          user_id?: string;
+          var_kcal2?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "expenditure_snapshots_program_id_fkey";
+            columns: ["program_id"];
+            isOneToOne: false;
+            referencedRelation: "programs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       food_log_entries: {
         Row: {
           created_at: string;
@@ -947,6 +1000,75 @@ export type Database = {
           user_id?: string;
         };
         Relationships: [];
+      };
+      targets: {
+        Row: {
+          basis: Json;
+          calories_kcal: number;
+          carbs_g: number;
+          created_at: string;
+          dow_calories_kcal: number[];
+          effective_from: string;
+          effective_to: string | null;
+          engine_version: string;
+          expenditure_snapshot_id: string | null;
+          fat_g: number;
+          id: string;
+          params: Json;
+          program_id: string | null;
+          protein_g: number;
+          user_id: string;
+        };
+        Insert: {
+          basis: Json;
+          calories_kcal: number;
+          carbs_g: number;
+          created_at?: string;
+          dow_calories_kcal: number[];
+          effective_from: string;
+          effective_to?: string | null;
+          engine_version: string;
+          expenditure_snapshot_id?: string | null;
+          fat_g: number;
+          id?: string;
+          params: Json;
+          program_id?: string | null;
+          protein_g: number;
+          user_id: string;
+        };
+        Update: {
+          basis?: Json;
+          calories_kcal?: number;
+          carbs_g?: number;
+          created_at?: string;
+          dow_calories_kcal?: number[];
+          effective_from?: string;
+          effective_to?: string | null;
+          engine_version?: string;
+          expenditure_snapshot_id?: string | null;
+          fat_g?: number;
+          id?: string;
+          params?: Json;
+          program_id?: string | null;
+          protein_g?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "targets_expenditure_snapshot_id_fkey";
+            columns: ["expenditure_snapshot_id"];
+            isOneToOne: false;
+            referencedRelation: "expenditure_snapshots";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "targets_program_id_fkey";
+            columns: ["program_id"];
+            isOneToOne: false;
+            referencedRelation: "programs";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       training_goals: {
         Row: {
