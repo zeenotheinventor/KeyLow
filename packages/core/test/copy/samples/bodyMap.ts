@@ -98,6 +98,7 @@ export const samples: Record<string, () => string[]> = {
             localDate: "2026-10-17",
             isToday: kind === "in_progress",
             onlyInProjected: kind === "planned",
+            projectedNeedsRoutine: false,
             state: { kind, routineDayName: "Push" },
           }).accessibleName,
       )
@@ -106,6 +107,16 @@ export const samples: Record<string, () => string[]> = {
           localDate: "2026-10-14",
           isToday: false,
           onlyInProjected: false,
+          projectedNeedsRoutine: false,
+          state: { kind: "rest" },
+        }).accessibleName,
+      )
+      .concat(
+        copy.describeScrubberDay({
+          localDate: "2026-10-17",
+          isToday: false,
+          onlyInProjected: true,
+          projectedNeedsRoutine: true,
           state: { kind: "rest" },
         }).accessibleName,
       ),

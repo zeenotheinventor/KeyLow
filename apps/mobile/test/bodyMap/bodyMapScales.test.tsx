@@ -155,6 +155,7 @@ function weekDays(statusOf: Record<string, BodyMapDay["status"]> = {}): BodyMapD
     isToday: false,
     status: statusOf[date] ?? status,
     plannedDayName,
+    sessionDayName: plannedDayName,
     selectable: true,
   }));
 }

@@ -538,6 +538,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: false,
         status: "logged",
         plannedDayName: "Push",
+        sessionDayName: "Push",
         selectable: true,
       },
       {
@@ -546,6 +547,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: false,
         status: "logged",
         plannedDayName: "Pull",
+        sessionDayName: "Pull",
         selectable: true,
       },
       {
@@ -554,6 +556,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: false,
         status: "rest",
         plannedDayName: null,
+        sessionDayName: null,
         selectable: true,
       },
       {
@@ -562,6 +565,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: true,
         status: "in_progress",
         plannedDayName: "Legs",
+        sessionDayName: "Legs",
         selectable: true,
       },
       {
@@ -570,6 +574,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: false,
         status: "rest",
         plannedDayName: null,
+        sessionDayName: null,
         selectable: false,
       },
       {
@@ -578,6 +583,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: false,
         status: "planned",
         plannedDayName: "Push",
+        sessionDayName: null,
         selectable: false,
       },
       {
@@ -586,6 +592,7 @@ describe("useBodyMap, the scrubber days", () => {
         isToday: false,
         status: "rest",
         plannedDayName: null,
+        sessionDayName: null,
         selectable: false,
       },
     ]);
@@ -635,6 +642,95 @@ describe("useBodyMap, the scrubber days", () => {
       "rest",
       "in_progress",
     ]);
+  });
+
+  it("should name the routine day a logged session was done as, and give no name to a day with none", async () => {
+    installTrainingFake(server, goldenWeekData);
+
+    const { result } = renderBodyMap();
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.days.map((day) => day.sessionDayName)).toStrictEqual([
+      "Push",
+      "Pull",
+      null,
+      "Legs",
+      null,
+      null,
+      null,
+    ]);
+  });
+
+  it("should name the day a session was started as, not the day planned, when another was picked (KEY-505)", async () => {
+    const [monday, ...others] = goldenSessions;
+    const pullDay = goldenRoutine.routine_days[1];
+    installTrainingFake(server, {
+      ...goldenWeekData,
+      sessions: [{ ...monday, routine_day_id: pullDay?.id }, ...others],
+    });
+
+    const { result } = renderBodyMap();
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.days[0]).toMatchObject({
+      status: "logged",
+      plannedDayName: "Push",
+      sessionDayName: "Pull",
+    });
+  });
+
+  it("should name Tuesday's Pull for Tuesday when it is made up on Wednesday, and no day for Wednesday (KEY-531)", async () => {
+    const [monday, , thursday] = goldenSessions;
+    const pullDay = goldenRoutine.routine_days[1];
+    installTrainingFake(server, {
+      ...goldenWeekData,
+      sessions: [
+        monday,
+        thursday,
+        sessionRow({
+          local_date: "2026-10-14",
+          routine_day_id: pullDay?.id,
+          started_at: "2026-10-14T17:00:00+01:00",
+          ended_at: "2026-10-14T18:00:00+01:00",
+        }),
+      ],
+    });
+
+    const { result } = renderBodyMap();
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.days.slice(1, 3)).toMatchObject([
+      { status: "logged", sessionDayName: "Pull" },
+      { status: "rest", sessionDayName: null },
+    ]);
+  });
+
+  it("should give no name to a session that follows no routine day (extra)", async () => {
+    installTrainingFake(server, {
+      ...goldenWeekData,
+      sessions: [
+        ...goldenSessions,
+        sessionRow({
+          local_date: "2026-10-14",
+          routine_day_id: null,
+          started_at: "2026-10-14T17:00:00+01:00",
+          ended_at: "2026-10-14T18:00:00+01:00",
+        }),
+      ],
+    });
+
+    const { result } = renderBodyMap();
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.days[2]).toMatchObject({ status: "extra", sessionDayName: null });
   });
 
   it("should let every day be picked in Projected", async () => {
