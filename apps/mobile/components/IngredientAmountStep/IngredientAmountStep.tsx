@@ -1,4 +1,4 @@
-import { useFoodWithPortions } from "@keylow/api-client";
+import { useFoodWithPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import { frozenFoodOf, withAmount } from "@keylow/core/recipes";
 
 import { PortionPicker } from "../PortionPicker";
@@ -20,6 +20,11 @@ export function IngredientAmountStep({
   onBack,
 }: IngredientAmountStepProps) {
   const liveFood = useFoodWithPortions(ingredient.food_id);
+  // A branded food stored before the portion rules is asked for once, so its new portions reach the chips.
+  // Only the chips follow: the ingredient's snapshot stays the source of its values, and nothing is written.
+  useRefreshOutdatedOffFood(
+    liveFood.status === "ready" && liveFood.food.deleted_at === null ? liveFood.food : undefined,
+  );
   const livePortions =
     liveFood.status === "ready" && liveFood.food.deleted_at === null
       ? { portions: liveFood.portions, loggedPortionId: ingredient.portion_id }

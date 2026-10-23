@@ -11,6 +11,7 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
 import type { RecipeIngredient } from "@keylow/core/recipes";
+import type { Food } from "@keylow/core/schemas";
 
 // The amount step of an ingredient that is already in the recipe: what it shows, which chips it offers, and
 // what Save and Remove from recipe hand back. The food's read is stood in for, so each test says what the
@@ -27,8 +28,12 @@ jest.mock(
 );
 
 const mockFoodWithPortions = jest.fn<FoodWithPortionsState, [string]>();
+const mockRefreshOutdatedOffFood = jest.fn<undefined, [Food | null | undefined]>();
 jest.mock("@keylow/api-client", () => ({
   useFoodWithPortions: (id: string) => mockFoodWithPortions(id),
+  useRefreshOutdatedOffFood: (food: Food | null | undefined) => {
+    mockRefreshOutdatedOffFood(food);
+  },
 }));
 
 setUpTests();
@@ -121,6 +126,7 @@ describe("the amount step of an ingredient", () => {
   beforeEach(() => {
     jest.useFakeTimers();
     registerAppStyles(kitStyles);
+    mockRefreshOutdatedOffFood.mockReset();
     mockFoodWithPortions.mockReset();
     mockFoodWithPortions.mockReturnValue({
       status: "ready",
@@ -323,6 +329,34 @@ describe("the amount step of an ingredient", () => {
 
       expect(callbacks.onRemove).toHaveBeenCalledTimes(1);
       expect(callbacks.onSave).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("the refresh of a branded food stored before the portion rules", () => {
+    it("should ask for the refresh of the live food when it is there", async () => {
+      await showStep(oneMediumOnion);
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(onions);
+    });
+
+    it("should ask for the refresh of no food while the live food is not read yet", async () => {
+      mockFoodWithPortions.mockReturnValue({ status: "loading" });
+
+      await showStep(oneMediumOnion);
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(undefined);
+    });
+
+    it("should ask for the refresh of no food that has been deleted", async () => {
+      mockFoodWithPortions.mockReturnValue({
+        status: "ready",
+        food: { ...onions, deleted_at: "2026-10-16T09:00:00Z" },
+        portions: onionPortions,
+      });
+
+      await showStep(oneMediumOnion);
+
+      expect(mockRefreshOutdatedOffFood).toHaveBeenLastCalledWith(undefined);
     });
   });
 });

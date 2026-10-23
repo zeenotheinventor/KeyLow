@@ -20,7 +20,15 @@ export const entryBackend: {
   offProduct: OffProductResponse | null;
   /** The codes `off-product` was asked for, in order. */
   offProductCodes: string[];
-} = { foods: [], foodPortions: [], offProduct: null, offProductCodes: [] };
+  /** When set, `off-product` waits for it before it answers, so a test can look at the screen before the answer lands. */
+  offProductHeldUntil: Promise<void> | null;
+} = {
+  foods: [],
+  foodPortions: [],
+  offProduct: null,
+  offProductCodes: [],
+  offProductHeldUntil: null,
+};
 
 export function resetEntryBackend(): void {
   resetDiaryBackend();
@@ -28,6 +36,7 @@ export function resetEntryBackend(): void {
   entryBackend.foodPortions = [];
   entryBackend.offProduct = null;
   entryBackend.offProductCodes = [];
+  entryBackend.offProductHeldUntil = null;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -59,6 +68,7 @@ async function entryFetch(input: string | URL | Request, init?: RequestInit): Pr
     const body: unknown = JSON.parse(typeof init?.body === "string" ? init.body : "{}");
     const code = typeof body === "object" && body !== null && "code" in body ? body.code : "";
     entryBackend.offProductCodes.push(String(code));
+    await entryBackend.offProductHeldUntil;
 
     return entryBackend.offProduct === null
       ? jsonResponse({ error: { code: "not_found", message: "No such product" } }, 404)
