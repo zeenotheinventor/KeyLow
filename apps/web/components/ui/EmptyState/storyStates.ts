@@ -6,4 +6,5 @@ export const storyStates = [
   "Section",
   "Page",
   "Placeholder",
+  "Success",
 ];

@@ -1,7 +1,7 @@
 import { iconStroke } from "@keylow/tokens";
 import Link from "next/link";
 
-import type { EmptyStateAction, EmptyStateProps, EmptyStateSize } from "./types";
+import type { EmptyStateAction, EmptyStateProps, EmptyStateSize, EmptyStateTone } from "./types";
 
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,13 @@ const sizeClasses = {
   page: { frame: "py-14", body: "" },
   placeholder: { frame: "py-16", body: "max-w-[360px]" },
 } as const satisfies Record<EmptyStateSize, { frame: string; body: string }>;
+
+// Each class is written out whole so Tailwind can see it.
+const iconToneClasses = {
+  neutral: "bg-surface-raised text-text-muted",
+  danger: "bg-danger-muted text-danger",
+  success: "bg-success-muted [&_svg]:stroke-success",
+} as const satisfies Record<EmptyStateTone, string>;
 
 function ActionButton({ action }: { action: EmptyStateAction }) {
   const Icon = action.icon;
@@ -64,7 +71,7 @@ export function EmptyState({
       <span
         className={cn(
           "mb-2 flex size-14 items-center justify-center rounded-medium",
-          tone === "danger" ? "bg-danger-muted text-danger" : "bg-surface-raised text-text-muted",
+          iconToneClasses[tone],
         )}
       >
         <Icon aria-hidden className="size-8" strokeWidth={iconStroke} />

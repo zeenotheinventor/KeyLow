@@ -16,6 +16,7 @@ import { useEffect, useRef, useState } from "react";
 import { PerServingCard } from "../PerServingCard";
 import { RecipeEditorFrame } from "../RecipeEditorFrame";
 import { RecipeEditorLayout } from "../RecipeEditorLayout";
+import { RecipeRefreshDialog } from "../RecipeRefreshDialog";
 import { RecipeViewActions } from "../RecipeViewActions";
 import { RecipeViewIngredientsCard } from "../RecipeViewIngredientsCard";
 import { RecipeViewStepsCard } from "../RecipeViewStepsCard";
@@ -40,7 +41,7 @@ const ANNOUNCE_AFTER_TYPING_MS = 500;
  * so nothing is saved or sent. It holds no arithmetic, rounding or checks: what the amounts say, what
  * counts as a servings number and what a button does to it are core's. Its Duplicate and Archive buttons
  * are the library's own actions (`useRecipeActions`): a copy opens on its own page, and an archived recipe
- * leaves for the library, each with a toast that has Undo.
+ * leaves for the library, each with a toast that has Undo. Refresh ingredients opens a dialog over the page.
  */
 export function RecipeView({ recipe }: RecipeViewProps) {
   const router = useRouter();
@@ -52,6 +53,7 @@ export function RecipeView({ recipe }: RecipeViewProps) {
   const [chosenServings, setChosenServings] = useState<number | null>(null);
   const [text, setText] = useState(() => String(recipe.servings));
   const [hasProblem, setHasProblem] = useState(false);
+  const [isRefreshOpen, setIsRefreshOpen] = useState(false);
   // Whether the new amounts are due to be read out. What is read is always the view's own words.
   const [isAnnouncementDue, setIsAnnouncementDue] = useState(false);
   const servingsField = useRef<HTMLInputElement>(null);
@@ -160,6 +162,9 @@ export function RecipeView({ recipe }: RecipeViewProps) {
           isLibraryRead={!library.isPending}
           isDuplicating={actions.isDuplicating(recipe.id)}
           isArchiving={actions.isArchiving(recipe.id)}
+          onRefresh={() => {
+            setIsRefreshOpen(true);
+          }}
           onDuplicate={duplicate}
           onArchive={archive}
         />
@@ -206,6 +211,14 @@ export function RecipeView({ recipe }: RecipeViewProps) {
       <p role="status" className="sr-only">
         {announcement}
       </p>
+      {/* Over the view, which stays as it is, so the servings chosen here are untouched by a refresh. */}
+      <RecipeRefreshDialog
+        open={isRefreshOpen}
+        recipeId={recipe.id}
+        onClose={() => {
+          setIsRefreshOpen(false);
+        }}
+      />
     </RecipeEditorFrame>
   );
 }

@@ -13,6 +13,8 @@ export type RecipeViewActionsProps = {
   isDuplicating: boolean;
   /** The recipe is being put away, so Archive is busy and does not respond. */
   isArchiving: boolean;
+  /** Opens the refresh dialog, where the recipe's foods are checked for changes. */
+  onRefresh: () => void;
   onDuplicate: () => void;
   onArchive: () => void;
 };

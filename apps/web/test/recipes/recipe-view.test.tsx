@@ -195,7 +195,7 @@ describe("RecipeViewScreen", () => {
       ).toBeTruthy();
     });
 
-    it("should have Edit going to the editor, and no Refresh ingredients button yet", async () => {
+    it("should have Edit going to the editor", async () => {
       await showRecipe();
 
       expect(
@@ -206,8 +206,6 @@ describe("RecipeViewScreen", () => {
       expect(
         screen.getByRole("link", { name: describeEditRecipe("Chicken and rice") }).textContent,
       ).toBe(RECIPE_VIEW.edit);
-      expect(screen.queryByRole("button", { name: /Refresh/ })).toBeNull();
-      expect(screen.queryByRole("link", { name: /Refresh/ })).toBeNull();
     });
   });
 
