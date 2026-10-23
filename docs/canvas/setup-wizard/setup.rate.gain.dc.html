@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>setup: rate, gain</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6a739ab9f72fec4b3c50c348de3c56d0">
+<link rel="stylesheet" href="/_blob/b7c5aa5a94130ec85cdd7a14e6ec57eb">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 820px; height: 872px; display: flex; gap: 40px; background: #565C66; font-family: 'Geist', system-ui, sans-serif">
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Dark · Default 0.25% chosen</span>
+<dc-import name="SetupScreen" screen-state="rate-gain" theme="dark" hint-size="390px,844px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Light · Default 0.25% chosen</span>
+<dc-import name="SetupScreen" screen-state="rate-gain" theme="light" hint-size="390px,844px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":820,"height":872}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

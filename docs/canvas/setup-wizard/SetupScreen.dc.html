@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Setup wizard: every step, the estimate and its states</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6a739ab9f72fec4b3c50c348de3c56d0">
+<link rel="stylesheet" href="/_blob/b7c5aa5a94130ec85cdd7a14e6ec57eb">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="SheetHeader sheet (leading optional: proposed extension)" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-2); padding: 56px var(--space-4) var(--space-3)">
+<sc-if value="{{hasBack}}" hint-placeholder-val="{{ true }}">
+<button class="kl-ib" type="button" aria-label="Back" aria-disabled="{{backDisabled}}" style="opacity: {{backOpacity}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+</sc-if>
+<sc-if value="{{noBack}}" hint-placeholder-val="{{ false }}">
+<span aria-hidden="true" style="width: 44px; height: 44px; flex-shrink: 0"></span>
+</sc-if>
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px">
+<h1 class="t-h2" style="margin: 0; text-align: center; white-space: nowrap">{{title}}</h1>
+<sc-if value="{{hasStep}}" hint-placeholder-val="{{ true }}"><span class="t-cap tab c-sec">{{stepText}}</span></sc-if>
+</div>
+<sc-if value="{{hasClose}}" hint-placeholder-val="{{ false }}">
+<button class="kl-ib" type="button" aria-label="Close" aria-disabled="{{backDisabled}}" style="opacity: {{backOpacity}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+</sc-if>
+<sc-if value="{{noClose}}" hint-placeholder-val="{{ true }}">
+<span aria-hidden="true" style="width: 44px; height: 44px; flex-shrink: 0"></span>
+</sc-if>
+</header>
+
+<div style="flex-shrink: 0; padding: 0 var(--space-4)">
+<div data-kilo="ProgressBar (value = step / steps)" role="progressbar" aria-label="{{progressLabel}}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{progressNow}}" style="height: 4px; overflow: hidden; border-radius: var(--radius-pill); background: var(--border)">
+<div style="height: 100%; width: {{progressWidth}}; border-radius: var(--radius-pill); background: var(--accent)"></div>
+</div>
+</div>
+
+<main style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-5) var(--space-4) var(--space-4)">
+
+<div style="display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 class="t-h1" style="margin: 0">{{question}}</h2>
+<sc-if value="{{hasHelper}}" hint-placeholder-val="{{ true }}"><p class="t-body c-sec" style="margin: 0">{{helper}}</p></sc-if>
+</div>
+
+<sc-if value="{{hasOptions}}" hint-placeholder-val="{{ true }}">
+<div role="radiogroup" aria-label="{{question}}" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<sc-for list="{{options}}" as="o" hint-placeholder-count="3">
+<div data-kilo="OptionCard (new)" role="radio" aria-checked="{{o.checked}}" aria-disabled="{{o.disabled}}" style="min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-medium); background: {{o.bg}}; border: 1px solid {{o.border}}; box-shadow: {{o.shadow}}">
+<span aria-hidden="true" style="width: 20px; height: 20px; flex-shrink: 0; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-pill); border: 2px solid {{o.ring}}; background: {{o.dotBg}}; opacity: {{o.dim}}"><span style="width: 8px; height: 8px; border-radius: var(--radius-pill); background: {{o.dot}}"></span></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="display: flex; align-items: center; gap: var(--space-2); opacity: {{o.dim}}"><span class="t-bs tab">{{o.title}}</span><sc-if value="{{o.hasBadge}}" hint-placeholder-val="{{ false }}"><span data-kilo="Badge" class="t-cap" style="height: 22px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 8px; border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-secondary)">{{o.badge}}</span></sc-if></span>
+<sc-if value="{{o.hasDesc}}" hint-placeholder-val="{{ true }}"><span class="t-cap c-sec" style="opacity: {{o.dim}}">{{o.desc}}</span></sc-if>
+<sc-if value="{{o.hasReason}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-sec" style="display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>{{o.reason}}</span></sc-if>
+</span>
+<sc-if value="{{o.hasValue}}" hint-placeholder-val="{{ false }}"><span style="flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end"><span class="t-bs tab">{{o.value}}</span><span class="t-cap c-mut">{{o.valueCap}}</span></span></sc-if>
+</div>
+</sc-for>
+</div>
+</sc-if>
+
+<sc-if value="{{hasDob}}" hint-placeholder-val="{{ false }}">
+<div role="group" aria-label="Date of birth" style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.6fr); gap: var(--space-2)">
+<sc-for list="{{dob}}" as="d" hint-placeholder-count="3">
+<div class="kl-field">
+<label class="t-ls">{{d.label}}</label>
+<div data-kilo="NumericInput (number pad, align left)" class="{{d.cls}}"><input inputmode="numeric" value="{{d.value}}" placeholder="{{d.ph}}" onChange="{{noop}}" aria-label="{{d.aria}}" aria-invalid="{{dobInvalid}}" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; font-family: var(--font-sans); color: var(--text-primary)"></div>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{hasDobError}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-danger" role="alert">{{dobError}}</span></sc-if>
+<sc-if value="{{hasDobAge}}" hint-placeholder-val="{{ false }}"><span class="t-cap tab c-sec">{{dobAge}}</span></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{hasBody}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="SegmentedControl sm" role="radiogroup" aria-label="Units" style="height: var(--control-height-sm); box-sizing: border-box; display: flex; padding: 2px; border-radius: var(--radius-medium); border: 1px solid var(--border); background: var(--surface-raised)">
+<sc-for list="{{units}}" as="u" hint-placeholder-count="2">
+<span role="radio" aria-checked="{{u.checked}}" style="flex: 1; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 9px; background: {{u.bg}}; color: {{u.fg}}; font-size: 12px; line-height: 20px; font-weight: 600">{{u.label}}</span>
+</sc-for>
+</div>
+<sc-for list="{{bodyFields}}" as="f" hint-placeholder-count="2">
+<div class="kl-field" role="group" aria-label="{{f.label}}">
+<label class="t-ls">{{f.label}}</label>
+<div style="display: flex; gap: var(--space-2)">
+<sc-for list="{{f.parts}}" as="p" hint-placeholder-count="1">
+<div data-kilo="NumericInput" class="{{p.cls}}" style="flex: 1; min-width: 0"><input inputmode="decimal" value="{{p.value}}" onChange="{{noop}}" aria-label="{{p.aria}}" aria-invalid="{{p.invalid}}" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)"><span class="t-body c-mut">{{p.unit}}</span></div>
+</sc-for>
+</div>
+<sc-if value="{{f.hasError}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-danger" role="alert">{{f.error}}</span></sc-if>
+<sc-if value="{{f.hasSource}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-sec" style="display: flex; align-items: center; gap: 6px"><svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg>{{f.source}}</span></sc-if>
+</div>
+</sc-for>
+</sc-if>
+
+<sc-if value="{{hasNote}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner info" role="note" style="display: flex; gap: var(--space-3); padding: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-secondary)"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">{{noteTitle}}</span><span class="t-body c-sec">{{noteBody}}</span></div>
+</div>
+</sc-if>
+
+<sc-if value="{{hasEstimate}}" hint-placeholder-val="{{ false }}">
+<section data-kilo="Card: the estimate (flourish on arrival)" class="kl-card" aria-label="Calorie target, estimate" style="position: relative; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4)">
+<span aria-hidden="true" style="position: absolute; top: -20px; bottom: -20px; left: 0; width: 45%; background: var(--accent); opacity: 0; pointer-events: none; animation: kl-slash var(--duration-flourish) var(--ease-exit) 120ms both"></span>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<span class="t-bs c-sec">Calorie target</span>
+<span data-kilo="Badge accent" class="t-cap" style="height: 22px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 8px; border-radius: var(--radius-pill); background: var(--accent-muted); color: var(--accent-ink)">Estimate</span>
+</div>
+<div style="display: flex; align-items: baseline; gap: 6px"><span class="t-dn" style="animation: kl-flash var(--duration-chart) var(--ease-whip) 200ms both">{{est.kcal}}</span><span class="t-body c-sec">kcal a day</span></div>
+<sc-if value="{{est.plain}}" hint-placeholder-val="{{ true }}"><p class="t-body tab c-sec" style="margin: 0">{{est.rateLine}}</p></sc-if>
+<sc-if value="{{est.clamped}}" hint-placeholder-val="{{ false }}"><p data-kilo="Guardrail line" class="t-cap tab c-sec" style="display: flex; align-items: flex-start; gap: var(--space-2); margin: 0"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-secondary)"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg><span style="flex: 1">{{est.clampLine}}</span></p></sc-if>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2); margin-top: var(--space-2)">
+<sc-for list="{{est.tiles}}" as="t" hint-placeholder-count="3">
+<div style="display: flex; flex-direction: column; gap: 4px; padding: var(--space-2) var(--space-3); border-radius: var(--radius-medium); background: var(--surface-raised); animation: kl-cut-in var(--duration-standard) var(--ease-enter) {{t.delay}} both">
+<span class="t-bs tab">{{t.value}}</span>
+<span class="t-cap c-sec" style="display: flex; align-items: center; gap: 6px"><span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; border-radius: 2px; background: {{t.color}}"></span>{{t.label}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+<div data-kilo="GroupedList: ListRow (value)" class="kl-card" style="overflow: hidden">
+<div style="min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3)">
+<span style="flex: 1; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Estimated expenditure</span><span class="t-cap c-mut">The energy you use in a day</span></span>
+<span style="display: flex; align-items: baseline; gap: 3px"><span class="t-ns">{{est.tdee}}</span><span class="t-cap c-mut">kcal</span></span>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: var(--space-2)">
+<p class="t-cap c-sec" style="margin: 0">{{est.accuracy}}</p>
+<p class="t-cap c-mut" style="margin: 0">Ki-Lo's estimates and targets are not medical advice. Speak to a doctor before you make big changes to your diet or your weight.</p>
+</div>
+</sc-if>
+</main>
+
+<footer style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) var(--space-4) 42px; background: var(--surface-sheet); border-top: 1px solid var(--border)">
+<sc-if value="{{saveError}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner error, sentence only" role="alert" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--danger-muted); border: 1px solid var(--danger); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--danger)"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+<span class="t-body" style="flex: 1">Not saved. Check your connection and try again.</span>
+</div>
+</sc-if>
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" aria-disabled="{{ctaDisabled}}" aria-busy="{{ctaBusy}}" style="position: relative; width: 100%; height: var(--control-height-lg); opacity: {{ctaOpacity}}">
+<sc-if value="{{saving}}" hint-placeholder-val="{{ false }}"><span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg></span></sc-if>
+<span style="visibility: {{ctaVis}}">{{cta}}</span>
+</button>
+<sc-if value="{{escape}}" hint-placeholder-val="{{ false }}">
+<button data-kilo="Button ghost quiet md" type="button" class="kl-btn kl-ghost" style="width: 100%; margin-top: calc(-1 * var(--space-1)); color: var(--text-secondary)">I'll set my own targets</button>
+</sc-if>
+</footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["sex-first-run","sex-first-run-chosen","sex-recalculate","birth-date-valid","birth-date-under-13","birth-date-future","body-metric","body-imperial","body-prefilled","body-errors","activity","goal-default","goal-under-18","rate-lose","rate-gain","protein","diet","estimate-default","estimate-m6","estimate-floor","estimate-max-deficit","estimate-saving","estimate-save-error"],"default":"sex-first-run"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'sex-first-run';
+
+    // Every number on these boards comes from the engine rules (M6 build plan, Expenditure and Targets), worked in the canvas notes.
+    // BMR = 10 kg + 6.25 cm - 5 age + s (male +5, female -161, prefer not to say -78); TDEE = BMR x activity factor.
+    // Main sample: male, 35 (born 14 Mar 1991, today 23 Oct 2026), 180 cm, 80.0 kg, lightly active (1.375), lose 0.5% a week,
+    // moderate protein (1.6 g/kg), balanced (fat 0.40 of what is left after protein).
+    const opt = (title, desc, x) => Object.assign({ title, desc: desc || '', on: false, disabled: false, reason: '', badge: '', value: '', valueCap: '' }, x || {});
+    const card = (o) => ({
+      title: o.title,
+      hasDesc: !!o.desc, desc: o.desc,
+      hasReason: !!o.reason, reason: o.reason,
+      hasBadge: !!o.badge, badge: o.badge,
+      hasValue: !!o.value, value: o.value, valueCap: o.valueCap,
+      checked: o.on ? 'true' : 'false',
+      disabled: o.disabled ? 'true' : 'false',
+      bg: o.on ? 'var(--accent-muted)' : 'var(--surface)',
+      border: o.on ? 'var(--accent)' : 'var(--border)',
+      shadow: o.on ? 'inset 0 0 0 1px var(--accent)' : 'none',
+      ring: o.on ? 'var(--accent)' : 'var(--border-strong)',
+      dotBg: o.on ? 'var(--accent)' : 'transparent',
+      dot: o.on ? 'var(--accent-foreground)' : 'transparent',
+      dim: o.disabled ? '0.4' : '1'
+    });
+
+    const sexOptions = (chosen) => [
+      opt('Female', '', { on: chosen === 'female' }),
+      opt('Male', '', { on: chosen === 'male' }),
+      opt('Prefer not to say', 'Ki-Lo uses the average of the female and male estimates.', { on: chosen === 'other' })
+    ];
+    const sex = { step: 'sex', question: 'What is your sex?', helper: 'Ki-Lo uses it with your age, height and weight to estimate the energy you use each day.' };
+
+    const dob = { step: 'dob', question: 'When were you born?', helper: 'Your age is part of the estimate.' };
+    const body = { step: 'body', question: 'How tall are you, and what do you weigh?', helper: 'Your weight this morning, before you eat, is best.' };
+    const activity = {
+      step: 'activity', question: 'How active are you?', helper: 'Think of a normal week: your job, getting about and exercise.',
+      options: [
+        opt('Sedentary', 'Mostly sitting, with little or no exercise.'),
+        opt('Lightly active', 'Some walking, or exercise 1 to 3 days a week.', { on: true }),
+        opt('Moderately active', 'On your feet a lot, or exercise 3 to 5 days a week.'),
+        opt('Very active', 'A physical job, or hard exercise 6 or 7 days a week.'),
+        opt('Extra active', 'A physical job and daily training, or training twice a day.')
+      ]
+    };
+    const goalHelper = 'Your calorie target follows from this.';
+    const goalOptions = (under18) => [
+      under18
+        ? opt('Lose weight', '', { disabled: true, reason: 'Not offered under 18.' })
+        : opt('Lose weight', 'Eat a little less than you use.', { on: true }),
+      opt('Maintain weight', 'Eat about what you use.', { on: under18 }),
+      opt('Gain weight', 'Eat a little more than you use.')
+    ];
+    // Rates for 80.0 kg: pct / 100 x 80 = kg a week, to one decimal (0.08 shows as 0.1).
+    const rateLose = {
+      step: 'rate', question: 'How fast do you want to lose weight?', helper: 'As a share of your body weight each week. Slower is easier to keep up.',
+      options: [
+        opt('0.25% a week', 'Gentle, and easy to keep up.', { value: '0.2 kg', valueCap: 'a week' }),
+        opt('0.5% a week', 'A steady pace.', { on: true, badge: 'Suggested', value: '0.4 kg', valueCap: 'a week' }),
+        opt('0.75% a week', 'Faster, and harder to keep up.', { value: '0.6 kg', valueCap: 'a week' }),
+        opt('1.0% a week', 'The fastest Ki-Lo sets.', { value: '0.8 kg', valueCap: 'a week' })
+      ]
+    };
+    const rateGain = {
+      step: 'rate', question: 'How fast do you want to gain weight?', helper: 'As a share of your body weight each week. Slower gains add less fat.',
+      options: [
+        opt('0.1% a week', 'Slow, and adds the least fat.', { value: '0.1 kg', valueCap: 'a week' }),
+        opt('0.25% a week', 'A steady pace.', { on: true, badge: 'Suggested', value: '0.2 kg', valueCap: 'a week' }),
+        opt('0.5% a week', 'The fastest Ki-Lo sets.', { value: '0.4 kg', valueCap: 'a week' })
+      ]
+    };
+    // Protein: g/kg x 80.0 kg = 128, 160, 176 g a day.
+    const protein = {
+      step: 'protein', question: 'How much protein?', helper: 'Ki-Lo sets protein first, from your weight, then shares the rest between fat and carbohydrate.',
+      options: [
+        opt('Moderate', '1.6 g per kg of body weight. Enough for most people.', { on: true, value: '128 g', valueCap: 'a day' }),
+        opt('High', '2.0 g per kg. Suits regular strength training.', { value: '160 g', valueCap: 'a day' }),
+        opt('Very high', '2.2 g per kg. Helps keep muscle while you lose weight.', { value: '176 g', valueCap: 'a day' })
+      ]
+    };
+    const diet = {
+      step: 'diet', question: 'How do you like to eat?', helper: 'This splits the calories left after protein between fat and carbohydrate.',
+      options: [
+        opt('Balanced', 'A mix of both, as most people eat.', { on: true }),
+        opt('Low fat', 'More bread, rice, pasta and fruit. Less oil and butter.'),
+        opt('Low carb', 'More meat, fish, eggs, dairy and oils. Less bread and rice. Not keto.')
+      ]
+    };
+
+    const tiles = (p, c, f) => [
+      { value: p + ' g', label: 'Protein', color: 'var(--protein)', delay: '160ms' },
+      { value: c + ' g', label: 'Carbohydrate', color: 'var(--carbs)', delay: '196ms' },
+      { value: f + ' g', label: 'Fat', color: 'var(--fat)', delay: '232ms' }
+    ];
+    const accuracyNow = 'This is a starting estimate from your answers, and it can be out by a few hundred kcal a day. You can change these any time in Targets.';
+    const accuracyM6 = 'This is a starting estimate from your answers. Each week, Ki-Lo checks it against your weigh-ins and food log and adjusts your targets.';
+    // Default: BMR 1,755.0, TDEE 2,413.1; delta 0.005 x 80 x 7700 / 7 = 440, raw 1,973.1, rounded 1,970; P 128, F 64.8 -> 65, C 218.7 -> 219.
+    const estDefault = { kcal: '1,970', tdee: '2,413', plain: true, clamped: false, rateLine: 'To lose about 0.4 kg a week (0.5% of your weight).', clampLine: '', tiles: tiles(128, 219, 65), accuracy: accuracyNow };
+    // Floor: female, 30, 160 cm, 55.0 kg, sedentary, lose 1.0%. BMR 1,239, TDEE 1,486.8, raw 881.8; floor max(1200, 1115.1) = 1,200.
+    const estFloor = { kcal: '1,200', tdee: '1,487', plain: false, clamped: true, rateLine: '', clampLine: 'Raised to 1,200 kcal, the lowest target Ki-Lo sets for you. You would lose about 0.3 kg a week (0.47% of your weight), not 1.0%.', tiles: tiles(88, 127, 38), accuracy: accuracyNow };
+    // Max deficit: male, 40, 175 cm, 130.0 kg, moderately active, lose 1.0%. BMR 2,198.75, TDEE 3,408.1, raw 1,978.1; 70% of TDEE = 2,385.6 -> 2,390.
+    const estDeficit = { kcal: '2,390', tdee: '3,408', plain: false, clamped: true, rateLine: '', clampLine: 'Kept to a 30% deficit, the most Ki-Lo sets. You would lose about 0.9 kg a week (0.71% of your weight), not 1.0%.', tiles: tiles(208, 234, 69), accuracy: accuracyNow };
+    const estimate = { step: 'estimate', question: 'Your starting targets', helper: '' };
+
+    const dobFields = (d, m, y, bad) => [
+      { label: 'Day', value: d, ph: 'DD', aria: 'Day of birth', cls: bad ? 'kl-input kl-input-error' : 'kl-input' },
+      { label: 'Month', value: m, ph: 'MM', aria: 'Month of birth', cls: bad ? 'kl-input kl-input-error' : 'kl-input' },
+      { label: 'Year', value: y, ph: 'YYYY', aria: 'Year of birth', cls: bad ? 'kl-input kl-input-error' : 'kl-input' }
+    ];
+    const part = (value, unit, aria, error) => ({ value, unit, aria, invalid: error ? 'true' : 'false', cls: error ? 'kl-input kl-input-error' : 'kl-input' });
+    const field = (label, parts, x) => Object.assign({ label, parts, hasError: false, error: '', hasSource: false, source: '' }, x || {});
+    const metricFields = (h, w, x) => [
+      field('Height', [part(h, 'cm', 'Height in centimetres', x && x.hErr)], x && x.hErr ? { hasError: true, error: x.hErr } : {}),
+      field('Weight', [part(w, 'kg', 'Weight in kilograms', x && x.wErr)], x && x.wErr ? { hasError: true, error: x.wErr } : x && x.source ? { hasSource: true, source: x.source } : {})
+    ];
+    const imperialFields = [
+      field('Height', [part('5', 'ft', 'Height, feet'), part('11', 'in', 'Height, inches')]),
+      field('Weight', [part('176.4', 'lb', 'Weight in pounds')])
+    ];
+
+    const S = {
+      'sex-first-run': Object.assign({}, sex, { mode: 'first', options: sexOptions(null), invalid: true }),
+      'sex-first-run-chosen': Object.assign({}, sex, { mode: 'first', options: sexOptions('other') }),
+      'sex-recalculate': Object.assign({}, sex, { mode: 'recalc', options: sexOptions('male') }),
+      'birth-date-valid': Object.assign({}, dob, { dob: dobFields('14', '03', '1991'), age: 'You are 35.' }),
+      'birth-date-under-13': Object.assign({}, dob, { dob: dobFields('02', '06', '2015', true), error: 'You need to be 13 or over to use Ki-Lo.', invalid: true }),
+      'birth-date-future': Object.assign({}, dob, { dob: dobFields('12', '11', '2026', true), error: 'Enter a date before today.', invalid: true }),
+      'body-metric': Object.assign({}, body, { units: 'metric', fields: metricFields('180', '80.0') }),
+      'body-imperial': Object.assign({}, body, { units: 'imperial', fields: imperialFields }),
+      'body-prefilled': Object.assign({}, body, { units: 'metric', fields: metricFields('180', '80.0', { source: 'From your weigh-in on 21 Oct' }) }),
+      'body-errors': Object.assign({}, body, { units: 'metric', fields: metricFields('18', '4', { hErr: 'Enter a height between 100 and 250 cm.', wErr: 'Enter a weight between 20 and 400 kg.' }), invalid: true }),
+      'activity': activity,
+      'goal-default': { step: 'goal', question: 'What is your goal?', helper: goalHelper, options: goalOptions(false), note: ['Pregnant or breastfeeding?', 'Talk to a doctor, midwife or dietitian before you set a goal. Ki-Lo\'s estimates do not allow for pregnancy or breastfeeding.'] },
+      'goal-under-18': { step: 'goal', question: 'What is your goal?', helper: goalHelper, options: goalOptions(true), note: ['Talk to a health professional', 'If you are under 18 and want to lose weight, or you are pregnant or breastfeeding, talk to a doctor, midwife or dietitian first.'] },
+      'rate-lose': rateLose,
+      'rate-gain': rateGain,
+      'protein': protein,
+      'diet': diet,
+      'estimate-default': Object.assign({}, estimate, { est: estDefault }),
+      'estimate-m6': Object.assign({}, estimate, { est: Object.assign({}, estDefault, { accuracy: accuracyM6 }) }),
+      'estimate-floor': Object.assign({}, estimate, { est: estFloor }),
+      'estimate-max-deficit': Object.assign({}, estimate, { est: estDeficit }),
+      'estimate-saving': Object.assign({}, estimate, { est: estDefault, saving: true }),
+      'estimate-save-error': Object.assign({}, estimate, { est: estDefault, saveError: true })
+    };
+    const s = S[st] || S['sex-first-run'];
+    const mode = s.mode || 'first';
+
+    // Step numbers: 8 questions; Maintain skips the rate, making 7 (the total follows the goal chosen).
+    const STEPS = { sex: ['About you', 1], dob: ['About you', 2], body: ['About you', 3], activity: ['Activity', 4], goal: ['Goal', 5], rate: ['Goal', 6], protein: ['Macros', 7], diet: ['Macros', 8] };
+    const isEstimate = s.step === 'estimate';
+    const stepInfo = STEPS[s.step] || ['Your estimate', 8];
+    const total = s.step === 'goal' && st === 'goal-under-18' ? 7 : 8;
+    const n = stepInfo[1];
+    // The bar counts the estimate as the last place: step n of 8 fills n / 9, the estimate fills it.
+    const pct = isEstimate ? 100 : Math.round((n / (total + 1)) * 1000) / 10;
+    const firstStep = s.step === 'sex';
+    const est = s.est || estDefault;
+
+    return {
+      theme,
+      hasBack: !firstStep,
+      noBack: firstStep,
+      backDisabled: s.saving ? 'true' : 'false',
+      backOpacity: s.saving ? '0.4' : '1',
+      hasClose: mode === 'recalc',
+      noClose: mode !== 'recalc',
+      title: isEstimate ? 'Your estimate' : stepInfo[0],
+      hasStep: !isEstimate,
+      stepText: 'Step ' + n + ' of ' + total,
+      progressLabel: isEstimate ? 'Setup complete' : 'Step ' + n + ' of ' + total,
+      progressNow: String(Math.round(pct)),
+      progressWidth: pct + '%',
+      question: s.question,
+      hasHelper: !!s.helper,
+      helper: s.helper || '',
+      hasOptions: !!s.options,
+      options: (s.options || []).map(card),
+      hasDob: !!s.dob,
+      dob: s.dob || [],
+      dobInvalid: s.error ? 'true' : 'false',
+      hasDobError: !!s.error && !!s.dob,
+      dobError: s.error || '',
+      hasDobAge: !!s.age,
+      dobAge: s.age || '',
+      hasBody: !!s.fields,
+      units: [
+        { label: 'kg, cm', checked: s.units === 'imperial' ? 'false' : 'true', bg: s.units === 'imperial' ? 'transparent' : 'var(--text-primary)', fg: s.units === 'imperial' ? 'var(--text-secondary)' : 'var(--background)' },
+        { label: 'lb, ft, in', checked: s.units === 'imperial' ? 'true' : 'false', bg: s.units === 'imperial' ? 'var(--text-primary)' : 'transparent', fg: s.units === 'imperial' ? 'var(--background)' : 'var(--text-secondary)' }
+      ],
+      bodyFields: s.fields || [],
+      hasNote: !!s.note,
+      noteTitle: s.note ? s.note[0] : '',
+      noteBody: s.note ? s.note[1] : '',
+      hasEstimate: isEstimate,
+      est,
+      saveError: !!s.saveError,
+      saving: !!s.saving,
+      cta: isEstimate ? 'Start' : 'Continue',
+      ctaDisabled: s.invalid || s.saving ? 'true' : 'false',
+      ctaBusy: s.saving ? 'true' : 'false',
+      ctaOpacity: s.invalid ? '0.4' : '1',
+      ctaVis: s.saving ? 'hidden' : 'visible',
+      escape: firstStep && mode === 'first',
+      noop: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>
