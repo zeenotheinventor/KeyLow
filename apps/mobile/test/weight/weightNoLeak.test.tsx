@@ -1,6 +1,8 @@
+import "../support/gestureHandler";
+
 import { KeyLowProvider } from "@keylow/api-client";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
-import { render, screen, waitFor } from "@testing-library/react-native";
+import { render, screen, userEvent, waitFor } from "@testing-library/react-native";
 
 import { WeightScreen } from "../../components/WeightScreen";
 import { ThemeProvider } from "../../lib/theme";
@@ -102,6 +104,36 @@ describe("the Weight screen's console output", () => {
 
     expect(screen.getByLabelText(/^Today, 07:42/)).toBeOnTheScreen();
     expectNothingPrivateWritten();
+  });
+
+  it("should hold no weight, date or trend value while the trend card and the chart draw, on every range", async () => {
+    const user = userEvent.setup();
+    const today = toLocalDate(new Date(), "Europe/London");
+    weightBackend.weighIns = [
+      weighInRow({ localDate: today, utcTime: "07:42", weightKg: 81.6, timeZone: "UTC" }),
+      weighInRow({
+        localDate: addCalendarDays(today, -1),
+        utcTime: "07:50",
+        weightKg: 81.9,
+        timeZone: "UTC",
+      }),
+      weighInRow({ localDate: "2026-10-10", utcTime: "08:00", weightKg: 99, timeZone: "UTC" }),
+    ];
+    await renderWeightScreen();
+    await screen.findByLabelText("Trend weight");
+
+    for (const range of ["1 week", "30 days", "1 year", "90 days"]) {
+      await user.press(screen.getByRole("radio", { name: range }));
+    }
+
+    expect(
+      screen.getByRole("image", { name: /^Weight over the last 90 days, trend / }),
+    ).toBeOnTheScreen();
+    expectNothingPrivateWritten();
+    const text = written.join("\n");
+    for (const secret of [today, addCalendarDays(today, -1), "2026-10-10", "81.", "99"]) {
+      expect(text).not.toContain(secret);
+    }
   });
 
   it("should hold no weight, note or time when the read fails, though the database quotes a weight", async () => {

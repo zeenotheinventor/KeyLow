@@ -84,6 +84,39 @@ describe("inline style", () => {
     ]);
   });
 
+  it.each(["stroke", "fill"])(
+    "should allow style=%s, which is a Skia paint style and not a React Native style",
+    (paintStyle) => {
+      expect(
+        rulesFound(mobileFile, `export const a = <Scatter style="${paintStyle}" radius={3} />;`),
+      ).toEqual([]);
+    },
+  );
+
+  it("should flag a style that is a word other than a Skia paint style", () => {
+    expect(rulesFound(mobileFile, `export const a = <View style="stroked" />;`)).toEqual([
+      "inline-style",
+    ]);
+  });
+
+  it("should flag a template literal or an expression in place of a paint style word", () => {
+    expect(rulesFound(mobileFile, "export const a = <Scatter style={`stroke`} />;")).toEqual([
+      "inline-style",
+    ]);
+    expect(
+      rulesFound(mobileFile, `export const a = <Scatter style={isRing ? "stroke" : "fill"} />;`),
+    ).toEqual(["inline-style"]);
+  });
+
+  it("should still flag an object, an array and a variable beside a paint style", () => {
+    expect(
+      rulesFound(
+        mobileFile,
+        `export const a = <><View style={{ flex: 1 }} /><View style={[a]} /><View style={someObject} /><Scatter style="stroke" /></>;`,
+      ),
+    ).toEqual(["inline-style", "inline-style", "inline-style"]);
+  });
+
   it("should flag an object literal on an animated view", () => {
     expect(
       rulesFound(mobileFile, `export const a = <Animated.View style={{ opacity: 1 }} />;`),

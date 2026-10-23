@@ -1,3 +1,5 @@
+import "../support/gestureHandler";
+
 import { KeyLowProvider } from "@keylow/api-client";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
 import { render, screen } from "@testing-library/react-native";
@@ -83,8 +85,10 @@ function drawingsIn(row: Instance) {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView" && isInside(node, row)) ?? [];
 }
 
+// A row ends in its weight after a comma. The trend card's chart is named "..., trend 81.9 kg", which is not a row.
+const rowLabel = /, \d+\.\d kg$/;
 const rowNames = () =>
-  screen.getAllByLabelText(/ kg$/).map((row) => String(row.props["aria-label"]));
+  screen.getAllByLabelText(rowLabel).map((row) => String(row.props["aria-label"]));
 
 describe("the Weight screen's list", () => {
   beforeEach(() => {
@@ -128,7 +132,7 @@ describe("the Weight screen's list", () => {
     await renderWeightScreen();
     await screen.findByRole("heading", { name: "Weigh-ins" });
 
-    const rows = screen.getAllByLabelText(/ kg$/);
+    const rows = screen.getAllByLabelText(rowLabel);
 
     expect(rows.length).toBeGreaterThan(0);
     for (const row of rows) {

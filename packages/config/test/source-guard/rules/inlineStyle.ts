@@ -61,6 +61,8 @@ const tagNameOf = (attribute: ts.JsxAttribute): string => {
   return element.tagName.getText();
 };
 
+const SKIA_PAINT_STYLES = new Set(["fill", "stroke"]);
+
 // The value of a JSX `style` attribute is allowed when it is one of these, and flagged otherwise:
 //  1. CSS custom properties, through `vars({...})` or an object literal of `--names`. A class reads
 //     the property, as in `pt-[var(--inset-top)]`, so the value is runtime but the styling is a class.
@@ -68,8 +70,14 @@ const tagNameOf = (attribute: ts.JsxAttribute): string => {
 //     an element, and the style comes from a hook such as `useAnimatedStyle`, never from a literal.
 //  3. The status bar's `style`, which is the word `light` or `dark` and not a CSS style.
 //  4. A variable set from `vars(...)` in the same file (the theme provider's scheme variables).
+//  5. The word `fill` or `stroke` as a string literal. Skia's paint (and Victory's `Scatter` on top of it)
+//     takes its paint style by that name, so it is a drawing mode and not a React Native style. Only those
+//     two words as a plain string pass: `style="color: red"`, a template literal and any expression flag.
 function isAllowedStyleValue(attribute: ts.JsxAttribute, sourceFile: ts.SourceFile): boolean {
   const initializer = attribute.initializer;
+  if (initializer !== undefined && ts.isStringLiteral(initializer)) {
+    return SKIA_PAINT_STYLES.has(initializer.text);
+  }
   if (initializer === undefined || !ts.isJsxExpression(initializer) || !initializer.expression) {
     return false;
   }
