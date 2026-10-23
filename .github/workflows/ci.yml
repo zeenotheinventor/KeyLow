@@ -350,11 +350,20 @@ jobs:
   # under tools/ (the list generator is there) runs it, and then the whole app is checked. The tasks run
   # with --only, so the packages the app depends on are not linted and type-checked again, `core` does
   # that.
+  # The mobile tests were the long pole of every full run (about ten minutes, lint and type-check
+  # included, on one runner), so the job runs as four parallel legs: "static" lints, type-checks and
+  # runs Expo doctor, and the other three each run a third of the Jest files (`--shard`, split by file).
+  # `checks` needs `mobile`, which waits for every leg, so the required check is unchanged.
   mobile:
+    name: mobile (${{ matrix.part }})
     needs: scope
     if: needs.scope.outputs.mobile == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        part: [static, 1/3, 2/3, 3/3]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -364,30 +373,36 @@ jobs:
       # and Expo files with Babel, and it took 46 seconds on a runner. Its cache is keyed by file content and
       # transformer config, so restoring one from a near miss is safe: stale entries are never read.
       # The path is the cacheDirectory in apps/mobile/jest.config.js. Pull requests only restore it,
-      # and the step that saves it runs on a push to main (see the header).
+      # and the step that saves it runs on a push to main (see the header). Each shard transforms a
+      # different third of the files, so each keeps its own cache (the leg's index is in the key).
       - name: Restore the mobile Jest cache
         id: jest-cache
+        if: matrix.part != 'static'
         uses: actions/cache/restore@v6
         with:
           path: apps/mobile/node_modules/.cache/jest
-          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
-          restore-keys: jest-${{ runner.os }}-
+          key: jest-${{ runner.os }}-shard${{ strategy.job-index }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
+          restore-keys: jest-${{ runner.os }}-shard${{ strategy.job-index }}-
       # The app's lint, type-check and tests read generated files that are not committed (the kit barrel,
       # the icon map and the story index of Storybook). Turbo writes them before those tasks, but --only
-      # skips every task but the three named, so the generator runs first on its own. It needs Node 22.6
+      # skips every task but the ones named, so the generator runs first on its own. It needs Node 22.6
       # or newer (.nvmrc is 22) and the installed mobile dependencies.
       - name: Write the generated lists
         run: pnpm generate:lists
-      - name: Lint, type-check and test the app
-        run: pnpm turbo run lint typecheck test --filter=@keylow/mobile --only
+      - name: Lint and type-check the app
+        if: matrix.part == 'static'
+        run: pnpm turbo run lint typecheck --filter=@keylow/mobile --only
+      - name: Test the app (shard ${{ matrix.part }})
+        if: matrix.part != 'static'
+        run: pnpm turbo run test --filter=@keylow/mobile --only -- --shard=${{ matrix.part }}
       # Saved after the tests, which is what fills the Jest cache. Only a push to main saves, and only
       # on a miss of the exact key.
       - name: Save the mobile Jest cache
-        if: github.event_name == 'push' && steps.jest-cache.outputs.cache-hit != 'true'
+        if: matrix.part != 'static' && github.event_name == 'push' && steps.jest-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v6
         with:
           path: apps/mobile/node_modules/.cache/jest
-          key: jest-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
+          key: jest-${{ runner.os }}-shard${{ strategy.job-index }}-${{ hashFiles('pnpm-lock.yaml', 'apps/mobile/babel.config.js', 'apps/mobile/jest.config.js') }}
       # Some doctor checks call the Expo API. A run where every failure is a network error is
       # downgraded to a warning, so an Expo outage does not block merges.
       # Expo patch releases are installed in a batch, when a native build is being made anyway, because
@@ -396,6 +411,7 @@ jobs:
       # warning annotation. Every other failure, a minor or major mismatch included, fails the step, and so
       # does a report the script cannot read.
       - name: Check the Expo project health
+        if: matrix.part == 'static'
         working-directory: apps/mobile
         env:
           EXPO_DOCTOR_WARN_ON_NETWORK_ERRORS: "true"
