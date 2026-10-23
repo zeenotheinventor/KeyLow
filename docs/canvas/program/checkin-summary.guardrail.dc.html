@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>checkin-summary: guardrail</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6e06207071883255ccbdf89333df3876">
+<link rel="stylesheet" href="/_blob/90e3afd83792749ff685abba2a03b9cc">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 2540px; height: 1328px; display: flex; align-items: flex-start; gap: 40px; background: #565C66; font-family: 'Geist', system-ui, sans-serif">
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Dark · step capped and max deficit (scrolled)</span>
+<dc-import name="ProgramScreen" screen-state="summary-guardrail-step" theme="dark" hint-size="390px,844px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Light · step capped and max deficit (scrolled)</span>
+<dc-import name="ProgramScreen" screen-state="summary-guardrail-step" theme="light" hint-size="390px,844px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Dark · floor above expenditure (scrolled)</span>
+<dc-import name="ProgramScreen" screen-state="summary-guardrail-floor" theme="dark" hint-size="390px,844px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Light · floor above expenditure (scrolled)</span>
+<dc-import name="ProgramScreen" screen-state="summary-guardrail-floor" theme="light" hint-size="390px,844px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Dark · every guardrail and reason line</span>
+<dc-import name="ProgramKit" section="lines" theme="dark" hint-size="390px,1300px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Light · every guardrail and reason line</span>
+<dc-import name="ProgramKit" section="lines" theme="light" hint-size="390px,1300px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2540,"height":1328}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

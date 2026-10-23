@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>More, with the Programme row</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6e06207071883255ccbdf89333df3876">
+<link rel="stylesheet" href="/_blob/90e3afd83792749ff685abba2a03b9cc">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="MoreScreen" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+<header data-kilo="ScreenHeader" style="flex-shrink: 0; padding: 56px var(--space-4) var(--space-3)"><h1 class="t-h1" style="margin: 0">More</h1></header>
+<div style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-1) var(--space-4) var(--space-4)">
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="5">
+<section aria-label="{{sec.title}}" style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2)">
+<h2 class="t-bs" style="margin: 0; padding: 0 var(--space-1)">{{sec.title}}</h2>
+<div data-kilo="GroupedList" class="kl-card" style="overflow: hidden">
+<sc-for list="{{sec.rows}}" as="r" hint-placeholder-count="1">
+<div data-kilo="{{r.kilo}}" role="button" aria-label="{{r.aria}}" style="min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-top: {{r.divider}}; outline: {{r.outline}}; outline-offset: -3px; border-radius: {{r.radius}}">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)">
+<sc-if value="{{r.iTarget}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></sc-if>
+<sc-if value="{{r.iChart}}" hint-placeholder-val="{{ false }}"><svg data-kilo="Icon ChartLine (add to the icon map)" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></sc-if>
+<sc-if value="{{r.iApple}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.94c1.5 0 2.75 1.06 4 1.06 3 0 6-8 6-12.22A4.91 4.91 0 0 0 17 5c-2.22 0-4 1.44-5 2-1-.56-2.78-2-5-2a4.9 4.9 0 0 0-5 4.78C2 14 5 22 8 22c1.25 0 2.5-1.06 4-1.06Z"></path><path d="M10 2c1 .5 2 2 2 5"></path></svg></sc-if>
+<sc-if value="{{r.iScale}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="m2 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1Z"></path><path d="M7 21h10"></path><path d="M12 3v18"></path><path d="M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"></path></svg></sc-if>
+<sc-if value="{{r.iMoon}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8a2.83 2.83 0 0 0 4 4 4 4 0 1 1-4-4"></path><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.9 4.9 1.4 1.4"></path><path d="m17.7 17.7 1.4 1.4"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.3 17.7-1.4 1.4"></path><path d="m19.1 4.9-1.4 1.4"></path></svg></sc-if>
+<sc-if value="{{r.iClock}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></sc-if>
+<sc-if value="{{r.iInfo}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg></sc-if>
+<sc-if value="{{r.iOut}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg></sc-if>
+</span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">{{r.title}}</span><sc-if value="{{r.hasSub}}" hint-placeholder-val="{{ false }}"><span class="t-cap tab c-mut">{{r.sub}}</span></sc-if></span>
+<sc-if value="{{r.hasValue}}" hint-placeholder-val="{{ false }}"><span class="t-body tab c-sec">{{r.value}}</span></sc-if>
+<sc-if value="{{r.chevron}}" hint-placeholder-val="{{ true }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg></sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+</div>
+
+<nav data-kilo="TabBar" aria-label="Main" style="flex-shrink: 0; position: relative; height: 83px; box-sizing: border-box; padding-bottom: 34px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border)">
+<span aria-hidden="true" style="position: absolute; top: -1px; left: 80%; width: 20%; height: 2px; display: flex; justify-content: center"><span style="width: 28px; height: 2px; border-radius: 1px; background: var(--accent); transform: skewX(-20deg)"></span></span>
+<a href="#dashboard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</a>
+<a href="#diary" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Diary</a>
+<div style="display: flex; align-items: center; justify-content: center"><button type="button" aria-label="Find food" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--accent); border: 0; border-radius: var(--radius-pill); color: var(--accent-foreground)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button></div>
+<a href="#recipes" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"></path><path d="M6 17h12"></path></svg>Recipes</a>
+<a href="#more" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--accent-ink); font-size: 10px; line-height: 12px; font-weight: 600"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>More</a>
+</nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["with-programme","no-programme"],"default":"with-programme"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const on = (this.props.screenState ?? 'with-programme') === 'with-programme';
+    // The More screen as built on main (MoreRoute: Food, Nutrition, Body, Settings, Account), with the new Programme row
+    // in Nutrition under Targets. With a programme: the golden fixture after its third check-in (target 2,140, next check-in Fri 30 Oct).
+    // Without one: the M3 sample's own targets, 2,200 kcal.
+    const icons = { iTarget: false, iChart: false, iApple: false, iScale: false, iMoon: false, iClock: false, iInfo: false, iOut: false };
+    const row = (o, i) => Object.assign({}, icons, { kilo: 'ListRow', divider: i ? '1px solid var(--border)' : '0', hasSub: !!o.sub, hasValue: !!o.value, chevron: o.chevron !== false, outline: o.isNew ? '2px dashed var(--accent)' : 'none', radius: o.isNew ? 'var(--radius-large)' : '0', aria: [o.title, o.sub, o.value].filter(Boolean).join(', ') }, o);
+    const sections = [
+      { title: 'Food', rows: [row({ iApple: true, title: 'Your foods', sub: 'Foods you created or copied' }, 0)] },
+      { title: 'Nutrition', rows: [
+        row({ iTarget: true, title: 'Targets', sub: on ? 'From your programme' : 'Set by you', value: on ? '2,140 kcal' : '2,200 kcal' }, 0),
+        row({ iChart: true, title: 'Programme', sub: on ? 'Next check-in Fri 30 Oct' : 'Let Ki-Lo set your targets', isNew: true, kilo: 'ListRow (new row)' }, 1)
+      ] },
+      { title: 'Body', rows: [row({ iScale: true, title: 'Weight' }, 0)] },
+      { title: 'Settings', rows: [row({ iMoon: true, title: 'Appearance', value: theme === 'light' ? 'Light' : 'Dark' }, 0), row({ iClock: true, title: 'Reminders' }, 1), row({ iInfo: true, title: 'About' }, 2)] },
+      { title: 'Account', rows: [row({ iOut: true, title: 'Sign out', chevron: false }, 0)] }
+    ];
+    return { theme, sections };
+  }
+}
+</script>
+</body>
+</html>

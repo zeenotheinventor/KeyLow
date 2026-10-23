@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Expenditure chart card: LineChart with a band</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6e06207071883255ccbdf89333df3876">
+<link rel="stylesheet" href="/_blob/90e3afd83792749ff685abba2a03b9cc">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="ExpenditureChartCard" style="position: relative; width: 390px; height: 420px; box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-4); overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+<span class="t-cap c-mut">{{caption}}</span>
+<section data-kilo="ExpenditureChartCard (new): Card + LineChart with band" class="kl-card" style="flex-shrink: 0; padding: var(--space-4)">
+
+<sc-if value="{{hasChart}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="LineChart (band and legend: proposed extension)" role="img" aria-label="{{ch.summary}}" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<div style="display: flex; align-items: baseline; gap: var(--space-2)"><span class="t-cap c-sec">{{label}}</span><span class="t-cap c-mut">{{unit}}</span></div>
+<div style="display: flex">
+<div aria-hidden="true" style="width: 48px; height: 160px; flex-shrink: 0; box-sizing: border-box; display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between; padding-right: var(--space-2)">
+<sc-for list="{{ch.ticks}}" as="t" hint-placeholder-count="3"><span class="t-cap tab c-mut">{{t}}</span></sc-for>
+</div>
+<svg aria-hidden="true" width="276" height="160" viewBox="0 0 276 160" style="display: block; flex-shrink: 0">
+<path d="M0 8.5H276M0 80.5H276" fill="none" stroke="var(--chart-grid)" stroke-width="1"></path>
+<path d="M0 151.5H276" fill="none" stroke="var(--chart-axis)" stroke-width="1"></path>
+<path d="{{ch.band}}" fill="var(--chart-band)" stroke="none"></path>
+<path d="{{ch.line}}" fill="none" stroke="var(--chart-trend)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+<path d="{{ch.pts}}" fill="var(--chart-point)" stroke="none"></path>
+<path d="{{ch.marker}}" fill="var(--chart-marker)" stroke="none"></path>
+</svg>
+</div>
+<div aria-hidden="true" style="display: flex; height: 16px">
+<span style="width: 48px; flex-shrink: 0"></span>
+<div style="width: 276px; box-sizing: border-box; display: flex; padding: 0 4px">
+<sc-for list="{{ch.weeks}}" as="w" hint-placeholder-count="5"><span style="flex: 1; position: relative"><span class="t-cap c-mut" style="position: absolute; left: 50%; width: 56px; margin-left: -28px; text-align: center; white-space: nowrap">{{w}}</span></span></sc-for>
+</div>
+</div>
+<sc-if value="{{hasLegend}}" hint-placeholder-val="{{ true }}">
+<div aria-hidden="true" class="t-cap c-sec" style="display: flex; gap: var(--space-4); padding-left: 48px">
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 2px; border-radius: 1px; background: var(--chart-trend)"></span>Estimate</span>
+<span style="display: flex; align-items: center; gap: 6px"><span style="width: 14px; height: 10px; border-radius: 2px; background: var(--chart-band); box-shadow: inset 0 0 0 1px var(--chart-axis)"></span>Likely range</span>
+</div>
+</sc-if>
+<p class="t-cap tab c-sec" style="margin: 0">{{ch.summary}}</p>
+</div>
+</sc-if>
+
+<sc-if value="{{empty}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="EmptyState (inside the card)" style="display: flex; flex-direction: column; align-items: center; gap: var(--space-2); padding: var(--space-4) var(--space-2); text-align: center">
+<span class="t-cap c-sec" style="align-self: flex-start">Expenditure by week</span>
+<span aria-hidden="true" style="width: 48px; height: 48px; margin-top: var(--space-4); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--surface-raised); color: var(--text-muted)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span>
+<h3 class="t-bs" style="margin: 0">No estimates yet</h3>
+<p class="t-cap c-sec" style="margin: 0 0 var(--space-4)">Your expenditure shows here week by week, starting from your setup answers.</p>
+</div>
+</sc-if>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"chartState":{"editor":"enum","options":["default","few-points","one-point","empty","gap","no-band"],"default":"default"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":420}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.chartState ?? 'default';
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const fmt10 = (n) => (Math.round(n / 10) * 10).toLocaleString('en-GB');
+    const r2 = (x) => Math.round(x * 100) / 100;
+    const circle = (x, y, r) => 'M' + r2(x - r) + ' ' + y + 'a' + r + ' ' + r + ' 0 1 0 ' + (2 * r) + ' 0a' + r + ' ' + r + ' 0 1 0 ' + (-2 * r) + ' 0';
+    // The same plot as ProgramScreen: LineChart's rules plus the proposed band (see the notes on program: components).
+    const plot = (series, summary) => {
+      const W = 276, H = 160, IX = 4, IY = 8;
+      const all = [];
+      series.forEach((p) => { if (p.v !== null) { all.push(p.v); if (p.lo != null) all.push(p.lo, p.hi); } });
+      let min = Math.min(...all), max = Math.max(...all);
+      if (min === max) { min -= 1; max += 1; }
+      const n = series.length, aw = W - 2 * IX, ah = H - 2 * IY;
+      const X = (i) => r2(IX + ((i + 0.5) / n) * aw);
+      const Y = (v) => r2(IY + (1 - (v - min) / (max - min)) * ah);
+      let line = '', band = '', pts = '', marker = '', run = [], latest = -1;
+      series.forEach((p, i) => { if (p.v !== null) latest = i; });
+      const flush = () => {
+        if (run.length >= 2) {
+          line += run.map((i, k) => (k ? 'L' : 'M') + X(i) + ' ' + Y(series[i].v)).join(' ') + ' ';
+          if (series[run[0]].lo != null) band += run.map((i, k) => (k ? 'L' : 'M') + X(i) + ' ' + Y(series[i].hi)).join(' ') + ' ' + run.slice().reverse().map((i) => 'L' + X(i) + ' ' + Y(series[i].lo)).join(' ') + ' Z ';
+        } else if (run.length === 1 && series[run[0]].lo != null) {
+          const i = run[0];
+          band += 'M' + r2(X(i) - 6) + ' ' + Y(series[i].hi) + 'H' + r2(X(i) + 6) + 'V' + Y(series[i].lo) + 'H' + r2(X(i) - 6) + 'Z ';
+        }
+        run = [];
+      };
+      series.forEach((p, i) => { if (p.v === null) flush(); else run.push(i); });
+      flush();
+      series.forEach((p, i) => { if (p.v === null) return; if (i === latest) marker = circle(X(i), Y(p.v), 4); else pts += circle(X(i), Y(p.v), 2.5) + ' '; });
+      const step = Math.max(1, Math.ceil(n / 4));
+      const lab = new Set();
+      for (let i = n - 1; i >= 0; i -= step) lab.add(i);
+      const wk = (iso) => { const parts = iso.split('-').map(Number); return parts[2] + ' ' + MON[parts[1] - 1]; };
+      return { line, band, pts, marker, ticks: [max, (min + max) / 2, min].map(fmt10), weeks: series.map((p, i) => (lab.has(i) ? wk(p.week) : '')), summary };
+    };
+    const golden = [
+      { week: '2026-09-21', v: 2500, lo: 2019.4, hi: 2980.6 },
+      { week: '2026-09-28', v: 2500, lo: 2019.4, hi: 2980.6 },
+      { week: '2026-10-05', v: 2559.56, lo: 2291.43, hi: 2827.69 },
+      { week: '2026-10-12', v: 2574.22, lo: 2388.77, hi: 2759.67 },
+      { week: '2026-10-19', v: 2579.54, lo: 2430.91, hi: 2728.17 }
+    ];
+    const start = { v: 2413.125, lo: 1949.23, hi: 2877.02 };
+    const S = {
+      default: { caption: 'Golden fixture, after the third check-in (Friday 23 October)', ch: plot(golden, 'Estimated expenditure over 5 weeks: 2,500 kcal a day in the week of 21 September, 2,580 now, likely 2,430 to 2,730.') },
+      'few-points': { caption: 'Settling, second week (Wednesday 28 October): two points', ch: plot([Object.assign({ week: '2026-10-19' }, start), Object.assign({ week: '2026-10-26' }, start)], 'Estimated expenditure over 2 weeks: 2,413 kcal a day, a starting estimate from your answers, likely 1,950 to 2,880.') },
+      'one-point': { caption: 'Settling, first week (Saturday 24 October): one point', ch: plot([Object.assign({ week: '2026-10-19' }, start)], 'Estimated expenditure this week: 2,413 kcal a day, a starting estimate from your answers, likely 1,950 to 2,880.') },
+      empty: { caption: 'No snapshot yet', empty: true },
+      gap: { caption: 'Component state: a week with no value breaks the line and the band', ch: plot([golden[0], golden[1], golden[2], { week: '2026-10-12', v: null }, golden[4]], 'Estimated expenditure over 5 weeks: 2,500 kcal a day in the week of 21 September, 2,580 now, likely 2,430 to 2,730.') },
+      'no-band': { caption: 'Component state: without band, LineChart as built (no legend)', noLegend: true, label: 'Barbell row', ch: plot([
+        { week: '2026-09-21', v: 60 }, { week: '2026-09-28', v: 62.5 }, { week: '2026-10-05', v: 62.5 }, { week: '2026-10-12', v: 65 }, { week: '2026-10-19', v: 67.5 }
+      ], 'Barbell row, best set by week: from 60 kg to 67.5 kg over 5 weeks.') }
+    };
+    const s = S[st] || S.default;
+    // The no-band specimen shows weights, so its ticks keep LineChart's default formatter (one decimal, no separator).
+    if (st === 'no-band') s.ch.ticks = ['67.5', '63.8', '60'];
+    return {
+      theme,
+      caption: s.caption,
+      label: s.label || 'Expenditure by week',
+      unit: s.label ? 'kg' : 'kcal a day',
+      hasChart: !s.empty,
+      empty: !!s.empty,
+      hasLegend: !s.noLegend,
+      ch: s.ch || { line: '', band: '', pts: '', marker: '', ticks: [], weeks: [], summary: '' }
+    };
+  }
+}
+</script>
+</body>
+</html>
