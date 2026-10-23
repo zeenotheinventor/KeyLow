@@ -254,6 +254,110 @@ describe("the CoFID portions migration, applied to a database that has the veget
   });
 });
 
+// KEY-525, the bakery, dairy and eggs batch. The expected rows are the FoodData Central rows the portions file cites.
+const bakeryDairyEggsBatchCodes = [
+  "11-541", // English muffin
+  "11-542", // English muffin, toasted
+  "11-822", // rye crispbread
+  "11-925", // wheat tortilla
+  "11-970", // bagel
+  "11-988", // croissant
+  "12-493", // Emmental slice
+  "12-527", // processed cheese slice
+  "12-815", // quail egg
+  "12-816", // turkey egg
+  "12-920", // duck egg
+] as const;
+const bagelCode = "11-970";
+const croissantCode = "11-988";
+const tortillaCode = "11-925";
+const eggCodes = ["12-815", "12-816", "12-920"] as const;
+
+describe("the CoFID portions migration, applied to a database that has the bakery, cheese and eggs but no portions for them", () => {
+  it("should give bagels small, medium and large, with medium the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([bagelCode])}\n${migrationSql}\n${listPortionsOf([bagelCode])}`,
+    );
+
+    expect(lines).toEqual([
+      "11-970|1 small bagel|69|f|0",
+      "11-970|1 medium bagel|105|t|1",
+      "11-970|1 large bagel|131|f|2",
+    ]);
+  });
+
+  it("should give croissants small, medium and large, with medium the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([croissantCode])}\n${migrationSql}\n${listPortionsOf([croissantCode])}`,
+    );
+
+    expect(lines).toEqual([
+      "11-988|1 small croissant|42|f|0",
+      "11-988|1 medium croissant|57|t|1",
+      "11-988|1 large croissant|67|f|2",
+    ]);
+  });
+
+  it("should give tortillas three diameters, with the 7 to 8 inch the default", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf([tortillaCode])}\n${migrationSql}\n${listPortionsOf([tortillaCode])}`,
+    );
+
+    expect(lines).toEqual([
+      "11-925|1 tortilla, 6 inch|30|f|0",
+      "11-925|1 tortilla, 7 to 8 inch|49|t|1",
+      "11-925|1 tortilla, 10 inch|72|f|2",
+    ]);
+  });
+
+  it("should give quail, turkey and duck eggs one egg each", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(eggCodes)}\n${migrationSql}\n${listPortionsOf(eggCodes)}`,
+    );
+
+    expect(lines).toEqual(["12-815|1 egg|9|t|0", "12-816|1 egg|79|t|0", "12-920|1 egg|70|t|0"]);
+  });
+
+  it("should give the single-portion foods the weights the FoodData Central rows cite", () => {
+    const singlePortionCodes = ["11-541", "11-542", "11-822", "12-493", "12-527"] as const;
+    const lines = runRolledBack(
+      `${deletePortionsOf(singlePortionCodes)}\n${migrationSql}\n${listPortionsOf(singlePortionCodes)}`,
+    );
+
+    expect(lines).toEqual([
+      "11-541|1 muffin|57|t|0",
+      "11-542|1 muffin|52|t|0",
+      "11-822|1 crispbread|11|t|0",
+      "12-493|1 slice|28|t|0",
+      "12-527|1 slice|21|t|0",
+    ]);
+  });
+
+  it("should leave every new food with exactly one default portion", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(bakeryDairyEggsBatchCodes)}\n${migrationSql}\nselect food.source_ref, count(*) filter (where portion.is_default) ${sharedPortionsOf(bakeryDairyEggsBatchCodes)} group by food.source_ref order by food.source_ref;`,
+    );
+
+    expect(lines).toEqual(bakeryDairyEggsBatchCodes.map((code) => `${code}|1`));
+  });
+
+  it("should change nothing when its SQL is applied a second time", () => {
+    const lines = runRolledBack(
+      [
+        deletePortionsOf(bakeryDairyEggsBatchCodes),
+        migrationSql,
+        fingerprintOf(bakeryDairyEggsBatchCodes),
+        migrationSql,
+        fingerprintOf(bakeryDairyEggsBatchCodes),
+      ].join("\n"),
+    );
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toMatch(/^0\|/);
+    expect(lines[1]).toBe(lines[0]);
+  });
+});
+
 // Each test applies the migration once first, so there are portions to change before it runs again.
 describe("the CoFID portions migration, applied again to portions that differ from the file", () => {
   it("should correct a weight and a label under the same id", () => {

@@ -5,6 +5,8 @@
 # foods that are missing a macro (suspect), so the review gate can be demoed offline.
 # 13-669 is left out on purpose: the workbook gives that code to two foods (see VERIFICATION.md).
 11-450 # Pasta, plain, fresh, boiled
+11-541 # Muffins, English style, white
+11-542 # Muffins, English style, white, toasted
 11-716 # Pasta, white, dried, raw
 11-718 # Pasta, wholewheat, spaghetti, dried, raw
 11-722 # Pasta, white, spaghetti, dried, boiled in unsalted water
@@ -12,6 +14,7 @@
 11-742 # Breakfast cereal, cornflakes, fortified
 11-788 # Porridge oats, unfortified
 11-789 # Porridge oats, unfortified, cooked, made up with semi-skimmed milk
+11-822 # Crispbread, rye
 11-823 # Oatcakes, plain, retail
 11-857 # Rice, white, basmati, raw
 11-858 # Rice, white, basmati, boiled in unsalted water
@@ -26,9 +29,11 @@
 11-886 # Flour, wheat, white, plain, soft
 11-889 # Flour, wheat, wholemeal
 11-923 # Bread, white, crusty bloomer, unsliced, fresh, large
+11-925 # Tortilla, wheat, soft
 11-947 # Bread, seeded
 11-968 # Rice, pilau, plain, homemade
 11-969 # Bread, ciabatta
+11-970 # Bagels, plain
 11-971 # Bread, brown, average
 11-972 # Bread, malted wheat
 11-973 # Bread, naan, retail
@@ -36,6 +41,7 @@
 11-980 # Bread, white, sliced
 11-981 # Bread, wholemeal, average
 11-982 # Bread, wholemeal, toasted
+11-988 # Croissants
 11-1001 # Bread, white, toasted
 11-1029 # Banana bread, homemade
 11-1106 # Porridge, made with milk and water
@@ -79,6 +85,9 @@
 12-554 # Milk, skimmed, UHT
 12-555 # Yogurt, Greek style, plain
 12-596 # Milk, whole, pasteurised, average
+12-815 # Eggs, quail, whole, raw
+12-816 # Eggs, turkey, whole, raw
+12-920 # Eggs, duck, whole, raw
 12-937 # Eggs, chicken, whole, raw
 12-938 # Eggs, chicken, white, raw
 12-939 # Eggs, chicken, yolk, raw
