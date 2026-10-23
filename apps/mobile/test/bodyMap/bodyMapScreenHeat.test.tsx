@@ -33,7 +33,11 @@ import type { QueryClient } from "@tanstack/react-query";
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
-    getItem: (key: string) => Promise.resolve(key === "bodyMap.figure" ? "male" : null),
+    // The figure is chosen and the first-open hint seen, so this file's screen is the plain one. The hint has a file of its own.
+    getItem: (key: string) =>
+      Promise.resolve(
+        key === "bodyMap.figure" ? "male" : key === "bodyMap.hintSeen" ? "true" : null,
+      ),
     setItem: () => Promise.resolve(),
   },
 }));

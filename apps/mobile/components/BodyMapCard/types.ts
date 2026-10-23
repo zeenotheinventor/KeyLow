@@ -1,6 +1,7 @@
 import type { BodyFigureValues } from "../ui";
 import type { BodyMapScale } from "@keylow/core/copy";
 import type { BodyArtworkFigure, BodyMapView, MuscleId } from "@keylow/core/training";
+import type { ReactNode } from "react";
 
 export type BodyMapCardProps = {
   /** The scale the figures are coloured by. */
@@ -29,4 +30,6 @@ export type BodyMapCardProps = {
   selected?: MuscleId | undefined;
   /** Called when a muscle is pressed and held. Left out, the figures are plain images. */
   onLongPressMuscle?: ((muscle: MuscleId) => void) | undefined;
+  /** Laid over the figures, such as the first-open hint. It positions itself. */
+  overlay?: ReactNode;
 };
