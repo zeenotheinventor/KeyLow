@@ -16,13 +16,17 @@ export { createHealthConnectProvider } from "./healthConnectProvider";
 export {
   clearAnchor,
   getAnchor,
+  getBodyAnchor,
   getLastImport,
   setAnchor,
+  setBodyAnchor,
   setLastImport,
 } from "./healthAnchorStore";
 export type { HealthAnchorStore } from "./healthAnchorStore";
-export { runHealthImport } from "./importRunner";
+export { bodyNotRun, runHealthImport } from "./importRunner";
 export type {
+  BodyKindResult,
+  BodyKindStatus,
   HealthImportDependencies,
   HealthImportResult,
   HealthImportStatus,

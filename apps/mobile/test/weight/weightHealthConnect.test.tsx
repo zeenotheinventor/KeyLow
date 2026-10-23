@@ -7,7 +7,7 @@ import { act, render, screen, userEvent, waitFor } from "@testing-library/react-
 import { isValidElement } from "react";
 
 import { WeightScreen } from "../../components/WeightScreen";
-import { getHealthProvider } from "../../lib/health";
+import { bodyNotRun, getHealthProvider } from "../../lib/health";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { fakeHealthImport } from "../support/fakeHealthImport";
@@ -49,6 +49,7 @@ const result = (status: HealthImportResult["status"], inserted = 0): HealthImpor
   read: inserted,
   skipped: 0,
   inserted,
+  body: bodyNotRun,
 });
 
 let provider: FakeHealthProvider;

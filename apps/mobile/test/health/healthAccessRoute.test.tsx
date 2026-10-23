@@ -5,7 +5,7 @@ import { setUpTests } from "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import HealthAccessRoute from "../../app/(tabs)/more/weight/health";
-import { getHealthProvider } from "../../lib/health";
+import { bodyNotRun, getHealthProvider } from "../../lib/health";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { createFakeHealthProvider } from "../support/fakeHealthProvider";
@@ -44,12 +44,14 @@ const imported = (inserted: number): HealthImportResult => ({
   read: inserted,
   skipped: 0,
   inserted,
+  body: bodyNotRun,
 });
 const withStatus = (status: HealthImportResult["status"]): HealthImportResult => ({
   status,
   read: 0,
   skipped: 0,
   inserted: 0,
+  body: bodyNotRun,
 });
 
 let provider: FakeHealthProvider;

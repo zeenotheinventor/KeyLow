@@ -1,28 +1,42 @@
-import { useImportWeighIns, useProfileTimeZone, useSupabase } from "@keylow/api-client";
+import {
+  useImportBodyMeasurements,
+  useImportWeighIns,
+  useProfileTimeZone,
+  useSupabase,
+} from "@keylow/api-client";
 import { useCallback, useEffect, useRef } from "react";
 import { AppState } from "react-native";
 
 import { loadLastImport, registerHealthImporter, startHealthImport } from "./healthImportStore";
+import { bodyNotRun } from "./importRunner";
 import { useReadsEnabled } from "../useReadsEnabled";
 
 import type { HealthProvider } from "./HealthProvider";
 import type { HealthImportResult } from "./importRunner";
 
 /** What the importer gives when it did not start: nobody signed in, or the time zone not loaded yet. */
-const notReady: HealthImportResult = { status: "unavailable", read: 0, skipped: 0, inserted: 0 };
+const notReady: HealthImportResult = {
+  status: "unavailable",
+  read: 0,
+  skipped: 0,
+  inserted: 0,
+  body: bodyNotRun,
+};
 
 /**
- * Starts the weight import: once when it mounts and each time the app comes back to the foreground, and
- * it registers the importer that `importHealthNow` (the pull to refresh) calls. Nothing runs in the
- * background. It imports only for a signed in person whose account has accepted the Terms, with the
- * profile's time zone loaded. Until then the importer answers `unavailable` and the shared state is left
- * alone. Mount it once, where a person is signed in, and only where there is a provider.
+ * Starts the Health import (weight, then body fat and lean mass in the same pass): once when it mounts
+ * and each time the app comes back to the foreground, and it registers the importer that
+ * `importHealthNow` (the pull to refresh) calls. Nothing runs in the background. It imports only for a
+ * signed in person whose account has accepted the Terms, with the profile's time zone loaded. Until
+ * then the importer answers `unavailable` and the shared state is left alone. Mount it once, where a
+ * person is signed in, and only where there is a provider.
  */
 export function useHealthImportTriggers(provider: HealthProvider): void {
   const client = useSupabase();
   const isEnabled = useReadsEnabled();
   const profileTimeZone = useProfileTimeZone({ enabled: isEnabled });
   const { mutateAsync: importWeighIns } = useImportWeighIns();
+  const { mutateAsync: importBodyMeasurements } = useImportBodyMeasurements();
 
   // A profile with no zone reads in UTC, as every other screen does.
   const timeZone =
@@ -47,9 +61,10 @@ export function useHealthImportTriggers(provider: HealthProvider): void {
       provider,
       timeZone,
       importWeighIns,
+      importBodyMeasurements,
       now: () => new Date(),
     });
-  }, [readUserId, provider, timeZone, importWeighIns]);
+  }, [readUserId, provider, timeZone, importWeighIns, importBodyMeasurements]);
 
   // Registered once for as long as the runner is mounted, calling whichever importer is the latest, so a
   // time zone arriving does not unregister it (which would empty the state).
