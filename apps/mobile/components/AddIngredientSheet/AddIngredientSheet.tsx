@@ -16,6 +16,7 @@ export function AddIngredientSheet({
   onChoose,
   onBackToResults,
   onClose,
+  onScanBarcode,
   onAdd,
 }: AddIngredientSheetProps) {
   // The search field may hold the keyboard, which would stay up under the amount step.
@@ -41,6 +42,7 @@ export function AddIngredientSheet({
           onOpenFood={(foodId) => {
             choose({ foodId });
           }}
+          onScanBarcode={onScanBarcode}
         />
       </View>
       {chosen === undefined ? null : (

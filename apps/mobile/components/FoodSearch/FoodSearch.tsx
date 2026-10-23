@@ -22,10 +22,10 @@ const WORDING = {
  * search field docked at the bottom, and the field's scan control. For `scope="own"` it is titled
  * "Your foods" and lists the user's own foods, and the cursor stays out of the field because the list
  * is what the user came for. With an `ingredient` it is titled "Add ingredient" and finds a food for a
- * recipe: no create control and no scanner, and every row opens the amount step.
+ * recipe: no create control, and every row opens the amount step. The scan control is the same in every mode.
  */
 export function FoodSearch(props: FoodSearchProps) {
-  const { onClose, onOpenFood } = props;
+  const { onClose, onOpenFood, onScanBarcode } = props;
   const insets = useSafeAreaInsets();
   const [query, setQuery] = useState("");
   const scope = props.scope ?? "all";
@@ -94,15 +94,13 @@ export function FoodSearch(props: FoodSearchProps) {
         label="Search foods"
         placeholder="Search for a food"
         trailing={
-          props.ingredient !== undefined ? undefined : (
-            <IconButton
-              icon="ScanBarcode"
-              label="Scan barcode"
-              size="sm"
-              variant="ghost"
-              onPress={props.onScanBarcode}
-            />
-          )
+          <IconButton
+            icon="ScanBarcode"
+            label="Scan barcode"
+            size="sm"
+            variant="ghost"
+            onPress={onScanBarcode}
+          />
         }
         value={query}
         onChangeText={setQuery}
