@@ -72,6 +72,48 @@ export type Database = {
           },
         ];
       };
+      body_measurements: {
+        Row: {
+          created_at: string;
+          deleted_at: string | null;
+          external_id: string | null;
+          id: string;
+          kind: Database["public"]["Enums"]["body_measurement_kind"];
+          local_date: string;
+          measured_at: string;
+          source: Database["public"]["Enums"]["weigh_in_source"];
+          tz: string;
+          user_id: string;
+          value: number;
+        };
+        Insert: {
+          created_at?: string;
+          deleted_at?: string | null;
+          external_id?: string | null;
+          id?: string;
+          kind: Database["public"]["Enums"]["body_measurement_kind"];
+          local_date: string;
+          measured_at: string;
+          source: Database["public"]["Enums"]["weigh_in_source"];
+          tz: string;
+          user_id?: string;
+          value: number;
+        };
+        Update: {
+          created_at?: string;
+          deleted_at?: string | null;
+          external_id?: string | null;
+          id?: string;
+          kind?: Database["public"]["Enums"]["body_measurement_kind"];
+          local_date?: string;
+          measured_at?: string;
+          source?: Database["public"]["Enums"]["weigh_in_source"];
+          tz?: string;
+          user_id?: string;
+          value?: number;
+        };
+        Relationships: [];
+      };
       day_logs: {
         Row: {
           completed_at: string | null;
@@ -1144,6 +1186,7 @@ export type Database = {
       training_focus_is_valid: { Args: { focus: string[] }; Returns: boolean };
     };
     Enums: {
+      body_measurement_kind: "body_fat_pct" | "lean_mass_kg";
       equipment:
         | "barbell"
         | "dumbbell"
@@ -1291,6 +1334,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      body_measurement_kind: ["body_fat_pct", "lean_mass_kg"],
       equipment: [
         "barbell",
         "dumbbell",
