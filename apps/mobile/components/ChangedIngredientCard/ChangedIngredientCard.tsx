@@ -2,12 +2,13 @@ import { useFood } from "@keylow/api-client";
 import {
   REFRESH,
   REFRESH_PER_100_LABELS,
+  beforeAfterFigures,
   describePer100Heading,
   describePortionFellBack,
 } from "@keylow/core/copy";
 import { View } from "react-native";
 
-import { BeforeAfterRow, beforeAfterFigures } from "../BeforeAfterRow";
+import { BeforeAfterRow } from "../BeforeAfterRow";
 import { Badge, Card, Text } from "../ui";
 
 import type { ChangedIngredientCardProps } from "./types";

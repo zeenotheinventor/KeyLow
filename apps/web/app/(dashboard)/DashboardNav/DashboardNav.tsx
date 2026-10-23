@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/Button";
 import { KiLoMark } from "@/components/ui/KiLoMark";
 import { SearchLauncher } from "@/components/ui/SearchField";
 import { useFoodLogActions } from "@/lib/foodLogActions";
+import { recipesPath } from "@/lib/recipeRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
 const SECTIONS: readonly DashboardSection[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Diary", href: "/diary" },
-  { label: "Recipes", href: "/recipes" },
+  { label: "Recipes", href: recipesPath() },
   { label: "More", href: "/more" },
 ];
 

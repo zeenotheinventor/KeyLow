@@ -1,8 +1,21 @@
-import { FOOD_ROW, NOT_GIVEN, describeBeforeAfter } from "@keylow/core/copy";
-import { formatCalories, formatGrams } from "@keylow/core/format";
+import { FOOD_ROW } from "./foodRow";
+import { NOT_GIVEN } from "./nutrition";
+import { describeBeforeAfter } from "./recipeRefresh";
+import { formatCalories, formatGrams } from "../format/numbers";
 
-import type { BeforeAfterFigures } from "./types";
-import type { BeforeAndAfterQuantity } from "@keylow/core/copy";
+import type { BeforeAndAfterQuantity } from "./recipeRefresh";
+
+/** One figure before and after a refresh, already written: the texts, whether they say the same, and the words a screen reader hears. */
+export type BeforeAfterFigures = {
+  /** The old value, without its unit. */
+  before: string;
+  /** The new value with its unit, or the one value of a figure that did not change. */
+  after: string;
+  /** True when the two are written the same, so the row says "no change" in place of an arrow. */
+  isUnchanged: boolean;
+  /** "Calories, 374 before, 362 now", or "Carbs, 43 grams, no change". */
+  accessibleName: string;
+};
 
 const QUANTITIES: Readonly<
   Record<BeforeAndAfterQuantity, { format: (value: number) => string; unit: string }>

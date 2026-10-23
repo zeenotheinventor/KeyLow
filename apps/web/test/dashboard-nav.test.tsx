@@ -3,6 +3,7 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DashboardNav } from "@/app/(dashboard)/DashboardNav";
+import { recipesPath } from "@/lib/recipeRoutes";
 
 const { push, pathname, openAddFood, viewedDate } = vi.hoisted(() => ({
   push: vi.fn(),
@@ -55,6 +56,12 @@ describe("DashboardNav", () => {
       "/recipes",
       "/more",
     ]);
+  });
+
+  it("should link Recipes to the recipe library route", () => {
+    render(<DashboardNav />);
+
+    expect(screen.getByRole("link", { name: "Recipes" }).getAttribute("href")).toBe(recipesPath());
   });
 
   it("should no longer link to Weight or Settings, which are reached through More", () => {

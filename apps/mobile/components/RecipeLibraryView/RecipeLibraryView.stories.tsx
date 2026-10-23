@@ -5,8 +5,8 @@ import { sampleRecipes } from "./sampleRecipes";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
 
-// The Recipes tab still shows Coming soon, so these stories are how the library is seen: each state of the
-// boards. The props are a union, which Storybook's args typing cannot hold, so each story renders its own view.
+// These stories show each state of the library as the boards draw it. The props are a union, which Storybook's
+// args typing cannot hold, so each story renders its own view.
 const actions = {
   onOpenRecipe: () => undefined,
   onNewRecipe: () => undefined,

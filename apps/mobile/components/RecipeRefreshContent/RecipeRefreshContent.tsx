@@ -3,15 +3,16 @@ import {
   FOOD_MACRO_LABELS,
   RECIPE_EDITOR,
   REFRESH,
+  amountCaptionOf,
+  beforeAfterFigures,
   describeCountSuffix,
 } from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { amountCaptionOf } from "./amountCaption";
 import { dockBottomPadding } from "../../lib/dockBottomPadding";
-import { BeforeAfterRow, beforeAfterFigures } from "../BeforeAfterRow";
+import { BeforeAfterRow } from "../BeforeAfterRow";
 import { ChangedIngredientCard } from "../ChangedIngredientCard";
 import { Button, Card, EmptyState, GroupedList, ListRow, Text } from "../ui";
 

@@ -1,6 +1,7 @@
+import { beforeAfterFigures } from "@keylow/core/copy";
 import { render, screen, within } from "@testing-library/react-native";
 
-import { BeforeAfterRow, beforeAfterFigures } from "../../components/BeforeAfterRow";
+import { BeforeAfterRow } from "../../components/BeforeAfterRow";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -11,44 +12,6 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
-
-describe("the figures of a value before and after", () => {
-  it("should write energy in whole kilocalories with the unit once, after the new value", () => {
-    expect(beforeAfterFigures("Calories", { before: 374.2, after: 361.7 }, "energy")).toEqual({
-      before: "374",
-      after: "362 kcal",
-      isUnchanged: false,
-      accessibleName: "Calories, 374 before, 362 now",
-    });
-  });
-
-  it("should write grams as the rest of the app writes them", () => {
-    expect(beforeAfterFigures("Fat", { before: 8.125, after: 6.75 }, "grams")).toEqual({
-      before: "8.1",
-      after: "6.8 g",
-      isUnchanged: false,
-      accessibleName: "Fat, 8.1 before, 6.8 now",
-    });
-  });
-
-  it("should count two values as the same when they are written the same", () => {
-    expect(beforeAfterFigures("Carbs", { before: 42.55, after: 42.6 }, "grams")).toEqual({
-      before: "43",
-      after: "43 g",
-      isUnchanged: true,
-      accessibleName: "Carbs, 43 grams, no change",
-    });
-  });
-
-  it("should write a value the food does not give as not given, with no unit", () => {
-    expect(beforeAfterFigures("Fibre", { before: 2, after: null }, "grams")).toEqual({
-      before: "2",
-      after: "not given",
-      isUnchanged: false,
-      accessibleName: "Fibre, 2 before, not given now",
-    });
-  });
-});
 
 describe("a row of a value before and after", () => {
   let kitStyles: string;

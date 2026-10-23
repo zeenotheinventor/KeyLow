@@ -1,35 +1,10 @@
+import { beforeAfterFigures } from "@keylow/core/copy";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { BeforeAfterRow, beforeAfterFigures } from "@/components/recipes/BeforeAfterRow";
+import { BeforeAfterRow } from "@/components/recipes/BeforeAfterRow";
 
 afterEach(cleanup);
-
-describe("beforeAfterFigures", () => {
-  it("should write the new value with its unit once and the old one without", () => {
-    expect(beforeAfterFigures("Calories", { before: 374.1, after: 361.8 }, "energy")).toEqual({
-      before: "374",
-      after: "362 kcal",
-      isUnchanged: false,
-      accessibleName: "Calories, 374 before, 362 now",
-    });
-  });
-
-  it("should count two values written the same as unchanged, and say so in words", () => {
-    const figures = beforeAfterFigures("Carbs", { before: 43.1, after: 43.4 }, "grams");
-
-    expect(figures.isUnchanged).toBe(true);
-    expect(figures.after).toBe("43 g");
-    expect(figures.accessibleName).toBe("Carbs, 43 grams, no change");
-  });
-
-  it("should write a value the food does not record as not given, with no unit", () => {
-    const figures = beforeAfterFigures("Fibre", { before: 2, after: null }, "grams");
-
-    expect(figures.after).toBe("not given");
-    expect(figures.accessibleName).toBe("Fibre, 2 before, not given now");
-  });
-});
 
 describe("BeforeAfterRow", () => {
   it("should read as one group named in words, with the old value, the new value and the label", () => {
