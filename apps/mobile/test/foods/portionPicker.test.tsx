@@ -914,6 +914,21 @@ describe("the portion picker's unit chips", () => {
     });
   });
 
+  describe("a food that already stores a spoon's label", () => {
+    it("should show one 1 tbsp chip, the stored one, and still 1 tsp", async () => {
+      showFood(buildFood({ ...foodFixture, source: "off", density_g_per_ml: null }));
+      Object.assign(portionsQuery, {
+        data: [
+          buildFoodPortion({ id: "ketchup-tbsp", label: "1 tbsp", grams: 15, is_default: true }),
+        ],
+      });
+      await renderPicker({ day: "2026-10-15" });
+
+      expectChips(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
+    });
+  });
+
   describe("pressing a different chip", () => {
     it("should set a food on g at 100 to 1 when 1 tbsp is pressed, not read 100 tbsp", async () => {
       showFood(oil);

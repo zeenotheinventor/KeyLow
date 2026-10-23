@@ -24,6 +24,8 @@ export type PickerChoices<Portion extends AmountPortion = AmountPortion> = {
 const GRAMS_OPTION: UnitOption = { value: "g", label: "g" };
 const MILLILITRES_OPTION: UnitOption = { value: "ml", label: "ml" };
 
+const comparableLabel = (label: string): string => label.trim().toLowerCase();
+
 /**
  * The chips for portions the food already has: those portions in the order given, then g, and, when the
  * food is measured by volume, ml and the teaspoon and tablespoon. A chip says its words only ("1 medium",
@@ -51,13 +53,26 @@ export function choicesFor<Portion extends AmountPortion>(
  * (the default one is the one the picker opens on, not necessarily the first), then g, then, only when the
  * food can be measured by volume, ml, 1 tsp and 1 tbsp. A food that cannot gets no volume chip at all. A
  * food measured by volume can have its density from a portion's label, such as "1 tbsp (15 g)".
- * Read the starting amount from `portions`, which holds the spoons that the chips name.
+ * Read the starting amount from `portions`, which holds the spoons that the chips name. A spoon whose label
+ * the food already has on a portion of its own ("1 tbsp", in any case) is left out of both lists, so the
+ * picker never shows two chips that read the same; the food's own portion stays.
  */
 export function pickerChoices<Portion extends AmountPortion & Pick<FoodPortion, "position">>(
   food: PickerFood,
   portions: readonly Portion[],
 ): PickerChoices<Portion> {
   const inOrder = [...portions].sort((first, second) => first.position - second.position);
+  const choices = choicesFor(inOrder, canMeasureByVolume(food, portions));
 
-  return choicesFor(inOrder, canMeasureByVolume(food, portions));
+  const ownLabels = new Set(inOrder.map((portion) => comparableLabel(portion.label)));
+  const repeatedSpoonIds = new Set(
+    SPOON_PORTIONS.filter((spoon) => ownLabels.has(comparableLabel(spoon.label))).map(
+      (spoon) => spoon.id,
+    ),
+  );
+
+  return {
+    portions: choices.portions.filter((portion) => !repeatedSpoonIds.has(portion.id)),
+    options: choices.options.filter((option) => !repeatedSpoonIds.has(option.value)),
+  };
 }

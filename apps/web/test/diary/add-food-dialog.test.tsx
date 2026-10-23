@@ -15,6 +15,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 const CHICKEN_ID = "11111111-1111-4111-8111-111111111111";
 const RICE_ID = "11111111-1111-4111-8111-222222222222";
 const SOUP_ID = "11111111-1111-4111-8111-333333333333";
+const KETCHUP_ID = "11111111-1111-4111-8111-444444444444";
 
 const chicken = makeFood({
   id: CHICKEN_ID,
@@ -768,6 +769,31 @@ describe("the add food dialog", () => {
       expect(screen.getByRole("radio", { name: "1 breast", checked: true })).toBeTruthy();
       expect(screen.getByRole("textbox", { name: /^Amount/ })).toHaveProperty("value", "1");
       expect(screen.queryByRole("searchbox")).toBeNull();
+    });
+
+    it("should show one 1 tbsp radio when the food already stores a 1 tbsp portion", () => {
+      const ketchup = makeFood({
+        id: KETCHUP_ID,
+        name: "Tomato ketchup",
+        source: "off",
+        density_g_per_ml: 1.1,
+      });
+      api.foods.set(KETCHUP_ID, ketchup);
+      api.portions.set(KETCHUP_ID, [
+        makePortion({
+          id: "22222222-2222-4222-8222-444444444444",
+          food_id: KETCHUP_ID,
+          label: "1 tbsp",
+          grams: 15,
+          is_default: true,
+        }),
+      ]);
+
+      renderDialog({ foodId: KETCHUP_ID });
+
+      expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
+      expect(screen.getByRole("radio", { name: "1 tsp" })).toBeTruthy();
     });
 
     it("should read now on today, with the Time field saying Now, when the request names no day", () => {

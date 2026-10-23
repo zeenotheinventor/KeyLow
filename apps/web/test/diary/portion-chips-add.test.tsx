@@ -192,24 +192,13 @@ describe("the add dialog's chips", () => {
       expect(screen.getByRole("radio", { name: "1 pot", checked: true })).toBeTruthy();
     });
 
-    it("should keep a food's own gram portion apart from the spoon when both are called 1 tbsp", () => {
+    it("should show a food's own 1 tbsp portion once, with no generated tablespoon beside it", () => {
       openFood(syrup);
 
-      const [own, spoon] = screen.getAllByRole("radio", { name: "1 tbsp" });
-      expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp", "1 tbsp"]);
-      expect(own).toHaveProperty("ariaChecked", "true");
-      expect(spoon).toHaveProperty("ariaChecked", "false");
+      expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
       expect(
         screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (21 g)" }),
-      ).toBeTruthy();
-
-      if (spoon === undefined) {
-        throw new Error("The spoon chip is missing");
-      }
-      fireEvent.click(spoon);
-
-      expect(
-        screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (15 ml, 21 g)" }),
       ).toBeTruthy();
     });
   });
