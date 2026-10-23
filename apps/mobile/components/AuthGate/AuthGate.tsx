@@ -7,6 +7,7 @@ import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
 import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
 import { DeviceTimeZoneSync } from "../DeviceTimeZoneSync";
+import { HealthImportRunner } from "../HealthImportRunner";
 import { ReminderScheduler } from "../ReminderScheduler";
 import { ReminderTapRouting } from "../ReminderTapRouting";
 import { SessionCover } from "../SessionCover";
@@ -128,8 +129,8 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
   // The children stay mounted so the navigator exists before the first redirect. The cover hides them until the stored session is read.
   // The terms gate is drawn over them the same way, and hides them from a screen reader, until the signed in
   // account is known to have accepted the current Terms. It mounts only with a session, so nothing reads
-  // the acceptance for a signed out user. The time zone sync, the reminder scheduler and the reminder tap
-  // routing mount with it, for the same reason.
+  // the acceptance for a signed out user. The time zone sync, the health import, the reminder scheduler and the
+  // reminder tap routing mount with it, for the same reason.
   return (
     <>
       <View aria-hidden={termsGateState !== "open"} className="flex-1">
@@ -140,6 +141,7 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
         <>
           <TermsGate onStateChange={setTermsGateState} />
           <DeviceTimeZoneSync />
+          <HealthImportRunner />
           <ReminderScheduler />
           <ReminderTapRouting />
         </>
