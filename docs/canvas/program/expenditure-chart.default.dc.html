@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>expenditure-chart: default</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6e06207071883255ccbdf89333df3876">
+<link rel="stylesheet" href="/_blob/90e3afd83792749ff685abba2a03b9cc">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 820px; height: 448px; display: flex; align-items: flex-start; gap: 40px; background: #565C66; font-family: 'Geist', system-ui, sans-serif">
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Dark · 5 weeks with band</span>
+<dc-import name="ExpenditureChartCard" chart-state="default" theme="dark" hint-size="390px,420px"></dc-import>
+</div>
+<div style="width: 390px; display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; line-height: 20px; font-weight: 600; color: #EEF0F4">Light · 5 weeks with band</span>
+<dc-import name="ExpenditureChartCard" chart-state="default" theme="light" hint-size="390px,420px"></dc-import>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":820,"height":448}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Targets while a programme is active, and switching to your own</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6e06207071883255ccbdf89333df3876">
+<link rel="stylesheet" href="/_blob/90e3afd83792749ff685abba2a03b9cc">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" data-screen="TargetsScreen" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="SheetHeader sheet" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-2); padding: 56px var(--space-4) var(--space-3)">
+<button class="kl-ib" type="button" aria-label="Back to More"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+<h1 class="t-h2" style="flex: 1; margin: 0; text-align: center">Targets</h1>
+<span aria-hidden="true" style="width: 44px; height: 44px; flex-shrink: 0"></span>
+</header>
+
+<sc-if value="{{engine}}" hint-placeholder-val="{{ true }}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) var(--space-4)">
+
+<div data-kilo="GroupedList: ListRow (new row: Programme)" class="kl-card" style="overflow: hidden; outline: 2px dashed var(--accent); outline-offset: 2px">
+<button type="button" aria-label="Programme, your weekly check-in sets these targets" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg data-kilo="Icon ChartLine (add to the icon map)" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Programme</span><span class="t-cap c-mut">Your weekly check-in sets these targets</span></span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+
+<section aria-label="This week's targets" style="display: flex; flex-direction: column; gap: var(--space-2); outline: 2px dashed var(--accent); outline-offset: 2px; border-radius: var(--radius-large)">
+<div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 var(--space-1)"><h2 class="t-bs" style="margin: 0">This week</h2><span class="t-cap tab c-mut">Since Friday 23 October</span></div>
+<div data-kilo="GroupedList: ListRow (value, numeral, no chevron)" class="kl-card" style="overflow: hidden">
+<sc-for list="{{values}}" as="v" hint-placeholder-count="4">
+<div style="min-height: 52px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); border-top: {{v.divider}}">
+<span aria-hidden="true" style="width: 8px; height: 8px; flex-shrink: 0; border-radius: 2px; background: {{v.color}}"></span>
+<span class="t-body" style="flex: 1">{{v.label}}</span>
+<span style="display: flex; align-items: baseline; gap: 3px"><span class="t-ns">{{v.value}}</span><span class="t-cap c-mut">{{v.unit}}</span></span>
+</div>
+</sc-for>
+</div>
+</section>
+
+<div data-kilo="GroupedList: ListRow (the setup canvas's entry row, unchanged)" class="kl-card" style="overflow: hidden">
+<button type="button" aria-label="Estimate my targets, from a few questions about you and your goal" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: transparent; border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary)">
+<span aria-hidden="true" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-small); background: var(--surface-raised); color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"></rect><line x1="8" x2="16" y1="6" y2="6"></line><line x1="16" x2="16" y1="14" y2="18"></line><path d="M16 10h.01"></path><path d="M12 10h.01"></path><path d="M8 10h.01"></path><path d="M12 14h.01"></path><path d="M8 14h.01"></path><path d="M12 18h.01"></path><path d="M8 18h.01"></path></svg></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Estimate my targets</span><span class="t-cap c-mut">From a few questions about you and your goal</span></span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+
+<p class="t-cap c-mut" style="margin: 0">Your programme sets these each week. If you set your own, the weekly check-in stops.</p>
+</div>
+
+<div style="flex-shrink: 0; padding: var(--space-4) var(--space-4) 42px; background: var(--surface-sheet); border-top: 1px solid var(--border)">
+<button data-kilo="Button secondary lg" type="button" class="kl-btn kl-secondary" style="width: 100%; height: var(--control-height-lg)">Set my own targets</button>
+</div>
+</sc-if>
+
+<sc-if value="{{manual}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1; min-height: 0; display: flex; flex-direction: column; gap: var(--space-4); padding: var(--space-2) var(--space-4)">
+<div class="kl-field">
+<label class="t-ls" for="t-kcal">Calories</label>
+<div data-kilo="NumericInput" class="kl-input">
+<input id="t-kcal" inputmode="numeric" value="2000" onChange="{{noop}}" aria-describedby="t-kcal-help" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)">
+<span class="t-body c-mut">kcal</span>
+</div>
+<span id="t-kcal-help" class="t-cap c-mut">Between 800 and 6,000 kcal</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-2)">
+<sc-for list="{{macros}}" as="m" hint-placeholder-count="3">
+<div class="kl-field">
+<label class="t-ls">{{m.label}}</label>
+<div data-kilo="NumericInput" class="kl-input"><input inputmode="numeric" value="{{m.value}}" onChange="{{noop}}" aria-label="{{m.label}} target in grams" class="t-body tab" style="flex: 1; min-width: 0; height: 40px; border: 0; outline: none; background: transparent; padding: 0; text-align: right; font-family: var(--font-sans); color: var(--text-primary)"><span class="t-body c-mut">g</span></div>
+</div>
+</sc-for>
+</div>
+<span class="t-cap tab c-mut">Macros add up to 2,141 kcal</span>
+</div>
+<p class="t-cap c-mut" style="margin: 0">Saving your own targets ends your programme and its weekly check-in.</p>
+</div>
+<div style="flex-shrink: 0; padding: var(--space-4) var(--space-4) 42px; background: var(--surface-sheet); border-top: 1px solid var(--border)">
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg)">Save</button>
+</div>
+
+<div class="kl-dim" aria-hidden="true" style="position: absolute; inset: 0; z-index: 40"></div>
+<div data-kilo="ConfirmDialog tone primary (BottomSheet: title, body, two buttons)" role="dialog" aria-modal="true" aria-labelledby="sw-title" aria-describedby="sw-body" class="kl-sheet" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 41; display: flex; flex-direction: column; gap: var(--space-3); padding: 0 var(--space-4) calc(var(--space-6) + 34px)">
+<div style="display: flex; justify-content: center; padding: var(--space-2) 0 0"><span aria-hidden="true" style="width: 36px; height: 4px; border-radius: var(--radius-pill); background: var(--border-strong)"></span></div>
+<div style="display: flex; flex-direction: column; gap: var(--space-1); text-align: center">
+<h2 id="sw-title" class="t-h2" style="margin: 0">Turn off weekly check-ins?</h2>
+<p id="sw-body" class="t-body c-sec" style="margin: 0">Saving your own targets ends your programme, so Ki-Lo stops adjusting them each week. You can start one again from Estimate my targets.</p>
+</div>
+<div style="display: flex; flex-direction: column; gap: var(--space-2); padding-top: var(--space-2)">
+<button data-kilo="Button primary lg" type="button" class="kl-btn kl-primary" style="width: 100%; height: var(--control-height-lg)">Save my targets</button>
+<button data-kilo="Button secondary lg" type="button" class="kl-btn kl-secondary" style="width: 100%; height: var(--control-height-lg)">Keep my programme</button>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["engine","switch-to-manual"],"default":"engine"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'engine';
+    // The golden fixture's targets after its third check-in (Friday 23 October): 2,140 kcal, P 126, C 245, F 73.
+    // In the form the person has typed 2,000 kcal over the prefilled 2,140; 126 x 4 + 245 x 4 + 73 x 9 = 2,141.
+    const v = (label, value, unit, color, i) => ({ label, value, unit, color, divider: i ? '1px solid var(--border)' : '0' });
+    return {
+      theme,
+      engine: st !== 'switch-to-manual',
+      manual: st === 'switch-to-manual',
+      values: [
+        v('Calories', '2,140', 'kcal', 'var(--calories)', 0),
+        v('Protein', '126', 'g', 'var(--protein)', 1),
+        v('Carbohydrate', '245', 'g', 'var(--carbs)', 2),
+        v('Fat', '73', 'g', 'var(--fat)', 3)
+      ],
+      macros: [{ label: 'Protein', value: '126' }, { label: 'Carbohydrate', value: '245' }, { label: 'Fat', value: '73' }],
+      noop: () => {}
+    };
+  }
+}
+</script>
+</body>
+</html>

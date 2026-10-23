@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<title>Diary day</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/6e06207071883255ccbdf89333df3876">
+<link rel="stylesheet" href="/_blob/90e3afd83792749ff685abba2a03b9cc">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div data-theme="{{theme}}" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; font-family: var(--font-sans); background: var(--background); color: var(--text-primary)">
+
+<header data-kilo="DiaryHeader" style="flex-shrink: 0; display: flex; align-items: center; gap: var(--space-1); padding: 56px var(--space-4) var(--space-3)">
+<h1 class="t-h1" style="flex: 1; min-width: 0; margin: 0">{{title}}</h1>
+<button class="kl-ib" type="button" aria-label="Choose a date"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"></path><path d="M16 2v4"></path><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M3 10h18"></path></svg></button>
+<button class="kl-ib" type="button" aria-label="More"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></button>
+</header>
+
+<sc-if value="{{weekStrip}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="WeekStrip" role="group" aria-label="This week" style="flex-shrink: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 0 var(--space-4) var(--space-3)">
+<sc-for list="{{week}}" as="d" hint-placeholder-count="7">
+<div style="display: flex; flex-direction: column; align-items: center; gap: 4px">
+<button type="button" aria-label="{{d.aria}}" aria-pressed="{{d.selected}}" aria-disabled="{{d.disabled}}" style="width: 100%; max-width: 48px; height: 56px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; border: 1px solid {{d.border}}; border-radius: var(--radius-pill); background: {{d.bg}}; color: var(--text-primary); opacity: {{d.opacity}}; font-family: var(--font-sans)">
+<span class="t-bs tab">{{d.n}}</span>
+<span class="t-cap c-mut">{{d.dow}}</span>
+</button>
+<span style="height: 12px; display: flex; align-items: center; justify-content: center">
+<sc-if value="{{d.dot}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent)"></span></sc-if>
+<sc-if value="{{d.check}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+</span>
+</div>
+</sc-for>
+</div>
+<sc-if value="{{weekHint}}" hint-placeholder-val="{{ false }}"><p class="t-cap c-mut" style="flex-shrink: 0; margin: calc(var(--space-2) * -1) 0 var(--space-2); text-align: center">Swipe the strip to change week</p></sc-if>
+</sc-if>
+
+<sc-if value="{{loading}}" hint-placeholder-val="{{ false }}">
+<div aria-label="Loading your diary" style="flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; gap: var(--space-3)">
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; padding: 0 var(--space-4)"><sc-for list="{{skeletonDays}}" as="x" hint-placeholder-count="7"><span class="kl-sk" style="height: 56px; border-radius: var(--radius-pill)"></span></sc-for></div>
+<div style="display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 8px; padding: var(--space-1) var(--space-4) 0"><sc-for list="{{skeletonBars}}" as="x" hint-placeholder-count="4"><span style="display: flex; flex-direction: column; gap: 10px"><span class="kl-sk" style="height: 12px"></span><span class="kl-sk" style="height: 4px"></span></span></sc-for></div>
+<div style="padding: var(--space-2) var(--space-4); display: flex; flex-direction: column; gap: var(--space-3)">
+<sc-for list="{{skeletonHours}}" as="x" hint-placeholder-count="5">
+<div style="display: flex; flex-direction: column; gap: var(--space-2)">
+<span style="display: flex; align-items: center; justify-content: space-between"><span class="kl-sk" style="width: 64px; height: 28px; border-radius: var(--radius-pill)"></span><span class="kl-sk" style="width: 32px; height: 32px; border-radius: 50%"></span></span>
+<sc-if value="{{x.food}}" hint-placeholder-val="{{ false }}"><span class="kl-sk" style="height: 64px; margin-left: 8px; border-radius: var(--radius-large)"></span></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{error}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="ErrorState" style="min-height: 520px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-2); padding: 0 var(--space-6); text-align: center">
+<span style="width: 56px; height: 56px; margin-bottom: var(--space-2); display: flex; align-items: center; justify-content: center; border-radius: var(--radius-medium); background: var(--danger-muted); color: var(--danger)"><svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<h2 class="t-h2" style="margin: 0">Couldn't load your diary</h2>
+<p class="t-body c-sec" style="margin: 0">Check your connection and try again.</p>
+<button class="kl-btn kl-secondary" type="button" style="margin-top: var(--space-3)">Try again</button>
+</div>
+</sc-if>
+
+
+
+<sc-if value="{{content}}" hint-placeholder-val="{{ true }}">
+<div data-kilo="MacroProgressStrip (pressable, opens Targets)" role="button" aria-label="Targets. {{stripAria}}" style="flex-shrink: 0; display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: var(--space-2); padding: var(--space-1) var(--space-4) var(--space-3)">
+<sc-for list="{{bars}}" as="b" hint-placeholder-count="4">
+<div role="group" aria-label="{{b.aria}}" style="min-width: 0; display: flex; flex-direction: column; gap: 6px">
+<span class="t-cap tab" style="display: flex; align-items: center; gap: 4px; white-space: nowrap">
+<sc-if value="{{b.flame}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--calories)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg></sc-if>
+<sc-if value="{{b.hasLabel}}" hint-placeholder-val="{{ false }}"><span class="c-sec">{{b.label}}</span></sc-if>
+<span style="color: {{b.ink}}">{{b.eaten}}</span>
+<span class="c-mut">{{b.suffix}}</span>
+</span>
+<sc-if value="{{b.hasBar}}" hint-placeholder-val="{{ true }}">
+<span style="position: relative; height: 4px; border-radius: var(--radius-pill); background: var(--border); overflow: hidden; box-shadow: {{b.ring}}">
+<span style="position: absolute; top: 0; bottom: 0; left: 0; width: {{b.fill}}; background: {{b.color}}"></span>
+
+</span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<div style="flex-shrink: 0; display: flex; flex-direction: column; gap: var(--space-2); padding: 0 var(--space-4)">
+<sc-if value="{{bannerInfo}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner info" role="status" style="display: flex; gap: var(--space-3); padding: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-secondary)"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span class="t-bs">No target set</span>
+<span class="t-body c-sec">Set a calorie and macro target to see what is left.</span>
+<a href="#targets" class="t-bs c-ink" style="text-decoration: underline">Set target</a>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{bannerOffline}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner offline" role="status" style="display: flex; gap: var(--space-3); padding: var(--space-3); background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-secondary)"><path d="M12 20h.01"></path><path d="M8.5 16.429a5 5 0 0 1 7 0"></path><path d="M5 12.859a10 10 0 0 1 5.17-2.69"></path><path d="M19 12.859a10 10 0 0 0-2.007-1.523"></path><path d="M2 8.82a15 15 0 0 1 4.177-2.643"></path><path d="M22 8.82a15 15 0 0 0-11.288-3.764"></path><path d="m2 2 20 20"></path></svg>
+<div style="flex: 1; display: flex; flex-direction: column; gap: 2px">
+<span class="t-bs">You're offline</span>
+<span class="t-body c-sec">Showing your last saved diary. Changes need a connection.</span>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{bannerError}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Banner error, sentence only" role="alert" style="display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); background: var(--danger-muted); border: 1px solid var(--danger); border-radius: var(--radius-medium)">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--danger)"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+<span class="t-body" style="flex: 1">{{bannerErrorText}}</span>
+</div>
+</sc-if>
+
+
+</div>
+
+<div data-kilo="FoodLog" style="flex: 1; min-height: 0; overflow: hidden; position: relative; display: flex; flex-direction: column; justify-content: {{justify}}">
+<div style="flex-shrink: 0; padding: var(--space-2) var(--space-4) var(--space-6); transform: translateY(-{{scrollY}}px)">
+
+<sc-if value="{{emptyCard}}" hint-placeholder-val="{{ false }}">
+<section data-kilo="Card: nothing logged" class="kl-card" aria-label="Nothing logged yet" style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4); margin-bottom: var(--space-3)">
+<span style="display: flex; flex-direction: column; gap: 2px"><span class="t-bs">Nothing logged yet</span><span class="t-cap c-mut">Tap + on an hour, search, scan or quick add.</span></span>
+<div style="display: flex; flex-direction: column; gap: var(--space-1)">
+<button class="kl-btn kl-secondary" type="button" aria-disabled="{{copyDisabled}}" style="width: 100%; opacity: {{copyOpacity}}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>Copy yesterday</button>
+<sc-if value="{{noYesterday}}" hint-placeholder-val="{{ false }}"><span class="t-cap c-mut" style="text-align: center">Nothing logged yesterday</span></sc-if>
+</div>
+</section>
+</sc-if>
+
+<div data-kilo="HourList" role="list">
+<sc-for list="{{hours}}" as="h" hint-placeholder-count="24">
+<div role="listitem" style="position: relative; display: flow-root; margin-left: 6px; padding-left: 14px; border-left: 1px solid var(--border)">
+<span aria-hidden="true" style="position: absolute; left: -4px; top: 19px; width: 7px; height: 7px; box-sizing: border-box; border-radius: 50%; background: var(--surface-raised); border: 1px solid var(--border-strong)"></span>
+<div style="display: flex; align-items: center; min-height: 44px">
+<span class="t-cap tab" aria-label="{{h.chipAria}}" style="margin-left: 8px; height: 28px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; padding: 0 var(--space-3); border-radius: var(--radius-pill); background: var(--surface-raised); border: 1px solid var(--border); color: var(--text-secondary)">{{h.label}}<sc-if value="{{h.now}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 50%; background: var(--accent)"></span></sc-if></span>
+<span style="flex: 1"></span>
+<button type="button" aria-label="{{h.addLabel}}" aria-disabled="{{h.addDisabled}}" style="width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; opacity: {{h.addOpacity}}"><span style="width: 32px; height: 32px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); border-radius: 50%; color: var(--text-secondary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span></button>
+</div>
+<sc-if value="{{h.hasRows}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="GroupedListCard (hour)" class="kl-card" style="margin: 0 0 var(--space-2) 8px; overflow: hidden">
+<sc-for list="{{h.rows}}" as="r" hint-placeholder-count="2">
+<div style="position: relative; border-top: {{r.divider}}; background: {{r.swipeBg}}">
+<sc-if value="{{r.swiped}}" hint-placeholder-val="{{ false }}"><button type="button" class="t-bs" style="position: absolute; top: 0; right: 0; bottom: 0; width: 88px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 0; background: transparent; color: var(--text-on-status); font-family: var(--font-sans)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>Delete</button></sc-if>
+<button data-kilo="FoodRow (logged amount, with time)" type="button" style="position: relative; width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); background: var(--surface); border: 0; text-align: left; font-family: var(--font-sans); color: var(--text-primary); transform: translateX({{r.shift}}); box-shadow: {{r.press}}" aria-label="{{r.aria}}">
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span class="t-bs" style="display: flex; align-items: center; gap: 6px; min-width: 0"><sc-if value="{{r.recipe}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"></path><path d="M6 17h12"></path></svg></sc-if><span style="min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.title}}</span></span>
+<span class="t-cap tab c-mut" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.caption}}</span>
+<span class="t-cap tab c-sec" style="display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px">
+<span style="display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap"><svg aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--calories)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"></path></svg><span>{{r.kcal}}</span><span class="c-mut">kcal</span></span>
+<span style="display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 2px; background: var(--protein)"></span>{{r.p}} P</span>
+<span style="display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 2px; background: var(--carbs)"></span>{{r.c}} C</span>
+<span style="display: inline-flex; align-items: center; gap: var(--space-1); white-space: nowrap"><span aria-hidden="true" style="width: 6px; height: 6px; border-radius: 2px; background: var(--fat)"></span>{{r.f}} F</span>
+</span>
+</span>
+<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; color: var(--text-muted)"><path d="m9 18 6-6-6-6"></path></svg>
+</button>
+</div>
+</sc-for>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+
+<button data-kilo="DayCompleteToggle" type="button" role="switch" aria-checked="{{toggle.checked}}" style="width: 100%; min-height: 56px; box-sizing: border-box; display: flex; align-items: center; gap: var(--space-3); margin-top: var(--space-4); padding: var(--space-2) var(--space-4); background: {{toggle.bg}}; border: 1px solid {{toggle.border}}; border-radius: var(--radius-medium); color: var(--text-primary); text-align: left; font-family: var(--font-sans); opacity: {{toggle.opacity}}">
+<span style="flex: 1; display: flex; flex-direction: column"><span class="t-bs">{{toggle.label}}</span><span class="t-cap c-mut">{{toggle.caption}}</span></span>
+<span aria-hidden="true" style="position: relative; width: 44px; height: 26px; flex-shrink: 0; border-radius: var(--radius-pill); background: {{toggle.track}}"><span style="position: absolute; top: 3px; left: {{toggle.knobLeft}}; width: 20px; height: 20px; border-radius: 50%; background: {{toggle.knob}}"></span></span>
+</button>
+
+</div>
+</div>
+</sc-if>
+
+<div style="flex-shrink: 0; padding: var(--space-2) var(--space-4); background: var(--background); opacity: {{chromeOpacity}}">
+<div data-kilo="SearchLauncher" style="height: var(--control-height-md); box-sizing: border-box; display: flex; align-items: center; padding: 0 var(--space-1) 0 0; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--radius-medium); box-shadow: var(--elevation-card)">
+<button type="button" class="t-body c-mut" style="flex: 1; height: 42px; display: flex; align-items: center; gap: var(--space-2); padding: 0 0 0 var(--space-4); background: transparent; border: 0; font-family: var(--font-sans); text-align: left">
+<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+Search for a food
+</button>
+<button type="button" aria-label="Scan barcode" style="width: 36px; height: 36px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 0; background: transparent; border: 0; color: var(--text-primary)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 7v10"></path><path d="M12 7v10"></path><path d="M17 7v10"></path></svg></button>
+</div>
+</div>
+
+<nav data-kilo="TabBar" aria-label="Main" style="flex-shrink: 0; position: relative; height: 83px; box-sizing: border-box; padding-bottom: 34px; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); background: var(--surface); border-top: 1px solid var(--border)">
+<span aria-hidden="true" style="position: absolute; top: -1px; left: 20%; width: 20%; height: 2px; display: flex; justify-content: center"><span style="width: 28px; height: 2px; border-radius: 1px; background: var(--accent); transform: skewX(-20deg)"></span></span>
+<a href="#dashboard" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Dashboard</a>
+<a href="#diary" aria-current="page" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--accent-ink); font-size: 10px; line-height: 12px; font-weight: 600"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"></path><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"></path></svg>Diary</a>
+<div style="display: flex; align-items: center; justify-content: center"><button type="button" aria-label="Find food" style="width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; padding: 0; background: var(--accent); border: 0; border-radius: var(--radius-pill); color: var(--accent-foreground); box-shadow: var(--elevation-card)"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button></div>
+<a href="#recipes" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21a1 1 0 0 0 1-1v-5.35c0-.457.316-.844.727-1.041a4 4 0 0 0-2.134-7.589 5 5 0 0 0-9.186 0 4 4 0 0 0-2.134 7.588c.411.198.727.585.727 1.041V20a1 1 0 0 0 1 1Z"></path><path d="M6 17h12"></path></svg>Recipes</a>
+<a href="#more" style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; text-decoration: none; color: var(--text-muted); font-size: 10px; line-height: 12px; font-weight: 500"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>More</a>
+</nav>
+
+<sc-if value="{{toast.show}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="Toast" role="status" class="kl-toast" style="position: absolute; left: var(--space-4); right: var(--space-4); bottom: 152px; z-index: 30">
+<span style="display: flex; color: {{toast.iconColor}}">
+<sc-if value="{{toast.iconTrash}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></sc-if>
+<sc-if value="{{toast.iconCopy}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg></sc-if>
+<sc-if value="{{toast.iconCheck}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+<sc-if value="{{toast.iconRefresh}}" hint-placeholder-val="{{ false }}"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg></sc-if>
+</span>
+<span style="flex: 1; min-width: 0; font-size: 14px; line-height: 20px">{{toast.message}}</span>
+<sc-if value="{{toast.undo}}" hint-placeholder-val="{{ false }}"><button type="button" class="c-ink" style="height: 36px; padding: 0 var(--space-3); border: 0; border-radius: var(--radius-small); background: transparent; font-family: var(--font-sans); font-size: 14px; font-weight: 600">{{toast.actionLabel}}</button></sc-if>
+</div>
+</sc-if>
+
+<sc-if value="{{sheet}}" hint-placeholder-val="{{ false }}">
+<div class="kl-dim" aria-hidden="true" style="position: absolute; inset: 0; z-index: 40"></div>
+<div data-kilo="BottomSheet" role="dialog" aria-modal="true" aria-label="{{sheetTitle}}" class="kl-sheet" style="position: absolute; left: 0; right: 0; bottom: 0; z-index: 41; padding: 0 var(--space-4) calc(var(--space-6) + 34px)">
+<div style="display: flex; justify-content: center; padding: var(--space-2) 0 var(--space-3)"><span aria-hidden="true" style="width: 36px; height: 4px; border-radius: var(--radius-pill); background: var(--border-strong)"></span></div>
+
+<sc-if value="{{picker.show}}" hint-placeholder-val="{{ false }}">
+<div data-kilo="DatePicker" style="display: flex; flex-direction: column; gap: var(--space-2)">
+<div style="display: flex; align-items: center; justify-content: space-between">
+<button class="kl-ibg" type="button" aria-label="Previous month"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg></button>
+<h2 class="t-h2" style="margin: 0">October 2026</h2>
+<button class="kl-ibg" type="button" aria-label="Next month" style="opacity: 0.4"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></button>
+</div>
+<div style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); text-align: center">
+<sc-for list="{{picker.dow}}" as="h" hint-placeholder-count="7"><span class="t-cap c-mut" style="padding: var(--space-1) 0">{{h}}</span></sc-for>
+</div>
+<div role="grid" aria-label="October 2026" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; justify-items: center">
+<sc-for list="{{picker.cells}}" as="c" hint-placeholder-count="35">
+<button type="button" aria-label="{{c.aria}}" class="t-body tab" style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; padding: 0; border: {{c.ring}}; border-radius: 50%; background: {{c.bg}}; color: {{c.fg}}; opacity: {{c.opacity}}; visibility: {{c.vis}}; font-family: var(--font-sans); font-weight: {{c.weight}}">{{c.n}}<sc-if value="{{c.dot}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="position: absolute; bottom: 5px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--success)"></span></sc-if></button>
+</sc-for>
+</div>
+</div>
+</sc-if>
+
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"screenState":{"editor":"enum","options":["today","today-scrolled","today-empty","over-target","complete","past-day","no-target","loading","offline","error","row-swiped","deleted-toast","date-picker","day-copied","nothing-to-copy","copy-error","saved-toast","row-spoon","today-recipe","row-recipe","targets-updated"],"default":"today"},"theme":{"editor":"enum","options":["dark","light"],"default":"dark"},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'light' ? 'light' : 'dark';
+    const st = this.props.screenState ?? 'today';
+    const T = { kcal: 2200, p: 160, c: 220, f: 70 };
+    const E = (time, title, amount, kcal, p, f, c, quick) => ({ time, title, amount, kcal, p, f, c, quick: !!quick });
+    const today = [
+      E('08:05', 'Porridge oats', '50 g', 187, 5.6, 4.2, 30.2),
+      E('08:05', 'Semi-skimmed milk', '200 ml', 92, 7, 3.4, 9.6),
+      E('08:10', 'Banana', '1 medium (100 g)', 95, 1.2, 0.1, 20.3),
+      E('12:40', 'Chicken breast, grilled', '150 g', 222, 48, 3.3, 0),
+      E('12:40', 'Basmati rice, boiled', '180 g', 216, 4.9, 0.7, 47.5),
+      E('12:45', 'Meal deal crisps', '', 130, 2, 7, 15, true),
+      E('15:20', 'Greek yoghurt 0% fat', '1 pot (170 g)', 97, 17.3, 0.3, 6.5)
+    ];
+    const lasagne = E('19:30', 'Lasagne', '1 portion (400 g)', 1373, 64, 62, 128);
+    const salmon = E('19:15', 'Salmon fillet, baked', '120 g', 247, 25, 16, 0);
+    const apple = E('13:30', 'Apple', '1 medium (150 g)', 78, 0.5, 0.2, 18);
+    // KEY-259: a logged spoon amount reads as its count and millilitres, like the ml row above. 2 tbsp of olive oil at 0.92 g/ml is 27.6 g.
+    const oil = E('12:40', 'Oil, olive', '2 tbsp (30 ml)', 248, 0, 27.6, 0);
+    const yesterday = [...today, salmon];
+    // M4 (brief 23): one serving of the golden "Chicken and rice" logged from the 18:00 hour's "+", or 300 g of the cooked dish (1,496.8 kcal, P 126.5, C 170.2, F 32.5 over 1,100 g).
+    const recipeServing = Object.assign(E('18:00', 'Chicken and rice', '1 serving (275 g)', 374.2, 31.625, 8.125, 42.55), { recipe: true });
+    const recipeGrams = Object.assign(E('18:00', 'Chicken and rice', '300 g', 1496.8 * 300 / 1100, 126.5 * 300 / 1100, 32.5 * 300 / 1100, 170.2 * 300 / 1100), { recipe: true, pressed: true });
+    const kc = (n) => Math.round(n).toLocaleString('en-GB');
+    const g = (n) => { const a = Math.abs(n); const v = a < 10 ? Math.round(a * 10) / 10 : Math.round(a); return String(v); };
+    const byState = {
+      'today': { e: today, top: 8 },
+      'today-scrolled': { e: today, end: true },
+      'today-empty': { e: [], emptyCard: true, copyYesterday: true },
+      'over-target': { e: [...today, lasagne], top: 18 },
+      'complete': { e: today, complete: true, end: true },
+      'past-day': { e: yesterday, past: true, top: 8, weekHint: true },
+      'no-target': { e: today, noTarget: true, top: 8 },
+      'loading': { loading: true },
+      'offline': { e: today, offline: true, top: 8 },
+      'error': { error: true },
+      'row-swiped': { e: today, swiped: 'Chicken breast, grilled', top: 11 },
+      'deleted-toast': { e: today.filter((x) => x.title !== 'Chicken breast, grilled'), toast: 'deleted', top: 11 },
+      'date-picker': { e: today, picker: true, top: 8 },
+      'day-copied': { e: [...today, ...yesterday], toast: 'day', top: 8 },
+      'nothing-to-copy': { e: [], emptyCard: true, noYesterday: true },
+      'copy-error': { e: [], emptyCard: true, copyYesterday: true, bannerError: 'Not copied. Check your connection and try again.' },
+      'saved-toast': { e: [...today, apple], toast: 'saved', top: 13 },
+      'row-spoon': { e: [...today, oil], top: 11 },
+      'today-recipe': { e: [...today, recipeServing], top: 15 },
+      'row-recipe': { e: [...today, recipeGrams], top: 15 },
+      // Ki-Lo program canvas (KEY-623): Friday 23 October, the morning of the golden fixture's third check-in, which ran on
+      // open and set 2,140 kcal, P 126, C 245, F 73. Breakfast is logged. The toast is the only new thing on this board.
+      'targets-updated': { e: today.slice(0, 3), toast: 'targets', top: 8, T: { kcal: 2140, p: 126, c: 245, f: 73 }, fri23: true }
+    };
+    const s = byState[st] || byState.today;
+    // One log: a stable sort by time keeps earlier entries first at the same time.
+    const entries = (s.e || []).map((x, i) => ({ x, i })).sort((a, b) => a.x.time.localeCompare(b.x.time) || a.i - b.i).map((o) => o.x);
+    const sum = (l) => l.reduce((a, x) => ({ kcal: a.kcal + x.kcal, p: a.p + x.p, f: a.f + x.f, c: a.c + x.c }), { kcal: 0, p: 0, f: 0, c: 0 });
+    const tot = sum(entries);
+    const content = !s.loading && !s.error;
+    const FLOW = { hour: 44, food: 77, gap: 10, card: 10 };
+    const hours = [];
+    let offsetToTop = {};
+    let runningHeight = 0;
+    for (let h = 0; h < 24; h++) {
+      const label = String(h).padStart(2, '0') + ':00';
+      const inHour = entries.filter((x) => parseInt(x.time.slice(0, 2), 10) === h);
+      offsetToTop[h] = runningHeight;
+      runningHeight += FLOW.hour + (inHour.length ? inHour.length * FLOW.food + FLOW.gap : 0);
+      const isNow = h === 11 && !s.past;
+      hours.push({
+        label,
+        now: isNow,
+        chipAria: isNow ? label + ', now' : label,
+        addLabel: 'Add food at ' + label,
+        addDisabled: s.offline ? 'true' : 'false',
+        addOpacity: s.offline ? '0.4' : '1',
+        hasRows: inHour.length > 0,
+        rows: inHour.map((x, i) => ({
+          title: x.title,
+          caption: x.time + ' · ' + (x.quick ? 'Quick add' : x.amount),
+          p: g(x.p), c: g(x.c), f: g(x.f), kcal: kc(x.kcal),
+          divider: i ? '1px solid var(--border)' : '0',
+          recipe: !!x.recipe,
+          press: x.pressed ? 'inset 0 0 0 999px var(--press-overlay)' : 'none',
+          aria: x.time + ', ' + x.title + (x.recipe ? ', recipe' : '') + ', ' + (x.quick ? 'Quick add' : x.amount) + ', ' + kc(x.kcal) + ' kilocalories',
+          swiped: s.swiped === x.title,
+          shift: s.swiped === x.title ? '-88px' : '0px',
+          swipeBg: s.swiped === x.title ? 'var(--danger)' : 'transparent'
+        }))
+      });
+    }
+    const scrollY = s.top != null ? offsetToTop[s.top] : 0;
+    // Progress strip: eaten / target, a 4 px bar in the nutrient colour. Over target the bar fills and gains a brighter outline of its own colour (Zee: no warning colour on these bars).
+    const bar = (label, color, eaten, target, flame, unit) => {
+      const has = target > 0;
+      const r = has ? eaten / target : 0;
+      const isOver = has && r > 1;
+      const shown = flame ? kc(eaten) : g(eaten);
+      return {
+        flame, label, hasLabel: !!label,
+        eaten: shown,
+        suffix: has ? '/ ' + (flame ? kc(target) : g(target)) : unit,
+        ink: 'var(--text-primary)',
+        hasBar: has, color,
+        fill: (Math.min(1, r) * 100).toFixed(1) + '%',
+        isOver,
+        ring: isOver ? '0 0 0 1px var(--background), 0 0 0 2.5px color-mix(in srgb, ' + color + ' 55%, white)' : 'none',
+        over: isOver ? (Math.min(0.35, r - 1) * 100).toFixed(1) + '%' : '0%',
+        aria: (flame ? 'Calories' : label === 'P' ? 'Protein' : label === 'C' ? 'Carbohydrate' : 'Fat') + ': ' + shown + (has ? ' of ' + (flame ? kc(target) : g(target)) : '') + (flame ? ' kilocalories' : ' grams') + (isOver ? ', over target' : '')
+      };
+    };
+    const tg = s.noTarget ? { kcal: 0, p: 0, c: 0, f: 0 } : (s.T || T);
+    const bars = [
+      bar('', 'var(--calories)', tot.kcal, tg.kcal, true, ' kcal'),
+      bar('P', 'var(--protein)', tot.p, tg.p, false, ' g'),
+      bar('C', 'var(--carbs)', tot.c, tg.c, false, ' g'),
+      bar('F', 'var(--fat)', tot.f, tg.f, false, ' g')
+    ];
+    // Week: Monday 12 to Sunday 18 October 2026, today Thursday 15.
+    const done = !!s.complete;
+    const selectedNumber = s.fri23 ? 23 : s.past ? 14 : 15;
+    const wk = s.fri23 ? [
+      { n: 19, dow: 'Mo', long: 'Monday 19 October', complete: true },
+      { n: 20, dow: 'Tu', long: 'Tuesday 20 October', complete: true },
+      { n: 21, dow: 'We', long: 'Wednesday 21 October', complete: true },
+      { n: 22, dow: 'Th', long: 'Thursday 22 October', complete: true },
+      { n: 23, dow: 'Fr', long: 'Friday 23 October, today', complete: false, today: true },
+      { n: 24, dow: 'Sa', long: 'Saturday 24 October', future: true },
+      { n: 25, dow: 'Su', long: 'Sunday 25 October', future: true }
+    ] : [
+      { n: 12, dow: 'Mo', long: 'Monday 12 October', complete: true },
+      { n: 13, dow: 'Tu', long: 'Tuesday 13 October', complete: true },
+      { n: 14, dow: 'We', long: 'Wednesday 14 October', complete: false },
+      { n: 15, dow: 'Th', long: 'Thursday 15 October, today', complete: done, today: true },
+      { n: 16, dow: 'Fr', long: 'Friday 16 October', future: true },
+      { n: 17, dow: 'Sa', long: 'Saturday 17 October', future: true },
+      { n: 18, dow: 'Su', long: 'Sunday 18 October', future: true }
+    ];
+    const week = wk.map((d) => {
+      const selected = d.n === selectedNumber;
+      return {
+        n: String(d.n), dow: d.dow,
+        aria: d.long + (d.complete ? ', complete' : '') + (selected ? ', selected' : ''),
+        selected: selected ? 'true' : 'false',
+        disabled: d.future ? 'true' : 'false',
+        border: selected ? 'var(--border-strong)' : 'var(--border)',
+        bg: selected ? 'var(--surface-raised)' : 'transparent',
+        opacity: d.future ? '0.4' : '1',
+        check: !!d.complete,
+        dot: !!d.today && !d.complete
+      };
+    });
+    const toggle = { checked: done ? 'true' : 'false', label: done ? 'Day complete' : 'Mark day complete', caption: done ? 'Counted in your expenditure estimate' : 'Complete days feed the expenditure estimate', bg: done ? 'var(--accent-muted)' : 'var(--surface)', border: done ? 'var(--accent)' : 'var(--border)', track: done ? 'var(--accent)' : 'var(--border-strong)', knob: done ? 'var(--accent-foreground)' : 'var(--text-primary)', knobLeft: done ? '21px' : '3px', opacity: s.offline ? '0.5' : '1' };
+    const toasts = {
+      deleted: { message: 'Entry deleted', undo: true, iconTrash: true, iconColor: 'var(--text-secondary)' },
+      day: { message: 'Copied 8 entries from yesterday', undo: true, iconCopy: true, iconColor: 'var(--text-secondary)' },
+      saved: { message: 'Added', undo: false, iconCheck: true, iconColor: 'var(--success)' },
+      targets: { message: 'Check-in done: new targets', undo: true, actionLabel: 'See why', iconRefresh: true, iconColor: 'var(--text-secondary)' }
+    };
+    const toast = Object.assign({ show: !!s.toast, undo: false, actionLabel: 'Undo', iconTrash: false, iconCopy: false, iconCheck: false, iconRefresh: false, message: '', iconColor: 'var(--text-secondary)' }, toasts[s.toast] || {});
+    // October 2026 starts on a Thursday: three blanks before the 1st.
+    const cells = [];
+    for (let i = 0; i < 3; i++) cells.push({ n: '', vis: 'hidden', aria: '', ring: '0', bg: 'transparent', fg: 'var(--text-primary)', opacity: '1', weight: 400, dot: false });
+    for (let d = 1; d <= 31; d++) {
+      const isToday = d === 15;
+      const comp = d === 12 || d === 13;
+      cells.push({ n: String(d), vis: 'visible', aria: d + ' October' + (isToday ? ', today, selected' : '') + (comp ? ', complete' : ''), ring: isToday ? '2px solid var(--accent)' : '0', bg: isToday ? 'var(--accent)' : 'transparent', fg: isToday ? 'var(--accent-foreground)' : 'var(--text-primary)', opacity: d > 15 ? '0.4' : '1', weight: isToday ? 600 : 400, dot: comp });
+    }
+    const sheet = !!s.picker;
+    return {
+      theme,
+      title: s.past ? 'Wed 14 Oct' : 'Today',
+      weekStrip: !s.loading,
+      weekHint: !!s.weekHint,
+      week,
+      bars,
+      hours,
+      emptyCard: !!s.emptyCard,
+      copyDisabled: s.noYesterday ? 'true' : 'false',
+      copyOpacity: s.noYesterday ? '0.4' : '1',
+      noYesterday: !!s.noYesterday,
+      justify: s.end ? 'flex-end' : 'flex-start',
+      scrollY: String(scrollY),
+      bannerInfo: !!s.noTarget,
+      bannerOffline: !!s.offline,
+      bannerError: !!s.bannerError,
+      bannerErrorText: s.bannerError || '',
+      loading: !!s.loading,
+      skeletonDays: [1, 2, 3, 4, 5, 6, 7],
+      skeletonBars: [1, 2, 3, 4],
+      skeletonHours: [{ food: false }, { food: true }, { food: false }, { food: true }, { food: false }],
+      error: !!s.error,
+      content,
+      toggle,
+      chromeOpacity: s.offline ? '0.5' : '1',
+      stripAria: bars.map((b) => b.aria).join('. '),
+      toast,
+      sheet,
+      sheetTitle: 'Choose a date',
+      picker: { show: !!s.picker, dow: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], cells }
+    };
+  }
+}
+</script>
+</body>
+</html>
