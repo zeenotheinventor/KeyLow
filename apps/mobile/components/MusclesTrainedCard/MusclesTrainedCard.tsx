@@ -3,6 +3,7 @@ import { sessionHeatValues, sessionMuscleSets, TRAINING_PARAMS_V1 } from "@keylo
 import { useMemo } from "react";
 import { View } from "react-native";
 
+import { useBodyFigure } from "../../lib/bodyFigure";
 import { BodyFigure, Card, Text } from "../ui";
 import { TrainedMuscleRow } from "./TrainedMuscleRow";
 
@@ -15,7 +16,9 @@ const SIDES = ["front", "back"] as const;
  * The Muscles trained card, on the finish screen and on a past session: the front and the back of the body
  * at 64 points, filled with the heat of this session's sets alone, and beside them the muscles it trained
  * with their effective sets, most first, each with the swatch of the step its figure is filled with. A
- * session with no working sets trained nothing, so the card is left out.
+ * session with no working sets trained nothing, so the card is left out. The figures are drawn as the
+ * figure setting has them, male or female, and the card waits for the stored setting, which the phone gives
+ * at once, so it never draws the wrong figure first.
  */
 export function MusclesTrainedCard({ sets, at }: MusclesTrainedCardProps) {
   const { rows, heatSteps } = useMemo(
@@ -26,7 +29,9 @@ export function MusclesTrainedCard({ sets, at }: MusclesTrainedCardProps) {
     [sets, at],
   );
 
-  if (rows.length === 0) {
+  const { figure, isReady: isFigureReady } = useBodyFigure();
+
+  if (rows.length === 0 || !isFigureReady) {
     return null;
   }
 
@@ -44,9 +49,9 @@ export function MusclesTrainedCard({ sets, at }: MusclesTrainedCardProps) {
         <View className="flex-row items-center gap-3">
           <View className="flex-row gap-2">
             {SIDES.map((side) => (
-              // The figure setting (KEY-430) plugs in here as the figure's `body`; until it exists the male is drawn, as on the body map.
               <BodyFigure
                 key={side}
+                body={figure}
                 label={FINISH_SCREEN.figureNames[side]}
                 scale="heat"
                 side={side}

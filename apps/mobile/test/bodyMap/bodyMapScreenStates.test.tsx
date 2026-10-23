@@ -21,9 +21,13 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 import type { ActiveRoutine, TrainingSet } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
+// The figure is already chosen (Male), so the screen does not stop to ask. The figure tests cover the question.
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(key === "bodyMap.figure" ? "male" : null),
+    setItem: () => Promise.resolve(),
+  },
 }));
 jest.mock(
   "expo-router",
@@ -274,12 +278,13 @@ describe("the body map screen's states", () => {
       expect(screen.queryByText("Start a session")).not.toBeOnTheScreen();
     });
 
-    it("should leave nothing to press but Back and the view toggle, so no figure is interactive", async () => {
+    it("should leave nothing to press but Back, the figure setting and the view toggle, so no figure is interactive", async () => {
       await renderScreen();
       await screen.findByRole("heading", { name: "Nothing to show yet" });
 
-      expect(screen.getAllByRole("button")).toHaveLength(2);
+      expect(screen.getAllByRole("button")).toHaveLength(3);
       expect(screen.getByRole("button", { name: "Back" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Figure: male or female" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Show projected" })).toBeOnTheScreen();
     });
   });

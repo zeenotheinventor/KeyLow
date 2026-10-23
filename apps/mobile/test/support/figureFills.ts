@@ -1,7 +1,7 @@
 import { BODY_ARTWORK, isMuscleId } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 
-import type { BodyArtworkSide, MuscleId } from "@keylow/core/training";
+import type { BodyArtworkFigure, BodyArtworkSide, MuscleId } from "@keylow/core/training";
 import type { ThemeScheme } from "@keylow/tokens";
 import type { screen } from "@testing-library/react-native";
 
@@ -19,11 +19,16 @@ function paint(hex: string) {
 
 /**
  * The fill of every muscle drawn in a figure, read from the figure found by its accessible name. A muscle
- * has no role of its own, so its drawing is found by its path on the side the figure shows.
+ * has no role of its own, so its drawing is found by its path on the side the figure shows, in the body
+ * drawn (the male, unless said).
  */
-export function fillsIn(figure: FigureElement, side: BodyArtworkSide): Map<MuscleId, unknown> {
+export function fillsIn(
+  figure: FigureElement,
+  side: BodyArtworkSide,
+  body: BodyArtworkFigure = "male",
+): Map<MuscleId, unknown> {
   const fills = new Map<MuscleId, unknown>();
-  for (const [id, path] of Object.entries(BODY_ARTWORK.male[side].muscles)) {
+  for (const [id, path] of Object.entries(BODY_ARTWORK[body][side].muscles)) {
     const [drawing] = figure.queryAll(
       (node) => node.type === "RNSVGPath" && propOf(node.props, "d") === path,
     );

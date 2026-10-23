@@ -1,6 +1,6 @@
 import type { BodyFigureValues } from "../ui";
 import type { BodyMapScale } from "@keylow/core/copy";
-import type { BodyMapView } from "@keylow/core/training";
+import type { BodyArtworkFigure, BodyMapView } from "@keylow/core/training";
 
 export type BodyMapCardProps = {
   /** The scale the figures are coloured by. */
@@ -11,6 +11,8 @@ export type BodyMapCardProps = {
   actualValues: BodyFigureValues;
   /** The value of each muscle in Projected. A muscle left out is drawn at rest. */
   projectedValues: BodyFigureValues;
+  /** The figure drawn, from the figure setting. Defaults to male. */
+  body?: BodyArtworkFigure | undefined;
   /** The view named, such as "Actual". */
   viewLabel: string;
   /** The line under the view: the moment shown, or why there is nothing to show. */

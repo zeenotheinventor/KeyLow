@@ -16,7 +16,7 @@ export type BodyFigureProps = {
   scale: BodyFigureScale;
   values: BodyFigureValues;
   /** The figure to draw. Defaults to male. */
-  body?: BodyArtworkFigure;
+  body?: BodyArtworkFigure | undefined;
   /** The muscle to outline in the primary text colour. */
   selected?: MuscleId;
   /** The opacity of the whole figure, from 0 to 1, as the canvas component's `dim` has it. Defaults to 1. */

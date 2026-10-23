@@ -10,6 +10,7 @@ import { PersistedDiaryCache } from "../components/PersistedDiaryCache";
 import { RootErrorScreen } from "../components/RootErrorScreen";
 import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
+import { startBodyFigureRead } from "../lib/bodyFigure";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
 import { setUpReminderNotifications } from "../lib/notifications";
@@ -36,6 +37,10 @@ feedFocusManager();
 // Creates the reminders' Android channel and lets a reminder show while the app is open. A build without the
 // notifications module does nothing, and a failure leaves the app as it was.
 setUpReminderNotifications().catch(() => undefined);
+
+// Starts reading the figure setting, so the screens that draw a body find it read and never draw the wrong
+// figure first. A failure to read leaves Male.
+startBodyFigureRead();
 
 const queryClient = createQueryClient();
 

@@ -25,12 +25,12 @@ const heatSwatchClassNames = [
 /**
  * The body map on the dashboard as its board draws it: the title and the view with a Body map link and its
  * chevron, Actual heat now, front and back at 100 points, the heat legend from Peak to Rested, the three
- * warmest muscles and today's planned day. The figure is drawn male until the figure setting exists. The
+ * warmest muscles and today's planned day. The figure is drawn as the figure setting has it, male unless said. The
  * whole card is one button that opens the body map, as the Today and This week cards open the Diary, named
  * by what it shows and "Open the body map". There is no toggle and no long-press here. The words and
  * figures inside it are hidden from screen readers, because that name already says all of it.
  */
-export function DashboardBodyMapCard({ bodyMap, onOpen }: DashboardBodyMapCardProps) {
+export function DashboardBodyMapCard({ bodyMap, body, onOpen }: DashboardBodyMapCardProps) {
   const { warmestLine, todayLine, accessibleName } = describeDashboardBodyMapCard({
     warmest: bodyMap.warmest,
     today: todayPlanOf(bodyMap.today),
@@ -69,6 +69,7 @@ export function DashboardBodyMapCard({ bodyMap, onOpen }: DashboardBodyMapCardPr
           </View>
           <View className="flex-row items-end justify-center gap-[28px]">
             <BodyFigure
+              body={body}
               label={figureLabel("front")}
               scale="heat"
               side="front"
@@ -76,6 +77,7 @@ export function DashboardBodyMapCard({ bodyMap, onOpen }: DashboardBodyMapCardPr
               w={FIGURE_WIDTH}
             />
             <BodyFigure
+              body={body}
               label={figureLabel("back")}
               scale="heat"
               side="back"

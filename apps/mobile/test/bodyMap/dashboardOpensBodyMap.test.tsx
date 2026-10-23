@@ -25,9 +25,13 @@ import { showSampleWeek } from "../support/weekFixtures";
 import type { ActiveRoutine, TrainingSet } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
+// The figure is already chosen (Male), so the screen does not stop to ask. The figure tests cover the question.
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+  default: {
+    getItem: (key: string) => Promise.resolve(key === "bodyMap.figure" ? "male" : null),
+    setItem: () => Promise.resolve(),
+  },
 }));
 jest.mock(
   "react-native-safe-area-context",
