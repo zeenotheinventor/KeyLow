@@ -197,7 +197,7 @@ KEY-6's health data rules (Zee, 2026-10-14) apply to the wizard. Profile stats, 
 - The web wizard. Zee's ruling 5 puts the web boards and tickets (W1 to W3) after the mobile wizard has shipped and Zee has used it.
 - Day-of-week offsets in `deriveTargets`. M6 adds them.
 - The prior for an account with no stats. An existing account marked set up with null stats, and a user who took the escape, has nothing to compute `initialExpenditure` from. M6 decides what its first snapshot uses.
-- The fat floor on its own can exceed the calories, but only at very high weights. Point 2 of "`deriveTargets`" does not say what the macros are then. KEY-598 raises it before it builds the case.
+- Resolved in KEY-598: the fat floor on its own can exceed the calories, but only at very high weights (at 1200 kcal, above 266 kg). The macros are then fat = `floor(calories / 9)` g, protein 0 g and carbs 0 g, and a `macro_fit` clamp is recorded, so the macros never exceed the calories.
 
 ### Implemented by
 
@@ -438,7 +438,7 @@ Amendment 1 added the `expenditure` and `targets` groups with the values `initia
 
 ### What this amendment closes
 
-From Amendment 1, "Open": the check-in weekday ("The schedule" and Q1), the day-of-week offsets in `deriveTargets` (above), and the prior for an account with no stats ("The prior for an account with no stats"). The fat floor that can exceed the calories at very high weights stays open for KEY-598.
+From Amendment 1, "Open": the check-in weekday ("The schedule" and Q1), the day-of-week offsets in `deriveTargets` (above), and the prior for an account with no stats ("The prior for an account with no stats"). The fat floor that can exceed the calories at very high weights is resolved in KEY-598: fat is `floor(calories / 9)` g, protein and carbs are 0 g, and `macro_fit` is recorded.
 
 ### Not in v1
 

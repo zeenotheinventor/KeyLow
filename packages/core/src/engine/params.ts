@@ -41,7 +41,7 @@ export type ExpenditureParams = Readonly<{
   activityFactorBand: Readonly<{ min: number; max: number }>;
 }>;
 
-/** The tunables of the daily calorie target. The macro values join this group with the macro half of `deriveTargets`. */
+/** The tunables of the daily calorie target and of the split of those calories into macros. */
 export type TargetsParams = Readonly<{
   /** A lose target is never below this many kilocalories a day. */
   floorAbsKcal: number;
@@ -57,6 +57,17 @@ export type TargetsParams = Readonly<{
   maxGainPct: number;
   /** Calories are rounded to a multiple of this many kilocalories. */
   roundToKcal: number;
+  /** The protein presets, in grams of protein for each kilogram of trend weight. */
+  proteinPresets: Readonly<{ moderate: number; high: number; very_high: number }>;
+  /** Protein is never more than this many grams for each kilogram of trend weight. */
+  proteinMaxGPerKg: number;
+  /**
+   * The fat fractions, each the share of the calories left after protein that goes to fat. The keys are
+   * the stored `programs.split_preset` values.
+   */
+  fatFractions: Readonly<{ balanced: number; low_fat: number; low_carb: number }>;
+  /** Fat is never less than this many grams for each kilogram of trend weight. */
+  fatMinGPerKg: number;
 }>;
 
 export type EngineParams = Readonly<{
@@ -85,5 +96,9 @@ export const DEFAULT_ENGINE_PARAMS: EngineParams = {
     maxLossPct: 1.0,
     maxGainPct: 0.5,
     roundToKcal: 10,
+    proteinPresets: { moderate: 1.6, high: 2.0, very_high: 2.2 },
+    proteinMaxGPerKg: 3.0,
+    fatFractions: { balanced: 0.4, low_fat: 0.28, low_carb: 0.6 },
+    fatMinGPerKg: 0.5,
   },
 };

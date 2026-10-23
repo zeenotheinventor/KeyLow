@@ -129,14 +129,42 @@ describe("DEFAULT_ENGINE_PARAMS targets group", () => {
     expect(DEFAULT_ENGINE_PARAMS.targets.roundToKcal).toBe(10);
   });
 
+  it("should offer the protein presets moderate 1.6, high 2.0 and very high 2.2 g/kg", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.proteinPresets).toStrictEqual({
+      moderate: 1.6,
+      high: 2.0,
+      very_high: 2.2,
+    });
+  });
+
+  it("should cap protein at 3.0 g/kg", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.proteinMaxGPerKg).toBe(3.0);
+  });
+
+  it("should offer the fat fractions balanced 0.40, low_fat 0.28 and low_carb 0.60", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.fatFractions).toStrictEqual({
+      balanced: 0.4,
+      low_fat: 0.28,
+      low_carb: 0.6,
+    });
+  });
+
+  it("should keep fat at 0.5 g/kg or more", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.fatMinGPerKg).toBe(0.5);
+  });
+
   it("should hold exactly these targets defaults and no second energy density", () => {
     expect(Object.keys(DEFAULT_ENGINE_PARAMS.targets).sort()).toStrictEqual([
+      "fatFractions",
+      "fatMinGPerKg",
       "floorAbsKcal",
       "floorBmrFactor",
       "maxDeficitFrac",
       "maxGainPct",
       "maxLossPct",
       "maxSurplusFrac",
+      "proteinMaxGPerKg",
+      "proteinPresets",
       "roundToKcal",
     ]);
   });
