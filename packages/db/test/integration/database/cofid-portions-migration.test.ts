@@ -358,6 +358,61 @@ describe("the CoFID portions migration, applied to a database that has the baker
   });
 });
 
+// KEY-526, the store cupboard batch. The expected rows are the FoodData Central rows the portions file cites.
+const storeCupboardBatchCodes = [
+  "14-188", // peach half, canned in juice
+  "14-189", // peach half, canned in syrup
+  "14-197", // pear half, canned in juice
+  "14-840", // pistachio
+  "14-871", // Brazil nut
+  "14-896", // almond
+  "16-448", // anchovy
+  "17-114", // marshmallow
+] as const;
+
+describe("the CoFID portions migration, applied to a database that has the store cupboard foods but no portions for them", () => {
+  it("should give each store cupboard food its one piece, with the weight its FoodData Central row cites", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(storeCupboardBatchCodes)}\n${migrationSql}\n${listPortionsOf(storeCupboardBatchCodes)}`,
+    );
+
+    expect(lines).toEqual([
+      "14-188|1 peach half|98|t|0",
+      "14-189|1 peach half|98|t|0",
+      "14-197|1 pear half|76|t|0",
+      "14-840|1 pistachio|0.7|t|0",
+      "14-871|1 Brazil nut|5|t|0",
+      "14-896|1 almond|1.2|t|0",
+      "16-448|1 anchovy|4|t|0",
+      "17-114|1 marshmallow|7.2|t|0",
+    ]);
+  });
+
+  it("should leave every store cupboard food with exactly one default portion", () => {
+    const lines = runRolledBack(
+      `${deletePortionsOf(storeCupboardBatchCodes)}\n${migrationSql}\nselect food.source_ref, count(*) filter (where portion.is_default) ${sharedPortionsOf(storeCupboardBatchCodes)} group by food.source_ref order by food.source_ref;`,
+    );
+
+    expect(lines).toEqual(storeCupboardBatchCodes.map((code) => `${code}|1`));
+  });
+
+  it("should change nothing when its SQL is applied a second time", () => {
+    const lines = runRolledBack(
+      [
+        deletePortionsOf(storeCupboardBatchCodes),
+        migrationSql,
+        fingerprintOf(storeCupboardBatchCodes),
+        migrationSql,
+        fingerprintOf(storeCupboardBatchCodes),
+      ].join("\n"),
+    );
+
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).not.toMatch(/^0\|/);
+    expect(lines[1]).toBe(lines[0]);
+  });
+});
+
 // Each test applies the migration once first, so there are portions to change before it runs again.
 describe("the CoFID portions migration, applied again to portions that differ from the file", () => {
   it("should correct a weight and a label under the same id", () => {
