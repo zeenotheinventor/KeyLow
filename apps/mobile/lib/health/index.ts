@@ -1,7 +1,12 @@
 export { HealthProviderError } from "./HealthProviderError";
 export type { HealthErrorCode, HealthProviderAction } from "./HealthProviderError";
 export type {
+  BodyCompositionAccess,
   HealthAvailability,
+  HealthBodyCompositionKindRead,
+  HealthBodyCompositionRead,
+  HealthBodyCompositionStart,
+  HealthPermissionOptions,
   HealthPermissionResult,
   HealthProvider,
   HealthWeightRead,
