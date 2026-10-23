@@ -34,6 +34,7 @@ const meta = {
     ),
   ],
   args: {
+    scale: "heat",
     view: "actual",
     viewLabel: "Actual",
     subLine: "Now · Thu 15 Oct, 19:00",
@@ -74,5 +75,46 @@ export const NothingLogged: Story = {
     subLine: "Nothing logged in the last 14 days",
     actualValues: RESTING_HEAT,
     projectedValues: RESTING_HEAT,
+  },
+};
+
+// Volume Projected on the golden week at Sunday 20:00: sets this week against each muscle's target.
+export const VolumeProjected: Story = {
+  args: {
+    scale: "volume",
+    view: "projected",
+    viewLabel: "Projected",
+    subLine: "By Sun 18 Oct, if you follow the plan",
+    toggleLabel: "Show actual",
+    actualValues: { triceps: 1, lats: 1, quads: 0 },
+    projectedValues: { triceps: 2, delt_front: 2, delt_side: 2, lats: 1, quads: 0, hamstrings: 0 },
+  },
+};
+
+// Gap on the golden week at Sunday 20:00: no button and no tap, and the note names what the missed Push left behind.
+export const Gap: Story = {
+  args: {
+    scale: "gap",
+    viewLabel: "Done against plan",
+    subLine: "This week · as of Sun 18 Oct, 20:00",
+    actualValues: {
+      triceps: 0,
+      delt_front: 0,
+      delt_side: 0,
+      chest_upper: 0,
+      chest_lower: 0,
+      lats: 1,
+    },
+    projectedValues: {
+      triceps: 0,
+      delt_front: 0,
+      delt_side: 0,
+      chest_upper: 0,
+      chest_lower: 0,
+      lats: 1,
+    },
+    toggleLabel: null,
+    isToggleEnabled: false,
+    note: "Gap compares this week's sets with your plan, so it has no Actual or Projected. Saturday's Push was missed, so upper chest, lower chest, front delts, side delts and triceps are behind.",
   },
 };

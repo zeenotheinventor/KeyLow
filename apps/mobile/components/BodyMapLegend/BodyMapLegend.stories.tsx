@@ -7,6 +7,7 @@ import type { Meta, StoryObj } from "@storybook/react-native";
 const meta = {
   title: "BodyMap/BodyMapLegend",
   component: BodyMapLegend,
+  args: { scale: "heat" },
   decorators: [
     (Story) => (
       <View className="p-4">
@@ -22,3 +23,9 @@ type Story = StoryObj<typeof meta>;
 
 // The heat legend, from Rested to Peak, with only the peak glowing.
 export const Heat: Story = {};
+
+// The volume legend, from Not targeted to Over.
+export const Volume: Story = { args: { scale: "volume" } };
+
+// The gap legend, from Not in plan to Ahead.
+export const Gap: Story = { args: { scale: "gap" } };

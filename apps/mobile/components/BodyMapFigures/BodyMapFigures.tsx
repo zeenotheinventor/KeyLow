@@ -32,13 +32,14 @@ function createTapRelay() {
 }
 
 /**
- * The front and the back of the body side by side, each with its name under it. A tap anywhere on them
+ * The front and the back of the body side by side, each with its name under it, coloured by the scale. A tap anywhere on them
  * calls `onTap`; a pan, or a touch the screen takes over to scroll, never does. The figures stay plain
  * images, so a screen reader reaches the view through the toggle button and not through this tap. When
  * the view changes the old figures fade out under the new ones over 220 ms, and are hidden from a screen
  * reader while they do.
  */
 export function BodyMapFigures({
+  scale,
   view,
   actualValues,
   projectedValues,
@@ -75,12 +76,12 @@ export function BodyMapFigures({
                 <Animated.View style={outgoingStyle}>
                   <BodyFigure
                     label={describeBodyFigureLabel({
-                      scale: "heat",
+                      scale,
                       view: outgoing,
                       side,
                       hint: null,
                     })}
-                    scale="heat"
+                    scale={scale}
                     side={side}
                     values={valuesOf(outgoing)}
                     w={figureWidth}
@@ -90,8 +91,8 @@ export function BodyMapFigures({
             )}
             <Animated.View style={incomingLayerStyle}>
               <BodyFigure
-                label={describeBodyFigureLabel({ scale: "heat", view, side, hint: null })}
-                scale="heat"
+                label={describeBodyFigureLabel({ scale, view, side, hint: null })}
+                scale={scale}
                 side={side}
                 values={valuesOf(view)}
                 w={figureWidth}

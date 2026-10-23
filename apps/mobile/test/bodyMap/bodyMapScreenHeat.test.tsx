@@ -363,14 +363,14 @@ describe("the body map screen, Actual heat at Thursday 19:00", () => {
   });
 
   describe("only what this ticket builds", () => {
-    it("should show no scale switch, side switch, day scrubber or muscle list yet", async () => {
+    it("should show the scale switch, and no side switch, day scrubber or muscle list yet", async () => {
       await renderScreen();
 
-      for (const name of [/scale/i, /side/i, /day shown/i, /muscle list/i, /long-press/i]) {
+      for (const name of [/side/i, /day shown/i, /muscle list/i, /long-press/i]) {
         expect(screen.queryByLabelText(name)).not.toBeOnTheScreen();
         expect(screen.queryByText(name)).not.toBeOnTheScreen();
       }
-      expect(screen.queryAllByRole("radio")).toHaveLength(0);
+      expect(screen.getAllByRole("radio")).toHaveLength(3);
     });
 
     it("should show no Start a session button, because the Train tab it would open is not there", async () => {
