@@ -16,8 +16,9 @@ const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
 
 /**
  * The About screen, pushed from More: a stack header with Back, and the Data sources section, which
- * credits the datasets the app shows foods from, as their licences ask, and the Legal list, which opens the
- * Privacy Policy and the Terms in the browser. The About board draws both.
+ * credits the datasets the app shows foods from and the models its 3D body is adapted from, as their
+ * licences ask, and the Legal list, which opens the Privacy Policy and the Terms in the browser. The
+ * About board draws both.
  */
 export function AboutScreen() {
   const insets = useSafeAreaInsets();
@@ -76,6 +77,16 @@ export function AboutScreen() {
           name={dataSources.off.name}
           text={dataSources.off.text}
           url={dataSources.off.url}
+        />
+        <DataSourceCredit
+          name={dataSources.bodyParts3d.name}
+          text={dataSources.bodyParts3d.text}
+          url={dataSources.bodyParts3d.url}
+        />
+        <DataSourceCredit
+          name={dataSources.zAnatomy.name}
+          text={dataSources.zAnatomy.text}
+          url={dataSources.zAnatomy.url}
         />
         {/* The board puts 14 points between groups. 12 and 16 are equally near, so this is 16, as on the web page: the 8 of the gap plus 8. */}
         <View className="mt-2">
