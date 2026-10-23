@@ -28,7 +28,12 @@ export type {
   RequiredFoodNutrient,
 } from "./foodForm";
 export { isFoodId } from "./isFoodId";
-export { OFF_FRESHNESS_MS, offFreshness } from "./freshness";
+export {
+  OFF_FRESHNESS_MS,
+  OFF_PORTION_RULES_FROM,
+  isBeforePortionRules,
+  offFreshness,
+} from "./freshness";
 export type { OffFreshness } from "./freshness";
 export { normaliseOffCandidate, normaliseOffProduct, offProductPayloadSchema } from "./off";
 export type { NormaliseOffResult, OffFoodInput, OffPortionInput, OffProductPayload } from "./off";

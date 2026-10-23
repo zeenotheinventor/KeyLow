@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { OFF_FRESHNESS_MS, offFreshness } from "../../src/foods/freshness";
+import {
+  OFF_FRESHNESS_MS,
+  OFF_PORTION_RULES_FROM,
+  isBeforePortionRules,
+  offFreshness,
+} from "../../src/foods/freshness";
 
 const now = new Date("2026-10-07T12:00:00.000Z");
 
@@ -51,5 +56,40 @@ describe("offFreshness", () => {
 
   it("should be stale when the timestamp cannot be parsed, so the food is refetched", () => {
     expect(offFreshness("not a date", now)).toBe("stale");
+  });
+});
+
+describe("OFF_PORTION_RULES_FROM", () => {
+  it("should be the moment the pack and borrowed portion rules went live in production", () => {
+    expect(OFF_PORTION_RULES_FROM).toBe("2026-10-23T02:16:15Z");
+  });
+});
+
+describe("isBeforePortionRules", () => {
+  const rulesFrom = new Date(OFF_PORTION_RULES_FROM).getTime();
+
+  it("should be true for a fetch time before the rules", () => {
+    expect(isBeforePortionRules(new Date(rulesFrom - 1000).toISOString())).toBe(true);
+  });
+
+  it("should be true one millisecond before the rules", () => {
+    expect(isBeforePortionRules(new Date(rulesFrom - 1).toISOString())).toBe(true);
+  });
+
+  it("should be false at exactly the moment of the rules", () => {
+    expect(isBeforePortionRules(OFF_PORTION_RULES_FROM)).toBe(false);
+  });
+
+  it("should be false after the rules", () => {
+    expect(isBeforePortionRules(new Date(rulesFrom + 1).toISOString())).toBe(false);
+  });
+
+  it("should accept an ISO timestamp string as returned by PostgREST", () => {
+    expect(isBeforePortionRules("2026-10-22T12:00:00+00:00")).toBe(true);
+    expect(isBeforePortionRules("2026-10-23T12:00:00.123456+00:00")).toBe(false);
+  });
+
+  it("should be true when the timestamp cannot be parsed, so the food is refetched", () => {
+    expect(isBeforePortionRules("not a date")).toBe(true);
   });
 });
