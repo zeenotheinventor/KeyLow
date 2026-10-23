@@ -5,5 +5,6 @@ export const storyStates = [
   "Wide",
   "PrimaryAction",
   "DisabledAction",
+  "SecondaryAction",
   "Card",
 ];

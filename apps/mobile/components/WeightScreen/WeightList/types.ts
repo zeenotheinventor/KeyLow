@@ -10,4 +10,10 @@ export type WeightListProps = {
   isLeftOut: (localDate: string) => boolean;
   /** What the list scrolls with above the Weigh-ins heading, such as the trend card. Nothing yet. */
   header?: ReactNode;
+  /** What sits beside the Weigh-ins heading, such as the Health Connect status. */
+  status?: ReactNode;
+  /** Whether the pull to refresh is spinning. */
+  isRefreshing: boolean;
+  /** Called when the list is pulled down. */
+  onRefresh: () => void;
 };
