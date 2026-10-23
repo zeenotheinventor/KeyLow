@@ -30,9 +30,10 @@ describe("DEFAULT_ENGINE_PARAMS", () => {
     expect(DEFAULT_ENGINE_PARAMS.trend.winsorPct).toBe(0.025);
   });
 
-  it("should hold only the version and the trend and expenditure groups at the top level", () => {
+  it("should hold only the version and the trend, expenditure and targets groups at the top level", () => {
     expect(Object.keys(DEFAULT_ENGINE_PARAMS).sort()).toStrictEqual([
       "expenditure",
+      "targets",
       "trend",
       "version",
     ]);
@@ -95,6 +96,48 @@ describe("DEFAULT_ENGINE_PARAMS expenditure group", () => {
       "priorCv",
       "sexOffsetKcal",
       "zClampKcal",
+    ]);
+  });
+});
+
+describe("DEFAULT_ENGINE_PARAMS targets group", () => {
+  it("should floor a lose goal at 1200 kcal", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.floorAbsKcal).toBe(1200);
+  });
+
+  it("should floor a lose goal at 0.9 times the BMR", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.floorBmrFactor).toBe(0.9);
+  });
+
+  it("should cap a deficit at 30% of tdee", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.maxDeficitFrac).toBe(0.3);
+  });
+
+  it("should cap a surplus at 20% of tdee", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.maxSurplusFrac).toBe(0.2);
+  });
+
+  it("should cap a loss at 1.0% of body weight a week", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.maxLossPct).toBe(1.0);
+  });
+
+  it("should cap a gain at 0.5% of body weight a week", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.maxGainPct).toBe(0.5);
+  });
+
+  it("should round calories to the nearest 10 kcal", () => {
+    expect(DEFAULT_ENGINE_PARAMS.targets.roundToKcal).toBe(10);
+  });
+
+  it("should hold exactly these targets defaults and no second energy density", () => {
+    expect(Object.keys(DEFAULT_ENGINE_PARAMS.targets).sort()).toStrictEqual([
+      "floorAbsKcal",
+      "floorBmrFactor",
+      "maxDeficitFrac",
+      "maxGainPct",
+      "maxLossPct",
+      "maxSurplusFrac",
+      "roundToKcal",
     ]);
   });
 });

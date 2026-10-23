@@ -1,8 +1,9 @@
 /*
  * Every tunable of the adaptive engine in one object, so that a retune is a new version and never an
  * edit that rewrites history. Anything computed with these params records their version. The
- * `expenditure` group holds the values the starting estimate and `deriveTargets` use (ADR 0002,
- * Amendment 1). M6 adds the measurement and update params later, with their functions.
+ * `expenditure` and `targets` groups hold the values the starting estimate and `deriveTargets` use
+ * (ADR 0002, Amendment 1). The energy density lives in `expenditure` only, and `deriveTargets` reads it
+ * from there. M6 adds the measurement and update params later, with their functions.
  */
 
 import type { ActivityLevel, Sex } from "./types";
@@ -40,10 +41,29 @@ export type ExpenditureParams = Readonly<{
   activityFactorBand: Readonly<{ min: number; max: number }>;
 }>;
 
+/** The tunables of the daily calorie target. The macro values join this group with the macro half of `deriveTargets`. */
+export type TargetsParams = Readonly<{
+  /** A lose target is never below this many kilocalories a day. */
+  floorAbsKcal: number;
+  /** A lose target is never below this multiple of the BMR. The floor is the larger of the two limits. */
+  floorBmrFactor: number;
+  /** A lose target is never more than this fraction of tdee below it (0.30 is 30%). */
+  maxDeficitFrac: number;
+  /** A gain target is never more than this fraction of tdee above it (0.20 is 20%). */
+  maxSurplusFrac: number;
+  /** The fastest loss the engine aims for, in percent of body weight a week. */
+  maxLossPct: number;
+  /** The fastest gain the engine aims for, in percent of body weight a week. */
+  maxGainPct: number;
+  /** Calories are rounded to a multiple of this many kilocalories. */
+  roundToKcal: number;
+}>;
+
 export type EngineParams = Readonly<{
   version: typeof ENGINE_VERSION;
   trend: TrendParams;
   expenditure: ExpenditureParams;
+  targets: TargetsParams;
 }>;
 
 export const DEFAULT_ENGINE_PARAMS: EngineParams = {
@@ -56,5 +76,14 @@ export const DEFAULT_ENGINE_PARAMS: EngineParams = {
     sexOffsetKcal: { male: 5, female: -161, other: -78 },
     activityFactors: { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725, extra: 1.9 },
     activityFactorBand: { min: 1.2, max: 1.9 },
+  },
+  targets: {
+    floorAbsKcal: 1200,
+    floorBmrFactor: 0.9,
+    maxDeficitFrac: 0.3,
+    maxSurplusFrac: 0.2,
+    maxLossPct: 1.0,
+    maxGainPct: 0.5,
+    roundToKcal: 10,
   },
 };

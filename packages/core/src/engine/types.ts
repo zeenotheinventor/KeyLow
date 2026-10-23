@@ -32,3 +32,16 @@ export type Sex = (typeof SEXES)[number];
 export const ACTIVITY_LEVELS = ["sedentary", "light", "moderate", "very", "extra"] as const;
 
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
+
+/** What the user wants the calories to do. */
+export const CALORIE_GOALS = ["lose", "maintain", "gain"] as const;
+
+export type CalorieGoal = (typeof CALORIE_GOALS)[number];
+
+/**
+ * The guardrails that can change a target, so that a screen can tell the user which one did. The setup
+ * layer adds its own `profile_max` to this list. It is not an engine clamp.
+ */
+export const CLAMPS = ["max_rate", "max_deficit", "max_surplus", "floor", "macro_fit"] as const;
+
+export type Clamp = (typeof CLAMPS)[number];

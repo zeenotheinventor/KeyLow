@@ -1,8 +1,11 @@
-import type { ActivityLevel, Sex } from "../engine";
+import { CALORIE_GOALS } from "../engine";
+
+import type { ActivityLevel, CalorieGoal, Sex } from "../engine";
 import type { WeightDisplayUnit } from "../weight";
 
-export const GOALS = ["lose", "maintain", "gain"] as const;
-export type SetupGoal = (typeof GOALS)[number];
+/** The engine's goal list. The engine is the source because it is pure and setup imports from it. */
+export const GOALS = CALORIE_GOALS;
+export type SetupGoal = CalorieGoal;
 
 export const HEIGHT_UNITS = ["cm", "ft_in"] as const;
 export type HeightUnit = (typeof HEIGHT_UNITS)[number];
