@@ -25,6 +25,8 @@ import zanatomy_common as common  # noqa: E402
 import zanatomy_mapping as mapping  # noqa: E402
 
 MUSCLES_BLEND = "zanatomy-muscles.blend"
+# A face attribute on muscle_other: true for the faces of the neutral muscles that the phone file leaves out.
+PHONE_DROP_ATTRIBUTE = "phone_drop"
 
 
 def new_group_mesh(objects):
@@ -40,11 +42,15 @@ def new_group_mesh(objects):
     return builder
 
 
-def make_group_object(name, objects, collection):
+def make_group_object(name, objects, collection, dropped=()):
     builder = new_group_mesh(objects)
     mesh = bpy.data.meshes.new(name)
     builder.to_mesh(mesh)
     builder.free()
+    if name == f"muscle_{mapping.NEUTRAL}":
+        flags = [obj.name in dropped for obj in objects for _ in obj.data.polygons]
+        attribute = mesh.attributes.new(PHONE_DROP_ATTRIBUTE, "BOOLEAN", "FACE")
+        attribute.data.foreach_set("value", flags)
     obj = bpy.data.objects.new(name, mesh)
     collection.objects.link(obj)
     return obj
@@ -81,6 +87,7 @@ def main():
     groups[mapping.DEEP] = []
     groups[mapping.HEAD] = []
     excluded = []
+    phone_dropped = set()
     names = []
     for obj in common.collection_meshes(common.MUSCLE_COLLECTION):
         collection_names = [collection.name for collection in obj.users_collection]
@@ -92,6 +99,8 @@ def main():
             excluded.append(obj)
         else:
             groups[group].append(obj)
+            if group == mapping.NEUTRAL and mapping.is_phone_drop(compiled, obj.name, collection_names):
+                phone_dropped.add(obj.name)
     limits = json.load(open(common.MAP_PATH))["skeleton"]
     skeleton, stray = [], []
     for bone in common.collection_meshes(common.SKELETON_COLLECTION):
@@ -119,6 +128,7 @@ def main():
     print("\nMuscle objects drawn neutral (other):")
     for obj in sorted(groups[mapping.NEUTRAL], key=lambda o: o.name):
         print(f"  {obj.name} ({len(obj.data.polygons)})")
+    print(f"\nNeutral muscles the phone file leaves out: {len(phone_dropped)} objects")
     print("\nObjects per id:")
     for muscle_id in compiled["ids"]:
         print(f"  {muscle_id}: " + ", ".join(sorted(o.name for o in groups[muscle_id])))
@@ -130,7 +140,7 @@ def main():
     scene = bpy.data.scenes.new("grouped")
     made = {}
     for group, objects in groups.items():
-        made[group] = make_group_object(f"muscle_{group}", objects, scene.collection)
+        made[group] = make_group_object(f"muscle_{group}", objects, scene.collection, phone_dropped)
     bpy.context.window.scene = scene
     bpy.context.view_layer.update()
     trim_faces(json.load(open(common.MAP_PATH))["trim"], {f"muscle_{key}": obj for key, obj in made.items()})

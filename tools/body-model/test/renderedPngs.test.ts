@@ -25,7 +25,7 @@ function pngFiles(folderName: string): string[] {
 
 describe.each([
   ["bases", 9],
-  ["muscles", 7],
+  ["muscles", 9],
 ])("committed renders in renders/%s", (folderName, expectedCount) => {
   const files = pngFiles(folderName);
 

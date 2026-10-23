@@ -1,6 +1,6 @@
 # Licence of the committed derived files
 
-The pictures in `renders/muscles/` (and the `dist/` folder, when the phone model is added to this package) are **adapted from Z-Anatomy and BodyParts3D**. They are licensed under **Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)**: https://creativecommons.org/licenses/by-sa/4.0/
+The pictures in `renders/muscles/` and the phone model in `dist/` (`male.glb`, with its own notice in `dist/LICENCE.md`) are **adapted from Z-Anatomy and BodyParts3D**. They are licensed under **Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)**: https://creativecommons.org/licenses/by-sa/4.0/
 
 Anyone who reuses or adapts them must keep this notice, give the credit below, say what they changed and share their adaptation under the same licence.
 
@@ -19,6 +19,7 @@ The muscle meshes come from `Startup.blend` of Z-Anatomy, which is itself adapte
 - A see-through skin and a dark core were generated from the muscles and bones, because Z-Anatomy has no skin.
 - A head and its two eyes from the Blender Studio Human Base Meshes (bundle v1.4.1, CC0 1.0) were grafted on at the neck. The Z-Anatomy face muscles are hidden. The CC0 material is in the public domain, and the combined work is CC BY-SA 4.0.
 - Colours, lighting and the camera were added for the renders.
+- For `dist/male.glb`, the neutral muscles of the hands and feet and the superficial masseter were left out, every mesh was reduced to far fewer triangles, and the model was moved to stand on the floor, given plain materials and stored with 16 bit positions and 8 bit normals. `renders/muscles/male-phone-*.png` are pictures of that file.
 
 Some organs in the Z-Anatomy file carry non-commercial licences (the inner ear and the kidney). None of them is read, used or included.
 

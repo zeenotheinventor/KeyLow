@@ -7,3 +7,6 @@ __pycache__/
 *.blend1
 *.blend@
 *.crash.txt
+
+# The phone model and its licence notice are committed (the repository ignores dist/ everywhere else)
+!dist/

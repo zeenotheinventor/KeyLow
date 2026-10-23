@@ -32,12 +32,23 @@ describe("blenderCommand", () => {
       "--background",
       "--factory-startup",
       "--disable-autoexec",
+      "--python-exit-code",
+      "1",
       "--python",
       expect.stringMatching(/tools\/body-model\/blender\/inspect_bundle\.py$/),
       "--",
       "--source",
       "/data/bundle",
     ]);
+  });
+});
+
+describe("the exit code flag", () => {
+  it("comes before --python, because Blender reads its arguments in order and the flag does nothing after the script has run", () => {
+    const { args } = blenderCommand("/usr/bin/blender", "inspect_bundle", []);
+
+    expect(args.indexOf("--python-exit-code")).toBeGreaterThanOrEqual(0);
+    expect(args.indexOf("--python-exit-code")).toBeLessThan(args.indexOf("--python"));
   });
 });
 

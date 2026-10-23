@@ -226,6 +226,8 @@ def paint(objects, ids_to_hex, other_hex, core_hex, skin_material, glow=None):
         objects["head_face"].data.materials.clear()
         objects["head_face"].data.materials.append(make_face_material())
         for name in ("eye_left", "eye_right"):
+            if name not in objects:
+                continue
             eye = objects[name]
             corners = [eye.matrix_world @ mathutils.Vector(corner) for corner in eye.bound_box]
             centre = sum(corners, mathutils.Vector()) / 8

@@ -33,6 +33,10 @@ export function blenderCommand(
       "--background",
       "--factory-startup",
       "--disable-autoexec",
+      // Blender exits 0 when a script raises an ordinary error, unless it is told otherwise. It reads its arguments in
+      // order, so this must come before --python: after it, the script has already run and the flag does nothing.
+      "--python-exit-code",
+      "1",
       "--python",
       join(blenderScriptsFolder, `${scriptName}.py`),
       "--",

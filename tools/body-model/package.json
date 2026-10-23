@@ -3,6 +3,9 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./male.glb": "./dist/male.glb"
+  },
   "scripts": {
     "inspect": "node --experimental-strip-types src/run.ts inspect_bundle",
     "render": "node --experimental-strip-types src/run.ts render_bases",
@@ -10,6 +13,8 @@
     "zanatomy:skin": "node --experimental-strip-types src/run.ts zanatomy_skin",
     "zanatomy:head": "node --experimental-strip-types src/run.ts zanatomy_head",
     "zanatomy:render": "node --experimental-strip-types src/run.ts zanatomy_render",
+    "export": "node --experimental-strip-types src/exportMale.ts",
+    "zanatomy:phone-render": "node --experimental-strip-types src/run.ts zanatomy_phone_render",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
