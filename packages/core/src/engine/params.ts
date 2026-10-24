@@ -3,7 +3,8 @@
  * edit that rewrites history. Anything computed with these params records their version. The
  * `expenditure` and `targets` groups hold the values the starting estimate and `deriveTargets` use
  * (ADR 0002, Amendment 1). The energy density lives in `expenditure` only, and `deriveTargets` reads it
- * from there. M6 adds the measurement and update params later, with their functions.
+ * from there. The window, eligibility and variance params of `measureExpenditure` sit in `expenditure`
+ * too (ADR 0002, Amendment 2). The update params come with `updateExpenditure`.
  */
 
 import type { ActivityLevel, Sex } from "./types";
@@ -39,6 +40,23 @@ export type ExpenditureParams = Readonly<{
   activityFactors: Readonly<Record<ActivityLevel, number>>;
   /** An activity factor override is clamped to this range. */
   activityFactorBand: Readonly<{ min: number; max: number }>;
+  /** The measurement looks at this many days before the check-in day, the check-in day itself excluded. */
+  windowDays: number;
+  /** The first and last real weigh-in in the window must be at least this many days apart, both ends counted. */
+  minSpanDays: number;
+  /**
+   * The window needs at least this many days with a real weigh-in. Keep `minWeighDays` at 3 or more and
+   * `minCompleteDays` at 1 or more: below that the measured figures are NaN. There is no runtime guard.
+   */
+  minWeighDays: number;
+  /** The window needs at least this many complete days. */
+  minCompleteDays: number;
+  /** The residual standard deviation of the weight is never taken as less than this, in kilograms. */
+  residualSdFloorKg: number;
+  /** One day's logged intake is uncertain by this fraction of the mean intake (0.15 is 15%). */
+  intakeCvPerDay: number;
+  /** The standard deviation, in kilocalories a day, charged when every day since the first data is incomplete. */
+  incompletePenaltyKcal: number;
 }>;
 
 /** The tunables of the daily calorie target and of the split of those calories into macros. */
@@ -87,6 +105,13 @@ export const DEFAULT_ENGINE_PARAMS: EngineParams = {
     sexOffsetKcal: { male: 5, female: -161, other: -78 },
     activityFactors: { sedentary: 1.2, light: 1.375, moderate: 1.55, very: 1.725, extra: 1.9 },
     activityFactorBand: { min: 1.2, max: 1.9 },
+    windowDays: 28,
+    minSpanDays: 14,
+    minWeighDays: 8,
+    minCompleteDays: 10,
+    residualSdFloorKg: 0.3,
+    intakeCvPerDay: 0.15,
+    incompletePenaltyKcal: 100,
   },
   targets: {
     floorAbsKcal: 1200,

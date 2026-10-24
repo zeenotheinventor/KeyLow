@@ -82,3 +82,51 @@ export function toDayOfWeekKcal(values: readonly number[]): DayOfWeekKcal {
   }
   throw new RangeError("The day of week figures must hold 7 whole numbers, Monday first.");
 }
+
+/** One calendar day of logged intake as the measurement reads it. */
+export type DayInput = Readonly<{
+  /** The day in the user's time zone, written `YYYY-MM-DD`. */
+  localDate: string;
+  /** The day's total kilocalories, or null when nothing is logged. */
+  intakeKcal: number | null;
+  /** True when the user marked the day complete. A complete day also needs a non-null intake. */
+  isComplete: boolean;
+}>;
+
+/** The rules a window can fail, in the order they are checked. */
+export type MeasurementReason = "span" | "weigh_days" | "complete_days";
+
+/** What `measureExpenditure` found in the window, whether or not it was enough to measure. */
+export type MeasurementCounts = Readonly<{
+  /** Days from the first real weigh-in to the last, both ends counted. 0 with no weigh-in. */
+  spanDays: number;
+  /** Days with a real, accepted weigh-in. */
+  weighDays: number;
+  /** Days that are complete and have an intake. */
+  completeDays: number;
+}>;
+
+/** A window that is too thin to measure: the reasons, and the counts that failed them. */
+export type IneligibleMeasurement = MeasurementCounts &
+  Readonly<{
+    eligible: false;
+    reasons: readonly MeasurementReason[];
+  }>;
+
+/** A window that measured. Nothing is rounded, and `rKcal2` is already inflated by `spanDays / 7`. */
+export type EligibleMeasurement = MeasurementCounts &
+  Readonly<{
+    eligible: true;
+    /** The expenditure the window implies, in kilocalories a day, clamped to the expenditure range. */
+    zKcal: number;
+    /** The variance of `zKcal` in kilocalories squared, the `R_eff` of the update step. */
+    rKcal2: number;
+    /** The least squares slope of the weight, in kilograms a day. */
+    slopeKgPerDay: number;
+    /** The standard error of the slope, in kilograms a day. */
+    seSlopeKg: number;
+    /** The mean intake over the complete days, in kilocalories a day. */
+    meanIntakeKcal: number;
+  }>;
+
+export type MeasureExpenditureResult = EligibleMeasurement | IneligibleMeasurement;
