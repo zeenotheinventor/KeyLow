@@ -12,6 +12,19 @@ export const keys = {
     /** What the setup wizard starts from: set up or not, the stats, the active program, the latest weigh-in. Health data, never persisted. */
     setupState: ["profiles", "setup-state"] as const,
   },
+  /**
+   * The program reads: the summary the program screen shows, and the two histories behind its charts. They
+   * are health data and a family of their own, outside `profiles` and the lists the mobile app keeps
+   * offline, so the program screen may show its loading state without a connection. A history is keyed by
+   * its number of weeks and nothing else, so two ranges never share an entry. Every key sits under
+   * `["program"]`, so one invalidation of `keys.program.all` refreshes all three.
+   */
+  program: {
+    all: ["program"] as const,
+    summary: ["program", "summary"] as const,
+    expenditureHistory: (weeks: number) => ["program", "expenditure-history", weeks] as const,
+    targetsHistory: (weeks: number) => ["program", "targets-history", weeks] as const,
+  },
   foods: {
     all: ["foods"] as const,
     detail: (id: string) => ["foods", id] as const,

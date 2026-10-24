@@ -14,6 +14,8 @@ export type {
   FoodSource,
   NutrientBasis,
 } from "./food";
+export { expenditureMeasurementSchema, targetsBasisSchema } from "./program";
+export type { ExpenditureMeasurement, TargetsBasis } from "./program";
 export { nutrientAmountSchema, nutrientsSchema, strictNutrientsSchema } from "./nutrients";
 export type { NullableNutrients, Nutrients } from "./nutrients";
 export {

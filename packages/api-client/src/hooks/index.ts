@@ -138,3 +138,7 @@ export type {
 } from "./useExerciseSearch";
 export { useArchiveExercise } from "./useArchiveExercise";
 export { useSaveExercise } from "./useSaveExercise";
+export { useProgramSummary } from "./useProgramSummary";
+export { useExpenditureHistory } from "./useExpenditureHistory";
+export { useTargetsHistory } from "./useTargetsHistory";
+export type { ProgramHistoryOptions } from "./ProgramHistoryOptions";
