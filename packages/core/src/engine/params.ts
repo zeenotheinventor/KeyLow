@@ -3,8 +3,8 @@
  * edit that rewrites history. Anything computed with these params records their version. The
  * `expenditure` and `targets` groups hold the values the starting estimate and `deriveTargets` use
  * (ADR 0002, Amendment 1). The energy density lives in `expenditure` only, and `deriveTargets` reads it
- * from there. The window, eligibility and variance params of `measureExpenditure` sit in `expenditure`
- * too (ADR 0002, Amendment 2). The update params come with `updateExpenditure`.
+ * from there. The window, eligibility and variance params of `measureExpenditure` and the process noise
+ * and weekly clamp of `updateExpenditure` sit in `expenditure` too (ADR 0002, Amendment 2).
  */
 
 import type { ActivityLevel, Sex } from "./types";
@@ -57,6 +57,10 @@ export type ExpenditureParams = Readonly<{
   intakeCvPerDay: number;
   /** The standard deviation, in kilocalories a day, charged when every day since the first data is incomplete. */
   incompletePenaltyKcal: number;
+  /** The expenditure belief drifts by this standard deviation, in kilocalories a day, with each check-in. */
+  processSdKcalPerWeek: number;
+  /** One check-in moves the expenditure estimate by at most this many kilocalories a day, up or down. */
+  maxWeeklyChangeKcal: number;
 }>;
 
 /** The tunables of the daily calorie target and of the split of those calories into macros. */
@@ -112,6 +116,8 @@ export const DEFAULT_ENGINE_PARAMS: EngineParams = {
     residualSdFloorKg: 0.3,
     intakeCvPerDay: 0.15,
     incompletePenaltyKcal: 100,
+    processSdKcalPerWeek: 75,
+    maxWeeklyChangeKcal: 250,
   },
   targets: {
     floorAbsKcal: 1200,

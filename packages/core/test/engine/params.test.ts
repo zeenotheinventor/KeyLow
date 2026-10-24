@@ -95,10 +95,12 @@ describe("DEFAULT_ENGINE_PARAMS expenditure group", () => {
       "energyDensityKcalPerKg",
       "incompletePenaltyKcal",
       "intakeCvPerDay",
+      "maxWeeklyChangeKcal",
       "minCompleteDays",
       "minSpanDays",
       "minWeighDays",
       "priorCv",
+      "processSdKcalPerWeek",
       "residualSdFloorKg",
       "sexOffsetKcal",
       "windowDays",
@@ -132,6 +134,14 @@ describe("DEFAULT_ENGINE_PARAMS expenditure group", () => {
 
   it("should penalise an incomplete window by 100 kcal at most", () => {
     expect(DEFAULT_ENGINE_PARAMS.expenditure.incompletePenaltyKcal).toBe(100);
+  });
+
+  it("should let the expenditure belief drift by 75 kcal a week", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.processSdKcalPerWeek).toBe(75);
+  });
+
+  it("should move the expenditure estimate by 250 kcal a week at most", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.maxWeeklyChangeKcal).toBe(250);
   });
 });
 
