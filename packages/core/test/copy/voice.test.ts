@@ -26,7 +26,13 @@ const exportedFunctionNames = Object.entries(copy)
   .filter(([, value]) => typeof value === "function")
   .map(([name]) => name);
 
-const personsOwnStatements = collectStrings(copy.SIGN_UP_ACCEPTANCE);
+// The sign up checkbox and the setup buttons that say "my targets" are the person's own words, not Ki-Lo's.
+const personsOwnStatements = [
+  ...collectStrings(copy.SIGN_UP_ACCEPTANCE),
+  copy.SETUP_SHELL.setOwnTargetsLabel,
+  copy.SETUP_TARGETS_ROW.title,
+  copy.SETUP_TARGETS_ROW.name,
+];
 
 const allSentences = [
   ...Object.values(copy).flatMap(collectStrings),
@@ -71,7 +77,7 @@ describe("the voice of the copy", () => {
     // "We" on the week strip is Wednesday, a day abbreviation and not a pronoun.
     const dayAbbreviations: readonly string[] = copy.WEEK_STRIP_DAY_NAMES;
     for (const sentence of allSentences.filter((text) => !dayAbbreviations.includes(text))) {
-      // The sign up checkbox is the person's own statement, so it is the one place that says I and my.
+      // A person's own statement, such as the sign up checkbox, is the one place that says I and my.
       if (!personsOwnStatements.includes(sentence)) {
         expect(sentence).not.toMatch(/\b(my|we)\b/i);
         expect(sentence).not.toMatch(/\bI\b/);

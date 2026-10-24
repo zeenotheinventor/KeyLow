@@ -21,6 +21,7 @@ describe("the setup module", () => {
       "PROTEIN_PRESETS",
       "RATE_PRESETS_PCT_PER_WEEK",
       "SETUP_STEPS",
+      "bindingCalorieClamp",
       "capToProfileRange",
       "checkBirthDate",
       "checkHeightCm",

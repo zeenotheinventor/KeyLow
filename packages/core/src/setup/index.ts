@@ -46,3 +46,5 @@ export type {
 } from "./types";
 export { defaultUnitsForRegion, entryWeightUnit, weightUnitToSave } from "./units";
 export type { DefaultUnits } from "./units";
+export { bindingCalorieClamp } from "./bindingClamp";
+export type { CalorieClampCode } from "./bindingClamp";

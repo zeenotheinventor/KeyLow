@@ -59,7 +59,7 @@ export type LegalDocument = {
   sections: readonly LegalSection[];
 };
 
-const NOT_MEDICAL_ADVICE =
+export const NOT_MEDICAL_ADVICE =
   "Ki-Lo's estimates and targets are not medical advice. Speak to a doctor before you make big changes to your diet or your weight.";
 
 export const PRIVACY_POLICY: LegalDocument = {
