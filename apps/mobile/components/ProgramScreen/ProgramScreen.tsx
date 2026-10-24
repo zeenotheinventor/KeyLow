@@ -23,7 +23,7 @@ import { ErrorState, GroupedList, ListRow, SheetHeader, Skeleton, Text } from ".
  * estimate, what the first check-in needs while settling, this week's targets, what the last check-in changed
  * and the programme's own settings, or the no-program, loading and error boards.
  * The estimate says it is an estimate, and the screen ends with the not-medical-advice line. How it works opens
- * the explainer sheet. The chart and the edit come with their own screens.
+ * the explainer sheet, and Edit programme opens the edit form. The chart comes with its own card.
  * The first open after a new check-in (remembered per device by its date) counts the estimate up from the one
  * before, flashes the accent, cuts the check-in card in and plays the complete haptic, once.
  */
@@ -105,6 +105,15 @@ export function ProgramScreen() {
             <ExpenditureChartCard />
             <YourProgramme rows={state.view.details} />
             <GroupedList hidesTitle title={PROGRAM_SCREEN.title}>
+              <ListRow
+                icon="Pencil"
+                title={PROGRAM_SCREEN.editLabel}
+                onPress={() => {
+                  openOnce(() => {
+                    router.push("/more/program/edit");
+                  });
+                }}
+              />
               <ListRow
                 icon="Info"
                 title={PROGRAM_SCREEN.howItWorksLabel}

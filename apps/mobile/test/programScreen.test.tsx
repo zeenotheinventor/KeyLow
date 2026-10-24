@@ -278,7 +278,7 @@ describe("the Programme screen", () => {
       expect(await screen.findByText(NOT_MEDICAL_ADVICE)).toBeOnTheScreen();
     });
 
-    it("should offer How it works under the programme's details, and not Edit programme yet", async () => {
+    it("should offer How it works under the programme's details", async () => {
       await renderProgramScreen();
       await screen.findByText("2,580");
 
@@ -286,7 +286,36 @@ describe("the Programme screen", () => {
       expect(texts.indexOf("How it works")).toBeGreaterThan(texts.indexOf("Diet style"));
       expect(texts.indexOf("How it works")).toBeLessThan(texts.indexOf(NOT_MEDICAL_ADVICE));
       expect(screen.getByRole("button", { name: "How it works" })).toBeOnTheScreen();
-      expect(screen.queryByText("Edit programme")).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Edit programme" })).toBeOnTheScreen();
+    });
+
+    it("should offer Edit programme above How it works, as the canvas draws the two rows", async () => {
+      await renderProgramScreen();
+      await screen.findByText("2,580");
+
+      const texts = textsInOrder(screen.toJSON());
+      expect(texts.indexOf("Edit programme")).toBeGreaterThan(texts.indexOf("Diet style"));
+      expect(texts.indexOf("Edit programme")).toBeLessThan(texts.indexOf("How it works"));
+    });
+
+    it("should open Edit programme when its row is pressed", async () => {
+      const user = userEvent.setup();
+      await renderProgramScreen();
+
+      await user.press(await screen.findByRole("button", { name: "Edit programme" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/program/edit");
+    });
+
+    it("should open Edit programme once for two quick presses", async () => {
+      const user = userEvent.setup();
+      await renderProgramScreen();
+      const row = await screen.findByRole("button", { name: "Edit programme" });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
     });
 
     it("should open the explainer when How it works is pressed", async () => {

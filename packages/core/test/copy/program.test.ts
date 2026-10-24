@@ -12,6 +12,7 @@ import {
   PROGRAM_CHART,
   PROGRAM_CHECKIN_SUMMARY,
   PROGRAM_EDIT,
+  PROGRAM_EDIT_FAILED_BANNER,
   PROGRAM_ERROR,
   PROGRAM_EXPLAINER,
   PROGRAM_GUARDRAIL_LINES,
@@ -1075,6 +1076,17 @@ describe("program-edit: default, under-18, saving, save-error", () => {
     expectOnCanvas([
       "Saving changes your targets from today. Your expenditure estimate stays at 2,580 kcal a day.",
     ]);
+  });
+
+  it("should word the footnote without the estimate when no expenditure estimate exists yet", () => {
+    expect(describeEditFootnote(null)).toBe("Saving changes your targets from today.");
+  });
+
+  it("should say the targets have not changed when a save failed, whichever step failed", () => {
+    // The tech lead's wording, not the canvas's: the canvas's "Not saved" is false when only the recompute failed.
+    expect(PROGRAM_EDIT_FAILED_BANNER).toBe(
+      "Your targets have not changed. Check your connection and try again.",
+    );
   });
 
   it("should give the Save button", () => {

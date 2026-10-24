@@ -108,7 +108,10 @@ function listedWeighIn(row: Row, index: number): Row {
   };
 }
 
-async function programFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
+export async function programFetch(
+  input: string | URL | Request,
+  init?: RequestInit,
+): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
   const table = pathname.split("/").pop() ?? "";

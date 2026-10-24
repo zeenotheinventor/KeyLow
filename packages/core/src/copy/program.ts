@@ -492,9 +492,14 @@ export const PROGRAM_EDIT = {
   notOfferedUnder18: SETUP_GOAL_NOT_OFFERED_UNDER_18,
 } as const;
 
-/** The footnote above Save: a save keeps the newest expenditure estimate and only works the targets out again. */
-export const describeEditFootnote = (expenditureKcal: number): string =>
-  `Saving changes your targets from today. Your expenditure estimate stays at ${describeKcal(expenditureKcal)} a day.`;
+/**
+ * The footnote above Save: a save keeps the newest expenditure estimate and only works the targets out again.
+ * With no estimate yet (`null`) it says the first sentence only.
+ */
+export const describeEditFootnote = (expenditureKcal: number | null): string =>
+  expenditureKcal === null
+    ? "Saving changes your targets from today."
+    : `Saving changes your targets from today. Your expenditure estimate stays at ${describeKcal(expenditureKcal)} a day.`;
 
 /** Targets while a programme runs (`targets · engine`) and the switch to the person's own (`targets · switch-to-manual`). */
 export const PROGRAM_TARGETS_SCREEN = {
@@ -572,3 +577,11 @@ export const describeSettlingTipFor = (
     ? describeSettlingTip(firstCheckInDate)
     : describeSettlingTipOnOrAfter(tipDate);
 };
+
+/**
+ * Above the footnote when Edit programme's save failed. The canvas's "Not saved" can be false: the write can
+ * succeed and the recompute after it fail, and a network failure looks the same as a failed write. These words
+ * are true in both cases, and a second press heals either. They are the tech lead's, not the canvas's.
+ */
+export const PROGRAM_EDIT_FAILED_BANNER =
+  "Your targets have not changed. Check your connection and try again.";
