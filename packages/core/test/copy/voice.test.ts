@@ -32,6 +32,10 @@ const personsOwnStatements = [
   copy.SETUP_SHELL.setOwnTargetsLabel,
   copy.SETUP_TARGETS_ROW.title,
   copy.SETUP_TARGETS_ROW.name,
+  copy.PROGRAM_TARGETS_SCREEN.setOwnTargetsLabel,
+  copy.PROGRAM_TARGETS_SCREEN.dialog.body,
+  copy.PROGRAM_TARGETS_SCREEN.dialog.confirmLabel,
+  copy.PROGRAM_TARGETS_SCREEN.dialog.cancelLabel,
 ];
 
 const allSentences = [

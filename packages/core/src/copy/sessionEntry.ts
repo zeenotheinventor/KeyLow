@@ -1,5 +1,6 @@
 import { describeRepRange } from "./routines";
-import { lowerFirst, SET_PHRASES, spokenNumbers, writtenNumbers } from "./sessionWording";
+import { SET_PHRASES, spokenNumbers, writtenNumbers } from "./sessionWording";
+import { lowerFirst } from "./wording";
 import { formatScaledCount } from "../format/scaledCount";
 import {
   MAX_LOAD_KG,

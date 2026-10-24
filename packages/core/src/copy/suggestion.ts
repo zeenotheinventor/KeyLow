@@ -8,6 +8,7 @@ import {
 import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
+import { capitaliseFirst } from "./wording";
 import { heatStepOf, isReadyHeat } from "../training/bodyMapValues";
 import { GOAL_PRESETS_V1 } from "../training/goalPresets";
 import { heatPercentOf } from "../training/heatReadout";
@@ -97,8 +98,6 @@ export const SUGGESTION_NO_GOAL = {
   body: "Tell Ki-Lo what you are training for and it suggests your next session.",
   action: "Set your goal",
 } as const;
-
-const capitaliseFirst = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 const isToday = ({ localDate, todayLocalDate }: SuggestionContext): boolean =>
   localDate === todayLocalDate;
