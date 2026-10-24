@@ -1,8 +1,11 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { render, screen, userEvent, within } from "@testing-library/react-native";
+import { act, render, screen, userEvent, within } from "@testing-library/react-native";
 import { Text } from "react-native";
 
 import MoreRoute from "../app/(tabs)/more";
+import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
+import { useBodyMapRenderer } from "../lib/bodyMapRenderer";
+import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
 import { ThemeProvider, useTheme } from "../lib/theme";
 import { deviceScheme } from "./support/deviceScheme";
 import {
@@ -56,6 +59,13 @@ function ThemeProbe() {
   return <Text>{`scheme:${scheme} preference:${preference}`}</Text>;
 }
 
+// Shows the renderer a mounted reader of the body map's preference sees, which the segments alone do not prove.
+function BodyMapRendererProbe() {
+  const { renderer } = useBodyMapRenderer();
+
+  return <Text>{`body map renderer:${renderer}`}</Text>;
+}
+
 type Instance = NonNullable<ReturnType<typeof screen.getByRole>>;
 
 function isInside(node: Instance | null, ancestor: Instance): boolean {
@@ -73,6 +83,7 @@ async function renderMore() {
       <KeyLowProvider client={diaryClient} queryClient={createDiaryQueryClient()}>
         <MoreRoute />
         <ThemeProbe />
+        <BodyMapRendererProbe />
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -86,6 +97,8 @@ describe("the More screen", () => {
     resetDiaryBackend();
     mockStorageItems.clear();
     mockSetItem.mockClear();
+    resetBodyMapRendererForTests();
+    resetBodyFigureForTests();
     deviceScheme.current = "light";
   });
 
@@ -268,6 +281,100 @@ describe("the More screen", () => {
         expect(mockSetItem).toHaveBeenCalledWith("kl-theme", "system");
       },
     );
+  });
+
+  describe("Body map", () => {
+    const femaleNote =
+      "3D draws the male body for now. Your figure is female, so the body map stays 2D.";
+
+    it("should be a row in Settings, beside Appearance, over a 2D and 3D choice", async () => {
+      await renderMore();
+
+      // The role query does not resolve a radiogroup, so the group is the one of that name with the role.
+      const groups = screen
+        .getAllByLabelText("Body map")
+        .filter((element) => element.props.role === "radiogroup");
+      expect(groups).toHaveLength(1);
+      const group = groups[0];
+      if (group === undefined) {
+        throw new Error("The Body map group is missing");
+      }
+      const radios = within(screen.getByLabelText("Settings")).getAllByRole("radio");
+
+      expect(within(group).getAllByRole("radio")).toHaveLength(2);
+      expect(within(group).getByRole("radio", { name: "2D" })).toBeOnTheScreen();
+      expect(within(group).getByRole("radio", { name: "3D" })).toBeOnTheScreen();
+      ["Dark", "Light", "Match device", "2D", "3D"].forEach((name, index) => {
+        expect(radios[index]).toHaveAccessibleName(name);
+      });
+    });
+
+    it("should have 2D selected on a fresh install", async () => {
+      await renderMore();
+
+      expect(screen.getByRole("radio", { name: "2D" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "3D" })).not.toBeChecked();
+      expect(screen.getByText("body map renderer:2d")).toBeOnTheScreen();
+    });
+
+    it("should apply 3D at once to a mounted reader of the preference when 3D is chosen", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "3D" }));
+
+      expect(screen.getByRole("radio", { name: "3D" })).toBeChecked();
+      expect(screen.getByText("body map renderer:3d")).toBeOnTheScreen();
+    });
+
+    it("should keep the choice for the next launch", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "3D" }));
+
+      expect(mockSetItem).toHaveBeenCalledWith("bodyMap.renderer", "3d");
+    });
+
+    it("should bring 2D back when 2D is chosen after 3D", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "3D" }));
+      await user.press(screen.getByRole("radio", { name: "2D" }));
+
+      expect(screen.getByRole("radio", { name: "2D" })).toBeChecked();
+      expect(screen.getByText("body map renderer:2d")).toBeOnTheScreen();
+      expect(mockSetItem).toHaveBeenLastCalledWith("bodyMap.renderer", "2d");
+    });
+
+    it("should show the saved choice when the screen opens on a later launch", async () => {
+      mockStorageItems.set("bodyMap.renderer", "3d");
+
+      await renderMore();
+
+      expect(await screen.findByRole("radio", { name: "3D" })).toBeChecked();
+    });
+
+    it("should say nothing about the figure for the male figure", async () => {
+      mockStorageItems.set("bodyMap.figure", "male");
+      await renderMore();
+      // Lets the stored figure be read, so the absence is not just the first render.
+      await act(async () => {});
+
+      expect(screen.queryByText(femaleNote)).not.toBeOnTheScreen();
+    });
+
+    it("should say the body map stays 2D for the female figure, with 3D still the choice shown", async () => {
+      const user = userEvent.setup();
+      mockStorageItems.set("bodyMap.figure", "female");
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "3D" }));
+
+      expect(await screen.findByText(femaleNote)).toBeOnTheScreen();
+      expect(screen.getByRole("radio", { name: "3D" })).toBeChecked();
+    });
   });
 
   describe("Reminders", () => {

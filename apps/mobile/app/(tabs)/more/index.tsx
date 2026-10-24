@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 
 import { AppearanceSetting } from "../../../components/AppearanceSetting";
+import { BodyMapRendererSetting } from "../../../components/BodyMapRendererSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
 import { signOut } from "../../../lib/signOut";
@@ -12,7 +13,7 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 
 // The sections of the `tab-shell.more` board, with Nutrition between Food and Body. Your foods opens the search
 // sheet in its own-foods mode, Targets opens the Targets screen and shows the calorie target once one is set,
-// Weight opens the Weight screen inside this tab, Appearance is set here, and Sign out is Account's one row.
+// Weight opens the Weight screen inside this tab, Appearance and the Body map are set here, and Sign out is Account's one row.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
 // clock because the kit has no bell.
 export default function MoreRoute() {
@@ -57,6 +58,7 @@ export default function MoreRoute() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.settings.title}>
           <AppearanceSetting />
+          <BodyMapRendererSetting />
           <ListRow
             icon="Clock"
             title={MORE_SCREEN.settings.reminders.title}

@@ -4,6 +4,11 @@ import type { BodyArtworkFigure, BodyMapRenderer } from "./bodyArtwork";
 // chooses 3D sees the 2D map. Adding the female is one more entry here.
 const FIGURES_WITH_3D_BODY: readonly BodyArtworkFigure[] = ["male"];
 
+/** Whether the figure has a 3D body, so a screen can say when it does not. */
+export function figureHas3dBody(figure: BodyArtworkFigure): boolean {
+  return FIGURES_WITH_3D_BODY.includes(figure);
+}
+
 export type BodyMapRendererInput = {
   /** What the person chose in More. */
   preference: BodyMapRenderer;
@@ -19,5 +24,5 @@ export function bodyMapRendererFor({
   figure,
   canTry3d,
 }: BodyMapRendererInput): BodyMapRenderer {
-  return preference === "3d" && canTry3d && FIGURES_WITH_3D_BODY.includes(figure) ? "3d" : "2d";
+  return preference === "3d" && canTry3d && figureHas3dBody(figure) ? "3d" : "2d";
 }

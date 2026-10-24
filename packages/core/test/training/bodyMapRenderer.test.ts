@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bodyMapRendererFor } from "../../src/training";
+import { bodyMapRendererFor, figureHas3dBody } from "../../src/training";
 
 import type { BodyArtworkFigure, BodyMapRenderer } from "../../src/training";
 
@@ -37,5 +37,15 @@ describe("bodyMapRendererFor", () => {
 
       expect(drawnIn3d).toEqual([{ preference: "3d", figure: "male", canTry3d: true }]);
     });
+  });
+});
+
+describe("figureHas3dBody", () => {
+  it("should be true for the male figure", () => {
+    expect(figureHas3dBody("male")).toBe(true);
+  });
+
+  it("should be false for the female figure, which has no 3D body yet", () => {
+    expect(figureHas3dBody("female")).toBe(false);
   });
 });

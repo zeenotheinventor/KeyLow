@@ -56,6 +56,12 @@ describe("the tab shell copy", () => {
           title: "Appearance",
           options: { dark: "Dark", light: "Light", system: "Match device" },
         },
+        bodyMap: {
+          title: "Body map",
+          options: { twoD: "2D", threeD: "3D" },
+          femaleNote:
+            "3D draws the male body for now. Your figure is female, so the body map stays 2D.",
+        },
         reminders: { title: "Reminders" },
         about: { title: "About" },
       },
