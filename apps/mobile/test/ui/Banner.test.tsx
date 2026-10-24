@@ -120,7 +120,7 @@ describe("Banner", () => {
       expect(screen.getByRole("status", { name: "Needs review" })).toBeOnTheScreen();
     });
 
-    it("should set the title in strong body text and the body in secondary caption text", async () => {
+    it("should set the title in strong body text", async () => {
       await renderBanner();
 
       expect(screen.getByText("Needs review")).toHaveStyle({
@@ -128,12 +128,45 @@ describe("Banner", () => {
         fontSize: 16,
         lineHeight: 24,
       });
-      expect(screen.getByText(/Energy and carbohydrate/)).toHaveStyle({
-        fontFamily: "Geist-Medium",
-        fontSize: 12,
-        lineHeight: 16,
-      });
     });
+
+    // The M3 boards draw the quiet notice's sentence as `t-body c-sec`: regular, 16 over 24, secondary ink.
+    it.each(["offline", "info"] as const)(
+      "should set the %s body in regular body text, 16 over 24, as the boards draw it",
+      async (variant) => {
+        await renderBanner({ variant });
+
+        expect(screen.getByText(/Energy and carbohydrate/)).toHaveStyle({
+          fontFamily: "Geist-Regular",
+          fontSize: 16,
+          lineHeight: 24,
+        });
+      },
+    );
+
+    it.each(["offline", "info"] as const)(
+      "should set the %s body in the secondary text colour",
+      async (variant) => {
+        await renderBanner({ variant });
+
+        expect(await screen.findByText(/Energy and carbohydrate/)).toHaveStyle({
+          color: resolvedColor("dark", "text-secondary"),
+        });
+      },
+    );
+
+    it.each(["review", "error"] as const)(
+      "should keep the %s body in secondary caption text, which no board redraws",
+      async (variant) => {
+        await renderBanner({ variant });
+
+        expect(screen.getByText(/Energy and carbohydrate/)).toHaveStyle({
+          fontFamily: "Geist-Medium",
+          fontSize: 12,
+          lineHeight: 16,
+        });
+      },
+    );
 
     it("should keep a title with no body in strong body text, as the design system card draws it", async () => {
       await renderBanner({ title: "Open Food Facts is busy", body: undefined });
@@ -241,6 +274,58 @@ describe("Banner", () => {
       });
     });
 
+    it.each(["offline", "info"] as const)(
+      "should be a %s button named by its label, at least 44 points tall, reaching past the text",
+      async (variant) => {
+        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+        const onPress = jest.fn();
+        await renderBanner({ variant, action: { label: "Set target", onPress } });
+
+        const button = screen.getByRole("button", { name: "Set target" });
+        await user.press(button);
+
+        expect(button).toHaveStyle({ minHeight: touchTarget });
+        expect(onPress).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    // The boards draw the quiet action as `t-bs c-ink` underlined, under the words: body-strong, 16 over 24.
+    it.each(["offline", "info"] as const)(
+      "should set the %s action in strong body text, 16 over 24, underlined",
+      async (variant) => {
+        await renderBanner({ variant, action: { label: "Set target", onPress: () => undefined } });
+
+        expect(screen.getByText("Set target")).toHaveStyle({
+          fontFamily: "Geist-SemiBold",
+          fontSize: 16,
+          lineHeight: 24,
+          textDecorationLine: "underline",
+        });
+      },
+    );
+
+    it.each(["offline", "info"] as const)(
+      "should draw the %s action under the words, after the sentence",
+      async (variant) => {
+        await renderBanner({ variant, action: { label: "Set target", onPress: () => undefined } });
+
+        expectTextsInOrder(screen.getAllByText(/./), [
+          "Needs review",
+          "Energy and carbohydrate are not given. Fill them in to save your own copy of this food.",
+          "Set target",
+        ]);
+      },
+    );
+
+    it.each(["review", "error"] as const)(
+      "should leave the %s action not underlined, which is KEY-148's to change",
+      async (variant) => {
+        await renderBanner({ variant, action: { label: "Try again", onPress: () => undefined } });
+
+        expect(screen.getByText("Try again")).not.toHaveStyle({ textDecorationLine: "underline" });
+      },
+    );
+
     it("should compress when pressed, like every pressable", async () => {
       await renderBanner({
         variant: "review",
@@ -307,17 +392,18 @@ describe("Banner", () => {
       expect(screen.getByText("Copy to your foods")).toHaveStyle({ color: ink });
     });
 
-    // No board draws an action on info or offline, so the design system card decides: secondary text.
+    // The M3 boards draw the quiet action as `t-bs c-ink`: the accent ink, lime in dark and the primary text
+    // colour in light, where lime is too faint for text.
     it.each(["offline", "info"] as const)(
-      "should set the %s action in the secondary text colour, as the design system card does",
+      "should set the %s action in the accent ink, as the boards draw it",
       async (variant) => {
         await renderBanner(
-          { variant, action: { label: "Dismiss", onPress: () => undefined } },
+          { variant, action: { label: "Set target", onPress: () => undefined } },
           scheme,
         );
 
-        expect(await screen.findByText("Dismiss")).toHaveStyle({
-          color: resolvedColor(scheme, "text-secondary"),
+        expect(await screen.findByText("Set target")).toHaveStyle({
+          color: resolvedColor(scheme, "accent-ink"),
         });
       },
     );
@@ -346,17 +432,58 @@ describe("Banner", () => {
   });
 
   describe("layout", () => {
-    it("should pad 16 across and 12 down inside a 12 point radius, with the icon and words 12 apart", async () => {
-      await renderBanner();
+    // The M3 boards draw the quiet notice with `padding: var(--space-3)`: 12 on every side.
+    it.each(["offline", "info"] as const)(
+      "should pad the %s variant 12 on every side inside a 12 point radius, with the icon and words 12 apart",
+      async (variant) => {
+        await renderBanner({ variant });
 
-      expect(box()).toHaveStyle({
-        paddingLeft: 16,
-        paddingRight: 16,
-        paddingTop: 12,
-        paddingBottom: 12,
-        borderRadius: 12,
-        columnGap: 12,
+        expect(box()).toHaveStyle({ padding: 12, borderRadius: 12, columnGap: 12 });
+      },
+    );
+
+    it.each(["review", "error"] as const)(
+      "should keep the %s variant padded 16 across and 12 down, which no board redraws",
+      async (variant) => {
+        await renderBanner({ variant });
+
+        expect(box()).toHaveStyle({
+          paddingLeft: 16,
+          paddingRight: 16,
+          paddingTop: 12,
+          paddingBottom: 12,
+          borderRadius: 12,
+          columnGap: 12,
+        });
+      },
+    );
+
+    // The action's 44 point target is 10 points taller than its 24 point line on each side, and 8 wider on each
+    // side. Negative margins give that room back, so the words sit where the board draws them: 2 points under
+    // the sentence and 12 above the box's edge.
+    it.each(["offline", "info"] as const)(
+      "should give back the room the %s action's target takes, so the layout does not shift",
+      async (variant) => {
+        await renderBanner({ variant, action: { label: "Set target", onPress: () => undefined } });
+
+        expect(screen.getByRole("button", { name: "Set target" })).toHaveStyle({
+          marginLeft: -8,
+          marginRight: -8,
+          marginTop: -10,
+          marginBottom: -10,
+        });
+      },
+    );
+
+    it("should leave the review action's margins as they were", async () => {
+      await renderBanner({
+        variant: "review",
+        action: { label: "Copy to your foods", onPress: () => undefined },
       });
+
+      const button = screen.getByRole("button", { name: "Copy to your foods" });
+      expect(button).toHaveStyle({ marginLeft: -8, marginRight: -8, marginBottom: -10 });
+      expect(button).not.toHaveStyle({ marginTop: -10 });
     });
   });
 
