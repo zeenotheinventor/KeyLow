@@ -26,6 +26,8 @@ describe("setupWizardReducer", () => {
         step: "sex",
         hasLoadedSavedAnswers: false,
         hasEditedBirthDate: false,
+        hasEditedBody: false,
+        weightFromWeighInOn: undefined,
       });
     });
   });
@@ -104,13 +106,163 @@ describe("setupWizardReducer", () => {
       expect(state.step).toBe("body");
     });
 
-    it("should stay on a step that is not built yet", () => {
-      const state = setupWizardReducer(stateAt("body", { sex: "male", birthDate: "1991-03-14" }), {
+    it("should stay on the body step while the height and the weight are not both given", () => {
+      const state = setupWizardReducer(stateAt("body", { heightCm: 180 }), {
         type: "continued",
         today: TODAY,
       });
 
       expect(state.step).toBe("body");
+    });
+
+    it("should move from the body step to the activity step once the height and the weight are valid", () => {
+      const state = setupWizardReducer(
+        stateAt("body", { heightCm: 180, weightKg: 80, weightUnit: "kg", heightUnit: "cm" }),
+        { type: "continued", today: TODAY },
+      );
+
+      expect(state.step).toBe("activity");
+    });
+
+    it("should stay on a step that is not built yet", () => {
+      const state = setupWizardReducer(stateAt("activity", { heightCm: 180, weightKg: 80 }), {
+        type: "continued",
+        today: TODAY,
+      });
+
+      expect(state.step).toBe("activity");
+    });
+  });
+
+  describe("changing the height and the weight", () => {
+    const kilograms: { heightCm: number; weightKg: number; weightUnit: "kg" } = {
+      heightCm: 180,
+      weightKg: 80,
+      weightUnit: "kg",
+    };
+
+    it("should keep the height and the weight, in kilograms and centimetres, with their units in the draft", () => {
+      const state = setupWizardReducer(initialSetupWizardState, {
+        type: "bodyChanged",
+        ...kilograms,
+      });
+
+      expect(state.draft).toEqual({
+        heightCm: 180,
+        weightKg: 80,
+        weightUnit: "kg",
+        heightUnit: "cm",
+      });
+    });
+
+    it("should keep feet and inches as the height unit when the weight unit is pounds", () => {
+      const state = setupWizardReducer(initialSetupWizardState, {
+        type: "bodyChanged",
+        heightCm: 180,
+        weightKg: 80.0137,
+        weightUnit: "lb",
+      });
+
+      expect(state.draft).toEqual({
+        heightCm: 180,
+        weightKg: 80.0137,
+        weightUnit: "lb",
+        heightUnit: "ft_in",
+      });
+    });
+
+    it("should keep the answers already given", () => {
+      const state = setupWizardReducer(stateAt("body", { sex: "male", birthDate: "1991-03-14" }), {
+        type: "bodyChanged",
+        ...kilograms,
+      });
+
+      expect(state.draft).toEqual({
+        sex: "male",
+        birthDate: "1991-03-14",
+        heightCm: 180,
+        weightKg: 80,
+        weightUnit: "kg",
+        heightUnit: "cm",
+      });
+    });
+
+    it("should remove a height or a weight that is no longer usable, and keep the units", () => {
+      const state = setupWizardReducer(
+        stateAt("body", { heightCm: 180, weightKg: 80, weightUnit: "kg", heightUnit: "cm" }),
+        { type: "bodyChanged", heightCm: undefined, weightKg: undefined, weightUnit: "lb" },
+      );
+
+      expect(state.draft).toEqual({ weightUnit: "lb", heightUnit: "ft_in" });
+    });
+
+    it("should say the body has been edited", () => {
+      const state = setupWizardReducer(initialSetupWizardState, {
+        type: "bodyChanged",
+        ...kilograms,
+      });
+
+      expect(state.hasEditedBody).toBe(true);
+    });
+
+    it("should keep the weigh-in's date for the weight while the weight is the same number, whatever the unit", () => {
+      const prefilled = setupWizardReducer(initialSetupWizardState, {
+        type: "savedAnswersLoaded",
+        today: TODAY,
+        saved: { weightKg: 80, weightUnit: "kg", heightUnit: "cm" },
+        weighInDate: "2026-10-21",
+      });
+
+      const state = setupWizardReducer(prefilled, {
+        type: "bodyChanged",
+        heightCm: undefined,
+        weightKg: 80,
+        weightUnit: "lb",
+      });
+
+      expect(state.weightFromWeighInOn).toBe("2026-10-21");
+    });
+
+    it("should drop the weigh-in's date once the weight is a different number", () => {
+      const prefilled = setupWizardReducer(initialSetupWizardState, {
+        type: "savedAnswersLoaded",
+        today: TODAY,
+        saved: { weightKg: 80, weightUnit: "kg", heightUnit: "cm" },
+        weighInDate: "2026-10-21",
+      });
+
+      const state = setupWizardReducer(prefilled, {
+        type: "bodyChanged",
+        heightCm: undefined,
+        weightKg: 80.1,
+        weightUnit: "kg",
+      });
+
+      expect(state.weightFromWeighInOn).toBeUndefined();
+    });
+
+    it("should not bring the weigh-in's date back when the weight is typed back to the weigh-in's number", () => {
+      const prefilled = setupWizardReducer(initialSetupWizardState, {
+        type: "savedAnswersLoaded",
+        today: TODAY,
+        saved: { weightKg: 80, weightUnit: "kg", heightUnit: "cm" },
+        weighInDate: "2026-10-21",
+      });
+      const changed = setupWizardReducer(prefilled, {
+        type: "bodyChanged",
+        heightCm: undefined,
+        weightKg: undefined,
+        weightUnit: "kg",
+      });
+
+      const state = setupWizardReducer(changed, {
+        type: "bodyChanged",
+        heightCm: undefined,
+        weightKg: 80,
+        weightUnit: "kg",
+      });
+
+      expect(state.weightFromWeighInOn).toBeUndefined();
     });
   });
 
@@ -289,6 +441,52 @@ describe("setupWizardReducer", () => {
       expect(state.draft).toEqual({ sex: "male" });
     });
 
+    it("should lay the saved height, the weight from the weigh-in and the units under the draft, and note the weigh-in's date", () => {
+      const state = setupWizardReducer(initialSetupWizardState, {
+        type: "savedAnswersLoaded",
+        today: TODAY,
+        saved: { heightCm: 180, weightKg: 80, weightUnit: "lb", heightUnit: "ft_in" },
+        weighInDate: "2026-10-21",
+      });
+
+      expect(state.draft).toEqual({
+        heightCm: 180,
+        weightKg: 80,
+        weightUnit: "lb",
+        heightUnit: "ft_in",
+      });
+      expect(state.weightFromWeighInOn).toBe("2026-10-21");
+    });
+
+    it("should note no weigh-in date when there is no weight from a weigh-in", () => {
+      const state = setupWizardReducer(initialSetupWizardState, {
+        type: "savedAnswersLoaded",
+        today: TODAY,
+        saved: { heightCm: 180, weightUnit: "kg", heightUnit: "cm" },
+      });
+
+      expect(state.weightFromWeighInOn).toBeUndefined();
+    });
+
+    it("should leave the saved height, weight and units out once the person has edited the body", () => {
+      const edited = setupWizardReducer(initialSetupWizardState, {
+        type: "bodyChanged",
+        heightCm: undefined,
+        weightKg: undefined,
+        weightUnit: "lb",
+      });
+
+      const state = setupWizardReducer(edited, {
+        type: "savedAnswersLoaded",
+        today: TODAY,
+        saved: { sex: "male", heightCm: 180, weightKg: 80, weightUnit: "kg", heightUnit: "cm" },
+        weighInDate: "2026-10-21",
+      });
+
+      expect(state.draft).toEqual({ sex: "male", weightUnit: "lb", heightUnit: "ft_in" });
+      expect(state.weightFromWeighInOn).toBeUndefined();
+    });
+
     it("should not replace an answer the person has already given", () => {
       const answered = setupWizardReducer(initialSetupWizardState, {
         type: "sexChosen",
@@ -318,6 +516,35 @@ describe("isStepComplete", () => {
 
   it("should be false for the birth date step the day before someone turns 13", () => {
     expect(isStepComplete({ birthDate: "2013-10-24" }, "birthDate", TODAY)).toBe(false);
+  });
+});
+
+describe("isStepComplete on the body step", () => {
+  const body = { heightCm: 180, weightKg: 80 };
+
+  it("should be false until both the height and the weight are given", () => {
+    expect(isStepComplete({}, "body", TODAY)).toBe(false);
+    expect(isStepComplete({ heightCm: 180 }, "body", TODAY)).toBe(false);
+    expect(isStepComplete({ weightKg: 80 }, "body", TODAY)).toBe(false);
+    expect(isStepComplete(body, "body", TODAY)).toBe(true);
+  });
+
+  it.each([
+    [100, true],
+    [250, true],
+    [99.9, false],
+    [250.1, false],
+  ])("should judge a height of %s cm to be %s", (heightCm, isComplete) => {
+    expect(isStepComplete({ ...body, heightCm }, "body", TODAY)).toBe(isComplete);
+  });
+
+  it.each([
+    [20, true],
+    [400, true],
+    [19.9, false],
+    [400.1, false],
+  ])("should judge a weight of %s kg to be %s", (weightKg, isComplete) => {
+    expect(isStepComplete({ ...body, weightKg }, "body", TODAY)).toBe(isComplete);
   });
 });
 

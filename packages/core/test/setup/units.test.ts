@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultUnitsForRegion, entryWeightUnit, weightUnitToSave } from "../../src/setup";
+import {
+  defaultUnitsForRegion,
+  entryWeightUnit,
+  heightUnitFor,
+  weightUnitToSave,
+} from "../../src/setup";
 
 describe("defaultUnitsForRegion", () => {
   it.each([["US"], ["LR"], ["MM"]])("should give pounds and feet and inches for %s", (region) => {
@@ -43,6 +48,21 @@ describe("entryWeightUnit", () => {
     expect(entryWeightUnit(null, "US")).toBe("lb");
     expect(entryWeightUnit(null, "GB")).toBe("kg");
     expect(entryWeightUnit(null, null)).toBe("kg");
+  });
+});
+
+describe("entryWeightUnit with a stored value the profile cannot hold", () => {
+  it("should read text that is not a weight unit as none stored, so the region decides", () => {
+    expect(entryWeightUnit("stone", "US")).toBe("lb");
+    expect(entryWeightUnit("stone", "GB")).toBe("kg");
+    expect(entryWeightUnit("", "US")).toBe("lb");
+  });
+});
+
+describe("heightUnitFor", () => {
+  it("should give centimetres with kilograms and feet and inches with pounds", () => {
+    expect(heightUnitFor("kg")).toBe("cm");
+    expect(heightUnitFor("lb")).toBe("ft_in");
   });
 });
 

@@ -1,7 +1,13 @@
 export { checkBirthDate, MAX_AGE_YEARS, MIN_AGE_YEARS } from "./birthDate";
 export type { BirthDateReason, BirthDateResult } from "./birthDate";
 export { defaultGoalForAge, goalsAllowed, resetGoalForAge, withGoal } from "./goals";
-export { checkHeightCm, HEIGHT_MAX_CM, HEIGHT_MIN_CM, parseHeightInput } from "./height";
+export {
+  centimetresToFeetAndInches,
+  checkHeightCm,
+  HEIGHT_MAX_CM,
+  HEIGHT_MIN_CM,
+  parseHeightInput,
+} from "./height";
 export type {
   HeightCheck,
   HeightInput,
@@ -44,7 +50,7 @@ export type {
   SetupWeighInSave,
   StartingPlan,
 } from "./types";
-export { defaultUnitsForRegion, entryWeightUnit, weightUnitToSave } from "./units";
+export { defaultUnitsForRegion, entryWeightUnit, heightUnitFor, weightUnitToSave } from "./units";
 export type { DefaultUnits } from "./units";
 export { bindingCalorieClamp } from "./bindingClamp";
 export type { CalorieClampCode } from "./bindingClamp";
