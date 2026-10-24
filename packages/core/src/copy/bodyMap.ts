@@ -105,6 +105,10 @@ export const BODY_MAP = {
   sideBySideName: "Show side by side",
   scaleSwitch: { name: "Scale", heat: "Heat", volume: "Volume", gap: "Gap" },
   sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
+  /** What the Front / Back control does to the 3D body, for a screen reader, since a drag alone must not be the only way. */
+  sideSwitchDescription: "Turns the body to face front or back.",
+  /** The hint under the 3D body. Later gestures add to it: the board ends "Pinch to zoom · Long-press a muscle for details". */
+  rotateHint: "Drag to turn",
   legendNames: { heat: "Heat legend", volume: "Volume legend", gap: "Gap legend" },
   views: { actual: "Actual", projected: "Projected", gap: "Done against plan" },
   toggle: {

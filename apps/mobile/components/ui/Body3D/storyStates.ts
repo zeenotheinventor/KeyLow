@@ -7,4 +7,5 @@ export const storyStates = [
   "Selected",
   "Dimmed",
   "Glow",
+  "Rotatable",
 ];
