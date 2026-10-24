@@ -1,6 +1,8 @@
 export { rowPressScale } from "./rowPressScale";
+export { useAccentFlashStyle } from "./useAccentFlashStyle";
 export { useCountUp } from "./useCountUp";
 export { useCrossFade } from "./useCrossFade";
+export { useCutInStyle } from "./useCutInStyle";
 export { useFadeInStyle } from "./useFadeInStyle";
 export { usePressScale } from "./usePressScale";
 export { useReducedMotion } from "./useReducedMotion";

@@ -40,6 +40,8 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   { tone: "accent", colorName: "accent" },
   // The week strip's tick: the success green in dark and a darker green in light, to read on a light surface.
   { tone: "success-ink", colorName: "success-ink" },
+  // The check-in summary's reason line: the warning in dark and the primary text colour in light, as the design's ink.
+  { tone: "warning-ink", colorName: "warning-ink" },
 ];
 
 const names: IconName[] = [

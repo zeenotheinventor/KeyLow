@@ -24,6 +24,9 @@ export const keys = {
     summary: ["program", "summary"] as const,
     expenditureHistory: (weeks: number) => ["program", "expenditure-history", weeks] as const,
     targetsHistory: (weeks: number) => ["program", "targets-history", weeks] as const,
+    /** The targets history with the rows that held for no days kept, which holds other rows than `targetsHistory`. */
+    targetsHistoryWithZeroDayRows: (weeks: number) =>
+      ["program", "targets-history-with-zero-day-rows", weeks] as const,
   },
   foods: {
     all: ["foods"] as const,

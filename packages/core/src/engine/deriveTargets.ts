@@ -36,7 +36,7 @@ function dailyKcalPerPercentPerWeekAt(trendWeight: number, params: EngineParams)
 }
 
 /** The lowest a lose target can be, in kilocalories a day: the larger of the absolute floor and the BMR share. */
-function calorieFloorKcal(bmr: number, params: EngineParams): number {
+export function calorieFloorKcal(bmr: number, params: EngineParams): number {
   const { targets } = params;
   return Math.max(targets.floorAbsKcal, targets.floorBmrFactor * bmr);
 }

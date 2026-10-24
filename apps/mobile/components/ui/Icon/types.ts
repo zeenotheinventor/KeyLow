@@ -10,7 +10,7 @@ export type IconSizeName = keyof typeof iconSize;
 
 /**
  * A tone from the kit's text and fill tones, or a colour tone: the theme colour itself, for a glyph that is
- * drawn in `accent-ink`, `accent`, `success`, `success-ink`, `warning`, `danger` or `calories`. Each colour
+ * drawn in `accent-ink`, `accent`, `success`, `success-ink`, `warning`, `warning-ink`, `danger` or `calories`. Each colour
  * tone is one file in `./tones`, named for the tone and saying what it is for, and `iconColorTones.ts` is
  * generated from them (see tools/generate-lists), so adding a tone is adding a file.
  */

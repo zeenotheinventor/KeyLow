@@ -5,14 +5,21 @@ import {
   startSnapshot,
   targetsRow,
   toDayInputs,
+  updateExpenditure,
 } from "@keylow/core/engine";
-import { goldenCheckinFixture } from "@keylow/core/testing";
+import { goldenCheckinFixture, ineligibleCheckinFixture } from "@keylow/core/testing";
 import { createClient } from "@supabase/supabase-js";
 
 import { diaryBackend, fakeFetch as diaryFetch } from "./diaryBackend";
 
 import type { Database } from "@keylow/api-client";
-import type { CheckinProgram, ProfileStats } from "@keylow/core/engine";
+import type {
+  CheckinMeasurement,
+  CheckinProgram,
+  EligibleMeasurement,
+  EngineTargetsRow,
+  ProfileStats,
+} from "@keylow/core/engine";
 
 type Row = Record<string, unknown>;
 
@@ -46,6 +53,8 @@ export const programBackend: {
    * and the weigh-in list reads them all, each with the other columns the list needs filled in.
    */
   weighIns: Row[];
+  /** Fails the targets history read, which the check-in card makes, and leaves the other targets reads alone. */
+  targetsHistoryFails: boolean;
 } = {
   snapshots: [],
   setupProfile: {
@@ -58,6 +67,7 @@ export const programBackend: {
   },
   weightUnit: "kg",
   weighIns: [],
+  targetsHistoryFails: false,
 };
 
 export function resetProgramBackend(): void {
@@ -72,6 +82,7 @@ export function resetProgramBackend(): void {
   };
   programBackend.weightUnit = "kg";
   programBackend.weighIns = [];
+  programBackend.targetsHistoryFails = false;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -101,7 +112,10 @@ async function programFetch(input: string | URL | Request, init?: RequestInit): 
   const ownsTable = table === "expenditure_snapshots" || table === "weigh_ins";
   const ownsProfile =
     table === "profiles" && (select === "weight_unit" || select.startsWith("sex,"));
-  if (!ownsTable && !ownsProfile) {
+  // The history read asks for the rows oldest first, which the diary's fake database does not honour.
+  const ownsTargetsHistory =
+    table === "targets" && (searchParams.get("order") ?? "").startsWith("effective_from.asc");
+  if (!ownsTable && !ownsProfile && !ownsTargetsHistory) {
     return diaryFetch(input, init);
   }
 
@@ -115,10 +129,29 @@ async function programFetch(input: string | URL | Request, init?: RequestInit): 
       500,
     );
   }
-  if (table === "expenditure_snapshots") {
+  if (ownsTargetsHistory) {
+    if (programBackend.targetsHistoryFails) {
+      return jsonResponse(
+        { code: "XX000", message: "raw database text", details: null, hint: null },
+        500,
+      );
+    }
     return jsonResponse(
-      [...programBackend.snapshots].sort((first, second) =>
-        String(second["as_of_date"]).localeCompare(String(first["as_of_date"])),
+      // Oldest first, and by id among the rows of one day, as the table's own order does.
+      [...diaryBackend.engineTargets].sort(
+        (first, second) =>
+          String(first["effective_from"]).localeCompare(String(second["effective_from"])) ||
+          String(first["id"]).localeCompare(String(second["id"])),
+      ),
+    );
+  }
+  if (table === "expenditure_snapshots") {
+    // The summary asks for the newest first and the history for the oldest first.
+    const direction = (searchParams.get("order") ?? "").includes(".asc") ? 1 : -1;
+    return jsonResponse(
+      [...programBackend.snapshots].sort(
+        (first, second) =>
+          direction * String(first["as_of_date"]).localeCompare(String(second["as_of_date"])),
       ),
     );
   }
@@ -159,10 +192,14 @@ const MODERATE_BALANCED_LOSE: ProgramColumns = {
   split_preset: "balanced",
 };
 
-function programRow(startedOn: string, nextCheckinDate: string | null): Row {
+function programRow(
+  startedOn: string,
+  nextCheckinDate: string | null,
+  columns: ProgramColumns = MODERATE_BALANCED_LOSE,
+): Row {
   return {
     id: PROGRAM_ID,
-    ...MODERATE_BALANCED_LOSE,
+    ...columns,
     started_on: startedOn,
     next_checkin_date: nextCheckinDate,
     ended_on: null,
@@ -338,4 +375,238 @@ export function showProgramWithoutSnapshot(): void {
   };
   programBackend.setupProfile = SAMPLE_MAN.setupProfile;
   programBackend.weighIns = [{ weight_kg: SAMPLE_MAN.weightKg, local_date: SET_UP_ON }];
+}
+
+const FIRST_CHECKIN_AFTER = 14;
+
+/** The golden person's first check-in, Friday 9 October (day 14 from Friday 25 September). */
+export const FIRST_CHECKIN_DATE = addCalendarDays(GOLDEN_DAY_ZERO, FIRST_CHECKIN_AFTER);
+
+type StartRow = {
+  kind: "start";
+  as_of_date: string;
+  mu_kcal: number;
+  var_kcal2: number;
+  measurement: null;
+};
+
+type CheckinRow = {
+  kind: "checkin";
+  as_of_date: string;
+  mu_kcal: number;
+  var_kcal2: number;
+  measurement: CheckinMeasurement;
+};
+
+type CheckinCase = {
+  program: ProgramColumns;
+  start: StartRow;
+  startTargets: EngineTargetsRow<"start">;
+  checkin: { snapshot: CheckinRow; targets: EngineTargetsRow<"checkin"> };
+};
+
+/** An edit or a recalculation after the check-in: a recompute row opens on `recomputedOn` and closes the check-in's row. */
+export type Recompute = { recomputedOn: string; ratePctPerWeek: number };
+
+/**
+ * A programme with a start snapshot and one check-in, as the database holds them: the start row closed on the
+ * check-in's day and the check-in's row open, or closed by a recompute row when one is given. The rows are
+ * newest first, as the programme summary reads them.
+ */
+function showCheckinCase(
+  { program, start, startTargets, checkin }: CheckinCase,
+  recompute?: Recompute,
+): void {
+  const rows = [
+    targetsDatabaseRow(1, checkin.targets, recompute?.recomputedOn ?? null),
+    targetsDatabaseRow(0, startTargets, checkin.snapshot.as_of_date),
+  ];
+  if (recompute !== undefined) {
+    const recomputed = targetsRow({
+      source: "recompute",
+      effectiveFrom: recompute.recomputedOn,
+      muKcal: checkin.snapshot.mu_kcal,
+      trendWeightKg: checkin.targets.basis.trendWeightKg,
+      program: {
+        goal: "lose",
+        ratePctPerWeek: recompute.ratePctPerWeek,
+        proteinGPerKg: program.protein_g_per_kg,
+        fatFraction: program.fat_fraction_of_remaining,
+        dowOffsetsKcal: NO_DAY_OFFSETS,
+      },
+      bmrKcal: checkin.targets.basis.bmrKcal,
+    });
+    rows.unshift(targetsDatabaseRow(2, recomputed, null));
+  }
+
+  diaryBackend.programs = [programRow(GOLDEN_DAY_ZERO, "2026-10-16", program)];
+  programBackend.snapshots = [snapshotRow(0, start), snapshotRow(1, checkin.snapshot)];
+  diaryBackend.engineTargets = rows;
+}
+
+/** The golden person's first check-in, run through `checkinStep` on the weigh-ins of `weighInDays` (all of them by default). */
+function goldenCase(
+  fixture: ReturnType<typeof goldenCheckinFixture>,
+  weighInDays?: readonly number[],
+): CheckinCase {
+  const { snapshot, targets } = checkinStep({
+    asOfDate: FIRST_CHECKIN_DATE,
+    prior: fixture.prior,
+    weighIns:
+      weighInDays === undefined
+        ? fixture.weighIns
+        : fixture.weighIns.filter((_, day) => weighInDays.includes(day)),
+    days: toDayInputs(fixture.dayTotals, fixture.dayLogs),
+    program: fixture.program,
+    bmrKcal: fixture.bmrKcal,
+  });
+  return {
+    program: MODERATE_BALANCED_LOSE,
+    start: {
+      kind: "start",
+      as_of_date: GOLDEN_DAY_ZERO,
+      mu_kcal: fixture.prior.muKcal,
+      var_kcal2: fixture.prior.varKcal2,
+      measurement: null,
+    },
+    startTargets: targetsRow({
+      source: "start",
+      effectiveFrom: GOLDEN_DAY_ZERO,
+      muKcal: fixture.prior.muKcal,
+      trendWeightKg: 80,
+      program: fixture.program,
+      bmrKcal: fixture.bmrKcal,
+    }),
+    checkin: { snapshot, targets },
+  };
+}
+
+/** The golden day 14 check-in of the canvas (Friday 9 October), which measured: 2,500 to 2,560 kcal, 2,060 to 2,120. */
+export function showGoldenFirstCheckin(recompute?: Recompute): void {
+  showCheckinCase(goldenCase(goldenCheckinFixture(GOLDEN_DAY_ZERO)), recompute);
+}
+
+/** The golden day 14 check-in with 9 complete days (Q8): it could not measure. */
+export function showNineCompleteDaysCheckin(): void {
+  showCheckinCase(goldenCase(ineligibleCheckinFixture(GOLDEN_DAY_ZERO)));
+}
+
+/** The golden day 14 check-in with weigh-ins on days 5, 6, 8, 11 and 13 only: it could not measure, for two reasons. */
+export function showFiveWeighInDaysCheckin(): void {
+  showCheckinCase(goldenCase(goldenCheckinFixture(GOLDEN_DAY_ZERO), [5, 6, 8, 11, 13]));
+}
+
+type InventedCheckin = {
+  stats: ProfileStats;
+  startWeightKg: number;
+  trendWeightKg: number;
+  program: ProgramColumns;
+  /** The expenditure the window implies and its variance: made up, as the canvas does, to reach the guardrail. */
+  zKcal: number;
+  rKcal2: number;
+};
+
+/** A check-in whose measurement is made up (the canvas's `z` and `R_eff`), run through core's own update and targets. */
+function inventedCase({
+  stats,
+  startWeightKg,
+  trendWeightKg,
+  program: columns,
+  zKcal,
+  rKcal2,
+}: InventedCheckin): CheckinCase {
+  const program: CheckinProgram = {
+    goal: "lose",
+    ratePctPerWeek: columns.rate_pct_per_week,
+    proteinGPerKg: columns.protein_g_per_kg,
+    fatFraction: columns.fat_fraction_of_remaining,
+    dowOffsetsKcal: NO_DAY_OFFSETS,
+  };
+  const started = startSnapshot({
+    stats,
+    onboardingWeightKg: startWeightKg,
+    asOfDate: GOLDEN_DAY_ZERO,
+    trendWeightKg: startWeightKg,
+  });
+  const bmrKcal = profileBmr(stats, startWeightKg, GOLDEN_DAY_ZERO);
+  const measurement: EligibleMeasurement = {
+    eligible: true,
+    zKcal,
+    rKcal2,
+    slopeKgPerDay: 0,
+    seSlopeKg: 0,
+    meanIntakeKcal: zKcal,
+    spanDays: 14,
+    weighDays: 14,
+    completeDays: 14,
+  };
+  const update = updateExpenditure(
+    { muKcal: started.mu_kcal, varKcal2: started.var_kcal2 },
+    measurement,
+  );
+  const { gain, rawStepKcal, stepKcal, stepClamped } = update;
+
+  return {
+    program: columns,
+    start: {
+      kind: "start",
+      as_of_date: GOLDEN_DAY_ZERO,
+      mu_kcal: started.mu_kcal,
+      var_kcal2: started.var_kcal2,
+      measurement: null,
+    },
+    startTargets: targetsRow({
+      source: "start",
+      effectiveFrom: GOLDEN_DAY_ZERO,
+      muKcal: started.mu_kcal,
+      trendWeightKg: startWeightKg,
+      program,
+      bmrKcal,
+    }),
+    checkin: {
+      snapshot: {
+        kind: "checkin",
+        as_of_date: FIRST_CHECKIN_DATE,
+        mu_kcal: update.muKcal,
+        var_kcal2: update.varKcal2,
+        measurement: { ...measurement, gain, rawStepKcal, stepKcal, stepClamped },
+      },
+      targets: targetsRow({
+        source: "checkin",
+        effectiveFrom: FIRST_CHECKIN_DATE,
+        muKcal: update.muKcal,
+        trendWeightKg,
+        program,
+        bmrKcal,
+      }),
+    },
+  };
+}
+
+/** Guardrails A: the setup canvas's max-deficit man (male, 40, 175 cm, 130.0 kg, moderately active, lose 1.0%). */
+export function showMaxDeficitCheckin(): void {
+  showCheckinCase(
+    inventedCase({
+      stats: { sex: "male", birthDate: "1986-03-14", heightCm: 175, activity: "moderate" },
+      startWeightKg: 130,
+      trendWeightKg: 128.4,
+      program: { ...MODERATE_BALANCED_LOSE, rate_pct_per_week: 1 },
+      zKcal: 2900,
+      rKcal2: 60000,
+    }),
+  );
+}
+
+/** Guardrails B: the floor-above-expenditure woman (50, 150 cm, 40.0 kg, sedentary, lose 0.5%). */
+export function showFloorAboveExpenditureCheckin(): void {
+  showCheckinCase(
+    inventedCase({
+      stats: { sex: "female", birthDate: "1976-03-14", heightCm: 150, activity: "sedentary" },
+      startWeightKg: 40,
+      trendWeightKg: 39.9,
+      program: MODERATE_BALANCED_LOSE,
+      zKcal: 1080,
+      rKcal2: 25000,
+    }),
+  );
 }

@@ -115,6 +115,44 @@ describe("useTargetsHistory", () => {
     expect(queryClient.getQueryData(keys.program.targetsHistory(26))).toBeDefined();
   });
 
+  it("should keep the rows that held for no days when asked to, under a key of its own", async () => {
+    installProgramFake(server, {
+      programs: [programRow()],
+      targets: [
+        targetsRow({
+          effective_from: "2026-10-16",
+          effective_to: "2026-10-23",
+          calories_kcal: 2170,
+        }),
+        targetsRow({
+          effective_from: "2026-10-23",
+          effective_to: "2026-10-23",
+          calories_kcal: 1999,
+        }),
+        targetsRow({ effective_from: "2026-10-23", effective_to: null, calories_kcal: 2140 }),
+      ],
+    });
+    const { queryClient, wrapper } = createWrapper();
+
+    const { result } = renderHook(
+      () => ({
+        plain: useTargetsHistory({ weeks: 8, now: NOW }),
+        whole: useTargetsHistory({ weeks: 8, now: NOW, keepZeroDayRows: true }),
+      }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.plain.data).toBeDefined();
+      expect(result.current.whole.data).toBeDefined();
+    });
+    expect(result.current.plain.data?.map((row) => row.caloriesKcal)).toEqual([2170, 2140]);
+    expect(result.current.whole.data?.map((row) => row.caloriesKcal)).toEqual([2170, 1999, 2140]);
+    expect(queryClient.getQueryData(keys.program.targetsHistoryWithZeroDayRows(8))).toEqual(
+      result.current.whole.data,
+    );
+  });
+
   it("should make no request at all while enabled is false", async () => {
     const { requests } = installProgramFake(server, { targets: [targetsRow()] });
     const { wrapper } = createWrapper();

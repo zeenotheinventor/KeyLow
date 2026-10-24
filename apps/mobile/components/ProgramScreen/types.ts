@@ -1,3 +1,4 @@
+import type { CheckinSummaryCardProps } from "./CheckinSummaryCard";
 import type { SettlingChecklistProps } from "./SettlingChecklist";
 import type { ExpenditureSnapshot, ProgramSummary, Targets, TargetsRow } from "@keylow/api-client";
 import type { ExpenditureBelief } from "@keylow/core/engine";
@@ -7,7 +8,8 @@ import type { WeightDisplayUnit } from "@keylow/core/weight";
 export type ExpenditureHeroView = {
   /** The accessible name: "Estimated expenditure, 2,580 kilocalories a day, likely 2,430 to 2,730 kcal". */
   name: string;
-  kcalText: string;
+  /** The estimate in kilocalories a day, which the numeral shows, and counts up to when a check-in has just arrived. */
+  muKcal: number;
   /** "Likely 2,430 to 2,730 kcal". */
   rangeText: string;
   /** Under the range: where the estimate comes from, or that it is a starting estimate. */
@@ -49,8 +51,19 @@ export type ProgramDetailRow = {
   value: string;
 };
 
+/** The programme's newest check-in, when the newest snapshot is one: what its card describes and its motion starts from. */
+export type CheckinView = {
+  /** The check-in's date, `YYYY-MM-DD`, which the device remembers when its arrival has been shown. */
+  date: string;
+  /** The estimate before the check-in, which the hero counts up from. Null when the programme has no snapshot before it. */
+  previousMuKcal: number | null;
+  card: Omit<CheckinSummaryCardProps, "isArriving">;
+};
+
 export type ProgramView = {
   hero: ExpenditureHeroView;
+  /** Null unless the newest snapshot is a check-in. */
+  checkin: CheckinView | null;
   /** What the settling checklist is given. Null once the program has a check-in, and before the schedule is set. */
   settlingChecklist: SettlingChecklistProps | null;
   /** Null for a program with no targets to show yet. */
