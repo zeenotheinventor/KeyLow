@@ -2,8 +2,6 @@ import type { Body3DProps } from "../../ui";
 import type { BodyViewProps } from "../types";
 import type { ComponentType } from "react";
 
-export type Phase = "loading" | "drawn" | "failed";
-
 export type BodyViewIn3DProps = BodyViewProps & {
   /** Called once if the 3D body will not draw, so the caller can stay on 2D. */
   onFail: () => void;

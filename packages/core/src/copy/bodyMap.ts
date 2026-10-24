@@ -109,6 +109,10 @@ export const BODY_MAP = {
   sideSwitchDescription: "Turns the body to face front or back.",
   /** The hint under the 3D body. Later gestures add to it: the board ends "Pinch to zoom · Long-press a muscle for details". */
   rotateHint: "Drag to turn",
+  /** Over the 2D figure while the 3D body loads, at the corner of the stage. It goes when the 3D body has drawn or has failed. */
+  loading3d: "Loading 3D…",
+  /** Added to the figure's name while the 3D body loads, as the loading board names it. */
+  loading3dLabel: "3D is loading.",
   legendNames: { heat: "Heat legend", volume: "Volume legend", gap: "Gap legend" },
   views: { actual: "Actual", projected: "Projected", gap: "Done against plan" },
   toggle: {
@@ -370,6 +374,10 @@ export const describeBodyFigureLabel = ({
   const name = `${BODY_MAP.title}, ${viewLabel}, ${SCALE_WORDS[scale]}, ${side}`;
   return hint === null ? name : `${name}. ${BODY_MAP.figureHints[hint]}`;
 };
+
+/** The figure's name while the 3D body loads: the name, then that 3D is loading. */
+export const describeBodyFigureLoading3d = (label: string): string =>
+  `${label.endsWith(".") ? label : `${label}.`} ${BODY_MAP.loading3dLabel}`;
 
 export type ScrubberDayInput = Readonly<{
   /** The calendar day, `YYYY-MM-DD`. */

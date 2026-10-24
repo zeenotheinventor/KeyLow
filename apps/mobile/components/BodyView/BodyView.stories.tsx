@@ -9,7 +9,7 @@ import type { Meta, StoryObj } from "@storybook/react-native";
 
 const heatSteps = Object.fromEntries(MUSCLE_IDS.map((muscle, index) => [muscle, index % 6]));
 
-// A 3D body that never draws a frame, so the 2D figure stays until the 3 seconds are up.
+// A 3D body that never draws a frame, so the 2D figure stays until the 8 seconds are up.
 function NeverDrawsBody3D() {
   return null;
 }
@@ -48,7 +48,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The 3D body is still loading, so the 2D figure shows. This one never draws, so after 3 seconds the
+// The 3D body is still loading, so the 2D figure shows. This one never draws, so after 8 seconds the
 // 2D figure stays for good, which is also how a failure looks.
 export const Loading: Story = { args: { Body3DComponent: NeverDrawsBody3D } };
 

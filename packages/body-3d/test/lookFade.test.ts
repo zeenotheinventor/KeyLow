@@ -112,6 +112,31 @@ describe("createLookFade", () => {
     expect(materials.neckColour.getHex()).toBe(materials.muscles.neck.color.getHex());
   });
 
+  it("should ease the neck colour to the upper trapezius's when that muscle turns warmer, with no jump to it", async () => {
+    const { materials, fade } = await startedFade("blue");
+    const before = materials.neckColour.clone();
+    const warmerTrapezius = byMuscle((id): Look =>
+      id === "traps_upper"
+        ? { color: "red", glowColor: "red", glow: 0, warmth: 3 }
+        : { color: "blue", glowColor: "red", glow: 0 },
+    );
+
+    fade.moveTo(warmerTrapezius, emphasis, 220);
+    fade.step(16);
+
+    expect(materials.neckColour.equals(before)).toBe(true);
+
+    fade.step(110);
+
+    expect(materials.neckColour.getHexString()).toBe(
+      new Color("blue").lerp(new Color("red"), 0.5).getHexString(),
+    );
+
+    fade.step(500);
+
+    expect(materials.neckColour.getHexString()).toBe(hex("red"));
+  });
+
   it("should turn about from where it had got to, with no jump", async () => {
     const { materials, fade } = await startedFade("blue");
     fade.moveTo(looksOf("red"), emphasis, 220);

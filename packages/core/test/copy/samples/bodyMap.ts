@@ -90,6 +90,17 @@ export const samples: Record<string, () => string[]> = {
       hint: "openBodyMap",
     }),
   ],
+  describeBodyFigureLoading3d: () => [
+    copy.describeBodyFigureLoading3d("Body map, Actual, heat, front"),
+    copy.describeBodyFigureLoading3d(
+      copy.describeBodyFigureLabel({
+        scale: "heat",
+        view: "actual",
+        side: "front",
+        hint: "muscleList",
+      }),
+    ),
+  ],
   describeScrubberDay: () =>
     (["logged", "planned", "missed", "in_progress"] as const)
       .map(

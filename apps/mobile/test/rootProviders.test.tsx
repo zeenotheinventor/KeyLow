@@ -6,6 +6,7 @@ import RootLayout, { ErrorBoundary } from "../app/_layout";
 import { RootErrorScreen } from "../components/RootErrorScreen";
 import { useToast } from "../components/ui";
 import { startBodyFigureRead } from "../lib/bodyFigure";
+import { startBodyMapRendererRead } from "../lib/bodyMapRenderer";
 import { feedFocusManager } from "../lib/connectivity";
 import { resetRouterMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
@@ -81,6 +82,11 @@ jest.mock("../lib/bodyFigure", () => ({
   ...jest.requireActual<typeof import("../lib/bodyFigure")>("../lib/bodyFigure"),
   startBodyFigureRead: jest.fn(),
 }));
+// Whether the layout starts reading the body map's renderer setting is what is asked, as for the figure setting.
+jest.mock("../lib/bodyMapRenderer", () => ({
+  ...jest.requireActual<typeof import("../lib/bodyMapRenderer")>("../lib/bodyMapRenderer"),
+  startBodyMapRendererRead: jest.fn(),
+}));
 // Whether the layout starts Sentry is what is asked. What it starts with is proved with the Sentry tests.
 jest.mock("../lib/sentry/init", () => ({ initSentry: jest.fn() }));
 jest.mock("../lib/supabase", () => ({
@@ -111,6 +117,10 @@ describe("the app root", () => {
 
   it("should start reading the figure setting as the layout loads, so a screen finds it read", () => {
     expect(startBodyFigureRead).toHaveBeenCalledTimes(1);
+  });
+
+  it("should start reading the body map renderer setting as the layout loads, so a 3D map opens in 3D at once", () => {
+    expect(startBodyMapRendererRead).toHaveBeenCalledTimes(1);
   });
 
   it("should start error reporting as the layout loads, so an error while the app starts is reported", () => {

@@ -79,6 +79,10 @@ const SCALE_OPTIONS = [
  * on the figures. A Muscle list row under the legend opens the list of all 22 muscles for the view and the day on
  * screen, so no muscle depends on a long press. It is left out when nothing is logged and in the side by side view.
  *
+ * When 3D is chosen in More, the card draws its 3D layout (see `BodyMapCard`) and the screen does nothing
+ * for it: the setting reaches an open screen by itself. There the first-open hint and the long press
+ * are not offered, since a long press on the 3D body does not exist yet, and the side by side view stays 2D.
+ *
  * The first time it opens on a device a hint over the figures says to long-press a muscle. It waits for
  * the figure question to be answered, stays until Got it or a muscle's sheet is opened, and is never
  * drawn in the nothing logged state or in the side by side view.

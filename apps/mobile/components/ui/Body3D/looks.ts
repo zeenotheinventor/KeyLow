@@ -31,6 +31,19 @@ export function parseRgba(text: string): { color: string; alpha: number } {
 }
 
 /**
+ * How warm a fill reads, for the head's neck colour to follow the warmer of the neck and the upper trapezius. On heat
+ * it is the step. The volume and gap scales have no warmer or cooler, so a muscle in play reads 1 and one that is not
+ * targeted, or not in the plan, reads 0.
+ */
+function warmthOf(scale: BodyFigureScale, fill: string, palette: BodyMapPalette): number {
+  if (scale === "heat") {
+    return Math.max(0, palette.heat.indexOf(fill));
+  }
+  const restingFill = scale === "volume" ? palette.volume.notTargeted : palette.gap.notInPlan;
+  return fill === restingFill ? 0 : 1;
+}
+
+/**
  * The look of each of the 22 muscles, from the same `readMuscle` and palette as the 2D figure, so the same value
  * is the same colour in both. Only the peak heat step glows, by the palette's glow colour and alpha. A muscle with
  * no value, or one the scale does not have, is read as `readMuscle` reads it.
@@ -46,7 +59,15 @@ export function looksOf(
   return Object.fromEntries(
     MUSCLE_IDS.map((id) => {
       const { fill, isPeak } = readMuscle(scale, values[id], palette);
-      return [id, { color: fill, glowColor, glow: isPeak ? peakGlow : 0 }];
+      return [
+        id,
+        {
+          color: fill,
+          glowColor,
+          glow: isPeak ? peakGlow : 0,
+          warmth: warmthOf(scale, fill, palette),
+        },
+      ];
     }),
   ) as Record<MuscleId, Look>;
 }

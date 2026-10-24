@@ -1,3 +1,4 @@
+import { BODY_TAP_SLOP } from "@keylow/body-3d/touch";
 import { BODY_MAP, MUSCLE_NAMES } from "@keylow/core/copy";
 import { BODY_ARTWORK, BODY_GLOW_FILTER, isMuscleId } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
@@ -16,10 +17,6 @@ import type { AccessibilityActionEvent, GestureResponderEvent } from "react-nati
 
 const OUTLINE_WIDTH = 1.4;
 const SELECTED_OUTLINE_WIDTH = 2.6;
-
-// A finger that moves further than this from where it went down on a muscle is dragging, and neither
-// presses nor long presses it.
-const TAP_SLOP = 10;
 
 // The screen reader action that does what a long press does for a finger.
 const DETAILS_ACTION = "details";
@@ -69,7 +66,7 @@ export function BodyFigure({
   const isDragged = () => {
     const { origin, latest } = touch.current;
     return origin !== null && latest !== null
-      ? Math.hypot(latest.x - origin.x, latest.y - origin.y) > TAP_SLOP
+      ? Math.hypot(latest.x - origin.x, latest.y - origin.y) > BODY_TAP_SLOP
       : false;
   };
 
