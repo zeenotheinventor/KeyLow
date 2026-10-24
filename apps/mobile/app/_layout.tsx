@@ -11,6 +11,7 @@ import { RootErrorScreen } from "../components/RootErrorScreen";
 import { RootNavigator } from "../components/RootNavigator";
 import { ToastProvider } from "../components/ui";
 import { startBodyFigureRead } from "../lib/bodyFigure";
+import { startBodyMapRendererRead } from "../lib/bodyMapRenderer";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
 import { setUpReminderNotifications } from "../lib/notifications";
@@ -41,6 +42,10 @@ setUpReminderNotifications().catch(() => undefined);
 // Starts reading the figure setting, so the screens that draw a body find it read and never draw the wrong
 // figure first. A failure to read leaves Male.
 startBodyFigureRead();
+
+// Starts reading the body map's renderer setting too, so a person who chose 3D finds it read when the body map
+// first opens, and never sees the 2D map first and then a jump to 3D. A failure to read leaves 2D.
+startBodyMapRendererRead();
 
 const queryClient = createQueryClient();
 

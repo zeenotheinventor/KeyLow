@@ -50,6 +50,7 @@ export function SegmentedControl<Value extends string>({
   options,
   value,
   onChange,
+  hint,
   size = "md",
 }: SegmentedControlProps<Value>) {
   const sizeLook = sizeLooks[size];
@@ -57,6 +58,7 @@ export function SegmentedControl<Value extends string>({
 
   return (
     <View
+      accessibilityHint={hint}
       aria-label={label}
       className={`flex-row rounded-medium border border-border bg-surface-raised ${sizeLook.trackClassName}`}
       role="radiogroup"

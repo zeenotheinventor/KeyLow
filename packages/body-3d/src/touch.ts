@@ -1,6 +1,6 @@
 /**
- * How far a finger may move, in points, between going down and lifting and still be a tap. The 2D figure's
- * `TAP_SLOP` is the same figure, and the two become one constant when the drop-in joins them.
+ * How far a finger may move, in points, between going down and lifting and still be a tap. The body map's 2D
+ * figures use this value too, so a tap means the same on both.
  */
 export const BODY_TAP_SLOP = 10;
 

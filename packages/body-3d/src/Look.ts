@@ -8,6 +8,12 @@ export type Look = {
   glowColor: string;
   /** How strongly it glows, 0 for not at all, as three.js's emissive intensity. */
   glow: number;
+  /**
+   * How warm the look reads, so that where the neck and the upper trapezius meet at the head the warmer one gives the
+   * neck its colour, and a hot trapezius over a rested neck leaves no collar at the sides. 0 when left out, and a tie
+   * goes to the neck.
+   */
+  warmth?: number | undefined;
 };
 
 /** What the screen asks of the whole body on top of each muscle's look, as `BodyFigure` has it. */

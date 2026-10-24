@@ -123,6 +123,48 @@ describe("applyLooks on the committed male body", () => {
     expect(materials.neckColour.getHexString()).toBe(hexOf("orangered"));
   });
 
+  describe("the head's neck colour, where the neck and the upper trapezius meet", () => {
+    const hotLook: Look = { color: "orangered", glowColor: "red", glow: 0, warmth: 4 };
+    const warmLook: Look = { color: "gold", glowColor: "red", glow: 0, warmth: 2 };
+
+    it("should follow the upper trapezius when it is warmer than a rested neck, so no collar shows at the sides", async () => {
+      const { materials } = await dressedMale();
+      const looks = { ...allResting(), traps_upper: hotLook };
+
+      applyLooks(materials, looks, plainEmphasis);
+
+      expect(materials.neckColour.getHexString()).toBe(hexOf("orangered"));
+      expect(materials.muscles.neck.color.getHexString()).toBe(hexOf("slategray"));
+    });
+
+    it("should follow the neck when it is warmer than the upper trapezius", async () => {
+      const { materials } = await dressedMale();
+      const looks = { ...allResting(), neck: hotLook, traps_upper: warmLook };
+
+      applyLooks(materials, looks, plainEmphasis);
+
+      expect(materials.neckColour.getHexString()).toBe(hexOf("orangered"));
+    });
+
+    it("should follow the neck when the two are as warm as each other", async () => {
+      const { materials } = await dressedMale();
+      const looks = { ...allResting(), neck: warmLook, traps_upper: { ...hotLook, warmth: 2 } };
+
+      applyLooks(materials, looks, plainEmphasis);
+
+      expect(materials.neckColour.getHexString()).toBe(hexOf("gold"));
+    });
+
+    it("should give the upper trapezius's dimmed colour, as the muscle shows it", async () => {
+      const { materials } = await dressedMale();
+      const looks = { ...allResting(), traps_upper: hotLook };
+
+      applyLooks(materials, looks, { ...plainEmphasis, dim: 0.5 });
+
+      expect(materials.neckColour.getHex()).toBe(materials.muscles.traps_upper.color.getHex());
+    });
+  });
+
   it("should not change the looks it was given", async () => {
     const { materials } = await dressedMale();
     const looks = allResting();

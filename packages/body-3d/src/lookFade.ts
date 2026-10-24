@@ -25,10 +25,13 @@ export type LookFade = {
   step: (deltaMilliseconds: number) => boolean;
 };
 
-const copyOf = (paints: BodyPaints): BodyPaints =>
-  byMuscle((id) => ({ color: paints[id].color.clone(), emissive: paints[id].emissive.clone() }));
+const copyOf = (paints: BodyPaints): BodyPaints => ({
+  ...byMuscle((id) => ({ color: paints[id].color.clone(), emissive: paints[id].emissive.clone() })),
+  neckColour: paints.neckColour.clone(),
+});
 
 const areSame = (first: BodyPaints, second: BodyPaints) =>
+  first.neckColour.equals(second.neckColour) &&
   MUSCLE_IDS.every(
     (id) =>
       first[id].color.equals(second[id].color) && first[id].emissive.equals(second[id].emissive),
@@ -67,6 +70,7 @@ export function createLookFade(
           shown[id].color.copy(next[id].color);
           shown[id].emissive.copy(next[id].emissive);
         }
+        shown.neckColour.copy(next.neckColour);
         writePaints(materials, shown);
         isMoving = false;
         return false;
@@ -93,6 +97,7 @@ export function createLookFade(
         shown[id].color.copy(start[id].color).lerp(target[id].color, eased);
         shown[id].emissive.copy(start[id].emissive).lerp(target[id].emissive, eased);
       }
+      shown.neckColour.copy(start.neckColour).lerp(target.neckColour, eased);
       writePaints(materials, shown);
       isMoving = progress < 1;
       return isMoving;

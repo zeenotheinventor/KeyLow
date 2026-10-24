@@ -52,7 +52,7 @@ async function renderBodyView(preference: "2d" | "3d", props: Partial<BodyViewPr
       <BodyView {...bodyProps} {...props} />
     </ThemeProvider>,
   );
-  // The stored preference is read a moment after the first render, and 3D would have 3 seconds to fail.
+  // The stored preference is read a moment after the first render, and 3D would have 8 seconds to fail.
   await act(() => {
     jest.advanceTimersByTime(5000);
   });

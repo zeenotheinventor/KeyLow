@@ -46,6 +46,9 @@ jest.mock("../components/ui/Body3D/Body3DCanvas", () => ({
   Body3DCanvas: (props: { onFirstFrame?: () => void }) => mockCanvas(props),
 }));
 
+// How long the 3D body has to draw its first frame, so a slow first load on Hermes is not dropped to 2D.
+const FIRST_FRAME_TIMEOUT_MILLISECONDS = 8000;
+
 const label = "Body map, front";
 const bodyProps: BodyViewProps = { side: "front", scale: "heat", values: {}, label, w: 120 };
 
@@ -261,7 +264,7 @@ describe("BodyView", () => {
       expect(pointerEventsOf(animatedLayerOf(hiddenFigure))).toBe("none");
     });
 
-    it("should never let the 3D layer take a touch, loading or drawn", async () => {
+    it("should let the 3D layer take a touch only once it has drawn, so a drag reaches the body", async () => {
       await renderBodyView("3d");
       const [, body] = screen.getAllByRole("img", { name: label, hidden: true });
       if (body === undefined) {
@@ -272,24 +275,32 @@ describe("BodyView", () => {
 
       await drawFirstFrame();
 
-      expect(holder && pointerEventsOf(holder)).toBe("none");
+      expect(holder && pointerEventsOf(holder)).toBe("auto");
     });
 
-    it("should keep the 2D figure when no first frame comes in 3 seconds", async () => {
+    it("should keep the 2D figure when no first frame comes in time", async () => {
       await renderBodyView("3d");
 
-      await advance(3000);
+      await advance(FIRST_FRAME_TIMEOUT_MILLISECONDS);
 
       expect(screen.getByRole("img", { name: label })).toBeOnTheScreen();
       expect(screen.getAllByRole("img", { name: label, hidden: true })).toHaveLength(1);
     });
 
-    it("should not fall back when the first frame comes just before 3 seconds", async () => {
+    it("should keep waiting for the 3D body until the time is up", async () => {
       await renderBodyView("3d");
 
-      await advance(2998);
+      await advance(FIRST_FRAME_TIMEOUT_MILLISECONDS - 2);
+
+      expect(screen.getAllByRole("img", { name: label, hidden: true })).toHaveLength(2);
+    });
+
+    it("should not fall back when the first frame comes just before the time is up", async () => {
+      await renderBodyView("3d");
+
+      await advance(FIRST_FRAME_TIMEOUT_MILLISECONDS - 2);
       await drawFirstFrame();
-      await advance(motionDuration.standard + 3000);
+      await advance(motionDuration.standard + FIRST_FRAME_TIMEOUT_MILLISECONDS);
 
       expect(screen.getAllByRole("img", { name: label, hidden: true })).toHaveLength(2);
     });
@@ -320,7 +331,7 @@ describe("BodyView", () => {
 
     it("should not try 3D again in a later mount after it timed out", async () => {
       const first = await renderBodyView("3d");
-      await advance(3000);
+      await advance(FIRST_FRAME_TIMEOUT_MILLISECONDS);
       await first.unmount();
       mockCanvas.mockClear();
 
@@ -347,7 +358,7 @@ describe("BodyView", () => {
 
     it("should keep the saved preference when 3D fails", async () => {
       await renderBodyView("3d");
-      await advance(3000);
+      await advance(FIRST_FRAME_TIMEOUT_MILLISECONDS);
 
       expect(mockStorageItems.get("bodyMap.renderer")).toBe("3d");
     });

@@ -11,6 +11,8 @@ export type SegmentedControlProps<Value extends string> = {
   options: readonly SegmentedControlOption<Value>[];
   value: Value;
   onChange: (value: Value) => void;
+  /** What choosing an option does, when the options alone do not say. A screen reader reads it after the group's label. */
+  hint?: string | undefined;
   /** `md` (the default) is the 44 point track. `sm` is the 36 point track with a 12 point label, for a row that has other things in it. */
   size?: "md" | "sm" | undefined;
 };

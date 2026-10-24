@@ -89,6 +89,31 @@ describe("SegmentedControl", () => {
       expect(screen.getByLabelText("Nutrition basis")).toHaveProp("role", "radiogroup");
     });
 
+    it("should carry no accessibility hint unless it is given one", async () => {
+      await renderBasis({ value: "per-100-g" });
+
+      expect(screen.getByLabelText("Nutrition basis")).not.toHaveProp("accessibilityHint");
+    });
+
+    it("should say what it does with the hint it is given", async () => {
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <SegmentedControl
+            hint="Changes the unit."
+            label="Nutrition basis"
+            options={basisOptions}
+            value="per-100-g"
+            onChange={() => undefined}
+          />
+        </ThemeProvider>,
+      );
+
+      expect(screen.getByLabelText("Nutrition basis")).toHaveProp(
+        "accessibilityHint",
+        "Changes the unit.",
+      );
+    });
+
     it("should hold one radio for each option, named by the option", async () => {
       await renderBasis({ value: "per-100-g" });
 

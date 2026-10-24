@@ -16,7 +16,8 @@ const SELECTED_SHARE_OF_TEXT_COLOUR = 0.5;
 /** What a muscle's material is set to: the colour, and all the light it gives out (its emissive intensity stays 1). */
 export type MusclePaint = { color: Color; emissive: Color };
 
-export type BodyPaints = Record<MuscleId, MusclePaint>;
+/** The paint of each muscle, and the colour the head fades into at the neck, which is eased with them. */
+export type BodyPaints = Record<MuscleId, MusclePaint> & { neckColour: Color };
 
 /** The paints of the looks under the emphasis, new each time. */
 export function paintsOf(
@@ -26,7 +27,7 @@ export function paintsOf(
   const resting = new Color(emphasis.restingColor);
   const text = new Color(emphasis.selectedColor);
   const hasSelection = emphasis.selected !== undefined;
-  return byMuscle((id) => {
+  const musclePaints = byMuscle((id) => {
     const look = looks[id];
     const isSelected = id === emphasis.selected;
     const unselected = hasSelection && !isSelected ? emphasis.unselectedOpacity : 1;
@@ -44,13 +45,17 @@ export function paintsOf(
       .add(new Color(look.glowColor).multiplyScalar(look.glow * strength * strength));
     return { color, emissive };
   });
+  // The neck muscle's paint, unless the upper trapezius, whose vertices also reach the collar, is the warmer.
+  const isTrapeziusWarmer = (looks.traps_upper.warmth ?? 0) > (looks.neck.warmth ?? 0);
+  const neckSource = isTrapeziusWarmer ? musclePaints.traps_upper : musclePaints.neck;
+  return { ...musclePaints, neckColour: neckSource.color.clone() };
 }
 
-/** Sets the materials to the paints, and the head's neck colour to the neck muscle's. */
+/** Sets the materials to the paints, and the head's neck colour to the paints'. */
 export function writePaints(materials: BodyMaterials, paints: BodyPaints): void {
   for (const id of MUSCLE_IDS) {
     materials.muscles[id].color.copy(paints[id].color);
     materials.muscles[id].emissive.copy(paints[id].emissive);
   }
-  materials.neckColour.copy(paints.neck.color);
+  materials.neckColour.copy(paints.neckColour);
 }

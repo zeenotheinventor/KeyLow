@@ -4,6 +4,7 @@ import {
   BODY_MAP,
   BODY_MAP_LEGEND_ITEMS,
   describeBodyFigureLabel,
+  describeBodyFigureLoading3d,
   describeBodyMapHeader,
   describeDashboardBodyMapCard,
   describeFigureRowValue,
@@ -163,6 +164,8 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
       sideSwitchDescription: "Turns the body to face front or back.",
       rotateHint: "Drag to turn",
+      loading3d: "Loading 3D…",
+      loading3dLabel: "3D is loading.",
       legendNames: { heat: "Heat legend", volume: "Volume legend", gap: "Gap legend" },
       views: { actual: "Actual", projected: "Projected", gap: "Done against plan" },
       toggle: {
@@ -419,6 +422,31 @@ describe("the labels of a body figure", () => {
     ],
   ] as const)("should write %j as the board does", (input, label) => {
     expect(describeBodyFigureLabel(input)).toBe(label);
+  });
+});
+
+describe("describeBodyFigureLoading3d", () => {
+  it("should add that 3D is loading to the figure's name, as the loading board names it", () => {
+    expect(
+      describeBodyFigureLoading3d(
+        describeBodyFigureLabel({ scale: "heat", view: "actual", side: "front", hint: null }),
+      ),
+    ).toBe("Body map, Actual, heat, front. 3D is loading.");
+  });
+
+  it("should come after the muscle list hint when the name has one", () => {
+    expect(
+      describeBodyFigureLoading3d(
+        describeBodyFigureLabel({
+          scale: "heat",
+          view: "actual",
+          side: "front",
+          hint: "muscleList",
+        }),
+      ),
+    ).toBe(
+      "Body map, Actual, heat, front. The muscle list has each muscle’s values. 3D is loading.",
+    );
   });
 });
 

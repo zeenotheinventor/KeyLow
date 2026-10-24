@@ -98,6 +98,26 @@ describe.each(schemes)("looksOf in the %s theme", (scheme) => {
     }
   });
 
+  it.each([0, 1, 2, 3, 4, 5])("should read heat step %i as that warm", (step) => {
+    expect(looksOf("heat", { abs: step }, palette).abs.warmth).toBe(step);
+  });
+
+  it("should read a muscle with no heat as not warm at all", () => {
+    expect(looksOf("heat", {}, palette).abs.warmth).toBe(0);
+  });
+
+  it.each([0, 1, 2, 3])("should read volume status %i as warmer than not targeted", (status) => {
+    const looks = looksOf("volume", { abs: status }, palette);
+
+    expect(looks.abs.warmth).toBe(1);
+    expect(looksOf("volume", {}, palette).abs.warmth).toBe(0);
+  });
+
+  it.each([0, 1, 2])("should read gap value %i as warmer than not in the plan", (gap) => {
+    expect(looksOf("gap", { abs: gap }, palette).abs.warmth).toBe(1);
+    expect(looksOf("gap", {}, palette).abs.warmth).toBe(0);
+  });
+
   it("should glow by the alpha of the heat glow token, in its colour", () => {
     const { chest_upper: peak } = looksOf("heat", { chest_upper: 5 }, palette);
     const { color, alpha } = parseRgba(palette.heatGlow);

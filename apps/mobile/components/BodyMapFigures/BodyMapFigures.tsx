@@ -1,3 +1,4 @@
+import { BODY_TAP_SLOP } from "@keylow/body-3d/touch";
 import { BODY_MAP, describeBodyFigureLabel } from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { useEffect, useState } from "react";
@@ -8,16 +9,13 @@ import { useCrossFade } from "../../lib/motion";
 import { useScreenReaderEnabled } from "../../lib/screenReader";
 import { BodyFigure, Text } from "../ui";
 import { ViewName } from "../ViewLabel";
+import { BodyStage } from "./BodyStage";
 
 import type { BodyMapFiguresProps } from "./types";
 import type { BodyMapView, MuscleId } from "@keylow/core/training";
 
 const SIDES = ["front", "back"] as const;
 const SIDE_BY_SIDE_VIEWS = ["actual", "projected"] as const;
-
-// A touch that moves further than this from where it went down is a pan, and never a tap. A muscle button
-// applies the same slop to its own press.
-const TAP_SLOP = 10;
 
 // How strongly the muscles that are not the selected one show while a sheet is open on it.
 const UNSELECTED_OPACITY = 0.4;
@@ -54,6 +52,11 @@ function createTapRelay() {
  * the view changes the old figures fade out under the new ones over 220 ms, and are hidden from a screen
  * reader while they do.
  *
+ * With `in3d` it is one body on a dark stage instead, turned to the side it names, as the 3D body map draws
+ * it: a drag turns the body and a tap calls `onTap`, and when 3D cannot be drawn the 2D figure of that side
+ * stays in the stage, where a tap on it calls `onTap` too and a drag does not. It has no outgoing figures, because the 3D body eases its colours itself, and no
+ * muscle buttons, since a long press on the 3D body does not exist yet.
+ *
  * With `sideBySide` the figures are Actual and Projected together, one side of each at the one figure width,
  * with the view's name over it and its moment under it. Both views show, so a tap on them does nothing,
  * a short press on a muscle does nothing, and a long press calls `onLongPressMuscle` with the view of the
@@ -71,6 +74,7 @@ export function BodyMapFigures({
   onTap,
   onLongPressMuscle,
   sideBySide,
+  in3d,
   hasMuscleList = false,
 }: BodyMapFiguresProps) {
   const { outgoing, incomingStyle, outgoingStyle } = useCrossFade(view, view);
@@ -90,12 +94,34 @@ export function BodyMapFigures({
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderRelease: (_event, { dx, dy }) => {
-        if (Math.hypot(dx, dy) <= TAP_SLOP) {
+        if (Math.hypot(dx, dy) <= BODY_TAP_SLOP) {
           tapRelay.tap();
         }
       },
     }),
   );
+
+  if (in3d !== undefined && sideBySide === undefined) {
+    return (
+      <BodyStage
+        body={body}
+        label={describeBodyFigureLabel({
+          scale,
+          view,
+          side: in3d.side,
+          hint: hintOf(in3d.side),
+        })}
+        scale={scale}
+        selected={selected}
+        side={in3d.side}
+        unselectedOpacity={UNSELECTED_OPACITY}
+        values={valuesOf(view)}
+        tapHandlers={panResponder.panHandlers}
+        onSideChange={in3d.onSideChange}
+        onTap={onTap}
+      />
+    );
+  }
 
   if (sideBySide !== undefined) {
     return (
