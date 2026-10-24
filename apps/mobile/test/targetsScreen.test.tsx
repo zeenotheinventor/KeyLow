@@ -506,6 +506,73 @@ describe("the Targets screen", () => {
     });
   });
 
+  describe("a user with no programme", () => {
+    it("should see none of the programme's words, and the manual note and card", async () => {
+      await renderLoadedTargets();
+
+      expect(
+        screen.queryByRole("button", {
+          name: "Programme, Your weekly check-in sets these targets",
+        }),
+      ).not.toBeOnTheScreen();
+      expect(screen.queryByText("This week")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Set my own targets" })).not.toBeOnTheScreen();
+      expect(
+        screen.queryByText("Saving your own targets ends your programme and its weekly check-in."),
+      ).not.toBeOnTheScreen();
+      expect(
+        screen.getByText(
+          "You set these yourself for now. Later, Ki-Lo will suggest targets from your weight trend.",
+        ),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", {
+          name: "Estimate my targets, From a few questions about you and your goal",
+        }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should save again when Save is pressed again after a failed save", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+      diaryBackend.failingTables.add("profiles");
+      await user.press(save());
+      await screen.findByText("Not saved. Check your connection and try again.");
+      diaryBackend.failingTables.delete("profiles");
+
+      await user.press(save());
+
+      expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+      expect(diaryBackend.saves).toHaveLength(1);
+      // The save starts by looking for a programme to end, so each attempt makes this read once.
+      expect(
+        diaryBackend.requests.filter(
+          (request) =>
+            request.table === "programs" && request.search.includes("select=id%2Cstarted_on"),
+        ),
+      ).toHaveLength(2);
+    });
+
+    it("should make no read of the programme summary", async () => {
+      await renderLoadedTargets();
+
+      expect(requestsTo("expenditure_snapshots")).toBe(0);
+    });
+
+    it("should save without asking, and never show the dialog", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+
+      await user.press(save());
+
+      expect(
+        screen.queryByRole("heading", { name: "Turn off weekly check-ins?" }),
+      ).not.toBeOnTheScreen();
+      expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+      expect(diaryBackend.saves).toHaveLength(1);
+    });
+  });
+
   describe("the terms gate", () => {
     it("should read no targets while the terms are not accepted", async () => {
       diaryBackend.terms = { terms_accepted_at: null, terms_version: null };

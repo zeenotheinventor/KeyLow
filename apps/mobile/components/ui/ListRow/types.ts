@@ -1,7 +1,11 @@
 import type { BadgeTone } from "../Badge";
 import type { IconName } from "../Icon";
+import type { FieldMacro } from "../Input";
 import type { ReactNode, Ref } from "react";
 import type { View } from "react-native";
+
+/** The three macros `NumericInput`'s `macro` draws, and calories, which the diary's progress strip colours too. */
+export type ListRowMacro = FieldMacro | "calories";
 
 export type ListRowBadge = {
   /** One short phrase from `@keylow/core/copy`. */
@@ -13,6 +17,11 @@ type ListRowBaseProps = {
   /** A leading icon, by name, in a small tile. */
   icon?: IconName | undefined;
   title: string;
+  /**
+   * Draws the macro's (or the calories') colour as an 8 point key before the title, as the Targets screen's Protein, Carbohydrate
+   * and Fat rows do. It is decoration, so the row's accessible name is unchanged.
+   */
+  macro?: ListRowMacro | undefined;
   subtitle?: string | undefined;
   /**
    * A short status drawn before the value, such as the weigh-in list's "Left out of trend" in the warning

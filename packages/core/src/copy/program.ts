@@ -504,6 +504,8 @@ export const PROGRAM_TARGETS_SCREEN = {
     name: "Programme, your weekly check-in sets these targets",
   },
   thisWeek: "This week",
+  /** The name of the list of this week's four targets, for a screen reader. */
+  thisWeekList: "This week's targets",
   engineNote:
     "Your programme sets these each week. If you set your own, the weekly check-in stops.",
   setOwnTargetsLabel: "Set my own targets",

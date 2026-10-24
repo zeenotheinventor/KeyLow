@@ -9,12 +9,21 @@ import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
 import { Text } from "../Text";
 
-import type { ListRowProps } from "./types";
+import type { ListRowMacro, ListRowProps } from "./types";
+
+// Written out in full so Tailwind sees each class.
+const macroKeyClassName: Record<ListRowMacro, string> = {
+  calories: "bg-calories",
+  protein: "bg-protein",
+  carbs: "bg-carbs",
+  fat: "bg-fat",
+};
 
 /** A row of the diary, a menu or a list of foods: an icon, a title, a subtitle, a value and a chevron. */
 export function ListRow({
   icon,
   title,
+  macro,
   subtitle,
   badge,
   value,
@@ -55,6 +64,12 @@ export function ListRow({
         >
           <Icon name={icon} size={isCompact ? 18 : "md"} tone="secondary" />
         </View>
+      )}
+      {macro === undefined ? null : (
+        <View
+          aria-hidden
+          className={`h-2 w-2 shrink-0 rounded-[2px] ${macroKeyClassName[macro]}`}
+        />
       )}
       <View className={isCompact ? "flex-1" : "flex-1 gap-[2px]"}>
         <Text numberOfLines={1} variant={isCompact ? "label-small" : "body-strong"}>
