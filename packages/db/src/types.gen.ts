@@ -1309,6 +1309,7 @@ export type Database = {
         Args: { p_exercises: Json; p_import_run_id: string };
         Returns: Json;
       };
+      invoke_checkin_backstop: { Args: never; Returns: string };
       recipe_instructions_are_valid: {
         Args: { steps: string[] };
         Returns: boolean;
