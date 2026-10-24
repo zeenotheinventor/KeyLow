@@ -7,4 +7,5 @@ export const storyStates = [
   "PositiveTone",
   "NegativeTone",
   "Decorative",
+  "Wide",
 ];

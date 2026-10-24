@@ -409,6 +409,17 @@ function SkeletonWeight() {
   );
 }
 
+// The Weight screen's Body composition section as its loading board draws it: one 104 point block for each
+// card, 8 points apart.
+function SkeletonBodyComposition() {
+  return (
+    <View className="gap-2" testID="skeleton-body-composition">
+      <SkeletonBone className="h-[104px] rounded-large" />
+      <SkeletonBone className="h-[104px] rounded-large" />
+    </View>
+  );
+}
+
 /**
  * What a list shows while it loads, shaped like the content that replaces it. It draws nothing for the
  * first 200 ms (`--skeleton-delay`), so a load that is quick never flickers, then fades in. It is hidden
@@ -432,6 +443,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "bodyMap" ? <SkeletonBodyMap /> : null}
       {variant === "historyList" ? <SkeletonHistoryList /> : null}
       {variant === "weight" ? <SkeletonWeight /> : null}
+      {variant === "bodyComposition" ? <SkeletonBodyComposition /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View

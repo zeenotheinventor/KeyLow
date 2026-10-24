@@ -65,3 +65,6 @@ export const HistoryList: Story = { args: { variant: "historyList" } };
 
 // The Weight screen while it loads: the Trend weight card, the range control, the chart, a heading bar and the list.
 export const Weight: Story = { args: { variant: "weight" } };
+
+// The Weight screen's Body composition section while it loads: two 104 point blocks, one for each card.
+export const BodyComposition: Story = { args: { variant: "bodyComposition" } };

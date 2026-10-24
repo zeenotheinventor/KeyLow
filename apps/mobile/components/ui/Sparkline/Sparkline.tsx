@@ -13,19 +13,46 @@ import { strokePaint } from "../../../lib/skia/strokePaint";
 import { StyledCanvas } from "../../../lib/skia/StyledCanvas";
 import { useTheme } from "../../../lib/theme";
 
-import type { SparklineProps, SparklineTone } from "./types";
+import type { SparklineProps, SparklineSize, SparklineTone } from "./types";
 import type { ColorName } from "@keylow/tokens";
 
-const WIDTH = 64;
-const HEIGHT = 20;
-// Room all round for the line's width and the dot, so neither is cut off at the edge of the canvas.
-const INSET = 3;
-const LINE_WIDTH = 1.5;
-const DOT_RADIUS = 2;
-// A reading with no line to its neighbours, which is still seen, smaller than the latest reading's dot.
-const LONE_DOT_RADIUS = 1.5;
+type SizeSpec = {
+  /** Written out in full so Tailwind sees it. */
+  canvasClassName: string;
+  width: number;
+  height: number;
+  // Room all round for the line's width and the dot, so neither is cut off at the edge of the canvas.
+  inset: number;
+  lineWidth: number;
+  dotRadius: number;
+  // A reading with no line to its neighbours, which is still seen, smaller than the latest reading's dot.
+  loneDotRadius: number;
+  // The width of the ring in the surface colour around the latest dot, or 0 for none.
+  ringWidth: number;
+};
 
-const area = { left: INSET, top: INSET, width: WIDTH - 2 * INSET, height: HEIGHT - 2 * INSET };
+const sizes: Record<SparklineSize, SizeSpec> = {
+  default: {
+    canvasClassName: "h-5 w-16",
+    width: 64,
+    height: 20,
+    inset: 3,
+    lineWidth: 1.5,
+    dotRadius: 2,
+    loneDotRadius: 1.5,
+    ringWidth: 0,
+  },
+  wide: {
+    canvasClassName: "h-[40px] w-[128px]",
+    width: 128,
+    height: 40,
+    inset: 4,
+    lineWidth: 2,
+    dotRadius: 3.5,
+    loneDotRadius: 2,
+    ringWidth: 2,
+  },
+};
 
 const toneColours: Record<SparklineTone, { line: ColorName; dot: ColorName }> = {
   neutral: { line: "chart-trend", dot: "chart-marker" },
@@ -38,8 +65,21 @@ const toneColours: Record<SparklineTone, { line: ColorName; dot: ColorName }> = 
  * no point, and a reading with a skipped week either side is a smaller dot alone. It is an image named by the label,
  * or decoration a screen reader skips when the row's own text says the same.
  */
-export function Sparkline({ points, label, decorative = false, tone = "neutral" }: SparklineProps) {
+export function Sparkline({
+  points,
+  label,
+  decorative = false,
+  tone = "neutral",
+  size = "default",
+}: SparklineProps) {
   const { colors } = useTheme();
+  const spec = sizes[size];
+  const area = {
+    left: spec.inset,
+    top: spec.inset,
+    width: spec.width - 2 * spec.inset,
+    height: spec.height - 2 * spec.inset,
+  };
 
   const placed = plotPoints(points, area, valueDomain(points));
   const latestWeek = latestIndex(points);
@@ -50,7 +90,7 @@ export function Sparkline({ points, label, decorative = false, tone = "neutral" 
 
   return (
     <View {...accessibility}>
-      <StyledCanvas className="h-5 w-16">
+      <StyledCanvas className={spec.canvasClassName}>
         {lineRuns(placed).map((run) => (
           <Path
             color={colors[toneColours[tone].line]}
@@ -58,7 +98,7 @@ export function Sparkline({ points, label, decorative = false, tone = "neutral" 
             path={runPath(run)}
             strokeCap="round"
             strokeJoin="round"
-            strokeWidth={LINE_WIDTH}
+            strokeWidth={spec.lineWidth}
             {...strokePaint}
           />
         ))}
@@ -70,7 +110,7 @@ export function Sparkline({ points, label, decorative = false, tone = "neutral" 
               cx={point.x}
               cy={point.y}
               key={point.index}
-              r={LONE_DOT_RADIUS}
+              r={spec.loneDotRadius}
             />
           ))}
         {latest !== undefined && latest !== null && (
@@ -78,7 +118,17 @@ export function Sparkline({ points, label, decorative = false, tone = "neutral" 
             color={colors[toneColours[tone].dot]}
             cx={latest.x}
             cy={latest.y}
-            r={DOT_RADIUS}
+            r={spec.dotRadius}
+          />
+        )}
+        {latest !== undefined && latest !== null && spec.ringWidth > 0 && (
+          <Circle
+            color={colors.surface}
+            cx={latest.x}
+            cy={latest.y}
+            r={spec.dotRadius}
+            strokeWidth={spec.ringWidth}
+            {...strokePaint}
           />
         )}
       </StyledCanvas>

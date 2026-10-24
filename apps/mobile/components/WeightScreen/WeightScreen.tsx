@@ -8,19 +8,27 @@ import { View } from "react-native";
 import { useHealthImport } from "../../lib/health";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { BodyCompositionSection } from "../BodyCompositionSection";
 import { ErrorState, Skeleton } from "../ui";
 import { WeightTrendCard } from "../WeightTrendCard";
+import { useBodyCompositionAccess } from "./useBodyCompositionAccess";
 import { useHealthConnection } from "./useHealthConnection";
 import { WeightEmptyState } from "./WeightEmptyState";
 import { WeightHeader } from "./WeightHeader";
 import { WeightImportStatus, WeightImportingLine } from "./WeightImportStatus";
 import { WeightList } from "./WeightList";
 
+import type { WeightRange } from "@keylow/core/weight";
+
+const DEFAULT_RANGE: WeightRange = 90;
+
 /**
  * The Weight screen, pushed inside the More tab so the tab bar stays: the header over the list of the
  * signed in user's weigh-ins, or the loading, error or empty board. A failed refetch keeps the list. The
  * error board is raised 64 points above the middle, as `weight: chart and weigh-ins` draws it. Weigh-ins
- * are health data and are not in the offline cache, so a read that fails offline is the error board.
+ * are health data and are not in the offline cache, so a read that fails offline is the error board. The
+ * Body composition section follows the trend card in the list's header when Health Connect is connected
+ * and the access to body fat and lean mass has been read, and the one range control drives it with the chart.
  */
 export function WeightScreen() {
   const router = useRouter();
@@ -30,6 +38,9 @@ export function WeightScreen() {
   const timeZone = useProfileTimeZone({ enabled: isReadEnabled });
   const now = useNow();
   const connection = useHealthConnection();
+  const bodyCompositionAccess = useBodyCompositionAccess();
+  // One range for the weight chart and both body cards. It starts on 90 days and is not kept.
+  const [range, setRange] = useState<WeightRange>(DEFAULT_RANGE);
   const { importNow, isImporting, lastImportedAt } = useHealthImport();
   const [isRefreshing, setIsRefreshing] = useState(false);
   // A second pull while one runs is the same import, and the control does not ask while it spins, but a
@@ -81,7 +92,24 @@ export function WeightScreen() {
 
       return (
         <WeightList
-          header={<WeightTrendCard today={today} trend={trend} weighIns={weighIns.data} />}
+          header={
+            <>
+              <WeightTrendCard
+                range={range}
+                today={today}
+                trend={trend}
+                weighIns={weighIns.data}
+                onRangeChange={setRange}
+              />
+              {connection === "connected" && bodyCompositionAccess !== null ? (
+                <BodyCompositionSection
+                  access={bodyCompositionAccess}
+                  range={range}
+                  today={today}
+                />
+              ) : null}
+            </>
+          }
           isLeftOut={(localDate) => trend.byDate.get(localDate)?.rejected === true}
           isRefreshing={isRefreshing}
           status={
