@@ -89,7 +89,7 @@ function holdFetchOpen() {
 }
 
 function makeCallbacks() {
-  return { onUpdateFound: jest.fn(), onProgress: jest.fn() };
+  return { onUpdateFound: jest.fn() };
 }
 
 describe("startOnLatestUpdate", () => {
@@ -185,14 +185,13 @@ describe("startOnLatestUpdate", () => {
       expect(outcome).toBe("up-to-date");
     });
 
-    it("should not show the update screen", async () => {
+    it("should not say an update was found", async () => {
       reportNoUpdateAvailable();
       const callbacks = makeCallbacks();
 
       await startOnLatestUpdate(callbacks);
 
       expect(callbacks.onUpdateFound).not.toHaveBeenCalled();
-      expect(callbacks.onProgress).not.toHaveBeenCalled();
     });
   });
 
@@ -274,10 +273,7 @@ describe("startOnLatestUpdate", () => {
 
     it("should say an update was found once, before the fetch starts", async () => {
       const calls: string[] = [];
-      const callbacks = {
-        onUpdateFound: jest.fn(() => calls.push("found")),
-        onProgress: jest.fn(),
-      };
+      const callbacks = { onUpdateFound: jest.fn(() => calls.push("found")) };
       fetchUpdateAsync.mockImplementation(() => {
         calls.push("fetch");
         return new Promise(() => {});
@@ -290,39 +286,15 @@ describe("startOnLatestUpdate", () => {
       expect(callbacks.onUpdateFound).toHaveBeenCalledTimes(1);
     });
 
-    it("should pass on the progress of the download", async () => {
+    it("should not restart the stall time for a state change that is not a download", async () => {
       holdFetchOpen();
-      const callbacks = makeCallbacks();
 
-      void startOnLatestUpdate(callbacks);
-      await jest.advanceTimersByTimeAsync(0);
-      progressSource.report(0.25);
-      progressSource.report(0.6);
-
-      expect(callbacks.onProgress.mock.calls).toEqual([[0.25], [0.6]]);
-    });
-
-    it("should pass on a progress that has not changed only once", async () => {
-      holdFetchOpen();
-      const callbacks = makeCallbacks();
-
-      void startOnLatestUpdate(callbacks);
-      await jest.advanceTimersByTimeAsync(0);
-      progressSource.report(0.4);
-      progressSource.report(0.4);
-
-      expect(callbacks.onProgress).toHaveBeenCalledTimes(1);
-    });
-
-    it("should ignore a state change that is not a download", async () => {
-      holdFetchOpen();
-      const callbacks = makeCallbacks();
-
-      void startOnLatestUpdate(callbacks);
-      await jest.advanceTimersByTimeAsync(0);
+      const pending = startOnLatestUpdate();
+      await jest.advanceTimersByTimeAsync(10_000);
       progressSource.report(0.4, false);
+      await jest.advanceTimersByTimeAsync(5000);
 
-      expect(callbacks.onProgress).not.toHaveBeenCalled();
+      await expect(pending).resolves.toBe("stalled");
     });
 
     it("should not stop the download because it takes longer than the time for the check", async () => {
@@ -521,21 +493,11 @@ describe("startOnLatestUpdate", () => {
     });
 
     describe("when the download finishes", () => {
-      it("should show the bar full and then reload exactly once", async () => {
-        const calls: string[] = [];
-        const callbacks = {
-          onUpdateFound: jest.fn(),
-          onProgress: jest.fn((progress: number) => calls.push(`progress ${String(progress)}`)),
-        };
+      it("should reload exactly once", async () => {
         fetchUpdateAsync.mockResolvedValue(newFetch(newerUpdateId));
-        reloadAsync.mockImplementation(() => {
-          calls.push("reload");
-          return Promise.resolve();
-        });
 
-        const outcome = await startOnLatestUpdate(callbacks);
+        const outcome = await startOnLatestUpdate();
 
-        expect(calls).toEqual(["progress 1", "reload"]);
         expect(reloadAsync).toHaveBeenCalledTimes(1);
         expect(outcome).toBe("reloading");
       });
@@ -547,15 +509,6 @@ describe("startOnLatestUpdate", () => {
 
         expect(progressSource.listenerCount()).toBe(0);
         expect(jest.getTimerCount()).toBe(0);
-      });
-
-      it("should not show the bar full when the fetch brought nothing new", async () => {
-        fetchUpdateAsync.mockResolvedValue(nothingNewFetch());
-        const callbacks = makeCallbacks();
-
-        await startOnLatestUpdate(callbacks);
-
-        expect(callbacks.onProgress).not.toHaveBeenCalled();
       });
     });
   });

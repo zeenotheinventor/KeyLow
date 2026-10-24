@@ -53,18 +53,17 @@ describe("an update reload that leaves the app running", () => {
     expect(hideAsync).not.toHaveBeenCalled();
   });
 
-  it("should keep the update screen up while the reload gets going, and remove it after the failsafe", async () => {
+  it("should say the splash screen has gone after the failsafe, and not before", async () => {
     const { result } = await renderHook(() => useHideSplashAfterUpdateCheck());
 
     await advance(reloadFailsafeMilliseconds - 1);
-    expect(result.current.isUpdateScreenShown).toBe(true);
-    expect(result.current.progress).toBe(1);
+    expect(result.current).toBe(false);
     await advance(1);
 
-    expect(result.current.isUpdateScreenShown).toBe(false);
+    expect(result.current).toBe(true);
   });
 
-  it("should not hide the splash screen from the failsafe once the screen is gone", async () => {
+  it("should not hide the splash screen from the failsafe once the hook is gone", async () => {
     const { unmount } = await render(<Probe />);
     await advance(0);
 

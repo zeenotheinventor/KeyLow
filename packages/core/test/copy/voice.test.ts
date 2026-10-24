@@ -38,6 +38,9 @@ const personsOwnStatements = [
   copy.PROGRAM_TARGETS_SCREEN.dialog.cancelLabel,
 ];
 
+// Zee asked for this toast in these words, with the exclamation mark, so it is the one sentence that has one.
+const sentencesWithAnExclamationMark = [copy.UPDATED_TOAST];
+
 const allSentences = [
   ...Object.values(copy).flatMap(collectStrings),
   ...Object.values(sampleCalls).flatMap((call) => call()),
@@ -60,8 +63,14 @@ describe("the voice of the copy", () => {
 
   it("should use no exclamation mark", () => {
     for (const sentence of allSentences) {
-      expect(sentence).not.toContain("!");
+      if (!sentencesWithAnExclamationMark.includes(sentence)) {
+        expect(sentence).not.toContain("!");
+      }
     }
+  });
+
+  it("should allow an exclamation mark in the updated toast only", () => {
+    expect(allSentences.filter((sentence) => sentence.includes("!"))).toEqual([copy.UPDATED_TOAST]);
   });
 
   it("should use no em dash and no double hyphen stand-in", () => {
