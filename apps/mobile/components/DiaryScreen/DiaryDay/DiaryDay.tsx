@@ -22,6 +22,7 @@ import { DiaryDayContent } from "../DiaryDayContent";
 import { DiaryFrame } from "../DiaryFrame";
 import { DiaryLoading } from "../DiaryLoading";
 import { DiaryMoreSheet } from "../DiaryMoreSheet";
+import { useCheckinToast } from "../useCheckinToast";
 import { useCopyYesterday } from "../useCopyYesterday";
 import { useDeleteEntryWithUndo } from "../useDeleteEntryWithUndo";
 
@@ -34,6 +35,7 @@ const NOON = 12;
  * One day of the diary and the week around it, once the profile's time zone is known: the header, the
  * week strip and, under it, the day, with the sheets the header opens (the date picker, and the menu
  * with Copy yesterday) and the actions on the day (delete with Undo, copy, and marking it complete).
+ * It also says once, in a toast, when a check-in has set a new calorie target.
  * Nothing is read while `isReadEnabled` is false, because the terms gate is up over the app. Until the
  * first day has loaded a skeleton stands in for the whole body. After that the header and the strip stay
  * on screen whatever the next day is doing, so a day that is slow to load, or waiting for a connection,
@@ -83,6 +85,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
   const targetsQuery = useTargets({ enabled: isReadEnabled, localDate: viewedDate });
   const setDayComplete = useSetDayComplete();
   const deleteEntry = useDeleteEntryWithUndo();
+  useCheckinToast();
   const { copyYesterday, isCopying, hasCopyFailed } = useCopyYesterday(viewedDate, timeZone);
 
   const day = dayQuery.data;

@@ -21,6 +21,13 @@ export const checkinBackend: {
   runGate: Promise<void> | undefined;
   programReads: number;
   runBodies: unknown[];
+  /** The calorie target on the profile, which the targets read answers with (the user has no program row of the engine's). */
+  targetKcal: number | null;
+  /** What the calorie target becomes once a run records check-ins. Undefined leaves it as it was. */
+  targetKcalAfterRun: number | null | undefined;
+  /** Fails the targets read alone. */
+  targetsReadFails: boolean;
+  targetReads: number;
 } = {
   termsAccepted: true,
   timeZone: "UTC",
@@ -31,6 +38,10 @@ export const checkinBackend: {
   runGate: undefined,
   programReads: 0,
   runBodies: [],
+  targetKcal: 2200,
+  targetKcalAfterRun: undefined,
+  targetsReadFails: false,
+  targetReads: 0,
 };
 
 export function resetCheckinBackend(): void {
@@ -43,6 +54,10 @@ export function resetCheckinBackend(): void {
   checkinBackend.runGate = undefined;
   checkinBackend.programReads = 0;
   checkinBackend.runBodies = [];
+  checkinBackend.targetKcal = 2200;
+  checkinBackend.targetKcalAfterRun = undefined;
+  checkinBackend.targetsReadFails = false;
+  checkinBackend.targetReads = 0;
 }
 
 const jsonResponse = (body: unknown, status = 200) =>
@@ -56,6 +71,22 @@ const profileRow = () => ({
   terms_version: checkinBackend.termsAccepted ? TERMS_VERSION : null,
   timezone: checkinBackend.timeZone,
 });
+
+function answerTargetsRead(): Response {
+  checkinBackend.targetReads += 1;
+  if (checkinBackend.targetsReadFails) {
+    return jsonResponse({ code: "XX000", message: "a target of 2140 was refused" }, 500);
+  }
+
+  return jsonResponse([
+    {
+      target_kcal: checkinBackend.targetKcal,
+      target_protein_g: null,
+      target_carbs_g: null,
+      target_fat_g: null,
+    },
+  ]);
+}
 
 function answerProgramRead(): Response {
   checkinBackend.programReads += 1;
@@ -92,16 +123,29 @@ async function answerRun(body: unknown): Promise<Response> {
   if (checkinBackend.program !== null) {
     checkinBackend.program.next_checkin_date = checkinBackend.runAnswer.nextCheckinDate;
   }
+  if (checkinBackend.runAnswer.ran > 0 && checkinBackend.targetKcalAfterRun !== undefined) {
+    checkinBackend.targetKcal = checkinBackend.targetKcalAfterRun;
+  }
   return jsonResponse(checkinBackend.runAnswer);
 }
 
 function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-  const { pathname } = new URL(address);
+  const { pathname, searchParams } = new URL(address);
+  const selected = searchParams.get("select") ?? "";
 
   try {
     if (pathname.endsWith("/profiles")) {
-      return Promise.resolve(jsonResponse([profileRow()]));
+      return Promise.resolve(
+        selected.includes("target_kcal") ? answerTargetsRead() : jsonResponse([profileRow()]),
+      );
+    }
+    // The targets read looks for an engine program and its row first. The user has neither.
+    if (pathname.endsWith("/programs") && selected === "id") {
+      return Promise.resolve(jsonResponse([]));
+    }
+    if (pathname.endsWith("/targets")) {
+      return Promise.resolve(jsonResponse([]));
     }
     if (pathname.endsWith("/programs")) {
       return Promise.resolve(answerProgramRead());

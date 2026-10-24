@@ -6,6 +6,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react-na
 import { Text } from "react-native";
 
 import { AuthGate } from "../components/AuthGate";
+import { announceNewTargets, hasNewTargets, takeNewTargets } from "../lib/checkinToast";
 import { scheduledRemindersStorageKey } from "../lib/reminderScheduler";
 import { ThemeProvider } from "../lib/theme";
 import { notificationsState, resetNotificationsMock } from "./support/expoNotificationsMock";
@@ -382,6 +383,42 @@ describe("AuthGate", () => {
       });
 
       expect(setUser).toHaveBeenLastCalledWith(null);
+    });
+  });
+
+  describe("the check-in toast signal", () => {
+    beforeEach(() => {
+      mockSupabaseClient.auth.getSession.mockResolvedValue({
+        data: { session: fakeSession },
+        error: null,
+      });
+      routerMock.segments = ["(tabs)", "diary"];
+    });
+
+    afterEach(() => {
+      takeNewTargets();
+    });
+
+    it("should be cleared when the user signs out, so the next account does not see it", async () => {
+      await renderGate();
+      announceNewTargets();
+
+      await act(() => {
+        emitAuthStateChange("SIGNED_OUT", null);
+      });
+
+      expect(hasNewTargets()).toBe(false);
+    });
+
+    it("should be kept when the session is only refreshed", async () => {
+      await renderGate();
+      announceNewTargets();
+
+      await act(() => {
+        emitAuthStateChange("TOKEN_REFRESHED", fakeSession);
+      });
+
+      expect(hasNewTargets()).toBe(true);
     });
   });
 
