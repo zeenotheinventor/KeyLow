@@ -703,6 +703,7 @@ describe("setup: estimate · default", () => {
       carbohydrate: "Carbohydrate",
       fat: "Fat",
     });
+    expect(SETUP_ESTIMATE.carbsShortLabel).toBe("Carbs");
     expect(SETUP_ESTIMATE.expenditure).toEqual({
       title: words.expenditureTitle,
       caption: words.expenditureCaption,

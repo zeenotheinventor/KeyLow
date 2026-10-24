@@ -508,6 +508,8 @@ export const SETUP_ESTIMATE = {
     caloriesUnit: "kcal a day",
   },
   tileLabels: { protein: "Protein", carbohydrate: "Carbohydrate", fat: "Fat" },
+  /** The setup estimate card only: three tiles share one row, and "Carbohydrate" wraps mid-word there. */
+  carbsShortLabel: "Carbs",
   expenditure: {
     title: "Estimated expenditure",
     caption: "The energy you use in a day",
