@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 
-import { handle } from "./http.ts";
+import { error, handle } from "./http.ts";
 
 type Report = [functionName: string, code: string, caught: unknown];
 
@@ -41,3 +41,19 @@ Deno.test("handle reports nothing for an answered request or a preflight", async
 
   assertEquals(spy.reports, []);
 });
+
+Deno.test(
+  "error answers the three run-checkin codes with the status the contract names",
+  async () => {
+    const bodies = [
+      { response: error("bad_mode", "m"), status: 400, code: "bad_mode" },
+      { response: error("no_program", "m"), status: 409, code: "no_program" },
+      { response: error("missing_stats", "m"), status: 409, code: "missing_stats" },
+    ];
+
+    for (const { response, status, code } of bodies) {
+      assertEquals(response.status, status);
+      assertEquals(await response.json(), { error: { code, message: "m" } });
+    }
+  },
+);
