@@ -1,6 +1,8 @@
 export { computeTrend } from "./computeTrend";
 export { dayTarget } from "./dayTarget";
 export type { DayAdjustments, DayTargetInput } from "./dayTarget";
+export { measureExpenditure } from "./measureExpenditure";
+export type { MeasureExpenditureInput } from "./measureExpenditure";
 export { bmrMifflinStJeor, initialExpenditure } from "./initialExpenditure";
 export type { BmrInput, InitialExpenditure, InitialExpenditureInput } from "./initialExpenditure";
 export {
@@ -26,7 +28,13 @@ export type {
   ActivityLevel,
   CalorieGoal,
   Clamp,
+  DayInput,
   DayOfWeekKcal,
+  EligibleMeasurement,
+  IneligibleMeasurement,
+  MeasureExpenditureResult,
+  MeasurementCounts,
+  MeasurementReason,
   Sex,
   TrendInput,
   TrendPoint,

@@ -93,10 +93,45 @@ describe("DEFAULT_ENGINE_PARAMS expenditure group", () => {
       "activityFactorBand",
       "activityFactors",
       "energyDensityKcalPerKg",
+      "incompletePenaltyKcal",
+      "intakeCvPerDay",
+      "minCompleteDays",
+      "minSpanDays",
+      "minWeighDays",
       "priorCv",
+      "residualSdFloorKg",
       "sexOffsetKcal",
+      "windowDays",
       "zClampKcal",
     ]);
+  });
+
+  it("should measure over a window of 28 days", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.windowDays).toBe(28);
+  });
+
+  it("should need a span of 14 days between the first and last weigh-in", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.minSpanDays).toBe(14);
+  });
+
+  it("should need 8 weigh days in the window", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.minWeighDays).toBe(8);
+  });
+
+  it("should need 10 complete days in the window", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.minCompleteDays).toBe(10);
+  });
+
+  it("should floor the residual standard deviation of the weight at 0.3 kg", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.residualSdFloorKg).toBe(0.3);
+  });
+
+  it("should take the standard deviation of a day's logged intake as 15% of the mean", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.intakeCvPerDay).toBe(0.15);
+  });
+
+  it("should penalise an incomplete window by 100 kcal at most", () => {
+    expect(DEFAULT_ENGINE_PARAMS.expenditure.incompletePenaltyKcal).toBe(100);
   });
 });
 
