@@ -6,4 +6,9 @@ export type TargetsFormProps = {
   initial: Targets;
   /** Drawn at the top of the form's scrolling content, above Calories, so it scrolls with the fields. */
   header?: ReactNode;
+  /**
+   * For a person whose programme runs: a save ends it, so the form says so in place of its usual note and asks
+   * first, in a dialog, before it saves. Leave it out for someone with no programme.
+   */
+  endsProgramme?: boolean;
 };

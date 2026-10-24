@@ -3,6 +3,7 @@ import {
   DIARY_PROBLEMS,
   MACROS_OPTIONAL,
   OFFLINE_BANNER,
+  PROGRAM_TARGETS_SCREEN,
   SAVE_FAILED_BANNER,
   TARGETS_NOTE,
   TARGETS_SAVED_TOAST,
@@ -21,7 +22,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useIsOnline } from "../../../lib/connectivity";
 import { useKeyboardLift } from "../../../lib/useKeyboardLift";
 import { useScrollFocusedInputIntoView } from "../../../lib/useScrollFocusedInputIntoView";
-import { Banner, Button, NumericInput, Text, useToast } from "../../ui";
+import { Banner, Button, ConfirmDialog, NumericInput, Text, useToast } from "../../ui";
+import { FOOTER_EXTRA_PADDING, MINIMUM_FOOTER_BOTTOM_PADDING } from "../footerPadding";
 
 import type { TargetsFormProps } from "./types";
 
@@ -32,16 +34,13 @@ const MACRO_FIELDS = [
   { name: "fat", label: TARGETS_SCREEN.fat },
 ] as const;
 
-// The footer sits on the screen's bottom inset with the 8 points the board adds, and never closer than 12.
-const FOOTER_EXTRA_PADDING = 8;
-const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
-
 /**
  * The Targets form: calories (whole numbers from 800 to 6,000, required) and protein, carbohydrate and fat in grams, with a
  * live note of what the macros add up to. Save is dimmed until the targets pass core's `validateTargets`.
- * A save goes back to where the user came from with the Toast "Targets saved".
+ * A save goes back to where the user came from with the Toast "Targets saved". For a person whose programme
+ * runs (`endsProgramme`) Save asks first, in a dialog, and only its Save my targets goes on to save.
  */
-export function TargetsForm({ initial, header }: TargetsFormProps) {
+export function TargetsForm({ initial, header, endsProgramme = false }: TargetsFormProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -53,6 +52,9 @@ export function TargetsForm({ initial, header }: TargetsFormProps) {
   const [fat, setFat] = useState(fieldText(initial.fat_g));
   const [isKcalTouched, setIsKcalTouched] = useState(false);
   const [hasSaveFailed, setHasSaveFailed] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  // A second press can arrive before the screen has drawn the busy state, so the save is also guarded here.
+  const isSaving = useRef(false);
   const footerRef = useRef<View>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const keyboardLift = useKeyboardLift(footerRef, Platform.OS === "android");
@@ -81,15 +83,19 @@ export function TargetsForm({ initial, header }: TargetsFormProps) {
     : MACROS_OPTIONAL;
 
   async function save() {
-    if (!result.ok) {
+    if (!result.ok || isSaving.current) {
       return;
     }
+    isSaving.current = true;
     setHasSaveFailed(false);
     try {
       await updateTargets.mutateAsync(input);
     } catch {
       setHasSaveFailed(true);
       return;
+    } finally {
+      isSaving.current = false;
+      setIsConfirming(false);
     }
     toast.show({ message: TARGETS_SAVED_TOAST, tone: "success", icon: "Check" });
     // A cold link to this screen has nothing before it, so Save goes to More instead.
@@ -146,7 +152,7 @@ export function TargetsForm({ initial, header }: TargetsFormProps) {
           </Text>
         </View>
         <Text tone="muted" variant="caption">
-          {TARGETS_NOTE}
+          {endsProgramme ? PROGRAM_TARGETS_SCREEN.switchNote : TARGETS_NOTE}
         </Text>
       </ScrollView>
       {/* Save stays in view and rides above the keyboard, as the food form's does. Its padding is a runtime
@@ -171,11 +177,32 @@ export function TargetsForm({ initial, header }: TargetsFormProps) {
           haptic="confirm"
           loading={updateTargets.isPending}
           size="lg"
-          onPress={() => void save()}
+          onPress={() => {
+            if (endsProgramme) {
+              setIsConfirming(true);
+            } else {
+              void save();
+            }
+          }}
         >
           {TARGETS_SCREEN.save}
         </Button>
       </View>
+      {endsProgramme ? (
+        <ConfirmDialog
+          body={PROGRAM_TARGETS_SCREEN.dialog.body}
+          busy={updateTargets.isPending}
+          cancelLabel={PROGRAM_TARGETS_SCREEN.dialog.cancelLabel}
+          confirmLabel={PROGRAM_TARGETS_SCREEN.dialog.confirmLabel}
+          open={isConfirming}
+          title={PROGRAM_TARGETS_SCREEN.dialog.title}
+          tone="primary"
+          onCancel={() => {
+            setIsConfirming(false);
+          }}
+          onConfirm={() => void save()}
+        />
+      ) : null}
     </KeyboardAvoidingView>
   );
 }

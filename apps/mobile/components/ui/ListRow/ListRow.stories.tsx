@@ -89,6 +89,17 @@ export const CompactLeftOut: Story = {
   },
 };
 
+// The Targets screen's value row while a programme runs: the macro's colour as a key before the title, a value
+// and unit, and no chevron because the row goes nowhere.
+export const WithMacroKey: Story = {
+  args: { macro: "protein", title: "Protein", value: "126", unit: "g", icon: undefined },
+};
+
+// The Targets screen's Calories row: the calories colour as the key, the same one the diary's progress strip uses.
+export const WithCaloriesKey: Story = {
+  args: { macro: "calories", title: "Calories", value: "2,140", unit: "kcal", icon: undefined },
+};
+
 // The recipe library's Archived recipes row: a count in secondary text, and a chevron.
 export const WithQuietValue: Story = {
   args: {

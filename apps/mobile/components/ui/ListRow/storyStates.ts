@@ -5,6 +5,8 @@ export const storyStates = [
   "WithBadge",
   "Compact",
   "CompactLeftOut",
+  "WithMacroKey",
+  "WithCaloriesKey",
   "WithQuietValue",
   "TitleOnly",
   "Disabled",
