@@ -7,6 +7,7 @@ import {
   DEFAULT_ENGINE_PARAMS,
   deriveCalorieTarget,
   deriveTargets,
+  effectiveRatePctPerWeek,
   initialExpenditure,
   splitMacros,
 } from "../../src/engine";
@@ -1150,5 +1151,65 @@ describe("deriveTargets properties", () => {
         },
       ),
     );
+  });
+});
+
+describe("effectiveRatePctPerWeek", () => {
+  it("should give 0.4965 for a loss from 2579.54 to 2150 kcal at 78.65 kg", () => {
+    expect(
+      effectiveRatePctPerWeek({
+        goal: "lose",
+        caloriesKcal: 2150,
+        tdee: 2579.54,
+        trendWeight: 78.65,
+      }),
+    ).toBeCloseTo(0.4965, 4);
+  });
+
+  it("should give 0.1827 for a gain from 5638.25 to 6000 kcal at 180 kg", () => {
+    expect(
+      effectiveRatePctPerWeek({
+        goal: "gain",
+        caloriesKcal: 6000,
+        tdee: 5638.25,
+        trendWeight: 180,
+      }),
+    ).toBeCloseTo(0.1827, 4);
+  });
+
+  it("should be negative when a lose target sits above tdee", () => {
+    expect(
+      effectiveRatePctPerWeek({
+        goal: "lose",
+        caloriesKcal: 1200,
+        tdee: 1111.8,
+        trendWeight: 40,
+      }),
+    ).toBeCloseTo(-0.2005, 4);
+  });
+
+  it("should give 0 at maintain whatever the calories", () => {
+    expect(
+      effectiveRatePctPerWeek({
+        goal: "maintain",
+        caloriesKcal: 2500,
+        tdee: 2413.125,
+        trendWeight: 80,
+      }),
+    ).toBe(0);
+  });
+
+  it("should read the energy density from the params", () => {
+    const params = {
+      ...DEFAULT_ENGINE_PARAMS,
+      expenditure: { ...DEFAULT_ENGINE_PARAMS.expenditure, energyDensityKcalPerKg: 3850 },
+    };
+
+    expect(
+      effectiveRatePctPerWeek(
+        { goal: "gain", caloriesKcal: 6000, tdee: 5638.25, trendWeight: 180 },
+        params,
+      ),
+    ).toBeCloseTo(0.3654, 4);
   });
 });

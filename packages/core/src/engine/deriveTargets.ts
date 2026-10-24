@@ -29,6 +29,35 @@ export type CalorieTarget = Readonly<{
 
 const DAYS_PER_WEEK = 7;
 
+/** The daily kilocalories that one percent of the trend weight a week is worth. */
+function dailyKcalPerPercentPerWeekAt(trendWeight: number, params: EngineParams): number {
+  return (trendWeight * params.expenditure.energyDensityKcalPerKg) / DAYS_PER_WEEK / 100;
+}
+
+export type EffectiveRateInput = Readonly<{
+  goal: CalorieGoal;
+  /** The calories the target ends up at, in kilocalories a day. */
+  caloriesKcal: number;
+  /** Daily energy expenditure, in kilocalories. */
+  tdee: number;
+  /** The trend weight, in kilograms. */
+  trendWeight: number;
+}>;
+
+/**
+ * The rate that `caloriesKcal` implies, in percent of body weight a week. True and signed: positive
+ * means movement in the goal's direction, and `maintain` is always 0. A caller that changes the calories
+ * after `deriveCalorieTarget` (the setup layer's 6000 cap) uses this to restate the rate.
+ */
+export function effectiveRatePctPerWeek(
+  { goal, caloriesKcal, tdee, trendWeight }: EffectiveRateInput,
+  params: EngineParams = DEFAULT_ENGINE_PARAMS,
+): number {
+  if (goal === "maintain") return 0;
+  const movedKcal = goal === "lose" ? tdee - caloriesKcal : caloriesKcal - tdee;
+  return movedKcal / dailyKcalPerPercentPerWeekAt(trendWeight, params);
+}
+
 /**
  * The calorie half of `deriveTargets`, as the Build Plan's Targets section and ADR 0002, Amendment 1
  * specify it. The 6000 profile maximum is the setup layer's.
@@ -37,10 +66,9 @@ export function deriveCalorieTarget(
   { goal, ratePctPerWeek, tdee, trendWeight, bmr }: CalorieTargetInput,
   params: EngineParams = DEFAULT_ENGINE_PARAMS,
 ): CalorieTarget {
-  const { targets, expenditure } = params;
+  const { targets } = params;
   const clamps: Clamp[] = [];
-  const dailyKcalPerPercentPerWeek =
-    (trendWeight * expenditure.energyDensityKcalPerKg) / DAYS_PER_WEEK / 100;
+  const dailyKcalPerPercentPerWeek = dailyKcalPerPercentPerWeekAt(trendWeight, params);
 
   const lowestKcal = tdee * (1 - targets.maxDeficitFrac);
   const floorKcal = Math.max(targets.floorAbsKcal, targets.floorBmrFactor * bmr);
@@ -76,10 +104,14 @@ export function deriveCalorieTarget(
     caloriesKcal = Math.min(caloriesKcal, Math.floor(highestKcal / step) * step);
   }
 
-  const movedKcal = goal === "lose" ? tdee - caloriesKcal : caloriesKcal - tdee;
-  const effectiveRatePctPerWeek = goal === "maintain" ? 0 : movedKcal / dailyKcalPerPercentPerWeek;
-
-  return { caloriesKcal, clamps, effectiveRatePctPerWeek };
+  return {
+    caloriesKcal,
+    clamps,
+    effectiveRatePctPerWeek: effectiveRatePctPerWeek(
+      { goal, caloriesKcal, tdee, trendWeight },
+      params,
+    ),
+  };
 }
 
 const KCAL_PER_GRAM_OF_PROTEIN_OR_CARBS = 4;

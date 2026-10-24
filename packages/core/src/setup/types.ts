@@ -2,6 +2,7 @@ import { CALORIE_GOALS } from "../engine";
 
 import type { ActivityLevel, CalorieGoal, Sex } from "../engine";
 import type { WeightDisplayUnit } from "../weight";
+import type { SetupClamp } from "./profileRange";
 
 /** The engine's goal list. The engine is the source because it is pure and setup imports from it. */
 export const GOALS = CALORIE_GOALS;
@@ -38,3 +39,51 @@ export type SetupAnswers = Readonly<{
 
 /** The answers so far, while the wizard is still being walked through. */
 export type SetupDraft = Partial<SetupAnswers>;
+
+/** The columns of `profiles` the wizard writes. The repo adds `onboarding_completed_at` and `targets_updated_at`. */
+export type SetupProfileSave = Readonly<{
+  sex: Sex;
+  birth_date: string;
+  height_cm: number;
+  activity: ActivityLevel;
+  onboarding_weight_kg: number;
+  target_kcal: number;
+  target_protein_g: number;
+  target_carbs_g: number;
+  target_fat_g: number;
+  /** Present only when no unit is stored. A stored unit is never overwritten (ADR 0003, Amendment 12). */
+  weight_unit?: WeightDisplayUnit;
+}>;
+
+/** The columns of `programs` the wizard writes. `started_on` is for the insert only. */
+export type SetupProgramSave = Readonly<{
+  goal: SetupGoal;
+  /** A magnitude, 0 for the maintain goal. */
+  rate_pct_per_week: number;
+  protein_g_per_kg: number;
+  fat_fraction_of_remaining: number;
+  split_preset: DietStyle;
+  started_on: string;
+}>;
+
+/** What the wizard records as the weigh-in of the weight entered. */
+export type SetupWeighInSave = Readonly<{ weightKg: number; localDate: string }>;
+
+/** What the estimate screen shows and what the api-client saves, from one set of answers. */
+export type StartingPlan = Readonly<{
+  estimate: Readonly<{
+    bmrKcal: number;
+    /** The unrounded estimate of daily energy use. The screen rounds it to whole kilocalories. */
+    expenditureKcal: number;
+  }>;
+  targets: Readonly<{ caloriesKcal: number; proteinG: number; fatG: number; carbsG: number }>;
+  /** The guardrails that changed the result: the engine's, then `profile_max` when the 6000 cap bit. */
+  clamps: readonly SetupClamp[];
+  /** Signed, as the engine gives it: negative when the floor lifts a lose target above expenditure. */
+  effectiveRatePctPerWeek: number;
+  save: Readonly<{
+    profile: SetupProfileSave;
+    program: SetupProgramSave;
+    weighIn: SetupWeighInSave;
+  }>;
+}>;
