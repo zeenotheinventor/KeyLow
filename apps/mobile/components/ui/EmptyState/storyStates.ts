@@ -6,5 +6,6 @@ export const storyStates = [
   "PrimaryAction",
   "DisabledAction",
   "SecondaryAction",
+  "WithPoints",
   "Card",
 ];

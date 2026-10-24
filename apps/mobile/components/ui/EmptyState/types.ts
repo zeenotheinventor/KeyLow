@@ -12,6 +12,13 @@ export type EmptyStateAction = {
   disabled?: boolean | undefined;
 };
 
+/** One line of an empty state's points: a small icon in a tile and one sentence. */
+export type EmptyStatePoint = {
+  icon: IconName;
+  /** One sentence, from `@keylow/core/copy`. */
+  text: string;
+};
+
 export type EmptyStateProps = {
   /** The icon in the tile above the title, by name. Leave it out for no tile, as the training boards' card draws it. */
   icon?: IconName | undefined;
@@ -19,6 +26,13 @@ export type EmptyStateProps = {
   title: string;
   /** One more sentence, from `@keylow/core/copy` too. */
   body?: string | undefined;
+  /**
+   * What the view would do, as lines in a card under the body, such as the Programme screen's three things a
+   * programme does. With points the view is a screen's own page and not a message in the middle of one: its
+   * words start at the top, 16 points from the sides, and the card and the action, drawn large and the full
+   * width of the view, follow them. `secondaryAction` is not drawn beside points. An empty list draws none.
+   */
+  points?: readonly EmptyStatePoint[] | undefined;
   /** The one thing to do about it, drawn as a button: secondary unless its `variant` says otherwise. */
   action?: EmptyStateAction | undefined;
   /**

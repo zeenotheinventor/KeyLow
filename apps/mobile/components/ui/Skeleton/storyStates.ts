@@ -14,5 +14,6 @@ export const storyStates = [
   "BodyMap",
   "HistoryList",
   "Weight",
+  "Program",
   "BodyComposition",
 ];
