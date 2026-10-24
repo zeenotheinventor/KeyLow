@@ -40,8 +40,45 @@ export type CalorieGoal = (typeof CALORIE_GOALS)[number];
 
 /**
  * The guardrails that can change a target, so that a screen can tell the user which one did. The setup
- * layer adds its own `profile_max` to this list. It is not an engine clamp.
+ * layer adds its own `profile_max` to this list. It is not an engine clamp. `dow_floor` and `dow_range`
+ * are recorded when a day of week offset moves a day's calories into the floor or the 800 to 6000 range.
  */
-export const CLAMPS = ["max_rate", "max_deficit", "max_surplus", "floor", "macro_fit"] as const;
+export const CLAMPS = [
+  "max_rate",
+  "max_deficit",
+  "max_surplus",
+  "floor",
+  "macro_fit",
+  "dow_floor",
+  "dow_range",
+] as const;
 
 export type Clamp = (typeof CLAMPS)[number];
+
+/** One figure for each day of the week in kilocalories, Monday first and Sunday last. */
+export type DayOfWeekKcal = readonly [number, number, number, number, number, number, number];
+
+function isWholeNumber(value: number | undefined): value is number {
+  return value !== undefined && Number.isInteger(value);
+}
+
+/**
+ * Narrows a stored array of figures, such as `targets.dow_calories_kcal`, to the seven whole numbers of a
+ * week, Monday first. It throws a `RangeError` for any other length, a null element or a fractional one.
+ */
+export function toDayOfWeekKcal(values: readonly number[]): DayOfWeekKcal {
+  const [monday, tuesday, wednesday, thursday, friday, saturday, sunday, ...extra] = values;
+  if (
+    extra.length === 0 &&
+    isWholeNumber(monday) &&
+    isWholeNumber(tuesday) &&
+    isWholeNumber(wednesday) &&
+    isWholeNumber(thursday) &&
+    isWholeNumber(friday) &&
+    isWholeNumber(saturday) &&
+    isWholeNumber(sunday)
+  ) {
+    return [monday, tuesday, wednesday, thursday, friday, saturday, sunday];
+  }
+  throw new RangeError("The day of week figures must hold 7 whole numbers, Monday first.");
+}
