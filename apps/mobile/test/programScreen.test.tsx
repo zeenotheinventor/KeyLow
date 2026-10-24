@@ -276,12 +276,35 @@ describe("the Programme screen", () => {
       expect(await screen.findByText(NOT_MEDICAL_ADVICE)).toBeOnTheScreen();
     });
 
-    it("should lead nowhere yet: no Edit programme and no How it works", async () => {
+    it("should offer How it works under the programme's details, and not Edit programme yet", async () => {
       await renderProgramScreen();
       await screen.findByText("2,580");
 
+      const texts = textsInOrder(screen.toJSON());
+      expect(texts.indexOf("How it works")).toBeGreaterThan(texts.indexOf("Diet style"));
+      expect(texts.indexOf("How it works")).toBeLessThan(texts.indexOf(NOT_MEDICAL_ADVICE));
+      expect(screen.getByRole("button", { name: "How it works" })).toBeOnTheScreen();
       expect(screen.queryByText("Edit programme")).not.toBeOnTheScreen();
-      expect(screen.queryByText("How it works")).not.toBeOnTheScreen();
+    });
+
+    it("should open the explainer when How it works is pressed", async () => {
+      const user = userEvent.setup();
+      await renderProgramScreen();
+
+      await user.press(await screen.findByRole("button", { name: "How it works" }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/program/explainer");
+    });
+
+    it("should open the explainer once for two quick presses", async () => {
+      const user = userEvent.setup();
+      await renderProgramScreen();
+      const row = await screen.findByRole("button", { name: "How it works" });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
     });
 
     it("should show a guardrail line in place of the rate line when a guardrail set the target", async () => {

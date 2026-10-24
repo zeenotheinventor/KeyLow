@@ -14,20 +14,22 @@ import { WeekTargetsCard } from "./WeekTargetsCard";
 import { YourProgramme } from "./YourProgramme";
 import { useCheckinArrival } from "../../lib/checkinSeen";
 import { haptic } from "../../lib/haptics";
-import { ErrorState, SheetHeader, Skeleton, Text } from "../ui";
+import { useOpenOnce } from "../../lib/useOpenOnce";
+import { ErrorState, GroupedList, ListRow, SheetHeader, Skeleton, Text } from "../ui";
 
 /**
  * The Programme screen, pushed inside the More tab so the tab bar stays: the header with Back, then the
  * estimate, what the first check-in needs while settling, this week's targets, what the last check-in changed
  * and the programme's own settings, or the no-program, loading and error boards.
- * The estimate says it is an estimate, and the screen ends with the not-medical-advice line. The chart, the
- * explainer and the edit come with their own screens.
+ * The estimate says it is an estimate, and the screen ends with the not-medical-advice line. How it works opens
+ * the explainer sheet. The chart and the edit come with their own screens.
  * The first open after a new check-in (remembered per device by its date) counts the estimate up from the one
  * before, flashes the accent, cuts the check-in card in and plays the complete haptic, once.
  */
 export function ProgramScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const openOnce = useOpenOnce();
   const state = useProgramScreen();
   const { isRead: isCheckinRead, isNew: isCheckinNew } = useCheckinArrival(
     state.status === "program" ? (state.view.checkin?.date ?? null) : null,
@@ -100,6 +102,17 @@ export function ProgramScreen() {
               <CheckinSummaryCard {...checkin.card} isArriving={isCheckinNew} />
             )}
             <YourProgramme rows={state.view.details} />
+            <GroupedList hidesTitle title={PROGRAM_SCREEN.title}>
+              <ListRow
+                icon="Info"
+                title={PROGRAM_SCREEN.howItWorksLabel}
+                onPress={() => {
+                  openOnce(() => {
+                    router.push("/more/program/explainer");
+                  });
+                }}
+              />
+            </GroupedList>
             <Text className="px-1" tone="muted" variant="caption">
               {PROGRAM_SCREEN.notMedicalAdvice}
             </Text>
