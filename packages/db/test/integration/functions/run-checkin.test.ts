@@ -4,6 +4,7 @@ import {
   checkinWeekday,
   edgeErrorSchema,
   localToday,
+  runCheckinBackstopResponseSchema,
   runCheckinRecomputeResponseSchema,
   runCheckinResponseSchema,
 } from "@keylow/core";
@@ -13,13 +14,14 @@ import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 import { callFunction } from "../support/functionClient";
 import { requireServedFunction } from "../support/functionsLane";
 import { adminClient } from "../support/stack";
+import { requireFunctionEnvironmentValue } from "../support/testEnvironment";
 import { createTestUser, deleteCreatedTestUsers } from "../support/users";
 
 import type { Json } from "../../../src/types.gen";
 import type { TestUser } from "../support/users";
 
 /*
- * `run-checkin` in its due and recompute modes, over HTTP against the served function, with real user JWTs.
+ * `run-checkin` in its due, recompute and backstop modes, over HTTP against the served function, with real user JWTs.
  *
  * Every user is built from the golden run of ADR 0002, Amendment 2 (`goldenCheckinFixture`), with day 0
  * twenty-eight days before today in UTC (a profile's time zone is UTC unless it is changed). The
@@ -584,6 +586,13 @@ describe("run-checkin, due mode", () => {
       expect(edgeErrorSchema.parse(response.body).error.code).toBe("unauthorized");
     });
 
+    it("should answer 401, not 400, for a mode it does not have and no JWT", async () => {
+      const response = await callFunction("run-checkin", { body: { mode: "weekly" } });
+
+      expect(response.status).toBe(401);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("unauthorized");
+    });
+
     it("should answer 409 no_program for a user with no program", async () => {
       const user = await createGoldenUser({ withoutProgram: true });
 
@@ -614,17 +623,30 @@ describe("run-checkin, due mode", () => {
       expect(await readNextCheckinDate(user)).toBe(day(14));
     });
 
-    it.each(["backstop", "weekly"])("should answer 400 bad_mode for the mode %s", async (mode) => {
+    it("should answer 400 bad_mode for a mode the function does not have", async () => {
       const user = await createGoldenUser({ withoutProgram: true });
 
       const response = await callFunction("run-checkin", {
         accessToken: user.accessToken,
-        body: { mode },
+        body: { mode: "weekly" },
       });
 
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({ error: { code: "bad_mode" } });
     });
+
+    it.each(["due", "recompute"])(
+      "should not accept the backstop secret in the %s mode",
+      async (mode) => {
+        const response = await callBackstopFunction({
+          mode,
+          secret: requireFunctionEnvironmentValue("CHECKIN_CRON_SECRET"),
+        });
+
+        expect(response.status).toBe(401);
+        expect(edgeErrorSchema.parse(response.body).error.code).toBe("unauthorized");
+      },
+    );
   });
 });
 
@@ -983,6 +1005,146 @@ describe("run-checkin, recompute mode", () => {
       expect(await readTargets(user)).toHaveLength(0);
       expect(await readNextCheckinDate(user)).toBeNull();
       expect(await readCheckinWeekday(user)).toBeNull();
+    });
+  });
+});
+
+// The backstop calls the function with the secret header. `callFunction` sends a bearer token only,
+// so this one builds its own request, and can send a secret, a JWT, both or neither.
+async function callBackstopFunction(options: {
+  mode?: string;
+  secret?: string;
+  accessToken?: string;
+}) {
+  const { apiUrl, anonKey } = inject("stack");
+  const response = await fetch(`${apiUrl}/functions/v1/run-checkin`, {
+    method: "POST",
+    headers: {
+      apikey: anonKey,
+      "Content-Type": "application/json",
+      ...(options.secret === undefined ? {} : { "x-checkin-secret": options.secret }),
+      ...(options.accessToken === undefined
+        ? {}
+        : { Authorization: `Bearer ${options.accessToken}` }),
+    },
+    body: JSON.stringify({ mode: options.mode ?? "backstop" }),
+    // One run visits every due user in the database, so it can take longer than a single user's call.
+    signal: AbortSignal.timeout(60_000),
+  });
+  const body: unknown = await response.json();
+  return { status: response.status, body };
+}
+
+const backstopSecret = () => requireFunctionEnvironmentValue("CHECKIN_CRON_SECRET");
+
+// The backstop visits every due user of the database, so other suites' users may be run too. Each
+// assertion below is about this suite's own users, and the counts are lower bounds, never totals.
+// A run handles the oldest 200 due users first and these users are due since day 14, so they come
+// early in any run a real stack makes.
+describe("run-checkin, backstop mode", () => {
+  describe("a refused call", () => {
+    let dueUser: TestUser;
+    const responses = new Map<string, Awaited<ReturnType<typeof callBackstopFunction>>>();
+
+    beforeAll(async () => {
+      dueUser = await createGoldenUser();
+      const wrongSecret = `${backstopSecret()}-wrong`;
+      const calls = {
+        "a wrong secret": { secret: wrongSecret },
+        "no header": {},
+        "an empty header": { secret: "" },
+        "a user JWT and no secret": { accessToken: dueUser.accessToken },
+        "a user JWT and a wrong secret": { secret: wrongSecret, accessToken: dueUser.accessToken },
+      };
+      for (const [name, options] of Object.entries(calls)) {
+        responses.set(name, await callBackstopFunction(options));
+      }
+    }, 120_000);
+
+    it.each([
+      "a wrong secret",
+      "no header",
+      "an empty header",
+      "a user JWT and no secret",
+      "a user JWT and a wrong secret",
+    ])("should answer 401 unauthorized for %s", (name) => {
+      const response = responses.get(name);
+
+      expect(response?.status).toBe(401);
+      expect(edgeErrorSchema.parse(response?.body).error.code).toBe("unauthorized");
+    });
+
+    it("should give every refusal the same body, so it hints at nothing", () => {
+      const bodies = [...responses.values()].map(({ body }) => JSON.stringify(body));
+
+      expect(new Set(bodies).size).toBe(1);
+    });
+
+    it("should run nothing for a due user", async () => {
+      expect(await readCheckinSnapshots(dueUser)).toHaveLength(0);
+      expect(await readNextCheckinDate(dueUser)).toBe(day(14));
+    });
+  });
+
+  describe("two due users, one not due and one due with a stat missing", () => {
+    let dueUsers: TestUser[];
+    let notDue: TestUser;
+    let missingStats: TestUser;
+    let firstCall: Awaited<ReturnType<typeof callBackstopFunction>>;
+    let snapshotIdsAfterFirstCall: string[][];
+    let secondCall: Awaited<ReturnType<typeof callBackstopFunction>>;
+
+    beforeAll(async () => {
+      dueUsers = await Promise.all([createGoldenUser(), createGoldenUser()]);
+      notDue = await createGoldenUser({ nextCheckinDate: addCalendarDays(today, 3) });
+      missingStats = await createGoldenUser({ birthDate: null });
+      firstCall = await callBackstopFunction({ secret: backstopSecret() });
+      snapshotIdsAfterFirstCall = await Promise.all(
+        dueUsers.map(async (user) => (await readCheckinSnapshots(user)).map(({ id }) => id)),
+      );
+      secondCall = await callBackstopFunction({ secret: backstopSecret() });
+    }, 120_000);
+
+    it("should answer 200 with the counts of users, check-ins run and users that failed", () => {
+      expect(firstCall.status).toBe(200);
+      const counts = runCheckinBackstopResponseSchema.parse(firstCall.body);
+
+      // Three of this suite's users are due, and each of the two golden ones owes three check-ins.
+      expect(counts.users).toBeGreaterThanOrEqual(3);
+      expect(counts.ran).toBeGreaterThanOrEqual(6);
+      expect(counts.failed).toBeGreaterThanOrEqual(1);
+    });
+
+    it("should write the golden snapshots for both due users", async () => {
+      for (const user of dueUsers) {
+        expectGoldenChain(await readCheckinSnapshots(user));
+        expect(await readNextCheckinDate(user)).toBe(day(35));
+      }
+    });
+
+    it("should leave the user who is not due untouched", async () => {
+      expect(await readCheckinSnapshots(notDue)).toHaveLength(0);
+      expect(await readNextCheckinDate(notDue)).toBe(addCalendarDays(today, 3));
+      expect(await readTargets(notDue)).toHaveLength(1);
+    });
+
+    it("should write nothing for the user with a stat missing, and still run the others", async () => {
+      expect(await readCheckinSnapshots(missingStats)).toHaveLength(0);
+      expect(await readNextCheckinDate(missingStats)).toBe(day(14));
+    });
+
+    it("should run nothing new for the due users on a second call", async () => {
+      expect(secondCall.status).toBe(200);
+      runCheckinBackstopResponseSchema.parse(secondCall.body);
+
+      const snapshotIdsAfterSecondCall = await Promise.all(
+        dueUsers.map(async (user) => (await readCheckinSnapshots(user)).map(({ id }) => id)),
+      );
+      expect(snapshotIdsAfterSecondCall).toEqual(snapshotIdsAfterFirstCall);
+      for (const user of dueUsers) {
+        expect(await readNextCheckinDate(user)).toBe(day(35));
+        expect(await readTargets(user)).toHaveLength(4);
+      }
     });
   });
 });

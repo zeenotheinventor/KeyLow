@@ -15,11 +15,13 @@ export type {
   NutrientBasis,
 } from "./food";
 export {
+  runCheckinBackstopResponseSchema,
   runCheckinRecomputeResponseSchema,
   runCheckinRequestSchema,
   runCheckinResponseSchema,
 } from "./runCheckin";
 export type {
+  RunCheckinBackstopResponse,
   RunCheckinRecomputeResponse,
   RunCheckinRequest,
   RunCheckinResponse,

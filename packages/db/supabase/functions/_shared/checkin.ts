@@ -366,7 +366,7 @@ function safeDatabaseCode(code: string): string {
   return databaseCodePattern.test(code) ? code : "unknown";
 }
 
-export type RunCheckinMode = "due" | "recompute";
+export type RunCheckinMode = "due" | "recompute" | "backstop";
 
 export type RunCheckinRequestRead =
   | Readonly<{ ok: true; mode: RunCheckinMode }>

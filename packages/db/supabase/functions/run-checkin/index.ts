@@ -1,8 +1,8 @@
 // run-checkin: the weekly check-in of the caller's own program (ADR 0002, Amendment 2, "`run-checkin`").
-// Two modes live here. `due` runs the check-ins that are due for the signed-in user, oldest first, up
+// Three modes live here. `due` runs the check-ins that are due for the signed-in user, oldest first, up
 // to 8 a call. `recompute` makes the start snapshot when one is due, derives the targets again and
-// sets the schedule (the end of setup, and an edit of the program). `backstop` comes with its own
-// ticket and is refused as a bad mode until then.
+// sets the schedule (the end of setup, and an edit of the program). `backstop` runs `due` for every
+// user who is due, up to 200 a call, and is authorised by the `x-checkin-secret` header alone.
 //
 // Things to know when changing this file:
 // - The service client bypasses row level security, so every read is filtered by the verified user's
@@ -28,10 +28,23 @@
 //   recompute can write a start snapshot as of today while an older check-in is still due, and that
 //   check-in must not start from a belief dated after it. A rewrite keeps the start snapshot's own
 //   date, so it is never dated past the program's `next_checkin_date`, and the filter covers the rest.
+// - `backstop` never calls `requireUser`: a JWT is not its credential and the secret is not the other
+//   modes'. The secret check comes before anything is read, and every refusal is the same 401. The
+//   per-user work is `runDueCheckins`, the one function the signed-in `due` mode runs too. A user the
+//   due mode refuses (`missing_stats`) or whose run throws is counted as failed, logged by id and code
+//   only, and the loop moves on. The pure parts are in `_shared/backstop.ts`.
 // - `recompute` always needs the stats, whether or not anything is due, and writes through
 //   `record_targets` in one transaction. The pure choice of branch is `planRecompute`. Its logs hold
 //   the user id, the branch and the duration.
 import { requireUser } from "../_shared/auth.ts";
+import {
+  backstopFailureLogLine,
+  backstopLogLine,
+  backstopSecretHeader,
+  isBackstopAuthorised,
+  readBackstopUsers,
+  runBackstop,
+} from "../_shared/backstop.ts";
 import {
   callRecordCheckin,
   callRecordTargets,
@@ -59,11 +72,13 @@ import {
   checkinStep,
   localToday,
   requireStats,
+  runCheckinBackstopResponseSchema,
   runCheckinRecomputeResponseSchema,
   runCheckinResponseSchema,
   toDayInputs,
 } from "../_shared/core.ts";
 import { error, handle, json } from "../_shared/http.ts";
+import { reportError } from "../_shared/report.ts";
 
 import type {
   CheckinLoopDependencies,
@@ -91,11 +106,15 @@ const refusalMessages = {
 
 Deno.serve(
   handle("run-checkin", async (request) => {
+    const mode = await readMode(request);
+    if (mode === "backstop") {
+      return await handleBackstop(request);
+    }
+    // The other modes need the signed-in user first, so a call with no JWT is 401 whatever its body.
     const user = await requireUser(request);
     if (user instanceof Response) {
       return user;
     }
-    const mode = await readMode(request);
     if (mode instanceof Response) {
       return mode;
     }
@@ -145,8 +164,55 @@ async function readMode(request: Request): Promise<RunCheckinMode | Response> {
     return read.mode;
   }
   return read.code === "bad_mode"
-    ? error("bad_mode", "Send no mode, or the mode due or recompute.")
+    ? error("bad_mode", "Send no mode, or the mode due, recompute or backstop.")
     : error("invalid_request", "The request body must be a JSON object.");
+}
+
+// The backstop (see the note at the top). The secret is checked before anything is read, and a refusal
+// says nothing about which part was wrong.
+async function handleBackstop(request: Request): Promise<Response> {
+  const authorised = await isBackstopAuthorised(
+    request.headers.get(backstopSecretHeader),
+    Deno.env.get("CHECKIN_CRON_SECRET"),
+  );
+  if (!authorised) {
+    return error("unauthorized", "Sign in to use this endpoint.");
+  }
+
+  const startedAt = performance.now();
+  const service = createServiceClient();
+  const nowIso = new Date().toISOString();
+  const userIds = await readBackstopUsers(async ({ dueOnOrBefore, limit }) => {
+    const { data, error: readError } = await service
+      .from("programs")
+      .select("user_id, next_checkin_date")
+      .is("ended_on", null)
+      .lte("next_checkin_date", dueOnOrBefore)
+      .order("next_checkin_date", { ascending: true })
+      .limit(limit);
+    return {
+      // The date filter leaves out a null date. The generated type just cannot say so.
+      data:
+        data?.flatMap(({ user_id, next_checkin_date }) =>
+          next_checkin_date === null ? [] : [{ user_id, next_checkin_date }],
+        ) ?? null,
+      error: readError,
+    };
+  }, nowIso);
+  const run = await runBackstop(
+    userIds,
+    (userId) => runDueCheckins(service, userId, nowIso),
+    (userId, code, caught) => {
+      console.info(backstopFailureLogLine(userId, code));
+      if (code === "internal_error") {
+        reportError("run-checkin", code, caught);
+      }
+    },
+  );
+  console.info(
+    backstopLogLine({ ...run, durationMilliseconds: Math.round(performance.now() - startedAt) }),
+  );
+  return json(runCheckinBackstopResponseSchema.parse(run));
 }
 
 async function runDueCheckins(
