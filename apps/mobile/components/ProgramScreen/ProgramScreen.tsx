@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ExpenditureHeroCard } from "./ExpenditureHeroCard";
 import { NoProgramView } from "./NoProgramView";
+import { SettlingChecklist } from "./SettlingChecklist";
 import { useProgramScreen } from "./useProgramScreen";
 import { WeekTargetsCard } from "./WeekTargetsCard";
 import { YourProgramme } from "./YourProgramme";
@@ -13,7 +14,8 @@ import { ErrorState, SheetHeader, Skeleton, Text } from "../ui";
 
 /**
  * The Programme screen, pushed inside the More tab so the tab bar stays: the header with Back, then the
- * estimate, this week's targets and the programme's own settings, or the no-program, loading and error boards.
+ * estimate, what the first check-in needs while settling, this week's targets and the programme's own settings,
+ * or the no-program, loading and error boards.
  * The estimate says it is an estimate, and the screen ends with the not-medical-advice line. The cards the
  * check-in, the chart, the explainer and the edit add come with their own screens.
  */
@@ -61,6 +63,9 @@ export function ProgramScreen() {
         return (
           <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-6 pt-1">
             <ExpenditureHeroCard view={state.view.hero} />
+            {state.view.settlingChecklist === null ? null : (
+              <SettlingChecklist {...state.view.settlingChecklist} />
+            )}
             {state.view.targets === null ? null : <WeekTargetsCard view={state.view.targets} />}
             <YourProgramme rows={state.view.details} />
             <Text className="px-1" tone="muted" variant="caption">

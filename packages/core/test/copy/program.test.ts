@@ -50,6 +50,8 @@ import {
   describeRateSubtitle,
   describeRateLine,
   describeSettlingTip,
+  describeSettlingTipFor,
+  describeSettlingTipOnOrAfter,
   describeTargetsCardName,
   describeTargetsCardSince,
   describeTargetsScreenSince,
@@ -318,6 +320,35 @@ describe("program: settling", () => {
     expectOnCanvas([
       "Weigh in on Thursday 5 November, the day before, so your weigh-ins cover the full 14 days.",
     ]);
+  });
+
+  it("should write the tip with the date itself, when older weigh-ins put it earlier than the day before", () => {
+    expect(describeSettlingTipOnOrAfter("2026-11-02")).toBe(
+      "Weigh in on or after Monday 2 November so your weigh-ins cover the full 14 days.",
+    );
+  });
+
+  it("should write no tip when there is no tip date", () => {
+    expect(describeSettlingTipFor("2026-11-06", null)).toBeNull();
+  });
+
+  it("should write the day before wording when the tip date is the day before the first check-in", () => {
+    expect(describeSettlingTipFor("2026-11-06", "2026-11-05")).toBe(
+      "Weigh in on Thursday 5 November, the day before, so your weigh-ins cover the full 14 days.",
+    );
+  });
+
+  it("should write the on or after wording when the tip date is earlier than the day before", () => {
+    expect(describeSettlingTipFor("2026-11-06", "2026-11-02")).toBe(
+      "Weigh in on or after Monday 2 November so your weigh-ins cover the full 14 days.",
+    );
+  });
+
+  it("should write the same days in both tips as the span the engine needs", () => {
+    const { minSpanDays } = DEFAULT_ENGINE_PARAMS.expenditure;
+
+    expect(describeSettlingTip("2026-11-06")).toContain(`the full ${minSpanDays} days.`);
+    expect(describeSettlingTipOnOrAfter("2026-11-02")).toContain(`the full ${minSpanDays} days.`);
   });
 
   it("should write the first check-in as a short date in a row", () => {

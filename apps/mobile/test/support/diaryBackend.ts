@@ -56,6 +56,8 @@ export const diaryBackend: {
   weekReadsFail: boolean;
   /** Never answers the reads of a whole week alone, as a slow connection does. */
   weekReadsHang: boolean;
+  /** Never answers the reads of the weeks that start on these Mondays (`YYYY-MM-DD`), and answers the other weeks. */
+  hungWeekStarts: Set<string>;
   /** Fails the read of the profile's time zone alone, so the terms acceptance still loads. */
   timeZoneReadFails: boolean;
   /** The bodies of the updates made to the profile. */
@@ -87,6 +89,7 @@ export const diaryBackend: {
   timeZoneReadFails: false,
   weekReadsFail: false,
   weekReadsHang: false,
+  hungWeekStarts: new Set(),
   saves: [],
   requests: [],
   writes: [],
@@ -124,6 +127,7 @@ export function resetDiaryBackend(): void {
   diaryBackend.timeZoneReadFails = false;
   diaryBackend.weekReadsFail = false;
   diaryBackend.weekReadsHang = false;
+  diaryBackend.hungWeekStarts.clear();
   diaryBackend.requests = [];
   diaryBackend.writes = [];
 }
@@ -666,6 +670,14 @@ export async function fakeFetch(
     table === "day_totals" &&
     searchParams.getAll("local_date").some((condition) => condition.startsWith("gte."));
   if (isWeekRead && diaryBackend.weekReadsHang) {
+    return new Promise(() => undefined);
+  }
+  if (
+    isWeekRead &&
+    searchParams
+      .getAll("local_date")
+      .some((condition) => diaryBackend.hungWeekStarts.has(condition.replace("gte.", "")))
+  ) {
     return new Promise(() => undefined);
   }
   if (isWeekRead && diaryBackend.weekReadsFail) {

@@ -1,3 +1,11 @@
+export {
+  acceptedWeighInDates,
+  checkinWindow,
+  checkinWindowWeeks,
+  completeDayDates,
+  firstCheckinReadiness,
+} from "./checkinReadiness";
+export type { CheckinWindow, CheckinWindowWeeks, FirstCheckinReadiness } from "./checkinReadiness";
 export { checkinSummary } from "./checkinSummary";
 export type { CheckinSummary, CheckinSummaryKind } from "./checkinSummary";
 export { expenditureBand } from "./expenditureBand";

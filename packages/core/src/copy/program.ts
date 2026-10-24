@@ -538,3 +538,27 @@ export const PROGRAM_SETUP_MEASURED = {
 /** The estimate's accuracy line after a measurement, from the date of the last check-in. */
 export const describeMeasuredAccuracyLine = (measuredOn: string): string =>
   `Ki-Lo measured your expenditure at your last check-in, on ${describeDateInWords(measuredOn)}. Changing your answers keeps it and changes only your targets.`;
+
+/**
+ * The tip under the settling counts when older weigh-ins make the date that completes the cover earlier than the
+ * day before the first check-in, from that date (`YYYY-MM-DD`). The wording is the tech lead's, not the canvas's.
+ */
+export const describeSettlingTipOnOrAfter = (tipDate: string): string =>
+  `Weigh in on or after ${describeDateInWords(tipDate)} so your weigh-ins cover the full 14 days.`;
+
+/**
+ * The tip under the settling counts, or null when there is no tip date: the day before wording when the date is
+ * the day before the first check-in (both `YYYY-MM-DD`), which is the usual case, and the on or after wording
+ * when older weigh-ins make it earlier.
+ */
+export const describeSettlingTipFor = (
+  firstCheckInDate: string,
+  tipDate: string | null,
+): string | null => {
+  if (tipDate === null) {
+    return null;
+  }
+  return tipDate === addCalendarDays(firstCheckInDate, -1)
+    ? describeSettlingTip(firstCheckInDate)
+    : describeSettlingTipOnOrAfter(tipDate);
+};

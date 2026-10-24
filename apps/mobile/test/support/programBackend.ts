@@ -41,7 +41,10 @@ export const programBackend: {
   setupProfile: SetupProfile;
   /** The weight unit of the profile. */
   weightUnit: string;
-  /** The `weigh_ins` rows, newest first, which the setup read takes the newest of. */
+  /**
+   * The `weigh_ins` rows, newest first, as `weight_kg` and `local_date`. The setup read takes the newest of them,
+   * and the weigh-in list reads them all, each with the other columns the list needs filled in.
+   */
   weighIns: Row[];
 } = {
   snapshots: [],
@@ -78,6 +81,18 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+/** A weigh-in as the list reads it: the columns the setup read leaves out are filled in, and any the row gives are kept. */
+function listedWeighIn(row: Row, index: number): Row {
+  return {
+    id: `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`,
+    measured_at: `${String(row["local_date"])}T08:00:00+00:00`,
+    tz: "Europe/London",
+    source: "manual",
+    note: null,
+    ...row,
+  };
+}
+
 async function programFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
@@ -108,7 +123,11 @@ async function programFetch(input: string | URL | Request, init?: RequestInit): 
     );
   }
   if (table === "weigh_ins") {
-    return jsonResponse(programBackend.weighIns.slice(0, 1));
+    return jsonResponse(
+      searchParams.get("limit") === "1"
+        ? programBackend.weighIns.slice(0, 1)
+        : programBackend.weighIns.map(listedWeighIn),
+    );
   }
   if (select === "weight_unit") {
     return jsonResponse([{ weight_unit: programBackend.weightUnit }]);
