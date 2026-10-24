@@ -18,6 +18,11 @@ type BodyRotationInput = Pick<Body3DProps, "onSideChange" | "onTap"> & {
   width: number;
 };
 
+// How far sideways a finger moves before the drag takes hold. Android's scroll view takes a vertical move of
+// 8 points (the system's touch slop), and when it does the gesture handler cancels a drag that has not taken
+// hold. So the drag takes hold at the same distance, and a swipe more sideways than vertical turns the body.
+const PAN_ACTIVATION_OFFSET = 8;
+
 const FRONT_YAW = 0;
 const BACK_YAW = Math.PI;
 
@@ -81,9 +86,9 @@ export function useBodyRotation({ side, width, onSideChange, onTap }: BodyRotati
     const pan = Gesture.Pan()
       .withTestId("body-3d-pan")
       .runOnJS(true)
-      // A horizontal move of 10 points takes hold, and a vertical or diagonal one first is a scroll, which the pan
-      // fails for. No minimum distance, because it would activate on the first diagonal sample and take the scroll.
-      .activeOffsetX([-BODY_TAP_SLOP, BODY_TAP_SLOP])
+      // A horizontal move takes hold, and a vertical or diagonal one first is a scroll, which the pan fails for.
+      // No minimum distance, because it would activate on the first diagonal sample and take the scroll.
+      .activeOffsetX([-PAN_ACTIVATION_OFFSET, PAN_ACTIVATION_OFFSET])
       .failOffsetY([-BODY_TAP_SLOP, BODY_TAP_SLOP])
       .onStart(({ translationX }) => {
         // A drag that takes hold of a settle carries on from where the body is, and setting the turn ends the settle.

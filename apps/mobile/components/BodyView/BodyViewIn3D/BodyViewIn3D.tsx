@@ -25,7 +25,7 @@ const HIDDEN_BODY_OPACITY = 0.01;
  * stays, with no message, and `onFail` is called. The box keeps the 2D figure's size throughout, and a
  * screen reader finds one image with the label: the 2D figure until the 3D body has drawn, then the 3D.
  * The 3D body gets the figure's value props, the side it faces and the two calls that only it makes, and
- * takes touches once it has drawn. With `bodyScheme` the 3D body alone is drawn in that scheme, and the 2D figure keeps the app's. `onPhaseChange` tells the stage around it where it is.
+ * takes touches once it has drawn, over `touchWidth` if the stage is wider than the body. The box is that wide, with the figure and the body centred in it. With `bodyScheme` the 3D body alone is drawn in that scheme, and the 2D figure keeps the app's. `onPhaseChange` tells the stage around it where it is.
  */
 export function BodyViewIn3D({
   onFail,
@@ -34,6 +34,7 @@ export function BodyViewIn3D({
   onTap,
   onPhaseChange,
   bodyScheme,
+  touchWidth,
   ...figureProps
 }: BodyViewIn3DProps) {
   const { label, w, side, scale, values, selected, dim = 1, unselectedOpacity = 1 } = figureProps;
@@ -91,6 +92,7 @@ export function BodyViewIn3D({
       unselectedOpacity={unselectedOpacity}
       values={values}
       w={w}
+      touchWidth={touchWidth}
       onError={fail}
       onFirstFrame={showDrawn}
       onSideChange={onSideChange}
@@ -99,7 +101,10 @@ export function BodyViewIn3D({
   );
 
   return (
-    <View className="w-[var(--body-width)]" style={vars({ "--body-width": w })}>
+    <View
+      className="w-[var(--box-width)] items-center"
+      style={vars({ "--box-width": Math.max(touchWidth ?? w, w) })}
+    >
       {/* In the flow, so it gives the box its size, and it stays under the 3D body for good. */}
       <Animated.View
         aria-hidden={isDrawn}

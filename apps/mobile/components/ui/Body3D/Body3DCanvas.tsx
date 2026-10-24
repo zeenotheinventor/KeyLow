@@ -142,6 +142,9 @@ export function Body3DCanvas({
       camera={{ fov: BODY_FIELD_OF_VIEW_DEGREES }}
       flat
       frameloop="demand"
+      // The canvas lays a touch responder over the GL view that takes every touch at touch down, and that would
+      // cancel the body's drag and tap. The body uses no pointer events of three.js, so the canvas takes none.
+      pointerEvents="none"
       onCreated={({ gl }) => {
         // A shader that cannot be linked is only logged by three.js, which then draws nothing. This sends it to
         // the caller, so the 2D figure stays. It replaces three's own log, and the log would carry no health data.

@@ -40,6 +40,8 @@ jest.mock("../../components/ui/Body3D/Body3DCanvas", () => ({
 
 const label = "Body, male, 3D";
 const WIDTH = 120;
+// Android's scroll view takes a vertical move of 8 points, so the drag has to take hold at no more than that.
+const PAN_ACTIVATION_OFFSET = 8;
 const HALF_TURN = Math.PI;
 const QUARTER_TURN = Math.PI / 2;
 
@@ -153,14 +155,14 @@ describe("Body3D turning", () => {
   });
 
   describe("the touch rule", () => {
-    it("should detect a drag only after 10 points sideways, and leave a vertical or diagonal swipe to the page", async () => {
+    it("should detect a drag after 8 points sideways, before an Android scroll view takes a vertical move, and leave a steeper swipe to the page", async () => {
       await render(<Body />);
 
       // No minimum distance: it is OR-ed with the offsets, so a diagonal first sample would take the scroll.
       expect(panGesture().config.minDist).toBeUndefined();
       expect(panGesture().config).toMatchObject({
-        activeOffsetXStart: -BODY_TAP_SLOP,
-        activeOffsetXEnd: BODY_TAP_SLOP,
+        activeOffsetXStart: -PAN_ACTIVATION_OFFSET,
+        activeOffsetXEnd: PAN_ACTIVATION_OFFSET,
         failOffsetYStart: -BODY_TAP_SLOP,
         failOffsetYEnd: BODY_TAP_SLOP,
       });
