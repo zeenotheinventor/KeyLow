@@ -42,6 +42,10 @@ describe("which queries the diary cache keeps", () => {
     ["the portions of a food", keys.foods.portions("food-id")],
     ["the foods of the user", keys.foods.own],
     ["a profile", keys.profiles.detail("user-id")],
+    [
+      "the setup state, which is health data and is never kept for offline use",
+      keys.profiles.setupState,
+    ],
     ["the recipe library", keys.recipes.list(true)],
     ["the live recipes", keys.recipes.list(false)],
     ["a recipe", keys.recipes.detail("recipe-id")],

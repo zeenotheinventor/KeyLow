@@ -53,6 +53,8 @@ export { useSetDayComplete } from "./useSetDayComplete";
 export { useProfileTimeZone } from "./useProfileTimeZone";
 export { useSyncTimeZone } from "./useSyncTimeZone";
 export type { UseSyncTimeZoneInput } from "./useSyncTimeZone";
+export { useSaveSetup } from "./useSaveSetup";
+export type { SaveSetupInput } from "./useSaveSetup";
 export { useSetupState } from "./useSetupState";
 export { useTargets } from "./useTargets";
 export { useTermsAcceptance } from "./useTermsAcceptance";
