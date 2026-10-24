@@ -599,18 +599,17 @@ select ok(
   'anon has no privilege on weigh_ins'
 );
 select ok(
-  not has_table_privilege('service_role', 'public.weigh_ins', 'select')
+  has_table_privilege('service_role', 'public.weigh_ins', 'select')
     and not has_table_privilege('service_role', 'public.weigh_ins', 'insert')
     and not has_table_privilege('service_role', 'public.weigh_ins', 'update')
     and not has_table_privilege('service_role', 'public.weigh_ins', 'delete')
     and not has_table_privilege('service_role', 'public.weigh_ins', 'truncate')
     and not has_table_privilege('service_role', 'public.weigh_ins', 'references')
     and not has_table_privilege('service_role', 'public.weigh_ins', 'trigger')
-    and not has_any_column_privilege('service_role', 'public.weigh_ins', 'select')
     and not has_any_column_privilege('service_role', 'public.weigh_ins', 'insert')
     and not has_any_column_privilege('service_role', 'public.weigh_ins', 'update')
     and not has_any_column_privilege('service_role', 'public.weigh_ins', 'references'),
-  'service_role has no privilege on weigh_ins'
+  'service_role can select from weigh_ins and holds no other privilege on it'
 );
 
 -- Policies: one per statement the owner may run, and none for delete.

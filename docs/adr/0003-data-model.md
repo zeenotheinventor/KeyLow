@@ -1627,7 +1627,7 @@ Recorded on 2026-10-23 under KEY-604, part of KEY-6 (the M6 brief, scopes 1, 4 a
 - the unique constraint on `(user_id, as_of_date)`, the unique index that allows one current target per user, the list index, and the three indexes on the foreign keys.
 - that clients get `select` only, with an owner-only policy on each table, and that `anon` gets no privilege on the two tables and `service_role` gets `select` only.
 - that every write goes through two `security definer` functions, `record_checkin` and `record_targets`, with `set search_path = ''` and execute granted to `service_role` only, and what each does in one transaction.
-- that `record_checkin` answers `duplicate` and writes nothing when the snapshot for `(user_id, as_of_date)` exists, and `recorded` otherwise.
+- that `record_checkin` answers `duplicate` and writes nothing when the snapshot for `(user_id, as_of_date)` exists, `program_ended` and writes nothing when the program has ended, and `recorded` otherwise.
 - the service role's `select` on `profiles`, `programs`, `weigh_ins`, `food_log_entries`, `day_logs`, `day_totals`, `expenditure_snapshots` and `targets`.
 - the check `profiles.checkin_weekday between 1 and 7`.
 - the backstop: the extensions `pg_cron` and `pg_net`, the function `invoke_checkin_backstop()` with its Vault secrets, that it does nothing when either secret is missing, and the schedule `17 * * * *`.
@@ -1762,12 +1762,14 @@ Two functions in `public`, both `security definer` with `set search_path = ''`, 
 
 **Serialising.** Both functions begin with `select 1 from public.profiles where id = p_user_id for update`, which serialises writers per user. It is the row lock of Amendment 7 ("Concurrency"), and there is no advisory lock. A missing profile raises `no_profile`.
 
-**`record_checkin(p_user_id uuid, p_snapshot jsonb, p_targets jsonb, p_next_checkin_date date)`** returns `text`, `recorded` or `duplicate`. In one transaction:
+**`record_checkin(p_user_id uuid, p_snapshot jsonb, p_targets jsonb, p_next_checkin_date date)`** returns `text`, `recorded`, `duplicate` or `program_ended`. In one transaction:
 
 1. It takes the lock above.
 2. It inserts the snapshot `on conflict (user_id, as_of_date) do nothing`. When nothing was inserted, it writes nothing else and returns `duplicate`.
-3. Otherwise it closes the current target and inserts the new one with `expenditure_snapshot_id` pointing at the snapshot (dates as in "Which date a new row takes"), and moves the `next_checkin_date` of the program the snapshot names to `p_next_checkin_date`.
+3. Otherwise it closes the current target and inserts the new one with `expenditure_snapshot_id` pointing at the snapshot (dates as in "Which date a new row takes"), and moves the `next_checkin_date` of the program the snapshot names to `p_next_checkin_date`. A null `p_next_checkin_date` leaves the column as it is, as in `record_targets`.
 4. It returns `recorded`.
+
+When the program the snapshot names has ended (`ended_on` is set), `record_checkin` returns `program_ended` and writes nothing, so a check-in that races the user saving their own targets, which ends the program (ADR 0002, Amendment 2, Q5), cannot put engine targets back over the manual ones. The ownership check comes first, so another user's ended program is still `not_owner`, and `record_targets` checks ownership only.
 
 After `duplicate`, `run-checkin` re-reads the newest snapshot and `next_checkin_date` and continues from the stored values. So `run-checkin` twice for the same user and date leaves one snapshot and one targets row, which is the brief's acceptance.
 

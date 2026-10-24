@@ -245,14 +245,14 @@ select ok(
   'anon has no privilege on food_log_entries'
 );
 select ok(
-  not has_table_privilege('service_role', 'public.food_log_entries', 'select')
+  has_table_privilege('service_role', 'public.food_log_entries', 'select')
     and not has_table_privilege('service_role', 'public.food_log_entries', 'insert')
     and not has_table_privilege('service_role', 'public.food_log_entries', 'update')
     and not has_table_privilege('service_role', 'public.food_log_entries', 'delete')
     and not has_table_privilege('service_role', 'public.food_log_entries', 'truncate')
     and not has_table_privilege('service_role', 'public.food_log_entries', 'references')
     and not has_table_privilege('service_role', 'public.food_log_entries', 'trigger'),
-  'service_role has no privilege on food_log_entries'
+  'service_role can select from food_log_entries and holds no other privilege on it'
 );
 select ok(
   has_table_privilege('authenticated', 'public.food_log_entries', 'select')

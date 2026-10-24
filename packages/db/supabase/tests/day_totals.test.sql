@@ -82,13 +82,13 @@ select ok(
 );
 
 select ok(
-  not exists (
-    select 1
+  (
+    select array_agg(privilege.privilege_type order by privilege.privilege_type)
     from pg_class as view_class, aclexplode(view_class.relacl) as privilege
     where view_class.oid = 'public.day_totals'::regclass
       and privilege.grantee = 'service_role'::regrole
-  ),
-  'service_role holds no privilege of any kind on day_totals, not even the default truncate or references'
+  ) = array['SELECT'],
+  'service_role holds select on day_totals and nothing else, not even the default truncate or references'
 );
 
 -- A non-number optional nutrient would break the view's cast to numeric, so the
