@@ -139,7 +139,7 @@ describe("initSentry", () => {
     });
   });
 
-  it("should fall back to the runtime version as the release for the bundle built into the app, which has no commit", () => {
+  it("should fall back to the runtime version as the release for a build that has no commit", () => {
     mockUpdatesState.runtimeVersion = "e96c6399d019380ff92a6589084efea74e8fbcca";
 
     initSentry();

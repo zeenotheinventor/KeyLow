@@ -3,9 +3,11 @@ import { formatDateTime } from "../dates";
 /**
  * The product version both About screens show. A bump is this one line, and it ships with the next web deploy
  * and the next update to the phone. It is not `app.json` `version`, which belongs to the installed binary and
- * changes the native fingerprint when edited.
+ * changes the native fingerprint when edited. It stays below 1.0.0 until version 1 is out: a minor bump when a
+ * milestone closes, a patch bump with each production APK build, and 1.0.0 at the M7 exit gate (the "Version line"
+ * section of `docs/runbooks/local-dev.md`).
  */
-export const APP_VERSION = "1.0.0";
+export const APP_VERSION = "0.5.0";
 
 const shortCommitLength = 7;
 const commitPattern = /^[0-9a-f]{7,40}$/;
@@ -16,7 +18,7 @@ type AppVersionInput = {
   commit: string | undefined;
 };
 
-/** `Version 1.0.0 (a1b2c3d)`, or `Version 1.0.0` when there is no usable commit. */
+/** `Version 0.5.0 (a1b2c3d)`, or `Version 0.5.0` when there is no usable commit. */
 export function formatAppVersion({ version, commit }: AppVersionInput): string {
   const normalisedCommit = commit?.trim().toLowerCase() ?? "";
 
@@ -34,7 +36,13 @@ type BuildLineInput = {
   timeZone: string;
 };
 
-/** `Built in` for the bundle inside the app, `Updated 15 Oct 2026, 10:00` (device zone) for an update, nothing when neither is known. */
+const embeddedBundleWithoutDate = "Shipped with this build";
+
+/**
+ * `Built 23 Oct 2026, 22:53` for the bundle inside the app, `Updated 15 Oct 2026, 10:00` for a downloaded update
+ * (both in the device zone), `Shipped with this build` for the bundle inside the app when it has no date, and nothing
+ * when updates are off or a downloaded update has no date.
+ */
 export function formatBuildLine({
   isEnabled,
   isEmbeddedLaunch,
@@ -45,9 +53,11 @@ export function formatBuildLine({
     return null;
   }
 
-  if (isEmbeddedLaunch) {
-    return "Built in";
+  if (createdAt === null) {
+    return isEmbeddedLaunch ? embeddedBundleWithoutDate : null;
   }
 
-  return createdAt === null ? null : `Updated ${formatDateTime(createdAt, timeZone)}`;
+  const label = isEmbeddedLaunch ? "Built" : "Updated";
+
+  return `${label} ${formatDateTime(createdAt, timeZone)}`;
 }

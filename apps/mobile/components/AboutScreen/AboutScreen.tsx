@@ -39,7 +39,8 @@ export function AboutScreen() {
     Linking.openURL(url).catch(() => undefined);
   }
 
-  // Metro inlines this value where `eas update` exports the bundle, and only for a read by this full name, so it
+  // Metro inlines this value where `eas update` exports the bundle, and where an EAS build bundles it (its
+  // pre-install hook writes `.env.local`), and only for a read by this full name, so it
   // is never destructured or looked up by a key. The commit must stay out of the Expo config and `eas.json`: the
   // fingerprint hashes both, and a value that changes per commit there would change the runtime version on every merge.
   const commit = textOrUndefined(process.env.EXPO_PUBLIC_COMMIT_SHA);

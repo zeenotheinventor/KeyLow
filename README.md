@@ -92,7 +92,7 @@ CI should never be the first place a formatting or lint error shows up. The para
   library, curated portions) ships as generated migrations, never as a terminal step.
 - **Mobile, JavaScript changes:** `eas-update.yml` publishes an over-the-air update to the
   `production` channel on every qualifying merge. It sets the commit in `EXPO_PUBLIC_COMMIT_SHA`,
-  which About shows, and uploads the source maps to Sentry when the token is set.
+  which About shows (an APK built on EAS carries its commit too), and uploads the source maps to Sentry when the token is set.
 - **Mobile, native changes:** a new native dependency, config plugin or SDK bump moves the
   fingerprint. OTA updates stop reaching old builds, so a new `production-apk` build is needed.
 

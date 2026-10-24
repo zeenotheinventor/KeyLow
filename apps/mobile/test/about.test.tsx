@@ -255,13 +255,13 @@ describe("the About screen", () => {
       process.env.EXPO_PUBLIC_COMMIT_SHA = "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678";
       await renderAbout();
 
-      expect(screen.getByText("Version 1.0.0 (a1b2c3d)")).toBeOnTheScreen();
+      expect(screen.getByText("Version 0.5.0 (a1b2c3d)")).toBeOnTheScreen();
     });
 
     it("should show only the version when the build has no commit", async () => {
       await renderAbout();
 
-      expect(screen.getByText("Version 1.0.0")).toBeOnTheScreen();
+      expect(screen.getByText("Version 0.5.0")).toBeOnTheScreen();
     });
 
     it("should say on which day and at what time the running update was made", async () => {
@@ -278,19 +278,40 @@ describe("the About screen", () => {
       expect(screen.getByText("Updated 16 Oct 2026, 12:30")).toBeOnTheScreen();
     });
 
-    it("should say Built in when the app runs the bundle it shipped with", async () => {
+    it("should say on which day and at what time the app was built when it runs the bundle it shipped with", async () => {
       mockUpdatesState.isEmbeddedLaunch = true;
+      mockUpdatesState.createdAt = new Date("2026-10-23T22:53:00Z");
       await renderAbout();
 
-      expect(screen.getByText("Built in")).toBeOnTheScreen();
+      expect(screen.getByText("Built 23 Oct 2026, 22:53")).toBeOnTheScreen();
+      expect(screen.queryByText(/^Updated /)).not.toBeOnTheScreen();
+    });
+
+    it("should give the build time in the device time zone", async () => {
+      mockUpdatesState.isEmbeddedLaunch = true;
+      mockUpdatesState.createdAt = new Date("2026-10-23T22:53:00Z");
+      setDeviceTimeZone("Pacific/Auckland");
+      await renderAbout();
+
+      expect(screen.getByText("Built 24 Oct 2026, 11:53")).toBeOnTheScreen();
+    });
+
+    it("should say the bundle shipped with the build when it has no date", async () => {
+      mockUpdatesState.isEmbeddedLaunch = true;
+      mockUpdatesState.createdAt = null;
+      await renderAbout();
+
+      expect(screen.getByText("Shipped with this build")).toBeOnTheScreen();
     });
 
     it("should show no second line when updates are disabled", async () => {
       mockUpdatesState.isEnabled = false;
+      mockUpdatesState.isEmbeddedLaunch = true;
       await renderAbout();
 
       expect(screen.queryByText(/^Updated /)).not.toBeOnTheScreen();
-      expect(screen.queryByText("Built in")).not.toBeOnTheScreen();
+      expect(screen.queryByText(/^Built /)).not.toBeOnTheScreen();
+      expect(screen.queryByText("Shipped with this build")).not.toBeOnTheScreen();
     });
 
     it("should add no heading", async () => {

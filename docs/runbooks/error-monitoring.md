@@ -19,7 +19,7 @@ Open the project, then **Issues**, then the issue.
 - **Web.** The release is the Vercel git commit SHA. Match it to the deployment on Vercel, or to the commit on `main`.
 - **Edge.** Events have no release, and the environment is `production`. Functions deploy from `main` through the `deploy-supabase` workflow, so match the event time against the latest successful run on the Actions tab.
 - **Mobile.** Every OTA update is published by the `EAS Update` workflow, run for a push to `main`, and the bundle carries that push's commit in `EXPO_PUBLIC_COMMIT_SHA`. On an event:
-  - `release` is that commit. For the bundle built into the installed app, which has no commit, it falls back to the runtime version (the native fingerprint).
+  - `release` is that commit. For the bundle built into the installed app it is the commit the APK was built from, and it falls back to the runtime version (the native fingerprint) only when that build had no commit, such as a build made without the pre-install hook.
   - `dist` is the id of the running update (`Updates.updateId`), so events group per update.
   - The tag `runtimeVersion` is the fingerprint, which tells you which native build the phone has.
   - `environment` comes from the app variant and defaults to `production`.
@@ -60,7 +60,7 @@ Web is rolled back with Instant Rollback in the Vercel dashboard. Edge Functions
 
 ## 4. Confirm the fix arrived
 
-Open **More**, then **About**, in the app (on web too). The version line reads `Version 1.0.0 (a1b2c3d)`, where the letters are the first seven characters of the commit the running code was built from. On the phone, the line under it reads `Updated <date and time>` for an OTA update and `Built in` for the embedded bundle.
+Open **More**, then **About**, in the app (on web too). The version line reads `Version 0.5.0 (a1b2c3d)`, where the letters are the first seven characters of the commit the running code was built from. On the phone, the line under it reads `Updated <date and time>` for an OTA update and `Built <date and time>` for the bundle inside the installed app (`Shipped with this build` if that bundle has no date).
 
 The app checks for an update at launch and holds the splash screen for up to 5 seconds while it downloads, then reloads into it. So normally one cold start is enough. If the version line is still old, the check timed out (a slow network), so close the app fully and start it again. A republished update shows the commit of the update you republished, not the commit of the rollback.
 
