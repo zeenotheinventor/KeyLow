@@ -4,6 +4,20 @@ export type { DayAdjustments, DayTargetInput } from "./dayTarget";
 export { measureExpenditure } from "./measureExpenditure";
 export type { MeasureExpenditureInput } from "./measureExpenditure";
 export { updateExpenditure } from "./updateExpenditure";
+export { toDayInputs } from "./toDayInputs";
+export type { DayLogRow, DayTotalRow } from "./toDayInputs";
+export { applyProfileCap } from "./applyProfileCap";
+export type { CappedTargets } from "./applyProfileCap";
+export { checkinStep } from "./checkinStep";
+export type {
+  CheckinBasis,
+  CheckinInput,
+  CheckinMeasurement,
+  CheckinProgram,
+  CheckinResult,
+  CheckinSnapshot,
+  CheckinTargets,
+} from "./checkinStep";
 export { bmrMifflinStJeor, initialExpenditure } from "./initialExpenditure";
 export type { BmrInput, InitialExpenditure, InitialExpenditureInput } from "./initialExpenditure";
 export {
