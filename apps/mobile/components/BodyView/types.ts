@@ -20,6 +20,11 @@ export type BodyViewProps = BodyFigureProps & {
    * theme, since it shows on the clear stage. Left out, the 3D body takes the app's theme.
    */
   bodyScheme?: ThemeScheme | undefined;
+  /**
+   * The width in points of the area the 3D body takes a drag and a tap on, centred on the body, for a stage wider
+   * than it. The turn is still half a turn for a drag across the body's width. The 3D body's width unless given, and the 2D figure leaves it out.
+   */
+  touchWidth?: number | undefined;
   /** Called with where the 3D body is in drawing, so the stage around it can show that it is loading. */
   onPhaseChange?: ((phase: BodyViewPhase) => void) | undefined;
 };

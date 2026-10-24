@@ -16,6 +16,11 @@ export type Body3DProps = Partial<
   /** The width in points. The height follows from the 200 by 440 drawing of `BodyFigure`. */
   w: number;
   /**
+   * The width in points of the area that takes the drag and the tap, centred on the body, so a stage wider than the
+   * body is all touch surface. The turn is still half a turn for a drag across the body's width. Never narrower than `w`, which it is by default.
+   */
+  touchWidth?: number | undefined;
+  /**
    * The side the body faces. When it changes the body turns there by the shorter arc, over the standard motion
    * duration, or at once with reduced motion. A drag turns the body too, and on release it settles on the nearer
    * side. Front by default.

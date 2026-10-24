@@ -16,10 +16,14 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 // GL does not run in Jest, so the canvas of react-three-fiber is stood in for. It keeps the props it was
 // given, so the test can run `onCreated` as the library would once the renderer exists.
-const mockCanvasProps: { onCreated?: ((state: RootState) => void) | undefined } = {};
+const mockCanvasProps: {
+  onCreated?: ((state: RootState) => void) | undefined;
+  pointerEvents?: string | undefined;
+} = {};
 jest.mock("@react-three/fiber/native", () => ({
-  Canvas: (props: { onCreated?: (state: RootState) => void }) => {
+  Canvas: (props: { onCreated?: (state: RootState) => void; pointerEvents?: string }) => {
     mockCanvasProps.onCreated = props.onCreated;
+    mockCanvasProps.pointerEvents = props.pointerEvents;
     return null;
   },
   useFrame: jest.fn(),
@@ -68,6 +72,12 @@ async function createRenderer(onError?: () => void) {
 }
 
 describe("Body3DCanvas", () => {
+  it("should take no touches, so its responder overlay never takes the touch from the body's gestures", async () => {
+    await createRenderer();
+
+    expect(mockCanvasProps.pointerEvents).toBe("none");
+  });
+
   it("should call onError when three.js reports a shader that cannot be linked", async () => {
     const onError = jest.fn();
     const gl = await createRenderer(onError);
