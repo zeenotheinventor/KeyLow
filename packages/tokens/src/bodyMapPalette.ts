@@ -16,6 +16,11 @@ export type BodyMapPalette = {
   gap: { behind: string; onPlan: string; ahead: string; notInPlan: string };
   silhouette: string;
   separator: string;
+  /** The 3D body's see-through skin, the dark core under the muscles, the clay head and the muscles that have no id. */
+  skin: string;
+  core: string;
+  clay: string;
+  otherMuscle: string;
 };
 
 /**
@@ -50,5 +55,9 @@ export const bodyMapPalette = (scheme: ThemeScheme): BodyMapPalette => {
     },
     silhouette: colors["body-silhouette"],
     separator: colors["body-separator"],
+    skin: colors["body-skin"],
+    core: colors["body-core"],
+    clay: colors["body-clay"],
+    otherMuscle: colors["body-other-muscle"],
   };
 };

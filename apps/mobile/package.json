@@ -14,6 +14,7 @@
   "dependencies": {
     "@keylow/api-client": "workspace:*",
     "@keylow/body-3d": "workspace:*",
+    "@keylow/body-model": "workspace:*",
     "@keylow/core": "workspace:*",
     "@keylow/tokens": "workspace:*",
     "@kingstinct/react-native-healthkit": "^16.2.0",

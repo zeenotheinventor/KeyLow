@@ -16,14 +16,14 @@ const meta = {
   ],
   // The size of the body map's figure. The scheme comes from the theme toolbar, so the story shows in
   // dark and in light.
-  args: { label: "Body, 3D test shape", w: 120 },
+  args: { label: "Body, male, 3D", w: 120 },
 } satisfies Meta<typeof Body3D>;
 
 export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The test shape in the resting grey, two boxes of different heights turned a little to show their sides.
-export const Default: Story = {};
+// The male body with every muscle at rest, seen through a faint skin. The theme toolbar shows it in light and dark.
+export const AtRest: Story = {};
 
 export const Wide: Story = { args: { w: 240 } };

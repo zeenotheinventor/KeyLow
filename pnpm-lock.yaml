@@ -36,6 +36,9 @@ importers:
       '@keylow/body-3d':
         specifier: workspace:*
         version: link:../../packages/body-3d
+      '@keylow/body-model':
+        specifier: workspace:*
+        version: link:../../tools/body-model
       '@keylow/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -402,6 +405,9 @@ importers:
 
   packages/body-3d:
     dependencies:
+      '@keylow/body-model':
+        specifier: workspace:*
+        version: link:../../tools/body-model
       three:
         specifier: 0.186.1
         version: 0.186.1
