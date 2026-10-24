@@ -2,10 +2,12 @@ import { bodyMapPalette } from "@keylow/tokens";
 import { vars } from "nativewind";
 import { useEffect, useMemo } from "react";
 import { View } from "react-native";
+import { GestureDetector } from "react-native-gesture-handler";
 
 import { Body3DBoundary } from "./Body3DBoundary";
 import { body3DCanvasElement } from "./body3DCanvasElement";
 import { looksOf } from "./looks";
+import { useBodyRotation } from "./useBodyRotation";
 import { useLookFadeMilliseconds } from "./useLookFadeMilliseconds";
 import { useTheme } from "../../../lib/theme";
 
@@ -25,10 +27,18 @@ const NO_VALUES: BodyFigureValues = {};
  * props with their meaning, and a change of values, scale or theme eases over 220 ms, or at once with reduced
  * motion. It is one image with the label. It draws nothing while the model loads, and nothing if GL or the
  * model fails. `onFirstFrame` tells the caller the body is on the screen, and `onError` that it will not be.
+ * A horizontal drag turns the body about its vertical axis, half a turn across its width, and on release it
+ * settles on the nearer of front and back. `side` turns it there, `onSideChange` reports a settle on the
+ * other side, and `onTap` a touch that lifts within 10 points of where it went down. A drag is never a tap,
+ * and a vertical swipe scrolls the page. The image has no action of its own, so the screen offers the same
+ * turns and the toggle as controls.
  */
 export function Body3D({
   label,
   w,
+  side = "front",
+  onSideChange,
+  onTap,
   scale = "heat",
   values = NO_VALUES,
   selected,
@@ -52,6 +62,7 @@ export function Body3D({
     [selected, textColour, palette.silhouette, dim, unselectedOpacity],
   );
   const fadeMilliseconds = useLookFadeMilliseconds();
+  const { yaw, gesture } = useBodyRotation({ side, width: w, onSideChange, onTap });
   const canvas = body3DCanvasElement({
     colours: {
       muscle: palette.silhouette,
@@ -64,6 +75,7 @@ export function Body3D({
     looks,
     emphasis,
     fadeMilliseconds,
+    yaw,
     onFirstFrame,
     onError,
   });
@@ -76,14 +88,16 @@ export function Body3D({
   }, [isCanvasMissing, onError]);
 
   return (
-    <View
-      accessible
-      aria-label={label}
-      className="h-[var(--body-height)] w-[var(--body-width)]"
-      role="img"
-      style={vars({ "--body-width": w, "--body-height": (w * DRAWING_HEIGHT) / DRAWING_WIDTH })}
-    >
-      {canvas !== null && <Body3DBoundary onError={onError}>{canvas}</Body3DBoundary>}
-    </View>
+    <GestureDetector gesture={gesture}>
+      <View
+        accessible
+        aria-label={label}
+        className="h-[var(--body-height)] w-[var(--body-width)]"
+        role="img"
+        style={vars({ "--body-width": w, "--body-height": (w * DRAWING_HEIGHT) / DRAWING_WIDTH })}
+      >
+        {canvas !== null && <Body3DBoundary onError={onError}>{canvas}</Body3DBoundary>}
+      </View>
+    </GestureDetector>
   );
 }

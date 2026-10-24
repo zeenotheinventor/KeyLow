@@ -161,6 +161,8 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       sideBySideName: "Show side by side",
       scaleSwitch: { name: "Scale", heat: "Heat", volume: "Volume", gap: "Gap" },
       sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
+      sideSwitchDescription: "Turns the body to face front or back.",
+      rotateHint: "Drag to turn",
       legendNames: { heat: "Heat legend", volume: "Volume legend", gap: "Gap legend" },
       views: { actual: "Actual", projected: "Projected", gap: "Done against plan" },
       toggle: {

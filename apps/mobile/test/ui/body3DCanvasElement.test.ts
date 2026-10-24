@@ -1,4 +1,5 @@
 import { bodyMapPalette } from "@keylow/tokens";
+import { makeMutable } from "react-native-reanimated";
 
 import { body3DCanvasElement } from "../../components/ui/Body3D/body3DCanvasElement";
 import { looksOf } from "../../components/ui/Body3D/looks";
@@ -35,6 +36,7 @@ describe("body3DCanvasElement", () => {
           unselectedOpacity: 1,
         },
         fadeMilliseconds: 220,
+        yaw: makeMutable(0),
       }),
     ).toBeNull();
   });

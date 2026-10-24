@@ -1,10 +1,16 @@
+import { BODY_MAP } from "@keylow/core/copy";
+import { useState } from "react";
 import { View } from "react-native";
 
 import { Body3D } from "./Body3D";
 import { BodyFigure } from "../BodyFigure";
 import { heatSteps, inTurn } from "../BodyFigure/storyValues";
+import { SegmentedControl } from "../SegmentedControl";
+import { Text } from "../Text";
 
 import type { Body3DProps } from "./types";
+import type { SegmentedControlOption } from "../SegmentedControl";
+import type { BodySide } from "@keylow/body-3d/rotation";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -26,7 +32,11 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-type BesideTheFigureProps = Body3DProps & Required<Pick<Body3DProps, "scale" | "values">>;
+type BesideTheFigureProps = Pick<
+  Body3DProps,
+  "label" | "w" | "selected" | "dim" | "unselectedOpacity"
+> &
+  Required<Pick<Body3DProps, "scale" | "values">>;
 
 // The 3D body on the left and the 2D figure of the same values on the right, so the colours can be compared. The
 // 2D figure is the one `BodyFigure`'s own story of that name draws.
@@ -35,6 +45,46 @@ function BesideTheFigure({ label, w, ...valueProps }: BesideTheFigureProps) {
     <View className="flex-row items-center gap-4">
       <Body3D label={label} w={w} {...valueProps} />
       <BodyFigure label="Body map, front" side="front" w={w} {...valueProps} />
+    </View>
+  );
+}
+
+const sideOptions: SegmentedControlOption<BodySide>[] = [
+  { value: "front", label: BODY_MAP.sideSwitch.front },
+  { value: "back", label: BODY_MAP.sideSwitch.back },
+];
+
+// A screen keeps the side and the tap count, so the story does too: a drag that settles on the other side sets
+// the side, the control sets it too, and a tap counts. The readout is the side the body has settled on.
+function Turning(props: Body3DProps) {
+  const [side, setSide] = useState<BodySide>("front");
+  const [tapCount, setTapCount] = useState(0);
+  return (
+    <View className="items-center gap-4">
+      <Body3D
+        {...props}
+        onSideChange={setSide}
+        onTap={() => {
+          setTapCount((count) => count + 1);
+        }}
+        side={side}
+      />
+      <Text variant="caption" tone="muted">
+        {BODY_MAP.rotateHint}
+      </Text>
+      <Text aria-live="polite">{`Side: ${side}`}</Text>
+      <Text aria-live="polite">{`Taps: ${tapCount}`}</Text>
+      <View className="w-48">
+        <SegmentedControl
+          label={BODY_MAP.sideSwitch.name}
+          onChange={setSide}
+          options={sideOptions}
+          value={side}
+        />
+      </View>
+      <Text tone="secondary" variant="caption">
+        {BODY_MAP.sideSwitchDescription}
+      </Text>
     </View>
   );
 }
@@ -76,4 +126,16 @@ export const Dimmed: Story = {
 export const Glow: Story = {
   args: { scale: "heat", values: { quads: 5, chest_lower: 5, biceps: 5, abs: 4 } },
   render: besideTheFigure,
+};
+
+/**
+ * Drag the body sideways to turn it: a drag across its width is half a turn, it follows the finger, and on
+ * release it settles on the nearer of Front and Back. Front and Back turn it too, by the shorter arc. A short
+ * tap counts and a drag never does. A vertical swipe on the body scrolls the page. The image is a single
+ * `img` with no action of its own, so nothing here depends on a gesture alone: the control turns the body, and
+ * a screen's own toggle button does what a tap does.
+ */
+export const Rotatable: Story = {
+  args: { scale: "heat", values: heatSteps, w: 160 },
+  render: (args) => <Turning {...args} />,
 };

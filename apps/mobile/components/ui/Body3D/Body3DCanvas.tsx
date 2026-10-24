@@ -10,19 +10,45 @@ import {
 import maleBody from "@keylow/body-model/male.glb";
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useAnimatedReaction } from "react-native-reanimated";
+import { scheduleOnRN } from "react-native-worklets";
 
 import { bundledModel } from "./bundledModel";
 
 import type { Body3DCanvasProps } from "./types";
+import type { Group } from "three";
 
 const MILLISECONDS_PER_SECOND = 1000;
 
+/**
+ * Turns the body by `yaw` about the vertical line through (`centreX`, `centreZ`), the middle of its box, so it
+ * turns on the spot wherever the model has its origin. The group turns about its own origin, so it is moved by
+ * what keeps that line where it was: the centre minus the centre turned.
+ */
+function turnAboutCentre(group: Group, yaw: number, centreX: number, centreZ: number) {
+  const sine = Math.sin(yaw);
+  const cosine = Math.cos(yaw);
+  group.rotation.y = yaw;
+  group.position.set(
+    centreX - (centreX * cosine + centreZ * sine),
+    0,
+    centreZ - (centreZ * cosine - centreX * sine),
+  );
+}
+
 type BodyMeshesProps = Pick<
   Body3DCanvasProps,
-  "colours" | "looks" | "emphasis" | "fadeMilliseconds" | "onFirstFrame"
+  "colours" | "looks" | "emphasis" | "fadeMilliseconds" | "yaw" | "onFirstFrame"
 >;
 
-function BodyMeshes({ colours, looks, emphasis, fadeMilliseconds, onFirstFrame }: BodyMeshesProps) {
+function BodyMeshes({
+  colours,
+  looks,
+  emphasis,
+  fadeMilliseconds,
+  yaw,
+  onFirstFrame,
+}: BodyMeshesProps) {
   const model = use(bundledModel(maleBody));
   const camera = useThree((state) => state.camera);
   const invalidate = useThree((state) => state.invalidate);
@@ -35,6 +61,14 @@ function BodyMeshes({ colours, looks, emphasis, fadeMilliseconds, onFirstFrame }
   // A copy of the meshes for each canvas, with its own geometry and materials. Two canvases on screen then do
   // not share a material, and no renderer is left listening on a geometry that outlives it.
   const dressed = useMemo(() => dressBody(model, first.colours), [model, first.colours]);
+  // The middle of the body from front to back and side to side, which the turn is about.
+  const { x: centreX, z: centreZ } = useMemo(
+    () => ({
+      x: (dressed.box.min.x + dressed.box.max.x) / 2,
+      z: (dressed.box.min.z + dressed.box.max.z) / 2,
+    }),
+    [dressed],
+  );
   const lookFade = useMemo(
     () => createLookFade(dressed.materials, first.looks, first.emphasis),
     [dressed, first.looks, first.emphasis],
@@ -44,6 +78,15 @@ function BodyMeshes({ colours, looks, emphasis, fadeMilliseconds, onFirstFrame }
       dressed.dispose();
     },
     [dressed],
+  );
+  // The turn is a shared value that a drag and a settle move off the render loop. The loop draws only on demand,
+  // so every change of it asks for the next frame, which reads it below. No React render is involved.
+  useAnimatedReaction(
+    () => yaw.get(),
+    () => {
+      scheduleOnRN(invalidate);
+    },
+    [yaw, invalidate],
   );
   // The parts that are not muscles change colour at once with the theme. The frame is drawn on demand.
   useLayoutEffect(() => {
@@ -67,6 +110,7 @@ function BodyMeshes({ colours, looks, emphasis, fadeMilliseconds, onFirstFrame }
       hasReportedFrame.current = true;
       onFirstFrame?.();
     }
+    turnAboutCentre(dressed.group, yaw.get(), centreX, centreZ);
     // The loop draws only on demand, so a fade that is not over asks for the next frame itself.
     if (lookFade.step(deltaSeconds * MILLISECONDS_PER_SECOND)) {
       invalidate();
@@ -77,7 +121,8 @@ function BodyMeshes({ colours, looks, emphasis, fadeMilliseconds, onFirstFrame }
 }
 
 /**
- * The GL view: a transparent canvas, a camera that frames the body, two lights and the male body, its muscles easing to their looks. It draws
+ * The GL view: a transparent canvas, a camera that frames the body, two lights and the male body, its muscles easing to their looks and
+ * the body turning with `yaw`. It draws
  * with no tone mapping, so the colours are the tokens'. The native canvas always draws at the device's pixel ratio,
  * because expo-gl cannot render at any other, so it takes no `dpr` to cap at 2.
  */
@@ -87,6 +132,7 @@ export function Body3DCanvas({
   looks,
   emphasis,
   fadeMilliseconds,
+  yaw,
   onFirstFrame,
   onError,
 }: Body3DCanvasProps) {
@@ -113,6 +159,7 @@ export function Body3DCanvas({
           fadeMilliseconds={fadeMilliseconds}
           looks={looks}
           onFirstFrame={onFirstFrame}
+          yaw={yaw}
         />
       </Suspense>
     </Canvas>

@@ -1,5 +1,6 @@
 import { bodyMapPalette } from "@keylow/tokens";
 import { render } from "@testing-library/react-native";
+import { makeMutable } from "react-native-reanimated";
 
 import { Body3DCanvas } from "../../components/ui/Body3D/Body3DCanvas";
 import { looksOf } from "../../components/ui/Body3D/looks";
@@ -59,6 +60,7 @@ async function createRenderer(onError?: () => void) {
       looks={looks}
       onError={onError}
       scheme="dark"
+      yaw={makeMutable(0)}
     />,
   );
   mockCanvasProps.onCreated?.({ gl } as unknown as RootState);

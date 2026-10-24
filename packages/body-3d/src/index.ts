@@ -12,3 +12,7 @@ export { applyLooks } from "./applyLooks";
 export { createLookFade } from "./lookFade";
 export type { LookFade } from "./lookFade";
 export type { Look, LookEmphasis } from "./Look";
+export { BODY_SIDE_YAW, nearestSide, yawAfterDrag, yawToReachSide } from "./rotation";
+export type { BodySide } from "./rotation";
+export { BODY_TAP_SLOP, classifyTouch } from "./touch";
+export type { TouchKind, TouchPoint } from "./touch";
