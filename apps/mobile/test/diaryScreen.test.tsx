@@ -25,6 +25,7 @@ import {
   requestsTo,
   resetDiaryBackend,
   sampleDay,
+  showLiveTargets,
 } from "./support/diaryBackend";
 import { oilEntry } from "./support/entries";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
@@ -401,6 +402,33 @@ describe("the diary screen", () => {
       expect(strip()).toHaveAccessibleName(
         /Calories: 2,412 of 2,200 kilocalories, over target\. Protein: 150 of 160 grams\. Carbohydrate: 257 of 220 grams, over target/,
       );
+    });
+  });
+
+  describe("with a program's day by day targets", () => {
+    beforeEach(() => {
+      showLiveTargets();
+    });
+
+    it("should draw the bars against the program's figures for the day on screen, today a Thursday at 2,000", async () => {
+      await renderLoadedDiary();
+
+      expect(strip()).toHaveAccessibleName(
+        "Targets. Calories: 1,039 of 2,000 kilocalories. Protein: 86 of 126 grams. Carbohydrate: 129 of 245 grams. Fat: 19 of 73 grams",
+      );
+    });
+
+    it("should draw the calories of another day's weekday when that day is chosen, a Monday at 2,200", async () => {
+      const user = userEvent.setup();
+      await renderLoadedDiary();
+
+      await user.press(screen.getByRole("button", { name: "Monday 12 October" }));
+
+      expect(
+        await screen.findByRole("button", {
+          name: /^Targets\. Calories: .* of 2,200 kilocalories\./,
+        }),
+      ).toBeOnTheScreen();
     });
   });
 

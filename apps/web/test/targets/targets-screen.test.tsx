@@ -34,7 +34,7 @@ vi.mock("@/components/ui/Toast", async (importOriginal) => ({
 beforeEach(() => {
   vi.resetAllMocks();
   useTargets.mockReturnValue({
-    data: { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 },
+    data: { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70, source: "manual" },
     isError: false,
     refetch,
   });

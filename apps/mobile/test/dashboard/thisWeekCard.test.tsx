@@ -19,6 +19,7 @@ import {
   requestsTo,
   resetDiaryBackend,
   sampleDay,
+  showLiveTargets,
 } from "../support/diaryBackend";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -163,6 +164,15 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(sampleName);
+    });
+
+    it("should hold the average against the program's weekly figure, 2,140, and not today's 2,000", async () => {
+      showLiveTargets();
+      await renderDashboard();
+
+      expect(await weekCard()).toHaveAccessibleName(
+        "This week, open the diary. Average 1,681 of 2,140 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+      );
     });
 
     it("should open the Diary on today when it is pressed", async () => {

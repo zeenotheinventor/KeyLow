@@ -23,6 +23,10 @@ export const diaryBackend: {
   timezone: string;
   terms: { terms_accepted_at: string | null; terms_version: string | null };
   targets: Targets;
+  /** The `programs` rows as the targets read sees them: `id` and `ended_on`. Empty by default, so the user has no program. */
+  programs: Row[];
+  /** The `targets` rows as the targets read sees them. Empty by default. They count only while a program is active. */
+  engineTargets: Row[];
   entries: Row[];
   /** The `recipes` rows as the library reads them: `id`, `name`, `servings`, `yield_grams`, `is_archived` and `computed`. */
   recipes: Row[];
@@ -64,6 +68,8 @@ export const diaryBackend: {
   timezone: "Europe/London",
   terms: { terms_accepted_at: "2026-10-15T09:30:00+00:00", terms_version: TERMS_VERSION },
   targets: { target_kcal: 2200, target_protein_g: 160, target_carbs_g: 220, target_fat_g: 70 },
+  programs: [],
+  engineTargets: [],
   entries: [],
   recipes: [],
   dayLogs: [],
@@ -98,6 +104,8 @@ export function resetDiaryBackend(): void {
     target_carbs_g: 220,
     target_fat_g: 70,
   };
+  diaryBackend.programs = [];
+  diaryBackend.engineTargets = [];
   diaryBackend.entries = [];
   diaryBackend.recipes = [];
   diaryBackend.dayLogs = [];
@@ -118,6 +126,26 @@ export function resetDiaryBackend(): void {
   diaryBackend.weekReadsHang = false;
   diaryBackend.requests = [];
   diaryBackend.writes = [];
+}
+
+/**
+ * An active program with a current targets row: 2,140 kcal a week, and by day, Monday first, 2,200, 2,150,
+ * 2,100, 2,000, 2,250, 1,900 and 2,100. A Thursday, the day the clock stands on in most suites, is 2,000.
+ */
+export function showLiveTargets(): void {
+  const programId = "44444444-4444-4444-8444-444444444444";
+  diaryBackend.programs = [{ id: programId, ended_on: null }];
+  diaryBackend.engineTargets = [
+    {
+      program_id: programId,
+      calories_kcal: 2140,
+      protein_g: 126,
+      fat_g: 73,
+      carbs_g: 245,
+      dow_calories_kcal: [2200, 2150, 2100, 2000, 2250, 1900, 2100],
+      effective_to: null,
+    },
+  ];
 }
 
 export const noTargets: Targets = {
@@ -677,6 +705,24 @@ export async function fakeFetch(
         );
       }
       return Promise.resolve(jsonResponse([profileRow(searchParams.get("select") ?? "")]));
+    case "programs":
+      // The targets read asks for the active program alone with `ended_on=is.null`.
+      return Promise.resolve(
+        jsonResponse(
+          diaryBackend.programs.filter(
+            (row) => searchParams.get("ended_on") !== "is.null" || row["ended_on"] === null,
+          ),
+        ),
+      );
+    case "targets":
+      // The targets read asks for the current row alone with `effective_to=is.null`.
+      return Promise.resolve(
+        jsonResponse(
+          diaryBackend.engineTargets.filter(
+            (row) => searchParams.get("effective_to") !== "is.null" || row["effective_to"] === null,
+          ),
+        ),
+      );
     case "food_log_entries":
       if (init !== undefined && isDiaryWrite) {
         return Promise.resolve(writeEntries(init, searchParams));

@@ -420,6 +420,8 @@ By Q5, a user with an active program and a current `targets` row reads the `targ
 
 Ending a program leaves its last targets row with `effective_to` null. That row is in force only while the active program exists, which is the read rule above, so a history reader must not label it current after the program ends (ADR 0003, Amendment 13).
 
+The diary reads the open row only when its `program_id` is the active program's id. A row left open by an ended program is not the new program's row, and a row with no `program_id` is nobody's, so in both cases the diary reads the profile's manual columns until the new program has a row of its own. A manual save ends the program on the later of the user's local today and the program's `started_on`, so the check `ended_on >= started_on` (ADR 0003, Amendment 12) holds even for a user who has moved to an earlier time zone.
+
 ### The confidence band
 
 The confidence band the program screen and the chart show is `mu ± 1.2816 · sd`, an 80 % range (Q6), where `sd` is `√var`. It is a display rule and not an engine param.

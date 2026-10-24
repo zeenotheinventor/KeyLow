@@ -80,7 +80,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
 
   const dayQuery = useDiaryDay(viewedDate, { enabled: isReadEnabled });
   const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate, { enabled: isReadEnabled });
-  const targetsQuery = useTargets({ enabled: isReadEnabled });
+  const targetsQuery = useTargets({ enabled: isReadEnabled, localDate: viewedDate });
   const setDayComplete = useSetDayComplete();
   const deleteEntry = useDeleteEntryWithUndo();
   const { copyYesterday, isCopying, hasCopyFailed } = useCopyYesterday(viewedDate, timeZone);

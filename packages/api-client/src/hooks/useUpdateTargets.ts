@@ -22,11 +22,13 @@ export class TargetsValidationError extends Error {
 }
 
 /**
- * Saves the signed in user's targets (the variable passed to `mutate`): calories from 800 to 6,000 and
+ * Saves the signed in user's own targets (the variable passed to `mutate`): calories from 800 to 6,000 and
  * macros of 0 or more, each macro optional. Checked with core's `validateTargets` before any request, and
- * a refusal throws a `TargetsValidationError`. Only the target columns of the profile are written. After a
- * success the saved targets are put in the targets cache and the whole diary is invalidated, so a day on
- * screen reads again alongside them.
+ * a refusal throws a `TargetsValidationError`. Only the target columns of the profile are written, and an
+ * active program is ended first, so the weekly check-in stops (see `updateMyTargets`). After a success
+ * the saved targets are put in the targets cache, the targets are invalidated so they are read again from
+ * the profile, the program reads are invalidated because the program has ended, and the whole diary is
+ * invalidated, so a day on screen reads again alongside them.
  */
 export function useUpdateTargets() {
   const client = useSupabase();
@@ -48,7 +50,10 @@ export function useUpdateTargets() {
     },
     onSuccess: (saved) => {
       queryClient.setQueryData(keys.profiles.targets, saved);
-      // Not awaited: the save is done, and the diary reads again in its own time.
+      // Not awaited: the save is done, and the screens read again in their own time.
+      void queryClient.invalidateQueries({ queryKey: keys.profiles.targets });
+      // The save ended the program, so the program screen's summary and histories read again.
+      void queryClient.invalidateQueries({ queryKey: keys.program.all });
       void queryClient.invalidateQueries({ queryKey: keys.diary.all });
     },
   });

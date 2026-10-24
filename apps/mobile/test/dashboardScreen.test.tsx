@@ -19,6 +19,7 @@ import {
   recipeEntry,
   requestsTo,
   resetDiaryBackend,
+  showLiveTargets,
   sampleDay,
 } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
@@ -248,6 +249,21 @@ describe("the dashboard screen", () => {
       await screen.findByText("Friday 16 October");
 
       expect(screen.queryByText("Thursday 15 October")).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("with a program's day by day targets", () => {
+    beforeEach(() => {
+      showLiveTargets();
+    });
+
+    it("should read today's figure from the program, a Thursday at 2,000, and not the week's 2,140", async () => {
+      await renderDashboard();
+
+      expect(await card()).toHaveAccessibleName(
+        "Today, open the diary. 961 calories remaining of 2,000. Protein: 86 of 126 grams. Carbs: 129 of 245 grams. Fat: 19 of 73 grams",
+      );
+      expect(screen.getByText("Target 2,000 kcal")).toBeOnTheScreen();
     });
   });
 
