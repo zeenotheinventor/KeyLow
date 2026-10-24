@@ -1380,7 +1380,11 @@ The Privacy Policy lists the health data the app imports. KEY-574 names body fat
 - KEY-569, the migration and seed: the enum `body_measurement_kind`, `body_measurements` with its checks, the plain unique constraint and the list index, the grants and policies, pgTAP (every policy, the exact privileges, the bounds per kind, the import key and the account deletion cascade), the regenerated `packages/db/src/types.gen.ts`, and body measurements in the seed.
 - KEY-570, the core helpers: the constants in "The numbers", the Health sample mappers and the smoothed trend. It builds to the numbers above and must not merge before this amendment is approved.
 - KEY-571, the api-client: the list, the bulk import that ignores duplicates, and the trend over the cached list.
+- KEY-572, the adapter: the Health Connect permissions for body fat and lean mass, and the read methods for both.
+- KEY-573, the Health import: an anchor per kind and the import runner, which reads body fat and lean mass in the same foreground pass.
 - KEY-574, the Privacy Policy: it names body fat and lean mass and raises `TERMS_VERSION`.
+- KEY-580, the permission flow: body fat and lean mass are allowed in the Health Connect flow.
+- KEY-581, the Body composition section on the Weight screen.
 - KEY-7 (M7), outside this amendment: the export, which must include this table.
 
 ### Consequences of Amendment 11

@@ -70,7 +70,9 @@ describe("the weigh-in entry route", () => {
 
     expect(await screen.findByRole("heading", { name: "Weigh-in" })).toBeOnTheScreen();
     expect(screen.getByLabelText("Weight (kg)")).toHaveDisplayValue("81.4");
-    expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+    });
   });
 
   it("should open an imported weigh-in with the notice and no Save", async () => {
