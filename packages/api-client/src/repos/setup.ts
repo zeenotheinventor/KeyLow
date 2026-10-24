@@ -1,8 +1,11 @@
 import { buildManualWeighIn } from "@keylow/core/weight";
 
+import { recomputeMyTargets } from "./program";
 import { addWeighIn } from "./weighIns";
+import { toEdgeErrorKind } from "../errors";
 
 import type { Database } from "../database.types";
+import type { EdgeErrorKind } from "../errors";
 import type { StartingPlan } from "@keylow/core/setup";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
@@ -259,12 +262,40 @@ async function saveProfile(
 }
 
 /**
+ * What a save resolves with. `targetsPending` is true when the account is saved but the engine's first
+ * targets are not made yet: `recomputeCode` is then the code the recompute failed with (`failed` when the
+ * failure was not a typed answer), and nothing else about it.
+ */
+export type SaveSetupResult =
+  { targetsPending: false } | { targetsPending: true; recomputeCode: EdgeErrorKind };
+
+// A recompute failure does not undo the save, and is reported as a code and never thrown. By then the
+// weigh-in, the program and the profile are written, and the profile holds the manual targets the wizard
+// worked out, so the account is set up and the diary shows those targets until the app's next due run, or
+// a retry, makes the engine's. Throwing would tell a user whose account is set up that the save failed.
+async function recomputeTargets(client: SupabaseClient<Database>): Promise<SaveSetupResult> {
+  try {
+    await recomputeMyTargets(client);
+    return { targetsPending: false };
+  } catch (failure) {
+    return {
+      targetsPending: true,
+      recomputeCode: failure instanceof Error ? toEdgeErrorKind(failure) : "failed",
+    };
+  }
+}
+
+/**
  * Saves the setup wizard's result for `userId` (`startingPlan(...).save` in core), in three steps and in
  * this order (ADR 0003, Amendment 12, "How the wizard saves"): the weigh-in, the program, and the
  * profile last. The profile carries `onboarding_completed_at`, so a failure at any step leaves the
  * account not set up and the user can press the button again. A failure stops the later steps and
  * throws `Could not save your setup (step, code)`, with the step `weigh-in`, `program` or `profile`,
  * and no value, because every value here is health data.
+ *
+ * A fourth step then asks `run-checkin` to recompute (ADR 0002, Amendment 2), which makes the start
+ * snapshot, the schedule and the first engine targets. It is not part of the save: the save is done
+ * once the profile is written. The result says whether the targets are pending (see `SaveSetupResult`).
  *
  * A retry after a failure in the program or the profile step can add a second manual weigh-in for
  * today. That is accepted: the weight trend uses the median of a day's weigh-ins.
@@ -274,10 +305,12 @@ export async function saveMySetup(
   userId: string,
   save: SetupSave,
   options: SaveSetupOptions,
-): Promise<void> {
+): Promise<SaveSetupResult> {
   const now = new Date();
 
   await saveWeighIn(client, save, options, now);
   await saveProgram(client, save, now);
   await saveProfile(client, userId, save, now);
+
+  return recomputeTargets(client);
 }

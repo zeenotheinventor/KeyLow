@@ -53,6 +53,8 @@ export { useSetDayComplete } from "./useSetDayComplete";
 export { useProfileTimeZone } from "./useProfileTimeZone";
 export { useSyncTimeZone } from "./useSyncTimeZone";
 export type { UseSyncTimeZoneInput } from "./useSyncTimeZone";
+export { useEditProgram } from "./useEditProgram";
+export type { EditProgramInput } from "./useEditProgram";
 export { useSaveSetup } from "./useSaveSetup";
 export type { SaveSetupInput } from "./useSaveSetup";
 export { useSetupState } from "./useSetupState";

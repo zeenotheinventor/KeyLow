@@ -52,6 +52,7 @@ export type { Targets } from "./targets";
 export { getMySetupState, saveMySetup } from "./setup";
 export type {
   SaveSetupOptions,
+  SaveSetupResult,
   SetupProgram,
   SetupSave,
   SetupState,
@@ -120,7 +121,19 @@ export { getExercise, searchExercises } from "./exercises";
 export type { ExerciseDetail, ExerciseSearchHit, ExerciseSearchOptions } from "./exercises";
 export { archiveExercise, saveExercise } from "./exerciseWrites";
 export type { ExerciseSave } from "./exerciseWrites";
-export { getMyProgramSummary, listMyExpenditureSnapshots, listMyTargetsHistory } from "./program";
-export type { ExpenditureSnapshot, ProgramDetails, ProgramSummary, TargetsRow } from "./program";
+export {
+  getMyProgramSummary,
+  listMyExpenditureSnapshots,
+  listMyTargetsHistory,
+  recomputeMyTargets,
+  updateMyProgram,
+} from "./program";
+export type {
+  ExpenditureSnapshot,
+  ProgramChanges,
+  ProgramDetails,
+  ProgramSummary,
+  TargetsRow,
+} from "./program";
 export { getMyCheckinSchedule, runMyDueCheckins } from "./checkin";
 export type { CheckinSchedule } from "./checkin";

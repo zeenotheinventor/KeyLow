@@ -1,13 +1,14 @@
-import { http } from "msw";
+import { HttpResponse, http } from "msw";
 
 import { REST_URL, postgrestError, postgrestRows } from "./postgrest";
+import { RECOMPUTED_TARGETS_ID, RUN_CHECKIN_URL } from "./programEdit";
 import { RECOGNISABLE_SETUP_WEIGHT } from "./setupState";
 
 import type { SetupServer } from "msw/node";
 
 type RecordedCall = {
   method: "GET" | "POST" | "PATCH";
-  table: "weigh_ins" | "programs" | "profiles";
+  table: "weigh_ins" | "programs" | "profiles" | "run-checkin";
   search: URLSearchParams;
   body: Record<string, unknown> | undefined;
 };
@@ -34,7 +35,8 @@ const PROGRAM_ID = "88888888-8888-4888-8888-888888888801";
  * own message quotes the weight, as a real one can, so a test can look for it in what is thrown.
  * `profileExists: false` makes the profile update match no row, `patchMatches: false` does the same for the
  * program update (the active row ended between the read and the write), and `malformedWeighIn` makes the
- * weigh-in insert answer with a row that is missing its columns.
+ * weigh-in insert answer with a row that is missing its columns. The `run-checkin` recompute that ends a save
+ * answers a new targets id, and `answerRecomputeWith` changes what it answers.
  */
 export function installSetupSaveFake(
   server: SetupServer,
@@ -53,6 +55,8 @@ export function installSetupSaveFake(
   const calls: RecordedCall[] = [];
   const failures = new Map<RequestKey, string>();
   const storedPrograms = [...programs];
+  let recomputeAnswer: () => Response = () =>
+    HttpResponse.json({ targetsId: RECOMPUTED_TARGETS_ID });
 
   const fail = (key: RequestKey) => {
     const code = failures.get(key);
@@ -136,6 +140,10 @@ export function installSetupSaveFake(
       const id = call.search.get("id")?.replace("eq.", "");
       return postgrestRows(request, profileExists ? [{ id }] : []);
     }),
+    http.post(RUN_CHECKIN_URL, async ({ request }) => {
+      await record(request, "POST", "run-checkin");
+      return recomputeAnswer();
+    }),
   );
 
   return {
@@ -147,6 +155,10 @@ export function installSetupSaveFake(
       } else {
         failures.set(key, code);
       }
+    },
+    /** Replaces what the `run-checkin` recompute answers, for a refusal or a body that is not an answer. */
+    answerRecomputeWith: (answer: () => Response) => {
+      recomputeAnswer = answer;
     },
     /** The calls as `METHOD table`, in the order they were made. */
     order: () => calls.map((call) => `${call.method} ${call.table}`),

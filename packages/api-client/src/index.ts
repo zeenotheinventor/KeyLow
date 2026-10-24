@@ -146,6 +146,7 @@ export type { SaveSetupInput } from "./hooks";
 export { getMySetupState, saveMySetup } from "./repos";
 export type {
   SaveSetupOptions,
+  SaveSetupResult,
   SetupProgram,
   SetupSave,
   SetupState,
@@ -287,22 +288,26 @@ export type {
   ExerciseSearchOptions,
 } from "./repos";
 export {
+  useEditProgram,
   useExpenditureHistory,
   useProgramSummary,
   useRunDueCheckins,
   useTargetsHistory,
 } from "./hooks";
-export type { ProgramHistoryOptions } from "./hooks";
+export type { EditProgramInput, ProgramHistoryOptions } from "./hooks";
 export {
   getMyCheckinSchedule,
   getMyProgramSummary,
   listMyExpenditureSnapshots,
   listMyTargetsHistory,
+  recomputeMyTargets,
   runMyDueCheckins,
+  updateMyProgram,
 } from "./repos";
 export type {
   CheckinSchedule,
   ExpenditureSnapshot,
+  ProgramChanges,
   ProgramDetails,
   ProgramSummary,
   TargetsRow,
