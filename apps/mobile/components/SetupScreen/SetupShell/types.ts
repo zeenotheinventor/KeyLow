@@ -21,6 +21,10 @@ export type SetupShellProps = {
   isHeaderInert?: boolean | undefined;
   /** The footer's Continue. Left out, and with no `footer`, the step has no footer. */
   continueAction?: Readonly<{ isEnabled: boolean; onPress: () => void }> | undefined;
+  /** A line above Continue, such as the failed banner of the escape. Drawn with Continue only. */
+  notice?: ReactNode;
+  /** A quiet button under Continue, the first run's way out of step 1. Drawn with Continue only. */
+  escapeAction?: Readonly<{ label: string; isLoading: boolean; onPress: () => void }> | undefined;
   /** A footer of the step's own, drawn in place of Continue, such as the estimate's banners and Start. */
   footer?: ReactNode;
   /** The step's controls, which scroll under the fixed header and above the fixed footer. */

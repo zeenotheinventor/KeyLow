@@ -1,5 +1,11 @@
-import { useProfileTimeZone, useSaveSetup, useSetupState } from "@keylow/api-client";
-import { SETUP_GROUP_TITLES, SETUP_QUESTIONS, TARGETS_SAVED_TOAST } from "@keylow/core/copy";
+import { useProfileTimeZone, useSaveSetup, useSetupState, useSkipSetup } from "@keylow/api-client";
+import {
+  SAVE_FAILED_BANNER,
+  SETUP_GROUP_TITLES,
+  SETUP_QUESTIONS,
+  SETUP_SHELL,
+  TARGETS_SAVED_TOAST,
+} from "@keylow/core/copy";
 import {
   entryWeightUnit,
   isRateGoal,
@@ -29,7 +35,7 @@ import { timeZoneOrDevice, useToday } from "./useToday";
 import { useIsOnline } from "../../lib/connectivity";
 import { diaryHref } from "../../lib/navigation";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
-import { useToast } from "../ui";
+import { Banner, useToast } from "../ui";
 
 import type { SetupScreenProps } from "./types";
 import type { SetupDraft, SetupStep } from "@keylow/core/setup";
@@ -62,13 +68,17 @@ function questionWordsOf(step: SetupStep, draft: SetupDraft) {
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
  * loses none, and the saved answers are read once the Terms are accepted. The last step is the estimate,
  * which draws the starting plan of the answers and saves it: the first run then lands on the Diary, and a
- * recalculation goes back to Targets with the Toast "Targets saved". Nothing of the answers is logged.
+ * recalculation goes back to Targets with the Toast "Targets saved". The first run's step 1 has no way back
+ * but the escape, "I'll set my own targets", which marks the account set up and opens Targets. Nothing of
+ * the answers is logged.
  */
 export function SetupScreen({ mode }: SetupScreenProps) {
   const router = useRouter();
   const toast = useToast();
   const saveSetup = useSaveSetup();
+  const skipSetup = useSkipSetup();
   const isSaveStarted = useRef(false);
+  const isSkipStarted = useRef(false);
   const isMounted = useRef(false);
   const [hasSaved, setHasSaved] = useState(false);
   const today = useToday();
@@ -83,9 +93,13 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   const isOnline = useIsOnline();
   const hasPreviousStep = previousStep(draft, step) !== undefined;
   const isRecalculating = mode === "recalculate";
+  // The first run's one way out of step 1. A recalculation has Close, and later steps have Back.
+  const isFirstRunEscapeShown = !isRecalculating && !hasPreviousStep;
   // Busy from the press until the screen has gone, so the moment between the save settling and the
   // navigation cannot be used to leave twice or to save again.
   const isSaving = saveSetup.isPending || hasSaved;
+  // Likewise for the escape: busy until the screen has gone, since a skip that is done stays done.
+  const isSkipping = skipSetup.isPending || skipSetup.isSuccess;
 
   function goBack() {
     dispatch({ type: "wentBack" });
@@ -108,8 +122,7 @@ export function SetupScreen({ mode }: SetupScreenProps) {
     }
   }, [router]);
 
-  // Only while Setup is the focused screen, so a route pushed over it keeps its own back button. The first
-  // run's step 1 is left to the system, which is the first run gate's to decide.
+  // Only while Setup is the focused screen, so a route pushed over it keeps its own back button.
   useFocusEffect(
     useCallback(() => {
       const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
@@ -123,9 +136,9 @@ export function SetupScreen({ mode }: SetupScreenProps) {
         }
         if (isRecalculating) {
           close();
-          return true;
         }
-        return false;
+        // The first run's step 1 has no way back, since nothing is under it: the escape is the way out.
+        return true;
       });
 
       return () => {
@@ -179,6 +192,25 @@ export function SetupScreen({ mode }: SetupScreenProps) {
       close();
     } else {
       router.replace(diaryHref(estimateToday));
+    }
+  }
+
+  // One write per press, guarded by a ref for the same reason as the save. A failure is shown by
+  // `skipSetup.isError`, and the next press is the retry. The write is done whether or not the screen is
+  // still here, and the navigation is only for a screen that is.
+  async function skip() {
+    if (isSkipStarted.current) {
+      return;
+    }
+    isSkipStarted.current = true;
+    try {
+      await skipSetup.mutateAsync();
+    } catch {
+      isSkipStarted.current = false;
+      return;
+    }
+    if (isMounted.current) {
+      router.replace("/targets");
     }
   }
 
@@ -302,11 +334,25 @@ export function SetupScreen({ mode }: SetupScreenProps) {
         words === undefined
           ? undefined
           : {
-              isEnabled: isStepComplete(draft, step, today),
+              isEnabled: isStepComplete(draft, step, today) && !isSkipping,
               onPress: () => {
                 dispatch({ type: "continued", today });
               },
             }
+      }
+      escapeAction={
+        isFirstRunEscapeShown
+          ? {
+              label: SETUP_SHELL.setOwnTargetsLabel,
+              isLoading: isSkipping,
+              onPress: () => void skip(),
+            }
+          : undefined
+      }
+      notice={
+        isFirstRunEscapeShown && skipSetup.isError ? (
+          <Banner sentence title={SAVE_FAILED_BANNER} variant="error" />
+        ) : undefined
       }
       helper={words?.helper}
       progressName={progress.progressName}

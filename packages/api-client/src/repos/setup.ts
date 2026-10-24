@@ -314,3 +314,24 @@ export async function saveMySetup(
 
   return recomputeTargets(client);
 }
+
+/**
+ * Marks the signed in user's account set up without a plan, for the first run's "I'll set my own
+ * targets". The update carries `onboarding_completed_at` (now, on the client's clock) and no other
+ * column, so no stat, target or program can change. A failure throws `Could not mark your setup done
+ * (code)` and nothing else, because the database's own message can quote a value.
+ */
+export async function markMySetupDone(
+  client: SupabaseClient<Database>,
+  userId: string,
+): Promise<void> {
+  const { error } = await client
+    .from("profiles")
+    .update({ onboarding_completed_at: new Date().toISOString() })
+    .eq("id", userId)
+    .select("id")
+    .single();
+  if (error) {
+    throw repoError("mark your setup done", error);
+  }
+}

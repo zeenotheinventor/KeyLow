@@ -49,7 +49,7 @@ export {
   updateMyTimeZone,
 } from "./targets";
 export type { Targets } from "./targets";
-export { getMySetupState, saveMySetup } from "./setup";
+export { getMySetupState, markMySetupDone, saveMySetup } from "./setup";
 export type {
   SaveSetupOptions,
   SaveSetupResult,

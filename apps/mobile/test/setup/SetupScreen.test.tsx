@@ -117,6 +117,18 @@ async function pressAndroidBackButton(): Promise<boolean> {
   return wasHandled;
 }
 
+// Holds every write until the test lets go, so the screen can be looked at while a write is under way.
+function holdWritesNow(): () => Promise<void> {
+  let release: () => void = () => undefined;
+  setupBackend.writeGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return () =>
+    act(() => {
+      release();
+    });
+}
+
 // The time zone the device reports, which the screen reads today's date in.
 function deviceTimeZone(timeZone: string) {
   jest
@@ -267,6 +279,160 @@ describe("the setup wizard", () => {
       await user.press(continueButton());
 
       expect(screen.getByText("Step 1 of 8")).toBeOnTheScreen();
+    });
+  });
+
+  describe("the first run escape", () => {
+    const escapeButton = () => screen.getByRole("button", { name: "I'll set my own targets" });
+    const savedBanner = () => screen.queryByText("Not saved. Check your connection and try again.");
+
+    it("should be offered on step 1 of the first run, with nothing chosen and with a card chosen", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+
+      expect(escapeButton()).toBeOnTheScreen();
+
+      await user.press(radio("Female"));
+
+      expect(escapeButton()).toBeOnTheScreen();
+    });
+
+    it("should not be offered on step 1 of a recalculation, which has Close", async () => {
+      await renderWizard("recalculate");
+
+      expect(
+        screen.queryByRole("button", { name: "I'll set my own targets" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should not be offered after step 1, where Back is the way out", async () => {
+      await renderWizard("first-run");
+
+      await goToBirthDateStep();
+
+      expect(
+        screen.queryByRole("button", { name: "I'll set my own targets" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should mark the account set up with that one column and land on Targets", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+
+      await user.press(escapeButton());
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledWith("/targets");
+      });
+      expect(routerMock.replace).toHaveBeenCalledTimes(1);
+      expect(setupBackend.writes).toEqual(["PATCH profiles"]);
+      expect(Object.keys(setupBackend.writeBodies["PATCH profiles"] ?? {})).toEqual([
+        "onboarding_completed_at",
+      ]);
+    });
+
+    it("should leave the wizard's own answers out of the write, whatever has been chosen", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+      await user.press(radio("Female"));
+
+      await user.press(escapeButton());
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledWith("/targets");
+      });
+      expect(JSON.stringify(setupBackend.writeBodies["PATCH profiles"])).not.toContain("female");
+    });
+
+    it("should show the failed banner and stay on step 1 when the write fails", async () => {
+      const user = userEvent.setup();
+      setupBackend.writesFail = true;
+      await renderWizard("first-run");
+
+      await user.press(escapeButton());
+
+      expect(
+        await screen.findByText("Not saved. Check your connection and try again."),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "What is your sex?" })).toBeOnTheScreen();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+      expect(escapeButton()).toBeEnabled();
+    });
+
+    it("should show no raw error text when the write fails", async () => {
+      const user = userEvent.setup();
+      setupBackend.writesFail = true;
+      await renderWizard("first-run");
+
+      await user.press(escapeButton());
+
+      await screen.findByText("Not saved. Check your connection and try again.");
+      expect(screen.queryByText(/unavailable/)).not.toBeOnTheScreen();
+      expect(screen.queryByText(/XX000/)).not.toBeOnTheScreen();
+      expect(screen.queryByText(/Could not mark/)).not.toBeOnTheScreen();
+    });
+
+    it("should write again on the next press, and land on Targets once that works", async () => {
+      const user = userEvent.setup();
+      setupBackend.writesFail = true;
+      await renderWizard("first-run");
+      await user.press(escapeButton());
+      await screen.findByText("Not saved. Check your connection and try again.");
+      setupBackend.writesFail = false;
+
+      await user.press(escapeButton());
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledWith("/targets");
+      });
+      expect(savedBanner()).not.toBeOnTheScreen();
+    });
+
+    it("should write once when it is pressed twice while the write is under way", async () => {
+      await renderWizard("first-run");
+      const release = holdWritesNow();
+
+      await pressTwiceInTheSameMoment(escapeButton());
+      await screen.findByRole("button", { busy: true });
+      await release();
+
+      await waitFor(() => {
+        expect(routerMock.replace).toHaveBeenCalledTimes(1);
+      });
+      expect(setupBackend.writes).toEqual(["PATCH profiles"]);
+    });
+
+    it("should hold Continue still while the write is under way", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+      await user.press(radio("Female"));
+      const release = holdWritesNow();
+
+      await user.press(escapeButton());
+      await screen.findByRole("button", { busy: true });
+      await user.press(continueButton());
+
+      expect(screen.getByRole("heading", { name: "What is your sex?" })).toBeOnTheScreen();
+      await release();
+    });
+
+    it("should neither navigate nor fail loudly when the screen has gone before the write is done", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+      const release = holdWritesNow();
+      await user.press(escapeButton());
+      await screen.findByRole("button", { busy: true });
+
+      await screen.unmount();
+      await release();
+      await waitFor(() => {
+        expect(setupBackend.writes).toEqual(["PATCH profiles"]);
+      });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+
+      expect(routerMock.replace).not.toHaveBeenCalled();
     });
   });
 
@@ -2060,13 +2226,29 @@ describe("the setup wizard", () => {
       expect(backPressHandlers).toHaveLength(1);
     });
 
-    it("should be left to the system on step 1 of the first run", async () => {
+    it("should do nothing on step 1 of the first run, where the escape is the way out", async () => {
       await renderWizard("first-run");
 
       const wasHandled = await pressAndroidBackButton();
 
-      expect(wasHandled).toBe(false);
+      expect(wasHandled).toBe(true);
       expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+      expect(screen.getByRole("heading", { name: "What is your sex?" })).toBeOnTheScreen();
+    });
+
+    it("should do nothing on step 1 of the first run while the escape is under way", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+      const release = holdWritesNow();
+      await user.press(screen.getByRole("button", { name: "I'll set my own targets" }));
+      await screen.findByRole("button", { busy: true });
+
+      const wasHandled = await pressAndroidBackButton();
+
+      expect(wasHandled).toBe(true);
+      expect(routerMock.back).not.toHaveBeenCalled();
+      await release();
     });
   });
 

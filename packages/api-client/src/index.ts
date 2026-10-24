@@ -141,9 +141,9 @@ export type {
   RecipeUpdate,
   Targets,
 } from "./repos";
-export { useSaveSetup, useSetupState } from "./hooks";
+export { useSaveSetup, useSetupState, useSkipSetup } from "./hooks";
 export type { SaveSetupInput } from "./hooks";
-export { getMySetupState, saveMySetup } from "./repos";
+export { getMySetupState, markMySetupDone, saveMySetup } from "./repos";
 export type {
   SaveSetupOptions,
   SaveSetupResult,
