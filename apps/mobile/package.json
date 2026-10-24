@@ -9,7 +9,8 @@
     "ios": "expo start --dev-client --ios",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "jest"
+    "test": "jest",
+    "eas-build-pre-install": "node scripts/writeCommitEnv.js"
   },
   "dependencies": {
     "@keylow/api-client": "workspace:*",

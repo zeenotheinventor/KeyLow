@@ -8,6 +8,10 @@ describe("APP_VERSION", () => {
   it("should be a three part version number", () => {
     expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
   });
+
+  it("should stay below 1.0.0 until version 1 is out", () => {
+    expect(APP_VERSION).toBe("0.5.0");
+  });
 });
 
 describe("formatAppVersion", () => {
@@ -44,7 +48,29 @@ describe("formatAppVersion", () => {
 describe("formatBuildLine", () => {
   const createdAt = new Date("2026-10-15T10:00:00Z");
 
-  it("should say Built in for the bundle inside the app", () => {
+  it("should give the build date and time for the bundle inside the app", () => {
+    expect(
+      formatBuildLine({
+        isEnabled: true,
+        isEmbeddedLaunch: true,
+        createdAt: new Date("2026-10-23T22:53:00Z"),
+        timeZone: "UTC",
+      }),
+    ).toBe("Built 23 Oct 2026, 22:53");
+  });
+
+  it("should give the build date and time in the device zone for the bundle inside the app", () => {
+    expect(
+      formatBuildLine({
+        isEnabled: true,
+        isEmbeddedLaunch: true,
+        createdAt: new Date("2026-10-23T22:53:00Z"),
+        timeZone: "Pacific/Auckland",
+      }),
+    ).toBe("Built 24 Oct 2026, 11:53");
+  });
+
+  it("should say the bundle shipped with the build when it has no date", () => {
     expect(
       formatBuildLine({
         isEnabled: true,
@@ -52,7 +78,7 @@ describe("formatBuildLine", () => {
         createdAt: null,
         timeZone: "UTC",
       }),
-    ).toBe("Built in");
+    ).toBe("Shipped with this build");
   });
 
   it.each([

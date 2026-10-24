@@ -83,14 +83,14 @@ describe("About page", () => {
       vi.stubEnv("VERCEL_GIT_COMMIT_SHA", "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678");
       render(<AboutPage />);
 
-      expect(screen.getByText("Version 1.0.0 (a1b2c3d)")).toBeTruthy();
+      expect(screen.getByText("Version 0.5.0 (a1b2c3d)")).toBeTruthy();
     });
 
     it("should show only the version when there is no commit, as in local development", () => {
       vi.stubEnv("VERCEL_GIT_COMMIT_SHA", undefined);
       render(<AboutPage />);
 
-      expect(screen.getByText("Version 1.0.0")).toBeTruthy();
+      expect(screen.getByText("Version 0.5.0")).toBeTruthy();
     });
 
     it("should add no heading and no link", () => {
