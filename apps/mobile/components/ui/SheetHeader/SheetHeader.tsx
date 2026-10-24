@@ -39,7 +39,7 @@ const variants = {
 >;
 
 /**
- * The top of a sheet: a control at the left, a centred title and an optional control at the right, or two.
+ * The top of a sheet: an optional control at the left, a centred title and an optional control at the right, or two.
  * The screen gives the top inset and the header gives the 12 points under it, as the search field's dock
  * gives the 12 above the bottom inset. With two controls on the right the title is centred in the space
  * between the left control and the pair. A control and a slot together draw the control first and the slot
@@ -81,6 +81,14 @@ export function SheetHeader({
     );
   }
 
+  function renderLeading() {
+    if (leading === undefined) {
+      // The same 44 points as the empty slot on the right, so a header with no control at the left still centres its title.
+      return <View className="w-touch-target" testID="sheet-header-leading-empty-slot" />;
+    }
+    return renderControl(leading, look.leadingIconSize);
+  }
+
   function renderTrailing() {
     if (trailing === undefined) {
       // Two slots of one width keep the title in the middle, so a header with no control on the right still centres it.
@@ -103,7 +111,7 @@ export function SheetHeader({
       className={`flex-row items-center gap-2 px-4 pt-3 ${look.className}`}
       testID="sheet-header"
     >
-      {renderControl(leading, look.leadingIconSize)}
+      {renderLeading()}
       {subtitle === undefined ? (
         <Text
           className="flex-1 text-center"

@@ -206,6 +206,70 @@ describe("SheetHeader", () => {
     });
   });
 
+  describe("without a leading control, as the first step of the setup has it", () => {
+    const withoutLeading: SheetHeaderProps = {
+      title: "About you",
+      subtitle: "Step 1 of 8",
+      trailing: undefined,
+    };
+
+    it("should draw no control at all when it has no leading and no trailing control", async () => {
+      await renderHeader(withoutLeading);
+
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "About you" })).toBeOnTheScreen();
+      expect(screen.getByText("Step 1 of 8")).toBeOnTheScreen();
+    });
+
+    it("should keep the empty 44 point slot at the left, so the title stays centred", async () => {
+      await renderHeader(withoutLeading);
+
+      expect(screen.getByTestId("sheet-header-leading-empty-slot")).toHaveStyle({
+        width: touchTarget,
+      });
+      // The two slots are one width, so the title sits in the middle of the header.
+      expect(screen.getByTestId("sheet-header-empty-slot")).toHaveStyle({ width: touchTarget });
+    });
+
+    it("should draw only the close control at the right, as recalculate's first step has", async () => {
+      await renderHeader({
+        ...withoutLeading,
+        trailing: { icon: "X", label: "Close", onPress: () => undefined },
+      });
+
+      expectButtonsInOrder(["Close"]);
+      expect(screen.getByTestId("sheet-header-leading-empty-slot")).toBeOnTheScreen();
+      expect(screen.queryByTestId("sheet-header-empty-slot")).not.toBeOnTheScreen();
+    });
+
+    it("should call the handler of the close control that is pressed", async () => {
+      const user = userEvent.setup();
+      const onClose = jest.fn();
+      await renderHeader({
+        ...withoutLeading,
+        trailing: { icon: "X", label: "Close", onPress: onClose },
+      });
+
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw the empty slot in the stack header too", async () => {
+      await renderHeader({ ...withoutLeading, variant: "stack" });
+
+      expect(screen.getByTestId("sheet-header-leading-empty-slot")).toHaveStyle({
+        width: touchTarget,
+      });
+    });
+
+    it("should draw no empty slot at the left when there is a leading control", async () => {
+      await renderHeader(searchHeader);
+
+      expect(screen.queryByTestId("sheet-header-leading-empty-slot")).not.toBeOnTheScreen();
+    });
+  });
+
   describe("with two trailing controls, as the recipe view has Edit and More", () => {
     const editAndMore = [
       { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },

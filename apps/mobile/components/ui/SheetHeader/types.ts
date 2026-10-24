@@ -24,8 +24,11 @@ export type SheetHeaderProps = {
   /** Defaults to `sheet`. */
   variant?: SheetHeaderVariant;
   title: string;
-  /** Close on the sheet header, back on the stack header. */
-  leading: SheetHeaderControl;
+  /**
+   * Close on the sheet header, back on the stack header. Left out, as the setup's first step has it, the
+   * empty 44 point slot stays so the title keeps its place.
+   */
+  leading?: SheetHeaderControl | undefined;
   /**
    * The optional control on the right: create on the sheet header, close on the stack header. A header
    * can have two, side by side, such as the recipe view's Edit and More. The title then sits in the space
