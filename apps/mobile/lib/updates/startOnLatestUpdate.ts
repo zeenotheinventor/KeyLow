@@ -7,12 +7,10 @@ export type UpdateOutcome =
 
 /**
  * What the caller hears while an update comes down. `onUpdateFound` is called once, before the download
- * starts, so the caller can put up a screen for the wait. `onProgress` follows the download from 0 to 1,
- * and gets a 1 when it is done, just before the restart.
+ * starts, so the caller can make ready to wait for it behind the splash screen.
  */
 export type UpdateCallbacks = {
   onUpdateFound?: () => void;
-  onProgress?: (progress: number) => void;
 };
 
 // How long the check for an update may take. It covers the check only. A slow network misses it, and the
@@ -20,9 +18,9 @@ export type UpdateCallbacks = {
 export const updateCheckTimeoutMilliseconds = 5000;
 
 // How long a download may go without its progress changing. The clock starts with the download and starts
-// again at every change, so a slow download that keeps moving is never cut off. Where the build reports no
-// progress at all, this is the limit on the download as a whole. The download goes on after the app carries
-// on, so the next start has it.
+// again at every change, so a slow download that keeps moving is never cut off, and nothing of the progress
+// is shown. Where the build reports no progress at all, this is the limit on the download as a whole. The
+// download goes on after the app carries on, so the next start has it.
 export const updateStallTimeoutMilliseconds = 15_000;
 
 /**
@@ -93,11 +91,10 @@ export async function startOnLatestUpdate(callbacks: UpdateCallbacks = {}): Prom
 
         latestProgress = context.downloadProgress;
         restartStallTimer();
-        callbacks.onProgress?.(context.downloadProgress);
       });
     } catch {
       // The listener is not part of the documented API, so if it is missing or throws, the download goes on
-      // without progress and the bar stays indeterminate. The stall time then bounds the fetch as a whole.
+      // without progress. The stall time then bounds the fetch as a whole.
     }
     restartStallTimer();
 
@@ -112,7 +109,6 @@ export async function startOnLatestUpdate(callbacks: UpdateCallbacks = {}): Prom
     // running from it. The reload gets a full stall time of its own, so a slow start of the restart does not
     // read as a stall, and a reload that never returns still ends in one.
     restartStallTimer();
-    callbacks.onProgress?.(1);
     await Updates.reloadAsync();
     settle("reloading");
   }

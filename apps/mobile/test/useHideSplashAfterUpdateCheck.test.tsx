@@ -53,12 +53,12 @@ describe("useHideSplashAfterUpdateCheck", () => {
     expect(hideAsync).not.toHaveBeenCalled();
   });
 
-  it("should show no update screen while the check is running", async () => {
+  it("should say the splash screen has not gone while the check is running", async () => {
     holdCheckOpen();
 
     const { result } = await renderUpdateHook();
 
-    expect(result.current.isUpdateScreenShown).toBe(false);
+    expect(result.current).toBe(false);
   });
 
   it.each<UpdateOutcome>(["up-to-date", "timed-out", "failed", "skipped"])(
@@ -70,6 +70,18 @@ describe("useHideSplashAfterUpdateCheck", () => {
       await settleCheck(outcome);
 
       expect(hideAsync).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each<UpdateOutcome>(["up-to-date", "timed-out", "failed", "skipped"])(
+    "should say the splash screen has gone once it has been hidden after the check settles as %s",
+    async (outcome) => {
+      const { settleCheck } = holdCheckOpen();
+      const { result } = await renderUpdateHook();
+
+      await settleCheck(outcome);
+
+      expect(result.current).toBe(true);
     },
   );
 
@@ -104,14 +116,14 @@ describe("useHideSplashAfterUpdateCheck", () => {
       return { ...check, ...rendered };
     }
 
-    it("should show the update screen and keep the splash screen until the screen is laid out", async () => {
+    it("should keep the splash screen up for the whole download, and not say it has gone", async () => {
       const { result } = await renderWithUpdateFound();
 
-      expect(result.current.isUpdateScreenShown).toBe(true);
       expect(hideAsync).not.toHaveBeenCalled();
+      expect(result.current).toBe(false);
     });
 
-    it("should stop the ceiling from hiding the splash screen, as the update screen's layout does it", async () => {
+    it("should stop the ceiling from hiding the splash screen during the download", async () => {
       await renderWithUpdateFound();
 
       expect(cancelSplashHoldCeiling).toHaveBeenCalledTimes(1);
@@ -126,60 +138,25 @@ describe("useHideSplashAfterUpdateCheck", () => {
       expect(cancelSplashHoldCeiling).not.toHaveBeenCalled();
     });
 
-    it("should hide the splash screen once the update screen has been laid out, and only once", async () => {
-      const { result } = await renderWithUpdateFound();
-
-      await act(() => {
-        result.current.handleUpdateScreenLayout();
-        result.current.handleUpdateScreenLayout();
-        return Promise.resolve();
-      });
-
-      expect(hideAsync).toHaveBeenCalledTimes(1);
-    });
-
-    it("should follow the progress of the download", async () => {
-      const { result, callbacks } = await renderWithUpdateFound();
-      expect(result.current.progress).toBeUndefined();
-
-      await act(() => {
-        callbacks().onProgress?.(0.4);
-        return Promise.resolve();
-      });
-
-      expect(result.current.progress).toBe(0.4);
-    });
-
     it.each<UpdateOutcome>(["stalled", "failed", "up-to-date"])(
-      "should remove the update screen and hide the splash screen when the update ends as %s",
+      "should hide the splash screen, once, when the update ends as %s",
       async (outcome) => {
         const { result, settleCheck } = await renderWithUpdateFound();
 
         await settleCheck(outcome);
 
-        expect(result.current.isUpdateScreenShown).toBe(false);
         expect(hideAsync).toHaveBeenCalledTimes(1);
+        expect(result.current).toBe(true);
       },
     );
 
-    it("should hide the splash screen only once when the update ends after the layout", async () => {
-      const { result, settleCheck } = await renderWithUpdateFound();
-      await act(() => {
-        result.current.handleUpdateScreenLayout();
-        return Promise.resolve();
-      });
-
-      await settleCheck("stalled");
-
-      expect(hideAsync).toHaveBeenCalledTimes(1);
-    });
-
-    it("should keep the update screen up while the app reloads", async () => {
+    it("should keep the splash screen up while the app reloads", async () => {
       const { result, settleCheck } = await renderWithUpdateFound();
 
       await settleCheck("reloading");
 
-      expect(result.current.isUpdateScreenShown).toBe(true);
+      expect(hideAsync).not.toHaveBeenCalled();
+      expect(result.current).toBe(false);
     });
   });
 
@@ -192,7 +169,7 @@ describe("useHideSplashAfterUpdateCheck", () => {
       jest.useRealTimers();
     });
 
-    it("should remove the update screen and hide the splash screen after the failsafe", async () => {
+    it("should hide the splash screen after the failsafe, and not a moment before", async () => {
       const check = holdCheckOpen();
       const { result } = await renderUpdateHook();
       await act(() => {
@@ -202,11 +179,11 @@ describe("useHideSplashAfterUpdateCheck", () => {
       await check.settleCheck("reloading");
 
       await act(() => jest.advanceTimersByTimeAsync(reloadFailsafeMilliseconds - 1));
-      expect(result.current.isUpdateScreenShown).toBe(true);
+      expect(hideAsync).not.toHaveBeenCalled();
       await act(() => jest.advanceTimersByTimeAsync(1));
 
-      expect(result.current.isUpdateScreenShown).toBe(false);
       expect(hideAsync).toHaveBeenCalledTimes(1);
+      expect(result.current).toBe(true);
     });
   });
 });

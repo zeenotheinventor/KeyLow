@@ -44,7 +44,7 @@ describe("holdSplashScreen", () => {
     expect(hideAsync).toHaveBeenCalledTimes(1);
   });
 
-  it("should not let go at the ceiling once the ceiling is cancelled, as the update screen takes over", () => {
+  it("should not let go at the ceiling once the ceiling is cancelled, as the download holds the splash screen itself", () => {
     holdSplashScreen();
 
     cancelSplashHoldCeiling();

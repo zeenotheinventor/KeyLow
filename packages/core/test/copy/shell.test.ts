@@ -8,6 +8,7 @@ import {
   SEARCH_LAUNCHER,
   TAB_BAR_LABEL,
   TAB_TITLES,
+  UPDATED_TOAST,
 } from "../../src/copy";
 
 describe("the tab shell copy", () => {
@@ -25,6 +26,10 @@ describe("the tab shell copy", () => {
     expect(TAB_BAR_LABEL).toBe("Main");
     expect(ADD_FOOD_BUTTON_LABEL).toBe("Find food");
     expect(SEARCH_LAUNCHER).toEqual({ label: "Search for a food", scanLabel: "Scan barcode" });
+  });
+
+  it("should pin the toast that says the app has been updated", () => {
+    expect(UPDATED_TOAST).toBe("Ki-Lo has been updated!");
   });
 
   it("should pin the placeholder sentences the boards draw", () => {

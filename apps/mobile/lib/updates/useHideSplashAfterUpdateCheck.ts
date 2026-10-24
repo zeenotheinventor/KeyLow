@@ -9,28 +9,29 @@ import { startOnLatestUpdate } from "./startOnLatestUpdate";
 export const reloadFailsafeMilliseconds = 3000;
 
 /**
- * Hides the splash screen once the check for a newer update has settled, and says whether the update
- * screen is to be shown meanwhile. The root layout holds the splash screen first, which stops the router
- * hiding it.
+ * Hides the splash screen once the check for a newer update has settled, and says when it has gone. The
+ * root layout holds the splash screen first, which stops the router hiding it.
  *
  * When there is no update, or the check fails, the splash screen is hidden at once. When an update is found
- * `isUpdateScreenShown` turns true and `progress` follows the download, from 0 to 1, until the update
- * ends. The splash screen stays up until the update screen calls `handleUpdateScreenLayout`, so there is
- * never a frame of the app or a blank between them. The update ends in a reload, which leaves the update
- * screen up so the user sees it carry on into the new bundle, or in a stall or a failure, which remove the
- * screen and carry on with the bundle the app has. If the reload does not restart the app, the screen goes
- * after a short failsafe too.
+ * the splash screen stays up for the whole download, so the person sees the splash screen and nothing else,
+ * and the ceiling that would otherwise let it go is cancelled. The update ends in a reload, which leaves the
+ * splash screen up so the new bundle starts behind it, or in a stall or a failure, which hide it and carry
+ * on with the bundle the app has. If the reload does not restart the app, the splash screen goes after a
+ * short failsafe too.
+ *
+ * The result is true once the splash screen has been hidden, which is when the app is in view.
  */
-export function useHideSplashAfterUpdateCheck() {
-  const [isUpdateScreenShown, setIsUpdateScreenShown] = useState(false);
-  const [progress, setProgress] = useState<number | undefined>();
+export function useHideSplashAfterUpdateCheck(): boolean {
+  const [isSplashScreenGone, setIsSplashScreenGone] = useState(false);
   const isSplashScreenHidden = useRef(false);
 
-  // The splash screen is hidden once, by whichever comes first: the update screen's layout or the end of the update.
+  // The splash screen is hidden once, by whichever ends the update first.
   const hideSplashScreen = useCallback(() => {
     if (!isSplashScreenHidden.current) {
       isSplashScreenHidden.current = true;
-      void SplashScreen.hideAsync();
+      void SplashScreen.hideAsync().finally(() => {
+        setIsSplashScreenGone(true);
+      });
     }
   }, []);
 
@@ -42,25 +43,13 @@ export function useHideSplashAfterUpdateCheck() {
       onUpdateFound: () => {
         if (!isGone) {
           cancelSplashHoldCeiling();
-          setIsUpdateScreenShown(true);
-        }
-      },
-      onProgress: (downloaded) => {
-        if (!isGone) {
-          setProgress(downloaded);
         }
       },
     }).then((outcome) => {
       if (outcome !== "reloading") {
         hideSplashScreen();
-        if (!isGone) {
-          setIsUpdateScreenShown(false);
-        }
       } else if (!isGone) {
-        failsafe = setTimeout(() => {
-          setIsUpdateScreenShown(false);
-          hideSplashScreen();
-        }, reloadFailsafeMilliseconds);
+        failsafe = setTimeout(hideSplashScreen, reloadFailsafeMilliseconds);
       }
     });
 
@@ -70,5 +59,5 @@ export function useHideSplashAfterUpdateCheck() {
     };
   }, [hideSplashScreen]);
 
-  return { isUpdateScreenShown, progress, handleUpdateScreenLayout: hideSplashScreen };
+  return isSplashScreenGone;
 }
