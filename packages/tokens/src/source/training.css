@@ -6,12 +6,19 @@
    keeps 3:1 on the surface.
    volume: blue under, pale blue maintaining, green productive, red over (productive and over reuse success and danger).
    gap: diverging around the plan; blue behind, neutral on plan, amber ahead.
+   3D body (KEY-589): skin, core, clay (the head) and other-muscle are the 3D body's materials. The dark values are those of
+   the approved renders in tools/body-model/blender/zanatomy_render.py (the heat render's skin, core and clay, and the
+   silhouette it draws the muscles with that have no id). The light values keep the same roles on the light surface.
    v2 (second pass, 2026-10-18): --volume-not-targeted for a muscle the routine and goal do not train (KEY-356),
    drawn close to the silhouette so it reads as left out, not as a status; the gap scale reuses it for "not in your plan".
    The far-behind and far-ahead gap steps are retired: core has three plan statuses (behind, on plan, ahead). */
 :root{
 --body-silhouette:#262D3A;
 --body-separator:#141821;
+--body-skin:#8FA6C8;
+--body-core:#1E2430;
+--body-clay:#B3A79B;
+--body-other-muscle:#262D3A;
 --heat-0:#3A4355;
 --heat-1:#3FA463;
 --heat-2:#C8C13A;
@@ -31,6 +38,10 @@
 [data-theme="light"]{
 --body-silhouette:#E2E6EC;
 --body-separator:#F7F8FA;
+--body-skin:#6F829F;
+--body-core:#848FA4;
+--body-clay:#CDBFB0;
+--body-other-muscle:#E2E6EC;
 --heat-0:#C9CED8;
 --heat-1:#2F8F4E;
 --heat-2:#9E8E19;

@@ -53,6 +53,10 @@ describe("kilo-tokens.css", () => {
     expect(committedScopes[":root"]).toMatchObject({
       "--body-silhouette": "#262D3A",
       "--body-separator": "#141821",
+      "--body-skin": "#8FA6C8",
+      "--body-core": "#1E2430",
+      "--body-clay": "#B3A79B",
+      "--body-other-muscle": "#262D3A",
       "--heat-0": "#3A4355",
       "--heat-1": "#3FA463",
       "--heat-2": "#C8C13A",
@@ -75,6 +79,10 @@ describe("kilo-tokens.css", () => {
     expect(committedScopes['[data-theme="light"]']).toMatchObject({
       "--body-silhouette": "#E2E6EC",
       "--body-separator": "#F7F8FA",
+      "--body-skin": "#6F829F",
+      "--body-core": "#848FA4",
+      "--body-clay": "#CDBFB0",
+      "--body-other-muscle": "#E2E6EC",
       "--heat-0": "#C9CED8",
       "--heat-1": "#2F8F4E",
       "--heat-2": "#9E8E19",

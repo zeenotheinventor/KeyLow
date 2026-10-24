@@ -2,8 +2,12 @@
 
 exports[`body map colour contrast on the surface > should record the ratio of every body map colour in the dark theme, with no threshold for the rest 1`] = `
 {
+  "body-clay": 7.54,
+  "body-core": 1.14,
+  "body-other-muscle": 1.28,
   "body-separator": 1,
   "body-silhouette": 1.28,
+  "body-skin": 7.15,
   "gap-ahead": 8.7,
   "gap-behind": 6.08,
   "gap-on-plan": 2.9,
@@ -24,8 +28,12 @@ exports[`body map colour contrast on the surface > should record the ratio of ev
 
 exports[`body map colour contrast on the surface > should record the ratio of every body map colour in the light theme, with no threshold for the rest 1`] = `
 {
+  "body-clay": 1.69,
+  "body-core": 3.07,
+  "body-other-muscle": 1.18,
   "body-separator": 1,
   "body-silhouette": 1.18,
+  "body-skin": 3.68,
   "gap-ahead": 4.44,
   "gap-behind": 5.61,
   "gap-on-plan": 1.83,

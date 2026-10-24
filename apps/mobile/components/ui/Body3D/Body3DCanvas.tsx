@@ -1,27 +1,45 @@
 /* eslint-disable react/no-unknown-property -- react-three-fiber elements take three.js props, which the DOM rule does not know */
-import testShape from "@keylow/body-3d/fixtures/quantised-cube.glb";
-import { Canvas, useFrame } from "@react-three/fiber/native";
-import { Suspense, use, useMemo, useRef } from "react";
+import { BODY_FIELD_OF_VIEW_DEGREES, BODY_LIGHTING, dressBody, frameBody } from "@keylow/body-3d";
+import maleBody from "@keylow/body-model/male.glb";
+import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
+import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 
 import { bundledModel } from "./bundledModel";
 
-// The camera looks down the z axis at the middle of the 3 by 1.5 test shape. The vertical field of view
-// is wide because the canvas is tall and narrow, and the shape has to fit its width.
-const CAMERA = { position: [0, 0, 7] as const, fov: 65 };
-
-// Turned a little off the front, so the boxes show their sides and the draw is plainly 3D.
-const SHAPE_ROTATION = [0.35, -0.5, 0] as const;
-const SHAPE_POSITION = [0, -0.75, 0] as const;
+import type { Body3DCanvasProps } from "./types";
+import type { BodyColours } from "@keylow/body-3d";
 
 function BodyMeshes({
-  color,
+  colours,
   onFirstFrame,
 }: {
-  color: string;
+  colours: BodyColours;
   onFirstFrame?: (() => void) | undefined;
 }) {
-  const { meshes } = use(bundledModel(testShape));
+  const model = use(bundledModel(maleBody));
+  const camera = useThree((state) => state.camera);
+  const invalidate = useThree((state) => state.invalidate);
+  const aspect = useThree((state) => state.size.width / state.size.height);
   const hasReportedFrame = useRef(false);
+  const { muscle, otherMuscle, core, clay, skin } = colours;
+  // A copy of the meshes for each canvas, with its own geometry and materials. Two canvases on screen then do
+  // not share a material, and no renderer is left listening on a geometry that outlives it.
+  const dressed = useMemo(
+    () => dressBody(model, { muscle, otherMuscle, core, clay, skin }),
+    [model, muscle, otherMuscle, core, clay, skin],
+  );
+  useEffect(
+    () => () => {
+      dressed.dispose();
+    },
+    [dressed],
+  );
+  // The whole body, head to feet, whatever the shape of the view. It looks straight along the z axis, which is where R3F points the camera.
+  useLayoutEffect(() => {
+    camera.position.set(...frameBody(dressed.box, aspect));
+    camera.updateProjectionMatrix();
+    invalidate();
+  }, [camera, dressed, aspect, invalidate]);
   // The meshes are in the scene by now, so the first frame that runs is the first one that draws them.
   useFrame(() => {
     if (!hasReportedFrame.current) {
@@ -29,41 +47,34 @@ function BodyMeshes({
       onFirstFrame?.();
     }
   });
-  // A copy for each canvas, so two on screen do not take the meshes from one another or share a material.
-  const copies = useMemo(
-    () => [...meshes].map(([name, mesh]) => [name, mesh.clone()] as const),
-    [meshes],
-  );
 
-  return (
-    <group position={SHAPE_POSITION} rotation={SHAPE_ROTATION}>
-      {copies.map(([name, mesh]) => (
-        <primitive key={name} object={mesh}>
-          <meshStandardMaterial attach="material" color={color} />
-        </primitive>
-      ))}
-    </group>
-  );
+  return <primitive object={dressed.group} />;
 }
 
 /**
- * The GL view: a transparent canvas, a fixed camera, a soft light and the meshes in one colour. The
- * native canvas always draws at the device's pixel ratio, because expo-gl cannot render at any other,
- * so it takes no `dpr` to cap at 2.
+ * The GL view: a transparent canvas, a camera that frames the body, two lights and the male body at rest. It draws
+ * with no tone mapping, so the colours are the tokens'. The native canvas always draws at the device's pixel ratio,
+ * because expo-gl cannot render at any other, so it takes no `dpr` to cap at 2.
  */
-export function Body3DCanvas({
-  color,
-  onFirstFrame,
-}: {
-  color: string;
-  onFirstFrame?: (() => void) | undefined;
-}) {
+export function Body3DCanvas({ colours, scheme, onFirstFrame, onError }: Body3DCanvasProps) {
+  const lighting = BODY_LIGHTING[scheme];
   return (
-    <Canvas camera={CAMERA} frameloop="demand">
-      <ambientLight intensity={1.2} />
-      <directionalLight intensity={1.4} position={[2, 4, 5]} />
+    <Canvas
+      camera={{ fov: BODY_FIELD_OF_VIEW_DEGREES }}
+      flat
+      frameloop="demand"
+      onCreated={({ gl }) => {
+        // A shader that cannot be linked is only logged by three.js, which then draws nothing. This sends it to
+        // the caller, so the 2D figure stays. It replaces three's own log, and the log would carry no health data.
+        gl.debug.onShaderError = () => {
+          onError?.();
+        };
+      }}
+    >
+      <ambientLight intensity={lighting.ambientIntensity} />
+      <directionalLight intensity={lighting.keyIntensity} position={lighting.keyPosition} />
       <Suspense fallback={null}>
-        <BodyMeshes color={color} onFirstFrame={onFirstFrame} />
+        <BodyMeshes colours={colours} onFirstFrame={onFirstFrame} />
       </Suspense>
     </Canvas>
   );

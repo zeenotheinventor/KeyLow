@@ -1,2 +1,10 @@
+export { BODY_FIELD_OF_VIEW_DEGREES, frameBody } from "./frameBody";
+export type { CameraPosition } from "./frameBody";
+export { bodyMaterials } from "./bodyMaterials";
+export type { BodyColours, BodyMaterials } from "./bodyMaterials";
+export { BODY_LIGHTING } from "./bodyLighting";
+export type { BodyLighting, BodyLightingScheme } from "./bodyLighting";
+export { dressBody } from "./dressBody";
+export type { DressedBody } from "./dressBody";
 export { loadBodyModel } from "./loadBodyModel";
 export type { BodyModel } from "./types";

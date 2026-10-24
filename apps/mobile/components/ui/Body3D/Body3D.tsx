@@ -14,15 +14,26 @@ const DRAWING_WIDTH = 200;
 const DRAWING_HEIGHT = 440;
 
 /**
- * The body in 3D, drawn with GL. For now it draws a test shape in the resting grey of the body map,
- * which the real body replaces. It is one image with the label. It draws nothing while the model loads,
+ * The male body in 3D, drawn with GL: every muscle at rest in the resting grey of the body map, seen through
+ * a faint skin, with a clay head. It is one image with the label. It draws nothing while the model loads,
  * and nothing if GL or the model fails. `onFirstFrame` tells the caller the body is on the screen, and
  * `onError` that it will not be.
  */
 export function Body3D({ label, w, onFirstFrame, onError }: Body3DProps) {
   const { scheme } = useTheme();
   const palette = bodyMapPalette(scheme);
-  const canvas = body3DCanvasElement(palette.silhouette, onFirstFrame);
+  const canvas = body3DCanvasElement({
+    colours: {
+      muscle: palette.silhouette,
+      otherMuscle: palette.otherMuscle,
+      core: palette.core,
+      clay: palette.clay,
+      skin: palette.skin,
+    },
+    scheme,
+    onFirstFrame,
+    onError,
+  });
   const isCanvasMissing = canvas === null;
 
   useEffect(() => {

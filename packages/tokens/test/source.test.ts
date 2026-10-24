@@ -43,6 +43,10 @@ describe("the training additions", () => {
   const expectedNames = [
     "body-silhouette",
     "body-separator",
+    "body-skin",
+    "body-core",
+    "body-clay",
+    "body-other-muscle",
     "heat-0",
     "heat-1",
     "heat-2",

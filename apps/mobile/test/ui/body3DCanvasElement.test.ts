@@ -13,6 +13,11 @@ describe("body3DCanvasElement", () => {
   it("should be null when the canvas module cannot be read, as on a build without expo-gl", () => {
     mockCanvasModuleThrows = true;
 
-    expect(body3DCanvasElement("silhouette")).toBeNull();
+    expect(
+      body3DCanvasElement({
+        colours: { muscle: "a", otherMuscle: "b", core: "c", clay: "d", skin: "e" },
+        scheme: "dark",
+      }),
+    ).toBeNull();
   });
 });

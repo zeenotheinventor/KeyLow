@@ -41,9 +41,9 @@ jest.mock("expo", () => {
 
 // GL does not run in Jest, and the canvas module brings in three, which Jest does not transform. Whether
 // the 3D code is read at all is checked in BodyViewLazy.test.tsx.
-const mockCanvas = jest.fn<null, [{ color: string; onFirstFrame?: () => void }]>(() => null);
+const mockCanvas = jest.fn<null, [{ onFirstFrame?: () => void }]>(() => null);
 jest.mock("../components/ui/Body3D/Body3DCanvas", () => ({
-  Body3DCanvas: (props: { color: string; onFirstFrame?: () => void }) => mockCanvas(props),
+  Body3DCanvas: (props: { onFirstFrame?: () => void }) => mockCanvas(props),
 }));
 
 const label = "Body map, front";

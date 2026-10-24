@@ -1,1 +1,1 @@
-export const storyStates = ["Default", "Wide"];
+export const storyStates = ["AtRest", "Wide"];

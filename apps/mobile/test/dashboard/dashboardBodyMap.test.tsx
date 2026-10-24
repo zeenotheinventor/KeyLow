@@ -184,6 +184,10 @@ describe("DashboardBodyMap", () => {
       seedCachedRows();
       await renderCard();
       expect(await screen.findByText("Warmest: lats 9 %", hidden)).toBeOnTheScreen();
+      // A new day reads the sets from a new start day, and the fake backend has no sets to answer it with, so
+      // that read would fail whenever it settled before the assertion. It stays on its way, so the rows
+      // already cached stand in and only the clock changes.
+      diaryBackend.hungTables.add("workout_sets");
 
       await moveClockTo("2026-10-16T16:55:00Z");
 

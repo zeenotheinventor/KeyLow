@@ -7,6 +7,7 @@ import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
 import type { Body3DProps } from "../../components/ui";
+import type { Body3DCanvasProps } from "../../components/ui/Body3D/types";
 import type { ThemeScheme } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -16,12 +17,12 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 // GL does not run in Jest, and the canvas module brings in three, which Jest does not transform. The canvas
 // is stood in for, so the test reaches the component's own markup and what it hands to the canvas.
-const mockCanvas = jest.fn<null, [{ color: string; onFirstFrame?: () => void }]>(() => null);
+const mockCanvas = jest.fn<null, [Body3DCanvasProps]>(() => null);
 jest.mock("../../components/ui/Body3D/Body3DCanvas", () => ({
-  Body3DCanvas: (props: { color: string; onFirstFrame?: () => void }) => mockCanvas(props),
+  Body3DCanvas: (props: Body3DCanvasProps) => mockCanvas(props),
 }));
 
-const label = "Body, 3D test shape";
+const label = "Body, male, 3D";
 
 function renderBody(props: Partial<Body3DProps> = {}, scheme: ThemeScheme = "dark") {
   return render(
@@ -57,13 +58,32 @@ describe("Body3D", () => {
   });
 
   it.each<ThemeScheme>(["dark", "light"])(
-    "should draw in the silhouette colour of the %s theme",
+    "should give the canvas the body colours of the %s theme, from the tokens",
     async (scheme) => {
+      const palette = bodyMapPalette(scheme);
+
       await renderBody({}, scheme);
 
       expect(mockCanvas).toHaveBeenCalledWith(
-        expect.objectContaining({ color: bodyMapPalette(scheme).silhouette }),
+        expect.objectContaining({
+          colours: {
+            muscle: palette.silhouette,
+            otherMuscle: palette.otherMuscle,
+            core: palette.core,
+            clay: palette.clay,
+            skin: palette.skin,
+          },
+        }),
       );
+    },
+  );
+
+  it.each<ThemeScheme>(["dark", "light"])(
+    "should light the body for the %s theme",
+    async (scheme) => {
+      await renderBody({}, scheme);
+
+      expect(mockCanvas).toHaveBeenCalledWith(expect.objectContaining({ scheme }));
     },
   );
 

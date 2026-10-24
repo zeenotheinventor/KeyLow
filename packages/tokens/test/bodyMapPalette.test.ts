@@ -9,6 +9,10 @@ describe("bodyMapPalette", () => {
     expect(bodyMapPalette("dark")).toEqual({
       silhouette: "#262D3A",
       separator: "#141821",
+      skin: "#8FA6C8",
+      core: "#1E2430",
+      clay: "#B3A79B",
+      otherMuscle: "#262D3A",
       heat: ["#3A4355", "#3FA463", "#C8C13A", "#E5A13A", "#EE6E36", "#F04848"],
       heatGlow: "rgba(240,72,72,0.55)",
       volume: {
@@ -31,6 +35,10 @@ describe("bodyMapPalette", () => {
     expect(bodyMapPalette("light")).toEqual({
       silhouette: "#E2E6EC",
       separator: "#F7F8FA",
+      skin: "#6F829F",
+      core: "#848FA4",
+      clay: "#CDBFB0",
+      otherMuscle: "#E2E6EC",
       heat: ["#C9CED8", "#2F8F4E", "#9E8E19", "#BE7E19", "#CF5A26", "#C9313A"],
       heatGlow: "rgba(201,49,58,0.35)",
       volume: {
