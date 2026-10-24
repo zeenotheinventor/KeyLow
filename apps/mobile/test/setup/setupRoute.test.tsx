@@ -2,6 +2,7 @@ import { KeyLowProvider } from "@keylow/api-client";
 import { cleanup, render, screen } from "@testing-library/react-native";
 
 import SetupRoute from "../../app/setup";
+import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient } from "../support/diaryBackend";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
@@ -27,7 +28,9 @@ async function renderRoute() {
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={setupClient} queryClient={createDiaryQueryClient()}>
-        <SetupRoute />
+        <ToastProvider>
+          <SetupRoute />
+        </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );

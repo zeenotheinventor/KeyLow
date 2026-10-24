@@ -1,6 +1,14 @@
-import { KeyLowProvider } from "@keylow/api-client";
+import { KeyLowProvider, keys } from "@keylow/api-client";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, render, screen, userEvent } from "@testing-library/react-native";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 
 import { TargetsScreen } from "../components/TargetsScreen";
 import { ToastProvider } from "../components/ui";
@@ -16,7 +24,9 @@ import {
 } from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
+import { expectAccessibleNamesInOrder } from "./support/namesInOrder";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { pressTwiceInTheSameMoment } from "./support/sameTickPress";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -339,6 +349,118 @@ describe("the Targets screen", () => {
     });
   });
 
+  describe("the Estimate my targets row", () => {
+    const estimateRow = () =>
+      screen.getByRole("button", {
+        name: "Estimate my targets, From a few questions about you and your goal",
+      });
+
+    it("should come before the Calories field and Save in reading order, after Back", async () => {
+      await renderLoadedTargets();
+
+      expectAccessibleNamesInOrder(
+        screen.getAllByRole("button").filter((button) => button.props.role === "button"),
+        ["Back", "Estimate my targets, From a few questions about you and your goal", "Save"],
+      );
+      expectAccessibleNamesInOrder(screen.getAllByLabelText(/^(Estimate my targets|Calories)/), [
+        "Estimate my targets, From a few questions about you and your goal",
+        "Calories (kcal)",
+      ]);
+    });
+
+    it("should scroll with the fields, as the board draws it", async () => {
+      await renderLoadedTargets();
+
+      const scrollView = screen.root?.queryAll((node) => node.type === "RCTScrollView")[0];
+
+      if (scrollView === undefined) {
+        throw new Error("The form has no scroll view");
+      }
+      expect(
+        within(scrollView).getByRole("button", {
+          name: "Estimate my targets, From a few questions about you and your goal",
+        }),
+      ).toBeOnTheScreen();
+      expect(within(scrollView).getByLabelText("Calories (kcal)")).toBeOnTheScreen();
+    });
+
+    it("should say what it does under its title", async () => {
+      await renderLoadedTargets();
+
+      expect(screen.getByText("Estimate my targets")).toBeOnTheScreen();
+      expect(screen.getByText("From a few questions about you and your goal")).toBeOnTheScreen();
+    });
+
+    it("should be there when no target is set yet", async () => {
+      diaryBackend.targets = noTargets;
+
+      await renderLoadedTargets();
+
+      expect(estimateRow()).toBeOnTheScreen();
+    });
+
+    it("should open the wizard in recalculate mode", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+
+      await user.press(estimateRow());
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith("/setup?mode=recalculate");
+    });
+
+    it("should open the wizard once when it is pressed twice before the screen has moved", async () => {
+      await renderLoadedTargets();
+
+      await pressTwiceInTheSameMoment(estimateRow());
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+    });
+
+    it("should leave the fields as they were", async () => {
+      await renderLoadedTargets();
+
+      expect(calories()).toHaveDisplayValue("2200");
+      expect(save()).toBeEnabled();
+    });
+  });
+
+  describe("when the stored targets change under the screen", () => {
+    // What a recalculation does: the wizard saves over this screen, which stays mounted under it, and the
+    // targets are read again.
+    async function refetchTargets() {
+      await act(() => queryClient.invalidateQueries({ queryKey: keys.profiles.targets }));
+    }
+
+    it("should show the new numbers in the fields, so a Save does not write the old ones back", async () => {
+      await renderLoadedTargets();
+      expect(calories()).toHaveDisplayValue("2200");
+      diaryBackend.targets = { ...diaryBackend.targets, target_kcal: 1970 };
+
+      await refetchTargets();
+
+      await waitFor(() => {
+        expect(calories()).toHaveDisplayValue("1970");
+      });
+      expect(protein()).toHaveDisplayValue("160");
+    });
+
+    it("should keep what is typed when the targets are read again with the same numbers", async () => {
+      const user = userEvent.setup();
+      await renderLoadedTargets();
+      await user.clear(calories());
+      await user.type(calories(), "2400");
+      const readsBefore = requestsTo("profiles");
+
+      await refetchTargets();
+
+      await waitFor(() => {
+        expect(requestsTo("profiles")).toBeGreaterThan(readsBefore);
+      });
+      expect(calories()).toHaveDisplayValue("2400");
+    });
+  });
+
   describe("offline", () => {
     it("should say so and disable Save", async () => {
       await renderLoadedTargets();
@@ -359,6 +481,11 @@ describe("the Targets screen", () => {
 
       expect(screen.getByRole("heading", { name: "Targets" })).toBeOnTheScreen();
       expect(screen.queryByLabelText("Calories (kcal)")).not.toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", {
+          name: "Estimate my targets, From a few questions about you and your goal",
+        }),
+      ).not.toBeOnTheScreen();
     });
 
     it("should offer Try again when the targets cannot be read", async () => {
@@ -366,6 +493,11 @@ describe("the Targets screen", () => {
       diaryBackend.targetsReadFails = true;
       await renderTargets();
       await screen.findByText("Something went wrong. Try again.");
+      expect(
+        screen.queryByRole("button", {
+          name: "Estimate my targets, From a few questions about you and your goal",
+        }),
+      ).not.toBeOnTheScreen();
 
       diaryBackend.targetsReadFails = false;
       await user.press(screen.getByRole("button", { name: "Try again" }));
