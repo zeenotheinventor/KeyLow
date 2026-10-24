@@ -1,24 +1,30 @@
 import { useSetupState } from "@keylow/api-client";
 import { SETUP_GROUP_TITLES, SETUP_QUESTIONS } from "@keylow/core/copy";
-import { entryWeightUnit, previousStep } from "@keylow/core/setup";
+import { entryWeightUnit, isRateGoal, previousStep } from "@keylow/core/setup";
 import { getLocales } from "expo-localization";
 import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback } from "react";
 import { BackHandler } from "react-native";
 
-import { describeStepProgress, isStepComplete } from "./setupDraftReducer";
+import { allowedGoalsOf, describeStepProgress, isStepComplete } from "./setupDraftReducer";
 import { SetupShell } from "./SetupShell";
+import { ActivityStep } from "./steps/ActivityStep";
 import { BirthDateStep } from "./steps/BirthDateStep";
 import { BodyStep } from "./steps/BodyStep";
+import { DietStep } from "./steps/DietStep";
+import { GoalStep } from "./steps/GoalStep";
+import { ProteinStep } from "./steps/ProteinStep";
+import { RateStep } from "./steps/RateStep";
 import { SexStep } from "./steps/SexStep";
 import { useSetupDraft } from "./useSetupDraft";
 import { useToday } from "./useToday";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 import type { SetupScreenProps } from "./types";
-import type { SetupStep } from "@keylow/core/setup";
+import type { SetupDraft, SetupStep } from "@keylow/core/setup";
 
-function questionWordsOf(step: SetupStep) {
+// The rate is only asked for a goal that moves the weight, and its question names the direction.
+function questionWordsOf(step: SetupStep, draft: SetupDraft) {
   switch (step) {
     case "sex":
       return SETUP_QUESTIONS.sex;
@@ -26,15 +32,25 @@ function questionWordsOf(step: SetupStep) {
       return SETUP_QUESTIONS.birthDate;
     case "body":
       return SETUP_QUESTIONS.body;
-    default:
+    case "activity":
+      return SETUP_QUESTIONS.activity;
+    case "goal":
+      return SETUP_QUESTIONS.goal;
+    case "rate":
+      return isRateGoal(draft.goal) ? SETUP_QUESTIONS.rate[draft.goal] : undefined;
+    case "protein":
+      return SETUP_QUESTIONS.protein;
+    case "diet":
+      return SETUP_QUESTIONS.diet;
+    case "estimate":
       return undefined;
   }
 }
 
 /**
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
- * loses none, and the saved answers are read once the Terms are accepted. The steps after the height and
- * weight are not built yet and draw only the header and the progress bar.
+ * loses none, and the saved answers are read once the Terms are accepted. The estimate is not built yet
+ * and draws only the header and the progress bar.
  */
 export function SetupScreen({ mode }: SetupScreenProps) {
   const router = useRouter();
@@ -82,7 +98,10 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   );
 
   const progress = describeStepProgress(draft, step);
-  const words = questionWordsOf(step);
+  const words = questionWordsOf(step, draft);
+  // Until the saved answers arrive the draft has no unit, and the fields start from the stored one or the region's.
+  const weightUnit =
+    draft.weightUnit ?? entryWeightUnit(setupState.data?.stats.weightUnit ?? null, regionCode);
 
   function renderStep() {
     switch (step) {
@@ -112,17 +131,65 @@ export function SetupScreen({ mode }: SetupScreenProps) {
             today={today}
             weighInDate={state.weightFromWeighInOn}
             weightKg={draft.weightKg}
-            // Until the saved answers arrive the draft has no unit, and the fields start from the stored one or the region's.
-            weightUnit={
-              draft.weightUnit ??
-              entryWeightUnit(setupState.data?.stats.weightUnit ?? null, regionCode)
-            }
+            weightUnit={weightUnit}
             onChange={(body) => {
               dispatch({ type: "bodyChanged", ...body });
             }}
           />
         );
-      default:
+      case "activity":
+        return (
+          <ActivityStep
+            value={draft.activity}
+            onChange={(activity) => {
+              dispatch({ type: "activityChosen", activity });
+            }}
+          />
+        );
+      case "goal":
+        return (
+          <GoalStep
+            allowedGoals={allowedGoalsOf(draft, today)}
+            value={draft.goal}
+            onChange={(goal) => {
+              dispatch({ type: "goalChosen", goal });
+            }}
+          />
+        );
+      case "rate":
+        // The rate is only reached with a goal that moves the weight and the weight from step 3, which
+        // Continue on those steps makes sure of, so this only narrows the types.
+        return !isRateGoal(draft.goal) || draft.weightKg === undefined ? null : (
+          <RateStep
+            goal={draft.goal}
+            value={draft.ratePctPerWeek}
+            weightKg={draft.weightKg}
+            weightUnit={weightUnit}
+            onChange={(ratePctPerWeek) => {
+              dispatch({ type: "rateChosen", ratePctPerWeek });
+            }}
+          />
+        );
+      case "protein":
+        return draft.weightKg === undefined ? null : (
+          <ProteinStep
+            value={draft.proteinPreset}
+            weightKg={draft.weightKg}
+            onChange={(proteinPreset) => {
+              dispatch({ type: "proteinChosen", proteinPreset });
+            }}
+          />
+        );
+      case "diet":
+        return (
+          <DietStep
+            value={draft.dietStyle}
+            onChange={(dietStyle) => {
+              dispatch({ type: "dietChosen", dietStyle });
+            }}
+          />
+        );
+      case "estimate":
         return null;
     }
   }

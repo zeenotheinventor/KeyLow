@@ -1,7 +1,7 @@
 import { DEFAULT_RATE_PCT_PER_WEEK } from "./presets";
 import { GOALS } from "./types";
 
-import type { SetupDraft, SetupGoal } from "./types";
+import type { RateGoal, SetupDraft, SetupGoal } from "./types";
 
 const ADULT_AGE_YEARS = 18;
 
@@ -11,6 +11,11 @@ const ADULT_AGE_YEARS = 18;
  */
 export function goalsAllowed(ageYears: number): readonly SetupGoal[] {
   return ageYears >= ADULT_AGE_YEARS ? GOALS : GOALS.filter((goal) => goal !== "lose");
+}
+
+/** Whether the goal is asked a rate: lose and gain are, maintain and no goal yet are not. */
+export function isRateGoal(goal: SetupGoal | undefined): goal is RateGoal {
+  return goal === "lose" || goal === "gain";
 }
 
 /**

@@ -3,18 +3,32 @@ import { ageInYears } from "@keylow/core/dates";
 import {
   checkBirthDate,
   checkHeightCm,
+  DEFAULT_DIET_STYLE,
+  DEFAULT_PROTEIN_PRESET,
+  DEFAULT_RATE_PCT_PER_WEEK,
+  goalsAllowed,
   heightUnitFor,
+  isRateGoal,
+  nearestRatePreset,
   nextStep,
   previousStep,
   progressFraction,
+  RATE_PRESETS_PCT_PER_WEEK,
   resetGoalForAge,
   stepCount,
   stepNumber,
+  withGoal,
 } from "@keylow/core/setup";
 import { checkWeightKg } from "@keylow/core/weight";
 
-import type { Sex } from "@keylow/core/engine";
-import type { SetupDraft, SetupStep } from "@keylow/core/setup";
+import type { ActivityLevel, Sex } from "@keylow/core/engine";
+import type {
+  DietStyle,
+  ProteinPreset,
+  SetupDraft,
+  SetupGoal,
+  SetupStep,
+} from "@keylow/core/setup";
 import type { WeightDisplayUnit } from "@keylow/core/weight";
 
 /**
@@ -22,8 +36,12 @@ import type { WeightDisplayUnit } from "@keylow/core/weight";
  * have joined the draft, which happens once. `hasEditedBirthDate` is true once the person has typed in the
  * birth date fields, so a saved birth date that arrives later does not come in under what they typed.
  * `hasEditedBody` is the same for the height, the weight and the units, and `weightFromWeighInOn` is the
- * date of the weigh-in the weight in the draft came from, until the weight changes.
+ * date of the weigh-in the weight in the draft came from, until the weight changes. `unchosenDefaults`
+ * lists the answers that arriving at a step filled in with its default and that the person has not
+ * pressed, which a saved answer that arrives later may still replace.
  */
+export type DefaultedAnswer = "proteinPreset" | "dietStyle";
+
 export type SetupWizardState = Readonly<{
   draft: SetupDraft;
   step: SetupStep;
@@ -31,6 +49,7 @@ export type SetupWizardState = Readonly<{
   hasEditedBirthDate: boolean;
   hasEditedBody: boolean;
   weightFromWeighInOn: string | undefined;
+  unchosenDefaults: readonly DefaultedAnswer[];
 }>;
 
 /**
@@ -55,6 +74,11 @@ export type SetupWizardAction =
       today: string;
       weighInDate?: string | undefined;
     }>
+  | Readonly<{ type: "activityChosen"; activity: ActivityLevel }>
+  | Readonly<{ type: "goalChosen"; goal: SetupGoal }>
+  | Readonly<{ type: "rateChosen"; ratePctPerWeek: number }>
+  | Readonly<{ type: "proteinChosen"; proteinPreset: ProteinPreset }>
+  | Readonly<{ type: "dietChosen"; dietStyle: DietStyle }>
   | Readonly<{ type: "continued"; today: string }>
   | Readonly<{ type: "wentBack" }>;
 
@@ -65,12 +89,14 @@ export const initialSetupWizardState: SetupWizardState = {
   hasEditedBirthDate: false,
   hasEditedBody: false,
   weightFromWeighInOn: undefined,
+  unchosenDefaults: [],
 };
 
 /**
- * Whether the person has answered this step so that Continue is live. A step that is not built yet has
- * no way to be answered, so it is not complete. A saved height can be outside the bounds, so the body step
- * checks both numbers again.
+ * Whether the person has answered this step so that Continue is live. The estimate is not a question, so it
+ * is never complete. A saved height can be outside the bounds, so the body step checks both numbers again,
+ * and a saved rate can be off the presets, so the rate step does too, though arriving at it has already
+ * snapped it.
  */
 export function isStepComplete(draft: SetupDraft, step: SetupStep, today: string): boolean {
   switch (step) {
@@ -85,8 +111,75 @@ export function isStepComplete(draft: SetupDraft, step: SetupStep, today: string
         draft.weightKg !== undefined &&
         checkWeightKg(draft.weightKg).ok
       );
-    default:
+    case "activity":
+      return draft.activity !== undefined;
+    case "goal":
+      return draft.goal !== undefined;
+    case "rate":
+      return (
+        draft.goal !== undefined &&
+        draft.ratePctPerWeek !== undefined &&
+        RATE_PRESETS_PCT_PER_WEEK[draft.goal].includes(draft.ratePctPerWeek)
+      );
+    case "protein":
+      return draft.proteinPreset !== undefined;
+    case "diet":
+      return draft.dietStyle !== undefined;
+    case "estimate":
       return false;
+  }
+}
+
+/**
+ * The goals offered to this person. Step 2 cannot be passed without a birth date, so it is there by the
+ * goal step. Without one, Lose is not offered, which is the safe side.
+ */
+export function allowedGoalsOf(draft: SetupDraft, today: string): readonly SetupGoal[] {
+  return goalsAllowed(draft.birthDate === undefined ? 0 : ageInYears(draft.birthDate, today));
+}
+
+/**
+ * The state as the step being arrived at needs it. The rate, the protein preset and the diet style each
+ * have a default that is chosen on arrival, so Continue is live and the answer is in the draft. A rate that
+ * is not a preset of the goal, such as a saved one from a program written elsewhere, snaps to the nearest.
+ * A rate is only asked for a goal that moves the weight. Nothing is chosen for the activity or the goal.
+ * A default is not an answer the person gave, so the protein preset and the diet style it fills are noted
+ * in `unchosenDefaults`.
+ */
+function withDefaultsFor(state: SetupWizardState, step: SetupStep): SetupWizardState {
+  const { draft, unchosenDefaults } = state;
+  switch (step) {
+    case "rate":
+      return isRateGoal(draft.goal)
+        ? {
+            ...state,
+            draft: {
+              ...draft,
+              ratePctPerWeek: nearestRatePreset(
+                draft.goal,
+                draft.ratePctPerWeek ?? DEFAULT_RATE_PCT_PER_WEEK[draft.goal],
+              ),
+            },
+          }
+        : state;
+    case "protein":
+      return draft.proteinPreset === undefined
+        ? {
+            ...state,
+            draft: { ...draft, proteinPreset: DEFAULT_PROTEIN_PRESET },
+            unchosenDefaults: [...unchosenDefaults, "proteinPreset"],
+          }
+        : state;
+    case "diet":
+      return draft.dietStyle === undefined
+        ? {
+            ...state,
+            draft: { ...draft, dietStyle: DEFAULT_DIET_STYLE },
+            unchosenDefaults: [...unchosenDefaults, "dietStyle"],
+          }
+        : state;
+    default:
+      return state;
   }
 }
 
@@ -143,7 +236,16 @@ function withSavedAnswers(
     delete savedToUse.weightUnit;
     delete savedToUse.heightUnit;
   }
-  const merged: SetupDraft = { ...savedToUse, ...state.draft };
+  // A default filled in on arrival is not an answer the person gave, so a saved answer replaces it.
+  const replacesDefault: SetupDraft = {
+    ...(state.unchosenDefaults.includes("proteinPreset") && savedToUse.proteinPreset !== undefined
+      ? { proteinPreset: savedToUse.proteinPreset }
+      : {}),
+    ...(state.unchosenDefaults.includes("dietStyle") && savedToUse.dietStyle !== undefined
+      ? { dietStyle: savedToUse.dietStyle }
+      : {}),
+  };
+  const merged: SetupDraft = { ...savedToUse, ...state.draft, ...replacesDefault };
   const draft =
     merged.birthDate === undefined
       ? merged
@@ -152,6 +254,7 @@ function withSavedAnswers(
     ...state,
     draft,
     hasLoadedSavedAnswers: true,
+    unchosenDefaults: [],
     weightFromWeighInOn: savedToUse.weightKg === undefined ? undefined : weighInDate,
   };
 }
@@ -179,11 +282,29 @@ export function setupWizardReducer(
       };
     case "savedAnswersLoaded":
       return state.hasLoadedSavedAnswers ? state : withSavedAnswers(state, action);
+    case "activityChosen":
+      return { ...state, draft: { ...state.draft, activity: action.activity } };
+    case "goalChosen":
+      return { ...state, draft: withGoal(state.draft, action.goal) };
+    case "rateChosen":
+      return { ...state, draft: { ...state.draft, ratePctPerWeek: action.ratePctPerWeek } };
+    case "proteinChosen":
+      return {
+        ...state,
+        draft: { ...state.draft, proteinPreset: action.proteinPreset },
+        unchosenDefaults: state.unchosenDefaults.filter((answer) => answer !== "proteinPreset"),
+      };
+    case "dietChosen":
+      return {
+        ...state,
+        draft: { ...state.draft, dietStyle: action.dietStyle },
+        unchosenDefaults: state.unchosenDefaults.filter((answer) => answer !== "dietStyle"),
+      };
     case "continued": {
       const step = nextStep(state.draft, state.step);
       return step === undefined || !isStepComplete(state.draft, state.step, action.today)
         ? state
-        : { ...state, step };
+        : { ...withDefaultsFor(state, step), step };
     }
     case "wentBack": {
       const step = previousStep(state.draft, state.step);

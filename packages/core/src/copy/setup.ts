@@ -19,6 +19,7 @@ import type {
   HeightInputReason,
   HeightUnit,
   ProteinPreset,
+  RateGoal,
   SetupGoal,
   SetupStep,
 } from "../setup";
@@ -64,7 +65,7 @@ type Question = Readonly<{ question: string; helper: string }>;
 type SetupQuestions = Readonly<
   Record<"sex" | "birthDate" | "body" | "activity" | "goal" | "protein" | "diet", Question> & {
     /** The rate is only asked for a goal that moves the weight, and its question names the direction. */
-    rate: Readonly<Record<Exclude<SetupGoal, "maintain">, Question>>;
+    rate: Readonly<Record<RateGoal, Question>>;
   }
 >;
 
@@ -181,7 +182,7 @@ export type SetupRateOption = Readonly<{
 }>;
 
 const rateOptions = (
-  goal: Exclude<SetupGoal, "maintain">,
+  goal: RateGoal,
   words: ReadonlyArray<readonly [ratePctPerWeek: number, description: string]>,
 ): readonly SetupRateOption[] =>
   words.map(([ratePctPerWeek, description]) => ({
@@ -191,9 +192,7 @@ const rateOptions = (
   }));
 
 /** The rate cards, in the order drawn. Maintain skips the step. */
-export const SETUP_RATE_OPTIONS: Readonly<
-  Record<Exclude<SetupGoal, "maintain">, readonly SetupRateOption[]>
-> = {
+export const SETUP_RATE_OPTIONS: Readonly<Record<RateGoal, readonly SetupRateOption[]>> = {
   lose: rateOptions("lose", [
     [0.25, "Gentle, and easy to keep up."],
     [0.5, "A steady pace."],
@@ -296,6 +295,17 @@ export const describeRateAmount = (
   unit: WeightDisplayUnit,
 ): string => `${weeklyAmountNumber(ratePerWeekKg(ratePctPerWeek, weightKg), unit)} ${unit}`;
 
+/** What a screen reader says for a rate's weekly amount: "about 0.4 kilograms a week", in the person's unit. */
+export const describeRateAmountInWords = (
+  ratePctPerWeek: number,
+  weightKg: number,
+  unit: WeightDisplayUnit,
+): string => {
+  const unitInWords = unit === "kg" ? "kilograms" : "pounds";
+  const amount = weeklyAmountNumber(ratePerWeekKg(ratePctPerWeek, weightKg), unit);
+  return `about ${amount} ${unitInWords} ${SETUP_PER_WEEK}`;
+};
+
 /**
  * What a screen reader says for a rate card, as in "0.5% a week, suggested, a steady pace, about 0.4 kilograms
  * a week": the title, "suggested" when it is the default, the line under it and the weekly amount in words.
@@ -304,16 +314,13 @@ export const describeRateOptionName = (
   option: SetupRateOption,
   weightKg: number,
   unit: WeightDisplayUnit,
-): string => {
-  const unitInWords = unit === "kg" ? "kilograms" : "pounds";
-  const amount = weeklyAmountNumber(ratePerWeekKg(option.ratePctPerWeek, weightKg), unit);
-  return [
+): string =>
+  [
     describeRateTitle(option.ratePctPerWeek),
     ...(option.suggested ? ["suggested"] : []),
     asPhrase(option.description),
-    `about ${amount} ${unitInWords} ${SETUP_PER_WEEK}`,
+    describeRateAmountInWords(option.ratePctPerWeek, weightKg, unit),
   ].join(", ");
-};
 
 /** A protein preset's grams a day for this weight, whole grams in either unit: "128 g". */
 export const describeProteinGrams = (preset: ProteinPreset, weightKg: number): string =>

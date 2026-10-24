@@ -23,6 +23,10 @@ export const samples: Record<string, () => string[]> = {
     copy.describeRateAmount(0.5, 80, "kg"),
     copy.describeRateAmount(0.5, 80, "lb"),
   ],
+  describeRateAmountInWords: () => [
+    copy.describeRateAmountInWords(0.5, 80, "kg"),
+    copy.describeRateAmountInWords(0.5, 80, "lb"),
+  ],
   describeRateOptionName: () =>
     [loseRate, gainRate].flatMap((option) =>
       option === undefined

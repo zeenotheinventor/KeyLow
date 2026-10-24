@@ -6,6 +6,7 @@ import {
   DEFAULT_RATE_PCT_PER_WEEK,
   DIET_FAT_FRACTION_OF_REMAINDER,
   PROTEIN_G_PER_KG,
+  nearestRatePreset,
   RATE_PRESETS_PCT_PER_WEEK,
   ratePerWeekKg,
 } from "../../src/setup";
@@ -63,4 +64,46 @@ describe("ratePerWeekKg", () => {
   ])("should turn %s percent of %s kg into %s kg a week", (ratePct, weightKg, expected) => {
     expect(ratePerWeekKg(ratePct, weightKg)).toBe(expected);
   });
+});
+
+describe("nearestRatePreset", () => {
+  it.each([
+    ["lose", 0.25, 0.25],
+    ["lose", 0.5, 0.5],
+    ["lose", 0.75, 0.75],
+    ["lose", 1.0, 1.0],
+    ["gain", 0.1, 0.1],
+    ["gain", 0.25, 0.25],
+    ["gain", 0.5, 0.5],
+    ["maintain", 0, 0],
+  ] as const)("should give a preset of %s, %s, back as itself", (goal, ratePct, expected) => {
+    expect(nearestRatePreset(goal, ratePct)).toBe(expected);
+  });
+
+  it.each([
+    ["lose", 0.6, 0.5],
+    ["lose", 0.7, 0.75],
+    ["lose", 0.3, 0.25],
+    ["lose", 2.0, 1.0],
+    ["lose", 0, 0.25],
+    ["gain", 0.4, 0.5],
+    ["gain", 0.2, 0.25],
+    ["gain", 0.12, 0.1],
+    ["maintain", 0.3, 0],
+  ] as const)("should snap %s, %s to the preset %s", (goal, ratePct, expected) => {
+    expect(nearestRatePreset(goal, ratePct)).toBe(expected);
+  });
+
+  it.each([
+    ["lose", 0.375, 0.25],
+    ["lose", 0.625, 0.5],
+    ["lose", 0.875, 0.75],
+    ["gain", 0.175, 0.1],
+    ["gain", 0.375, 0.25],
+  ] as const)(
+    "should send %s, %s, which is halfway between two presets, to the slower one, %s",
+    (goal, ratePct, expected) => {
+      expect(nearestRatePreset(goal, ratePct)).toBe(expected);
+    },
+  );
 });
