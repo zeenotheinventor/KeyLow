@@ -906,6 +906,24 @@ describe("listMyTargetsHistory", () => {
     expect(history.map((row) => row.caloriesKcal)).toEqual([2170, 2140]);
   });
 
+  it("should keep a row that held for no days when asked to, in its place among the rows of that day", async () => {
+    installProgramFake(server, {
+      programs: [programRow()],
+      targets: [
+        closedRow("2026-10-23", "2026-10-30", 2170),
+        closedRow("2026-10-30", "2026-10-30", 1999),
+        closedRow("2026-10-30", null, 2140),
+      ],
+    });
+
+    const history = await listMyTargetsHistory(createTestClient(), {
+      fromDate: "2026-10-01",
+      keepZeroDayRows: true,
+    });
+
+    expect(history.map((row) => row.caloriesKcal)).toEqual([2170, 1999, 2140]);
+  });
+
   describe("which row is current", () => {
     it("should mark the open row current while the program is active", async () => {
       installProgramFake(server, {

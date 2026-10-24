@@ -1,6 +1,7 @@
 import { PROGRAM_SCREEN } from "@keylow/core/copy";
-import { Text as NativeText, View } from "react-native";
+import { View } from "react-native";
 
+import { CountingNumeral } from "./CountingNumeral";
 import { Badge, Card, Text } from "../../ui";
 
 import type { ExpenditureHeroCardProps } from "./types";
@@ -10,8 +11,9 @@ import type { ExpenditureHeroCardProps } from "./types";
  * eyebrow with the Estimate badge, and the Settling badge beside it while the estimate is still the starting
  * one, the whole kilocalories in the 40 point numeral of the Trend weight card, the likely range, and a line
  * about where the estimate comes from. The card is named by its figure and its range, as the Weight screen's is.
+ * On the first open after a new check-in the figure counts up from the estimate before it (see `CountingNumeral`).
  */
-export function ExpenditureHeroCard({ view }: ExpenditureHeroCardProps) {
+export function ExpenditureHeroCard({ view, arrival }: ExpenditureHeroCardProps) {
   return (
     <Card aria-label={view.name}>
       <View className="gap-1">
@@ -27,10 +29,7 @@ export function ExpenditureHeroCard({ view }: ExpenditureHeroCardProps) {
           </View>
         </View>
         <View className="flex-row items-baseline gap-1">
-          {/* The design sets the figure at 40 over 46, which is between the type scale's sizes, as the Trend weight card's is. */}
-          <NativeText className="text-[40px] font-semibold leading-[46px] tracking-[-0.02em] tabular-nums text-text-primary">
-            {view.kcalText}
-          </NativeText>
+          <CountingNumeral arrival={arrival} muKcal={view.muKcal} />
           <Text tone="secondary">{PROGRAM_SCREEN.hero.unit}</Text>
         </View>
         <Text className="tabular-nums">{view.rangeText}</Text>

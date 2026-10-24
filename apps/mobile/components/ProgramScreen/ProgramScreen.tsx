@@ -1,28 +1,42 @@
 import { PROGRAM_ERROR, PROGRAM_SCREEN } from "@keylow/core/copy";
 import { useRouter } from "expo-router";
 import { vars } from "nativewind";
+import { useEffect } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { CheckinSummaryCard } from "./CheckinSummaryCard";
 import { ExpenditureHeroCard } from "./ExpenditureHeroCard";
 import { NoProgramView } from "./NoProgramView";
 import { SettlingChecklist } from "./SettlingChecklist";
 import { useProgramScreen } from "./useProgramScreen";
 import { WeekTargetsCard } from "./WeekTargetsCard";
 import { YourProgramme } from "./YourProgramme";
+import { useCheckinArrival } from "../../lib/checkinSeen";
+import { haptic } from "../../lib/haptics";
 import { ErrorState, SheetHeader, Skeleton, Text } from "../ui";
 
 /**
  * The Programme screen, pushed inside the More tab so the tab bar stays: the header with Back, then the
- * estimate, what the first check-in needs while settling, this week's targets and the programme's own settings,
- * or the no-program, loading and error boards.
- * The estimate says it is an estimate, and the screen ends with the not-medical-advice line. The cards the
- * check-in, the chart, the explainer and the edit add come with their own screens.
+ * estimate, what the first check-in needs while settling, this week's targets, what the last check-in changed
+ * and the programme's own settings, or the no-program, loading and error boards.
+ * The estimate says it is an estimate, and the screen ends with the not-medical-advice line. The chart, the
+ * explainer and the edit come with their own screens.
+ * The first open after a new check-in (remembered per device by its date) counts the estimate up from the one
+ * before, flashes the accent, cuts the check-in card in and plays the complete haptic, once.
  */
 export function ProgramScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const state = useProgramScreen();
+  const { isRead: isCheckinRead, isNew: isCheckinNew } = useCheckinArrival(
+    state.status === "program" ? (state.view.checkin?.date ?? null) : null,
+  );
+  useEffect(() => {
+    if (isCheckinNew) {
+      void haptic.complete();
+    }
+  }, [isCheckinNew]);
 
   function goBack() {
     // A cold link to this screen has nothing before it, so Back goes to More instead.
@@ -33,20 +47,27 @@ export function ProgramScreen() {
     }
   }
 
+  const loadingBody = (
+    <View
+      accessible
+      aria-label={PROGRAM_SCREEN.loadingName}
+      aria-live="polite"
+      className="flex-1 px-4 pt-1"
+      role="status"
+    >
+      <Skeleton variant="program" />
+    </View>
+  );
+
   function renderBody() {
+    // The hero reads its arrival when it is mounted, so the programme waits for the device's answer. This matters
+    // when the programme is already held, as it is when the screen is opened from More. An unreadable store answers too.
+    if (state.status === "program" && !isCheckinRead) {
+      return loadingBody;
+    }
     switch (state.status) {
       case "loading":
-        return (
-          <View
-            accessible
-            aria-label={PROGRAM_SCREEN.loadingName}
-            aria-live="polite"
-            className="flex-1 px-4 pt-1"
-            role="status"
-          >
-            <Skeleton variant="program" />
-          </View>
-        );
+        return loadingBody;
       case "error":
         return (
           <View className="flex-1 pb-16">
@@ -59,20 +80,32 @@ export function ProgramScreen() {
         );
       case "no-program":
         return <NoProgramView ownTargetKcal={state.ownTargetKcal} />;
-      case "program":
+      case "program": {
+        const { checkin, hero } = state.view;
         return (
           <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-6 pt-1">
-            <ExpenditureHeroCard view={state.view.hero} />
+            <ExpenditureHeroCard
+              arrival={
+                isCheckinNew && checkin !== null
+                  ? { fromKcal: checkin.previousMuKcal ?? hero.muKcal }
+                  : null
+              }
+              view={hero}
+            />
             {state.view.settlingChecklist === null ? null : (
               <SettlingChecklist {...state.view.settlingChecklist} />
             )}
             {state.view.targets === null ? null : <WeekTargetsCard view={state.view.targets} />}
+            {checkin === null ? null : (
+              <CheckinSummaryCard {...checkin.card} isArriving={isCheckinNew} />
+            )}
             <YourProgramme rows={state.view.details} />
             <Text className="px-1" tone="muted" variant="caption">
               {PROGRAM_SCREEN.notMedicalAdvice}
             </Text>
           </ScrollView>
         );
+      }
     }
   }
 

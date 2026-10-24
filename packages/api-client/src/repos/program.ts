@@ -319,13 +319,15 @@ export async function listMyExpenditureSnapshots(
 /**
  * The signed in user's targets rows whose range touches `fromDate` (`YYYY-MM-DD`) and every day after,
  * oldest first: the rows that ended after it, and the open row. A row that ended on `fromDate` is out,
- * because its end is exclusive. A row that held for no days is left out. `isCurrent` is true only for an
+ * because its end is exclusive. A row that held for no days is left out, unless `keepZeroDayRows` is true:
+ * a check-in's row that an edit replaced on the same day held for no days, and is the only record of that
+ * check-in's targets. It then stands before the row that replaced it. `isCurrent` is true only for an
  * open row while a program is active (see `TargetsRow`), which is why the active program is read as
  * well. A `fromDate` that is not a calendar date throws a `RangeError` before any request.
  */
 export async function listMyTargetsHistory(
   client: SupabaseClient<Database>,
-  { fromDate }: { fromDate: string },
+  { fromDate, keepZeroDayRows = false }: { fromDate: string; keepZeroDayRows?: boolean },
 ): Promise<TargetsRow[]> {
   assertCalendarDay(fromDate);
   const action = "load your targets history";
@@ -351,7 +353,7 @@ export async function listMyTargetsHistory(
   const programIsActive = program.data !== null;
 
   return targets.data
-    .filter((row) => !heldForNoDays(row))
+    .filter((row) => keepZeroDayRows || !heldForNoDays(row))
     .map((row) => toTargetsRow(row, programIsActive, action));
 }
 

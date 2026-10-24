@@ -5,6 +5,7 @@ import {
   CALORIE_GOALS,
   CLAMPS,
   DEFAULT_ENGINE_PARAMS,
+  calorieFloorKcal,
   deriveCalorieTarget,
   deriveTargets,
   effectiveRatePctPerWeek,
@@ -14,6 +15,16 @@ import {
 } from "../../src/engine";
 
 import type { CalorieGoal, Clamp, DayOfWeekKcal } from "../../src/engine";
+
+describe("calorieFloorKcal", () => {
+  it("should be 90 percent of the BMR when that is above 1,200 kcal: 1,579.5 for the golden BMR of 1,755", () => {
+    expect(calorieFloorKcal(1755, DEFAULT_ENGINE_PARAMS)).toBe(1579.5);
+  });
+
+  it("should be 1,200 kcal when 90 percent of the BMR is below it", () => {
+    expect(calorieFloorKcal(926.5, DEFAULT_ENGINE_PARAMS)).toBe(1200);
+  });
+});
 
 describe("the CalorieGoal and Clamp lists", () => {
   it("should list the three goals", () => {

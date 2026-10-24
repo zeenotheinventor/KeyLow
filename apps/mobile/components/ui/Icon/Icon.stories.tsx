@@ -108,6 +108,8 @@ export const Tones: Story = {
       <View className="rounded-small bg-warning-muted p-2">
         <Icon {...args} tone="warning" />
       </View>
+      {/* The warning ink is the warning colour in dark and the primary text colour in light, beside warning words. */}
+      <Icon {...args} tone="warning-ink" />
       <View className="rounded-small bg-danger-muted p-2">
         <Icon {...args} tone="danger" />
       </View>

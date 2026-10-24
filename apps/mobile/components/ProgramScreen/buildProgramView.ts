@@ -29,6 +29,7 @@ import {
 import type {
   BuildProgramViewInput,
   CheckInRowView,
+  CheckinView,
   ExpenditureHeroView,
   MacroTilesView,
   ProgramDetailRow,
@@ -122,7 +123,7 @@ export function buildProgramView({
 
   const hero: ExpenditureHeroView = {
     name: describeExpenditureHeroName(band),
-    kcalText: formatCalories(band.muKcal),
+    muKcal: band.muKcal,
     rangeText: describeLikelyRange(band),
     captionText:
       settling || latestSnapshot === null
@@ -170,7 +171,20 @@ export function buildProgramView({
       ? { firstCheckinDate, daysLeft, today }
       : null;
 
-  return { hero, settlingChecklist, targets, details: detailsOf(program, weightKg, unit) };
+  const checkin: CheckinView | null =
+    latestSnapshot?.kind === "checkin"
+      ? {
+          date: latestSnapshot.asOfDate,
+          previousMuKcal: previousSnapshot?.muKcal ?? null,
+          card: {
+            snapshot: latestSnapshot,
+            programStartedOn: program.startedOn,
+            unit,
+          },
+        }
+      : null;
+
+  return { hero, checkin, settlingChecklist, targets, details: detailsOf(program, weightKg, unit) };
 }
 
 function detailsOf(

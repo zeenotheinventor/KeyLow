@@ -50,6 +50,7 @@ export type { RecomputeBasis, RecomputeInput, RecomputeTargetsRow } from "./reco
 export { bmrMifflinStJeor, initialExpenditure } from "./initialExpenditure";
 export type { BmrInput, InitialExpenditure, InitialExpenditureInput } from "./initialExpenditure";
 export {
+  calorieFloorKcal,
   deriveCalorieTarget,
   deriveTargets,
   effectiveRatePctPerWeek,

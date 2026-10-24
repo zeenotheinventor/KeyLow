@@ -532,6 +532,11 @@ describe("keys.program", () => {
   it("should key each history by its number of weeks, so two ranges never share an entry", () => {
     expect(keys.program.expenditureHistory(12)).toEqual(["program", "expenditure-history", 12]);
     expect(keys.program.targetsHistory(12)).toEqual(["program", "targets-history", 12]);
+    expect(keys.program.targetsHistoryWithZeroDayRows(12)).toEqual([
+      "program",
+      "targets-history-with-zero-day-rows",
+      12,
+    ]);
     expect(keys.program.expenditureHistory(12)).not.toEqual(keys.program.expenditureHistory(26));
     expect(keys.program.targetsHistory(12)).not.toEqual(keys.program.targetsHistory(26));
     expect(keys.program.expenditureHistory(12)).not.toEqual(keys.program.targetsHistory(12));
@@ -542,6 +547,7 @@ describe("keys.program", () => {
       keys.program.summary,
       keys.program.expenditureHistory(12),
       keys.program.targetsHistory(12),
+      keys.program.targetsHistoryWithZeroDayRows(12),
     ]) {
       expect(key.slice(0, 1)).toEqual(keys.program.all);
     }
