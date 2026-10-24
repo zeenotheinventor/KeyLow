@@ -8,6 +8,9 @@ import type { SetupClamp } from "./profileRange";
 export const GOALS = CALORIE_GOALS;
 export type SetupGoal = CalorieGoal;
 
+/** A goal that moves the weight, which is the only kind that is asked a rate. Maintain skips it. */
+export type RateGoal = Exclude<SetupGoal, "maintain">;
+
 export const HEIGHT_UNITS = ["cm", "ft_in"] as const;
 export type HeightUnit = (typeof HEIGHT_UNITS)[number];
 

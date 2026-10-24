@@ -31,6 +31,8 @@ describe("the setup module", () => {
       "entryWeightUnit",
       "goalsAllowed",
       "heightUnitFor",
+      "isRateGoal",
+      "nearestRatePreset",
       "nextStep",
       "parseHeightInput",
       "previousStep",

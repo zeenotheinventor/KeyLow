@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { defaultGoalForAge, goalsAllowed, resetGoalForAge, withGoal } from "../../src/setup";
+import {
+  defaultGoalForAge,
+  goalsAllowed,
+  isRateGoal,
+  resetGoalForAge,
+  withGoal,
+} from "../../src/setup";
 
 describe("goalsAllowed", () => {
   it("should not offer lose at 17", () => {
@@ -85,5 +91,20 @@ describe("resetGoalForAge", () => {
   it("should leave a draft with no goal alone", () => {
     const answers = { sex: "female" } as const;
     expect(resetGoalForAge(answers, 17)).toBe(answers);
+  });
+});
+
+describe("isRateGoal", () => {
+  it("should be true for lose and gain, which are asked a rate", () => {
+    expect(isRateGoal("lose")).toBe(true);
+    expect(isRateGoal("gain")).toBe(true);
+  });
+
+  it("should be false for maintain, which skips the rate", () => {
+    expect(isRateGoal("maintain")).toBe(false);
+  });
+
+  it("should be false while no goal is chosen", () => {
+    expect(isRateGoal(undefined)).toBe(false);
   });
 });

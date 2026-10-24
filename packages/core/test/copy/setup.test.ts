@@ -36,6 +36,7 @@ import {
   describeSetupOptionName,
   describeProteinGrams,
   describeRateAmount,
+  describeRateAmountInWords,
   describeRateLine,
   describeRateOptionName,
   describeRateTitle,
@@ -531,6 +532,12 @@ describe("setup: rate · lose", () => {
 
   it("should show 0.08 kg as 0.1 kg", () => {
     expect(describeRateAmount(0.1, 80.0, "kg")).toBe("0.1 kg");
+  });
+
+  it("should say a weekly amount in words for a screen reader, in the person's unit", () => {
+    expect(describeRateAmountInWords(0.5, 80.0, "kg")).toBe("about 0.4 kilograms a week");
+    expect(describeRateAmountInWords(0.5, 80.0, "lb")).toBe("about 0.9 pounds a week");
+    expect(describeRateAmountInWords(0.1, 80.0, "kg")).toBe("about 0.1 kilograms a week");
   });
 });
 

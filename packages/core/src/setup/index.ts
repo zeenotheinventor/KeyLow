@@ -1,6 +1,6 @@
 export { checkBirthDate, MAX_AGE_YEARS, MIN_AGE_YEARS } from "./birthDate";
 export type { BirthDateReason, BirthDateResult } from "./birthDate";
-export { defaultGoalForAge, goalsAllowed, resetGoalForAge, withGoal } from "./goals";
+export { defaultGoalForAge, goalsAllowed, isRateGoal, resetGoalForAge, withGoal } from "./goals";
 export {
   centimetresToFeetAndInches,
   checkHeightCm,
@@ -20,6 +20,7 @@ export {
   DEFAULT_PROTEIN_PRESET,
   DEFAULT_RATE_PCT_PER_WEEK,
   DIET_FAT_FRACTION_OF_REMAINDER,
+  nearestRatePreset,
   PROTEIN_G_PER_KG,
   RATE_PRESETS_PCT_PER_WEEK,
   ratePerWeekKg,
@@ -42,6 +43,7 @@ export type {
   DietStyle,
   HeightUnit,
   ProteinPreset,
+  RateGoal,
   SetupAnswers,
   SetupDraft,
   SetupGoal,
