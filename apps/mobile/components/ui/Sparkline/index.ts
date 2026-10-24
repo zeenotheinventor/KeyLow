@@ -1,2 +1,2 @@
 export { Sparkline } from "./Sparkline";
-export type { SparklineProps, SparklineTone } from "./types";
+export type { SparklineProps, SparklineSize, SparklineTone } from "./types";

@@ -29,13 +29,21 @@ const oneDecimal = (kilograms: number): string => (Math.round(kilograms * 10) / 
  * The Trend weight card of the Weight screen, with the range control and the chart under it. The card
  * says where the trend stands: the weekly rate, or "Settling" while the trend has too few readings, the
  * trend to one decimal and a line about the last weigh-in. The range is held here, starts on 90 days and is
- * not kept. A range only chooses which days are drawn, because the trend is worked out once from every
+ * not kept, unless the screen gives one (`range` with `onRangeChange`) so that one control also drives the
+ * Body composition cards. A range only chooses which days are drawn, because the trend is worked out once from every
  * weigh-in and never again for a range. The screen reads the weigh-ins and works the trend out, and gives
  * both to the card: a card that read them itself would be a second reader of the whole history, and would
  * read it again as it appeared.
  */
-export function WeightTrendCard({ weighIns, trend, today }: WeightTrendCardProps) {
-  const [range, setRange] = useState<WeightRange>(DEFAULT_RANGE);
+export function WeightTrendCard({
+  weighIns,
+  trend,
+  today,
+  range: givenRange,
+  onRangeChange,
+}: WeightTrendCardProps) {
+  const [ownRange, setOwnRange] = useState<WeightRange>(DEFAULT_RANGE);
+  const range = givenRange ?? ownRange;
 
   const chart = useMemo(
     () => prepareWeightChart({ points: trend.points, weighIns, range, today }),
@@ -86,7 +94,9 @@ export function WeightTrendCard({ weighIns, trend, today }: WeightTrendCardProps
         options={rangeOptions}
         value={String(range)}
         onChange={(next) => {
-          setRange(WEIGHT_RANGES.find((option) => String(option) === next) ?? DEFAULT_RANGE);
+          const picked = WEIGHT_RANGES.find((option) => String(option) === next) ?? DEFAULT_RANGE;
+          setOwnRange(picked);
+          onRangeChange?.(picked);
         }}
       />
       <WeightChart

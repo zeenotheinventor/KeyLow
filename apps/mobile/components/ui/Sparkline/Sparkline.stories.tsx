@@ -55,3 +55,13 @@ export const NegativeTone: Story = {
 
 // A row that says it in words hides the line from a screen reader.
 export const Decorative: Story = { args: { decorative: true } };
+
+// 128 by 40 points with a 4 point inset, a 2 point line and a dot ringed in the surface colour, as the Body
+// composition cards draw it. A daily series, with the front padded with nulls, places the line by date.
+export const Wide: Story = {
+  args: {
+    size: "wide",
+    points: [null, null, null, 23.4, 23.2, 23.3, 23.0, 22.8, 22.9, 22.6, 22.5, 22.4],
+    label: "Body fat over the last 90 days, trend 22.4 %",
+  },
+};

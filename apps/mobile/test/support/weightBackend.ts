@@ -6,6 +6,8 @@ import type { Database } from "@keylow/api-client";
 
 type Row = Record<string, unknown>;
 
+type BodyKind = "body_fat_pct" | "lean_mass_kg";
+
 /** What the database holds for the Weight screen and how it answers, which a test changes between renders. */
 export const weightBackend: {
   /** The live `weigh_ins` rows, newest first, as the list reads them. */
@@ -34,6 +36,14 @@ export const weightBackend: {
   deletedIds: string[];
   /** Makes an update find no manual row to change, as one for an imported or already deleted row does. */
   updatesMatchNoRow: boolean;
+  /** The live `body_measurements` rows of both kinds, as the lists read them. */
+  bodyMeasurements: Row[];
+  /** A kind set to true fails its reads with a database error. */
+  bodyReadsFail: Record<BodyKind, boolean>;
+  /** A kind set to true never answers its reads. */
+  bodyReadsHang: Record<BodyKind, boolean>;
+  /** The number of requests made for each kind. */
+  bodyRequestCount: Record<BodyKind, number>;
 } = {
   weighIns: [],
   timeZone: "Europe/London",
@@ -48,6 +58,10 @@ export const weightBackend: {
   updatedRows: [],
   deletedIds: [],
   updatesMatchNoRow: false,
+  bodyMeasurements: [],
+  bodyReadsFail: { body_fat_pct: false, lean_mass_kg: false },
+  bodyReadsHang: { body_fat_pct: false, lean_mass_kg: false },
+  bodyRequestCount: { body_fat_pct: 0, lean_mass_kg: 0 },
 };
 
 export function resetWeightBackend(): void {
@@ -64,6 +78,10 @@ export function resetWeightBackend(): void {
   weightBackend.updatedRows = [];
   weightBackend.deletedIds = [];
   weightBackend.updatesMatchNoRow = false;
+  weightBackend.bodyMeasurements = [];
+  weightBackend.bodyReadsFail = { body_fat_pct: false, lean_mass_kg: false };
+  weightBackend.bodyReadsHang = { body_fat_pct: false, lean_mass_kg: false };
+  weightBackend.bodyRequestCount = { body_fat_pct: 0, lean_mass_kg: 0 };
 }
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -101,6 +119,23 @@ export function weighInRow({
     weight_kg: weightKg,
     source,
     note,
+  };
+}
+
+let bodyRowCount = 0;
+
+/** A body measurement as the lists read it from the database. */
+export function bodyMeasurementRow(kind: BodyKind, localDate: string, value: number): Row {
+  bodyRowCount += 1;
+
+  return {
+    id: `88888888-8888-4888-8888-${String(bodyRowCount).padStart(12, "0")}`,
+    kind,
+    measured_at: `${localDate}T07:00:00+00:00`,
+    local_date: localDate,
+    tz: "Europe/London",
+    value,
+    source: "health_connect",
   };
 }
 
@@ -205,6 +240,23 @@ async function answerWeighInUpdate(
   return jsonResponse(stored, 200);
 }
 
+async function answerBodyMeasurementRead(searchParams: URLSearchParams): Promise<Response> {
+  const kind = (searchParams.get("kind") ?? "").replace("eq.", "");
+  if (kind !== "body_fat_pct" && kind !== "lean_mass_kg") {
+    return jsonResponse({ message: "unexpected body measurement kind" }, 404);
+  }
+  weightBackend.bodyRequestCount[kind] += 1;
+  if (weightBackend.bodyReadsHang[kind]) {
+    return new Promise(() => undefined);
+  }
+  if (weightBackend.bodyReadsFail[kind]) {
+    return databaseFailure();
+  }
+  const rows = weightBackend.bodyMeasurements.filter((row) => row.kind === kind);
+
+  return jsonResponse(pageOf(rows, searchParams));
+}
+
 function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
   const address = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const { pathname, searchParams } = new URL(address);
@@ -238,6 +290,8 @@ function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<R
         return Promise.resolve(databaseFailure());
       }
       return Promise.resolve(jsonResponse(pageOf(weightBackend.weighIns, searchParams)));
+    case "body_measurements":
+      return answerBodyMeasurementRead(searchParams);
     default:
       return Promise.resolve(
         jsonResponse({ message: `unexpected request: ${init?.method ?? "GET"}` }, 404),
