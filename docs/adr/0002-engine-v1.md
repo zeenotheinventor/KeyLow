@@ -394,7 +394,7 @@ Index 0 is Monday and 6 is Sunday. They are checked as `programs.dow_offsets_kca
 
 ### `run-checkin`
 
-`POST`, JSON, idempotent on `(user_id, as_of_date)`. `run-checkin` reads `weigh_ins` with `deleted_at is null`.
+`POST`, JSON, idempotent on `(user_id, as_of_date)`. `run-checkin` reads `weigh_ins` with `deleted_at is null`. It reads the weigh-ins from 90 days before the diary days start so that the trend has warmed up, and it refuses a weigh-in read of 1000 rows or more, which is about 6 readings a day over that window, so a heavier smart-scale history would need paging.
 
 **The gateway.** KEY-612, which creates the function, adds `[functions.run-checkin]` to `config.toml` with `verify_jwt = false`, and the `import_map` and `entrypoint` lines, as `off-product` has. The backstop carries no JWT, so the gateway cannot check one. The modes that need a user call `requireUser` from `_shared/auth.ts`.
 
@@ -405,6 +405,8 @@ Index 0 is Monday and 6 is Sunday. They are checked as `programs.dow_offsets_kca
 - `{ mode: 'backstop' }` with the header `x-checkin-secret` runs every due user and answers 200 `{ users, ran, failed }`. `users` counts the users handled, `ran` the check-ins recorded and `failed` the users that failed. One run handles at most the oldest 200 due users, and the hourly cadence drains the rest. A user who fails every hour stays among the oldest, so 200 such users could hold the rest back: unreachable at today's scale, and a later amendment can order failed users last.
 - A missing or invalid JWT in `due` or `recompute` answers 401.
 - With no active program, `due` and `recompute` answer 409 `no_program`. With missing stats they answer 409 `missing_stats` ("The prior for an account with no stats").
+
+In `due` mode, `missing_stats` is answered only when a check-in is due, so a call with nothing due answers `{ ran: 0, nextCheckinDate }` whatever the profile holds. `recompute` always needs the stats, and the backstop only visits users who are due.
 
 **The backstop credential.** `x-checkin-secret` is compared in constant time with the function secret `CHECKIN_CRON_SECRET`. The mode answers 401 when `CHECKIN_CRON_SECRET` is unset or empty, so it fails closed, and when the header is missing or wrong. The backstop takes no `Authorization` header. A JWT is never the backstop credential, and the secret is never accepted in the other modes.
 

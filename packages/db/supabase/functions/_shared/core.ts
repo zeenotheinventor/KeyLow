@@ -1,8 +1,34 @@
 // Functions import @keylow/core through this file, never through ./core/index.js directly. The
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
-export type { EdgeError, EdgeErrorCode, OffProductResponse } from "./core/index.js";
+export type {
+  CheckinInput,
+  CheckinProgram,
+  CheckinResult,
+  DayInput,
+  DayLogRow,
+  DayTotalRow,
+  EdgeError,
+  EdgeErrorCode,
+  ExpenditureBelief,
+  OffProductResponse,
+  ProfileStats,
+  RunCheckinErrorCode,
+  RunCheckinResponse,
+  TrendInput,
+} from "./core/index.js";
 export {
+  addCalendarDays,
+  checkinStep,
+  dueCheckinDates,
+  localToday,
+  nextAfter,
+  profileBmr,
+  requireStats,
+  runCheckinRequestSchema,
+  runCheckinResponseSchema,
+  toDayInputs,
+  toDayOfWeekKcal,
   isBeforePortionRules,
   normaliseBarcode,
   normaliseOffCandidate,
