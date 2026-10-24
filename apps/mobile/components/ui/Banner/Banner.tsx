@@ -15,6 +15,11 @@ import type { TextTone } from "../Text";
 // with the words in a text colour, because a status colour is not text in light (Q14). The review
 // variant's title and action are `warning-ink`, which is warning in dark and the primary text colour in
 // light. The quiet variants are the raised surface with a hairline border.
+
+// The boards' `t-bs c-ink` with an underline: lime in dark and the primary text colour in light.
+const quietActionClassName =
+  "text-body-strong font-semibold tabular-nums underline text-accent-ink";
+
 const variants: Record<
   BannerVariant,
   {
@@ -23,6 +28,10 @@ const variants: Record<
     icon: IconName;
     iconTone: IconTone;
     titleTone: TextTone;
+    // The quiet variants are the M3 boards' notice: 12 points all round, the sentence in regular body
+    // text, and the action in strong body text, underlined, in the accent ink. The others keep the design
+    // system card's look, which no board redraws.
+    isQuiet: boolean;
     actionClassName: string;
     role: "alert" | "status" | "note";
     // The alert role alone does not announce on mount on Android, so a failure is a live region too.
@@ -35,7 +44,8 @@ const variants: Record<
     icon: "CircleAlert",
     iconTone: "warning",
     titleTone: "warning-ink",
-    actionClassName: "text-warning-ink",
+    isQuiet: false,
+    actionClassName: "text-[14px] font-semibold leading-[20px] tabular-nums text-warning-ink",
     role: "note",
   },
   error: {
@@ -44,7 +54,8 @@ const variants: Record<
     icon: "CircleAlert",
     iconTone: "danger",
     titleTone: "primary",
-    actionClassName: toneClassName.primary,
+    isQuiet: false,
+    actionClassName: `text-[14px] font-semibold leading-[20px] tabular-nums ${toneClassName.primary}`,
     role: "alert",
     liveRegion: "assertive",
   },
@@ -54,7 +65,8 @@ const variants: Record<
     icon: "WifiOff",
     iconTone: "secondary",
     titleTone: "primary",
-    actionClassName: toneClassName.secondary,
+    isQuiet: true,
+    actionClassName: quietActionClassName,
     role: "status",
   },
   info: {
@@ -63,7 +75,8 @@ const variants: Record<
     icon: "Info",
     iconTone: "secondary",
     titleTone: "primary",
-    actionClassName: toneClassName.secondary,
+    isQuiet: true,
+    actionClassName: quietActionClassName,
     role: "status",
   },
 };
@@ -93,7 +106,7 @@ export function Banner({
   // label style. The default is the design system card's.
   const boxClassName = isCompact
     ? `p-3 ${look.fillClassName}`
-    : `border px-4 py-3 ${look.borderClassName} ${look.fillClassName}`;
+    : `border ${look.isQuiet ? "p-3" : "px-4 py-3"} ${look.borderClassName} ${look.fillClassName}`;
   // Only the review notice can be raised: the quiet ones are never an alert, and the error already is.
   const isRaised = announce === true && variant === "review";
 
@@ -131,7 +144,7 @@ export function Banner({
               {title}
             </Text>
             {body === undefined ? null : (
-              <Text tone="secondary" variant="caption">
+              <Text tone="secondary" variant={look.isQuiet ? "body" : "caption"}>
                 {body}
               </Text>
             )}
@@ -143,18 +156,15 @@ export function Banner({
           )}
           {action === undefined ? null : (
             // The action reaches the 44 point touch target by growing past its text, and the negative
-            // margins give back the room it takes, as the boards draw it.
+            // margins give back the room it takes, as the boards draw it. The quiet action's 24 point line
+            // leaves 10 points above and below, so it gives both back and sits 2 under the sentence.
             <PressableSurface
-              className="-mx-2 -mb-[10px] min-h-touch-target justify-center self-start px-2"
+              className={`-mx-2 -mb-[10px] min-h-touch-target justify-center self-start px-2 ${look.isQuiet ? "-mt-[10px]" : ""}`}
               label={action.label}
               onPress={action.onPress}
             >
-              {/* The design sets this at 14 over 20, which is between the type scale's sizes, so it is not a Text variant. */}
-              <NativeText
-                className={`text-[14px] font-semibold leading-[20px] tabular-nums ${look.actionClassName}`}
-              >
-                {action.label}
-              </NativeText>
+              {/* The review and error action is set at 14 over 20, which is between the type scale's sizes, so it is not a Text variant. */}
+              <NativeText className={look.actionClassName}>{action.label}</NativeText>
             </PressableSurface>
           )}
         </View>

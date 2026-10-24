@@ -28,6 +28,26 @@ export const Info: Story = {
   },
 };
 
+// The dashboard's "No target set" notice: the action sits under the words, in the accent ink, underlined.
+export const InfoWithAction: Story = {
+  args: {
+    tone: "info",
+    title: "No target set",
+    children: "Set a calorie and macro target to see what is left.",
+    action: { label: "Set target", href: "/more/targets" },
+  },
+};
+
+// The edit dialog's "food changed" notice, with a button for its action.
+export const InfoWithButtonAction: Story = {
+  args: {
+    tone: "info",
+    title: "This food has changed since you logged it.",
+    children: "Your entry keeps the values you saved.",
+    action: { label: "Update to current food data", onClick: () => undefined },
+  },
+};
+
 export const InfoWithCustomIcon: Story = {
   args: {
     tone: "info",

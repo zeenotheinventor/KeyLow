@@ -3,7 +3,7 @@ import type * as React from "react";
 
 export type BannerTone = "info" | "review" | "error";
 
-/** Where the action sits. Trailing is at the end of the row, below is a link under the message. */
+/** Where the action sits. Trailing is at the end of the row, below is a link under the message. Info goes below, review and error trailing, unless told. */
 export type BannerActionPlacement = "trailing" | "below";
 
 export type BannerAction = { label: string } & (

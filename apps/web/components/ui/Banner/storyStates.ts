@@ -1,5 +1,7 @@
 export const storyStates = [
   "Info",
+  "InfoWithAction",
+  "InfoWithButtonAction",
   "InfoWithCustomIcon",
   "Review",
   "ReviewWithAction",

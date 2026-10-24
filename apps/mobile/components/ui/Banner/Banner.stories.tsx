@@ -1,6 +1,8 @@
 import {
   ADD_PRODUCT_FAILED,
   FOOD_REVIEW_BANNER,
+  NO_TARGET_BANNER,
+  OFFLINE_BANNER,
   OPEN_FOOD_FACTS_BUSY,
   OPEN_FOOD_FACTS_SEARCH_FAILED,
   describeBarcodeRateLimit,
@@ -37,16 +39,18 @@ export const Review: Story = {
   },
 };
 
-// The design system card's quiet notice for a view that is showing saved data.
+// The diary and dashboard offline boards: the quiet notice, 12 points all round, with the sentence in
+// regular body text and no action.
 export const Offline: Story = {
   args: {
     variant: "offline",
-    title: "Offline",
-    body: "Showing saved data. Changes will not save.",
+    title: OFFLINE_BANNER.title,
+    body: OFFLINE_BANNER.body,
   },
 };
 
 // The off-error and empty-off-error boards: Open Food Facts could not be searched, and the rest still works.
+// Info without an action.
 export const Info: Story = {
   args: {
     variant: "info",
@@ -66,14 +70,14 @@ export const InfoBusy: Story = {
   },
 };
 
-// The quiet variants take an action in secondary text, as the design system card has it.
+// The no-target boards on the diary and the dashboard: the quiet notice with its action under the words,
+// in strong body text, underlined, in the accent ink (lime in dark, the primary text colour in light).
 export const InfoWithAction: Story = {
   args: {
     variant: "info",
-    icon: "CloudOff",
-    title: OPEN_FOOD_FACTS_SEARCH_FAILED.title,
-    body: OPEN_FOOD_FACTS_SEARCH_FAILED.body,
-    action: { label: "Try again", onPress: () => undefined },
+    title: NO_TARGET_BANNER.title,
+    body: NO_TARGET_BANNER.body,
+    action: { label: NO_TARGET_BANNER.action, onPress: () => undefined },
   },
 };
 

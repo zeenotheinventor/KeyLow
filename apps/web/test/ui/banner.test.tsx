@@ -8,6 +8,9 @@ import { Banner } from "@/components/ui/Banner";
 
 const lightTextRule = "light-theme:text-text-primary";
 
+// Whole class names, so "p-3" is not found inside "gap-3" and "text-body" not inside "text-body-strong".
+const classesOf = (element: HTMLElement) => element.className.split(" ");
+
 describe("Banner", () => {
   afterEach(() => {
     cleanup();
@@ -145,6 +148,174 @@ describe("Banner", () => {
 
       expect(screen.queryByRole("button")).toBeNull();
       expect(screen.queryByRole("link")).toBeNull();
+    });
+  });
+
+  describe("info look, as the boards draw it", () => {
+    it("should pad 12 on every side", () => {
+      render(<Banner tone="info">Check your email</Banner>);
+
+      const classes = classesOf(screen.getByRole("status"));
+
+      expect(classes).toContain("p-3");
+      expect(classes).not.toContain("px-4");
+    });
+
+    it("should set the sentence under a title in body size, in the secondary ink", () => {
+      render(
+        <Banner tone="info" title="No target set">
+          Set a calorie and macro target to see what is left.
+        </Banner>,
+      );
+
+      const classes = classesOf(
+        screen.getByText("Set a calorie and macro target to see what is left."),
+      );
+
+      expect(classes).toContain("text-body");
+      expect(classes).toContain("text-text-secondary");
+      expect(classes).not.toContain("text-caption");
+    });
+
+    it("should draw the action in body-strong accent ink, underlined", () => {
+      render(
+        <Banner tone="info" title="No target set" action={{ label: "Set target", href: "/more" }}>
+          Set a calorie and macro target to see what is left.
+        </Banner>,
+      );
+
+      const classes = classesOf(screen.getByRole("link", { name: "Set target" }));
+
+      expect(classes).toContain("text-body-strong");
+      expect(classes).toContain("text-accent-ink");
+      expect(classes).toContain("underline");
+    });
+
+    it("should draw a button action the same way", () => {
+      render(
+        <Banner tone="info" action={{ label: "Update to current food data", onClick: vi.fn() }}>
+          Your entry keeps the values you saved.
+        </Banner>,
+      );
+
+      const classes = classesOf(
+        screen.getByRole("button", { name: "Update to current food data" }),
+      );
+
+      expect(classes).toContain("text-body-strong");
+      expect(classes).toContain("text-accent-ink");
+      expect(classes).toContain("underline");
+    });
+
+    it("should put the action under the words by default", () => {
+      render(
+        <Banner tone="info" title="No target set" action={{ label: "Set target", href: "/more" }}>
+          Set a target.
+        </Banner>,
+      );
+
+      const words = screen.getByText("Set a target.").parentElement;
+
+      expect(words?.contains(screen.getByRole("link", { name: "Set target" }))).toBe(true);
+    });
+
+    it("should still put the action at the end of the row when asked", () => {
+      render(
+        <Banner
+          tone="info"
+          title="No target set"
+          action={{ label: "Set target", href: "/more" }}
+          actionPlacement="trailing"
+        >
+          Set a target.
+        </Banner>,
+      );
+
+      const words = screen.getByText("Set a target.").parentElement;
+
+      expect(words?.contains(screen.getByRole("link", { name: "Set target" }))).toBe(false);
+    });
+  });
+
+  describe("review and error look, unchanged", () => {
+    it.each(["review", "error"] as const)(
+      "should keep %s padding at 16 across and 12 down",
+      (tone) => {
+        render(<Banner tone={tone}>Energy is not given.</Banner>);
+
+        const classes = classesOf(screen.getByRole(tone === "review" ? "note" : "alert"));
+
+        expect(classes).toContain("px-4");
+        expect(classes).toContain("py-3");
+        expect(classes).not.toContain("p-3");
+      },
+    );
+
+    it.each(["review", "error"] as const)("should keep the %s sentence in caption size", (tone) => {
+      render(
+        <Banner tone={tone} title="A title">
+          The sentence.
+        </Banner>,
+      );
+
+      const classes = classesOf(screen.getByText("The sentence."));
+
+      expect(classes).toContain("text-caption");
+      expect(classes).toContain("text-text-secondary");
+    });
+
+    it.each(["review", "error"] as const)(
+      "should keep the %s action 14 pixels semibold, trailing and not underlined",
+      (tone) => {
+        render(
+          <Banner tone={tone} action={{ label: "Do it", onClick: vi.fn() }}>
+            Energy is not given.
+          </Banner>,
+        );
+
+        const classes = classesOf(screen.getByRole("button", { name: "Do it" }));
+
+        expect(classes).toContain("text-[14px]");
+        expect(classes).toContain("font-semibold");
+        expect(classes).toContain("min-h-control-sm");
+        expect(classes).not.toContain("underline");
+        expect(classes).not.toContain("text-accent-ink");
+        expect(classes).not.toContain("text-body-strong");
+      },
+    );
+
+    it.each(["review", "error"] as const)(
+      "should keep the %s action below as a primary ink underlined link",
+      (tone) => {
+        render(
+          <Banner
+            tone={tone}
+            action={{ label: "Edit the food", href: "/foods/1/edit" }}
+            actionPlacement="below"
+          >
+            Saved, but not its portions.
+          </Banner>,
+        );
+
+        const classes = classesOf(screen.getByRole("link", { name: "Edit the food" }));
+
+        expect(classes).toContain("text-[14px]");
+        expect(classes).toContain("text-text-primary");
+        expect(classes).toContain("underline");
+        expect(classes).not.toContain("text-accent-ink");
+      },
+    );
+
+    it("should default a review action to trailing", () => {
+      render(
+        <Banner tone="review" title="Needs review" action={{ label: "Copy", onClick: vi.fn() }}>
+          Energy is not given.
+        </Banner>,
+      );
+
+      const words = screen.getByText("Energy is not given.").parentElement;
+
+      expect(words?.contains(screen.getByRole("button", { name: "Copy" }))).toBe(false);
     });
   });
 
