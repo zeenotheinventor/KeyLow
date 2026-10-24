@@ -8,4 +8,6 @@ export const storyStates = [
   "TwoControlsDisabled",
   "ControlAndSlot",
   "LongTitle",
+  "WithoutLeading",
+  "WithoutLeadingWithClose",
 ];

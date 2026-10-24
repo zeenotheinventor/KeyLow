@@ -100,3 +100,14 @@ export const LongTitle: Story = {
     trailing: editAndMore,
   },
 };
+
+// The setup's first step: no Back and no Close. The empty 44 point slot keeps the title in the middle, and
+// the subtitle carries the step.
+export const WithoutLeading: Story = {
+  args: { title: "About you", subtitle: "Step 1 of 8" },
+};
+
+// Recalculate's first step: Close at the right only.
+export const WithoutLeadingWithClose: Story = {
+  args: { title: "About you", subtitle: "Step 1 of 8", trailing: close },
+};
