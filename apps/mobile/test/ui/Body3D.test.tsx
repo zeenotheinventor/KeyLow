@@ -1,7 +1,8 @@
-import { bodyMapPalette } from "@keylow/tokens";
+import { bodyMapPalette, motionDuration, themes } from "@keylow/tokens";
 import { render, screen } from "@testing-library/react-native";
 
 import { Body3D } from "../../components/ui";
+import { looksOf } from "../../components/ui/Body3D/looks";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -86,6 +87,71 @@ describe("Body3D", () => {
       expect(mockCanvas).toHaveBeenCalledWith(expect.objectContaining({ scheme }));
     },
   );
+
+  it.each<ThemeScheme>(["dark", "light"])(
+    "should give the canvas the looks BodyFigure's reading gives, in the %s theme",
+    async (scheme) => {
+      const values = { chest_upper: 5, quads: 2 };
+
+      await renderBody({ scale: "heat", values }, scheme);
+
+      expect(mockCanvas).toHaveBeenLastCalledWith(
+        expect.objectContaining({ looks: looksOf("heat", values, bodyMapPalette(scheme)) }),
+      );
+    },
+  );
+
+  it("should draw every muscle at rest on heat when it is given no values", async () => {
+    await renderBody();
+
+    expect(mockCanvas).toHaveBeenLastCalledWith(
+      expect.objectContaining({ looks: looksOf("heat", {}, bodyMapPalette("dark")) }),
+    );
+  });
+
+  it("should read the values on the scale it is given", async () => {
+    await renderBody({ scale: "volume", values: { abs: 2 } });
+
+    expect(mockCanvas).toHaveBeenLastCalledWith(
+      expect.objectContaining({ looks: looksOf("volume", { abs: 2 }, bodyMapPalette("dark")) }),
+    );
+  });
+
+  it("should hand the canvas the emphasis with BodyFigure's defaults, in the primary text colour and the resting grey", async () => {
+    await renderBody();
+
+    expect(mockCanvas).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        emphasis: {
+          selected: undefined,
+          selectedColor: themes.dark["text-primary"],
+          restingColor: bodyMapPalette("dark").silhouette,
+          dim: 1,
+          unselectedOpacity: 1,
+        },
+      }),
+    );
+  });
+
+  it("should hand the canvas the selected muscle, the dim and the unselected opacity", async () => {
+    await renderBody({ selected: "biceps", dim: 0.3, unselectedOpacity: 0.5 });
+
+    expect(mockCanvas.mock.lastCall?.[0].emphasis).toEqual({
+      selected: "biceps",
+      selectedColor: themes.dark["text-primary"],
+      restingColor: bodyMapPalette("dark").silhouette,
+      dim: 0.3,
+      unselectedOpacity: 0.5,
+    });
+  });
+
+  it("should ask the canvas for the 220 ms fade", async () => {
+    await renderBody();
+
+    expect(mockCanvas).toHaveBeenLastCalledWith(
+      expect.objectContaining({ fadeMilliseconds: motionDuration.standard }),
+    );
+  });
 
   it("should call onFirstFrame when the canvas draws its first frame", async () => {
     const onFirstFrame = jest.fn();

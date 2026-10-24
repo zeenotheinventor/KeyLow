@@ -1,8 +1,17 @@
+import { bodyMapPalette } from "@keylow/tokens";
 import { render } from "@testing-library/react-native";
 
 import { Body3DCanvas } from "../../components/ui/Body3D/Body3DCanvas";
+import { looksOf } from "../../components/ui/Body3D/looks";
 
+import type { Body3DCanvasProps } from "../../components/ui/Body3D/types";
 import type { RootState } from "@react-three/fiber/native";
+
+// The looks come from `BodyFigure`'s reading, and its folder reads the saved body choice.
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
 
 // GL does not run in Jest, so the canvas of react-three-fiber is stood in for. It keeps the props it was
 // given, so the test can run `onCreated` as the library would once the renderer exists.
@@ -28,13 +37,30 @@ jest.mock("@keylow/body-model/male.glb", () => 1, { virtual: true });
 jest.mock("../../components/ui/Body3D/bundledModel", () => ({ bundledModel: jest.fn() }));
 
 const colours = { muscle: "a", otherMuscle: "b", core: "c", clay: "d", skin: "e" };
+const looks = looksOf("heat", {}, bodyMapPalette("dark"));
+const emphasis: Body3DCanvasProps["emphasis"] = {
+  selected: undefined,
+  selectedColor: "c",
+  restingColor: "d",
+  dim: 1,
+  unselectedOpacity: 1,
+};
 
 // The part of the renderer that the canvas touches.
 const rendererWithDebug = () => ({ debug: { onShaderError: null as (() => void) | null } });
 
 async function createRenderer(onError?: () => void) {
   const gl = rendererWithDebug();
-  await render(<Body3DCanvas colours={colours} onError={onError} scheme="dark" />);
+  await render(
+    <Body3DCanvas
+      colours={colours}
+      emphasis={emphasis}
+      fadeMilliseconds={220}
+      looks={looks}
+      onError={onError}
+      scheme="dark"
+    />,
+  );
   mockCanvasProps.onCreated?.({ gl } as unknown as RootState);
   return gl;
 }

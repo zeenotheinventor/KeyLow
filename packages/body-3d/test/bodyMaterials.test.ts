@@ -1,7 +1,7 @@
 import { Color, FrontSide, MeshBasicMaterial, MeshStandardMaterial, ShaderLib } from "three";
 import { describe, expect, it } from "vitest";
 
-import { bodyMaterials } from "../src/bodyMaterials";
+import { bodyMaterials, colourFixedMaterials } from "../src/bodyMaterials";
 
 import type { BodyColours } from "../src/bodyMaterials";
 
@@ -18,10 +18,18 @@ const hexOfName = (name: string) => new Color(name).getHexString();
 
 describe("bodyMaterials", () => {
   const materials = bodyMaterials(colours);
-  const all = Object.values(materials);
+  const all = [
+    ...Object.values(materials.muscles),
+    materials.other,
+    materials.core,
+    materials.head,
+    materials.skin,
+  ];
 
   it("should give each material the colour it is given, in sRGB as the hex was written", () => {
-    expect(hexOf(materials.muscle)).toBe(hexOfName(colours.muscle));
+    for (const material of Object.values(materials.muscles)) {
+      expect(hexOf(material)).toBe(hexOfName(colours.muscle));
+    }
     expect(hexOf(materials.other)).toBe(hexOfName(colours.otherMuscle));
     expect(hexOf(materials.core)).toBe(hexOfName(colours.core));
     expect(hexOf(materials.head)).toBe(hexOfName(colours.clay));
@@ -39,15 +47,33 @@ describe("bodyMaterials", () => {
     }
   });
 
+  it("should make one material for each of the 22 muscles, none shared", () => {
+    expect(Object.keys(materials.muscles)).toHaveLength(22);
+    expect(new Set(Object.values(materials.muscles)).size).toBe(22);
+  });
+
+  it("should start the head's neck colour at the muscle colour", () => {
+    expect(materials.neckColour.getHexString()).toBe(hexOfName(colours.muscle));
+  });
+
   it("should light the muscles from within a little and the core more, as the approved render does", () => {
-    expect(materials.muscle.emissiveIntensity).toBeCloseTo(0.12);
+    // A muscle's emissive colour is the light itself (0.12 of its colour), so its intensity stays 1.
+    expect(materials.muscles.abs.emissiveIntensity).toBe(1);
+    expect(materials.muscles.abs.emissive.getHex()).toBe(
+      new Color(colours.muscle).multiplyScalar(0.12).getHex(),
+    );
     expect(materials.core.emissiveIntensity).toBeCloseTo(0.5);
     expect(materials.other.emissiveIntensity).toBe(0);
     expect(hexOf(materials.core)).toBe(materials.core.emissive.getHexString());
   });
 
   it("should draw the muscles, the core and the head matt", () => {
-    for (const material of [materials.muscle, materials.other, materials.core, materials.head]) {
+    for (const material of [
+      materials.muscles.abs,
+      materials.other,
+      materials.core,
+      materials.head,
+    ]) {
       expect(material).toBeInstanceOf(MeshStandardMaterial);
       expect(material.roughness).toBeCloseTo(0.9);
       expect(material.metalness).toBe(0);
@@ -119,6 +145,47 @@ describe("bodyMaterials", () => {
 
       expect(uniforms["bodyNeckColour"]?.value.getHexString()).toBe(hexOfName(colours.muscle));
     });
+
+    it("should give the shader the neck colour itself, so a colour copied into it reaches the uniform", () => {
+      const uniforms: Record<string, { value: Color }> = {};
+      applyShaderChange(materials.head, { vertexShader, fragmentShader }, uniforms);
+
+      materials.neckColour.set("orangered");
+
+      expect(uniforms["bodyNeckColour"]?.value).toBe(materials.neckColour);
+      expect(uniforms["bodyNeckColour"]?.value.getHexString()).toBe(hexOfName("orangered"));
+    });
+  });
+});
+
+describe("colourFixedMaterials", () => {
+  const recoloured: BodyColours = {
+    muscle: "black",
+    otherMuscle: "red",
+    core: "green",
+    clay: "blue",
+    skin: "white",
+  };
+
+  it("should set the other muscles, the core, the head and the skin to the new colours, with their light from within", () => {
+    const materials = bodyMaterials(colours);
+
+    colourFixedMaterials(materials, recoloured);
+
+    expect(hexOf(materials.other)).toBe(hexOfName("red"));
+    expect(hexOf(materials.core)).toBe(hexOfName("green"));
+    expect(materials.core.emissive.getHexString()).toBe(hexOfName("green"));
+    expect(hexOf(materials.head)).toBe(hexOfName("blue"));
+    expect(hexOf(materials.skin)).toBe(hexOfName("white"));
+  });
+
+  it("should leave the muscles and the neck colour to the looks", () => {
+    const materials = bodyMaterials(colours);
+
+    colourFixedMaterials(materials, recoloured);
+
+    expect(hexOf(materials.muscles.abs)).toBe(hexOfName(colours.muscle));
+    expect(materials.neckColour.getHexString()).toBe(hexOfName(colours.muscle));
   });
 });
 

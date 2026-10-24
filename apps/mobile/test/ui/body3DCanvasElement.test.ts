@@ -1,4 +1,13 @@
+import { bodyMapPalette } from "@keylow/tokens";
+
 import { body3DCanvasElement } from "../../components/ui/Body3D/body3DCanvasElement";
+import { looksOf } from "../../components/ui/Body3D/looks";
+
+// The looks come from `BodyFigure`'s reading, and its folder reads the saved body choice.
+jest.mock("@react-native-async-storage/async-storage", () => ({
+  __esModule: true,
+  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
+}));
 
 const mockCanvas = () => null;
 let mockCanvasModuleThrows = false;
@@ -17,6 +26,15 @@ describe("body3DCanvasElement", () => {
       body3DCanvasElement({
         colours: { muscle: "a", otherMuscle: "b", core: "c", clay: "d", skin: "e" },
         scheme: "dark",
+        looks: looksOf("heat", {}, bodyMapPalette("dark")),
+        emphasis: {
+          selected: undefined,
+          selectedColor: "f",
+          restingColor: "g",
+          dim: 1,
+          unselectedOpacity: 1,
+        },
+        fadeMilliseconds: 220,
       }),
     ).toBeNull();
   });

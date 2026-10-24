@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 
-import { BODY_MESH_NAMES } from "@keylow/body-model/meshNames";
+import { BODY_MESH_NAMES, MUSCLE_IDS } from "@keylow/body-model/meshNames";
 import { Box3, Color, Mesh, MeshStandardMaterial } from "three";
 import { describe, expect, it, vi } from "vitest";
 
@@ -81,10 +81,12 @@ describe("dressBody with the committed male body", () => {
     expect(hexOf(meshNamed(group, "head"))).toBe(hexOfName(colours.clay));
   });
 
-  it("should share one material between the muscles", async () => {
-    const { group } = dressBody(await loadMaleBody(), colours);
+  it("should give each muscle a material of its own, so each can take a colour", async () => {
+    const { group, materials } = dressBody(await loadMaleBody(), colours);
 
-    expect(meshNamed(group, "abs").material).toBe(meshNamed(group, "quads").material);
+    expect(meshNamed(group, "abs").material).toBe(materials.muscles.abs);
+    expect(meshNamed(group, "abs").material).not.toBe(meshNamed(group, "quads").material);
+    expect(new Set(MUSCLE_IDS.map((id) => materials.muscles[id])).size).toBe(22);
   });
 
   it("should leave the eyes as the file gives them, with their own colours per vertex", async () => {
@@ -132,12 +134,14 @@ describe("dressBody dispose", () => {
     const dressed = dressBody(model, colours);
     const absListener = countDisposals(meshNamed(dressed.group, "abs").geometry);
     const skinListener = countDisposals(materialOf(meshNamed(dressed.group, "skin")));
+    const quadsListener = countDisposals(materialOf(meshNamed(dressed.group, "quads")));
     const eyesListener = countDisposals(materialOf(meshNamed(dressed.group, "eyes")));
 
     dressed.dispose();
 
     expect(absListener).toHaveBeenCalledTimes(1);
     expect(skinListener).toHaveBeenCalledTimes(1);
+    expect(quadsListener).toHaveBeenCalledTimes(1);
     expect(eyesListener).toHaveBeenCalledTimes(1);
     expect(sharedGeometryListener).not.toHaveBeenCalled();
   });
