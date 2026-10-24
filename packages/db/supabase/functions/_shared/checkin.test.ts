@@ -485,8 +485,12 @@ Deno.test("readRunCheckinRequest reads the recompute mode as recompute", () => {
   assertEquals(readRunCheckinRequest({ mode: "recompute" }), { ok: true, mode: "recompute" });
 });
 
+Deno.test("readRunCheckinRequest reads the backstop mode as backstop", () => {
+  assertEquals(readRunCheckinRequest({ mode: "backstop" }), { ok: true, mode: "backstop" });
+});
+
 Deno.test("readRunCheckinRequest answers bad_mode for any other mode", () => {
-  for (const mode of ["backstop", "weekly", "", 7, null]) {
+  for (const mode of ["weekly", "", 7, null]) {
     assertEquals(readRunCheckinRequest({ mode }), { ok: false, code: "bad_mode" });
   }
 });

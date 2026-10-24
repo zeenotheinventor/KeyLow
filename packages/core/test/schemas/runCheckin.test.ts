@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   edgeErrorCodeSchema,
+  runCheckinBackstopResponseSchema,
   runCheckinRecomputeResponseSchema,
   runCheckinRequestSchema,
   runCheckinResponseSchema,
@@ -20,7 +21,11 @@ describe("runCheckinRequestSchema", () => {
     expect(runCheckinRequestSchema.parse({ mode: "recompute" })).toEqual({ mode: "recompute" });
   });
 
-  it.each(["backstop", "", 7, null])("should reject the mode %j", (mode) => {
+  it("should accept the backstop mode", () => {
+    expect(runCheckinRequestSchema.parse({ mode: "backstop" })).toEqual({ mode: "backstop" });
+  });
+
+  it.each(["weekly", "", 7, null])("should reject the mode %j", (mode) => {
     expect(runCheckinRequestSchema.safeParse({ mode }).success).toBe(false);
   });
 
@@ -67,8 +72,41 @@ describe("runCheckinRecomputeResponseSchema", () => {
   );
 });
 
+describe("runCheckinBackstopResponseSchema", () => {
+  it("should accept the counts of users, check-ins run and users that failed", () => {
+    const body = { users: 5, ran: 9, failed: 1 };
+    expect(runCheckinBackstopResponseSchema.parse(body)).toEqual(body);
+  });
+
+  it("should accept a run that found nobody due", () => {
+    const body = { users: 0, ran: 0, failed: 0 };
+    expect(runCheckinBackstopResponseSchema.parse(body)).toEqual(body);
+  });
+
+  it.each(["users", "ran", "failed"])("should reject a negative %s", (field) => {
+    expect(
+      runCheckinBackstopResponseSchema.safeParse({ users: 0, ran: 0, failed: 0, [field]: -1 })
+        .success,
+    ).toBe(false);
+  });
+
+  it.each(["users", "ran", "failed"])("should reject a %s that is not a whole number", (field) => {
+    expect(
+      runCheckinBackstopResponseSchema.safeParse({ users: 0, ran: 0, failed: 0, [field]: 1.5 })
+        .success,
+    ).toBe(false);
+  });
+
+  it.each([{ users: 1, ran: 1 }, { ran: 0, nextCheckinDate: null }, { targetsId: "x" }])(
+    "should reject %j",
+    (body) => {
+      expect(runCheckinBackstopResponseSchema.safeParse(body).success).toBe(false);
+    },
+  );
+});
+
 describe("the error codes run-checkin sends", () => {
-  it.each(["bad_mode", "no_program", "missing_stats"])(
+  it.each(["bad_mode", "no_program", "missing_stats", "unauthorized"])(
     "should be in the shared edge error schema: %s",
     (code) => {
       expect(edgeErrorCodeSchema.parse(code)).toBe(code);
