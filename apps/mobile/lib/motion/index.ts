@@ -1,4 +1,5 @@
 export { rowPressScale } from "./rowPressScale";
+export { useCountUp } from "./useCountUp";
 export { useCrossFade } from "./useCrossFade";
 export { useFadeInStyle } from "./useFadeInStyle";
 export { usePressScale } from "./usePressScale";

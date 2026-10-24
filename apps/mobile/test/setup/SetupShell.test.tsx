@@ -98,6 +98,23 @@ describe("SetupShell", () => {
     });
   });
 
+  describe("a header that is inert", () => {
+    it("should dim Back and Close and ignore a press on either", async () => {
+      const onBack = jest.fn();
+      const onClose = jest.fn();
+      const user = userEvent.setup();
+      await renderShell({ onBack, onClose, isHeaderInert: true });
+
+      await user.press(screen.getByRole("button", { name: "Back" }));
+      await user.press(screen.getByRole("button", { name: "Close" }));
+
+      expect(screen.getByRole("button", { name: "Back" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
+      expect(onBack).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+  });
+
   describe("the progress bar", () => {
     it("should be named for the step and filled to the percentage it is given", async () => {
       await renderShell();
@@ -155,6 +172,15 @@ describe("SetupShell", () => {
     it("should draw no footer when the step has no Continue", async () => {
       await renderShell({ continueAction: undefined });
 
+      expect(screen.queryByRole("button", { name: "Continue" })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("a footer the step brings", () => {
+    it("should draw it in the footer in place of Continue", async () => {
+      await renderShell({ continueAction: undefined, footer: <Text>The footer of the step</Text> });
+
+      expect(screen.getByText("The footer of the step")).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Continue" })).not.toBeOnTheScreen();
     });
   });

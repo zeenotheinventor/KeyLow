@@ -17,8 +17,12 @@ export type SetupShellProps = {
   onBack?: (() => void) | undefined;
   /** Close at the right of the header, which only a recalculation has. */
   onClose?: (() => void) | undefined;
-  /** The footer's Continue. Left out, the step has no footer. */
+  /** Dims Back and Close and stops them responding, while the estimate is being saved. */
+  isHeaderInert?: boolean | undefined;
+  /** The footer's Continue. Left out, and with no `footer`, the step has no footer. */
   continueAction?: Readonly<{ isEnabled: boolean; onPress: () => void }> | undefined;
+  /** A footer of the step's own, drawn in place of Continue, such as the estimate's banners and Start. */
+  footer?: ReactNode;
   /** The step's controls, which scroll under the fixed header and above the fixed footer. */
   children?: ReactNode;
 };

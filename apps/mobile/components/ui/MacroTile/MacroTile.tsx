@@ -2,7 +2,8 @@ import { NOT_GIVEN, PORTION_PICKER, describeShareOfEnergy } from "@keylow/core/c
 import { formatEnergyShare, formatGrams } from "@keylow/core/format";
 import { View } from "react-native";
 
-import { Badge, Text } from "../../../ui";
+import { Badge } from "../Badge";
+import { Text } from "../Text";
 
 import type { MacroTileMacro, MacroTileProps } from "./types";
 
@@ -38,7 +39,7 @@ export function MacroTile({ label, macro, grams, share, isBlank = false }: Macro
       className="min-w-0 flex-1 gap-1 rounded-medium bg-surface-raised px-3 py-[10px]"
     >
       <View className="flex-row items-center gap-[6px]">
-        <View aria-hidden className={`h-2 w-2 rounded-[2px] ${dotClassName[macro]}`} />
+        <View aria-hidden className={`h-2 w-2 shrink-0 rounded-[2px] ${dotClassName[macro]}`} />
         <Text tone="secondary" variant="caption">
           {label}
         </Text>

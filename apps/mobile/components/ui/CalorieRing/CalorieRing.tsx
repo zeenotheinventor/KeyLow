@@ -20,8 +20,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { outlineWidth, ringPaths } from "./ringMaths";
-import { useCountUp } from "./useCountUp";
-import { useReducedMotion, useWhipFill } from "../../../lib/motion";
+import { useCountUp, useReducedMotion, useWhipFill } from "../../../lib/motion";
 import { strokePaint } from "../../../lib/skia/strokePaint";
 import { StyledCanvas } from "../../../lib/skia/StyledCanvas";
 import { outlineColour, useTheme } from "../../../lib/theme";
