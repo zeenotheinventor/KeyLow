@@ -7,6 +7,9 @@ import type { Clamp } from "../engine";
  */
 export const PROFILE_MAX_KCAL = 6000;
 
+/** The bottom of the profile and targets range, the fewest calories a stored target or a day can hold. */
+export const PROFILE_MIN_KCAL = 800;
+
 /** The engine's clamps plus `profile_max`, which belongs to the setup layer and not to the engine. */
 export type SetupClamp = Clamp | "profile_max";
 

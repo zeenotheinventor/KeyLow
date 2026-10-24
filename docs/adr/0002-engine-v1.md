@@ -377,7 +377,7 @@ A recompute happens when the program is edited and at the end of setup. It runs 
 
 Index 0 is Monday and 6 is Sunday. They are checked as `programs.dow_offsets_kcal` is (ADR 0003, Amendment 12: length 7, no null element, sum 0).
 
-- `dowCaloriesKcal[i] = calories + offsets[i]`, each rounded to 10.
+- `dowCaloriesKcal[i] = calories + offsets[i]`, each rounded to 10. The days are worked out from the week held within 800 to 6000, so the 6000 cap never drops a user's offsets: a week of 6630 with offsets `[-300, 300, 0, 0, 0, 0, 0]` gives Monday 5700 and Tuesday 6000.
 - For `lose` only, a day below the floor `max(1200, 0.9 · BMR)` is raised to it, in the same way Amendment 1 raises the week (stepped up by 10 until it is at or above the floor), and the clamp `dow_floor` is recorded. This matches Amendment 1's "the floor applies to the `lose` goal only".
 - For every goal, each day is kept within 800 to 6000, the targets range. A day below 800 is stepped up and a day above 6000 is stepped down by 10 until it is within the range, and the clamp `dow_range` is recorded. `dow_floor` and `dow_range` are added to the engine's `Clamp` by KEY-605.
 - Macros are weekly, not per day, so they do not change with the offsets.

@@ -1,7 +1,8 @@
 import { DEFAULT_ENGINE_PARAMS } from "./params";
+import { PROFILE_MAX_KCAL, PROFILE_MIN_KCAL } from "../setup/profileRange";
 
 import type { EngineParams } from "./params";
-import type { CalorieGoal, Clamp } from "./types";
+import type { CalorieGoal, Clamp, DayOfWeekKcal } from "./types";
 
 export type CalorieTargetInput = Readonly<{
   goal: CalorieGoal;
@@ -32,6 +33,12 @@ const DAYS_PER_WEEK = 7;
 /** The daily kilocalories that one percent of the trend weight a week is worth. */
 function dailyKcalPerPercentPerWeekAt(trendWeight: number, params: EngineParams): number {
   return (trendWeight * params.expenditure.energyDensityKcalPerKg) / DAYS_PER_WEEK / 100;
+}
+
+/** The lowest a lose target can be, in kilocalories a day: the larger of the absolute floor and the BMR share. */
+function calorieFloorKcal(bmr: number, params: EngineParams): number {
+  const { targets } = params;
+  return Math.max(targets.floorAbsKcal, targets.floorBmrFactor * bmr);
 }
 
 export type EffectiveRateInput = Readonly<{
@@ -71,7 +78,7 @@ export function deriveCalorieTarget(
   const dailyKcalPerPercentPerWeek = dailyKcalPerPercentPerWeekAt(trendWeight, params);
 
   const lowestKcal = tdee * (1 - targets.maxDeficitFrac);
-  const floorKcal = Math.max(targets.floorAbsKcal, targets.floorBmrFactor * bmr);
+  const floorKcal = calorieFloorKcal(bmr, params);
   const highestKcal = tdee * (1 + targets.maxSurplusFrac);
 
   let rawKcal = tdee;
@@ -190,6 +197,11 @@ export type DeriveTargetsConfig = Readonly<{
   proteinGPerKg: number;
   /** The share of the calories left after protein that goes to fat. */
   fatFraction: number;
+  /**
+   * Kilocalories to add to the week's calories on each weekday, Monday first. They hold whole numbers
+   * and sum to 0. All zeros when missing.
+   */
+  dowOffsetsKcal?: DayOfWeekKcal;
 }>;
 
 export type DeriveTargetsInput = Readonly<{
@@ -207,21 +219,107 @@ export type DerivedTargets = Readonly<{
   proteinG: number;
   fatG: number;
   carbsG: number;
-  /** The calorie clamps in the order they were applied, then `macro_fit`. */
+  /** The calories for each weekday, Monday first. The macros stay those of the week. */
+  dowCaloriesKcal: DayOfWeekKcal;
+  /** The calorie clamps in the order they were applied, then `dow_floor` and `dow_range`, then `macro_fit`. */
   clamps: readonly Clamp[];
   effectiveRatePctPerWeek: number;
   engineVersion: EngineParams["version"];
 }>;
 
+const NO_OFFSETS_KCAL: DayOfWeekKcal = [0, 0, 0, 0, 0, 0, 0];
+
 /**
- * The daily targets: calories from `deriveCalorieTarget`, then the macros from `splitMacros`. The day of
- * week offsets are not here yet.
+ * The day of week offsets are checked as `programs.dow_offsets_kcal` is (ADR 0003, Amendment 12): length 7,
+ * no null element, elements sum to 0. A stored array can hold anything, so this checks what the type
+ * promises. The messages state the rule and never a value.
+ */
+function assertValidDayOfWeekOffsets(offsetsKcal: readonly unknown[]): void {
+  if (offsetsKcal.length !== DAYS_PER_WEEK || !offsetsKcal.every(Number.isInteger)) {
+    throw new RangeError("The day of week offsets must hold 7 whole numbers, Monday first.");
+  }
+  if (offsetsKcal.reduce<number>((sum, offsetKcal) => sum + Number(offsetKcal), 0) !== 0) {
+    throw new RangeError("The day of week offsets must sum to 0.");
+  }
+}
+
+type DayCaloriesInput = Readonly<{
+  goal: CalorieGoal;
+  caloriesKcal: number;
+  offsetsKcal: DayOfWeekKcal;
+  bmr: number;
+}>;
+
+type DayCalories = Readonly<{
+  dowCaloriesKcal: DayOfWeekKcal;
+  /** `dow_floor` then `dow_range`, each at most once. */
+  clamps: readonly Clamp[];
+}>;
+
+/**
+ * The calories for each weekday (ADR 0002, Amendment 2, "Day-of-week offsets"). Each day starts from the
+ * week's calories held within 800 to 6000, so a week the setup layer's 6000 cap will lower still gives the
+ * days that cap leaves. The offset is added and the day rounded to the nearest step. For `lose` only, a day
+ * below the floor is stepped up to it and `dow_floor` is recorded. For every goal, a day outside 800 to 6000
+ * is stepped back inside it and `dow_range` is recorded.
+ */
+function deriveDayCalories(
+  { goal, caloriesKcal, offsetsKcal, bmr }: DayCaloriesInput,
+  params: EngineParams,
+): DayCalories {
+  const step = params.targets.roundToKcal;
+  const floorKcal = calorieFloorKcal(bmr, params);
+  const lowestKcal = Math.ceil(PROFILE_MIN_KCAL / step) * step;
+  const highestKcal = Math.floor(PROFILE_MAX_KCAL / step) * step;
+  const keepInRange = (kcal: number): number => Math.min(Math.max(kcal, lowestKcal), highestKcal);
+  const weekKcal = keepInRange(caloriesKcal);
+  const recorded = { floor: false, range: false };
+
+  const dayCalories = (offsetKcal: number): number => {
+    let dayKcal = Math.round((weekKcal + offsetKcal) / step) * step;
+    if (goal === "lose" && dayKcal < floorKcal) {
+      dayKcal = Math.ceil(floorKcal / step) * step;
+      recorded.floor = true;
+    }
+    const inRangeKcal = keepInRange(dayKcal);
+    if (inRangeKcal !== dayKcal) recorded.range = true;
+    return inRangeKcal;
+  };
+
+  const [monday, tuesday, wednesday, thursday, friday, saturday, sunday] = offsetsKcal;
+  const dowCaloriesKcal: DayOfWeekKcal = [
+    dayCalories(monday),
+    dayCalories(tuesday),
+    dayCalories(wednesday),
+    dayCalories(thursday),
+    dayCalories(friday),
+    dayCalories(saturday),
+    dayCalories(sunday),
+  ];
+  const clamps: Clamp[] = [];
+  if (recorded.floor) clamps.push("dow_floor");
+  if (recorded.range) clamps.push("dow_range");
+
+  return { dowCaloriesKcal, clamps };
+}
+
+/**
+ * The daily targets: calories from `deriveCalorieTarget`, then the macros from `splitMacros`, then the
+ * calories for each weekday from the day of week offsets. The offsets throw a `RangeError` when they are
+ * not 7 whole numbers that sum to 0. The macros stay weekly.
  */
 export function deriveTargets(
   { config, tdee, trendWeight, bmr }: DeriveTargetsInput,
   params: EngineParams = DEFAULT_ENGINE_PARAMS,
 ): DerivedTargets {
-  const { goal, ratePctPerWeek, proteinGPerKg, fatFraction } = config;
+  const {
+    goal,
+    ratePctPerWeek,
+    proteinGPerKg,
+    fatFraction,
+    dowOffsetsKcal = NO_OFFSETS_KCAL,
+  } = config;
+  assertValidDayOfWeekOffsets(dowOffsetsKcal);
   const calorieTarget = deriveCalorieTarget(
     { goal, ratePctPerWeek, tdee, trendWeight, bmr },
     params,
@@ -230,13 +328,18 @@ export function deriveTargets(
     { caloriesKcal: calorieTarget.caloriesKcal, trendWeight, proteinGPerKg, fatFraction },
     params,
   );
+  const days = deriveDayCalories(
+    { goal, caloriesKcal: calorieTarget.caloriesKcal, offsetsKcal: dowOffsetsKcal, bmr },
+    params,
+  );
 
   return {
     caloriesKcal: calorieTarget.caloriesKcal,
     proteinG: macros.proteinG,
     fatG: macros.fatG,
     carbsG: macros.carbsG,
-    clamps: [...calorieTarget.clamps, ...macros.clamps],
+    dowCaloriesKcal: days.dowCaloriesKcal,
+    clamps: [...calorieTarget.clamps, ...days.clamps, ...macros.clamps],
     effectiveRatePctPerWeek: calorieTarget.effectiveRatePctPerWeek,
     engineVersion: params.version,
   };

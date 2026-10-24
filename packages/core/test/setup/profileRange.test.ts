@@ -4,9 +4,16 @@ import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { CLAMPS } from "../../src/engine";
 import { capToProfileRange, PROFILE_MAX_KCAL } from "../../src/setup";
+import { PROFILE_MIN_KCAL } from "../../src/setup/profileRange";
 
 import type { Clamp } from "../../src/engine";
 import type { SetupClamp } from "../../src/setup";
+
+describe("PROFILE_MIN_KCAL", () => {
+  it("should be 800, the bottom of the profile and targets range", () => {
+    expect(PROFILE_MIN_KCAL).toBe(800);
+  });
+});
 
 describe("PROFILE_MAX_KCAL", () => {
   it("should be 6000, the top of profiles_target_kcal_range", () => {
