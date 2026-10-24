@@ -22,8 +22,20 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   useUpdateTargets: () => updateTargets,
 }));
 
-const none: Targets = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };
-const filled: Targets = { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 };
+const none: Targets = {
+  kcal: null,
+  protein_g: null,
+  carbs_g: null,
+  fat_g: null,
+  source: "manual",
+};
+const filled: Targets = {
+  kcal: 2200,
+  protein_g: 160,
+  carbs_g: 220,
+  fat_g: 70,
+  source: "manual",
+};
 
 function renderForm(initial: Targets = filled) {
   return render(

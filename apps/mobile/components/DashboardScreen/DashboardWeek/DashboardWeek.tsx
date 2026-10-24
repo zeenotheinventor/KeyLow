@@ -12,7 +12,8 @@ import type { DashboardWeekProps } from "./types";
 
 /**
  * The This week card, once today is known: the week that holds today (the same query the diary's week
- * strip reads, so the two share the cache and agree) and the targets, added up by core. It loads and
+ * strip reads, so the two share the cache and agree) and the targets, added up by core. The card sets the
+ * week's average against the week's calories, so the targets are read with no date. It loads and
  * fails on its own, so the Today card above it is unaffected. The week is asked for by today's Monday, so
  * when the date rolls over into a new week the card reads that week and never sums the old one for the
  * new day. Its numbers are the totals as given: nothing here adds them up a second way. Pressing it opens

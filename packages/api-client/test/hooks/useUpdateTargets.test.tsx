@@ -2,9 +2,11 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { TargetsValidationError, useUpdateTargets } from "../../src/hooks/useUpdateTargets";
 import { keys } from "../../src/queryKeys";
+import { activeProgram, programsRead } from "../support/liveTargetsFake";
 import {
   AUTH_USER_URL,
   REST_URL,
@@ -27,6 +29,8 @@ beforeEach(() => {
   updates = [];
   updatedIds = [];
   server.use(
+    // Most cases are about the profile write, so by default the user has no program to end.
+    programsRead([]),
     http.get(AUTH_USER_URL, () =>
       HttpResponse.json({ id: SIGNED_IN_USER_ID, aud: "authenticated", role: "authenticated" }),
     ),
@@ -75,8 +79,86 @@ describe("useUpdateTargets", () => {
       saved = await result.current.mutateAsync(valid);
     });
 
-    expect(saved).toEqual(valid);
-    expect(queryClient.getQueryData(keys.profiles.targets)).toEqual(valid);
+    expect(saved).toEqual({ ...valid, source: "manual" });
+    expect(queryClient.getQueryData(keys.profiles.targets)).toEqual({ ...valid, source: "manual" });
+  });
+
+  it("should invalidate the targets, so they are read again from where they now come from", async () => {
+    const { queryClient, result } = await renderSignedIn();
+
+    await act(async () => {
+      await result.current.mutateAsync(valid);
+    });
+
+    expect(queryClient.getQueryState(keys.profiles.targets)?.isInvalidated).toBe(true);
+  });
+
+  it("should invalidate the program reads, so the program screen stops showing a program that has ended", async () => {
+    const { queryClient, result } = await renderSignedIn();
+    queryClient.setQueryData(keys.program.summary, { isActive: true });
+    queryClient.setQueryData(keys.program.targetsHistory(12), []);
+
+    await act(async () => {
+      await result.current.mutateAsync(valid);
+    });
+
+    expect(queryClient.getQueryState(keys.program.summary)?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(keys.program.targetsHistory(12))?.isInvalidated).toBe(true);
+  });
+
+  describe("while a program is active", () => {
+    let programWrites: unknown[] = [];
+
+    beforeEach(() => {
+      programWrites = [];
+      server.use(
+        programsRead([activeProgram]),
+        http.get(`${REST_URL}/profiles`, ({ request }) =>
+          postgrestRows(request, [{ timezone: "Europe/London" }]),
+        ),
+        http.patch(`${REST_URL}/programs`, async ({ request }) => {
+          programWrites.push(await request.json());
+          return postgrestRows(request, [activeProgram]);
+        }),
+      );
+    });
+
+    it("should end the program with ended_on and updated_at only, and then save the profile", async () => {
+      const { result } = await renderSignedIn();
+
+      await act(async () => {
+        await result.current.mutateAsync(valid);
+      });
+
+      expect(programWrites).toHaveLength(1);
+      // Exactly these two keys, and nothing else: a strict schema refuses any other.
+      expect(() =>
+        z
+          .strictObject({ ended_on: z.iso.date(), updated_at: z.iso.datetime() })
+          .parse(programWrites[0]),
+      ).not.toThrow();
+      expect(updates).toHaveLength(1);
+    });
+
+    it("should save nothing and leave the caches alone when ending the program fails", async () => {
+      server.use(
+        http.patch(`${REST_URL}/programs`, () => postgrestError(500, "XX000", "unavailable")),
+      );
+      const { queryClient, result } = await renderSignedIn();
+      queryClient.setQueryData(keys.diary.day("2026-10-15"), { localDate: "2026-10-15" });
+
+      await act(async () => {
+        await result.current.mutateAsync(valid).catch(() => undefined);
+      });
+
+      await waitFor(() => {
+        expect(result.current.isError).toBe(true);
+      });
+      expect(result.current.error).toHaveProperty("cause.code", "XX000");
+      expect(updates).toEqual([]);
+      expect(queryClient.getQueryData(keys.profiles.targets)).toBeUndefined();
+      expect(queryClient.getQueryState(keys.diary.day("2026-10-15"))?.isInvalidated).toBe(false);
+    });
   });
 
   it("should invalidate the diary, so the progress bars read the new targets with the day", async () => {
@@ -163,11 +245,11 @@ describe("useUpdateTargets", () => {
       saved = await result.current.mutateAsync(valid);
     });
 
-    expect(saved).toEqual(valid);
+    expect(saved).toEqual({ ...valid, source: "manual" });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.diary.all });
   });
 
-  it("should leave the diary and the cached targets alone and expose the error when the save fails", async () => {
+  it("should leave the diary, the program reads and the cached targets alone and expose the error when the save fails", async () => {
     server.use(
       http.patch(`${REST_URL}/profiles`, () =>
         postgrestError(500, "XX000", "database unavailable"),
@@ -175,6 +257,7 @@ describe("useUpdateTargets", () => {
     );
     const { queryClient, result } = await renderSignedIn();
     queryClient.setQueryData(keys.diary.day("2026-10-15"), { localDate: "2026-10-15" });
+    queryClient.setQueryData(keys.program.summary, { isActive: true });
 
     await act(async () => {
       await result.current.mutateAsync(valid).catch(() => undefined);
@@ -184,6 +267,7 @@ describe("useUpdateTargets", () => {
       expect(result.current.isError).toBe(true);
     });
     expect(result.current.error).toHaveProperty("cause.code", "XX000");
+    expect(queryClient.getQueryState(keys.program.summary)?.isInvalidated).toBe(false);
     expect(queryClient.getQueryData(keys.profiles.targets)).toBeUndefined();
     expect(queryClient.getQueryState(keys.diary.day("2026-10-15"))?.isInvalidated).toBe(false);
   });

@@ -264,8 +264,20 @@ export function overTargetDay(date = "2026-10-15"): LogEntry[] {
   ];
 }
 
-export const targets: Targets = { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 };
-export const noTargets: Targets = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };
+export const targets: Targets = {
+  kcal: 2200,
+  protein_g: 160,
+  carbs_g: 220,
+  fat_g: 70,
+  source: "manual",
+};
+export const noTargets: Targets = {
+  kcal: null,
+  protein_g: null,
+  carbs_g: null,
+  fat_g: null,
+  source: "manual",
+};
 
 /** A day as `useDiaryDay` returns it. */
 export function diaryDay(localDate: string, entries: LogEntry[], isComplete = false): DiaryDay {

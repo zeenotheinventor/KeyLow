@@ -290,7 +290,13 @@ describe("the week view", () => {
     });
 
     it("should draw no bars when there is no calorie target", () => {
-      backend.targets = settled({ kcal: null, protein_g: null, carbs_g: null, fat_g: null });
+      backend.targets = settled({
+        kcal: null,
+        protein_g: null,
+        carbs_g: null,
+        fat_g: null,
+        source: "manual",
+      });
       renderWeek();
 
       expect(screen.queryAllByRole("meter")).toHaveLength(0);

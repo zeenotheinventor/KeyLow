@@ -71,6 +71,7 @@ describe("saving the setup against the local stack with a real user JWT", () => 
       protein_g: 149,
       carbs_g: 230,
       fat_g: 58,
+      source: "manual",
     });
   });
 

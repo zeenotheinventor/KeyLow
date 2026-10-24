@@ -37,7 +37,7 @@ export function DashboardToday({ timeZone, isReadEnabled }: DashboardTodayProps)
   const isOnline = useIsOnline();
   const today = toLocalDate(useNow(), timeZone);
   const dayQuery = useDiaryDay(today, { enabled: isReadEnabled });
-  const targetsQuery = useTargets({ enabled: isReadEnabled });
+  const targetsQuery = useTargets({ enabled: isReadEnabled, localDate: today });
 
   // When midnight comes the new day is still loading. The card keeps the last day it had until it arrives,
   // and the date has already moved on, so the card never flashes to its skeleton.

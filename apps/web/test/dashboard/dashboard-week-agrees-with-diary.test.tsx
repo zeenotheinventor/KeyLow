@@ -19,7 +19,7 @@ type Backend = {
 
 const backend = vi.hoisted((): Backend => ({
   week: [],
-  targets: { kcal: null, protein_g: null, carbs_g: null, fat_g: null },
+  targets: { kcal: null, protein_g: null, carbs_g: null, fat_g: null, source: "manual" },
   day: undefined,
 }));
 
