@@ -3,6 +3,7 @@ import { useRouter, useSegments } from "expo-router";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
 
+import { takeNewTargets } from "../../lib/checkinToast";
 import { useCancelRemindersWhenSignedOut } from "../../lib/reminderScheduler";
 import { identifyUser } from "../../lib/sentry/identifyUser";
 import { supabase } from "../../lib/supabase";
@@ -81,6 +82,10 @@ export function AuthGate({ children, readStoredUserId = readNoStoredUserId }: Au
       // above is the one that tells the two apart, so this event is not allowed to undo it.
       if (event === "INITIAL_SESSION" && nextSession === null) {
         return;
+      }
+      // A new target is one account's news, so it goes with the session and the next account never sees it.
+      if (event === "SIGNED_OUT") {
+        takeNewTargets();
       }
       identify(nextSession?.user.id ?? null);
       setIsSignedIn(nextSession !== null);
