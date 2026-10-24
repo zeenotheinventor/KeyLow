@@ -18,6 +18,8 @@ export {
   RATE_PRESETS_PCT_PER_WEEK,
   ratePerWeekKg,
 } from "./presets";
+export { capToProfileRange, PROFILE_MAX_KCAL } from "./profileRange";
+export type { SetupClamp } from "./profileRange";
 export { setupAnswersSchemaFor } from "./schema";
 export {
   nextStep,
@@ -28,6 +30,7 @@ export {
   stepNumber,
 } from "./steps";
 export type { SetupStep } from "./steps";
+export { startingPlan } from "./startingPlan";
 export { DIET_STYLES, GOALS, HEIGHT_UNITS, PROTEIN_PRESETS } from "./types";
 export type {
   DietStyle,
@@ -36,6 +39,10 @@ export type {
   SetupAnswers,
   SetupDraft,
   SetupGoal,
+  SetupProfileSave,
+  SetupProgramSave,
+  SetupWeighInSave,
+  StartingPlan,
 } from "./types";
 export { defaultUnitsForRegion, entryWeightUnit, weightUnitToSave } from "./units";
 export type { DefaultUnits } from "./units";

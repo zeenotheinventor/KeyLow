@@ -1,7 +1,12 @@
 export { computeTrend } from "./computeTrend";
 export { bmrMifflinStJeor, initialExpenditure } from "./initialExpenditure";
 export type { BmrInput, InitialExpenditure, InitialExpenditureInput } from "./initialExpenditure";
-export { deriveCalorieTarget, deriveTargets, splitMacros } from "./deriveTargets";
+export {
+  deriveCalorieTarget,
+  deriveTargets,
+  effectiveRatePctPerWeek,
+  splitMacros,
+} from "./deriveTargets";
 export type {
   CalorieTarget,
   CalorieTargetInput,
@@ -10,6 +15,7 @@ export type {
   DerivedTargets,
   DeriveTargetsConfig,
   DeriveTargetsInput,
+  EffectiveRateInput,
 } from "./deriveTargets";
 export { DEFAULT_ENGINE_PARAMS, ENGINE_VERSION } from "./params";
 export type { EngineParams, ExpenditureParams, TargetsParams, TrendParams } from "./params";
