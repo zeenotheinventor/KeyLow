@@ -163,6 +163,12 @@ describe("the package index", () => {
     "saveMySetup",
     "useSetupState",
     "useSaveSetup",
+    "getMyProgramSummary",
+    "listMyExpenditureSnapshots",
+    "listMyTargetsHistory",
+    "useProgramSummary",
+    "useExpenditureHistory",
+    "useTargetsHistory",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

@@ -281,3 +281,7 @@ export type {
   ExerciseSearchHit,
   ExerciseSearchOptions,
 } from "./repos";
+export { useExpenditureHistory, useProgramSummary, useTargetsHistory } from "./hooks";
+export type { ProgramHistoryOptions } from "./hooks";
+export { getMyProgramSummary, listMyExpenditureSnapshots, listMyTargetsHistory } from "./repos";
+export type { ExpenditureSnapshot, ProgramDetails, ProgramSummary, TargetsRow } from "./repos";

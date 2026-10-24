@@ -120,3 +120,5 @@ export { getExercise, searchExercises } from "./exercises";
 export type { ExerciseDetail, ExerciseSearchHit, ExerciseSearchOptions } from "./exercises";
 export { archiveExercise, saveExercise } from "./exerciseWrites";
 export type { ExerciseSave } from "./exerciseWrites";
+export { getMyProgramSummary, listMyExpenditureSnapshots, listMyTargetsHistory } from "./program";
+export type { ExpenditureSnapshot, ProgramDetails, ProgramSummary, TargetsRow } from "./program";
