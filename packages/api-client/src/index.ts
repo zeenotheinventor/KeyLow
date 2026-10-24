@@ -4,7 +4,12 @@ export { KeyLowProvider, useSupabase } from "./KeyLowProvider";
 export { keys } from "./queryKeys";
 export { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "./recipeCache";
 export { CustomFoodValidationError } from "./customFoodInput";
-export { EdgeFunctionError, OffProductNotFoundError, RateLimitedError } from "./errors";
+export {
+  EdgeFunctionError,
+  OffProductNotFoundError,
+  RateLimitedError,
+  toEdgeErrorKind,
+} from "./errors";
 export type { EdgeErrorKind } from "./errors";
 export {
   useAcceptTerms,
@@ -281,7 +286,24 @@ export type {
   ExerciseSearchHit,
   ExerciseSearchOptions,
 } from "./repos";
-export { useExpenditureHistory, useProgramSummary, useTargetsHistory } from "./hooks";
+export {
+  useExpenditureHistory,
+  useProgramSummary,
+  useRunDueCheckins,
+  useTargetsHistory,
+} from "./hooks";
 export type { ProgramHistoryOptions } from "./hooks";
-export { getMyProgramSummary, listMyExpenditureSnapshots, listMyTargetsHistory } from "./repos";
-export type { ExpenditureSnapshot, ProgramDetails, ProgramSummary, TargetsRow } from "./repos";
+export {
+  getMyCheckinSchedule,
+  getMyProgramSummary,
+  listMyExpenditureSnapshots,
+  listMyTargetsHistory,
+  runMyDueCheckins,
+} from "./repos";
+export type {
+  CheckinSchedule,
+  ExpenditureSnapshot,
+  ProgramDetails,
+  ProgramSummary,
+  TargetsRow,
+} from "./repos";

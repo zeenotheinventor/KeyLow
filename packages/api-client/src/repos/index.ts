@@ -122,3 +122,5 @@ export { archiveExercise, saveExercise } from "./exerciseWrites";
 export type { ExerciseSave } from "./exerciseWrites";
 export { getMyProgramSummary, listMyExpenditureSnapshots, listMyTargetsHistory } from "./program";
 export type { ExpenditureSnapshot, ProgramDetails, ProgramSummary, TargetsRow } from "./program";
+export { getMyCheckinSchedule, runMyDueCheckins } from "./checkin";
+export type { CheckinSchedule } from "./checkin";
