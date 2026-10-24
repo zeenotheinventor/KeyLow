@@ -1,6 +1,7 @@
 import { describeShortDate, joinInWords } from "./bodyMap";
 import { describeCount } from "./counts";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
+import { capitaliseFirst } from "./wording";
 import {
   MAX_DAYS_PER_WEEK,
   MAX_SESSION_MINUTES,
@@ -156,7 +157,6 @@ export const GOAL_QUESTIONNAIRE = {
 } as const;
 
 /** The text with its first letter in capitals. */
-const capitaliseFirst = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 /** The fixed words of the errors. They state the rule and never a value. */
 export const GOAL_ERRORS = {

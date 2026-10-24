@@ -40,7 +40,12 @@ export const MORE_SCREEN = {
   },
   nutrition: {
     title: "Nutrition",
-    targets: { title: "Targets", subtitle: "Set by you" },
+    targets: {
+      title: "Targets",
+      subtitle: "Set by you",
+      subtitleFromProgram: "From your programme",
+    },
+    program: { title: "Programme", subtitleWithoutProgram: "Let Ki-Lo set your targets" },
   },
   body: { title: "Body", weight: { title: "Weight" } },
   settings: {

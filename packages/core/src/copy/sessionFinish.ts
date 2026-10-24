@@ -1,7 +1,8 @@
 import { describeHeatStep, describeSets, joinInWords } from "./bodyMap";
 import { describeCount } from "./counts";
 import { MUSCLE_NAMES } from "./muscleNames";
-import { lowerFirst, SET_PHRASES } from "./sessionWording";
+import { SET_PHRASES } from "./sessionWording";
+import { lowerFirst } from "./wording";
 import { formatClockTime } from "../dates/formatClockTime";
 import { formatScaledCount } from "../format/scaledCount";
 import { characterCount } from "../recipes/characterCount";

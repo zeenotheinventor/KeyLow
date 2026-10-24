@@ -1,8 +1,8 @@
+import { describeCountedName, describeCountOfTarget } from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { View } from "react-native";
 
 import { Text } from "../Text";
-import { describeCountOfTarget } from "./describeCountOfTarget";
 
 import type { SettlingProgressBarProps } from "./types";
 
@@ -36,7 +36,9 @@ export function SettlingProgressBar({
       )}
       <View
         accessible
-        aria-label={hasCaption ? `${name ?? label}, ${countText}` : (name ?? label)}
+        aria-label={
+          hasCaption ? describeCountedName(name ?? label, countShown, target) : (name ?? label)
+        }
         aria-valuemax={target}
         aria-valuemin={0}
         aria-valuenow={countShown}

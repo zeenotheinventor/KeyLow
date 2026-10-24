@@ -8,6 +8,7 @@ import {
 import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
+import { capitaliseFirst } from "./wording";
 import { dayNumber } from "../dates/calendarDay";
 
 import type { MuscleId } from "../training/muscles";
@@ -248,8 +249,6 @@ const describeNextDate = (nextDate: string, localDate: string): string =>
 
 const describeNextDay = (next: NextPlannedDay, localDate: string): string =>
   `${next.name} on ${describeNextDate(next.date, localDate)}`;
-
-const capitaliseFirst = (text: string): string => text.charAt(0).toUpperCase() + text.slice(1);
 
 const describeRecovery = ({ muscles, trainedOn }: RecoveringMuscles): string | null => {
   const [first] = muscles;

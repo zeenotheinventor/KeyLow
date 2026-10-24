@@ -51,3 +51,4 @@ export * from "./exerciseProgress";
 export * from "./trainingReminders";
 export * from "./remindersScreen";
 export * from "./setup";
+export * from "./program";
