@@ -36,11 +36,11 @@ describe("describeEdgeError", () => {
     expect(RETRY_LABEL).toBe("Try again");
   });
 
-  it("should have its own sentence for each of the six edge error codes", () => {
-    expect(codes).toHaveLength(6);
+  it("should have its own sentence for each of the nine edge error codes", () => {
+    expect(codes).toHaveLength(9);
     const sentences = codes.map((code) => describeEdgeError(code));
 
-    expect(new Set(sentences).size).toBe(6);
+    expect(new Set(sentences).size).toBe(9);
     for (const sentence of sentences) {
       expect(sentence).not.toBe(GENERIC_ERROR);
     }
@@ -61,6 +61,18 @@ describe("describeEdgeError", () => {
 
   it.each(codes)("should say what to do or what is wrong in a full sentence for %s", (code) => {
     expect(describeEdgeError(code)).toMatch(/^[A-Z].*\.$/);
+  });
+
+  it("should pin the sentences of the codes run-checkin sends", () => {
+    expect(describeEdgeError("bad_mode")).toBe(
+      "Ki-Lo did not recognise that request. Update the app and try again.",
+    );
+    expect(describeEdgeError("no_program")).toBe(
+      "Set up a program first, then Ki-Lo can work out your targets.",
+    );
+    expect(describeEdgeError("missing_stats")).toBe(
+      "Ki-Lo needs your sex, birth date, height, activity level and weight. Add them to your profile and try again.",
+    );
   });
 
   it("should pin the sentences", () => {

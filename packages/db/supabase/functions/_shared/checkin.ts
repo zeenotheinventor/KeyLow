@@ -1,6 +1,7 @@
 // The pure parts of `run-checkin` (ADR 0002, Amendment 2, "`run-checkin`"): which dates a call runs,
 // the range of rows to read for them, turning the rows into the inputs of `checkinStep`, the loop
-// that records the check-ins one after another, and the lines and errors that leave the function.
+// that records the check-ins one after another, the plan of a recompute (which start snapshot rule
+// applies and the targets to write), and the lines and errors that leave the function.
 // Nothing here reads a clock or the database, so Deno tests cover all of it. The function itself is
 // `run-checkin/index.ts`.
 //
@@ -11,10 +12,15 @@ import { z } from "zod";
 
 import {
   addCalendarDays,
+  computeTrend,
   dueCheckinDates,
   nextAfter,
   profileBmr,
+  recomputeTargets,
   runCheckinRequestSchema,
+  scheduleToSet,
+  startSnapshot,
+  startSnapshotAction,
   toDayOfWeekKcal,
 } from "./core.ts";
 
@@ -26,7 +32,10 @@ import type {
   EdgeErrorCode,
   ExpenditureBelief,
   ProfileStats,
-  RunCheckinErrorCode,
+  RecomputeTargetsRow,
+  ScheduleToSet,
+  StartSnapshot,
+  StartSnapshotAction,
   TrendInput,
 } from "./core.ts";
 import type { Database } from "./core/database.types.ts";
@@ -357,13 +366,15 @@ function safeDatabaseCode(code: string): string {
   return databaseCodePattern.test(code) ? code : "unknown";
 }
 
+export type RunCheckinMode = "due" | "recompute";
+
 export type RunCheckinRequestRead =
-  | Readonly<{ ok: true; mode: "due" }>
-  | Readonly<{ ok: false; code: Extract<EdgeErrorCode, "invalid_request"> | RunCheckinErrorCode }>;
+  | Readonly<{ ok: true; mode: RunCheckinMode }>
+  | Readonly<{ ok: false; code: Extract<EdgeErrorCode, "invalid_request" | "bad_mode"> }>;
 
 /**
- * Reads the JSON body of a call. A body with no mode asks for `due`. A body that names any other
- * mode is `bad_mode`, and one that is not an object is `invalid_request`.
+ * Reads the JSON body of a call. A body with no mode asks for `due`. A body that names a mode this
+ * function does not have is `bad_mode`, and one that is not an object is `invalid_request`.
  */
 export function readRunCheckinRequest(body: unknown): RunCheckinRequestRead {
   const parsed = runCheckinRequestSchema.safeParse(body);
@@ -383,7 +394,245 @@ export function runLogLine({
   return `run-checkin due user=${userId} ran=${ran} duration_ms=${durationMilliseconds}`;
 }
 
+/** The code of a call that is refused for its user's rows: no program, or a profile with a stat missing. */
+export type RunCheckinRefusalCode = Extract<EdgeErrorCode, "no_program" | "missing_stats">;
+
 /** The line a refused run logs: the user id and the code. */
-export function refusedLogLine(userId: string, code: RunCheckinErrorCode): string {
+export function refusedLogLine(userId: string, code: RunCheckinRefusalCode): string {
   return `run-checkin refused user=${userId} code=${code}`;
+}
+
+/** The line a finished recompute logs: the user id, which branch ran and the duration. */
+export function recomputeLogLine({
+  userId,
+  branch,
+  durationMilliseconds,
+}: Readonly<{ userId: string; branch: RecomputeBranch; durationMilliseconds: number }>): string {
+  return `run-checkin recompute user=${userId} branch=${branch} duration_ms=${durationMilliseconds}`;
+}
+
+/**
+ * The snapshot a due check-in starts from: the newest one dated before `before`, or the newest of all
+ * when `before` is null. A start snapshot can carry a later date than a check-in that is still due (a
+ * recompute writes one as of today), and a check-in must not start from a belief that is dated after
+ * it. `read` answers the newest snapshot under that date. A failed read throws its code alone. Null
+ * when there is no such snapshot.
+ */
+export async function readPriorBelief(
+  read: PriorSnapshotRead,
+  before: string | null,
+): Promise<ExpenditureBelief | null> {
+  const { data, error } = await read(before);
+  if (error !== null) {
+    throw readFailure("expenditure_snapshots", error.code);
+  }
+  return data === null ? null : { muKcal: data.mu_kcal, varKcal2: data.var_kcal2 };
+}
+
+/** The newest snapshot dated before a date (any, for null), as far as `readPriorBelief` needs it. */
+export type PriorSnapshotRead = (before: string | null) => PromiseLike<{
+  data: Readonly<{ mu_kcal: number; var_kcal2: number }> | null;
+  error: Readonly<{ code: string }> | null;
+}>;
+
+/** `startSnapshotAction` rewrites a start snapshot up to this many days old and makes a new one after that. */
+const oldestRewrittenStartSnapshotDays = 28;
+
+/**
+ * The days of weigh-ins a recompute reads, back from today. The oldest rewrite is dated today minus 28
+ * and needs the trend on the day before that (29 days back), warmed up by `trendWarmUpDays` more.
+ */
+export const recomputeWeighInDays = oldestRewrittenStartSnapshotDays + 1 + trendWarmUpDays;
+
+/**
+ * The trend weight on `date`: the newest trend point of the weigh-ins dated on or before it, or null
+ * when there is none. The trend is worked out from those weigh-ins only, as `checkinStep` does for the
+ * day before a check-in, so a later weigh-in never moves it.
+ */
+export function trendWeightOn(weighIns: readonly TrendInput[], date: string): number | null {
+  const upToDate = weighIns.filter(({ localDate }) => localDate <= date);
+  return computeTrend(upToDate).at(-1)?.trendKg ?? null;
+}
+
+/** The newest snapshot of the user, as far as a recompute reads it. */
+export type NewestSnapshot = Readonly<{
+  id: string;
+  kind: "start" | "checkin";
+  as_of_date: string;
+  mu_kcal: number;
+}>;
+
+/** Everything a recompute reads. The weigh-ins are live ones and may reach back as far as `recomputeWeighInDays`. */
+export type RecomputeReads = Readonly<{
+  program: CheckinProgram;
+  /** The program's stored `next_checkin_date`, null for a program the wizard made. */
+  nextCheckinDate: string | null;
+  stats: ProfileStats;
+  onboardingWeightKg: number;
+  newest: NewestSnapshot | null;
+  weighIns: readonly TrendInput[];
+  /** The user's local today, `YYYY-MM-DD`. */
+  today: string;
+}>;
+
+/** What a recompute does with the start snapshot: `new`, `rewrite` or `none` (ADR 0002, Amendment 2). */
+export type RecomputeBranch = StartSnapshotAction;
+
+/** What a recompute writes: the start snapshot (or none), the targets and the schedule (or none). */
+export type RecomputePlan = Readonly<{
+  branch: RecomputeBranch;
+  startSnapshot: StartSnapshot | null;
+  /** The newest snapshot the targets point at, for the `none` branch. The writer sets it otherwise. */
+  expenditureSnapshotId: string | null;
+  targets: RecomputeTargetsRow;
+  schedule: ScheduleToSet | null;
+}>;
+
+/**
+ * The recompute of one user (ADR 0002, Amendment 2, "The start snapshot and the schedule" and
+ * "Recompute"). `startSnapshotAction` picks the branch. A `rewrite` keeps the existing start snapshot's
+ * own date, so a start snapshot is never dated later than the program's `next_checkin_date`. The
+ * schedule is decided apart from the branch, from the program alone, except that a `new` start
+ * snapshot also sets it again when the program's date is already due.
+ *
+ * The trend weight of a start snapshot is the trend on the day before its date, null with no weigh-in
+ * (ADR 0003, Amendment 13). The targets use the trend on yesterday, the onboarding weight standing in
+ * when there is none. Only the `none` branch reads the targets' expenditure from the stored snapshot.
+ */
+export function planRecompute({
+  program,
+  nextCheckinDate,
+  stats,
+  onboardingWeightKg,
+  newest,
+  weighIns,
+  today,
+}: RecomputeReads): RecomputePlan {
+  const branch = startSnapshotAction({
+    latest: newest,
+    today,
+    settling: newest?.kind === "start",
+  });
+  const asOfDate = branch === "rewrite" && newest !== null ? newest.as_of_date : today;
+  const start =
+    branch === "none"
+      ? null
+      : startSnapshot({
+          stats,
+          onboardingWeightKg,
+          asOfDate,
+          trendWeightKg: trendWeightOn(weighIns, addCalendarDays(asOfDate, -1)),
+        });
+  const snapshot = start ?? newest;
+  if (snapshot === null) {
+    // `none` is only ever chosen when there is a newest snapshot.
+    throw new RangeError("A recompute needs a snapshot to start from.");
+  }
+  const targets = recomputeTargets({
+    snapshot,
+    trendWeightKg: trendWeightOn(weighIns, addCalendarDays(today, -1)) ?? onboardingWeightKg,
+    program,
+    bmrKcal: profileBmr(stats, onboardingWeightKg, today),
+    today,
+  });
+  // A new start snapshot begins a fresh settling period. When the program's date is already due, the
+  // due mode would otherwise answer `duplicate` for today's date and never move it, so the schedule
+  // is set again (a null date, to `scheduleToSet`, is one that is set again).
+  const dateIsDue = nextCheckinDate !== null && nextCheckinDate <= today;
+  return {
+    branch,
+    startSnapshot: start,
+    expenditureSnapshotId: branch === "none" ? (newest?.id ?? null) : null,
+    targets,
+    schedule: scheduleToSet(
+      { next_checkin_date: branch === "new" && dateIsDue ? null : nextCheckinDate },
+      today,
+    ),
+  };
+}
+
+/**
+ * The arguments of `record_targets`. Every key is one the writer reads, and none names a user but
+ * `p_user_id`. A null start snapshot, date or weekday is sent as null, and the writer then leaves that
+ * part alone.
+ */
+export function toRecordTargetsArguments(
+  userId: string,
+  programId: string,
+  { startSnapshot: start, expenditureSnapshotId, targets, schedule }: RecomputePlan,
+) {
+  return {
+    p_user_id: userId,
+    p_targets: jsonObjectSchema.parse({
+      program_id: programId,
+      expenditure_snapshot_id: expenditureSnapshotId,
+      effective_from: targets.effective_from,
+      calories_kcal: targets.calories_kcal,
+      protein_g: targets.protein_g,
+      fat_g: targets.fat_g,
+      carbs_g: targets.carbs_g,
+      dow_calories_kcal: targets.dow_calories_kcal,
+      basis: targets.basis,
+      engine_version: targets.engine_version,
+      params: targets.params,
+    }),
+    p_start_snapshot:
+      start === null
+        ? null
+        : jsonObjectSchema.parse({
+            program_id: programId,
+            as_of_date: start.as_of_date,
+            mu_kcal: start.mu_kcal,
+            var_kcal2: start.var_kcal2,
+            measurement: start.measurement,
+            trend_weight_kg: start.trend_weight_kg,
+            engine_version: start.engine_version,
+            params: start.params,
+          }),
+    p_next_checkin_date: schedule === null ? null : schedule.nextCheckinDate,
+    p_checkin_weekday: schedule === null ? null : schedule.checkinWeekday,
+  };
+}
+
+/** The error of a refused `record_targets` write. Its message holds the database code and nothing else. */
+export class RecordTargetsError extends Error {
+  constructor(code: string) {
+    super(`record_targets was refused with code ${code}`);
+    this.name = "RecordTargetsError";
+  }
+}
+
+type RecordTargetsArguments = ReturnType<typeof toRecordTargetsArguments>;
+
+/**
+ * `record_targets` arguments as the generated database types have them. They call every argument
+ * non-null, though the writer takes a null start snapshot, date and weekday to mean "leave alone".
+ * Sending `RecordTargetsArguments` as these is safe because the types differ only in that nullability.
+ */
+export type GeneratedRecordTargetsArguments =
+  Database["public"]["Functions"]["record_targets"]["Args"];
+
+/** The `record_targets` call of the service client, as far as `callRecordTargets` needs it. */
+export type RecordTargetsRpc = (
+  args: RecordTargetsArguments,
+) => PromiseLike<{ data: unknown; error: Readonly<{ code: string }> | null }>;
+
+const targetsIdSchema = z.uuid();
+
+/**
+ * Writes the recompute through `record_targets` and answers the id of the new targets row. A refused
+ * write throws the code alone, for the reason `recordCheckinFailure` gives, so nothing of the rows reaches
+ * the response, the log or Sentry.
+ */
+export async function callRecordTargets(
+  rpc: RecordTargetsRpc,
+  userId: string,
+  programId: string,
+  plan: RecomputePlan,
+): Promise<string> {
+  const answer = await rpc(toRecordTargetsArguments(userId, programId, plan));
+  if (answer.error !== null) {
+    throw new RecordTargetsError(safeDatabaseCode(answer.error.code));
+  }
+  return targetsIdSchema.parse(answer.data);
 }

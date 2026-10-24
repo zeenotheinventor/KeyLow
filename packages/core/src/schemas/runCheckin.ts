@@ -1,21 +1,14 @@
 import { z } from "zod";
 
 /*
- * The contract of the `run-checkin` Edge Function (ADR 0002, Amendment 2, "`run-checkin`"). Only the
- * `due` mode exists so far. `recompute` and `backstop` join the mode list with their own tickets, and
- * until then a body that names them is refused as a bad mode.
+ * The contract of the `run-checkin` Edge Function (ADR 0002, Amendment 2, "`run-checkin`"). The `due` and
+ * `recompute` modes exist so far. `backstop` joins the mode list with its own ticket, and until then a
+ * body that names it is refused as a bad mode. The error codes the function sends are in
+ * `edgeErrorCodeSchema`, beside every other function's.
  */
 
-/**
- * The error codes only `run-checkin` sends, beside the shared `EdgeErrorCode`s: a mode it does not know
- * (400), a user with no active program (409) and a program whose profile lacks a stat a check-in needs
- * (409). They are kept apart from `edgeErrorCodeSchema` for now, because the user-facing sentence for each
- * shared code lives in `copy/errors.ts`. Folding them into that schema comes with their sentences.
- */
-export const runCheckinErrorCodeSchema = z.enum(["bad_mode", "no_program", "missing_stats"]);
-
-/** What a call asks for. Only the caller's own due check-ins are available. */
-const runCheckinModeSchema = z.literal("due");
+/** What a call asks for. Both modes run for the caller's own program. */
+const runCheckinModeSchema = z.enum(["due", "recompute"]);
 
 /** Request body of the `run-checkin` Edge Function. A body with no mode asks for `due`. */
 export const runCheckinRequestSchema = z.object({
@@ -32,6 +25,11 @@ export const runCheckinResponseSchema = z.object({
   nextCheckinDate: z.iso.date().nullable(),
 });
 
-export type RunCheckinErrorCode = z.infer<typeof runCheckinErrorCodeSchema>;
+/** Response body of the `run-checkin` Edge Function in `recompute` mode: the id of the new targets row. */
+export const runCheckinRecomputeResponseSchema = z.object({
+  targetsId: z.uuid(),
+});
+
 export type RunCheckinRequest = z.infer<typeof runCheckinRequestSchema>;
 export type RunCheckinResponse = z.infer<typeof runCheckinResponseSchema>;
+export type RunCheckinRecomputeResponse = z.infer<typeof runCheckinRecomputeResponseSchema>;

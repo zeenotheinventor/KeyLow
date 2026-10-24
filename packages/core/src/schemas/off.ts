@@ -43,6 +43,10 @@ export const offProductResponseSchema = z.object({
   portions: z.array(foodPortionSchema),
 });
 
+/**
+ * The codes of the shared error body. The last three are `run-checkin`'s: a mode it does not know (400),
+ * a user with no active program (409) and a user whose profile lacks a stat the engine needs (409).
+ */
 export const edgeErrorCodeSchema = z.enum([
   "not_found",
   "rate_limited",
@@ -50,6 +54,9 @@ export const edgeErrorCodeSchema = z.enum([
   "invalid_request",
   "unauthorized",
   "internal_error",
+  "bad_mode",
+  "no_program",
+  "missing_stats",
 ]);
 
 /** Error body shared by every Edge Function. */

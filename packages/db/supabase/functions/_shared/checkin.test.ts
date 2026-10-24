@@ -4,10 +4,15 @@ import {
   datesToRun,
   maximumCheckinsPerCall,
   readRange,
+  recomputeWeighInDays,
   callRecordCheckin,
+  callRecordTargets,
+  planRecompute,
   readFailure,
+  readPriorBelief,
   readRequestBody,
   readRunCheckinRequest,
+  recomputeLogLine,
   recordCheckinFailure,
   refusedLogLine,
   requireCompleteRead,
@@ -18,7 +23,9 @@ import {
   toCheckinProgram,
   toRecordCheckinArguments,
   toRecordOutcome,
+  toRecordTargetsArguments,
   toWeighIns,
+  trendWeightOn,
 } from "./checkin.ts";
 import { addCalendarDays, checkinStep, toDayInputs } from "./core.ts";
 import { handle } from "./http.ts";
@@ -27,6 +34,7 @@ import { toSafeError } from "./report.ts";
 import type {
   CheckinLoopDependencies,
   CheckinReads,
+  RecomputeReads,
   RecordOutcome,
   StoredCheckinState,
 } from "./checkin.ts";
@@ -473,8 +481,12 @@ Deno.test("readRunCheckinRequest reads an empty object and the due mode as due",
   assertEquals(readRunCheckinRequest({ mode: "due" }), { ok: true, mode: "due" });
 });
 
+Deno.test("readRunCheckinRequest reads the recompute mode as recompute", () => {
+  assertEquals(readRunCheckinRequest({ mode: "recompute" }), { ok: true, mode: "recompute" });
+});
+
 Deno.test("readRunCheckinRequest answers bad_mode for any other mode", () => {
-  for (const mode of ["recompute", "backstop", "", 7, null]) {
+  for (const mode of ["backstop", "weekly", "", 7, null]) {
     assertEquals(readRunCheckinRequest({ mode }), { ok: false, code: "bad_mode" });
   }
 });
@@ -668,5 +680,516 @@ Deno.test(
     const error = assertThrows(() => requireUniqueDates(rows, "day_logs"), Error);
 
     assertEquals(error.message, "Reading day_logs failed with code duplicate_date");
+  },
+);
+
+// Recompute (ADR 0002, Amendment 2, "The start snapshot and the schedule" and "Recompute"). Today is day 28
+// of the golden run, 2026-10-24, a Saturday. The profile is the golden one but at the activity "light",
+// so the starting estimate is Mifflin-St Jeor 1755 times 1.375, which is 2413.125, with a variance of
+// 131021.376. The golden start snapshot of 2500 is a figure the golden fixture chose for itself.
+const today = day(28);
+
+const goldenStats = {
+  sex: "male",
+  birthDate: "1991-04-01",
+  heightCm: 180,
+  activity: "light",
+} as const;
+
+function recomputeReads(overrides: Partial<RecomputeReads> = {}): RecomputeReads {
+  return {
+    program: goldenProgram,
+    nextCheckinDate: null,
+    stats: goldenStats,
+    onboardingWeightKg: 80,
+    newest: null,
+    weighIns: [],
+    today,
+    ...overrides,
+  };
+}
+
+const goldenWeighIns = goldenReads().weighIns;
+
+Deno.test(
+  "planRecompute makes a new start snapshot as of today when the user has no snapshot",
+  () => {
+    const plan = planRecompute(recomputeReads());
+
+    assertEquals(plan.branch, "new");
+    assertEquals(plan.startSnapshot?.kind, "start");
+    assertEquals(plan.startSnapshot?.as_of_date, today);
+    assertAlmostEquals(plan.startSnapshot?.mu_kcal ?? 0, 2413.125, 1e-9);
+    assertAlmostEquals(plan.startSnapshot?.var_kcal2 ?? 0, 131021.376, 1e-3);
+    assertEquals(plan.startSnapshot?.measurement, null);
+    assertEquals(plan.expenditureSnapshotId, null);
+  },
+);
+
+Deno.test(
+  "planRecompute starts the targets from the new start snapshot, with the source start",
+  () => {
+    const plan = planRecompute(recomputeReads());
+
+    assertEquals(plan.targets.basis.source, "start");
+    assertAlmostEquals(plan.targets.basis.tdeeKcal, 2413.125, 1e-9);
+    assertEquals(plan.targets.effective_from, today);
+    assertEquals(plan.targets.calories_kcal, 1970);
+    assertEquals(plan.targets.protein_g, 128);
+  },
+);
+
+Deno.test(
+  "planRecompute leaves the trend weight of a start snapshot null without a weigh-in",
+  () => {
+    const plan = planRecompute(recomputeReads());
+
+    assertEquals(plan.startSnapshot?.trend_weight_kg, null);
+    assertEquals(plan.targets.basis.trendWeightKg, 80);
+  },
+);
+
+Deno.test(
+  "planRecompute puts the trend weight of the day before in a start snapshot and in the targets",
+  () => {
+    const plan = planRecompute(recomputeReads({ weighIns: goldenWeighIns }));
+
+    assertAlmostEquals(plan.startSnapshot?.trend_weight_kg ?? 0, 79.022685, 1e-6);
+    assertAlmostEquals(plan.targets.basis.trendWeightKg, 79.022685, 1e-6);
+    assertEquals(plan.targets.calories_kcal, 1980);
+    assertEquals(plan.targets.protein_g, 126);
+  },
+);
+
+Deno.test(
+  "planRecompute ignores a weigh-in dated today, because the trend is the day before's",
+  () => {
+    const plan = planRecompute(recomputeReads({ weighIns: [{ localDate: today, weightKg: 90 }] }));
+
+    assertEquals(plan.startSnapshot?.trend_weight_kg, null);
+    assertEquals(plan.targets.basis.trendWeightKg, 80);
+  },
+);
+
+Deno.test("planRecompute rewrites a start snapshot that is the newest, on its own date", () => {
+  const plan = planRecompute(
+    recomputeReads({
+      newest: { id: "snapshot-1", kind: "start", as_of_date: day(18), mu_kcal: 2000 },
+    }),
+  );
+
+  assertEquals(plan.branch, "rewrite");
+  assertEquals(plan.startSnapshot?.as_of_date, day(18));
+  assertAlmostEquals(plan.startSnapshot?.mu_kcal ?? 0, 2413.125, 1e-9);
+  assertEquals(plan.expenditureSnapshotId, null);
+  assertEquals(plan.targets.basis.source, "start");
+  assertAlmostEquals(plan.targets.basis.tdeeKcal, 2413.125, 1e-9);
+  assertEquals(plan.targets.effective_from, today);
+});
+
+Deno.test(
+  "planRecompute takes a rewritten snapshot's trend weight from the day before its own date",
+  () => {
+    const plan = planRecompute(
+      recomputeReads({
+        weighIns: goldenWeighIns,
+        newest: { id: "snapshot-1", kind: "start", as_of_date: day(14), mu_kcal: 2000 },
+      }),
+    );
+
+    assertAlmostEquals(plan.startSnapshot?.trend_weight_kg ?? 0, 79.592361, 1e-6);
+    assertAlmostEquals(plan.targets.basis.trendWeightKg, 79.022685, 1e-6);
+  },
+);
+
+Deno.test("planRecompute still rewrites a start snapshot of exactly 28 days ago", () => {
+  const plan = planRecompute(
+    recomputeReads({
+      newest: { id: "snapshot-1", kind: "start", as_of_date: day(0), mu_kcal: 2000 },
+    }),
+  );
+
+  assertEquals(plan.branch, "rewrite");
+  assertEquals(plan.startSnapshot?.as_of_date, day(0));
+});
+
+Deno.test(
+  "planRecompute makes a new start snapshot as of today when the newest is 29 days old",
+  () => {
+    const plan = planRecompute(
+      recomputeReads({
+        newest: { id: "snapshot-1", kind: "start", as_of_date: day(-1), mu_kcal: 2000 },
+      }),
+    );
+
+    assertEquals(plan.branch, "new");
+    assertEquals(plan.startSnapshot?.as_of_date, today);
+  },
+);
+
+Deno.test(
+  "planRecompute keeps the learned expenditure after a check-in and writes no snapshot",
+  () => {
+    const plan = planRecompute(
+      recomputeReads({
+        newest: { id: "snapshot-2", kind: "checkin", as_of_date: day(18), mu_kcal: 2579.54 },
+      }),
+    );
+
+    assertEquals(plan.branch, "none");
+    assertEquals(plan.startSnapshot, null);
+    assertEquals(plan.expenditureSnapshotId, "snapshot-2");
+    assertEquals(plan.targets.basis.source, "recompute");
+    assertAlmostEquals(plan.targets.basis.tdeeKcal, 2579.54, 1e-9);
+    assertEquals(plan.targets.calories_kcal, 2140);
+  },
+);
+
+Deno.test(
+  "planRecompute makes a new start snapshot when the newest check-in is over 28 days old",
+  () => {
+    const plan = planRecompute(
+      recomputeReads({
+        newest: { id: "snapshot-2", kind: "checkin", as_of_date: day(-1), mu_kcal: 2579.54 },
+      }),
+    );
+
+    assertEquals(plan.branch, "new");
+    assertEquals(plan.startSnapshot?.as_of_date, today);
+    assertEquals(plan.targets.basis.source, "start");
+  },
+);
+
+Deno.test(
+  "planRecompute sets the schedule on every branch when the program has no next date",
+  () => {
+    const newestOf = (kind: "start" | "checkin", asOfDate: string) => ({
+      id: "snapshot-1",
+      kind,
+      as_of_date: asOfDate,
+      mu_kcal: 2500,
+    });
+    const cases = [
+      { branch: "new", newest: null },
+      { branch: "rewrite", newest: newestOf("start", day(18)) },
+      { branch: "none", newest: newestOf("checkin", day(18)) },
+    ] as const;
+
+    for (const { branch, newest } of cases) {
+      const plan = planRecompute(recomputeReads({ newest, nextCheckinDate: null }));
+
+      assertEquals(plan.branch, branch);
+      assertEquals(plan.schedule, { nextCheckinDate: "2026-11-07", checkinWeekday: 6 });
+    }
+  },
+);
+
+Deno.test(
+  "planRecompute leaves the schedule alone on every branch when the program has a next date",
+  () => {
+    const newestOf = (kind: "start" | "checkin", asOfDate: string) => ({
+      id: "snapshot-1",
+      kind,
+      as_of_date: asOfDate,
+      mu_kcal: 2500,
+    });
+    const cases = [null, newestOf("start", day(18)), newestOf("checkin", day(18))];
+
+    for (const newest of cases) {
+      const plan = planRecompute(recomputeReads({ newest, nextCheckinDate: day(32) }));
+
+      assertEquals(plan.schedule, null);
+    }
+  },
+);
+
+Deno.test("trendWeightOn is null with no weigh-in on or before the day", () => {
+  assertEquals(trendWeightOn([], day(5)), null);
+  assertEquals(trendWeightOn(goldenWeighIns, day(-1)), null);
+});
+
+Deno.test(
+  "trendWeightOn is the newest trend point on or before the day, from the weigh-ins up to it",
+  () => {
+    assertAlmostEquals(trendWeightOn(goldenWeighIns, day(27)) ?? 0, 79.022685, 1e-6);
+    assertAlmostEquals(trendWeightOn(goldenWeighIns, day(20)) ?? 0, 79.320994, 1e-6);
+    assertAlmostEquals(
+      trendWeightOn([...goldenWeighIns, { localDate: day(28), weightKg: 120 }], day(27)) ?? 0,
+      79.022685,
+      1e-6,
+    );
+  },
+);
+
+// The snapshots of a user whose start snapshot was written later than the check-in that is due. A
+// rewrite keeps the start snapshot's own date, so it cannot happen through `recompute`, but the due mode
+// does not rely on that: its prior is the newest snapshot dated before the date it runs.
+const snapshotsWithALateStart = [
+  { as_of_date: day(0), mu_kcal: 2500, var_kcal2: 140625 },
+  { as_of_date: day(20), mu_kcal: 3000, var_kcal2: 90000 },
+];
+
+function fakeSnapshotRead(rows: typeof snapshotsWithALateStart) {
+  const asked: (string | null)[] = [];
+  return {
+    asked,
+    read: (before: string | null) => {
+      asked.push(before);
+      const newest = rows
+        .filter(({ as_of_date }) => before === null || as_of_date < before)
+        .sort((first, second) => second.as_of_date.localeCompare(first.as_of_date))[0];
+      return Promise.resolve({ data: newest ?? null, error: null });
+    },
+  };
+}
+
+Deno.test(
+  "readPriorBelief is the newest snapshot dated before the date it is asked for",
+  async () => {
+    const { read, asked } = fakeSnapshotRead(snapshotsWithALateStart);
+
+    const prior = await readPriorBelief(read, day(14));
+
+    assertEquals(prior, { muKcal: 2500, varKcal2: 140625 });
+    assertEquals(asked, [day(14)]);
+  },
+);
+
+Deno.test("readPriorBelief is the newest snapshot of all when no date is given", async () => {
+  const { read } = fakeSnapshotRead(snapshotsWithALateStart);
+
+  assertEquals(await readPriorBelief(read, null), { muKcal: 3000, varKcal2: 90000 });
+});
+
+Deno.test("readPriorBelief is null when no snapshot is dated before the date", async () => {
+  const { read } = fakeSnapshotRead(snapshotsWithALateStart);
+
+  assertEquals(await readPriorBelief(read, day(0)), null);
+});
+
+Deno.test("readPriorBelief throws the code of a failed read and nothing else", async () => {
+  const read = () => Promise.resolve({ data: null, error: refusedWrite });
+
+  const failure = await assertRejects(() => readPriorBelief(read, day(14)), Error);
+
+  assertEquals(failure.message, "Reading expenditure_snapshots failed with code 23514");
+});
+
+function recordTargetsRpc(answer: { data: unknown; error: { code: string } | null }) {
+  const sent: unknown[] = [];
+  return {
+    sent,
+    rpc: (args: unknown) => {
+      sent.push(args);
+      return Promise.resolve(answer);
+    },
+  };
+}
+
+const targetsId = "0c5f8d4e-6b1a-4c3e-9d2f-7a8b9c0d1e2f";
+
+Deno.test(
+  "toRecordTargetsArguments sends the start snapshot, the targets and the schedule of a new plan",
+  () => {
+    const plan = planRecompute(recomputeReads());
+
+    const args = toRecordTargetsArguments("user-id", "program-id", plan);
+
+    assertEquals(Object.keys(args).sort(), [
+      "p_checkin_weekday",
+      "p_next_checkin_date",
+      "p_start_snapshot",
+      "p_targets",
+      "p_user_id",
+    ]);
+    assertEquals(args.p_user_id, "user-id");
+    assertEquals(args.p_next_checkin_date, "2026-11-07");
+    assertEquals(args.p_checkin_weekday, 6);
+    assertEquals(Object.keys(args.p_start_snapshot ?? {}).sort(), [
+      "as_of_date",
+      "engine_version",
+      "measurement",
+      "mu_kcal",
+      "params",
+      "program_id",
+      "trend_weight_kg",
+      "var_kcal2",
+    ]);
+    assertEquals(args.p_start_snapshot?.program_id, "program-id");
+    assertEquals(args.p_start_snapshot?.measurement, null);
+    assertEquals(Object.keys(args.p_targets).sort(), [
+      "basis",
+      "calories_kcal",
+      "carbs_g",
+      "dow_calories_kcal",
+      "effective_from",
+      "engine_version",
+      "expenditure_snapshot_id",
+      "fat_g",
+      "params",
+      "program_id",
+      "protein_g",
+    ]);
+    assertEquals(args.p_targets.program_id, "program-id");
+    assertEquals(args.p_targets.expenditure_snapshot_id, null);
+    assertEquals(args.p_targets.effective_from, today);
+  },
+);
+
+Deno.test(
+  "toRecordTargetsArguments names the newest snapshot and sends no start snapshot or schedule for a none plan",
+  () => {
+    const plan = planRecompute(
+      recomputeReads({
+        newest: { id: "snapshot-2", kind: "checkin", as_of_date: day(18), mu_kcal: 2579.54 },
+        nextCheckinDate: day(32),
+      }),
+    );
+
+    const args = toRecordTargetsArguments("user-id", "program-id", plan);
+
+    assertEquals(args.p_start_snapshot, null);
+    assertEquals(args.p_next_checkin_date, null);
+    assertEquals(args.p_checkin_weekday, null);
+    assertEquals(args.p_targets.expenditure_snapshot_id, "snapshot-2");
+  },
+);
+
+Deno.test(
+  "callRecordTargets sends the arguments of the writer and answers the id of the new targets",
+  async () => {
+    const { rpc, sent } = recordTargetsRpc({ data: targetsId, error: null });
+    const plan = planRecompute(recomputeReads());
+
+    const id = await callRecordTargets(rpc, "user-id", "program-id", plan);
+
+    assertEquals(id, targetsId);
+    assertEquals(sent, [toRecordTargetsArguments("user-id", "program-id", plan)]);
+  },
+);
+
+Deno.test("callRecordTargets refuses an answer that is not an id", async () => {
+  const { rpc } = recordTargetsRpc({ data: "teapot", error: null });
+
+  await assertRejects(() =>
+    callRecordTargets(rpc, "user-id", "program-id", planRecompute(recomputeReads())),
+  );
+});
+
+Deno.test("callRecordTargets throws the code of a refused write and none of the row", async () => {
+  const { rpc } = recordTargetsRpc({ data: null, error: refusedWrite });
+
+  const failure = await assertRejects(
+    () => callRecordTargets(rpc, "user-id", "program-id", planRecompute(recomputeReads())),
+    Error,
+  );
+
+  assertEquals(failure.message, "record_targets was refused with code 23514");
+});
+
+Deno.test("the log line of a recompute holds the user id, the branch and the duration only", () => {
+  assertEquals(
+    recomputeLogLine({ userId: "0c5f8d4e", branch: "rewrite", durationMilliseconds: 87 }),
+    "run-checkin recompute user=0c5f8d4e branch=rewrite duration_ms=87",
+  );
+});
+
+Deno.test(
+  "a recompute reads weigh-ins back 119 days: 29 for the oldest rewrite's day before, 90 to warm up",
+  () => {
+    assertEquals(recomputeWeighInDays, 119);
+  },
+);
+
+Deno.test(
+  "planRecompute sets a schedule of today plus 14 for a new start snapshot when the next date is overdue",
+  () => {
+    for (const nextCheckinDate of [day(21), today]) {
+      const plan = planRecompute(
+        recomputeReads({
+          nextCheckinDate,
+          newest: { id: "snapshot-2", kind: "checkin", as_of_date: day(-7), mu_kcal: 2579.54 },
+        }),
+      );
+
+      assertEquals(plan.branch, "new");
+      assertEquals(plan.schedule, { nextCheckinDate: "2026-11-07", checkinWeekday: 6 });
+    }
+  },
+);
+
+Deno.test("planRecompute leaves a next date after today alone for a new start snapshot", () => {
+  const plan = planRecompute(
+    recomputeReads({
+      nextCheckinDate: day(29),
+      newest: { id: "snapshot-2", kind: "checkin", as_of_date: day(-7), mu_kcal: 2579.54 },
+    }),
+  );
+
+  assertEquals(plan.branch, "new");
+  assertEquals(plan.schedule, null);
+});
+
+Deno.test("planRecompute leaves an overdue next date alone when the branch is not new", () => {
+  const plan = planRecompute(
+    recomputeReads({
+      nextCheckinDate: day(21),
+      newest: { id: "snapshot-2", kind: "checkin", as_of_date: day(18), mu_kcal: 2579.54 },
+    }),
+  );
+
+  assertEquals(plan.branch, "none");
+  assertEquals(plan.schedule, null);
+});
+
+Deno.test("planRecompute passes the floor's BMR of 1755 for the golden profile", () => {
+  assertEquals(planRecompute(recomputeReads()).targets.basis.bmrKcal, 1755);
+});
+
+Deno.test(
+  "planRecompute works the start snapshot at the age on its date and the floor at the age today",
+  () => {
+    // Born 1991-10-20: 34 on day 18 (2026-10-14), the rewritten snapshot's date, and 35 on day 28.
+    const stats = { ...goldenStats, birthDate: "1991-10-20" };
+
+    const plan = planRecompute(
+      recomputeReads({
+        stats,
+        newest: { id: "snapshot-1", kind: "start", as_of_date: day(18), mu_kcal: 2000 },
+      }),
+    );
+
+    // Mifflin-St Jeor is 1760 at 34 and 1755 at 35, and the factor of "light" is 1.375.
+    assertAlmostEquals(plan.startSnapshot?.mu_kcal ?? 0, 2420, 1e-9);
+    assertEquals(plan.targets.basis.bmrKcal, 1755);
+  },
+);
+
+Deno.test("callRecordTargets reads a code that is not a short code as unknown", async () => {
+  const { rpc } = recordTargetsRpc({ data: null, error: { code: refusedWrite.details } });
+
+  const failure = await assertRejects(
+    () => callRecordTargets(rpc, "user-id", "program-id", planRecompute(recomputeReads())),
+    Error,
+  );
+
+  assertEquals(failure.message, "record_targets was refused with code unknown");
+  for (const value of healthValues) {
+    assertEquals(failure.message.includes(value), false);
+  }
+});
+
+Deno.test(
+  "planRecompute leaves an overdue next date alone when the start snapshot is rewritten",
+  () => {
+    const plan = planRecompute(
+      recomputeReads({
+        nextCheckinDate: day(21),
+        newest: { id: "snapshot-1", kind: "start", as_of_date: day(18), mu_kcal: 2000 },
+      }),
+    );
+
+    assertEquals(plan.branch, "rewrite");
+    assertEquals(plan.schedule, null);
   },
 );

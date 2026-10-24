@@ -1,12 +1,10 @@
 // Response helpers shared by every Edge Function: JSON bodies, the typed error body and CORS.
 // The error body and its codes are the @keylow/core contract, so the functions and the api-client
 // share one definition.
-import type { EdgeErrorCode, RunCheckinErrorCode } from "./core.ts";
+import type { EdgeErrorCode } from "./core.ts";
 import { type ReportError, reportError } from "./report.ts";
 
-type ErrorCode = EdgeErrorCode | RunCheckinErrorCode;
-
-const statusByCode: Record<ErrorCode, number> = {
+const statusByCode: Record<EdgeErrorCode, number> = {
   not_found: 404,
   rate_limited: 429,
   upstream_error: 502,
@@ -35,7 +33,7 @@ export function json(body: unknown, init: ResponseInit = {}): Response {
 }
 
 export function error(
-  code: ErrorCode,
+  code: EdgeErrorCode,
   message: string,
   options: { retryAfterSeconds?: number } = {},
 ): Response {

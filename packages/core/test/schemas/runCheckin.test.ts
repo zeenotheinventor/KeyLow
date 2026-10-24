@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  runCheckinErrorCodeSchema,
+  edgeErrorCodeSchema,
+  runCheckinRecomputeResponseSchema,
   runCheckinRequestSchema,
   runCheckinResponseSchema,
 } from "../../src/schemas";
@@ -15,7 +16,11 @@ describe("runCheckinRequestSchema", () => {
     expect(runCheckinRequestSchema.parse({})).toEqual({});
   });
 
-  it.each(["recompute", "backstop", "", 7, null])("should reject the mode %j", (mode) => {
+  it("should accept the recompute mode", () => {
+    expect(runCheckinRequestSchema.parse({ mode: "recompute" })).toEqual({ mode: "recompute" });
+  });
+
+  it.each(["backstop", "", 7, null])("should reject the mode %j", (mode) => {
     expect(runCheckinRequestSchema.safeParse({ mode }).success).toBe(false);
   });
 
@@ -48,14 +53,25 @@ describe("runCheckinResponseSchema", () => {
   });
 });
 
-describe("runCheckinErrorCodeSchema", () => {
-  it("should hold exactly the three codes only run-checkin sends", () => {
-    expect([...runCheckinErrorCodeSchema.options].sort()).toEqual(
-      ["bad_mode", "missing_stats", "no_program"].sort(),
-    );
+describe("runCheckinRecomputeResponseSchema", () => {
+  it("should accept the id of the new targets row", () => {
+    const body = { targetsId: "0c5f8d4e-6b1a-4c3e-9d2f-7a8b9c0d1e2f" };
+    expect(runCheckinRecomputeResponseSchema.parse(body)).toEqual(body);
   });
 
-  it("should not hold a code the shared edge error schema already has", () => {
-    expect(runCheckinErrorCodeSchema.safeParse("internal_error").success).toBe(false);
-  });
+  it.each([{}, { targetsId: "not-an-id" }, { targetsId: null }, { ran: 0, nextCheckinDate: null }])(
+    "should reject %j",
+    (body) => {
+      expect(runCheckinRecomputeResponseSchema.safeParse(body).success).toBe(false);
+    },
+  );
+});
+
+describe("the error codes run-checkin sends", () => {
+  it.each(["bad_mode", "no_program", "missing_stats"])(
+    "should be in the shared edge error schema: %s",
+    (code) => {
+      expect(edgeErrorCodeSchema.parse(code)).toBe(code);
+    },
+  );
 });

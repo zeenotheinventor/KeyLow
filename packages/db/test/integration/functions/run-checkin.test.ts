@@ -4,6 +4,7 @@ import {
   checkinWeekday,
   edgeErrorSchema,
   localToday,
+  runCheckinRecomputeResponseSchema,
   runCheckinResponseSchema,
 } from "@keylow/core";
 import { goldenCheckinFixture } from "@keylow/core/testing";
@@ -18,7 +19,7 @@ import type { Json } from "../../../src/types.gen";
 import type { TestUser } from "../support/users";
 
 /*
- * `run-checkin` in its due mode, over HTTP against the served function, with real user JWTs.
+ * `run-checkin` in its due and recompute modes, over HTTP against the served function, with real user JWTs.
  *
  * Every user is built from the golden run of ADR 0002, Amendment 2 (`goldenCheckinFixture`), with day 0
  * twenty-eight days before today in UTC (a profile's time zone is UTC unless it is changed). The
@@ -42,9 +43,9 @@ const day0 = addCalendarDays(today, -28);
 const day = (offset: number) => addCalendarDays(day0, offset);
 const fixture = goldenCheckinFixture(day0);
 
-const startTargets = (programId: string): Json => ({
+const startTargets = (programId: string, effectiveFrom: string = day0): Json => ({
   program_id: programId,
-  effective_from: day0,
+  effective_from: effectiveFrom,
   calories_kcal: 2150,
   protein_g: 126,
   fat_g: 73,
@@ -268,7 +269,7 @@ async function createUserWithEndedProgram(): Promise<TestUser> {
 async function readSnapshots(user: TestUser) {
   const { data, error } = await adminClient()
     .from("expenditure_snapshots")
-    .select("as_of_date, kind, mu_kcal, var_kcal2, engine_version, params")
+    .select("id, as_of_date, kind, mu_kcal, var_kcal2, trend_weight_kg, engine_version, params")
     .eq("user_id", user.id)
     .order("as_of_date");
   expectNoError(error, "the snapshot read");
@@ -283,10 +284,11 @@ async function readTargets(user: TestUser) {
   const { data, error } = await adminClient()
     .from("targets")
     .select(
-      "effective_from, effective_to, calories_kcal, protein_g, fat_g, carbs_g, engine_version, params",
+      "id, expenditure_snapshot_id, effective_from, effective_to, calories_kcal, protein_g, fat_g, carbs_g, basis, engine_version, params",
     )
     .eq("user_id", user.id)
-    .order("effective_from");
+    .order("effective_from")
+    .order("created_at");
   expectNoError(error, "the targets read");
   return data ?? [];
 }
@@ -299,6 +301,23 @@ async function readNextCheckinDate(user: TestUser) {
     .single();
   expectNoError(error, "the program read");
   return data?.next_checkin_date ?? null;
+}
+
+async function readCheckinWeekday(user: TestUser) {
+  const { data, error } = await adminClient()
+    .from("profiles")
+    .select("checkin_weekday")
+    .eq("id", user.id)
+    .single();
+  expectNoError(error, "the profile read");
+  return data?.checkin_weekday ?? null;
+}
+
+async function runRecompute(user: TestUser) {
+  return await callFunction("run-checkin", {
+    accessToken: user.accessToken,
+    body: { mode: "recompute" },
+  });
 }
 
 async function runDue(user: TestUser) {
@@ -506,6 +525,42 @@ describe("run-checkin, due mode", () => {
     });
   });
 
+  describe("a start snapshot dated after the check-in that is due", () => {
+    it("should run the golden chain from the snapshot before the date, not from the later start", async () => {
+      const user = await createGoldenUser();
+      const program = await adminClient()
+        .from("programs")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      expectNoError(program.error, "the program read");
+      // A second start snapshot of 3000 / 90 000 on day 20. A prior read as the newest snapshot of all
+      // would start the day 14 check-in from it, and every golden figure would move.
+      const lateStart = await adminClient().rpc("record_targets", {
+        p_user_id: user.id,
+        p_targets: startTargets(program.data?.id ?? ""),
+        p_start_snapshot: {
+          program_id: program.data?.id ?? "",
+          as_of_date: day(20),
+          mu_kcal: 3000,
+          var_kcal2: 90000,
+          measurement: null,
+          trend_weight_kg: null,
+          engine_version: ENGINE_VERSION,
+          params: {},
+        },
+        p_next_checkin_date: day(14),
+        p_checkin_weekday: checkinWeekday(day0),
+      });
+      expectNoError(lateStart.error, "the late start snapshot");
+
+      const response = await runDue(user);
+
+      expect(runCheckinResponseSchema.parse(response.body).ran).toBe(3);
+      expectGoldenChain(await readCheckinSnapshots(user));
+    });
+  });
+
   describe("a user with nothing due", () => {
     it("should answer ran 0 and the stored next date, and write nothing", async () => {
       const user = await createGoldenUser({ nextCheckinDate: addCalendarDays(today, 3) });
@@ -559,19 +614,375 @@ describe("run-checkin, due mode", () => {
       expect(await readNextCheckinDate(user)).toBe(day(14));
     });
 
-    it.each(["recompute", "backstop", "weekly"])(
-      "should answer 400 bad_mode for the mode %s",
-      async (mode) => {
-        const user = await createGoldenUser({ withoutProgram: true });
+    it.each(["backstop", "weekly"])("should answer 400 bad_mode for the mode %s", async (mode) => {
+      const user = await createGoldenUser({ withoutProgram: true });
 
-        const response = await callFunction("run-checkin", {
-          accessToken: user.accessToken,
-          body: { mode },
-        });
+      const response = await callFunction("run-checkin", {
+        accessToken: user.accessToken,
+        body: { mode },
+      });
 
-        expect(response.status).toBe(400);
-        expect(response.body).toMatchObject({ error: { code: "bad_mode" } });
-      },
-    );
+      expect(response.status).toBe(400);
+      expect(response.body).toMatchObject({ error: { code: "bad_mode" } });
+    });
+  });
+});
+
+// The users of the recompute mode are built here, apart from the golden ones: a profile with its stats,
+// and a program the way the wizard leaves it, with no next check-in date. Male, 180 cm, 80 kg and 35 years
+// old. At the activity "light" the starting estimate is Mifflin-St Jeor 1755 times 1.375, which is
+// 2413.125 with a variance of 131021.376, and at "moderate" it is 1755 times 1.55, which is 2720.25.
+// With no weigh-ins the trend weight stands at the onboarding 80 kg, so a lose program at 0.5 % a week
+// takes 440 kcal off: 1970 kcal from the light estimate (P 128, F 65, C 218) and 2280 from the moderate.
+
+type RecomputeUserOptions = {
+  /** Leaves the profile without a birth date. */
+  birthDate?: null;
+  /** Replaces "light". */
+  activity?: "light" | "moderate";
+  /** Replaces the wizard's null date. */
+  nextCheckinDate?: string;
+  /** Replaces today. */
+  startedOn?: string;
+};
+
+async function createRecomputeUser(options: RecomputeUserOptions = {}) {
+  const user = await createTestUser("key613");
+  const profile = await user.client
+    .from("profiles")
+    .update({
+      sex: "male",
+      birth_date: options.birthDate === undefined ? birthDate : options.birthDate,
+      height_cm: 180,
+      activity: options.activity ?? "light",
+      onboarding_weight_kg: 80,
+    })
+    .eq("id", user.id);
+  expectNoError(profile.error, "the profile update");
+  const programId = await insertProgram(user, options.startedOn ?? today, options.nextCheckinDate);
+  return { user, programId };
+}
+
+async function insertProgram(user: TestUser, startedOn: string, nextCheckinDate?: string) {
+  const program = await user.client
+    .from("programs")
+    .insert({
+      goal: "lose",
+      rate_pct_per_week: 0.5,
+      protein_g_per_kg: 1.6,
+      fat_fraction_of_remaining: 0.4,
+      split_preset: "balanced",
+      started_on: startedOn,
+      ...(nextCheckinDate === undefined ? {} : { next_checkin_date: nextCheckinDate }),
+    })
+    .select("id")
+    .single();
+  expectNoError(program.error, "the program insert");
+  return program.data?.id ?? "";
+}
+
+async function updateProfileActivity(user: TestUser, activity: "light" | "moderate") {
+  const { error } = await user.client.from("profiles").update({ activity }).eq("id", user.id);
+  expectNoError(error, "the activity update");
+}
+
+describe("run-checkin, recompute mode", () => {
+  describe("a fresh user with a profile and a program and no snapshot", () => {
+    let user: TestUser;
+    let response: Awaited<ReturnType<typeof runRecompute>>;
+
+    beforeAll(async () => {
+      ({ user } = await createRecomputeUser());
+      response = await runRecompute(user);
+    });
+
+    it("should answer 200 with the id of the new targets row", async () => {
+      expect(response.status).toBe(200);
+      const { targetsId } = runCheckinRecomputeResponseSchema.parse(response.body);
+      const targets = await readTargets(user);
+      expect(targets.map(({ id }) => id)).toEqual([targetsId]);
+    });
+
+    it("should write one start snapshot as of today from the starting estimate", async () => {
+      const snapshots = await readSnapshots(user);
+
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]).toMatchObject({
+        kind: "start",
+        as_of_date: today,
+        trend_weight_kg: null,
+        engine_version: ENGINE_VERSION,
+      });
+      expect(snapshots[0]?.mu_kcal).toBeCloseTo(2413.125, 6);
+      expect(snapshots[0]?.var_kcal2).toBeCloseTo(131021.376, 2);
+    });
+
+    it("should write one current target from the start snapshot, effective today", async () => {
+      const targets = await readTargets(user);
+      const snapshots = await readSnapshots(user);
+
+      expect(targets).toHaveLength(1);
+      expect(targets[0]).toMatchObject({
+        effective_from: today,
+        effective_to: null,
+        calories_kcal: 1970,
+        protein_g: 128,
+        fat_g: 65,
+        carbs_g: 218,
+        expenditure_snapshot_id: snapshots[0]?.id,
+        engine_version: ENGINE_VERSION,
+      });
+      expect(targets[0]?.basis).toMatchObject({ source: "start", trendWeightKg: 80 });
+    });
+
+    it("should set the first check-in 14 days out and the weekday of today", async () => {
+      expect(await readNextCheckinDate(user)).toBe(addCalendarDays(today, 14));
+      expect(await readCheckinWeekday(user)).toBe(checkinWeekday(today));
+    });
+  });
+
+  describe("the same call again the same day after the activity changed", () => {
+    it("should rewrite the one start snapshot, replace the current target and keep the schedule", async () => {
+      const { user } = await createRecomputeUser();
+      const first = await runRecompute(user);
+      const snapshotsBefore = await readSnapshots(user);
+      await updateProfileActivity(user, "moderate");
+
+      const second = await runRecompute(user);
+
+      expect(second.status).toBe(200);
+      const snapshots = await readSnapshots(user);
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]?.id).toBe(snapshotsBefore[0]?.id);
+      expect(snapshots[0]).toMatchObject({ kind: "start", as_of_date: today });
+      expect(snapshots[0]?.mu_kcal).toBeCloseTo(2720.25, 6);
+      const targets = await readTargets(user);
+      expect(targets).toHaveLength(2);
+      expect(targets[0]).toMatchObject({ effective_from: today, effective_to: today });
+      expect(targets[1]).toMatchObject({
+        effective_from: today,
+        effective_to: null,
+        calories_kcal: 2280,
+        expenditure_snapshot_id: snapshots[0]?.id,
+      });
+      expect(runCheckinRecomputeResponseSchema.parse(second.body).targetsId).toBe(targets[1]?.id);
+      expect(runCheckinRecomputeResponseSchema.parse(first.body).targetsId).toBe(targets[0]?.id);
+      expect(await readNextCheckinDate(user)).toBe(addCalendarDays(today, 14));
+    });
+  });
+
+  describe("a user still settling, with a start snapshot from 10 days ago", () => {
+    it("should rewrite it on its own date, not today, and leave the schedule", async () => {
+      const { user, programId } = await createRecomputeUser({
+        startedOn: addCalendarDays(today, -10),
+        nextCheckinDate: addCalendarDays(today, 4),
+      });
+      const start = await adminClient().rpc("record_targets", {
+        p_user_id: user.id,
+        p_targets: startTargets(programId, addCalendarDays(today, -10)),
+        p_start_snapshot: {
+          program_id: programId,
+          as_of_date: addCalendarDays(today, -10),
+          mu_kcal: 2413.125,
+          var_kcal2: 131021.376,
+          measurement: null,
+          trend_weight_kg: null,
+          engine_version: ENGINE_VERSION,
+          params: {},
+        },
+        p_next_checkin_date: addCalendarDays(today, 4),
+        p_checkin_weekday: checkinWeekday(addCalendarDays(today, -10)),
+      });
+      expectNoError(start.error, "the start snapshot");
+      await updateProfileActivity(user, "moderate");
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(200);
+      const snapshots = await readSnapshots(user);
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]).toMatchObject({
+        kind: "start",
+        as_of_date: addCalendarDays(today, -10),
+      });
+      expect(snapshots[0]?.mu_kcal).toBeCloseTo(2720.25, 6);
+      const current = (await readTargets(user)).filter(({ effective_to }) => effective_to === null);
+      expect(current).toHaveLength(1);
+      expect(current[0]).toMatchObject({ effective_from: today, calories_kcal: 2280 });
+      expect(await readNextCheckinDate(user)).toBe(addCalendarDays(today, 4));
+    });
+  });
+
+  describe("a user after the golden catch-up who changes the program's goal to maintain", () => {
+    it("should write no snapshot and new targets of 2580 kcal from today, and keep the schedule", async () => {
+      const user = await createGoldenUser();
+      await runDue(user);
+      const snapshotsBefore = await readSnapshots(user);
+      const changed = await user.client
+        .from("programs")
+        .update({ goal: "maintain", rate_pct_per_week: 0 })
+        .is("ended_on", null);
+      expectNoError(changed.error, "the goal change");
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(200);
+      const snapshots = await readSnapshots(user);
+      expect(snapshots).toHaveLength(4);
+      expect(snapshots.map(({ id }) => id)).toEqual(snapshotsBefore.map(({ id }) => id));
+      const targets = await readTargets(user);
+      const current = targets.filter(({ effective_to }) => effective_to === null);
+      expect(current).toHaveLength(1);
+      expect(current[0]).toMatchObject({
+        effective_from: today,
+        calories_kcal: 2580,
+        protein_g: 126,
+        expenditure_snapshot_id: snapshots.at(-1)?.id,
+      });
+      expect(current[0]?.basis).toMatchObject({ source: "recompute", goal: "maintain" });
+      expect(targets.at(-2)).toMatchObject({ effective_to: today });
+      expect(await readNextCheckinDate(user)).toBe(day(35));
+    });
+  });
+
+  describe("a returning user whose last program ended and who has a new one from the wizard", () => {
+    it("should keep the learned expenditure, write no snapshot and set the schedule", async () => {
+      const { user, programId: endedProgramId } = await createRecomputeUser({
+        startedOn: addCalendarDays(today, -30),
+      });
+      const checkin = await adminClient().rpc("record_checkin", {
+        p_user_id: user.id,
+        p_snapshot: {
+          program_id: endedProgramId,
+          as_of_date: addCalendarDays(today, -10),
+          mu_kcal: 2600,
+          var_kcal2: 50000,
+          measurement: { eligible: false },
+          trend_weight_kg: null,
+          engine_version: ENGINE_VERSION,
+          params: { version: ENGINE_VERSION },
+        },
+        p_targets: startTargets(endedProgramId),
+        p_next_checkin_date: addCalendarDays(today, -3),
+      });
+      expectNoError(checkin.error, "the check-in");
+      const ended = await user.client
+        .from("programs")
+        .update({ ended_on: addCalendarDays(today, -5) })
+        .eq("id", endedProgramId);
+      expectNoError(ended.error, "the program end");
+      await insertProgram(user, today);
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(200);
+      const snapshots = await readSnapshots(user);
+      expect(snapshots).toHaveLength(1);
+      expect(snapshots[0]).toMatchObject({
+        kind: "checkin",
+        as_of_date: addCalendarDays(today, -10),
+      });
+      const current = (await readTargets(user)).filter(({ effective_to }) => effective_to === null);
+      expect(current).toHaveLength(1);
+      expect(current[0]).toMatchObject({
+        effective_from: today,
+        calories_kcal: 2160,
+        expenditure_snapshot_id: snapshots[0]?.id,
+      });
+      expect(current[0]?.basis).toMatchObject({ source: "recompute", tdeeKcal: 2600 });
+      const { data, error } = await adminClient()
+        .from("programs")
+        .select("next_checkin_date")
+        .eq("user_id", user.id)
+        .is("ended_on", null)
+        .single();
+      expectNoError(error, "the program read");
+      expect(data?.next_checkin_date).toBe(addCalendarDays(today, 14));
+      expect(await readCheckinWeekday(user)).toBe(checkinWeekday(today));
+    });
+  });
+
+  describe("a user whose newest snapshot is 35 days old and whose check-in date is overdue", () => {
+    it("should write a start snapshot as of today and move the date to 14 days out, so a due call has nothing to run", async () => {
+      const { user, programId } = await createRecomputeUser({
+        startedOn: addCalendarDays(today, -60),
+      });
+      const checkin = await adminClient().rpc("record_checkin", {
+        p_user_id: user.id,
+        p_snapshot: {
+          program_id: programId,
+          as_of_date: addCalendarDays(today, -35),
+          mu_kcal: 2600,
+          var_kcal2: 50000,
+          measurement: { eligible: false },
+          trend_weight_kg: null,
+          engine_version: ENGINE_VERSION,
+          params: { version: ENGINE_VERSION },
+        },
+        p_targets: startTargets(programId),
+        p_next_checkin_date: addCalendarDays(today, -28),
+      });
+      expectNoError(checkin.error, "the check-in");
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(200);
+      const snapshots = await readSnapshots(user);
+      expect(snapshots.map(({ kind, as_of_date }) => ({ kind, as_of_date }))).toEqual([
+        { kind: "checkin", as_of_date: addCalendarDays(today, -35) },
+        { kind: "start", as_of_date: today },
+      ]);
+      expect(await readNextCheckinDate(user)).toBe(addCalendarDays(today, 14));
+      expect(await readCheckinWeekday(user)).toBe(checkinWeekday(today));
+
+      const due = await runDue(user);
+
+      expect(runCheckinResponseSchema.parse(due.body)).toEqual({
+        ran: 0,
+        nextCheckinDate: addCalendarDays(today, 14),
+      });
+      expect(await readSnapshots(user)).toHaveLength(2);
+    });
+  });
+
+  describe("a refused call", () => {
+    it("should answer 401 with the typed error and no JWT", async () => {
+      const response = await callFunction("run-checkin", { body: { mode: "recompute" } });
+
+      expect(response.status).toBe(401);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("unauthorized");
+    });
+
+    it("should answer 409 no_program for a user with no program", async () => {
+      const user = await createTestUser("key613");
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(409);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("no_program");
+    });
+
+    it("should answer 409 no_program when the only program has ended", async () => {
+      const user = await createUserWithEndedProgram();
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(409);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("no_program");
+    });
+
+    it("should answer 409 missing_stats and write nothing for a user with no birth date", async () => {
+      const { user } = await createRecomputeUser({ birthDate: null });
+
+      const response = await runRecompute(user);
+
+      expect(response.status).toBe(409);
+      expect(edgeErrorSchema.parse(response.body).error.code).toBe("missing_stats");
+      expect(JSON.stringify(response.body)).not.toMatch(/[0-9]/);
+      expect(await readSnapshots(user)).toHaveLength(0);
+      expect(await readTargets(user)).toHaveLength(0);
+      expect(await readNextCheckinDate(user)).toBeNull();
+      expect(await readCheckinWeekday(user)).toBeNull();
+    });
   });
 });

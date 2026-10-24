@@ -91,7 +91,7 @@ A copy that fails part way takes back the rows it wrote, so a copy is all of the
 
 ### Error kinds
 
-The Open Food Facts error of `useFoodSearch` and `useFoodByBarcode` (`FoodSearchOffError`) carries a `kind` and no sentence. A `kind` is one of the six Edge Function codes (`not_found`, `rate_limited`, `upstream_error`, `invalid_request`, `unauthorized`, `internal_error`) or `failed` when the failure was not a typed answer (no network, or a body that was not an edge error). The local search error (`localError`) always has the kind `failed`, and the `error` state of `useFoodWithPortions` carries only a `debugMessage`. A rate limit also carries `retryAfterSeconds` when the server said how long to wait.
+The Open Food Facts error of `useFoodSearch` and `useFoodByBarcode` (`FoodSearchOffError`) carries a `kind` and no sentence. A `kind` is one of the nine Edge Function codes (`not_found`, `rate_limited`, `upstream_error`, `invalid_request`, `unauthorized`, `internal_error`, `bad_mode`, `no_program`, `missing_stats`) or `failed` when the failure was not a typed answer (no network, or a body that was not an edge error). The local search error (`localError`) always has the kind `failed`, and the `error` state of `useFoodWithPortions` carries only a `debugMessage`. A rate limit also carries `retryAfterSeconds` when the server said how long to wait.
 
 The screen turns a kind into words with `describeEdgeError` from `@keylow/core`, at the call site. The raw text of a failure is in `debugMessage`, for logs and bug reports only. It can carry upstream or database wording, so the UI must never render it. `message` on the same objects holds the same text and stays only until the screens stop reading it.
 
