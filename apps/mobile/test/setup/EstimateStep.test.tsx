@@ -121,12 +121,13 @@ describe("the setup estimate", () => {
       expect(within(card()).getByText("Estimate")).toBeOnTheScreen();
     });
 
-    it("should show protein 128 g, carbohydrate 218 g and fat 65 g, with no share", async () => {
+    it("should show protein 128 g, carbs 218 g and fat 65 g, with no share", async () => {
       await renderEstimate();
 
       expect(within(card()).getByLabelText("Protein, 128 g")).toBeOnTheScreen();
-      expect(within(card()).getByLabelText("Carbohydrate, 218 g")).toBeOnTheScreen();
+      expect(within(card()).getByLabelText("Carbs, 218 g")).toBeOnTheScreen();
       expect(within(card()).getByLabelText("Fat, 65 g")).toBeOnTheScreen();
+      expect(within(card()).queryByLabelText(/^Carbohydrate/)).not.toBeOnTheScreen();
     });
 
     it("should show the expenditure in whole kilocalories", async () => {
@@ -196,7 +197,7 @@ describe("the setup estimate", () => {
       await renderEstimate({ answers: floorAnswers });
 
       expect(within(card()).getByLabelText("Protein, 88 g")).toBeOnTheScreen();
-      expect(within(card()).getByLabelText("Carbohydrate, 127 g")).toBeOnTheScreen();
+      expect(within(card()).getByLabelText("Carbs, 127 g")).toBeOnTheScreen();
       expect(within(card()).getByLabelText("Fat, 38 g")).toBeOnTheScreen();
     });
 
@@ -226,7 +227,7 @@ describe("the setup estimate", () => {
       await renderEstimate({ answers: maxDeficitAnswers });
 
       expect(within(card()).getByLabelText("Protein, 208 g")).toBeOnTheScreen();
-      expect(within(card()).getByLabelText("Carbohydrate, 234 g")).toBeOnTheScreen();
+      expect(within(card()).getByLabelText("Carbs, 234 g")).toBeOnTheScreen();
       expect(within(card()).getByLabelText("Fat, 69 g")).toBeOnTheScreen();
     });
 

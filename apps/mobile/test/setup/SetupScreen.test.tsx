@@ -1458,7 +1458,7 @@ describe("the setup wizard", () => {
         within(card).getByText("To lose about 0.4 kg a week (0.5% of your weight)."),
       ).toBeOnTheScreen();
       expect(within(card).getByLabelText("Protein, 128 g")).toBeOnTheScreen();
-      expect(within(card).getByLabelText("Carbohydrate, 218 g")).toBeOnTheScreen();
+      expect(within(card).getByLabelText("Carbs, 218 g")).toBeOnTheScreen();
       expect(within(card).getByLabelText("Fat, 65 g")).toBeOnTheScreen();
       expect(screen.getByText("2,413")).toBeOnTheScreen();
     });
@@ -2269,7 +2269,7 @@ describe("the setup wizard", () => {
         const card = screen.getByLabelText("Calorie target, estimate");
         expect(await within(card).findByText("2,360")).toBeOnTheScreen();
         expect(within(card).getByLabelText("Protein, 126 g")).toBeOnTheScreen();
-        expect(within(card).getByLabelText("Carbohydrate, 280 g")).toBeOnTheScreen();
+        expect(within(card).getByLabelText("Carbs, 280 g")).toBeOnTheScreen();
         expect(within(card).getByLabelText("Fat, 82 g")).toBeOnTheScreen();
         expect(
           screen.getByText("To lose about 0.2 kg a week (0.25% of your weight)."),

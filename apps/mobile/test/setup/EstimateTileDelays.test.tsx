@@ -53,7 +53,7 @@ describe("the estimate's tiles cutting in", () => {
       within(screen.getByTestId("cut-in-after-160-ms")).getByLabelText("Protein, 128 g"),
     ).toBeOnTheScreen();
     expect(
-      within(screen.getByTestId("cut-in-after-196-ms")).getByLabelText("Carbohydrate, 218 g"),
+      within(screen.getByTestId("cut-in-after-196-ms")).getByLabelText("Carbs, 218 g"),
     ).toBeOnTheScreen();
     expect(
       within(screen.getByTestId("cut-in-after-232-ms")).getByLabelText("Fat, 65 g"),

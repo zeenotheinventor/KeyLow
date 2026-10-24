@@ -116,7 +116,7 @@ export function EstimateCard({ targets, lines }: EstimateCardProps) {
           <CutIn delay={firstTileDelay + stagger}>
             <MacroTile
               grams={targets.carbsG}
-              label={SETUP_ESTIMATE.tileLabels.carbohydrate}
+              label={SETUP_ESTIMATE.carbsShortLabel}
               macro="carbs"
               share={null}
             />
