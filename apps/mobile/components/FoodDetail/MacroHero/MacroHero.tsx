@@ -11,8 +11,7 @@ import { energyShares } from "@keylow/core/search";
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo, View } from "react-native";
 
-import { MacroTile } from "./MacroTile";
-import { Card, Text } from "../../ui";
+import { Card, MacroTile, Text } from "../../ui";
 
 import type { MacroHeroProps } from "./types";
 

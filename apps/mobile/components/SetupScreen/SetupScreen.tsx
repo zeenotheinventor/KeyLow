@@ -1,9 +1,15 @@
-import { useSetupState } from "@keylow/api-client";
+import { useProfileTimeZone, useSetupState } from "@keylow/api-client";
 import { SETUP_GROUP_TITLES, SETUP_QUESTIONS } from "@keylow/core/copy";
-import { entryWeightUnit, isRateGoal, previousStep } from "@keylow/core/setup";
+import {
+  entryWeightUnit,
+  isRateGoal,
+  previousStep,
+  setupAnswersSchemaFor,
+  startingPlan,
+} from "@keylow/core/setup";
 import { getLocales } from "expo-localization";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { BackHandler } from "react-native";
 
 import { allowedGoalsOf, describeStepProgress, isStepComplete } from "./setupDraftReducer";
@@ -12,12 +18,15 @@ import { ActivityStep } from "./steps/ActivityStep";
 import { BirthDateStep } from "./steps/BirthDateStep";
 import { BodyStep } from "./steps/BodyStep";
 import { DietStep } from "./steps/DietStep";
+import { EstimateStep } from "./steps/EstimateStep";
 import { GoalStep } from "./steps/GoalStep";
 import { ProteinStep } from "./steps/ProteinStep";
 import { RateStep } from "./steps/RateStep";
 import { SexStep } from "./steps/SexStep";
+import { storedWeightUnitOf } from "./storedWeightUnit";
 import { useSetupDraft } from "./useSetupDraft";
 import { useToday } from "./useToday";
+import { useIsOnline } from "../../lib/connectivity";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 
 import type { SetupScreenProps } from "./types";
@@ -49,16 +58,21 @@ function questionWordsOf(step: SetupStep, draft: SetupDraft) {
 
 /**
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
- * loses none, and the saved answers are read once the Terms are accepted. The estimate is not built yet
- * and draws only the header and the progress bar.
+ * loses none, and the saved answers are read once the Terms are accepted. The last step is the estimate,
+ * which draws the starting plan of the answers. Start does not save yet.
  */
 export function SetupScreen({ mode }: SetupScreenProps) {
   const router = useRouter();
   const today = useToday();
-  const setupState = useSetupState({ enabled: useReadsEnabled() });
+  const isReadEnabled = useReadsEnabled();
+  const setupState = useSetupState({ enabled: isReadEnabled });
   const regionCode = getLocales().at(0)?.regionCode;
   const { state, dispatch } = useSetupDraft(setupState.data, today, regionCode);
   const { draft, step } = state;
+  // The profile's time zone is only read once the estimate is reached, which is when its date is needed.
+  const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled && step === "estimate" });
+  const estimateToday = useToday(profileTimeZone.data);
+  const isOnline = useIsOnline();
   const hasPreviousStep = previousStep(draft, step) !== undefined;
   const isRecalculating = mode === "recalculate";
 
@@ -96,6 +110,22 @@ export function SetupScreen({ mode }: SetupScreenProps) {
       };
     }, [close, dispatch, hasPreviousStep, isRecalculating]),
   );
+
+  const storedWeightUnit = storedWeightUnitOf(setupState.data?.stats.weightUnit ?? null);
+  // The estimate is only made on the last step, from answers that step's Continue has made complete, so the
+  // check only narrows the type.
+  const estimate = useMemo(() => {
+    if (step !== "estimate") {
+      return undefined;
+    }
+    const answers = setupAnswersSchemaFor(estimateToday).safeParse(draft);
+    return answers.success
+      ? {
+          answers: answers.data,
+          plan: startingPlan(answers.data, estimateToday, storedWeightUnit),
+        }
+      : undefined;
+  }, [draft, estimateToday, step, storedWeightUnit]);
 
   const progress = describeStepProgress(draft, step);
   const words = questionWordsOf(step, draft);
@@ -190,8 +220,26 @@ export function SetupScreen({ mode }: SetupScreenProps) {
           />
         );
       case "estimate":
+        // The estimate brings its own shell, because its footer is not a Continue.
         return null;
     }
+  }
+
+  if (estimate !== undefined) {
+    return (
+      <EstimateStep
+        answers={estimate.answers}
+        isOffline={!isOnline}
+        isSaving={false}
+        mode={mode}
+        plan={estimate.plan}
+        saveFailed={false}
+        // Setup wizard 16 saves the plan and routes on.
+        onBack={goBack}
+        onClose={isRecalculating ? close : undefined}
+        onStart={() => undefined}
+      />
+    );
   }
 
   return (

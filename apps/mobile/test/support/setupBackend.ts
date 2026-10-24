@@ -60,6 +60,8 @@ export const setupBackend: {
   program: ProgramRow | null;
   /** The newest weigh-in, or null for an account with none. */
   weighIn: WeighInRow | null;
+  /** The IANA time zone of the profile, or null for a profile that has none. */
+  timeZone: string | null;
   /** Holds every setup read until it settles. */
   readGate: Promise<void> | undefined;
   readsFail: boolean;
@@ -72,6 +74,7 @@ export const setupBackend: {
   profile: freshProfile,
   program: null,
   weighIn: null,
+  timeZone: null,
   readGate: undefined,
   readsFail: false,
   requests: [],
@@ -83,6 +86,7 @@ export function resetSetupBackend(): void {
   setupBackend.profile = freshProfile;
   setupBackend.program = null;
   setupBackend.weighIn = null;
+  setupBackend.timeZone = null;
   setupBackend.readGate = undefined;
   setupBackend.readsFail = false;
   setupBackend.requests = [];
@@ -106,7 +110,7 @@ async function answerSetupRead(table: string): Promise<Response> {
     return jsonResponse({ code: "XX000", message: "unavailable", details: null, hint: null }, 500);
   }
   if (table === "profiles") {
-    return jsonResponse([setupBackend.profile]);
+    return jsonResponse([{ ...setupBackend.profile, timezone: setupBackend.timeZone }]);
   }
   if (table === "programs") {
     return jsonResponse(setupBackend.program === null ? [] : [setupBackend.program]);

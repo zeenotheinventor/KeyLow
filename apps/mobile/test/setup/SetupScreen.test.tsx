@@ -1,5 +1,14 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
+import { onlineManager } from "@tanstack/react-query";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from "@testing-library/react-native";
 import { BackHandler } from "react-native";
 
 import { SetupScreen } from "../../components/SetupScreen";
@@ -142,6 +151,17 @@ async function goToRateStep(goal: RegExp = /^Lose weight/) {
 async function goToProteinStep() {
   const user = userEvent.setup();
   await goToRateStep();
+  await user.press(continueButton());
+}
+
+// Past the diet to the estimate, for a person born on the day given who loses weight at the default rate.
+async function goToEstimate(birthDate: readonly [string, string, string]) {
+  const user = userEvent.setup();
+  await goToGoalStep(birthDate);
+  await user.press(radio(/^Lose weight/));
+  await user.press(continueButton());
+  await user.press(continueButton());
+  await user.press(continueButton());
   await user.press(continueButton());
 }
 
@@ -1225,7 +1245,7 @@ describe("the setup wizard", () => {
       expect(continueButton()).toBeEnabled();
     });
 
-    it("should lead on to the estimate, which draws only the header and the progress bar until it is built", async () => {
+    it("should lead on to the estimate, with its header, its card and Start in place of Continue", async () => {
       const user = userEvent.setup();
       await renderWizard("first-run");
       await goToDietStep();
@@ -1242,12 +1262,78 @@ describe("the setup wizard", () => {
       expect(
         screen.queryByRole("heading", { name: "How do you like to eat?" }),
       ).not.toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Your starting targets" })).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "Continue" })).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Start" })).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Close" })).not.toBeOnTheScreen();
+    });
+
+    it("should show the estimate of the answers given, with the canvas person's figures", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+      await goToDietStep();
+      await user.press(continueButton());
+
+      const card = await screen.findByLabelText("Calorie target, estimate");
+
+      expect(await within(card).findByText("1,970")).toBeOnTheScreen();
+      expect(
+        within(card).getByText("To lose about 0.4 kg a week (0.5% of your weight)."),
+      ).toBeOnTheScreen();
+      expect(within(card).getByLabelText("Protein, 128 g")).toBeOnTheScreen();
+      expect(within(card).getByLabelText("Carbohydrate, 218 g")).toBeOnTheScreen();
+      expect(within(card).getByLabelText("Fat, 65 g")).toBeOnTheScreen();
+      expect(screen.getByText("2,413")).toBeOnTheScreen();
+    });
+
+    it("should go back from the estimate to the diet step with the answer kept", async () => {
+      const user = userEvent.setup();
+      await renderWizard("first-run");
+      await goToDietStep();
+      await user.press(radio(/^Low carb/));
+      await user.press(continueButton());
 
       await user.press(backButton());
 
       expect(screen.getByText("Step 8 of 8")).toBeOnTheScreen();
       expect(radio(/^Low carb/)).toBeChecked();
+    });
+
+    it("should work out the estimate on today's date in the profile's time zone", async () => {
+      // 12:00 UTC is 02:00 on the 24th at UTC+14, the person's 35th birthday, and 34 on the 23rd in UTC.
+      setupBackend.timeZone = "Pacific/Kiritimati";
+      await renderWizard("first-run");
+
+      await goToEstimate(["24", "10", "1991"]);
+
+      expect(await screen.findByText("2,413")).toBeOnTheScreen();
+    });
+
+    it("should work out the estimate on the device's date when the profile has no time zone", async () => {
+      await renderWizard("first-run");
+
+      await goToEstimate(["24", "10", "1991"]);
+
+      expect(await screen.findByText("2,420")).toBeOnTheScreen();
+    });
+
+    it("should say it is offline and dim Start when the connection is lost on the estimate", async () => {
+      await renderWizard("first-run");
+      await goToEstimate(["14", "03", "1991"]);
+      await screen.findByLabelText("Calorie target, estimate");
+
+      try {
+        await act(() => {
+          onlineManager.setOnline(false);
+        });
+
+        expect(screen.getByText("You're offline")).toBeOnTheScreen();
+        expect(screen.getByRole("button", { name: "Start" })).toBeDisabled();
+      } finally {
+        await act(() => {
+          onlineManager.setOnline(true);
+        });
+      }
     });
 
     it("should write nothing about the answers to the console, from the activity to the estimate", async () => {
@@ -1427,6 +1513,22 @@ describe("the setup wizard", () => {
       }
 
       expect(radio(/^0\.5% a week/)).toBeChecked();
+    });
+
+    it("should lead on to the estimate of the saved answers, with Close and Save targets", async () => {
+      const user = userEvent.setup();
+      await renderWizard("recalculate");
+      await screen.findByRole("radio", { name: "Male", checked: true });
+      for (let step = 0; step < 8; step += 1) {
+        await user.press(continueButton());
+      }
+
+      const card = await screen.findByLabelText("Calorie target, estimate");
+
+      expect(await within(card).findByText("1,970")).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Save targets" })).toBeOnTheScreen();
+      expect(closeButton()).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Start" })).not.toBeOnTheScreen();
     });
 
     it("should open the protein and the diet with the saved ones chosen", async () => {

@@ -3,7 +3,10 @@ import { getAnimatedStyle } from "react-native-reanimated";
 type AnimatedElement = Parameters<typeof getAnimatedStyle>[0];
 
 // Reanimated types an animated style loosely, so the transform is read as unknown and narrowed.
-function transformValue(element: AnimatedElement, key: "scale" | "rotate" | "translateX"): unknown {
+function transformValue(
+  element: AnimatedElement,
+  key: "scale" | "rotate" | "translateX" | "skewX",
+): unknown {
   const { transform }: { transform?: unknown } = getAnimatedStyle(element);
   if (!Array.isArray(transform)) {
     return undefined;
@@ -48,4 +51,10 @@ export function animatedTranslateXPoints(element: AnimatedElement): number | und
 export function animatedOpacity(element: AnimatedElement): number | undefined {
   const { opacity }: { opacity?: unknown } = getAnimatedStyle(element);
   return typeof opacity === "number" ? opacity : undefined;
+}
+
+/** The lean in degrees in an element's animated style, or undefined when it has none. */
+export function animatedSkewXDegrees(element: AnimatedElement): number | undefined {
+  const value = transformValue(element, "skewX");
+  return typeof value === "string" ? Number.parseFloat(value) : undefined;
 }

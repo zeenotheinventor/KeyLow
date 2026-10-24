@@ -29,7 +29,9 @@ export function SetupShell({
   helper,
   onBack,
   onClose,
+  isHeaderInert = false,
   continueAction,
+  footer,
   children,
 }: SetupShellProps) {
   const insets = useSafeAreaInsets();
@@ -37,6 +39,20 @@ export function SetupShell({
   const scrollViewRef = useRef<ScrollView>(null);
   const keyboardLift = useKeyboardLift(footerRef, Platform.OS === "android");
   const trackScrollOffset = useScrollFocusedInputIntoView(scrollViewRef, keyboardLift);
+
+  const footerContent =
+    footer ??
+    (continueAction === undefined ? undefined : (
+      <Button
+        disabled={!continueAction.isEnabled}
+        fullWidth
+        haptic="select"
+        size="lg"
+        onPress={continueAction.onPress}
+      >
+        {SETUP_SHELL.continueLabel}
+      </Button>
+    ));
 
   return (
     // The top inset is a runtime value no class can name, so it goes through a variable, as the Targets screen's does.
@@ -48,14 +64,19 @@ export function SetupShell({
         leading={
           onBack === undefined
             ? undefined
-            : { icon: "ChevronLeft", label: SETUP_SHELL.backName, onPress: onBack }
+            : {
+                icon: "ChevronLeft",
+                label: SETUP_SHELL.backName,
+                disabled: isHeaderInert,
+                onPress: onBack,
+              }
         }
         subtitle={subtitle}
         title={title}
         trailing={
           onClose === undefined
             ? undefined
-            : { icon: "X", label: SETUP_SHELL.closeName, onPress: onClose }
+            : { icon: "X", label: SETUP_SHELL.closeName, disabled: isHeaderInert, onPress: onClose }
         }
       />
       <View className="px-4">
@@ -82,7 +103,7 @@ export function SetupShell({
           )}
           {children}
         </ScrollView>
-        {continueAction === undefined ? null : (
+        {footerContent === undefined ? null : (
           // Continue stays in view and rides above the keyboard, as the Targets form's Save does. Its padding is
           // a runtime value no class can name, so it goes through a variable.
           <View
@@ -95,15 +116,7 @@ export function SetupShell({
                   : Math.max(insets.bottom + FOOTER_EXTRA_PADDING, MINIMUM_FOOTER_BOTTOM_PADDING),
             })}
           >
-            <Button
-              disabled={!continueAction.isEnabled}
-              fullWidth
-              haptic="select"
-              size="lg"
-              onPress={continueAction.onPress}
-            >
-              {SETUP_SHELL.continueLabel}
-            </Button>
+            {footerContent}
           </View>
         )}
       </KeyboardAvoidingView>
