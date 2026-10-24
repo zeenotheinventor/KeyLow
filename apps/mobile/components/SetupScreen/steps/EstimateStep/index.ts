@@ -1,2 +1,2 @@
 export { EstimateStep } from "./EstimateStep";
-export type { EstimateStepProps } from "./types";
+export type { EstimateMeasurement, EstimateStepProps } from "./types";
