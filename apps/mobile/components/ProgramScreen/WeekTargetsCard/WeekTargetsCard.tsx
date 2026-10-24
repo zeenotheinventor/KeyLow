@@ -55,7 +55,7 @@ export function WeekTargetsCard({ view }: WeekTargetsCardProps) {
             />
             <MacroTile
               grams={macros.carbsG}
-              label={SETUP_ESTIMATE.tileLabels.carbohydrate}
+              label={SETUP_ESTIMATE.tileLabels.carbs}
               macro="carbs"
               share={null}
             />

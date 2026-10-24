@@ -248,7 +248,7 @@ describe("the Programme screen", () => {
       await renderProgramScreen();
 
       expect(await screen.findByLabelText("Protein, 126 g")).toBeOnTheScreen();
-      expect(screen.getByLabelText("Carbohydrate, 245 g")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Carbs, 245 g")).toBeOnTheScreen();
       expect(screen.getByLabelText("Fat, 73 g")).toBeOnTheScreen();
     });
 
@@ -441,7 +441,7 @@ describe("the Programme screen", () => {
         await screen.findByLabelText("This week's targets, 1,970 kilocalories a day"),
       ).toBeOnTheScreen();
       expect(screen.getByLabelText("Protein, 128 g")).toBeOnTheScreen();
-      expect(screen.getByLabelText("Carbohydrate, 218 g")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Carbs, 218 g")).toBeOnTheScreen();
       expect(screen.getByLabelText("Fat, 65 g")).toBeOnTheScreen();
       expect(screen.getByText("Since Fri 23 Oct")).toBeOnTheScreen();
     });
@@ -622,7 +622,7 @@ describe("the Programme screen", () => {
         await screen.findByLabelText("This week's targets, 1,970 kilocalories a day"),
       ).toBeOnTheScreen();
       expect(screen.getByLabelText("Protein, 128 g")).toBeOnTheScreen();
-      expect(screen.getByLabelText("Carbohydrate, 218 g")).toBeOnTheScreen();
+      expect(screen.getByLabelText("Carbs, 218 g")).toBeOnTheScreen();
       expect(screen.getByLabelText("Fat, 65 g")).toBeOnTheScreen();
       expect(screen.getByText("Since Fri 23 Oct")).toBeOnTheScreen();
     });
