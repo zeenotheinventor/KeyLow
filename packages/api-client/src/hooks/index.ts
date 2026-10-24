@@ -139,6 +139,7 @@ export type {
 export { useArchiveExercise } from "./useArchiveExercise";
 export { useSaveExercise } from "./useSaveExercise";
 export { useProgramSummary } from "./useProgramSummary";
+export { useRunDueCheckins } from "./useRunDueCheckins";
 export { useExpenditureHistory } from "./useExpenditureHistory";
 export { useTargetsHistory } from "./useTargetsHistory";
 export type { ProgramHistoryOptions } from "./ProgramHistoryOptions";
