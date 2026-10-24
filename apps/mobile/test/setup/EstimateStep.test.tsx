@@ -356,7 +356,7 @@ describe("the setup estimate", () => {
         expect(screen.getByText("Estimated expenditure")).toBeOnTheScreen();
         expect(
           screen.getByText(
-            "This is a starting estimate from your answers, and it can be out by a few hundred kcal a day. You can change these any time in Targets.",
+            "This is a starting estimate from your answers. Each week, Ki-Lo checks it against your weigh-ins and food log and adjusts your targets.",
           ),
         ).toBeOnTheScreen();
         expect(
@@ -367,10 +367,83 @@ describe("the setup estimate", () => {
       },
     );
 
-    it("should not draw the accuracy line that waits for the weekly check-in", async () => {
+    it("should not draw the accuracy line from before the weekly check-in ran", async () => {
       await renderEstimate();
 
-      expect(screen.queryByText(/Each week, Ki-Lo checks it/)).toBeNull();
+      expect(screen.queryByText(/it can be out by a few hundred kcal a day/)).toBeNull();
+    });
+
+    it("should draw the weekly check-in accuracy line on a settling recalculation too", async () => {
+      await renderEstimate({ mode: "recalculate" });
+
+      expect(
+        screen.getByText(
+          "This is a starting estimate from your answers. Each week, Ki-Lo checks it against your weigh-ins and food log and adjusts your targets.",
+        ),
+      ).toBeOnTheScreen();
+      expect(screen.getByRole("heading", { name: "Your starting targets" })).toBeOnTheScreen();
+      expect(screen.getByText("The energy you use in a day")).toBeOnTheScreen();
+    });
+  });
+
+  describe("after a check-in that measured", () => {
+    const measured = { kind: "measured", measuredOn: "2026-10-23" } as const;
+
+    it("should say Your new targets in place of Your starting targets", async () => {
+      await renderEstimate({ mode: "recalculate", measurement: measured });
+
+      expect(screen.getByRole("heading", { name: "Your new targets" })).toBeOnTheScreen();
+      expect(screen.queryByRole("heading", { name: "Your starting targets" })).toBeNull();
+    });
+
+    it("should say the expenditure was measured from the weigh-ins and the food log", async () => {
+      await renderEstimate({ mode: "recalculate", measurement: measured });
+
+      expect(screen.getByText("Estimated expenditure")).toBeOnTheScreen();
+      expect(screen.getByText("Measured from your weigh-ins and food log")).toBeOnTheScreen();
+      expect(screen.queryByText("The energy you use in a day")).toBeNull();
+    });
+
+    it("should say when it was measured and that changing the answers changes only the targets", async () => {
+      await renderEstimate({ mode: "recalculate", measurement: measured });
+
+      expect(
+        screen.getByText(
+          "Ki-Lo measured your expenditure at your last check-in, on Friday 23 October. Changing your answers keeps it and changes only your targets.",
+        ),
+      ).toBeOnTheScreen();
+      expect(screen.queryByText(/This is a starting estimate from your answers/)).toBeNull();
+    });
+
+    it("should keep the medical line, Save targets and Close", async () => {
+      await renderEstimate({ mode: "recalculate", measurement: measured });
+
+      expect(screen.getByText(/are not medical advice/)).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Save targets" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("after check-ins that never measured", () => {
+    const carriedForward = { kind: "carried-forward" } as const;
+
+    it("should say Your new targets and that the expenditure is carried forward", async () => {
+      await renderEstimate({ mode: "recalculate", measurement: carriedForward });
+
+      expect(screen.getByRole("heading", { name: "Your new targets" })).toBeOnTheScreen();
+      expect(screen.getByText("Carried forward from your last check-in")).toBeOnTheScreen();
+      expect(screen.queryByText("Measured from your weigh-ins and food log")).toBeNull();
+    });
+
+    it("should say Ki-Lo has not measured it yet and that changing the answers changes only the targets", async () => {
+      await renderEstimate({ mode: "recalculate", measurement: carriedForward });
+
+      expect(
+        screen.getByText(
+          "Ki-Lo has not measured your expenditure yet, so it keeps the estimate from your last check-in. Changing your answers changes only your targets.",
+        ),
+      ).toBeOnTheScreen();
+      expect(screen.queryByText(/This is a starting estimate from your answers/)).toBeNull();
     });
   });
 
@@ -483,6 +556,27 @@ describe("the setup estimate", () => {
       await renderEstimate();
 
       expect(screen.queryByRole("alert")).toBeNull();
+    });
+  });
+
+  describe("while the programme is being read", () => {
+    it("should dim the button, with no banner, and ignore a press", async () => {
+      const user = userEvent.setup();
+      await renderEstimate({ mode: "recalculate", isWaitingForProgramme: true });
+
+      expect(screen.getByRole("button", { name: "Save targets" })).toBeDisabled();
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByText("You're offline")).toBeNull();
+
+      await user.press(screen.getByRole("button", { name: "Save targets" }));
+
+      expect(handlers.onStart).not.toHaveBeenCalled();
+    });
+
+    it("should leave the button live when the programme is not being read", async () => {
+      await renderEstimate({ mode: "recalculate", isWaitingForProgramme: false });
+
+      expect(screen.getByRole("button", { name: "Save targets" })).toBeEnabled();
     });
   });
 

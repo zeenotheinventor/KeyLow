@@ -1,4 +1,11 @@
-import { useProfileTimeZone, useSaveSetup, useSetupState, useSkipSetup } from "@keylow/api-client";
+import {
+  useExpenditureHistory,
+  useProfileTimeZone,
+  useSaveSetup,
+  useSetupState,
+  useSkipSetup,
+  useWeightTrend,
+} from "@keylow/api-client";
 import {
   SAVE_FAILED_BANNER,
   SETUP_GROUP_TITLES,
@@ -18,6 +25,7 @@ import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 
+import { measuredEstimateOf } from "./measuredEstimate";
 import { allowedGoalsOf, describeStepProgress, isStepComplete } from "./setupDraftReducer";
 import { SetupShell } from "./SetupShell";
 import { ActivityStep } from "./steps/ActivityStep";
@@ -64,6 +72,11 @@ function questionWordsOf(step: SetupStep, draft: SetupDraft) {
   }
 }
 
+// How far back the expenditure history is read, a year of weekly check-ins. The newest snapshot decides whether
+// the recompute keeps its mean (28 days at most), and the same list holds the newest check-in that measured,
+// which can be much older.
+const EXPENDITURE_HISTORY_WEEKS = 52;
+
 /**
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
  * loses none, and the saved answers are read once the Terms are accepted. The last step is the estimate,
@@ -93,6 +106,17 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   const isOnline = useIsOnline();
   const hasPreviousStep = previousStep(draft, step) !== undefined;
   const isRecalculating = mode === "recalculate";
+  // A recalculation after a check-in keeps the measured expenditure, so the estimate shows what the recompute
+  // will write. What it needs is read from the moment the wizard opens, so it is there when the estimate is.
+  // A new account has no programme, and its first run reads none of it.
+  const areProgrammeReadsEnabled = isReadEnabled && isRecalculating;
+  const expenditureHistory = useExpenditureHistory({
+    weeks: EXPENDITURE_HISTORY_WEEKS,
+    enabled: areProgrammeReadsEnabled,
+  });
+  const weightTrend = useWeightTrend({ enabled: areProgrammeReadsEnabled });
+  const isWaitingForProgramme =
+    isRecalculating && (expenditureHistory.isPending || weightTrend.isLoading);
   // The first run's one way out of step 1. A recalculation has Close, and later steps have Back.
   const isFirstRunEscapeShown = !isRecalculating && !hasPreviousStep;
   // Busy from the press until the screen has gone, so the moment between the save settling and the
@@ -162,6 +186,37 @@ export function SetupScreen({ mode }: SetupScreenProps) {
         }
       : undefined;
   }, [draft, estimateToday, step, storedWeightUnit]);
+
+  // Undefined when the recompute starts again from the answers, until every read is known and when any of
+  // them failed. The estimate of the answers is then drawn as it is, and the save's recompute still writes
+  // the engine's targets.
+  const measuredEstimate = useMemo(() => {
+    const history = expenditureHistory.data;
+    if (
+      estimate === undefined ||
+      history === undefined ||
+      weightTrend.isLoading ||
+      weightTrend.isError
+    ) {
+      return undefined;
+    }
+    return measuredEstimateOf({
+      answers: estimate.answers,
+      plan: estimate.plan,
+      today: estimateToday,
+      history,
+      trendPoints: weightTrend.points,
+      fallbackWeightKg: setupState.data?.latestWeighIn?.weightKg ?? estimate.answers.weightKg,
+    });
+  }, [
+    estimate,
+    estimateToday,
+    expenditureHistory.data,
+    setupState.data?.latestWeighIn?.weightKg,
+    weightTrend.isError,
+    weightTrend.isLoading,
+    weightTrend.points,
+  ]);
 
   // One save per press: the guard is a ref because a second press can arrive before the screen has drawn the
   // first, and the mutation's pending state is only read on the next draw. Whether a weigh-in is written is
@@ -315,11 +370,13 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   if (estimate !== undefined) {
     return (
       <EstimateStep
-        answers={estimate.answers}
+        answers={(measuredEstimate ?? estimate).answers}
         isOffline={!isOnline}
         isSaving={isSaving}
+        isWaitingForProgramme={isWaitingForProgramme}
+        measurement={measuredEstimate?.measurement}
         mode={mode}
-        plan={estimate.plan}
+        plan={(measuredEstimate ?? estimate).plan}
         saveFailed={saveSetup.isError}
         onBack={goBack}
         onClose={isRecalculating ? close : undefined}

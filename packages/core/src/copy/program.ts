@@ -535,6 +535,16 @@ export const PROGRAM_SETUP_MEASURED = {
   expenditureSubtitle: "Measured from your weigh-ins and food log",
 } as const;
 
+/**
+ * The setup estimate in recalculate mode after check-ins that never measured. The canvas draws no words for it:
+ * these are the tech lead's, written for Setup wizard 18 (KEY-644).
+ */
+export const PROGRAM_SETUP_CARRIED_FORWARD = {
+  expenditureSubtitle: "Carried forward from your last check-in",
+  accuracyLine:
+    "Ki-Lo has not measured your expenditure yet, so it keeps the estimate from your last check-in. Changing your answers changes only your targets.",
+} as const;
+
 /** The estimate's accuracy line after a measurement, from the date of the last check-in. */
 export const describeMeasuredAccuracyLine = (measuredOn: string): string =>
   `Ki-Lo measured your expenditure at your last check-in, on ${describeDateInWords(measuredOn)}. Changing your answers keeps it and changes only your targets.`;

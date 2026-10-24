@@ -19,6 +19,7 @@ import {
   PROGRAM_REASON_LINES,
   PROGRAM_SCREEN,
   PROGRAM_SETTLING,
+  PROGRAM_SETUP_CARRIED_FORWARD,
   PROGRAM_SETUP_MEASURED,
   PROGRAM_TARGETS_SCREEN,
   PROGRAM_TOAST,
@@ -1176,6 +1177,17 @@ describe("setup: estimate · measured", () => {
     expectOnCanvas([
       "Ki-Lo measured your expenditure at your last check-in, on Friday 23 October. Changing your answers keeps it and changes only your targets.",
     ]);
+  });
+});
+
+// The canvas draws no words for check-ins that never measured. These are the tech lead's, so they are not looked up on it.
+describe("setup: estimate · carried forward", () => {
+  it("should give the expenditure row's subtitle and the accuracy line in the tech lead's words", () => {
+    expect(PROGRAM_SETUP_CARRIED_FORWARD).toEqual({
+      expenditureSubtitle: "Carried forward from your last check-in",
+      accuracyLine:
+        "Ki-Lo has not measured your expenditure yet, so it keeps the estimate from your last check-in. Changing your answers changes only your targets.",
+    });
   });
 });
 
