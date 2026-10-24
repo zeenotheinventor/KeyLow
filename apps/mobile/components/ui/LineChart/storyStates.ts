@@ -10,4 +10,9 @@ export const storyStates = [
   "DecimalSeries",
   "LargeValues",
   "SelectedWeek",
+  "FiveWeeksWithoutBand",
+  "BandOverFiveWeeks",
+  "BandWithAWeekWithoutValue",
+  "BandOverTwoWeeks",
+  "BandOverOneWeek",
 ];

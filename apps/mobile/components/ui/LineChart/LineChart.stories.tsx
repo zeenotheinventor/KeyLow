@@ -130,3 +130,82 @@ export const SelectedWeek: Story = {
   args: { selectedWeek: weeksEndingAt(climbing(13)).at(6)?.week ?? "" },
   render: (args) => <SelectableLineChart {...args} />,
 };
+
+// Five weeks of a trend with no band, as the exercise charts draw it: no legend, and the axis of the values alone.
+export const FiveWeeksWithoutBand: Story = {
+  args: {
+    points: weeksEndingAt([60, 62.5, 62.5, 65, 67.5]),
+    summary: "Barbell row, best set by week: from 60 kg to 67.5 kg over 5 weeks.",
+  },
+};
+
+// An estimate with its likely range: the programme canvas's five weeks. The axis runs from the lowest band end to
+// the highest, written to the nearest 10, and the legend sits under the week labels.
+const nearestTen = (value: number) => (Math.round(value / 10) * 10).toLocaleString("en-GB");
+
+const expenditureArgs = {
+  label: "Expenditure by week",
+  unit: "kcal a day",
+  formatValue: nearestTen,
+  legend: { line: "Estimate", band: "Likely range" },
+};
+
+const fiveWeekEstimates = [
+  { week: "2026-09-21", value: 2500, band: { low: 2019.4, high: 2980.6 } },
+  { week: "2026-09-28", value: 2500, band: { low: 2019.4, high: 2980.6 } },
+  { week: "2026-10-05", value: 2559.56, band: { low: 2291.43, high: 2827.69 } },
+  { week: "2026-10-12", value: 2574.22, band: { low: 2388.77, high: 2759.67 } },
+  { week: "2026-10-19", value: 2579.54, band: { low: 2430.91, high: 2728.17 } },
+];
+
+const fiveWeekSummary =
+  "Estimated expenditure over 5 weeks: 2,500 kcal a day in the week of 21 September, 2,580 now, likely 2,430 to 2,730.";
+
+export const BandOverFiveWeeks: Story = {
+  args: {
+    ...expenditureArgs,
+    points: fiveWeekEstimates.map(({ week, value }) => ({ week, value })),
+    band: fiveWeekEstimates.map(({ band }) => band),
+    summary: fiveWeekSummary,
+  },
+};
+
+// The fourth week has no value, so the line and the band both break there, and the last week stands alone as a 12 point bar.
+export const BandWithAWeekWithoutValue: Story = {
+  args: {
+    ...expenditureArgs,
+    points: fiveWeekEstimates.map(({ week, value }, index) => ({
+      week,
+      value: index === 3 ? null : value,
+    })),
+    band: fiveWeekEstimates.map(({ band }, index) => (index === 3 ? null : band)),
+    summary: fiveWeekSummary,
+  },
+};
+
+const startingEstimate = { value: 2413.125, band: { low: 1949.23, high: 2877.02 } };
+
+// The settling fortnight: the starting estimate carried into the second week.
+export const BandOverTwoWeeks: Story = {
+  args: {
+    ...expenditureArgs,
+    points: [
+      { week: "2026-10-19", value: startingEstimate.value },
+      { week: "2026-10-26", value: startingEstimate.value },
+    ],
+    band: [startingEstimate.band, startingEstimate.band],
+    summary:
+      "Estimated expenditure over 2 weeks: 2,413 kcal a day, a starting estimate from your answers, likely 1,950 to 2,880.",
+  },
+};
+
+// One week: the point with its band as a bar 12 points wide.
+export const BandOverOneWeek: Story = {
+  args: {
+    ...expenditureArgs,
+    points: [{ week: "2026-10-19", value: startingEstimate.value }],
+    band: [startingEstimate.band],
+    summary:
+      "Estimated expenditure this week: 2,413 kcal a day, a starting estimate from your answers, likely 1,950 to 2,880.",
+  },
+};

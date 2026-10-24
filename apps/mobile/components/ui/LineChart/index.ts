@@ -1,2 +1,2 @@
 export { LineChart } from "./LineChart";
-export type { LineChartPoint, LineChartProps } from "./types";
+export type { LineChartBand, LineChartLegend, LineChartPoint, LineChartProps } from "./types";

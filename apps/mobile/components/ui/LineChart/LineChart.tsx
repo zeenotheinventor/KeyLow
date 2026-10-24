@@ -1,3 +1,4 @@
+import { Path } from "@shopify/react-native-skia";
 import { vars } from "nativewind";
 import { useMemo } from "react";
 import { Pressable, View } from "react-native";
@@ -5,10 +6,12 @@ import { CartesianChart, Line, Scatter } from "victory-native";
 
 import {
   axisTicks,
+  bandPath,
   formatTick,
   labelledIndexes,
   latestIndex,
   valueDomain,
+  weekBands,
   weekLabel,
 } from "../../../lib/chart/linePlot";
 import { useTheme } from "../../../lib/theme";
@@ -23,6 +26,8 @@ const MAX_WEEK_LABELS = 4;
 // person has set their text, and a long value such as "102.5" never wraps.
 const FIXED_TEXT_SCALE = 1;
 const VALUE_KEYS: "value"[] = ["value"];
+// A band is the high and the low end of each week, placed by Victory like the value so they share its scale.
+const BAND_KEYS: ("value" | "low" | "high")[] = ["value", "low", "high"];
 const LINE_WIDTH = 2.5;
 const POINT_RADIUS = 2.5;
 const EMPHASISED_RADIUS = 4;
@@ -31,9 +36,10 @@ const EMPHASISED_RADIUS = 4;
  * A trend over weeks: a line through the readings, three values on the axis, the unit above it and the
  * week starts under it, thinned so they never run together. A skipped week breaks the line and has no point,
  * and a reading with a skipped week either side is a dot. The latest reading (or the selected week) is a
- * larger point in the marker colour. The colours are the design's chart tokens. The line and points are
- * drawn on Skia by Victory; everything else is ordinary views and text, so the whole chart is one image,
- * named by the caller's summary, which is also written under it.
+ * larger point in the marker colour. With a `band` the likely range of each week is shaded behind the line, and a
+ * `legend` names the line and the band under the week labels. The colours are the design's chart tokens. The
+ * line, points and band are drawn on Skia by Victory. Everything else is ordinary views and text, so the whole
+ * chart is one image, named by the caller's summary, which is also written under it.
  */
 export function LineChart({
   points,
@@ -44,12 +50,22 @@ export function LineChart({
   selectedWeek,
   onSelectWeek,
   height = DEFAULT_HEIGHT,
+  band,
+  legend,
 }: LineChartProps) {
   const { colors } = useTheme();
 
   const values = useMemo(() => points.map((point) => point.value), [points]);
-  const domain = useMemo(() => valueDomain(values), [values]);
-  const data = useMemo(() => values.map((value, index) => ({ index, value })), [values]);
+  const domain = useMemo(() => valueDomain(values, band), [values, band]);
+  const data = useMemo(() => {
+    const bands = weekBands(values, band);
+    return values.map((value, index) => ({
+      index,
+      value,
+      low: bands[index]?.low ?? null,
+      high: bands[index]?.high ?? null,
+    }));
+  }, [values, band]);
   const ticks = domain === undefined ? [] : axisTicks(domain);
   const selectedIndex = points.findIndex((point) => point.week === selectedWeek);
   const emphasisedIndex = selectedIndex === -1 ? latestIndex(values) : selectedIndex;
@@ -102,10 +118,16 @@ export function LineChart({
                     domain={{ x: [-0.5, points.length - 0.5], y: [domain.min, domain.max] }}
                     padding={plotPadding}
                     xKey="index"
-                    yKeys={VALUE_KEYS}
+                    yKeys={band === undefined ? VALUE_KEYS : BAND_KEYS}
                   >
                     {({ points: plotted }) => (
                       <>
+                        {band !== undefined && (
+                          <Path
+                            color={colors["chart-band"]}
+                            path={bandPath(plotted.high, plotted.low)}
+                          />
+                        )}
                         <Line
                           color={colors["chart-trend"]}
                           connectMissingData={false}
@@ -171,6 +193,31 @@ export function LineChart({
           </View>
         </View>
       </View>
+      {band !== undefined && legend !== undefined && (
+        <View aria-hidden className="flex-row">
+          <View className={gutterClassName} />
+          <View className="flex-1 flex-row flex-wrap gap-x-4 gap-y-1">
+            <View className="flex-row items-center gap-[6px]">
+              <View
+                className="h-[2px] w-[14px] rounded-[1px] bg-chart-trend"
+                testID="legend-line-swatch"
+              />
+              <Text tone="secondary" variant="caption">
+                {legend.line}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-[6px]">
+              <View
+                className="h-[10px] w-[14px] rounded-[2px] border border-chart-axis bg-chart-band"
+                testID="legend-band-swatch"
+              />
+              <Text tone="secondary" variant="caption">
+                {legend.band}
+              </Text>
+            </View>
+          </View>
+        </View>
+      )}
       <Text tone="secondary" variant="caption">
         {summary}
       </Text>
