@@ -1,17 +1,9 @@
-import { MUSCLE_IDS } from "@keylow/core/training";
 import { View } from "react-native";
 
 import { BodyFigure } from "./BodyFigure";
+import { heatSteps, inTurn } from "./storyValues";
 
-import type { BodyFigureValues } from "./types";
 import type { Meta, StoryObj } from "@storybook/react-native";
-
-// Every muscle takes the next value of the scale in turn, so each step or status appears on a side.
-function inTurn(valueCount: number): BodyFigureValues {
-  return Object.fromEntries(MUSCLE_IDS.map((muscle, index) => [muscle, index % valueCount]));
-}
-
-const heatSteps = inTurn(6);
 
 const meta = {
   title: "UI/BodyFigure",

@@ -1,27 +1,57 @@
 import { bodyMapPalette } from "@keylow/tokens";
 import { vars } from "nativewind";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { View } from "react-native";
 
 import { Body3DBoundary } from "./Body3DBoundary";
 import { body3DCanvasElement } from "./body3DCanvasElement";
+import { looksOf } from "./looks";
+import { useLookFadeMilliseconds } from "./useLookFadeMilliseconds";
 import { useTheme } from "../../../lib/theme";
 
 import type { Body3DProps } from "./types";
+import type { BodyFigureValues } from "../BodyFigure";
 
 // The 200 by 440 drawing of `BodyFigure`, so the 3D body takes the 2D figure's place at the same size.
 const DRAWING_WIDTH = 200;
 const DRAWING_HEIGHT = 440;
 
+// One empty object, so a caller that leaves `values` out does not hand the canvas a new set of looks every render.
+const NO_VALUES: BodyFigureValues = {};
+
 /**
- * The male body in 3D, drawn with GL: every muscle at rest in the resting grey of the body map, seen through
- * a faint skin, with a clay head. It is one image with the label. It draws nothing while the model loads,
- * and nothing if GL or the model fails. `onFirstFrame` tells the caller the body is on the screen, and
- * `onError` that it will not be.
+ * The male body in 3D, drawn with GL and seen through a faint skin, with a clay head. Each muscle takes the colour
+ * `BodyFigure` gives the same value on the same scale, and the peak heat step glows. It takes the figure's value
+ * props with their meaning, and a change of values, scale or theme eases over 220 ms, or at once with reduced
+ * motion. It is one image with the label. It draws nothing while the model loads, and nothing if GL or the
+ * model fails. `onFirstFrame` tells the caller the body is on the screen, and `onError` that it will not be.
  */
-export function Body3D({ label, w, onFirstFrame, onError }: Body3DProps) {
-  const { scheme } = useTheme();
-  const palette = bodyMapPalette(scheme);
+export function Body3D({
+  label,
+  w,
+  scale = "heat",
+  values = NO_VALUES,
+  selected,
+  dim = 1,
+  unselectedOpacity = 1,
+  onFirstFrame,
+  onError,
+}: Body3DProps) {
+  const { scheme, colors } = useTheme();
+  const palette = useMemo(() => bodyMapPalette(scheme), [scheme]);
+  const looks = useMemo(() => looksOf(scale, values, palette), [scale, values, palette]);
+  const textColour = colors["text-primary"];
+  const emphasis = useMemo(
+    () => ({
+      selected,
+      selectedColor: textColour,
+      restingColor: palette.silhouette,
+      dim,
+      unselectedOpacity,
+    }),
+    [selected, textColour, palette.silhouette, dim, unselectedOpacity],
+  );
+  const fadeMilliseconds = useLookFadeMilliseconds();
   const canvas = body3DCanvasElement({
     colours: {
       muscle: palette.silhouette,
@@ -31,6 +61,9 @@ export function Body3D({ label, w, onFirstFrame, onError }: Body3DProps) {
       skin: palette.skin,
     },
     scheme,
+    looks,
+    emphasis,
+    fadeMilliseconds,
     onFirstFrame,
     onError,
   });
