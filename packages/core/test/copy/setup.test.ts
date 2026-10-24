@@ -700,10 +700,9 @@ describe("setup: estimate · default", () => {
     });
     expect(SETUP_ESTIMATE.tileLabels).toEqual({
       protein: "Protein",
-      carbohydrate: "Carbohydrate",
+      carbs: "Carbs",
       fat: "Fat",
     });
-    expect(SETUP_ESTIMATE.carbsShortLabel).toBe("Carbs");
     expect(SETUP_ESTIMATE.expenditure).toEqual({
       title: words.expenditureTitle,
       caption: words.expenditureCaption,
