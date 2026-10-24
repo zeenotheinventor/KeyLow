@@ -1313,6 +1313,25 @@ export type Database = {
         Args: { steps: string[] };
         Returns: boolean;
       };
+      record_checkin: {
+        Args: {
+          p_next_checkin_date: string;
+          p_snapshot: Json;
+          p_targets: Json;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
+      record_targets: {
+        Args: {
+          p_checkin_weekday: number;
+          p_next_checkin_date: string;
+          p_start_snapshot: Json;
+          p_targets: Json;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       save_exercise: {
         Args: { p_exercise: Json; p_exercise_id: string; p_muscles: Json };
         Returns: string;

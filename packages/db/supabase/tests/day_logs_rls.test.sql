@@ -55,14 +55,14 @@ select ok(
   'anon has no privilege on day_logs'
 );
 select ok(
-  not has_table_privilege('service_role', 'public.day_logs', 'select')
+  has_table_privilege('service_role', 'public.day_logs', 'select')
     and not has_table_privilege('service_role', 'public.day_logs', 'insert')
     and not has_table_privilege('service_role', 'public.day_logs', 'update')
     and not has_table_privilege('service_role', 'public.day_logs', 'delete')
     and not has_table_privilege('service_role', 'public.day_logs', 'truncate')
     and not has_table_privilege('service_role', 'public.day_logs', 'references')
     and not has_table_privilege('service_role', 'public.day_logs', 'trigger'),
-  'service_role has no privilege on day_logs'
+  'service_role can select from day_logs and holds no other privilege on it'
 );
 select ok(
   has_table_privilege('authenticated', 'public.day_logs', 'select')

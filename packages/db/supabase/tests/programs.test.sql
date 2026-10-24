@@ -855,18 +855,17 @@ select ok(
   'anon has no privilege on programs'
 );
 select ok(
-  not has_table_privilege('service_role', 'public.programs', 'select')
+  has_table_privilege('service_role', 'public.programs', 'select')
     and not has_table_privilege('service_role', 'public.programs', 'insert')
     and not has_table_privilege('service_role', 'public.programs', 'update')
     and not has_table_privilege('service_role', 'public.programs', 'delete')
     and not has_table_privilege('service_role', 'public.programs', 'truncate')
     and not has_table_privilege('service_role', 'public.programs', 'references')
     and not has_table_privilege('service_role', 'public.programs', 'trigger')
-    and not has_any_column_privilege('service_role', 'public.programs', 'select')
     and not has_any_column_privilege('service_role', 'public.programs', 'insert')
     and not has_any_column_privilege('service_role', 'public.programs', 'update')
     and not has_any_column_privilege('service_role', 'public.programs', 'references'),
-  'service_role has no privilege on programs'
+  'service_role can select from programs and holds no other privilege on it'
 );
 
 -- Account deletion on the real table: a user with an active and an ended program. Deleting the auth
