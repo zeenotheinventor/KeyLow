@@ -201,7 +201,7 @@ export type {
   FrontMuscleId,
 } from "./bodyArtwork";
 
-export { bodyMapRendererFor } from "./bodyMapRenderer";
+export { bodyMapRendererFor, figureHas3dBody } from "./bodyMapRenderer";
 export type { BodyMapRendererInput } from "./bodyMapRenderer";
 
 export { compareWeekSoFar } from "./compareWeekSoFar";
