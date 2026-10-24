@@ -18,6 +18,35 @@ export type {
   CheckinSnapshot,
   CheckinTargets,
 } from "./checkinStep";
+export {
+  checkinWeekday,
+  dueCheckinDates,
+  firstCheckinDate,
+  localToday,
+  nextAfter,
+  scheduleToSet,
+} from "./schedule";
+export type { ScheduleToSet } from "./schedule";
+export { profileBmr, requireStats, startSnapshot, startSnapshotAction } from "./startSnapshot";
+export type {
+  LatestSnapshot,
+  ProfileStats,
+  ProfileStatsRow,
+  RequiredStats,
+  StartSnapshot,
+  StartSnapshotAction,
+  StartSnapshotActionInput,
+  StartSnapshotInput,
+} from "./startSnapshot";
+export { targetsRow } from "./targetsRow";
+export type {
+  EngineTargetsRow,
+  TargetsRowBasis,
+  TargetsRowInput,
+  TargetsSource,
+} from "./targetsRow";
+export { recomputeTargets } from "./recomputeTargets";
+export type { RecomputeBasis, RecomputeInput, RecomputeTargetsRow } from "./recomputeTargets";
 export { bmrMifflinStJeor, initialExpenditure } from "./initialExpenditure";
 export type { BmrInput, InitialExpenditure, InitialExpenditureInput } from "./initialExpenditure";
 export {
