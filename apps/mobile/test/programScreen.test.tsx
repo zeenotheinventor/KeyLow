@@ -1,3 +1,5 @@
+import "./support/gestureHandler";
+
 import { KeyLowProvider } from "@keylow/api-client";
 import { act, render, screen, userEvent } from "@testing-library/react-native";
 
