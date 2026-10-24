@@ -3,7 +3,13 @@ import { act, render, screen, userEvent } from "@testing-library/react-native";
 
 import { ProgramScreen } from "../components/ProgramScreen";
 import { ThemeProvider } from "../lib/theme";
-import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "./support/diaryBackend";
+import {
+  completeDayLog,
+  createDiaryQueryClient,
+  dayTotalsRow,
+  diaryBackend,
+  resetDiaryBackend,
+} from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import {
   programBackend,
@@ -86,6 +92,22 @@ function drawingsBesideText(text: string): number {
   ).length;
 }
 
+// Every piece of text on the screen, top to bottom, so a test can say what sits under what.
+type RenderedNode = string | { children: readonly RenderedNode[] | null };
+
+function textsInOrder(node: RenderedNode | readonly RenderedNode[] | null): string[] {
+  if (node === null) {
+    return [];
+  }
+  if (typeof node === "string") {
+    return [node];
+  }
+  if ("children" in node) {
+    return textsInOrder(node.children);
+  }
+  return node.flatMap((child) => textsInOrder(child));
+}
+
 describe("the Programme screen", () => {
   beforeEach(() => {
     resetRouterMock();
@@ -166,6 +188,14 @@ describe("the Programme screen", () => {
           "Estimated expenditure, 2,580 kilocalories a day, likely 2,430 to 2,730 kcal",
         ),
       ).toBeOnTheScreen();
+    });
+
+    it("should not show what the first check-in needs", async () => {
+      await renderProgramScreen();
+      await screen.findByText("2,580");
+
+      expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
+      expect(screen.queryByText(/^First check-in Friday/)).not.toBeOnTheScreen();
     });
 
     it("should show 2,580 kcal with its likely range and the Estimate badge, and no Settling badge", async () => {
@@ -371,6 +401,92 @@ describe("the Programme screen", () => {
       expect(screen.queryByLabelText(/^Next check-in/)).not.toBeOnTheScreen();
     });
 
+    describe("what the first check-in needs (program: settling)", () => {
+      beforeEach(() => {
+        programBackend.weighIns = ["2026-10-28", "2026-10-27", "2026-10-25", "2026-10-23"].map(
+          (localDate) => ({ weight_kg: 80, local_date: localDate }),
+        );
+        diaryBackend.dayLogs = ["2026-10-23", "2026-10-24", "2026-10-26", "2026-10-27"].map(
+          completeDayLog,
+        );
+        diaryBackend.dayTotals = ["2026-10-23", "2026-10-24", "2026-10-26", "2026-10-27"].map(
+          (localDate) => dayTotalsRow(localDate, [2000, 100, 200, 70]),
+        );
+      });
+
+      it("should show the first check-in's date and the three counts of the canvas case", async () => {
+        await renderProgramScreen();
+
+        expect(
+          await screen.findByText("First check-in Friday 6 November, in 9 days"),
+        ).toBeOnTheScreen();
+        expect(
+          screen.getByText("Until then your targets stay as they are. The check-in needs:"),
+        ).toBeOnTheScreen();
+        expect(
+          screen.getByRole("progressbar", { name: "Days with a weigh-in, 4 of 8" }),
+        ).toBeOnTheScreen();
+        expect(
+          screen.getByRole("progressbar", { name: "Days your weigh-ins cover, 6 of 14" }),
+        ).toBeOnTheScreen();
+        expect(
+          screen.getByRole("progressbar", { name: "Complete days, 4 of 10" }),
+        ).toBeOnTheScreen();
+        expect(
+          screen.getByText(
+            "Weigh in on Thursday 5 November, the day before, so your weigh-ins cover the full 14 days.",
+          ),
+        ).toBeOnTheScreen();
+      });
+
+      it("should sit under the hero and above this week's targets", async () => {
+        await renderProgramScreen();
+        await screen.findByText("First check-in Friday 6 November, in 9 days");
+
+        const texts = textsInOrder(screen.toJSON());
+        const at = (text: string) => texts.indexOf(text);
+
+        expect(at("Likely 1,950 to 2,880 kcal")).toBeGreaterThan(-1);
+        expect(at("First check-in Friday 6 November, in 9 days")).toBeGreaterThan(
+          at("Likely 1,950 to 2,880 kcal"),
+        );
+        expect(at("This week's targets")).toBeGreaterThan(
+          at("First check-in Friday 6 November, in 9 days"),
+        );
+      });
+
+      it("should not show once a check-in has been made, whether it measured or not", async () => {
+        programBackend.snapshots = [
+          ...programBackend.snapshots,
+          {
+            id: "66666666-6666-4666-8666-666666666697",
+            program_id: "55555555-5555-4555-8555-555555555555",
+            as_of_date: "2026-10-27",
+            kind: "checkin",
+            mu_kcal: 2413.125,
+            var_kcal2: 136000,
+            measurement: {
+              eligible: false,
+              reasons: ["complete_days"],
+              spanDays: 14,
+              weighDays: 14,
+              completeDays: 9,
+            },
+          },
+        ];
+        await renderProgramScreen();
+        await screen.findByText("2,413");
+        // Long enough for any read that was wrongly started to answer.
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        });
+
+        expect(screen.queryByText(/^First check-in Friday/)).not.toBeOnTheScreen();
+        expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
+        expect(screen.queryByText(/Weigh in on/)).not.toBeOnTheScreen();
+      });
+    });
+
     it("should not be settling once a check-in that could not measure exists, so its Not measured card can show", async () => {
       programBackend.snapshots = [
         ...programBackend.snapshots,
@@ -474,6 +590,7 @@ describe("the Programme screen", () => {
       await screen.findByText("2,413");
 
       expect(screen.queryByLabelText(/check-in, /)).not.toBeOnTheScreen();
+      expect(screen.queryByRole("progressbar")).not.toBeOnTheScreen();
     });
   });
 

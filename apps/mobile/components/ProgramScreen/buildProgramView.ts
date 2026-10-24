@@ -115,7 +115,7 @@ export function buildProgramView({
     return null;
   }
   const snapshots = [latestSnapshot, previousSnapshot].filter((snapshot) => snapshot !== null);
-  const { settling } = settlingProgress(program, snapshots, today);
+  const { settling, firstCheckinDate, daysLeft } = settlingProgress(program, snapshots, today);
   const band = expenditureBand(belief);
   const weightKg = currentTargets?.basis.trendWeightKg ?? fallbackWeightKg;
   const goal = GOALS.find((candidate) => candidate === program.goal);
@@ -165,7 +165,12 @@ export function buildProgramView({
           checkIn: checkInRowOf(program.nextCheckinDate, settling, today),
         };
 
-  return { hero, targets, details: detailsOf(program, weightKg, unit) };
+  const settlingChecklist =
+    settling && firstCheckinDate !== null && daysLeft !== null
+      ? { firstCheckinDate, daysLeft, today }
+      : null;
+
+  return { hero, settlingChecklist, targets, details: detailsOf(program, weightKg, unit) };
 }
 
 function detailsOf(

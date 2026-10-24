@@ -35,6 +35,11 @@ export const samples: Record<string, () => string[]> = {
     copy.describeFirstCheckInBanner("2026-11-06", 0),
   ],
   describeSettlingTip: () => [copy.describeSettlingTip("2026-11-06")],
+  describeSettlingTipOnOrAfter: () => [copy.describeSettlingTipOnOrAfter("2026-11-02")],
+  describeSettlingTipFor: () => [
+    copy.describeSettlingTipFor("2026-11-06", "2026-11-05") ?? "",
+    copy.describeSettlingTipFor("2026-11-06", "2026-11-02") ?? "",
+  ],
   describeOwnTargetsStay: () => [copy.describeOwnTargetsStay(2200)],
   describeRateSubtitle: () => [
     copy.describeRateSubtitle(0.5, 79.023, "kg"),

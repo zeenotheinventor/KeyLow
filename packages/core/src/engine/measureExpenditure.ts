@@ -17,8 +17,14 @@ type Weighing = Readonly<{ dayIndex: number; weightKg: number }>;
 
 const DAYS_PER_WEEK = 7;
 
-function isRealAcceptedWeighIn(point: TrendPoint): boolean {
+/** A day the measurement counts as a weigh-in: a real reading, neither filled in nor rejected as a spike. */
+export function isRealAcceptedWeighIn(point: TrendPoint): boolean {
   return point.rawKg !== null && !point.interpolated && !point.rejected;
+}
+
+/** A day the measurement counts as complete: the user marked it complete and it has an intake to average. */
+export function isCompleteDayWithIntake(day: DayInput): day is DayInput & { intakeKcal: number } {
+  return day.isComplete && day.intakeKcal !== null;
 }
 
 function sum(values: readonly number[]): number {
@@ -60,7 +66,7 @@ export function measureExpenditure(
     const hasWeighIn = point !== undefined && isRealAcceptedWeighIn(point);
 
     if (hasWeighIn) weighings.push({ dayIndex, weightKg: point.usedKg });
-    if (intakeKcal !== null && day?.isComplete) completeIntakes.push(intakeKcal);
+    if (day !== undefined && isCompleteDayWithIntake(day)) completeIntakes.push(day.intakeKcal);
     if (hasWeighIn || intakeKcal !== null) {
       firstDataDayIndex = Math.min(firstDataDayIndex, dayIndex);
     }

@@ -1,3 +1,4 @@
+import type { SettlingChecklistProps } from "./SettlingChecklist";
 import type { ExpenditureSnapshot, ProgramSummary, Targets, TargetsRow } from "@keylow/api-client";
 import type { ExpenditureBelief } from "@keylow/core/engine";
 import type { WeightDisplayUnit } from "@keylow/core/weight";
@@ -50,6 +51,8 @@ export type ProgramDetailRow = {
 
 export type ProgramView = {
   hero: ExpenditureHeroView;
+  /** What the settling checklist is given. Null once the program has a check-in, and before the schedule is set. */
+  settlingChecklist: SettlingChecklistProps | null;
   /** Null for a program with no targets to show yet. */
   targets: WeekTargetsView | null;
   details: readonly ProgramDetailRow[];
