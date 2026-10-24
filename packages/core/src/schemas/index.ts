@@ -15,11 +15,15 @@ export type {
   NutrientBasis,
 } from "./food";
 export {
-  runCheckinErrorCodeSchema,
+  runCheckinRecomputeResponseSchema,
   runCheckinRequestSchema,
   runCheckinResponseSchema,
 } from "./runCheckin";
-export type { RunCheckinErrorCode, RunCheckinRequest, RunCheckinResponse } from "./runCheckin";
+export type {
+  RunCheckinRecomputeResponse,
+  RunCheckinRequest,
+  RunCheckinResponse,
+} from "./runCheckin";
 export { expenditureMeasurementSchema, targetsBasisSchema } from "./program";
 export type { ExpenditureMeasurement, TargetsBasis } from "./program";
 export { nutrientAmountSchema, nutrientsSchema, strictNutrientsSchema } from "./nutrients";

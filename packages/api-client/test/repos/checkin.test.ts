@@ -188,10 +188,22 @@ describe("runMyDueCheckins", () => {
     expect(failure).toMatchObject({ code: "internal_error", status: 500 });
   });
 
+  it("should throw a bad_mode refusal as an EdgeFunctionError", async () => {
+    server.use(http.post(RUN_CHECKIN_URL, () => edgeErrorResponse(400, "bad_mode", "Bad mode")));
+
+    const failure = await thrownBy(() => runMyDueCheckins(createTestClient()));
+
+    expect(failure).toBeInstanceOf(EdgeFunctionError);
+    expect(failure).toMatchObject({ code: "bad_mode", status: 400 });
+  });
+
   it("should throw the generic error for a refusal the edge helpers cannot classify", async () => {
     server.use(
       http.post(RUN_CHECKIN_URL, () =>
-        HttpResponse.json({ error: { code: "bad_mode", message: "Bad mode" } }, { status: 400 }),
+        HttpResponse.json(
+          { error: { code: "not_a_code", message: "Not a code" } },
+          { status: 400 },
+        ),
       ),
     );
 

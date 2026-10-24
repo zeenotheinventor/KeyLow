@@ -30,6 +30,10 @@ const EDGE_ERROR_SENTENCES: Readonly<Record<EdgeErrorCode, string>> = {
   invalid_request: "That request was not valid. Check what you entered and try again.",
   unauthorized: "Your session has ended. Sign in again.",
   internal_error: "Ki-Lo had a problem with that request. Try again in a moment.",
+  bad_mode: "Ki-Lo did not recognise that request. Update the app and try again.",
+  no_program: "Set up a program first, then Ki-Lo can work out your targets.",
+  missing_stats:
+    "Ki-Lo needs your sex, birth date, height, activity level and weight. Add them to your profile and try again.",
 };
 
 /**

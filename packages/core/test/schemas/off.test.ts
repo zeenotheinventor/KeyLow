@@ -204,13 +204,16 @@ describe("edgeErrorCodeSchema", () => {
     "invalid_request",
     "unauthorized",
     "internal_error",
+    "bad_mode",
+    "no_program",
+    "missing_stats",
   ];
 
   it.each(allCodes)("should accept %s", (code) => {
     expect(edgeErrorCodeSchema.parse(code)).toBe(code);
   });
 
-  it("should have exactly the six documented codes", () => {
+  it("should have exactly the nine documented codes", () => {
     expect([...edgeErrorCodeSchema.options].sort()).toEqual([...allCodes].sort());
   });
 

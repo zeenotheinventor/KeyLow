@@ -57,3 +57,19 @@ Deno.test(
     }
   },
 );
+
+Deno.test("error answers the status of each code run-checkin sends", async () => {
+  const bodies = await Promise.all(
+    (["bad_mode", "no_program", "missing_stats"] as const).map((code) =>
+      error(code, "message")
+        .json()
+        .then((body) => body.error.code),
+    ),
+  );
+  const statuses = (["bad_mode", "no_program", "missing_stats"] as const).map(
+    (code) => error(code, "message").status,
+  );
+
+  assertEquals(bodies, ["bad_mode", "no_program", "missing_stats"]);
+  assertEquals(statuses, [400, 409, 409]);
+});
