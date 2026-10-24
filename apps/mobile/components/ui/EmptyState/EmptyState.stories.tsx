@@ -1,6 +1,7 @@
 import {
   BODY_MAP,
   FOOD_NOT_FOUND,
+  PROGRAM_NO_PROGRAM,
   RECIPES_EMPTY,
   RECIPES_LIBRARY,
   RECIPES_SEARCH_EMPTY,
@@ -99,6 +100,26 @@ export const SecondaryAction: Story = {
     body: WEIGHT_EMPTY.body,
     action: { label: WEIGHT_EMPTY.addWeighIn, variant: "primary", onPress: () => undefined },
     secondaryAction: { label: WEIGHT_EMPTY.connectHealth, icon: "Heart", onPress: () => undefined },
+  },
+};
+
+// The Programme screen's no-program board: three lines of what a programme does under the body, and the one action
+// large and the full width of the view.
+export const WithPoints: Story = {
+  args: {
+    icon: "ChartLine",
+    title: PROGRAM_NO_PROGRAM.title,
+    body: PROGRAM_NO_PROGRAM.body,
+    points: [
+      { icon: "Calculator", text: PROGRAM_NO_PROGRAM.points[0] },
+      { icon: "Scale", text: PROGRAM_NO_PROGRAM.points[1] },
+      { icon: "Target", text: PROGRAM_NO_PROGRAM.points[2] },
+    ],
+    action: {
+      label: PROGRAM_NO_PROGRAM.startLabel,
+      variant: "primary",
+      onPress: () => undefined,
+    },
   },
 };
 

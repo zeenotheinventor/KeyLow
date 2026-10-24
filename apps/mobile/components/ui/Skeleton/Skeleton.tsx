@@ -409,6 +409,19 @@ function SkeletonWeight() {
   );
 }
 
+// The Programme screen as its loading board draws it: the expenditure card, the targets card, the Your programme
+// heading as a short bar and the rows, 12 points apart. The screen gives their sides.
+function SkeletonProgram() {
+  return (
+    <View className="gap-3" testID="skeleton-program">
+      <SkeletonBone className="h-[164px] rounded-large" />
+      <SkeletonBone className="h-[248px] rounded-large" />
+      <SkeletonBone className="h-[18px] w-[140px]" />
+      <SkeletonBone className="h-[176px] rounded-large" />
+    </View>
+  );
+}
+
 // The Weight screen's Body composition section as its loading board draws it: one 104 point block for each
 // card, 8 points apart.
 function SkeletonBodyComposition() {
@@ -443,6 +456,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "bodyMap" ? <SkeletonBodyMap /> : null}
       {variant === "historyList" ? <SkeletonHistoryList /> : null}
       {variant === "weight" ? <SkeletonWeight /> : null}
+      {variant === "program" ? <SkeletonProgram /> : null}
       {variant === "bodyComposition" ? <SkeletonBodyComposition /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (

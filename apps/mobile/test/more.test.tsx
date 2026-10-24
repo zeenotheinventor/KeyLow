@@ -11,12 +11,17 @@ import { deviceScheme } from "./support/deviceScheme";
 import {
   createDiaryQueryClient,
   diaryBackend,
-  diaryClient,
   noTargets,
   requestsTo,
   resetDiaryBackend,
 } from "./support/diaryBackend";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
+import {
+  programClient,
+  resetProgramBackend,
+  showGoldenProgram,
+  showProgramWithoutSnapshot,
+} from "./support/programBackend";
 import { mockSupabaseClient, resetSupabaseMock } from "./support/supabaseMock";
 
 const mockStorageItems = new Map<string, string>();
@@ -80,7 +85,7 @@ function drawingsIn(row: Instance) {
 async function renderMore() {
   await render(
     <ThemeProvider>
-      <KeyLowProvider client={diaryClient} queryClient={createDiaryQueryClient()}>
+      <KeyLowProvider client={programClient} queryClient={createDiaryQueryClient()}>
         <MoreRoute />
         <ThemeProbe />
         <BodyMapRendererProbe />
@@ -95,6 +100,7 @@ describe("the More screen", () => {
     resetRouterMock();
     resetSupabaseMock();
     resetDiaryBackend();
+    resetProgramBackend();
     mockStorageItems.clear();
     mockSetItem.mockClear();
     resetBodyMapRendererForTests();
@@ -152,7 +158,7 @@ describe("the More screen", () => {
 
       const row = await screen.findByRole("button", { name: "Targets, Set by you, 2,200 kcal" });
 
-      expect(within(screen.getByLabelText("Nutrition")).getByRole("button")).toBe(row);
+      expect(within(screen.getByLabelText("Nutrition")).getAllByRole("button")[0]).toBe(row);
       expect(row).toBeEnabled();
     });
 
@@ -181,6 +187,82 @@ describe("the More screen", () => {
         diaryBackend.requests.filter((request) => !request.search.includes("terms_accepted_at")),
       ).toEqual([]);
       expect(requestsTo("profiles")).toBe(1);
+    });
+  });
+
+  describe("Programme", () => {
+    it("should be a row in Nutrition under Targets, with its icon and a chevron because it goes somewhere", async () => {
+      await renderMore();
+
+      const nutrition = within(screen.getByLabelText("Nutrition"));
+      const rows = nutrition.getAllByRole("button");
+
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toHaveAccessibleName(/^Targets/);
+      expect(rows[1]).toHaveAccessibleName(/^Programme/);
+      expect(drawingsIn(nutrition.getByRole("button", { name: /^Programme/ }))).toHaveLength(2);
+    });
+
+    it("should offer to set the targets when there is no programme", async () => {
+      await renderMore();
+
+      expect(
+        await screen.findByRole("button", { name: "Programme, Let Ki-Lo set your targets" }),
+      ).toBeEnabled();
+    });
+
+    it("should say when the next check-in is while a programme runs", async () => {
+      showGoldenProgram();
+      await renderMore();
+
+      expect(
+        await screen.findByRole("button", { name: "Programme, Next check-in Fri 30 Oct" }),
+      ).toBeEnabled();
+    });
+
+    it("should say nothing under its title while a programme has no check-in date yet", async () => {
+      showProgramWithoutSnapshot();
+      await renderMore();
+      // The recompute has not made the programme's targets yet, so these are the ones the wizard saved.
+      await screen.findByRole("button", { name: "Targets, Set by you, 1,970 kcal" });
+
+      expect(screen.getByRole("button", { name: "Programme" })).toBeEnabled();
+    });
+
+    it("should open the Programme screen inside the More tab when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(await screen.findByRole("button", { name: /^Programme/ }));
+
+      expect(routerMock.push).toHaveBeenCalledWith("/more/program");
+    });
+
+    it("should read nothing while the terms are not accepted", async () => {
+      diaryBackend.terms = { terms_accepted_at: null, terms_version: null };
+      await renderMore();
+
+      expect(await screen.findByRole("button", { name: "Programme" })).toBeEnabled();
+      expect(requestsTo("expenditure_snapshots")).toBe(0);
+    });
+  });
+
+  describe("Targets from a programme", () => {
+    it("should say they come from the programme when the programme's targets are in force", async () => {
+      showGoldenProgram();
+      await renderMore();
+
+      expect(
+        await screen.findByRole("button", { name: "Targets, From your programme, 2,140 kcal" }),
+      ).toBeEnabled();
+    });
+
+    it("should keep saying Set by you for targets the user typed", async () => {
+      await renderMore();
+
+      expect(
+        await screen.findByRole("button", { name: "Targets, Set by you, 2,200 kcal" }),
+      ).toBeEnabled();
     });
   });
 

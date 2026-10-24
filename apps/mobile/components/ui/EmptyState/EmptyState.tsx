@@ -7,11 +7,15 @@ import { Card } from "../Card";
 import { Icon } from "../Icon";
 import { Text } from "../Text";
 
-import type { EmptyStateAction, EmptyStateProps } from "./types";
+import type { EmptyStateAction, EmptyStatePoint, EmptyStateProps } from "./types";
 
 function renderAction(
   action: EmptyStateAction,
-  { className = "", isFullWidth = false }: { className?: string; isFullWidth?: boolean },
+  {
+    className = "",
+    isFullWidth = false,
+    size = "md",
+  }: { className?: string; isFullWidth?: boolean; size?: "md" | "lg" },
 ) {
   return (
     <Button
@@ -19,11 +23,32 @@ function renderAction(
       disabled={action.disabled ?? false}
       fullWidth={isFullWidth}
       icon={action.icon}
+      size={size}
       variant={action.variant ?? "secondary"}
       onPress={action.onPress}
     >
       {action.label}
     </Button>
+  );
+}
+
+// The points as the Programme screen's no-program board draws them: a card of rows, each at least 56 points tall
+// with a 36 point tile for its icon, and a hairline above every row after the first.
+function PointsCard({ points }: { points: readonly EmptyStatePoint[] }) {
+  return (
+    <Card padding={0}>
+      {points.map((point, index) => (
+        <View
+          key={point.text}
+          className={`min-h-[56px] flex-row items-center gap-3 px-3 py-2 ${index === 0 ? "" : "border-t border-border"}`}
+        >
+          <View className="h-control-sm w-control-sm shrink-0 items-center justify-center rounded-small bg-surface-raised">
+            <Icon name={point.icon} size="md" tone="secondary" />
+          </View>
+          <Text className="min-w-0 flex-1">{point.text}</Text>
+        </View>
+      ))}
+    </Card>
   );
 }
 
@@ -39,11 +64,41 @@ export function EmptyState({
   body,
   action,
   secondaryAction,
+  points,
   inset = "default",
   variant = "page",
 }: EmptyStateProps) {
   const animatedStyle = useFadeInStyle();
   const isCard = variant === "card";
+
+  if (points !== undefined && points.length > 0) {
+    return (
+      <Animated.View style={animatedStyle} testID="empty-state">
+        <View className="gap-4 px-4 pt-4">
+          <View className="items-center gap-2 px-2">
+            {icon === undefined ? null : (
+              <View
+                className="mb-2 h-[56px] w-[56px] items-center justify-center rounded-medium bg-surface-raised"
+                testID="empty-state-tile"
+              >
+                <Icon name={icon} size="xl" tone="muted" />
+              </View>
+            )}
+            <Text className="text-center" role="heading" variant="h2">
+              {title}
+            </Text>
+            {body === undefined ? null : (
+              <Text className="text-center" tone="secondary">
+                {body}
+              </Text>
+            )}
+          </View>
+          <PointsCard points={points} />
+          {action === undefined ? null : renderAction(action, { isFullWidth: true, size: "lg" })}
+        </View>
+      </Animated.View>
+    );
+  }
 
   const words = (
     <View
