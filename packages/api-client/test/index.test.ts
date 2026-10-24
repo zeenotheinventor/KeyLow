@@ -172,6 +172,9 @@ describe("the package index", () => {
     "toEdgeErrorKind",
     "getMyCheckinSchedule",
     "runMyDueCheckins",
+    "recomputeMyTargets",
+    "updateMyProgram",
+    "useEditProgram",
     "useRunDueCheckins",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);

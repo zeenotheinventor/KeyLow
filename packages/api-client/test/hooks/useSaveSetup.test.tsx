@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -25,6 +26,7 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  onlineManager.setOnline(true);
   server.resetHandlers();
 });
 afterAll(() => {
@@ -63,6 +65,9 @@ async function renderSignedIn() {
   rendered.queryClient.setQueryData(keys.profiles.targets, { kcal: null });
   rendered.queryClient.setQueryData(keys.weighIns.list, []);
   rendered.queryClient.setQueryData(keys.profiles.weightUnit, "kg");
+  rendered.queryClient.setQueryData(keys.program.summary, { program: null });
+  rendered.queryClient.setQueryData(keys.program.expenditureHistory(12), []);
+  rendered.queryClient.setQueryData(keys.program.targetsHistory(12), []);
   rendered.queryClient.setQueryData(keys.diary.day("2026-10-24"), { localDate: "2026-10-24" });
   rendered.queryClient.setQueryData(keys.diary.week("2026-10-19"), []);
   rendered.queryClient.setQueryData(keys.profiles.termsAcceptance, { terms_version: "x" });
@@ -87,6 +92,7 @@ describe("useSaveSetup", () => {
       "GET programs",
       "POST programs",
       "PATCH profiles",
+      "POST run-checkin",
     ]);
     expect(fake.searchOf("PATCH profiles")?.get("id")).toBe(`eq.${SIGNED_IN_USER_ID}`);
   });
@@ -100,6 +106,45 @@ describe("useSaveSetup", () => {
     expect(isInvalidated(queryClient, keys.profiles.setupState)).toBe(true);
     expect(isInvalidated(queryClient, keys.profiles.targets)).toBe(true);
     expect(isInvalidated(queryClient, keys.weighIns.list)).toBe(true);
+  });
+
+  it("should invalidate the program reads, which the first snapshot and the first targets change, on success", async () => {
+    installSetupSaveFake(server);
+    const { queryClient, result } = await renderSignedIn();
+
+    await act(() => result.current.mutateAsync(input));
+
+    expect(isInvalidated(queryClient, keys.program.summary)).toBe(true);
+    expect(isInvalidated(queryClient, keys.program.expenditureHistory(12))).toBe(true);
+    expect(isInvalidated(queryClient, keys.program.targetsHistory(12))).toBe(true);
+  });
+
+  it("should resolve with targetsPending false when the recompute succeeds", async () => {
+    installSetupSaveFake(server);
+    const { result } = await renderSignedIn();
+
+    const answer = await act(() => result.current.mutateAsync(input));
+
+    expect(answer).toEqual({ targetsPending: false });
+  });
+
+  it("should still succeed and invalidate everything, with targetsPending, when the recompute is refused", async () => {
+    const fake = installSetupSaveFake(server);
+    fake.answerRecomputeWith(() =>
+      HttpResponse.json({ error: { code: "missing_stats", message: "Refused" } }, { status: 409 }),
+    );
+    const { queryClient, result } = await renderSignedIn();
+
+    const answer = await act(() => result.current.mutateAsync(input));
+
+    expect(answer).toEqual({ targetsPending: true, recomputeCode: "missing_stats" });
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+    expect(isInvalidated(queryClient, keys.profiles.setupState)).toBe(true);
+    expect(isInvalidated(queryClient, keys.profiles.targets)).toBe(true);
+    expect(isInvalidated(queryClient, keys.program.summary)).toBe(true);
+    expect(isInvalidated(queryClient, keys.diary.day("2026-10-24"))).toBe(true);
   });
 
   it("should invalidate the weight unit, which a first save by someone who chose lb sets, on success", async () => {
@@ -119,6 +164,24 @@ describe("useSaveSetup", () => {
 
     expect(isInvalidated(queryClient, keys.diary.day("2026-10-24"))).toBe(true);
     expect(isInvalidated(queryClient, keys.diary.week("2026-10-19"))).toBe(true);
+  });
+
+  it("should send its requests and settle while the connection manager says offline", async () => {
+    const fake = installSetupSaveFake(server);
+    const { result } = await renderSignedIn();
+    onlineManager.setOnline(false);
+
+    await act(async () => {
+      await result.current.mutateAsync(input);
+    });
+
+    expect(fake.order()).toEqual([
+      "POST weigh_ins",
+      "GET programs",
+      "POST programs",
+      "PATCH profiles",
+      "POST run-checkin",
+    ]);
   });
 
   it("should not touch the terms acceptance, which the gate reads", async () => {
@@ -153,6 +216,7 @@ describe("useSaveSetup", () => {
     expect(isInvalidated(queryClient, keys.profiles.weightUnit)).toBe(false);
     expect(isInvalidated(queryClient, keys.diary.day("2026-10-24"))).toBe(false);
     expect(isInvalidated(queryClient, keys.diary.week("2026-10-19"))).toBe(false);
+    expect(isInvalidated(queryClient, keys.program.summary)).toBe(false);
   });
 
   it("should refuse before any request when nobody is signed in", async () => {

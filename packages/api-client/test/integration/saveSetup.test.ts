@@ -1,6 +1,8 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
+import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
 
 import { createTestUser, deleteCreatedTestUsers } from "./support/users";
+import { requireServedFunction } from "../../../db/test/integration/support/functionsLane";
 import { getMySetupState, saveMySetup } from "../../src/repos/setup";
 import { getMyTargets } from "../../src/repos/targets";
 import { listWeighIns } from "../../src/repos/weighIns";
@@ -33,12 +35,44 @@ const firstSave: SetupSave = {
   weighIn: { weightKg: 74.3, localDate: "2026-10-01" },
 };
 
+/** A profile's time zone is UTC unless it is changed, so this is the date `run-checkin` works from. */
+const today = toLocalDate(new Date(), "UTC");
+
+async function readSnapshots(user: TestUser) {
+  const { data, error } = await user.client
+    .from("expenditure_snapshots")
+    .select("id,kind,program_id")
+    .order("as_of_date", { ascending: true });
+  expect(error).toBeNull();
+  return data ?? [];
+}
+
+async function readCurrentTargets(user: TestUser) {
+  const { data, error } = await user.client
+    .from("targets")
+    .select("id,program_id,basis,calories_kcal")
+    .is("effective_to", null);
+  expect(error).toBeNull();
+  return data ?? [];
+}
+
+async function readManualTargets(user: TestUser) {
+  const { data, error } = await user.client
+    .from("profiles")
+    .select("target_kcal,target_protein_g,target_carbs_g,target_fat_g,targets_updated_at")
+    .eq("id", user.id)
+    .single();
+  expect(error).toBeNull();
+  return data;
+}
+
 const options: SaveSetupOptions = { latestWeighInKg: null, timeZone: "Europe/London" };
 
 describe("saving the setup against the local stack with a real user JWT", () => {
   let user: TestUser;
 
   beforeAll(async () => {
+    await requireServedFunction(inject("stack"), "run-checkin");
     user = await createTestUser("key602");
   });
 
@@ -46,8 +80,10 @@ describe("saving the setup against the local stack with a real user JWT", () => 
     await deleteCreatedTestUsers();
   });
 
-  it("should save a full setup and then read it back as set up, with the program and the targets", async () => {
-    await saveMySetup(user.client, user.id, firstSave, options);
+  it("should save a full setup and then read it back as set up, with the program and the engine's first targets", async () => {
+    const result = await saveMySetup(user.client, user.id, firstSave, options);
+
+    expect(result).toEqual({ targetsPending: false });
 
     const state = await getMySetupState(user.client);
     expect(state.isSetUp).toBe(true);
@@ -66,17 +102,45 @@ describe("saving the setup against the local stack with a real user JWT", () => 
       splitPreset: "balanced",
     });
     expect(state.latestWeighIn?.weightKg).toBe(74.3);
-    expect(await getMyTargets(user.client)).toEqual({
-      kcal: 2150,
-      protein_g: 149,
-      carbs_g: 230,
-      fat_g: 58,
-      source: "manual",
+    expect((await getMyTargets(user.client)).source).toBe("engine");
+  });
+
+  it("should leave one start snapshot, one current target of the program and a first check-in 14 days out", async () => {
+    const snapshots = await readSnapshots(user);
+    const current = await readCurrentTargets(user);
+    const state = await getMySetupState(user.client);
+    const { data: schedule, error } = await user.client
+      .from("programs")
+      .select("next_checkin_date")
+      .is("ended_on", null)
+      .single();
+
+    expect(error).toBeNull();
+    expect(snapshots).toHaveLength(1);
+    expect(snapshots[0]).toMatchObject({ kind: "start" });
+    expect(current).toHaveLength(1);
+    expect(current[0]).toMatchObject({ program_id: state.program?.id });
+    expect(current[0]?.basis).toMatchObject({ source: "start", goal: "lose" });
+    expect(current[0]?.calories_kcal).toBeGreaterThan(0);
+    expect(schedule?.next_checkin_date).toBe(addCalendarDays(today, 14));
+  });
+
+  it("should have written the wizard's manual targets on the profile row, which the recompute leaves alone", async () => {
+    const manual = await readManualTargets(user);
+
+    expect(manual).toMatchObject({
+      target_kcal: 2150,
+      target_protein_g: 149,
+      target_carbs_g: 230,
+      target_fat_g: 58,
     });
+    expect(manual?.targets_updated_at).not.toBeNull();
   });
 
   it("should update the active program in place on a recalculation, keep started_on and the stored unit, and write no second weigh-in", async () => {
     const before = await getMySetupState(user.client);
+    const snapshotsBefore = await readSnapshots(user);
+    const targetsBefore = await readCurrentTargets(user);
     const recalculated: SetupSave = {
       profile: { ...profileWithoutUnit, target_kcal: 2300 },
       program: {
@@ -88,7 +152,7 @@ describe("saving the setup against the local stack with a real user JWT", () => 
       weighIn: firstSave.weighIn,
     };
 
-    await saveMySetup(user.client, user.id, recalculated, {
+    const result = await saveMySetup(user.client, user.id, recalculated, {
       latestWeighInKg: before.latestWeighIn?.weightKg ?? null,
       timeZone: "Europe/London",
     });
@@ -104,7 +168,23 @@ describe("saving the setup against the local stack with a real user JWT", () => 
     expect(after.program?.id).toBe(before.program?.id);
     expect(after.program).toMatchObject({ goal: "maintain", ratePctPerWeek: 0 });
     expect(after.stats.weightUnit).toBe("lb");
-    expect((await getMyTargets(user.client)).kcal).toBe(2300);
+    expect(result).toEqual({ targetsPending: false });
+    expect((await getMyTargets(user.client)).source).toBe("engine");
+    // The recompute rewrites the one start snapshot and replaces the current target with a new row.
+    expect(await readSnapshots(user)).toEqual(snapshotsBefore);
+    const targetsAfter = await readCurrentTargets(user);
+    expect(targetsAfter).toHaveLength(1);
+    expect(targetsAfter[0]?.id).not.toBe(targetsBefore[0]?.id);
+    expect(targetsAfter[0]?.basis).toMatchObject({ goal: "maintain" });
+    expect(targetsAfter[0]?.calories_kcal).toBeGreaterThan(0);
+    const manualAfter = await readManualTargets(user);
+    expect(manualAfter).toMatchObject({
+      target_kcal: 2300,
+      target_protein_g: 149,
+      target_carbs_g: 230,
+      target_fat_g: 58,
+    });
+    expect(manualAfter?.targets_updated_at).not.toBeNull();
     expect(await listWeighIns(user.client)).toHaveLength(1);
   });
 });

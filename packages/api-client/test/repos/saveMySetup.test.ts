@@ -1,3 +1,4 @@
+import { HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -77,10 +78,11 @@ describe("saveMySetup", () => {
         "GET programs",
         "POST programs",
         "PATCH profiles",
+        "POST run-checkin",
       ]);
     });
 
-    it("should update the active program in place and still write the profile last", async () => {
+    it("should update the active program in place and still write the profile before the recompute", async () => {
       const fake = installSetupSaveFake(server, { programs: [programRow()] });
 
       await run();
@@ -90,6 +92,7 @@ describe("saveMySetup", () => {
         "GET programs",
         "PATCH programs",
         "PATCH profiles",
+        "POST run-checkin",
       ]);
     });
   });
@@ -144,7 +147,12 @@ describe("saveMySetup", () => {
 
       await run({ latestWeighInKg: 83.417 });
 
-      expect(fake.order()).toEqual(["GET programs", "POST programs", "PATCH profiles"]);
+      expect(fake.order()).toEqual([
+        "GET programs",
+        "POST programs",
+        "PATCH profiles",
+        "POST run-checkin",
+      ]);
     });
 
     it.each([
@@ -301,7 +309,11 @@ describe("saveMySetup", () => {
       fake.programs.push(programRow());
       await run();
 
-      expect(fake.order().slice(-2)).toEqual(["PATCH programs", "PATCH profiles"]);
+      expect(fake.order().slice(-3)).toEqual([
+        "PATCH programs",
+        "PATCH profiles",
+        "POST run-checkin",
+      ]);
     });
   });
 
@@ -379,6 +391,92 @@ describe("saveMySetup", () => {
       installSetupSaveFake(server, { profileExists: false });
 
       await expect(run()).rejects.toThrow("Could not save your setup (profile, PGRST116)");
+    });
+  });
+
+  describe("the recompute", () => {
+    it("should post the recompute mode to run-checkin once, after the profile is written", async () => {
+      const fake = installSetupSaveFake(server);
+
+      await run();
+
+      expect(fake.bodyOf("POST run-checkin")).toEqual({ mode: "recompute" });
+      expect(fake.order().filter((call) => call === "POST run-checkin")).toHaveLength(1);
+      expect(fake.order().at(-1)).toBe("POST run-checkin");
+    });
+
+    it("should resolve with targetsPending false when the recompute succeeds", async () => {
+      installSetupSaveFake(server);
+
+      expect(await run()).toEqual({ targetsPending: false });
+    });
+
+    it.each([
+      [409, "no_program", "no_program"],
+      [409, "missing_stats", "missing_stats"],
+      [429, "rate_limited", "rate_limited"],
+      [500, "internal_error", "internal_error"],
+    ] as const)(
+      "should leave the save in place and resolve with targetsPending and the code when the recompute answers %s %s",
+      async (status, edgeCode, expectedCode) => {
+        const fake = installSetupSaveFake(server);
+        fake.answerRecomputeWith(() =>
+          HttpResponse.json({ error: { code: edgeCode, message: "Refused" } }, { status }),
+        );
+        const consoleSpies = spyOnConsole();
+
+        const result = await run();
+
+        expect(result).toEqual({ targetsPending: true, recomputeCode: expectedCode });
+        expect(fake.order()).toEqual([
+          "POST weigh_ins",
+          "GET programs",
+          "POST programs",
+          "PATCH profiles",
+          "POST run-checkin",
+        ]);
+        expect(fake.programs).toHaveLength(1);
+        for (const spy of consoleSpies) {
+          expect(spy).not.toHaveBeenCalled();
+        }
+      },
+    );
+
+    it("should report failed when the recompute answer is not a typed edge error", async () => {
+      const fake = installSetupSaveFake(server);
+      fake.answerRecomputeWith(() => new HttpResponse("Bad gateway", { status: 502 }));
+
+      expect(await run()).toEqual({ targetsPending: true, recomputeCode: "failed" });
+    });
+
+    it("should report failed when the recompute answers with something that is not a targets id", async () => {
+      const fake = installSetupSaveFake(server);
+      fake.answerRecomputeWith(() => HttpResponse.json({ targetsId: "not-a-uuid" }));
+
+      expect(await run()).toEqual({ targetsPending: true, recomputeCode: "failed" });
+    });
+
+    it("should not run the recompute when the profile step fails", async () => {
+      const fake = installSetupSaveFake(server);
+      fake.failWith("PATCH profiles", "42501");
+
+      await expect(run()).rejects.toThrow("Could not save your setup (profile, 42501)");
+
+      expect(fake.order()).not.toContain("POST run-checkin");
+    });
+
+    it("should hold no health value in what it resolves with", async () => {
+      const fake = installSetupSaveFake(server);
+      fake.answerRecomputeWith(() =>
+        HttpResponse.json(
+          { error: { code: "missing_stats", message: `Weight ${RECOGNISABLE_SETUP_WEIGHT}` } },
+          { status: 409 },
+        ),
+      );
+
+      const result = await run();
+
+      expect(JSON.stringify(result)).not.toContain("83.4");
     });
   });
 

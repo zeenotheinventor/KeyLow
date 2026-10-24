@@ -1,10 +1,29 @@
-import { isCalendarDay } from "@keylow/core/dates";
-import { expenditureMeasurementSchema, targetsBasisSchema } from "@keylow/core/schemas";
+import { ageInYears, isCalendarDay } from "@keylow/core/dates";
+import {
+  expenditureMeasurementSchema,
+  runCheckinRecomputeResponseSchema,
+  runCheckinRequestSchema,
+  targetsBasisSchema,
+} from "@keylow/core/schemas";
+import {
+  DIET_FAT_FRACTION_OF_REMAINDER,
+  DIET_STYLES,
+  GOALS,
+  PROTEIN_G_PER_KG,
+  RATE_PRESETS_PCT_PER_WEEK,
+  goalsAllowed,
+} from "@keylow/core/setup";
 import { z } from "zod";
+
+import { invokeEdgeFunction } from "../edge";
 
 import type { SetupProgram } from "./setup";
 import type { Database } from "../database.types";
-import type { ExpenditureMeasurement, TargetsBasis } from "@keylow/core/schemas";
+import type {
+  ExpenditureMeasurement,
+  RunCheckinRecomputeResponse,
+  TargetsBasis,
+} from "@keylow/core/schemas";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 // The program, its expenditure estimates and its targets are health data. A failure names the action and
@@ -334,4 +353,121 @@ export async function listMyTargetsHistory(
   return targets.data
     .filter((row) => !heldForNoDays(row))
     .map((row) => toTargetsRow(row, programIsActive, action));
+}
+
+const programChangesSchema = z
+  .object({
+    goal: z.enum(GOALS),
+    ratePctPerWeek: z.number(),
+    proteinGPerKg: z.number(),
+    fatFraction: z.number(),
+    splitPreset: z.enum(DIET_STYLES),
+  })
+  .superRefine((changes, context) => {
+    if (!RATE_PRESETS_PCT_PER_WEEK[changes.goal].includes(changes.ratePctPerWeek)) {
+      context.addIssue({ code: "custom", path: ["ratePctPerWeek"] });
+    }
+    if (!Object.values(PROTEIN_G_PER_KG).includes(changes.proteinGPerKg)) {
+      context.addIssue({ code: "custom", path: ["proteinGPerKg"] });
+    }
+    if (DIET_FAT_FRACTION_OF_REMAINDER[changes.splitPreset] !== changes.fatFraction) {
+      context.addIssue({ code: "custom", path: ["fatFraction"] });
+    }
+  });
+
+/**
+ * What the program screen's edit changes: the five values of the active program that the wizard also
+ * writes. They are the values the wizard's presets hold (`@keylow/core/setup`): `ratePctPerWeek` is a
+ * magnitude and one of the goal's rate presets, `proteinGPerKg` is a protein preset, and `fatFraction`
+ * is the fraction of the chosen diet style, which is also the stored `splitPreset`, with no mapping.
+ */
+export type ProgramChanges = z.infer<typeof programChangesSchema>;
+
+/**
+ * Asks `run-checkin` to work out the targets again from the program and the profile as they are now
+ * (`recompute` mode, ADR 0002, Amendment 2, "The modes"), and gives back the id of the new targets row.
+ * A rate limit throws a `RateLimitedError`, a typed refusal an `EdgeFunctionError` (`no_program` when the
+ * user has no active program, `missing_stats` when a stat the engine needs is missing), and anything the
+ * edge helpers cannot classify, or an answer that is not a targets id, a plain error.
+ */
+export async function recomputeMyTargets(
+  client: SupabaseClient<Database>,
+): Promise<RunCheckinRecomputeResponse> {
+  const body = runCheckinRequestSchema.parse({ mode: "recompute" });
+  const response = await invokeEdgeFunction<unknown>(client, "run-checkin", body);
+
+  return runCheckinRecomputeResponseSchema.parse(response);
+}
+
+const updateError = (cause: PostgrestError) =>
+  new Error(`Could not update your program (${cause.code})`, { cause: { code: cause.code } });
+
+/**
+ * Edits the active program of `userId` in place and then recomputes the targets, so the new goal is in
+ * force at once. `today` is the user's local date (`YYYY-MM-DD`), which the age rule needs.
+ *
+ * The changes are checked first, with no request: a value that is not one of the wizard's presets throws a
+ * `RangeError` naming the fields. Then the birth date is read, and a goal that `goalsAllowed` in core does
+ * not offer at that age (a lose goal under 18, ADR 0002, Amendment 1) throws a `RangeError` that names the
+ * rule and never the age. A profile with no birth date is treated as too young for any goal that needs an
+ * adult. Only after that is anything written.
+ *
+ * The update carries exactly `goal`, `rate_pct_per_week`, `protein_g_per_kg`, `fat_fraction_of_remaining`,
+ * `split_preset` and `updated_at`, which is what ADR 0003, Amendment 12 lets a recalculation write. It
+ * never writes `started_on`, `dow_offsets_kcal`, `goal_weight_kg`, `next_checkin_date` or `ended_on`.
+ * A user with no active program matches no row and fails with `PGRST116`. A database failure names the
+ * action and the code only.
+ *
+ * The recompute is a second step, not part of the write. When it is refused the program stays as edited
+ * and the typed edge error from `recomputeMyTargets` is thrown, so the screen can say the targets are
+ * not up to date and offer a retry.
+ */
+export async function updateMyProgram(
+  client: SupabaseClient<Database>,
+  userId: string,
+  changes: ProgramChanges,
+  { today }: { today: string },
+): Promise<RunCheckinRecomputeResponse> {
+  if (!isCalendarDay(today)) {
+    throw new RangeError("Today must be a calendar date written YYYY-MM-DD");
+  }
+
+  const parsed = programChangesSchema.safeParse(changes);
+  if (!parsed.success) {
+    const fields = new Set(parsed.error.issues.map((issue) => String(issue.path[0])));
+    throw new RangeError(`Invalid program changes: ${[...fields].join(", ")}`);
+  }
+  const valid = parsed.data;
+
+  const profile = await client.from("profiles").select("birth_date").eq("id", userId).maybeSingle();
+  if (profile.error) {
+    throw updateError(profile.error);
+  }
+  const birthDate = profile.data?.birth_date ?? null;
+  // No birth date means no proof of age, so the age is taken as 0 and `goalsAllowed` decides from that.
+  const ageYears = birthDate === null ? 0 : ageInYears(birthDate, today);
+  if (!goalsAllowed(ageYears).includes(valid.goal)) {
+    throw new RangeError("The lose goal is not allowed under 18");
+  }
+
+  // Named one by one and not spread: nothing but Amendment 12's six columns can reach the row.
+  const { error } = await client
+    .from("programs")
+    .update({
+      goal: valid.goal,
+      rate_pct_per_week: valid.ratePctPerWeek,
+      protein_g_per_kg: valid.proteinGPerKg,
+      fat_fraction_of_remaining: valid.fatFraction,
+      split_preset: valid.splitPreset,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId)
+    .is("ended_on", null)
+    .select("id")
+    .single();
+  if (error) {
+    throw updateError(error);
+  }
+
+  return recomputeMyTargets(client);
 }
