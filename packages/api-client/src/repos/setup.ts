@@ -1,4 +1,9 @@
+import { buildManualWeighIn } from "@keylow/core/weight";
+
+import { addWeighIn } from "./weighIns";
+
 import type { Database } from "../database.types";
+import type { StartingPlan } from "@keylow/core/setup";
 import type { PostgrestError, SupabaseClient } from "@supabase/supabase-js";
 
 // The setup state is health data: the stats, the program and the weight never reach a message. A failure
@@ -112,4 +117,167 @@ export async function getMySetupState(client: SupabaseClient<Database>): Promise
         ? null
         : { weightKg: weighIn.data.weight_kg, localDate: weighIn.data.local_date },
   };
+}
+
+/** What `startingPlan` in core hands the api-client to save: the profile, the program and the weigh-in. */
+export type SetupSave = StartingPlan["save"];
+
+export type SaveSetupOptions = {
+  /** The weight of the user's latest weigh-in on any date, or null when there is none (`useSetupState`). */
+  latestWeighInKg: number | null;
+  /** The IANA zone of the profile, which dates the weigh-in. */
+  timeZone: string;
+};
+
+type SaveStep = "weigh-in" | "program" | "profile";
+
+/** A weight entered within this many kilograms of the latest weigh-in is the same weight (ADR 0003, Amendment 12). */
+const SAME_WEIGHT_TOLERANCE_KG = 0.05;
+/** Subtracting two weights is not exact in floating point, so a difference of exactly the tolerance still counts. */
+const FLOATING_POINT_SLACK_KG = 1e-9;
+
+const saveError = (step: SaveStep, code: string) =>
+  new Error(`Could not save your setup (${step}, ${code})`, { cause: { step, code } });
+
+const codeOf = (error: unknown): string | undefined =>
+  error instanceof Error &&
+  typeof error.cause === "object" &&
+  error.cause !== null &&
+  "code" in error.cause &&
+  typeof error.cause.code === "string"
+    ? error.cause.code
+    : undefined;
+
+const isSameWeight = (weightKg: number, latestWeighInKg: number | null) =>
+  latestWeighInKg !== null &&
+  Math.abs(weightKg - latestWeighInKg) <= SAME_WEIGHT_TOLERANCE_KG + FLOATING_POINT_SLACK_KG;
+
+async function saveWeighIn(
+  client: SupabaseClient<Database>,
+  save: SetupSave,
+  options: SaveSetupOptions,
+  now: Date,
+) {
+  // The skip rule is the repo's, not the screen's: a prefilled weight shown in lb to one decimal and
+  // saved unchanged is within the tolerance, and no date is looked at, so a recalculation never writes
+  // a stale value dated today.
+  if (isSameWeight(save.weighIn.weightKg, options.latestWeighInKg)) {
+    return;
+  }
+
+  const weighIn = buildManualWeighIn({
+    weightKg: save.weighIn.weightKg,
+    measuredAt: now,
+    note: null,
+    timeZone: options.timeZone,
+  });
+
+  try {
+    await addWeighIn(client, weighIn);
+  } catch (error) {
+    const code = codeOf(error);
+    // An error with no code is a row that would not parse. Its message holds a row id and field paths only.
+    throw code === undefined ? error : saveError("weigh-in", code);
+  }
+}
+
+async function saveProgram(client: SupabaseClient<Database>, save: SetupSave, now: Date) {
+  const { program } = save;
+  // Named one by one and not spread: `dow_offsets_kcal`, `goal_weight_kg`, `next_checkin_date` and
+  // `ended_on` are never the wizard's to write, and `started_on` is for the insert only.
+  const recalculated = {
+    goal: program.goal,
+    rate_pct_per_week: program.rate_pct_per_week,
+    protein_g_per_kg: program.protein_g_per_kg,
+    fat_fraction_of_remaining: program.fat_fraction_of_remaining,
+    split_preset: program.split_preset,
+    updated_at: now.toISOString(),
+  };
+
+  // Read, then insert or update: the one-active index is partial, so there is nothing to upsert against.
+  const active = await client.from("programs").select("id").is("ended_on", null).maybeSingle();
+  if (active.error) {
+    throw saveError("program", active.error.code);
+  }
+
+  if (active.data === null) {
+    // Two presses, or a second device, can race to here. The index refuses the second insert (23505),
+    // and the user's retry then finds the active row and updates it.
+    const { error } = await client
+      .from("programs")
+      .insert({ ...recalculated, started_on: program.started_on });
+    if (error) {
+      throw saveError("program", error.code);
+    }
+    return;
+  }
+
+  const { error } = await client
+    .from("programs")
+    .update(recalculated)
+    .eq("id", active.data.id)
+    .select("id")
+    .single();
+  if (error) {
+    throw saveError("program", error.code);
+  }
+}
+
+async function saveProfile(
+  client: SupabaseClient<Database>,
+  userId: string,
+  save: SetupSave,
+  now: Date,
+) {
+  const { profile } = save;
+  const savedAt = now.toISOString();
+
+  // Named one by one and not spread, so nothing but these columns can reach the row (no id, no terms
+  // columns). `weight_unit` is there only when the stored unit was null: a stored unit is never overwritten.
+  const { error } = await client
+    .from("profiles")
+    .update({
+      sex: profile.sex,
+      birth_date: profile.birth_date,
+      height_cm: profile.height_cm,
+      activity: profile.activity,
+      onboarding_weight_kg: profile.onboarding_weight_kg,
+      target_kcal: profile.target_kcal,
+      target_protein_g: profile.target_protein_g,
+      target_carbs_g: profile.target_carbs_g,
+      target_fat_g: profile.target_fat_g,
+      targets_updated_at: savedAt,
+      onboarding_completed_at: savedAt,
+      ...(profile.weight_unit === undefined ? {} : { weight_unit: profile.weight_unit }),
+    })
+    .eq("id", userId)
+    .select("id")
+    .single();
+  if (error) {
+    throw saveError("profile", error.code);
+  }
+}
+
+/**
+ * Saves the setup wizard's result for `userId` (`startingPlan(...).save` in core), in three steps and in
+ * this order (ADR 0003, Amendment 12, "How the wizard saves"): the weigh-in, the program, and the
+ * profile last. The profile carries `onboarding_completed_at`, so a failure at any step leaves the
+ * account not set up and the user can press the button again. A failure stops the later steps and
+ * throws `Could not save your setup (step, code)`, with the step `weigh-in`, `program` or `profile`,
+ * and no value, because every value here is health data.
+ *
+ * A retry after a failure in the program or the profile step can add a second manual weigh-in for
+ * today. That is accepted: the weight trend uses the median of a day's weigh-ins.
+ */
+export async function saveMySetup(
+  client: SupabaseClient<Database>,
+  userId: string,
+  save: SetupSave,
+  options: SaveSetupOptions,
+): Promise<void> {
+  const now = new Date();
+
+  await saveWeighIn(client, save, options, now);
+  await saveProgram(client, save, now);
+  await saveProfile(client, userId, save, now);
 }
