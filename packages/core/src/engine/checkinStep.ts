@@ -1,12 +1,12 @@
 import { addCalendarDays } from "../dates";
-import { applyProfileCap } from "./applyProfileCap";
 import { computeTrend } from "./computeTrend";
-import { deriveTargets } from "./deriveTargets";
 import { measureExpenditure } from "./measureExpenditure";
 import { DEFAULT_ENGINE_PARAMS } from "./params";
+import { targetsRow } from "./targetsRow";
 import { updateExpenditure } from "./updateExpenditure";
 
 import type { EngineParams } from "./params";
+import type { EngineTargetsRow, TargetsRowBasis } from "./targetsRow";
 import type {
   CalorieGoal,
   DayInput,
@@ -18,7 +18,6 @@ import type {
   MeasureExpenditureResult,
   TrendInput,
 } from "./types";
-import type { SetupClamp } from "../setup/profileRange";
 
 /** The active program, as far as one check-in reads it. */
 export type CheckinProgram = Readonly<{
@@ -58,22 +57,8 @@ type ExpenditureUpdateFields = Pick<
 export type CheckinMeasurement =
   (EligibleMeasurement & ExpenditureUpdateFields) | IneligibleMeasurement;
 
-/** What a targets row's `basis` column holds (ADR 0002, Amendment 2, "Key sets and the 6000 cap"). */
-export type CheckinBasis = Readonly<{
-  source: "checkin";
-  tdeeKcal: number;
-  trendWeightKg: number;
-  bmrKcal: number;
-  goal: CalorieGoal;
-  ratePctPerWeek: number;
-  /** The true signed rate, negative when the floor lifts a lose target above expenditure. */
-  effectiveRatePctPerWeek: number;
-  proteinGPerKg: number;
-  fatFraction: number;
-  dowOffsetsKcal: DayOfWeekKcal;
-  /** The engine's clamps and the setup layer's `profile_max`. */
-  clamps: readonly SetupClamp[];
-}>;
+/** What a targets row's `basis` column holds after a check-in (ADR 0002, Amendment 2, "Key sets and the 6000 cap"). */
+export type CheckinBasis = TargetsRowBasis<"checkin">;
 
 /** The `expenditure_snapshots` row of a check-in, with the database's column names. */
 export type CheckinSnapshot = Readonly<{
@@ -89,17 +74,7 @@ export type CheckinSnapshot = Readonly<{
 }>;
 
 /** The `targets` row of a check-in, with the database's column names. */
-export type CheckinTargets = Readonly<{
-  effective_from: string;
-  calories_kcal: number;
-  protein_g: number;
-  fat_g: number;
-  carbs_g: number;
-  dow_calories_kcal: DayOfWeekKcal;
-  basis: CheckinBasis;
-  engine_version: EngineParams["version"];
-  params: EngineParams;
-}>;
+export type CheckinTargets = EngineTargetsRow<"checkin">;
 
 export type CheckinResult = Readonly<{
   snapshot: CheckinSnapshot;
@@ -161,21 +136,6 @@ export function checkinStep(
   );
   const muKcal = belief.muKcal;
 
-  const targetsInput = {
-    config: {
-      goal: program.goal,
-      ratePctPerWeek: program.ratePctPerWeek,
-      proteinGPerKg: program.proteinGPerKg,
-      fatFraction: program.fatFraction,
-      dowOffsetsKcal: program.dowOffsetsKcal,
-    },
-    tdee: muKcal,
-    trendWeight: targetWeightKg,
-    bmr: bmrKcal,
-  };
-  const derived = deriveTargets(targetsInput, params);
-  const capped = applyProfileCap(derived, targetsInput, params);
-
   return {
     snapshot: {
       kind: "checkin",
@@ -187,28 +147,16 @@ export function checkinStep(
       engine_version: params.version,
       params,
     },
-    targets: {
-      effective_from: asOfDate,
-      calories_kcal: capped.caloriesKcal,
-      protein_g: capped.proteinG,
-      fat_g: capped.fatG,
-      carbs_g: capped.carbsG,
-      dow_calories_kcal: derived.dowCaloriesKcal,
-      basis: {
+    targets: targetsRow(
+      {
         source: "checkin",
-        tdeeKcal: muKcal,
+        effectiveFrom: asOfDate,
+        muKcal,
         trendWeightKg: targetWeightKg,
+        program,
         bmrKcal,
-        goal: program.goal,
-        ratePctPerWeek: program.ratePctPerWeek,
-        effectiveRatePctPerWeek: capped.effectiveRatePctPerWeek,
-        proteinGPerKg: program.proteinGPerKg,
-        fatFraction: program.fatFraction,
-        dowOffsetsKcal: [...program.dowOffsetsKcal],
-        clamps: capped.clamps,
       },
-      engine_version: params.version,
       params,
-    },
+    ),
   };
 }
