@@ -58,6 +58,7 @@ export type { EditProgramInput } from "./useEditProgram";
 export { useSaveSetup } from "./useSaveSetup";
 export type { SaveSetupInput } from "./useSaveSetup";
 export { useSetupState } from "./useSetupState";
+export { useSkipSetup } from "./useSkipSetup";
 export { useTargets } from "./useTargets";
 export { useTermsAcceptance } from "./useTermsAcceptance";
 export { useUndoCopyDay } from "./useUndoCopyDay";

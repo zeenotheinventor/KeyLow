@@ -17,8 +17,9 @@ const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
 /**
  * What every step of the setup wizard sits in: the sheet header with the group as its title and
  * "Step n of 8" under it, the progress bar, the question with its helper line, the step's controls
- * scrolling between the fixed header and the fixed footer, and the footer's Continue. Back and Close are
- * the caller's to give, because only it knows where the step is and how the wizard was opened.
+ * scrolling between the fixed header and the fixed footer, and the footer's Continue, with the escape under
+ * it on the first run's step 1. Back and Close are the caller's to give, because only it knows where the
+ * step is and how the wizard was opened.
  */
 export function SetupShell({
   title,
@@ -31,6 +32,8 @@ export function SetupShell({
   onClose,
   isHeaderInert = false,
   continueAction,
+  notice,
+  escapeAction,
   footer,
   children,
 }: SetupShellProps) {
@@ -43,15 +46,31 @@ export function SetupShell({
   const footerContent =
     footer ??
     (continueAction === undefined ? undefined : (
-      <Button
-        disabled={!continueAction.isEnabled}
-        fullWidth
-        haptic="select"
-        size="lg"
-        onPress={continueAction.onPress}
-      >
-        {SETUP_SHELL.continueLabel}
-      </Button>
+      <>
+        {notice}
+        <Button
+          disabled={!continueAction.isEnabled}
+          fullWidth
+          haptic="select"
+          size="lg"
+          onPress={continueAction.onPress}
+        >
+          {SETUP_SHELL.continueLabel}
+        </Button>
+        {escapeAction === undefined ? null : (
+          // The board pulls the escape up by 4 points, so it sits 8 under Continue and not the footer's 12.
+          <Button
+            className="-mt-1"
+            fullWidth
+            loading={escapeAction.isLoading}
+            quiet
+            variant="ghost"
+            onPress={escapeAction.onPress}
+          >
+            {escapeAction.label}
+          </Button>
+        )}
+      </>
     ));
 
   return (
