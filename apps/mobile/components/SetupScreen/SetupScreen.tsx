@@ -1,5 +1,5 @@
-import { useProfileTimeZone, useSetupState } from "@keylow/api-client";
-import { SETUP_GROUP_TITLES, SETUP_QUESTIONS } from "@keylow/core/copy";
+import { useProfileTimeZone, useSaveSetup, useSetupState } from "@keylow/api-client";
+import { SETUP_GROUP_TITLES, SETUP_QUESTIONS, TARGETS_SAVED_TOAST } from "@keylow/core/copy";
 import {
   entryWeightUnit,
   isRateGoal,
@@ -9,7 +9,7 @@ import {
 } from "@keylow/core/setup";
 import { getLocales } from "expo-localization";
 import { useFocusEffect, useRouter } from "expo-router";
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BackHandler } from "react-native";
 
 import { allowedGoalsOf, describeStepProgress, isStepComplete } from "./setupDraftReducer";
@@ -25,9 +25,11 @@ import { RateStep } from "./steps/RateStep";
 import { SexStep } from "./steps/SexStep";
 import { storedWeightUnitOf } from "./storedWeightUnit";
 import { useSetupDraft } from "./useSetupDraft";
-import { useToday } from "./useToday";
+import { timeZoneOrDevice, useToday } from "./useToday";
 import { useIsOnline } from "../../lib/connectivity";
+import { diaryHref } from "../../lib/navigation";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { useToast } from "../ui";
 
 import type { SetupScreenProps } from "./types";
 import type { SetupDraft, SetupStep } from "@keylow/core/setup";
@@ -59,10 +61,16 @@ function questionWordsOf(step: SetupStep, draft: SetupDraft) {
 /**
  * The setup wizard. Steps and their order come from core, the answers are kept in a reducer so Back
  * loses none, and the saved answers are read once the Terms are accepted. The last step is the estimate,
- * which draws the starting plan of the answers. Start does not save yet.
+ * which draws the starting plan of the answers and saves it: the first run then lands on the Diary, and a
+ * recalculation goes back to Targets with the Toast "Targets saved". Nothing of the answers is logged.
  */
 export function SetupScreen({ mode }: SetupScreenProps) {
   const router = useRouter();
+  const toast = useToast();
+  const saveSetup = useSaveSetup();
+  const isSaveStarted = useRef(false);
+  const isMounted = useRef(false);
+  const [hasSaved, setHasSaved] = useState(false);
   const today = useToday();
   const isReadEnabled = useReadsEnabled();
   const setupState = useSetupState({ enabled: isReadEnabled });
@@ -75,10 +83,21 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   const isOnline = useIsOnline();
   const hasPreviousStep = previousStep(draft, step) !== undefined;
   const isRecalculating = mode === "recalculate";
+  // Busy from the press until the screen has gone, so the moment between the save settling and the
+  // navigation cannot be used to leave twice or to save again.
+  const isSaving = saveSetup.isPending || hasSaved;
 
   function goBack() {
     dispatch({ type: "wentBack" });
   }
+
+  // Not set in the render, so a screen the strict mode mounts twice ends up marked mounted.
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const close = useCallback(() => {
     // A cold link to this screen has nothing before it, so Close goes to Targets itself.
@@ -94,6 +113,10 @@ export function SetupScreen({ mode }: SetupScreenProps) {
   useFocusEffect(
     useCallback(() => {
       const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+        // Like the on-screen Back and Close, which are dimmed: the press is taken and does nothing.
+        if (isSaving) {
+          return true;
+        }
         if (hasPreviousStep) {
           dispatch({ type: "wentBack" });
           return true;
@@ -108,7 +131,7 @@ export function SetupScreen({ mode }: SetupScreenProps) {
       return () => {
         subscription.remove();
       };
-    }, [close, dispatch, hasPreviousStep, isRecalculating]),
+    }, [close, dispatch, hasPreviousStep, isRecalculating, isSaving]),
   );
 
   const storedWeightUnit = storedWeightUnitOf(setupState.data?.stats.weightUnit ?? null);
@@ -126,6 +149,38 @@ export function SetupScreen({ mode }: SetupScreenProps) {
         }
       : undefined;
   }, [draft, estimateToday, step, storedWeightUnit]);
+
+  // One save per press: the guard is a ref because a second press can arrive before the screen has drawn the
+  // first, and the mutation's pending state is only read on the next draw. Whether a weigh-in is written is
+  // the repo's to decide from the latest weigh-in's weight, so the screen only passes it. A failure is shown
+  // by `saveSetup.isError` and the next press is the retry.
+  async function start() {
+    if (estimate === undefined || isSaveStarted.current) {
+      return;
+    }
+    isSaveStarted.current = true;
+    try {
+      await saveSetup.mutateAsync({
+        save: estimate.plan.save,
+        latestWeighInKg: setupState.data?.latestWeighIn?.weightKg ?? null,
+        timeZone: timeZoneOrDevice(profileTimeZone.data),
+      });
+    } catch {
+      isSaveStarted.current = false;
+      return;
+    }
+    // The save is done whether or not the screen is still here, and the navigation is only for a screen that is.
+    if (!isMounted.current) {
+      return;
+    }
+    setHasSaved(true);
+    if (isRecalculating) {
+      toast.show({ message: TARGETS_SAVED_TOAST, tone: "success", icon: "Check" });
+      close();
+    } else {
+      router.replace(diaryHref(estimateToday));
+    }
+  }
 
   const progress = describeStepProgress(draft, step);
   const words = questionWordsOf(step, draft);
@@ -230,14 +285,13 @@ export function SetupScreen({ mode }: SetupScreenProps) {
       <EstimateStep
         answers={estimate.answers}
         isOffline={!isOnline}
-        isSaving={false}
+        isSaving={isSaving}
         mode={mode}
         plan={estimate.plan}
-        saveFailed={false}
-        // Setup wizard 16 saves the plan and routes on.
+        saveFailed={saveSetup.isError}
         onBack={goBack}
         onClose={isRecalculating ? close : undefined}
-        onStart={() => undefined}
+        onStart={() => void start()}
       />
     );
   }

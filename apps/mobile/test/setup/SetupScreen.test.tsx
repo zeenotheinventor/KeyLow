@@ -12,11 +12,13 @@ import {
 import { BackHandler } from "react-native";
 
 import { SetupScreen } from "../../components/SetupScreen";
+import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient } from "../support/diaryBackend";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
+import { pressTwiceInTheSameMoment } from "../support/sameTickPress";
 import {
   freshProfile,
   resetSetupBackend,
@@ -25,6 +27,7 @@ import {
   setupBackend,
   setupClient,
   setupReads,
+  signInSetupClient,
 } from "../support/setupBackend";
 
 import type { SetupMode } from "../../components/SetupScreen";
@@ -72,7 +75,9 @@ let queryClient: QueryClient;
 const wizard = (mode: SetupMode) => (
   <ThemeProvider fixedPreference="dark">
     <KeyLowProvider client={setupClient} queryClient={queryClient}>
-      <SetupScreen mode={mode} />
+      <ToastProvider>
+        <SetupScreen mode={mode} />
+      </ToastProvider>
     </KeyLowProvider>
   </ThemeProvider>
 );
@@ -184,7 +189,7 @@ describe("the setup wizard", () => {
     kitStyles = await compileKitStyles("", ["components/SetupScreen"]);
   });
 
-  beforeEach(() => {
+  beforeEach(async () => {
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetSetupBackend();
@@ -200,6 +205,7 @@ describe("the setup wizard", () => {
     deviceTimeZone("UTC");
     mockDeviceRegion = "GB";
     jest.useFakeTimers({ now: new Date("2026-10-23T12:00:00Z"), doNotFake: [...ONLY_THE_DATE] });
+    await signInSetupClient();
   });
 
   afterEach(async () => {
@@ -1581,6 +1587,426 @@ describe("the setup wizard", () => {
 
       expect(screen.getByText("Step 6 of 7")).toBeOnTheScreen();
       expect(radio(/^Moderate/)).toBeChecked();
+    });
+  });
+
+  describe("saving from the estimate", () => {
+    // The recalculation's estimate of the saved answers, which every step has prefilled.
+    async function goToRecalculatedEstimate() {
+      const user = userEvent.setup();
+      await renderWizard("recalculate");
+      await screen.findByRole("radio", { name: "Male", checked: true });
+      for (let step = 0; step < 8; step += 1) {
+        await user.press(continueButton());
+      }
+      await screen.findByLabelText("Calorie target, estimate");
+    }
+
+    // Holds every write until the test lets go, so the screen can be looked at while the save is under way.
+    function holdWrites(): () => Promise<void> {
+      let release: () => void = () => undefined;
+      setupBackend.writeGate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      return () =>
+        act(() => {
+          release();
+        });
+    }
+
+    const toastedTargetsSaved = () => screen.queryByText("Targets saved");
+
+    describe("on the first run", () => {
+      async function goToFirstRunEstimate() {
+        await renderWizard("first-run");
+        await goToEstimate(["14", "03", "1991"]);
+        await screen.findByLabelText("Calorie target, estimate");
+      }
+
+      it("should save once when Start is pressed: the weigh-in, the program, then the profile", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+        expect(setupBackend.writes).toEqual(["POST weigh_ins", "POST programs", "PATCH profiles"]);
+      });
+
+      it("should save the estimate's targets and the weight from the body step, dated in the device's time zone", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+        expect(setupBackend.writeBodies["PATCH profiles"]).toMatchObject({
+          target_kcal: 1970,
+          onboarding_weight_kg: 80,
+        });
+        expect(setupBackend.writeBodies["POST weigh_ins"]).toMatchObject({
+          weight_kg: 80,
+          tz: "UTC",
+        });
+      });
+
+      it("should date the weigh-in in the profile's time zone when it has one", async () => {
+        const user = userEvent.setup();
+        setupBackend.timeZone = "Europe/London";
+        await goToFirstRunEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+        expect(setupBackend.writeBodies["POST weigh_ins"]).toMatchObject({ tz: "Europe/London" });
+      });
+
+      it("should replace the wizard with the Diary on today, with no toast and no going back", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+        expect(routerMock.replace).toHaveBeenCalledWith("/diary?day=2026-10-23");
+        expect(routerMock.back).not.toHaveBeenCalled();
+        expect(screen.queryByRole("status")).not.toBeOnTheScreen();
+      });
+
+      it("should not leave the wizard until the save is done", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+        const release = holdWrites();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        expect(routerMock.replace).not.toHaveBeenCalled();
+        await release();
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+      });
+
+      it("should mark Start busy and dim Back while the save is under way, and save once for a second press", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+        const release = holdWrites();
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        const saving = await screen.findByRole("button", { busy: true });
+        await user.press(saving);
+
+        expect(backButton()).toBeDisabled();
+        expect(setupBackend.writes).toEqual(["POST weigh_ins"]);
+        await release();
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+        expect(setupBackend.writes).toEqual(["POST weigh_ins", "POST programs", "PATCH profiles"]);
+      });
+
+      it("should save once when Start is pressed twice before the screen has drawn the first press", async () => {
+        await goToFirstRunEstimate();
+
+        await pressTwiceInTheSameMoment(screen.getByRole("button", { name: "Start" }));
+
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+        expect(setupBackend.writes).toEqual(["POST weigh_ins", "POST programs", "PATCH profiles"]);
+      });
+
+      it("should do nothing on the Android back button while the save is under way, and step back once it is not", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+        const release = holdWrites();
+        await user.press(screen.getByRole("button", { name: "Start" }));
+        await screen.findByRole("button", { busy: true });
+
+        const wasHandledWhileSaving = await pressAndroidBackButton();
+
+        expect(wasHandledWhileSaving).toBe(true);
+        expect(screen.getByRole("heading", { name: "Your estimate" })).toBeOnTheScreen();
+        expect(routerMock.back).not.toHaveBeenCalled();
+        await release();
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+      });
+
+      it("should step back from the estimate on the Android back button when nothing is being saved", async () => {
+        await goToFirstRunEstimate();
+
+        const wasHandled = await pressAndroidBackButton();
+
+        expect(wasHandled).toBe(true);
+        expect(screen.getByText("Step 8 of 8")).toBeOnTheScreen();
+      });
+
+      it("should keep Start busy and Back dimmed once the save is done, until the screen has gone", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledTimes(1);
+        });
+
+        expect(screen.getByRole("button", { busy: true })).toBeOnTheScreen();
+        expect(backButton()).toBeDisabled();
+        expect(await pressAndroidBackButton()).toBe(true);
+        expect(screen.getByRole("heading", { name: "Your estimate" })).toBeOnTheScreen();
+      });
+
+      it("should not leave the wizard when the screen has gone before the save is done", async () => {
+        const user = userEvent.setup();
+        await goToFirstRunEstimate();
+        const release = holdWrites();
+        await user.press(screen.getByRole("button", { name: "Start" }));
+        await screen.findByRole("button", { busy: true });
+
+        await screen.unmount();
+        await release();
+        await waitFor(() => {
+          expect(setupBackend.writes).toEqual([
+            "POST weigh_ins",
+            "POST programs",
+            "PATCH profiles",
+          ]);
+        });
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+
+        expect(routerMock.replace).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("when the save fails", () => {
+      async function failTheFirstSave() {
+        const user = userEvent.setup();
+        await renderWizard("first-run");
+        await goToEstimate(["14", "03", "1991"]);
+        await screen.findByLabelText("Calorie target, estimate");
+        setupBackend.writesFail = true;
+        await user.press(screen.getByRole("button", { name: "Start" }));
+        await screen.findByText("Not saved. Check your connection and try again.");
+        return user;
+      }
+
+      it("should show the banner above Start, stay on the estimate and not leave", async () => {
+        await failTheFirstSave();
+
+        expect(
+          screen.getByText("Not saved. Check your connection and try again."),
+        ).toBeOnTheScreen();
+        expect(screen.getByRole("heading", { name: "Your estimate" })).toBeOnTheScreen();
+        expect(routerMock.replace).not.toHaveBeenCalled();
+        expect(routerMock.back).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", { name: "Start" })).toBeEnabled();
+      });
+
+      it("should keep the estimate and the answers behind it", async () => {
+        const user = await failTheFirstSave();
+
+        expect(await screen.findByText("1,970")).toBeOnTheScreen();
+        await user.press(backButton());
+        await user.press(backButton());
+        expect(radio(/^Moderate/)).toBeChecked();
+      });
+
+      it("should save again on the next press, and go on once that works", async () => {
+        const user = await failTheFirstSave();
+        setupBackend.writesFail = false;
+        setupBackend.writes = [];
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        await waitFor(() => {
+          expect(routerMock.replace).toHaveBeenCalledWith("/diary?day=2026-10-23");
+        });
+        expect(setupBackend.writes).toContain("PATCH profiles");
+        expect(
+          screen.queryByText("Not saved. Check your connection and try again."),
+        ).not.toBeOnTheScreen();
+      });
+
+      it("should take the banner down while the retry is under way", async () => {
+        const user = await failTheFirstSave();
+        setupBackend.writesFail = false;
+        const release = holdWrites();
+
+        await user.press(screen.getByRole("button", { name: "Start" }));
+
+        await screen.findByRole("button", { busy: true });
+        expect(
+          screen.queryByText("Not saved. Check your connection and try again."),
+        ).not.toBeOnTheScreen();
+        await release();
+      });
+
+      it("should show no raw error text and write nothing to the console", async () => {
+        const consoleCalls = [
+          jest.spyOn(console, "log"),
+          jest.spyOn(console, "info"),
+          jest.spyOn(console, "warn"),
+          jest.spyOn(console, "error"),
+        ];
+
+        await failTheFirstSave();
+
+        expect(screen.queryByText(/XX000|unavailable|Could not save/)).not.toBeOnTheScreen();
+        expect(consoleCalls.flatMap((spy) => spy.mock.calls)).toEqual([]);
+      });
+    });
+
+    describe("when the connection is lost", () => {
+      it("should save nothing when the dimmed Start is pressed", async () => {
+        const user = userEvent.setup();
+        await renderWizard("first-run");
+        await goToEstimate(["14", "03", "1991"]);
+        await screen.findByLabelText("Calorie target, estimate");
+
+        try {
+          await act(() => {
+            onlineManager.setOnline(false);
+          });
+          await user.press(screen.getByRole("button", { name: "Start" }));
+
+          expect(setupBackend.writes).toEqual([]);
+          expect(routerMock.replace).not.toHaveBeenCalled();
+        } finally {
+          await act(() => {
+            onlineManager.setOnline(true);
+          });
+        }
+      });
+    });
+
+    describe("when recalculating", () => {
+      beforeEach(() => {
+        setupBackend.profile = savedProfile;
+        setupBackend.program = savedProgram;
+        // The same weight as the saved answers show, so the repo has no new weigh-in to write.
+        setupBackend.weighIn = { weight_kg: 80, local_date: "2026-10-22" };
+      });
+
+      it("should save with Save targets, once, and leave the weigh-in the repo skips alone", async () => {
+        const user = userEvent.setup();
+        await goToRecalculatedEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+
+        await waitFor(() => {
+          expect(routerMock.back).toHaveBeenCalledTimes(1);
+        });
+        expect(setupBackend.writes).toEqual(["PATCH programs", "PATCH profiles"]);
+      });
+
+      it("should go back to Targets and say Targets saved, without replacing the wizard", async () => {
+        const user = userEvent.setup();
+        await goToRecalculatedEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+        expect(routerMock.back).toHaveBeenCalledTimes(1);
+        expect(routerMock.replace).not.toHaveBeenCalled();
+      });
+
+      it("should go to Targets itself when nothing is before the wizard, and say Targets saved", async () => {
+        const user = userEvent.setup();
+        routerMock.canGoBack.mockReturnValue(false);
+        await goToRecalculatedEstimate();
+
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+
+        expect(await screen.findByRole("status")).toHaveTextContent("Targets saved");
+        expect(routerMock.replace).toHaveBeenCalledWith("/targets");
+        expect(routerMock.back).not.toHaveBeenCalled();
+      });
+
+      it("should neither leave nor say Targets saved when the save fails", async () => {
+        const user = userEvent.setup();
+        await goToRecalculatedEstimate();
+        setupBackend.writesFail = true;
+
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+
+        expect(
+          await screen.findByText("Not saved. Check your connection and try again."),
+        ).toBeOnTheScreen();
+        expect(routerMock.back).not.toHaveBeenCalled();
+        expect(routerMock.replace).not.toHaveBeenCalled();
+        expect(toastedTargetsSaved()).not.toBeOnTheScreen();
+      });
+
+      it("should do nothing on the Android back button or on Close while the save is under way", async () => {
+        const user = userEvent.setup();
+        await goToRecalculatedEstimate();
+        const release = holdWrites();
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+        await screen.findByRole("button", { busy: true });
+
+        const wasHandled = await pressAndroidBackButton();
+        await user.press(closeButton());
+
+        expect(wasHandled).toBe(true);
+        expect(routerMock.back).not.toHaveBeenCalled();
+        expect(screen.getByRole("heading", { name: "Your estimate" })).toBeOnTheScreen();
+        await release();
+        await waitFor(() => {
+          expect(routerMock.back).toHaveBeenCalledTimes(1);
+        });
+      });
+
+      it("should keep Close, Back and Save targets inert once the save is done, so it leaves once", async () => {
+        const user = userEvent.setup();
+        await goToRecalculatedEstimate();
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+        await waitFor(() => {
+          expect(routerMock.back).toHaveBeenCalledTimes(1);
+        });
+
+        await user.press(closeButton());
+        await user.press(backButton());
+        const wasHandled = await pressAndroidBackButton();
+
+        expect(wasHandled).toBe(true);
+        expect(screen.getByRole("button", { busy: true })).toBeOnTheScreen();
+        expect(closeButton()).toBeDisabled();
+        expect(routerMock.back).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole("heading", { name: "Your estimate" })).toBeOnTheScreen();
+      });
+
+      it("should neither say Targets saved nor leave when the screen has gone before the save is done", async () => {
+        const user = userEvent.setup();
+        await goToRecalculatedEstimate();
+        const release = holdWrites();
+        await user.press(screen.getByRole("button", { name: "Save targets" }));
+        await screen.findByRole("button", { busy: true });
+
+        await screen.unmount();
+        await release();
+        await waitFor(() => {
+          expect(setupBackend.writes).toEqual(["PATCH programs", "PATCH profiles"]);
+        });
+        await act(async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        });
+
+        expect(routerMock.back).not.toHaveBeenCalled();
+        expect(routerMock.replace).not.toHaveBeenCalled();
+        expect(toastedTargetsSaved()).not.toBeOnTheScreen();
+      });
     });
   });
 

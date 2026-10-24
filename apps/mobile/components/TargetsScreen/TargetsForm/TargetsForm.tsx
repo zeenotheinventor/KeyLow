@@ -41,7 +41,7 @@ const MINIMUM_FOOTER_BOTTOM_PADDING = 12;
  * live note of what the macros add up to. Save is dimmed until the targets pass core's `validateTargets`.
  * A save goes back to where the user came from with the Toast "Targets saved".
  */
-export function TargetsForm({ initial }: TargetsFormProps) {
+export function TargetsForm({ initial, header }: TargetsFormProps) {
   const router = useRouter();
   const toast = useToast();
   const isOnline = useIsOnline();
@@ -112,6 +112,7 @@ export function TargetsForm({ initial }: TargetsFormProps) {
         contentContainerClassName="gap-4 px-4 pb-4 pt-2"
         onScroll={trackScrollOffset}
       >
+        {header}
         <NumericInput
           error={kcalError}
           helper={TARGET_KCAL_HELPER}
