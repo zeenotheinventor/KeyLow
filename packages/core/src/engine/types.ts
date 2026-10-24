@@ -130,3 +130,24 @@ export type EligibleMeasurement = MeasurementCounts &
   }>;
 
 export type MeasureExpenditureResult = EligibleMeasurement | IneligibleMeasurement;
+
+/** The engine's belief about daily energy expenditure, a Gaussian: what `updateExpenditure` reads and returns. */
+export type ExpenditureBelief = Readonly<{
+  /** The mean, in kilocalories a day. */
+  muKcal: number;
+  /** The variance, in kilocalories squared. */
+  varKcal2: number;
+}>;
+
+/** The belief after a check-in with an eligible measurement, and how the Kalman step got there. */
+export type ExpenditureUpdate = ExpenditureBelief &
+  Readonly<{
+    /** The Kalman gain `K`, between 0 and 1: the share of the gap to `zKcal` the raw step covers. */
+    gain: number;
+    /** `gain` times the gap between `zKcal` and the prior mean, before the weekly clamp. */
+    rawStepKcal: number;
+    /** The step taken: `rawStepKcal` held to the weekly clamp. */
+    stepKcal: number;
+    /** True when the weekly clamp changed the step. */
+    stepClamped: boolean;
+  }>;

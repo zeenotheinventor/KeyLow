@@ -3,6 +3,7 @@ export { dayTarget } from "./dayTarget";
 export type { DayAdjustments, DayTargetInput } from "./dayTarget";
 export { measureExpenditure } from "./measureExpenditure";
 export type { MeasureExpenditureInput } from "./measureExpenditure";
+export { updateExpenditure } from "./updateExpenditure";
 export { bmrMifflinStJeor, initialExpenditure } from "./initialExpenditure";
 export type { BmrInput, InitialExpenditure, InitialExpenditureInput } from "./initialExpenditure";
 export {
@@ -31,6 +32,8 @@ export type {
   DayInput,
   DayOfWeekKcal,
   EligibleMeasurement,
+  ExpenditureBelief,
+  ExpenditureUpdate,
   IneligibleMeasurement,
   MeasureExpenditureResult,
   MeasurementCounts,
