@@ -50,33 +50,43 @@ export const savedProgram: ProgramRow = {
   split_preset: "balanced",
 };
 
+type WeighInRow = { weight_kg: number; local_date: string };
+
 /** What the database holds for the setup wizard and how it answers, which a test changes between renders. */
 export const setupBackend: {
   /** Whether the account has accepted the current Terms. The wizard reads nothing while it has not. */
   hasAcceptedTerms: boolean;
   profile: ProfileRow;
   program: ProgramRow | null;
+  /** The newest weigh-in, or null for an account with none. */
+  weighIn: WeighInRow | null;
   /** Holds every setup read until it settles. */
   readGate: Promise<void> | undefined;
   readsFail: boolean;
   /** The table and the columns asked for of every request made to the database. */
   requests: { table: string; select: string }[];
+  /** The method and table of every request that is not a read, which the wizard never makes before the estimate. */
+  writes: string[];
 } = {
   hasAcceptedTerms: true,
   profile: freshProfile,
   program: null,
+  weighIn: null,
   readGate: undefined,
   readsFail: false,
   requests: [],
+  writes: [],
 };
 
 export function resetSetupBackend(): void {
   setupBackend.hasAcceptedTerms = true;
   setupBackend.profile = freshProfile;
   setupBackend.program = null;
+  setupBackend.weighIn = null;
   setupBackend.readGate = undefined;
   setupBackend.readsFail = false;
   setupBackend.requests = [];
+  setupBackend.writes = [];
 }
 
 /** The requests that read the wizard's own data, which is everything but the terms acceptance. */
@@ -101,7 +111,7 @@ async function answerSetupRead(table: string): Promise<Response> {
   if (table === "programs") {
     return jsonResponse(setupBackend.program === null ? [] : [setupBackend.program]);
   }
-  return jsonResponse([]);
+  return jsonResponse(setupBackend.weighIn === null ? [] : [setupBackend.weighIn]);
 }
 
 function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
@@ -110,6 +120,9 @@ function fakeFetch(input: string | URL | Request, init?: RequestInit): Promise<R
   const table = pathname.split("/").pop() ?? "";
   const select = searchParams.get("select") ?? "";
 
+  if (request.method !== "GET") {
+    setupBackend.writes.push(`${request.method} ${table}`);
+  }
   if (request.method !== "GET" || !["profiles", "programs", "weigh_ins"].includes(table)) {
     return Promise.resolve(jsonResponse({ message: "unexpected request" }, 404));
   }

@@ -1,4 +1,8 @@
-import { WEIGH_IN_MAX_KG, WEIGH_IN_MIN_KG } from "./bounds";
+import { checkWeightKg } from "./checkWeightKg";
+import { roundToGram } from "./roundToGram";
+import { lbToKg } from "./units";
+
+import type { WeightDisplayUnit } from "./types";
 
 export type WeightInputReason =
   "empty" | "not-a-number" | "too-many-decimals" | "too-low" | "too-high";
@@ -39,11 +43,29 @@ export function parseWeightInput(text: string): WeightInputResult {
   }
 
   const weightKg = Number(trimmed.replace(",", "."));
-  if (weightKg < WEIGH_IN_MIN_KG) {
-    return refuse("too-low");
+  const check = checkWeightKg(weightKg);
+  return check.ok ? { ok: true, weightKg } : refuse(check.reason);
+}
+
+// What is wrong with the text itself reads the same in either unit.
+const READS_THE_SAME_IN_POUNDS: ReadonlySet<WeightInputReason> = new Set([
+  "empty",
+  "not-a-number",
+  "too-many-decimals",
+]);
+
+/**
+ * `parseWeightInput` for a weight typed in kilograms or pounds. Pounds are read for what the text is, then
+ * converted and rounded to the gram as a weigh-in is, and held to the bounds in kilograms, so 44 lb is too
+ * low and 45 lb is not, and the answer is never a long fraction of a kilogram. Kilograms read as they do in
+ * `parseWeightInput`.
+ */
+export function parseWeightInputIn(text: string, unit: WeightDisplayUnit): WeightInputResult {
+  const reading = parseWeightInput(text);
+  if (unit === "kg" || (!reading.ok && READS_THE_SAME_IN_POUNDS.has(reading.reason))) {
+    return reading;
   }
-  if (weightKg > WEIGH_IN_MAX_KG) {
-    return refuse("too-high");
-  }
-  return { ok: true, weightKg };
+  const weightKg = roundToGram(lbToKg(Number(text.trim().replace(",", "."))));
+  const check = checkWeightKg(weightKg);
+  return check.ok ? { ok: true, weightKg } : refuse(check.reason);
 }

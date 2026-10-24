@@ -1,5 +1,11 @@
 import { SEXES } from "@keylow/core/engine";
-import { DIET_STYLES, PROTEIN_G_PER_KG, PROTEIN_PRESETS } from "@keylow/core/setup";
+import {
+  DIET_STYLES,
+  entryWeightUnit,
+  heightUnitFor,
+  PROTEIN_G_PER_KG,
+  PROTEIN_PRESETS,
+} from "@keylow/core/setup";
 
 import type { SetupState } from "@keylow/api-client";
 import type { SetupDraft } from "@keylow/core/setup";
@@ -13,11 +19,17 @@ const listed = <Item extends string>(
 ): Item | undefined => items.find((item) => item === stored);
 
 /**
- * What the wizard starts from: the sex, birth date, height and activity on the profile, and the active
- * program's goal, rate, protein and diet. The weight and the units are the body step's. A fresh account has
- * none of them, so nothing is chosen.
+ * What the wizard starts from: the sex, birth date, height and activity on the profile, the active
+ * program's goal, rate, protein and diet, and the weight of the latest weigh-in on any date. There is no
+ * onboarding weight before setup, so without a weigh-in the weight is left empty. The units the body step
+ * opens in are the stored weight unit as the wizard enters it, or the device region's when none is stored
+ * (`regionCode` is the device region). A fresh account has no answers, so nothing is chosen but the units.
  */
-export function savedAnswersOf({ stats, program }: SetupState): SetupDraft {
+export function savedAnswersOf(
+  { stats, program, latestWeighIn }: SetupState,
+  regionCode: string | null | undefined,
+): SetupDraft {
+  const weightUnit = entryWeightUnit(stats.weightUnit, regionCode);
   const sex = listed(SEXES, stats.sex);
   const dietStyle = listed(DIET_STYLES, program?.splitPreset ?? null);
   const proteinPreset = PROTEIN_PRESETS.find(
@@ -28,6 +40,9 @@ export function savedAnswersOf({ stats, program }: SetupState): SetupDraft {
     ...(sex === undefined ? {} : { sex }),
     ...(stats.birthDate === null ? {} : { birthDate: stats.birthDate }),
     ...(stats.heightCm === null ? {} : { heightCm: stats.heightCm }),
+    ...(latestWeighIn === null ? {} : { weightKg: latestWeighIn.weightKg }),
+    weightUnit,
+    heightUnit: heightUnitFor(weightUnit),
     ...(stats.activity === null ? {} : { activity: stats.activity }),
     ...(program === null ? {} : { goal: program.goal, ratePctPerWeek: program.ratePctPerWeek }),
     ...(proteinPreset === undefined ? {} : { proteinPreset }),

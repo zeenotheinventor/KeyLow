@@ -8,7 +8,9 @@ export {
   WEIGH_IN_NOTE_MAX_CHARS,
 } from "./bounds";
 export { buildManualWeighIn } from "./buildManualWeighIn";
-export { parseWeightInput } from "./parseWeightInput";
+export { checkWeightKg } from "./checkWeightKg";
+export type { WeightKgCheck } from "./checkWeightKg";
+export { parseWeightInput, parseWeightInputIn } from "./parseWeightInput";
 export type { WeightInputReason, WeightInputResult } from "./parseWeightInput";
 export { validateNote } from "./validateNote";
 export type { NoteResult } from "./validateNote";

@@ -17,19 +17,24 @@ export function defaultUnitsForRegion(regionCode: string | null | undefined): De
     : { weightUnit: "kg", heightUnit: "cm" };
 }
 
+/** The height unit that goes with a weight unit: the wizard has one switch, kilograms with centimetres or pounds with feet and inches. */
+export const heightUnitFor = (weightUnit: WeightDisplayUnit): HeightUnit =>
+  weightUnit === "lb" ? "ft_in" : "cm";
+
 /**
  * The unit the wizard enters the weight in (ADR 0003 Amendment 12): the stored kilograms or pounds as
  * they are, pounds when stones are stored because the wizard does not offer stones, and the region's
- * default when nothing is stored.
+ * default when nothing is stored. The database keeps the unit as plain text, so text that is not a
+ * weight unit reads as nothing stored.
  */
 export function entryWeightUnit(
-  storedWeightUnit: WeightUnit | null,
+  storedWeightUnit: string | null,
   regionCode: string | null | undefined,
 ): WeightDisplayUnit {
-  if (storedWeightUnit === null) {
-    return defaultUnitsForRegion(regionCode).weightUnit;
+  if (storedWeightUnit === "kg" || storedWeightUnit === "lb") {
+    return storedWeightUnit;
   }
-  return storedWeightUnit === "st" ? "lb" : storedWeightUnit;
+  return storedWeightUnit === "st" ? "lb" : defaultUnitsForRegion(regionCode).weightUnit;
 }
 
 /**

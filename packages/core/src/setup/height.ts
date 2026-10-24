@@ -85,6 +85,21 @@ function parseFeetAndInches(feetText: string, inchesText: string): HeightInputRe
   return withinBounds(Math.round(totalInches * CENTIMETRES_PER_INCH * HUNDREDTHS) / HUNDREDTHS);
 }
 
+const SHORTEST_ACCEPTED_INCHES = Math.ceil(HEIGHT_MIN_CM / CENTIMETRES_PER_INCH);
+
+/**
+ * A height in centimetres as whole feet and whole inches, the nearest whole inch, for the fields to show.
+ * The result is never an inch that `parseHeightInput` refuses, so 100 cm reads 3 ft 4 in rather than the
+ * 3 ft 3 in that is a hair under the shortest height. Meant for a height that has passed `checkHeightCm`.
+ */
+export function centimetresToFeetAndInches(heightCm: number): { feet: number; inches: number } {
+  const totalInches = Math.max(
+    Math.round(heightCm / CENTIMETRES_PER_INCH),
+    SHORTEST_ACCEPTED_INCHES,
+  );
+  return { feet: Math.floor(totalInches / INCHES_PER_FOOT), inches: totalInches % INCHES_PER_FOOT };
+}
+
 /**
  * Reads what the height fields hold, in centimetres (a decimal comma or point, one decimal at most)
  * or in whole feet and whole inches (0 to 11), and returns the height in centimetres or the reason

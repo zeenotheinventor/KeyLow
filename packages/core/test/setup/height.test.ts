@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { HEIGHT_MAX_CM, HEIGHT_MIN_CM, checkHeightCm, parseHeightInput } from "../../src/setup";
+import {
+  HEIGHT_MAX_CM,
+  HEIGHT_MIN_CM,
+  centimetresToFeetAndInches,
+  checkHeightCm,
+  parseHeightInput,
+} from "../../src/setup";
 
 const cm = (text: string) => parseHeightInput({ unit: "cm", text });
 const feetAndInches = (feet: string, inches: string) =>
@@ -109,5 +115,31 @@ describe("checkHeightCm", () => {
 
   it.each([[Number.NaN], [Number.POSITIVE_INFINITY]])("should refuse %s", (value) => {
     expect(checkHeightCm(value)).toEqual({ ok: false, reason: "not-a-number" });
+  });
+});
+
+describe("centimetresToFeetAndInches", () => {
+  it.each([
+    [180, 5, 11],
+    [175.26, 5, 9],
+    [152.4, 5, 0],
+    [250, 8, 2],
+    [170.2, 5, 7],
+    [170.3, 5, 7],
+    [171.5, 5, 8],
+  ])("should read %s cm as %s ft %s in, to the nearest whole inch", (heightCm, feet, inches) => {
+    expect(centimetresToFeetAndInches(heightCm)).toEqual({ feet, inches });
+  });
+
+  it("should read the shortest height as 3 ft 4 in, which is an inch parseHeightInput accepts, not 3 ft 3 in", () => {
+    // 100 cm is 39.4 inches, which rounds to 39, and 39 inches is 99.06 cm, below the bound.
+    expect(centimetresToFeetAndInches(HEIGHT_MIN_CM)).toEqual({ feet: 3, inches: 4 });
+    expect(feetAndInches("3", "4")).toEqual({ ok: true, heightCm: 101.6 });
+    expect(feetAndInches("3", "3")).toEqual({ ok: false, reason: "too-low" });
+  });
+
+  it("should give an inch that parseHeightInput accepts for the tallest height", () => {
+    expect(centimetresToFeetAndInches(HEIGHT_MAX_CM)).toEqual({ feet: 8, inches: 2 });
+    expect(feetAndInches("8", "2")).toEqual({ ok: true, heightCm: 248.92 });
   });
 });
