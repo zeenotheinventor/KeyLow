@@ -1,13 +1,11 @@
 import { ageInYears } from "../dates";
 import {
+  applyProfileCap,
   DEFAULT_ENGINE_PARAMS,
   deriveTargets,
-  effectiveRatePctPerWeek,
   initialExpenditure,
-  splitMacros,
 } from "../engine";
 import { goalsAllowed } from "./goals";
-import { capToProfileRange } from "./profileRange";
 import { weightUnitToSave } from "./units";
 
 import type { EngineParams } from "../engine";
@@ -47,61 +45,30 @@ export function startingPlan(
   const proteinGPerKg = params.targets.proteinPresets[answers.proteinPreset];
   const fatFraction = params.targets.fatFractions[answers.dietStyle];
 
-  const derived = deriveTargets(
-    {
-      config: {
-        goal: answers.goal,
-        ratePctPerWeek: answers.ratePctPerWeek,
-        proteinGPerKg,
-        fatFraction,
-      },
-      tdee: muKcal,
-      trendWeight: answers.weightKg,
-      bmr: bmrKcal,
+  const targetsInput = {
+    config: {
+      goal: answers.goal,
+      ratePctPerWeek: answers.ratePctPerWeek,
+      proteinGPerKg,
+      fatFraction,
     },
-    params,
-  );
-  const capped = capToProfileRange(
-    derived.caloriesKcal,
-    derived.clamps.filter((clamp) => clamp !== "macro_fit"),
-  );
-  const capApplied = capped.caloriesKcal !== derived.caloriesKcal;
-  // Macros for the calories before the cap would not fit the stored calories, so they are split again.
-  const macros = capApplied
-    ? splitMacros(
-        {
-          caloriesKcal: capped.caloriesKcal,
-          trendWeight: answers.weightKg,
-          proteinGPerKg,
-          fatFraction,
-        },
-        params,
-      )
-    : derived;
-  const clamps = capApplied ? [...capped.clamps, ...macros.clamps] : derived.clamps;
+    tdee: muKcal,
+    trendWeight: answers.weightKg,
+    bmr: bmrKcal,
+  };
+  const capped = applyProfileCap(deriveTargets(targetsInput, params), targetsInput, params);
   const weightUnit = weightUnitToSave(storedWeightUnit, answers.weightUnit);
 
   return {
     estimate: { bmrKcal, expenditureKcal: muKcal },
     targets: {
       caloriesKcal: capped.caloriesKcal,
-      proteinG: macros.proteinG,
-      fatG: macros.fatG,
-      carbsG: macros.carbsG,
+      proteinG: capped.proteinG,
+      fatG: capped.fatG,
+      carbsG: capped.carbsG,
     },
-    clamps,
-    // The cap moves the calories, so the rate is restated for the calories that are stored.
-    effectiveRatePctPerWeek: capApplied
-      ? effectiveRatePctPerWeek(
-          {
-            goal: answers.goal,
-            caloriesKcal: capped.caloriesKcal,
-            tdee: muKcal,
-            trendWeight: answers.weightKg,
-          },
-          params,
-        )
-      : derived.effectiveRatePctPerWeek,
+    clamps: capped.clamps,
+    effectiveRatePctPerWeek: capped.effectiveRatePctPerWeek,
     save: {
       profile: {
         sex: answers.sex,
@@ -110,9 +77,9 @@ export function startingPlan(
         activity: answers.activity,
         onboarding_weight_kg: answers.weightKg,
         target_kcal: capped.caloriesKcal,
-        target_protein_g: macros.proteinG,
-        target_carbs_g: macros.carbsG,
-        target_fat_g: macros.fatG,
+        target_protein_g: capped.proteinG,
+        target_carbs_g: capped.carbsG,
+        target_fat_g: capped.fatG,
         ...(weightUnit === undefined ? {} : { weight_unit: weightUnit }),
       },
       program: {
