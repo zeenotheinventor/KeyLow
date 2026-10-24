@@ -31,19 +31,25 @@ describe("BODY_MESH_NAMES", () => {
 });
 
 describe("the meshNames entry", () => {
-  it("should typecheck without allowImportingTsExtensions, as it does in the mobile app", () => {
-    const result = spawnSync(
-      process.execPath,
-      [
-        createRequire(import.meta.url).resolve("typescript/bin/tsc"),
-        "--noEmit",
-        "-p",
-        join(packageFolder, "test", "fixtures", "tsconfig.meshNames.json"),
-      ],
-      { encoding: "utf8" },
-    );
+  // A whole tsc run in a child process. It takes under a second alone, but on CI it shares the runner with
+  // every other suite in the core job and has reached the 15 s CI timeout, so it gets a minute of its own.
+  it(
+    "should typecheck without allowImportingTsExtensions, as it does in the mobile app",
+    { timeout: 60_000 },
+    () => {
+      const result = spawnSync(
+        process.execPath,
+        [
+          createRequire(import.meta.url).resolve("typescript/bin/tsc"),
+          "--noEmit",
+          "-p",
+          join(packageFolder, "test", "fixtures", "tsconfig.meshNames.json"),
+        ],
+        { encoding: "utf8" },
+      );
 
-    expect(result.stdout).toBe("");
-    expect(result.status).toBe(0);
-  });
+      expect(result.stdout).toBe("");
+      expect(result.status).toBe(0);
+    },
+  );
 });
