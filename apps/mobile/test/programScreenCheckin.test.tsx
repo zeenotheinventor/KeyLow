@@ -1,3 +1,5 @@
+import "./support/gestureHandler";
+
 import { KeyLowProvider } from "@keylow/api-client";
 import { act, render, screen, within } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
@@ -533,7 +535,7 @@ describe("the check-in summary card on the Programme screen", () => {
       await settle();
 
       expect(screen.queryByLabelText(/^Last check-in/)).not.toBeOnTheScreen();
-      expect(screen.getByLabelText(/^Estimated expenditure/)).toBeOnTheScreen();
+      expect(screen.getByLabelText(/^Estimated expenditure, /)).toBeOnTheScreen();
     });
 
     it("should not show when no targets row came from the check-in", async () => {

@@ -55,6 +55,8 @@ export const programBackend: {
   weighIns: Row[];
   /** Fails the targets history read, which the check-in card makes, and leaves the other targets reads alone. */
   targetsHistoryFails: boolean;
+  /** Fails the expenditure history read, which the chart and the check-in card make, and leaves the summary alone. */
+  expenditureHistoryFails: boolean;
 } = {
   snapshots: [],
   setupProfile: {
@@ -68,6 +70,7 @@ export const programBackend: {
   weightUnit: "kg",
   weighIns: [],
   targetsHistoryFails: false,
+  expenditureHistoryFails: false,
 };
 
 export function resetProgramBackend(): void {
@@ -83,6 +86,7 @@ export function resetProgramBackend(): void {
   programBackend.weightUnit = "kg";
   programBackend.weighIns = [];
   programBackend.targetsHistoryFails = false;
+  programBackend.expenditureHistoryFails = false;
 }
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -148,6 +152,12 @@ async function programFetch(input: string | URL | Request, init?: RequestInit): 
   if (table === "expenditure_snapshots") {
     // The summary asks for the newest first and the history for the oldest first.
     const direction = (searchParams.get("order") ?? "").includes(".asc") ? 1 : -1;
+    if (direction === 1 && programBackend.expenditureHistoryFails) {
+      return jsonResponse(
+        { code: "XX000", message: "raw database text", details: null, hint: null },
+        500,
+      );
+    }
     return jsonResponse(
       [...programBackend.snapshots].sort(
         (first, second) =>

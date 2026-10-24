@@ -1,3 +1,5 @@
+import "./support/gestureHandler";
+
 import { KeyLowProvider } from "@keylow/api-client";
 import { act, render, screen, within } from "@testing-library/react-native";
 import * as Haptics from "expo-haptics";
@@ -170,7 +172,7 @@ describe("the Programme screen on the first open after a new check-in", () => {
   it("should count the hero up from the previous estimate, 2,500 to 2,560", async () => {
     reduceMotion(false);
     await renderProgramScreen();
-    const hero = await screen.findByLabelText(/^Estimated expenditure/);
+    const hero = await screen.findByLabelText(/^Estimated expenditure, /);
 
     expect(within(hero).queryByText("2,560")).not.toBeOnTheScreen();
     await advance(900);
@@ -211,7 +213,7 @@ describe("the Programme screen on the first open after a new check-in", () => {
     resetCheckinSeenStore();
 
     await render(open());
-    const hero = await screen.findByLabelText(/^Estimated expenditure/);
+    const hero = await screen.findByLabelText(/^Estimated expenditure, /);
 
     expect(within(hero).getByText("2,500")).toBeOnTheScreen();
     // The first frame tells the count its target, and the count then runs in the frames after it.
@@ -226,7 +228,7 @@ describe("the Programme screen on the first open after a new check-in", () => {
     asyncStorageMock.getItem.mockRejectedValueOnce(new Error("unreadable"));
     await renderProgramScreen();
     const card = await screen.findByLabelText(cardName);
-    const hero = screen.getByLabelText(/^Estimated expenditure/);
+    const hero = screen.getByLabelText(/^Estimated expenditure, /);
 
     expect(screen.queryByRole("status", { name: "Loading your programme" })).not.toBeOnTheScreen();
     expect(within(hero).getByText("2,560")).toBeOnTheScreen();
@@ -262,7 +264,7 @@ describe("the Programme screen on the first open after a new check-in", () => {
     reduceMotion(false);
     await renderProgramScreen();
     const card = await screen.findByLabelText(cardName);
-    const hero = screen.getByLabelText(/^Estimated expenditure/);
+    const hero = screen.getByLabelText(/^Estimated expenditure, /);
     await advance(100);
 
     expect(within(hero).getByText("2,560")).toBeOnTheScreen();
@@ -281,7 +283,7 @@ describe("the Programme screen on the first open after a new check-in", () => {
 
     await renderProgramScreen();
     await screen.findByLabelText(cardName);
-    const hero = screen.getByLabelText(/^Estimated expenditure/);
+    const hero = screen.getByLabelText(/^Estimated expenditure, /);
     await advance(100);
 
     expect(within(hero).getByText("2,560")).toBeOnTheScreen();

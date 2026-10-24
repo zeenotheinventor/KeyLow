@@ -6,6 +6,7 @@ import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CheckinSummaryCard } from "./CheckinSummaryCard";
+import { ExpenditureChartCard } from "./ExpenditureChartCard";
 import { ExpenditureHeroCard } from "./ExpenditureHeroCard";
 import { NoProgramView } from "./NoProgramView";
 import { SettlingChecklist } from "./SettlingChecklist";
@@ -101,6 +102,7 @@ export function ProgramScreen() {
             {checkin === null ? null : (
               <CheckinSummaryCard {...checkin.card} isArriving={isCheckinNew} />
             )}
+            <ExpenditureChartCard />
             <YourProgramme rows={state.view.details} />
             <GroupedList hidesTitle title={PROGRAM_SCREEN.title}>
               <ListRow

@@ -11,6 +11,7 @@ describe("the program module", () => {
       "checkinWindowWeeks",
       "completeDayDates",
       "expenditureBand",
+      "expenditureChartWeeks",
       "firstCheckinReadiness",
       "settlingProgress",
     ]);
