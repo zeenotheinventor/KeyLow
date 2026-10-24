@@ -1,5 +1,6 @@
 import {
   axisTicks,
+  bandPath,
   formatTick,
   labelledIndexes,
   latestIndex,
@@ -25,6 +26,58 @@ describe("valueDomain", () => {
   it("should be undefined when there is no reading", () => {
     expect(valueDomain([null, null])).toBeUndefined();
     expect(valueDomain([])).toBeUndefined();
+  });
+
+  describe("with a band", () => {
+    it("should run from the lowest to the highest of the values and the band ends", () => {
+      expect(
+        valueDomain(
+          [2500, 2500, 2559.56, 2574.22, 2579.54],
+          [
+            { low: 2019.4, high: 2980.6 },
+            { low: 2019.4, high: 2980.6 },
+            { low: 2291.43, high: 2827.69 },
+            { low: 2388.77, high: 2759.67 },
+            { low: 2430.91, high: 2728.17 },
+          ],
+        ),
+      ).toEqual({ min: 2019.4, max: 2980.6 });
+    });
+
+    it("should leave the domain of the values alone when the band sits inside them", () => {
+      expect(
+        valueDomain(
+          [40, 55],
+          [
+            { low: 41, high: 43 },
+            { low: 50, high: 54 },
+          ],
+        ),
+      ).toEqual({ min: 40, max: 55 });
+    });
+
+    it("should skip a week without a band", () => {
+      expect(valueDomain([40, 55], [null, { low: 50, high: 60 }])).toEqual({ min: 40, max: 60 });
+    });
+
+    it("should skip the band of a week without a value, which has nothing to draw", () => {
+      expect(valueDomain([40, null, 55], [null, { low: 10, high: 90 }, null])).toEqual({
+        min: 40,
+        max: 55,
+      });
+    });
+
+    it("should skip the weeks a short band list does not reach", () => {
+      expect(valueDomain([40, 55, 50], [{ low: 30, high: 45 }])).toEqual({ min: 30, max: 55 });
+    });
+
+    it("should open a series whose band ends are its values by one either side", () => {
+      expect(valueDomain([55, 55], [{ low: 55, high: 55 }, null])).toEqual({ min: 54, max: 56 });
+    });
+
+    it("should be undefined when no week has a value, whatever the band", () => {
+      expect(valueDomain([null], [{ low: 1, high: 2 }])).toBeUndefined();
+    });
   });
 });
 
@@ -152,5 +205,55 @@ describe("lonePoints", () => {
 
   it("should be empty when every reading is on a line", () => {
     expect(lonePoints([at(0), at(1), null, at(3), at(4)])).toEqual([]);
+  });
+});
+
+describe("bandPath", () => {
+  const at = (x: number, y: number | null) => ({ x, y });
+
+  it("should run along the high ends and back along the low ends, and close", () => {
+    expect(bandPath([at(10, 20), at(30, 10)], [at(10, 60), at(30, 50)])).toBe(
+      "M10 20 L30 10 L30 50 L10 60 Z",
+    );
+  });
+
+  it("should write the numbers to two decimals", () => {
+    expect(bandPath([at(10.123, 20.456), at(30, 10)], [at(10.123, 60), at(30, 50.999)])).toBe(
+      "M10.12 20.46 L30 10 L30 51 L10.12 60 Z",
+    );
+  });
+
+  it("should break at a week with no value and start a new shape after it", () => {
+    expect(
+      bandPath(
+        [at(0, 10), at(10, 10), at(20, null), at(30, 10), at(40, 12)],
+        [at(0, 50), at(10, 50), at(20, null), at(30, 50), at(40, 52)],
+      ),
+    ).toBe("M0 10 L10 10 L10 50 L0 50 Z M30 10 L40 12 L40 52 L30 50 Z");
+  });
+
+  it("should break at a week whose low end is missing", () => {
+    expect(
+      bandPath([at(0, 10), at(10, 10), at(20, 10)], [at(0, 50), at(10, null), at(20, 50)]),
+    ).toBe("M-6 10 H6 V50 H-6 Z M14 10 H26 V50 H14 Z");
+  });
+
+  it("should draw a lone week as a bar 12 points wide, centred on its point", () => {
+    expect(bandPath([at(50, 20)], [at(50, 60)])).toBe("M44 20 H56 V60 H44 Z");
+  });
+
+  it("should draw a week alone between two skipped weeks as a bar", () => {
+    expect(
+      bandPath([at(0, null), at(10, 10), at(20, null)], [at(0, null), at(10, 50), at(20, null)]),
+    ).toBe("M4 10 H16 V50 H4 Z");
+  });
+
+  it("should draw nothing when no week has a band", () => {
+    expect(bandPath([at(0, null)], [at(0, null)])).toBe("");
+    expect(bandPath([], [])).toBe("");
+  });
+
+  it("should treat a missing value like a null one", () => {
+    expect(bandPath([{ x: 0, y: undefined }], [{ x: 0, y: undefined }])).toBe("");
   });
 });

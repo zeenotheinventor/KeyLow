@@ -3,10 +3,10 @@ import {
   TREND_EXPLAINER_BODY_SECTION,
   describeSettlingBanner,
 } from "@keylow/core/copy";
+import { TREND_SETTLED_OBS } from "@keylow/core/weight";
 import { Text as NativeText, View } from "react-native";
 
-import { Banner, BottomSheet, Button, SheetScrollView, Text } from "../ui";
-import { SettlingProgressBar } from "./SettlingProgressBar";
+import { Banner, BottomSheet, Button, SettlingProgressBar, SheetScrollView, Text } from "../ui";
 
 import type { TrendExplainerSheetProps } from "./types";
 
@@ -53,7 +53,12 @@ export function TrendExplainerSheet({
               title={describeSettlingBanner(settlingObservationCount)}
               variant="review"
             >
-              <SettlingProgressBar observationCount={settlingObservationCount} />
+              <SettlingProgressBar
+                count={settlingObservationCount}
+                hasCaption={false}
+                label={TREND_EXPLAINER.progressName}
+                target={TREND_SETTLED_OBS}
+              />
             </Banner>
           )}
           <View className="gap-4">

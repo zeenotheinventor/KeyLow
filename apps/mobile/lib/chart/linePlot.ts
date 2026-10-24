@@ -11,12 +11,30 @@ export type PlotPoint = { index: number; x: number; y: number };
 const readings = (values: readonly (number | null)[]): number[] =>
   values.filter((value): value is number => value !== null);
 
+/** The likely range of a week: the shaded band of a chart runs from `low` to `high` through it. */
+export type BandEnds = { low: number; high: number };
+
+/** The band of each week, as long as the values: a week without a value or without a band has none. */
+export function weekBands(
+  values: readonly (number | null)[],
+  band: readonly (BandEnds | null | undefined)[] = [],
+): (BandEnds | null)[] {
+  return values.map((value, index) => (value === null ? null : (band[index] ?? null)));
+}
+
 /**
- * The lowest to the highest reading. A series that never moves is opened by one either side, so its line
- * sits in the middle and the axis still has three different ticks. Without a reading there is no domain.
+ * The lowest to the highest reading, and the ends of the band when there is one, so the band is never cut
+ * off. A series that never moves is opened by one either side, so its line sits in the middle and the axis
+ * still has three different ticks. Without a reading there is no domain.
  */
-export function valueDomain(values: readonly (number | null)[]): ValueDomain | undefined {
-  const present = readings(values);
+export function valueDomain(
+  values: readonly (number | null)[],
+  band?: readonly (BandEnds | null | undefined)[],
+): ValueDomain | undefined {
+  const present = [
+    ...readings(values),
+    ...weekBands(values, band).flatMap((ends) => (ends === null ? [] : [ends.low, ends.high])),
+  ];
   if (present.length === 0) {
     return undefined;
   }
@@ -91,6 +109,55 @@ export function runPath(run: readonly PlotPoint[]): string {
   return run
     .map(({ x, y }, position) => `${position === 0 ? "M" : "L"}${twoDecimals(x)} ${twoDecimals(y)}`)
     .join(" ");
+}
+
+/** A place on the drawing. A week with no value has no `y`. */
+export type BandVertex = { x: number; y: number | null | undefined };
+
+/** The width of the bar a week alone is given for its band, since a lone point has no line to run a band along. */
+export const LONE_BAND_WIDTH = 12;
+
+/**
+ * An SVG path for the band: for each stretch of weeks that have one, along the high ends, back along the low
+ * ends and closed, as straight segments like the line. A week without a band ends a stretch, and a week
+ * alone is a bar `LONE_BAND_WIDTH` wide, centred on its place. `high` and `low` are the same weeks in the same
+ * order.
+ */
+export function bandPath(high: readonly BandVertex[], low: readonly BandVertex[]): string {
+  const shapes: string[] = [];
+  let run: { x: number; high: number; low: number }[] = [];
+
+  const endRun = () => {
+    const [only, ...rest] = run;
+    if (only !== undefined && rest.length === 0) {
+      const left = twoDecimals(only.x - LONE_BAND_WIDTH / 2);
+      const right = twoDecimals(only.x + LONE_BAND_WIDTH / 2);
+      shapes.push(
+        `M${left} ${twoDecimals(only.high)} H${right} V${twoDecimals(only.low)} H${left} Z`,
+      );
+    } else if (only !== undefined) {
+      const along = run.map(
+        ({ x, high: y }, position) =>
+          `${position === 0 ? "M" : "L"}${twoDecimals(x)} ${twoDecimals(y)}`,
+      );
+      const back = [...run]
+        .reverse()
+        .map(({ x, low: y }) => `L${twoDecimals(x)} ${twoDecimals(y)}`);
+      shapes.push([...along, ...back, "Z"].join(" "));
+    }
+    run = [];
+  };
+
+  high.forEach((top, index) => {
+    const bottom = low[index];
+    if (typeof top.y === "number" && typeof bottom?.y === "number") {
+      run.push({ x: top.x, high: top.y, low: bottom.y });
+    } else {
+      endRun();
+    }
+  });
+  endRun();
+  return shapes.join(" ");
 }
 
 /** The values the axis labels, top to bottom: the highest, the middle and the lowest. */

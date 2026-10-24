@@ -1,12 +1,16 @@
 import "../support/gestureHandler";
 
+import { themes } from "@keylow/tokens";
 import { fireEvent, isHiddenFromAccessibility, screen } from "@testing-library/react-native";
 
 import { LineChart } from "../../components/ui";
 import { renderChart } from "../support/chartRender";
+import { compileKitStyles } from "../support/kitStyles";
+import { registerAppStyles } from "../support/nativeWindStyles";
 import { expectTextsInOrder } from "../support/textsInOrder";
+import { resolvedColor } from "../support/themeColor";
 
-import type { LineChartPoint, LineChartProps } from "../../components/ui";
+import type { LineChartBand, LineChartPoint, LineChartProps } from "../../components/ui";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -193,6 +197,187 @@ describe("LineChart", () => {
       expect(screen.getByRole("button", { name: "12 Oct" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "26 Oct" })).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: "19 Oct" })).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("with a likely range band", () => {
+    let kitStyles: string;
+
+    beforeAll(async () => {
+      kitStyles = await compileKitStyles();
+    });
+
+    beforeEach(() => {
+      registerAppStyles(kitStyles);
+    });
+
+    // The golden five weeks of the programme canvas, from 21 September.
+    const goldenWeeks = ["2026-09-21", "2026-09-28", "2026-10-05", "2026-10-12", "2026-10-19"];
+    const goldenPoints = [2500, 2500, 2559.56, 2574.22, 2579.54].map((value, index) => ({
+      week: goldenWeeks[index] ?? "",
+      value,
+    }));
+    const goldenBand: LineChartBand[] = [
+      { low: 2019.4, high: 2980.6 },
+      { low: 2019.4, high: 2980.6 },
+      { low: 2291.43, high: 2827.69 },
+      { low: 2388.77, high: 2759.67 },
+      { low: 2430.91, high: 2728.17 },
+    ];
+    const goldenSummary =
+      "Estimated expenditure over 5 weeks: 2,500 kcal a day in the week of 21 September, 2,580 now, likely 2,430 to 2,730.";
+    const legend = { line: "Estimate", band: "Likely range" };
+    // The expenditure card's formatter: to the nearest 10, with a thousands separator.
+    const nearestTen = (value: number) => (Math.round(value / 10) * 10).toLocaleString("en-GB");
+
+    const bandedProps = {
+      points: goldenPoints,
+      band: goldenBand,
+      legend,
+      summary: goldenSummary,
+      label: "Expenditure by week",
+      unit: "kcal a day",
+      formatValue: nearestTen,
+    };
+
+    // The golden chart, with whatever the test changes. `without` leaves the band or the legend out altogether.
+    async function renderBanded(
+      overrides: Partial<LineChartProps> = {},
+      without?: "band" | "legend",
+    ) {
+      const { band, legend: legendWords, ...rest } = { ...bandedProps, ...overrides };
+      await renderLineChart({
+        ...rest,
+        ...(without === "band" ? {} : { band }),
+        ...(without === "legend" ? {} : { legend: legendWords }),
+      });
+    }
+
+    it("should write the axis from the lowest band end to the highest, to the nearest 10", async () => {
+      await renderBanded();
+
+      expectTextsInOrder(screen.getAllByText(/^\d,\d{3}$/, hiddenToo), ["2,980", "2,500", "2,020"]);
+    });
+
+    it("should write the axis of the values alone when there is no band", async () => {
+      await renderLineChart({ points: goldenPoints, formatValue: nearestTen });
+
+      expectTextsInOrder(screen.getAllByText(/^\d,\d{3}$/, hiddenToo), ["2,580", "2,540", "2,500"]);
+    });
+
+    it("should label every second week back from the latest", async () => {
+      await renderBanded();
+
+      expectTextsInOrder(screen.getAllByText(/^\d+ (Sep|Oct)$/, hiddenToo), [
+        "21 Sep",
+        "5 Oct",
+        "19 Oct",
+      ]);
+    });
+
+    it("should keep the chart one image named by the caller's summary", async () => {
+      await renderBanded();
+
+      expect(screen.getAllByRole("img")).toHaveLength(1);
+      expect(screen.getByRole("img", { name: goldenSummary })).toBeOnTheScreen();
+    });
+
+    it("should write the legend with the caller's words, under the week labels and before the summary", async () => {
+      await renderBanded();
+
+      expectTextsInOrder(
+        screen.getAllByText(/^(19 Oct|Estimate|Likely range|Estimated expenditure.*)$/, hiddenToo),
+        ["19 Oct", "Estimate", "Likely range", goldenSummary],
+      );
+    });
+
+    it("should write the legend in whatever words the caller gives", async () => {
+      await renderBanded({ legend: { line: "Trend", band: "Usual range" } });
+
+      expect(screen.getByText("Trend", hiddenToo)).toBeOnTheScreen();
+      expect(screen.getByText("Usual range", hiddenToo)).toBeOnTheScreen();
+      expect(screen.queryByText("Likely range", hiddenToo)).not.toBeOnTheScreen();
+    });
+
+    it("should hide the legend from screen readers, since the summary carries it", async () => {
+      await renderBanded();
+
+      expect(isHiddenFromAccessibility(screen.getByText("Estimate", hiddenToo))).toBe(true);
+      expect(isHiddenFromAccessibility(screen.getByText("Likely range", hiddenToo))).toBe(true);
+    });
+
+    it("should draw a legend swatch of 14 by 2 points in the trend colour for the line", async () => {
+      await renderBanded();
+
+      expect(await screen.findByTestId("legend-line-swatch", hiddenToo)).toHaveStyle({
+        width: 14,
+        height: 2,
+        backgroundColor: resolvedColor("dark", "chart-trend"),
+      });
+    });
+
+    it("should draw a legend swatch of 14 by 10 points in the band colour, ringed in the axis colour, for the band", async () => {
+      await renderBanded();
+
+      expect(await screen.findByTestId("legend-band-swatch", hiddenToo)).toHaveStyle({
+        width: 14,
+        height: 10,
+        backgroundColor: themes.dark["chart-band"],
+        borderWidth: 1,
+        borderColor: resolvedColor("dark", "chart-axis"),
+      });
+    });
+
+    it("should draw no legend when the caller gives none", async () => {
+      await renderBanded({}, "legend");
+
+      expect(screen.queryByText("Estimate", hiddenToo)).not.toBeOnTheScreen();
+      expect(screen.queryByText("Likely range", hiddenToo)).not.toBeOnTheScreen();
+    });
+
+    it("should draw no legend without a band, even when the caller gives one", async () => {
+      await renderBanded({}, "band");
+
+      expect(screen.queryByText("Estimate", hiddenToo)).not.toBeOnTheScreen();
+      expect(screen.queryByText("Likely range", hiddenToo)).not.toBeOnTheScreen();
+    });
+
+    it("should draw a week with no value, and its band, as a gap", async () => {
+      await renderBanded({
+        points: goldenPoints.map((point, index) =>
+          index === 3 ? { ...point, value: null } : point,
+        ),
+        band: goldenBand.map((ends, index) => (index === 3 ? null : ends)),
+      });
+
+      expect(screen.getByRole("img", { name: goldenSummary })).toBeOnTheScreen();
+      expectTextsInOrder(screen.getAllByText(/^\d,\d{3}$/, hiddenToo), ["2,980", "2,500", "2,020"]);
+    });
+
+    it("should draw one week with its band", async () => {
+      await renderBanded({
+        points: [{ week: "2026-10-19", value: 2413.125 }],
+        band: [{ low: 1949.23, high: 2877.02 }],
+      });
+
+      expectTextsInOrder(screen.getAllByText(/^\d,\d{3}$/, hiddenToo), ["2,880", "2,410", "1,950"]);
+      expect(screen.getByText("Likely range", hiddenToo)).toBeOnTheScreen();
+    });
+
+    it("should draw two weeks with their band", async () => {
+      await renderBanded({
+        points: [
+          { week: "2026-10-19", value: 2413.125 },
+          { week: "2026-10-26", value: 2413.125 },
+        ],
+        band: [
+          { low: 1949.23, high: 2877.02 },
+          { low: 1949.23, high: 2877.02 },
+        ],
+      });
+
+      expectTextsInOrder(screen.getAllByText(/^\d+ Oct$/, hiddenToo), ["19 Oct", "26 Oct"]);
+      expect(screen.getByText("Estimate", hiddenToo)).toBeOnTheScreen();
     });
   });
 });
