@@ -19,6 +19,7 @@ import type { RecipeAmountFieldsProps } from "./types";
 import type { RecipeEntryUnit } from "@keylow/core/diary";
 
 import { useSelectAmountOnChipPress } from "@/components/diary/useSelectAmountOnChipPress";
+import { useSelectAmountOnFocus } from "@/components/diary/useSelectAmountOnFocus";
 import { MacroHero } from "@/components/foods/FoodDetail/MacroHero";
 import { Badge } from "@/components/ui/Badge";
 import { ChipGroup } from "@/components/ui/ChipGroup";
@@ -51,6 +52,7 @@ export function RecipeAmountFields({
 }: RecipeAmountFieldsProps) {
   const noteId = useId();
   const { amountFieldRef, onChipPress } = useSelectAmountOnChipPress(amountRef);
+  const selectOnFocus = useSelectAmountOnFocus();
   const { servings, yield_grams: yieldGrams } = recipe;
   const { unit, typed } = draft;
   // Grams of a recipe with no cooked weight are of the raw ingredients, which the fields say.
@@ -102,6 +104,7 @@ export function RecipeAmountFields({
           unit={unitSuffix}
           value={draft.quantityText}
           error={typed === null ? DIARY_PROBLEMS.quantity : undefined}
+          {...selectOnFocus}
           onChange={(event) => {
             draft.setQuantityText(event.target.value);
           }}

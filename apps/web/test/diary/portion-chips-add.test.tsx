@@ -388,13 +388,13 @@ describe("pressing a chip puts the cursor in the amount with the whole number se
     expect(field).toHaveProperty("selectionEnd", 3);
   });
 
-  it("should leave the number unselected when the dialog opens", () => {
+  it("should select the number when the dialog opens", () => {
     openFood(banana);
 
     const field = amountField("medium");
     expect(document.activeElement).toBe(field);
     expect(field).toHaveProperty("value", "1");
-    expect(field).toHaveProperty("selectionStart", 1);
+    expect(field).toHaveProperty("selectionStart", 0);
     expect(field).toHaveProperty("selectionEnd", 1);
   });
 
@@ -404,5 +404,72 @@ describe("pressing a chip puts the cursor in the amount with the whole number se
     fireEvent.keyDown(screen.getByRole("radio", { name: "1 medium" }), { key: "ArrowRight" });
 
     expect(document.activeElement).toBe(screen.getByRole("radio", { name: "1 large" }));
+  });
+});
+
+describe("clicking into the amount selects the whole number", () => {
+  it("should select the number and keep it selected through the mouseup of a click that gave the field focus", () => {
+    openFood(oliveOil);
+    typeAmount("g", "250");
+    screen.getByRole("radio", { name: "ml" }).focus();
+    const field = amountField("g");
+
+    fireEvent.mouseDown(field);
+    field.focus();
+    const mouseUpWasNotPrevented = fireEvent.mouseUp(field);
+
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 3);
+    expect(mouseUpWasNotPrevented).toBe(false);
+  });
+
+  it("should not stop the mouseup of a click on a field that already has focus, so the caret can be placed", () => {
+    openFood(oliveOil);
+    const field = amountField("g");
+    field.focus();
+
+    fireEvent.mouseDown(field);
+    const mouseUpWasNotPrevented = fireEvent.mouseUp(field);
+
+    expect(mouseUpWasNotPrevented).toBe(true);
+  });
+
+  it("should stop only the first mouseup, so a second click on the focused field places the caret", () => {
+    openFood(oliveOil);
+    screen.getByRole("radio", { name: "ml" }).focus();
+    const field = amountField("g");
+    fireEvent.mouseDown(field);
+    field.focus();
+    fireEvent.mouseUp(field);
+
+    fireEvent.mouseDown(field);
+    const mouseUpWasNotPrevented = fireEvent.mouseUp(field);
+
+    expect(mouseUpWasNotPrevented).toBe(true);
+  });
+
+  it("should forget a click that gave the field focus once the field loses it", () => {
+    openFood(oliveOil);
+    const chip = screen.getByRole("radio", { name: "ml" });
+    chip.focus();
+    const field = amountField("g");
+    fireEvent.mouseDown(field);
+    field.focus();
+    chip.focus();
+    field.focus();
+
+    expect(fireEvent.mouseUp(field)).toBe(true);
+  });
+
+  it("should select the whole number when the field gets focus from the keyboard alone", () => {
+    openFood(oliveOil);
+    typeAmount("g", "250");
+    screen.getByRole("radio", { name: "ml" }).focus();
+
+    amountField("g").focus();
+
+    const field = amountField("g");
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 3);
   });
 });

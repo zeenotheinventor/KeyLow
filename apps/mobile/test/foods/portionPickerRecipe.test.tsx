@@ -198,6 +198,15 @@ describe("PortionPicker in recipe mode", () => {
     });
   });
 
+  describe("tapping into the amount", () => {
+    it("should select the whole amount when the person taps into it", async () => {
+      const { user } = await renderPicker();
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(screen.getByLabelText("Amount (g)").props.selectTextOnFocus).toBe(true);
+    });
+  });
+
   describe("choosing a unit puts the cursor in the amount", () => {
     it("should focus nothing when the picker is drawn", async () => {
       await renderPicker();

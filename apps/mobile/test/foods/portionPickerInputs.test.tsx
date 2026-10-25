@@ -125,6 +125,14 @@ describe("PortionPicker as a component", () => {
     });
   });
 
+  describe("tapping into the amount", () => {
+    it("should select the whole amount when the person taps into it", async () => {
+      await renderPicker({ initialAmount: { unit: "g", quantity: 50 } });
+
+      expect(screen.getByLabelText("Amount (g)").props.selectTextOnFocus).toBe(true);
+    });
+  });
+
   describe("a note", () => {
     it("should be drawn beside the food's source when given", async () => {
       await renderPicker({ note: "Last logged 50 g, yesterday" });
