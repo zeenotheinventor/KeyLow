@@ -1,0 +1,16 @@
+export const storyStates = [
+  "NinetyDaysKilograms",
+  "NinetyDaysPercent",
+  "OneWeekKilograms",
+  "OneWeekPercent",
+  "OneYearKilograms",
+  "OneYearPercent",
+  "SettlingKilograms",
+  "SettlingPercent",
+  "GapKilograms",
+  "GapPercent",
+  "SinglePointKilograms",
+  "SinglePointPercent",
+  "EmptyRangeKilograms",
+  "EmptyRangePercent",
+];
