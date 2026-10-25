@@ -28,6 +28,7 @@ describe("the weight module", () => {
       "bodyPointsInRange",
       "buildManualWeighIn",
       "checkWeightKg",
+      "composeBodySplit",
       "computeBodyTrend",
       "displayWeight",
       "isBodyTrendSettling",

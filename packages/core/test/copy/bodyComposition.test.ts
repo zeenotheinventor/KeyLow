@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { collectStrings } from "./collectStrings";
 import {
   BODY_COMPOSITION,
+  BODY_COMPOSITION_CHART,
   HEALTH_ACCESS,
   HEALTH_ACCESS_BODY_POINTS,
   HEALTH_ACCESS_EXPLAIN_POINTS,
@@ -16,6 +17,8 @@ import {
   describeBodySettlingLine,
   describeBodyValue,
   describeChartName,
+  describeCompositionChartName,
+  describeCompositionSource,
 } from "../../src";
 
 // The boards are "Ki-Lo M5 screens", canvas version 10. Every expected value below is copied from a
@@ -388,5 +391,86 @@ describe("the body composition section of the trend explainer", () => {
     expect(TREND_EXPLAINER.sections.map((section) => section.title)).not.toContain(
       TREND_EXPLAINER_BODY_SECTION.title,
     );
+  });
+});
+
+// The composition chart's words come from KEY-656, not from a board. The ticket pins every example.
+describe("weight: chart and weigh-ins · composition chart words", () => {
+  const latestKg = { fat: 18.24, lean: 64.86 };
+  const latestPct = { fat: 22.44, lean: 77.56 };
+
+  it("should pin the switch labels", () => {
+    expect(BODY_COMPOSITION_CHART).toEqual({
+      viewGroupLabel: "Chart view",
+      views: { weight: "Weight", composition: "Composition" },
+      unitGroupLabel: "Show as",
+      units: { kg: "kg", pct: "%" },
+    });
+  });
+
+  it("should name the figure in kilograms with the latest values", () => {
+    expect(describeCompositionChartName(90, "kg", latestKg)).toBe(
+      "Body fat and lean mass over the last 90 days, body fat 18.2 kg, lean mass 64.9 kg",
+    );
+  });
+
+  it("should name the figure in per cent with the latest values", () => {
+    expect(describeCompositionChartName(90, "pct", latestPct)).toBe(
+      "Body fat and lean mass over the last 90 days, body fat 22.4 %, lean mass 77.6 %",
+    );
+  });
+
+  it("should name only the span with no latest values", () => {
+    expect(describeCompositionChartName(90, "kg", null)).toBe(
+      "Body fat and lean mass over the last 90 days",
+    );
+  });
+
+  it.each([
+    [7, "the last week"],
+    [30, "the last 30 days"],
+    [90, "the last 90 days"],
+    [365, "the last year"],
+  ] as const)("should use the span words of the body chart for %s days", (range, words) => {
+    expect(describeCompositionChartName(range, "kg", null)).toBe(
+      `Body fat and lean mass over ${words}`,
+    );
+  });
+
+  it.each([
+    ["fat", { fat: Number.NaN, lean: 64.9 }],
+    ["lean", { fat: 18.2, lean: Number.POSITIVE_INFINITY }],
+  ])("should drop the latest values when the %s value is not a number", (_label, latest) => {
+    const name = describeCompositionChartName(30, "pct", latest);
+
+    expect(name).toBe("Body fat and lean mass over the last 30 days");
+    expect(name).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("should say which reading the split was worked out from", () => {
+    expect(describeCompositionSource("body_fat_pct")).toBe(
+      "Worked out from your body fat and trend weight.",
+    );
+    expect(describeCompositionSource("lean_mass_kg")).toBe(
+      "Worked out from your lean mass and trend weight.",
+    );
+  });
+
+  it("should use no em dash, double hyphen, semicolon, muscle or Apple word", () => {
+    const sentences = collectStrings([
+      BODY_COMPOSITION_CHART,
+      ([7, 30, 90, 365] as const).flatMap((range) => [
+        describeCompositionChartName(range, "kg", latestKg),
+        describeCompositionChartName(range, "pct", latestPct),
+        describeCompositionChartName(range, "kg", null),
+      ]),
+      describeCompositionSource("body_fat_pct"),
+      describeCompositionSource("lean_mass_kg"),
+    ]);
+
+    expect(sentences.length).toBeGreaterThan(15);
+    for (const sentence of sentences) {
+      expect(sentence).not.toMatch(/—|--|;|muscle|apple|healthkit/i);
+    }
   });
 });

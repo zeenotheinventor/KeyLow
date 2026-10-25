@@ -60,3 +60,27 @@ export type BodyTrendPoint = Readonly<{
   /** Reading days in the segment up to and including this day. */
   nObs: number;
 }>;
+
+/** What the composition chart shows its two lines in: kilograms, or per cent of the weight trend. */
+export type BodySplitUnit = "kg" | "pct";
+
+/** One day of the composition chart. Full float, never rounded. */
+export type BodySplitPoint = Readonly<{
+  /** The day, written `YYYY-MM-DD`. */
+  date: string;
+  /** The chart breaks the line where this changes. It counts from 0. */
+  segment: number;
+  /** Kilograms, or per cent of the weight trend. */
+  fat: number;
+  /** Kilograms, or per cent of the weight trend. */
+  lean: number;
+}>;
+
+/** The two lines of the composition chart, and what they were worked out from. */
+export type BodySplit = Readonly<{
+  /** The kind the split was worked out from, or null when neither kind has a trend point. */
+  driver: BodyMeasurementKind | null;
+  points: BodySplitPoint[];
+  /** The driver's trend is still settling. False with no driver. */
+  settling: boolean;
+}>;

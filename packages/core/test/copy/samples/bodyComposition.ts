@@ -34,4 +34,14 @@ export const samples: Record<string, () => string[]> = {
       { bodyFat: 1, leanMass: 1 },
       { bodyFat: 0, leanMass: 0 },
     ].flatMap((counts) => collectStrings(copy.describeBodyCounts(counts))),
+  describeCompositionChartName: () =>
+    ([7, 30, 90, 365] as const).flatMap((range) => [
+      copy.describeCompositionChartName(range, "kg", { fat: 18.2, lean: 64.9 }),
+      copy.describeCompositionChartName(range, "pct", { fat: 22.4, lean: 77.6 }),
+      copy.describeCompositionChartName(range, "kg", null),
+    ]),
+  describeCompositionSource: () => [
+    copy.describeCompositionSource("body_fat_pct"),
+    copy.describeCompositionSource("lean_mass_kg"),
+  ],
 };
