@@ -27,6 +27,7 @@ import { View } from "react-native";
 import { PerHundredList } from "./PerHundredList";
 import { PortionPickerShell } from "./PortionPickerShell";
 import { RecipePortionPicker } from "./RecipePortionPicker";
+import { useSelectAmountOnChipPress } from "./useSelectAmountOnChipPress";
 import { MacroHero } from "../FoodDetail/MacroHero";
 import { Badge, Banner, Button, ChipGroup, NumericInput, Text } from "../ui";
 
@@ -106,6 +107,8 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
     setQuantityText(reselected.quantity);
   }
 
+  const { amountRef, onChipPress } = useSelectAmountOnChipPress(quantityText);
+
   const { amount, hero } = previewAmount(amountFood, choices.portions, unitValue, quantityText);
   // A logged entry keeps the values it was saved with, so the food's own review does not apply to it.
   const needsReview = !isFromSnapshot && foodNeedsReview(food);
@@ -122,6 +125,7 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
         <>
           <NumericInput
             error={amount === null ? DIARY_PROBLEMS.quantity : undefined}
+            inputRef={amountRef}
             label={PORTION_PICKER.amountLabel}
             unit={unitSuffix}
             value={quantityText}
@@ -134,6 +138,7 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
             options={choices.options}
             value={chosenUnit === undefined ? null : unitValue}
             onChange={chooseUnit}
+            onChipPress={onChipPress}
           />
         </>
       }

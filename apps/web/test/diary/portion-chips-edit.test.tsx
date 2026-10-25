@@ -508,3 +508,42 @@ describe("the edit dialog's chips for a food that has portions", () => {
     expect(chipNames()).toEqual(["g"]);
   });
 });
+
+describe("pressing a chip in the edit dialog puts the cursor in the amount with the whole number selected", () => {
+  it("should still put the cursor in the amount when the dialog opens, through the ref it hands the fields", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    expect(document.activeElement).toBe(amountField("g"));
+  });
+
+  it("should select the new unit's starting amount", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
+
+    const field = amountField("tbsp");
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty("value", "1");
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 1);
+  });
+
+  it("should select the amount again when the chip already chosen is pressed", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    const field = amountField("g");
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 2);
+  });
+
+  it("should keep the focus in the chips when an arrow key walks them", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: "g" }), { key: "ArrowRight" });
+
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "ml" }));
+  });
+});

@@ -18,6 +18,7 @@ import { goldenRecipe, goldenRecipeDetail, goldenRecipeId } from "./support/reci
 import RecipeAmountRoute from "../../app/foods/recipe/[id]/log";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -100,6 +101,9 @@ function storedEntry(): RecipeLogEntry {
     kcal: 374.2,
   };
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("the amount step of a recipe", () => {
   let kitStyles: string;

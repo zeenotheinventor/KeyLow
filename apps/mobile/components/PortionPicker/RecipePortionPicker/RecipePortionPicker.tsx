@@ -23,6 +23,7 @@ import { MacroHero } from "../../FoodDetail/MacroHero";
 import { Badge, Banner, Button, ChipGroup, Icon, NumericInput, Text } from "../../ui";
 import { PerHundredList } from "../PerHundredList";
 import { PortionPickerShell } from "../PortionPickerShell";
+import { useSelectAmountOnChipPress } from "../useSelectAmountOnChipPress";
 
 import type { RecipeEntryPickerProps, RecipePortionPickerProps } from "../types";
 import type { RecipeEntryUnit } from "@keylow/core/diary";
@@ -58,6 +59,8 @@ export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntr
     setUnit(next);
   };
 
+  const { amountRef, onChipPress } = useSelectAmountOnChipPress(quantityText);
+
   const typed = previewTypedRecipeAmount(recipe, unit, quantityText);
   const { servings, yield_grams: yieldGrams } = recipe;
   // Grams of a recipe with no cooked weight are of the raw ingredients, which the screen says.
@@ -82,6 +85,7 @@ export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntr
         <>
           <NumericInput
             error={typed === null ? DIARY_PROBLEMS.quantity : undefined}
+            inputRef={amountRef}
             label={PORTION_PICKER.amountLabel}
             unit={unitSuffix}
             value={quantityText}
@@ -94,6 +98,7 @@ export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntr
             options={UNIT_OPTIONS}
             value={unit}
             onChange={chooseUnit}
+            onChipPress={onChipPress}
           />
         </>
       }

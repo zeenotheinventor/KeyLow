@@ -248,6 +248,49 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(within(card).getByText("20 %")).toBeTruthy();
     });
 
+    it("should put the cursor in the amount with the new starting amount selected when a unit chip is pressed", async () => {
+      renderDialog();
+      await openRecipe();
+
+      fireEvent.click(unitChip("g"));
+
+      const gramsField = amountField();
+      expect(document.activeElement).toBe(gramsField);
+      expect(gramsField).toHaveProperty("value", "100");
+      expect(gramsField).toHaveProperty("selectionStart", 0);
+      expect(gramsField).toHaveProperty("selectionEnd", 3);
+
+      fireEvent.click(unitChip("1 serving"));
+
+      const servingsField = amountField();
+      expect(document.activeElement).toBe(servingsField);
+      expect(servingsField).toHaveProperty("selectionStart", 0);
+      expect(servingsField).toHaveProperty("selectionEnd", 1);
+    });
+
+    it("should select a typed amount again when the chip already chosen is pressed", async () => {
+      renderDialog();
+      await openRecipe();
+      fireEvent.click(unitChip("g"));
+      typeAmount("250");
+
+      fireEvent.click(unitChip("g"));
+
+      const field = amountField();
+      expect(document.activeElement).toBe(field);
+      expect(field).toHaveProperty("selectionStart", 0);
+      expect(field).toHaveProperty("selectionEnd", 3);
+    });
+
+    it("should keep the focus in the chips when an arrow key walks them", async () => {
+      renderDialog();
+      await openRecipe();
+
+      fireEvent.keyDown(unitChip("1 serving"), { key: "ArrowRight" });
+
+      expect(document.activeElement).toBe(unitChip("g"));
+    });
+
     it("should say nothing about raw grams when the recipe has a cooked weight", async () => {
       renderDialog();
       await openRecipe();

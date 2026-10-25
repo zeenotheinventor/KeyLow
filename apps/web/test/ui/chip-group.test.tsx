@@ -16,9 +16,11 @@ const unitOptions = [
 function ControlledChipGroup({
   initial = "breast",
   onChange,
+  onChipPress,
 }: {
   initial?: string;
   onChange?: (value: string) => void;
+  onChipPress?: (value: string) => void;
 }) {
   const [value, setValue] = useState(initial);
   return (
@@ -30,6 +32,7 @@ function ControlledChipGroup({
         setValue(next);
         onChange?.(next);
       }}
+      onChipPress={onChipPress}
     />
   );
 }
@@ -83,6 +86,47 @@ describe("ChipGroup", () => {
     expect(
       screen.getByRole("radio", { name: "1 breast (150 g)" }).getAttribute("aria-checked"),
     ).toBe("false");
+  });
+
+  describe("onChipPress", () => {
+    it("should report a click on a chip that is not chosen, after onChange", () => {
+      const calls: string[] = [];
+      render(
+        <ControlledChipGroup
+          onChange={(value) => calls.push(`change ${value}`)}
+          onChipPress={(value) => calls.push(`press ${value}`)}
+        />,
+      );
+
+      fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+      expect(calls).toEqual(["change g", "press g"]);
+    });
+
+    it("should report a click on the chip that is already chosen", () => {
+      const onChipPress = vi.fn();
+      render(<ControlledChipGroup onChipPress={onChipPress} />);
+
+      fireEvent.click(screen.getByRole("radio", { name: "1 breast (150 g)" }));
+
+      expect(onChipPress).toHaveBeenCalledWith("breast");
+    });
+
+    it.each(["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"])(
+      "should not report the %s key, which only walks the chips",
+      (key) => {
+        const onChipPress = vi.fn();
+        const onChange = vi.fn();
+        render(
+          <ControlledChipGroup initial="slice" onChange={onChange} onChipPress={onChipPress} />,
+        );
+
+        fireEvent.keyDown(screen.getByRole("radio", { name: "1 slice (30 g)" }), { key });
+
+        expect(onChange).toHaveBeenCalledOnce();
+        expect(onChipPress).not.toHaveBeenCalled();
+      },
+    );
   });
 
   describe("roving focus", () => {

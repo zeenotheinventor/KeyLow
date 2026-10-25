@@ -6,6 +6,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { IngredientAmountStep } from "../../components/IngredientAmountStep";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -115,6 +116,9 @@ function expectChips(names: string[]) {
     expect(chips[index]).toHaveAccessibleName(name);
   });
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("the amount step of an ingredient", () => {
   let kitStyles: string;

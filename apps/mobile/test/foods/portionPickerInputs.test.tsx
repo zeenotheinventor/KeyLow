@@ -2,13 +2,14 @@ import "react-native-gesture-handler/jestSetup";
 
 import { buildFoodPortion } from "@keylow/core/testing";
 import { render, screen, userEvent } from "@testing-library/react-native";
-import { Text } from "react-native";
+import { AccessibilityInfo, Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import { foodFixture, savedFoodId } from "./support/apiClientMock";
 import { PortionPicker } from "../../components/PortionPicker";
 import { ThemeProvider } from "../../lib/theme";
-import { chickenEntry } from "../support/entries";
+import { trackFieldSelection } from "../support/amountFieldSelection";
+import { breastEntry, chickenEntry } from "../support/entries";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -94,6 +95,7 @@ async function renderEditPicker(props: Partial<Omit<EditProps, "mode">> = {}) {
 }
 
 describe("PortionPicker as a component", () => {
+  const amountField = trackFieldSelection();
   let kitStyles: string;
 
   beforeAll(async () => {
@@ -134,6 +136,87 @@ describe("PortionPicker as a component", () => {
       await renderPicker();
 
       expect(screen.queryByText(/Last logged/)).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("choosing a unit puts the cursor in the amount", () => {
+    it("should focus nothing when the picker is drawn", async () => {
+      await renderPicker();
+
+      expect(amountField.focus).not.toHaveBeenCalled();
+      expect(amountField.setSelection).not.toHaveBeenCalled();
+    });
+
+    it("should focus the amount and select the whole of the new unit's starting amount when a chip is pressed", async () => {
+      const { user } = await renderPicker();
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(screen.getByLabelText("Amount (g)")).toHaveDisplayValue("100");
+      expect(amountField.focus).toHaveBeenCalledTimes(1);
+      expect(amountField.setSelection).toHaveBeenCalledTimes(1);
+      expect(amountField.setSelection).toHaveBeenCalledWith(0, "100".length);
+      expect(amountField.focusedThenSelected()).toBe(true);
+    });
+
+    it("should select the one of a portion when a portion chip is pressed after grams", async () => {
+      const { user } = await renderPicker({ initialAmount: { unit: "g", quantity: 250 } });
+
+      await user.press(screen.getByRole("radio", { name: "Box of 6" }));
+
+      expect(screen.getByLabelText("Amount (box of 6)")).toHaveDisplayValue("1");
+      expect(amountField.setSelection).toHaveBeenLastCalledWith(0, 1);
+    });
+
+    it("should do the same when the chosen chip is pressed again, over the amount as it stands", async () => {
+      const { user } = await renderPicker({ initialAmount: { unit: "g", quantity: 50 } });
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(screen.getByLabelText("Amount (g)")).toHaveDisplayValue("50");
+      expect(amountField.focus).toHaveBeenCalledTimes(1);
+      expect(amountField.setSelection).toHaveBeenCalledWith(0, "50".length);
+    });
+
+    it("should select again on each press of a chip", async () => {
+      const { user } = await renderPicker();
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(amountField.focus).toHaveBeenCalledTimes(2);
+      expect(amountField.setSelection).toHaveBeenCalledTimes(2);
+    });
+
+    it("should do the same for a logged entry", async () => {
+      const { user } = await renderEditPicker({ snapshot: breastEntry().snapshot });
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(screen.getByLabelText("Amount (g)")).toHaveDisplayValue("100");
+      expect(amountField.focus).toHaveBeenCalledTimes(1);
+      expect(amountField.setSelection).toHaveBeenCalledWith(0, "100".length);
+    });
+
+    it("should do the same for a food that has to be copied before it can be logged", async () => {
+      const { user } = await renderPicker({ food: { ...foodFixture, carbs_g: null } });
+
+      expect(screen.getByRole("button", { name: "Copy to your foods" })).toBeOnTheScreen();
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(amountField.focus).toHaveBeenCalledTimes(1);
+      expect(amountField.setSelection).toHaveBeenCalledWith(0, "100".length);
+    });
+
+    it("should not announce anything to a screen reader", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      const setFocus = jest.spyOn(AccessibilityInfo, "setAccessibilityFocus");
+      const { user } = await renderPicker();
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(announce).not.toHaveBeenCalled();
+      expect(setFocus).not.toHaveBeenCalled();
     });
   });
 

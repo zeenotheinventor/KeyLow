@@ -127,7 +127,10 @@ export function ChipGroup<Value extends string>(props: ChipGroupAnyProps<Value>)
         hitSlop={layout === "wrap" ? wrapChipHitSlop : undefined}
         label={option.label}
         role={roles.chip}
-        onPress={press}
+        onPress={() => {
+          press();
+          props.onChipPress?.(option.value);
+        }}
       >
         {/* Capped so the line stays inside the 36 point chip at large text, which a fixed height cannot grow with. The line height is a runtime value no class can name, so it goes through a variable. */}
         <NativeText

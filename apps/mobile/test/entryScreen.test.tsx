@@ -19,6 +19,7 @@ import { setUpTests } from "react-native-reanimated";
 import EntryRoute from "../app/entry/[id]";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
+import { trackFieldSelection } from "./support/amountFieldSelection";
 import { createDiaryQueryClient, diaryBackend, sampleDay } from "./support/diaryBackend";
 import { oilEntry, oilFood } from "./support/entries";
 import { entryBackend, entryClient, resetEntryBackend } from "./support/entryBackend";
@@ -130,6 +131,9 @@ async function chooseTime(
     expect(screen.queryByRole("button", { name: "Done" })).not.toBeOnTheScreen();
   });
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("the entry screen", () => {
   let kitStyles: string;

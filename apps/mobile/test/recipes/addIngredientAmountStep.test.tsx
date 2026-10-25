@@ -6,6 +6,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { AddIngredientAmountStep } from "../../components/AddIngredientAmountStep";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -117,6 +118,9 @@ async function showStep(foodId: string, recent?: RecentFood) {
 
 const hero = (caption: string) => screen.getByLabelText(`Energy and macros, ${caption}`);
 const amountField = () => screen.getByLabelText(/^Amount/);
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("the amount step of a food being added to a recipe", () => {
   let kitStyles: string;

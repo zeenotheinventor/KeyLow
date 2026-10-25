@@ -231,6 +231,50 @@ describe("ChipGroup", () => {
       expect(onChange).toHaveBeenCalledWith("g");
     });
 
+    it("should tell a screen about a press of a chip, after onChange when the choice changes", async () => {
+      const user = userEvent.setup();
+      const calls: string[] = [];
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <ChipGroup
+            label="Unit"
+            options={unitOptions}
+            value="g"
+            onChange={(next: Unit) => calls.push(`change ${next}`)}
+            onChipPress={(next: Unit) => calls.push(`press ${next}`)}
+          />
+        </ThemeProvider>,
+      );
+
+      await user.press(screen.getByRole("radio", { name: "ml" }));
+
+      expect(calls).toEqual(["change ml", "press ml"]);
+    });
+
+    it("should tell a screen about a press of the checked chip too, though the choice and the haptic stay as they were", async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      const onChipPress = jest.fn();
+      await render(
+        <ThemeProvider fixedPreference="dark">
+          <ChipGroup
+            label="Unit"
+            options={unitOptions}
+            value="g"
+            onChange={onChange}
+            onChipPress={onChipPress}
+          />
+        </ThemeProvider>,
+      );
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(onChipPress).toHaveBeenCalledTimes(1);
+      expect(onChipPress).toHaveBeenCalledWith("g");
+      expect(onChange).not.toHaveBeenCalled();
+      expect(mockImpact).not.toHaveBeenCalled();
+    });
+
     it("should move the check at once when a screen keeps the choice", async () => {
       const user = userEvent.setup();
       await render(<KeptUnit />);
