@@ -4,6 +4,7 @@ import { makeMutable } from "react-native-reanimated";
 
 import { Body3DCanvas } from "../../components/ui/Body3D/Body3DCanvas";
 import { looksOf } from "../../components/ui/Body3D/looks";
+import { FRAME_ASPECT, wholeBodyView } from "../support/zoomView";
 
 import type { Body3DCanvasProps } from "../../components/ui/Body3D/types";
 
@@ -17,6 +18,11 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 // reach the renderer are stood in for. The frame callback, the reaction and `invalidate` are kept, so the test
 // can run them as the render loop and the UI thread would.
 const mockInvalidate = jest.fn();
+const mockCamera = {
+  zoom: 1,
+  position: { set: jest.fn<undefined, [number, number, number]>() },
+  updateProjectionMatrix: jest.fn(),
+};
 const mockFrame: { run: ((state: object, deltaSeconds: number) => void) | undefined } = {
   run: undefined,
 };
@@ -27,21 +33,18 @@ jest.mock("@react-three/fiber/native", () => ({
   },
   useThree: (select: (state: object) => unknown) =>
     select({
-      camera: { position: { set: jest.fn() }, updateProjectionMatrix: jest.fn() },
+      camera: mockCamera,
       invalidate: mockInvalidate,
-      size: { width: 100, height: 220 },
+      size: { width: 300, height: 220 },
     }),
 }));
 
-const mockReaction: {
-  prepare: (() => number) | undefined;
-  react: (() => void) | undefined;
-} = { prepare: undefined, react: undefined };
+// Every reaction the canvas registered, in order. A test finds the one for a shared value by the value it reads.
+const mockReactions: { prepare: () => unknown; react: () => void }[] = [];
 jest.mock("react-native-reanimated", () => ({
   ...jest.requireActual<object>("react-native-reanimated"),
-  useAnimatedReaction: (prepare: () => number, react: () => void) => {
-    mockReaction.prepare = prepare;
-    mockReaction.react = react;
+  useAnimatedReaction: (prepare: () => unknown, react: () => void) => {
+    mockReactions.push({ prepare, react });
   },
 }));
 // The reaction runs on the UI thread and asks the JavaScript thread to draw. Here the ask is made at once.
@@ -82,6 +85,7 @@ jest.mock("@keylow/body-3d", () => ({
     dispose: jest.fn(),
   }),
   frameBody: () => [0, 0, 5],
+  pointsPerMetre: () => 100,
 }));
 jest.mock("@keylow/body-model/male.glb", () => 1, { virtual: true });
 const mockModel = Promise.resolve({});
@@ -96,7 +100,7 @@ const emphasis: Body3DCanvasProps["emphasis"] = {
   unselectedOpacity: 1,
 };
 
-async function drawBody(yaw = makeMutable(0)) {
+async function drawBody(yaw = makeMutable(0), view = wholeBodyView()) {
   await render(
     <Body3DCanvas
       colours={colours}
@@ -104,7 +108,9 @@ async function drawBody(yaw = makeMutable(0)) {
       fadeMilliseconds={220}
       looks={looksOf("heat", {}, bodyMapPalette("dark"))}
       scheme="dark"
+      view={view}
       yaw={yaw}
+      frameAspect={FRAME_ASPECT}
     />,
   );
   return yaw;
@@ -128,6 +134,10 @@ function placed(point: { x: number; z: number }, yaw: number) {
 describe("Body3DCanvas turning", () => {
   beforeEach(() => {
     mockInvalidate.mockClear();
+    mockReactions.length = 0;
+    mockCamera.zoom = 1;
+    mockCamera.position.set.mockClear();
+    mockCamera.updateProjectionMatrix.mockClear();
     mockBodyGroup.rotation.y = 0;
     mockBodyGroup.position.set(0, 0, 0);
     mockFrame.run = undefined;
@@ -173,9 +183,83 @@ describe("Body3DCanvas turning", () => {
 
     yaw.set(0.4);
     // The UI thread reads the yaw in the reaction's first function and runs the second when it has changed.
-    expect(mockReaction.prepare?.()).toBe(0.4);
-    mockReaction.react?.();
+    reactionReading(0.4).react();
 
     expect(mockInvalidate).toHaveBeenCalledTimes(1);
+  });
+});
+
+function reactionReading(value: unknown) {
+  const reaction = mockReactions.find((candidate) => candidate.prepare() === value);
+  if (reaction === undefined) {
+    throw new Error("No reaction reads that value.");
+  }
+  return reaction;
+}
+
+describe("Body3DCanvas zooming", () => {
+  beforeEach(() => {
+    mockInvalidate.mockClear();
+    mockReactions.length = 0;
+    mockCamera.zoom = 1;
+    mockCamera.position.set.mockClear();
+    mockCamera.updateProjectionMatrix.mockClear();
+    mockFrame.run = undefined;
+  });
+
+  it("should leave the camera at the framing, and its projection alone, for the whole body", async () => {
+    await drawBody();
+    mockCamera.updateProjectionMatrix.mockClear();
+
+    runFrame();
+
+    expect(mockCamera.position.set).toHaveBeenLastCalledWith(0, 0, 5);
+    expect(mockCamera.zoom).toBe(1);
+    expect(mockCamera.updateProjectionMatrix).not.toHaveBeenCalled();
+  });
+
+  it("should zoom the camera to the zoom each frame reads, and rebuild the projection only when it changed", async () => {
+    const view = wholeBodyView();
+    await drawBody(makeMutable(0), view);
+    mockCamera.updateProjectionMatrix.mockClear();
+
+    view.set({ zoom: 1.5, x: 0, y: 0 });
+    runFrame();
+    runFrame();
+
+    expect(mockCamera.zoom).toBe(1.5);
+    expect(mockCamera.updateProjectionMatrix).toHaveBeenCalledTimes(1);
+  });
+
+  it("should move the camera up when the body is panned down, and left when it is panned right", async () => {
+    const view = wholeBodyView();
+    await drawBody(makeMutable(0), view);
+
+    // At 100 points to the metre and twice the size, 100 points is half a metre.
+    view.set({ zoom: 2, x: 100, y: 100 });
+    runFrame();
+
+    const [x, y, z] = mockCamera.position.set.mock.lastCall ?? [];
+    expect(x).toBeCloseTo(-0.5);
+    expect(y).toBeCloseTo(0.5);
+    expect(z).toBe(5);
+  });
+
+  it("should ask for a frame when the view changes, because the loop draws only on demand", async () => {
+    const view = wholeBodyView();
+    await drawBody(makeMutable(0), view);
+    view.set({ zoom: 1.7, x: 3, y: 4 });
+    mockInvalidate.mockClear();
+
+    // The UI thread reads the view in the reaction's first function and runs the second when it has changed.
+    reactionReading(view.get()).react();
+
+    expect(mockInvalidate).toHaveBeenCalledTimes(1);
+  });
+
+  it("should register one reaction for the view, and one for the turn", async () => {
+    await drawBody();
+
+    expect(mockReactions).toHaveLength(2);
   });
 });

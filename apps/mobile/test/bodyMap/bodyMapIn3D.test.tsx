@@ -168,11 +168,11 @@ describe("the body map card in 3D", () => {
       expect(screen.getByRole("img", { name: frontLabel })).toBeOnTheScreen();
     });
 
-    it("should say to drag, and say no more than the gestures that exist", async () => {
+    it("should say to drag and to pinch, and say no more than the gestures that exist", async () => {
       await renderCard();
 
-      expect(screen.getByText("Drag to turn")).toBeOnTheScreen();
-      expect(screen.queryByText(/pinch|long-press/i)).not.toBeOnTheScreen();
+      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
+      expect(screen.queryByText(/long-press/i)).not.toBeOnTheScreen();
     });
 
     it("should keep the view label and its sub-line, as in 2D", async () => {
@@ -550,7 +550,7 @@ describe("the body map card in 3D", () => {
 
       expect(screen.getAllByRole("img")).toHaveLength(1);
       expect(screen.getByRole("img", { name: backLabel })).toBeOnTheScreen();
-      expect(screen.getByText("Drag to turn")).toBeOnTheScreen();
+      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
       expect(backButton()).toBeChecked();
     });
 
@@ -573,13 +573,13 @@ describe("the body map card in 3D", () => {
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("2d");
       });
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
 
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("3d");
       });
 
-      expect(screen.getByText("Drag to turn")).toBeOnTheScreen();
+      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
       expect(screen.queryByText(BODY_MAP.loading3d)).not.toBeOnTheScreen();
       expect(screen.getByRole("img", { name: frontLabel })).toBeOnTheScreen();
     });
@@ -593,7 +593,7 @@ describe("the body map card in 3D", () => {
 
       await renderCard();
 
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
     });
@@ -603,7 +603,7 @@ describe("the body map card in 3D", () => {
     it("should draw the female figure in the 2D layout", async () => {
       await renderCard({ body: "female" });
 
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
       expect(mockBody3D).not.toHaveBeenCalled();
@@ -614,7 +614,7 @@ describe("the body map card in 3D", () => {
 
       await renderCard();
 
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
       expect(mockBody3D).not.toHaveBeenCalled();
     });
@@ -629,20 +629,20 @@ describe("the body map card in 3D", () => {
         toggleLabel: null,
       });
 
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
       expect(mockBody3D).not.toHaveBeenCalled();
     });
 
     it("should return to the 2D layout when the setting is changed back to 2D, with no reload", async () => {
       await renderCard();
-      expect(screen.getByText("Drag to turn")).toBeOnTheScreen();
+      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
 
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("2d");
       });
 
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
     });
@@ -650,13 +650,13 @@ describe("the body map card in 3D", () => {
     it("should change to the 3D layout when the setting is changed to 3D, with no reload", async () => {
       mockStorageItems.set("bodyMap.renderer", "2d");
       await renderCard();
-      expect(screen.queryByText("Drag to turn")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
 
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("3d");
       });
 
-      expect(screen.getByText("Drag to turn")).toBeOnTheScreen();
+      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
     });
   });
 });

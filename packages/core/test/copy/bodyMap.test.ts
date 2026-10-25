@@ -5,6 +5,7 @@ import {
   BODY_MAP_LEGEND_ITEMS,
   describeBodyFigureLabel,
   describeBodyFigureLoading3d,
+  describeZoomLevel,
   describeBodyMapHeader,
   describeDashboardBodyMapCard,
   describeFigureRowValue,
@@ -163,7 +164,8 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       scaleSwitch: { name: "Scale", heat: "Heat", volume: "Volume", gap: "Gap" },
       sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
       sideSwitchDescription: "Turns the body to face front or back.",
-      rotateHint: "Drag to turn",
+      rotateHint: "Drag to turn · Pinch to zoom",
+      zoom: { reset: "Reset", resetName: "Reset zoom" },
       loading3d: "Loading 3D…",
       loading3dLabel: "3D is loading.",
       legendNames: { heat: "Heat legend", volume: "Volume legend", gap: "Gap legend" },
@@ -825,5 +827,22 @@ describe("the small date and count words", () => {
     expect(describeSets(0)).toBe("0 sets");
     expect(describeSets(1.5)).toBe("1.5 sets");
     expect(describeSets(16)).toBe("16 sets");
+  });
+});
+
+describe("describeZoomLevel", () => {
+  it("should write a whole zoom with no decimal point, as the board's pill does", () => {
+    expect(describeZoomLevel(2)).toBe("2×");
+    expect(describeZoomLevel(1)).toBe("1×");
+  });
+
+  it("should write one decimal place when there is one", () => {
+    expect(describeZoomLevel(1.5)).toBe("1.5×");
+    expect(describeZoomLevel(1.25)).toBe("1.3×");
+  });
+
+  it("should write a zoom that rounds to a whole one as that whole one", () => {
+    expect(describeZoomLevel(1.96)).toBe("2×");
+    expect(describeZoomLevel(1.04)).toBe("1×");
   });
 });

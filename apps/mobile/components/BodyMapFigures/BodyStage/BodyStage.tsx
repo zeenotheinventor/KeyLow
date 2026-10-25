@@ -1,4 +1,4 @@
-import { BODY_MAP, describeBodyFigureLoading3d } from "@keylow/core/copy";
+import { BODY_MAP, describeBodyFigureLoading3d, describeZoomLevel } from "@keylow/core/copy";
 import { motionDuration } from "@keylow/tokens";
 import { useEffect, useState } from "react";
 import { View } from "react-native";
@@ -7,7 +7,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-na
 import { useReducedMotion } from "../../../lib/motion";
 import { ThemeScope } from "../../../lib/theme";
 import { BodyView, useBody3DSupport } from "../../BodyView";
-import { Text } from "../../ui";
+import { Badge, Button, Text } from "../../ui";
 
 import type { BodyStageProps } from "./types";
 import type { BodyViewPhase } from "../../BodyView";
@@ -24,6 +24,9 @@ export const BODY_STAGE_FIGURE_WIDTH = 108;
  * If 3D fails the text goes, the stage stays clear, and the 2D figure stays in the same place. A tap on the 2D
  * figure is a tap while the 3D body has not drawn, and after that the 3D body takes the touch, anywhere on the
  * stage and not only on the body. A drag across the width of the body is still half a turn.
+ * A pinch zooms the 3D body and two fingers pan it. While it is zoomed, a pill at the top right of the stage
+ * shows the zoom, as "2×", and a Reset button eases the body back to the whole body. The pill follows the
+ * zoom when the fingers let go, and not while they move.
  */
 export function BodyStage({ tapHandlers, label, ...figureProps }: BodyStageProps) {
   const isReducedMotion = useReducedMotion();
@@ -32,6 +35,9 @@ export function BodyStage({ tapHandlers, label, ...figureProps }: BodyStageProps
   // The width the phone gives the stage, which the 3D body takes a drag and a tap across. Until it is known the
   // body takes them over its own width.
   const [stageWidth, setStageWidth] = useState(BODY_STAGE_FIGURE_WIDTH);
+  // The zoom the 3D body last reported, and how many resets have been asked for.
+  const [zoom, setZoom] = useState(1);
+  const [zoomResetCount, setZoomResetCount] = useState(0);
   // After a failure `BodyView` draws the 2D figure alone and reports nothing, so a stage drawn after one,
   // such as by switching More to 2D and back to 3D, must not wait for a report.
   const phase = hasFailed ? "failed" : reportedPhase;
@@ -71,8 +77,28 @@ export function BodyStage({ tapHandlers, label, ...figureProps }: BodyStageProps
         label={phase === "loading" ? describeBodyFigureLoading3d(label) : label}
         w={BODY_STAGE_FIGURE_WIDTH}
         touchWidth={stageWidth}
+        zoomResetCount={zoomResetCount}
         onPhaseChange={setPhase}
+        onZoomChange={setZoom}
       />
+      {phase === "drawn" && zoom > 1 ? (
+        <ThemeScope className="absolute right-2 top-2" scheme="dark">
+          <View className="flex-row items-center gap-2">
+            <Badge>{describeZoomLevel(zoom)}</Badge>
+            <Button
+              accessibilityLabel={BODY_MAP.zoom.resetName}
+              icon="RotateCcw"
+              size="sm"
+              variant="secondary"
+              onPress={() => {
+                setZoomResetCount((count) => count + 1);
+              }}
+            >
+              {BODY_MAP.zoom.reset}
+            </Button>
+          </View>
+        </ThemeScope>
+      ) : null}
       {phase === "loading" ? (
         <Text className="absolute bottom-2 right-2" role="status" tone="muted" variant="caption">
           {BODY_MAP.loading3d}

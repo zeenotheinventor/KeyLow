@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./rotation": "./src/rotation.ts",
-    "./touch": "./src/touch.ts"
+    "./touch": "./src/touch.ts",
+    "./zoom": "./src/zoom.ts"
   },
   "scripts": {
     "lint": "eslint .",

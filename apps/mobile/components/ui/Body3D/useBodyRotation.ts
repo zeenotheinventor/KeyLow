@@ -30,7 +30,8 @@ const BACK_YAW = Math.PI;
  * The turn of the body and the gesture that drives it. A drag across the body's width turns it half a turn, the
  * body follows the finger with no easing and no inertia, and on release it settles on the nearer of front and
  * back over the standard motion duration, or at once with reduced motion. A change of `side` turns it there by
- * the shorter arc. A touch that lifts within the slop of where it went down is a tap, and a drag never is.
+ * the shorter arc. A touch that lifts within the slop of where it went down is a tap, and a drag never is. Only a
+ * touch of one finger turns the body or taps it.
  *
  * The turn is a shared value that only the canvas reads. Both gestures run on the JavaScript thread, and a read
  * of a shared value there can lag a write made there, because the write reaches the UI thread first. So the
@@ -48,6 +49,8 @@ export function useBodyRotation({ side, width, onSideChange, onTap }: BodyRotati
   // Where the body faced when the drag took hold, and where the tap's finger went down.
   const yawAtDragStart = useRef(initialYaw);
   const tapDown = useRef<TouchPoint>({ x: 0, y: 0 });
+  // True once a second finger went down during the touch, which is a pinch or a pan and never a tap.
+  const hasSecondFinger = useRef(false);
   // What the gestures call, as of the latest render, so a new callback from the screen never rebuilds them.
   const latest = useRef({ side, onSideChange, onTap });
   useLayoutEffect(() => {
@@ -86,6 +89,9 @@ export function useBodyRotation({ side, width, onSideChange, onTap }: BodyRotati
     const pan = Gesture.Pan()
       .withTestId("body-3d-pan")
       .runOnJS(true)
+      // One finger turns the body. A second finger landing fails the drag if it has not taken hold, and cancels it if it has,
+      // so two fingers never turn the body, and the pinch and the two-finger pan have the touch.
+      .maxPointers(1)
       // A horizontal move takes hold, and a vertical or diagonal one first is a scroll, which the pan fails for.
       // No minimum distance, because it would activate on the first diagonal sample and take the scroll.
       .activeOffsetX([-PAN_ACTIVATION_OFFSET, PAN_ACTIVATION_OFFSET])
@@ -112,9 +118,20 @@ export function useBodyRotation({ side, width, onSideChange, onTap }: BodyRotati
       .maxDistance(BODY_TAP_SLOP)
       .onBegin(({ x, y }) => {
         tapDown.current = { x, y };
+        hasSecondFinger.current = false;
+      })
+      // The tap handler counts a quick touch of two fingers as a tap, so a second finger down rules the tap out.
+      .onTouchesDown(({ numberOfTouches }) => {
+        if (numberOfTouches > 1) {
+          hasSecondFinger.current = true;
+        }
       })
       .onEnd(({ x, y }, wasRecognised) => {
-        if (wasRecognised && classifyTouch(tapDown.current, { x, y }, BODY_TAP_SLOP) === "tap") {
+        if (
+          wasRecognised &&
+          !hasSecondFinger.current &&
+          classifyTouch(tapDown.current, { x, y }, BODY_TAP_SLOP) === "tap"
+        ) {
           latest.current.onTap?.();
         }
       });

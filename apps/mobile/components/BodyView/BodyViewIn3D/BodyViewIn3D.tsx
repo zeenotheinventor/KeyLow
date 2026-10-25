@@ -24,7 +24,7 @@ const HIDDEN_BODY_OPACITY = 0.01;
  * no fade when the person has asked for reduced motion. If there is no first frame in 8 seconds, or the 3D body fails, the 2D figure
  * stays, with no message, and `onFail` is called. The box keeps the 2D figure's size throughout, and a
  * screen reader finds one image with the label: the 2D figure until the 3D body has drawn, then the 3D.
- * The 3D body gets the figure's value props, the side it faces and the two calls that only it makes, and
+ * The 3D body gets the figure's value props, the side it faces, the zoom calls and the two calls that only it makes, and
  * takes touches once it has drawn, over `touchWidth` if the stage is wider than the body. The box is that wide, with the figure and the body centred in it. With `bodyScheme` the 3D body alone is drawn in that scheme, and the 2D figure keeps the app's. `onPhaseChange` tells the stage around it where it is.
  */
 export function BodyViewIn3D({
@@ -32,6 +32,8 @@ export function BodyViewIn3D({
   Body3DComponent = Body3D,
   onSideChange,
   onTap,
+  onZoomChange,
+  zoomResetCount,
   onPhaseChange,
   bodyScheme,
   touchWidth,
@@ -97,6 +99,8 @@ export function BodyViewIn3D({
       onFirstFrame={showDrawn}
       onSideChange={onSideChange}
       onTap={onTap}
+      onZoomChange={onZoomChange}
+      zoomResetCount={zoomResetCount}
     />
   );
 

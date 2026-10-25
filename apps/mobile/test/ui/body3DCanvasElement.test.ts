@@ -3,6 +3,7 @@ import { makeMutable } from "react-native-reanimated";
 
 import { body3DCanvasElement } from "../../components/ui/Body3D/body3DCanvasElement";
 import { looksOf } from "../../components/ui/Body3D/looks";
+import { FRAME_ASPECT, wholeBodyView } from "../support/zoomView";
 
 // The looks come from `BodyFigure`'s reading, and its folder reads the saved body choice.
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -37,6 +38,8 @@ describe("body3DCanvasElement", () => {
         },
         fadeMilliseconds: 220,
         yaw: makeMutable(0),
+        view: wholeBodyView(),
+        frameAspect: FRAME_ASPECT,
       }),
     ).toBeNull();
   });

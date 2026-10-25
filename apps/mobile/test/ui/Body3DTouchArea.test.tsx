@@ -13,6 +13,7 @@ import { wrappedByGestureDetector } from "../support/wrappedByGestureDetector";
 
 import type { Body3DProps } from "../../components/ui";
 import type { Body3DCanvasProps } from "../../components/ui/Body3D/types";
+import type { ReactNode } from "react";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -24,6 +25,15 @@ const mockCanvas = jest.fn<null, [Body3DCanvasProps]>(() => null);
 jest.mock("../../components/ui/Body3D/Body3DCanvas", () => ({
   Body3DCanvas: (props: Body3DCanvasProps) => mockCanvas(props),
 }));
+jest.mock("../../components/ui/Body3D/Body3DBoundary", () => {
+  const { View } = jest.requireActual<typeof import("react-native")>("react-native");
+  const { createElement } = jest.requireActual<typeof import("react")>("react");
+  // The boundary is stood in for by a view that can be found, since the GL view it holds draws nothing here.
+  return {
+    Body3DBoundary: ({ children }: { children: ReactNode }) =>
+      createElement(View, { testID: "gl-view" }, children),
+  };
+});
 
 const label = "Body, male, 3D";
 const BODY_WIDTH = 108;
@@ -81,6 +91,19 @@ describe("Body3D touch area", () => {
         width: BODY_WIDTH,
         height: BODY_HEIGHT,
       });
+    });
+
+    it("should make the GL view as wide as the touch area, centred on the body, so a zoomed body is not cut off at the body's width", async () => {
+      await renderBody({ touchWidth: TOUCH_WIDTH });
+
+      const glView = screen.getByTestId("gl-view").parent;
+      expect(glView).toHaveStyle({ width: TOUCH_WIDTH, left: (BODY_WIDTH - TOUCH_WIDTH) / 2 });
+    });
+
+    it("should have the GL view be the width of the body when the touch area is", async () => {
+      await renderBody();
+
+      expect(screen.getByTestId("gl-view").parent).toHaveStyle({ width: BODY_WIDTH, left: 0 });
     });
 
     it("should have the touch area be the width of the body when it is not given", async () => {

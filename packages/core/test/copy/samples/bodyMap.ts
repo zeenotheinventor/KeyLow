@@ -101,6 +101,7 @@ export const samples: Record<string, () => string[]> = {
       }),
     ),
   ],
+  describeZoomLevel: () => [copy.describeZoomLevel(1.5), copy.describeZoomLevel(2)],
   describeScrubberDay: () =>
     (["logged", "planned", "missed", "in_progress"] as const)
       .map(

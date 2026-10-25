@@ -2,12 +2,13 @@ import { bodyMapPalette } from "@keylow/tokens";
 import { vars } from "nativewind";
 import { useEffect, useMemo } from "react";
 import { View } from "react-native";
-import { GestureDetector } from "react-native-gesture-handler";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { Body3DBoundary } from "./Body3DBoundary";
 import { body3DCanvasElement } from "./body3DCanvasElement";
 import { looksOf } from "./looks";
 import { useBodyRotation } from "./useBodyRotation";
+import { useBodyZoom } from "./useBodyZoom";
 import { useLookFadeMilliseconds } from "./useLookFadeMilliseconds";
 import { useTheme } from "../../../lib/theme";
 
@@ -33,6 +34,13 @@ const NO_VALUES: BodyFigureValues = {};
  * other side, and `onTap` a touch that lifts within 10 points of where it went down. A drag is never a tap,
  * and a vertical swipe scrolls the page. The image has no action of its own, so the screen offers the same
  * turns and the toggle as controls.
+ *
+ * A pinch zooms from the whole body to twice as close about the point between the fingers, and two fingers
+ * moving together pan the zoomed body, by the extra half of the body that the zoom adds on each side. Only one finger turns
+ * the body or taps it, so a pinch or a two-finger pan never does either. Snapping to a side keeps the zoom,
+ * and the zoom is gone when the body is. The GL view is as wide as the touch area, so a zoomed body has the
+ * stage to fill, and the whole body is framed as it was. `onZoomChange` tells the zoom when the fingers let go,
+ * and `zoomResetCount` eases the view back to the whole body.
  */
 export function Body3D({
   label,
@@ -41,6 +49,8 @@ export function Body3D({
   side = "front",
   onSideChange,
   onTap,
+  onZoomChange,
+  zoomResetCount = 0,
   scale = "heat",
   values = NO_VALUES,
   selected,
@@ -65,7 +75,25 @@ export function Body3D({
   );
   const fadeMilliseconds = useLookFadeMilliseconds();
   const touchWidth = Math.max(requestedTouchWidth ?? w, w);
-  const { yaw, gesture } = useBodyRotation({ side, width: w, onSideChange, onTap });
+  const height = (w * DRAWING_HEIGHT) / DRAWING_WIDTH;
+  const { yaw, gesture: rotationGesture } = useBodyRotation({
+    side,
+    width: w,
+    onSideChange,
+    onTap,
+  });
+  const { view, gesture: zoomGesture } = useBodyZoom({
+    bodyWidth: w,
+    height,
+    stageWidth: touchWidth,
+    resetCount: zoomResetCount,
+    onZoomChange,
+  });
+  // Whichever takes hold first has the touch: the zoom's two fingers, or the turn and the tap of one.
+  const gesture = useMemo(
+    () => Gesture.Race(zoomGesture, rotationGesture),
+    [zoomGesture, rotationGesture],
+  );
   const canvas = body3DCanvasElement({
     colours: {
       muscle: palette.silhouette,
@@ -79,6 +107,8 @@ export function Body3D({
     emphasis,
     fadeMilliseconds,
     yaw,
+    view,
+    frameAspect: DRAWING_WIDTH / DRAWING_HEIGHT,
     onFirstFrame,
     onError,
   });
@@ -89,8 +119,6 @@ export function Body3D({
       onError?.();
     }
   }, [isCanvasMissing, onError]);
-
-  const height = (w * DRAWING_HEIGHT) / DRAWING_WIDTH;
 
   return (
     <GestureDetector gesture={gesture}>
@@ -106,7 +134,18 @@ export function Body3D({
           role="img"
           style={vars({ "--body-width": w, "--body-height": height })}
         >
-          {canvas !== null && <Body3DBoundary onError={onError}>{canvas}</Body3DBoundary>}
+          {canvas !== null && (
+            // The GL view is as wide as the touch area, with the body's own box in the middle of it, so a zoomed body is not cut off at the body's width.
+            <View
+              className="absolute top-0 h-full w-[var(--canvas-width)] left-[var(--canvas-left)]"
+              style={vars({
+                "--canvas-width": touchWidth,
+                "--canvas-left": (w - touchWidth) / 2,
+              })}
+            >
+              <Body3DBoundary onError={onError}>{canvas}</Body3DBoundary>
+            </View>
+          )}
         </View>
       </View>
     </GestureDetector>
