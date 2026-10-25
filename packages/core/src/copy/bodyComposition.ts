@@ -1,7 +1,7 @@
 import { HEALTH_CONNECT_NAME, WEIGHT_RANGE_LABELS } from "./weight";
 import { TREND_SETTLED_OBS } from "../weight/bounds";
 
-import type { BodyMeasurementKind } from "../weight/bodyTypes";
+import type { BodyMeasurementKind, BodySplitUnit } from "../weight/bodyTypes";
 import type { WeightRange } from "../weight/types";
 
 /**
@@ -132,3 +132,39 @@ export const describeBodyCounts = ({ bodyFat, leanMass }: BodyCountsInput): stri
 
   return `Also ${parts.join(" and ")} ${lastCount === 1 ? "reading" : "readings"}.`;
 };
+
+/** The switches above the trend card's chart and the words around the composition view. */
+export const BODY_COMPOSITION_CHART = {
+  viewGroupLabel: "Chart view",
+  views: { weight: "Weight", composition: "Composition" },
+  unitGroupLabel: "Show as",
+  units: { kg: "kg", pct: "%" },
+} as const;
+
+type CompositionLatest = Readonly<{ fat: number; lean: number }>;
+
+/**
+ * The composition figure's name for a screen reader: "Body fat and lean mass over the last 90 days, body
+ * fat 18.2 kg, lean mass 64.9 kg", and in per cent "..., body fat 22.4 %, lean mass 77.6 %". Without
+ * latest values, or when either is not a number, it is only the span: "Body fat and lean mass over the
+ * last 90 days".
+ */
+export const describeCompositionChartName = (
+  range: WeightRange,
+  unit: BodySplitUnit,
+  latest: CompositionLatest | null,
+): string => {
+  const name = `Body fat and lean mass over ${CHART_SPAN_WORDS[range]}`;
+  if (latest === null || !Number.isFinite(latest.fat) || !Number.isFinite(latest.lean)) {
+    return name;
+  }
+  const unitText = BODY_COMPOSITION_CHART.units[unit];
+  const fat = roundToOneDecimal(latest.fat).toFixed(1);
+  const lean = roundToOneDecimal(latest.lean).toFixed(1);
+
+  return `${name}, body fat ${fat} ${unitText}, lean mass ${lean} ${unitText}`;
+};
+
+/** The line under the chart, saying which reading the two lines were worked out from. */
+export const describeCompositionSource = (driver: BodyMeasurementKind): string =>
+  `Worked out from your ${driver === "body_fat_pct" ? "body fat" : "lean mass"} and trend weight.`;

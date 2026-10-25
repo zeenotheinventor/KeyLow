@@ -38,6 +38,9 @@ export type {
   BodyMeasurementInsert,
   BodyMeasurementKind,
   BodyReading,
+  BodySplit,
+  BodySplitPoint,
+  BodySplitUnit,
   BodyTrendPoint,
   HealthBodyFatSample,
   HealthLeanMassSample,
@@ -45,3 +48,4 @@ export type {
 export { bodyChangeOverRange, bodyPointsInRange, isBodyTrendSettling } from "./bodyTrendHelpers";
 export { computeBodyTrend } from "./computeBodyTrend";
 export { mapHealthBodyFatSamples, mapHealthLeanMassSamples } from "./mapHealthBodyMeasurements";
+export { composeBodySplit } from "./composeBodySplit";
