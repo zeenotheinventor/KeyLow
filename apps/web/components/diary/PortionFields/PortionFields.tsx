@@ -3,6 +3,7 @@ import { DIARY_PROBLEMS, PORTION_PICKER, describePortionUnit } from "@keylow/cor
 import type { PortionFieldsProps } from "./types";
 
 import { useSelectAmountOnChipPress } from "@/components/diary/useSelectAmountOnChipPress";
+import { useSelectAmountOnFocus } from "@/components/diary/useSelectAmountOnFocus";
 import { MacroHero } from "@/components/foods/FoodDetail/MacroHero";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { NumericInput } from "@/components/ui/NumericInput";
@@ -29,6 +30,7 @@ export function PortionFields({
   ...timeProps
 }: PortionFieldsProps) {
   const { amountFieldRef, onChipPress } = useSelectAmountOnChipPress(amountRef);
+  const selectOnFocus = useSelectAmountOnFocus();
   const chosenPortion = portions.find((portion) => portion.id === unitValue);
   // A portion's own noun ("medium", "pot") follows the amount when its label counts one, else "portion(s)".
   const unitSuffix =
@@ -50,6 +52,7 @@ export function PortionFields({
           unit={unitSuffix}
           value={quantityText}
           error={preview.amount === null ? DIARY_PROBLEMS.quantity : undefined}
+          {...selectOnFocus}
           onChange={(event) => {
             onQuantityChange(event.target.value);
           }}

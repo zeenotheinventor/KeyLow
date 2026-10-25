@@ -87,6 +87,7 @@ export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntr
             error={typed === null ? DIARY_PROBLEMS.quantity : undefined}
             inputRef={amountRef}
             label={PORTION_PICKER.amountLabel}
+            selectTextOnFocus
             unit={unitSuffix}
             value={quantityText}
             onChangeText={setQuantityText}

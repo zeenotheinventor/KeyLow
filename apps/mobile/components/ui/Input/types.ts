@@ -71,6 +71,7 @@ export type FieldTextProps = Pick<
   | "autoFocus"
   | "maxLength"
   | "returnKeyType"
+  | "selectTextOnFocus"
 >;
 
 /**

@@ -282,6 +282,57 @@ describe("the add food dialog, the amount step of a recipe", () => {
       expect(field).toHaveProperty("selectionEnd", 3);
     });
 
+    it("should select the number when the dialog opens", async () => {
+      renderDialog();
+      await openRecipe();
+
+      const field = amountField();
+      expect(field).toHaveProperty("value", "1");
+      expect(field).toHaveProperty("selectionStart", 0);
+      expect(field).toHaveProperty("selectionEnd", 1);
+    });
+
+    it("should select the number and keep it selected through the mouseup of a click that gave the field focus", async () => {
+      renderDialog();
+      await openRecipe();
+      fireEvent.click(unitChip("g"));
+      typeAmount("250");
+      unitChip("g").focus();
+      const field = amountField();
+
+      fireEvent.mouseDown(field);
+      field.focus();
+      const mouseUpWasNotPrevented = fireEvent.mouseUp(field);
+
+      expect(field).toHaveProperty("selectionStart", 0);
+      expect(field).toHaveProperty("selectionEnd", 3);
+      expect(mouseUpWasNotPrevented).toBe(false);
+    });
+
+    it("should not stop the mouseup of a click on a field that already has focus", async () => {
+      renderDialog();
+      await openRecipe();
+      const field = amountField();
+      field.focus();
+
+      fireEvent.mouseDown(field);
+
+      expect(fireEvent.mouseUp(field)).toBe(true);
+    });
+
+    it("should select the whole number when the field gets focus from the keyboard alone", async () => {
+      renderDialog();
+      await openRecipe();
+      fireEvent.click(unitChip("g"));
+      typeAmount("250");
+      unitChip("g").focus();
+
+      amountField().focus();
+
+      expect(amountField()).toHaveProperty("selectionStart", 0);
+      expect(amountField()).toHaveProperty("selectionEnd", 3);
+    });
+
     it("should keep the focus in the chips when an arrow key walks them", async () => {
       renderDialog();
       await openRecipe();

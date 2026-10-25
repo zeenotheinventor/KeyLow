@@ -547,3 +547,47 @@ describe("pressing a chip in the edit dialog puts the cursor in the amount with 
     expect(document.activeElement).toBe(screen.getByRole("radio", { name: "ml" }));
   });
 });
+
+describe("clicking into the amount in the edit dialog selects the whole number", () => {
+  it("should select the number when the dialog opens", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+
+    const field = amountField("g");
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 2);
+  });
+
+  it("should select the number and keep it selected through the mouseup of a click that gave the field focus", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+    screen.getByRole("radio", { name: "ml" }).focus();
+    const field = amountField("g");
+
+    fireEvent.mouseDown(field);
+    field.focus();
+    const mouseUpWasNotPrevented = fireEvent.mouseUp(field);
+
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 2);
+    expect(mouseUpWasNotPrevented).toBe(false);
+  });
+
+  it("should not stop the mouseup of a click on a field that already has focus", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+    const field = amountField("g");
+    field.focus();
+
+    fireEvent.mouseDown(field);
+
+    expect(fireEvent.mouseUp(field)).toBe(true);
+  });
+
+  it("should select the whole number when the field gets focus from the keyboard alone", () => {
+    renderDialog(oilEntry({ quantity: 20, unit: "g" }));
+    screen.getByRole("radio", { name: "ml" }).focus();
+
+    amountField("g").focus();
+
+    expect(amountField("g")).toHaveProperty("selectionStart", 0);
+    expect(amountField("g")).toHaveProperty("selectionEnd", 2);
+  });
+});
