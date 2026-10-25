@@ -8,7 +8,9 @@ import { View } from "react-native";
 import { useHealthImport } from "../../lib/health";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { useWeightChartView } from "../../lib/weightChartView";
 import { BodyCompositionSection } from "../BodyCompositionSection";
+import { BodyCompositionView } from "../BodyCompositionView";
 import { ErrorState, Skeleton } from "../ui";
 import { WeightTrendCard } from "../WeightTrendCard";
 import { useBodyCompositionAccess } from "./useBodyCompositionAccess";
@@ -29,6 +31,9 @@ const DEFAULT_RANGE: WeightRange = 90;
  * are health data and are not in the offline cache, so a read that fails offline is the error board. The
  * Body composition section follows the trend card in the list's header when Health Connect is connected
  * and the access to body fat and lean mass has been read, and the one range control drives it with the chart.
+ * The trend card offers the Weight / Composition switch while Health Connect is connected or not connected,
+ * and not while it is being checked or on a device without it. The choice and the unit are kept on the device,
+ * and the list waits for them to be read, so a person who left Composition on never sees the weight figure first.
  */
 export function WeightScreen() {
   const router = useRouter();
@@ -39,6 +44,7 @@ export function WeightScreen() {
   const now = useNow();
   const connection = useHealthConnection();
   const bodyCompositionAccess = useBodyCompositionAccess();
+  const chartView = useWeightChartView();
   // One range for the weight chart and both body cards. It starts on 90 days and is not kept.
   const [range, setRange] = useState<WeightRange>(DEFAULT_RANGE);
   const { importNow, isImporting, lastImportedAt } = useHealthImport();
@@ -87,8 +93,29 @@ export function WeightScreen() {
     }
     // The day names wait for the zone, so "Today" does not flip when it arrives. A profile always has a zone.
     // If the read fails or finds no row the day is UTC, as the other screens read it.
-    if (weighIns.data !== undefined && !timeZone.isPending) {
+    // The view waits for the device store for the same reason, and the store settles within a second at worst.
+    if (weighIns.data !== undefined && !timeZone.isPending && chartView.isRead) {
       const today = toLocalDate(now, timeZone.data ?? "UTC");
+      // The switch is for a device that has Health Connect. Without it, or while that is being found out, the
+      // card is the weight card and the saved choice is left as it is.
+      const viewProps =
+        connection === "connected" || connection === "not-connected"
+          ? {
+              view: chartView.view,
+              onViewChange: chartView.setView,
+              composition: (
+                <BodyCompositionView
+                  access={bodyCompositionAccess}
+                  connection={connection}
+                  range={range}
+                  today={today}
+                  unit={chartView.unit}
+                  weightPoints={trend.points}
+                  onUnitChange={chartView.setUnit}
+                />
+              ),
+            }
+          : {};
 
       return (
         <WeightList
@@ -100,10 +127,12 @@ export function WeightScreen() {
                 trend={trend}
                 weighIns={weighIns.data}
                 onRangeChange={setRange}
+                {...viewProps}
               />
               {connection === "connected" && bodyCompositionAccess !== null ? (
                 <BodyCompositionSection
                   access={bodyCompositionAccess}
+                  isUnderComposition={viewProps.view === "composition"}
                   range={range}
                   today={today}
                 />

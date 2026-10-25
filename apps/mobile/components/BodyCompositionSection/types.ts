@@ -8,4 +8,10 @@ export type BodyCompositionSectionProps = {
   range: WeightRange;
   /** Today in the profile's time zone, `YYYY-MM-DD`. */
   today: string;
+  /**
+   * True while the trend card draws the composition view above the section. The section then draws only its
+   * heading, its cards and the compact prompt for a kind that cannot be read, since the view draws the full
+   * prompts, the loading status, the error prompt and the lean mass caption. Defaults to false.
+   */
+  isUnderComposition?: boolean;
 };

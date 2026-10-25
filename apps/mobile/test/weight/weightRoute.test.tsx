@@ -141,7 +141,12 @@ describe("the weigh-in entry route", () => {
   it("should open the add sheet over the Weight screen from the header's Add weigh-in, and close back to it with Cancel", async () => {
     const user = userEvent.setup();
     await renderApp("/more/weight");
-    await user.press(await screen.findByRole("button", { name: "Add weigh-in" }));
+    await screen.findByRole("heading", { name: "No weigh-ins yet" });
+    const [headerAdd] = screen.getAllByRole("button", { name: "Add weigh-in" });
+    if (headerAdd === undefined) {
+      throw new Error("The screen needs the header's Add weigh-in button");
+    }
+    await user.press(headerAdd);
 
     expect(await screen.findByLabelText("Add weigh-in", { exact: true })).toHaveProp(
       "role",

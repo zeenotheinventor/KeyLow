@@ -1,2 +1,2 @@
 export { WeightTrendCard } from "./WeightTrendCard";
-export type { WeightTrendCardProps } from "./types";
+export type { WeightTrendCardProps, WeightTrendCardView } from "./types";
