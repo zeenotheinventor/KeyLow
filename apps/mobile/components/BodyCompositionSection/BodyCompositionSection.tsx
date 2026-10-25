@@ -24,8 +24,18 @@ const OPEN_PERMISSION_FLOW = "/more/weight/health?add=body-composition";
  * with none is the same prompt with the compact prompt for the other kind after it. A kind that is
  * allowed with no readings beside one that has some draws nothing, since the card for the other says
  * enough. The caption about lean mass shows only with a lean mass card.
+ *
+ * Under the composition view (`isUnderComposition`) the view above draws the full prompts, the loading
+ * status, the error prompt and the caption, so none is drawn twice. The section draws the cards of the kinds
+ * that have readings and the compact prompt for each kind that is not allowed, once at least one is, and
+ * draws nothing, not even its heading, when it has neither.
  */
-export function BodyCompositionSection({ access, range, today }: BodyCompositionSectionProps) {
+export function BodyCompositionSection({
+  access,
+  range,
+  today,
+  isUnderComposition = false,
+}: BodyCompositionSectionProps) {
   const router = useRouter();
   const isReadEnabled = useReadsEnabled();
   const bodyFat = useBodyCompositionKind("body_fat_pct", {
@@ -47,6 +57,40 @@ export function BodyCompositionSection({ access, range, today }: BodyComposition
   const openPermissionFlow = () => {
     router.push(OPEN_PERMISSION_FLOW);
   };
+
+  function renderCompactPrompts(kinds: readonly BodyMeasurementKind[]) {
+    return kinds.map((kind) => (
+      <BodyCompositionPrompt
+        key={kind}
+        action={BODY_COMPOSITION.partial[kind].action}
+        text={BODY_COMPOSITION.partial[kind].text}
+        variant="compact"
+        onAction={openPermissionFlow}
+      />
+    ));
+  }
+
+  function renderUnderComposition() {
+    const cards = readings.flatMap((reading) =>
+      reading.status === "readings" ? [reading.card] : [],
+    );
+    const prompts = readings.length === 0 ? [] : notAllowed;
+    if (cards.length === 0 && prompts.length === 0) {
+      return null;
+    }
+
+    return (
+      <View className="gap-2">
+        <Text className="px-1" role="heading" variant="body-strong">
+          {BODY_COMPOSITION.heading}
+        </Text>
+        {cards.map((card) => (
+          <BodyCompositionCard key={card.kind} {...card} />
+        ))}
+        {renderCompactPrompts(prompts)}
+      </View>
+    );
+  }
 
   function renderBody() {
     if (readings.length === 0) {
@@ -105,15 +149,7 @@ export function BodyCompositionSection({ access, range, today }: BodyComposition
             variant="no-readings-yet"
           />
         ) : null}
-        {notAllowed.map((kind) => (
-          <BodyCompositionPrompt
-            key={kind}
-            action={BODY_COMPOSITION.partial[kind].action}
-            text={BODY_COMPOSITION.partial[kind].text}
-            variant="compact"
-            onAction={openPermissionFlow}
-          />
-        ))}
+        {renderCompactPrompts(notAllowed)}
         {cards.some((card) => card.kind === "lean_mass_kg") ? (
           <NativeText className="px-1 text-caption font-normal tabular-nums text-text-muted">
             {BODY_COMPOSITION.caption}
@@ -121,6 +157,10 @@ export function BodyCompositionSection({ access, range, today }: BodyComposition
         ) : null}
       </>
     );
+  }
+
+  if (isUnderComposition) {
+    return renderUnderComposition();
   }
 
   return (

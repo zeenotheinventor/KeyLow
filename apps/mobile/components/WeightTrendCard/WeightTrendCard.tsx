@@ -1,4 +1,5 @@
 import {
+  BODY_COMPOSITION_CHART,
   WEIGHT_RANGE_LABELS,
   WEIGHT_SCREEN,
   describeChartName,
@@ -23,6 +24,11 @@ const rangeOptions = WEIGHT_RANGES.map((range) => ({
   label: WEIGHT_RANGE_LABELS[range],
 }));
 
+const viewOptions = [
+  { value: "weight", label: BODY_COMPOSITION_CHART.views.weight },
+  { value: "composition", label: BODY_COMPOSITION_CHART.views.composition },
+] as const;
+
 const oneDecimal = (kilograms: number): string => (Math.round(kilograms * 10) / 10).toFixed(1);
 
 /**
@@ -33,7 +39,9 @@ const oneDecimal = (kilograms: number): string => (Math.round(kilograms * 10) / 
  * Body composition cards. A range only chooses which days are drawn, because the trend is worked out once from every
  * weigh-in and never again for a range. The screen reads the weigh-ins and works the trend out, and gives
  * both to the card: a card that read them itself would be a second reader of the whole history, and would
- * read it again as it appeared.
+ * read it again as it appeared. Given an `onViewChange` it draws the Chart view switch between the card and
+ * the range control, and in the `composition` view it draws the `composition` it is given where the weight
+ * chart and its legend would be. Without them it is the weight card alone.
  */
 export function WeightTrendCard({
   weighIns,
@@ -41,6 +49,9 @@ export function WeightTrendCard({
   today,
   range: givenRange,
   onRangeChange,
+  view = "weight",
+  onViewChange,
+  composition,
 }: WeightTrendCardProps) {
   const [ownRange, setOwnRange] = useState<WeightRange>(DEFAULT_RANGE);
   const range = givenRange ?? ownRange;
@@ -89,6 +100,14 @@ export function WeightTrendCard({
           </NativeText>
         </View>
       </Card>
+      {onViewChange === undefined ? null : (
+        <SegmentedControl
+          label={BODY_COMPOSITION_CHART.viewGroupLabel}
+          options={viewOptions}
+          value={view}
+          onChange={onViewChange}
+        />
+      )}
       <SegmentedControl
         label={WEIGHT_SCREEN.rangeGroupLabel}
         options={rangeOptions}
@@ -99,34 +118,40 @@ export function WeightTrendCard({
           onRangeChange?.(picked);
         }}
       />
-      <WeightChart
-        data={chart}
-        isSettling={trend.settling}
-        name={describeChartName(range, latestPoint.trendKg)}
-      />
-      <View className="flex-row gap-4 px-1">
-        <View className="flex-row items-center gap-[6px]">
-          <View aria-hidden className="h-[2px] w-[14px] rounded-[1px] bg-chart-trend" />
-          <Text tone="secondary" variant="caption">
-            {WEIGHT_SCREEN.legend.trend}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-[6px]">
-          <View aria-hidden className="h-[6px] w-[6px] rounded-pill bg-chart-point" />
-          <Text tone="secondary" variant="caption">
-            {WEIGHT_SCREEN.legend.weighIn}
-          </Text>
-        </View>
-        <View className="flex-row items-center gap-[6px]">
-          <View
-            aria-hidden
-            className="h-[6px] w-[6px] rounded-pill border-[1.5px] border-warning"
+      {view === "composition" && composition !== undefined ? (
+        composition
+      ) : (
+        <>
+          <WeightChart
+            data={chart}
+            isSettling={trend.settling}
+            name={describeChartName(range, latestPoint.trendKg)}
           />
-          <Text tone="secondary" variant="caption">
-            {WEIGHT_SCREEN.legend.leftOut}
-          </Text>
-        </View>
-      </View>
+          <View className="flex-row gap-4 px-1">
+            <View className="flex-row items-center gap-[6px]">
+              <View aria-hidden className="h-[2px] w-[14px] rounded-[1px] bg-chart-trend" />
+              <Text tone="secondary" variant="caption">
+                {WEIGHT_SCREEN.legend.trend}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-[6px]">
+              <View aria-hidden className="h-[6px] w-[6px] rounded-pill bg-chart-point" />
+              <Text tone="secondary" variant="caption">
+                {WEIGHT_SCREEN.legend.weighIn}
+              </Text>
+            </View>
+            <View className="flex-row items-center gap-[6px]">
+              <View
+                aria-hidden
+                className="h-[6px] w-[6px] rounded-pill border-[1.5px] border-warning"
+              />
+              <Text tone="secondary" variant="caption">
+                {WEIGHT_SCREEN.legend.leftOut}
+              </Text>
+            </View>
+          </View>
+        </>
+      )}
     </View>
   );
 }
