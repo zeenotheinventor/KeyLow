@@ -17,7 +17,7 @@ export type BodyCompositionKind =
  * readings, or read with the card to draw over the range. Data that is showing stays when it is read
  * again, so a refresh never turns a card back into a loading state. A failure with a read under way
  * counts as loading, so Try again shows that it is working. The trend is worked out by `useBodyTrend`,
- * and only the range's change and line are worked out here.
+ * and only the range's change and line are worked out here. A settling trend has the line and no change.
  */
 export function useBodyCompositionKind(
   kind: BodyMeasurementKind,
@@ -35,10 +35,15 @@ export function useBodyCompositionKind(
       return undefined;
     }
     const base = { kind, trend: latest.trend, range };
-    if (trend.settling) {
-      return { ...base, state: "settling", readingCount: latest.nObs };
-    }
     const pointsInRange = bodyPointsInRange(trend.points, range, today);
+    if (trend.settling) {
+      return {
+        ...base,
+        state: "settling",
+        readingCount: latest.nObs,
+        line: pointsInRange.length === 0 ? null : bodyLineSeries(pointsInRange, range, today),
+      };
+    }
     const change = bodyChangeOverRange(trend.points, range, today);
 
     return change === null || pointsInRange.length < 2

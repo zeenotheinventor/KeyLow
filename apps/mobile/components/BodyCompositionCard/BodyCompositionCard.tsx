@@ -17,8 +17,9 @@ import type { BodyCompositionCardProps } from "./types";
  * One labelled value of the Weight screen's Body composition section, full width: the label and one badge
  * on the first row, the trend to one decimal with its unit and the 128 by 40 trend line, and under them
  * the reason when there is no change to show. A settled trend with a change has the change badge and the
- * line. A trend that is still settling has the "Settling" badge and the count so far, and a range with
- * fewer than two readings has the reason, and neither has a change badge or a line.
+ * line. A trend that is still settling has the "Settling" badge, the count so far and the line when the
+ * range holds a point of it, with no change badge. A range with fewer than two readings has the reason,
+ * with no badge and no line.
  */
 export function BodyCompositionCard(props: BodyCompositionCardProps) {
   const { kind, trend, range } = props;
@@ -47,7 +48,7 @@ export function BodyCompositionCard(props: BodyCompositionCardProps) {
             </NativeText>
             <Text tone="secondary">{unit}</Text>
           </View>
-          {props.state === "chart" ? (
+          {(props.state === "chart" || props.state === "settling") && props.line !== null ? (
             <Sparkline
               label={describeBodyChartName(kind, range, trend)}
               points={props.line}

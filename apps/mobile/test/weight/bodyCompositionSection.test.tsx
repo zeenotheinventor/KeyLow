@@ -257,7 +257,7 @@ describe("BodyCompositionSection", () => {
   });
 
   describe("settling", () => {
-    it("should show the value, Settling and the count, with no change badge and no line", async () => {
+    it("should show the value, Settling and the count, with the trend line and no change badge", async () => {
       weightBackend.bodyMeasurements = [
         ...readings("body_fat_pct", 22.8, 22.4, 3),
         ...readings("lean_mass_kg", 63.2, 63.1, 3),
@@ -269,7 +269,43 @@ describe("BodyCompositionSection", () => {
       expect(bodyFatCard().getByText("Settling")).toBeOnTheScreen();
       expect(bodyFatCard().getByText("Settles after 7 readings. 3 of 7 so far.")).toBeOnTheScreen();
       expect(screen.queryByText(/ over 90 days/)).not.toBeOnTheScreen();
+      expect(
+        screen.getByRole("img", { name: /^Body fat over the last 90 days, trend / }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("img", { name: /^Lean mass over the last 90 days, trend / }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should draw no trend line when every reading is before the range", async () => {
+      weightBackend.bodyMeasurements = [
+        ...readings("body_fat_pct", 22.8, 22.4, 3, 20),
+        ...readings("lean_mass_kg", 63.2, 63.1, 3, 20),
+      ];
+      await renderSection({ range: 7 });
+
+      await screen.findByLabelText("Body fat");
+
+      expect(bodyFatCard().getByText("Settling")).toBeOnTheScreen();
       expect(screen.queryByRole("img")).not.toBeOnTheScreen();
+    });
+
+    it("should redraw the trend line for the new range when the range changes", async () => {
+      weightBackend.bodyMeasurements = [
+        ...readings("body_fat_pct", 22.8, 22.4, 3, 20),
+        ...readings("lean_mass_kg", 63.2, 63.1, 3, 20),
+      ];
+      const { changeRange } = await renderSection({ range: 7 });
+
+      await screen.findByLabelText("Body fat");
+
+      expect(screen.queryByRole("img")).not.toBeOnTheScreen();
+
+      await changeRange(30);
+
+      expect(
+        await screen.findByRole("img", { name: /^Body fat over the last 30 days, trend / }),
+      ).toBeOnTheScreen();
     });
 
     it("should count the readings and not the days, when a day has none", async () => {
