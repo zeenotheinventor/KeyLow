@@ -20,11 +20,13 @@ export type BodyCompositionChartCardProps = BodyCompositionCardBaseProps & {
   line: readonly (number | null)[];
 };
 
-/** Fewer than 7 readings: the value and the count so far, with no change and no line. */
+/** Fewer than 7 readings: the value, the count so far and the line when the range has a point, with no change. */
 export type BodyCompositionSettlingCardProps = BodyCompositionCardBaseProps & {
   state: "settling";
   /** How many readings the trend has so far. */
   readingCount: number;
+  /** The trend for each day of the range as on a settled card, or `null` when no point is in the range. */
+  line: readonly (number | null)[] | null;
 };
 
 /** A range with fewer than two readings in it: the value and the reason, with no change and no line. */

@@ -50,9 +50,28 @@ export const LeanMass: Story = {
   },
 };
 
-// Fewer than 7 readings: the Settling badge and the count so far, with no change and no line.
+// Fewer than 7 readings with no point in the range: the Settling badge and the count so far, with no line.
 export const Settling: Story = {
-  args: { state: "settling", kind: "body_fat_pct", trend: 22.6, range: 90, readingCount: 3 },
+  args: {
+    state: "settling",
+    kind: "body_fat_pct",
+    trend: 22.6,
+    range: 90,
+    readingCount: 3,
+    line: null,
+  },
+};
+
+// Fewer than 7 readings with a point in the range: the same card with the trend line beside the value.
+export const SettlingWithLine: Story = {
+  args: {
+    state: "settling",
+    kind: "body_fat_pct",
+    trend: 22.6,
+    range: 90,
+    readingCount: 3,
+    line: [...Array.from<null>({ length: 87 }).fill(null), 22.8, 22.7, 22.6],
+  },
 };
 
 // A range with fewer than two readings: the value and the reason, with no change and no line.

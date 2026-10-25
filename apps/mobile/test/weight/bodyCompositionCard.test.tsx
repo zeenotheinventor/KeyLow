@@ -132,25 +132,73 @@ describe("BodyCompositionCard", () => {
   describe("while the trend settles", () => {
     const settling: BodyCompositionCardProps = {
       kind: "body_fat_pct",
-      trend: 22.6,
+      trend: 22.44,
       range: 90,
       state: "settling",
       readingCount: 3,
+      line,
     };
 
     it("should show the value, the Settling badge and how many readings it has", async () => {
       await renderCard(settling);
 
-      expect(screen.getByText("22.6")).toBeOnTheScreen();
-      expect(screen.getByText("Settling")).toBeOnTheScreen();
-      expect(screen.getByText("Settles after 7 readings. 3 of 7 so far.")).toBeOnTheScreen();
+      const card = within(screen.getByLabelText("Body fat"));
+
+      expect(card.getByText("22.4")).toBeOnTheScreen();
+      expect(card.getByText("%")).toBeOnTheScreen();
+      expect(card.getByText("Settling")).toBeOnTheScreen();
+      expect(card.getByText("Settles after 7 readings. 3 of 7 so far.")).toBeOnTheScreen();
     });
 
-    it("should have no change badge and no trend line", async () => {
+    it("should draw the trend line as an image named by the kind, the span and the trend", async () => {
       await renderCard(settling);
 
+      expect(
+        screen.getByRole("img", { name: "Body fat over the last 90 days, trend 22.4 %" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should name the line for lean mass", async () => {
+      await renderCard({ ...settling, kind: "lean_mass_kg", trend: 63.14 });
+
+      expect(
+        screen.getByRole("img", { name: "Lean mass over the last 90 days, trend 63.1 kg" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should draw the line wide, as the settled card does", async () => {
+      await renderCard(settling);
+
+      const canvases = screen.root?.queryAll((node) => node.type === "Canvas") ?? [];
+
+      expect(canvases[0]).toHaveStyle({ width: 128, height: 40 });
+    });
+
+    it("should have no change badge", async () => {
+      await renderCard(settling);
+
+      expect(screen.queryByText(/points over/)).not.toBeOnTheScreen();
       expect(screen.queryByText(/over 90 days/)).not.toBeOnTheScreen();
+    });
+
+    it("should draw no trend line when it has no line", async () => {
+      await renderCard({ ...settling, line: null });
+
+      expect(screen.getByText("Settling")).toBeOnTheScreen();
       expect(screen.queryByRole("img")).not.toBeOnTheScreen();
+    });
+
+    it("should write no reading to the console", async () => {
+      const spies = (["log", "warn", "error", "info"] as const).map((method) =>
+        jest.spyOn(console, method).mockImplementation(() => undefined),
+      );
+
+      await renderCard(settling);
+
+      spies.forEach((spy) => {
+        expect(spy).not.toHaveBeenCalled();
+        spy.mockRestore();
+      });
     });
   });
 

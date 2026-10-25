@@ -1,1 +1,8 @@
-export const storyStates = ["BodyFat", "LeanMass", "Settling", "RangeEmpty", "Loading"];
+export const storyStates = [
+  "BodyFat",
+  "LeanMass",
+  "Settling",
+  "SettlingWithLine",
+  "RangeEmpty",
+  "Loading",
+];
