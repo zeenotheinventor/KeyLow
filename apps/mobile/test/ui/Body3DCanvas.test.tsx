@@ -4,6 +4,7 @@ import { makeMutable } from "react-native-reanimated";
 
 import { Body3DCanvas } from "../../components/ui/Body3D/Body3DCanvas";
 import { looksOf } from "../../components/ui/Body3D/looks";
+import { FRAME_ASPECT, wholeBodyView } from "../support/zoomView";
 
 import type { Body3DCanvasProps } from "../../components/ui/Body3D/types";
 import type { RootState } from "@react-three/fiber/native";
@@ -64,7 +65,9 @@ async function createRenderer(onError?: () => void) {
       looks={looks}
       onError={onError}
       scheme="dark"
+      view={wholeBodyView()}
       yaw={makeMutable(0)}
+      frameAspect={FRAME_ASPECT}
     />,
   );
   mockCanvasProps.onCreated?.({ gl } as unknown as RootState);

@@ -107,8 +107,10 @@ export const BODY_MAP = {
   sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
   /** What the Front / Back control does to the 3D body, for a screen reader, since a drag alone must not be the only way. */
   sideSwitchDescription: "Turns the body to face front or back.",
-  /** The hint under the 3D body. Later gestures add to it: the board ends "Pinch to zoom · Long-press a muscle for details". */
-  rotateHint: "Drag to turn",
+  /** The hint under the 3D body. The long-press gesture adds to it: the board ends "Long-press a muscle for details". */
+  rotateHint: "Drag to turn · Pinch to zoom",
+  /** The Reset button over the zoomed 3D body, which shows while it is zoomed. The name is for a screen reader, since the visible label is one word. */
+  zoom: { reset: "Reset", resetName: "Reset zoom" },
   /** Over the 2D figure while the 3D body loads, at the corner of the stage. It goes when the 3D body has drawn or has failed. */
   loading3d: "Loading 3D…",
   /** Added to the figure's name while the 3D body loads, as the loading board names it. */
@@ -374,6 +376,9 @@ export const describeBodyFigureLabel = ({
   const name = `${BODY_MAP.title}, ${viewLabel}, ${SCALE_WORDS[scale]}, ${side}`;
   return hint === null ? name : `${name}. ${BODY_MAP.figureHints[hint]}`;
 };
+
+/** The zoom of the 3D body as the pill over it shows it: to one decimal place, with no trailing ".0", such as "2×" and "1.5×". */
+export const describeZoomLevel = (zoom: number): string => `${Number(zoom.toFixed(1))}×`;
 
 /** The figure's name while the 3D body loads: the name, then that 3D is loading. */
 export const describeBodyFigureLoading3d = (label: string): string =>

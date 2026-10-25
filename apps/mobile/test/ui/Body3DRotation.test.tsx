@@ -68,6 +68,11 @@ function drag(...distances: number[]) {
   ]);
 }
 
+// The test ids of the gestures that were built, in the order they were built, so a count says which gesture was built.
+const testIdsOf = <Built extends { config: { testId?: string | undefined } }>(
+  results: jest.MockResult<Built>[],
+) => results.flatMap((result) => (result.type === "return" ? [result.value.config.testId] : []));
+
 function tapAt(down: { x: number; y: number }, up: { x: number; y: number }) {
   fireGestureHandler(tapGesture(), [
     { state: State.BEGAN, ...down },
@@ -478,8 +483,8 @@ describe("Body3D turning", () => {
       await rerender(<Body props={{ side: "back", onSideChange: jest.fn(), onTap: jest.fn() }} />);
       await rerender(<Body props={{ side: "front", onSideChange: jest.fn(), onTap: jest.fn() }} />);
 
-      expect(buildPan).toHaveBeenCalledTimes(1);
-      expect(buildTap).toHaveBeenCalledTimes(1);
+      expect(testIdsOf(buildPan.mock.results).sort()).toEqual(["body-3d-pan", "body-3d-zoom-pan"]);
+      expect(testIdsOf(buildTap.mock.results)).toEqual(["body-3d-tap"]);
     });
 
     it("should call the latest callbacks, not the ones from when the drag began", async () => {

@@ -15,6 +15,10 @@ export type BodyViewProps = BodyFigureProps & {
   onSideChange?: ((side: BodyArtworkSide) => void) | undefined;
   /** Called once for a touch on the 3D body that lifts within the tap slop of where it went down. A drag never calls it. */
   onTap?: (() => void) | undefined;
+  /** Called with the zoom of the 3D body, to one decimal place, when a pinch or a two-finger pan lets go and when a reset starts. 1 is the whole body. */
+  onZoomChange?: ((zoom: number) => void) | undefined;
+  /** Raise it to ease the 3D body back to the whole body, centred. See `Body3D`. */
+  zoomResetCount?: number | undefined;
   /**
    * The scheme to draw the 3D body in, for a stage that is dark in both themes. The 2D figure keeps the app's
    * theme, since it shows on the clear stage. Left out, the 3D body takes the app's theme.

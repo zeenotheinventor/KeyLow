@@ -1,4 +1,4 @@
-export { BODY_FIELD_OF_VIEW_DEGREES, frameBody } from "./frameBody";
+export { BODY_FIELD_OF_VIEW_DEGREES, frameBody, pointsPerMetre } from "./frameBody";
 export type { CameraPosition } from "./frameBody";
 export { bodyMaterials, colourFixedMaterials } from "./bodyMaterials";
 export type { BodyColours, BodyMaterials } from "./bodyMaterials";

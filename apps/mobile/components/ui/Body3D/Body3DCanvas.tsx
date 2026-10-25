@@ -6,7 +6,9 @@ import {
   createLookFade,
   dressBody,
   frameBody,
+  pointsPerMetre,
 } from "@keylow/body-3d";
+import { cameraShift } from "@keylow/body-3d/zoom";
 import maleBody from "@keylow/body-model/male.glb";
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
 import { Suspense, use, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -16,9 +18,15 @@ import { scheduleOnRN } from "react-native-worklets";
 import { bundledModel } from "./bundledModel";
 
 import type { Body3DCanvasProps } from "./types";
+import type { CameraPosition } from "@keylow/body-3d";
+import type { ZoomView } from "@keylow/body-3d/zoom";
+import type { RootState } from "@react-three/fiber/native";
+import type { SharedValue } from "react-native-reanimated";
 import type { Group } from "three";
 
 const MILLISECONDS_PER_SECOND = 1000;
+
+type SceneCamera = RootState["camera"];
 
 /**
  * Turns the body by `yaw` about the vertical line through (`centreX`, `centreZ`), the middle of its box, so it
@@ -36,9 +44,50 @@ function turnAboutCentre(group: Group, yaw: number, centreX: number, centreZ: nu
   );
 }
 
+// The camera R3F makes from the `camera` prop is a perspective one, which has a zoom.
+function hasZoom(camera: SceneCamera): camera is SceneCamera & { zoom: number } {
+  return "zoom" in camera && typeof camera.zoom === "number";
+}
+
+/**
+ * Zooms the camera about the middle of its view, and moves it so the body is moved on the stage by the view's
+ * offset. The projection is rebuilt only when the zoom changed.
+ */
+function zoomCamera(
+  camera: SceneCamera,
+  framed: CameraPosition,
+  view: ZoomView,
+  metrePoints: number,
+) {
+  const shift = cameraShift(view, metrePoints);
+  camera.position.set(framed[0] + shift.x, framed[1] + shift.y, framed[2]);
+  if (hasZoom(camera) && camera.zoom !== view.zoom) {
+    camera.zoom = view.zoom;
+    camera.updateProjectionMatrix();
+  }
+}
+
+/** Asks for the next frame whenever the shared value changes, because the loop draws only on demand. */
+function useInvalidateOnChange<Value>(value: SharedValue<Value>, invalidate: () => void) {
+  useAnimatedReaction(
+    () => value.get(),
+    () => {
+      scheduleOnRN(invalidate);
+    },
+    [value, invalidate],
+  );
+}
+
 type BodyMeshesProps = Pick<
   Body3DCanvasProps,
-  "colours" | "looks" | "emphasis" | "fadeMilliseconds" | "yaw" | "onFirstFrame"
+  | "colours"
+  | "looks"
+  | "emphasis"
+  | "fadeMilliseconds"
+  | "yaw"
+  | "view"
+  | "frameAspect"
+  | "onFirstFrame"
 >;
 
 function BodyMeshes({
@@ -47,12 +96,14 @@ function BodyMeshes({
   emphasis,
   fadeMilliseconds,
   yaw,
+  view,
+  frameAspect,
   onFirstFrame,
 }: BodyMeshesProps) {
   const model = use(bundledModel(maleBody));
   const camera = useThree((state) => state.camera);
   const invalidate = useThree((state) => state.invalidate);
-  const aspect = useThree((state) => state.size.width / state.size.height);
+  const viewHeight = useThree((state) => state.size.height);
   const hasReportedFrame = useRef(false);
   const { muscle, otherMuscle, core, clay, skin } = colours;
   // The first colours and looks dress the body once. A change of theme or of values then moves the materials it
@@ -79,15 +130,11 @@ function BodyMeshes({
     },
     [dressed],
   );
+  // The zoom and the pan are one shared value too, moved by a pinch, a two-finger pan and a reset, and read below.
+  useInvalidateOnChange(view, invalidate);
   // The turn is a shared value that a drag and a settle move off the render loop. The loop draws only on demand,
   // so every change of it asks for the next frame, which reads it below. No React render is involved.
-  useAnimatedReaction(
-    () => yaw.get(),
-    () => {
-      scheduleOnRN(invalidate);
-    },
-    [yaw, invalidate],
-  );
+  useInvalidateOnChange(yaw, invalidate);
   // The parts that are not muscles change colour at once with the theme. The frame is drawn on demand.
   useLayoutEffect(() => {
     colourFixedMaterials(dressed.materials, { muscle, otherMuscle, core, clay, skin });
@@ -98,12 +145,18 @@ function BodyMeshes({
     lookFade.moveTo(looks, emphasis, fadeMilliseconds);
     invalidate();
   }, [lookFade, looks, emphasis, fadeMilliseconds, invalidate]);
-  // The whole body, head to feet, whatever the shape of the view. It looks straight along the z axis, which is where R3F points the camera.
+  // The whole body, head to feet, as the body's own view is shaped, however wide the canvas is. It looks straight
+  // along the z axis, which is where R3F points the camera. A wider canvas shows the same body at the same size.
+  const framed = useMemo(() => frameBody(dressed.box, frameAspect), [dressed, frameAspect]);
+  const metrePoints = useMemo(
+    () => pointsPerMetre(dressed.box, frameAspect, viewHeight),
+    [dressed, frameAspect, viewHeight],
+  );
   useLayoutEffect(() => {
-    camera.position.set(...frameBody(dressed.box, aspect));
+    camera.position.set(...framed);
     camera.updateProjectionMatrix();
     invalidate();
-  }, [camera, dressed, aspect, invalidate]);
+  }, [camera, framed, invalidate]);
   // The meshes are in the scene by now, so the first frame that runs is the first one that draws them.
   useFrame((_, deltaSeconds) => {
     if (!hasReportedFrame.current) {
@@ -111,6 +164,7 @@ function BodyMeshes({
       onFirstFrame?.();
     }
     turnAboutCentre(dressed.group, yaw.get(), centreX, centreZ);
+    zoomCamera(camera, framed, view.get(), metrePoints);
     // The loop draws only on demand, so a fade that is not over asks for the next frame itself.
     if (lookFade.step(deltaSeconds * MILLISECONDS_PER_SECOND)) {
       invalidate();
@@ -122,7 +176,7 @@ function BodyMeshes({
 
 /**
  * The GL view: a transparent canvas, a camera that frames the body, two lights and the male body, its muscles easing to their looks and
- * the body turning with `yaw`. It draws
+ * the body turning with `yaw` and zoomed and moved with `view`. It draws
  * with no tone mapping, so the colours are the tokens'. The native canvas always draws at the device's pixel ratio,
  * because expo-gl cannot render at any other, so it takes no `dpr` to cap at 2.
  */
@@ -133,6 +187,8 @@ export function Body3DCanvas({
   emphasis,
   fadeMilliseconds,
   yaw,
+  view,
+  frameAspect,
   onFirstFrame,
   onError,
 }: Body3DCanvasProps) {
@@ -162,7 +218,9 @@ export function Body3DCanvas({
           fadeMilliseconds={fadeMilliseconds}
           looks={looks}
           onFirstFrame={onFirstFrame}
+          view={view}
           yaw={yaw}
+          frameAspect={frameAspect}
         />
       </Suspense>
     </Canvas>
