@@ -12,6 +12,7 @@ import {
 import PortionPickerRoute from "../../app/foods/[id]/log";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -60,6 +61,7 @@ const pickerTree = () => (
 const amountField = () => screen.getByLabelText(/^Amount/);
 
 describe("the portion picker when the portions are replaced under it", () => {
+  const amountSelection = trackFieldSelection();
   let kitStyles: string;
 
   beforeAll(async () => {
@@ -107,6 +109,31 @@ describe("the portion picker when the portions are replaced under it", () => {
 
     expect(screen.getByRole("radio", { name: "Box of 6", checked: true })).toBeOnTheScreen();
     expect(screen.getByRole("button", { name: "Add" })).toBeEnabled();
+  });
+
+  it("should not move focus or the selection, because a refresh is not a press of a chip", async () => {
+    await render(pickerTree());
+
+    Object.assign(portionsQuery, { data: withNewIds(portionFixtures) });
+    await screen.rerender(pickerTree());
+
+    expect(amountSelection.focus).not.toHaveBeenCalled();
+    expect(amountSelection.setSelection).not.toHaveBeenCalled();
+  });
+
+  it("should not move focus or the selection when the chosen chip is gone and the picker moves to the default", async () => {
+    const user = userEvent.setup();
+    await render(pickerTree());
+    await user.press(screen.getByRole("radio", { name: "Box of 6" }));
+    amountSelection.focus.mockClear();
+    amountSelection.setSelection.mockClear();
+
+    Object.assign(portionsQuery, { data: withNewIds(portionFixtures.slice(0, 1)) });
+    await screen.rerender(pickerTree());
+
+    expect(screen.getByRole("radio", { name: "1 bar", checked: true })).toBeOnTheScreen();
+    expect(amountSelection.focus).not.toHaveBeenCalled();
+    expect(amountSelection.setSelection).not.toHaveBeenCalled();
   });
 
   it("should not show the old id as the unit of the amount", async () => {

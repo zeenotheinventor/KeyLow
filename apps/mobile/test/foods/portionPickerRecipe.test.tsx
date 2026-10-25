@@ -8,6 +8,7 @@ import { setUpTests } from "react-native-reanimated";
 import { goldenRecipe } from "./support/recipeFixtures";
 import { PortionPicker } from "../../components/PortionPicker";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
@@ -60,6 +61,7 @@ async function typeAmount(text: string) {
 }
 
 describe("PortionPicker in recipe mode", () => {
+  const amountSelection = trackFieldSelection();
   let kitStyles: string;
 
   beforeAll(async () => {
@@ -193,6 +195,49 @@ describe("PortionPicker in recipe mode", () => {
       await user.press(screen.getByRole("radio", { name: "g" }));
 
       expect(screen.queryByText(/No cooked weight is set/)).not.toBeOnTheScreen();
+    });
+  });
+
+  describe("choosing a unit puts the cursor in the amount", () => {
+    it("should focus nothing when the picker is drawn", async () => {
+      await renderPicker();
+
+      expect(amountSelection.focus).not.toHaveBeenCalled();
+      expect(amountSelection.setSelection).not.toHaveBeenCalled();
+    });
+
+    it("should focus the amount and select the whole of 100 when g is chosen", async () => {
+      const { user } = await renderPicker();
+      await typeAmount("2");
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(screen.getByLabelText("Amount (g)")).toHaveDisplayValue("100");
+      expect(amountSelection.focus).toHaveBeenCalledTimes(1);
+      expect(amountSelection.setSelection).toHaveBeenCalledWith(0, "100".length);
+      expect(amountSelection.focusedThenSelected()).toBe(true);
+    });
+
+    it("should select the 1 when 1 serving is chosen again", async () => {
+      const { user } = await renderPicker();
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      await user.press(screen.getByRole("radio", { name: "1 serving" }));
+
+      expect(screen.getByLabelText("Amount (serving)")).toHaveDisplayValue("1");
+      expect(amountSelection.setSelection).toHaveBeenLastCalledWith(0, 1);
+    });
+
+    it("should select the typed amount when the chosen chip is pressed again", async () => {
+      const { user } = await renderPicker();
+      await user.press(screen.getByRole("radio", { name: "g" }));
+      await typeAmount("300");
+
+      await user.press(screen.getByRole("radio", { name: "g" }));
+
+      expect(screen.getByLabelText("Amount (g)")).toHaveDisplayValue("300");
+      expect(amountSelection.focus).toHaveBeenCalledTimes(2);
+      expect(amountSelection.setSelection).toHaveBeenLastCalledWith(0, "300".length);
     });
   });
 

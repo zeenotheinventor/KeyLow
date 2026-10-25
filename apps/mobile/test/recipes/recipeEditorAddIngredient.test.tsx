@@ -21,6 +21,7 @@ import { setUpTests } from "react-native-reanimated";
 import { RecipeEditor } from "../../components/RecipeEditor";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import {
   createDiaryQueryClient,
   diaryBackend,
@@ -367,6 +368,9 @@ function findsSpinach() {
     local: [hitOf(spinach, 0.9), hitOf(matureSpinach, 0.8)],
   });
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("adding an ingredient from the recipe editor", () => {
   let kitStyles: string;

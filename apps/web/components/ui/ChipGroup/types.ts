@@ -10,5 +10,10 @@ export type ChipGroupProps<Value extends string> = {
   options: readonly ChipGroupOption<Value>[];
   value: Value;
   onChange: (value: Value) => void;
+  /**
+   * Called after `onChange` on every click on a chip, the chosen one included, which `onChange` alone never
+   * hears. The arrow, Home and End keys walk the chips and do not call it.
+   */
+  onChipPress?: ((value: Value) => void) | undefined;
   className?: string;
 };

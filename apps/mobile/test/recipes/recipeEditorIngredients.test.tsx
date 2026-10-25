@@ -19,6 +19,7 @@ import { setUpTests } from "react-native-reanimated";
 import { RecipeEditor } from "../../components/RecipeEditor";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
@@ -228,6 +229,9 @@ function expectChips(names: string[]) {
     expect(chips[index]).toHaveAccessibleName(name);
   });
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("the recipe editor's ingredient rows", () => {
   let kitStyles: string;

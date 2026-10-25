@@ -19,6 +19,7 @@ import PortionPickerRoute from "../../app/foods/[id]/log";
 import ScanRoute from "../../app/foods/scan";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
+import { trackFieldSelection } from "../support/amountFieldSelection";
 import { resetCameraMock, scanBarcode } from "../support/expoCameraMock";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
@@ -101,6 +102,9 @@ async function renderPickerFromScan() {
     </ThemeProvider>,
   );
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("barcode to log", () => {
   let kitStyles: string;

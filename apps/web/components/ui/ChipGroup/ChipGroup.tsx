@@ -32,6 +32,7 @@ export function ChipGroup<Value extends string>({
   options,
   value,
   onChange,
+  onChipPress,
   className,
 }: ChipGroupProps<Value>) {
   const chips = useRef<(HTMLButtonElement | null)[]>([]);
@@ -60,6 +61,7 @@ export function ChipGroup<Value extends string>({
           tabIndex={index === tabbableIndex ? 0 : -1}
           onClick={() => {
             onChange(option.value);
+            onChipPress?.(option.value);
           }}
           onKeyDown={(event) => {
             if (event.altKey || event.metaKey || event.ctrlKey) return;

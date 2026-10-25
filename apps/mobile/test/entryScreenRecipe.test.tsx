@@ -19,6 +19,7 @@ import EntryRoute from "../app/entry/[id]";
 import { entryRowProps } from "../components/DiaryScreen/entryRowProps";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
+import { trackFieldSelection } from "./support/amountFieldSelection";
 import {
   boardRecipeTotal,
   createDiaryQueryClient,
@@ -159,6 +160,9 @@ async function chooseTime(
     expect(screen.queryByRole("button", { name: "Done" })).not.toBeOnTheScreen();
   });
 }
+
+// Pressing a unit chip selects the amount, which the jest preset's text field cannot do.
+trackFieldSelection();
 
 describe("the entry screen for a logged recipe", () => {
   let kitStyles: string;

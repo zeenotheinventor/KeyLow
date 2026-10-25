@@ -18,6 +18,8 @@ type ChipGroupSharedProps<Value extends string> = {
   layout?: ChipGroupLayout | undefined;
   /** Classes for the group itself, for the screen's layout. */
   className?: string;
+  /** Hears every press of a chip, the chosen one too, after `onChange` where that runs. For a screen that does something more than change the choice, such as moving focus to the field the chip belongs to. */
+  onChipPress?: (value: Value) => void;
 };
 
 /** Picks one of a few options as chips, such as the unit an amount is in. */

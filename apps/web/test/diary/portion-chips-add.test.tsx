@@ -361,3 +361,48 @@ describe("pressing a different chip", () => {
     expect(entry.quantity).toBe(1);
   });
 });
+
+describe("pressing a chip puts the cursor in the amount with the whole number selected", () => {
+  it("should select the new unit's starting amount, not the old number", () => {
+    openFood(banana);
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    const field = amountField("g");
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty("value", "100");
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 3);
+  });
+
+  it("should select a typed amount again when the chip already chosen is pressed", () => {
+    openFood(oliveOil);
+    typeAmount("g", "250");
+
+    fireEvent.click(screen.getByRole("radio", { name: "g" }));
+
+    const field = amountField("g");
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty("value", "250");
+    expect(field).toHaveProperty("selectionStart", 0);
+    expect(field).toHaveProperty("selectionEnd", 3);
+  });
+
+  it("should leave the number unselected when the dialog opens", () => {
+    openFood(banana);
+
+    const field = amountField("medium");
+    expect(document.activeElement).toBe(field);
+    expect(field).toHaveProperty("value", "1");
+    expect(field).toHaveProperty("selectionStart", 1);
+    expect(field).toHaveProperty("selectionEnd", 1);
+  });
+
+  it("should keep the focus in the chips when an arrow key walks them", () => {
+    openFood(banana);
+
+    fireEvent.keyDown(screen.getByRole("radio", { name: "1 medium" }), { key: "ArrowRight" });
+
+    expect(document.activeElement).toBe(screen.getByRole("radio", { name: "1 large" }));
+  });
+});

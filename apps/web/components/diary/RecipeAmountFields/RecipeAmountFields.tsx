@@ -18,6 +18,7 @@ import { useId } from "react";
 import type { RecipeAmountFieldsProps } from "./types";
 import type { RecipeEntryUnit } from "@keylow/core/diary";
 
+import { useSelectAmountOnChipPress } from "@/components/diary/useSelectAmountOnChipPress";
 import { MacroHero } from "@/components/foods/FoodDetail/MacroHero";
 import { Badge } from "@/components/ui/Badge";
 import { ChipGroup } from "@/components/ui/ChipGroup";
@@ -49,6 +50,7 @@ export function RecipeAmountFields({
   recipeNotice,
 }: RecipeAmountFieldsProps) {
   const noteId = useId();
+  const { amountFieldRef, onChipPress } = useSelectAmountOnChipPress(amountRef);
   const { servings, yield_grams: yieldGrams } = recipe;
   const { unit, typed } = draft;
   // Grams of a recipe with no cooked weight are of the raw ingredients, which the fields say.
@@ -95,7 +97,7 @@ export function RecipeAmountFields({
       <NutrientTable caption={describeRecipePer100Heading(yieldGrams)} rows={per100Rows} />
       <div className="grid items-end gap-3 min-[700px]:grid-cols-[160px_1fr]">
         <NumericInput
-          ref={amountRef}
+          ref={amountFieldRef}
           label={PORTION_PICKER.amountLabel}
           unit={unitSuffix}
           value={draft.quantityText}
@@ -109,6 +111,7 @@ export function RecipeAmountFields({
           options={UNIT_OPTIONS}
           value={unit}
           onChange={draft.setUnit}
+          onChipPress={onChipPress}
         />
       </div>
       <TimeField value={time} isNow={isNow} onChange={onTimeChange} />
