@@ -12,11 +12,14 @@ import {
   waitFor,
   within,
 } from "@testing-library/react-native";
+import { Pressable, Text } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import QuickAddRoute from "../../app/foods/quick-add";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider, usePlate } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
+import { oatBarInGrams } from "../plate/support/plateItems";
 import {
   createDiaryQueryClient,
   diaryBackend,
@@ -77,6 +80,23 @@ function seedAcceptedTerms(client: QueryClient) {
   });
 }
 
+// What the search does when a plus is pressed, so the sheet's plate has a food on it before the form is used.
+function PutOatBarOnThePlate() {
+  const plate = usePlate();
+
+  return (
+    <Pressable
+      role="button"
+      aria-label="Put the oat bar on the plate"
+      onPress={() => {
+        plate.add((key) => oatBarInGrams(key));
+      }}
+    >
+      <Text>Put the oat bar on the plate</Text>
+    </Pressable>
+  );
+}
+
 type Params = { day?: string; time?: string };
 
 async function renderQuickAdd(params: Params = {}, seed?: (client: QueryClient) => void) {
@@ -88,7 +108,10 @@ async function renderQuickAdd(params: Params = {}, seed?: (client: QueryClient) 
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={diaryClient} queryClient={queryClient}>
         <ToastProvider>
-          <QuickAddRoute />
+          <PlateProvider>
+            <QuickAddRoute />
+            <PutOatBarOnThePlate />
+          </PlateProvider>
         </ToastProvider>
       </KeyLowProvider>
     </ThemeProvider>,
@@ -304,6 +327,18 @@ describe("the quick add route", () => {
 
       expect(await screen.findByRole("status", { name: "Added" })).toBeOnTheScreen();
       expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+    });
+
+    it("should go back to the search, not close the sheet, when foods are on the plate", async () => {
+      const user = await renderQuickAdd({ day: "2026-10-15" });
+      await screen.findByLabelText("Calories (kcal)");
+      await user.press(screen.getByRole("button", { name: "Put the oat bar on the plate" }));
+
+      await addCrisps(user);
+
+      expect(await screen.findByRole("status", { name: "Added" })).toBeOnTheScreen();
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
     });
 
     it("should stay on the form with the Not saved banner when the save fails, and not close", async () => {

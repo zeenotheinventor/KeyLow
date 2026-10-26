@@ -3,10 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react-native";
 
 import FoodSearchRoute from "../../app/foods/index";
+import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock } from "../support/expoRouterMock";
 
 import type { Database } from "@keylow/api-client";
+
+// The search sheet guards its plate with a hold on leaving, which needs a navigator. These tests are not about leaving.
+jest.mock("expo-router/react-navigation", () => ({ usePreventRemove: () => undefined }));
 
 jest.mock(
   "expo-router",
@@ -42,7 +46,9 @@ async function renderSheetWithRealSearch() {
   await render(
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={unansweredClient}>
-        <FoodSearchRoute />
+        <PlateProvider>
+          <FoodSearchRoute />
+        </PlateProvider>
       </KeyLowProvider>
     </ThemeProvider>,
   );

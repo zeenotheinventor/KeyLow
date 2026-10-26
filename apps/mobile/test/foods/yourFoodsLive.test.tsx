@@ -5,11 +5,15 @@ import { act, cleanup, render, screen } from "@testing-library/react-native";
 
 import { foodFixture } from "./support/apiClientMock";
 import FoodSearchRoute from "../../app/foods/index";
+import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
 import type { Database } from "@keylow/api-client";
 import type { Food } from "@keylow/core/schemas";
+
+// The search sheet guards its plate with a hold on leaving, which needs a navigator. These tests are not about leaving.
+jest.mock("expo-router/react-navigation", () => ({ usePreventRemove: () => undefined }));
 
 jest.mock(
   "expo-router",
@@ -61,7 +65,9 @@ describe("Your foods, with the real list query", () => {
     await render(
       <ThemeProvider fixedPreference="dark">
         <KeyLowProvider client={client} queryClient={queryClient}>
-          <FoodSearchRoute />
+          <PlateProvider>
+            <FoodSearchRoute />
+          </PlateProvider>
         </KeyLowProvider>
       </ThemeProvider>,
     );

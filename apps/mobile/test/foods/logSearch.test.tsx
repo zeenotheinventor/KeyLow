@@ -55,6 +55,9 @@ jest.mock(
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
 
+// The search sheet guards its plate with a hold on leaving, which needs a navigator. These tests are not about leaving.
+jest.mock("expo-router/react-navigation", () => ({ usePreventRemove: () => undefined }));
+
 setUpTests();
 
 const bananaId = "77777777-7777-4777-8777-777777777777";
@@ -209,7 +212,9 @@ describe("food search sheet in log mode", () => {
       routerMock.searchParams = {};
       await render(
         <ThemeProvider fixedPreference="dark">
-          <FoodSearchRoute />
+          <PlateProvider>
+            <FoodSearchRoute />
+          </PlateProvider>
         </ThemeProvider>,
       );
 
