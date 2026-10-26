@@ -72,6 +72,69 @@ export type Database = {
           },
         ];
       };
+      assistant_actions: {
+        Row: {
+          conversation_id: string | null;
+          created_at: string;
+          id: string;
+          target_id: string | null;
+          target_ids: string[] | null;
+          target_local_date: string | null;
+          target_table: string;
+          target_updated_at: string | null;
+          tool: string;
+          turn_id: string | null;
+          turn_seq: number;
+          undone_at: string | null;
+          user_id: string;
+        };
+        Insert: {
+          conversation_id?: string | null;
+          created_at?: string;
+          id?: string;
+          target_id?: string | null;
+          target_ids?: string[] | null;
+          target_local_date?: string | null;
+          target_table: string;
+          target_updated_at?: string | null;
+          tool: string;
+          turn_id?: string | null;
+          turn_seq: number;
+          undone_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          conversation_id?: string | null;
+          created_at?: string;
+          id?: string;
+          target_id?: string | null;
+          target_ids?: string[] | null;
+          target_local_date?: string | null;
+          target_table?: string;
+          target_updated_at?: string | null;
+          tool?: string;
+          turn_id?: string | null;
+          turn_seq?: number;
+          undone_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "assistant_actions_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "assistant_conversations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "assistant_actions_turn_id_fkey";
+            columns: ["turn_id"];
+            isOneToOne: false;
+            referencedRelation: "assistant_turns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       assistant_conversations: {
         Row: {
           compacted_through_turn_id: string | null;
@@ -190,6 +253,57 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      assistant_usage: {
+        Row: {
+          cache_creation_input_tokens: number;
+          cache_read_input_tokens: number;
+          cost_usd_micros: number;
+          created_at: string;
+          id: string;
+          input_tokens: number;
+          latency_ms: number;
+          model: string;
+          output_tokens: number;
+          route: string;
+          stop_reason: string | null;
+          transport: string;
+          turn_id: string;
+          user_id: string;
+        };
+        Insert: {
+          cache_creation_input_tokens: number;
+          cache_read_input_tokens: number;
+          cost_usd_micros: number;
+          created_at?: string;
+          id?: string;
+          input_tokens: number;
+          latency_ms: number;
+          model: string;
+          output_tokens: number;
+          route: string;
+          stop_reason?: string | null;
+          transport: string;
+          turn_id: string;
+          user_id: string;
+        };
+        Update: {
+          cache_creation_input_tokens?: number;
+          cache_read_input_tokens?: number;
+          cost_usd_micros?: number;
+          created_at?: string;
+          id?: string;
+          input_tokens?: number;
+          latency_ms?: number;
+          model?: string;
+          output_tokens?: number;
+          route?: string;
+          stop_reason?: string | null;
+          transport?: string;
+          turn_id?: string;
+          user_id?: string;
+        };
+        Relationships: [];
       };
       body_measurements: {
         Row: {
@@ -1394,6 +1508,19 @@ export type Database = {
       };
     };
     Views: {
+      assistant_usage_daily: {
+        Row: {
+          cache_creation_input_tokens: number | null;
+          cache_read_input_tokens: number | null;
+          cost_usd_micros: number | null;
+          input_tokens: number | null;
+          output_tokens: number | null;
+          turns: number | null;
+          usage_date: string | null;
+          user_id: string | null;
+        };
+        Relationships: [];
+      };
       day_totals: {
         Row: {
           carbs_g: number | null;
@@ -1413,6 +1540,7 @@ export type Database = {
     };
     Functions: {
       accept_terms: { Args: { p_version: string }; Returns: undefined };
+      assistant_spend_this_month: { Args: never; Returns: number };
       consume_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number };
         Returns: {
