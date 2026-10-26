@@ -2,7 +2,7 @@ import { useContext } from "react";
 
 import { PlateContext } from "./plateContext";
 
-import type { PlateContextValue, PlateLoggingGuard } from "./types";
+import type { PlateContextValue, PlateExit, PlateLoggingGuard } from "./types";
 
 function usePlateContext() {
   const plate = useContext(PlateContext);
@@ -23,5 +23,10 @@ export function usePlate(): PlateContextValue {
 
 /** The hold `useLogPlate` takes on the plate while it logs. */
 export function usePlateLoggingGuard(): PlateLoggingGuard {
+  return usePlateContext();
+}
+
+/** The question "Discard your plate?", which the search's guard asks and the sheet's layout draws. */
+export function usePlateExit(): PlateExit {
   return usePlateContext();
 }

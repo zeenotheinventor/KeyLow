@@ -2,7 +2,7 @@ import { Stack, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
 import { readLogContext } from "../../lib/navigation";
-import { PlateProvider } from "../../lib/plate";
+import { DiscardPlateDialog, PlateProvider } from "../../lib/plate";
 import { useTheme } from "../../lib/theme";
 
 // The root layout's AuthGate already covers these routes, so the stack needs no guard of its own.
@@ -28,6 +28,8 @@ export default function FoodsLayout() {
         <Stack.Screen name="scan" />
         <Stack.Screen name="quick-add" />
       </Stack>
+      {/* Drawn here, not by the search, so it shows above the scanner and quick add, which cover the search. */}
+      <DiscardPlateDialog />
     </PlateProvider>
   );
 }

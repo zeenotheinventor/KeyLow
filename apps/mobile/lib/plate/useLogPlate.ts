@@ -100,7 +100,7 @@ export function useLogPlate(context: LogContext | undefined): {
   const logEntries = useLogEntries();
   const profileTimeZone = useProfileTimeZone({ enabled: useReadsEnabled() });
   const { items, time, canLog } = plate;
-  const { startLogging, finishLogging } = usePlateLoggingGuard();
+  const { startLogging, finishLogging, markLogged } = usePlateLoggingGuard();
   const day = context?.day;
   const { mutateAsync } = logEntries;
   const timeZone = profileTimeZone.data === undefined ? undefined : (profileTimeZone.data ?? "UTC");
@@ -145,9 +145,12 @@ export function useLogPlate(context: LogContext | undefined): {
       tone: "success",
       icon: "Check",
     });
-    closeSheet();
     const hour = parseClockTime(formatClockTime(written.loggedAt, zone))?.hour;
-    router.push(diaryHref(written.localDate, hour));
+    // The sheet's guard lets a close through once the plate is logged, so the close waits for that render.
+    markLogged(() => {
+      closeSheet();
+      router.push(diaryHref(written.localDate, hour));
+    });
 
     return { ok: true };
   }, [
@@ -155,6 +158,7 @@ export function useLogPlate(context: LogContext | undefined): {
     timeZone,
     startLogging,
     finishLogging,
+    markLogged,
     day,
     time,
     client,

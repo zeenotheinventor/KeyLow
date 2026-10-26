@@ -3,7 +3,7 @@ import { act, renderHook } from "@testing-library/react-native";
 
 import { withPlate } from "./support/plateHarness";
 import { chickenAndRice, oatBarInBars, oatBarInGrams } from "./support/plateItems";
-import { usePlate, usePlateLoggingGuard } from "../../lib/plate";
+import { usePlate, usePlateExit, usePlateLoggingGuard } from "../../lib/plate";
 import { profileTimeZone, resetApiClientMock } from "../foods/support/apiClientMock";
 
 // Nothing is stored in these tests, but the theme reads the phone's small store.
@@ -30,7 +30,7 @@ describe("the plate store", () => {
   });
 
   async function renderPlate(props: { initialTime?: string } = {}) {
-    return renderHook(() => ({ ...usePlate(), ...usePlateLoggingGuard() }), {
+    return renderHook(() => ({ ...usePlate(), ...usePlateLoggingGuard(), ...usePlateExit() }), {
       wrapper: withPlate(props),
     });
   }
@@ -326,6 +326,85 @@ describe("the plate store", () => {
       });
 
       expect(started).toBe(true);
+    });
+  });
+
+  describe("a plate that has been logged", () => {
+    it("should not be logged to start with, nor while it is being logged", async () => {
+      const { result } = await renderPlate();
+      expect(result.current.isLogged).toBe(false);
+
+      await act(() => {
+        result.current.startLogging();
+      });
+
+      expect(result.current.isLogged).toBe(false);
+    });
+
+    it("should be logged once marked, and run what it was given only after the render that shows it", async () => {
+      const { result } = await renderPlate();
+      const seenByTheCallback: boolean[] = [];
+
+      await act(() => {
+        result.current.markLogged(() => {
+          seenByTheCallback.push(result.current.isLogged);
+        });
+      });
+
+      expect(seenByTheCallback).toEqual([true]);
+      expect(result.current.isLogged).toBe(true);
+    });
+
+    it("should run what it was given once", async () => {
+      const { result } = await renderPlate();
+      const afterwards = jest.fn();
+
+      await act(() => {
+        result.current.markLogged(afterwards);
+      });
+      await act(() => {
+        result.current.add((key) => oatBarInGrams(key));
+      });
+
+      expect(afterwards).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("asking to discard the plate", () => {
+    it("should not be asking to start with", async () => {
+      const { result } = await renderPlate();
+
+      expect(result.current.isAsking).toBe(false);
+      expect(result.current.isDiscarded).toBe(false);
+    });
+
+    it("should be asking once asked, and not any more on Keep adding", async () => {
+      const { result } = await renderPlate();
+
+      await act(() => {
+        result.current.ask();
+      });
+      expect(result.current.isAsking).toBe(true);
+      await act(() => {
+        result.current.keep();
+      });
+
+      expect(result.current.isAsking).toBe(false);
+      expect(result.current.isDiscarded).toBe(false);
+    });
+
+    it("should be discarded, and no longer asking, on Discard", async () => {
+      const { result } = await renderPlate();
+      await act(() => {
+        result.current.ask();
+      });
+
+      await act(() => {
+        result.current.discard();
+      });
+
+      expect(result.current.isAsking).toBe(false);
+      expect(result.current.isDiscarded).toBe(true);
     });
   });
 

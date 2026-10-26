@@ -22,6 +22,9 @@ export function useLogEntries() {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // An offline write fails at once instead of pausing until the connection returns: the plate screen holds
+    // its Close while a log is in flight, so a paused write would leave the person with no way out.
+    networkMode: "always",
     mutationFn: (items: readonly LogEntriesItem[]) => logEntries(client, items),
     onSuccess: (entries) => {
       for (const entry of entries) {

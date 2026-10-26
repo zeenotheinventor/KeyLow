@@ -290,6 +290,14 @@ describe("useLogPlate", () => {
       expect(rendered.result.current.plate.canLog).toBe(false);
     });
 
+    it("should mark the plate as logged, which the screens' guard lets a close through for", async () => {
+      const rendered = await renderWithOatBarAndRecipe();
+
+      await logPlate(rendered);
+
+      expect(rendered.result.current.plate.isLogged).toBe(true);
+    });
+
     it("should not log again while the sheet is closing", async () => {
       const rendered = await renderWithOatBarAndRecipe();
       await logPlate(rendered);
@@ -314,6 +322,15 @@ describe("useLogPlate", () => {
       expect(screen.queryByText(/Logged/)).not.toBeOnTheScreen();
       expect(routerMock.parentGoBack).not.toHaveBeenCalled();
       expect(routerMock.push).not.toHaveBeenCalled();
+    });
+
+    it("should not mark the plate as logged, so a close still asks", async () => {
+      mockLogEntries.mockRejectedValue(new Error("Could not log the entries"));
+      const rendered = await renderWithOatBarAndRecipe();
+
+      await logPlate(rendered);
+
+      expect(rendered.result.current.plate.isLogged).toBe(false);
     });
 
     it("should write nothing when a food cannot be read", async () => {
