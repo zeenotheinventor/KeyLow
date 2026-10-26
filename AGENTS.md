@@ -10,7 +10,7 @@ file only points at them. Keep it under 80 lines: a rule that needs more than a 
 
 - `docs/runbooks/local-dev.md`: setup, everyday commands, the shared-list rules, troubleshooting.
 - `docs/ci.md`: the parallel gate, scoped runs, merging, stacked pull requests, red main.
-- `docs/adr/`: five decisions that are frozen until amended. Deviating needs an amendment first.
+- `docs/adr/`: six decisions that are frozen until amended. Deviating needs an amendment first.
 - `docs/runbooks/error-monitoring.md`: Sentry, the scrubbing rules, where each secret lives.
 - The Linear ticket is the spec. Its acceptance criteria, not the title, define done.
 

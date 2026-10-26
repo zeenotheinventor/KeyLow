@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26.
 
 ## Context
 
@@ -1824,7 +1824,7 @@ From Amendment 12, "Open": the check-in weekday and `next_checkin_date` (the che
 
 ### Open
 
-Nothing is open in this amendment.
+- Zee may ask for Undo on edits (`update_entry`, `update_recipe`) later. That would need a stored previous-value snapshot, which is health data (flagged to Zee, 2026-10-26).
 
 ### Implemented by
 
@@ -1838,3 +1838,238 @@ Nothing is open in this amendment.
 ### Consequences of Amendment 13
 
 The migrations (KEY-610, KEY-611 and KEY-616) create the tables, the checks, the indexes, the grants, the policies, the two functions, the check on `profiles.checkin_weekday` and the job, and `packages/db/src/types.gen.ts` gains `expenditure_snapshots` and `targets` and the two functions. Core, the functions and the api-client build to the numbers above and to ADR 0002, Amendment 2. The M7 export brief must add both tables. Any further deviation from the frozen Decision, from Amendments 1 to 12 or from this amendment needs an Amendment 14 before the migration or code that implements it lands.
+
+## Amendment 14 (The assistant: conversations, turns, messages, actions, usage, entitlements, consent and a recipe link, 2026-10-26)
+
+### Status
+
+Recorded on 2026-10-26 under KEY-662, part of KEY-185 (the M8 brief, with its Amendment 1 and Amendment 2). It is the data side of ADR 0006, which holds the decisions and their reasons. The frozen Decision lists none of these tables, so by the rule at the top of this ADR they need an amendment before their migrations. KEY-664, KEY-665 and KEY-666 build it and cite it. This amendment adds six tables (`assistant_conversations`, `assistant_turns`, `assistant_messages`, `assistant_actions`, `assistant_usage`, `entitlements`), one view (`assistant_usage_daily`), three functions (`assistant_spend_this_month`, `assistant_access`, `has_entitlement`), two columns on `profiles` and one on `recipes`. It adds no embedding column, because semantic food search is deferred to Housekeeping (ADR 0006). The remaining details are interpretations made for implementation. They are, in full:
+
+- the column types, defaults and checks that the brief does not give, and the names of the columns that Amendment 2 of KEY-185 and the contract do not fix.
+- the turn statuses (`open`, `complete`, `clarify`, `confirm`, `stopped`, `failed`, `refused`), which are the values the app contract (`stopped`), the turn loop (KEY-682) and compaction (`complete`, `clarify`, `confirm`) name. They replace the three that KEY-662 first listed (`open`, `done`, `failed`), which cannot tell a finished turn from one that asked a question.
+- that `assistant_actions.turn_id` and `assistant_actions.conversation_id` are both nullable and set null on delete, so an action outlives its conversation and its turns.
+- that `assistant_usage.turn_id` has no foreign key and is not null, so deleting a conversation never lowers the month's spend.
+- that `route` and `transport` are checked against the values named here (`recipe_parse` was added as an orchestrator decision, 2026-10-26).
+- that a non-null `daily_turns` on a `free` or `plus` row is that row's daily limit, that null on such a row means the free default of 15, and that no daily cap is `unlimited` only. The column check is `> 0`.
+- that the consent columns are written by the client, with the client's clock, unlike the terms columns of Amendment 3.
+- that `save_recipe` is replaced so it carries `source_url`.
+- the checks that pair the two compaction columns and the two consent columns, and the check on `recipes.source_url`.
+- the indexes, including the ones on foreign keys and on `user_id`.
+- that `updated_at` on `assistant_conversations` is set by the writer, because no trigger helper exists.
+- that the 10 slots of a turn count write tool calls and not rows, and the two columns of `assistant_actions` that make that work (`target_ids` and `target_local_date`).
+- that `assistant_messages` carries a `seq` per conversation for ordering.
+- the privileges, the policies, the view's column names and the definition of `assistant_spend_this_month()` as a calendar month in UTC.
+- that `assistant_consent_version` holds the `TERMS_VERSION` the person saw when they switched the assistant on.
+- the column grants on `profiles` and `recipes` that carry the three new columns.
+- the export and account deletion contract and the health data rules.
+- that `TERMS_VERSION` does not change here (KEY-663 changes it).
+
+Zee's answers of 2026-10-25 on KEY-662 settle the rest, and ADR 0006 records all thirteen. The ones that shape the data are Q3 (`recipes.source_url`), Q7 (15 free turns a day, and the `unlimited` plan with no daily cap), Q11 (conversations in the export and in account deletion) and Q13 (compaction, which adds two columns to `assistant_conversations`).
+
+### Zee's rulings
+
+Zee's words that shape these tables, 2026-10-25. The first and third are from his round 2 comment on KEY-662, and the second is quoted in KEY-185 Amendment 2 C:
+
+> "I thought we could write our own MCP client that calls our own tool MCP server... It also kinda keeps us agnostic of the model."
+
+> "Build a whole-account data export in M8, conversations included"
+
+> "I feel also I'll learn more here."
+
+The first is why `assistant_usage.transport` has the value `mcp_http`. The second is the export contract below. His round 3 comment on KEY-662 ("M7 builds the export, no export button in M8") is superseded by Amendment 2 C, which has the export built in M8. The third is why compaction is Ki-Lo's own and why `assistant_conversations` carries the note. Q7 added the `unlimited` plan, and Q3 the `recipes.source_url` column. Q10, no hand measures, adds no column.
+
+Decided by the author of this amendment on reading the tickets and the plan, 2026-10-26, and confirmed or ruled by the orchestrator the same day. These are not Zee's rulings, and each is in the list above:
+
+- **Turn statuses (orchestrator decision, 2026-10-26).** KEY-662 listed `open|done|failed`. The app contract says the function saves a partial reply with the turn status `stopped`, the turn loop stores `complete`, `clarify`, `confirm`, `stopped`, `failed` and `refused`, and compaction runs only after a turn that ended `complete`. A check of three values would reject all of that, so the check has seven.
+- **An action outlives its turn.** KEY-662 gave `conversation_id` as "null on conversation delete" and said nothing of `turn_id`. Deleting a conversation deletes its turns, so a non-null `turn_id` could not survive it. Both are set null, as KEY-665 says for `turn_id`.
+- **Spend survives a deleted conversation.** `assistant_usage.turn_id` has no foreign key and no `on delete`, because a key that cascaded would let a person lower the month's spend by deleting a conversation.
+- **Slots count write tool calls, and two columns name what a call changed (orchestrator decision, 2026-10-26, built by KEY-665 for the columns and KEY-693 for `copy_day`).** `day_logs` has the key `(user_id, local_date)` and no `id`, so `target_id` cannot name a day, and a whole-day copy changes many rows in one call. `assistant_actions` therefore gains `target_local_date` and `target_ids`, and `turn_seq` 1 to 10 is one slot per write tool call. A `copy_day` of a whole day takes one slot whatever the entry count.
+- **Recipe parse is a usage route (orchestrator decision, 2026-10-26).** KEY-698 makes one tool-less model call per recipe parse, so `assistant_usage.route` also allows `recipe_parse`, with transport `none`.
+- **A null `daily_turns` row column (orchestrator decision, 2026-10-26).** The column check is `> 0`, because `consume_rate_limit` raises for a limit below 1. A non-null value on a `free` or `plus` row is that row's limit, and null on such a row means 15.
+- **Consent is client-written (orchestrator decision, 2026-10-26).** The consent columns are set by the owner's client with the client's clock, a deliberate departure from the terms columns of Amendment 3, because consent here only gates the person's own use of the assistant.
+- **`save_recipe` carries `source_url` (orchestrator decision, 2026-10-26).** See "`profiles` and `recipes`".
+- **Message order.** A `seq` integer per conversation orders `assistant_messages`, because `created_at` can tie when one transaction stores several messages. The tables have a precedent for an explicit order column (`position` on `recipe_ingredients`, Amendment 8).
+- **A null `daily_turns` is not a way round the quota.** `assistant_access` returns null for `unlimited` and for nothing else. A `free` or `plus` row whose column is null returns 15.
+
+### `assistant_conversations`
+
+| Column                      | Definition                                                                                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                        | `uuid primary key default gen_random_uuid()`.                                                                                                                                                            |
+| `user_id`                   | `uuid not null references auth.users (id) on delete cascade`. No default, because no client inserts.                                                                                                     |
+| `title`                     | `text`, nullable. M8 never writes it, so it is always null, and no screen shows it because the app shows one running conversation and no list.                                                           |
+| `compaction_summary`        | `text`, nullable. The compaction note (ADR 0006), null until the first compaction. It holds foods and amounts, so it is health data.                                                                     |
+| `compacted_through_turn_id` | `uuid`, nullable. The last turn the note covers. No foreign key: a turn only ever goes when its conversation goes, and a key from conversations to turns would make the two tables reference each other. |
+| `created_at`                | `timestamptz not null default now()`.                                                                                                                                                                    |
+| `updated_at`                | `timestamptz not null default now()`. Set by the writer when it stores a turn or a note, because no trigger helper exists. Compaction's compare-and-set reads it.                                        |
+
+- The two compaction columns are null together or set together: `(compaction_summary is null) = (compacted_through_turn_id is null)`.
+- An index on `(user_id, updated_at desc)`, which finds the newest conversation and serves the cascade from `auth.users`.
+- Only the service role writes either compaction column, because `authenticated` has no insert or update.
+
+### `assistant_turns`
+
+| Column                 | Definition                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                   | `uuid primary key default gen_random_uuid()`.                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `conversation_id`      | `uuid not null references public.assistant_conversations (id) on delete cascade`.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| `user_id`              | `uuid not null references auth.users (id) on delete cascade`.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `user_message_id`      | `uuid not null`. The id of the user's message in `assistant_messages` that started the turn. No foreign key, because that row names this turn and a key each way would make the tables reference each other. The writer generates the id, stores the turn first, then the message.                                                                                                                                                                                                                 |
+| `status`               | `text not null default 'open'`. Check: `status in ('open', 'complete', 'clarify', 'confirm', 'stopped', 'failed', 'refused')`. `open` while the turn runs. `complete` when it ended with an answer or a card, `clarify` when it ended with a question, `confirm` when it ended asking for a confirmation, `stopped` when the request was aborted, `failed` when an error ended it, and `refused` when the model stopped with a refusal. Both `failed` and `refused` send the `turn_failed` notice. |
+| `pending_confirmation` | `jsonb`, nullable. The confirmation the turn is waiting on, as data: its id, the tool name and a hash of the input (KEY-670), and no health value. Null otherwise.                                                                                                                                                                                                                                                                                                                                 |
+| `created_at`           | `timestamptz not null default now()`. The `mcp` function's turn binding measures its 5 minutes from here.                                                                                                                                                                                                                                                                                                                                                                                          |
+| `finished_at`          | `timestamptz`, nullable. Null while the turn is open.                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+
+- An index on `(conversation_id, created_at)`, and one on `user_id` for the cascade from `auth.users`.
+
+### `assistant_messages`
+
+| Column            | Definition                                                                                                                                                                                                                    |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`              | `uuid primary key default gen_random_uuid()`.                                                                                                                                                                                 |
+| `conversation_id` | `uuid not null references public.assistant_conversations (id) on delete cascade`.                                                                                                                                             |
+| `turn_id`         | `uuid not null references public.assistant_turns (id) on delete cascade`.                                                                                                                                                     |
+| `user_id`         | `uuid not null references auth.users (id) on delete cascade`.                                                                                                                                                                 |
+| `role`            | `text not null`. Check: `role in ('user', 'assistant')`, the two roles of the Messages API. A `user` message holds the person's text or the tool results of that turn.                                                        |
+| `content`         | `jsonb not null`. The raw Messages API content blocks as sent and received, so the next turn replays history unchanged and the cache holds. It holds what the person typed and what the tools returned, so it is health data. |
+| `seq`             | `integer not null`. The message's place in its conversation, from 1, assigned by the writer. Unique `(conversation_id, seq)`. Replays read in this order, and `created_at` is never used to order.                            |
+| `created_at`      | `timestamptz not null default now()`.                                                                                                                                                                                         |
+
+- The unique key `(conversation_id, seq)` is the ordering index. There is also an index on `turn_id` for the cascade and one on `user_id`.
+
+### `assistant_actions`
+
+| Column              | Definition                                                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | `uuid primary key default gen_random_uuid()`.                                                                                                                                                                       |
+| `user_id`           | `uuid not null references auth.users (id) on delete cascade`.                                                                                                                                                       |
+| `conversation_id`   | `uuid references public.assistant_conversations (id) on delete set null`. Null once the conversation is deleted, so "What the assistant changed" keeps the row.                                                     |
+| `turn_id`           | `uuid references public.assistant_turns (id) on delete set null`. Set null when the turn goes with its conversation.                                                                                                |
+| `turn_seq`          | `integer not null`. The slot, 1 to 10, one per write tool call. Check: `turn_seq between 1 and 10`. Unique `(turn_id, turn_seq)`.                                                                                   |
+| `tool`              | `text not null`. The tool name, such as `log_entry`.                                                                                                                                                                |
+| `target_table`      | `text not null`. The table the write changed.                                                                                                                                                                       |
+| `target_id`         | `uuid`, nullable. The id of the row a single-row write created or changed. Null while the slot is only reserved. No foreign key, because it names rows in different tables.                                         |
+| `target_ids`        | `uuid[]`, nullable. The ids of the rows a multi-row write created or changed, such as the entries of a `copy_day` or the ids of a `delete_entry` that names several. Check: null, or `cardinality(target_ids) > 0`. |
+| `target_local_date` | `date`, nullable. The diary day a write names: the day `set_day_complete` changed, and the target day of a `copy_day`. `day_logs` has no `id`, so a date is how an action names it.                                 |
+| `target_updated_at` | `timestamptz`, nullable. The target's change time as the write left it, filled in when the write lands. Undo answers `undo_unavailable` when the target has changed since (KEY-670).                                |
+| `created_at`        | `timestamptz not null default now()`.                                                                                                                                                                               |
+| `undone_at`         | `timestamptz`, nullable. Set when the action is undone. It is also how an undo is recorded as a signal, since the replay set of real corrections is deferred (ADR 0006, Q6).                                        |
+
+- **Ids and one date only.** No column can hold a nutrient, a weight, a quantity or free text beyond the tool name and the table name. The one date names a diary day and no value. A test lists the columns.
+- **What Undo can restore** is set out in ADR 0006, Guards. It reads only ids and one date, never a value. `set_day_complete` records an action only when the call changed the day's state, and `update_targets` Undo is offered only when a programme was active (orchestrator decision, 2026-10-26).
+- **Ten slots per turn, one per write tool call.** The unique key and the check are what the executor's reservation relies on (ADR 0006): parallel writes cannot take the same slot or an eleventh. The slots count tool calls and not rows, so a `copy_day` of a whole day, or a `delete_entry` that names several ids, takes one slot whatever the row count, and the rows are listed in `target_ids`. A row with `target_id`, `target_ids` and `target_local_date` all null is a reserved slot, and the executor deletes it when the write fails. This is orchestrator decision, 2026-10-26, built by KEY-665 (the columns) and KEY-693 (`copy_day`).
+- **No check that a landed write names a target.** A reserved slot and a landed write differ only in whether the executor has filled a target in, and the database has no marker for "landed", so a check that one of the three is set would reject the reservation itself. The executor's tests assert it instead (KEY-670).
+- Indexes: `(user_id, created_at desc)` for the changes list and the cascade, and `conversation_id` for the set null. The unique key leads with `turn_id`, so it serves that foreign key.
+
+### `assistant_usage`
+
+| Column                        | Definition                                                                                                                                                                                                                                                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                          | `uuid primary key default gen_random_uuid()`.                                                                                                                                                                                                                 |
+| `user_id`                     | `uuid not null references auth.users (id) on delete cascade`.                                                                                                                                                                                                 |
+| `turn_id`                     | `uuid not null`. The turn the model call belongs to. A compaction call carries the id of the turn it followed. No foreign key (see above).                                                                                                                    |
+| `route`                       | `text not null`. Check: `route in ('describe_or_ask', 'compact', 'recipe_parse')`. `recipe_parse` is the tool-less structured call that reads a fetched recipe page (KEY-698). The coaching wave adds its own value in its own amendment.                     |
+| `model`                       | `text not null`. The model id, such as `claude-haiku-5-5`.                                                                                                                                                                                                    |
+| `input_tokens`                | `integer not null`. Check: `>= 0`.                                                                                                                                                                                                                            |
+| `output_tokens`               | `integer not null`. Check: `>= 0`.                                                                                                                                                                                                                            |
+| `cache_read_input_tokens`     | `integer not null`. Check: `>= 0`.                                                                                                                                                                                                                            |
+| `cache_creation_input_tokens` | `integer not null`. Check: `>= 0`.                                                                                                                                                                                                                            |
+| `cost_usd_micros`             | `bigint not null`. Check: `>= 0`. Millionths of a US dollar.                                                                                                                                                                                                  |
+| `latency_ms`                  | `integer not null`. Check: `>= 0`.                                                                                                                                                                                                                            |
+| `stop_reason`                 | `text`, nullable. The API's stop reason, null when the call failed before one arrived.                                                                                                                                                                        |
+| `transport`                   | `text not null`. Check: `transport in ('mcp_http', 'none')`. `mcp_http` for a turn's model calls (route `describe_or_ask`), which reach their tools through Ki-Lo's MCP client. `none` for a compaction call and for a recipe parse call, which use no tools. |
+| `created_at`                  | `timestamptz not null default now()`.                                                                                                                                                                                                                         |
+
+- One row per model call. A turn with three tool rounds writes four rows.
+- **Counts only.** No column can hold text beyond the route, the model id, the stop reason and the transport. A test lists the columns.
+- Indexes: `(user_id, created_at)` for the daily view and the cascade, and `(created_at)` for the monthly sum.
+
+**`assistant_usage_daily`** is a view with `security_invoker = true`, one row per user per UTC day: `user_id`, `usage_date` (the UTC date of `created_at`), `turns` (the distinct `turn_id` of rows whose route is `describe_or_ask`, so compaction and recipe parse rows add tokens and cost but no turn), `input_tokens`, `output_tokens`, `cache_read_input_tokens`, `cache_creation_input_tokens` and `cost_usd_micros` (each the sum). Being `security_invoker`, it shows a person only their own rows.
+
+**`assistant_spend_this_month()`** returns `bigint`, `security definer` with `set search_path = ''` and schema-qualified objects: the sum of `cost_usd_micros` over all users since the first instant of the current UTC month, and 0 when there are no rows. Execute is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only. The `assistant` function compares it with `readLimit('ASSISTANT_MONTHLY_CAP_USD_MICROS', 10000000)` (ADR 0006).
+
+### `entitlements`
+
+| Column        | Definition                                                                                                                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user_id`     | `uuid not null references auth.users (id) on delete cascade`.                                                                                                                                |
+| `feature`     | `text not null`. Check: `feature in ('assistant')`.                                                                                                                                          |
+| `plan`        | `text not null`. Check: `plan in ('free', 'plus', 'unlimited')`.                                                                                                                             |
+| `granted_at`  | `timestamptz not null default now()`.                                                                                                                                                        |
+| `expires_at`  | `timestamptz`, nullable. Null means the row does not expire.                                                                                                                                 |
+| `source`      | `text not null`. Where the row came from. `manual` for a row Zee adds in the dashboard.                                                                                                      |
+| `daily_turns` | `integer`, nullable. Check: null or `> 0`, because `consume_rate_limit` raises for a limit below 1. On a `free` or `plus` row, a non-null value is that row's daily limit and null means 15. |
+
+- Primary key `(user_id, feature)`. It leads with `user_id`, so the cascade has an index.
+- No row is inserted for any existing user. The free plan is a default, not a row.
+- **Granting unlimited access** is one row in the Supabase dashboard table editor: `feature` `assistant`, `plan` `unlimited`, `source` `manual`, `expires_at` empty or a date. It takes effect on the user's next turn. Removing the row, or its expiry passing, restores the free plan.
+
+**`assistant_access(p_user_id uuid)`** returns `table (plan text, daily_turns integer, source text)`, `security definer`, `set search_path = ''`:
+
+- The user's unexpired `assistant` row wins (`expires_at` null or in the future). Without one it returns `('free', 15, 'default')`.
+- For `unlimited` it returns a null `daily_turns` whatever the column holds, and null means no daily cap: the `assistant` function skips the per-user daily counter for that user. For a `free` or `plus` row with a non-null `daily_turns` it returns that value, and with a null one it returns 15, so null never means unlimited by accident.
+- Execute is revoked from `public`, `anon` and `authenticated` and granted to `service_role` only.
+
+**`has_entitlement(p_user_id uuid, p_feature text)`** returns `boolean`, defined the same way: true for the free default and for an unexpired row of that feature. Execute for `service_role` only.
+
+### `profiles` and `recipes`
+
+- `profiles.assistant_consent_at timestamptz` and `profiles.assistant_consent_version text`, both nullable and both null for every existing and new profile, so the assistant is off by default. A check, in the style of `profiles_terms_acceptance_paired` (Amendment 3), requires `(assistant_consent_at is null) = (assistant_consent_version is null)`. The version is the `TERMS_VERSION` the person saw when they switched the assistant on. The owner sets both to turn the assistant on and sets both to null to turn it off. The database does not know which version is current, as in Amendment 3. Unlike the terms columns of Amendment 3, which only the trigger and `accept_terms` write, these are written by the owner's client with the client's clock (a deliberate departure, orchestrator decision, 2026-10-26). Consent here only gates the person's own use of the assistant, so a client that claims a consent it did not give harms nobody but that person.
+- **Column grants.** Amendment 3 made the `profiles` column lists explicit, and a column added later is not writable until its migration grants it. KEY-666 adds the two consent columns to the `update` grant on `profiles` for `authenticated`, and not to `insert`, because the signup trigger creates the row with both null. The existing `profiles_update_own` policy applies unchanged.
+- `recipes.source_url text`, nullable, with the check `source_url is null or source_url ~ '^https?://'`, which refuses a `javascript:` address. It holds the page a recipe was imported from (Q3), since `recipes.notes` no longer exists (Amendment 8). The `recipes` grants are explicit column lists too, so KEY-666 adds `source_url` to both the `insert` and the `update` grant for `authenticated`, and the exact-privilege assertions in the recipes pgTAP change with it.
+- **`save_recipe` carries it (orchestrator decision, 2026-10-26).** Recipes are saved through `public.save_recipe(uuid, jsonb, jsonb)` (Amendment 8), which builds each column from named keys, so a column grant alone would leave `source_url` unwritable. KEY-666's migration replaces that function, same signature, so that it reads an optional `source_url` key from the recipe object, validates it against `^https?://`, and on update keeps the stored value when the key is absent, as `is_archived` behaves. An explicit JSON null on update clears the link, and on create means no link. An absent key keeps it on update. KEY-666's pgTAP asserts both. The recipes pgTAP is updated with it.
+
+### Privileges and row level security
+
+In the style of Amendments 9, 12 and 13: `revoke all` on each table from `anon`, `authenticated` and `service_role`, then explicit grants. RLS is enabled on all six tables.
+
+| Table                     | `authenticated`    | `service_role`                         |
+| ------------------------- | ------------------ | -------------------------------------- |
+| `assistant_conversations` | `select`, `delete` | `select`, `insert`, `update`           |
+| `assistant_turns`         | `select`           | `select`, `insert`, `update`           |
+| `assistant_messages`      | `select`           | `select`, `insert`, `update`           |
+| `assistant_actions`       | `select`           | `select`, `insert`, `update`, `delete` |
+| `assistant_usage`         | `select`           | `insert`                               |
+| `entitlements`            | `select`           | `insert`, `update`, `delete`           |
+
+- `anon` gets nothing on any of them. `authenticated` gets `select` on `assistant_usage_daily` and nothing else on the view.
+- No client can insert or update any of these tables, so a client cannot write an action, a usage row, a plan, a turn, a message or a compaction note. The `assistant` function writes with the service client and filters every write by the user it has verified.
+- A person deletes a conversation, and its turns and messages go by the cascade. There is no client delete on turns or messages, because a foreign key action does not run as the caller.
+- Policies, as predicates, for `authenticated` and using `(select auth.uid())`: `<table>_select_own` on each of the six tables, `using user_id = (select auth.uid())`, and `assistant_conversations_delete_own`, `using user_id = (select auth.uid())`. Every table carries `user_id`, so no policy joins.
+- Terms acceptance is not in the policies, as in Amendments 9, 12 and 13.
+
+### Health data
+
+A conversation is health data: the text a person typed, what the tools returned (diary rows, weights, targets), and the compaction note. They are owner-only under RLS, never written to a log, an error message, a Sentry event or an analytics event, and never in a committed fixture (the eval user's diary is synthetic). A turn's `pending_confirmation` holds an id, a tool name and a hash and no health value. `assistant_actions` holds ids and one diary date, and `assistant_usage` holds counts, and neither holds a health value. Conversation text is sent to Anthropic as a processor, which the Privacy Policy names (KEY-663).
+
+### Export and account deletion
+
+There is no data export and no in-app account deletion today (Amendment 9, "Export and account deletion"). This amendment adds to the contract:
+
+- **Export (Zee, 2026-10-25, Q11).** Conversations are included in the data export. The whole-account export is built in M8, last, on the client under the user's JWT (KEY-707 and KEY-708). It includes every column of every row the user owns in `assistant_conversations`, `assistant_turns`, `assistant_messages`, `assistant_actions`, `assistant_usage` and `entitlements`, with `profiles.assistant_consent_at`, `profiles.assistant_consent_version` and `recipes.source_url` inside their tables, rows as stored. `authenticated` has `select` on all six, so it needs no `service_role` grant. The earlier amendments' line that the `service_role` grant an export path needs is M7's to add is moot for these tables, because KEY-707 reads under the user's JWT. Until it ships, conversations are within the privacy policy's manual export and deletion path (KEY-136).
+- **Deleting conversations.** A person deletes all their conversations from Settings. Their turns and messages go with them, and their actions stay with `conversation_id` and `turn_id` null.
+- **Account deletion** works through the `on delete cascade` foreign key from `auth.users` (`user_id` on every new table) and needs no code. It deletes the person's usage rows too, which lowers the month's spend by their share.
+
+### Terms
+
+These tables hold nothing the Privacy Policy does not already have to say once it names Anthropic. KEY-663 changes the policy's words and bumps `TERMS_VERSION` (Q8). This amendment changes no copy and no constant.
+
+### What this closes
+
+From ADR 0003, the decision (e) of KEY-185 (conversations stored per user, with row-level security, deletable, included in export and account deletion), and the entitlement seam of decision (a) (an `entitlements` table, a `has_entitlement` check, no billing).
+
+### Open
+
+- Zee may ask for Undo on edits (`update_entry`, `update_recipe`) later. That would need a stored previous-value snapshot, which is health data (flagged to Zee, 2026-10-26).
+
+### Implemented by
+
+- KEY-664, the migration for the conversations: `assistant_conversations`, `assistant_turns` and `assistant_messages` with the columns above (compaction columns included), the owner `select` and conversation `delete` policies, the service role's grants, the indexes, pgTAP (a person sees only their own rows, no client insert or update, delete cascades to turns and messages, the account cascade, never another person's note), and `types.gen.ts`.
+- KEY-665, the migration for the actions and usage: `assistant_actions` with its slot key and check, `assistant_usage` with its counts, `assistant_usage_daily` and `assistant_spend_this_month()`, with pgTAP (the eleventh slot, the same slot twice, the actions kept when a conversation is deleted, the view's scope, the month's sum, no column that can hold health data), and `types.gen.ts`.
+- KEY-666, the migration for access: `entitlements`, `assistant_access`, `has_entitlement`, the consent columns and their column grant, `recipes.source_url` and its grants, with pgTAP (the free default, a live and an expired row, `unlimited` with a null limit, the grants, the check on the link), the changed exact-privilege assertions, and `types.gen.ts`.
+- KEY-670, KEY-681, KEY-682 and KEY-706, which write these tables (the executor reserves the slots, the gates read access and spend, the turn loop stores turns, messages and usage, compaction writes the note).
+- KEY-707 and KEY-708, the whole-account export. KEY-663, the policy words and `TERMS_VERSION`.
+
+### Consequences of Amendment 14
+
+The migrations (KEY-664, KEY-665 and KEY-666) create the tables, the checks, the indexes, the grants, the policies, the view, the three functions and the three columns, and `packages/db/src/types.gen.ts` gains them. Each migration copes with any data already in the database, since no row is inserted for an existing user and the new columns start null. The functions, the api-client and the screens build to these names and to ADR 0006. A change to a name here goes back into ADR 0006 in the same pull request.
