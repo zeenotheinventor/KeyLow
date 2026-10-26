@@ -68,6 +68,27 @@ type PortionPickerAddProps = PortionPickerLoggingProps & {
 };
 
 /**
+ * The amount step of a food about to join the plate (the picker's add-to-plate mode): the page for a food
+ * about to be logged, with no Time row, because the time belongs to the plate, and nothing saved. "Add to
+ * plate" hands the amount over, and works offline because nothing is written. A food that must be reviewed
+ * first has the review banner and Copy to your foods in place of the button, as on the add page.
+ */
+type PortionPickerAddToPlateProps = PortionPickerBaseProps & {
+  mode: "add-to-plate";
+  /** The food's own portions. The picker adds g and, for a food measured by volume, ml and the spoons. */
+  portions: readonly FoodPortion[];
+  /** Starts the amount at this instead of the food's default serving, such as the amount last logged. */
+  initialAmount?: PortionAmount | undefined;
+  /** A line under the header beside the food's source, such as "Scanned 5201054013410" or "Last logged 50 g, yesterday". */
+  note?: string | undefined;
+  /** The plate is being logged, so nothing more can be put on it: Add to plate is dimmed. */
+  isPlateLogging?: boolean | undefined;
+  /** Opens the copy form, for a food that has to be reviewed before its first log. */
+  onCopy: () => void;
+  onSubmit: (amount: ChosenAmount) => void;
+};
+
+/**
  * The page for a logged entry, which the food's own review does not apply to: Save in place of Add, with a
  * Delete under it. The food is the entry's own snapshot, and `time` is the entry's. The amount and the hero
  * work from `snapshot`, so a change to the live food never reaches them; the live food only decides which
@@ -121,7 +142,7 @@ type PortionPickerAddIngredientProps = PortionPickerBaseProps & {
   onSubmit: (amount: ChosenAmount) => void;
 };
 
-/** What the two pages of a recipe have in common: the recipe they draw, the Time row and saving. */
+/** What every page of a recipe has in common: the recipe they draw and the way back. */
 type RecipePickerBaseProps = {
   /**
    * The recipe with its `computed` cache: the search hit for a recipe about to be logged (a `RecipeSummary`
@@ -129,6 +150,10 @@ type RecipePickerBaseProps = {
    */
   recipe: RecipeOfSnapshot;
   onBack: () => void;
+};
+
+/** What the pages of a recipe that log it at a time have beyond the base: the Time row, and saving. */
+type RecipePickerLoggingProps = RecipePickerBaseProps & {
   /** The Time row's time as `HH:mm` when the picker opens. */
   time: string;
   /** Draws Add or Save as working and stops it responding. */
@@ -146,7 +171,7 @@ type RecipePickerBaseProps = {
  * (1 serving and g), the Time row and Add. The recipe is the search hit, with its `computed` cache, so the
  * hero and the entry that is stored are worked out from the same figures. It has no food.
  */
-export type RecipePortionPickerProps = RecipePickerBaseProps & {
+export type RecipePortionPickerProps = RecipePickerLoggingProps & {
   mode: "recipe";
   /** The row reads "Now · 12:40" and not "12:40", until the person chooses a time. */
   isNow: boolean;
@@ -157,7 +182,7 @@ export type RecipePortionPickerProps = RecipePickerBaseProps & {
  * Add, a Delete under it, and the Time row showing the entry's own time. The recipe is made from the entry's
  * snapshot, so a recipe edited since changes nothing on it.
  */
-export type RecipeEntryPickerProps = RecipePickerBaseProps & {
+export type RecipeEntryPickerProps = RecipePickerLoggingProps & {
   mode: "edit-recipe";
   /** What the entry was logged with, which the amount and the unit chip start on. */
   amount: RecipeAmount;
@@ -166,12 +191,27 @@ export type RecipeEntryPickerProps = RecipePickerBaseProps & {
   onDelete: () => void;
 };
 
+/**
+ * The amount step of a recipe about to join the plate (the picker's recipe-to-plate mode): the recipe page
+ * with no Time row and nothing saved. "Add to plate" hands the amount over, and works offline.
+ */
+export type RecipeToPlatePickerProps = RecipePickerBaseProps & {
+  mode: "recipe-to-plate";
+  /** The plate is being logged, so nothing more can be put on it: Add to plate is dimmed. */
+  isPlateLogging?: boolean | undefined;
+  onSubmit: (amount: RecipeAmount) => void;
+};
+
 /** The pages of a food, which the picker has had since the diary was built. */
 export type FoodPortionPickerProps =
   | PortionPickerAddProps
   | PortionPickerEditProps
   | PortionPickerAddIngredientProps
+  | PortionPickerAddToPlateProps
   | PortionPickerEditIngredientProps;
 
 export type PortionPickerProps =
-  FoodPortionPickerProps | RecipePortionPickerProps | RecipeEntryPickerProps;
+  | FoodPortionPickerProps
+  | RecipePortionPickerProps
+  | RecipeEntryPickerProps
+  | RecipeToPlatePickerProps;

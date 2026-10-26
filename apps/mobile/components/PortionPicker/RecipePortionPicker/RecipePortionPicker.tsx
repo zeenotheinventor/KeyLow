@@ -1,6 +1,7 @@
 import {
   DIARY_PROBLEMS,
   ENTRY_SCREEN,
+  PLATE,
   PORTION_PICKER,
   RECIPE_BADGE,
   RECIPE_UNITS,
@@ -25,7 +26,11 @@ import { PerHundredList } from "../PerHundredList";
 import { PortionPickerShell } from "../PortionPickerShell";
 import { useSelectAmountOnChipPress } from "../useSelectAmountOnChipPress";
 
-import type { RecipeEntryPickerProps, RecipePortionPickerProps } from "../types";
+import type {
+  RecipeEntryPickerProps,
+  RecipePortionPickerProps,
+  RecipeToPlatePickerProps,
+} from "../types";
 import type { RecipeEntryUnit } from "@keylow/core/diary";
 
 // The two chips of a recipe, a number of servings first because it is the recipe's own unit.
@@ -45,9 +50,17 @@ const UNIT_OPTIONS: readonly { value: RecipeEntryUnit; label: string }[] = [
  * A logged entry's page (the edit-recipe mode) is the same page from the entry's own snapshot: it starts on
  * the amount the entry was logged with, the Time row shows the entry's time and never "Now", Save takes the
  * place of Add, and a ghost Delete sits under it. Save and Delete are dimmed and do nothing while offline.
+ *
+ * A recipe about to join the plate (the recipe-to-plate mode) is the same page with Add to plate and no Time
+ * row, since the time belongs to the plate. It saves nothing, so it works offline.
  */
-export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntryPickerProps) {
-  const { recipe, time, isSaving, hasSaveError, isOnline = true, onBack, onSubmit } = props;
+export function RecipePortionPicker(
+  props: RecipePortionPickerProps | RecipeEntryPickerProps | RecipeToPlatePickerProps,
+) {
+  const { recipe, onBack } = props;
+  // The pages that log a recipe at a time. The plate's page does not.
+  const logging = props.mode === "recipe-to-plate" ? undefined : props;
+  const isOnline = logging?.isOnline ?? true;
   const entry = props.mode === "edit-recipe" ? props : undefined;
   const [start] = useState(() => entry?.amount ?? recipeAmountStart());
   const [quantityText, setQuantityText] = useState(() => String(start.quantity));
@@ -108,18 +121,30 @@ export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntr
         <View className="gap-1">
           <Button
             fullWidth
-            disabled={typed === null || !isOnline}
+            disabled={
+              typed === null ||
+              !isOnline ||
+              (props.mode === "recipe-to-plate" && props.isPlateLogging === true)
+            }
             haptic="confirm"
-            loading={isSaving}
+            loading={logging?.isSaving ?? false}
             size="lg"
             onPress={() => {
               if (typed === null) {
                 return;
               }
-              onSubmit({ ...typed.amount, time: chosenTime, isNow: isTimeStillNow });
+              if (props.mode === "recipe-to-plate") {
+                props.onSubmit(typed.amount);
+              } else {
+                props.onSubmit({ ...typed.amount, time: chosenTime, isNow: isTimeStillNow });
+              }
             }}
           >
-            {entry === undefined ? PORTION_PICKER.addAction : ENTRY_SCREEN.saveAction}
+            {entry !== undefined
+              ? ENTRY_SCREEN.saveAction
+              : props.mode === "recipe-to-plate"
+                ? PLATE.addToPlate
+                : PORTION_PICKER.addAction}
           </Button>
           {entry === undefined ? null : (
             <Button
@@ -135,12 +160,14 @@ export function RecipePortionPicker(props: RecipePortionPickerProps | RecipeEntr
           )}
         </View>
       )}
-      showsTime
-      time={time}
+      showsTime={logging !== undefined}
+      time={logging?.time ?? ""}
       title={recipe.name}
       onBack={onBack}
     >
-      {hasSaveError ? <Banner sentence title={SAVE_FAILED_BANNER} variant="error" /> : null}
+      {logging?.hasSaveError === true ? (
+        <Banner sentence title={SAVE_FAILED_BANNER} variant="error" />
+      ) : null}
       <View className="flex-row items-center gap-2">
         <Badge outlined>{RECIPE_BADGE}</Badge>
         <Text tone="muted" variant="caption">

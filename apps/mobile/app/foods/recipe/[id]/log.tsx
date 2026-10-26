@@ -1,50 +1,39 @@
-import { keys, useLogRecipeServing, useProfileTimeZone, useRecipe } from "@keylow/api-client";
-import { ADDED_TOAST } from "@keylow/core/copy";
-import { canLogRecipe, clockTimeOn, openingLoggedAt } from "@keylow/core/diary";
+import { keys, useRecipe } from "@keylow/api-client";
+import { describeAddedToPlate } from "@keylow/core/copy";
+import { canLogRecipe } from "@keylow/core/diary";
+import { plateItemOfRecipe } from "@keylow/core/plate";
 import { isRecipeId } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
-import { useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useRef } from "react";
+import { AccessibilityInfo } from "react-native";
 
 import { PortionPicker } from "../../../../components/PortionPicker";
 import { RecipeLoadState } from "../../../../components/RecipeLoadState";
-import { useToast } from "../../../../components/ui";
-import { useIsOnline } from "../../../../lib/connectivity";
-import {
-  readLogContext,
-  useCloseFoodsSheet,
-  useGoBackInFoodsSheet,
-} from "../../../../lib/navigation";
+import { readLogContext, useGoBackInFoodsSheet, withLogContext } from "../../../../lib/navigation";
+import { usePlate } from "../../../../lib/plate";
 import { useReadsEnabled } from "../../../../lib/useReadsEnabled";
 
-import type { RecipeSelection } from "../../../../components/PortionPicker";
+import type { RecipeAmount } from "@keylow/core/diary";
 
 /**
- * The amount step of a recipe: the portion picker in its recipe mode, opened from a recipe row of the log
- * search. It reads `day` and `time` as the food sheet carries them, so the Time row shows the hour an hour's
- * plus was pressed on or "Now" with the current time. Add logs the amount at the time the row shows, closes
- * the sheet to the diary and shows the toast. An archived recipe and one with no weight are not found, as
- * the search never offers them, and the failure of a save is the fixed sentence and never the amount.
+ * The amount step of a recipe: the portion picker in its recipe-to-plate mode, opened from a recipe row of
+ * the log search. Add to plate puts the amount on the plate, writes nothing and goes back to the search, which
+ * clears its field. The plate has the time, so the page has no Time row. `day` and `time` are read only to
+ * send the search back as it was opened. An archived recipe and one with no weight are not found, as the
+ * search never offers them.
  */
 export default function RecipeAmountRoute() {
+  const router = useRouter();
   const goBack = useGoBackInFoodsSheet();
-  const closeSheet = useCloseFoodsSheet();
-  const toast = useToast();
   const queryClient = useQueryClient();
-  const logRecipe = useLogRecipeServing();
-  const isOnline = useIsOnline();
+  const plate = usePlate();
   const { id, day, time } = useLocalSearchParams<{ id: string; day?: string; time?: string }>();
   const isReadEnabled = useReadsEnabled();
   const isKnownToBeMissing = !isRecipeId(id);
   const state = useRecipe(isKnownToBeMissing ? undefined : id, { enabled: isReadEnabled });
-  // The diary reads its days and hours in the profile's zone, so the time logged here is read in it too.
-  const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled });
-  const [isSaving, setIsSaving] = useState(false);
-  // Set in the same tick as the press, which a state update is not, so a second press cannot get past it.
-  const isSavingNow = useRef(false);
-  const [hasSaveError, setHasSaveError] = useState(false);
-  // The moment the screen opened, so "Now" does not move while the picker is open.
-  const [openedAt] = useState(() => new Date());
+  // Set in the same tick as the press, which a state update is not, so a second press cannot add it twice.
+  const hasAddedToPlate = useRef(false);
   const logContext = readLogContext({ day, time });
 
   function renderLoadState(loadState: "loading" | "error" | "notFound") {
@@ -54,9 +43,6 @@ export default function RecipeAmountRoute() {
         onBack={goBack}
         onRetry={() => {
           void queryClient.invalidateQueries({ queryKey: keys.recipes.detail(id) });
-          if (profileTimeZone.isError) {
-            void queryClient.invalidateQueries({ queryKey: keys.profiles.timeZone });
-          }
         }}
       />
     );
@@ -65,10 +51,10 @@ export default function RecipeAmountRoute() {
   if (isKnownToBeMissing) {
     return renderLoadState("notFound");
   }
-  if (state.status === "error" || profileTimeZone.isError) {
+  if (state.status === "error") {
     return renderLoadState("error");
   }
-  if (state.status === "loading" || profileTimeZone.data === undefined) {
+  if (state.status === "loading") {
     return renderLoadState("loading");
   }
   if (state.status === "notFound") {
@@ -80,52 +66,25 @@ export default function RecipeAmountRoute() {
     return renderLoadState("notFound");
   }
 
-  // A signed in user always has a profile row, which the database creates. If it is missing the day is UTC.
-  const timeZone = profileTimeZone.data ?? "UTC";
-  const initial = openingLoggedAt(openedAt, logContext, timeZone);
-
-  async function handleSubmit(selection: RecipeSelection) {
-    if (isSavingNow.current) {
+  const handleAddToPlate = (amount: RecipeAmount) => {
+    if (hasAddedToPlate.current) {
       return;
     }
-    isSavingNow.current = true;
-    setIsSaving(true);
-    setHasSaveError(false);
-    try {
-      const { loggedAt, localDate } = selection.isNow
-        ? initial
-        : clockTimeOn(initial.localDate, selection.time, timeZone);
-      await logRecipe.mutateAsync({
-        recipe,
-        quantity: selection.quantity,
-        unit: selection.unit,
-        loggedAt: loggedAt.toISOString(),
-        localDate,
-      });
-      toast.show({ message: ADDED_TOAST, tone: "success", icon: "Check" });
-      closeSheet();
-    } catch {
-      // The failure is not kept: it can quote the amount, which is health data. The banner says what to do.
-      setHasSaveError(true);
-    } finally {
-      isSavingNow.current = false;
-      setIsSaving(false);
-    }
-  }
+    hasAddedToPlate.current = true;
+    plate.add((key) => plateItemOfRecipe({ key, recipe, amount }));
+    // No toast is drawn after Add to plate, so a screen reader is told instead.
+    AccessibilityInfo.announceForAccessibility(describeAddedToPlate(recipe.name));
+    // Back to the search it was opened from, with the day and the hour it had.
+    router.dismissTo(withLogContext("/foods", logContext));
+  };
 
   return (
     <PortionPicker
-      hasSaveError={hasSaveError}
-      isNow={logContext?.time === undefined}
-      isOnline={isOnline}
-      isSaving={isSaving}
-      mode="recipe"
+      isPlateLogging={plate.isLogging}
+      mode="recipe-to-plate"
       recipe={recipe}
-      time={initial.clockTime}
       onBack={goBack}
-      onSubmit={(selection) => {
-        void handleSubmit(selection);
-      }}
+      onSubmit={handleAddToPlate}
     />
   );
 }

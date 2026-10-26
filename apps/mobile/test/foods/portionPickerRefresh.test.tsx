@@ -11,6 +11,7 @@ import {
 } from "./support/apiClientMock";
 import PortionPickerRoute from "../../app/foods/[id]/log";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { trackFieldSelection } from "../support/amountFieldSelection";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
@@ -53,7 +54,9 @@ const withNewIds = (portions: FoodPortion[]): FoodPortion[] =>
 const pickerTree = () => (
   <ThemeProvider fixedPreference="dark">
     <ToastProvider>
-      <PortionPickerRoute />
+      <PlateProvider>
+        <PortionPickerRoute />
+      </PlateProvider>
     </ToastProvider>
   </ThemeProvider>
 );

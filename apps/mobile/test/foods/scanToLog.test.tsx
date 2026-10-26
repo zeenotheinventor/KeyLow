@@ -1,6 +1,7 @@
 import "react-native-gesture-handler/jestSetup";
 
 import { act, render, screen, userEvent } from "@testing-library/react-native";
+import { useEffect } from "react";
 import { setUpTests } from "react-native-reanimated";
 
 import {
@@ -18,6 +19,7 @@ import {
 import PortionPickerRoute from "../../app/foods/[id]/log";
 import ScanRoute from "../../app/foods/scan";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider, usePlate } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { trackFieldSelection } from "../support/amountFieldSelection";
 import { resetCameraMock, scanBarcode } from "../support/expoCameraMock";
@@ -25,11 +27,13 @@ import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
+import type { PlateContextValue } from "../../lib/plate";
 import type { UseFoodByBarcodeOptions } from "@keylow/api-client";
 
-// A barcode hit while food is being logged opens the portion picker, and the picker logs. The screens are
-// the real ones with the router mocked, so the URL the scan replaces itself with is what the picker is
-// opened on.
+// A barcode hit while food is being logged opens the portion picker, and the picker puts the food on the
+// plate. Opened with no day, from the scanner of the Your foods sheet, it has no plate to use and logs. The
+// screens are the real ones with the router mocked, so the URL the scan replaces itself with is what the
+// picker is opened on.
 
 jest.mock(
   "expo-router",
@@ -90,6 +94,17 @@ function openedPickerParams() {
   };
 }
 
+// The plate the picker puts the food on, read from inside the provider the food sheet's layout mounts.
+let plate: PlateContextValue;
+
+function PlateReader() {
+  const current = usePlate();
+  useEffect(() => {
+    plate = current;
+  });
+  return null;
+}
+
 // Scans the cola and opens the picker on the URL the scan replaced itself with.
 async function renderPickerFromScan() {
   await scanCola();
@@ -97,7 +112,10 @@ async function renderPickerFromScan() {
   await render(
     <ThemeProvider fixedPreference="dark">
       <ToastProvider>
-        <PortionPickerRoute />
+        <PlateProvider>
+          <PlateReader />
+          <PortionPickerRoute />
+        </PlateProvider>
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -169,7 +187,7 @@ describe("barcode to log", () => {
     });
   });
 
-  describe("from the scan to a logged entry", () => {
+  describe("from the scan to the plate or a logged entry", () => {
     // What the person does with their finger, one entry for each tap.
     const taps: string[] = [];
 
@@ -186,29 +204,29 @@ describe("barcode to log", () => {
       taps.length = 0;
     });
 
-    it("should take at most three taps after the scan: confirm the portion and save, with no tap on the Time row", async () => {
+    it("should take at most three taps after the scan: confirm the portion and add it, with no tap on the Time row", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       await renderScanner({ day: "2026-10-15" });
       await renderPickerFromScan();
       expect(openedPickerParams().pathname).toBe(`/foods/${savedFoodId}/log`);
+      expect(screen.getByText(`Scanned ${cola}`)).toBeOnTheScreen();
 
       // Confirming the portion: the default one is already chosen, and pressing it keeps it.
       await pressCounted(user, "1 bar", "radio");
-      await pressCounted(user, "Add", "button");
+      await pressCounted(user, "Add to plate", "button");
 
       expect(taps.length).toBeLessThanOrEqual(3);
-      expect(taps).not.toContain("Time, now, 12:40, change");
-      expect(mockLogFood).toHaveBeenCalledTimes(1);
-      expect(mockLogFood).toHaveBeenCalledWith(
-        expect.objectContaining({
-          food: foodFixture,
-          quantity: 1,
-          unit: "portion",
-          portion: portionFixtures[0],
-          loggedAt: "2026-10-15T11:40:30.000Z",
-        }),
-      );
-      expect(routerMock.parentGoBack).toHaveBeenCalledTimes(1);
+      expect(plate.items).toHaveLength(1);
+      expect(plate.items[0]).toMatchObject({
+        kind: "food",
+        foodId: foodFixture.id,
+        quantity: 1,
+        unit: { kind: "portion", label: "1 bar" },
+      });
+      expect(mockLogFood).not.toHaveBeenCalled();
+      expect(routerMock.dismissTo).toHaveBeenCalledWith("/foods?day=2026-10-15");
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
     });
 
     it("should need a single tap when the default portion is right", async () => {
@@ -216,10 +234,10 @@ describe("barcode to log", () => {
       await renderScanner({ day: "2026-10-15" });
       await renderPickerFromScan();
 
-      await pressCounted(user, "Add", "button");
+      await pressCounted(user, "Add to plate", "button");
 
-      expect(taps).toEqual(["Add"]);
-      expect(mockLogFood).toHaveBeenCalledTimes(1);
+      expect(taps).toEqual(["Add to plate"]);
+      expect(plate.items).toHaveLength(1);
     });
 
     describe("outside log mode, which is the sheet from More or Your foods and a link", () => {
@@ -269,18 +287,17 @@ describe("barcode to log", () => {
     });
 
     describe("from the dock on the Diary, viewing a past day", () => {
-      it("should log the default portion on that day, in one tap", async () => {
+      it("should put the default portion on the plate and return to the search on that day, in one tap", async () => {
         const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
         await renderScanner({ day: "2026-10-14" });
         await renderPickerFromScan();
 
-        await pressCounted(user, "Add", "button");
+        await pressCounted(user, "Add to plate", "button");
 
-        expect(taps).toEqual(["Add"]);
-        expect(mockLogFood).toHaveBeenCalledTimes(1);
-        expect(mockLogFood).toHaveBeenCalledWith(
-          expect.objectContaining({ food: foodFixture, localDate: "2026-10-14" }),
-        );
+        expect(taps).toEqual(["Add to plate"]);
+        expect(plate.items).toHaveLength(1);
+        expect(routerMock.dismissTo).toHaveBeenCalledWith("/foods?day=2026-10-14");
+        expect(mockLogFood).not.toHaveBeenCalled();
       });
     });
   });
