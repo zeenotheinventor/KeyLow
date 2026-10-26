@@ -15,6 +15,10 @@ export type DiaryDayContentProps = {
   isCopying: boolean;
   /** The last copy of yesterday failed: the error banner is shown. */
   hasCopyFailed: boolean;
+  /** An hour the log is to scroll to, from a link. See `FoodLogProps`. */
+  showHour?: number | undefined;
+  /** Called once the log has scrolled to `showHour`. */
+  onHourShown?: (() => void) | undefined;
   /** The bars and the no-target banner open Targets. */
   onOpenTargets: () => void;
   /** Called with the hour of the plus that was pressed. */

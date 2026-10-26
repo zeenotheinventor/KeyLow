@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { DayCompleteToggle, FoodRow, HourRow } from "../../ui";
@@ -18,8 +18,9 @@ const HOURS_PER_DAY = 24;
  * and no separator between them, because each row draws its own piece of the guide line and a gap would
  * break it. On a day with nothing logged the Nothing logged yet card sits above 00:00. When the hours have
  * all been measured the log scrolls once so the first food's hour, or the current hour when the day is
- * empty, is near the top. Key it by the day, so a new day scrolls again, and so the day complete switch,
- * which belongs to the day, is a new one for it.
+ * empty, is near the top. A link can ask for another hour (`showHour`), which it scrolls to the same way,
+ * also when it has already scrolled, once for each request. Key it by the day, so a new day scrolls
+ * again, and so the day complete switch, which belongs to the day, is a new one for it.
  */
 export function FoodLog({
   hours,
@@ -30,6 +31,8 @@ export function FoodLog({
   isComplete,
   isYesterdayEmpty,
   isCopying,
+  showHour,
+  onHourShown,
   onAddFood,
   onDeleteEntry,
   onCopyYesterday,
@@ -46,14 +49,12 @@ export function FoodLog({
   const isEmpty = hours.every((group) => group.entries.length === 0);
   const startHour = hours.find((group) => group.entries.length > 0)?.hour ?? currentHour;
 
-  function scrollToStartHour() {
-    const top = hourTops.current.get(startHour);
-    if (
-      hasScrolled.current ||
-      listTop.current === null ||
-      top === undefined ||
-      hourTops.current.size < HOURS_PER_DAY
-    ) {
+  // A requested hour comes first, and is scrolled to whenever it is asked for. Without one the log scrolls
+  // once, to the first food's hour. The first scroll of either kind is the log's one scroll to a start.
+  const scrollToWantedHour = useCallback(() => {
+    const wantedHour = showHour ?? (hasScrolled.current ? undefined : startHour);
+    const top = wantedHour === undefined ? undefined : hourTops.current.get(wantedHour);
+    if (top === undefined || listTop.current === null || hourTops.current.size < HOURS_PER_DAY) {
       return;
     }
 
@@ -62,7 +63,17 @@ export function FoodLog({
       y: Math.max(0, listTop.current + top - SCROLL_MARGIN),
       animated: false,
     });
-  }
+    if (showHour !== undefined) {
+      onHourShown?.();
+    }
+  }, [showHour, startHour, onHourShown]);
+
+  // A request that arrives when the hours are already measured has no layout event to wait for.
+  useEffect(() => {
+    if (showHour !== undefined) {
+      scrollToWantedHour();
+    }
+  }, [showHour, scrollToWantedHour]);
 
   return (
     <ScrollView ref={scrollViewRef} className="flex-1" contentContainerClassName="px-4 pb-6 pt-2">
@@ -78,7 +89,7 @@ export function FoodLog({
         role="list"
         onLayout={(event) => {
           listTop.current = event.nativeEvent.layout.y;
-          scrollToStartHour();
+          scrollToWantedHour();
         }}
       >
         {hours.map((group) => (
@@ -91,7 +102,7 @@ export function FoodLog({
             onAdd={onAddFood}
             onLayout={(event) => {
               hourTops.current.set(group.hour, event.nativeEvent.layout.y);
-              scrollToStartHour();
+              scrollToWantedHour();
             }}
           >
             {group.entries.map((entry) => (

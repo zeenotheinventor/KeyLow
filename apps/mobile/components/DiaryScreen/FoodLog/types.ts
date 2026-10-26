@@ -16,6 +16,14 @@ export type FoodLogProps = {
   isYesterdayEmpty: boolean;
   /** A copy of yesterday is under way, as the empty day's button shows. */
   isCopying: boolean;
+  /**
+   * An hour (0 to 23) the log has been asked to scroll to, with the same margin as its first scroll, also
+   * when it has already scrolled. It waits for the hours to be measured, scrolls once, and then says so
+   * with `onHourShown`, so the next request is a new one.
+   */
+  showHour?: number | undefined;
+  /** Called once the log has scrolled to `showHour`. */
+  onHourShown?: (() => void) | undefined;
   /** Called with the hour of the plus that was pressed. */
   onAddFood: (hour: number) => void;
   /** Called with the entry whose row was deleted, by a swipe or by its Delete action. Rows cannot be deleted while offline. */

@@ -22,6 +22,8 @@ export function DiaryDayContent({
   isYesterdayEmpty,
   isCopying,
   hasCopyFailed,
+  showHour,
+  onHourShown,
   onOpenTargets,
   onAddFood,
   onDeleteEntry,
@@ -58,11 +60,13 @@ export function DiaryDayContent({
         isOnline={isOnline}
         isToday={isToday}
         isYesterdayEmpty={isYesterdayEmpty}
+        showHour={showHour}
         timeZone={timeZone}
         onAddFood={onAddFood}
         onCompleteChange={onCompleteChange}
         onCopyYesterday={onCopyYesterday}
         onDeleteEntry={onDeleteEntry}
+        onHourShown={onHourShown}
       />
     </>
   );
