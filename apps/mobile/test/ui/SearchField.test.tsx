@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Keyboard, Platform } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { IconButton, SearchField } from "../../components/ui";
+import { Button, IconButton, SearchField } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { stubKeyboard, subscription } from "../support/keyboardStub";
 import { compileKitStyles } from "../support/kitStyles";
@@ -220,6 +220,69 @@ describe("SearchField", () => {
       await renderField({ trailing: scanControl });
 
       expect(screen.getByRole("button", { name: "Scan barcode" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("the dock action", () => {
+    const logFoods = (
+      <Button accessibilityLabel="Log foods, 4 foods on your plate">Log foods</Button>
+    );
+
+    // The host nodes in the order they are drawn, so one control can be found after another.
+    function drawnPosition(control: ReturnType<typeof screen.getByRole>) {
+      return (screen.root?.queryAll((node) => typeof node.type === "string") ?? []).indexOf(
+        control,
+      );
+    }
+
+    it("should draw the action by its name", async () => {
+      await renderField({ dockAction: logFoods });
+
+      expect(
+        screen.getByRole("button", { name: "Log foods, 4 foods on your plate" }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should draw the action after the field", async () => {
+      await renderField({ dockAction: logFoods });
+
+      const field = drawnPosition(screen.getByRole("searchbox", { name: "Search foods" }));
+      const action = drawnPosition(
+        screen.getByRole("button", { name: "Log foods, 4 foods on your plate" }),
+      );
+      expect(field).toBeGreaterThanOrEqual(0);
+      expect(action).toBeGreaterThan(field);
+    });
+
+    it("should let the field shrink to the width the action leaves", async () => {
+      await renderField({ dockAction: logFoods });
+
+      expect(viewsDrawn({ minWidth: 0, flexGrow: 1 })).toHaveLength(1);
+    });
+
+    it("should hold the same field with and without the action, so typing keeps its focus", async () => {
+      const view = await renderField();
+      const field = screen.getByRole("searchbox", { name: "Search foods" });
+
+      await view.rerender(
+        <ThemeProvider fixedPreference="dark">
+          <SearchField {...defaultProps} dockAction={logFoods} />
+        </ThemeProvider>,
+      );
+
+      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBe(field);
+    });
+
+    it("should draw nothing beside the field when it has no action", async () => {
+      await renderField();
+
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+    });
+
+    it("should leave the action out of an inline field, which has no dock", async () => {
+      await renderField({ placement: "inline", dockAction: logFoods });
+
+      expect(screen.queryByRole("button")).not.toBeOnTheScreen();
     });
   });
 

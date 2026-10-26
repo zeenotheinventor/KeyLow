@@ -483,4 +483,41 @@ describe("SheetHeader", () => {
       expect(screen.getByTestId("sheet-header-empty-slot")).toBeOnTheScreen();
     });
   });
+
+  describe("with wide slots, as the plate chip needs", () => {
+    const withChip: SheetHeaderProps = {
+      ...searchHeader,
+      trailing: undefined,
+      trailingSlot: <Text>4 foods</Text>,
+      hasWideSlots: true,
+    };
+
+    it("should give the leading and trailing slots one width of 76 points, so the title stays centred", async () => {
+      await renderHeader(withChip);
+
+      expect(screen.getByTestId("sheet-header-leading-slot")).toHaveStyle({ width: 76 });
+      expect(screen.getByTestId("sheet-header-trailing-slot")).toHaveStyle({ width: 76 });
+      expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
+    });
+
+    it("should keep the controls and the slot inside their wide slots", async () => {
+      await renderHeader(withChip);
+
+      expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
+      expect(screen.getByText("4 foods")).toBeOnTheScreen();
+    });
+
+    it("should keep the leading slot's width with no leading control", async () => {
+      await renderHeader({ ...withChip, leading: undefined });
+
+      expect(screen.getByTestId("sheet-header-leading-slot")).toHaveStyle({ width: 76 });
+    });
+
+    it("should draw no wide slots unless asked", async () => {
+      await renderHeader({ ...withChip, hasWideSlots: undefined });
+
+      expect(screen.queryByTestId("sheet-header-leading-slot")).not.toBeOnTheScreen();
+      expect(screen.queryByTestId("sheet-header-trailing-slot")).not.toBeOnTheScreen();
+    });
+  });
 });

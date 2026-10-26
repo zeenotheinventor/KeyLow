@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View } from "react-native";
 
+import { Button } from "../Button";
 import { IconButton } from "../IconButton";
 import { SearchField } from "./SearchField";
 
@@ -77,4 +78,24 @@ export const Inline: Story = {
 export const Disabled: Story = {
   args: { ...Inline.args, disabled: true },
   decorators: Inline.decorators ?? [],
+};
+
+// The plate's Log foods button docked beside the field, which shrinks to make room.
+export const WithLogFoods: Story = {
+  args: {
+    value: "chicken",
+    dockAction: <Button accessibilityLabel="Log foods, 4 foods on your plate">Log foods</Button>,
+  },
+};
+
+// While the plate is being logged the button shows its spinner in place of its label.
+export const WithLogFoodsLogging: Story = {
+  args: {
+    value: "chicken",
+    dockAction: (
+      <Button loading accessibilityLabel="Log foods, 4 foods on your plate">
+        Log foods
+      </Button>
+    ),
+  },
 };

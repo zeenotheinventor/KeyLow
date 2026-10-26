@@ -60,6 +60,7 @@ export function FoodRow({
   caption,
   needsReview = false,
   onAdd,
+  addLabel,
   addDisabled = false,
   onDelete,
   startsSwiped,
@@ -268,7 +269,7 @@ export function FoodRow({
         <IconButton
           disabled={addDisabled || disabled}
           icon="Plus"
-          label={describeAddFood(name, caption)}
+          label={addLabel ?? describeAddFood(name, caption)}
           variant="ring"
           onPress={onAdd}
         />

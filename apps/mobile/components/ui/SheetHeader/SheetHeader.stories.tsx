@@ -2,6 +2,7 @@ import { View } from "react-native";
 
 import { SheetHeader } from "./SheetHeader";
 import { Button } from "../Button";
+import { PlateChip } from "../PlateChip";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
 
@@ -110,4 +111,14 @@ export const WithoutLeading: Story = {
 // Recalculate's first step: Close at the right only.
 export const WithoutLeadingWithClose: Story = {
   args: { title: "About you", subtitle: "Step 1 of 8", trailing: close },
+};
+
+// The log search with foods on the plate: the chip at the right, in a slot as wide as the left one, so the title stays centred.
+export const WithPlateChip: Story = {
+  args: {
+    title: "Log food",
+    leading: close,
+    trailingSlot: <PlateChip count={4} onPress={() => undefined} />,
+    hasWideSlots: true,
+  },
 };

@@ -44,6 +44,12 @@ export type SheetHeaderProps = {
    */
   trailingSlot?: ReactNode;
   /**
+   * Gives the leading and trailing ends one width of 76 points, in place of the 44 point control, so a
+   * `trailingSlot` wider than a control, such as the plate chip, leaves the title in the middle. The leading
+   * control stays at the left and the trailing content at the right. Leave it out for the usual 44 points.
+   */
+  hasWideSlots?: boolean | undefined;
+  /**
    * Whether the title is a heading for a screen reader. Defaults to true. A view that has its own
    * heading, as the food detail has the food's name, turns it off so there is one.
    */

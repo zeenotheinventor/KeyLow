@@ -10,4 +10,5 @@ export const storyStates = [
   "LongTitle",
   "WithoutLeading",
   "WithoutLeadingWithClose",
+  "WithPlateChip",
 ];

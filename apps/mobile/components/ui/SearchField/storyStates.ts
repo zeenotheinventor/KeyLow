@@ -1,1 +1,10 @@
-export const storyStates = ["Empty", "Filled", "WithClear", "Focused", "Inline", "Disabled"];
+export const storyStates = [
+  "Empty",
+  "Filled",
+  "WithClear",
+  "Focused",
+  "Inline",
+  "Disabled",
+  "WithLogFoods",
+  "WithLogFoodsLogging",
+];
