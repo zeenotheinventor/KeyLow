@@ -42,7 +42,8 @@ import type { PickerChoices } from "@keylow/core/diary";
 export function PortionPicker(props: PortionPickerProps) {
   return props.mode === "recipe" ||
     props.mode === "edit-recipe" ||
-    props.mode === "recipe-to-plate" ? (
+    props.mode === "recipe-to-plate" ||
+    props.mode === "edit-plate-recipe" ? (
     <RecipePortionPicker {...props} />
   ) : (
     <FoodPortionPicker {...props} />
@@ -60,7 +61,9 @@ export function PortionPicker(props: PortionPickerProps) {
  * with the food's source under the title and Add to recipe; a food that must be reviewed first cannot be added.
  * A food about to join the plate has the add page without the Time row, since the time belongs to the plate,
  * with Add to plate; it saves nothing, so it works offline, and a food that must be reviewed first has Copy to
- * your foods in place of the button, as on the add page.
+ * your foods in place of the button, as on the add page. A food already on the plate, opened to change its unit,
+ * is the same page started on the row's amount and unit, with Save in place of Add to plate: it has no Time row
+ * and no Delete, and it saves nothing, so it works offline.
  */
 function FoodPortionPicker(props: FoodPortionPickerProps) {
   const { food, onBack } = props;
@@ -73,7 +76,10 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
   // food's portions, while its hero is worked out from the snapshot alone. The hero gets the portions the chips
   // came from.
   const isAdding =
-    props.mode === "add" || props.mode === "add-ingredient" || props.mode === "add-to-plate";
+    props.mode === "add" ||
+    props.mode === "add-ingredient" ||
+    props.mode === "add-to-plate" ||
+    props.mode === "edit-plate";
   const choices: PickerChoices = isAdding
     ? pickerChoices(food, props.portions)
     : entryPickerChoices(props.snapshot, props.livePortions);
@@ -180,7 +186,8 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
                 if (
                   props.mode === "edit-ingredient" ||
                   props.mode === "add-ingredient" ||
-                  props.mode === "add-to-plate"
+                  props.mode === "add-to-plate" ||
+                  props.mode === "edit-plate"
                 ) {
                   props.onSubmit(amount);
                 } else {
@@ -188,7 +195,7 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
                 }
               }}
             >
-              {isFromSnapshot
+              {isFromSnapshot || props.mode === "edit-plate"
                 ? ENTRY_SCREEN.saveAction
                 : props.mode === "add-ingredient"
                   ? RECIPE_EDITOR.addToRecipe

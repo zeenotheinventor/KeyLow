@@ -274,13 +274,16 @@ describe("the Your plate sheet", () => {
       expect(sheet.getByRole("button", { name: logFood })).toHaveTextContent("Log food");
     });
 
-    it("should write the name of a row as plain text until the picker is wired to it, with no button", async () => {
+    it("should make the name of a row a button that says it changes the amount or unit", async () => {
       const user = await renderSearch();
 
       const sheet = await openThePlate(user);
 
-      expect(sheet.getByText("Semi-skimmed milk")).toBeOnTheScreen();
-      expect(sheet.queryByRole("button", { name: /change amount or unit/ })).not.toBeOnTheScreen();
+      expect(
+        sheet.getByRole("button", {
+          name: "Semi-skimmed milk, 200 ml, 92 kilocalories, change amount or unit",
+        }),
+      ).toBeEnabled();
     });
 
     it("should not show 0 foods while the sheet closes on its last food", async () => {

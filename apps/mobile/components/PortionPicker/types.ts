@@ -89,6 +89,21 @@ type PortionPickerAddToPlateProps = PortionPickerBaseProps & {
 };
 
 /**
+ * The amount step of a food already on the plate, opened from the row's name to change its amount or unit (the
+ * picker's edit-plate mode): the add-to-plate page started on the row's amount and unit, with Save in place of
+ * Add to plate. It has no Time row, since the time belongs to the plate, and no Delete, since the row's X takes
+ * the food off. Save hands the amount over, and works offline because nothing is written.
+ */
+type PortionPickerEditPlateProps = PortionPickerBaseProps & {
+  mode: "edit-plate";
+  /** The food's own portions. The picker adds g and, for a food measured by volume, ml and the spoons. */
+  portions: readonly FoodPortion[];
+  /** The row's amount and unit, as the food's portions are now. A row with no valid amount is given its unit's usual amount. */
+  initialAmount?: PortionAmount | undefined;
+  onSubmit: (amount: ChosenAmount) => void;
+};
+
+/**
  * The page for a logged entry, which the food's own review does not apply to: Save in place of Add, with a
  * Delete under it. The food is the entry's own snapshot, and `time` is the entry's. The amount and the hero
  * work from `snapshot`, so a change to the live food never reaches them; the live food only decides which
@@ -202,16 +217,30 @@ export type RecipeToPlatePickerProps = RecipePickerBaseProps & {
   onSubmit: (amount: RecipeAmount) => void;
 };
 
+/**
+ * The amount step of a recipe already on the plate, opened from the row's name (the picker's edit-plate-recipe
+ * mode): the recipe page started on the row's amount and unit, with Save in place of Add to plate, no Time row
+ * and no Delete. It saves nothing, so it works offline.
+ */
+export type RecipeEditPlatePickerProps = RecipePickerBaseProps & {
+  mode: "edit-plate-recipe";
+  /** The row's amount and unit. A row with no valid amount is given its unit's usual amount. */
+  amount: RecipeAmount;
+  onSubmit: (amount: RecipeAmount) => void;
+};
+
 /** The pages of a food, which the picker has had since the diary was built. */
 export type FoodPortionPickerProps =
   | PortionPickerAddProps
   | PortionPickerEditProps
   | PortionPickerAddIngredientProps
   | PortionPickerAddToPlateProps
+  | PortionPickerEditPlateProps
   | PortionPickerEditIngredientProps;
 
 export type PortionPickerProps =
   | FoodPortionPickerProps
   | RecipePortionPickerProps
   | RecipeEntryPickerProps
-  | RecipeToPlatePickerProps;
+  | RecipeToPlatePickerProps
+  | RecipeEditPlatePickerProps;
