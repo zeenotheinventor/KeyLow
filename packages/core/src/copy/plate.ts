@@ -1,4 +1,5 @@
 import { RECIPE_BADGE } from "./recipeLog";
+import { spokenAmount } from "./spokenAmount";
 
 /**
  * The words of the plate, as the "Ki-Lo plate" boards draw them. Undo is `LOG_SEARCH.undo`, the message under
@@ -68,6 +69,26 @@ export const describeRemoveFromPlate = (foodName: string): string =>
 /** The name of a row's amount field. `units` is the plural unit word: "servings", "pots", "ml". */
 export const describePlateAmountField = (foodName: string, units: string): string =>
   `Amount of ${foodName}, ${units}`;
+
+/**
+ * The name of the button that is a row's name and stats: "Chicken and rice, 1 serving, 374 kilocalories, change
+ * amount or unit". `amountText` is what the field reads, `unitWord` the word after it and `energy` the row's
+ * kilocalories as `formatCalories` writes them. The amount is left out while the field is empty.
+ */
+export const describePlateRowOpenName = (
+  foodName: string,
+  amountText: string,
+  unitWord: string,
+  energy: string,
+): string =>
+  [
+    foodName,
+    amountText.trim() === "" ? undefined : `${amountText} ${unitWord}`,
+    spokenAmount(energy, "kilocalorie", "kilocalories"),
+    "change amount or unit",
+  ]
+    .filter((part) => part !== undefined)
+    .join(", ");
 
 /** The body of the dialog that asks before the plate is thrown away. */
 export const describeDiscardPlateBody = (count: number): string =>

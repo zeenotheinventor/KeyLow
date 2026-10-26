@@ -423,4 +423,72 @@ describe("NumericInput", () => {
       );
     });
   });
+
+  describe("the sm size", () => {
+    const amount: Partial<NumericInputProps> = {
+      label: "Amount",
+      accessibilityLabel: "Amount of Semi-skimmed milk, ml",
+      labelHidden: true,
+      unit: "ml",
+      value: "200",
+      size: "sm",
+    };
+
+    it("should draw a box 36 points high with 10 points across, as the plate row's amount is drawn", async () => {
+      await renderNumericInput(amount);
+
+      expect(viewsDrawn({ height: 36, paddingLeft: 10, paddingRight: 10 })).toHaveLength(1);
+      expect(viewsDrawn({ minHeight: 44 })).toHaveLength(0);
+    });
+
+    it("should keep the unit 8 points from the digits", async () => {
+      await renderNumericInput(amount);
+
+      expect(viewsDrawn({ height: 36, columnGap: 8 })).toHaveLength(1);
+    });
+
+    it("should write the unit as a caption, smaller than the digits, as the board draws it", async () => {
+      await renderNumericInput(amount);
+
+      expect(screen.getByText("ml", { includeHiddenElements: true })).toHaveStyle({
+        fontSize: 12,
+        lineHeight: 16,
+      });
+      expect(screen.getByLabelText("Amount of Semi-skimmed milk, ml")).toHaveStyle({
+        fontSize: 16,
+      });
+    });
+
+    it("should leave the unit of the other sizes in body type", async () => {
+      await renderNumericInput();
+
+      expect(screen.getByText("kcal", { includeHiddenElements: true })).toHaveStyle({
+        fontSize: 16,
+        lineHeight: 24,
+      });
+    });
+
+    it("should write the digits in a line short enough for the box", async () => {
+      await renderNumericInput(amount);
+
+      expect(screen.getByLabelText("Amount of Semi-skimmed milk, ml")).not.toHaveStyle({
+        minHeight: 40,
+      });
+    });
+  });
+
+  describe("a disabled field that does not dim itself", () => {
+    it("should dim to half strength by default", async () => {
+      await renderNumericInput({ disabled: true });
+
+      expect(viewsDrawn({ opacity: 0.5 }).length).toBeGreaterThan(0);
+    });
+
+    it("should take no typing and draw no dimming of its own when asked not to dim", async () => {
+      await renderNumericInput({ disabled: true, dimsWhenDisabled: false });
+
+      expect(screen.getByLabelText("Energy (kcal)")).toHaveProp("editable", false);
+      expect(viewsDrawn({ opacity: 0.5 })).toHaveLength(0);
+    });
+  });
 });

@@ -15,6 +15,7 @@ import {
   describePlateAmountField,
   describePlateChipName,
   describePlateDay,
+  describePlateRowOpenName,
   describeRemoveFromPlate,
   describeStripDay,
 } from "../../src/copy";
@@ -127,6 +128,29 @@ describe("the plate row's words", () => {
     );
     expect(describePlateAmountField("Semi-skimmed milk", "ml")).toBe(
       "Amount of Semi-skimmed milk, ml",
+    );
+  });
+});
+
+describe("describePlateRowOpenName", () => {
+  it("should name the row with the food, the amount, the energy and what pressing it does", () => {
+    expect(describePlateRowOpenName("Chicken and rice", "1", "serving", "374")).toBe(
+      "Chicken and rice, 1 serving, 374 kilocalories, change amount or unit",
+    );
+    expect(describePlateRowOpenName("Semi-skimmed milk", "200", "ml", "92")).toBe(
+      "Semi-skimmed milk, 200 ml, 92 kilocalories, change amount or unit",
+    );
+  });
+
+  it("should say 1 kilocalorie in the singular", () => {
+    expect(describePlateRowOpenName("Sweetener", "1", "tablet", "1")).toBe(
+      "Sweetener, 1 tablet, 1 kilocalorie, change amount or unit",
+    );
+  });
+
+  it("should leave the amount out while the field is empty", () => {
+    expect(describePlateRowOpenName("Chicken and rice", "", "servings", "0")).toBe(
+      "Chicken and rice, 0 kilocalories, change amount or unit",
     );
   });
 });

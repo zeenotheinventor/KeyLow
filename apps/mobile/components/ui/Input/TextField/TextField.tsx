@@ -24,6 +24,10 @@ function boxSpacingClassName(
   if (size === "cell") {
     return "px-0 gap-0";
   }
+  // The plate row's amount: 10 across and 8 between, with the unit.
+  if (size === "sm") {
+    return "px-[10px] gap-2";
+  }
   if (density === "comfortable") {
     return "px-4 gap-2";
   }
@@ -48,6 +52,7 @@ const boxHeightClassName = {
   default: "min-h-control-md",
   // The routine editor board's fields are 36 points high in a row of 48.
   cell: "h-control-sm",
+  sm: "h-control-sm",
   display: "h-16",
 } satisfies Record<NonNullable<TextFieldProps["size"]>, string>;
 
@@ -85,6 +90,7 @@ export function TextField({
   errorShownElsewhere = false,
   missingNote,
   disabled = false,
+  dimsWhenDisabled = true,
   density = "comfortable",
   size = "default",
   inputRef,
@@ -144,7 +150,7 @@ export function TextField({
   const fillClassName = locked || disabled ? "bg-surface" : "bg-surface-raised";
 
   return (
-    <View className={`gap-1 ${disabled ? "opacity-50" : ""}`}>
+    <View className={`gap-1 ${disabled && dimsWhenDisabled ? "opacity-50" : ""}`}>
       {labelHidden && hint === undefined ? null : (
         <View className="flex-row items-center justify-between gap-1">
           {labelHidden ? null : (
@@ -179,7 +185,7 @@ export function TextField({
           // `aria-disabled={false}` would turn a locked field's input back on.
           aria-disabled={disabled ? true : undefined}
           aria-label={accessibilityLabel ?? (unit === undefined ? label : `${label} (${unit})`)}
-          className={`${size === "cell" ? "min-h-0" : "min-h-10"} min-w-0 flex-1 p-0 tabular-nums text-text-primary ${valueClassName(size, strongValue)} ${alignClassName[align]}`}
+          className={`${size === "cell" || size === "sm" ? "min-h-0" : "min-h-10"} min-w-0 flex-1 p-0 tabular-nums text-text-primary ${valueClassName(size, strongValue)} ${alignClassName[align]}`}
           cursorColor={colors["text-primary"]}
           // `readOnly` is left out because React Native lets it override `editable` even when it is false.
           editable={!disabled && !locked}
@@ -205,7 +211,8 @@ export function TextField({
             aria-hidden
             maxFontSizeMultiplier={maxFontSizeMultiplier}
             tone="muted"
-            variant="body"
+            // The plate row's unit is a caption beside body digits, as the board draws it.
+            variant={size === "sm" ? "caption" : "body"}
           >
             {unit}
           </Text>

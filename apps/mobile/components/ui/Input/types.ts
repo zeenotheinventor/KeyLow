@@ -54,6 +54,11 @@ export type FieldFrameProps = {
   missingNote?: string | undefined;
   /** Drops the whole field to half strength and stops it taking typing. */
   disabled?: boolean | undefined;
+  /**
+   * Whether a disabled field dims itself to half strength. Defaults to true. A field inside something that is
+   * already dimmed as a whole, such as a plate row that is being logged, turns it off, so it is dimmed once.
+   */
+  dimsWhenDisabled?: boolean | undefined;
   /** Defaults to `comfortable`, and to `compact` for a `NumericInput`. */
   density?: InputDensity | undefined;
   /** The text input itself, for a screen that moves focus to the field, such as the first one a failed save found wrong. */

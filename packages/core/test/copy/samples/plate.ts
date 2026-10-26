@@ -17,6 +17,9 @@ export const samples: Record<string, () => string[]> = {
     copy.describeStripDay("Today", false),
     copy.describeStripDay("Today", true),
   ],
+  describePlateRowOpenName: () => [
+    copy.describePlateRowOpenName("Chicken and rice", "1", "serving", "374"),
+  ],
   describeRemoveFromPlate: () => [copy.describeRemoveFromPlate("Banana")],
   describePlateAmountField: () => [copy.describePlateAmountField("Banana", "medium")],
   describeDiscardPlateBody: () => [
