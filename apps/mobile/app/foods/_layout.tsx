@@ -1,6 +1,8 @@
-import { Stack } from "expo-router";
+import { Stack, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
+import { readLogContext } from "../../lib/navigation";
+import { PlateProvider } from "../../lib/plate";
 import { useTheme } from "../../lib/theme";
 
 // The root layout's AuthGate already covers these routes, so the stack needs no guard of its own.
@@ -8,9 +10,10 @@ import { useTheme } from "../../lib/theme";
 // scanner and the food form draw theirs.
 export default function FoodsLayout() {
   const { scheme, colors } = useTheme();
+  const { day, time } = useGlobalSearchParams<{ day?: string; time?: string }>();
 
   return (
-    <>
+    <PlateProvider initialTime={readLogContext({ day, time })?.time}>
       {/* Light content on the dark sheet, dark on the light one. */}
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <Stack
@@ -25,6 +28,6 @@ export default function FoodsLayout() {
         <Stack.Screen name="scan" />
         <Stack.Screen name="quick-add" />
       </Stack>
-    </>
+    </PlateProvider>
   );
 }
