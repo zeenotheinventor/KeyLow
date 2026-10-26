@@ -115,10 +115,8 @@ export const WithoutLeadingWithClose: Story = {
 
 // The log search with foods on the plate: the chip at the right, in a slot as wide as the left one, so the title stays centred.
 export const WithPlateChip: Story = {
-  args: {
-    title: "Log food",
-    leading: close,
-    trailingSlot: <PlateChip count={4} onPress={() => undefined} />,
-    hasWideSlots: true,
-  },
+  args: { title: "Log food", leading: close, hasWideSlots: true },
+  render: (args) => (
+    <SheetHeader {...args} trailingSlot={<PlateChip count={4} onPress={() => undefined} />} />
+  ),
 };
