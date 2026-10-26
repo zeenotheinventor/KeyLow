@@ -72,6 +72,125 @@ export type Database = {
           },
         ];
       };
+      assistant_conversations: {
+        Row: {
+          compacted_through_turn_id: string | null;
+          compaction_summary: string | null;
+          created_at: string;
+          id: string;
+          title: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          compacted_through_turn_id?: string | null;
+          compaction_summary?: string | null;
+          created_at?: string;
+          id?: string;
+          title?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          compacted_through_turn_id?: string | null;
+          compaction_summary?: string | null;
+          created_at?: string;
+          id?: string;
+          title?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      assistant_messages: {
+        Row: {
+          content: Json;
+          conversation_id: string;
+          created_at: string;
+          id: string;
+          role: string;
+          seq: number;
+          turn_id: string;
+          user_id: string;
+        };
+        Insert: {
+          content: Json;
+          conversation_id: string;
+          created_at?: string;
+          id?: string;
+          role: string;
+          seq: number;
+          turn_id: string;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          conversation_id?: string;
+          created_at?: string;
+          id?: string;
+          role?: string;
+          seq?: number;
+          turn_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "assistant_messages_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "assistant_conversations";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "assistant_messages_turn_id_fkey";
+            columns: ["turn_id"];
+            isOneToOne: false;
+            referencedRelation: "assistant_turns";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      assistant_turns: {
+        Row: {
+          conversation_id: string;
+          created_at: string;
+          finished_at: string | null;
+          id: string;
+          pending_confirmation: Json | null;
+          status: string;
+          user_id: string;
+          user_message_id: string;
+        };
+        Insert: {
+          conversation_id: string;
+          created_at?: string;
+          finished_at?: string | null;
+          id?: string;
+          pending_confirmation?: Json | null;
+          status?: string;
+          user_id: string;
+          user_message_id: string;
+        };
+        Update: {
+          conversation_id?: string;
+          created_at?: string;
+          finished_at?: string | null;
+          id?: string;
+          pending_confirmation?: Json | null;
+          status?: string;
+          user_id?: string;
+          user_message_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "assistant_turns_conversation_id_fkey";
+            columns: ["conversation_id"];
+            isOneToOne: false;
+            referencedRelation: "assistant_conversations";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       body_measurements: {
         Row: {
           created_at: string;
