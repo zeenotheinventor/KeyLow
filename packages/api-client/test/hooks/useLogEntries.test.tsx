@@ -1,4 +1,5 @@
 import { buildFood } from "@keylow/core/testing";
+import { onlineManager } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -22,6 +23,7 @@ beforeAll(() => {
 });
 afterEach(() => {
   server.resetHandlers();
+  onlineManager.setOnline(true);
 });
 afterAll(() => {
   server.close();
@@ -183,6 +185,23 @@ describe("useLogEntries", () => {
         expect(fake.requests.dayReads).toBe(dayReadsBefore + 1);
       });
     });
+  });
+
+  it("should try the write and fail at once when the connection is lost, not wait for it to return", async () => {
+    const fake = installDiaryFake(server);
+    fake.failWrites();
+    onlineManager.setOnline(false);
+    const { wrapper } = createWrapper();
+    const { result } = renderHook(() => useLogEntries(), { wrapper });
+
+    // A paused mutation would never settle, and the person would be left waiting on a plate that cannot be logged.
+    await act(async () => {
+      await result.current.mutateAsync(plate).catch(() => undefined);
+    });
+
+    expect(fake.requests.writes).toBe(1);
+    expect(result.current.isError).toBe(true);
+    expect(result.current.isPaused).toBe(false);
   });
 
   it("should send nothing when a row has a negative amount", async () => {

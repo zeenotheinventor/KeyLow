@@ -56,6 +56,7 @@ export const mockMaterialiseOffProduct = jest.fn<Promise<Food>, [{ code: string 
 export const mockUseFoodSearch = jest.fn<FoodSearchResult, [string]>();
 export const mockUseOwnFoods = jest.fn<OwnFoodsState, []>();
 export const mockLogEntries = jest.fn<Promise<unknown[]>, [readonly LogEntriesItem[]]>();
+export const mockQuickAdd = jest.fn<Promise<unknown>, [unknown]>();
 
 type DayRead = {
   data: { entries: { nutrients: Record<string, number | null> }[] } | undefined;
@@ -114,6 +115,8 @@ export function resetSearchApiClientMock(): void {
   mockMaterialiseOffProduct.mockReset();
   mockLogEntries.mockReset();
   mockLogEntries.mockResolvedValue([]);
+  mockQuickAdd.mockReset();
+  mockQuickAdd.mockResolvedValue({});
   eatenDay.current = {
     data: {
       entries: [{ nutrients: { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 } }],
@@ -137,6 +140,7 @@ export const mockSearchApiClient = {
   useOwnFoods: mockUseOwnFoods,
   useRecipeSearch: mockUseRecipeSearch,
   useLogEntries: () => ({ mutateAsync: mockLogEntries }),
+  useQuickAdd: () => ({ mutateAsync: mockQuickAdd }),
   useDiaryDay: mockUseDiaryDay,
   useTargets: mockUseTargets,
   useMaterialiseOffProduct: () => ({ mutateAsync: mockMaterialiseOffProduct }),
