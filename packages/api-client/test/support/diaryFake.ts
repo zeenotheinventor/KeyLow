@@ -97,16 +97,21 @@ export function installDiaryFake(server: SetupServer, seed: LogEntry[] = []) {
       if (control.failWrites) {
         return postgrestError(500, "XX000", "unavailable");
       }
-      const body = diaryInsertSchema.parse(await request.json());
-      const stored: StoredEntry = {
+      // One insert of an array is one statement: every row is stored with the same `created_at`, or none is.
+      const json: unknown = await request.json();
+      const bodies = z.array(diaryInsertSchema).safeParse(json);
+      const createdAt = new Date().toISOString();
+      const storedRows: StoredEntry[] = (
+        bodies.success ? bodies.data : [diaryInsertSchema.parse(json)]
+      ).map((body) => ({
         ...body,
         id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
+        created_at: createdAt,
         kcal: body.nutrients.kcal ?? null,
         deleted_at: null,
-      };
-      rows.push(stored);
-      return postgrestRows(request, [stored], 201);
+      }));
+      rows.push(...storedRows);
+      return postgrestRows(request, storedRows, 201);
     }),
     http.patch(`${REST_URL}/food_log_entries`, async ({ request }) => {
       requests.writes += 1;

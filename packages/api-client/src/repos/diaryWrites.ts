@@ -2,6 +2,7 @@ import { toLocalDate } from "@keylow/core/dates";
 import {
   buildLogEntry,
   buildQuickEntry,
+  buildRecipeLogEntry,
   quickLogEntryInsertSchema,
   recomputeEntry,
   recomputeRecipeEntry,
@@ -9,15 +10,17 @@ import {
 } from "@keylow/core/diary";
 import { z } from "zod";
 
-import { writeWithoutDeadPortion } from "./deadPortion";
+import { isDeadPortionRefusal, writeWithoutDeadPortion } from "./deadPortion";
 import { ENTRY_COLUMNS, idOfRow, insertDiaryEntry, parseRow, repoError } from "./diaryRows";
 import {
   diaryInsertSchema,
   foodLogEntrySchema,
   logEntrySchema,
   quickLogEntrySchema,
+  recipeLogEntrySchema,
 } from "./diarySchemas";
 import { getFood, listFoodPortions } from "./foods";
+import { recipeRepoError } from "./recipes";
 
 import type {
   DiaryInsert,
@@ -26,6 +29,7 @@ import type {
   QuickLogEntry,
   RecipeLogEntry,
 } from "./diarySchemas";
+import type { LogRecipeInput } from "./recipeEntries";
 import type { Database } from "../database.types";
 import type {
   BuildLogEntryInput,
@@ -116,6 +120,125 @@ export async function logQuickEntry(
   input: LogQuickEntryInput,
 ): Promise<QuickLogEntry> {
   return insertEntry(client, buildQuickEntry(input), quickLogEntrySchema, "log the quick add");
+}
+
+/** One thing on the plate: a food or a recipe serving, with what `logFood` or `logRecipe` takes. */
+export type LogEntriesItem =
+  { kind: "food"; input: LogFoodInput } | { kind: "recipe"; input: LogRecipeInput };
+
+const LOG_ENTRIES_ACTION = "log the entries";
+
+/** Builds the row of one item and checks it, naming the action and the field paths, never a value. */
+function checkedItemEntry(item: LogEntriesItem): DiaryInsert {
+  const entry = build(LOG_ENTRIES_ACTION, () =>
+    item.kind === "food" ? buildLogEntry(item.input) : buildRecipeLogEntry(item.input),
+  );
+  // The builders store the time and the day as given, so a malformed one is caught here, before any request.
+  const checked = diaryInsertSchema.safeParse(entry);
+  if (!checked.success) {
+    const paths = checked.error.issues.map(({ path }) => path.join(".") || "(entry)");
+    throw new RangeError(
+      `Could not ${LOG_ENTRIES_ACTION}: the entry is not valid at ${[...new Set(paths)].join(", ")}`,
+    );
+  }
+  return checked.data;
+}
+
+/** The entries with no portion on the food rows whose portion is in `deadPortionIds`. */
+const withoutPortions = (entries: readonly DiaryInsert[], deadPortionIds: ReadonlySet<string>) =>
+  entries.map((entry) => {
+    const portionId = portionIdOf(entry);
+    return portionId !== null && deadPortionIds.has(portionId) ? withPortionId(entry, null) : entry;
+  });
+
+/**
+ * The ids among the portions of the batch that no longer exist, or an empty set when there is nothing
+ * to look up or the portions could not be read (the first refusal is then what the caller reports).
+ */
+async function deadPortionIdsOf(
+  client: SupabaseClient<Database>,
+  entries: readonly DiaryInsert[],
+): Promise<Set<string>> {
+  const portionIds = [...new Set(entries.flatMap((entry) => portionIdOf(entry) ?? []))];
+  if (portionIds.length === 0) {
+    return new Set();
+  }
+
+  const { data, error } = await client.from("food_portions").select("id").in("id", portionIds);
+  if (error) {
+    return new Set();
+  }
+
+  const livePortionIds = new Set(data.map(({ id }) => id));
+  return new Set(portionIds.filter((portionId) => !livePortionIds.has(portionId)));
+}
+
+/**
+ * Logs everything on the plate in one request, all or nothing: the rows are built with `buildLogEntry`
+ * and `buildRecipeLogEntry`, each is checked before any request, and they go into `food_log_entries` as
+ * one array insert. PostgREST runs that as a single `INSERT` statement in one transaction, so a row the
+ * database refuses stores none of them, and the row level security policy still runs for each row.
+ * Resolves to the stored rows in the order given. A food may appear twice, and foods and recipes mix.
+ *
+ * The diary sorts by `logged_at`, then `created_at`, then `id`, and one statement gives every row the
+ * same `created_at`. So the i-th row is logged i milliseconds after the time it was given: the clock
+ * time shown is the same, and the order of the plate is the order of the diary.
+ *
+ * When the database refuses the batch for a portion that is gone (a refresh of a branded food replaces
+ * its portions), the portions of the batch are listed once, the food rows whose portion is gone lose
+ * it (their snapshot keeps the label and the amount), and the whole batch is sent once more. Any other
+ * refusal, and a second one, throws an error that names the action and the code.
+ *
+ * Throws a `RangeError` before any request for an empty list, or for a row with a negative or too large
+ * amount, a portion unit without a portion, or a time or day that is malformed.
+ */
+export async function logEntries(
+  client: SupabaseClient<Database>,
+  items: readonly LogEntriesItem[],
+): Promise<(FoodLogEntry | RecipeLogEntry)[]> {
+  if (items.length === 0) {
+    throw new RangeError(`Could not ${LOG_ENTRIES_ACTION}: there is nothing to log`);
+  }
+
+  const entries = items.map((item, index) => {
+    const entry = checkedItemEntry(item);
+    return index === 0
+      ? entry
+      : { ...entry, logged_at: new Date(Date.parse(entry.logged_at) + index).toISOString() };
+  });
+
+  const insertAll = (rows: readonly DiaryInsert[]) =>
+    client
+      .from("food_log_entries")
+      .insert([...rows])
+      .select(ENTRY_COLUMNS);
+
+  let result = await insertAll(entries);
+  if (result.error && isDeadPortionRefusal(result.error)) {
+    const deadPortionIds = await deadPortionIdsOf(client, entries);
+    if (deadPortionIds.size > 0) {
+      result = await insertAll(withoutPortions(entries, deadPortionIds));
+    }
+  }
+
+  const { data, error } = result;
+  if (error) {
+    throw recipeRepoError(LOG_ENTRIES_ACTION, error);
+  }
+  if (data.length !== items.length) {
+    throw new Error(
+      `Could not ${LOG_ENTRIES_ACTION}: the database stored a different number of rows`,
+    );
+  }
+
+  return items.map((item, index) =>
+    parseRow(
+      item.kind === "food" ? foodLogEntrySchema : recipeLogEntrySchema,
+      data[index],
+      "read the new entries",
+      idOfRow,
+    ),
+  );
 }
 
 async function setDeletedAt(

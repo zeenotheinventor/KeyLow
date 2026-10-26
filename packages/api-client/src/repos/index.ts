@@ -13,6 +13,7 @@ export type {
 } from "./diarySchemas";
 export { setDayComplete } from "./dayLogs";
 export {
+  logEntries,
   logFood,
   logQuickEntry,
   restoreLogEntry,
@@ -22,6 +23,7 @@ export {
 export type {
   EntryTimeChange,
   EntryUpdate,
+  LogEntriesItem,
   LogFoodInput,
   LogQuickEntryInput,
   QuickEntryValues,
