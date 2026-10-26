@@ -1,5 +1,10 @@
 import { useRecentFoods } from "@keylow/api-client";
-import { LOG_SEARCH, RECENT_FOODS, describeLoggedAmount } from "@keylow/core/copy";
+import {
+  LOG_SEARCH,
+  RECENT_FOODS,
+  describeAddToPlateName,
+  describeLoggedAmount,
+} from "@keylow/core/copy";
 import { nutrientsOfSnapshot } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import { describeMacros } from "@keylow/core/search";
@@ -11,7 +16,7 @@ import type { RecentFoodsProps } from "./types";
 
 /**
  * The foods logged most recently, newest first, each with the amount it was last logged with and the
- * values for that amount. Its plus logs that amount again. With no history it says so. Nothing is read
+ * values for that amount. Its plus puts that amount on the plate. With no history it says so. Nothing is read
  * until the account has accepted the current Terms.
  */
 export function RecentFoods({ addDisabled, onAdd, onOpen }: RecentFoodsProps) {
@@ -45,10 +50,13 @@ export function RecentFoods({ addDisabled, onAdd, onOpen }: RecentFoodsProps) {
         const nutrients = nutrientsOfSnapshot(snapshot);
         const macros = describeMacros(nutrients);
 
+        const caption = describeLoggedAmount(snapshot);
+
         return (
           <FoodRow
             key={food.foodId}
-            caption={describeLoggedAmount(snapshot)}
+            addLabel={describeAddToPlateName(snapshot.name, caption)}
+            caption={caption}
             addDisabled={addDisabled}
             energy={nutrients.kcal === null ? undefined : formatCalories(nutrients.kcal)}
             layout="recent"

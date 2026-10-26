@@ -6,4 +6,6 @@ export type LogSearchResultsProps = {
   logging: FoodSearchLogging;
   onOpenFood: (foodId: string) => void;
   onCreateFood: () => void;
+  /** Called when something has been put on the plate, from here or from another screen of the sheet, so the field can be emptied. */
+  onPlateAdded: () => void;
 };

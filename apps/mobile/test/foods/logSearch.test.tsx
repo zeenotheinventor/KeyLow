@@ -1,5 +1,5 @@
 import { SNAPSHOT_VERSION, buildLogEntry } from "@keylow/core/diary";
-import { buildFood, buildFoodPortion } from "@keylow/core/testing";
+import { buildFood } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
@@ -7,13 +7,10 @@ import { setUpTests } from "react-native-reanimated";
 
 import {
   foodFixture,
-  mockDeleteEntry,
   mockGetFood,
-  mockListFoodPortions,
   mockLogFood,
   mockUseProfileTimeZone,
   mockUseRecentFoods,
-  profileTimeZone,
   recentFoods,
   termsAccepted,
   resetApiClientMock,
@@ -27,6 +24,7 @@ import {
 } from "./support/searchApiClientMock";
 import FoodSearchRoute from "../../app/foods/index";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -152,7 +150,9 @@ async function renderLogSearch(params: { day?: string; time?: string } = {}) {
   await render(
     <ThemeProvider fixedPreference="dark">
       <ToastProvider>
-        <FoodSearchRoute />
+        <PlateProvider>
+          <FoodSearchRoute />
+        </PlateProvider>
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -188,10 +188,12 @@ describe("food search sheet in log mode", () => {
     mockLogFood.mockResolvedValue(storedEntry("entry-new"));
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.useRealTimers();
     jest.restoreAllMocks();
-    onlineManager.setOnline(true);
+    await act(() => {
+      onlineManager.setOnline(true);
+    });
   });
 
   describe("the header", () => {
@@ -338,7 +340,9 @@ describe("food search sheet in log mode", () => {
         expect(screen.getByRole("heading", { name: /^Recent/ })).toBeOnTheScreen();
         expect(screen.getByText(/as last logged/)).toBeOnTheScreen();
         expect(screen.getByRole("button", { name: /^Porridge oats, 50 g/ })).toBeOnTheScreen();
-        expect(screen.getByRole("button", { name: "Add Porridge oats, 50 g" })).toBeOnTheScreen();
+        expect(
+          screen.getByRole("button", { name: "Add Porridge oats, 50 g, to your plate" }),
+        ).toBeOnTheScreen();
       });
 
       it("should open the portion picker on a row, asking for the amount last logged", async () => {
@@ -348,24 +352,6 @@ describe("food search sheet in log mode", () => {
 
         expect(routerMock.push).toHaveBeenCalledWith(
           `/foods/${savedFoodId}/log?day=2026-10-14&time=12%3A00&recent=1`,
-        );
-      });
-
-      it("should log the amount last logged at the sheet's hour when its plus is pressed", async () => {
-        const user = await renderLogSearch();
-
-        await user.press(screen.getByRole("button", { name: "Add Porridge oats, 50 g" }));
-
-        expect(mockGetFood.mock.calls.map(([, id]) => id)).toEqual([savedFoodId]);
-        expect(mockListFoodPortions.mock.calls.map(([, id]) => id)).toEqual([savedFoodId]);
-        expect(mockLogFood).toHaveBeenCalledTimes(1);
-        expect(mockLogFood).toHaveBeenCalledWith(
-          expect.objectContaining({
-            quantity: 50,
-            unit: "g",
-            loggedAt: "2026-10-14T11:00:00.000Z",
-            localDate: "2026-10-14",
-          }),
         );
       });
     });
@@ -405,20 +391,6 @@ describe("food search sheet in log mode", () => {
       expect(
         screen.getByRole("button", { name: /^Oil, olive, 2 tbsp \(30 ml\)/ }),
       ).toBeOnTheScreen();
-    });
-
-    it("should log the same spoons again when its plus is pressed", async () => {
-      const user = await renderLogSearch();
-
-      await user.press(screen.getByRole("button", { name: "Add Oil, olive, 2 tbsp (30 ml)" }));
-
-      expect(mockLogFood).toHaveBeenCalledWith(
-        expect.objectContaining({
-          quantity: 2,
-          unit: "portion",
-          portion: expect.objectContaining({ label: "1 tbsp", ml: 15 }) as unknown,
-        }),
-      );
     });
   });
 
@@ -480,230 +452,26 @@ describe("food search sheet in log mode", () => {
       await type("ba");
 
       expect(
-        screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }),
+        screen.getByRole("button", { name: "Add Banana, 1 medium (150 g), to your plate" }),
       ).toBeOnTheScreen();
       expect(
-        screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }),
+        screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g, to your plate" }),
       ).toBeOnTheScreen();
-    });
-  });
-
-  describe("the plus on a result", () => {
-    beforeEach(() => {
-      showResults([banana, chicken]);
-      mockListFoodPortions.mockImplementation((_client, id) =>
-        Promise.resolve(
-          id === bananaId
-            ? [
-                {
-                  ...buildFoodPortion(),
-                  id: mediumPortionId,
-                  food_id: bananaId,
-                  label: "1 medium",
-                  grams: 150,
-                  is_default: true,
-                },
-              ]
-            : [],
-        ),
-      );
-    });
-
-    it("should log the default serving at the sheet's hour, loading the whole food first", async () => {
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-
-      expect(mockGetFood.mock.calls.map(([, id]) => id)).toEqual([bananaId]);
-      expect(mockLogFood).toHaveBeenCalledTimes(1);
-      expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({
-        food: { id: bananaId },
-        quantity: 1,
-        unit: "portion",
-        portion: { id: mediumPortionId },
-        loggedAt: "2026-10-14T11:00:00.000Z",
-        localDate: "2026-10-14",
-      });
-    });
-
-    it("should freeze the density of the food's serving label into the entry the plus logs", async () => {
-      mockListFoodPortions.mockResolvedValue([
-        {
-          ...buildFoodPortion(),
-          id: mediumPortionId,
-          food_id: bananaId,
-          label: "1 tbsp (15 g)",
-          grams: 15,
-          is_default: true,
-        },
-      ]);
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-
-      const input = mockLogFood.mock.calls[0]?.[0];
-      if (input === undefined) {
-        throw new Error("Nothing was logged");
-      }
-      const entry = buildLogEntry(input);
-      expect(entry.snapshot.density).toBe(1);
-      expect(entry.resolved_grams).toBe(15);
-    });
-
-    it("should log 100 g when the food has no default portion", async () => {
-      const user = await renderLogSearch();
-      await type("ch");
-
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
-
-      expect(mockLogFood).toHaveBeenCalledWith(
-        expect.objectContaining({ quantity: 100, unit: "g" }),
-      );
-      expect(mockLogFood.mock.calls[0]?.[0]).not.toHaveProperty("portion");
-    });
-
-    it("should log now when the sheet was opened from the dock, with a day and no hour", async () => {
-      const user = await renderLogSearch({ day: "2026-10-15" });
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-
-      const input = mockLogFood.mock.calls[0]?.[0];
-      // The clock has moved on a little while the tap was pressed.
-      expect(input?.loggedAt).toMatch(/^2026-10-15T11:40:30\./);
-      expect(input?.localDate).toBe("2026-10-15");
-    });
-
-    it("should leave the sheet open and say Added with the food's name", async () => {
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-
-      expect(screen.getByText("Added Banana")).toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
-      expect(routerMock.back).not.toHaveBeenCalled();
-      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
-      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeOnTheScreen();
-    });
-
-    it("should let several foods be added in a row", async () => {
-      showResults([banana, chicken]);
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
-
-      expect(mockLogFood).toHaveBeenCalledTimes(2);
-    });
-
-    it("should remove only its own entry on Undo", async () => {
-      mockLogFood
-        .mockResolvedValueOnce(storedEntry("entry-banana"))
-        .mockResolvedValueOnce(storedEntry("entry-chicken"));
-      const user = await renderLogSearch();
-      await type("ba");
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
-
-      await user.press(screen.getByRole("button", { name: "Undo" }));
-
-      expect(mockDeleteEntry).toHaveBeenCalledTimes(1);
-      expect(mockDeleteEntry).toHaveBeenCalledWith(storedEntry("entry-chicken"));
-    });
-
-    it("should log once however often the plus is pressed before the first has finished", async () => {
-      let finish: (entry: LogEntry) => void = () => undefined;
-      mockLogFood.mockReturnValue(
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-      );
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-      await act(() => {
-        finish(storedEntry("entry-banana"));
-      });
-
-      expect(mockLogFood).toHaveBeenCalledTimes(1);
-    });
-
-    it("should say it was not saved, and not Added, when logging fails", async () => {
-      mockLogFood.mockRejectedValue(new Error("network down while logging 150 g"));
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-
-      expect(screen.getByText("Not saved. Check your connection and try again.")).toBeOnTheScreen();
-      expect(screen.queryByText("Added Banana")).not.toBeOnTheScreen();
-      expect(screen.queryByText(/150 g\b.*network/)).not.toBeOnTheScreen();
-    });
-
-    it("should say it was not saved when the food cannot be loaded", async () => {
-      mockGetFood.mockRejectedValue(new Error("offline"));
-      const user = await renderLogSearch();
-      await type("ba");
-
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-
-      expect(mockLogFood).not.toHaveBeenCalled();
-      expect(screen.getByText("Not saved. Check your connection and try again.")).toBeOnTheScreen();
     });
   });
 
   describe("a drink with no portion", () => {
     const milk = hit({ id: chickenId, name: "Milk", basis: "per_100ml", kcal: 46 });
 
-    it("should be named for 100 ml, and the plus should log 100 ml", async () => {
+    it("should be named for 100 ml", async () => {
       showResults([milk]);
-      const user = await renderLogSearch();
+      await renderLogSearch();
       await type("mi");
 
-      await user.press(screen.getByRole("button", { name: "Add Milk, 100 ml" }));
-
       expect(screen.getByRole("button", { name: /^Milk, 100 ml/ })).toBeOnTheScreen();
-      expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({ quantity: 100, unit: "ml" });
-    });
-  });
-
-  describe("when Undo fails", () => {
-    it("should say it could not undo, in its own words, and not that the food was not saved", async () => {
-      mockDeleteEntry.mockRejectedValue(new Error("network down"));
-      showResults([chicken]);
-      const user = await renderLogSearch();
-      await type("ch");
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
-
-      await user.press(screen.getByRole("button", { name: "Undo" }));
-
-      expect(screen.getByText("Couldn't undo. Try again.")).toBeOnTheScreen();
       expect(
-        screen.queryByText("Not saved. Check your connection and try again."),
-      ).not.toBeOnTheScreen();
-    });
-  });
-
-  describe("with a profile that has no time zone", () => {
-    it("should log in UTC", async () => {
-      profileTimeZone.current = { data: null, isPending: false, isError: false };
-      showResults([chicken]);
-      const user = await renderLogSearch();
-      await type("ch");
-
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast, grilled, 100 g" }));
-
-      // 12:00 on the 14th in UTC, where London's summer time would make it 11:00 UTC.
-      expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({
-        loggedAt: "2026-10-14T12:00:00.000Z",
-        localDate: "2026-10-14",
-      });
+        screen.getByRole("button", { name: "Add Milk, 100 ml, to your plate" }),
+      ).toBeOnTheScreen();
     });
   });
 
@@ -756,47 +524,6 @@ describe("food search sheet in log mode", () => {
 
       expect(screen.getByText("Needs review")).toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /^Add Protein bar/ })).not.toBeOnTheScreen();
-    });
-  });
-
-  describe("offline", () => {
-    it("should disable every plus on the results and on Recent, and leave the rows pressable", async () => {
-      recentFoods.current = { data: [oatsRecent], isPending: false, isError: false };
-      showResults([banana]);
-      onlineManager.setOnline(false);
-      const user = await renderLogSearch();
-      await type("ba");
-
-      expect(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" })).toBeDisabled();
-      await user.press(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" }));
-      expect(mockLogFood).not.toHaveBeenCalled();
-      await type("");
-      expect(screen.getByRole("button", { name: "Add Porridge oats, 50 g" })).toBeDisabled();
-      expect(screen.getByRole("button", { name: /^Porridge oats, 50 g/ })).toBeEnabled();
-    });
-
-    it("should enable the plus again when the connection comes back", async () => {
-      showResults([banana]);
-      onlineManager.setOnline(false);
-      await renderLogSearch();
-      await type("ba");
-
-      await act(() => {
-        onlineManager.setOnline(true);
-      });
-
-      expect(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" })).toBeEnabled();
-    });
-  });
-
-  describe("while the profile's time zone is not known", () => {
-    it("should keep the plus off, because the time cannot be read yet", async () => {
-      profileTimeZone.current = { data: undefined, isPending: true, isError: false };
-      showResults([banana]);
-      await renderLogSearch();
-      await type("ba");
-
-      expect(screen.getByRole("button", { name: "Add Banana, 1 medium (150 g)" })).toBeDisabled();
     });
   });
 });

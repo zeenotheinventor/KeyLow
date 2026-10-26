@@ -6,6 +6,7 @@ import {
   mockGetFood,
   mockListFoodPortions,
   portionFixtures,
+  profileTimeZone,
   resetApiClientMock,
   savedFoodId,
 } from "../foods/support/apiClientMock";
@@ -201,6 +202,19 @@ describe("useLogPlate", () => {
       await logPlate(rendered);
 
       expect(momentsWritten()).toEqual(["2026-10-14T11:00:00.000Z", "2026-10-14T11:00:00.000Z"]);
+      expect(daysWritten()).toEqual(["2026-10-14", "2026-10-14"]);
+    });
+
+    it("should read the hour in UTC when the profile has no time zone", async () => {
+      profileTimeZone.current = { data: null, isPending: false, isError: false };
+      const rendered = await renderWithOatBarAndRecipe(
+        { day: "2026-10-14", time: "12:00" },
+        { initialTime: "12:00" },
+      );
+
+      await logPlate(rendered);
+
+      expect(momentsWritten()).toEqual(["2026-10-14T12:00:00.000Z", "2026-10-14T12:00:00.000Z"]);
       expect(daysWritten()).toEqual(["2026-10-14", "2026-10-14"]);
     });
 

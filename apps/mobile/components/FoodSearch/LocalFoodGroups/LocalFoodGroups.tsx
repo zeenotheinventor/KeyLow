@@ -1,4 +1,8 @@
-import { SEARCH_GROUP_HEADINGS, describeChooseAmountRowName } from "@keylow/core/copy";
+import {
+  SEARCH_GROUP_HEADINGS,
+  describeAddToPlateName,
+  describeChooseAmountRowName,
+} from "@keylow/core/copy";
 import { foodNeedsReview } from "@keylow/core/diary";
 import { formatCalories } from "@keylow/core/format";
 import { describeFoodRow, describeMacros, servingOfSearchHit } from "@keylow/core/search";
@@ -50,6 +54,11 @@ export function LocalFoodGroups({
             <FoodRow
               key={food.id}
               addDisabled={logRows?.addDisabled}
+              addLabel={
+                logRows === undefined
+                  ? undefined
+                  : describeAddToPlateName(food.name, serving.caption)
+              }
               brand={brand}
               caption={serving.caption}
               energy={serving.kcal === null ? undefined : formatCalories(serving.kcal)}
