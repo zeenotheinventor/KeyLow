@@ -374,6 +374,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      entitlements: {
+        Row: {
+          daily_turns: number | null;
+          expires_at: string | null;
+          feature: string;
+          granted_at: string;
+          plan: string;
+          source: string;
+          user_id: string;
+        };
+        Insert: {
+          daily_turns?: number | null;
+          expires_at?: string | null;
+          feature: string;
+          granted_at?: string;
+          plan: string;
+          source: string;
+          user_id: string;
+        };
+        Update: {
+          daily_turns?: number | null;
+          expires_at?: string | null;
+          feature?: string;
+          granted_at?: string;
+          plan?: string;
+          source?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       exercise_import_runs: {
         Row: {
           created_at: string;
@@ -880,6 +910,8 @@ export type Database = {
       profiles: {
         Row: {
           activity: Database["public"]["Enums"]["activity_level"] | null;
+          assistant_consent_at: string | null;
+          assistant_consent_version: string | null;
           birth_date: string | null;
           checkin_weekday: number | null;
           created_at: string;
@@ -901,6 +933,8 @@ export type Database = {
         };
         Insert: {
           activity?: Database["public"]["Enums"]["activity_level"] | null;
+          assistant_consent_at?: string | null;
+          assistant_consent_version?: string | null;
           birth_date?: string | null;
           checkin_weekday?: number | null;
           created_at?: string;
@@ -922,6 +956,8 @@ export type Database = {
         };
         Update: {
           activity?: Database["public"]["Enums"]["activity_level"] | null;
+          assistant_consent_at?: string | null;
+          assistant_consent_version?: string | null;
           birth_date?: string | null;
           checkin_weekday?: number | null;
           created_at?: string;
@@ -1086,6 +1122,7 @@ export type Database = {
           name: string;
           owner_id: string;
           servings: number;
+          source_url: string | null;
           yield_grams: number | null;
         };
         Insert: {
@@ -1097,6 +1134,7 @@ export type Database = {
           name: string;
           owner_id?: string;
           servings: number;
+          source_url?: string | null;
           yield_grams?: number | null;
         };
         Update: {
@@ -1108,6 +1146,7 @@ export type Database = {
           name?: string;
           owner_id?: string;
           servings?: number;
+          source_url?: string | null;
           yield_grams?: number | null;
         };
         Relationships: [];
@@ -1540,6 +1579,14 @@ export type Database = {
     };
     Functions: {
       accept_terms: { Args: { p_version: string }; Returns: undefined };
+      assistant_access: {
+        Args: { p_user_id: string };
+        Returns: {
+          daily_turns: number;
+          plan: string;
+          source: string;
+        }[];
+      };
       assistant_spend_this_month: { Args: never; Returns: number };
       consume_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_window_seconds: number };
@@ -1551,6 +1598,10 @@ export type Database = {
       delete_workout_session: {
         Args: { p_session_id: string };
         Returns: undefined;
+      };
+      has_entitlement: {
+        Args: { p_feature: string; p_user_id: string };
+        Returns: boolean;
       };
       import_exercises: {
         Args: { p_exercises: Json; p_import_run_id: string };

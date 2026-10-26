@@ -184,12 +184,12 @@ select is(
 );
 select is(
   (select array_agg(column_name::text order by column_name::text collate "C") from information_schema.column_privileges where table_schema = 'public' and table_name = 'recipes' and grantee = 'authenticated' and privilege_type = 'INSERT'),
-  array['computed', 'instructions', 'name', 'owner_id', 'servings', 'yield_grams'],
+  array['computed', 'instructions', 'name', 'owner_id', 'servings', 'source_url', 'yield_grams'],
   'authenticated can insert exactly these columns of recipes'
 );
 select is(
   (select array_agg(column_name::text order by column_name::text collate "C") from information_schema.column_privileges where table_schema = 'public' and table_name = 'recipes' and grantee = 'authenticated' and privilege_type = 'UPDATE'),
-  array['computed', 'instructions', 'is_archived', 'name', 'servings', 'yield_grams'],
+  array['computed', 'instructions', 'is_archived', 'name', 'servings', 'source_url', 'yield_grams'],
   'authenticated can update exactly these columns of recipes'
 );
 select is(
