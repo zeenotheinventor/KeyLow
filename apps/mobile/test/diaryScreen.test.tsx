@@ -56,22 +56,29 @@ jest.mock("../lib/useNow", () => {
 
 let queryClient: QueryClient;
 
+// A new element each time, because React skips an element it has already rendered, and the mocked router does
+// not tell the screen that the link changed as the real one does.
+const diaryTree = () => (
+  <ThemeProvider fixedPreference="dark">
+    <KeyLowProvider client={diaryClient} queryClient={queryClient}>
+      <ToastProvider>
+        <DiaryScreen />
+      </ToastProvider>
+    </KeyLowProvider>
+  </ThemeProvider>
+);
+
 async function renderDiary() {
   queryClient = createDiaryQueryClient();
-  await render(
-    <ThemeProvider fixedPreference="dark">
-      <KeyLowProvider client={diaryClient} queryClient={queryClient}>
-        <ToastProvider>
-          <DiaryScreen />
-        </ToastProvider>
-      </KeyLowProvider>
-    </ThemeProvider>,
-  );
+
+  return await render(diaryTree());
 }
 
 async function renderLoadedDiary() {
-  await renderDiary();
+  const rendered = await renderDiary();
   await screen.findByRole("button", { name: "Add food at 08:00" });
+
+  return rendered;
 }
 
 // An hour is named by its hour and its foods. The current hour's chip is named "11:00, now", which is not one.
@@ -952,6 +959,177 @@ describe("the diary screen", () => {
       }
 
       expect(scrollTo).not.toHaveBeenCalled();
+    });
+
+    describe("opened with an hour", () => {
+      const firstFoodScroll = { y: 50 + 800 - 8, animated: false };
+      const nineteenScroll = { y: 50 + 1900 - 8, animated: false };
+
+      it("should scroll to the hour in the link, not to the first food, once the hours are measured", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        routerMock.searchParams = { day: "2026-10-15", hour: "19" };
+        await renderLoadedDiary();
+
+        await layOutHours();
+
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith(nineteenScroll);
+      });
+
+      it("should scroll to the hour of a link to another day, once that day has loaded and been measured", async () => {
+        diaryBackend.entries = [...sampleDay(), ...sampleDay("2026-10-14")];
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        routerMock.searchParams = { day: "2026-10-14", hour: "19" };
+        await renderLoadedDiary();
+
+        await layOutHours();
+
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith(nineteenScroll);
+      });
+
+      it("should use the hour up, clearing it with the day, so choosing the tab again does not scroll", async () => {
+        routerMock.searchParams = { day: "2026-10-15", hour: "19" };
+        await renderLoadedDiary();
+
+        expect(routerMock.setParams).toHaveBeenCalledWith({ day: undefined, hour: undefined });
+      });
+
+      it("should keep the hour after the link is cleared, until the hours are measured", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        routerMock.searchParams = { day: "2026-10-15", hour: "19" };
+        const { rerender } = await renderLoadedDiary();
+
+        routerMock.searchParams = {};
+        await rerender(diaryTree());
+        await layOutHours();
+
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith(nineteenScroll);
+      });
+
+      it("should scroll to the hour of a link to the day already on screen, which has already scrolled", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        const { rerender } = await renderLoadedDiary();
+        await layOutHours();
+        expect(scrollTo).toHaveBeenLastCalledWith(firstFoodScroll);
+
+        routerMock.searchParams = { day: "2026-10-15", hour: "19" };
+        await rerender(diaryTree());
+
+        expect(scrollTo).toHaveBeenCalledTimes(2);
+        expect(scrollTo).toHaveBeenLastCalledWith(nineteenScroll);
+      });
+
+      it("should scroll again for the next link, whether its hour is another or the same after the link was cleared", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        const { rerender } = await renderLoadedDiary();
+        await layOutHours();
+        routerMock.searchParams = { day: "2026-10-15", hour: "19" };
+        await rerender(diaryTree());
+
+        routerMock.searchParams = { day: "2026-10-15", hour: "21" };
+        await rerender(diaryTree());
+        expect(scrollTo).toHaveBeenCalledTimes(3);
+        expect(scrollTo).toHaveBeenLastCalledWith({ y: 50 + 2100 - 8, animated: false });
+
+        routerMock.searchParams = {};
+        await rerender(diaryTree());
+        routerMock.searchParams = { day: "2026-10-15", hour: "21" };
+        await rerender(diaryTree());
+        expect(scrollTo).toHaveBeenCalledTimes(4);
+        expect(scrollTo).toHaveBeenLastCalledWith({ y: 50 + 2100 - 8, animated: false });
+      });
+
+      it("should scroll once, whatever else changes on the screen afterwards", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        routerMock.searchParams = { day: "2026-10-15", hour: "19" };
+        const { rerender } = await renderLoadedDiary();
+        await layOutHours();
+
+        await rerender(diaryTree());
+        await layOutHours();
+
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+      });
+
+      it("should scroll to the hour of a link that names no day, on the day on screen", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        const { rerender } = await renderLoadedDiary();
+        await layOutHours();
+
+        routerMock.searchParams = { hour: "19" };
+        await rerender(diaryTree());
+
+        expect(scrollTo).toHaveBeenLastCalledWith(nineteenScroll);
+      });
+
+      it.each(["24", "-1", "abc", "7.5", ""])(
+        "should ignore the hour %j, which is not an hour of the day, and scroll to the first food",
+        async (hour) => {
+          const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+          routerMock.searchParams = { day: "2026-10-15", hour };
+          await renderLoadedDiary();
+
+          await layOutHours();
+
+          expect(scrollTo).toHaveBeenCalledTimes(1);
+          expect(scrollTo).toHaveBeenCalledWith(firstFoodScroll);
+        },
+      );
+
+      it("should ignore the hour of a link to a day that has not come, with the day", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        routerMock.searchParams = { day: "2026-10-20", hour: "19" };
+        await renderLoadedDiary();
+
+        await layOutHours();
+
+        expect(screen.getByRole("heading", { name: "Today" })).toBeOnTheScreen();
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith(firstFoodScroll);
+      });
+
+      it("should not carry an hour still waiting for a day to load to a day chosen afterwards", async () => {
+        diaryBackend.entries = [...sampleDay(), ...sampleDay("2026-10-13")];
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        const user = userEvent.setup();
+        const { rerender } = await renderLoadedDiary();
+        await layOutHours();
+        diaryBackend.hungEntryReadsOnce.add("2026-10-14");
+        routerMock.searchParams = { day: "2026-10-14", hour: "19" };
+        await rerender(diaryTree());
+        await screen.findByRole("heading", { name: "Wed 14 Oct" });
+        scrollTo.mockClear();
+
+        await user.press(screen.getByRole("button", { name: "Tuesday 13 October" }));
+        await screen.findByRole("heading", { name: "Tue 13 Oct" });
+        await layOutHours();
+
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith(firstFoodScroll);
+      });
+
+      it("should not carry an hour still waiting for a day to load to the next link, which names no hour", async () => {
+        const scrollTo = jest.spyOn(ScrollView.prototype, "scrollTo");
+        const { rerender } = await renderLoadedDiary();
+        await layOutHours();
+        diaryBackend.hungEntryReadsOnce.add("2026-10-14");
+        routerMock.searchParams = { day: "2026-10-14", hour: "19" };
+        await rerender(diaryTree());
+        await screen.findByRole("heading", { name: "Wed 14 Oct" });
+        routerMock.searchParams = {};
+        await rerender(diaryTree());
+        scrollTo.mockClear();
+
+        routerMock.searchParams = { day: "2026-10-15" };
+        await rerender(diaryTree());
+        await screen.findByRole("heading", { name: "Today" });
+        await layOutHours();
+
+        expect(scrollTo).toHaveBeenCalledTimes(1);
+        expect(scrollTo).toHaveBeenCalledWith(firstFoodScroll);
+      });
     });
   });
 });

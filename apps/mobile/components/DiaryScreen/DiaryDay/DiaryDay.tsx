@@ -30,6 +30,17 @@ import type { DiaryDayProps } from "./types";
 import type { WeekStripWeekChange } from "../../ui";
 
 const NOON = 12;
+const LAST_HOUR = 23;
+
+// An hour of the day written in whole digits, 0 to 23. Anything else is not an hour to show.
+function readHour(value: string | undefined): number | undefined {
+  if (value === undefined || !/^\d{1,2}$/.test(value)) {
+    return undefined;
+  }
+  const hour = Number(value);
+
+  return hour <= LAST_HOUR ? hour : undefined;
+}
 
 /**
  * One day of the diary and the week around it, once the profile's time zone is known: the header, the
@@ -61,24 +72,44 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
     setViewedDay(viewedDate);
   }, [viewedDate]);
 
-  // A link to the diary can name the day to show, as the dashboard's card does with today. The tab stays
-  // mounted, so the link is used up and cleared: a later link to the same day is a new change, and
-  // choosing the tab again leaves the day alone. A day that does not exist or has not come is ignored.
-  const { day: dayParam } = useLocalSearchParams<{ day?: string | string[] }>();
+  // A link to the diary can name the day to show, as the dashboard's card does with today, and the hour to
+  // scroll to. The tab stays mounted, so the link is used up and cleared: a later link to the same day is a
+  // new change, and choosing the tab again leaves the day alone. A day that does not exist or has not come
+  // is ignored, and its hour with it. An hour that is not 0 to 23 is ignored.
+  const { day: dayParam, hour: hourParam } = useLocalSearchParams<{
+    day?: string | string[];
+    hour?: string | string[];
+  }>();
   const linkedDay = Array.isArray(dayParam) ? dayParam[0] : dayParam;
+  const linkedHour = Array.isArray(hourParam) ? hourParam[0] : hourParam;
   const [usedLinkedDay, setUsedLinkedDay] = useState<string | undefined>(undefined);
+  const [usedLinkedHour, setUsedLinkedHour] = useState<string | undefined>(undefined);
+  // The hour the log is to scroll to, until it has.
+  const [hourToShow, setHourToShow] = useState<number | undefined>(undefined);
+  const isLinkedDayShown =
+    linkedDay === undefined || (isCalendarDay(linkedDay) && linkedDay <= today);
   if (linkedDay !== usedLinkedDay) {
     setUsedLinkedDay(linkedDay);
-    if (linkedDay !== undefined && isCalendarDay(linkedDay) && linkedDay <= today) {
+    if (linkedDay !== undefined && isLinkedDayShown) {
+      // A link to a day is a new place to look: an hour still waiting for the last one is not carried over.
+      setHourToShow(undefined);
       setSelectedDate(linkedDay === today ? null : linkedDay);
       setShownWeekDate(null);
     }
   }
-  useEffect(() => {
-    if (linkedDay !== undefined) {
-      router.setParams({ day: undefined });
+  if (linkedHour !== usedLinkedHour) {
+    setUsedLinkedHour(linkedHour);
+    // Clearing the link is not a request, so the hour waits for the log to have scrolled to it.
+    const hour = readHour(linkedHour);
+    if (hour !== undefined && isLinkedDayShown) {
+      setHourToShow(hour);
     }
-  }, [linkedDay, router]);
+  }
+  useEffect(() => {
+    if (linkedDay !== undefined || linkedHour !== undefined) {
+      router.setParams({ day: undefined, hour: undefined });
+    }
+  }, [linkedDay, linkedHour, router]);
 
   const dayQuery = useDiaryDay(viewedDate, { enabled: isReadEnabled });
   const weekQuery = useDiaryWeek(weekDays[0] ?? viewedDate, { enabled: isReadEnabled });
@@ -110,6 +141,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
     (dayQuery.isError && day === undefined) || (targetsQuery.isError && targets === undefined);
 
   function selectDay(localDate: string) {
+    setHourToShow(undefined);
     setSelectedDate(localDate === today ? null : localDate);
     setShownWeekDate(null);
   }
@@ -154,6 +186,7 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         isCopying={isCopying}
         isYesterdayEmpty={isYesterdayEmpty}
         hasCopyFailed={hasCopyFailed}
+        showHour={hourToShow}
         targets={targets}
         timeZone={timeZone}
         onAddFood={(hour) => {
@@ -166,6 +199,9 @@ export function DiaryDay({ timeZone, isReadEnabled }: DiaryDayProps) {
         }
         onCopyYesterday={copyYesterday}
         onDeleteEntry={deleteEntry}
+        onHourShown={() => {
+          setHourToShow(undefined);
+        }}
         onOpenTargets={openTargets}
       />
     );
