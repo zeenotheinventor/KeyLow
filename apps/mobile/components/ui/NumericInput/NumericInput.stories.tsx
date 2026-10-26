@@ -267,3 +267,21 @@ export const CellSize: Story = {
     </View>
   ),
 };
+
+// The plate row's amount: a box 36 points high and 112 wide, 10 points across, the unit 8 points from the digits.
+export const SmallSize: Story = {
+  render: (args) => (
+    <View className="w-[112px]">
+      <TypingNumericInput
+        {...args}
+        accessibilityLabel="Amount of Semi-skimmed milk, ml"
+        label="Amount"
+        labelHidden
+        selectTextOnFocus
+        size="sm"
+        unit="ml"
+        value="200"
+      />
+    </View>
+  ),
+};

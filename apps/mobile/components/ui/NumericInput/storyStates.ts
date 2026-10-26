@@ -15,4 +15,5 @@ export const storyStates = [
   "LeftAligned",
   "DisplaySizeWithError",
   "CellSize",
+  "SmallSize",
 ];

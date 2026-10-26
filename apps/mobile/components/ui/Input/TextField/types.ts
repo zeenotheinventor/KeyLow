@@ -13,9 +13,10 @@ export type TextFieldProps = InputProps & {
   /**
    * `display` is a large centred number in a taller box, as the set entry boards draw the load and the reps.
    * `cell` is a box 36 points high with no padding across, for the numbers of a row in a table, as the
-   * routine editor board draws the sets, reps and RIR of an exercise. Defaults to `default`.
+   * routine editor board draws the sets, reps and RIR of an exercise. `sm` is a box 36 points high with 10
+   * points across, for a field inside a row, as the plate row draws its amount. Defaults to `default`.
    */
-  size?: "default" | "display" | "cell" | undefined;
+  size?: "default" | "display" | "cell" | "sm" | undefined;
   /** Sets the value in strong body text, as the servings stepper's number is. Defaults to regular. */
   strongValue?: boolean | undefined;
   /** Makes the field an adjustable that a swipe steps up and down. */
