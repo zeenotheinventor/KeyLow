@@ -2,6 +2,7 @@ import {
   DIARY_PROBLEMS,
   ENTRY_SCREEN,
   FOOD_REVIEW_BANNER,
+  PLATE,
   PORTION_PICKER,
   RECIPE_EDITOR,
   SAVE_FAILED_BANNER,
@@ -39,7 +40,9 @@ import type { PickerChoices } from "@keylow/core/diary";
  * ingredient modes) or a recipe's (add, and edit for a logged entry).
  */
 export function PortionPicker(props: PortionPickerProps) {
-  return props.mode === "recipe" || props.mode === "edit-recipe" ? (
+  return props.mode === "recipe" ||
+    props.mode === "edit-recipe" ||
+    props.mode === "recipe-to-plate" ? (
     <RecipePortionPicker {...props} />
   ) : (
     <FoodPortionPicker {...props} />
@@ -55,6 +58,9 @@ export function PortionPicker(props: PortionPickerProps) {
  * a recipe has the logged entry's page without the Time row, with Save and Remove from recipe: nothing is
  * logged or saved, so it works offline. A food about to join a recipe has the add page without the Time row,
  * with the food's source under the title and Add to recipe; a food that must be reviewed first cannot be added.
+ * A food about to join the plate has the add page without the Time row, since the time belongs to the plate,
+ * with Add to plate; it saves nothing, so it works offline, and a food that must be reviewed first has Copy to
+ * your foods in place of the button, as on the add page.
  */
 function FoodPortionPicker(props: FoodPortionPickerProps) {
   const { food, onBack } = props;
@@ -66,14 +72,14 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
   // An added food's chips come from the food and its portions; a logged entry's, from its own snapshot and the
   // food's portions, while its hero is worked out from the snapshot alone. The hero gets the portions the chips
   // came from.
-  const choices: PickerChoices =
-    props.mode === "add" || props.mode === "add-ingredient"
-      ? pickerChoices(food, props.portions)
-      : entryPickerChoices(props.snapshot, props.livePortions);
-  const amountFood =
-    props.mode === "add" || props.mode === "add-ingredient" ? food : snapshotAsFood(props.snapshot);
+  const isAdding =
+    props.mode === "add" || props.mode === "add-ingredient" || props.mode === "add-to-plate";
+  const choices: PickerChoices = isAdding
+    ? pickerChoices(food, props.portions)
+    : entryPickerChoices(props.snapshot, props.livePortions);
+  const amountFood = isAdding ? food : snapshotAsFood(props.snapshot);
   const [start] = useState(() =>
-    props.mode === "add" || props.mode === "add-ingredient"
+    isAdding
       ? startingAmount(food, choices.portions, props.initialAmount)
       : snapshotAmountStart(props.snapshot),
   );
@@ -93,7 +99,6 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
   // The portions of a food being added can be replaced while the picker is open. When the chosen chip's id is
   // gone, the chip with the same label takes over and the typed amount stays; with no such chip the picker
   // moves to the food's default and starts the amount again. A logged entry works from its snapshot instead.
-  const isAdding = props.mode === "add" || props.mode === "add-ingredient";
   if (isAdding && !choices.options.some((option) => option.value === unitValue)) {
     const reselected = reselectUnit(
       { unitValue, label: unitLabel, quantityText },
@@ -118,6 +123,12 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
       ? unitValue
       : describePortionUnit(chosenPortion.label, amount?.quantity ?? 1);
   const chosenUnit = choices.options.find((option) => option.value === unitValue);
+  // The pages that show Copy to your foods in place of their button for a food that must be reviewed first.
+  const copiesWhenReviewed = (props.mode === "add" || props.mode === "add-to-plate") && needsReview;
+  const note =
+    props.mode === "add" || props.mode === "edit" || props.mode === "add-to-plate"
+      ? props.note
+      : undefined;
 
   return (
     <PortionPickerShell
@@ -145,7 +156,7 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
       }
       isNow={logging?.isNow ?? false}
       renderActions={({ time, isNow }) =>
-        props.mode === "add" && needsReview ? (
+        copiesWhenReviewed ? (
           <Button fullWidth icon="Copy" size="lg" variant="primary" onPress={props.onCopy}>
             {FOOD_REVIEW_BANNER.action}
           </Button>
@@ -154,7 +165,10 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
             <Button
               fullWidth
               disabled={
-                amount === null || !isOnline || (props.mode === "add-ingredient" && needsReview)
+                amount === null ||
+                !isOnline ||
+                (props.mode === "add-ingredient" && needsReview) ||
+                (props.mode === "add-to-plate" && props.isPlateLogging === true)
               }
               haptic="confirm"
               loading={logging?.isSaving ?? false}
@@ -163,7 +177,11 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
                 if (amount === null) {
                   return;
                 }
-                if (props.mode === "edit-ingredient" || props.mode === "add-ingredient") {
+                if (
+                  props.mode === "edit-ingredient" ||
+                  props.mode === "add-ingredient" ||
+                  props.mode === "add-to-plate"
+                ) {
                   props.onSubmit(amount);
                 } else {
                   props.onSubmit({ ...amount, time, isNow });
@@ -174,7 +192,9 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
                 ? ENTRY_SCREEN.saveAction
                 : props.mode === "add-ingredient"
                   ? RECIPE_EDITOR.addToRecipe
-                  : PORTION_PICKER.addAction}
+                  : props.mode === "add-to-plate"
+                    ? PLATE.addToPlate
+                    : PORTION_PICKER.addAction}
             </Button>
             {props.mode === "edit" ? (
               <Button
@@ -202,7 +222,7 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
           </View>
         )
       }
-      showsTime={logging !== undefined && !(props.mode === "add" && needsReview)}
+      showsTime={logging !== undefined && !copiesWhenReviewed}
       time={logging?.time ?? ""}
       title={food.name}
       onBack={onBack}
@@ -221,11 +241,11 @@ function FoodPortionPicker(props: FoodPortionPickerProps) {
       {logging?.hasSaveError === true ? (
         <Banner sentence title={SAVE_FAILED_BANNER} variant="error" />
       ) : null}
-      {logging?.note === undefined ? null : (
+      {note === undefined ? null : (
         <View className="flex-row items-center gap-2">
           <Badge kind="source" source={food.source} />
           <Text tone="muted" variant="caption">
-            {logging.note}
+            {note}
           </Text>
         </View>
       )}

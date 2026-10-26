@@ -12,6 +12,7 @@ import {
 import FoodDetailRoute from "../../app/foods/[id]/index";
 import PortionPickerRoute from "../../app/foods/[id]/log";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 
@@ -51,7 +52,9 @@ const oldBrandedFood = {
 async function renderScreen(screenElement: ReactElement) {
   await render(
     <ThemeProvider fixedPreference="dark">
-      <ToastProvider>{screenElement}</ToastProvider>
+      <ToastProvider>
+        <PlateProvider>{screenElement}</PlateProvider>
+      </ToastProvider>
     </ThemeProvider>,
   );
 }

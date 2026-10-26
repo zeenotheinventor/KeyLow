@@ -4,6 +4,8 @@ import { SPOON_PORTIONS } from "@keylow/core/nutrition";
 import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import { onlineManager } from "@tanstack/react-query";
 import { act, render, screen, userEvent, within } from "@testing-library/react-native";
+import { useEffect } from "react";
+import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import {
@@ -23,12 +25,14 @@ import {
 } from "./support/apiClientMock";
 import PortionPickerRoute from "../../app/foods/[id]/log";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider, usePlate, usePlateLoggingGuard } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { trackFieldSelection } from "../support/amountFieldSelection";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 
+import type { PlateContextValue, PlateLoggingGuard } from "../../lib/plate";
 import type { RecentFood } from "@keylow/api-client";
 import type { Food } from "@keylow/core/schemas";
 
@@ -59,16 +63,37 @@ const openedAt = new Date("2026-10-15T11:40:30Z");
 
 type Params = { day?: string; time?: string; barcode?: string; recent?: string };
 
-async function renderPicker(params: Params = {}) {
-  routerMock.searchParams = { id: savedFoodId, ...params };
-  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-  await render(
+// The plate the picker puts the food on, read from inside the provider the food sheet's layout mounts.
+let plate: PlateContextValue;
+let loggingGuard: PlateLoggingGuard;
+
+function PlateReader() {
+  const current = usePlate();
+  const guard = usePlateLoggingGuard();
+  useEffect(() => {
+    plate = current;
+    loggingGuard = guard;
+  });
+  return null;
+}
+
+function renderRoute() {
+  return render(
     <ThemeProvider fixedPreference="dark">
       <ToastProvider>
-        <PortionPickerRoute />
+        <PlateProvider>
+          <PlateReader />
+          <PortionPickerRoute />
+        </PlateProvider>
       </ToastProvider>
     </ThemeProvider>,
   );
+}
+
+async function renderPicker(params: Params = {}) {
+  routerMock.searchParams = { id: savedFoodId, ...params };
+  const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+  await renderRoute();
   return user;
 }
 
@@ -147,13 +172,7 @@ describe("portion picker", () => {
 
     it("should say the food was not found for an id that is not a food id, without asking for it", async () => {
       routerMock.searchParams = { id: "oat-bar" };
-      await render(
-        <ThemeProvider fixedPreference="dark">
-          <ToastProvider>
-            <PortionPickerRoute />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
+      await renderRoute();
 
       expect(screen.getByRole("heading", { name: "Food not found" })).toBeOnTheScreen();
       expect(mockUseFoodWithPortions).not.toHaveBeenCalledWith("oat-bar");
@@ -183,7 +202,7 @@ describe("portion picker", () => {
 
     it("should read the time in the profile's zone, not the device's", async () => {
       profileTimeZone.current = { data: "America/New_York", isPending: false, isError: false };
-      await renderPicker({ day: "2026-10-15" });
+      await renderPicker();
 
       expect(timeRow("Time, now, 07:40, change")).toBeOnTheScreen();
     });
@@ -315,7 +334,7 @@ describe("portion picker", () => {
     });
 
     it("should turn Add off while the connection is lost, and on again when it is back", async () => {
-      await renderPicker({ day: "2026-10-15" });
+      await renderPicker();
 
       await act(() => {
         onlineManager.setOnline(false);
@@ -329,29 +348,17 @@ describe("portion picker", () => {
     });
   });
 
-  describe("the Time row", () => {
-    it("should read Now and the current time when opened from the dock or the centre plus", async () => {
-      await renderPicker({ day: "2026-10-15" });
+  // Opened outside log mode, from the scanner of the Your foods sheet, the picker logs and has the Time row.
+  describe("the Time row outside log mode", () => {
+    it("should read Now and the current time", async () => {
+      await renderPicker();
 
       expect(timeRow("Time, now, 12:40, change")).toBeOnTheScreen();
       expect(screen.getByText("Now · 12:40")).toBeOnTheScreen();
     });
 
-    it("should read Now and the current clock time on a past day", async () => {
-      await renderPicker({ day: "2026-10-14" });
-
-      expect(timeRow("Time, now, 12:40, change")).toBeOnTheScreen();
-    });
-
-    it("should read the hour an hour's plus was pressed on, not Now", async () => {
-      await renderPicker({ day: "2026-10-14", time: "12:00" });
-
-      expect(timeRow("Time, 12:00, change")).toBeOnTheScreen();
-      expect(screen.queryByText(/Now/)).not.toBeOnTheScreen();
-    });
-
     it("should open the time picker, and read the time chosen in it", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
 
       await user.press(timeRow("Time, now, 12:40, change"));
       await user.press(
@@ -371,9 +378,9 @@ describe("portion picker", () => {
     });
   });
 
-  describe("Add", () => {
+  describe("Add outside log mode", () => {
     it("should log the default serving at the moment the screen opened, as the Time row shows", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
 
       await user.press(addButton());
 
@@ -389,34 +396,8 @@ describe("portion picker", () => {
       });
     });
 
-    it("should log at the preset hour when opened from an hour's plus", async () => {
-      const user = await renderPicker({ day: "2026-10-14", time: "12:00" });
-
-      await user.press(addButton());
-
-      expect(mockLogFood).toHaveBeenCalledWith(
-        expect.objectContaining({
-          loggedAt: "2026-10-14T11:00:00.000Z",
-          localDate: "2026-10-14",
-        }),
-      );
-    });
-
-    it("should log at the current clock time on a past day", async () => {
-      const user = await renderPicker({ day: "2026-10-14" });
-
-      await user.press(addButton());
-
-      expect(mockLogFood).toHaveBeenCalledWith(
-        expect.objectContaining({
-          loggedAt: "2026-10-14T11:40:00.000Z",
-          localDate: "2026-10-14",
-        }),
-      );
-    });
-
     it("should log at the time chosen in the time picker", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
       await user.press(timeRow("Time, now, 12:40, change"));
       await user.press(
         within(screen.getByRole("spinbutton", { name: "Hours" })).getByRole("option", {
@@ -437,7 +418,7 @@ describe("portion picker", () => {
     });
 
     it("should log the amount and unit that were chosen", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
       await user.press(screen.getByRole("radio", { name: "g" }));
       await typeAmount(user, "150");
 
@@ -472,7 +453,7 @@ describe("portion picker", () => {
       });
 
       it("should show Add as working and log only once however often it is pressed", async () => {
-        const user = await renderPicker({ day: "2026-10-15" });
+        const user = await renderPicker();
 
         await user.press(addButton());
         await user.press(screen.getByRole("button", { name: /Add/, busy: true }));
@@ -482,7 +463,7 @@ describe("portion picker", () => {
       });
 
       it("should close the sheet to the diary and show the Added toast when it has saved", async () => {
-        const user = await renderPicker({ day: "2026-10-15" });
+        const user = await renderPicker();
         await user.press(addButton());
 
         await act(() => {
@@ -501,7 +482,7 @@ describe("portion picker", () => {
       });
 
       it("should say it was not saved, keep the sheet open and let Add be pressed again", async () => {
-        const user = await renderPicker({ day: "2026-10-15" });
+        const user = await renderPicker();
 
         await user.press(addButton());
 
@@ -514,7 +495,7 @@ describe("portion picker", () => {
       });
 
       it("should clear the notice when Add is pressed again and saves", async () => {
-        const user = await renderPicker({ day: "2026-10-15" });
+        const user = await renderPicker();
         await user.press(addButton());
         mockLogFood.mockResolvedValue({});
 
@@ -526,10 +507,188 @@ describe("portion picker", () => {
     });
   });
 
+  describe("Add to plate", () => {
+    const addToPlateButton = () => screen.getByRole("button", { name: "Add to plate" });
+
+    afterEach(async () => {
+      await act(() => {
+        onlineManager.setOnline(true);
+      });
+    });
+
+    it("should have Add to plate in place of Add, and no Time row, because the time is the plate's", async () => {
+      await renderPicker({ day: "2026-10-15" });
+
+      expect(addToPlateButton()).toBeEnabled();
+      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Time/ })).not.toBeOnTheScreen();
+    });
+
+    it("should put the default serving on the plate and write nothing", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await user.press(addToPlateButton());
+
+      expect(plate.items).toHaveLength(1);
+      expect(plate.items[0]).toMatchObject({
+        kind: "food",
+        foodId: savedFoodId,
+        name: "Oat bar",
+        quantity: 1,
+        unit: { kind: "portion", label: "1 bar", size: { amount: 45, unit: "g" } },
+      });
+      expect(mockLogFood).not.toHaveBeenCalled();
+      expect(screen.queryByText("Added")).not.toBeOnTheScreen();
+      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
+    });
+
+    it("should put the amount and unit that were chosen on the plate", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+      await user.press(screen.getByRole("radio", { name: "g" }));
+      await typeAmount(user, "150");
+
+      await user.press(addToPlateButton());
+
+      expect(plate.items[0]).toMatchObject({ quantity: 150, unit: { kind: "g" } });
+    });
+
+    it("should put a spoon on the plate as a portion of its size in millilitres", async () => {
+      showFood(oil);
+      const user = await renderPicker({ day: "2026-10-15" });
+      await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
+      await typeAmount(user, "2");
+
+      await user.press(addToPlateButton());
+
+      expect(plate.items[0]).toMatchObject({
+        quantity: 2,
+        unit: { kind: "portion", label: "1 tbsp", size: { amount: 15, unit: "ml" } },
+      });
+      // The values for one tbsp: 15 ml of olive oil at 0.92 g/ml is 13.8 g, at 899 kcal per 100 g.
+      expect(plate.items[0]?.perUnit.kcal).toBeCloseTo(124.062, 3);
+      expect(plate.totals.kcal).toBeCloseTo(248.124, 3);
+    });
+
+    it("should give a plain portion its values for one, so the plate counts the food", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await user.press(addToPlateButton());
+
+      // One bar is 45 g of a food at 420 kcal per 100 g.
+      expect(plate.items[0]?.perUnit.kcal).toBeCloseTo(189, 5);
+      expect(plate.totals.kcal).toBeCloseTo(189, 5);
+    });
+
+    it("should dim Add to plate while the plate is being logged, and put nothing more on it", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await act(() => {
+        loggingGuard.startLogging();
+      });
+
+      expect(addToPlateButton()).toBeDisabled();
+      await user.press(addToPlateButton());
+      expect(plate.items).toHaveLength(0);
+      expect(routerMock.dismissTo).not.toHaveBeenCalled();
+    });
+
+    it("should return to the search on the day it was opened for, whatever led here", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await user.press(addToPlateButton());
+
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+      expect(routerMock.dismissTo).toHaveBeenCalledWith("/foods?day=2026-10-15");
+      expect(routerMock.back).not.toHaveBeenCalled();
+    });
+
+    it("should return to the search on the hour of an hour's plus as well", async () => {
+      const user = await renderPicker({ day: "2026-10-14", time: "12:00" });
+
+      await user.press(addToPlateButton());
+
+      expect(routerMock.dismissTo).toHaveBeenCalledWith("/foods?day=2026-10-14&time=12%3A00");
+    });
+
+    it("should tell a screen reader the food is on the plate", async () => {
+      const announce = jest.spyOn(AccessibilityInfo, "announceForAccessibility");
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await user.press(addToPlateButton());
+
+      expect(announce).toHaveBeenCalledWith("Oat bar added to your plate");
+    });
+
+    it("should work with the connection lost, because nothing is written", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await act(() => {
+        onlineManager.setOnline(false);
+      });
+      expect(addToPlateButton()).toBeEnabled();
+      await user.press(addToPlateButton());
+
+      expect(plate.items).toHaveLength(1);
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+    });
+
+    it("should not wait for the profile's time zone, which only a time needs", async () => {
+      profileTimeZone.current = { data: undefined, isPending: true, isError: false };
+      await renderPicker({ day: "2026-10-15" });
+
+      expect(addToPlateButton()).toBeEnabled();
+    });
+
+    it("should put the food on the plate once however often it is pressed before the screen has gone", async () => {
+      const user = await renderPicker({ day: "2026-10-15" });
+
+      await user.press(addToPlateButton());
+      await user.press(addToPlateButton());
+
+      expect(plate.items).toHaveLength(1);
+      expect(plate.items[0]).toMatchObject({ quantity: 1 });
+      expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+    });
+
+    it("should put the amount last logged on the plate when it was opened from Recent", async () => {
+      recentFoods.current = { data: [oatsLastLogged], isPending: false, isError: false };
+      const user = await renderPicker({ day: "2026-10-15", recent: "1" });
+
+      await user.press(addToPlateButton());
+
+      expect(plate.items[0]).toMatchObject({ quantity: 50, unit: { kind: "g" } });
+    });
+
+    it("should return to the search from the create form, which replaced itself with the picker for a food it saved", async () => {
+      // The form hands the scanned code on, so the picker is opened on the day, the hour and the code.
+      const user = await renderPicker({
+        day: "2026-10-14",
+        time: "12:00",
+        barcode: "5201054013410",
+      });
+
+      await user.press(addToPlateButton());
+
+      expect(routerMock.dismissTo).toHaveBeenCalledWith("/foods?day=2026-10-14&time=12%3A00");
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
+    });
+
+    it("should put the food on the plate from a scan, with the code shown", async () => {
+      const user = await renderPicker({ day: "2026-10-15", barcode: "5201054013410" });
+      expect(screen.getByText("Scanned 5201054013410")).toBeOnTheScreen();
+
+      await user.press(addToPlateButton());
+
+      expect(plate.items).toHaveLength(1);
+      expect(routerMock.dismissTo).toHaveBeenCalledWith("/foods?day=2026-10-15");
+    });
+  });
+
   describe("the terms gate", () => {
     it("should read neither the time zone nor Recent while the Terms are not accepted", async () => {
       termsAccepted.current = false;
-      await renderPicker({ day: "2026-10-15", recent: "1" });
+      await renderPicker({ recent: "1" });
 
       expect(mockUseProfileTimeZone).toHaveBeenCalled();
       expect(
@@ -542,7 +701,7 @@ describe("portion picker", () => {
     });
 
     it("should read both once the Terms are accepted", async () => {
-      await renderPicker({ day: "2026-10-15", recent: "1" });
+      await renderPicker({ recent: "1" });
 
       expect(
         mockUseProfileTimeZone.mock.calls.every(([options]) => options?.enabled === true),
@@ -559,20 +718,20 @@ describe("portion picker", () => {
     });
 
     it("should read the time in UTC", async () => {
-      await renderPicker({ day: "2026-10-15" });
+      await renderPicker();
 
       // 11:40 UTC, where London would read 12:40.
       expect(timeRow("Time, now, 11:40, change")).toBeOnTheScreen();
     });
 
     it("should log in UTC", async () => {
-      const user = await renderPicker({ day: "2026-10-14", time: "12:00" });
+      const user = await renderPicker();
 
       await user.press(addButton());
 
       expect(mockLogFood.mock.calls[0]?.[0]).toMatchObject({
-        loggedAt: "2026-10-14T12:00:00.000Z",
-        localDate: "2026-10-14",
+        loggedAt: "2026-10-15T11:40:30.000Z",
+        localDate: "2026-10-15",
       });
     });
   });
@@ -582,7 +741,7 @@ describe("portion picker", () => {
       showFood({ ...foodFixture, carbs_g: null, quality: {} });
     });
 
-    it("should be reviewed first like a flagged one: no Add, no Time row, and the gap named", async () => {
+    it("should be reviewed first like a flagged one: no Add to plate, no Time row, and the gap named", async () => {
       await renderPicker({ day: "2026-10-15" });
 
       expect(screen.getByText("Needs review")).toBeOnTheScreen();
@@ -591,7 +750,7 @@ describe("portion picker", () => {
           "Carbohydrate is not given for this food. Copy it to your foods and fill the gap before you log it.",
         ),
       ).toBeOnTheScreen();
-      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Add to plate" })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /^Time/ })).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Copy to your foods" })).toBeOnTheScreen();
     });
@@ -618,10 +777,10 @@ describe("portion picker", () => {
       expect(screen.getAllByRole("button", { name: /Copy to your foods/ })).toHaveLength(1);
     });
 
-    it("should offer Copy to your foods in place of Add, with no Time row", async () => {
+    it("should offer Copy to your foods in place of Add to plate, with no Time row", async () => {
       await renderPicker({ day: "2026-10-15" });
 
-      expect(screen.queryByRole("button", { name: "Add" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Add to plate" })).not.toBeOnTheScreen();
       expect(screen.queryByRole("button", { name: /^Time/ })).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Copy to your foods" })).toBeOnTheScreen();
     });
@@ -659,7 +818,7 @@ describe("portion picker", () => {
     });
 
     it("should log that amount when Add is pressed without a change", async () => {
-      const user = await renderPicker({ day: "2026-10-15", recent: "1" });
+      const user = await renderPicker({ recent: "1" });
 
       await user.press(addButton());
 
@@ -859,7 +1018,7 @@ describe("the portion picker's unit chips", () => {
     });
 
     it("should log 2 tbsp as a portion of 15 ml with no portion row and the density it used", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
       await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
       await typeAmount(user, "2");
 
@@ -877,7 +1036,7 @@ describe("the portion picker's unit chips", () => {
     });
 
     it("should log a teaspoon as a portion of 5 ml, and one teaspoon because the chip sets the amount to 1", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
       await user.press(screen.getByRole("radio", { name: "1 tsp" }));
 
       await user.press(addButton());
@@ -904,7 +1063,7 @@ describe("the portion picker's unit chips", () => {
           }),
         ],
       });
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
       expectChips(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
 
       await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
@@ -983,7 +1142,7 @@ describe("the portion picker's unit chips", () => {
     });
 
     it("should log 250 ml with the density it used", async () => {
-      const user = await renderPicker({ day: "2026-10-15" });
+      const user = await renderPicker();
       await user.press(screen.getByRole("radio", { name: "ml" }));
       await typeAmount(user, "250");
 
