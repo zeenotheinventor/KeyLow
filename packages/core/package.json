@@ -10,6 +10,7 @@
     "./foods": "./src/foods/index.ts",
     "./schemas": "./src/schemas/index.ts",
     "./nutrition": "./src/nutrition/index.ts",
+    "./plate": "./src/plate/index.ts",
     "./engine": "./src/engine/index.ts",
     "./copy": "./src/copy/index.ts",
     "./format": "./src/format/index.ts",
