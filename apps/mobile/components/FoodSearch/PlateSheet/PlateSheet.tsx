@@ -1,4 +1,5 @@
 import { PLATE } from "@keylow/core/copy";
+import { useIsFocused } from "expo-router";
 import { useState } from "react";
 
 import { PlateSheetContent } from "./PlateSheetContent";
@@ -17,10 +18,17 @@ const SNAP_POINTS = ["87%"];
  * draws over the search, which it dims, and closes on the dim, a drag down and the Android back button with the
  * plate kept. While the plate is being logged it stays, so the answer, good or bad, is seen. The time picker the
  * Time row opens is a sheet of its own, drawn after this one so it covers it, which the plate sheet stays under.
+ *
+ * A row's name pushes the portion picker over the search. The sheet stays open as far as the search is
+ * concerned, but it is drawn only while the search is the screen in front: otherwise the sheet under the picker
+ * would take Android's back press and close itself unseen. It comes back with the row updated when the picker
+ * goes.
  */
-export function PlateSheet({ open, onClose, context }: PlateSheetProps) {
+export function PlateSheet({ open: isOpen, onClose, context }: PlateSheetProps) {
   const { isLogging, count, setTime } = usePlate();
   const { time, isNow } = usePlateClockTime();
+  const isFocused = useIsFocused();
+  const open = isOpen && isFocused;
   const [isTimePickerOpen, setIsTimePickerOpen] = useState(false);
 
   // The picker goes with the sheet it was opened from.

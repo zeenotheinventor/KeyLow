@@ -5,15 +5,20 @@ import {
   describeLogPlateActionName,
   UNDO_LABEL,
 } from "@keylow/core/copy";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import { View } from "react-native";
 
+import { useIsOnline } from "../../../../lib/connectivity";
+import { withLogContext } from "../../../../lib/navigation";
 import { useLogPlate, usePlate } from "../../../../lib/plate";
+import { logRecipePath } from "../../../../lib/recipeRoutes";
 import { Banner, Button, GroupedList, SheetScrollView, Text, TimeRow, useToast } from "../../../ui";
 import { PlateSheetRow } from "../PlateSheetRow";
 import { PlateTotalsCard } from "../PlateTotalsCard";
 
 import type { PlateSheetContentProps } from "./types";
+import type { PlateItem } from "@keylow/core/plate";
 
 const ROWS_LABEL = "Foods on your plate";
 
@@ -24,7 +29,8 @@ const ROWS_LABEL = "Foods on your plate";
  * in a toast whose Undo puts the plate back, rows, amounts and time. While the plate is logged, Clear plate and
  * the Time row are dimmed and do nothing. When the plate cannot be logged, the sheet's error sentence shows
  * above them and the sheet stays open. It is mounted only while the sheet is, so the sentence is gone the next
- * time the sheet opens.
+ * time the sheet opens. A row's name opens the portion picker on that row, to change its unit; it is dimmed
+ * while the connection is lost, because the picker reads the food's portions.
  */
 export function PlateSheetContent({
   onClose,
@@ -37,6 +43,8 @@ export function PlateSheetContent({
   const { items, count, canLog, isLogging, setQuantity, remove, clear, restore } = usePlate();
   const { logPlate } = useLogPlate(context);
   const toast = useToast();
+  const router = useRouter();
+  const isOnline = useIsOnline();
   const [hasFailed, setHasFailed] = useState(false);
 
   function logTheFoods() {
@@ -54,6 +62,12 @@ export function PlateSheetContent({
     if (count === 1) {
       onClose();
     }
+  }
+
+  function openRow(item: PlateItem) {
+    const path =
+      item.kind === "recipe" ? logRecipePath(item.recipe.id) : `/foods/${item.foodId}/log`;
+    router.push(withLogContext(path, context, { plate: item.key }));
   }
 
   function clearThePlate() {
@@ -97,9 +111,13 @@ export function PlateSheetContent({
             <PlateSheetRow
               key={item.key}
               isDisabled={isLogging}
+              isOpenDisabled={!isOnline}
               item={item}
               onAmountChange={(text) => {
                 setQuantity(item.key, text);
+              }}
+              onOpen={() => {
+                openRow(item);
               }}
               onRemove={() => {
                 removeFood(item.key);

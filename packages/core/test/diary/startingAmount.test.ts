@@ -5,6 +5,7 @@ import {
   reselectUnit,
   startingAmount,
   unitValueOf,
+  usualQuantityOfUnit,
 } from "../../src/diary/startingAmount";
 import { SPOON_PORTIONS } from "../../src/nutrition/volume";
 import { buildFood, buildFoodPortion } from "../../src/testing";
@@ -190,5 +191,25 @@ describe("reselectUnit", () => {
 
   it("should reset the amount to 100 when the fallback is g", () => {
     expect(reselectUnit(chosen, [gram], "g")).toEqual({ unitValue: "g", quantity: "100" });
+  });
+});
+
+describe("usualQuantityOfUnit", () => {
+  it.each(["g", "ml"] as const)("should be 100 for %s", (unit) => {
+    expect(usualQuantityOfUnit(unit)).toBe(100);
+  });
+
+  it.each(["portion", "serving"] as const)(
+    "should be 1 for a %s, a spoon being a portion",
+    (unit) => {
+      expect(usualQuantityOfUnit(unit)).toBe(1);
+    },
+  );
+
+  it("should agree with the amount a unit chip starts at", () => {
+    expect(String(usualQuantityOfUnit("ml"))).toBe(amountOnUnitChange("g", "ml", "5"));
+    expect(String(usualQuantityOfUnit("portion"))).toBe(
+      amountOnUnitChange("g", "portion-medium", "5"),
+    );
   });
 });

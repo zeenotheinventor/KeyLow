@@ -15,9 +15,16 @@ import type { PlateSheetRowProps } from "./types";
 /**
  * One food or recipe of Your plate: the kit's row, written from what the plate holds. The amount is the plate's
  * own text, so the row, the totals and the bars follow as it is typed, and an amount that is not above 0 says so
- * under the row. The name is plain text for now: it will become the button that opens the picker to change the unit.
+ * under the row. The name is the button that opens the picker to change the unit.
  */
-export function PlateSheetRow({ item, isDisabled, onAmountChange, onRemove }: PlateSheetRowProps) {
+export function PlateSheetRow({
+  item,
+  isDisabled,
+  isOpenDisabled,
+  onAmountChange,
+  onOpen,
+  onRemove,
+}: PlateSheetRowProps) {
   const values = plateItemValues(item);
 
   return (
@@ -26,6 +33,7 @@ export function PlateSheetRow({ item, isDisabled, onAmountChange, onRemove }: Pl
       disabled={isDisabled}
       energy={formatCalories(values.kcal)}
       error={isPlateItemValid(item) ? undefined : DIARY_PROBLEMS.quantity}
+      isOpenDisabled={isOpenDisabled}
       isRecipe={item.kind === "recipe"}
       // Only the three values are read by the row: it is named by its energy, so it has no sentence to give.
       macros={{
@@ -38,6 +46,7 @@ export function PlateSheetRow({ item, isDisabled, onAmountChange, onRemove }: Pl
       unitsWord={plateUnitWords(item).plural}
       unitWord={plateUnitWord(item)}
       onAmountChange={onAmountChange}
+      onOpen={onOpen}
       onRemove={onRemove}
     />
   );

@@ -77,6 +77,15 @@ export function amountOnUnitChange(
 }
 
 /**
+ * The amount a unit starts at, as a number: 100 for g or ml, 1 for a portion (a spoon is one) or a serving. It is
+ * the amount `amountOnUnitChange` gives a chip pressed for the first time, for a row that keeps its unit but has
+ * no amount to keep.
+ */
+export function usualQuantityOfUnit(unit: "g" | "ml" | "portion" | "serving"): number {
+  return unit === "g" || unit === "ml" ? AMOUNT_OF_THE_BASIS : AMOUNT_OF_A_PORTION;
+}
+
+/**
  * Where a picker stands once its chips were replaced: a refresh of a branded food deletes its portions and
  * inserts them again with new ids, so the chosen chip's id can be gone. The chip stays as it is while it is
  * still offered; otherwise the chip with the same label takes over and the typed amount is kept; otherwise

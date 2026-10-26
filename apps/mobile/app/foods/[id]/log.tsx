@@ -13,11 +13,16 @@ import {
   describeScannedCode,
 } from "@keylow/core/copy";
 import { describeDay } from "@keylow/core/dates";
-import { clockTimeOn, openingLoggedAt, pickerChoices } from "@keylow/core/diary";
+import {
+  clockTimeOn,
+  openingLoggedAt,
+  pickerChoices,
+  usualQuantityOfUnit,
+} from "@keylow/core/diary";
 import { isFoodId } from "@keylow/core/foods";
-import { plateItemOfPickedFood } from "@keylow/core/plate";
+import { isPlateItemValid, plateFoodAmount, plateItemOfPickedFood } from "@keylow/core/plate";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo } from "react-native";
 
 import { FoodLoadState } from "../../../components/FoodLoadState";
@@ -44,6 +49,10 @@ import type { ChosenAmount } from "@keylow/core/diary";
  * Add to plate puts the amount on the plate, writes nothing and goes back to the search, which clears its
  * field. The plate has the time, so the page has no Time row.
  *
+ * Opened from a plate row's name (`plate` names the row), the page is the plate-edit one: it starts on the row's
+ * amount and unit, Save puts the row back in its place with the new amount and goes back to the sheet, and
+ * Back changes nothing. A `plate` that is not a row of this food goes back to the search.
+ *
  * Opened with no day, as from the scanner of the Your foods sheet, which has no plate to put it on, the page
  * is the one that logs: the Time row shows "Now", and Add logs the food, closes the sheet to the diary and
  * shows the toast.
@@ -56,12 +65,20 @@ export default function PortionPickerRoute() {
   const logFood = useLogFood();
   const isOnline = useIsOnline();
   const plate = usePlate();
-  const { id, barcode, day, time, recent } = useLocalSearchParams<{
+  const {
+    id,
+    barcode,
+    day,
+    time,
+    recent,
+    plate: plateKey,
+  } = useLocalSearchParams<{
     id: string;
     barcode?: string;
     recent?: string;
     day?: string;
     time?: string;
+    plate?: string;
   }>();
   const isValidId = isFoodId(id);
   const state = useFoodWithPortions(isValidId ? id : "");
@@ -70,9 +87,14 @@ export default function PortionPickerRoute() {
   const isReadEnabled = useReadsEnabled();
   const logContext = readLogContext({ day, time });
   const isFromRecent = recent !== undefined;
+  const isEditingPlateRow = plateKey !== undefined;
+  const plateRow = plate.items.find(
+    (item) => item.key === plateKey && item.kind === "food" && item.foodId === id,
+  );
   // The diary reads its days and hours in the profile's zone, so a time logged here is read in it, and so is
-  // the day Recent says a food was last logged. Putting a food on the plate needs neither, so it works offline.
-  const needsTimeZone = logContext === undefined || isFromRecent;
+  // the day Recent says a food was last logged. Putting a food on the plate, or changing a row of it, needs
+  // neither, so they work offline.
+  const needsTimeZone = !isEditingPlateRow && (logContext === undefined || isFromRecent);
   const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled && needsTimeZone });
   // The Recent list is the cache the sheet has just drawn it from, so this is not a new request.
   const recentFoods = useRecentFoods({ enabled: isReadEnabled && isFromRecent });
@@ -82,6 +104,21 @@ export default function PortionPickerRoute() {
   const [openedAt] = useState(() => new Date());
   // Set in the same tick as the press, which a state update is not, so a second press cannot add it twice.
   const hasAddedToPlate = useRef(false);
+  // The same for Save on a plate row: going back twice would close the whole sheet.
+  const hasSavedPlateRow = useRef(false);
+  const isStalePlateRow = isEditingPlateRow && plateRow === undefined;
+
+  // A link to a row that is not on the plate, such as one kept from before the plate was cleared, has nothing
+  // to change: the search is where it belongs.
+  useEffect(() => {
+    if (isStalePlateRow) {
+      router.dismissTo(withLogContext("/foods", logContext));
+    }
+  }, [isStalePlateRow, router, logContext]);
+
+  if (isStalePlateRow) {
+    return null;
+  }
 
   if (!isValidId) {
     return <FoodLoadState state="notFound" />;
@@ -141,6 +178,17 @@ export default function PortionPickerRoute() {
     router.dismissTo(withLogContext("/foods", logContext));
   }
 
+  function handleSavePlateRow(rowKey: string, amount: ChosenAmount) {
+    if (hasSavedPlateRow.current) {
+      return;
+    }
+    hasSavedPlateRow.current = true;
+    const offered = pickerChoices(food, portions).portions;
+    // The row keeps its key and its place on the plate, and never merges into another row of the same food.
+    plate.replace(rowKey, (key) => plateItemOfPickedFood({ key, food, portions: offered, amount }));
+    goBack();
+  }
+
   async function handleSubmit(selection: PortionSelection) {
     setIsSaving(true);
     setHasSaveError(false);
@@ -165,6 +213,31 @@ export default function PortionPickerRoute() {
     } finally {
       setIsSaving(false);
     }
+  }
+
+  if (plateRow?.kind === "food") {
+    // The row's amount as the food is now: a portion that has gone comes as the grams or millilitres it was.
+    // A row with no valid amount keeps its unit and starts at that unit's usual amount (1, or 100 g or ml).
+    const startQuantity = usualQuantityOfUnit(plateRow.unit.kind);
+    const rowAmount = plateFoodAmount(
+      isPlateItemValid(plateRow)
+        ? plateRow
+        : { ...plateRow, quantity: startQuantity, quantityText: String(startQuantity) },
+      portions,
+    );
+
+    return (
+      <PortionPicker
+        food={food}
+        initialAmount={rowAmount === undefined ? undefined : amountForPicker(rowAmount)}
+        mode="edit-plate"
+        portions={portions}
+        onBack={goBack}
+        onSubmit={(amount) => {
+          handleSavePlateRow(plateRow.key, amount);
+        }}
+      />
+    );
   }
 
   if (logContext !== undefined) {
