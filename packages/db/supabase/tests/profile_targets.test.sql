@@ -143,11 +143,11 @@ select is(
       and has_column_privilege('authenticated', attrelid, attnum, 'update')
   ),
   array[
-    'activity', 'birth_date', 'checkin_weekday', 'energy_unit', 'height_cm', 'onboarding_completed_at',
-    'onboarding_weight_kg', 'sex', 'target_carbs_g', 'target_fat_g', 'target_kcal', 'target_protein_g',
-    'targets_updated_at', 'timezone', 'weight_unit'
+    'activity', 'assistant_consent_at', 'assistant_consent_version', 'birth_date', 'checkin_weekday', 'energy_unit',
+    'height_cm', 'onboarding_completed_at', 'onboarding_weight_kg', 'sex', 'target_carbs_g', 'target_fat_g',
+    'target_kcal', 'target_protein_g', 'targets_updated_at', 'timezone', 'weight_unit'
   ],
-  'authenticated can update exactly the Amendment 4 columns of profiles, without id'
+  'authenticated can update exactly the Amendment 4 columns of profiles and the two consent columns, without id'
 );
 select ok(
   not exists (
