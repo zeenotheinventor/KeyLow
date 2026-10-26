@@ -5,6 +5,7 @@ export * from "./engine";
 export * from "./foods";
 export * from "./format";
 export * from "./nutrition";
+export * from "./plate";
 export * from "./schemas";
 export * from "./search";
 export * from "./terms";

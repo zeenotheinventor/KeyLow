@@ -30,10 +30,11 @@ ESLint enforces the dependency rules for `src/` (`import-x/no-nodejs-modules` an
 | `src/nutrition/` | Nutrient maths and unit conversion                                                                           | Empty, filled in M2 and M5                                               |
 | `src/engine/`    | Trend, expenditure and targets                                                                               | Empty, filled in M6                                                      |
 | `src/training/`  | Muscle list, training bounds and enums, set snapshot, `TrainingParams`, heat model, projected against actual | Added in T1 (KEY-346), heat model and plan week in T3 (KEY-351, KEY-352) |
+| `src/plate/`     | The plate: items, merge, amounts, totals, the amount to log (KEY-710)                                        | Added for the plate (KEY-709)                                            |
 | `src/weight/`    | Weight checks and bounds, kg and lb display, weekly rate, chart ranges, Health sample mapper                 | Added in M5 (KEY-361)                                                    |
 | `test/`          | Vitest tests, mirroring the `src/` folder structure                                                          |                                                                          |
 
-Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/foods`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`, `@keylow/core/format`, `@keylow/core/copy`, `@keylow/core/search`, `@keylow/core/terms`, `@keylow/core/training`, `@keylow/core/weight`), and `@keylow/core` re-exports the public surface. The exception is `@keylow/core/testing` (`buildFood`, `buildFoodPortion`, `buildOffCandidate`): test builders that only test code imports, never shipped code, and the root export leaves it out.
+Each folder is a subpath export (`@keylow/core/dates`, `@keylow/core/foods`, `@keylow/core/schemas`, `@keylow/core/nutrition`, `@keylow/core/engine`, `@keylow/core/format`, `@keylow/core/copy`, `@keylow/core/search`, `@keylow/core/terms`, `@keylow/core/plate`, `@keylow/core/training`, `@keylow/core/weight`), and `@keylow/core` re-exports the public surface. The exception is `@keylow/core/testing` (`buildFood`, `buildFoodPortion`, `buildOffCandidate`): test builders that only test code imports, never shipped code, and the root export leaves it out.
 
 ## Formatting, copy and search presentation
 
