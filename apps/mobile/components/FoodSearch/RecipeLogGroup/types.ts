@@ -5,7 +5,7 @@ export type RecipeLogGroupProps = {
   recipes: LogRecipes["rows"];
   /** The trimmed query, whose words are written in bold in each name. */
   query: string;
-  /** Dims every plus and stops it responding, such as while offline. */
+  /** Dims every plus and stops it responding, such as while the plate is being logged. */
   addDisabled: boolean;
   onAdd: LogRecipes["onAdd"];
   onOpen: LogRecipes["onOpen"];

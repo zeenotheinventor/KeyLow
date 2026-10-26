@@ -4,6 +4,7 @@ import { mockApiClient } from "./apiClientMock";
 
 import type {
   FoodSearchResult,
+  LogEntriesItem,
   RecipeSearchResult,
   UseRecipeSearchOptions,
 } from "@keylow/api-client";
@@ -54,6 +55,39 @@ type OwnFoodsState =
 export const mockMaterialiseOffProduct = jest.fn<Promise<Food>, [{ code: string }]>();
 export const mockUseFoodSearch = jest.fn<FoodSearchResult, [string]>();
 export const mockUseOwnFoods = jest.fn<OwnFoodsState, []>();
+export const mockLogEntries = jest.fn<Promise<unknown[]>, [readonly LogEntriesItem[]]>();
+
+type DayRead = {
+  data: { entries: { nutrients: Record<string, number | null> }[] } | undefined;
+  isError: boolean;
+};
+type TargetsRead = {
+  data:
+    | {
+        kcal: number | null;
+        protein_g: number | null;
+        carbs_g: number | null;
+        fat_g: number | null;
+      }
+    | undefined;
+  isError: boolean;
+};
+
+// What the day was eaten as, which the search's bars start from: the M3 sample day (1,039 kcal).
+export const eatenDay: { current: DayRead } = {
+  current: {
+    data: {
+      entries: [{ nutrients: { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 } }],
+    },
+    isError: false,
+  },
+};
+// The targets the bars are measured against (the M3 sample targets).
+export const dayTargets: { current: TargetsRead } = {
+  current: { data: { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 }, isError: false },
+};
+export const mockUseDiaryDay = jest.fn<DayRead, [string, { enabled?: boolean }?]>();
+export const mockUseTargets = jest.fn<TargetsRead, [{ enabled?: boolean; localDate?: string }?]>();
 export const mockUseRecipeSearch = jest.fn<RecipeSearchResult, [string, UseRecipeSearchOptions?]>();
 
 // The test sets the whole search result for a case, and a reset puts back the idle one.
@@ -78,6 +112,22 @@ export function resetSearchApiClientMock(): void {
   mockUseOwnFoods.mockReset();
   mockUseOwnFoods.mockImplementation(() => ownFoodsResult.current);
   mockMaterialiseOffProduct.mockReset();
+  mockLogEntries.mockReset();
+  mockLogEntries.mockResolvedValue([]);
+  eatenDay.current = {
+    data: {
+      entries: [{ nutrients: { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 } }],
+    },
+    isError: false,
+  };
+  dayTargets.current = {
+    data: { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 },
+    isError: false,
+  };
+  mockUseDiaryDay.mockReset();
+  mockUseDiaryDay.mockImplementation(() => eatenDay.current);
+  mockUseTargets.mockReset();
+  mockUseTargets.mockImplementation(() => dayTargets.current);
 }
 
 // Builds on the food form mock, so one factory serves the screens that load a food too.
@@ -86,5 +136,8 @@ export const mockSearchApiClient = {
   useFoodSearch: mockUseFoodSearch,
   useOwnFoods: mockUseOwnFoods,
   useRecipeSearch: mockUseRecipeSearch,
+  useLogEntries: () => ({ mutateAsync: mockLogEntries }),
+  useDiaryDay: mockUseDiaryDay,
+  useTargets: mockUseTargets,
   useMaterialiseOffProduct: () => ({ mutateAsync: mockMaterialiseOffProduct }),
 };

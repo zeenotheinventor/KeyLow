@@ -5,11 +5,8 @@ import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
 import {
-  mockDeleteEntry,
   mockLogFood,
   mockLogRecipe,
-  mockUseProfileTimeZone,
-  profileTimeZone,
   recentFoods,
   resetApiClientMock,
   savedFoodId,
@@ -24,6 +21,7 @@ import {
 } from "./support/searchApiClientMock";
 import FoodSearchRoute from "../../app/foods/index";
 import { ToastProvider } from "../../components/ui";
+import { PlateProvider } from "../../lib/plate";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -80,8 +78,7 @@ const chickenAndRice: RecipeSummary = {
 
 const rowName =
   "Chicken and rice, recipe, 1 serving 275 grams, 374 kilocalories, protein 32 grams, carbohydrate 43 grams, fat 8.1 grams, choose amount";
-const addName = "Add Chicken and rice, 1 serving (275 g)";
-const notSaved = "Not saved. Check your connection and try again.";
+const addName = "Add Chicken and rice, 1 serving (275 g), to your plate";
 
 function hit(changes: Partial<FoodSearchHit>): FoodSearchHit {
   return {
@@ -136,7 +133,9 @@ async function renderLogSearch(params: { day?: string; time?: string } = {}) {
   await render(
     <ThemeProvider fixedPreference="dark">
       <ToastProvider>
-        <FoodSearchRoute />
+        <PlateProvider>
+          <FoodSearchRoute />
+        </PlateProvider>
       </ToastProvider>
     </ThemeProvider>,
   );
@@ -177,10 +176,12 @@ describe("recipes in the log search", () => {
     showRecipes([chickenAndRice]);
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     jest.useRealTimers();
     jest.restoreAllMocks();
-    onlineManager.setOnline(true);
+    await act(() => {
+      onlineManager.setOnline(true);
+    });
   });
 
   describe("the group", () => {
@@ -412,7 +413,9 @@ describe("recipes in the log search", () => {
       await render(
         <ThemeProvider fixedPreference="dark">
           <ToastProvider>
-            <FoodSearchRoute />
+            <PlateProvider>
+              <FoodSearchRoute />
+            </PlateProvider>
           </ToastProvider>
         </ThemeProvider>,
       );
@@ -444,142 +447,6 @@ describe("recipes in the log search", () => {
 
       expect(screen.getByRole("button", { name: addName })).toBeOnTheScreen();
     });
-
-    it("should log one serving once, at the hour the sheet was opened from", async () => {
-      const user = await renderLogSearch({ day: "2026-10-14", time: "18:00" });
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(mockLogRecipe).toHaveBeenCalledTimes(1);
-      // 18:00 in London in October is 17:00 UTC.
-      expect(mockLogRecipe.mock.calls[0]?.[0]).toMatchObject({
-        recipe: chickenAndRice,
-        quantity: 1,
-        unit: "serving",
-        loggedAt: "2026-10-14T17:00:00.000Z",
-        localDate: "2026-10-14",
-      });
-      expect(mockLogFood).not.toHaveBeenCalled();
-    });
-
-    it("should log now when the sheet was opened from the dock, with a day and no hour", async () => {
-      routerMock.searchParams = { day: "2026-10-15" };
-      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-      await render(
-        <ThemeProvider fixedPreference="dark">
-          <ToastProvider>
-            <FoodSearchRoute />
-          </ToastProvider>
-        </ThemeProvider>,
-      );
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(mockLogRecipe.mock.calls[0]?.[0].loggedAt).toMatch(/^2026-10-15T11:40:30\./);
-      expect(mockLogRecipe.mock.calls[0]?.[0].localDate).toBe("2026-10-15");
-    });
-
-    it("should leave the sheet open and say Added with the recipe's name", async () => {
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(screen.getByText("Added Chicken and rice")).toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: "Undo" })).toBeOnTheScreen();
-      expect(routerMock.back).not.toHaveBeenCalled();
-      expect(routerMock.parentGoBack).not.toHaveBeenCalled();
-      expect(screen.getByRole("searchbox", { name: "Search foods" })).toBeOnTheScreen();
-    });
-
-    it("should remove only the entry it made on Undo", async () => {
-      const user = await renderLogSearch();
-      await type("chicken");
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      await user.press(screen.getByRole("button", { name: "Undo" }));
-
-      expect(mockDeleteEntry).toHaveBeenCalledTimes(1);
-      expect(mockDeleteEntry).toHaveBeenCalledWith(storedRecipeEntry("entry-recipe"));
-    });
-
-    it("should log once however often it is pressed before the first has finished", async () => {
-      let finish: (entry: RecipeLogEntry) => void = () => undefined;
-      mockLogRecipe.mockReturnValue(
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-      );
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-      await user.press(screen.getByRole("button", { name: addName }));
-      await act(() => {
-        finish(storedRecipeEntry("entry-recipe"));
-      });
-
-      expect(mockLogRecipe).toHaveBeenCalledTimes(1);
-    });
-
-    it("should log again once the first has finished", async () => {
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(mockLogRecipe).toHaveBeenCalledTimes(2);
-    });
-
-    it("should log a food, and not the recipe, when the food's plus is pressed", async () => {
-      showFoods([chickenFillets]);
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast fillets, 100 g" }));
-
-      expect(mockLogFood).toHaveBeenCalledTimes(1);
-      expect(mockLogRecipe).not.toHaveBeenCalled();
-    });
-
-    it("should say it was not saved, and never why, when logging fails", async () => {
-      mockLogRecipe.mockRejectedValue(new Error("network down while logging 275 g"));
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(screen.getByText(notSaved)).toBeOnTheScreen();
-      expect(screen.queryByText("Added Chicken and rice")).not.toBeOnTheScreen();
-      expect(screen.queryByText(/network down/)).not.toBeOnTheScreen();
-    });
-
-    it("should say it could not undo, in its own words, when Undo fails", async () => {
-      mockDeleteEntry.mockRejectedValue(new Error("network down"));
-      const user = await renderLogSearch();
-      await type("chicken");
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      await user.press(screen.getByRole("button", { name: "Undo" }));
-
-      expect(screen.getByText("Couldn't undo. Try again.")).toBeOnTheScreen();
-      expect(screen.queryByText(notSaved)).not.toBeOnTheScreen();
-    });
-
-    it("should log in UTC when the profile has no time zone", async () => {
-      profileTimeZone.current = { data: null, isPending: false, isError: false };
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(mockLogRecipe.mock.calls[0]?.[0]).toMatchObject({
-        loggedAt: "2026-10-14T18:00:00.000Z",
-      });
-    });
   });
 
   describe("when the recipe search fails", () => {
@@ -600,8 +467,13 @@ describe("recipes in the log search", () => {
       expect(screen.queryByRole("alert")).not.toBeOnTheScreen();
       expect(screen.queryByText(/rpc failed/)).not.toBeOnTheScreen();
 
-      await user.press(screen.getByRole("button", { name: "Add Chicken breast fillets, 100 g" }));
-      expect(mockLogFood).toHaveBeenCalledTimes(1);
+      await user.press(
+        screen.getByRole("button", { name: "Add Chicken breast fillets, 100 g, to your plate" }),
+      );
+      expect(
+        screen.getByRole("button", { name: "Log food, 1 food on your plate" }),
+      ).toBeOnTheScreen();
+      expect(mockLogFood).not.toHaveBeenCalled();
     });
 
     it("should show no recipes group when the foods search is the one that fails, and say so", async () => {
@@ -615,42 +487,6 @@ describe("recipes in the log search", () => {
         }),
       ).toBeOnTheScreen();
       expect(screen.queryByRole("heading", { name: /^Your recipes/ })).not.toBeOnTheScreen();
-    });
-  });
-
-  describe("offline", () => {
-    it("should disable the plus, and log nothing when it is pressed", async () => {
-      onlineManager.setOnline(false);
-      const user = await renderLogSearch();
-      await type("chicken");
-
-      expect(screen.getByRole("button", { name: addName })).toBeDisabled();
-      await user.press(screen.getByRole("button", { name: addName }));
-
-      expect(mockLogRecipe).not.toHaveBeenCalled();
-    });
-
-    it("should enable it again when the connection comes back", async () => {
-      onlineManager.setOnline(false);
-      await renderLogSearch();
-      await type("chicken");
-
-      await act(() => {
-        onlineManager.setOnline(true);
-      });
-
-      expect(screen.getByRole("button", { name: addName })).toBeEnabled();
-    });
-  });
-
-  describe("while the profile's time zone is not known", () => {
-    it("should keep the plus off, because the time cannot be read yet", async () => {
-      profileTimeZone.current = { data: undefined, isPending: true, isError: false };
-      await renderLogSearch();
-      await type("chicken");
-
-      expect(mockUseProfileTimeZone).toHaveBeenCalled();
-      expect(screen.getByRole("button", { name: addName })).toBeDisabled();
     });
   });
 });

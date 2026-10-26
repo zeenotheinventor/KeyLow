@@ -1,10 +1,12 @@
 import { ADD_INGREDIENT, LOG_SEARCH, SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
 import { vars } from "nativewind";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { IngredientSearchResults } from "./IngredientSearchResults";
+import { LogPlateButton } from "./LogPlateButton";
+import { LogPlateStrip } from "./LogPlateStrip";
 import { LogSearchResults } from "./LogSearchResults";
 import { OwnFoodResults } from "./OwnFoodResults";
 import { SearchResults } from "./SearchResults";
@@ -23,6 +25,8 @@ const WORDING = {
  * "Your foods" and lists the user's own foods, and the cursor stays out of the field because the list
  * is what the user came for. With an `ingredient` it is titled "Add ingredient" and finds a food for a
  * recipe: no create control, and every row opens the amount step. The scan control is the same in every mode.
+ * In log mode the bars under the header show the day with the plate, every plus puts food on the plate, and
+ * Log food(s) beside the field writes it.
  */
 export function FoodSearch(props: FoodSearchProps) {
   const { onClose, onOpenFood, onScanBarcode } = props;
@@ -32,6 +36,9 @@ export function FoodSearch(props: FoodSearchProps) {
   const isIngredient = props.ingredient !== undefined;
   const logging = props.logging;
   const { title, autoFocus } = WORDING[scope];
+  const clearQuery = useCallback(() => {
+    setQuery("");
+  }, []);
 
   return (
     // The insets are runtime values no class can name, so they go through variables, as the field's lift does.
@@ -52,6 +59,7 @@ export function FoodSearch(props: FoodSearchProps) {
             : { icon: "Plus", label: "Create a food", onPress: props.onCreateFood }
         }
       />
+      {logging === undefined ? null : <LogPlateStrip day={logging.context.day} />}
       {props.ingredient !== undefined ? (
         <ScrollView
           className="flex-1"
@@ -85,12 +93,16 @@ export function FoodSearch(props: FoodSearchProps) {
               query={query}
               onCreateFood={props.onCreateFood}
               onOpenFood={onOpenFood}
+              onPlateAdded={clearQuery}
             />
           )}
         </ScrollView>
       )}
       <SearchField
         autoFocus={autoFocus}
+        dockAction={
+          logging === undefined ? undefined : <LogPlateButton context={logging.context} />
+        }
         label="Search foods"
         placeholder="Search for a food"
         trailing={

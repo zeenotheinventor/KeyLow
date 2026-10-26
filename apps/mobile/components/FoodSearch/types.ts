@@ -33,7 +33,7 @@ type FoodSearchFoodsProps = FoodSearchSharedProps & {
   /** Defaults to `all`. */
   scope?: FoodSearchScope;
   onCreateFood: () => void;
-  /** Puts the sheet in log mode: titled "Log food", with servings and a plus on each row. Leave it out for the plain search. */
+  /** Puts the sheet in log mode: titled "Log food", with servings and a plus on each row that puts it on the plate. Leave it out for the plain search. */
   logging?: FoodSearchLogging | undefined;
   ingredient?: undefined;
 };

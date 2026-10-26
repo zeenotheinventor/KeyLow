@@ -10,7 +10,7 @@ export type SearchResultsProps = {
   onCreateFood?: (() => void) | undefined;
   /** Takes the place of the "Search for a food" state before anything is typed, such as Quick add and Recent. */
   idleContent?: ReactNode;
-  /** Draws the local rows as servings with a plus that logs one at once, as the log search does. */
+  /** Draws the local rows as servings with a plus that puts one on the plate, as the log search does. */
   logRows?: LogRows | undefined;
   /**
    * Draws the local rows as servings that all open the amount step, with a chevron and no plus, as the ingredient
@@ -21,7 +21,7 @@ export type SearchResultsProps = {
 
 /**
  * The user's recipes that match, drawn as the first group of the log search. A row opens the amount step, and its
- * plus logs one serving at once.
+ * plus puts one serving on the plate.
  */
 export type LogRecipes = {
   /** The recipes that can be logged, in the order the search returned them. */
@@ -34,7 +34,7 @@ export type LogRecipes = {
 };
 
 export type LogRows = {
-  /** Dims every plus and stops it responding, such as while offline. */
+  /** Dims every plus and stops it responding, such as while the plate is being logged. */
   addDisabled: boolean;
   onAdd: (food: FoodSearchHit) => void;
   /** Leave it out for a log search that offers no recipes. */
