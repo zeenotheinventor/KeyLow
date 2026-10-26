@@ -25,7 +25,7 @@ export type OffResult = { ok: true; response: Response } | { ok: false; failure:
 
 // Open Food Facts asks every client to identify itself, so a missing User-Agent is a
 // configuration error, never something to default.
-function requireUserAgent(): string {
+export function requireUserAgent(): string {
   const userAgent = Deno.env.get("OFF_USER_AGENT");
   if (!userAgent) {
     throw new Error("OFF_USER_AGENT is not set. Open Food Facts requires a User-Agent.");
