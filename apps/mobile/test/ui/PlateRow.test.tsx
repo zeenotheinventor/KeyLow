@@ -246,6 +246,43 @@ describe("PlateRow", () => {
     });
   });
 
+  describe("with no way to open the food", () => {
+    it("should write the name and its stats as plain text, with no button for them", async () => {
+      await renderRow({ onOpen: undefined });
+
+      expect(screen.getByText("Semi-skimmed milk")).toBeOnTheScreen();
+      expect(screen.getByText("92")).toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: milkOpenName })).not.toBeOnTheScreen();
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+    });
+
+    it("should not dim the name, even when asked to dim it for being offline", async () => {
+      await renderRow({ onOpen: undefined, isOpenDisabled: true });
+
+      expect(viewsDrawn({ opacity: dimmedTo40Percent })).toHaveLength(0);
+    });
+
+    it("should keep the field and the X working", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onRemove = jest.fn();
+      const onAmountChange = jest.fn();
+      await renderRow({ onOpen: undefined, onRemove, onAmountChange });
+
+      await fireEvent.changeText(screen.getByLabelText(milkAmountName), "300");
+      await user.press(screen.getByRole("button", { name: milkRemoveName }));
+
+      expect(onAmountChange).toHaveBeenCalledWith("300");
+      expect(onRemove).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep the name's two lines and the Recipe caption", async () => {
+      await renderRow({ ...chickenAndRice, onOpen: undefined });
+
+      expect(screen.getByText("Chicken and rice")).toHaveProp("numberOfLines", 2);
+      expect(screen.getByText("Recipe")).toBeOnTheScreen();
+    });
+  });
+
   describe("while the plate is being logged", () => {
     it("should disable the name, the field and the X, and press none of them", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });

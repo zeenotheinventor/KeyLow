@@ -5,6 +5,7 @@ export const storyStates = [
   "Focused",
   "InvalidAmount",
   "NameDisabled",
+  "NameNotPressable",
   "Disabled",
   "InBottomSheet",
 ];

@@ -20,10 +20,13 @@ export type PlateRowProps = {
   /** The plural of the unit word: "servings", "pots", "ml". It names the amount field. */
   unitsWord: string;
   onAmountChange: (text: string) => void;
-  /** Opens the food to change the amount or the unit. Pressing the name does it. */
-  onOpen: () => void;
+  /**
+   * Opens the food to change the amount or the unit. Pressing the name does it. Leave it out where the unit
+   * cannot be changed yet, and the name and its stats are plain text: no button, and no dimming.
+   */
+  onOpen?: (() => void) | undefined;
   onRemove: () => void;
-  /** Dims the name to 40 percent and stops it responding, such as offline, when the unit change needs the food's portions. The field and the X still work. */
+  /** With `onOpen`, dims the name to 40 percent and stops it responding, such as offline, when the unit change needs the food's portions. The field and the X still work. */
   isOpenDisabled?: boolean | undefined;
   /** Dims the whole row to 40 percent and stops every control responding, while the plate is being logged. */
   disabled?: boolean | undefined;

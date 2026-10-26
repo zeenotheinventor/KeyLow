@@ -90,6 +90,11 @@ export const InvalidAmount: Story = {
 // Offline: the name, which opens the picker for the unit, is dimmed. The field and the X still work.
 export const NameDisabled: Story = { args: { isOpenDisabled: true } };
 
+// Where the unit cannot be changed yet: the name and its stats are plain text, not a button and not dimmed.
+export const NameNotPressable: Story = {
+  render: (args) => <TypingPlateRow {...args} onOpen={undefined} />,
+};
+
 // While the plate is being logged: the whole row at 40 percent, and nothing responds.
 export const Disabled: Story = { args: { disabled: true } };
 
