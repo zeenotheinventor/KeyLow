@@ -13,11 +13,18 @@ import type { TimeRowProps } from "./types";
  * right in tabular numerals and a chevron at the end, on a raised surface that is at least 44 high. The
  * border turns accent while the picker is open. The screen keeps the time and the picker's state.
  */
-export function TimeRow({ time, isNow = false, open = false, onPress }: TimeRowProps) {
+export function TimeRow({
+  time,
+  isNow = false,
+  open = false,
+  disabled = false,
+  onPress,
+}: TimeRowProps) {
   return (
     <PressableSurface
       // The classes are written out so Tailwind sees them. The border is always there, so the row keeps its size.
-      className={`min-h-touch-target flex-row items-center gap-2 rounded-medium border bg-surface-raised pl-4 pr-3 ${open ? "border-accent" : "border-border"}`}
+      className={`min-h-touch-target flex-row items-center gap-2 rounded-medium border bg-surface-raised pl-4 pr-3 ${open ? "border-accent" : "border-border"} ${disabled ? "opacity-40" : ""}`}
+      disabled={disabled}
       expanded={open}
       label={describeTimeRowName(time, isNow)}
       onPress={onPress}

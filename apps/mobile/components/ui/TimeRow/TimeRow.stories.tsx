@@ -32,3 +32,6 @@ export const Open: Story = { args: { isNow: true, open: true } };
 
 // Added from an hour's plus: that hour, not "Now".
 export const AtAnHour: Story = { args: { time: "12:00" } };
+
+// While the plate is being logged (plate.logging): dimmed to 40 percent and not responding.
+export const Disabled: Story = { args: { isNow: true, disabled: true } };
