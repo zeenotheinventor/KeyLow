@@ -104,6 +104,41 @@ describe("FoodRow in the food log", () => {
       expect(screen.getByRole("button", { name: addBananaName })).toBeOnTheScreen();
     });
 
+    it("should name the add button for the plate when it is given an add label", async () => {
+      await renderRow({
+        nameSegments: [{ text: "Greek yoghurt 0% fat", matched: false }],
+        caption: "1 pot (170 g)",
+        addLabel: "Add Greek yoghurt 0% fat, 1 pot (170 g), to your plate",
+      });
+
+      expect(
+        screen.getByRole("button", {
+          name: "Add Greek yoghurt 0% fat, 1 pot (170 g), to your plate",
+        }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.queryByRole("button", { name: "Add Greek yoghurt 0% fat, 1 pot (170 g)" }),
+      ).not.toBeOnTheScreen();
+    });
+
+    it("should still call onAdd from an add button named by an add label", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onAdd = jest.fn();
+      await renderRow({ onAdd, addLabel: "Add Banana, 1 medium (100 g), to your plate" });
+
+      await user.press(
+        screen.getByRole("button", { name: "Add Banana, 1 medium (100 g), to your plate" }),
+      );
+
+      expect(onAdd).toHaveBeenCalledTimes(1);
+    });
+
+    it("should keep the old name for the add button without an add label", async () => {
+      await renderRow();
+
+      expect(screen.getByRole("button", { name: addBananaName })).toBeOnTheScreen();
+    });
+
     it("should press the row and not the add button when the row is pressed", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
       const onPress = jest.fn();

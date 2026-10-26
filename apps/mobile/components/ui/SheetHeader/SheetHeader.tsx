@@ -38,12 +38,17 @@ const variants = {
   }
 >;
 
+// The board's wide slots: 76 points at each end, which holds a control and the plate chip alike, so the
+// title between them stays in the middle of the header.
+const wideSlotClassName = "w-[76px] shrink-0 flex-row";
+
 /**
  * The top of a sheet: an optional control at the left, a centred title and an optional control at the right, or two.
  * The screen gives the top inset and the header gives the 12 points under it, as the search field's dock
  * gives the 12 above the bottom inset. With two controls on the right the title is centred in the space
  * between the left control and the pair. A control and a slot together draw the control first and the slot
- * after it, with 8 points between, and the title sits in what they leave.
+ * after it, with 8 points between, and the title sits in what they leave. With `hasWideSlots` both ends are 76
+ * points wide, so a trailing slot wider than a control, such as the plate chip, does not move the title.
  */
 export function SheetHeader({
   variant = "sheet",
@@ -53,6 +58,7 @@ export function SheetHeader({
   subtitle,
   trailingSlot,
   isTitleHeading = true,
+  hasWideSlots = false,
 }: SheetHeaderProps) {
   const look = variants[variant];
 
@@ -111,7 +117,13 @@ export function SheetHeader({
       className={`flex-row items-center gap-2 px-4 pt-3 ${look.className}`}
       testID="sheet-header"
     >
-      {renderLeading()}
+      {hasWideSlots ? (
+        <View className={wideSlotClassName} testID="sheet-header-leading-slot">
+          {renderLeading()}
+        </View>
+      ) : (
+        renderLeading()
+      )}
       {subtitle === undefined ? (
         <Text
           className="flex-1 text-center"
@@ -136,7 +148,13 @@ export function SheetHeader({
           </Text>
         </View>
       )}
-      {renderTrailing()}
+      {hasWideSlots ? (
+        <View className={`${wideSlotClassName} justify-end`} testID="sheet-header-trailing-slot">
+          {renderTrailing()}
+        </View>
+      ) : (
+        renderTrailing()
+      )}
     </View>
   );
 }

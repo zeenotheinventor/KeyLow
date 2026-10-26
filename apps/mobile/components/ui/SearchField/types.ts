@@ -23,6 +23,12 @@ export type SearchFieldProps = {
    * its content, such as the recipes tab's, which has no sides or keyboard lift of its own to give.
    */
   placement?: "dock" | "inline" | undefined;
+  /**
+   * A control drawn after the field in the dock, 8 points from it, such as the plate's Log foods button.
+   * The field shrinks to the space it leaves. Only a `dock` field has one: an `inline` field is the field
+   * alone. Leave it out and the dock is the field alone.
+   */
+  dockAction?: ReactNode;
   /** Dims the field to 40 percent and stops it taking text, such as while the list it filters loads. */
   disabled?: boolean | undefined;
 };

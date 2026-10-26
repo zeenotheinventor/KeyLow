@@ -59,6 +59,11 @@ export type FoodRowProps = {
    * press the row. A `recipe` row in the log search has this beside its `onPress`, which opens the amount step.
    */
   onAdd?: (() => void) | undefined;
+  /**
+   * Names the add button in place of `describeAddFood(name, caption)`, such as "Add Greek yoghurt 0% fat,
+   * 1 pot (170 g), to your plate" when the button puts the serving on the plate and not in the diary.
+   */
+  addLabel?: string | undefined;
   /** Dims the add button and stops it responding, such as while offline, and leaves the row alone. A disabled row disables its add button too. */
   addDisabled?: boolean | undefined;
   /** Makes a `diary` row delete on a swipe left and on the Delete accessibility action. It acts at once. */

@@ -15,6 +15,7 @@ import type { SearchFieldProps } from "./types";
  * at the bottom of the screen above the keyboard. Put it last in a screen that fills the height. The
  * screen gives the bottom inset, the dock gives the 12 points above it. A screen whose field sits among
  * its content, such as the recipes tab's, places it `inline`: the field alone, with the screen's own sides.
+ * A docked field can have an action beside it, such as Log foods, and the field shrinks to the space it leaves.
  */
 export function SearchField({
   label,
@@ -27,6 +28,7 @@ export function SearchField({
   trailing,
   placement = "dock",
   disabled = false,
+  dockAction,
 }: SearchFieldProps) {
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
@@ -89,7 +91,12 @@ export function SearchField({
       className="border-t border-border bg-background pb-[var(--keyboard-lift)]"
       style={vars({ "--keyboard-lift": keyboardLift })}
     >
-      <View className="px-4 pb-3 pt-2">{field}</View>
+      {/* The field is always inside the row, with or without an action, so it is the same field when an
+          action appears beside it and keeps its focus and the keyboard. */}
+      <View className="flex-row items-center gap-2 px-4 pb-3 pt-2">
+        <View className="min-w-0 flex-1">{field}</View>
+        {dockAction}
+      </View>
     </View>
   );
 }
