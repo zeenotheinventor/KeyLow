@@ -4,7 +4,7 @@ import { MONTH_NAMES_LONG } from "./diaryDay";
  * The version of the Terms of Use and the Privacy Policy that people accept at sign-up. It is the date
  * the current wording took effect. A later version asks people to accept again.
  */
-export const TERMS_VERSION = "2026-10-23";
+export const TERMS_VERSION = "2026-10-26";
 
 /** The "Last updated" line under a document's title, from a version date such as `2026-10-15`. */
 export function describeLastUpdated(versionDate: string): string {
@@ -88,12 +88,14 @@ export const PRIVACY_POLICY: LegalDocument = {
         "Your workouts: sessions, sets, loads and the exercises you create.",
         "Your routines and training goals.",
         "Your goals, your targets and your expenditure estimates.",
+        "If you turn the assistant on, your conversations with it, the list of changes it has made for you, and counts of how much you use it. The counts hold none of what you wrote.",
       ],
     },
     {
       heading: "Why Ki-Lo uses it",
       paragraphs: [
         "Ki-Lo uses your information to run your food diary, your workout log and the adaptive engine. The engine estimates your energy expenditure and sets your targets.",
+        "If you turn the assistant on, Ki-Lo also uses your messages and your information to answer your questions and to log, copy and change entries for you.",
         "Your information is used for nothing else, apart from the error reports described under Who else handles your information.",
       ],
     },
@@ -103,7 +105,8 @@ export const PRIVACY_POLICY: LegalDocument = {
         "UK GDPR says a lawful basis is needed to use your information.",
         "For your account and the service you signed up for, the basis is providing that service to you.",
         "Your weight, body fat, lean mass, food diary, body stats, workouts, routines and training goals are health data. For health data, the basis is your explicit consent. You give it when you tick the box at sign-up.",
-        "You can withdraw your consent at any time by deleting your account. See how to do that under How to use your rights.",
+        "The assistant sends your messages and the health data it reads to Anthropic. For that, the basis is your explicit consent, which you give when you turn the assistant on. It is off until you do.",
+        "You can withdraw your consent for the assistant at any time by turning it off in More, under Assistant. You can withdraw your consent for the rest of Ki-Lo at any time by deleting your account. See how to do that under How to use your rights.",
       ],
     },
     {
@@ -122,6 +125,7 @@ export const PRIVACY_POLICY: LegalDocument = {
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
         "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body composition, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
+        "Anthropic: runs the AI model behind the assistant, and only if you turn the assistant on. It receives your messages and the Ki-Lo data the assistant reads to answer you or make a change. It deletes them within 30 days, unless it must keep them longer to enforce its usage policy or the law requires it, and it does not use them to train its models. Anthropic is based in the United States, so this data is processed outside the UK. Ki-Lo's agreement with Anthropic includes the UK's approved safeguard for that, the International Data Transfer Addendum.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ],
     },
@@ -134,13 +138,15 @@ export const PRIVACY_POLICY: LegalDocument = {
     {
       heading: "What Ki-Lo never does",
       paragraphs: [
-        "Your health data is never sold. It is never used for advertising. It is never shared with anyone beyond the companies listed above.",
+        "Your health data is never sold. It is never used for advertising. It is never shared with anyone beyond the companies listed above. Anthropic receives your health data only while the assistant is on, and only what you tell it and what it reads to answer you or make a change.",
       ],
     },
     {
       heading: "How long it is kept",
       paragraphs: [
-        "Your information is kept until you delete your account. After that, it is deleted. Error reports are the one exception: they are kept for 30 days, so they can outlast a deleted account by up to 30 days.",
+        "Your information is kept until you delete your account. After that, it is deleted.",
+        "Your assistant conversations are kept until you delete them or delete your account. You can delete them in More, under Assistant. The list of changes the assistant has made for you is kept until you delete your account.",
+        "The exceptions are error reports, which Sentry keeps for 30 days, and what the assistant sent to Anthropic, which Anthropic keeps for up to 30 days. Both can outlast a deleted account, and Anthropic's copy can outlast a deleted conversation, by up to 30 days. Anthropic can keep its copy longer only to enforce its usage policy or where the law requires it.",
       ],
     },
     {

@@ -42,7 +42,16 @@ function allTextOf(document: LegalDocument): string {
 describe("the legal copy", () => {
   describe("the terms version", () => {
     it("should be the date the current terms took effect", () => {
-      expect(TERMS_VERSION).toBe("2026-10-23");
+      expect(TERMS_VERSION).toBe("2026-10-26");
+    });
+
+    it("should ask someone who accepted the terms of 23 October 2026 to accept again", () => {
+      expect(
+        needsTermsAcceptance(
+          { terms_accepted_at: "2026-10-24T09:30:00+00:00", terms_version: "2026-10-23" },
+          TERMS_VERSION,
+        ),
+      ).toBe(true);
     });
 
     it("should ask someone who accepted the terms of 18 October 2026 to accept again", () => {
@@ -57,7 +66,7 @@ describe("the legal copy", () => {
     it("should not ask someone who accepted the current terms again", () => {
       expect(
         needsTermsAcceptance(
-          { terms_accepted_at: "2026-10-23T09:30:00+00:00", terms_version: TERMS_VERSION },
+          { terms_accepted_at: "2026-10-26T09:30:00+00:00", terms_version: TERMS_VERSION },
           TERMS_VERSION,
         ),
       ).toBe(false);
@@ -135,7 +144,7 @@ describe("the legal copy", () => {
 
   describe.each(documents)("the %s", (_name, document) => {
     it("should carry the date it was last updated", () => {
-      expect(document.lastUpdated).toBe("Last updated 23 October 2026");
+      expect(document.lastUpdated).toBe("Last updated 26 October 2026");
     });
 
     it("should have sections that each have a heading and at least one paragraph", () => {
@@ -217,6 +226,7 @@ describe("the legal copy", () => {
         "Your workouts: sessions, sets, loads and the exercises you create.",
         "Your routines and training goals.",
         "Your goals, your targets and your expenditure estimates.",
+        "If you turn the assistant on, your conversations with it, the list of changes it has made for you, and counts of how much you use it. The counts hold none of what you wrote.",
       ]);
     });
 
@@ -251,6 +261,15 @@ describe("the legal copy", () => {
       ]);
     });
 
+    it("should say that, with the assistant on, Ki-Lo also uses the messages and information to answer and to make changes", () => {
+      const why = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "Why Ki-Lo uses it",
+      );
+      expect(why?.paragraphs).toContain(
+        "If you turn the assistant on, Ki-Lo also uses your messages and your information to answer your questions and to log, copy and change entries for you.",
+      );
+    });
+
     it("should say the information is used only to run the diary and the adaptive engine", () => {
       expect(text).toContain(
         "Your information is used for nothing else, apart from the error reports described under Who else handles your information.",
@@ -262,9 +281,23 @@ describe("the legal copy", () => {
       expect(text).toContain("tick the box at sign-up");
     });
 
+    it("should rest sending health data to Anthropic on a separate explicit consent, given by turning the assistant on", () => {
+      const basis = PRIVACY_POLICY.sections.find((section) => section.heading === "Lawful basis");
+      expect(basis?.paragraphs).toContain(
+        "The assistant sends your messages and the health data it reads to Anthropic. For that, the basis is your explicit consent, which you give when you turn the assistant on. It is off until you do.",
+      );
+    });
+
     it("should say consent can be withdrawn by deleting the account", () => {
       expect(text).toContain("withdraw your consent");
       expect(text).toContain("deleting your account");
+    });
+
+    it("should say consent to the assistant is withdrawn by turning it off, and the rest by deleting the account", () => {
+      const basis = PRIVACY_POLICY.sections.find((section) => section.heading === "Lawful basis");
+      expect(basis?.paragraphs).toContain(
+        "You can withdraw your consent for the assistant at any time by turning it off in More, under Assistant. You can withdraw your consent for the rest of Ki-Lo at any time by deleting your account. See how to do that under How to use your rights.",
+      );
     });
 
     it("should say where the information is stored", () => {
@@ -280,6 +313,7 @@ describe("the legal copy", () => {
         "Vercel: hosts the web app.",
         "Expo: builds the mobile app and delivers app updates. When the app checks for updates, Expo sees the device's IP address and the app version. It never sees your diary or health data.",
         "Sentry: finds and fixes crashes and errors. When something goes wrong, it receives an error report: the app version, details of the device and app (such as the model, operating system, browser, language and time zone), the page or screen it happened on, the error's stack and your account ID. It never sees your diary, weigh-ins, body composition, body stats, workouts or training goals, and it does not keep your IP address. Sentry stores the reports in the EU, for 30 days.",
+        "Anthropic: runs the AI model behind the assistant, and only if you turn the assistant on. It receives your messages and the Ki-Lo data the assistant reads to answer you or make a change. It deletes them within 30 days, unless it must keep them longer to enforce its usage policy or the law requires it, and it does not use them to train its models. Anthropic is based in the United States, so this data is processed outside the UK. Ki-Lo's agreement with Anthropic includes the UK's approved safeguard for that, the International Data Transfer Addendum.",
         "Google: only if you choose to sign in with Google. Google shares your account name, email address and a link to your profile picture with Ki-Lo.",
       ]);
     });
@@ -300,14 +334,66 @@ describe("the legal copy", () => {
       expect(text).toContain("It is never shared with anyone beyond the companies listed above.");
     });
 
+    it("should say Anthropic never sees health data unless the assistant is on, and then only what the assistant reads", () => {
+      expect(text).toContain(
+        "Anthropic receives your health data only while the assistant is on, and only what you tell it and what it reads to answer you or make a change.",
+      );
+    });
+
     it("should keep information until the account is deleted, then delete it", () => {
       expect(text).toContain("Your information is kept until you delete your account.");
     });
 
-    it("should say error reports are kept for 30 days and can outlast a deleted account", () => {
-      expect(text).toContain(
-        "Error reports are the one exception: they are kept for 30 days, so they can outlast a deleted account by up to 30 days.",
+    it("should keep assistant conversations until the person deletes them or the account, and the list of changes until the account is deleted", () => {
+      const kept = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "How long it is kept",
       );
+      expect(kept?.paragraphs).toContain(
+        "Your assistant conversations are kept until you delete them or delete your account. You can delete them in More, under Assistant. The list of changes the assistant has made for you is kept until you delete your account.",
+      );
+    });
+
+    it("should say error reports and what Anthropic received are kept for 30 days and can outlast a deleted account", () => {
+      const kept = PRIVACY_POLICY.sections.find(
+        (section) => section.heading === "How long it is kept",
+      );
+      expect(kept?.paragraphs).toContain(
+        "The exceptions are error reports, which Sentry keeps for 30 days, and what the assistant sent to Anthropic, which Anthropic keeps for up to 30 days. Both can outlast a deleted account, and Anthropic's copy can outlast a deleted conversation, by up to 30 days. Anthropic can keep its copy longer only to enforce its usage policy or where the law requires it.",
+      );
+    });
+
+    describe("on the assistant and Anthropic", () => {
+      const anthropicLine = PRIVACY_POLICY.sections
+        .find((section) => section.heading === "Who else handles your information")
+        ?.bullets?.find((bullet) => bullet.startsWith("Anthropic:"));
+
+      it("should name Anthropic as running the assistant, only when the person turns it on", () => {
+        expect(anthropicLine).toContain("runs the AI model behind the assistant");
+        expect(anthropicLine).toContain("only if you turn the assistant on");
+      });
+
+      it("should say Anthropic receives the messages and the Ki-Lo data the assistant reads", () => {
+        expect(anthropicLine).toContain(
+          "receives your messages and the Ki-Lo data the assistant reads",
+        );
+      });
+
+      it("should say Anthropic deletes them within 30 days, and does not train on them", () => {
+        expect(anthropicLine).toContain("deletes them within 30 days");
+        expect(anthropicLine).toContain("does not use them to train its models");
+      });
+
+      it("should say Anthropic may keep them longer only to enforce its usage policy or where the law requires it", () => {
+        expect(anthropicLine).toContain(
+          "unless it must keep them longer to enforce its usage policy or the law requires it",
+        );
+      });
+
+      it("should say the data is processed in the United States, outside the UK, under the International Data Transfer Addendum", () => {
+        expect(anthropicLine).toContain(
+          "Anthropic is based in the United States, so this data is processed outside the UK. Ki-Lo's agreement with Anthropic includes the UK's approved safeguard for that, the International Data Transfer Addendum.",
+        );
+      });
     });
 
     it("should list the rights, including a complaint to the ICO at ico.org.uk", () => {
