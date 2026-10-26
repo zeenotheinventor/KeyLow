@@ -2,7 +2,7 @@ import { RECIPE_BADGE } from "./recipeLog";
 import { spokenAmount } from "./spokenAmount";
 
 /**
- * The words of the plate, as the "Ki-Lo plate" boards draw them. Undo is `LOG_SEARCH.undo`, the message under
+ * The words of the plate, as the "Ki-Lo plate" boards draw them. Undo is `UNDO_LABEL`, the message under
  * an empty amount is `DIARY_PROBLEMS.quantity`, Save is `FOOD_FORM.save`, Time is `TIME_ROW_LABEL`, and the
  * offline banner's title is `OFFLINE_BANNER.title`.
  */
