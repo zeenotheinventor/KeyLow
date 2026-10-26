@@ -62,7 +62,21 @@ export const samples: Record<string, () => string[]> = {
         { kcal: 2200, protein_g: 160, carbs_g: 0, fat_g: 70 },
       ),
     ),
+    copy.describeProgressStrip(
+      progressBars(
+        { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 },
+        { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 },
+        { kcal: 1241, protein_g: 69, carbs_g: 181, fat_g: 26 },
+      ),
+      "Today with your plate",
+    ),
   ],
+  describeProgressValue: () =>
+    progressBars(
+      { kcal: 1039, protein_g: 86, carbs_g: 129, fat_g: 19 },
+      { kcal: 2200, protein_g: 160, carbs_g: 220, fat_g: 70 },
+      { kcal: 658, protein_g: 57, carbs_g: 79, fat_g: 12 },
+    ).map(copy.describeProgressValue),
   describeCopiedEntriesToToday: () => [1, 8].map(copy.describeCopiedEntriesToToday),
   describeMacroTotal: () => [0, 131, 2480].map(copy.describeMacroTotal),
 };

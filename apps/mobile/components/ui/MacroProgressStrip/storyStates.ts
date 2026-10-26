@@ -4,4 +4,8 @@ export const storyStates = [
   "OverTarget",
   "NoTarget",
   "FourDigitCalories",
+  "WithPlate",
+  "PlateOverTarget",
+  "StatusGroup",
+  "CardForm",
 ];

@@ -187,20 +187,29 @@ const PROGRESS_BAR_NAMES = {
 
 /**
  * One bar of the progress strip for a screen reader, as the board words it: "Protein: 86 of 160 grams",
- * with ", over target" when the bar is over, and without the "of" part when there is no target.
+ * with what the plate holds after the amount (", 57 on your plate") and ", over target" last when the
+ * bar is over. The amount is eaten plus the plate; it has no "of" part when there is no target.
  */
 export const describeProgressBar = (bar: ProgressBar): string => {
   const format = bar.key === "calories" ? formatCalories : formatGrams;
   const unit = bar.key === "calories" ? "kilocalories" : "grams";
-  const eaten = format(bar.eaten);
-  const amount = bar.hasTarget ? `${eaten} of ${format(bar.target)}` : eaten;
+  const total = format(bar.eaten + bar.plate);
+  const amount = bar.hasTarget ? `${total} of ${format(bar.target)}` : total;
+  const plate = bar.plate > 0 ? `, ${format(bar.plate)} on your plate` : "";
 
-  return `${PROGRESS_BAR_NAMES[bar.key]}: ${amount} ${unit}${bar.isOver ? ", over target" : ""}`;
+  return `${PROGRESS_BAR_NAMES[bar.key]}: ${amount} ${unit}${plate}${bar.isOver ? ", over target" : ""}`;
 };
 
-/** The name of the progress strip with its values: "Targets. Calories: ... . Protein: ...". */
-export const describeProgressStrip = (bars: readonly ProgressBar[]): string =>
-  ["Targets", ...bars.map(describeProgressBar)].join(". ");
+/**
+ * The name of the progress strip with its values: "Targets. Calories: ... . Protein: ...". The diary's
+ * strip is "Targets"; the log search names its own ("Today", "Today with your plate").
+ */
+export const describeProgressStrip = (bars: readonly ProgressBar[], label = "Targets"): string =>
+  [label, ...bars.map(describeProgressBar)].join(". ");
+
+/** The value in a column of the progress strip: what was eaten plus what the plate holds, "1,697". */
+export const describeProgressValue = (bar: ProgressBar): string =>
+  (bar.key === "calories" ? formatCalories : formatGrams)(bar.eaten + bar.plate);
 
 /**
  * What follows the value in a column of the progress strip: "/ 2,200" against a target, or the unit

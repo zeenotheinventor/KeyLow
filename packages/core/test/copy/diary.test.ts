@@ -37,6 +37,7 @@ import {
   describeTimeRowName,
   describeTimeValue,
   describeProgressTarget,
+  describeProgressValue,
   describeWeekStripDay,
   WEEK_STRIP_DAY_NAMES,
   describeWeekStripName,
@@ -302,8 +303,9 @@ describe("the progress strip", () => {
     key: ProgressBarKey,
     totals: typeof sampleDay,
     barTargets: Parameters<typeof progressBars>[1],
+    plate?: Parameters<typeof progressBars>[2],
   ): ProgressBar => {
-    const bar = progressBars(totals, barTargets).find((candidate) => candidate.key === key);
+    const bar = progressBars(totals, barTargets, plate).find((candidate) => candidate.key === key);
     if (bar === undefined) {
       throw new Error(`No ${key} bar`);
     }
@@ -358,6 +360,65 @@ describe("the progress strip", () => {
     const bar = barOf("protein", { ...sampleDay, protein_g: 4.46 }, targets);
 
     expect(describeProgressBar(bar)).toBe("Protein: 4.5 of 160 grams");
+  });
+
+  describe("with the plate", () => {
+    const eatenToday = { kcal: 1039, protein_g: 86, carbs_g: 129.1, fat_g: 19 };
+    const severalOnPlate = { kcal: 658, protein_g: 57, carbs_g: 79, fat_g: 12 };
+    const overOnPlate = { kcal: 1241, protein_g: 69.1, carbs_g: 180.8, fat_g: 25.8 };
+    const noTargets = { kcal: null, protein_g: null, carbs_g: null, fat_g: null };
+    const emptyPlate = { kcal: 0, protein_g: 0, carbs_g: 0, fat_g: 0 };
+
+    it("should say what is on the plate after the amount, with eaten plus the plate as the amount", () => {
+      expect(describeProgressBar(barOf("calories", eatenToday, targets, severalOnPlate))).toBe(
+        "Calories: 1,697 of 2,200 kilocalories, 658 on your plate",
+      );
+      expect(describeProgressBar(barOf("protein", eatenToday, targets, severalOnPlate))).toBe(
+        "Protein: 143 of 160 grams, 57 on your plate",
+      );
+    });
+
+    it("should say on your plate before over target", () => {
+      expect(describeProgressBar(barOf("calories", eatenToday, targets, overOnPlate))).toBe(
+        "Calories: 2,280 of 2,200 kilocalories, 1,241 on your plate, over target",
+      );
+      expect(describeProgressBar(barOf("protein", eatenToday, targets, overOnPlate))).toBe(
+        "Protein: 155 of 160 grams, 69 on your plate",
+      );
+    });
+
+    it("should say the amount with no target as eaten plus the plate", () => {
+      expect(describeProgressBar(barOf("calories", eatenToday, noTargets, severalOnPlate))).toBe(
+        "Calories: 1,697 kilocalories, 658 on your plate",
+      );
+    });
+
+    it("should say nothing about the plate when the plate is empty", () => {
+      expect(progressBars(eatenToday, targets, emptyPlate).map(describeProgressBar)).toEqual(
+        progressBars(eatenToday, targets).map(describeProgressBar),
+      );
+    });
+
+    it("should name the strip with the label it is given, then the four values", () => {
+      const bars = progressBars(eatenToday, targets, severalOnPlate);
+
+      expect(describeProgressStrip(bars, "Today with your plate")).toBe(
+        "Today with your plate. Calories: 1,697 of 2,200 kilocalories, 658 on your plate. Protein: 143 of 160 grams, 57 on your plate. Carbohydrate: 208 of 220 grams, 79 on your plate. Fat: 31 of 70 grams, 12 on your plate",
+      );
+      expect(describeProgressStrip(progressBars(eatenToday, targets), "Today")).toMatch(
+        /^Today\. Calories: 1,039 of 2,200 kilocalories\. /,
+      );
+    });
+
+    it("should write eaten plus the plate as the column value", () => {
+      expect(describeProgressValue(barOf("calories", eatenToday, targets, severalOnPlate))).toBe(
+        "1,697",
+      );
+      expect(describeProgressValue(barOf("carbs", eatenToday, targets, severalOnPlate))).toBe(
+        "208",
+      );
+      expect(describeProgressValue(barOf("calories", eatenToday, targets))).toBe("1,039");
+    });
   });
 
   it("should name the strip Targets, then the four values in order", () => {
