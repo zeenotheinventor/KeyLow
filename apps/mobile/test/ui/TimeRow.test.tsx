@@ -97,6 +97,33 @@ describe("TimeRow", () => {
     });
   });
 
+  describe("when it is disabled", () => {
+    it("should report disabled and not call onPress", async () => {
+      const user = userEvent.setup();
+      const { onPress } = await renderRow({ disabled: true });
+
+      await user.press(screen.getByRole("button", { name: "Time, 12:40, change" }));
+
+      expect(screen.getByRole("button", { name: "Time, 12:40, change" })).toBeDisabled();
+      expect(onPress).not.toHaveBeenCalled();
+    });
+
+    it("should dim to 40 percent, as a disabled button does", async () => {
+      await renderRow({ disabled: true });
+
+      // NativeWind hands the opacity over as a 32 bit float.
+      expect(await screen.findByRole("button")).toHaveStyle({ opacity: Math.fround(0.4) });
+    });
+
+    it("should be enabled and at full strength by default", async () => {
+      await renderRow();
+
+      const row = await screen.findByRole("button");
+      expect(row).toBeEnabled();
+      expect(row).not.toHaveStyle({ opacity: Math.fround(0.4) });
+    });
+  });
+
   describe("its open state", () => {
     it("should say it is expanded while the picker is open", async () => {
       await renderRow({ open: true });

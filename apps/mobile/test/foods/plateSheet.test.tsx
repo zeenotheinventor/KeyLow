@@ -17,7 +17,7 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 import type { PlateItemBuilder } from "../../lib/plate";
 
 // "Your plate": the sheet the plate chip opens in the log search, where the plate is edited before it is
-// logged. Time and Clear plate come with the next ticket, so they are not here.
+// logged, with the plate's one Time row and Clear plate with its Undo.
 
 jest.mock(
   "expo-router",
@@ -72,12 +72,12 @@ function PlateFiller({ foods }: { foods: readonly PlateItemBuilder[] }) {
   );
 }
 
-async function renderSearch(foods: readonly PlateItemBuilder[] = boardPlate) {
+async function renderSearch(foods: readonly PlateItemBuilder[] = boardPlate, initialTime?: string) {
   const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
   await render(
     <ThemeProvider fixedPreference="dark">
       <ToastProvider>
-        <PlateProvider>
+        <PlateProvider {...(initialTime === undefined ? {} : { initialTime })}>
           <FoodSearch
             logging={{
               context: { day: "2026-10-15" },
@@ -258,14 +258,12 @@ describe("the Your plate sheet", () => {
       expect(sheet.queryByRole("group")).not.toBeOnTheScreen();
     });
 
-    it("should have Log foods, named for the count, and no Time row or Clear plate yet", async () => {
+    it("should have Log foods, named for the count", async () => {
       const user = await renderSearch();
 
       const sheet = await openThePlate(user);
 
       expect(sheet.getByRole("button", { name: logFoods })).toBeEnabled();
-      expect(sheet.queryByRole("button", { name: "Clear plate" })).not.toBeOnTheScreen();
-      expect(sheet.queryByText("Time")).not.toBeOnTheScreen();
     });
 
     it("should say Log food for a plate of one", async () => {
@@ -443,6 +441,347 @@ describe("the Your plate sheet", () => {
 
       expect(screen.queryByLabelText(yourPlate)).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Your plate, 1 food" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("the Time row", () => {
+    const timeRowNow = "Time, now, 12:40, change";
+
+    async function chooseTime(
+      user: ReturnType<typeof userEvent.setup>,
+      hour: string,
+      minute: string,
+    ) {
+      await user.press(
+        within(screen.getByRole("spinbutton", { name: "Hours" })).getByRole("option", {
+          name: hour,
+        }),
+      );
+      await user.press(
+        within(screen.getByRole("spinbutton", { name: "Minutes" })).getByRole("option", {
+          name: minute,
+        }),
+      );
+    }
+
+    it("should read Now and the current minute in the profile's zone by default, between the totals and Log foods", async () => {
+      const user = await renderSearch();
+
+      const sheet = await openThePlate(user);
+
+      expect(sheet.getByRole("button", { name: timeRowNow })).toBeEnabled();
+      expect(sheet.getByText("Time")).toBeOnTheScreen();
+      expect(sheet.getByText("Now · 12:40")).toBeOnTheScreen();
+    });
+
+    it("should read the plate's time in UTC when the profile has no zone", async () => {
+      profileTimeZone.current = { data: null, isPending: false, isError: false };
+      // The device is somewhere else, so UTC is the zone read and not the machine's own.
+      jest.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+        ...Intl.DateTimeFormat().resolvedOptions(),
+        timeZone: "Pacific/Auckland",
+      });
+      const user = await renderSearch();
+
+      const sheet = await openThePlate(user);
+
+      // 11:40 UTC is 12:40 in London, which is what the profile's zone would have read.
+      expect(sheet.getByText("Now · 11:40")).toBeOnTheScreen();
+    });
+
+    it("should move with the clock while it reads Now", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await advance(60_000);
+
+      expect(sheet.getByText("Now · 12:41")).toBeOnTheScreen();
+    });
+
+    it("should read the hour the search was opened from, and stay there as the clock moves", async () => {
+      const user = await renderSearch(boardPlate, "12:00");
+      const sheet = await openThePlate(user);
+
+      await advance(120_000);
+
+      expect(sheet.getByRole("button", { name: "Time, 12:00, change" })).toBeOnTheScreen();
+      expect(sheet.queryByText(/Now/)).not.toBeOnTheScreen();
+    });
+
+    it("should open the time picker over the plate sheet, which stays", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: timeRowNow }));
+
+      expect(screen.getByLabelText("Time")).toHaveProp("role", "dialog");
+      expect(screen.getByRole("spinbutton", { name: "Hours" })).toBeOnTheScreen();
+      expect(screen.getByLabelText(yourPlate)).toBeOnTheScreen();
+      expect(sheet.getByRole("button", { name: timeRowNow })).toBeExpanded();
+    });
+
+    it("should start the picker's wheels at the time the row reads", async () => {
+      const user = await renderSearch(boardPlate, "12:00");
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: "Time, 12:00, change" }));
+
+      expect(
+        within(screen.getByRole("spinbutton", { name: "Hours" })).getByRole("option", {
+          selected: true,
+        }),
+      ).toHaveAccessibleName("12");
+      expect(
+        within(screen.getByRole("spinbutton", { name: "Minutes" })).getByRole("option", {
+          selected: true,
+        }),
+      ).toHaveAccessibleName("00");
+    });
+
+    it("should start the picker's wheels at the time chosen last", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: timeRowNow }));
+      await chooseTime(user, "18", "45");
+      await user.press(screen.getByRole("button", { name: "Done" }));
+      await advance(1000);
+
+      await user.press(sheet.getByRole("button", { name: "Time, 18:45, change" }));
+
+      expect(
+        within(screen.getByRole("spinbutton", { name: "Hours" })).getByRole("option", {
+          selected: true,
+        }),
+      ).toHaveAccessibleName("18");
+      expect(
+        within(screen.getByRole("spinbutton", { name: "Minutes" })).getByRole("option", {
+          selected: true,
+        }),
+      ).toHaveAccessibleName("45");
+    });
+
+    it("should read the time chosen, no longer Now, and keep it as the clock moves", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: timeRowNow }));
+
+      await chooseTime(user, "18", "45");
+      await user.press(screen.getByRole("button", { name: "Done" }));
+      await advance(60_000);
+
+      expect(sheet.getByRole("button", { name: "Time, 18:45, change" })).toBeOnTheScreen();
+      expect(sheet.queryByText(/Now/)).not.toBeOnTheScreen();
+      expect(screen.queryByRole("spinbutton", { name: "Hours" })).not.toBeOnTheScreen();
+      expect(screen.getByLabelText(yourPlate)).toBeOnTheScreen();
+    });
+
+    it("should keep the time when the picker is dismissed without Done", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: timeRowNow }));
+      await chooseTime(user, "18", "45");
+
+      await fireEvent(screen.getByLabelText("Time"), "accessibilityEscape");
+      await advance(1000);
+
+      expect(sheet.getByRole("button", { name: timeRowNow })).toBeOnTheScreen();
+      expect(screen.getByLabelText(yourPlate)).toBeOnTheScreen();
+    });
+
+    it("should log every food at the chosen time", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: timeRowNow }));
+      await chooseTime(user, "18", "45");
+      await user.press(screen.getByRole("button", { name: "Done" }));
+
+      await user.press(sheet.getByRole("button", { name: logFoods }));
+
+      // 18:45 in London on 15 October is 17:45 UTC.
+      const entries = mockLogEntries.mock.calls[0]?.[0] ?? [];
+      expect(entries).toHaveLength(4);
+      expect(entries.map((entry) => entry.input.loggedAt)).toEqual(
+        Array(4).fill("2026-10-15T17:45:00.000Z"),
+      );
+      expect(routerMock.push).toHaveBeenCalledWith(expect.stringContaining("2026-10-15"));
+    });
+
+    it("should log at the hour the search was opened from when the time is not changed", async () => {
+      const user = await renderSearch(boardPlate, "12:00");
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: logFoods }));
+
+      const entries = mockLogEntries.mock.calls[0]?.[0] ?? [];
+      expect(entries.map((entry) => entry.input.loggedAt)).toEqual(
+        Array(4).fill("2026-10-15T11:00:00.000Z"),
+      );
+    });
+
+    it("should be dimmed and not open the picker while the plate is logged", async () => {
+      mockLogEntries.mockReturnValue(new Promise(() => undefined));
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: logFoods }));
+
+      const timeRow = sheet.getByRole("button", { name: timeRowNow });
+      await user.press(timeRow);
+
+      expect(timeRow).toBeDisabled();
+      expect(screen.queryByRole("spinbutton", { name: "Hours" })).not.toBeOnTheScreen();
+    });
+
+    it("should still be changed offline, because it writes nothing", async () => {
+      onlineManager.setOnline(false);
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: timeRowNow }));
+
+      expect(screen.getByRole("spinbutton", { name: "Hours" })).toBeOnTheScreen();
+    });
+  });
+
+  describe("Clear plate", () => {
+    const undo = () => screen.getByRole("button", { name: "Undo" });
+
+    it("should be offered in the sheet, ready to press", async () => {
+      const user = await renderSearch();
+
+      const sheet = await openThePlate(user);
+
+      expect(sheet.getByRole("button", { name: "Clear plate" })).toBeEnabled();
+    });
+
+    it("should empty the plate and close the sheet at once, with no question", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+      await advance(1000);
+
+      expect(screen.queryByLabelText(yourPlate)).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Your plate/ })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Log foods?\b/ })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("alertdialog")).not.toBeOnTheScreen();
+    });
+
+    it("should take the plate off the search's bars, which go back to what was eaten", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+      await advance(1000);
+
+      expect(screen.queryByRole("group", { name: /on your plate/ })).not.toBeOnTheScreen();
+    });
+
+    it("should say Plate cleared, with Undo", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+
+      expect(screen.getByText("Plate cleared")).toBeOnTheScreen();
+      expect(undo()).toBeOnTheScreen();
+    });
+
+    it("should bring the four rows back in their order with their amounts, and the plate's time, on Undo", async () => {
+      const user = await renderSearch();
+      let sheet = await openThePlate(user);
+      await fireEvent.changeText(sheet.getByLabelText(milkAmount), "300");
+      await user.press(sheet.getByRole("button", { name: "Time, now, 12:40, change" }));
+      await user.press(
+        within(screen.getByRole("spinbutton", { name: "Hours" })).getByRole("option", {
+          name: "18",
+        }),
+      );
+      await user.press(
+        within(screen.getByRole("spinbutton", { name: "Minutes" })).getByRole("option", {
+          name: "45",
+        }),
+      );
+      await user.press(screen.getByRole("button", { name: "Done" }));
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+      await advance(1000);
+
+      await user.press(undo());
+
+      expect(screen.queryByText("Plate cleared")).not.toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Your plate, 4 foods" })).toBeOnTheScreen();
+      sheet = await openThePlate(user);
+      const removeButtons = sheet.getAllByRole("button", { name: /^Remove .* from your plate$/ });
+      [
+        "Remove Chicken and rice from your plate",
+        "Remove Greek yoghurt 0% fat from your plate",
+        "Remove Banana from your plate",
+        "Remove Semi-skimmed milk from your plate",
+      ].forEach((name, index) => {
+        expect(removeButtons[index]).toHaveAccessibleName(name);
+      });
+      expect(sheet.getByLabelText(milkAmount)).toHaveProp("value", "300");
+      expect(sheet.getByText("704 kcal")).toBeOnTheScreen();
+      expect(sheet.getByRole("button", { name: "Time, 18:45, change" })).toBeOnTheScreen();
+    });
+
+    it("should leave the sheet shut when Undo puts the plate back", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+      await advance(1000);
+
+      await user.press(undo());
+      await advance(1000);
+
+      expect(screen.queryByLabelText(yourPlate)).not.toBeOnTheScreen();
+    });
+
+    it("should take the toast away when its wait is over, and the plate stays cleared", async () => {
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+
+      await advance(6000);
+
+      expect(screen.queryByText("Plate cleared")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: /^Your plate/ })).not.toBeOnTheScreen();
+    });
+
+    it("should say nothing when the last food is taken off with its X", async () => {
+      const user = await renderSearch([milk]);
+      const sheet = await openThePlate(user, "Your plate, 1 food");
+
+      await user.press(
+        sheet.getByRole("button", { name: "Remove Semi-skimmed milk from your plate" }),
+      );
+      await advance(1000);
+
+      expect(screen.queryByText("Plate cleared")).not.toBeOnTheScreen();
+      expect(screen.queryByRole("button", { name: "Undo" })).not.toBeOnTheScreen();
+    });
+
+    it("should still work offline, because it writes nothing", async () => {
+      onlineManager.setOnline(false);
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+
+      await user.press(sheet.getByRole("button", { name: "Clear plate" }));
+
+      expect(screen.getByText("Plate cleared")).toBeOnTheScreen();
+    });
+
+    it("should be dimmed and do nothing while the plate is logged", async () => {
+      mockLogEntries.mockReturnValue(new Promise(() => undefined));
+      const user = await renderSearch();
+      const sheet = await openThePlate(user);
+      await user.press(sheet.getByRole("button", { name: logFoods }));
+
+      const clear = sheet.getByRole("button", { name: "Clear plate" });
+      await user.press(clear);
+
+      expect(clear).toBeDisabled();
+      expect(screen.queryByText("Plate cleared")).not.toBeOnTheScreen();
+      expect(screen.getByLabelText(yourPlate)).toBeOnTheScreen();
     });
   });
 
