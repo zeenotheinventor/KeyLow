@@ -1,16 +1,10 @@
-import { useDiaryDay, useProfileTimeZone, useTargets } from "@keylow/api-client";
 import { describeStripDay } from "@keylow/core/copy";
-import { describeDay, instantAtLocalTime } from "@keylow/core/dates";
-import { progressBars, sumEntries } from "@keylow/core/diary";
 
+import { usePlateDayBars } from "./usePlateDayBars";
 import { usePlate } from "../../../lib/plate";
-import { useNow } from "../../../lib/useNow";
-import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 import { MacroProgressStrip } from "../../ui";
 
 import type { LogPlateStripProps } from "./types";
-
-const NOON = 12;
 
 /**
  * The day's four bars under the search header: what was eaten (read as the diary reads it, so it shows
@@ -19,23 +13,14 @@ const NOON = 12;
  * fails, nothing is drawn and the search works as it does without it.
  */
 export function LogPlateStrip({ day }: LogPlateStripProps) {
-  const { count, totals } = usePlate();
-  const now = useNow();
-  const isReadEnabled = useReadsEnabled();
-  const eaten = useDiaryDay(day, { enabled: isReadEnabled }).data;
-  const targets = useTargets({ enabled: isReadEnabled, localDate: day }).data;
-  const profileTimeZone = useProfileTimeZone({ enabled: isReadEnabled }).data;
+  const { count } = usePlate();
+  const dayBars = usePlateDayBars(day);
 
-  if (eaten === undefined || targets === undefined || profileTimeZone === undefined) {
+  if (dayBars === undefined) {
     return null;
   }
-  const timeZone = profileTimeZone ?? "UTC";
-  const dayTitle = describeDay(instantAtLocalTime(day, NOON, 0, timeZone), now, timeZone).label;
 
   return (
-    <MacroProgressStrip
-      bars={progressBars(sumEntries(eaten.entries), targets, totals)}
-      label={describeStripDay(dayTitle, count > 0)}
-    />
+    <MacroProgressStrip bars={dayBars.bars} label={describeStripDay(dayBars.dayTitle, count > 0)} />
   );
 }

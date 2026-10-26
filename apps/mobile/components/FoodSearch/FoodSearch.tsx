@@ -9,6 +9,7 @@ import { LogPlateButton } from "./LogPlateButton";
 import { LogPlateStrip } from "./LogPlateStrip";
 import { LogSearchResults } from "./LogSearchResults";
 import { OwnFoodResults } from "./OwnFoodResults";
+import { PlateSheet, PlateSheetChip } from "./PlateSheet";
 import { SearchResults } from "./SearchResults";
 import { IconButton, SearchField, SheetHeader } from "../ui";
 
@@ -25,8 +26,8 @@ const WORDING = {
  * "Your foods" and lists the user's own foods, and the cursor stays out of the field because the list
  * is what the user came for. With an `ingredient` it is titled "Add ingredient" and finds a food for a
  * recipe: no create control, and every row opens the amount step. The scan control is the same in every mode.
- * In log mode the bars under the header show the day with the plate, every plus puts food on the plate, and
- * Log food(s) beside the field writes it.
+ * In log mode the bars under the header show the day with the plate, every plus puts food on the plate, the
+ * plate chip in the header opens Your plate to edit it, and Log food(s) beside the field writes it.
  */
 export function FoodSearch(props: FoodSearchProps) {
   const { onClose, onOpenFood, onScanBarcode } = props;
@@ -36,8 +37,15 @@ export function FoodSearch(props: FoodSearchProps) {
   const isIngredient = props.ingredient !== undefined;
   const logging = props.logging;
   const { title, autoFocus } = WORDING[scope];
+  const [isPlateOpen, setIsPlateOpen] = useState(false);
   const clearQuery = useCallback(() => {
     setQuery("");
+  }, []);
+  const openPlate = useCallback(() => {
+    setIsPlateOpen(true);
+  }, []);
+  const closePlate = useCallback(() => {
+    setIsPlateOpen(false);
   }, []);
 
   return (
@@ -58,6 +66,9 @@ export function FoodSearch(props: FoodSearchProps) {
             ? undefined
             : { icon: "Plus", label: "Create a food", onPress: props.onCreateFood }
         }
+        // The plate chip is wider than a control, so both ends are as wide as it and the title stays in the middle.
+        hasWideSlots={logging !== undefined}
+        trailingSlot={logging === undefined ? undefined : <PlateSheetChip onPress={openPlate} />}
       />
       {logging === undefined ? null : <LogPlateStrip day={logging.context.day} />}
       {props.ingredient !== undefined ? (
@@ -117,6 +128,9 @@ export function FoodSearch(props: FoodSearchProps) {
         value={query}
         onChangeText={setQuery}
       />
+      {logging === undefined ? null : (
+        <PlateSheet context={logging.context} open={isPlateOpen} onClose={closePlate} />
+      )}
     </View>
   );
 }

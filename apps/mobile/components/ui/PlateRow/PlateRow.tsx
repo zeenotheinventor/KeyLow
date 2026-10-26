@@ -39,30 +39,39 @@ export function PlateRow({
 }: PlateRowProps) {
   const { isFirst } = useGroupedRowPosition();
   const hasError = error !== undefined && error.trim() !== "";
-  // While the whole row is dimmed, the name is already dimmed with it.
-  const dimsName = isOpenDisabled && !disabled;
+  // While the whole row is dimmed, the name is already dimmed with it. A name that is not a button is never dimmed.
+  const dimsName = onOpen !== undefined && isOpenDisabled && !disabled;
+  const nameBlock = (
+    <>
+      <Text numberOfLines={2} variant="body-strong">
+        {name}
+      </Text>
+      {isRecipe ? (
+        <Text tone="muted" variant="caption">
+          {PLATE.recipe}
+        </Text>
+      ) : null}
+      <Macros energy={energy} macros={macros} />
+    </>
+  );
 
   return (
     <View className={`${isFirst ? "" : "border-t border-border"} ${disabled ? "opacity-40" : ""}`}>
       <View className="flex-row items-center gap-2 py-2 pl-3 pr-1">
         <View className={`min-w-0 flex-1 ${dimsName ? "opacity-40" : ""}`}>
-          <PressableSurface
-            className="min-h-[48px] justify-center gap-1"
-            disabled={disabled || isOpenDisabled}
-            label={describePlateRowOpenName(name, amountText, unitWord, energy)}
-            pressScale={rowPressScale}
-            onPress={onOpen}
-          >
-            <Text numberOfLines={2} variant="body-strong">
-              {name}
-            </Text>
-            {isRecipe ? (
-              <Text tone="muted" variant="caption">
-                {PLATE.recipe}
-              </Text>
-            ) : null}
-            <Macros energy={energy} macros={macros} />
-          </PressableSurface>
+          {onOpen === undefined ? (
+            <View className="min-h-[48px] justify-center gap-1">{nameBlock}</View>
+          ) : (
+            <PressableSurface
+              className="min-h-[48px] justify-center gap-1"
+              disabled={disabled || isOpenDisabled}
+              label={describePlateRowOpenName(name, amountText, unitWord, energy)}
+              pressScale={rowPressScale}
+              onPress={onOpen}
+            >
+              {nameBlock}
+            </PressableSurface>
+          )}
         </View>
         <View className="w-[112px] shrink-0">
           <NumericInput
