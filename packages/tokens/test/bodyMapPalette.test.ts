@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { bodyMapPalette } from "../src";
 
-// The values are the Ki-Lo training canvas's (the v3 "tokens · body-map-scales" board, KEY-515, with the
-// two light values the orchestrator darkened to hold 3:1), written out here and not read back from the code under test.
+// The values are the Ki-Lo training canvas's (the v6 "tokens · body-map scales" board, KEY-736, for the volume scale,
+// and the v3 board, KEY-515, with the two light values the orchestrator darkened to hold 3:1, for the rest), written
+// out here and not read back from the code under test.
 describe("bodyMapPalette", () => {
   it("should return the canvas's dark values", () => {
     expect(bodyMapPalette("dark")).toEqual({
@@ -17,10 +18,10 @@ describe("bodyMapPalette", () => {
       heatGlow: "rgba(240,72,72,0.55)",
       volume: {
         notTrained: "#303746",
-        maintaining: "#8DB0E8",
-        growing: "#4EC2AE",
-        productive: "#5CD67A",
-        high: "#A6F5C4",
+        maintaining: "#2F81F7",
+        growing: "#3FB950",
+        productive: "#E8C547",
+        high: "#F04848",
       },
       gap: {
         behind: "#5B95FF",
@@ -43,10 +44,10 @@ describe("bodyMapPalette", () => {
       heatGlow: "rgba(201,49,58,0.35)",
       volume: {
         notTrained: "#D7DBE2",
-        maintaining: "#6E92D6",
-        growing: "#1A8A85",
-        productive: "#1F9D4E",
-        high: "#0C6B3A",
+        maintaining: "#1F5BD6",
+        growing: "#2F8F4E",
+        productive: "#A67C00",
+        high: "#C9313A",
       },
       gap: {
         behind: "#1F5BD6",
