@@ -21,10 +21,10 @@ function scrollViewAt(top: number, height: number, contentHeight = 5000) {
 }
 
 // The scroll view is 800 points tall from 100 down, so it ends at 900, and it is scrolled 200 down.
-async function renderAt(keyboardLift: number, contentHeight?: number) {
+async function renderAt(keyboardLift: number, contentHeight?: number, roomBelowField?: number) {
   const scrollView = scrollViewAt(100, 800, contentHeight);
   const view = await renderHook<ReturnType<typeof useScrollFocusedInputIntoView>, { lift: number }>(
-    ({ lift }) => useScrollFocusedInputIntoView(scrollView.ref, lift),
+    ({ lift }) => useScrollFocusedInputIntoView(scrollView.ref, lift, roomBelowField),
     { initialProps: { lift: 0 } },
   );
   await act(() => {
@@ -48,6 +48,17 @@ describe("useScrollFocusedInputIntoView", () => {
 
     // The field ends at 1000, 100 below the scroll view's end and 116 with the room to spare.
     expect(scrollTo).toHaveBeenCalledWith({ y: 200 + 116, animated: false });
+  });
+
+  it("should leave the room it is given below the field, when a screen needs more than the default", async () => {
+    focusFieldAt(900, 100);
+    const frames = holdFrames();
+
+    const { scrollTo } = await renderAt(240, undefined, 46);
+    await frames.run();
+
+    // The field ends at 1000, 100 below the scroll view's end and 146 with the 46 points asked for.
+    expect(scrollTo).toHaveBeenCalledWith({ y: 200 + 146, animated: false });
   });
 
   it("should wait for the next frame, when the scroll view has taken its new height, to measure", async () => {

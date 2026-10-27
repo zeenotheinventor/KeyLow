@@ -10,12 +10,14 @@ import {
 } from "@keylow/core/copy";
 import { MAX_SESSION_NOTE_LENGTH, sessionClock } from "@keylow/core/training";
 import { vars } from "nativewind";
-import { useState } from "react";
-import { ScrollView, View } from "react-native";
+import { useRef, useState } from "react";
+import { Platform, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useKeyboardLift } from "../../lib/useKeyboardLift";
 import { useNow } from "../../lib/useNow";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { useScrollFocusedInputIntoView } from "../../lib/useScrollFocusedInputIntoView";
 import { MusclesTrainedCard } from "../MusclesTrainedCard";
 import { StatCard } from "../StatCard";
 import { Banner, Button, SheetHeader, Text, TextArea } from "../ui";
@@ -24,6 +26,11 @@ import { useSaveSession } from "./useSaveSession";
 import type { FinishScreenProps } from "./types";
 
 const SECONDS_PER_MINUTE = 60;
+
+// The note scrolls into view with its counter, which in the usual case sits 31 points below the input (1 of the
+// box's border, 10 of its padding, 4 of gap and the counter's 16 point line), and with the usual 16 points to
+// spare below that. A wrapped error line or a large font scale can push the counter lower.
+const ROOM_BELOW_NOTE = 31 + 16;
 
 /**
  * The finish screen, as the `session · finish`, `session · saving` and `session · save-error` boards draw
@@ -42,6 +49,15 @@ export function FinishScreen({
   onSaved,
 }: FinishScreenProps) {
   const insets = useSafeAreaInsets();
+  const frameRef = useRef<View>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
+  // Android 15 draws edge to edge, so the window does not resize for the keyboard. iOS adjusts the scroll view's insets.
+  const keyboardLift = useKeyboardLift(frameRef, Platform.OS === "android");
+  const trackScrollOffset = useScrollFocusedInputIntoView(
+    scrollViewRef,
+    keyboardLift,
+    ROOM_BELOW_NOTE,
+  );
   const isReadingAllowed = useReadsEnabled();
   const timeZone = useProfileTimeZone({ enabled: isReadingAllowed });
   const now = useNow();
@@ -75,7 +91,12 @@ export function FinishScreen({
   const savedSetCount = details.workingSets === 0 ? details.warmups : details.workingSets;
 
   return (
-    <View className="flex-1 bg-background">
+    // The keyboard's cover is a runtime value no class can name, so it goes through a variable.
+    <View
+      ref={frameRef}
+      className="flex-1 bg-background pb-[var(--keyboard-lift)]"
+      style={vars({ "--keyboard-lift": keyboardLift })}
+    >
       {/* The inset is a runtime value no class can name, so it goes through a variable, as the session header's does. */}
       <View className="pt-[var(--inset-top)]" style={vars({ "--inset-top": insets.top })}>
         <SheetHeader
@@ -89,10 +110,13 @@ export function FinishScreen({
         />
       </View>
       <ScrollView
+        ref={scrollViewRef}
         automaticallyAdjustKeyboardInsets
         className="flex-1"
         contentContainerClassName="gap-3 px-4 pb-4 pt-1"
         keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
+        onScroll={trackScrollOffset}
       >
         <View className="flex-row gap-2">
           <StatCard label={FINISH_SCREEN.timeLabel} note={timeNote} value={time.value} />
