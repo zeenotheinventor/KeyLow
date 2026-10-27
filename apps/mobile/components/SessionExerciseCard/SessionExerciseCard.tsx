@@ -29,12 +29,25 @@ function valuesOfPrefill(prefill: SetPrefill): SetValues | null {
       };
 }
 
+/** The prefill that opens the set entry with the numbers a row shows: the inverse of `valuesOfPrefill`. The row's own type travels separately, as the type the entry starts on. */
+function prefillOfValues({ loadKg, reps, rir, rpe }: SetValues): SetPrefill {
+  return {
+    load_kg: loadKg,
+    reps,
+    rir,
+    rpe,
+    set_type: "working",
+    source: "session",
+  };
+}
+
 /**
  * One exercise of the session in progress: its card, with the Previous column read from the exercise's latest
  * earlier session. That read is not saved on the phone, so with no connection (or until it arrives, or if it
  * fails) every Previous is an en dash and the rest of the card is unchanged. The cells of a set still to do
  * open the set entry, which the screen hosts, for the exercise's next free slot and with the numbers it is
- * filled from.
+ * filled from. The cells of an added row (see below) open it the same way, but with the numbers and the type
+ * the row shows, so they can be changed before the set is logged.
  *
  * The mark of a logged set opens the set types sheet, which the screen hosts, for that set: its number is the
  * one it has among the working sets, or would have as one. A set still being saved has no stored id, so its
@@ -80,15 +93,17 @@ export function SessionExerciseCard({
   // entry opens for: its number, and the same set of the earlier session.
   const nextFreeSlot = rows.find((row) => row.state !== "done");
 
-  const openEntry = (setType: SetType, setNumber: number) => {
+  // A row that shows its own numbers (an added row) passes them as `shown`, and the entry opens with those and
+  // their type. Without them it opens with the slot's type and the numbers the next set is filled from.
+  const openEntry = (setType: SetType, setNumber: number, shown: SetValues | null = null) => {
     const slot = nextFreeSlot ?? { setType, setNumber, previous: null };
     onEditSet({
       exerciseId,
       exerciseName: name,
-      setType: slot.setType,
+      setType: shown?.setType ?? slot.setType,
       setNumber: slot.setNumber,
       plan,
-      prefill,
+      prefill: shown === null ? prefill : prefillOfValues(shown),
       lastWeek: slot.previous,
     });
   };
@@ -170,7 +185,8 @@ export function SessionExerciseCard({
   const workingRowCount = rows.filter(({ setType }) => setType !== "warmup").length;
   const addedRows = Array.from({ length: addedCount }, (_, index): ExerciseCardRow => {
     const setType = valuesToAdd?.setType ?? "working";
-    const setNumber = setType === "warmup" ? 0 : workingRowCount + index + 1;
+    const workingNumber = workingRowCount + index + 1;
+    const setNumber = setType === "warmup" ? 0 : workingNumber;
     const entry: SetRowEntry =
       valuesToAdd === null
         ? { state: "empty" }
@@ -181,6 +197,14 @@ export function SessionExerciseCard({
       state: "todo",
       setType,
       copy: describeSetRow({ setType, setNumber, unit, previous: null, entry }),
+      edit: {
+        name: describeSetEntryName(name, setType, setNumber),
+        onPress: () => {
+          // With nothing logged yet the row's numbers are the next set's own, so the entry says where they came from.
+          // A warm-up has no number, so the entry gets the one it would have as a working set.
+          openEntry(setType, workingNumber, lastSet === undefined ? null : valuesToAdd);
+        },
+      },
       onCheck: checkOf(valuesToAdd, setType, setNumber),
     };
   });
