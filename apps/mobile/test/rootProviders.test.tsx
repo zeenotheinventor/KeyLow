@@ -13,6 +13,7 @@ import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import { resetSupabaseMock } from "./support/supabaseMock";
 import { DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
+import { installFatalRestart } from "../lib/sentry/fatalRestart";
 import { initSentry } from "../lib/sentry/init";
 
 import type { ReactNode } from "react";
@@ -89,6 +90,8 @@ jest.mock("../lib/bodyMapRenderer", () => ({
 }));
 // Whether the layout starts Sentry is what is asked. What it starts with is proved with the Sentry tests.
 jest.mock("../lib/sentry/init", () => ({ initSentry: jest.fn() }));
+// Whether the layout installs the restart, and before Sentry starts, is what is asked. What it does is proved with the Sentry tests.
+jest.mock("../lib/sentry/fatalRestart", () => ({ installFatalRestart: jest.fn() }));
 jest.mock("../lib/supabase", () => ({
   supabase: jest.requireActual<{ mockSupabaseClient: unknown }>("./support/supabaseMock")
     .mockSupabaseClient,
@@ -125,6 +128,13 @@ describe("the app root", () => {
 
   it("should start error reporting as the layout loads, so an error while the app starts is reported", () => {
     expect(initSentry).toHaveBeenCalledTimes(1);
+  });
+
+  it("should install the restart on a fatal error before Sentry starts, because Sentry calls the handler it finds only after it has sent the error", () => {
+    expect(installFatalRestart).toHaveBeenCalledTimes(1);
+    const [installedAt] = jest.mocked(installFatalRestart).mock.invocationCallOrder;
+    const [startedAt] = jest.mocked(initSentry).mock.invocationCallOrder;
+    expect(installedAt).toBeLessThan(startedAt ?? 0);
   });
 
   it("should show a toast that a screen asks for, because the toast provider is mounted", async () => {

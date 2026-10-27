@@ -15,10 +15,15 @@ import { startBodyMapRendererRead } from "../lib/bodyMapRenderer";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
 import { createQueryClient } from "../lib/diaryCache";
 import { setUpReminderNotifications } from "../lib/notifications";
+import { installFatalRestart } from "../lib/sentry/fatalRestart";
 import { initSentry } from "../lib/sentry/init";
 import { readStoredUserId, supabase } from "../lib/supabase";
 import { ThemeProvider } from "../lib/theme";
 import { holdSplashScreen } from "../lib/updates";
+
+// Restarts the app on a fatal JavaScript error, so a person is not left on a black screen. It goes before
+// `initSentry()` on purpose: Sentry calls the handler it finds when it starts only after it has sent the error.
+installFatalRestart();
 
 // Starts error reporting as the module loads, so an error while the app starts is reported too. It does
 // nothing in development or without a DSN.
