@@ -109,19 +109,34 @@ describe("TrainBodyMapCard", () => {
   });
 
   describe("a narrow or large-text screen", () => {
-    it("should let the buttons drop under the label, kept to the right", async () => {
+    async function renderHeaderParts() {
       await renderCard();
 
-      const buttons = screen.getByRole("button", { name: "Show projected" }).parent?.parent?.parent;
-      const headerRow = buttons?.parent;
+      const buttonGroup = screen.getByRole("button", { name: "Show projected" }).parent?.parent
+        ?.parent;
+      const headerRow = buttonGroup?.parent;
+      const labelColumn = screen.getByText("Now · Thu 15 Oct, 17:55").parent?.parent;
 
-      expect(buttons).toHaveStyle({ marginLeft: "auto" });
-      expect(headerRow).toHaveStyle({
-        flexDirection: "row",
-        flexWrap: "wrap",
-        columnGap: 8,
-        rowGap: 4,
-      });
+      return { buttonGroup, headerRow, labelColumn };
+    }
+
+    it("should keep the label and the buttons on one row, as the board draws it", async () => {
+      const { headerRow } = await renderHeaderParts();
+
+      expect(headerRow).toHaveStyle({ flexDirection: "row", alignItems: "center" });
+      expect(headerRow).not.toHaveStyle({ flexWrap: "wrap" });
+    });
+
+    it("should let the label column take the remaining width and shrink, so its sub-line wraps inside it", async () => {
+      const { labelColumn } = await renderHeaderParts();
+
+      expect(labelColumn).toHaveStyle({ flexGrow: 1, flexShrink: 1, minWidth: 0 });
+    });
+
+    it("should keep the buttons at their full width", async () => {
+      const { buttonGroup } = await renderHeaderParts();
+
+      expect(buttonGroup).toHaveStyle({ flexShrink: 0 });
     });
   });
 
