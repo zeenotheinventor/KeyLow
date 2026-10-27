@@ -234,6 +234,16 @@ describe("scrubBreadcrumb", () => {
     });
   });
 
+  it("should keep the restart breadcrumb's reason and drop any other key and its message", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "app.restart",
+      message: "app.restart after fatal",
+      data: { reason: "fatal", error: FOOD_NAME, value: WEIGHT },
+    });
+
+    expect(scrubbed).toEqual({ category: "app.restart", data: { reason: "fatal" } });
+  });
+
   it("should not let the keys of the app state and keyboard breadcrumbs through on a request breadcrumb", () => {
     const scrubbed = scrubBreadcrumb({
       category: "fetch",

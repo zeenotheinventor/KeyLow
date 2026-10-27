@@ -17,8 +17,9 @@ import type { Breadcrumb, ErrorEvent } from "@sentry/react-native";
  */
 
 // The only breadcrumbs sent: moving between screens, the requests the app makes, and the app coming
-// forward or going away and the keyboard coming and going (a trail for a screen that went blank). The
-// last two carry a state name or numbers of points, built by code of ours, never what a person typed.
+// forward or going away, the keyboard coming and going (a trail for a screen that went blank), and the
+// app starting again after a fatal error. The last three carry a state name, numbers of points or a fixed
+// word, built by code of ours, never what a person typed.
 const BREADCRUMB_CATEGORIES_SENT = new Set([
   "navigation",
   "xhr",
@@ -26,6 +27,7 @@ const BREADCRUMB_CATEGORIES_SENT = new Set([
   "http",
   "app.state",
   "keyboard",
+  "app.restart",
 ]);
 
 const REQUEST_AND_NAVIGATION_DATA_KEYS_SENT = [
@@ -46,6 +48,7 @@ const BREADCRUMB_DATA_KEYS_SENT: Record<string, string[]> = {
   http: REQUEST_AND_NAVIGATION_DATA_KEYS_SENT,
   "app.state": ["state"],
   keyboard: ["event", "screenY", "height"],
+  "app.restart": ["reason"],
 };
 
 // A message that is fixed text in our own code, so no value can be in it, and is the one thing that says
