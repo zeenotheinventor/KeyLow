@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { at, heatSet } from "./heatSets";
 import { rowId, setRow } from "./historyRows";
 import {
-  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   addedSetTime,
   muscleState,
   orderSessionSets,
@@ -108,11 +108,11 @@ describe("addedSetTime", () => {
     const stampedWithThePress = heatSet(chest, { performed_at: at(MONDAY_NOW.getTime()) });
 
     it("should count the set on Tuesday and not on the day it was added", () => {
-      const onTuesday = muscleState([stampedByTheRule], at(tuesdayEvening), TRAINING_PARAMS_V1);
+      const onTuesday = muscleState([stampedByTheRule], at(tuesdayEvening), TRAINING_PARAMS_V2);
       const pressStampOnTuesday = muscleState(
         [stampedWithThePress],
         at(tuesdayEvening),
-        TRAINING_PARAMS_V1,
+        TRAINING_PARAMS_V2,
       );
 
       expect(onTuesday.chest_lower.heat).toBeGreaterThan(0);
@@ -122,8 +122,8 @@ describe("addedSetTime", () => {
     it("should leave less heat today than a set stamped with the press would", () => {
       const nowIso = at(MONDAY_NOW.getTime() + 60_000);
 
-      const today = muscleState([stampedByTheRule], nowIso, TRAINING_PARAMS_V1);
-      const pressStamp = muscleState([stampedWithThePress], nowIso, TRAINING_PARAMS_V1);
+      const today = muscleState([stampedByTheRule], nowIso, TRAINING_PARAMS_V2);
+      const pressStamp = muscleState([stampedWithThePress], nowIso, TRAINING_PARAMS_V2);
 
       expect(today.chest_lower.heat).toBeLessThan(pressStamp.chest_lower.heat);
     });

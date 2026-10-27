@@ -112,7 +112,7 @@ describe("the training additions as theme variables", () => {
     expect(themeVariables("light")["--kl-heat-3"]).toBe("190 126 25");
     expect(themeVariables("dark")["--kl-heat-glow"]).toBe("rgba(240,72,72,0.55)");
     expect(themeVariables("light")["--kl-heat-glow"]).toBe("rgba(201,49,58,0.35)");
-    expect(themeVariables("dark")["--kl-volume-not-targeted"]).toBe("48 55 70");
+    expect(themeVariables("dark")["--kl-volume-not-trained"]).toBe("48 55 70");
     expect(themeVariables("light")["--kl-gap-ahead"]).toBe("179 92 0");
   });
 });

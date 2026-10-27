@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { recordOfMuscles } from "./goldenWeekInputs";
 import { evenState, GOLDEN_LIBRARY, V_TAPER_GOALS, WEDNESDAY_STATE } from "./suggestGolden";
-import { MUSCLE_IDS, suggestSession, SUGGEST_PARAMS_V1 } from "../../src/training";
+import { MUSCLE_IDS, suggestSession, SUGGEST_PARAMS_V2 } from "../../src/training";
 
 import type {
   Equipment,
@@ -66,7 +66,7 @@ const suggest = (
   library: SuggestExercise[],
   state: SuggestState = evenState(0, 0),
   constraints: { minutes?: number; equipment?: Equipment[] } = {},
-) => suggestSession(state, goals, library, constraints, SUGGEST_PARAMS_V1);
+) => suggestSession(state, goals, library, constraints, SUGGEST_PARAMS_V2);
 
 const stateWith = (
   changes: Partial<Record<MuscleId, { weeklySets?: number; heat?: number }>>,
@@ -117,22 +117,8 @@ describe("suggestSession errors", () => {
 });
 
 describe("the nothing cases", () => {
-  // The medium muscles of the document, whose MAV low is 12. The rest are 10.
-  const MEDIUM = new Set<MuscleId>([
-    "chest_upper",
-    "chest_lower",
-    "lats",
-    "traps_upper",
-    "traps_mid",
-    "glute_med",
-    "adductors",
-  ]);
-
-  it("should offer nothing when every muscle is exactly at its MAV low (priorities covered)", () => {
-    const covered = recordOfMuscles((muscle) => ({
-      weeklySets: MEDIUM.has(muscle) ? 12 : 10,
-      heat: 0.2,
-    }));
+  it("should offer nothing when every muscle is exactly where Productive starts (priorities covered)", () => {
+    const covered = recordOfMuscles(() => ({ weeklySets: 10, heat: 0.2 }));
     expect(suggest(V_TAPER_GOALS, GOLDEN_LIBRARY, covered)).toStrictEqual({
       kind: "nothing",
       why: "priorities_covered",
@@ -172,13 +158,13 @@ describe("the nothing cases", () => {
   });
 
   it("should offer nothing, saying no room, when not even the first exercise fits the minutes", () => {
-    // With nothing logged chest_upper and lats score 3 x 12 = 36 and list position puts chest_upper first.
+    // With nothing logged chest_upper and lats score 3 x 10 = 30 and list position puts chest_upper first.
     // The incline press is 1 exercise and 3 sets: 2 + 7.5 = 9.5, shown 10, over 5 minutes.
     expect(suggest(V_TAPER_GOALS, GOLDEN_LIBRARY, evenState(0, 0), { minutes: 5 })).toStrictEqual({
       kind: "nothing",
       why: "no_room",
       skipped: [],
-      no_room: { muscle_id: "chest_upper", score: 36, minutes_if_added: 10 },
+      no_room: { muscle_id: "chest_upper", score: 30, minutes_if_added: 10 },
     });
   });
 });
@@ -241,20 +227,20 @@ describe("the score", () => {
     ).toStrictEqual(["press"]);
   });
 
-  it("should treat a muscle at or over its MAV low as having no gap", () => {
+  it("should treat a muscle at or over where Productive starts as having no gap", () => {
     const library = [exercise("press", ["chest_upper"])];
     expect(
       suggest(
         goalsWith({ chest_upper: 3 }),
         library,
-        stateWith({ chest_upper: { weeklySets: 12 } }),
+        stateWith({ chest_upper: { weeklySets: 10 } }),
       ).kind,
     ).toBe("nothing");
   });
 
   it("should count the sets already given in the session, so a muscle covered by one exercise stops leading", () => {
     // press: chest_upper primary. fly: chest_upper secondary at 0.5, chest_lower primary. After press
-    // (3 sets) chest_upper has 3 of 12, so the second pick is still about chest_lower.
+    // (3 sets) chest_upper has 3 of 10, so the second pick is still about chest_lower.
     const library = [
       exercise("press", ["chest_upper"], {}, ["chest_lower"]),
       exercise("fly", ["chest_lower"]),
@@ -266,9 +252,9 @@ describe("the score", () => {
         priority: 3,
         weekly_sets: 1.5,
         logged_sets: 0,
-        mav_low: 12,
+        mav_low: 10,
         heat: 0,
-        score: 31.5,
+        score: 25.5,
       },
     ]);
   });
@@ -297,22 +283,23 @@ describe("rounding", () => {
     const result = sessionOf(
       suggest(goalsWith({ chest_upper: 3, lats: 3, delt_side: 3, calves: 1 }), library),
     );
+    // The three score 3 x 10 = 30 alike, so list position puts delt_side before lats.
     expect(result.exercises.map((picked) => picked.exercise_id)).toStrictEqual([
       "press",
-      "row",
       "raise",
+      "row",
       "calf raise",
     ]);
     expect(result.exercises[3]?.reasons[0]?.weekly_sets).toBe(1.8);
   });
 
   it("should treat scores that differ only after the sixth decimal as equal, so list position decides", () => {
-    // chest_upper: 1 x (12 - 8.3) = 3.6999999999999993. delt_front: 1 x (10 - 6.3) = 3.7. Both are 3.7, and
-    // chest_upper is earlier in the muscle list. The delt_front exercise comes first in the library.
+    // chest_upper: 1 x (10 - 4) x (1 - 0.3) = 4.199999999999999. delt_front: 1 x (10 - 5.8) = 4.2. Both are
+    // 4.2, and chest_upper is earlier in the muscle list. The delt_front exercise comes first in the library.
     const library = [exercise("front", ["delt_front"]), exercise("chest", ["chest_upper"])];
     const state = stateWith({
-      chest_upper: { weeklySets: 8.3 },
-      delt_front: { weeklySets: 6.3 },
+      chest_upper: { weeklySets: 4, heat: 0.3 },
+      delt_front: { weeklySets: 5.8 },
     });
     expect(
       idsOf(suggest(goalsWith({ chest_upper: 1, delt_front: 1 }), library, state, { minutes: 10 })),
@@ -486,15 +473,15 @@ describe("the number of exercises", () => {
   });
 
   it("should stop at 8 exercises in a fresh suggestion, taking the 8 that score most", () => {
-    // Medium muscles score 36 and the others 30, with ties in list order. Triceps and quads are left out.
+    // Every muscle scores 3 x 10 = 30, with ties in list order. Triceps and quads are left out.
     expect(idsOf(suggest(goals, library))).toStrictEqual([
       "for chest_upper",
       "for chest_lower",
-      "for lats",
-      "for traps_mid",
       "for delt_front",
       "for delt_side",
       "for delt_rear",
+      "for lats",
+      "for traps_mid",
       "for biceps",
     ]);
   });
@@ -541,7 +528,7 @@ describe("sets, reps and RIR", () => {
 describe("the reasons are data only", () => {
   it("should carry muscle ids and numbers, and no exercise name or sentence", () => {
     const result = sessionOf(
-      suggestSession(WEDNESDAY_STATE, V_TAPER_GOALS, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V1),
+      suggestSession(WEDNESDAY_STATE, V_TAPER_GOALS, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V2),
     );
     for (const picked of result.exercises) {
       expect(Object.keys(picked).sort()).toStrictEqual([
@@ -588,7 +575,7 @@ describe("purity", () => {
     const state = structuredClone(WEDNESDAY_STATE);
     const goals = structuredClone(V_TAPER_GOALS);
     const library = structuredClone(GOLDEN_LIBRARY);
-    suggestSession(state, goals, library, { minutes: 45 }, SUGGEST_PARAMS_V1);
+    suggestSession(state, goals, library, { minutes: 45 }, SUGGEST_PARAMS_V2);
     expect(state).toStrictEqual(WEDNESDAY_STATE);
     expect(goals).toStrictEqual(V_TAPER_GOALS);
     expect(library).toStrictEqual(GOLDEN_LIBRARY);

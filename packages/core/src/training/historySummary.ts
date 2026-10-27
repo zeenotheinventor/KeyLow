@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireTimeZone } from "./expandPlan";
 import { MUSCLE_IDS } from "./muscles";
 import { weightedSetsByMuscle } from "./muscleState";
-import { TRAINING_PARAMS_V1 } from "./params";
+import { TRAINING_PARAMS_V2 } from "./params";
 import { addCalendarDays, daysSinceMonday, isCalendarDay } from "../dates/calendarDay";
 
 import type { MuscleId } from "./muscles";
@@ -200,7 +200,7 @@ const topMusclesOf = (workingSets: readonly HistorySet[], params: TrainingParams
 export const summariseSession = (
   session: Pick<HistorySession, "started_at" | "ended_at">,
   sets: readonly HistorySet[],
-  params: TrainingParams = TRAINING_PARAMS_V1,
+  params: TrainingParams = TRAINING_PARAMS_V2,
 ): SessionSummary => {
   const workingSets = workingSetsOf(sets);
   return {

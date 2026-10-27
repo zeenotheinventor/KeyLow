@@ -106,7 +106,7 @@ describe.each(schemes)("looksOf in the %s theme", (scheme) => {
     expect(looksOf("heat", {}, palette).abs.warmth).toBe(0);
   });
 
-  it.each([0, 1, 2, 3])("should read volume status %i as warmer than not targeted", (status) => {
+  it.each([1, 2, 3, 4])("should read volume status %i as warmer than not trained", (status) => {
     const looks = looksOf("volume", { abs: status }, palette);
 
     expect(looks.abs.warmth).toBe(1);

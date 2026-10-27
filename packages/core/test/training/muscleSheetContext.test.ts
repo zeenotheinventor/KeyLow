@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   setsBarPositionsOf,
-  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   upcomingSessionsOf,
   weightingExampleOf,
 } from "../../src/training";
@@ -118,113 +118,29 @@ describe("upcomingSessionsOf", () => {
 });
 
 describe("setsBarPositionsOf", () => {
-  const sideDeltsTarget = { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 };
+  const bands = TRAINING_PARAMS_V2.sizeClasses.small.volume;
 
-  it("should place the golden side delts on a track that runs to the maximum", () => {
-    const positions = setsBarPositionsOf({ actual: 5.5, planned: 11, target: sideDeltsTarget });
+  it("should place the golden side delts on a track that runs to 24 sets", () => {
+    const positions = setsBarPositionsOf({ actual: 5.5, planned: 11, bands });
 
-    expect(positions.done).toBeCloseTo(0.25, 5);
-    expect(positions.planned).toBeCloseTo(0.5, 5);
-    expect(positions.minimum).toBeCloseTo(6 / 22, 5);
-    expect(positions.bandStart).toBeCloseTo(10 / 22, 5);
-    expect(positions.bandEnd).toBeCloseTo(16 / 22, 5);
+    expect(positions.done).toBeCloseTo(5.5 / 24, 5);
+    expect(positions.planned).toBeCloseTo(11 / 24, 5);
+    expect(positions.growingFrom).toBeCloseTo(4 / 24, 5);
+    expect(positions.productiveFrom).toBeCloseTo(10 / 24, 5);
+    expect(positions.highAbove).toBeCloseTo(20 / 24, 5);
   });
 
-  it("should hold a figure beyond the maximum at the end of the track", () => {
-    const positions = setsBarPositionsOf({ actual: 25, planned: 30, target: sideDeltsTarget });
+  it("should hold a figure beyond the track at the end of it", () => {
+    const positions = setsBarPositionsOf({ actual: 25, planned: 30, bands });
 
     expect(positions.done).toBe(1);
     expect(positions.planned).toBe(1);
   });
 
   it("should put nothing logged or planned at the start of the track", () => {
-    const positions = setsBarPositionsOf({ actual: 0, planned: 0, target: sideDeltsTarget });
+    const positions = setsBarPositionsOf({ actual: 0, planned: 0, bands });
 
     expect(positions.done).toBe(0);
     expect(positions.planned).toBe(0);
-  });
-});
-
-describe("the labels of the sets bar", () => {
-  const sideDeltsTarget = { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 };
-  const positionsFor = (planned: number) =>
-    setsBarPositionsOf({ actual: 5.5, planned, target: sideDeltsTarget });
-
-  it("should centre the minimum and the planned figure when they are well apart and clear of the edges", () => {
-    const positions = positionsFor(11);
-
-    expect(positions.plannedLabel).toBe("centre");
-    expect(positions.isPlannedLabelBelow).toBe(false);
-  });
-
-  it("should align a planned figure of 0 to the start and move it under the bar, clear of the 0", () => {
-    const positions = positionsFor(0);
-
-    expect(positions.plannedLabel).toBe("start");
-    expect(positions.isPlannedLabelBelow).toBe(true);
-  });
-
-  it("should move a planned figure of 7 under the bar, because the minimum of 6 is beside it", () => {
-    const positions = positionsFor(7);
-
-    expect(positions.plannedLabel).toBe("centre");
-    expect(positions.isPlannedLabelBelow).toBe(true);
-  });
-
-  it("should keep a planned figure of 10 on the bar, because it is well apart from the minimum of 6", () => {
-    expect(positionsFor(10).isPlannedLabelBelow).toBe(false);
-  });
-
-  it("should align a planned figure at the maximum to the end and move it under the bar, clear of the maximum", () => {
-    const positions = positionsFor(22);
-
-    expect(positions.plannedLabel).toBe("end");
-    expect(positions.isPlannedLabelBelow).toBe(true);
-  });
-
-  it.each([18, 19])(
-    "should move a planned figure of %s on a maximum of 22 under the bar, because it would meet the Max label",
-    (planned) => {
-      const positions = positionsFor(planned);
-
-      expect(positions.plannedLabel).toBe("centre");
-      expect(positions.isPlannedLabelBelow).toBe(true);
-    },
-  );
-
-  it("should keep a planned figure of 17 on a maximum of 22 on the bar, clear of the Max label", () => {
-    expect(positionsFor(17).isPlannedLabelBelow).toBe(false);
-  });
-
-  it("should keep the Min label clear of the 0 and the Max label for every size class of the training params", () => {
-    for (const { mev, mav, mrv } of Object.values(TRAINING_PARAMS_V1.sizeClasses)) {
-      const { minimum } = setsBarPositionsOf({ actual: 0, planned: 0, target: { mev, mav, mrv } });
-
-      expect(minimum).toBeGreaterThan(0.2);
-      expect(minimum).toBeLessThan(0.5);
-    }
-  });
-
-  it("should leave a minimum near the start at its share of the track, which the Min label is centred on", () => {
-    const positions = setsBarPositionsOf({
-      actual: 0,
-      planned: 10,
-      target: { mev: 1, mav: { low: 4, high: 8 }, mrv: 20 },
-    });
-
-    expect(positions.minimum).toBeCloseTo(0.05, 5);
-    expect(positions).not.toHaveProperty("minimumLabel");
-  });
-
-  it("should put every mark at the start of a track with no maximum", () => {
-    const positions = setsBarPositionsOf({
-      actual: 4,
-      planned: 8,
-      target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 0 },
-    });
-
-    expect(positions.done).toBe(0);
-    expect(positions.planned).toBe(0);
-    expect(positions.bandEnd).toBe(0);
   });
 });

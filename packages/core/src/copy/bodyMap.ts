@@ -15,6 +15,7 @@ import type { BodyMapView, GAP_VALUES, WarmMuscle } from "../training/bodyMapVal
 import type { MuscleListRow } from "../training/muscleList";
 import type { MuscleId } from "../training/muscles";
 import type { VolumeStatus } from "../training/muscleState";
+import type { VolumeBands } from "../training/params";
 
 /*
  * The words of the body map (KEY-340) as the boards `body · *`, `web-body · *`, `dashboard · training-card`
@@ -44,15 +45,15 @@ export const HEAT_STEP_NAMES: Readonly<Record<HeatStep, string>> = {
 };
 
 /**
- * The name of each volume status, keyed by the status. The boards' legend lists "Not targeted" first and
- * `VOLUME_STATUSES` lists it last, so a word is always read through the status, never by position.
+ * The name of each volume status, keyed by the status (Zee's ruling of 2026-10-27, KEY-726). The legend
+ * lists them in the order of `VOLUME_STATUSES`, but a word is still read through the status, never by position.
  */
 export const VOLUME_STATUS_NAMES: Readonly<Record<VolumeStatus, string>> = {
-  under: "Under",
+  not_trained: "Not trained",
   maintaining: "Maintaining",
+  growing: "Growing",
   productive: "Productive",
-  over: "Over",
-  not_targeted: "Not targeted",
+  high: "High",
 };
 
 /** The name of each gap value, keyed by the value. The same holds for "Not in plan", which the legend lists first. */
@@ -73,15 +74,15 @@ export const describeHeatStep = (step: number): string => {
   return HEAT_STEP_NAMES[step];
 };
 
-/** The legend of each scale in the order the boards draw it, which puts "not targeted" and "not in plan" first. */
+/** The legend of each scale in the order the boards draw it, which puts "not trained" and "not in plan" first. */
 export const BODY_MAP_LEGEND_ITEMS = {
   heat: [0, 1, 2, 3, 4, 5].map(describeHeatStep),
   volume: [
-    VOLUME_STATUS_NAMES.not_targeted,
-    VOLUME_STATUS_NAMES.under,
+    VOLUME_STATUS_NAMES.not_trained,
     VOLUME_STATUS_NAMES.maintaining,
+    VOLUME_STATUS_NAMES.growing,
     VOLUME_STATUS_NAMES.productive,
-    VOLUME_STATUS_NAMES.over,
+    VOLUME_STATUS_NAMES.high,
   ],
   gap: [
     GAP_VALUE_NAMES.not_in_plan,
@@ -175,7 +176,6 @@ export const BODY_MAP = {
 const HEAT_LEGEND_CAPTION =
   "How hard and how recently each muscle worked. It cools as you recover.";
 const WEB_HEAT_LEGEND_ADDITION = "Press and hold a muscle, or pick it below, for its details.";
-const VOLUME_LEGEND_CAPTION = "Sets this week against each muscle's target.";
 
 /** Items as a sentence lists them: "A", "A and B", "A, B and C". */
 export const joinInWords = (items: readonly string[]): string => {
@@ -259,13 +259,24 @@ export type LegendCaptionInput = Readonly<{
   surface: "mobile" | "web";
   /** `onPlanToleranceSets` of the compare params, which the gap caption states. */
   onPlanToleranceSets: number;
+  /** The volume bands of the training params, which the volume caption states. */
+  volumeBands: VolumeBands;
 }>;
+
+/** The caption under the volume legend: the sets each band starts at, the same on every surface. */
+const describeVolumeLegendCaption = ({
+  growingFromSets,
+  productiveFromSets,
+  highAboveSets,
+}: VolumeBands): string =>
+  `Sets this week, Monday to Sunday. Growing starts at ${describeSets(growingFromSets)}, Productive at ${productiveFromSets} and High above ${highAboveSets}.`;
 
 /** The caption under a scale's legend. */
 export const describeLegendCaption = ({
   scale,
   surface,
   onPlanToleranceSets,
+  volumeBands,
 }: LegendCaptionInput): string => {
   if (scale === "gap") {
     return `Sets done against your plan for the week. On plan means within ${describeSets(onPlanToleranceSets)}.`;
@@ -275,9 +286,7 @@ export const describeLegendCaption = ({
       ? `${HEAT_LEGEND_CAPTION} ${WEB_HEAT_LEGEND_ADDITION}`
       : HEAT_LEGEND_CAPTION;
   }
-  return surface === "web"
-    ? `${VOLUME_LEGEND_CAPTION} A muscle your routine and goal leave out is not targeted, so it never reads as under.`
-    : `${VOLUME_LEGEND_CAPTION} Over means above the maximum.`;
+  return describeVolumeLegendCaption(volumeBands);
 };
 
 export type BodyMapHeaderInput<Scale extends BodyMapScale = BodyMapScale> = Readonly<{
@@ -540,7 +549,7 @@ const TRUE_MINUS_SIGN = "\u2212";
 
 export type WebListCaptionInput =
   | { scale: "heat"; moreAtRest: number }
-  | { scale: "volume"; moreUnder: number; notTargeted: number }
+  | { scale: "volume"; notTrained: number }
   | { scale: "gap"; moreOnPlan: number; notInPlan: number };
 
 const withCounts = (lead: string, counts: readonly (string | null)[]): string => {
@@ -560,10 +569,7 @@ export const describeWebListCaption = (input: WebListCaptionInput): string => {
     return withCounts("Hottest first", [countOf(input.moreAtRest, "more at rest")]);
   }
   if (input.scale === "volume") {
-    return withCounts("Most sets first", [
-      countOf(input.moreUnder, "more under"),
-      countOf(input.notTargeted, "not targeted"),
-    ]);
+    return withCounts("Most sets first", [countOf(input.notTrained, "not trained")]);
   }
   return withCounts("Furthest behind first", [
     countOf(input.moreOnPlan, "more on plan"),

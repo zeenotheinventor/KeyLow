@@ -48,10 +48,10 @@ describe("useMuscleDetail", () => {
         weeklySets: {
           actual: 5.5,
           planned: 11,
-          actualPosition: "below",
-          plannedPosition: "inside",
-          volumeStatus: "under",
-          target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
+          actualStatus: "growing",
+          plannedStatus: "productive",
+          volumeStatus: "growing",
+          bands: { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 },
         },
         targeting: { targeted: true, routineTrains: true, goalRanks: false },
       });
@@ -101,7 +101,7 @@ describe("useMuscleDetail", () => {
     });
   });
 
-  it("should read the abs as not targeted, with no last trained entry", async () => {
+  it("should read the abs as not trained, with no last trained entry", async () => {
     installTrainingFake(server, goldenWeekData);
 
     const { result } = renderDetail("abs");
@@ -111,7 +111,7 @@ describe("useMuscleDetail", () => {
     });
     expect(result.current.data).toMatchObject({
       heatPercent: 0,
-      weeklySets: { actual: 0, planned: 0, volumeStatus: "not_targeted" },
+      weeklySets: { actual: 0, planned: 0, volumeStatus: "not_trained" },
       targeting: { targeted: false, routineTrains: false, goalRanks: false },
       lastTrained: null,
     });

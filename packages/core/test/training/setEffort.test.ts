@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_RIR, MIN_RIR, SET_TYPES, setEffort, TRAINING_PARAMS_V1 } from "../../src/training";
+import { MAX_RIR, MIN_RIR, SET_TYPES, setEffort, TRAINING_PARAMS_V2 } from "../../src/training";
 
 import type { EffortSet, SetType } from "../../src/training";
 
 const effortOf = (set: Partial<EffortSet>): number =>
-  setEffort({ set_type: "working", rir: null, rpe: null, ...set }, TRAINING_PARAMS_V1);
+  setEffort({ set_type: "working", rir: null, rpe: null, ...set }, TRAINING_PARAMS_V2);
 
 const rirs = Array.from({ length: MAX_RIR - MIN_RIR + 1 }, (_, index) => MIN_RIR + index);
 const rpes = Array.from({ length: 19 }, (_, index) => 1 + index / 2);
@@ -80,8 +80,8 @@ describe("setEffort", () => {
 
   it("should take its factors from the params", () => {
     const params = {
-      ...TRAINING_PARAMS_V1,
-      effort: { ...TRAINING_PARAMS_V1.effort, unknown: 0.75, hardMaxRir: 1 },
+      ...TRAINING_PARAMS_V2,
+      effort: { ...TRAINING_PARAMS_V2.effort, unknown: 0.75, hardMaxRir: 1 },
     };
 
     expect(setEffort({ set_type: "working", rir: null, rpe: null }, params)).toBe(0.75);

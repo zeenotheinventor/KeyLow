@@ -1,10 +1,9 @@
 import { muscleIdSchema } from "@keylow/core/schemas";
 import {
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   MUSCLE_IDS,
   compareWeek,
   projectWeek,
-  targetedMuscles,
   volumeValues,
 } from "@keylow/core/training";
 import { act, renderHook, waitFor } from "@testing-library/react";
@@ -280,17 +279,17 @@ describe("useBodyMap, volume", () => {
       expect(projected.result.current.data).toBeDefined();
     });
 
-    // 0 under, 1 maintaining, 2 productive, 3 over, 4 not targeted.
+    // 0 not trained, 1 maintaining, 2 growing, 3 productive, 4 high.
     expect(actual.result.current.data?.values).toMatchObject({
-      delt_front: 1,
-      chest_upper: 0,
-      neck: 4,
+      delt_front: 2,
+      chest_upper: 2,
+      neck: 0,
     });
     expect(projected.result.current.data?.values).toMatchObject({
-      triceps: 2,
-      lats: 1,
-      traps_mid: 0,
-      neck: 4,
+      triceps: 3,
+      lats: 3,
+      traps_mid: 2,
+      neck: 0,
     });
   });
 
@@ -310,20 +309,16 @@ describe("useBodyMap, volume", () => {
       GOLDEN_WEEK_START,
       "Europe/London",
       { sessions, sets: sessions.flatMap((session) => session.sets) },
-      COMPARE_PARAMS_V1,
+      COMPARE_PARAMS_V2,
     );
     expect(result.current.data?.values).toStrictEqual(
-      volumeValues(
-        compareWeek(actual, projected, COMPARE_PARAMS_V1),
-        targetedMuscles({ routine }),
-        "projected",
-      ),
+      volumeValues(compareWeek(actual, projected, COMPARE_PARAMS_V2), "projected"),
     );
   });
 });
 
 describe("useBodyMap, with a training goal", () => {
-  it("should target what the goal ranks whatever the routine, in the volume numbers", async () => {
+  it("should give the volume numbers of the sets alone, whatever the goal ranks", async () => {
     const goal = trainingGoalsRow(vTaperAnswers);
     installTrainingFake(server, {
       sets: benchSets("2026-10-15T09:00:00+00:00"),
@@ -344,19 +339,10 @@ describe("useBodyMap, with a training goal", () => {
       GOLDEN_WEEK_START,
       "Europe/London",
       { sessions, sets: sessions.flatMap((session) => session.sets) },
-      COMPARE_PARAMS_V1,
+      COMPARE_PARAMS_V2,
     );
-    const comparison = compareWeek(actual, projected, COMPARE_PARAMS_V1);
     expect(result.current.data?.values).toStrictEqual(
-      volumeValues(
-        comparison,
-        targetedMuscles({ routine, priority: goal.muscle_priority }),
-        "actual",
-      ),
-    );
-    // The goal changes the numbers: the routine alone leaves the lats untargeted.
-    expect(result.current.data?.values.lats).not.toBe(
-      volumeValues(comparison, targetedMuscles({ routine }), "actual").lats,
+      volumeValues(compareWeek(actual, projected, COMPARE_PARAMS_V2), "actual"),
     );
   });
 

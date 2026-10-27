@@ -1,7 +1,7 @@
 import { LOADED_HEAT_PERCENT } from "./bodyMapValues";
 import { heatPercentOf } from "./heatReadout";
 import { muscleState, parseMoment } from "./muscleState";
-import { TRAINING_PARAMS_V1 } from "./params";
+import { TRAINING_PARAMS_V2 } from "./params";
 import { describeTrainingReminder, TRAINING_REMINDER_VARIANTS } from "../copy/trainingReminders";
 import { addCalendarDays, dayNumber, daysSinceMonday } from "../dates/calendarDay";
 import { parseClockTime } from "../dates/clockTime";
@@ -168,7 +168,7 @@ export const planTrainingReminders = ({
   plan,
   sessions,
   heatSets,
-  params = TRAINING_PARAMS_V1,
+  params = TRAINING_PARAMS_V2,
   weeklyGain,
   lastVariantIds,
 }: TrainingReminderInput): PlannedTrainingReminder[] => {

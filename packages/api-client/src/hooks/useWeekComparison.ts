@@ -1,4 +1,4 @@
-import { COMPARE_PARAMS_V1, compareWeek, projectWeek } from "@keylow/core/training";
+import { COMPARE_PARAMS_V2, compareWeek, projectWeek } from "@keylow/core/training";
 import { skipToken, useQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
 
@@ -57,9 +57,9 @@ export function useWeekComparison(
         weekStart,
         zone,
         { sessions, sets: sessions.flatMap((session) => session.sets) },
-        COMPARE_PARAMS_V1,
+        COMPARE_PARAMS_V2,
       );
-      return compareWeek(actual, projected, COMPARE_PARAMS_V1);
+      return compareWeek(actual, projected, COMPARE_PARAMS_V2);
     },
     [weekStart, zone, activeRoutine],
   );

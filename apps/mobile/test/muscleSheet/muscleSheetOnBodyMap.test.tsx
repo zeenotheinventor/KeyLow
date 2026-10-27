@@ -1,6 +1,6 @@
 import { KeyLowProvider, keys, useBodyMap, useMuscleDetail } from "@keylow/api-client";
 import { describeMuscleSheet } from "@keylow/core/copy";
-import { BODY_ARTWORK, TRAINING_PARAMS_V1 } from "@keylow/core/training";
+import { BODY_ARTWORK, TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import {
   act,
   cleanup,
@@ -113,10 +113,10 @@ const sideDelts: MuscleDetail = {
   weeklySets: {
     actual: 5.5,
     planned: 11,
-    target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
-    actualPosition: "below",
-    plannedPosition: "inside",
-    volumeStatus: "under",
+    bands: { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 },
+    actualStatus: "growing",
+    plannedStatus: "productive",
+    volumeStatus: "growing",
   },
   targeting: { targeted: true, routineTrains: true, goalRanks: false },
   lastTrained: {
@@ -141,7 +141,14 @@ const abs: MuscleDetail = {
   muscle: "abs",
   heatPercent: 0,
   heatStep: 0,
-  weeklySets: { ...sideDelts.weeklySets, actual: 0, planned: 0 },
+  weeklySets: {
+    ...sideDelts.weeklySets,
+    actual: 0,
+    planned: 0,
+    actualStatus: "not_trained",
+    plannedStatus: "not_trained",
+    volumeStatus: "not_trained",
+  },
   targeting: { targeted: false, routineTrains: false, goalRanks: false },
   lastTrained: null,
 };
@@ -192,7 +199,7 @@ const routine: ActiveRoutine = {
 const context: MuscleSheetContext = {
   weekStart: WEEK_START,
   upcomingSessions: [{ localDate: "2026-10-17", routineDayName: "Push" }],
-  heatWindowDays: TRAINING_PARAMS_V1.heatWindowDays,
+  heatWindowDays: TRAINING_PARAMS_V2.heatWindowDays,
   weightingExample: { exerciseName: "shoulder press", weight: 0.5 },
 };
 
@@ -290,7 +297,7 @@ describe("the muscle sheet on the body map", () => {
     jest.restoreAllMocks();
   });
 
-  describe("a muscle that is targeted", () => {
+  describe("a muscle with sets this week", () => {
     it("should open on a long press, as a dialog named for the muscle", async () => {
       await openScreen();
 
@@ -306,8 +313,8 @@ describe("the muscle sheet on the body map", () => {
       await longPress("Side delts");
 
       const copy = describeMuscleSheet(sideDelts, context);
-      if (copy.kind !== "targeted") {
-        throw new Error("The side delts are targeted");
+      if (copy.kind !== "trained") {
+        throw new Error("The side delts have sets");
       }
       const { heat, ready, weeklySets, lastTrained } = copy;
       expectSheetToShow("Side delts", [
@@ -336,8 +343,8 @@ describe("the muscle sheet on the body map", () => {
       await longPress("Side delts");
 
       const copy = describeMuscleSheet(sideDelts, context);
-      if (copy.kind !== "targeted") {
-        throw new Error("The side delts are targeted");
+      if (copy.kind !== "trained") {
+        throw new Error("The side delts have sets");
       }
       expect(screen.getByRole("img", { name: copy.weeklySets.barName })).toBeOnTheScreen();
       for (const label of Object.values(copy.weeklySets.barLabels)) {
@@ -351,8 +358,8 @@ describe("the muscle sheet on the body map", () => {
       await longPress("Hamstrings");
 
       const copy = describeMuscleSheet(hamstrings, context);
-      if (copy.kind !== "targeted") {
-        throw new Error("The hamstrings are targeted");
+      if (copy.kind !== "trained") {
+        throw new Error("The hamstrings have sets");
       }
       expectSheetToShow("Hamstrings", [copy.ready.value]);
     });
@@ -404,7 +411,7 @@ describe("the muscle sheet on the body map", () => {
       await pickDay(/^Monday 12 October/);
       await userEvent.setup().press(screen.getByRole("radio", { name: "Volume" }));
 
-      await userEvent.setup().longPress(muscleButton("Side delts", "Under"));
+      await userEvent.setup().longPress(muscleButton("Side delts", "Not trained"));
 
       expect(jest.mocked(useMuscleDetail).mock.lastCall?.[1]).toHaveProperty("at", undefined);
     });
@@ -429,15 +436,15 @@ describe("the muscle sheet on the body map", () => {
     });
   });
 
-  describe("a muscle that is not targeted", () => {
+  describe("a muscle with no sets this week", () => {
     it("should write the explanation and the footnote with the words describeMuscleSheet gives", async () => {
       await openScreen();
 
       await longPress("Abs");
 
       const copy = describeMuscleSheet(abs, context);
-      if (copy.kind !== "not_targeted") {
-        throw new Error("The abs are not targeted");
+      if (copy.kind !== "not_trained") {
+        throw new Error("The abs have no sets");
       }
       expectSheetToShow("Abs", [
         copy.subtitle,
@@ -451,7 +458,7 @@ describe("the muscle sheet on the body map", () => {
       ]);
     });
 
-    it("should leave out the buttons that edit the routine and the goal", async () => {
+    it("should leave out the buttons that edit the routine, which no screen can open from the sheet yet", async () => {
       await openScreen();
 
       await longPress("Abs");

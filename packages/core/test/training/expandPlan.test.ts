@@ -20,29 +20,29 @@ import {
 import { toLocalDate } from "../../src/dates";
 import {
   buildSetSnapshot,
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   expandPlan,
   muscleState,
-  TRAINING_PARAMS_V1,
-  TRAINING_PARAMS_VERSION,
+  TRAINING_PARAMS_V2,
+  TRAINING_PARAMS_VERSION_V2,
   weeklyVolume,
 } from "../../src/training";
 
 import type { CompareParams, PlanRoutineDay } from "../../src/training";
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
-describe("COMPARE_PARAMS_V1", () => {
-  // Every v1 value, written out. Changing one is a new params version, never an edit of this one.
-  it("should hold exactly the v1 values, with the v1 training params", () => {
-    expect(COMPARE_PARAMS_V1).toStrictEqual({
-      version: "keylow-training-v1",
-      training: TRAINING_PARAMS_V1,
+describe("COMPARE_PARAMS_V2", () => {
+  // Every v2 value, written out. Changing one is a new params version, never an edit of this one.
+  it("should hold exactly the v2 values, with the v2 training params", () => {
+    expect(COMPARE_PARAMS_V2).toStrictEqual({
+      version: "keylow-training-v2",
+      training: TRAINING_PARAMS_V2,
       plannedTime: { hour: 18, minute: 0 },
       onPlanToleranceSets: 1,
     } satisfies CompareParams);
-    expect(COMPARE_PARAMS_V1.version).toBe(TRAINING_PARAMS_VERSION);
-    expect(COMPARE_PARAMS_V1.training).toBe(TRAINING_PARAMS_V1);
+    expect(COMPARE_PARAMS_V2.version).toBe(TRAINING_PARAMS_VERSION_V2);
+    expect(COMPARE_PARAMS_V2.training).toBe(TRAINING_PARAMS_V2);
   });
 });
 

@@ -9,7 +9,7 @@ import {
   MUSCLE_IDS,
   muscleState,
   PLAN_STATUSES,
-  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   volumeValues,
   warmestMuscles,
 } from "../../src/training";
@@ -72,8 +72,8 @@ describe("the body map values", () => {
       fc.property(anyHeatStates, anyComparison, anyTargeted, (states, comparison, targeted) => {
         for (const values of [
           heatValues(states),
-          volumeValues(comparison, targeted, "actual"),
-          volumeValues(comparison, targeted, "projected"),
+          volumeValues(comparison, "actual"),
+          volumeValues(comparison, "projected"),
           gapValues(comparison, targeted),
         ]) {
           expect(Object.keys(values).sort()).toStrictEqual(sortedIds);
@@ -95,8 +95,8 @@ describe("the body map values", () => {
 
           expect(heatValues(shuffledStates)).toStrictEqual(heatValues(states));
           expect(warmestMuscles(shuffledStates)).toStrictEqual(warmestMuscles(states));
-          expect(volumeValues(shuffledComparison, targeted, "actual")).toStrictEqual(
-            volumeValues(comparison, targeted, "actual"),
+          expect(volumeValues(shuffledComparison, "actual")).toStrictEqual(
+            volumeValues(comparison, "actual"),
           );
           expect(gapValues(shuffledComparison, targeted)).toStrictEqual(
             gapValues(comparison, targeted),
@@ -112,9 +112,6 @@ describe("the body map values", () => {
         const rebuilt = new Set(order.filter((muscle) => targeted.has(muscle)));
 
         expect(gapValues(comparison, rebuilt)).toStrictEqual(gapValues(comparison, targeted));
-        expect(volumeValues(comparison, rebuilt, "projected")).toStrictEqual(
-          volumeValues(comparison, targeted, "projected"),
-        );
       }),
     );
   });
@@ -128,7 +125,7 @@ describe("the body map values", () => {
           );
 
         expect(within(heatValues(states), 5)).toBe(true);
-        expect(within(volumeValues(comparison, targeted, "actual"), 4)).toBe(true);
+        expect(within(volumeValues(comparison, "actual"), 4)).toBe(true);
         expect(within(gapValues(comparison, targeted), 3)).toBe(true);
       }),
     );
@@ -173,7 +170,7 @@ describe("the heat step and the ready test", () => {
             performed_at: at(MORNING - Math.floor(daysBefore * DAY)),
           }),
         );
-        const states = muscleState(sets, now, TRAINING_PARAMS_V1);
+        const states = muscleState(sets, now, TRAINING_PARAMS_V2);
         const steps = heatValues(states);
 
         for (const muscle of MUSCLE_IDS) {
@@ -198,7 +195,7 @@ describe("the heat step and the ready test", () => {
           const sets = Array.from({ length: count }, () =>
             heatSet([{ muscle_id: "lats", role: "primary", weight }]),
           );
-          const state = muscleState(sets, now, TRAINING_PARAMS_V1).lats;
+          const state = muscleState(sets, now, TRAINING_PARAMS_V2).lats;
 
           expect(
             heatValues({ ...recordOfMuscles(() => ({ heat: 0 })), lats: state }).lats <= 1,

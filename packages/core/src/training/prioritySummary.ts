@@ -24,7 +24,7 @@ const FIRST_PRIORITY: MusclePriorityLevel = 3;
 export const PRIORITY_GROUP_VOLUME_STATUS = {
   first: "productive",
   keptUp: "maintaining",
-  notTargeted: "not_targeted",
+  notTargeted: "not_trained",
 } as const satisfies Readonly<Record<string, VolumeStatus>>;
 
 export type PrioritySummary = Readonly<{

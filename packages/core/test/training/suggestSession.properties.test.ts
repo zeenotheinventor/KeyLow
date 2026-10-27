@@ -9,7 +9,7 @@ import {
   MUSCLE_ROLES,
   SESSION_TIME_PARAMS_V1,
   suggestSession,
-  SUGGEST_PARAMS_V1,
+  SUGGEST_PARAMS_V2,
 } from "../../src/training";
 
 import type {
@@ -129,7 +129,7 @@ const run = (scenario: Scenario) =>
     goalsOf(scenario, MUSCLE_IDS),
     scenario.library,
     {},
-    SUGGEST_PARAMS_V1,
+    SUGGEST_PARAMS_V2,
   );
 
 describe("suggestSession properties", () => {
@@ -150,7 +150,7 @@ describe("suggestSession properties", () => {
           },
           shuffledLibrary,
           {},
-          SUGGEST_PARAMS_V1,
+          SUGGEST_PARAMS_V2,
         );
         expect(JSON.stringify(shuffled)).toBe(JSON.stringify(run(scenario)));
       }),
@@ -183,7 +183,7 @@ describe("suggestSession properties", () => {
         }
         const ids = result.exercises.map((exercise) => exercise.exercise_id);
         expect(new Set(ids).size).toBe(ids.length);
-        expect(ids.length).toBeLessThanOrEqual(SUGGEST_PARAMS_V1.maxExercises.fresh);
+        expect(ids.length).toBeLessThanOrEqual(SUGGEST_PARAMS_V2.maxExercises.fresh);
         for (const id of ids) {
           const chosen = scenario.library.find((exercise) => exercise.id === id);
           expect(chosen).toBeDefined();
@@ -191,7 +191,7 @@ describe("suggestSession properties", () => {
           for (const entry of chosen?.muscles ?? []) {
             if (entry.role === "primary") {
               expect(scenario.heats[entry.muscle_id]).toBeLessThanOrEqual(
-                SUGGEST_PARAMS_V1.hotHeatThreshold,
+                SUGGEST_PARAMS_V2.hotHeatThreshold,
               );
             }
           }
@@ -205,7 +205,7 @@ describe("suggestSession properties", () => {
       fc.property(scenarios, (scenario) => {
         const result = run(scenario);
         for (const skipped of result.skipped) {
-          expect(skipped.heat).toBeGreaterThan(SUGGEST_PARAMS_V1.hotHeatThreshold);
+          expect(skipped.heat).toBeGreaterThan(SUGGEST_PARAMS_V2.hotHeatThreshold);
         }
         if (result.kind === "session") {
           for (const exercise of result.exercises) {

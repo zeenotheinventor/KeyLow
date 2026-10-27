@@ -1,5 +1,5 @@
 import { GOAL_PRESETS_V1 } from "../goalPresets";
-import { TRAINING_PARAMS_V1, TRAINING_PARAMS_VERSION } from "../params";
+import { TRAINING_PARAMS_V2, TRAINING_PARAMS_VERSION_V2 } from "../params";
 import { SESSION_TIME_PARAMS_V1 } from "../sessionTime";
 
 import type { GoalPresets } from "../goalPresets";
@@ -7,7 +7,7 @@ import type { TrainingParams } from "../params";
 import type { SessionTimeParams } from "../sessionTime";
 
 /*
- * The tunables of `suggestSession` (ADR 0005, "Goals and suggestions"). Like `COMPARE_PARAMS_V1` they sit
+ * The tunables of `suggestSession` (ADR 0005, "Goals and suggestions"). Like `COMPARE_PARAMS_V2` they sit
  * in their own object, carrying the training params version, so the presets, the heat model and the
  * session length keep their own pinned objects and this one only adds what the suggestion itself decides.
  * A change to any value is a new version, never an edit of this one, because a suggestion records the
@@ -21,7 +21,7 @@ import type { SessionTimeParams } from "../sessionTime";
 export type ExerciseTieBreak = "exercise_score" | "compound_first" | "name" | "id";
 
 export type SuggestParams = Readonly<{
-  version: typeof TRAINING_PARAMS_VERSION;
+  version: typeof TRAINING_PARAMS_VERSION_V2;
   /** The heat and volume numbers a muscle's score is read with. */
   training: TrainingParams;
   /** The sets per suggested exercise (by experience) and its reps and target RIR (by goal and mechanic). */
@@ -36,9 +36,9 @@ export type SuggestParams = Readonly<{
 }>;
 
 /** The values Zee agreed on KEY-396 (Part 3): hot above 0.5, 8 exercises fresh and 2 added to a planned day. */
-export const SUGGEST_PARAMS_V1: SuggestParams = {
-  version: TRAINING_PARAMS_VERSION,
-  training: TRAINING_PARAMS_V1,
+export const SUGGEST_PARAMS_V2: SuggestParams = {
+  version: TRAINING_PARAMS_VERSION_V2,
+  training: TRAINING_PARAMS_V2,
   presets: GOAL_PRESETS_V1,
   sessionTime: SESSION_TIME_PARAMS_V1,
   hotHeatThreshold: 0.5,

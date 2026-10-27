@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { heatSet, lateralRaise, repeat } from "./heatSets";
-import { COMPARE_PARAMS_V1, compareWeek, MUSCLE_IDS, PLAN_STATUSES } from "../../src/training";
+import { COMPARE_PARAMS_V2, compareWeek, MUSCLE_IDS, PLAN_STATUSES } from "../../src/training";
 
 import type { CompareParams } from "../../src/training";
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
 describe("compareWeek", () => {
   it("should give every muscle id, in the order of the list, at 0 and on plan with no sets", () => {

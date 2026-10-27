@@ -1,5 +1,5 @@
 import { BODY_MAP, BODY_MAP_LEGEND_ITEMS, describeLegendCaption } from "@keylow/core/copy";
-import { COMPARE_PARAMS_V1 } from "@keylow/core/training";
+import { COMPARE_PARAMS_V2, VOLUME_BANDS_V2 } from "@keylow/core/training";
 import { View } from "react-native";
 
 import { heatSwatchClassNames } from "../HeatSwatch";
@@ -10,17 +10,17 @@ import type { BodyMapLegendProps } from "./types";
 // Each swatch is written next to its name, in the order of the boards, so a legend item can never be left
 // without a colour. The names are core's `BODY_MAP_LEGEND_ITEMS` and the classes are written out so Tailwind
 // sees them. The heat legend goes from the rested step up to the peak, with the classes every heat swatch
-// shares, and only the peak glows. Volume starts with Not targeted, and Gap with Not in plan, which is drawn
+// shares, and only the peak glows. Volume starts with Not trained, and Gap with Not in plan, which is drawn
 // in the same colour.
 const volumeSwatches = [
-  "bg-volume-not-targeted",
-  "bg-volume-under",
+  "bg-volume-not-trained",
   "bg-volume-maintaining",
+  "bg-volume-growing",
   "bg-volume-productive",
-  "bg-volume-over",
+  "bg-volume-high",
 ] as const;
 const gapSwatches = [
-  "bg-volume-not-targeted",
+  "bg-volume-not-trained",
   "bg-gap-behind",
   "bg-gap-on-plan",
   "bg-gap-ahead",
@@ -50,7 +50,8 @@ export function BodyMapLegend({ scale }: BodyMapLegendProps) {
   const caption = describeLegendCaption({
     scale,
     surface: "mobile",
-    onPlanToleranceSets: COMPARE_PARAMS_V1.onPlanToleranceSets,
+    onPlanToleranceSets: COMPARE_PARAMS_V2.onPlanToleranceSets,
+    volumeBands: VOLUME_BANDS_V2,
   });
 
   return (

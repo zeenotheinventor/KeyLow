@@ -4,7 +4,7 @@ import { MUSCLE_IDS, MUSCLES } from "./muscles";
 import { setEffort } from "./setEffort";
 
 import type { MuscleId } from "./muscles";
-import type { MuscleParams, TrainingParams, VolumeLandmarks } from "./params";
+import type { MuscleParams, TrainingParams, VolumeBands } from "./params";
 import type { EffortSet } from "./setEffort";
 import type { SetSnapshot, WorkoutSetRow } from "../schemas/training";
 
@@ -16,16 +16,16 @@ import type { SetSnapshot, WorkoutSetRow } from "../schemas/training";
  */
 
 /**
- * Where a muscle's weekly sets sit against its landmarks, or `not_targeted` for a muscle the plan and the
- * goal do not train that has not reached its MEV (ADR 0005, Zee's ruling E on KEY-339). `not_targeted`
- * comes last, so the order of the four landmark statuses is unchanged.
+ * Where a muscle's weekly sets sit among the five bands of `keylow-training-v2` (ADR 0005, Amendment 6),
+ * from the least to the most. The index of a status in this list is the value the volume scale of the body
+ * map carries (`volumeValues`), so a change to the order is a change to the encoding.
  */
 export const VOLUME_STATUSES = [
-  "under",
+  "not_trained",
   "maintaining",
+  "growing",
   "productive",
-  "over",
-  "not_targeted",
+  "high",
 ] as const;
 
 export type VolumeStatus = (typeof VOLUME_STATUSES)[number];
@@ -57,7 +57,7 @@ const MILLISECONDS_PER_DAY = 24 * MILLISECONDS_PER_HOUR;
 
 /*
  * Weekly sets are rounded to nine decimal places, so floating point drift never moves a status
- * across a landmark: ten sets at a weight of 0.1 are exactly 1, not 0.9999999999999999.
+ * across a band edge: ten sets at a weight of 0.1 are exactly 1, not 0.9999999999999999.
  */
 const WEEKLY_SETS_SCALE = 1e9;
 
@@ -69,27 +69,22 @@ export const muscleParams = (muscle: MuscleId, params: TrainingParams): MusclePa
 };
 
 /**
- * Under below MEV, maintaining from MEV to below the low end of MAV, productive from there up to and
- * including MRV, and over above MRV. Between the high end of MAV and MRV a muscle still recovers from
- * its volume and still grows, so v1 calls it productive rather than adding a status the ADR does not
- * name; a screen that wants to warn there compares with `mav.high` itself.
- *
- * A muscle that is not targeted (`targeted` false) is `not_targeted` where it would be under, and
- * keeps its real status from MEV up, so a muscle the user in fact trains is never hidden and
- * over-training is never masked. `targeted` is true when left out.
+ * Not trained at 0 sets, Maintaining from just above 0 to below `growingFromSets`, Growing from there to
+ * below `productiveFromSets`, Productive from there up to and including `highAboveSets`, and High above it.
+ * The plan does not change the status: a muscle with no sets is Not trained whether or not the routine or
+ * the goal trains it.
  */
-export const volumeStatusOf = (
-  weeklySets: number,
-  landmarks: VolumeLandmarks,
-  targeted = true,
-): VolumeStatus => {
-  if (weeklySets < landmarks.mev) {
-    return targeted ? "under" : "not_targeted";
+export const volumeStatusOf = (weeklySets: number, bands: VolumeBands): VolumeStatus => {
+  if (weeklySets <= 0) {
+    return "not_trained";
   }
-  if (weeklySets < landmarks.mav.low) {
+  if (weeklySets < bands.growingFromSets) {
     return "maintaining";
   }
-  return weeklySets <= landmarks.mrv ? "productive" : "over";
+  if (weeklySets < bands.productiveFromSets) {
+    return "growing";
+  }
+  return weeklySets <= bands.highAboveSets ? "productive" : "high";
 };
 
 // The schemas' timestamp rule: a zone designator is required, so a time never depends on the device zone.
@@ -170,7 +165,6 @@ const volumeOf = (
   stimuli: Map<MuscleId, Stimulus[]>,
   asOf: number,
   params: TrainingParams,
-  targeted: ReadonlySet<MuscleId> | undefined,
 ): Record<MuscleId, MuscleVolume> =>
   byMuscle((muscle) => {
     const weeklySets = weightedSetsOf(
@@ -178,11 +172,7 @@ const volumeOf = (
     );
     return {
       weeklySets,
-      volumeStatus: volumeStatusOf(
-        weeklySets,
-        muscleParams(muscle, params),
-        targeted === undefined || targeted.has(muscle),
-      ),
+      volumeStatus: volumeStatusOf(weeklySets, muscleParams(muscle, params).volume),
     };
   });
 
@@ -202,20 +192,16 @@ export const weightedSetsByMuscle = (
 
 /**
  * Each muscle's effort-weighted sets over the volume window ending at `asOf` (the last 7 days in v1,
- * `asOf` included and the moment exactly a window earlier not), and its status against its landmarks.
+ * `asOf` included and the moment exactly a window earlier not), and its volume status.
  * Every muscle id is present, at 0 sets when nothing trained it.
- *
- * `targeted` is the muscles the plan and the goal train (`targetedMuscles`). A muscle outside it is
- * `not_targeted` where it would be under. Left out, every muscle is targeted.
  */
 export const weeklyVolume = (
   sets: readonly HeatSet[],
   asOf: string,
   params: TrainingParams,
-  targeted?: ReadonlySet<MuscleId>,
 ): Record<MuscleId, MuscleVolume> => {
   const at = parseMoment(asOf);
-  return volumeOf(stimuliUpTo(sets, at, params), at, params, targeted);
+  return volumeOf(stimuliUpTo(sets, at, params), at, params);
 };
 
 /**
@@ -227,10 +213,6 @@ export const weeklyVolume = (
  * `now + τ · ln(F / θ)`, rounded up to the next millisecond so fatigue is never above θ at that moment,
  * and at `now` when F is already at or below θ. A set after `now` has not happened yet and adds nothing.
  *
- * `targeted` is the muscles the plan and the goal train (`targetedMuscles`). It changes the volume status
- * only: a muscle outside it is `not_targeted` where it would be under, and its heat, ready at and weekly
- * sets are as they would be without it. Left out, every muscle is targeted.
- *
  * Throws a `RangeError` naming the rule when `now` or a set's `performed_at` is not an ISO timestamp
  * with a zone.
  */
@@ -238,12 +220,11 @@ export const muscleState = (
   sets: readonly HeatSet[],
   now: string,
   params: TrainingParams,
-  targeted?: ReadonlySet<MuscleId>,
 ): Record<MuscleId, MuscleState> => {
   const at = parseMoment(now);
   const nowIso = new Date(at).toISOString();
   const stimuli = stimuliUpTo(sets, at, params);
-  const volume = volumeOf(stimuli, at, params, targeted);
+  const volume = volumeOf(stimuli, at, params);
   return byMuscle((muscle) => {
     const { tauHours, capacity, threshold } = muscleParams(muscle, params);
     const tau = tauHours * MILLISECONDS_PER_HOUR;

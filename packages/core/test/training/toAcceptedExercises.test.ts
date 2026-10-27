@@ -6,7 +6,7 @@ import { goalsWith, libraryExercise, plannedDayOf, stateWith } from "./suggestPl
 import {
   buildSetSnapshot,
   suggestSession,
-  SUGGEST_PARAMS_V1,
+  SUGGEST_PARAMS_V2,
   toAcceptedExercises,
 } from "../../src/training";
 
@@ -34,7 +34,7 @@ describe("toAcceptedExercises", () => {
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       { plannedDay: legs },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     const press = GOLDEN_LIBRARY.find((each) => each.id === idOf("Incline Dumbbell Press"));
     if (press === undefined) {
@@ -65,7 +65,7 @@ describe("toAcceptedExercises", () => {
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       { plannedDay: legs },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     const [accepted] = toAcceptedExercises(suggestion, GOLDEN_LIBRARY);
     expect(accepted?.snapshot).toMatchObject({
@@ -101,7 +101,7 @@ describe("toAcceptedExercises", () => {
           { exercise: cableRow, sets: 4 },
         ]),
       },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     expect(toAcceptedExercises(suggestion, library)).toMatchObject([
       {
@@ -121,7 +121,7 @@ describe("toAcceptedExercises", () => {
       goalsWith({}),
       GOLDEN_LIBRARY,
       { plannedDay: legs },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     expect(suggestion.kind).toBe("nothing");
     expect(toAcceptedExercises(suggestion, GOLDEN_LIBRARY)).toStrictEqual([]);
@@ -133,16 +133,16 @@ describe("toAcceptedExercises", () => {
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       {},
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     const accepted = toAcceptedExercises(suggestion, GOLDEN_LIBRARY);
     expect(accepted.map((each) => each.exercise_id)).toStrictEqual([
       idOf("Barbell Deadlift"),
-      idOf("Incline Dumbbell Press"),
       idOf("Barbell Squat"),
+      idOf("Incline Dumbbell Press"),
       idOf("Side Lateral Raise"),
       idOf("Romanian Deadlift"),
-      idOf("Barbell Bench Press - Medium Grip"),
+      idOf("Standing Calf Raises"),
     ]);
     expect(accepted.map((each) => each.position)).toStrictEqual([0, 1, 2, 3, 4, 5]);
   });
@@ -153,7 +153,7 @@ describe("toAcceptedExercises", () => {
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       { plannedDay: legs },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     let error: unknown;
     try {

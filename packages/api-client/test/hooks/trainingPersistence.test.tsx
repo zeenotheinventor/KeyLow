@@ -1,10 +1,9 @@
 import {
-  COMPARE_PARAMS_V1,
-  TRAINING_PARAMS_V1,
+  COMPARE_PARAMS_V2,
+  TRAINING_PARAMS_V2,
   compareWeek,
   muscleState,
   projectWeek,
-  targetedMuscles,
 } from "@keylow/core/training";
 import { dehydrate, hydrate, onlineManager } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
@@ -12,14 +11,12 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { useMuscleState } from "../../src/hooks/useMuscleState";
-import { useTrainingGoals } from "../../src/hooks/useTrainingGoals";
 import { useWeekComparison } from "../../src/hooks/useWeekComparison";
 import { KeyLowProvider } from "../../src/KeyLowProvider";
 import { keys } from "../../src/queryKeys";
 import { createTestClient } from "../createTestClient";
 import { createQueryClient } from "../support/queryClients";
 import { installTrainingFake, routineRow, sessionRow, setRow } from "../support/training";
-import { trainingGoalsRow, vTaperAnswers } from "../support/trainingGoals";
 import { createWrapper } from "../support/wrapper";
 
 import type { ActiveRoutine, TrainingSet, WeekSession } from "../../src";
@@ -144,102 +141,12 @@ describe("the training reads in a persisted cache", () => {
     });
     // Core, called directly on the rows that were stored (read back from storage), at the later moment.
     const storedRows = throughStorage(rows.sets ?? []);
-    const expected = muscleState(
-      storedRows,
-      EVENING,
-      TRAINING_PARAMS_V1,
-      targetedMuscles({ routine: rows.routine ?? null }),
-    );
+    const expected = muscleState(storedRows, EVENING, TRAINING_PARAMS_V2);
     expect(result.current.data).toEqual(expected);
     // And it is not the heat of the morning, which is what a stored result would have shown.
     expect(result.current.data?.chest_lower.heat).toBeLessThan(morning?.chest_lower.heat ?? 0);
     expect(result.current.data?.chest_lower.readyAt).not.toBe(morning?.chest_lower.readyAt);
     expect(fake.requests).toHaveLength(requestsBefore);
-  });
-
-  describe("the current training goal", () => {
-    const goal = trainingGoalsRow(vTaperAnswers);
-
-    it("should store the row of the goal and no status worked out from its priorities", async () => {
-      const { stored } = await openOnline({ ...seed(), goal });
-
-      const storedGoal = stored.queries.find(
-        ({ queryKey }) => JSON.stringify(queryKey) === JSON.stringify(keys.training.goals),
-      );
-      expect(storedGoal?.state.data).toEqual(goal);
-      for (const { state } of stored.queries) {
-        expect(JSON.stringify(state.data)).not.toContain("not_targeted");
-      }
-    });
-
-    it("should work out heat as with no goal from a cache saved before the goal was kept, with the network down", async () => {
-      const { fake, rows, stored } = await openOnline({ ...seed(), goal });
-      const withoutGoal = {
-        ...stored,
-        queries: stored.queries.filter(
-          ({ queryKey }) => JSON.stringify(queryKey) !== JSON.stringify(keys.training.goals),
-        ),
-      };
-      expect(withoutGoal.queries).toHaveLength(stored.queries.length - 1);
-      const restored = createQueryClient({ defaultOptions: { queries: { retry: false } } });
-      hydrate(restored, withoutGoal);
-      fake.goOffline();
-      onlineManager.setOnline(false);
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <KeyLowProvider client={createTestClient()} queryClient={restored}>
-          {children}
-        </KeyLowProvider>
-      );
-
-      const { result } = renderHook(() => useMuscleState(EVENING), { wrapper });
-
-      await waitFor(() => {
-        expect(result.current.data).toBeDefined();
-      });
-      expect(result.current.data).toEqual(
-        muscleState(
-          throughStorage(rows.sets ?? []),
-          EVENING,
-          TRAINING_PARAMS_V1,
-          targetedMuscles({ routine: rows.routine ?? null }),
-        ),
-      );
-    });
-
-    it("should give the stored goal back offline and work the targeted muscles out from it", async () => {
-      const { fake, rows, stored } = await openOnline({ ...seed(), goal });
-      const restored = createQueryClient({ defaultOptions: { queries: { retry: false } } });
-      hydrate(restored, stored);
-      fake.goOffline();
-      onlineManager.setOnline(false);
-      const requestsBefore = fake.requests.length;
-      const wrapper = ({ children }: { children: ReactNode }) => (
-        <KeyLowProvider client={createTestClient()} queryClient={restored}>
-          {children}
-        </KeyLowProvider>
-      );
-
-      const { result } = renderHook(
-        () => ({ goals: useTrainingGoals(), heat: useMuscleState(EVENING) }),
-        { wrapper },
-      );
-
-      await waitFor(() => {
-        expect(result.current.heat.data).toBeDefined();
-      });
-      expect(result.current.goals.data).toEqual(goal);
-      expect(result.current.heat.data).toEqual(
-        muscleState(
-          throughStorage(rows.sets ?? []),
-          EVENING,
-          TRAINING_PARAMS_V1,
-          targetedMuscles({ routine: rows.routine ?? null, priority: goal.muscle_priority }),
-        ),
-      );
-      expect(result.current.heat.data?.abs.volumeStatus).toBe("not_targeted");
-      expect(result.current.heat.data?.lats.volumeStatus).toBe("under");
-      expect(fake.requests).toHaveLength(requestsBefore);
-    });
   });
 
   it("should compute heat from the rows read the day before when restored on the next day with the network down", async () => {
@@ -262,12 +169,7 @@ describe("the training reads in a persisted cache", () => {
       expect(result.current.data).toBeDefined();
     });
     expect(restored.getQueryData(keys.training.sets("2026-10-03"))).toBeUndefined();
-    const expected = muscleState(
-      throughStorage(rows.sets ?? []),
-      NEXT_DAY,
-      TRAINING_PARAMS_V1,
-      targetedMuscles({ routine: rows.routine ?? null }),
-    );
+    const expected = muscleState(throughStorage(rows.sets ?? []), NEXT_DAY, TRAINING_PARAMS_V2);
     expect(result.current.data).toEqual(expected);
     expect(result.current.data?.chest_lower.heat).toBeGreaterThan(0);
     expect(fake.requests).toHaveLength(requestsBefore);
@@ -356,10 +258,10 @@ describe("the training reads in a persisted cache", () => {
         WEEK_START,
         "Europe/London",
         { sessions, sets: sessions.flatMap((session) => session.sets) },
-        COMPARE_PARAMS_V1,
+        COMPARE_PARAMS_V2,
       );
       expect(result.current.data).toEqual(
-        compareWeek(week.actual, week.projected, COMPARE_PARAMS_V1),
+        compareWeek(week.actual, week.projected, COMPARE_PARAMS_V2),
       );
       // Monday's Push was never planned, so there is nothing to be behind on.
       expect(result.current.data?.chest_lower).toMatchObject({ projectedWeeklySets: 0, gap: 0 });
@@ -387,13 +289,15 @@ describe("the training reads in a persisted cache", () => {
     return { wrapper };
   };
 
-  it("should stay pending offline when the sets were restored and the routine was not, so no muscle is shown as under", async () => {
+  it("should give the heat and statuses offline from the sets alone, since the routine decides nothing there", async () => {
     const { wrapper } = await restoreWithoutRoutine();
 
     const { result } = renderHook(() => useMuscleState(EVENING), { wrapper });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(result.current).toMatchObject({ data: undefined, isPending: true, isError: false });
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current).toMatchObject({ isPending: false, isError: false });
   });
 
   it("should stay pending offline when the week was restored and the routine was not, so it is not compared with an empty plan", async () => {
@@ -466,8 +370,8 @@ describe("the training reads in a persisted cache", () => {
       WEEK_START,
       "Europe/London",
       { sessions, sets: sessions.flatMap((session) => session.sets) },
-      COMPARE_PARAMS_V1,
+      COMPARE_PARAMS_V2,
     );
-    expect(result.current.data).toEqual(compareWeek(actual, projected, COMPARE_PARAMS_V1));
+    expect(result.current.data).toEqual(compareWeek(actual, projected, COMPARE_PARAMS_V2));
   });
 });

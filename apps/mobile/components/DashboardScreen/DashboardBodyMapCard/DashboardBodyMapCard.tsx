@@ -1,5 +1,5 @@
 import { BODY_MAP, describeBodyFigureLabel, describeDashboardBodyMapCard } from "@keylow/core/copy";
-import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import { View } from "react-native";
 
 import { todayPlanOf } from "./todayPlanOf";
@@ -23,7 +23,7 @@ export function DashboardBodyMapCard({ bodyMap, body, onOpen }: DashboardBodyMap
   const { warmestLine, todayLine, accessibleName } = describeDashboardBodyMapCard({
     warmest: bodyMap.warmest,
     today: todayPlanOf(bodyMap.today),
-    heatWindowDays: TRAINING_PARAMS_V1.heatWindowDays,
+    heatWindowDays: TRAINING_PARAMS_V2.heatWindowDays,
     opensBodyMap: true,
   });
   const figureLabel = (side: "front" | "back") =>

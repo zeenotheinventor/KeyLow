@@ -21,7 +21,7 @@ export type UseMuscleDetailInput = {
 
 /**
  * The muscle sheet of the body map for one muscle: heat, ready in, the calendar week's sets against the
- * target, why it is not targeted, and when it was last trained (core's `muscleDetail`). Read and kept as
+ * volume bands, and when it was last trained (core's `muscleDetail`). Read and kept as
  * `useBodyMap` does.
  */
 export function useMuscleDetail(

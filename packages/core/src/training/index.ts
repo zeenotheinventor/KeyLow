@@ -31,7 +31,7 @@ export {
 } from "./bounds";
 export { buildSetSnapshot } from "./buildSetSnapshot";
 export type { SnapshotExercise } from "./buildSetSnapshot";
-export { COMPARE_PARAMS_V1 } from "./compareParams";
+export { COMPARE_PARAMS_V2 } from "./compareParams";
 export type { CompareParams } from "./compareParams";
 export { compareWeek, PLAN_STATUSES } from "./compareWeek";
 export type { MusclePlanComparison, PlanStatus } from "./compareWeek";
@@ -74,8 +74,20 @@ export {
   weeklyVolume,
 } from "./muscleState";
 export type { HeatSet, MuscleState, MuscleVolume, VolumeStatus } from "./muscleState";
-export { TRAINING_PARAMS_V1, TRAINING_PARAMS_VERSION } from "./params";
-export type { EffortParams, MuscleParams, TrainingParams, VolumeLandmarks } from "./params";
+export {
+  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
+  TRAINING_PARAMS_VERSION,
+  TRAINING_PARAMS_VERSION_V2,
+  VOLUME_BANDS_V2,
+} from "./params";
+export type {
+  EffortParams,
+  MuscleParams,
+  TrainingParams,
+  TrainingParamsV1,
+  VolumeBands,
+} from "./params";
 export { parseSetSnapshot } from "./parseSetSnapshot";
 export type { ParsedSetSnapshot, SetSnapshotProblem } from "./parseSetSnapshot";
 export { projectedState, projectWeek } from "./projectWeek";
@@ -179,11 +191,10 @@ export type {
   MuscleDetailSession,
   MuscleDetailSet,
   MuscleDetailView,
-  RangePosition,
   WeeklySetsDetail,
 } from "./muscleDetail";
 export { setsBarPositionsOf, upcomingSessionsOf, weightingExampleOf } from "./muscleSheetContext";
-export type { LabelAnchor, SetsBarPositions } from "./muscleSheetContext";
+export type { SetsBarPositions } from "./muscleSheetContext";
 export { muscleListGroups } from "./muscleList";
 export type { MuscleListGroup, MuscleListRow } from "./muscleList";
 
@@ -258,7 +269,7 @@ export type {
 } from "./nutritionProposal";
 export { PRIORITY_GROUP_VOLUME_STATUS, summarisePriorities } from "./prioritySummary";
 export type { PrioritySummary } from "./prioritySummary";
-export { SUGGEST_PARAMS_V1 } from "./suggest/suggestParams";
+export { SUGGEST_PARAMS_V2 } from "./suggest/suggestParams";
 export type { ExerciseTieBreak, SuggestParams } from "./suggest/suggestParams";
 export { suggestSession } from "./suggest/suggestSession";
 export type {

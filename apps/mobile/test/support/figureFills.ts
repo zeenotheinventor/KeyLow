@@ -50,8 +50,8 @@ export function heatFill(scheme: ThemeScheme, step: number) {
 
 /** The fill a volume status (an index in core's `VOLUME_STATUSES`) is drawn with, as react-native-svg holds it. */
 export function volumeFill(scheme: ThemeScheme, status: number) {
-  const { under, maintaining, productive, over, notTargeted } = bodyMapPalette(scheme).volume;
-  const hex = [under, maintaining, productive, over, notTargeted][status];
+  const { notTrained, maintaining, growing, productive, high } = bodyMapPalette(scheme).volume;
+  const hex = [notTrained, maintaining, growing, productive, high][status];
   if (hex === undefined) {
     throw new RangeError("A volume status must be a whole number from 0 to 4");
   }

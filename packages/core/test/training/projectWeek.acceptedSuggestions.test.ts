@@ -18,7 +18,7 @@ import {
   WEEK,
 } from "./plans";
 import {
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   compareWeek,
   compareWeekSoFar,
   expandPlan,
@@ -36,7 +36,7 @@ import type { AcceptedSuggestion, LoggedWeek } from "../../src/training";
  * adds 3.00 effective sets to biceps. London is on BST, so the planned time 18:00 is 17:00 UTC.
  */
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
 const MONDAY = "2026-10-19";
 const TUESDAY = "2026-10-20";
@@ -556,23 +556,13 @@ describe("projectWeek with accepted suggestions", () => {
 
     it("should leave targetedMuscles unchanged: a muscle only a suggestion trains is not targeted by the plan", () => {
       expect(targetedMuscles({ routine: legsOnly }).has("biceps")).toBe(false);
-      expect(
-        projectedState(
-          week.projected,
-          wednesdayNoon,
-          LONDON,
-          params,
-          targetedMuscles({ routine: legsOnly }),
-        ).biceps,
-      ).toMatchObject({ weeklySets: 3, volumeStatus: "not_targeted" });
     });
 
-    it("should be targeted by the goal that produced the suggestion, as before", () => {
-      const targeted = targetedMuscles({ routine: legsOnly, priority: { biceps: 2 } });
-
-      expect(
-        projectedState(week.projected, wednesdayNoon, LONDON, params, targeted).biceps,
-      ).toMatchObject({ weeklySets: 3, volumeStatus: "under" });
+    it("should read the suggestion's sets like any others, whatever the plan targets", () => {
+      expect(projectedState(week.projected, wednesdayNoon, LONDON, params).biceps).toMatchObject({
+        weeklySets: 3,
+        volumeStatus: "maintaining",
+      });
     });
   });
 });

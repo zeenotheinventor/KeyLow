@@ -6,7 +6,7 @@ import {
   describeSavedMoment,
 } from "@keylow/core/copy";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import { useState } from "react";
 
 import { useBodyFigure } from "../../../lib/bodyFigure";
@@ -78,7 +78,7 @@ export function TrainBodyMap({ timeZone, savedAt, onOpenBodyMap }: TrainBodyMapP
       note={projectedAvailable ? null : BODY_MAP.toggle.projectedNeedsRoutine}
       subLine={
         actual.data.nothingLogged
-          ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays)
+          ? describeNothingLogged(TRAINING_PARAMS_V2.heatWindowDays)
           : savedOrNowSubLine
       }
       toggleLabel={toggleLabel}

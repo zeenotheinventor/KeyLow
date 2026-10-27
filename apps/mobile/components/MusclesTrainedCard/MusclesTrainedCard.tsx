@@ -1,5 +1,5 @@
 import { describeMusclesTrained, FINISH_SCREEN } from "@keylow/core/copy";
-import { sessionHeatValues, sessionMuscleSets, TRAINING_PARAMS_V1 } from "@keylow/core/training";
+import { sessionHeatValues, sessionMuscleSets, TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import { useMemo } from "react";
 import { View } from "react-native";
 
@@ -23,8 +23,8 @@ const SIDES = ["front", "back"] as const;
 export function MusclesTrainedCard({ sets, at }: MusclesTrainedCardProps) {
   const { rows, heatSteps } = useMemo(
     () => ({
-      rows: sessionMuscleSets(sets, TRAINING_PARAMS_V1),
-      heatSteps: sessionHeatValues(sets, at, TRAINING_PARAMS_V1),
+      rows: sessionMuscleSets(sets, TRAINING_PARAMS_V2),
+      heatSteps: sessionHeatValues(sets, at, TRAINING_PARAMS_V2),
     }),
     [sets, at],
   );

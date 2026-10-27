@@ -184,14 +184,14 @@ describe("useDashboardBodyMap", () => {
 
   it("should read again only the reads that failed", async () => {
     const fake = installTrainingFake(server, goldenWeekData);
-    fake.failWith("42501", "routines");
+    fake.failWith("42501", "workout_sets");
     const { wrapper } = createWrapper();
     const { result } = renderHook(() => useDashboardBodyMap({ now: CARD_MOMENT }), { wrapper });
     await waitFor(() => {
       expect(result.current.isError).toBe(true);
     });
     const zoneReads = fake.requestsTo("profiles").length;
-    const routineReads = fake.requestsTo("routines").length;
+    const setReads = fake.requestsTo("workout_sets").length;
     fake.failWith(null);
 
     await act(async () => {
@@ -201,7 +201,7 @@ describe("useDashboardBodyMap", () => {
     await waitFor(() => {
       expect(result.current.data).toBeDefined();
     });
-    expect(fake.requestsTo("routines").length).toBeGreaterThan(routineReads);
+    expect(fake.requestsTo("workout_sets").length).toBeGreaterThan(setReads);
     expect(fake.requestsTo("profiles")).toHaveLength(zoneReads);
   });
 });

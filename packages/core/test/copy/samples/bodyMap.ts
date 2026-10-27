@@ -1,4 +1,5 @@
 import * as copy from "../../../src/copy";
+import { TRAINING_PARAMS_V2 } from "../../../src/training";
 
 // Every function `src/copy/bodyMap.ts` exports, called with representative arguments. The voice test fails
 // when a function has no row, so no sentence escapes the sweep.
@@ -54,7 +55,12 @@ export const samples: Record<string, () => string[]> = {
   describeLegendCaption: () =>
     (["heat", "volume", "gap"] as const).flatMap((scale) =>
       (["mobile", "web"] as const).map((surface) =>
-        copy.describeLegendCaption({ scale, surface, onPlanToleranceSets: 1 }),
+        copy.describeLegendCaption({
+          scale,
+          surface,
+          onPlanToleranceSets: 1,
+          volumeBands: TRAINING_PARAMS_V2.sizeClasses.small.volume,
+        }),
       ),
     ),
   describeBodyMapHeader: () =>
@@ -162,7 +168,7 @@ export const samples: Record<string, () => string[]> = {
     }),
   describeWebListCaption: () => [
     copy.describeWebListCaption({ scale: "heat", moreAtRest: 10 }),
-    copy.describeWebListCaption({ scale: "volume", moreUnder: 3, notTargeted: 7 }),
+    copy.describeWebListCaption({ scale: "volume", notTrained: 7 }),
     copy.describeWebListCaption({ scale: "gap", moreOnPlan: 3, notInPlan: 7 }),
   ],
   describeVolumeListRow: () =>

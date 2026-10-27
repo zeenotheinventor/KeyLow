@@ -4,19 +4,23 @@ import { WeeklySetsBar } from "./WeeklySetsBar";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
 
+const bands = { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 };
+const labels = { start: "0", growing: "4", productive: "10", high: "20" };
+const bandRule = "Growing from 4 sets, Productive from 10, High above 20";
+
 const meta = {
   title: "BodyMap/WeeklySetsBar",
   component: WeeklySetsBar,
   args: {
-    name: "5.5 sets done, 11 planned, target 10 to 16, minimum 6, maximum 22",
-    labels: { start: "0", minimum: "Min 6", planned: "Planned 11", maximum: "Max 22" },
+    name: `5.5 sets done, Growing, 11 planned. ${bandRule}`,
+    labels,
     weeklySets: {
       actual: 5.5,
       planned: 11,
-      target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
-      actualPosition: "below",
-      plannedPosition: "inside",
-      volumeStatus: "under",
+      bands,
+      actualStatus: "growing",
+      plannedStatus: "productive",
+      volumeStatus: "growing",
     },
   },
   decorators: [
@@ -32,71 +36,50 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The golden side delts on Thursday evening: under the minimum so far, with the plan reaching the target.
-export const BelowTarget: Story = {};
+// The golden side delts on Thursday evening: growing so far, with the plan reaching Productive.
+export const Growing: Story = {};
 
-// Inside the productive range, filled in the productive colour.
-export const InsideTarget: Story = {
+// Nothing done and nothing planned: an empty bar, and the planned tick at the start.
+export const NotTrained: Story = {
   args: {
-    name: "12 sets done, 12 planned, target 10 to 16, minimum 6, maximum 22",
-    labels: { start: "0", minimum: "Min 6", planned: "Planned 12", maximum: "Max 22" },
-    weeklySets: {
-      actual: 12,
-      planned: 12,
-      target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
-      actualPosition: "inside",
-      plannedPosition: "inside",
-      volumeStatus: "productive",
-    },
-  },
-};
-
-const target = { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 };
-
-// Nothing planned: the planned label hangs from the left on a row of its own, clear of the 0.
-export const PlannedNothing: Story = {
-  args: {
-    name: "0 sets done, 0 planned, target 10 to 16, minimum 6, maximum 22",
-    labels: { start: "0", minimum: "Min 6", planned: "Planned 0", maximum: "Max 22" },
+    name: `0 sets done, Not trained, 0 planned. ${bandRule}`,
     weeklySets: {
       actual: 0,
       planned: 0,
-      target,
-      actualPosition: "below",
-      plannedPosition: "below",
-      volumeStatus: "under",
+      bands,
+      actualStatus: "not_trained",
+      plannedStatus: "not_trained",
+      volumeStatus: "not_trained",
     },
   },
 };
 
-// A planned figure of 7 beside the minimum of 6: the planned label takes a row of its own.
-export const PlannedBesideMinimum: Story = {
+// Inside the productive range, filled in the productive colour.
+export const Productive: Story = {
   args: {
-    name: "5.5 sets done, 7 planned, target 10 to 16, minimum 6, maximum 22",
-    labels: { start: "0", minimum: "Min 6", planned: "Planned 7", maximum: "Max 22" },
+    name: `12 sets done, Productive, 12 planned. ${bandRule}`,
     weeklySets: {
-      actual: 5.5,
-      planned: 7,
-      target,
-      actualPosition: "below",
-      plannedPosition: "below",
-      volumeStatus: "under",
-    },
-  },
-};
-
-// A planned figure at the maximum: the planned label hangs from the right on a row of its own, clear of the Max.
-export const PlannedAtMaximum: Story = {
-  args: {
-    name: "16 sets done, 22 planned, target 10 to 16, minimum 6, maximum 22",
-    labels: { start: "0", minimum: "Min 6", planned: "Planned 22", maximum: "Max 22" },
-    weeklySets: {
-      actual: 16,
-      planned: 22,
-      target,
-      actualPosition: "inside",
-      plannedPosition: "above",
+      actual: 12,
+      planned: 12,
+      bands,
+      actualStatus: "productive",
+      plannedStatus: "productive",
       volumeStatus: "productive",
+    },
+  },
+};
+
+// Past 20 sets: the fill is in the High colour.
+export const High: Story = {
+  args: {
+    name: `22 sets done, High, 22 planned. ${bandRule}`,
+    weeklySets: {
+      actual: 22,
+      planned: 22,
+      bands,
+      actualStatus: "high",
+      plannedStatus: "high",
+      volumeStatus: "high",
     },
   },
 };

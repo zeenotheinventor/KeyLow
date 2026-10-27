@@ -1,4 +1,4 @@
-import { suggestSession, SUGGEST_PARAMS_V1 } from "../../src/training";
+import { suggestSession, SUGGEST_PARAMS_V2 } from "../../src/training";
 import goldenWeek from "../fixtures/training/goldenWeek.json";
 import { routine } from "../training/goldenWeekInputs";
 import {
@@ -110,7 +110,7 @@ export const onLegs = (minutes?: number): Suggestion =>
     V_TAPER_GOALS,
     GOLDEN_LIBRARY,
     { plannedDay: thursdaysLegs, ...(minutes === undefined ? {} : { minutes }) },
-    SUGGEST_PARAMS_V1,
+    SUGGEST_PARAMS_V2,
   );
 
 /** Case (a): 3 sets of incline dumbbell press added to Thursday's Legs, 16 to 19 sets, 60 minutes. */
@@ -121,7 +121,7 @@ export const twoAdds = planAdjustedOf(onLegs(75));
 
 /** Case (b2): the strength user with no routine for the day, whose first exercise is the deadlift. */
 export const strengthSession = sessionOf(
-  suggestSession(WEDNESDAY_STATE, STRENGTH_GOALS, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V1),
+  suggestSession(WEDNESDAY_STATE, STRENGTH_GOALS, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V2),
 );
 
 /** Case (b1): the strength user with Thursday's Legs kept, whose added deadlift leads with lower back. */
@@ -131,13 +131,13 @@ export const strengthOnLegs = planAdjustedOf(
     STRENGTH_GOALS,
     GOLDEN_LIBRARY,
     { plannedDay: thursdaysLegs },
-    SUGGEST_PARAMS_V1,
+    SUGGEST_PARAMS_V2,
   ),
 );
 
 /** Case (c): the V-taper user with no routine for the day. */
 export const vTaperSession = sessionOf(
-  suggestSession(WEDNESDAY_STATE, V_TAPER_GOALS, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V1),
+  suggestSession(WEDNESDAY_STATE, V_TAPER_GOALS, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V2),
 );
 
 /** The V-taper user's Wednesday with 45 minute sessions: not even the first exercise fits. */
@@ -150,7 +150,7 @@ export const bandsOnly = nothingOf(
     V_TAPER_GOALS,
     GOLDEN_LIBRARY,
     { equipment: ["band"] },
-    SUGGEST_PARAMS_V1,
+    SUGGEST_PARAMS_V2,
   ),
 );
 

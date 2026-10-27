@@ -1,12 +1,11 @@
 import {
-  COMPARE_PARAMS_V1,
-  TRAINING_PARAMS_V1,
+  COMPARE_PARAMS_V2,
+  TRAINING_PARAMS_V2,
   heatValues,
   muscleListGroups,
   muscleState,
   projectWeek,
   projectedState,
-  targetedMuscles,
   weekPlanDays,
 } from "@keylow/core/training";
 import { dehydrate, hydrate, onlineManager } from "@tanstack/react-query";
@@ -206,12 +205,7 @@ describe("the body map in a persisted cache", () => {
     });
     // Core, called directly on the rows that were stored (read back from storage), at the later moment.
     const expected = heatValues(
-      muscleState(
-        throughStorage(rows.sets ?? []),
-        SATURDAY_NOON,
-        TRAINING_PARAMS_V1,
-        targetedMuscles({ routine: rows.routine ?? null }),
-      ),
+      muscleState(throughStorage(rows.sets ?? []), SATURDAY_NOON, TRAINING_PARAMS_V2),
     );
     expect(result.current.data?.values).toStrictEqual(expected);
     expect(result.current.data?.computedAt).toBe(SATURDAY_NOON);
@@ -245,7 +239,7 @@ describe("the body map in a persisted cache", () => {
       GOLDEN_WEEK_START,
       "Europe/London",
       { sessions, sets: sessions.flatMap((session) => session.sets) },
-      COMPARE_PARAMS_V1,
+      COMPARE_PARAMS_V2,
     );
     expect(result.current.data?.values).toStrictEqual(
       heatValues(
@@ -253,8 +247,7 @@ describe("the body map in a persisted cache", () => {
           projection.projected,
           "2026-10-18T19:00:00.000Z",
           "Europe/London",
-          COMPARE_PARAMS_V1,
-          targetedMuscles({ routine: rows.routine ?? null }),
+          COMPARE_PARAMS_V2,
         ),
       ),
     );
@@ -270,14 +263,7 @@ describe("the body map in a persisted cache", () => {
       expect(result.current.data).toBeDefined();
     });
     expect(result.current.data?.values).toStrictEqual(
-      heatValues(
-        muscleState(
-          throughStorage(rows.sets ?? []),
-          SATURDAY_NOON,
-          TRAINING_PARAMS_V1,
-          targetedMuscles({ routine: rows.routine ?? null }),
-        ),
-      ),
+      heatValues(muscleState(throughStorage(rows.sets ?? []), SATURDAY_NOON, TRAINING_PARAMS_V2)),
     );
   });
 
@@ -301,12 +287,7 @@ describe("the body map in a persisted cache", () => {
     });
     expect(result.current.data).toStrictEqual(
       muscleListGroups(
-        muscleState(
-          throughStorage(rows.sets ?? []),
-          nextWeekMonday,
-          TRAINING_PARAMS_V1,
-          targetedMuscles({ routine: rows.routine ?? null }),
-        ),
+        muscleState(throughStorage(rows.sets ?? []), nextWeekMonday, TRAINING_PARAMS_V2),
         nextWeekMonday,
       ),
     );

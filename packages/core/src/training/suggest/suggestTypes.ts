@@ -59,6 +59,10 @@ export type SuggestionReason = Readonly<{
    * credits. The only figure a sentence may call "in the last 7 days".
    */
   logged_sets: number;
+  /**
+   * The sets the muscle was scored against. Under `keylow-training-v1` this was the low end of the muscle's
+   * MAV, and under v2 it is where Productive starts. The name stays, because stored reasons carry it.
+   */
   mav_low: number;
   heat: number;
   score: number;

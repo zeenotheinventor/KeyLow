@@ -8,7 +8,7 @@ import {
   describeProjectedAssumption,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useState } from "react";
@@ -330,7 +330,7 @@ export function BodyMapScreen() {
           projectedValues={projectedData.values}
           scale={scale}
           subLine={
-            isNothingLogged ? describeNothingLogged(TRAINING_PARAMS_V1.heatWindowDays) : subLine
+            isNothingLogged ? describeNothingLogged(TRAINING_PARAMS_V2.heatWindowDays) : subLine
           }
           toggleLabel={isSideBySide ? null : toggleLabel}
           view={view}

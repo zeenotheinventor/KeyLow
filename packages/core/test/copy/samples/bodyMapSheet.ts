@@ -13,10 +13,10 @@ const sideDelts: MuscleDetail = {
   weeklySets: {
     actual: 5.5,
     planned: 11,
-    target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
-    actualPosition: "below",
-    plannedPosition: "inside",
-    volumeStatus: "under",
+    bands: { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 },
+    actualStatus: "growing",
+    plannedStatus: "productive",
+    volumeStatus: "growing",
   },
   targeting: { targeted: true, routineTrains: true, goalRanks: false },
   lastTrained: {
@@ -41,6 +41,14 @@ export const samples: Record<string, () => string[]> = {
         {
           ...sideDelts,
           muscle: "neck",
+          weeklySets: {
+            ...sideDelts.weeklySets,
+            actual: 0,
+            planned: 0,
+            actualStatus: "not_trained",
+            plannedStatus: "not_trained",
+            volumeStatus: "not_trained",
+          },
           targeting: { targeted: false, routineTrains: false, goalRanks: false },
           lastTrained: null,
         },

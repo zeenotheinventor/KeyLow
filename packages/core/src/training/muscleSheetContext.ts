@@ -1,6 +1,6 @@
 import type { PlanRoutine } from "./expandPlan";
 import type { MuscleId } from "./muscles";
-import type { VolumeLandmarks } from "./params";
+import type { VolumeBands } from "./params";
 import type { WeekDayStatus } from "./weekPlanDays";
 
 /*
@@ -48,73 +48,38 @@ export const weightingExampleOf = (
   return null;
 };
 
-/** Which edge of its anchor a label hangs from: its start at the anchor, its middle on it, or its end at it. */
-export type LabelAnchor = "start" | "centre" | "end";
+/**
+ * The sets the weekly sets bar's track runs to: the top of the High band and a fifth more, so a muscle
+ * just past 20 sets is still on the track. A figure beyond it is held at the end. The draft of the
+ * `body · muscle-sheet` board draws 24, and the board wins if it settles on another number.
+ */
+const SETS_BAR_TRACK_SETS = 24;
 
-/** Where each mark of the weekly sets bar sits along its track, as a share of the track from 0 to 1, and its labels. */
+/** Where each mark of the weekly sets bar sits along its track, as a share of the track from 0 to 1. */
 export type SetsBarPositions = Readonly<{
   done: number;
   planned: number;
-  minimum: number;
-  /** The start of the productive range, where the target band begins. */
-  bandStart: number;
-  bandEnd: number;
-  /**
-   * How the planned label sits at its mark: a label near the start or the end hangs from the edge so it
-   * never overflows. The Min label is always centred on its mark, because the minimum of every size class
-   * of the training params is between a quarter and four tenths of the maximum, well clear of both ends.
-   */
-  plannedLabel: LabelAnchor;
-  /** True when the planned label would meet the Min, 0 or Max label on the row under the bar, so it takes a row of its own. */
-  isPlannedLabelBelow: boolean;
+  /** Where Growing starts, Productive starts, and High starts (above). */
+  growingFrom: number;
+  productiveFrom: number;
+  highAbove: number;
 }>;
 
-// A label is about a fifth of a phone's bar wide (72 points of about 358), so half of it is a tenth.
-// The share of the track at each end where a centred label would overflow, and the gap between two marks
-// under which their labels would meet.
-const EDGE_SHARE = 0.12;
-const LABELS_MEET_SHARE = 0.12;
-// The share beyond which a centred planned label meets the Max label, which hangs from the end of the track
-// and is about an eighth of it wide: the end, less the Max label and less half the planned label.
-const PLANNED_MEETS_MAXIMUM_SHARE = 0.775;
+const shareOf = (sets: number): number => Math.min(Math.max(sets / SETS_BAR_TRACK_SETS, 0), 1);
 
-const shareOf = (sets: number, maximum: number): number =>
-  maximum > 0 ? Math.min(Math.max(sets / maximum, 0), 1) : 0;
-
-const anchorOf = (share: number): LabelAnchor => {
-  if (share < EDGE_SHARE) {
-    return "start";
-  }
-  return share > 1 - EDGE_SHARE ? "end" : "centre";
-};
-
-/**
- * The marks of the weekly sets bar and how their labels sit. The track runs from 0 to the maximum, so a
- * figure above it is held at the end of the track. A track with no maximum puts every mark at the start.
- */
+/** The marks of the weekly sets bar: the sets done, the sets planned, and the three edges of the bands. */
 export const setsBarPositionsOf = ({
   actual,
   planned,
-  target,
+  bands,
 }: {
   actual: number;
   planned: number;
-  target: VolumeLandmarks;
-}): SetsBarPositions => {
-  const plannedShare = shareOf(planned, target.mrv);
-  const minimumShare = shareOf(target.mev, target.mrv);
-  const plannedAnchor = anchorOf(plannedShare);
-
-  return {
-    done: shareOf(actual, target.mrv),
-    planned: plannedShare,
-    minimum: minimumShare,
-    bandStart: shareOf(target.mav.low, target.mrv),
-    bandEnd: shareOf(target.mav.high, target.mrv),
-    plannedLabel: plannedAnchor,
-    isPlannedLabelBelow:
-      plannedAnchor !== "centre" ||
-      plannedShare > PLANNED_MEETS_MAXIMUM_SHARE ||
-      Math.abs(plannedShare - minimumShare) < LABELS_MEET_SHARE,
-  };
-};
+  bands: VolumeBands;
+}): SetsBarPositions => ({
+  done: shareOf(actual),
+  planned: shareOf(planned),
+  growingFrom: shareOf(bands.growingFromSets),
+  productiveFrom: shareOf(bands.productiveFromSets),
+  highAbove: shareOf(bands.highAboveSets),
+});

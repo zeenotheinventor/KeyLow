@@ -92,9 +92,9 @@ const bodyMapColoursAtThreeToOne = [
   "heat-3",
   "heat-4",
   "heat-5",
-  "volume-under",
+  "volume-growing",
   "volume-productive",
-  "volume-over",
+  "volume-high",
   "gap-behind",
   "gap-ahead",
 ] as const;

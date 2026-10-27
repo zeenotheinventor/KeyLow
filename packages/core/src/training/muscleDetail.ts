@@ -10,14 +10,14 @@ import type { CompareParams } from "./compareParams";
 import type { MusclePlanComparison } from "./compareWeek";
 import type { MuscleId } from "./muscles";
 import type { MuscleState, VolumeStatus } from "./muscleState";
-import type { VolumeLandmarks } from "./params";
+import type { VolumeBands } from "./params";
 import type { LoggedSet } from "./projectWeek";
 import type { TargetedMusclesInput } from "./targetedMuscles";
 import type { SetSnapshot } from "../schemas/training";
 
 /*
  * The muscle detail sheet of the body map (`body · muscle-sheet`, `body · muscle-sheet-not-targeted`) as
- * data: heat, ready in, sets this week against the target, why a muscle is not targeted, and when it was
+ * data: heat, ready in, sets this week against the target, whether a muscle is targeted, and when it was
  * last trained. Pure under the ADR 0002 rule: `now` is an argument. The screen writes its sentences from
  * these fields, so no maths lives in it.
  */
@@ -51,18 +51,17 @@ export type MuscleDetailInput = Readonly<{
   params: CompareParams;
 }>;
 
-/** Where a figure sits against the target range, the productive range of 10 to 16 sets for a small muscle. */
-export type RangePosition = "below" | "inside" | "above";
-
 export type WeeklySetsDetail = {
   /** Effort-weighted sets logged this calendar week. */
   actual: number;
   /** Effort-weighted sets of the week's plan, the logged days in place of planned ones. */
   planned: number;
-  /** The muscle's landmarks: its minimum, the productive range and its maximum. */
-  target: VolumeLandmarks;
-  actualPosition: RangePosition;
-  plannedPosition: RangePosition;
+  /** The muscle's volume bands: where Growing, Productive and High start. */
+  bands: VolumeBands;
+  /** The status of the sets done so far. */
+  actualStatus: VolumeStatus;
+  /** The status the week reaches if the plan is followed. */
+  plannedStatus: VolumeStatus;
   /** The status of the actual figure in the actual view, and of the planned one in the projected view. */
   volumeStatus: VolumeStatus;
 };
@@ -104,13 +103,6 @@ export type MuscleDetail = {
 };
 
 const MILLISECONDS_PER_DAY = 24 * 3_600_000;
-
-const positionOf = (sets: number, { mav }: VolumeLandmarks): RangePosition => {
-  if (sets < mav.low) {
-    return "below";
-  }
-  return sets <= mav.high ? "inside" : "above";
-};
 
 const routineTrains = (routine: TargetedMusclesInput["routine"], muscle: MuscleId): boolean =>
   routine?.days.some((day) =>
@@ -207,11 +199,11 @@ const lastTrainedOf = (
  * - Heat is the rounded percent of `state` and its step, and ready in is the whole hours from `now` to
  *   its ready time (see `readyInHoursOf`).
  * - Sets this week are the calendar week's figures of `comparison`, never the rolling weekly sets of the
- *   state (ADR 0005, Zee's ruling B on KEY-339), with the muscle's landmarks and where each figure sits
- *   against the productive range. The volume status is `volumeStatusOf` on the actual figure in the
- *   actual view and on the planned one in the projected view, so the view never changes the actual figure.
- * - Targeting says whether the muscle is targeted, and which of the routine and the goal asks for it, so
- *   a muscle that is not targeted can say why and offer Edit routine and Edit goal.
+ *   state (ADR 0005, Zee's ruling B on KEY-339), with the muscle's volume bands and the status of each
+ *   figure. The volume status is the actual figure's in the actual view and the planned one's in the
+ *   projected view, so the view never changes the actual figure. The plan does not change a status.
+ * - Targeting says whether the muscle is targeted, and which of the routine and the goal asks for it. The
+ *   sheet no longer reads this: its not trained case reads the sets.
  * - Last trained is the newest calendar day of the heat window (in `tz`, the window the heat counts, the
  *   start not included) on which a live set worked the muscle at an effort above 0, so a warm-up never
  *   counts. It names that day, the session of its newest set, the routine day's name, and the exercises
@@ -240,8 +232,9 @@ export const muscleDetail = ({
   const isTargeted = targetedMuscles(targeted).has(muscle);
   const heatPercent = heatPercentOf(state[muscle].heat);
   const { actualWeeklySets: actual, projectedWeeklySets: planned } = comparison[muscle];
-  const landmarks = muscleParams(muscle, params.training);
-  const target: VolumeLandmarks = { mev: landmarks.mev, mav: landmarks.mav, mrv: landmarks.mrv };
+  const { volume: bands } = muscleParams(muscle, params.training);
+  const actualStatus = volumeStatusOf(actual, bands);
+  const plannedStatus = volumeStatusOf(planned, bands);
   return {
     muscle,
     heatPercent,
@@ -250,10 +243,10 @@ export const muscleDetail = ({
     weeklySets: {
       actual,
       planned,
-      target,
-      actualPosition: positionOf(actual, target),
-      plannedPosition: positionOf(planned, target),
-      volumeStatus: volumeStatusOf(view === "projected" ? planned : actual, target, isTargeted),
+      bands,
+      actualStatus,
+      plannedStatus,
+      volumeStatus: view === "projected" ? plannedStatus : actualStatus,
     },
     targeting: {
       targeted: isTargeted,

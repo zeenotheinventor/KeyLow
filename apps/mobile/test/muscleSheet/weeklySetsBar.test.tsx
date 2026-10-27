@@ -18,16 +18,17 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 setUpTests();
 
-const target = { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 };
-const labels = { start: "0", minimum: "Min 6", planned: "Planned 11", maximum: "Max 22" };
-const name = "5.5 sets done, 11 planned, target 10 to 16, minimum 6, maximum 22";
+const bands = { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 };
+const labels = { start: "0", growing: "4", productive: "10", high: "20" };
+const name =
+  "5.5 sets done, Growing, 11 planned. Growing from 4 sets, Productive from 10, High above 20";
 const weeklySets: WeeklySetsBarProps["weeklySets"] = {
   actual: 5.5,
   planned: 11,
-  target,
-  actualPosition: "below",
-  plannedPosition: "inside",
-  volumeStatus: "under",
+  bands,
+  actualStatus: "growing",
+  plannedStatus: "productive",
+  volumeStatus: "growing",
 };
 
 async function renderBar(props: Partial<WeeklySetsBarProps> = {}) {
@@ -55,18 +56,12 @@ function stylesInBar(forName = name): Style[] {
     .map((node) => flatStyle(node.props.style));
 }
 
-function markNamed(
-  mark: "done fill" | "band" | "minimum tick" | "planned tick",
-  forName = name,
-): Style {
-  const found = stylesInBar(forName).find((style) => {
+// The ticks of the bands are 1 point wide and the planned tick is 2, and the fill is the 10 point bar from the left.
+function markNamed(mark: "done fill" | "planned tick"): Style {
+  const found = stylesInBar().find((style) => {
     switch (mark) {
       case "done fill":
         return style.height === 10 && style.left === 0 && style.width !== undefined;
-      case "band":
-        return style.height === 10 && style.borderLeftWidth === 1;
-      case "minimum tick":
-        return style.height === 18 && style.width === 1;
       case "planned tick":
         return style.height === 18 && style.width === 2;
     }
@@ -75,6 +70,13 @@ function markNamed(
     throw new Error(`The bar has no ${mark}`);
   }
   return found;
+}
+
+/** The left share of each band tick, in the order Growing, Productive, High. */
+function bandTickLefts(): number[] {
+  return stylesInBar()
+    .filter((style) => style.height === 18 && style.width === 1)
+    .map((style) => percentOf(style.left));
 }
 
 // A share of the track as the class wrote it, such as "25%".
@@ -98,13 +100,13 @@ describe("the weekly sets bar", () => {
     await cleanup();
   });
 
-  it("should be one image named by the sets, the target and the limits", async () => {
+  it("should be one image named by the sets, the band, the plan and where each band starts", async () => {
     await renderBar();
 
     expect(screen.getByRole("img", { name })).toBeOnTheScreen();
   });
 
-  it("should label the start, the minimum, the planned figure and the maximum", async () => {
+  it("should label the start and the edge of each band", async () => {
     await renderBar();
 
     for (const label of Object.values(labels)) {
@@ -112,48 +114,52 @@ describe("the weekly sets bar", () => {
     }
   });
 
+  it("should not label the planned figure or draw a target band, as the earlier bar did", async () => {
+    await renderBar();
+
+    expect(screen.queryByText(/Planned|Min|Max/)).not.toBeOnTheScreen();
+    expect(
+      stylesInBar().filter((style) => style.height === 10 && style.borderLeftWidth === 1),
+    ).toEqual([]);
+  });
+
   describe("the marks", () => {
-    it("should fill the track to the share of the maximum that is done", async () => {
-      await renderBar();
+    it("should fill the track to the share of 24 sets that is done", async () => {
+      await renderBar({ weeklySets: { ...weeklySets, actual: 6 } });
 
       expect(markNamed("done fill").width).toBe("25%");
     });
 
-    it("should put the planned tick at the share of the maximum that is planned", async () => {
-      await renderBar();
+    it("should put the planned tick at the share of 24 sets that is planned", async () => {
+      await renderBar({ weeklySets: { ...weeklySets, planned: 12 } });
 
       expect(markNamed("planned tick").left).toBe("50%");
     });
 
-    it("should put the minimum tick at the share of the maximum that is the minimum", async () => {
+    it("should put a tick at 4, 10 and 20 sets of the 24", async () => {
       await renderBar();
 
-      expect(percentOf(markNamed("minimum tick").left)).toBeCloseTo((6 / 22) * 100, 5);
+      const [growing, productive, high] = bandTickLefts();
+      expect(growing).toBeCloseTo((4 / 24) * 100, 5);
+      expect(productive).toBeCloseTo((10 / 24) * 100, 5);
+      expect(high).toBeCloseTo((20 / 24) * 100, 5);
     });
 
-    it("should lay the target band from the start of the range to its end", async () => {
-      await renderBar();
+    it("should hold a figure past 24 sets at the end of the track", async () => {
+      await renderBar({ weeklySets: { ...weeklySets, actual: 30, planned: 30 } });
 
-      const band = markNamed("band");
-      expect(percentOf(band.left)).toBeCloseTo((10 / 22) * 100, 5);
-      expect(percentOf(band.width)).toBeCloseTo((6 / 22) * 100, 5);
-    });
-
-    it("should keep each mark on its own number when the figures differ", async () => {
-      await renderBar({ weeklySets: { ...weeklySets, actual: 11, planned: 16.5 } });
-
-      expect(markNamed("done fill").width).toBe("50%");
-      expect(markNamed("planned tick").left).toBe("75%");
+      expect(markNamed("done fill").width).toBe("100%");
+      expect(markNamed("planned tick").left).toBe("100%");
     });
   });
 
   describe("the colour of the fill", () => {
     it.each([
-      ["under", "volume-under"],
+      ["not_trained", "volume-not-trained"],
       ["maintaining", "volume-maintaining"],
+      ["growing", "volume-growing"],
       ["productive", "volume-productive"],
-      ["over", "volume-over"],
-      ["not_targeted", "volume-not-targeted"],
+      ["high", "volume-high"],
     ] as const satisfies readonly (readonly [VolumeStatus, string])[])(
       "should be the %s colour of the volume scale",
       async (volumeStatus, token) => {
@@ -164,10 +170,10 @@ describe("the weekly sets bar", () => {
     );
 
     it("should follow the status of the plan in the Projected view, whatever is done", async () => {
-      // In Projected the detail's status is the planned figure's: 12 planned is productive though 5.5 is done.
-      await renderBar({ weeklySets: { ...weeklySets, planned: 12, volumeStatus: "productive" } });
+      // In Projected the detail's status is the planned figure's: 11 planned is productive though 5.5 is done.
+      await renderBar({ weeklySets: { ...weeklySets, volumeStatus: "productive" } });
 
-      expect(markNamed("done fill").width).toBe("25%");
+      expect(markNamed("done fill").width).toBe(`${(5.5 / 24) * 100}%`);
       expect(markNamed("done fill").backgroundColor).toBe(
         resolvedColor("dark", "volume-productive"),
       );
@@ -175,77 +181,22 @@ describe("the weekly sets bar", () => {
   });
 
   describe("the labels", () => {
-    it("should centre the minimum and the planned label on their marks, on the row under the bar", async () => {
+    it("should centre each band number on its tick, on the row under the bar", async () => {
       await renderBar();
 
-      expect(percentOf(labelBox("Min 6").left)).toBeCloseTo((6 / 22) * 100, 5);
-      expect(labelBox("Min 6").top).toBe(20);
-      expect(labelBox("Planned 11")).toMatchObject({ left: "50%", top: 20, marginLeft: -36 });
+      expect(percentOf(labelBox("4").left)).toBeCloseTo((4 / 24) * 100, 5);
+      expect(percentOf(labelBox("10").left)).toBeCloseTo((10 / 24) * 100, 5);
+      expect(percentOf(labelBox("20").left)).toBeCloseTo((20 / 24) * 100, 5);
+      expect(labelBox("4")).toMatchObject({ top: 20, marginLeft: -36 });
     });
 
-    it("should hang the start from the left and the maximum from the right", async () => {
+    it("should hang the 0 from the left", async () => {
       await renderBar();
 
       expect(labelBox("0")).toMatchObject({ left: 0, top: 20 });
-      expect(labelBox("Max 22")).toMatchObject({ right: 0, top: 20 });
     });
 
-    describe("planned 0", () => {
-      const planned = { ...weeklySets, planned: 0 };
-      const plannedLabels = { ...labels, planned: "Planned 0" };
-
-      it("should hang the planned label from the left, on a row of its own under the 0", async () => {
-        await renderBar({ weeklySets: planned, labels: plannedLabels });
-
-        expect(labelBox("Planned 0")).toMatchObject({ left: 0, top: 36 });
-        expect(labelBox("0")).toMatchObject({ top: 20 });
-      });
-
-      it("should make room for the second row", async () => {
-        await renderBar({ weeklySets: planned, labels: plannedLabels });
-
-        expect(flatStyle(screen.getByRole("img", { name }).props.style).height).toBe(50);
-      });
-    });
-
-    describe("planned 7 against a minimum of 6", () => {
-      it("should put the planned label on a row of its own, centred on its mark", async () => {
-        await renderBar({
-          weeklySets: { ...weeklySets, planned: 7 },
-          labels: { ...labels, planned: "Planned 7" },
-        });
-
-        expect(percentOf(labelBox("Planned 7").left)).toBeCloseTo((7 / 22) * 100, 5);
-        expect(labelBox("Planned 7").top).toBe(36);
-        expect(labelBox("Min 6")).toMatchObject({ top: 20 });
-      });
-    });
-
-    describe("planned 22 against a maximum of 22", () => {
-      it("should hang the planned label from the right, on a row of its own under the Max", async () => {
-        await renderBar({
-          weeklySets: { ...weeklySets, planned: 22 },
-          labels: { ...labels, planned: "Planned 22" },
-        });
-
-        expect(labelBox("Planned 22")).toMatchObject({ right: 0, top: 36 });
-        expect(labelBox("Max 22")).toMatchObject({ right: 0, top: 20 });
-      });
-    });
-
-    describe("planned 19 against a maximum of 22", () => {
-      it("should put the planned label on a row of its own, because it would meet the Max label", async () => {
-        await renderBar({
-          weeklySets: { ...weeklySets, planned: 19 },
-          labels: { ...labels, planned: "Planned 19" },
-        });
-
-        expect(labelBox("Planned 19").top).toBe(36);
-        expect(labelBox("Max 22")).toMatchObject({ right: 0, top: 20 });
-      });
-    });
-
-    it("should keep the bar's height when the planned label shares the row", async () => {
+    it("should keep the bar one row high, at 34 points", async () => {
       await renderBar();
 
       expect(flatStyle(screen.getByRole("img", { name }).props.style).height).toBe(34);

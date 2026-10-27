@@ -101,7 +101,7 @@ export const Wide: Story = { args: { w: 240 } };
 // Heat steps 0 to 5 from rested to peak, the golden pattern of `BodyFigure`'s Heat story. Peak glows.
 export const Heat: Story = { args: { scale: "heat", values: heatSteps }, render: besideTheFigure };
 
-// Under, maintaining, productive, over and not targeted.
+// Not trained, maintaining, growing, productive and high.
 export const Volume: Story = {
   args: { scale: "volume", values: inTurn(5) },
   render: besideTheFigure,

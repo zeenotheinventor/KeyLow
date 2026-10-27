@@ -45,7 +45,7 @@ afterAll(async () => {
 });
 
 describe("useMuscleState with a saved training goal, over the real tables", () => {
-  it("should leave untrained muscles not targeted with no goal, then target what the V-taper goal ranks once it is saved, and still not the abs or obliques", async () => {
+  it("should change no volume status when the V-taper goal is saved, since a status reads the sets alone", async () => {
     const { wrapper } = createWrapper(owner.client);
     const { result } = renderHook(
       () => ({ state: useMuscleState(NOW), save: useSaveTrainingGoals() }),
@@ -54,17 +54,15 @@ describe("useMuscleState with a saved training goal, over the real tables", () =
     await waitFor(() => {
       expect(result.current.state.data).toBeDefined();
     });
-    expect(result.current.state.data?.lats.volumeStatus).toBe("not_targeted");
+    const before = result.current.state.data;
+    expect(before?.lats.volumeStatus).toBe("not_trained");
 
     await act(() => result.current.save.mutateAsync(vTaperAnswers));
 
-    await waitFor(() => {
-      expect(result.current.state.data?.lats.volumeStatus).toBe("under");
-    });
     const state = result.current.state.data;
-    expect(state?.delt_side.volumeStatus).toBe("under");
-    expect(state?.chest_upper.volumeStatus).toBe("under");
-    expect(state?.abs.volumeStatus).toBe("not_targeted");
-    expect(state?.obliques.volumeStatus).toBe("not_targeted");
+    expect(state?.lats.volumeStatus).toBe("not_trained");
+    expect(state?.delt_side.volumeStatus).toBe("not_trained");
+    expect(state?.abs.volumeStatus).toBe("not_trained");
+    expect(state?.chest_lower.volumeStatus).toBe(before?.chest_lower.volumeStatus);
   });
 });

@@ -1,12 +1,11 @@
 // @vitest-environment jsdom
 // The hooks need a DOM to render in. The rest of the integration suite runs in node.
 import {
-  COMPARE_PARAMS_V1,
-  TRAINING_PARAMS_V1,
+  COMPARE_PARAMS_V2,
+  TRAINING_PARAMS_V2,
   compareWeek,
   muscleState,
   projectWeek,
-  targetedMuscles,
 } from "@keylow/core/training";
 import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -73,7 +72,7 @@ afterAll(async () => {
 });
 
 describe("useMuscleState over the real tables", () => {
-  it("should give core's heat and volume for the user's own sets, with not_targeted for an untrained muscle", async () => {
+  it("should give core's heat and volume for the user's own sets, with not_trained for an untrained muscle", async () => {
     const { wrapper } = createWrapper(owner.client);
 
     const { result } = renderHook(() => useMuscleState(NOW), { wrapper });
@@ -84,13 +83,12 @@ describe("useMuscleState over the real tables", () => {
     const state = result.current.data;
     // Two live sets in the last 7 days count in full at RIR 2 (a third was deleted). The set of the 8th
     // is older than the volume window, and still inside the heat window with the others.
-    expect(state?.chest_lower).toMatchObject({ weeklySets: 2, volumeStatus: "under" });
-    expect(state?.lats).toMatchObject({ heat: 0, weeklySets: 0, volumeStatus: "not_targeted" });
+    expect(state?.chest_lower).toMatchObject({ weeklySets: 2, volumeStatus: "maintaining" });
+    expect(state?.lats).toMatchObject({ heat: 0, weeklySets: 0, volumeStatus: "not_trained" });
     // Core, called directly on the same rows (core is not the code under test here).
     const rows = await listSetsFrom(owner.client, START_DAY, "2026-10-17");
-    const routine = await getActiveRoutine(owner.client);
     expect(rows).toHaveLength(3);
-    expect(state).toEqual(muscleState(rows, NOW, TRAINING_PARAMS_V1, targetedMuscles({ routine })));
+    expect(state).toEqual(muscleState(rows, NOW, TRAINING_PARAMS_V2));
   });
 
   it("should show another user none of the owner's heat", async () => {
@@ -103,8 +101,7 @@ describe("useMuscleState over the real tables", () => {
     });
     expect(result.current.data?.chest_lower).toMatchObject({ heat: 0, weeklySets: 0 });
     expect(result.current.data?.triceps).toMatchObject({ heat: 0, weeklySets: 0 });
-    // With no routine every muscle is targeted, so an untrained muscle is under and not not_targeted.
-    expect(result.current.data?.lats.volumeStatus).toBe("under");
+    expect(result.current.data?.lats.volumeStatus).toBe("not_trained");
   });
 });
 
@@ -131,9 +128,9 @@ describe("useWeekComparison over the real tables", () => {
       WEEK_START,
       "UTC",
       { sessions, sets: sessions.flatMap((session) => session.sets) },
-      COMPARE_PARAMS_V1,
+      COMPARE_PARAMS_V2,
     );
-    expect(result.current.data).toEqual(compareWeek(actual, projected, COMPARE_PARAMS_V1));
+    expect(result.current.data).toEqual(compareWeek(actual, projected, COMPARE_PARAMS_V2));
   });
 
   it("should show another user an empty week", async () => {

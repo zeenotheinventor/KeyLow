@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { goalsWith, libraryExercise, plannedDayOf, stateWith } from "./suggestPlanInputs";
-import { suggestSession, SUGGEST_PARAMS_V1 } from "../../src/training";
+import { suggestSession, SUGGEST_PARAMS_V2 } from "../../src/training";
 
 import type { PlannedEntry } from "./suggestPlanInputs";
 import type {
@@ -14,10 +14,10 @@ import type {
 /*
  * `suggestSession` on a planned routine day: the plan is kept, and Ki-Lo only adds (KEY-401).
  * The libraries are small so every expected value is worked by hand from the rules of Zee's agreed
- * document on KEY-396 (Part 3), never computed from the code under test. MAV low is 10 sets for every muscle
- * used here but lats and traps_mid, chest_upper and chest_lower, which are 12. A set of aesthetic
- * isolation work is 12 to 15 reps at RIR 1, a compound set 8 to 10 at RIR 2, and an intermediate user
- * gets 3 sets per exercise. A session reads `exercises × 2 + sets × 2.5` minutes, rounded to 5, half up.
+ * document on KEY-396 (Part 3), never computed from the code under test. Every muscle is scored against
+ * where Productive starts, 10 sets (under v1 it was the low end of MAV, 12 for lats, traps and chest). A set
+ * of aesthetic isolation work is 12 to 15 reps at RIR 1, a compound set 8 to 10 at RIR 2, and an
+ * intermediate user gets 3 sets per exercise. A session reads `exercises × 2 + sets × 2.5` minutes, rounded to 5, half up.
  */
 
 const squat = libraryExercise("squat", ["quads"], { equipment: "barbell" }, ["glute_max"]);
@@ -64,7 +64,7 @@ const suggest = (
     goalsWith(priority, goals),
     library,
     { ...constraints, plannedDay: plannedDayOf(plan) },
-    SUGGEST_PARAMS_V1,
+    SUGGEST_PARAMS_V2,
   );
 
 const day = (plan: readonly PlannedEntry[]): PlanRoutineDay => plannedDayOf(plan);
@@ -158,7 +158,7 @@ describe("a planned day is kept", () => {
 });
 
 describe("the planned sets count towards what is left", () => {
-  it("should add nothing for a muscle the planned day already brings to its MAV low", () => {
+  it("should add nothing for a muscle the planned day already brings to where Productive starts", () => {
     // delt_side has 8 of 10 sets and the planned raise gives 3 more: 11, no gap, so no score.
     const result = suggest(
       [{ exercise: lateralRaise, sets: 3, targetRir: 2 }],
@@ -233,7 +233,7 @@ describe("the planned sets count towards what is left", () => {
   });
 
   it("should give a later pick the sets credited by the plan and by the earlier pick", () => {
-    // Pick 1: chest_upper 3 x 12 = 36, the press. It gives chest_upper 3 and delt_front 1.5.
+    // Pick 1: chest_upper 3 x 10 = 30, the press. It gives chest_upper 3 and delt_front 1.5.
     // Pick 2: delt_front 2 x (10 - 1.5) = 17, the front raise, whose reason reads 1.5 weekly sets.
     const inclinePress = libraryExercise(
       "incline-press",
@@ -254,7 +254,7 @@ describe("the planned sets count towards what is left", () => {
         { origin: "plan" },
         {
           exercise_id: "incline-press",
-          reasons: [{ muscle_id: "chest_upper", weekly_sets: 0, score: 36 }],
+          reasons: [{ muscle_id: "chest_upper", weekly_sets: 0, score: 30 }],
         },
         {
           exercise_id: "front-raise",
@@ -324,9 +324,9 @@ describe("the length of the plan counts against the minutes", () => {
 describe("a planned exercise that cannot be done is kept (no swaps in v1)", () => {
   it("should keep, in place and credited, an exercise with a hot primary muscle and one whose equipment the user lacks", () => {
     // The cable row works lats, which are hot (0.6), and the barbell row needs a barbell the user lacks.
-    // Both stay with their planned sets. Each gives traps_mid 3 sets, so traps_mid reads 6 of 12 when the
-    // shrug is picked (2 x 6 = 12) after the lateral raise (3 x 10 = 30). Lats read 6 of 12 and score
-    // 1 x 6 x 0.4 = 2.4, so they are skipped for heat.
+    // Both stay with their planned sets. Each gives traps_mid 3 sets, so traps_mid reads 6 of 10 when the
+    // shrug is picked (2 x 4 = 8) after the lateral raise (3 x 10 = 30). Lats read 6 of 10 and score
+    // 1 x 4 x 0.4 = 1.6, so they are skipped for heat.
     const result = suggest(
       [
         { exercise: cableRow, sets: 3 },
@@ -348,7 +348,7 @@ describe("a planned exercise that cannot be done is kept (no swaps in v1)", () =
         {
           origin: "added",
           exercise_id: "shrug",
-          reasons: [{ muscle_id: "traps_mid", weekly_sets: 6, score: 12 }],
+          reasons: [{ muscle_id: "traps_mid", weekly_sets: 6, score: 8 }],
         },
       ],
       skipped: [{ muscle_id: "lats", heat: 0.6 }],
@@ -420,7 +420,7 @@ describe("a day without a planned day is unchanged", () => {
       goalsWith({ delt_side: 3 }),
       [lateralRaise],
       {},
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     expect(result.kind).toBe("session");
   });

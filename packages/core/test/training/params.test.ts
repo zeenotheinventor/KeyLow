@@ -6,10 +6,12 @@ import {
   MUSCLES,
   muscleParams,
   TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   TRAINING_PARAMS_VERSION,
+  TRAINING_PARAMS_VERSION_V2,
 } from "../../src/training";
 
-import type { TrainingParams } from "../../src/training";
+import type { TrainingParams, TrainingParamsV1 } from "../../src/training";
 
 describe("TRAINING_PARAMS_V1", () => {
   it("should carry the keylow-training-v1 version", () => {
@@ -61,7 +63,7 @@ describe("TRAINING_PARAMS_V1", () => {
       muscleOverrides: {},
       heatWindowDays: 14,
       volumeWindowDays: 7,
-    } satisfies TrainingParams);
+    } satisfies TrainingParamsV1);
   });
 
   it("should set each class's ready threshold at a quarter of its capacity", () => {
@@ -91,26 +93,83 @@ describe("TRAINING_PARAMS_V1", () => {
   });
 });
 
+describe("TRAINING_PARAMS_V2", () => {
+  it("should carry the keylow-training-v2 version, apart from the v1 constant", () => {
+    expect(TRAINING_PARAMS_VERSION_V2).toBe("keylow-training-v2");
+    expect(TRAINING_PARAMS_V2.version).toBe("keylow-training-v2");
+    expect(TRAINING_PARAMS_VERSION).toBe("keylow-training-v1");
+  });
+
+  // Every v2 value, written out. Changing one is a new params version, never an edit of this one.
+  it("should hold exactly the v2 values of ADR 0005, Amendment 6", () => {
+    const volume = { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 };
+
+    expect(TRAINING_PARAMS_V2).toStrictEqual({
+      version: "keylow-training-v2",
+      effort: {
+        warmup: 0,
+        unknown: 1,
+        hard: 1,
+        moderate: 0.5,
+        easy: 0.25,
+        hardMaxRir: 3,
+        moderateMaxRir: 5,
+        hardMinRpe: 7,
+        moderateMinRpe: 5,
+      },
+      sizeClasses: {
+        small: { tauHours: 24, capacity: 8, threshold: 2, volume },
+        medium: { tauHours: 32, capacity: 10, threshold: 2.5, volume },
+        large: { tauHours: 40, capacity: 10, threshold: 2.5, volume },
+      },
+      muscleOverrides: {},
+      heatWindowDays: 14,
+      volumeWindowDays: 7,
+    } satisfies TrainingParams);
+  });
+
+  it("should keep the heat numbers and the effort weights of v1", () => {
+    expect(TRAINING_PARAMS_V2.effort).toStrictEqual(TRAINING_PARAMS_V1.effort);
+    for (const sizeClass of MUSCLE_SIZE_CLASSES) {
+      const { tauHours, capacity, threshold } = TRAINING_PARAMS_V1.sizeClasses[sizeClass];
+      expect(TRAINING_PARAMS_V2.sizeClasses[sizeClass]).toMatchObject({
+        tauHours,
+        capacity,
+        threshold,
+      });
+    }
+  });
+
+  it("should keep each class's bands in order", () => {
+    for (const sizeClass of MUSCLE_SIZE_CLASSES) {
+      const { growingFromSets, productiveFromSets, highAboveSets } =
+        TRAINING_PARAMS_V2.sizeClasses[sizeClass].volume;
+      expect(growingFromSets).toBeGreaterThan(0);
+      expect(growingFromSets).toBeLessThanOrEqual(productiveFromSets);
+      expect(productiveFromSets).toBeLessThanOrEqual(highAboveSets);
+    }
+  });
+});
+
 describe("muscleParams", () => {
-  it("should give every muscle its size class's values in v1", () => {
+  it("should give every muscle its size class's values in v2", () => {
     for (const muscle of MUSCLE_IDS) {
-      expect(muscleParams(muscle, TRAINING_PARAMS_V1)).toStrictEqual(
-        TRAINING_PARAMS_V1.sizeClasses[MUSCLES[muscle].sizeClass],
+      expect(muscleParams(muscle, TRAINING_PARAMS_V2)).toStrictEqual(
+        TRAINING_PARAMS_V2.sizeClasses[MUSCLES[muscle].sizeClass],
       );
     }
   });
 
   it("should put an override's fields in place of the class's and keep the rest", () => {
     const params: TrainingParams = {
-      ...TRAINING_PARAMS_V1,
-      muscleOverrides: { neck: { tauHours: 12, mrv: 12 } },
+      ...TRAINING_PARAMS_V2,
+      muscleOverrides: { neck: { tauHours: 12 } },
     };
 
     expect(muscleParams("neck", params)).toStrictEqual({
-      ...TRAINING_PARAMS_V1.sizeClasses.small,
+      ...TRAINING_PARAMS_V2.sizeClasses.small,
       tauHours: 12,
-      mrv: 12,
     });
-    expect(muscleParams("biceps", params)).toStrictEqual(TRAINING_PARAMS_V1.sizeClasses.small);
+    expect(muscleParams("biceps", params)).toStrictEqual(TRAINING_PARAMS_V2.sizeClasses.small);
   });
 });

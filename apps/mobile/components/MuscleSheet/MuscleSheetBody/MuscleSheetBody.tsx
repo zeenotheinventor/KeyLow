@@ -1,6 +1,6 @@
 import { useActiveRoutine, useMuscleDetail } from "@keylow/api-client";
 import { BODY_MAP, MUSCLE_NAMES, TRAIN_ERROR, describeMuscleSheet } from "@keylow/core/copy";
-import { TRAINING_PARAMS_V1, upcomingSessionsOf, weightingExampleOf } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2, upcomingSessionsOf, weightingExampleOf } from "@keylow/core/training";
 import { View } from "react-native";
 
 import { ErrorState, Skeleton } from "../../ui";
@@ -55,7 +55,7 @@ export function MuscleSheetBody({
   const copy = describeMuscleSheet(detail.data, {
     weekStart,
     upcomingSessions: upcomingSessionsOf(days),
-    heatWindowDays: TRAINING_PARAMS_V1.heatWindowDays,
+    heatWindowDays: TRAINING_PARAMS_V2.heatWindowDays,
     weightingExample: weightingExampleOf(routine.data ?? null, muscle),
   });
 

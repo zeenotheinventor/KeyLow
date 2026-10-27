@@ -24,7 +24,7 @@ import {
   projectedState,
   projectWeek,
   suggestSession,
-  SUGGEST_PARAMS_V1,
+  SUGGEST_PARAMS_V2,
   toAcceptedExercises,
 } from "../../src/training";
 import goldenWeek from "../fixtures/training/goldenWeek.json";
@@ -69,7 +69,7 @@ const suggestion = suggestSession(
   V_TAPER_GOALS,
   GOLDEN_LIBRARY,
   { plannedDay: legsDay },
-  SUGGEST_PARAMS_V1,
+  SUGGEST_PARAMS_V2,
 );
 
 const accepted: AcceptedSuggestion = {
@@ -139,7 +139,7 @@ describe("the golden accepted suggestion", () => {
               )
             : [],
       };
-      const stored = { ...accepted, reasons, params_version: "keylow-training-v1" };
+      const stored = { ...accepted, reasons, params_version: "keylow-training-v2" };
       const parsed = parseAcceptedSuggestion({
         id: "00000009-0000-4000-8000-000000000001",
         ...stored,
@@ -151,7 +151,7 @@ describe("the golden accepted suggestion", () => {
       expect(parsed.ok ? parsed.suggestion.reasons.picks[0]?.reasons[0] : null).toMatchObject({
         muscle_id: "chest_upper",
         priority: 3,
-        mav_low: 12,
+        mav_low: 10,
       });
       if (parsed.ok) {
         expect(

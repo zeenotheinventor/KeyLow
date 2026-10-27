@@ -78,7 +78,7 @@ describe("preset as consumed by Tailwind", () => {
     expect(resolvedTheme.colors).toMatchObject({
       "heat-3": "rgb(var(--kl-heat-3) / <alpha-value>)",
       "heat-glow": "var(--kl-heat-glow)",
-      "volume-not-targeted": "rgb(var(--kl-volume-not-targeted) / <alpha-value>)",
+      "volume-not-trained": "rgb(var(--kl-volume-not-trained) / <alpha-value>)",
       "gap-on-plan": "rgb(var(--kl-gap-on-plan) / <alpha-value>)",
       "body-silhouette": "rgb(var(--kl-body-silhouette) / <alpha-value>)",
     });
@@ -141,11 +141,11 @@ describe("the classes the design's screens are written with", () => {
     "bg-heat-3",
     "bg-heat-5",
     "bg-heat-glow",
-    "bg-volume-under",
+    "bg-volume-not-trained",
     "bg-volume-maintaining",
+    "bg-volume-growing",
     "bg-volume-productive",
-    "bg-volume-over",
-    "bg-volume-not-targeted",
+    "bg-volume-high",
     "bg-gap-behind",
     "bg-gap-on-plan",
     "bg-gap-ahead",

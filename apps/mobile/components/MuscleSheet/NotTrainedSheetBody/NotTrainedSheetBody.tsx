@@ -5,15 +5,15 @@ import { HeatTile } from "../HeatTile";
 import { LastTrainedBlock } from "../LastTrainedBlock";
 import { StatTile } from "../StatTile";
 
-import type { NotTargetedSheetBodyProps } from "./types";
+import type { NotTrainedSheetBodyProps } from "./types";
 
 /**
- * What the sheet of a muscle with no target holds under its header: the Heat and This week tiles, why there
- * is no target, when the muscle was last trained, and what would give it one. The Edit routine and Edit goal
- * buttons the board draws between the last two are not here until the routine editor and the goal screen
- * can be opened from the sheet.
+ * What the sheet of a muscle with no sets this week holds under its header: the Heat and This week tiles,
+ * what a set would do, when the muscle was last trained, and how to get it into the routine. The Edit
+ * routine button the board draws between the last two is not here until the routine editor can be opened
+ * from the sheet.
  */
-export function NotTargetedSheetBody({ copy, detail }: NotTargetedSheetBodyProps) {
+export function NotTrainedSheetBody({ copy, detail }: NotTrainedSheetBodyProps) {
   const { heat, thisWeek, explanation, lastTrained, footnote } = copy;
 
   return (
@@ -23,7 +23,7 @@ export function NotTargetedSheetBody({ copy, detail }: NotTargetedSheetBodyProps
         <StatTile
           caption={thisWeek.statusName}
           label={thisWeek.label}
-          swatchClassName="border border-border-strong bg-volume-not-targeted"
+          swatchClassName="border border-border-strong bg-volume-not-trained"
           value={thisWeek.value}
         />
       </View>

@@ -8,7 +8,7 @@ import {
   V_TAPER_GOALS,
   WEDNESDAY_STATE,
 } from "./suggestGolden";
-import { suggestSession, SUGGEST_PARAMS_V1 } from "../../src/training";
+import { suggestSession, SUGGEST_PARAMS_V2 } from "../../src/training";
 
 import type {
   MuscleId,
@@ -88,7 +88,7 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       { plannedDay: legs },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     ),
   );
 
@@ -118,13 +118,13 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
     });
   });
 
-  it("should give the lead reason as upper chest: priority 3, 4.80 of 12 sets, heat 0.1300, score 18.79", () => {
+  it("should give the lead reason as upper chest: priority 3, 4.80 of 10 sets, heat 0.1300, score 13.57", () => {
     const added = suggestion.exercises[5];
     if (added?.origin !== "added") {
       throw new Error("Expected the added exercise");
     }
     expect(readable(added.reasons)).toStrictEqual([
-      reason("chest_upper", 3, 4.8, 12, 0.13, 18.79, 4.8),
+      reason("chest_upper", 3, 4.8, 10, 0.13, 13.57, 4.8),
     ]);
   });
 
@@ -134,13 +134,11 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
     expect(suggestion.planned).toStrictEqual({ sets: 16, minutes: 50 });
   });
 
-  it("should list lats and biceps as skipped for heat", () => {
+  // Lats are at 11 sets, already Productive, so they score 0 and are no longer wanted, hot or not.
+  it("should list biceps as skipped for heat, and not lats, which are already productive", () => {
     expect(
       suggestion.skipped.map((each) => ({ ...each, heat: roundedTo(each.heat, 4) })),
-    ).toStrictEqual([
-      { muscle_id: "lats", heat: 0.6324 },
-      { muscle_id: "biceps", heat: 0.5118 },
-    ]);
+    ).toStrictEqual([{ muscle_id: "biceps", heat: 0.5118 }]);
   });
 
   it("should say the side lateral raise does not fit: 7 exercises and 22 sets read 70 minutes", () => {
@@ -175,7 +173,7 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
         V_TAPER_GOALS,
         GOLDEN_LIBRARY,
         { plannedDay: legs, minutes: 75 },
-        SUGGEST_PARAMS_V1,
+        SUGGEST_PARAMS_V2,
       ),
     );
     expect(roomy.exercises.slice(5).map((each) => each.exercise_id)).toStrictEqual([
@@ -196,7 +194,7 @@ describe("the V-taper user, Wednesday 12:00, Thursday's Legs kept (document case
         V_TAPER_GOALS,
         GOLDEN_LIBRARY,
         { plannedDay: legs, minutes: 75 },
-        SUGGEST_PARAMS_V1,
+        SUGGEST_PARAMS_V2,
       ),
     );
     const raise = roomy.exercises[6];
@@ -216,40 +214,28 @@ describe("the V-taper user with 45 minute sessions (document case d, no room)", 
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       { plannedDay: legs, minutes: 45 },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     expect(result).toMatchObject({
       kind: "nothing",
       why: "no_room",
       no_room: { muscle_id: "chest_upper", minutes_if_added: 60 },
     });
-    expect(result.no_room && roundedTo(result.no_room.score, 2)).toBe(18.79);
+    expect(result.no_room && roundedTo(result.no_room.score, 2)).toBe(13.57);
   });
 });
 
 describe("a week whose priorities the plan already covers (document case d)", () => {
   it("should offer nothing, saying the priorities are covered, with the plan untouched", () => {
-    // Every muscle exactly at its MAV low (12 for the medium muscles, 10 for the rest) at heat 0.2.
-    const medium = new Set<MuscleId>([
-      "chest_upper",
-      "chest_lower",
-      "lats",
-      "traps_upper",
-      "traps_mid",
-      "glute_med",
-      "adductors",
-    ]);
-    const covered = recordOfMuscles((muscle) => ({
-      weeklySets: medium.has(muscle) ? 12 : 10,
-      heat: 0.2,
-    }));
+    // Every muscle exactly where Productive starts (10 sets) at heat 0.2.
+    const covered = recordOfMuscles(() => ({ weeklySets: 10, heat: 0.2 }));
     expect(
       suggestSession(
         covered,
         V_TAPER_GOALS,
         GOLDEN_LIBRARY,
         { plannedDay: legs },
-        SUGGEST_PARAMS_V1,
+        SUGGEST_PARAMS_V2,
       ),
     ).toStrictEqual({ kind: "nothing", why: "priorities_covered", skipped: [], no_room: null });
   });
@@ -262,7 +248,7 @@ describe("the strength user, Thursday's Legs kept plus one main lift (document c
       STRENGTH_GOALS,
       GOLDEN_LIBRARY,
       { plannedDay: legs },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     ),
   );
 
@@ -290,6 +276,6 @@ describe("the strength user, Thursday's Legs kept plus one main lift (document c
   it("should read 60 minutes and say the bench press would read 70", () => {
     expect(suggestion.minutes).toBe(60);
     expect(suggestion.no_room).toMatchObject({ muscle_id: "chest_lower", minutes_if_added: 70 });
-    expect(suggestion.no_room && roundedTo(suggestion.no_room.score, 2)).toBe(19.76);
+    expect(suggestion.no_room && roundedTo(suggestion.no_room.score, 2)).toBe(14.49);
   });
 });

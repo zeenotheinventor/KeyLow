@@ -61,10 +61,10 @@ const THURSDAY = "2026-10-15T18:00:00Z";
 const SUNDAY = "2026-10-18T19:00:00Z";
 
 // The numbers are the encodings of core's `VOLUME_STATUSES` and `GAP_VALUES`.
-const UNDER = 0;
+const NOT_TRAINED = 0;
 const MAINTAINING = 1;
-const PRODUCTIVE = 2;
-const NOT_TARGETED = 4;
+const GROWING = 2;
+const PRODUCTIVE = 3;
 const BEHIND = 0;
 const ON_PLAN = 1;
 const NOT_IN_PLAN = 3;
@@ -97,42 +97,43 @@ const heatThursday = valuesOf(0, [
   [3, ["quads"]],
 ]);
 
-// The golden week at Sunday 20:00, as the core golden tests pin it.
-const volumeProjected = valuesOf(NOT_TARGETED, [
-  [PRODUCTIVE, ["triceps", "delt_front", "delt_side"]],
-  [MAINTAINING, ["lats", "chest_upper", "chest_lower", "biceps"]],
+// The golden week at Sunday 20:00, as the core golden tests pin it, in the bands of keylow-training-v2.
+const volumeProjected = valuesOf(NOT_TRAINED, [
+  [PRODUCTIVE, ["triceps", "delt_front", "delt_side", "lats"]],
   [
-    UNDER,
-    [
-      "traps_mid",
-      "delt_rear",
-      "hamstrings",
-      "quads",
-      "glute_max",
-      "lower_back",
-      "calves",
-      "forearms",
-    ],
-  ],
-]);
-const volumeActual = valuesOf(NOT_TARGETED, [
-  [MAINTAINING, ["delt_front", "lats", "biceps", "triceps"]],
-  [
-    UNDER,
+    GROWING,
     [
       "chest_upper",
       "chest_lower",
+      "biceps",
+      "traps_mid",
+      "delt_rear",
+      "hamstrings",
+      "quads",
+      "glute_max",
+    ],
+  ],
+  [MAINTAINING, ["lower_back", "calves", "forearms"]],
+]);
+const volumeActual = valuesOf(NOT_TRAINED, [
+  [PRODUCTIVE, ["lats"]],
+  [
+    GROWING,
+    [
+      "chest_upper",
+      "chest_lower",
+      "delt_front",
       "delt_side",
       "delt_rear",
       "traps_mid",
-      "lower_back",
-      "forearms",
+      "biceps",
+      "triceps",
       "glute_max",
       "quads",
       "hamstrings",
-      "calves",
     ],
   ],
+  [MAINTAINING, ["lower_back", "forearms", "calves"]],
 ]);
 const gapSunday = valuesOf(ON_PLAN, [
   [BEHIND, ["triceps", "delt_front", "delt_side", "chest_upper", "chest_lower"]],
@@ -371,11 +372,12 @@ describe("the body map scales", () => {
 
       expect(screen.getByRole("img", { name: back })).toBeOnTheScreen();
       expect(fillOf("triceps", back)).toEqual(volumeFill("dark", PRODUCTIVE));
-      expect(fillOf("lats", back)).toEqual(volumeFill("dark", MAINTAINING));
-      expect(fillOf("hamstrings", back)).toEqual(volumeFill("dark", UNDER));
-      expect(fillOf("quads", front)).toEqual(volumeFill("dark", UNDER));
-      expect(fillOf("abs", front)).toEqual(volumeFill("dark", NOT_TARGETED));
-      expect(fillOf("chest_upper", front)).toEqual(volumeFill("dark", MAINTAINING));
+      expect(fillOf("lats", back)).toEqual(volumeFill("dark", PRODUCTIVE));
+      expect(fillOf("hamstrings", back)).toEqual(volumeFill("dark", GROWING));
+      expect(fillOf("quads", front)).toEqual(volumeFill("dark", GROWING));
+      expect(fillOf("calves", back)).toEqual(volumeFill("dark", MAINTAINING));
+      expect(fillOf("abs", front)).toEqual(volumeFill("dark", NOT_TRAINED));
+      expect(fillOf("chest_upper", front)).toEqual(volumeFill("dark", GROWING));
     });
 
     it("should read Projected over the plan's week, with the date the plan reaches", async () => {
@@ -399,8 +401,8 @@ describe("the body map scales", () => {
       const back = figureName("Actual", "weekly sets", "back");
       expect(await screen.findByRole("status", { name: "Actual" })).toBeOnTheScreen();
       expect(screen.getByText("This week · as of Sun 18 Oct, 20:00")).toBeOnTheScreen();
-      expect(fillOf("triceps", back)).toEqual(volumeFill("dark", MAINTAINING));
-      expect(fillOf("hamstrings", back)).toEqual(volumeFill("dark", UNDER));
+      expect(fillOf("triceps", back)).toEqual(volumeFill("dark", GROWING));
+      expect(fillOf("hamstrings", back)).toEqual(volumeFill("dark", GROWING));
     });
 
     it("should keep the view that is remembered, and show Projected when that was chosen", async () => {
@@ -459,29 +461,29 @@ describe("the body map scales", () => {
       ).not.toBeOnTheScreen();
     });
 
-    it("should name the legend and list Not targeted first, then Under to Over", async () => {
+    it("should name the legend and list Not trained first, then up to High", async () => {
       await openScreen();
       await switchTo("Volume");
 
       const legend = screen.getByRole("group", { name: "Volume legend" });
 
       expectTextsInOrder(within(legend).getAllByText(/./), [
-        "Not targeted",
-        "Under",
+        "Not trained",
         "Maintaining",
+        "Growing",
         "Productive",
-        "Over",
+        "High",
       ]);
       expect(screen.queryByRole("group", { name: "Heat legend" })).not.toBeOnTheScreen();
     });
 
-    it("should caption the legend with the sets against the target and what Over means", async () => {
+    it("should caption the legend with the week and where each band starts", async () => {
       await openScreen();
       await switchTo("Volume");
 
       expect(
         screen.getByText(
-          "Sets this week against each muscle's target. Over means above the maximum.",
+          "Sets this week, Monday to Sunday. Growing starts at 4 sets, Productive at 10 and High above 20.",
         ),
       ).toBeOnTheScreen();
     });
@@ -493,11 +495,11 @@ describe("the body map scales", () => {
       expect(swatchFills("Volume legend")).toEqual(
         (
           [
-            "volume-not-targeted",
-            "volume-under",
+            "volume-not-trained",
             "volume-maintaining",
+            "volume-growing",
             "volume-productive",
-            "volume-over",
+            "volume-high",
           ] as const
         ).map((token) => resolvedColor("dark", token)),
       );
@@ -683,7 +685,7 @@ describe("the body map scales", () => {
       await switchTo("Gap");
 
       expect(swatchFills("Gap legend")).toEqual(
-        (["volume-not-targeted", "gap-behind", "gap-on-plan", "gap-ahead"] as const).map((token) =>
+        (["volume-not-trained", "gap-behind", "gap-on-plan", "gap-ahead"] as const).map((token) =>
           resolvedColor("dark", token),
         ),
       );
