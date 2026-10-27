@@ -20,6 +20,7 @@ on:
       - "apps/mobile/plugins/**"
       - "apps/mobile/modules/**"
       - "apps/mobile/patches/**"
+      - "patches/**"
       - "apps/mobile/.fingerprintignore"
       - "package.json"
       - "pnpm-lock.yaml"

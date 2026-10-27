@@ -1,0 +1,30 @@
+diff --git a/android/src/main/java/expo/modules/updates/errorrecovery/ErrorRecovery.kt b/android/src/main/java/expo/modules/updates/errorrecovery/ErrorRecovery.kt
+index c216e1cfaff3b6c0bcae4f0fd68f02cadac7aabd..96bef50a2af647afe642ea5b6589aa560e61b5b1 100644
+--- a/android/src/main/java/expo/modules/updates/errorrecovery/ErrorRecovery.kt
++++ b/android/src/main/java/expo/modules/updates/errorrecovery/ErrorRecovery.kt
+@@ -28,7 +28,7 @@ class ErrorRecovery(
+   internal val handlerThread = HandlerThread("expo-updates-error-recovery")
+   internal lateinit var handler: Handler
+ 
+-  private var shouldHandleReactInstanceException = false
++  @Volatile private var shouldHandleReactInstanceException = false
+ 
+   fun initialize(delegate: ErrorRecoveryDelegate) {
+     if (!::handler.isInitialized) {
+@@ -49,7 +49,16 @@ class ErrorRecovery(
+   internal fun onReactInstanceException(exception: Exception) {
+     if (shouldHandleReactInstanceException) {
+       handleException(exception)
++      return
+     }
++    // KeyLow patch (KEY-734, https://github.com/expo/expo/issues/41543). Once error recovery is
++    // disarmed, this was the only host handler in a release build, so the exception was dropped and
++    // React Native then destroyed the instance, leaving a black screen and no crash report. Hand it
++    // to the default uncaught exception handler so the app crashes normally and Sentry records it.
++    // This runs on whichever thread reported the error, and some callers sit inside a task
++    // continuation that would swallow a throw, so the handler is called directly.
++    val defaultHandler = Thread.getDefaultUncaughtExceptionHandler() ?: throw exception
++    defaultHandler.uncaughtException(Thread.currentThread(), exception)
+   }
+ 
+   fun notifyNewRemoteLoadStatus(newStatus: ErrorRecoveryDelegate.RemoteLoadStatus) {
