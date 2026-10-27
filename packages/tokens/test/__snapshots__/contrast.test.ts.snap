@@ -18,6 +18,9 @@ exports[`body map colour contrast on the surface > should record the ratio of ev
   "heat-4": 5.85,
   "heat-5": 4.84,
   "heat-glow": 2.23,
+  "role-assist": 3.65,
+  "role-primary": 13.84,
+  "role-secondary": 6.62,
   "volume-growing": 6.99,
   "volume-high": 4.84,
   "volume-maintaining": 4.74,
@@ -44,6 +47,9 @@ exports[`body map colour contrast on the surface > should record the ratio of ev
   "heat-4": 3.84,
   "heat-5": 4.96,
   "heat-glow": 1.73,
+  "role-assist": 1.52,
+  "role-primary": 5.24,
+  "role-secondary": 2.9,
   "volume-growing": 3.83,
   "volume-high": 4.96,
   "volume-maintaining": 5.61,
@@ -169,5 +175,21 @@ exports[`recorded contrast ratios > should record every text, accent, status and
     "surface": 3.6,
     "surface-raised": 3.83,
   },
+}
+`;
+
+exports[`role colour contrast on the sheet > should record the ratio of the three role colours on the sheet in the dark theme, with no threshold for role-assist 1`] = `
+{
+  "role-assist": 2.96,
+  "role-primary": 11.23,
+  "role-secondary": 5.37,
+}
+`;
+
+exports[`role colour contrast on the sheet > should record the ratio of the three role colours on the sheet in the light theme, with no threshold for role-assist 1`] = `
+{
+  "role-assist": 1.62,
+  "role-primary": 5.57,
+  "role-secondary": 3.08,
 }
 `;

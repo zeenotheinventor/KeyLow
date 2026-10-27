@@ -80,6 +80,9 @@ describe("preset as consumed by Tailwind", () => {
       "heat-glow": "var(--kl-heat-glow)",
       "volume-not-trained": "rgb(var(--kl-volume-not-trained) / <alpha-value>)",
       "gap-on-plan": "rgb(var(--kl-gap-on-plan) / <alpha-value>)",
+      "role-primary": "rgb(var(--kl-role-primary) / <alpha-value>)",
+      "role-secondary": "rgb(var(--kl-role-secondary) / <alpha-value>)",
+      "role-assist": "rgb(var(--kl-role-assist) / <alpha-value>)",
       "body-silhouette": "rgb(var(--kl-body-silhouette) / <alpha-value>)",
     });
   });
@@ -149,6 +152,9 @@ describe("the classes the design's screens are written with", () => {
     "bg-gap-behind",
     "bg-gap-on-plan",
     "bg-gap-ahead",
+    "bg-role-primary",
+    "bg-role-secondary",
+    "bg-role-assist",
   ];
 
   it.each(classNames)("should generate %s", async (className) => {

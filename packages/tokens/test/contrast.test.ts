@@ -110,6 +110,39 @@ const bodyMapRatioOnSurface = (scheme: "dark" | "light", name: string): number =
   return roundedRatio(drawn, surface);
 };
 
+// The role colours (KEY-740) colour a muscle by its role in an exercise on the "Muscles it works" sheet, so they are
+// read against `surface-sheet` and not `surface`: light role-secondary is 2.90:1 on `surface` but 3.08:1 on the
+// sheet it is drawn on. Primary and secondary carry the meaning and hold 3:1 in both themes. Assist is faint on
+// purpose, so it claims no threshold and is only recorded.
+const roleColoursAtThreeToOne = ["role-primary", "role-secondary"] as const;
+
+const roleColours = ["role-primary", "role-secondary", "role-assist"] as const;
+
+const roleRatioOnSheet = (scheme: "dark" | "light", name: string): number =>
+  roundedRatio(trainingTokens(scheme)[name] ?? "", readTokenJson()[scheme]["surface-sheet"] ?? "");
+
+describe("role colour contrast on the sheet", () => {
+  it.each(["dark", "light"] as const)(
+    "should read at 3:1 or more on the sheet for role-primary and role-secondary in the %s theme",
+    (scheme) => {
+      for (const name of roleColoursAtThreeToOne) {
+        expect(roleRatioOnSheet(scheme, name), name).toBeGreaterThanOrEqual(3);
+      }
+    },
+  );
+
+  it.each(["dark", "light"] as const)(
+    "should record the ratio of the three role colours on the sheet in the %s theme, with no threshold for role-assist",
+    (scheme) => {
+      const ratios = Object.fromEntries(
+        roleColours.map((name) => [name, roleRatioOnSheet(scheme, name)]),
+      );
+
+      expect(ratios).toMatchSnapshot();
+    },
+  );
+});
+
 describe("body map colour contrast on the surface", () => {
   it.each(["dark", "light"] as const)(
     "should read at 3:1 or more for the figure colours that carry a status in the %s theme",

@@ -62,6 +62,9 @@ describe("the training additions", () => {
     "gap-behind",
     "gap-on-plan",
     "gap-ahead",
+    "role-primary",
+    "role-secondary",
+    "role-assist",
   ];
 
   it.each(["dark", "light"] as const)(

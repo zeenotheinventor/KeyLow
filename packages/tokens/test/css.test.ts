@@ -72,6 +72,9 @@ describe("kilo-tokens.css", () => {
       "--gap-behind": "#5B95FF",
       "--gap-on-plan": "#596274",
       "--gap-ahead": "#FF9F43",
+      "--role-primary": "#CCF249",
+      "--role-secondary": "#8FA83A",
+      "--role-assist": "#66783A",
     });
   });
 
@@ -98,6 +101,9 @@ describe("kilo-tokens.css", () => {
       "--gap-behind": "#1F5BD6",
       "--gap-on-plan": "#B4BAC6",
       "--gap-ahead": "#B35C00",
+      "--role-primary": "#4D7300",
+      "--role-secondary": "#76A01A",
+      "--role-assist": "#B9D67A",
     });
   });
 
