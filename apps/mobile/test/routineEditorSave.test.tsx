@@ -16,6 +16,7 @@ import {
   screen,
   userEvent,
   waitFor,
+  within,
 } from "@testing-library/react-native";
 import { View } from "react-native";
 import { setUpTests } from "react-native-reanimated";
@@ -399,6 +400,43 @@ describe("saving a routine in the editor", () => {
       expect(routineStore.saves).toHaveLength(1);
       expect(routineStore.saves[0]).toMatchObject({ routineId, name: "Push Pull Legs 2" });
       expect(routineStore.saves[0]?.days).toHaveLength(4);
+    });
+
+    // The press that crashed on Android (KEY-733): Save on a routine nothing was changed in. The Save label's
+    // row must stay a view of its own through the press, the wait and the answer, or the label changes parent.
+    it("should leave an unchanged routine for the routines list once, with the Save label's row a view of its own throughout", async () => {
+      jest.useFakeTimers();
+      let answerSave: () => void = () => undefined;
+      routineStore.holdSave = new Promise<void>((resolve) => {
+        answerSave = resolve;
+      });
+      await showEditor({ stored: true });
+      expect(within(saveButton()).getByTestId("button-row")).toHaveProp("collapsable", false);
+
+      await fireEvent.press(saveButton());
+      await act(() => {
+        jest.advanceTimersByTime(1);
+      });
+      expect(screen.getByRole("progressbar", { name: "Loading" })).toBeOnTheScreen();
+      const busySave = screen.getByRole("button", {
+        name: new RegExp(ROUTINE_EDITOR.saveAction),
+        busy: true,
+      });
+      expect(within(busySave).getByTestId("button-row")).toHaveProp("collapsable", false);
+
+      answerSave();
+      await act(() => {
+        jest.advanceTimersByTime(1);
+      });
+      await waitFor(() => {
+        expect(routerMock.dismissTo).toHaveBeenCalledTimes(1);
+      });
+
+      expect(routerMock.dismissTo).toHaveBeenCalledWith(routinesPath());
+      expect(screen.queryByRole("progressbar", { name: "Loading" })).not.toBeOnTheScreen();
+      expect(within(saveButton()).getByTestId("button-row")).toHaveProp("collapsable", false);
+      expect(routineStore.saves).toHaveLength(1);
+      jest.useRealTimers();
     });
 
     it("should create a routine, with no id, from the new routine editor", async () => {

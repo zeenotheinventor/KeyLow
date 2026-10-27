@@ -311,6 +311,28 @@ describe("Button", () => {
       expect(screen.getByText("Add entry")).not.toBeVisible();
     });
 
+    // Fabric draws a view without a style that matters as no view at all, and a row that dims to nothing is one
+    // that matters. A row that came and went with `loading` moved its label between two parents on Android,
+    // where the move crashed (KEY-733), so the row is always a view of its own.
+    it("should keep the label's row a view of its own, loading or not, so the label never changes parent", async () => {
+      const { rerender } = await renderButton();
+      expect(screen.getByTestId("button-row")).toHaveProp("collapsable", false);
+
+      await rerender(
+        <ThemeProvider fixedPreference="dark">
+          <Button loading>Add entry</Button>
+        </ThemeProvider>,
+      );
+      expect(screen.getByTestId("button-row")).toHaveProp("collapsable", false);
+
+      await rerender(
+        <ThemeProvider fixedPreference="dark">
+          <Button>Add entry</Button>
+        </ThemeProvider>,
+      );
+      expect(screen.getByTestId("button-row")).toHaveProp("collapsable", false);
+    });
+
     it("should show no spinner when it is not loading, and the label in full", async () => {
       await renderButton();
 

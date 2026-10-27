@@ -110,8 +110,13 @@ export function Button({
         label={accessibilityLabel}
         onPress={onPress}
       >
+        {/* Loading hides the label with opacity, and Fabric draws a view at full opacity and no style as no view
+            at all. A row that came and went with `loading` moved its label between two parents, which crashed
+            Android (KEY-733), so the row is always a view of its own and only its opacity changes. */}
         <View
           className={`flex-row items-center ${hasLeading ? "gap-3" : look.rowClassName} ${loading ? "opacity-0" : ""}`}
+          collapsable={false}
+          testID="button-row"
         >
           {hasLeading ? (
             leading
