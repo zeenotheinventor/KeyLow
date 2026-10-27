@@ -1,6 +1,10 @@
 // The two helper files only, because the package's index brings in three, which the kit must not read at start.
 import { nearestSide, yawAfterDrag, yawToReachSide } from "@keylow/body-3d/rotation";
-import { BODY_TAP_SLOP, classifyTouch } from "@keylow/body-3d/touch";
+import {
+  BODY_LONG_PRESS_DELAY_MILLISECONDS,
+  BODY_TAP_SLOP,
+  classifyTouch,
+} from "@keylow/body-3d/touch";
 import { motionDuration } from "@keylow/tokens";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Gesture } from "react-native-gesture-handler";
@@ -116,6 +120,8 @@ export function useBodyRotation({ side, width, onSideChange, onTap }: BodyRotati
       .withTestId("body-3d-tap")
       .runOnJS(true)
       .maxDistance(BODY_TAP_SLOP)
+      // Pins the tap's duration limit, which the gesture handler defaults to 500 ms, to the long press delay, so the two are one number.
+      .maxDuration(BODY_LONG_PRESS_DELAY_MILLISECONDS)
       .onBegin(({ x, y }) => {
         tapDown.current = { x, y };
         hasSecondFinger.current = false;

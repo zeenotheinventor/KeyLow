@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { BODY_TAP_SLOP, classifyTouch } from "../src/touch";
+import { BODY_LONG_PRESS_DELAY_MILLISECONDS, BODY_TAP_SLOP, classifyTouch } from "../src/touch";
 
 const down = { x: 100, y: 200 };
+
+describe("BODY_LONG_PRESS_DELAY_MILLISECONDS", () => {
+  it("should be half a second, the delay the 2D figure's long press has always had", () => {
+    expect(BODY_LONG_PRESS_DELAY_MILLISECONDS).toBe(500);
+  });
+});
 
 describe("BODY_TAP_SLOP", () => {
   it("should be 10 points, the same as the 2D figure's tap slop", () => {

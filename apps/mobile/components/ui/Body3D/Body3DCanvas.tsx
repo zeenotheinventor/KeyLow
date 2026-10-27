@@ -6,8 +6,10 @@ import {
   createLookFade,
   dressBody,
   frameBody,
+  pickMuscle,
   pointsPerMetre,
 } from "@keylow/body-3d";
+import { turnAboutCentre } from "@keylow/body-3d/rotation";
 import { cameraShift } from "@keylow/body-3d/zoom";
 import maleBody from "@keylow/body-model/male.glb";
 import { Canvas, useFrame, useThree } from "@react-three/fiber/native";
@@ -22,27 +24,10 @@ import type { CameraPosition } from "@keylow/body-3d";
 import type { ZoomView } from "@keylow/body-3d/zoom";
 import type { RootState } from "@react-three/fiber/native";
 import type { SharedValue } from "react-native-reanimated";
-import type { Group } from "three";
 
 const MILLISECONDS_PER_SECOND = 1000;
 
 type SceneCamera = RootState["camera"];
-
-/**
- * Turns the body by `yaw` about the vertical line through (`centreX`, `centreZ`), the middle of its box, so it
- * turns on the spot wherever the model has its origin. The group turns about its own origin, so it is moved by
- * what keeps that line where it was: the centre minus the centre turned.
- */
-function turnAboutCentre(group: Group, yaw: number, centreX: number, centreZ: number) {
-  const sine = Math.sin(yaw);
-  const cosine = Math.cos(yaw);
-  group.rotation.y = yaw;
-  group.position.set(
-    centreX - (centreX * cosine + centreZ * sine),
-    0,
-    centreZ - (centreZ * cosine - centreX * sine),
-  );
-}
 
 // The camera R3F makes from the `camera` prop is a perspective one, which has a zoom.
 function hasZoom(camera: SceneCamera): camera is SceneCamera & { zoom: number } {
@@ -87,6 +72,7 @@ type BodyMeshesProps = Pick<
   | "yaw"
   | "view"
   | "frameAspect"
+  | "onPickerChange"
   | "onFirstFrame"
 >;
 
@@ -98,11 +84,13 @@ function BodyMeshes({
   yaw,
   view,
   frameAspect,
+  onPickerChange,
   onFirstFrame,
 }: BodyMeshesProps) {
   const model = use(bundledModel(maleBody));
   const camera = useThree((state) => state.camera);
   const invalidate = useThree((state) => state.invalidate);
+  const viewWidth = useThree((state) => state.size.width);
   const viewHeight = useThree((state) => state.size.height);
   const hasReportedFrame = useRef(false);
   const { muscle, otherMuscle, core, clay, skin } = colours;
@@ -157,6 +145,16 @@ function BodyMeshes({
     camera.updateProjectionMatrix();
     invalidate();
   }, [camera, framed, invalidate]);
+  // The pick is made here, where the camera and the body are, so it sees them as they are drawn: the turn, the zoom
+  // and the pan are all on them. The canvas is as wide as the touch area, so a point of the touch area is a point of it.
+  useLayoutEffect(() => {
+    onPickerChange?.((point) =>
+      pickMuscle(point, { width: viewWidth, height: viewHeight }, camera, dressed.group),
+    );
+    return () => {
+      onPickerChange?.(null);
+    };
+  }, [onPickerChange, camera, dressed, viewWidth, viewHeight]);
   // The meshes are in the scene by now, so the first frame that runs is the first one that draws them.
   useFrame((_, deltaSeconds) => {
     if (!hasReportedFrame.current) {
@@ -189,6 +187,7 @@ export function Body3DCanvas({
   yaw,
   view,
   frameAspect,
+  onPickerChange,
   onFirstFrame,
   onError,
 }: Body3DCanvasProps) {
@@ -221,6 +220,7 @@ export function Body3DCanvas({
           view={view}
           yaw={yaw}
           frameAspect={frameAspect}
+          onPickerChange={onPickerChange}
         />
       </Suspense>
     </Canvas>

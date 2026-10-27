@@ -165,7 +165,7 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       scaleSwitch: { name: "Scale", heat: "Heat", volume: "Volume", gap: "Gap" },
       sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
       sideSwitchDescription: "Turns the body to face front or back.",
-      rotateHint: "Drag to turn · Pinch to zoom",
+      rotateHint: "Drag to turn · Pinch to zoom · Long-press a muscle for details",
       zoom: { reset: "Reset", resetName: "Reset zoom" },
       loading3d: "Loading 3D…",
       loading3dLabel: "3D is loading.",

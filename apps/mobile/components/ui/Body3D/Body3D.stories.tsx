@@ -11,6 +11,7 @@ import { Text } from "../Text";
 import type { Body3DProps } from "./types";
 import type { SegmentedControlOption } from "../SegmentedControl";
 import type { BodySide } from "@keylow/body-3d/rotation";
+import type { MuscleId } from "@keylow/core/training";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 const meta = {
@@ -54,15 +55,17 @@ const sideOptions: SegmentedControlOption<BodySide>[] = [
   { value: "back", label: BODY_MAP.sideSwitch.back },
 ];
 
-// A screen keeps the side and the tap count, so the story does too: a drag that settles on the other side sets
-// the side, the control sets it too, and a tap counts. The readout is the side the body has settled on.
+// A screen keeps the side, the tap count and the muscle of a long press, so the story does too: a drag that settles
+// on the other side sets the side, the control sets it too, a tap counts, and a long press shows the muscle id. The readout is the side the body has settled on.
 function Turning(props: Body3DProps) {
   const [side, setSide] = useState<BodySide>("front");
   const [tapCount, setTapCount] = useState(0);
+  const [longPressed, setLongPressed] = useState<MuscleId | null>(null);
   return (
     <View className="items-center gap-4">
       <Body3D
         {...props}
+        onLongPressMuscle={setLongPressed}
         onSideChange={setSide}
         onTap={() => {
           setTapCount((count) => count + 1);
@@ -74,6 +77,7 @@ function Turning(props: Body3DProps) {
       </Text>
       <Text aria-live="polite">{`Side: ${side}`}</Text>
       <Text aria-live="polite">{`Taps: ${tapCount}`}</Text>
+      <Text aria-live="polite">{`Long press: ${longPressed ?? "none"}`}</Text>
       <View className="w-48">
         <SegmentedControl
           label={BODY_MAP.sideSwitch.name}
@@ -131,7 +135,7 @@ export const Glow: Story = {
 /**
  * Drag the body sideways to turn it: a drag across its width is half a turn, it follows the finger, and on
  * release it settles on the nearer of Front and Back. Front and Back turn it too, by the shorter arc. A short
- * tap counts and a drag never does. A vertical swipe on the body scrolls the page. The image is a single
+ * tap counts and a drag never does. A long press on a muscle shows its id. A vertical swipe on the body scrolls the page. The image is a single
  * `img` with no action of its own, so nothing here depends on a gesture alone: the control turns the body, and
  * a screen's own toggle button does what a tap does.
  */

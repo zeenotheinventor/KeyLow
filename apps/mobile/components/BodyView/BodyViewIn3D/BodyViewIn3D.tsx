@@ -25,13 +25,16 @@ const HIDDEN_BODY_OPACITY = 0.01;
  * stays, with no message, and `onFail` is called. The box keeps the 2D figure's size throughout, and a
  * screen reader finds one image with the label: the 2D figure until the 3D body has drawn, then the 3D.
  * The 3D body gets the figure's value props, the side it faces, the zoom calls and the two calls that only it makes, and
- * takes touches once it has drawn, over `touchWidth` if the stage is wider than the body. The box is that wide, with the figure and the body centred in it. With `bodyScheme` the 3D body alone is drawn in that scheme, and the 2D figure keeps the app's. `onPhaseChange` tells the stage around it where it is.
+ * takes touches once it has drawn, over `touchWidth` if the stage is wider than the body. The box is that wide, with the figure and the body centred in it.
+ * `onLongPressMuscle` goes to the 3D body alone: the 2D figure that shows while it loads, or stays if it fails,
+ * makes no muscle a button, so a tap on it is still the tap of the stage. With `bodyScheme` the 3D body alone is drawn in that scheme, and the 2D figure keeps the app's. `onPhaseChange` tells the stage around it where it is.
  */
 export function BodyViewIn3D({
   onFail,
   Body3DComponent = Body3D,
   onSideChange,
   onTap,
+  onLongPressMuscle,
   onZoomChange,
   zoomResetCount,
   onPhaseChange,
@@ -99,6 +102,7 @@ export function BodyViewIn3D({
       onFirstFrame={showDrawn}
       onSideChange={onSideChange}
       onTap={onTap}
+      onLongPressMuscle={onLongPressMuscle}
       onZoomChange={onZoomChange}
       zoomResetCount={zoomResetCount}
     />

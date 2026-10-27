@@ -1,6 +1,13 @@
+import { Group, Vector3 } from "three";
 import { describe, expect, it } from "vitest";
 
-import { BODY_SIDE_YAW, nearestSide, yawAfterDrag, yawToReachSide } from "../src/rotation";
+import {
+  BODY_SIDE_YAW,
+  nearestSide,
+  turnAboutCentre,
+  yawAfterDrag,
+  yawToReachSide,
+} from "../src/rotation";
 
 const HALF_TURN = Math.PI;
 const QUARTER_TURN = Math.PI / 2;
@@ -123,5 +130,35 @@ describe("yawToReachSide", () => {
       expect(nearestSide(yawToReachSide(yaw, "back"))).toBe("back");
       expect(nearestSide(yawToReachSide(yaw, "front"))).toBe("front");
     }
+  });
+});
+
+describe("turnAboutCentre", () => {
+  // A point on the vertical line through the middle of a body whose box is not centred on the origin.
+  const centre = new Vector3(0.2, 1, 0.5);
+
+  it.each([0, Math.PI / 4, Math.PI / 2, Math.PI, -2])(
+    "should keep the line through the middle of the box where it was at a turn of %s",
+    (yaw) => {
+      const group = new Group();
+      group.add(new Group());
+      group.children[0]?.position.copy(centre);
+
+      turnAboutCentre(group, yaw, centre.x, centre.z);
+      group.updateMatrixWorld(true);
+
+      const turned = group.children[0]?.getWorldPosition(new Vector3());
+      expect(turned?.x).toBeCloseTo(centre.x);
+      expect(turned?.y).toBeCloseTo(centre.y);
+      expect(turned?.z).toBeCloseTo(centre.z);
+    },
+  );
+
+  it("should turn the group by the yaw", () => {
+    const group = new Group();
+
+    turnAboutCentre(group, 1.2, 0.2, 0.5);
+
+    expect(group.rotation.y).toBe(1.2);
   });
 });

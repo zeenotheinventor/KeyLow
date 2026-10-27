@@ -4,6 +4,12 @@
  */
 export const BODY_TAP_SLOP = 10;
 
+/**
+ * How long a finger has to stay down, in milliseconds, for a long press on a muscle. It is the delay the 2D
+ * figure's muscles have always had, which React Native's press gives by default, named so the 3D body takes the same.
+ */
+export const BODY_LONG_PRESS_DELAY_MILLISECONDS = 500;
+
 export type TouchPoint = { x: number; y: number };
 
 export type TouchKind = "tap" | "drag";
