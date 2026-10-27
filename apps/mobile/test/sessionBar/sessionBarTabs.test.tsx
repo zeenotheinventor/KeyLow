@@ -1,20 +1,10 @@
 import { KeyLowProvider } from "@keylow/api-client";
-import { tabBarHeight } from "@keylow/tokens";
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from "@testing-library/react-native";
+import { act, cleanup, render, screen, userEvent, waitFor } from "@testing-library/react-native";
 import { ExpoRoot, Slot } from "expo-router";
 import { getMockContext } from "expo-router/testing-library";
-import { Pressable, Text } from "react-native";
+import { Text } from "react-native";
 
 import TabsLayout from "../../app/(tabs)/_layout";
-import { ToastProvider, useToast } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient } from "../support/diaryBackend";
 import { compileKitStyles } from "../support/kitStyles";
@@ -90,37 +80,15 @@ function Providers() {
   return (
     <ThemeProvider fixedPreference="dark">
       <KeyLowProvider client={trainClient} queryClient={queryClient}>
-        <ToastProvider>
-          <Slot />
-        </ToastProvider>
+        <Slot />
       </KeyLowProvider>
     </ThemeProvider>
   );
 }
 
-function RaiseToast() {
-  const { show } = useToast();
-
-  return (
-    <Pressable
-      role="button"
-      onPress={() => {
-        show({ message: "Entry deleted" });
-      }}
-    >
-      <Text>Raise a toast</Text>
-    </Pressable>
-  );
-}
-
 const standIn = (text: string) =>
   function StandIn() {
-    return (
-      <>
-        <Text role="heading">{text}</Text>
-        <RaiseToast />
-      </>
-    );
+    return <Text role="heading">{text}</Text>;
   };
 
 const routes = {
@@ -236,60 +204,6 @@ describe("the session bar in the tab shell", () => {
       expect(await screen.findByRole("heading", { name: "Session screen" })).toBeOnTheScreen();
     });
 
-    describe("the toast clearance", () => {
-      const launcherHeight = 57;
-      const barHeight = 52;
-
-      async function measure(name: string, height: number) {
-        await fireEvent(screen.getByRole("button", { name }), "layout", {
-          nativeEvent: { layout: { x: 0, y: 0, width: 390, height } },
-        });
-      }
-
-      it("should raise a toast above the bar alone on a tab with no launcher", async () => {
-        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        await renderApp("/more");
-        await bar();
-        await measure(BAR_NAME, barHeight);
-
-        await user.press(screen.getByRole("button", { name: "Raise a toast" }));
-
-        expect(screen.getByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 12 + barHeight });
-      });
-
-      it("should raise a toast above the launcher and the bar together on the dashboard", async () => {
-        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        await renderApp("/dashboard");
-        await bar();
-        await measure("Search for a food", launcherHeight);
-        await measure(BAR_NAME, barHeight);
-
-        await user.press(screen.getByRole("button", { name: "Raise a toast" }));
-
-        expect(screen.getByTestId("toast")).toHaveStyle({
-          bottom: tabBarHeight + 12 + launcherHeight + barHeight,
-        });
-      });
-
-      it("should put toasts back at the default height when the session ends and the bar goes", async () => {
-        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        await renderApp("/more");
-        await bar();
-        await measure(BAR_NAME, barHeight);
-
-        trainBackend.activeSession = null;
-        await act(async () => {
-          await queryClient.invalidateQueries();
-        });
-        await waitFor(() => {
-          expect(screen.queryByRole("button", { name: BAR_NAME })).not.toBeOnTheScreen();
-        });
-        await user.press(screen.getByRole("button", { name: "Raise a toast" }));
-
-        expect(screen.getByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 12 });
-      });
-    });
-
     describe("the clock", () => {
       it("should tick the bar every second without drawing the tab bar again", async () => {
         await renderApp("/more");
@@ -316,18 +230,6 @@ describe("the session bar in the tab shell", () => {
       await act(() => Promise.resolve());
 
       expect(screen.queryByRole("button", { name: /Open session$/ })).not.toBeOnTheScreen();
-    });
-
-    it("should leave a toast at the default height", async () => {
-      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-      await renderApp("/more");
-      await waitFor(() => {
-        expect(trainRequestsTo("active_session")).toBe(1);
-      });
-
-      await user.press(screen.getByRole("button", { name: "Raise a toast" }));
-
-      expect(screen.getByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 12 });
     });
   });
 });

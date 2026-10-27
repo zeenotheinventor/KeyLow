@@ -7,7 +7,7 @@ import { Icon, PressableSurface, Text } from "../ui";
 import type { BodyMapHintProps } from "./types";
 
 // The kit Toast's box, so the two read alike, with the padding the board gives the hint: 4 above, below and
-// at the right, 12 at the left. The Toast is anchored to the bottom of the screen by its provider, so it
+// at the right, 12 at the left. The Toast is anchored to the top of the screen by its provider, so it
 // cannot sit on a card, and this strip is laid over the figures by the card instead.
 const boxClassName =
   "min-h-touch-target flex-row items-center gap-3 rounded-medium border border-border bg-surface-sheet py-1 pl-3 pr-1 elevation-toast";

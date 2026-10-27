@@ -5,7 +5,6 @@ export const storyStates = [
   "Danger",
   "MessageOnly",
   "LongMessage",
-  "AboveTabBar",
-  "AboveSearchDock",
+  "SuccessFilled",
   "WithProvider",
 ];

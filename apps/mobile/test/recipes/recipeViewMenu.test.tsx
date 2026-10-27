@@ -292,15 +292,15 @@ describe("the recipe view's More menu", () => {
       expect(routerMock.push).toHaveBeenCalledWith(recipePath(String(copy?.["id"])));
     });
 
-    it("should show its toast at the bottom above the safe area, as the copy's view has no tab bar", async () => {
-      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, right: 0, bottom: 20, left: 0 });
+    it("should show its toast at the top under the safe area", async () => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 47, right: 0, bottom: 20, left: 0 });
       const { user } = await showView();
 
       await duplicate(user);
       await toast("Recipe duplicated");
 
       // The toast's placement has no role or name to query, so it is read from its test id.
-      expect(screen.getByTestId("toast")).toHaveStyle({ bottom: 20 + 12 });
+      expect(screen.getByTestId("toast")).toHaveStyle({ top: 47 + 12 });
     });
 
     it("should close the sheet and change nothing of the original", async () => {

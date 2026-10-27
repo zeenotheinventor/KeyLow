@@ -66,6 +66,21 @@ describe("recorded contrast ratios", () => {
   );
 });
 
+// A filled success toast draws its words and icon on the success colour itself. The status ink
+// (`text-on-status`) is white in light, which is 3.51:1 on the light success green, so the fill has its own.
+describe("the ink on a success fill", () => {
+  it.each(["dark", "light"] as const)(
+    "should read at 4.5:1 or more on the success colour in the %s theme",
+    (scheme) => {
+      const theme = readTokenJson()[scheme];
+
+      expect(
+        contrastRatio(theme["text-on-success"] ?? "", theme.success ?? ""),
+      ).toBeGreaterThanOrEqual(4.5);
+    },
+  );
+});
+
 // The body map figure sits on a card, so its colours are read against `surface`. Zee approved the
 // canvas (KEY-339) with the claim that the figure colours that carry a status read at 3:1 or more. The
 // heat scale is now grey, then green to red (KEY-515): heat-1 to heat-5 all carry a status and hold the

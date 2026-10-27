@@ -1,15 +1,10 @@
-import { tabBarHeight, themes } from "@keylow/tokens";
+import { themes } from "@keylow/tokens";
 import { act, fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo, Pressable, Text } from "react-native";
 import { getAnimatedStyle, setUpTests } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import {
-  Toast,
-  ToastProvider,
-  useToast,
-  useToastAboveBar,
-  useToastClearance,
-} from "../../components/ui";
+import { Toast, ToastProvider, useToast } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -206,31 +201,153 @@ describe("Toast", () => {
   });
 
   describe("where it sits", () => {
-    it("should sit above the tab bar and the safe area, with 12 points between", async () => {
-      await renderToast({ bottomInset: 34 });
+    it("should sit under the status bar's safe area, with 12 points between, at the top", async () => {
+      await renderToast({ topInset: 59 });
 
       // The placement has no role of its own, because the announced words are inside it.
       expect(await screen.findByTestId("toast")).toHaveStyle({
-        bottom: tabBarHeight + 34 + 12,
+        top: 59 + 12,
         left: 16,
         right: 16,
       });
     });
+
+    it("should sit 12 points from the top without a safe area", async () => {
+      await renderToast();
+
+      expect(await screen.findByTestId("toast")).toHaveStyle({ top: 12 });
+    });
   });
 
-  describe("clearance", () => {
-    it("should sit higher by the clearance it is given, for a bar such as the search dock", async () => {
-      await renderToast({ bottomInset: 34, bottomClearance: 57 });
+  describe("the filled success variant", () => {
+    describe.each(schemes)("in the %s scheme", (scheme) => {
+      const filled = {
+        variant: "success-filled",
+        icon: "Check",
+        actionLabel: "View",
+        onAction: () => undefined,
+      } as const;
 
-      expect(await screen.findByTestId("toast")).toHaveStyle({
-        bottom: tabBarHeight + 34 + 12 + 57,
+      it("should fill the card with the success colour", async () => {
+        await renderToast(filled, scheme);
+
+        expect(await screen.findByTestId("toast-box")).toHaveStyle({
+          backgroundColor: resolvedColor(scheme, "success"),
+          borderColor: resolvedColor(scheme, "success"),
+        });
+      });
+
+      it("should draw the words in the ink for the success fill", async () => {
+        await renderToast(filled, scheme);
+
+        expect(await screen.findByText("Entry deleted")).toHaveStyle({
+          color: resolvedColor(scheme, "text-on-success"),
+        });
+      });
+
+      it("should draw the icon in the ink for the success fill, whatever the tone", async () => {
+        await renderToast({ ...filled, tone: "danger" }, scheme);
+
+        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-on-success"]);
+      });
+
+      it("should draw the action in the ink for the success fill, not lime or the primary text", async () => {
+        await renderToast(filled, scheme);
+
+        expect(await screen.findByText("View")).toHaveStyle({
+          color: resolvedColor(scheme, "text-on-success"),
+        });
       });
     });
 
-    it("should add nothing without a clearance", async () => {
-      await renderToast({ bottomInset: 34 });
+    it.each(schemes)(
+      "should leave the default look alone, a sheet card with primary words, in the %s scheme",
+      async (scheme) => {
+        await renderToast({}, scheme);
 
-      expect(await screen.findByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 34 + 12 });
+        expect(await screen.findByTestId("toast-box")).toHaveStyle({
+          backgroundColor: resolvedColor(scheme, "surface-sheet"),
+          borderColor: resolvedColor(scheme, "border"),
+        });
+        expect(screen.getByText("Entry deleted")).toHaveStyle({
+          color: resolvedColor(scheme, "text-primary"),
+        });
+      },
+    );
+  });
+
+  describe("dismissing it", () => {
+    it("should close at once when the card body is tapped", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onClose = jest.fn();
+      await renderToast({ actionLabel: "Undo", onAction: () => undefined, onClose });
+
+      await user.press(screen.getByText("Entry deleted"));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should run the action when the action is tapped, and close nothing itself", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      const onAction = jest.fn();
+      const onClose = jest.fn();
+      await renderToast({ actionLabel: "Undo", onAction, onClose });
+
+      await user.press(screen.getByRole("button", { name: "Undo" }));
+
+      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should offer a dismiss action to a screen reader on the announced words", async () => {
+      await renderToast({ onClose: () => undefined });
+
+      expect(screen.getByRole("status", { name: "Entry deleted" })).toHaveProp(
+        "accessibilityActions",
+        [{ name: "dismiss", label: "Dismiss" }],
+      );
+    });
+
+    it("should close when the screen reader's dismiss action is run", async () => {
+      const onClose = jest.fn();
+      await renderToast({ actionLabel: "Undo", onAction: () => undefined, onClose });
+
+      await fireEvent(
+        screen.getByRole("status", { name: "Entry deleted" }),
+        "accessibilityAction",
+        {
+          nativeEvent: { actionName: "dismiss" },
+        },
+      );
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should ignore a screen reader action that is not dismiss", async () => {
+      const onClose = jest.fn();
+      await renderToast({ onClose });
+
+      await fireEvent(
+        screen.getByRole("status", { name: "Entry deleted" }),
+        "accessibilityAction",
+        {
+          nativeEvent: { actionName: "activate" },
+        },
+      );
+
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should offer no dismiss action, and ignore a tap, without onClose", async () => {
+      const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+      await renderToast();
+
+      await user.press(screen.getByText("Entry deleted"));
+
+      expect(screen.getByRole("status", { name: "Entry deleted" })).not.toHaveProp(
+        "accessibilityActions",
+      );
+      expect(screen.getByText("Entry deleted")).toBeOnTheScreen();
     });
   });
 
@@ -422,6 +539,20 @@ describe("ToastProvider", () => {
     expect(screen.queryByText("Added to Lunch")).not.toBeOnTheScreen();
   });
 
+  it("should close the toast at once when its body is tapped, and not run its action", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    const onAction = jest.fn();
+    await renderProvider({
+      Delete: { message: "Entry deleted", actionLabel: "Undo", onAction },
+    });
+    await user.press(screen.getByRole("button", { name: "Delete" }));
+
+    await user.press(screen.getByText("Entry deleted"));
+
+    expect(screen.queryByText("Entry deleted")).not.toBeOnTheScreen();
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it("should call the action, then close the toast", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const onAction = jest.fn();
@@ -487,13 +618,7 @@ describe("ToastProvider", () => {
   });
 });
 
-// A screen that holds the clearance while it is mounted, as a screen with a bar above the tab bar does.
-function ScreenWithBar({ height }: { height: number }) {
-  useToastClearance(height);
-  return null;
-}
-
-describe("useToastClearance", () => {
+describe("ToastProvider placement", () => {
   let kitStyles: string;
 
   beforeAll(async () => {
@@ -507,138 +632,41 @@ describe("useToastClearance", () => {
   });
 
   afterEach(() => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 0, right: 0, bottom: 0, left: 0 });
     jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
-  // The default is the tab bar, the safe area under it (none in the mocked one) and 12 points.
-  const defaultBottom = tabBarHeight + 12;
-
-  function renderWithBar(bar: React.ReactNode) {
-    return render(
-      inScheme(
-        "dark",
-        <ToastProvider>
-          {bar}
-          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
-        </ToastProvider>,
-      ),
-    );
-  }
-
-  it("should raise every toast the provider shows by the height, whichever screen raises it", async () => {
+  it("should put every toast under the status bar, whichever screen raises it", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await renderWithBar(<ScreenWithBar height={57} />);
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ top: 47, right: 0, bottom: 34, left: 0 });
+    await renderProvider({ Delete: { message: "Entry deleted" } });
 
     await user.press(screen.getByRole("button", { name: "Delete" }));
 
-    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom + 57 });
+    expect(screen.getByTestId("toast")).toHaveStyle({ top: 47 + 12, left: 16, right: 16 });
   });
 
-  it("should leave the toast where it was without the hook", async () => {
+  it("should pass the variant a screen asks for to the toast", async () => {
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await renderWithBar(null);
+    await renderProvider({
+      Update: { message: "Ki-Lo has been updated!", variant: "success-filled" },
+    });
 
+    await user.press(screen.getByRole("button", { name: "Update" }));
+
+    expect(screen.getByTestId("toast-box")).toHaveStyle({
+      backgroundColor: resolvedColor("dark", "success"),
+    });
+  });
+
+  it("should leave the layer that holds the toast open to touches outside the card", async () => {
+    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
+    await renderProvider({ Delete: { message: "Entry deleted" } });
     await user.press(screen.getByRole("button", { name: "Delete" }));
 
-    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom });
-  });
-
-  it("should put the toast back when the screen that held the clearance goes", async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    const view = await renderWithBar(<ScreenWithBar height={57} />);
-    await view.rerender(
-      inScheme(
-        "dark",
-        <ToastProvider>
-          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
-        </ToastProvider>,
-      ),
-    );
-
-    await user.press(screen.getByRole("button", { name: "Delete" }));
-
-    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom });
-  });
-
-  it("should follow the height when it changes, as a bar measured again does", async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    const view = await renderWithBar(<ScreenWithBar height={57} />);
-    await user.press(screen.getByRole("button", { name: "Delete" }));
-    await view.rerender(
-      inScheme(
-        "dark",
-        <ToastProvider>
-          <ScreenWithBar height={80} />
-          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
-        </ToastProvider>,
-      ),
-    );
-
-    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: defaultBottom + 80 });
-  });
-
-  it("should fail outside a provider, as useToast does", async () => {
-    jest.spyOn(console, "error").mockImplementation(() => undefined);
-
-    await expect(render(<ScreenWithBar height={57} />)).rejects.toThrow(
-      "useToastClearance must be used inside a ToastProvider",
-    );
-  });
-});
-
-// A screen with no tab bar and a bar of its own standing on its bottom edge, such as the recipe editor's Save dock.
-function ScreenWithBottomBar({ height }: { height: number }) {
-  useToastAboveBar(height);
-  return null;
-}
-
-describe("useToastAboveBar", () => {
-  let kitStyles: string;
-
-  beforeAll(async () => {
-    kitStyles = await compileKitStyles();
-  });
-
-  beforeEach(() => {
-    jest.useFakeTimers();
-    registerAppStyles(kitStyles);
-    setReduceMotion(false);
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-    jest.restoreAllMocks();
-  });
-
-  function renderWithBottomBar(height: number) {
-    return render(
-      inScheme(
-        "dark",
-        <ToastProvider>
-          <ScreenWithBottomBar height={height} />
-          <Screen toasts={{ Delete: { message: "Entry deleted" } }} />
-        </ToastProvider>,
-      ),
-    );
-  }
-
-  it("should sit 12 points above the bar when the screen has no tab bar under it", async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await renderWithBottomBar(111);
-
-    await user.press(screen.getByRole("button", { name: "Delete" }));
-
-    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: 111 + 12 });
-  });
-
-  it("should leave the toast where it was while the bar is not measured", async () => {
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    await renderWithBottomBar(0);
-
-    await user.press(screen.getByRole("button", { name: "Delete" }));
-
-    expect(screen.getByTestId("toast")).toHaveStyle({ bottom: tabBarHeight + 12 });
+    // The layer has no role. It fills the screen, so it must not take a touch that is not on the card.
+    expect(screen.getByTestId("toast-layer")).toHaveProp("pointerEvents", "box-none");
   });
 });
 

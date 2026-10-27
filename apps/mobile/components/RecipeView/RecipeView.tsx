@@ -12,7 +12,6 @@ import {
   recipeViewOf,
   stepViewServings,
 } from "@keylow/core/recipes";
-import { tabBarHeight } from "@keylow/tokens";
 import { usePathname, useRouter } from "expo-router";
 import { vars } from "nativewind";
 import { useEffect, useRef, useState } from "react";
@@ -27,7 +26,7 @@ import { RecipeViewIngredientsSection } from "../RecipeViewIngredientsSection";
 import { RecipeViewMenu } from "../RecipeViewMenu";
 import { RecipeViewStepsSection } from "../RecipeViewStepsSection";
 import { ServingsCard } from "../ServingsCard";
-import { Banner, SheetHeader, useToastClearance } from "../ui";
+import { Banner, SheetHeader } from "../ui";
 
 import type { RecipeViewProps } from "./types";
 import type { TextInput } from "react-native";
@@ -55,8 +54,6 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
   const insets = useSafeAreaInsets();
   const recipeActions = useRecipeActions();
   const pathname = usePathname();
-  // This screen has no tab bar, so its toasts sit 12 points above the safe area and not above the bar.
-  useToastClearance(-tabBarHeight);
   // Null is the recipe's own servings, so the number is never one the recipe has since stopped having.
   const [chosenServings, setChosenServings] = useState<number | null>(null);
   // What is in the field while it is being typed in, or null when it shows the servings in use.

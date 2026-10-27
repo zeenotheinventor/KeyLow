@@ -5,6 +5,9 @@ import { AccessibilityInfo } from "react-native";
 import { useUpdatedToast } from "../components/RootNavigator/useUpdatedToast";
 import { ToastProvider } from "../components/ui";
 import { ThemeProvider } from "../lib/theme";
+import { compileKitStyles } from "./support/kitStyles";
+import { registerAppStyles } from "./support/nativeWindStyles";
+import { resolvedColor } from "./support/themeColor";
 import { lastSeenUpdateIdStorageKey } from "../lib/updates/lastSeenUpdateId";
 
 import type { ReactNode } from "react";
@@ -94,7 +97,14 @@ function settleStore() {
 }
 
 describe("useUpdatedToast", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
   beforeEach(() => {
+    registerAppStyles(kitStyles);
     mockStore.clear();
     mockStoreFailures.read = false;
     mockStoreFailures.write = false;
@@ -118,6 +128,18 @@ describe("useUpdatedToast", () => {
 
       expect(await screen.findByRole("status")).toHaveTextContent(UPDATED_TOAST);
       expect(UPDATED_TOAST).toBe("Ki-Lo has been updated!");
+    });
+
+    it("should show it as the filled green toast, in the success colour with its ink on the words", async () => {
+      await renderToastHook(true);
+      await settleStore();
+
+      expect(await screen.findByText(UPDATED_TOAST)).toHaveStyle({
+        color: resolvedColor("dark", "text-on-success"),
+      });
+      expect(screen.getByTestId("toast-box")).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "success"),
+      });
     });
 
     it("should not show the toast while the splash screen is up", async () => {
