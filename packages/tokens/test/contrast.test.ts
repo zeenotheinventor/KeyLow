@@ -84,14 +84,17 @@ describe("the ink on a success fill", () => {
 // The body map figure sits on a card, so its colours are read against `surface`. Zee approved the
 // canvas (KEY-339) with the claim that the figure colours that carry a status read at 3:1 or more. The
 // heat scale is now grey, then green to red (KEY-515): heat-1 to heat-5 all carry a status and hold the
-// threshold in both themes. The other body map colours are meant to recede (the silhouette, rested heat,
-// not targeted, on plan), so they have no threshold. KEY-515 darkened light heat-2 and heat-3 to keep it.
+// threshold in both themes. KEY-736 made the volume scale cool to warm, so all four coloured volume bands
+// (maintaining, growing, productive, high) hold it too. The other body map colours are meant to recede (the
+// silhouette, rested heat, not trained, on plan), so they have no threshold. KEY-515 darkened light heat-2 and
+// heat-3 to keep it.
 const bodyMapColoursAtThreeToOne = [
   "heat-1",
   "heat-2",
   "heat-3",
   "heat-4",
   "heat-5",
+  "volume-maintaining",
   "volume-growing",
   "volume-productive",
   "volume-high",
