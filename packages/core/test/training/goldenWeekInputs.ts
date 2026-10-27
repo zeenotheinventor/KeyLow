@@ -6,7 +6,7 @@ import {
 } from "../../src/schemas";
 import {
   buildSetSnapshot,
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   compareWeek,
   MUSCLE_IDS,
   muscleState,
@@ -24,7 +24,7 @@ import type { MuscleDetailSet, MuscleId, PlanRoutine } from "../../src/training"
 
 export const GOLDEN_TIME_ZONE = goldenWeek.timeZone;
 export const GOLDEN_WEEK_START = goldenWeek.weekStart;
-export const params = COMPARE_PARAMS_V1;
+export const params = COMPARE_PARAMS_V2;
 
 const requireExercise = (sourceRef: string) => {
   const exercise = goldenWeek.exercises.find((candidate) => candidate.sourceRef === sourceRef);
@@ -103,8 +103,7 @@ export const comparison = compareWeek(week.actual, week.projected, params);
 export const THURSDAY_EVENING = "2026-10-15T19:00:00+01:00";
 
 /** The heat, ready time and weekly sets of every muscle from the logged sets up to `now`. */
-export const actualStateAt = (now: string) =>
-  muscleState(loggedSets, now, params.training, targeted);
+export const actualStateAt = (now: string) => muscleState(loggedSets, now, params.training);
 
 /** A record of every muscle id, valued by `valueOf`. */
 export const recordOfMuscles = <Value>(

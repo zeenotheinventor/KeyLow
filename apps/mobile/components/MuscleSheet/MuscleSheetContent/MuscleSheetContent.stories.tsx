@@ -22,10 +22,10 @@ const sideDelts: MuscleDetail = {
   weeklySets: {
     actual: 5.5,
     planned: 11,
-    target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
-    actualPosition: "below",
-    plannedPosition: "inside",
-    volumeStatus: "under",
+    bands: { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 },
+    actualStatus: "growing",
+    plannedStatus: "productive",
+    volumeStatus: "growing",
   },
   targeting: { targeted: true, routineTrains: true, goalRanks: false },
   lastTrained: {
@@ -43,7 +43,14 @@ const abs: MuscleDetail = {
   ...sideDelts,
   muscle: "abs",
   heatPercent: 0,
-  weeklySets: { ...sideDelts.weeklySets, actual: 0, planned: 0 },
+  weeklySets: {
+    ...sideDelts.weeklySets,
+    actual: 0,
+    planned: 0,
+    actualStatus: "not_trained",
+    plannedStatus: "not_trained",
+    volumeStatus: "not_trained",
+  },
   targeting: { targeted: false, routineTrains: false, goalRanks: false },
   lastTrained: null,
 };
@@ -70,9 +77,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 // The side delts on Thursday evening, as `body · muscle-sheet` draws them.
-export const Targeted: Story = {};
+export const Growing: Story = {};
 
-// The abs, which neither the routine nor the goal reaches, as `body · muscle-sheet-not-targeted` draws them.
-export const NotTargeted: Story = {
+// The abs, with no sets done or planned this week, as `body · muscle-sheet-not-targeted` draws them.
+export const NotTrained: Story = {
   args: { detail: abs, copy: describeMuscleSheet(abs, context) },
 };

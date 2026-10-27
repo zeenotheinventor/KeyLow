@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 
 import { asLogged, legs, pull, push, routine, session, WEEK } from "./plans";
 import { addCalendarDays, toLocalDate } from "../../src/dates";
-import { COMPARE_PARAMS_V1, muscleState, projectedState, projectWeek } from "../../src/training";
+import { COMPARE_PARAMS_V2, muscleState, projectedState, projectWeek } from "../../src/training";
 
 import type { LoggedSession, LoggedSet } from "../../src/training";
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
 const ZONES = ["Europe/London", "America/Los_Angeles", "Pacific/Auckland", "Asia/Kolkata", "UTC"];
 const PLANNED_DAYS = [push, legs, pull];

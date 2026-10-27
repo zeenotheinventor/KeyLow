@@ -4,13 +4,15 @@
    green when ready (1), through yellow (2, Warm) and amber (3, Hot) to orange (4, Very hot) and red (5, Peak);
    step 5 also glows. Light steps 2 and 3 are a shade darker than the board's mockup so every coloured step
    keeps 3:1 on the surface.
-   volume: blue under, pale blue maintaining, green productive, red over (productive and over reuse success and danger).
+   volume (KEY-726, the v4 board, 2026-10-27): five bands, grey not trained, pale blue maintaining, teal growing,
+   green productive and a lighter green high (never red: high is not a warning).
    gap: diverging around the plan; blue behind, neutral on plan, amber ahead.
    3D body (KEY-589): skin, core, clay (the head) and other-muscle are the 3D body's materials. The dark values are those of
    the approved renders in tools/body-model/blender/zanatomy_render.py (the heat render's skin, core and clay, and the
    silhouette it draws the muscles with that have no id). The light values keep the same roles on the light surface.
    v2 (second pass, 2026-10-18): --volume-not-targeted for a muscle the routine and goal do not train (KEY-356),
-   drawn close to the silhouette so it reads as left out, not as a status; the gap scale reuses it for "not in your plan".
+   drawn close to the silhouette so it reads as left out, not as a status. v4 renamed it --volume-not-trained, for a
+   muscle with no sets; the gap scale reuses it for "not in your plan".
    The far-behind and far-ahead gap steps are retired: core has three plan statuses (behind, on plan, ahead). */
 :root{
 --body-silhouette:#262D3A;
@@ -26,11 +28,11 @@
 --heat-4:#EE6E36;
 --heat-5:#F04848;
 --heat-glow:rgba(240,72,72,0.55);
---volume-under:#4A86F7;
+--volume-not-trained:#303746;
 --volume-maintaining:#8DB0E8;
+--volume-growing:#4EC2AE;
 --volume-productive:#5CD67A;
---volume-over:#FF5C5C;
---volume-not-targeted:#303746;
+--volume-high:#A6F5C4;
 --gap-behind:#5B95FF;
 --gap-on-plan:#596274;
 --gap-ahead:#FF9F43;
@@ -49,11 +51,11 @@
 --heat-4:#CF5A26;
 --heat-5:#C9313A;
 --heat-glow:rgba(201,49,58,0.35);
---volume-under:#1F5BD6;
+--volume-not-trained:#D7DBE2;
 --volume-maintaining:#6E92D6;
+--volume-growing:#1A8A85;
 --volume-productive:#1F9D4E;
---volume-over:#D93030;
---volume-not-targeted:#D7DBE2;
+--volume-high:#0C6B3A;
 --gap-behind:#1F5BD6;
 --gap-on-plan:#B4BAC6;
 --gap-ahead:#B35C00;

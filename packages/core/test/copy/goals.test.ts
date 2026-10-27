@@ -391,9 +391,7 @@ describe("describePriorities for the golden V-taper answers", () => {
   });
 
   it("should write the legend under the body map", () => {
-    expect(priorities.legend).toBe(
-      "Green muscles come first. Grey ones are not targeted, so they never read as under.",
-    );
+    expect(priorities.legend).toBe("Green muscles come first. Grey ones are not targeted.");
   });
 
   it("should have four rows and nothing about a waist", () => {

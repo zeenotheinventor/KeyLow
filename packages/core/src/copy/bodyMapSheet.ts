@@ -7,16 +7,17 @@ import {
   describeWeekdayName,
   describeWeekRange,
   formatSetCount,
+  VOLUME_STATUS_NAMES,
 } from "./bodyMap";
 import { MUSCLE_GROUP_NAMES, MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
 import { MUSCLES } from "../training/muscles";
 
 import type { PlannedSession } from "./bodyMap";
-import type { LastTrained, MuscleDetail, RangePosition } from "../training/muscleDetail";
+import type { LastTrained, MuscleDetail } from "../training/muscleDetail";
 import type { MuscleId } from "../training/muscles";
 
 /*
- * The words of the muscle sheet (`body · muscle-sheet`, `body · muscle-sheet-not-targeted`) from a
+ * The words of the muscle sheet (`body · muscle-sheet`, `body · muscle-sheet-not-targeted`, now the Not trained case) from a
  * `MuscleDetail`. Data in, sentence out: every number comes from the detail or the context.
  */
 
@@ -29,8 +30,6 @@ export const MUSCLE_SHEET = {
   lastTrainedLabel: "Last trained",
   barStart: "0",
   editRoutine: "Edit routine",
-  editGoal: "Edit goal",
-  notTargetedStatus: "Not targeted",
   weightingNote: "Sets count by how much an exercise works the muscle.",
 } as const;
 
@@ -62,8 +61,8 @@ export type LastTrainedCopy = {
   exercises: string | null;
 };
 
-export type TargetedMuscleSheetCopy = {
-  kind: "targeted";
+export type TrainedMuscleSheetCopy = {
+  kind: "trained";
   title: string;
   /** The muscle's group. The goal priority clause of the board needs the goal, which a detail does not hold. */
   subtitle: string;
@@ -74,38 +73,27 @@ export type TargetedMuscleSheetCopy = {
     plannedText: string;
     done: { value: string; caption: string };
     barName: string;
-    barLabels: { start: string; minimum: string; planned: string; maximum: string };
+    /** The words under the bar: the start, and where Growing, Productive and High begin. */
+    barLabels: { start: string; growing: string; productive: string; high: string };
     position: string;
   };
   lastTrained: LastTrainedCopy;
   weightingNote: string;
 };
 
-export type NotTargetedMuscleSheetCopy = {
-  kind: "not_targeted";
+export type NotTrainedMuscleSheetCopy = {
+  kind: "not_trained";
   title: string;
   subtitle: string;
   heat: HeatTileCopy;
   thisWeek: { label: string; value: string; statusName: string };
   explanation: string;
   lastTrained: LastTrainedCopy;
-  actions: { editRoutine: string; editGoal: string };
+  actions: { editRoutine: string };
   footnote: string;
 };
 
-export type MuscleSheetCopy = TargetedMuscleSheetCopy | NotTargetedMuscleSheetCopy;
-
-const POSITION_SO_FAR: Readonly<Record<RangePosition, string>> = {
-  below: "Below target so far.",
-  inside: "Inside target so far.",
-  above: "Above target so far.",
-};
-
-const POSITION_BY_END_OF_WEEK: Readonly<Record<RangePosition, string>> = {
-  below: "below your target",
-  inside: "inside your target",
-  above: "above your target",
-};
+export type MuscleSheetCopy = TrainedMuscleSheetCopy | NotTrainedMuscleSheetCopy;
 
 const heatTile = ({ heatPercent, heatStep }: MuscleDetail): HeatTileCopy => ({
   label: MUSCLE_SHEET.heatLabel,
@@ -135,10 +123,10 @@ const lastTrainedBlock = (
 };
 
 const describePosition = (
-  { actual, planned, actualPosition, plannedPosition }: MuscleDetail["weeklySets"],
+  { actual, planned, actualStatus, plannedStatus }: MuscleDetail["weeklySets"],
   upcomingSessions: readonly PlannedSession[],
 ): string => {
-  const soFar = POSITION_SO_FAR[actualPosition];
+  const soFar = `${VOLUME_STATUS_NAMES[actualStatus]} so far.`;
   const more = formatSetCount(planned - actual);
   if (planned <= actual || Number(more) === 0) {
     return `${soFar} Nothing more is planned this week.`;
@@ -147,7 +135,11 @@ const describePosition = (
     upcomingSessions.length === 0
       ? "The plan adds"
       : `${describePlannedSessions(upcomingSessions)} ${upcomingSessions.length === 1 ? "plans" : "plan"}`;
-  return `${soFar} ${subject} ${more} more, which brings the week to ${formatSetCount(planned)}, ${POSITION_BY_END_OF_WEEK[plannedPosition]}.`;
+  const reaches =
+    plannedStatus === actualStatus
+      ? `still ${VOLUME_STATUS_NAMES[plannedStatus]}`
+      : `into ${VOLUME_STATUS_NAMES[plannedStatus]}`;
+  return `${soFar} ${subject} ${more} more, which brings the week to ${formatSetCount(planned)}, ${reaches}.`;
 };
 
 const describeShare = (weight: number): string => {
@@ -171,7 +163,7 @@ const describeRecoveredFrom = (localDate: string, weekStart: string): string =>
 const readyTile = (
   { readyInHours, lastTrained }: MuscleDetail,
   weekStart: string,
-): TargetedMuscleSheetCopy["ready"] => {
+): TrainedMuscleSheetCopy["ready"] => {
   const readyNow = readyInHours === 0;
   return {
     label: MUSCLE_SHEET.readyLabel,
@@ -183,14 +175,16 @@ const readyTile = (
   };
 };
 
-const describeTargetedSheet = (
+const describeTrainedSheet = (
   detail: MuscleDetail,
   { weekStart, upcomingSessions, heatWindowDays, weightingExample }: MuscleSheetContext,
-): TargetedMuscleSheetCopy => {
-  const { actual, planned, target } = detail.weeklySets;
-  const targetRange = `${target.mav.low} to ${target.mav.high}`;
+): TrainedMuscleSheetCopy => {
+  const { actual, planned, bands, actualStatus } = detail.weeklySets;
+  // The sets done are named by their own band. The view's status colours the bar and nothing here.
+  const statusName = VOLUME_STATUS_NAMES[actualStatus];
+  const bandRule = `Growing from ${describeSets(bands.growingFromSets)}, Productive from ${bands.productiveFromSets}, High above ${bands.highAboveSets}`;
   return {
-    kind: "targeted",
+    kind: "trained",
     title: MUSCLE_NAMES[detail.muscle],
     subtitle: MUSCLE_GROUP_NAMES[MUSCLES[detail.muscle].group],
     heat: heatTile(detail),
@@ -198,13 +192,13 @@ const describeTargetedSheet = (
     weeklySets: {
       heading: `Sets this week · ${describeWeekRange(weekStart)}`,
       plannedText: `${formatSetCount(planned)} planned`,
-      done: { value: formatSetCount(actual), caption: `done · target ${targetRange}` },
-      barName: `${describeSets(actual)} done, ${formatSetCount(planned)} planned, target ${targetRange}, minimum ${target.mev}, maximum ${target.mrv}`,
+      done: { value: formatSetCount(actual), caption: `done · ${statusName}` },
+      barName: `${describeSets(actual)} done, ${statusName}, ${formatSetCount(planned)} planned. ${bandRule}`,
       barLabels: {
         start: MUSCLE_SHEET.barStart,
-        minimum: `Min ${target.mev}`,
-        planned: `Planned ${formatSetCount(planned)}`,
-        maximum: `Max ${target.mrv}`,
+        growing: String(bands.growingFromSets),
+        productive: String(bands.productiveFromSets),
+        high: String(bands.highAboveSets),
       },
       position: describePosition(detail.weeklySets, upcomingSessions),
     },
@@ -213,41 +207,37 @@ const describeTargetedSheet = (
   };
 };
 
-const describeNotTargetedSheet = (
+const describeNotTrainedSheet = (
   detail: MuscleDetail,
   { heatWindowDays }: MuscleSheetContext,
-): NotTargetedMuscleSheetCopy => {
-  const name = MUSCLE_NAMES[detail.muscle];
-  const plain = name.toLowerCase();
-  const [object, subject, has, reads, gets] =
-    NAME_NUMBER[detail.muscle] === "one"
-      ? ["it", "it", "has", "reads", "gets"]
-      : ["them", "they", "have", "read", "get"];
+): NotTrainedMuscleSheetCopy => {
+  const plain = MUSCLE_NAMES[detail.muscle].toLowerCase();
+  const object = NAME_NUMBER[detail.muscle] === "one" ? "it" : "them";
   return {
-    kind: "not_targeted",
-    title: name,
-    subtitle: `${MUSCLE_GROUP_NAMES[MUSCLES[detail.muscle].group]} · not targeted`,
+    kind: "not_trained",
+    title: MUSCLE_NAMES[detail.muscle],
+    subtitle: `${MUSCLE_GROUP_NAMES[MUSCLES[detail.muscle].group]} · not trained this week`,
     heat: heatTile(detail),
     thisWeek: {
       label: MUSCLE_SHEET.thisWeekLabel,
       value: describeSets(detail.weeklySets.actual),
-      statusName: MUSCLE_SHEET.notTargetedStatus,
+      statusName: VOLUME_STATUS_NAMES.not_trained,
     },
-    explanation: `Your routine does not train ${plain} and your goal does not rank ${object}, so ${subject} ${has} no target this week and never ${reads} as under.`,
+    explanation: `No sets for ${plain} this week, which runs Monday to Sunday. Any working set for ${plain} moves ${object} to ${VOLUME_STATUS_NAMES.maintaining}.`,
     lastTrained: lastTrainedBlock(detail.lastTrained, heatWindowDays),
-    actions: { editRoutine: MUSCLE_SHEET.editRoutine, editGoal: MUSCLE_SHEET.editGoal },
-    footnote: `Add an exercise that works ${plain} to your routine, or rank ${object} in your goal, and ${subject} ${gets} a target.`,
+    actions: { editRoutine: MUSCLE_SHEET.editRoutine },
+    footnote: `Add an exercise that works ${plain} to your routine, and its sets count here.`,
   };
 };
 
 /**
- * The words of the sheet for one muscle. A muscle that is targeted gets the sets-this-week sheet, and one
- * that is not gets the sheet that says why and offers Edit routine and Edit goal.
+ * The words of the sheet for one muscle. A muscle with no sets done and none planned this week gets the
+ * sheet that says so and offers Edit routine. Any other muscle gets the sets-this-week sheet, with its bar.
  */
 export const describeMuscleSheet = (
   detail: MuscleDetail,
   context: MuscleSheetContext,
 ): MuscleSheetCopy =>
-  detail.targeting.targeted
-    ? describeTargetedSheet(detail, context)
-    : describeNotTargetedSheet(detail, context);
+  detail.weeklySets.actual === 0 && detail.weeklySets.planned === 0
+    ? describeNotTrainedSheet(detail, context)
+    : describeTrainedSheet(detail, context);

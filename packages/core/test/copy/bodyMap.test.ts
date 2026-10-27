@@ -37,6 +37,7 @@ import {
   HEAT_STEP_CUTS_V1,
   heatStepOf,
   muscleListGroups,
+  TRAINING_PARAMS_V2,
   VOLUME_STATUSES,
 } from "../../src/training";
 import { actualStateAt, GOLDEN_TIME_ZONE, THURSDAY_EVENING } from "../training/goldenWeekInputs";
@@ -83,11 +84,11 @@ describe("the value words of the body map, keyed by the value itself", () => {
 
   it("should name every volume status by the status, not by its position", () => {
     expect(VOLUME_STATUS_NAMES).toStrictEqual({
-      under: "Under",
+      not_trained: "Not trained",
       maintaining: "Maintaining",
+      growing: "Growing",
       productive: "Productive",
-      over: "Over",
-      not_targeted: "Not targeted",
+      high: "High",
     });
     expect(Object.keys(VOLUME_STATUS_NAMES).sort()).toStrictEqual([...VOLUME_STATUSES].sort());
   });
@@ -105,11 +106,11 @@ describe("the value words of the body map, keyed by the value itself", () => {
   it("should map every number volumeValues and gapValues can write to its word", () => {
     // The figure holds the index in VOLUME_STATUSES or GAP_VALUES, and reads the word through the value.
     expect(VOLUME_STATUSES.map((status) => VOLUME_STATUS_NAMES[status])).toStrictEqual([
-      "Under",
+      "Not trained",
       "Maintaining",
+      "Growing",
       "Productive",
-      "Over",
-      "Not targeted",
+      "High",
     ]);
     expect(GAP_VALUES.map((value) => GAP_VALUE_NAMES[value])).toStrictEqual([
       "Behind",
@@ -122,7 +123,7 @@ describe("the value words of the body map, keyed by the value itself", () => {
   it("should list the legend items in the order the boards draw them, with the same words", () => {
     expect(BODY_MAP_LEGEND_ITEMS).toStrictEqual({
       heat: ["Rested", "Ready", "Warm", "Hot", "Very hot", "Peak"],
-      volume: ["Not targeted", "Under", "Maintaining", "Productive", "Over"],
+      volume: ["Not trained", "Maintaining", "Growing", "Productive", "High"],
       gap: ["Not in plan", "Behind", "On plan", "Ahead"],
     });
     expect([...BODY_MAP_LEGEND_ITEMS.volume].sort()).toStrictEqual(
@@ -238,22 +239,47 @@ describe("describeLegendCaption", () => {
     [
       "volume",
       "mobile",
-      "Sets this week against each muscle's target. Over means above the maximum.",
+      "Sets this week, Monday to Sunday. Growing starts at 4 sets, Productive at 10 and High above 20.",
     ],
     [
       "volume",
       "web",
-      "Sets this week against each muscle's target. A muscle your routine and goal leave out is not targeted, so it never reads as under.",
+      "Sets this week, Monday to Sunday. Growing starts at 4 sets, Productive at 10 and High above 20.",
     ],
     ["gap", "mobile", "Sets done against your plan for the week. On plan means within 1 set."],
     ["gap", "web", "Sets done against your plan for the week. On plan means within 1 set."],
   ] as const)("should write the %s caption on %s as the board does", (scale, surface, caption) => {
-    expect(describeLegendCaption({ scale, surface, onPlanToleranceSets: 1 })).toBe(caption);
+    expect(
+      describeLegendCaption({
+        scale,
+        surface,
+        onPlanToleranceSets: 1,
+        volumeBands: TRAINING_PARAMS_V2.sizeClasses.small.volume,
+      }),
+    ).toBe(caption);
   });
 
   it("should take the on plan tolerance from the input, in the plural when it is not 1", () => {
-    expect(describeLegendCaption({ scale: "gap", surface: "mobile", onPlanToleranceSets: 2 })).toBe(
-      "Sets done against your plan for the week. On plan means within 2 sets.",
+    expect(
+      describeLegendCaption({
+        scale: "gap",
+        surface: "mobile",
+        onPlanToleranceSets: 2,
+        volumeBands: TRAINING_PARAMS_V2.sizeClasses.small.volume,
+      }),
+    ).toBe("Sets done against your plan for the week. On plan means within 2 sets.");
+  });
+
+  it("should take the band edges from the input", () => {
+    expect(
+      describeLegendCaption({
+        scale: "volume",
+        surface: "mobile",
+        onPlanToleranceSets: 1,
+        volumeBands: { growingFromSets: 1, productiveFromSets: 8, highAboveSets: 16 },
+      }),
+    ).toBe(
+      "Sets this week, Monday to Sunday. Growing starts at 1 set, Productive at 8 and High above 16.",
     );
   });
 });
@@ -693,10 +719,7 @@ describe("describeDashboardBodyMapCard", () => {
 describe("describeWebListCaption", () => {
   it.each([
     [{ scale: "heat", moreAtRest: 10 }, "Hottest first · 10 more at rest"],
-    [
-      { scale: "volume", moreUnder: 3, notTargeted: 7 },
-      "Most sets first · 3 more under, 7 not targeted",
-    ],
+    [{ scale: "volume", notTrained: 7 }, "Most sets first · 7 not trained"],
     [
       { scale: "gap", moreOnPlan: 3, notInPlan: 7 },
       "Furthest behind first · 3 more on plan, 7 not in plan",
@@ -707,9 +730,7 @@ describe("describeWebListCaption", () => {
 
   it("should leave out a count of 0 and the dot when both are 0", () => {
     expect(describeWebListCaption({ scale: "heat", moreAtRest: 0 })).toBe("Hottest first");
-    expect(describeWebListCaption({ scale: "volume", moreUnder: 0, notTargeted: 7 })).toBe(
-      "Most sets first · 7 not targeted",
-    );
+    expect(describeWebListCaption({ scale: "volume", notTrained: 0 })).toBe("Most sets first");
     expect(describeWebListCaption({ scale: "gap", moreOnPlan: 3, notInPlan: 0 })).toBe(
       "Furthest behind first · 3 more on plan",
     );
@@ -750,15 +771,15 @@ describe("describeVolumeListRow, the web volume board", () => {
       describeVolumeListRow({
         muscle: "abs",
         weeklySets: 0,
-        status: "not_targeted",
+        status: "not_trained",
         view: "actual",
         weekEnd: "2026-10-18",
       }),
     ).toStrictEqual({
       name: "Abs",
       valueText: "0",
-      status: "Not targeted",
-      accessibleName: "Abs, 0 sets so far this week, not targeted, open details",
+      status: "Not trained",
+      accessibleName: "Abs, 0 sets so far this week, not trained, open details",
     });
   });
 });

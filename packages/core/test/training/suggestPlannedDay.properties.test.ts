@@ -10,7 +10,7 @@ import {
   MUSCLE_ROLES,
   SESSION_TIME_PARAMS_V1,
   suggestSession,
-  SUGGEST_PARAMS_V1,
+  SUGGEST_PARAMS_V2,
 } from "../../src/training";
 
 import type {
@@ -176,7 +176,7 @@ const run = (scenario: Scenario) =>
     goalsOf(scenario, MUSCLE_IDS),
     scenario.library,
     constraintsOf(scenario, scenario.narrowing),
-    SUGGEST_PARAMS_V1,
+    SUGGEST_PARAMS_V2,
   );
 
 describe("suggestSession on a planned day, properties", () => {
@@ -200,7 +200,7 @@ describe("suggestSession on a planned day, properties", () => {
             scenario,
             scenario.narrowing && permuted(scenario.narrowing, scenario.shuffleSeed, 5),
           ),
-          SUGGEST_PARAMS_V1,
+          SUGGEST_PARAMS_V2,
         );
         expect(JSON.stringify(shuffled)).toBe(JSON.stringify(run(scenario)));
       }),
@@ -256,7 +256,7 @@ describe("suggestSession on a planned day, properties", () => {
         });
         const after = result.exercises.slice(plan.exercises.length);
         expect(after.every((entry) => entry.origin === "added")).toBe(true);
-        expect(after.length).toBeLessThanOrEqual(SUGGEST_PARAMS_V1.maxExercises.addedToPlannedDay);
+        expect(after.length).toBeLessThanOrEqual(SUGGEST_PARAMS_V2.maxExercises.addedToPlannedDay);
         expect(result.added).toBe(after.length);
         expect(result.added).toBeGreaterThan(0);
       }),
@@ -282,7 +282,7 @@ describe("suggestSession on a planned day, properties", () => {
           for (const muscle of chosen?.muscles ?? []) {
             if (muscle.role === "primary") {
               expect(scenario.heats[muscle.muscle_id]).toBeLessThanOrEqual(
-                SUGGEST_PARAMS_V1.hotHeatThreshold,
+                SUGGEST_PARAMS_V2.hotHeatThreshold,
               );
             }
           }
@@ -296,7 +296,7 @@ describe("suggestSession on a planned day, properties", () => {
       fc.property(scenarios, (scenario) => {
         const result = run(scenario);
         for (const skipped of result.skipped) {
-          expect(skipped.heat).toBeGreaterThan(SUGGEST_PARAMS_V1.hotHeatThreshold);
+          expect(skipped.heat).toBeGreaterThan(SUGGEST_PARAMS_V2.hotHeatThreshold);
         }
         if (result.kind === "plan_adjusted") {
           for (const entry of result.exercises) {

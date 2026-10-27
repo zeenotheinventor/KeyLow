@@ -6,13 +6,13 @@ import { HeatTile } from "../HeatTile";
 import { LastTrainedBlock } from "../LastTrainedBlock";
 import { StatTile } from "../StatTile";
 
-import type { TargetedSheetBodyProps } from "./types";
+import type { TrainedSheetBodyProps } from "./types";
 
 /**
- * What a targeted muscle's sheet holds under its header: the Heat and Ready tiles, the weekly sets block
+ * What the sheet of a muscle with sets this week holds under its header: the Heat and Ready tiles, the weekly sets block
  * with its bar, when the muscle was last trained, and the note on how sets are counted.
  */
-export function TargetedSheetBody({ copy, detail }: TargetedSheetBodyProps) {
+export function TrainedSheetBody({ copy, detail }: TrainedSheetBodyProps) {
   const { heat, ready, weeklySets, lastTrained, weightingNote } = copy;
 
   return (

@@ -33,13 +33,13 @@ export function parseRgba(text: string): { color: string; alpha: number } {
 /**
  * How warm a fill reads, for the head's neck colour to follow the warmer of the neck and the upper trapezius. On heat
  * it is the step. The volume and gap scales have no warmer or cooler, so a muscle in play reads 1 and one that is not
- * targeted, or not in the plan, reads 0.
+ * trained, or not in the plan, reads 0.
  */
 function warmthOf(scale: BodyFigureScale, fill: string, palette: BodyMapPalette): number {
   if (scale === "heat") {
     return Math.max(0, palette.heat.indexOf(fill));
   }
-  const restingFill = scale === "volume" ? palette.volume.notTargeted : palette.gap.notInPlan;
+  const restingFill = scale === "volume" ? palette.volume.notTrained : palette.gap.notInPlan;
   return fill === restingFill ? 0 : 1;
 }
 

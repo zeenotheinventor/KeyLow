@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { asLogged, dayId, exerciseId, id, session } from "./plans";
 import { addCalendarDays, instantAtLocalTime } from "../../src/dates";
 import {
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   compareWeek,
   expandPlan,
   MUSCLE_IDS,
@@ -15,7 +15,7 @@ import {
 import type { ExerciseMuscleEntry } from "../../src/schemas";
 import type { LoggedSession, LoggedSet, PlanExercise, PlanRoutine } from "../../src/training";
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
 /** Weeks with and without a clock change in the zones below. */
 const WEEKS = ["2026-03-23", "2026-09-21", "2026-10-19", "2026-10-26", "2026-12-28"];

@@ -13,7 +13,7 @@ import {
   LOADED_HEAT_PERCENT,
   muscleState,
   planTrainingReminders,
-  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   weekPlanDays,
 } from "../../src/training";
 import { heatPercentOf } from "../../src/training/heatReadout";
@@ -85,7 +85,7 @@ const chestSets = (count: number, performedAt: string): HeatSet[] =>
 // The fewest sets, all performed at one moment, that make the chest loaded at a later moment.
 const fewestLoadingSets = (performedAt: string, at: string): number => {
   for (let count = 1; count < 200; count += 1) {
-    const { heat } = muscleState(chestSets(count, performedAt), at, TRAINING_PARAMS_V1).chest_lower;
+    const { heat } = muscleState(chestSets(count, performedAt), at, TRAINING_PARAMS_V2).chest_lower;
     if (heatPercentOf(heat) >= LOADED_HEAT_PERCENT) {
       return count;
     }

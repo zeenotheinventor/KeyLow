@@ -18,7 +18,8 @@ import type {
  * Part 4). Pure under the ADR 0002 rule: no clock, no randomness and no IO, so the same inputs always give
  * the same output, whatever order the library and the state keys come in.
  *
- * The rules, one muscle at a time. A muscle scores `priority × max(0, MAV low − sets) × (1 − heat)`. The
+ * The rules, one muscle at a time. A muscle scores `priority × max(0, productive floor − sets) × (1 − heat)`,
+ * where the productive floor is where Productive starts (10 sets under keylow-training-v2). The
  * muscle with the highest score that has an eligible exercise leads the next pick (a muscle leads at most
  * one exercise), and the best of its exercises is added with its sets credited to every muscle it works,
  * so the next score sees them. It stops at the exercise cap, when no muscle can lead, or when one more

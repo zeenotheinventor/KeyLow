@@ -1,16 +1,13 @@
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
-import { TRAINING_PARAMS_V1, muscleState, targetedMuscles } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2, muscleState } from "@keylow/core/training";
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import { currentGoalOf } from "./currentGoalOf";
 import { HEAT_LOOKBACK_DAYS, newestCachedSetRows } from "./heatWindowRows";
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
 import { toTrainingReadResult } from "./trainingReadResult";
-import { useActiveRoutine } from "./useActiveRoutine";
 import { useProfileTimeZone } from "./useProfileTimeZone";
-import { useTrainingGoals } from "./useTrainingGoals";
 import { listSetsFrom } from "../repos/training";
 
 import type { DiaryReadOptions } from "./DiaryReadOptions";
@@ -25,17 +22,13 @@ import type { MuscleId, MuscleState } from "@keylow/core/training";
  * time zone through today, and held under `keys.training.sets(startDay)`, a key of a day and never of
  * `now`, so it is the same all day and a cache restored on a phone is found again. Core's `muscleState`
  * runs in `select`, so the numbers are worked out at the `now` given, from whatever rows are cached,
- * online or not. The muscles the active routine trains are targeted (`targetedMuscles`), and any other
- * that has not reached its MEV is `not_targeted`, unless the current goal ranks it above 0 (its
- * `muscle_priority`), which targets it whatever the routine. The routine is read through
- * `useActiveRoutine` and the goal through `useTrainingGoals`, which the body map shares. With no goal the
- * routine alone decides.
+ * online or not. The plan does not change a volume status (ADR 0005, Amendment 6), so the hook reads no
+ * routine and no goal.
  *
- * The result is pending until the time zone, the routine, the goal and the sets are all there, so a
- * muscle is never shown under that the routine does not train, nor as untargeted when the goal ranks it. A user with no profile row stays pending, since
- * there is no zone to read days in. `enabled` false makes no request at all. `now` that is not an ISO
- * timestamp with a zone throws a `RangeError`. Every signed-in user has a profile row in KeyLow, so
- * waiting for the zone is waiting for a read that resolves.
+ * The result is pending until the time zone and the sets are there. A user with no profile row stays
+ * pending, since there is no zone to read days in. `enabled` false makes no request at all. `now` that is
+ * not an ISO timestamp with a zone throws a `RangeError`. Every signed-in user has a profile row in KeyLow,
+ * so waiting for the zone is waiting for a read that resolves.
  *
  * When no sets are cached under today's start day (an app restored on a later day, with no connection),
  * the newest cached rows under any start day stand in until today's are read, and `select` still works
@@ -48,52 +41,26 @@ export function useMuscleState(
   const client = useSupabase();
   const queryClient = useQueryClient();
   const timeZone = useProfileTimeZone({ enabled });
-  const routine = useActiveRoutine({ enabled });
-  const goals = useTrainingGoals({ enabled });
 
   const today = timeZone.data ? toLocalDate(new Date(now), timeZone.data) : null;
   const startDay = today === null ? "" : addCalendarDays(today, -HEAT_LOOKBACK_DAYS);
-  const activeRoutine = routine.data;
-  const currentGoals = currentGoalOf(goals);
 
   const select = useCallback(
-    (sets: TrainingSet[]) =>
-      muscleState(
-        sets,
-        now,
-        TRAINING_PARAMS_V1,
-        targetedMuscles({
-          routine: activeRoutine ?? null,
-          priority: currentGoals?.muscle_priority ?? null,
-        }),
-      ),
-    [now, activeRoutine, currentGoals],
+    (sets: TrainingSet[]) => muscleState(sets, now, TRAINING_PARAMS_V2),
+    [now],
   );
 
   // Until today's rows are there, the newest rows held under another start day stand in (a cache restored
-  // on a later day than it was read). Not before the routine and the goal are known, so no muscle flashes as under.
-  const standInRows = useCallback(
-    () =>
-      activeRoutine === undefined || currentGoals === undefined
-        ? undefined
-        : newestCachedSetRows(queryClient),
-    [queryClient, activeRoutine, currentGoals],
-  );
+  // on a later day than it was read).
+  const standInRows = useCallback(() => newestCachedSetRows(queryClient), [queryClient]);
 
   const sets = useQuery({
     queryKey: keys.training.sets(startDay),
-    queryFn:
-      today === null || activeRoutine === undefined || currentGoals === undefined
-        ? skipToken
-        : () => listSetsFrom(client, startDay, today),
+    queryFn: today === null ? skipToken : () => listSetsFrom(client, startDay, today),
     enabled,
     select,
     placeholderData: standInRows,
   });
 
-  return toTrainingReadResult(
-    sets,
-    [timeZone, routine, goals],
-    currentGoals === undefined ? [timeZone, routine, goals] : [timeZone, routine],
-  );
+  return toTrainingReadResult(sets, [timeZone], [timeZone]);
 }

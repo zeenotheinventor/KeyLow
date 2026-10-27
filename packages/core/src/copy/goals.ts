@@ -311,8 +311,7 @@ export type PrioritiesCopy = Readonly<{
 }>;
 
 /** The line under the body map of the summary. */
-const PRIORITIES_LEGEND =
-  "Green muscles come first. Grey ones are not targeted, so they never read as under.";
+const PRIORITIES_LEGEND = "Green muscles come first. Grey ones are not targeted.";
 
 /**
  * The words of "Your priorities" from KEY-399's groups: the answers line, one row for each group that has

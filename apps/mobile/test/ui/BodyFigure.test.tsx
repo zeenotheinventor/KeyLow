@@ -144,11 +144,11 @@ describe("BodyFigure", () => {
 
     it.each(sides)("should fill every volume status of the %s with its colour", async (side) => {
       const fills = [
-        palette.volume.under,
+        palette.volume.notTrained,
         palette.volume.maintaining,
+        palette.volume.growing,
         palette.volume.productive,
-        palette.volume.over,
-        palette.volume.notTargeted,
+        palette.volume.high,
       ];
       expect(fills).toHaveLength(VOLUME_STATUSES.length);
 
@@ -177,7 +177,7 @@ describe("BodyFigure", () => {
 
     it.each([
       { scale: "heat" as const, rest: palette.heat[0] },
-      { scale: "volume" as const, rest: palette.volume.notTargeted },
+      { scale: "volume" as const, rest: palette.volume.notTrained },
       { scale: "gap" as const, rest: palette.gap.notInPlan },
     ])("should draw a missing muscle at rest on the $scale scale", async ({ scale, rest }) => {
       await renderFigure({ scale, values: {} }, scheme);
@@ -365,12 +365,12 @@ describe("BodyFigure", () => {
     it("should name a muscle by the value of the scale", async () => {
       await renderFigure({
         scale: "volume",
-        values: { quads: VOLUME_STATUSES.indexOf("over") },
+        values: { quads: VOLUME_STATUSES.indexOf("high") },
         onPressMuscle: jest.fn(),
       });
 
-      expect(screen.getByRole("button", { name: "Quads, Over" })).toBeOnTheScreen();
-      expect(screen.getByRole("button", { name: "Abs, Not targeted" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Quads, High" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Abs, Not trained" })).toBeOnTheScreen();
     });
 
     it("should name a muscle with no value as at rest", async () => {

@@ -6,12 +6,13 @@ export type BodyMapPalette = {
   /** Rested, ready, warm, hot, very hot and peak, in that order. */
   heat: [string, string, string, string, string, string];
   heatGlow: string;
+  /** Not trained, maintaining, growing, productive and high: the five volume bands. */
   volume: {
-    under: string;
+    notTrained: string;
     maintaining: string;
+    growing: string;
     productive: string;
-    over: string;
-    notTargeted: string;
+    high: string;
   };
   gap: { behind: string; onPlan: string; ahead: string; notInPlan: string };
   silhouette: string;
@@ -26,7 +27,7 @@ export type BodyMapPalette = {
 /**
  * The body map's colours for one theme as concrete colour strings, because `react-native-svg` fills
  * cannot read CSS variables. The values are the Ki-Lo training additions in `src/source/training.css`.
- * The gap scale draws "not in plan" as the volume scale's "not targeted", as the canvas does.
+ * The gap scale draws "not in plan" as the volume scale's "not trained", as the canvas does.
  */
 export const bodyMapPalette = (scheme: ThemeScheme): BodyMapPalette => {
   const colors = themes[scheme];
@@ -41,17 +42,17 @@ export const bodyMapPalette = (scheme: ThemeScheme): BodyMapPalette => {
     ],
     heatGlow: colors["heat-glow"],
     volume: {
-      under: colors["volume-under"],
+      notTrained: colors["volume-not-trained"],
       maintaining: colors["volume-maintaining"],
+      growing: colors["volume-growing"],
       productive: colors["volume-productive"],
-      over: colors["volume-over"],
-      notTargeted: colors["volume-not-targeted"],
+      high: colors["volume-high"],
     },
     gap: {
       behind: colors["gap-behind"],
       onPlan: colors["gap-on-plan"],
       ahead: colors["gap-ahead"],
-      notInPlan: colors["volume-not-targeted"],
+      notInPlan: colors["volume-not-trained"],
     },
     silhouette: colors["body-silhouette"],
     separator: colors["body-separator"],

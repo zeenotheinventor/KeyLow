@@ -35,10 +35,10 @@ const boardSideDelts: MuscleDetail = {
   weeklySets: {
     actual: 5.5,
     planned: 11,
-    target: { mev: 6, mav: { low: 10, high: 16 }, mrv: 22 },
-    actualPosition: "below",
-    plannedPosition: "inside",
-    volumeStatus: "under",
+    bands: { growingFromSets: 4, productiveFromSets: 10, highAboveSets: 20 },
+    actualStatus: "growing",
+    plannedStatus: "productive",
+    volumeStatus: "growing",
   },
   targeting: { targeted: true, routineTrains: true, goalRanks: false },
   lastTrained: {
@@ -76,20 +76,29 @@ const goldenDetail = (muscle: MuscleId): MuscleDetail =>
     params,
   });
 
-const targetedSheet = (detail: MuscleDetail, overrides: Partial<MuscleSheetContext> = {}) => {
+const trainedSheet = (detail: MuscleDetail, overrides: Partial<MuscleSheetContext> = {}) => {
   const sheet = describeMuscleSheet(detail, { ...context, ...overrides });
-  if (sheet.kind !== "targeted") {
-    throw new Error("Expected the sheet of a targeted muscle");
+  if (sheet.kind !== "trained") {
+    throw new Error("Expected the sheet of a muscle with sets");
   }
   return sheet;
 };
 
-const notTargetedSheet = (detail: MuscleDetail, overrides: Partial<MuscleSheetContext> = {}) => {
+const notTrainedSheet = (detail: MuscleDetail, overrides: Partial<MuscleSheetContext> = {}) => {
   const sheet = describeMuscleSheet(detail, { ...context, ...overrides });
-  if (sheet.kind !== "not_targeted") {
-    throw new Error("Expected the sheet of a muscle that is not targeted");
+  if (sheet.kind !== "not_trained") {
+    throw new Error("Expected the sheet of a muscle with no sets");
   }
   return sheet;
+};
+
+/** The weekly sets of a muscle with nothing done and nothing planned. */
+const NO_SETS: Partial<MuscleDetail["weeklySets"]> = {
+  actual: 0,
+  planned: 0,
+  actualStatus: "not_trained",
+  plannedStatus: "not_trained",
+  volumeStatus: "not_trained",
 };
 
 describe("the fixed words of the muscle sheet", () => {
@@ -102,8 +111,6 @@ describe("the fixed words of the muscle sheet", () => {
       lastTrainedLabel: "Last trained",
       barStart: "0",
       editRoutine: "Edit routine",
-      editGoal: "Edit goal",
-      notTargetedStatus: "Not targeted",
       weightingNote: "Sets count by how much an exercise works the muscle.",
     });
   });
@@ -116,10 +123,10 @@ describe("describeHours", () => {
   });
 });
 
-describe("describeMuscleSheet for a targeted muscle, the side delts of body · muscle-sheet", () => {
+describe("describeMuscleSheet for a muscle with sets, the side delts of body · muscle-sheet", () => {
   it("should write every line as the board draws it", () => {
     expect(describeMuscleSheet(boardSideDelts, context)).toStrictEqual({
-      kind: "targeted",
+      kind: "trained",
       title: "Side delts",
       subtitle: "Shoulders",
       heat: { label: "Heat", value: "3 %", stepName: "Rested" },
@@ -127,11 +134,12 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
       weeklySets: {
         heading: "Sets this week · Mon 12 to Sun 18 Oct",
         plannedText: "11 planned",
-        done: { value: "5.5", caption: "done · target 10 to 16" },
-        barName: "5.5 sets done, 11 planned, target 10 to 16, minimum 6, maximum 22",
-        barLabels: { start: "0", minimum: "Min 6", planned: "Planned 11", maximum: "Max 22" },
+        done: { value: "5.5", caption: "done · Growing" },
+        barName:
+          "5.5 sets done, Growing, 11 planned. Growing from 4 sets, Productive from 10, High above 20",
+        barLabels: { start: "0", growing: "4", productive: "10", high: "20" },
         position:
-          "Below target so far. Saturday's Push plans 5.5 more, which brings the week to 11, inside your target.",
+          "Growing so far. Saturday's Push plans 5.5 more, which brings the week to 11, into Productive.",
       },
       lastTrained: {
         label: "Last trained",
@@ -144,7 +152,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
   });
 
   it("should write the same numbers from the golden week at Thursday 19:00", () => {
-    const sheet = targetedSheet(goldenDetail("delt_side"));
+    const sheet = trainedSheet(goldenDetail("delt_side"));
 
     expect(sheet.heat).toStrictEqual({ label: "Heat", value: "3 %", stepName: "Rested" });
     expect(sheet.ready).toStrictEqual({
@@ -153,7 +161,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
       caption: "Recovered from Monday",
     });
     expect(sheet.weeklySets.position).toBe(
-      "Below target so far. Saturday's Push plans 5.5 more, which brings the week to 11, inside your target.",
+      "Growing so far. Saturday's Push plans 5.5 more, which brings the week to 11, into Productive.",
     );
     expect(sheet.lastTrained.value).toBe("Mon 12 Oct · Push");
     // The exercise names are printed as stored, so the fixture's title case shows.
@@ -168,7 +176,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
       [1, "In 1 hour", null],
       [31, "In 31 hours", null],
     ])("should write %d hours as %s with the caption %s", (readyInHours, value, caption) => {
-      expect(targetedSheet(detailWith({ readyInHours })).ready).toStrictEqual({
+      expect(trainedSheet(detailWith({ readyInHours })).ready).toStrictEqual({
         label: "Ready",
         value,
         caption,
@@ -176,7 +184,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
     });
 
     it("should give a muscle that is ready but was not trained in the window no caption", () => {
-      expect(targetedSheet(detailWith({ lastTrained: null })).ready).toStrictEqual({
+      expect(trainedSheet(detailWith({ lastTrained: null })).ready).toStrictEqual({
         label: "Ready",
         value: "Now",
         caption: null,
@@ -186,7 +194,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
 
   describe("recovered from", () => {
     const lastTrainedOn = (localDate: string) =>
-      targetedSheet(
+      trainedSheet(
         detailWith({
           lastTrained: {
             localDate,
@@ -210,7 +218,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
 
   describe("last trained", () => {
     it("should say not in the window for a muscle with no last trained entry", () => {
-      expect(targetedSheet(detailWith({ lastTrained: null })).lastTrained).toStrictEqual({
+      expect(trainedSheet(detailWith({ lastTrained: null })).lastTrained).toStrictEqual({
         label: "Last trained",
         value: "Not in the last 14 days",
         exercises: null,
@@ -218,7 +226,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
     });
 
     it("should leave the routine day out of a session that was not a routine day", () => {
-      const sheet = targetedSheet(
+      const sheet = trainedSheet(
         detailWith({
           lastTrained: {
             localDate: "2026-10-13",
@@ -239,88 +247,141 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
 
   describe("the position sentence", () => {
     const position = (
-      actualPosition: MuscleDetail["weeklySets"]["actualPosition"],
-      plannedPosition: MuscleDetail["weeklySets"]["plannedPosition"],
+      statuses: Pick<MuscleDetail["weeklySets"], "actualStatus" | "plannedStatus">,
       sets: { actual: number; planned: number },
       overrides: Partial<MuscleSheetContext> = {},
     ) =>
-      targetedSheet(
-        detailWith({ weeklySets: { ...sets, actualPosition, plannedPosition } }),
-        overrides,
-      ).weeklySets.position;
+      trainedSheet(detailWith({ weeklySets: { ...sets, ...statuses } }), overrides).weeklySets
+        .position;
 
     it.each([
       [
-        "below",
-        "inside",
+        "growing",
+        "productive",
         { actual: 5.5, planned: 11 },
-        "Below target so far. Saturday's Push plans 5.5 more, which brings the week to 11, inside your target.",
+        "Growing so far. Saturday's Push plans 5.5 more, which brings the week to 11, into Productive.",
       ],
       [
-        "below",
-        "below",
-        { actual: 2, planned: 5 },
-        "Below target so far. Saturday's Push plans 3 more, which brings the week to 5, below your target.",
+        "not_trained",
+        "maintaining",
+        { actual: 0, planned: 2 },
+        "Not trained so far. Saturday's Push plans 2 more, which brings the week to 2, into Maintaining.",
       ],
       [
-        "inside",
-        "inside",
-        { actual: 11, planned: 14 },
-        "Inside target so far. Saturday's Push plans 3 more, which brings the week to 14, inside your target.",
+        "growing",
+        "growing",
+        { actual: 5, planned: 8 },
+        "Growing so far. Saturday's Push plans 3 more, which brings the week to 8, still Growing.",
       ],
       [
-        "inside",
-        "above",
-        { actual: 15, planned: 18 },
-        "Inside target so far. Saturday's Push plans 3 more, which brings the week to 18, above your target.",
-      ],
-      [
-        "above",
-        "above",
-        { actual: 17, planned: 19.5 },
-        "Above target so far. Saturday's Push plans 2.5 more, which brings the week to 19.5, above your target.",
+        "productive",
+        "high",
+        { actual: 18, planned: 21 },
+        "Productive so far. Saturday's Push plans 3 more, which brings the week to 21, into High.",
       ],
     ] as const)(
       "should write %s so far and %s by the end of the week",
-      (actualPosition, plannedPosition, sets, sentence) => {
-        expect(position(actualPosition, plannedPosition, sets)).toBe(sentence);
+      (actualStatus, plannedStatus, sets, sentence) => {
+        expect(position({ actualStatus, plannedStatus }, sets)).toBe(sentence);
       },
     );
 
     it("should say that nothing more is planned when the plan adds no sets", () => {
-      expect(position("inside", "inside", { actual: 12, planned: 12 })).toBe(
-        "Inside target so far. Nothing more is planned this week.",
-      );
+      expect(
+        position(
+          { actualStatus: "productive", plannedStatus: "productive" },
+          { actual: 12, planned: 12 },
+        ),
+      ).toBe("Productive so far. Nothing more is planned this week.");
     });
 
     it("should name two planned sessions with the plural verb", () => {
       expect(
         position(
-          "below",
-          "inside",
+          { actualStatus: "growing", plannedStatus: "productive" },
           { actual: 4, planned: 10 },
           {
             upcomingSessions: [{ localDate: "2026-10-16", routineDayName: "Pull" }, SATURDAYS_PUSH],
           },
         ),
       ).toBe(
-        "Below target so far. Friday's Pull and Saturday's Push plan 6 more, which brings the week to 10, inside your target.",
+        "Growing so far. Friday's Pull and Saturday's Push plan 6 more, which brings the week to 10, into Productive.",
       );
     });
 
     it("should say the plan when no planned session is named", () => {
       expect(
-        position("below", "inside", { actual: 5.5, planned: 11 }, { upcomingSessions: [] }),
+        position(
+          { actualStatus: "growing", plannedStatus: "productive" },
+          { actual: 5.5, planned: 11 },
+          { upcomingSessions: [] },
+        ),
       ).toBe(
-        "Below target so far. The plan adds 5.5 more, which brings the week to 11, inside your target.",
+        "Growing so far. The plan adds 5.5 more, which brings the week to 11, into Productive.",
       );
+    });
+  });
+
+  describe("the bar", () => {
+    it("should name the sets, the band, the plan and where each band starts, as the board does", () => {
+      const { weeklySets } = trainedSheet(boardSideDelts);
+
+      expect(weeklySets.barName).toBe(
+        "5.5 sets done, Growing, 11 planned. Growing from 4 sets, Productive from 10, High above 20",
+      );
+      expect(weeklySets.done).toStrictEqual({ value: "5.5", caption: "done · Growing" });
+      expect(weeklySets.plannedText).toBe("11 planned");
+      expect(weeklySets.barLabels).toStrictEqual({
+        start: "0",
+        growing: "4",
+        productive: "10",
+        high: "20",
+      });
+    });
+
+    it("should name the sets done by their own band", () => {
+      const { weeklySets } = trainedSheet(
+        detailWith({
+          weeklySets: {
+            actual: 21,
+            planned: 21,
+            actualStatus: "high",
+            plannedStatus: "high",
+            volumeStatus: "high",
+          },
+        }),
+      );
+
+      expect(weeklySets.done.caption).toBe("done · High");
+      expect(weeklySets.barName).toContain("21 sets done, High, 21 planned.");
+    });
+
+    it("should name the sets done by the band they are in, not the band the plan reaches, in Projected", () => {
+      // In Projected the detail's volume status is the planned figure's: 11 planned is Productive.
+      const { weeklySets } = trainedSheet(
+        detailWith({
+          weeklySets: {
+            actual: 5.5,
+            planned: 11,
+            actualStatus: "growing",
+            plannedStatus: "productive",
+            volumeStatus: "productive",
+          },
+        }),
+      );
+
+      expect(weeklySets.done).toStrictEqual({ value: "5.5", caption: "done · Growing" });
+      expect(weeklySets.barName).toBe(
+        "5.5 sets done, Growing, 11 planned. Growing from 4 sets, Productive from 10, High above 20",
+      );
+      expect(weeklySets.position).toMatch(/^Growing so far\./);
     });
   });
 
   describe("the weighting note", () => {
     it("should write an before a name that starts with a vowel", () => {
       expect(
-        targetedSheet(boardSideDelts, {
+        trainedSheet(boardSideDelts, {
           weightingExample: { exerciseName: "overhead press", weight: 0.5 },
         }).weightingNote,
       ).toBe(
@@ -329,7 +390,7 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
     });
 
     const note = (weightingExample: MuscleSheetContext["weightingExample"]) =>
-      targetedSheet(boardSideDelts, { weightingExample }).weightingNote;
+      trainedSheet(boardSideDelts, { weightingExample }).weightingNote;
 
     it("should state only the rule when there is no example", () => {
       expect(note(null)).toBe("Sets count by how much an exercise works the muscle.");
@@ -347,88 +408,96 @@ describe("describeMuscleSheet for a targeted muscle, the side delts of body · m
   });
 
   it("should name both months in the heading of a week that crosses one", () => {
-    expect(targetedSheet(boardSideDelts, { weekStart: "2026-10-26" }).weeklySets.heading).toBe(
+    expect(trainedSheet(boardSideDelts, { weekStart: "2026-10-26" }).weeklySets.heading).toBe(
       "Sets this week · Mon 26 Oct to Sun 1 Nov",
     );
   });
 });
 
-describe("describeMuscleSheet for a muscle that is not targeted, the abs of body · muscle-sheet-not-targeted", () => {
+describe("describeMuscleSheet for a muscle with no sets, the abs of body · muscle-sheet-not-targeted", () => {
   it("should write every line as the board draws it, from the golden week", () => {
     expect(describeMuscleSheet(goldenDetail("abs"), context)).toStrictEqual({
-      kind: "not_targeted",
+      kind: "not_trained",
       title: "Abs",
-      subtitle: "Core · not targeted",
+      subtitle: "Core · not trained this week",
       heat: { label: "Heat", value: "0 %", stepName: "Rested" },
-      thisWeek: { label: "This week", value: "0 sets", statusName: "Not targeted" },
+      thisWeek: { label: "This week", value: "0 sets", statusName: "Not trained" },
       explanation:
-        "Your routine does not train abs and your goal does not rank them, so they have no target this week and never read as under.",
+        "No sets for abs this week, which runs Monday to Sunday. Any working set for abs moves them to Maintaining.",
       lastTrained: {
         label: "Last trained",
         value: "Not in the last 14 days",
         exercises: null,
       },
-      actions: { editRoutine: "Edit routine", editGoal: "Edit goal" },
-      footnote:
-        "Add an exercise that works abs to your routine, or rank them in your goal, and they get a target.",
+      actions: { editRoutine: "Edit routine" },
+      footnote: "Add an exercise that works abs to your routine, and its sets count here.",
     });
   });
 
-  it("should write the sets done so far when some were logged", () => {
-    const sheet = notTargetedSheet(
-      detailWith({
-        muscle: "abs",
-        targeting: { targeted: false, routineTrains: false, goalRanks: false },
-        weeklySets: { actual: 2.5 },
-      }),
-    );
-
-    expect(sheet.thisWeek.value).toBe("2.5 sets");
-  });
-
-  it("should write a singular muscle with it and a singular verb", () => {
-    const sheet = notTargetedSheet(
-      detailWith({
-        muscle: "neck",
-        targeting: { targeted: false, routineTrains: false, goalRanks: false },
-      }),
-    );
+  it("should write a singular muscle with it", () => {
+    const sheet = notTrainedSheet(detailWith({ muscle: "neck", weeklySets: NO_SETS }));
 
     expect(sheet.explanation).toBe(
-      "Your routine does not train neck and your goal does not rank it, so it has no target this week and never reads as under.",
+      "No sets for neck this week, which runs Monday to Sunday. Any working set for neck moves it to Maintaining.",
     );
     expect(sheet.footnote).toBe(
-      "Add an exercise that works neck to your routine, or rank it in your goal, and it gets a target.",
+      "Add an exercise that works neck to your routine, and its sets count here.",
     );
-    expect(sheet.subtitle).toBe("Neck · not targeted");
+    expect(sheet.subtitle).toBe("Neck · not trained this week");
   });
 
-  it("should write the last trained entry when a not targeted muscle was trained in the window", () => {
-    const sheet = notTargetedSheet(
-      detailWith({
-        muscle: "abs",
-        targeting: { targeted: false, routineTrains: false, goalRanks: false },
-      }),
-    );
+  it("should write the last trained entry when the muscle was trained in the window, before this week", () => {
+    const sheet = notTrainedSheet(detailWith({ muscle: "abs", weeklySets: NO_SETS }));
 
     expect(sheet.lastTrained.value).toBe("Mon 12 Oct · Push");
   });
+
+  it("should give a muscle with sets planned but none done the sheet with the bar", () => {
+    const sheet = describeMuscleSheet(
+      detailWith({
+        muscle: "quads",
+        weeklySets: {
+          actual: 0,
+          planned: 5,
+          actualStatus: "not_trained",
+          plannedStatus: "growing",
+        },
+      }),
+      context,
+    );
+
+    expect(sheet.kind).toBe("trained");
+  });
+
+  it("should give a muscle with sets done the sheet with the bar, whatever the plan targets", () => {
+    const sheet = describeMuscleSheet(
+      detailWith({
+        muscle: "abs",
+        targeting: { targeted: false, routineTrains: false, goalRanks: false },
+        weeklySets: {
+          actual: 2.5,
+          planned: 2.5,
+          actualStatus: "maintaining",
+          plannedStatus: "maintaining",
+          volumeStatus: "maintaining",
+        },
+      }),
+      context,
+    );
+
+    expect(sheet.kind).toBe("trained");
+  });
 });
 
-describe("the not targeted sentence, for each of the 22 muscles", () => {
-  // The names that read as one thing take "it", "has" and "reads". The rest are plural.
+describe("the not trained sentence, for each of the 22 muscles", () => {
+  // The names that read as one thing take "it". The rest are plural.
   const singular: readonly MuscleId[] = ["chest_upper", "chest_lower", "lower_back", "neck"];
 
   it.each(MUSCLE_IDS)("should agree with the name of %s", (muscle) => {
-    const sheet = notTargetedSheet(
-      detailWith({
-        muscle,
-        targeting: { targeted: false, routineTrains: false, goalRanks: false },
-      }),
-    );
+    const sheet = notTrainedSheet(detailWith({ muscle, weeklySets: NO_SETS }));
     const expectedEnding = singular.includes(muscle)
-      ? "does not rank it, so it has no target this week and never reads as under."
-      : "does not rank them, so they have no target this week and never read as under.";
+      ? "moves it to Maintaining."
+      : "moves them to Maintaining.";
 
     expect(sheet.explanation).toContain(expectedEnding);
   });

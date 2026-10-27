@@ -636,3 +636,73 @@ T6 ships the male body only. The female body is deferred and Zee chooses its sou
 - KEY-587, the 2D or 3D preference, and KEY-592, its More row.
 - KEY-588, the About credit.
 - KEY-561, `BodyView` and the fallback to 2D.
+
+## Amendment 6 (the five volume bands, keylow-training-v2, 2026-10-27)
+
+### Status
+
+Recorded on 2026-10-27 under KEY-727, part of KEY-726. It implements Zee's ruling of 2026-10-27, quoted below. It overrides the lines named in "What it overrides" and nothing else. The heat model, the effort weights, the windows, the goal presets and every other amendment stay as they are.
+
+Zee's ruling, after asking why his hard training week read as Under almost everywhere:
+
+> "Cool I like this. Go ahead"
+
+He was answering the proposal of KEY-726: the Volume view's bands move from the RP-style landmarks (MEV, MAV, MRV) to the current hypertrophy evidence. The boards (`tokens · body-map-scales` v4, `body · volume`, `body · muscle-sheet` and `body · muscle-sheet-not-targeted`) were approved under Zee's away rule on 2026-10-27, so the colours and words below are the boards' and not Zee's own comments. The three interpretations made for implementation are listed last, and Zee confirms them by approving the pull request that carries this amendment.
+
+### The bands
+
+`TRAINING_PARAMS_V2` carries `version: 'keylow-training-v2'`. Its heat numbers (τ, C and θ for each size class), its effort weights and its two windows are copied from v1, and a test pins each. Its volume numbers are the same for every muscle, because the evidence does not split by size class. They are effort-weighted (fractional) sets in the calendar week, Monday to Sunday, as before:
+
+| Band        | Sets this week            | Meaning                                                                                                                                       |
+| ----------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Not trained | 0                         | Nothing this week. Grey.                                                                                                                      |
+| Maintaining | above 0 and below 4       | Keeps muscle already built. It assumes the user has built the muscle before.                                                                  |
+| Growing     | 4 and above, below 10     | Growth, with the biggest return per set.                                                                                                      |
+| Productive  | 10 up to and including 20 | More growth, and most of the benefit.                                                                                                         |
+| High        | above 20                  | Small extra gains for a lot more work. It is not labelled "too much", because recovery is what heat shows. Drawn in a further green, not red. |
+
+The edges are exact: 3.99 sets is Maintaining, 4 is Growing, 9.99 is Growing, 10 is Productive, 20 is Productive and 20.25 is High. Weekly sets are rounded to nine decimal places, as before, so floating point drift never moves a muscle across an edge.
+
+Sources, as Zee's ruling cites them:
+
+- Pelland et al., "The Resistance Training Dose-Response", SportRxiv 460 (2024), published in Sports Medicine (2025): about 4 fractional sets a week is the minimum effective dose.
+- Bickel, Cross and Bamman (2011), "Exercise dosing to retain resistance training adaptations in young and older adults": about a ninth of the building volume held size for 32 weeks in young adults.
+- Schoenfeld, Ogborn and Krieger (2017), the dose-response meta-analysis.
+- Stronger by Science, "When does training volume reach the point of diminishing returns?": about 20 sets a week.
+- Jeff Nippard's volume guidance: 10 to 12 hard sets, his summaries of Pelland and Schoenfeld.
+
+The app's effort weighting already counts indirect work at about half a set, which matches Pelland's fractional method, so counting does not change.
+
+### What it changes
+
+- **Statuses.** The volume statuses are `not_trained`, `maintaining`, `growing`, `productive` and `high`, in that order, and the body map encodes them as their index in `VOLUME_STATUSES` (0 to 4). The statuses `under`, `over` and `not_targeted` are gone from the Volume view. A muscle with no value on the volume scale is drawn Not trained, which is index 0.
+- **Ruling E is superseded for the Volume view.** KEY-339 ruling E made a muscle the plan and the goal do not train `not_targeted` where it would have been `under`. Zero sets is now Not trained whether or not the plan targets the muscle, and the targeted set no longer changes a volume status. `muscleState`, `weeklyVolume`, `projectedState` and `volumeValues` take no targeted argument. The Gap view keeps its own "Not in plan", decided by `gapValues` from `targetedMuscles`, which is unchanged. `useMuscleState` reads no routine and no goal, since nothing in it depends on them.
+- **Colours.** The volume palette is five tokens, `volume-not-trained`, `volume-maintaining`, `volume-growing`, `volume-productive` and `volume-high`, in both themes. Not trained, Maintaining and Productive keep the colours of the old not targeted, maintaining and productive tokens. `volume-under` and `volume-over` are retired. The gap scale draws "Not in plan" in the Not trained colour, as it drew it in the not targeted colour.
+- **The muscle sheet.** The weekly sets bar runs from 0 to 24 sets with a tick and a number at 4, 10 and 20, fills in the colour of the band, and has no target band and no Min, Planned or Max labels. A muscle with no sets done and none planned this week gets the Not trained sheet, which says so and offers Edit routine and no Edit goal. Any other muscle gets the sheet with the bar.
+- **Suggestions.** `suggestSession` scored a muscle as `priority × max(0, MAV low − sets) × (1 − heat)`. Under v2 a muscle is scored against where Productive starts, 10 sets, so `MAV low` becomes 10 for every muscle. A small or large muscle already had 10, so only the medium muscles (chest, lats, traps, glute_med and adductors) move, from 12 to 10. The goldens were worked again by hand with that target. The reason data keeps the name `mav_low` for the number a muscle was scored against, because stored suggestions carry it and the schema of a stored reason reads it.
+
+### What it overrides
+
+- "The heat model (pure, versioned)": the sentence on chronic load that compares `weeklySets` with the landmarks `MEV ≤ MAV ≤ MRV` to give `under | maintaining | productive | over`, and the sentence that follows it on the fifth status `not_targeted`. The numbers in the table of starting values for MEV, MAV and MRV are the record of `keylow-training-v1`. The columns τ, C and θ are unchanged and are v2's as well.
+- The same section's list of functions: `muscleState(sets, now, params, targeted?)`, `weeklyVolume(sets, asOf, params, targeted?)` and the `projectedState` argument lose their optional trailing argument.
+- "Goals and suggestions": "`MAV_low − weeklySets`" reads "where Productive starts, 10, less `weeklySets`".
+- "The body map": "`volume` is diverging (blue under, green productive, red over)". The volume scale is five bands, from grey through blue and teal to green, and is no longer diverging.
+
+### Versions
+
+- A change to `TrainingParams` values is a new version, never an edit of `keylow-training-v1` (the "Consequences" of this ADR and ADR 0002). `TRAINING_PARAMS_V1` stays in `params.ts` as the record of what v1 held, with its test, and nothing computes with it any more. `COMPARE_PARAMS_V2` and `SUGGEST_PARAMS_V2` carry the v2 training params and version, and replace `COMPARE_PARAMS_V1` and `SUGGEST_PARAMS_V1`, which held the v1 training params.
+- The goal presets, the session time numbers and the nutrition proposals did not change, so they keep `keylow-training-v1`, and `training_goals.params_version` still records it for a goal saved before or after this amendment. A row already saved keeps the version it was written with. An `accepted_suggestions` row made before this amendment says `keylow-training-v1` and keeps its `mav_low` numbers as they were. A suggestion made after it says `keylow-training-v2`.
+- Nothing about volume status is persisted, so no migration is needed.
+
+### Interpretations made for implementation
+
+These are not Zee's rulings:
+
+- That `suggestSession` scores against where Productive starts (10), and not against Growing (4), which would leave almost every muscle already satisfied.
+- That the sheet's Not trained case is chosen by no sets done and none planned, and not by the Not trained status of the view alone, so a muscle with sets planned but none done yet still shows its bar.
+- That the bar's track runs to 24 sets, the number the `body · muscle-sheet` board draws.
+
+### Implemented by
+
+- KEY-727, this amendment, core, tokens and the mobile app.
+- The web twin of the Volume view waits in MWEB. Web reads the same core.

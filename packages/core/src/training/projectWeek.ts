@@ -200,9 +200,6 @@ export const projectWeek = (
  * (Zee, KEY-339 ruling D). A counted planned set decays from `params.plannedTime` on its own day. Pass
  * sets from before the week with the projection when the heat window reaches back past Monday.
  *
- * `targeted` is the muscles the plan and the goal train (`targetedMuscles`), passed on to `muscleState`
- * for the volume status. Left out, every muscle is targeted.
- *
  * Throws a `RangeError` naming the rule when `tz` is not an IANA name, and as `muscleState` does for
  * the other inputs.
  */
@@ -211,10 +208,9 @@ export const projectedState = (
   at: string,
   tz: string,
   params: CompareParams,
-  targeted?: ReadonlySet<MuscleId>,
 ): Record<MuscleId, MuscleState> => {
   requireTimeZone(tz);
   const today = toLocalDate(new Date(parseMoment(at)), tz);
   const counted = projected.filter((set) => !("planned" in set) || set.local_date < today);
-  return muscleState(counted, at, params.training, targeted);
+  return muscleState(counted, at, params.training);
 };

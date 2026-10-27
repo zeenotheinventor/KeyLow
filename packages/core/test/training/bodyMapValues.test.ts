@@ -24,7 +24,6 @@ import {
   muscleState,
   projectedState,
   projectWeek,
-  targetedMuscles,
   VOLUME_STATUSES,
   volumeValues,
   warmestMuscles,
@@ -205,95 +204,85 @@ const comparisonWith = (
     };
   });
 
-const UNDER = 0;
+const NOT_TRAINED = 0;
 const MAINTAINING = 1;
-const PRODUCTIVE = 2;
-const OVER = 3;
-const NOT_TARGETED = 4;
+const GROWING = 2;
+const PRODUCTIVE = 3;
+const HIGH = 4;
 
 describe("volumeValues", () => {
   it("should index the statuses in the order of VOLUME_STATUSES", () => {
-    expect(VOLUME_STATUSES.indexOf("under")).toBe(UNDER);
+    expect(VOLUME_STATUSES.indexOf("not_trained")).toBe(NOT_TRAINED);
     expect(VOLUME_STATUSES.indexOf("maintaining")).toBe(MAINTAINING);
+    expect(VOLUME_STATUSES.indexOf("growing")).toBe(GROWING);
     expect(VOLUME_STATUSES.indexOf("productive")).toBe(PRODUCTIVE);
-    expect(VOLUME_STATUSES.indexOf("over")).toBe(OVER);
-    expect(VOLUME_STATUSES.indexOf("not_targeted")).toBe(NOT_TARGETED);
+    expect(VOLUME_STATUSES.indexOf("high")).toBe(HIGH);
   });
 
-  describe("against the landmarks of a small muscle (triceps: MEV 6, MAV from 10, MRV 22)", () => {
-    const allTargeted = new Set<MuscleId>(MUSCLE_IDS);
-
-    it.each([
-      [5.9, UNDER],
-      [6, MAINTAINING],
-      [9.9, MAINTAINING],
-      [10, PRODUCTIVE],
-      [22, PRODUCTIVE],
-      [22.1, OVER],
-    ])("should put %s weekly sets at value %s", (sets, value) => {
+  // The edges of the five bands, 0, just above 0, just under 4, 4, just under 10, 10, 20 and just above 20.
+  it.each([
+    [0, NOT_TRAINED],
+    [0.25, MAINTAINING],
+    [3.99, MAINTAINING],
+    [4, GROWING],
+    [9.99, GROWING],
+    [10, PRODUCTIVE],
+    [20, PRODUCTIVE],
+    [20.25, HIGH],
+  ])(
+    "should put %s weekly sets at value %s, for a small, a medium and a large muscle",
+    (sets, value) => {
       const values = volumeValues(
-        comparisonWith({ triceps: { actual: sets, projected: sets } }),
-        allTargeted,
+        comparisonWith({
+          triceps: { actual: sets },
+          chest_lower: { actual: sets },
+          quads: { actual: sets },
+        }),
         "actual",
       );
 
       expect(values.triceps).toBe(value);
-    });
-
-    it("should call a muscle that is not targeted and under its MEV not targeted", () => {
-      const values = volumeValues(comparisonWith({}), new Set<MuscleId>(), "actual");
-
-      expect(values.triceps).toBe(NOT_TARGETED);
-    });
-
-    it("should keep the real status of a muscle that is not targeted once it reaches its MEV", () => {
-      const values = volumeValues(
-        comparisonWith({ triceps: { actual: 6 } }),
-        new Set<MuscleId>(),
-        "actual",
-      );
-
-      expect(values.triceps).toBe(MAINTAINING);
-    });
-  });
+      expect(values.chest_lower).toBe(value);
+      expect(values.quads).toBe(value);
+    },
+  );
 
   it("should read the actual sets in Actual and the projected sets in Projected", () => {
     const sets = comparisonWith({ triceps: { actual: 2, projected: 12 } });
-    const allTargeted = new Set<MuscleId>(MUSCLE_IDS);
 
-    expect(volumeValues(sets, allTargeted, "actual").triceps).toBe(UNDER);
-    expect(volumeValues(sets, allTargeted, "projected").triceps).toBe(PRODUCTIVE);
+    expect(volumeValues(sets, "actual").triceps).toBe(MAINTAINING);
+    expect(volumeValues(sets, "projected").triceps).toBe(PRODUCTIVE);
   });
 
   it("should hold every muscle id", () => {
-    const values = volumeValues(comparisonWith({}), targeted, "projected");
+    const values = volumeValues(comparisonWith({}), "projected");
 
     expect(Object.keys(values).sort()).toStrictEqual([...MUSCLE_IDS].sort());
   });
 
   describe("on the golden week as of Sunday 18 October", () => {
-    it("should give Projected the statuses the canvas lists", () => {
-      expect(volumeValues(comparison, targeted, "projected")).toStrictEqual(
+    it("should give Projected the bands of the volume board", () => {
+      expect(volumeValues(comparison, "projected")).toStrictEqual(
         recordOfMuscles((muscle) => {
           switch (muscle) {
             case "triceps":
             case "delt_front":
             case "delt_side":
-              return PRODUCTIVE;
             case "lats":
+              return PRODUCTIVE;
             case "chest_upper":
             case "chest_lower":
             case "biceps":
-              return MAINTAINING;
             case "traps_mid":
             case "delt_rear":
             case "hamstrings":
             case "quads":
             case "glute_max":
+              return GROWING;
             case "lower_back":
             case "calves":
             case "forearms":
-              return UNDER;
+              return MAINTAINING;
             case "traps_upper":
             case "abs":
             case "obliques":
@@ -301,33 +290,42 @@ describe("volumeValues", () => {
             case "adductors":
             case "tibialis":
             case "neck":
-              return NOT_TARGETED;
+              return NOT_TRAINED;
           }
         }),
       );
     });
 
-    it("should give Actual the statuses of the three logged days", () => {
-      expect(volumeValues(comparison, targeted, "actual")).toStrictEqual(
+    it("should read a muscle the plan leaves out like any other, by its sets", () => {
+      // The plan does not decide a status: only the sets do. Nothing is high in this week.
+      const values = volumeValues(comparison, "projected");
+
+      expect(Object.values(values)).not.toContain(HIGH);
+      expect(values.traps_upper).toBe(NOT_TRAINED);
+    });
+
+    it("should give Actual the bands of the three logged days", () => {
+      expect(volumeValues(comparison, "actual")).toStrictEqual(
         recordOfMuscles((muscle) => {
           switch (muscle) {
-            case "delt_front":
             case "lats":
-            case "biceps":
-            case "triceps":
-              return MAINTAINING;
+              return PRODUCTIVE;
             case "chest_upper":
             case "chest_lower":
+            case "delt_front":
             case "delt_side":
             case "delt_rear":
             case "traps_mid":
-            case "lower_back":
-            case "forearms":
+            case "biceps":
+            case "triceps":
             case "glute_max":
             case "quads":
             case "hamstrings":
+              return GROWING;
+            case "lower_back":
+            case "forearms":
             case "calves":
-              return UNDER;
+              return MAINTAINING;
             case "traps_upper":
             case "abs":
             case "obliques":
@@ -335,7 +333,7 @@ describe("volumeValues", () => {
             case "adductors":
             case "tibialis":
             case "neck":
-              return NOT_TARGETED;
+              return NOT_TRAINED;
           }
         }),
       );
@@ -373,23 +371,18 @@ describe("volumeValues", () => {
     );
 
     it("should count the calendar week, so a set just after Monday midnight is in it", () => {
-      const values = volumeValues(clockChangeComparison, targetedMuscles({ routine }), "actual");
+      const values = volumeValues(clockChangeComparison, "actual");
 
       expect(values.chest_lower).toBe(PRODUCTIVE);
-      expect(values.chest_upper).toBe(UNDER);
-      expect(values.delt_front).toBe(MAINTAINING);
-      expect(values.triceps).toBe(MAINTAINING);
+      expect(values.chest_upper).toBe(GROWING);
+      expect(values.delt_front).toBe(GROWING);
+      expect(values.triceps).toBe(GROWING);
     });
 
     it("should differ from the rolling window, which has already dropped that set by Sunday night", () => {
-      const rolling = weeklyVolume(
-        mondaySets,
-        "2026-10-25T23:30:00.000Z",
-        params.training,
-        targetedMuscles({ routine }),
-      );
+      const rolling = weeklyVolume(mondaySets, "2026-10-25T23:30:00.000Z", params.training);
 
-      expect(rolling.chest_lower.volumeStatus).toBe("under");
+      expect(rolling.chest_lower.volumeStatus).toBe("not_trained");
     });
   });
 });

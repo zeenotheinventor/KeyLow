@@ -1,7 +1,7 @@
 import {
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   MUSCLE_IDS,
-  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   compareWeek,
   compareWeekSoFar,
   dayMoments,
@@ -97,7 +97,7 @@ function projectionOf(rows: BodyMapRows, weekStart: string): WeekProjection {
     weekStart,
     rows.timeZone,
     { sessions: rows.sessions, sets: rows.sessions.flatMap((session) => session.sets) },
-    COMPARE_PARAMS_V1,
+    COMPARE_PARAMS_V2,
   );
 }
 
@@ -129,17 +129,15 @@ export function heatStatesOf(
   weekStart: string,
   computedAt: string,
 ): Record<MuscleId, MuscleState> {
-  const targeted = targetedMusclesOf(rows);
   if (view === "actual" || rows.routine === null) {
-    return muscleState(rows.sets, computedAt, TRAINING_PARAMS_V1, targeted);
+    return muscleState(rows.sets, computedAt, TRAINING_PARAMS_V2);
   }
   const projection = projectionOf(rows, weekStart);
   return projectedState(
     [...projection.projected, ...loggedOutsideProjection(rows, projection)],
     computedAt,
     rows.timeZone,
-    COMPARE_PARAMS_V1,
-    targeted,
+    COMPARE_PARAMS_V2,
   );
 }
 
@@ -151,8 +149,8 @@ export function heatStatesOf(
  */
 function gapValuesOf(rows: BodyMapRows, weekStart: string, computedAt: string) {
   const projection = projectionOf(rows, weekStart);
-  const soFar = compareWeekSoFar(projection, computedAt, rows.timeZone, COMPARE_PARAMS_V1);
-  const wholeWeek = compareWeek(projection.actual, projection.projected, COMPARE_PARAMS_V1);
+  const soFar = compareWeekSoFar(projection, computedAt, rows.timeZone, COMPARE_PARAMS_V2);
+  const wholeWeek = compareWeek(projection.actual, projection.projected, COMPARE_PARAMS_V2);
   const inPlanFromWholeWeek: Record<MuscleId, MusclePlanComparison> = { ...soFar };
   for (const muscle of MUSCLE_IDS) {
     inPlanFromWholeWeek[muscle] = {
@@ -177,8 +175,7 @@ export function valuesOf(
     case "volume": {
       const { actual, projected } = projectionOf(rows, weekStart);
       return volumeValues(
-        compareWeek(actual, projected, COMPARE_PARAMS_V1),
-        targetedMusclesOf(rows),
+        compareWeek(actual, projected, COMPARE_PARAMS_V2),
         // With no routine there is no plan to project, so Projected is Actual.
         rows.routine === null ? "actual" : view,
       );
@@ -193,7 +190,7 @@ const MILLISECONDS_PER_DAY = 24 * 3_600_000;
 /** True when no set was performed in the heat window that ends at `computedAt`, the start not included. */
 export function nothingLoggedAt(sets: readonly TrainingSet[], computedAt: string): boolean {
   const end = Date.parse(computedAt);
-  const start = end - TRAINING_PARAMS_V1.heatWindowDays * MILLISECONDS_PER_DAY;
+  const start = end - TRAINING_PARAMS_V2.heatWindowDays * MILLISECONDS_PER_DAY;
   return !sets.some((set) => {
     const performedAt = Date.parse(set.performed_at);
     return performedAt > start && performedAt <= end;
@@ -228,7 +225,7 @@ export function muscleDetailOf(
   return muscleDetail({
     muscle,
     state: heatStatesOf(rows, view, weekStart, computedAt),
-    comparison: compareWeek(projection.actual, projection.projected, COMPARE_PARAMS_V1),
+    comparison: compareWeek(projection.actual, projection.projected, COMPARE_PARAMS_V2),
     sets: rows.sets,
     sessions: rows.sessions.map(({ id, routine_day_id }) => ({
       id,
@@ -239,6 +236,6 @@ export function muscleDetailOf(
     view: rows.routine === null ? "actual" : view,
     now: computedAt,
     tz: rows.timeZone,
-    params: COMPARE_PARAMS_V1,
+    params: COMPARE_PARAMS_V2,
   });
 }

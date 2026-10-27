@@ -70,7 +70,7 @@ describe("the card for the golden suggestion, for a day that is tomorrow", () =>
     expect(card.reasons).toStrictEqual([
       {
         kind: "volume",
-        text: "Upper chest: 4.8 sets in the last 7 days, target 12, a V-taper priority",
+        text: "Upper chest: 4.8 sets in the last 7 days, target 10, a V-taper priority",
       },
       { kind: "heat", text: "Upper chest is ready now: heat 13 %" },
       { kind: "length", text: "Thursday goes from 16 to 19 sets, about 60 minutes" },
@@ -126,7 +126,7 @@ describe("the card when two exercises are added", () => {
   it("should say last 7 days of the logged sets for every pick", () => {
     const volumeLines = card.reasons.filter((reason) => reason.kind === "volume");
     expect(volumeLines.map((reason) => reason.text)).toStrictEqual([
-      "Upper chest: 4.8 sets in the last 7 days, target 12, a V-taper priority",
+      "Upper chest: 4.8 sets in the last 7 days, target 10, a V-taper priority",
       "Side delts: 5.5 sets in the last 7 days, target 10, a V-taper priority",
     ]);
   });
@@ -252,7 +252,7 @@ describe("the detail for the golden suggestion", () => {
     expect(detail.rows[5]).toStrictEqual({
       name: "Incline dumbbell press",
       target: "3 × 8 to 10 · RIR 2",
-      why: "Added. Upper chest is a V-taper priority, at 4.8 of 12 sets in the last 7 days, and ready now at heat 13 %. Side delts would not fit your 60 minutes.",
+      why: "Added. Upper chest is a V-taper priority, at 4.8 of 10 sets in the last 7 days, and ready now at heat 13 %. Side delts would not fit your 60 minutes.",
       added: true,
     });
   });
@@ -276,7 +276,7 @@ describe("the detail for the golden suggestion", () => {
   it("should say last 7 days of the logged sets for every pick, and not say what fits when everything did", () => {
     const rows = describeSuggestionDetail(twoAdds, detailForThursday).rows.slice(5);
     expect(rows.map((row) => row.why)).toStrictEqual([
-      "Added. Upper chest is a V-taper priority, at 4.8 of 12 sets in the last 7 days, and ready now at heat 13 %.",
+      "Added. Upper chest is a V-taper priority, at 4.8 of 10 sets in the last 7 days, and ready now at heat 13 %.",
       "Added. Side delts are a V-taper priority, at 5.5 of 10 sets in the last 7 days, and ready now at heat 12 %.",
     ]);
   });

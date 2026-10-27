@@ -18,11 +18,11 @@ exports[`body map colour contrast on the surface > should record the ratio of ev
   "heat-4": 5.85,
   "heat-5": 4.84,
   "heat-glow": 2.23,
+  "volume-growing": 8.16,
+  "volume-high": 13.94,
   "volume-maintaining": 8.04,
-  "volume-not-targeted": 1.49,
-  "volume-over": 5.87,
+  "volume-not-trained": 1.49,
   "volume-productive": 9.6,
-  "volume-under": 5.11,
 }
 `;
 
@@ -44,11 +44,11 @@ exports[`body map colour contrast on the surface > should record the ratio of ev
   "heat-4": 3.84,
   "heat-5": 4.96,
   "heat-glow": 1.73,
+  "volume-growing": 3.94,
+  "volume-high": 6.21,
   "volume-maintaining": 2.93,
-  "volume-not-targeted": 1.31,
-  "volume-over": 4.48,
+  "volume-not-trained": 1.31,
   "volume-productive": 3.3,
-  "volume-under": 5.61,
 }
 `;
 

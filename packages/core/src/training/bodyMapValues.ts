@@ -1,7 +1,7 @@
 import { PLAN_STATUSES } from "./compareWeek";
 import { MUSCLE_IDS } from "./muscles";
 import { muscleParams, VOLUME_STATUSES, volumeStatusOf } from "./muscleState";
-import { TRAINING_PARAMS_V1 } from "./params";
+import { TRAINING_PARAMS_V2 } from "./params";
 
 import type { MusclePlanComparison } from "./compareWeek";
 import type { MuscleId } from "./muscles";
@@ -54,7 +54,7 @@ const percentOf = (heat: number): number => Math.round(heat * 100);
 export const isReadyHeat = (
   muscle: MuscleId,
   heat: number,
-  params: TrainingParams = TRAINING_PARAMS_V1,
+  params: TrainingParams = TRAINING_PARAMS_V2,
 ): boolean => {
   const { threshold, capacity } = muscleParams(muscle, params);
   return heat <= threshold / capacity;
@@ -68,7 +68,7 @@ export const isReadyHeat = (
 export const heatStepOf = (
   muscle: MuscleId,
   heat: number,
-  params: TrainingParams = TRAINING_PARAMS_V1,
+  params: TrainingParams = TRAINING_PARAMS_V2,
 ): number => {
   const percent = percentOf(heat);
   const [readyFrom, , ...hotterCuts] = HEAT_STEP_CUTS_V1;
@@ -81,30 +81,28 @@ export const heatStepOf = (
 /** Each muscle's heat as a step from 0 to 5, by `heatStepOf`. */
 export const heatValues = (
   states: Readonly<Record<MuscleId, Pick<MuscleState, "heat">>>,
-  params: TrainingParams = TRAINING_PARAMS_V1,
+  params: TrainingParams = TRAINING_PARAMS_V2,
 ): Record<MuscleId, number> =>
   byMuscle((muscle) => heatStepOf(muscle, states[muscle].heat, params));
 
 /**
- * Each muscle's volume status as its index in `VOLUME_STATUSES`: 0 under, 1 maintaining, 2 productive,
- * 3 over, 4 not targeted. The sets are the calendar week's (Monday to Sunday, Zee's ruling B on KEY-339)
- * that `compareWeek` counted, never the rolling window: `actualWeeklySets` for Actual and
- * `projectedWeeklySets` for Projected. Over starts above the MRV (ruling F).
+ * Each muscle's volume status as its index in `VOLUME_STATUSES`: 0 not trained, 1 maintaining, 2 growing,
+ * 3 productive, 4 high. The sets are the calendar week's (Monday to Sunday, Zee's ruling B on KEY-339) that
+ * `compareWeek` counted, never the rolling window: `actualWeeklySets` for Actual and `projectedWeeklySets`
+ * for Projected. The plan does not change a status (Zee, 2026-10-27, KEY-726): the gap view is the one
+ * that compares with it.
  */
 export const volumeValues = (
   comparison: Readonly<
     Record<MuscleId, Pick<MusclePlanComparison, "actualWeeklySets" | "projectedWeeklySets">>
   >,
-  targeted: ReadonlySet<MuscleId>,
   view: BodyMapView,
-  params: TrainingParams = TRAINING_PARAMS_V1,
+  params: TrainingParams = TRAINING_PARAMS_V2,
 ): Record<MuscleId, number> =>
   byMuscle((muscle) => {
     const { actualWeeklySets, projectedWeeklySets } = comparison[muscle];
     const weeklySets = view === "actual" ? actualWeeklySets : projectedWeeklySets;
-    return VOLUME_STATUSES.indexOf(
-      volumeStatusOf(weeklySets, muscleParams(muscle, params), targeted.has(muscle)),
-    );
+    return VOLUME_STATUSES.indexOf(volumeStatusOf(weeklySets, muscleParams(muscle, params).volume));
   });
 
 /**

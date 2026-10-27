@@ -213,11 +213,11 @@ describe("summarisePriorities answers", () => {
 });
 
 describe("PRIORITY_GROUP_VOLUME_STATUS", () => {
-  it("should read first as productive, kept up as maintaining and not targeted as not targeted", () => {
+  it("should read first as productive, kept up as maintaining and not targeted as not trained", () => {
     expect(PRIORITY_GROUP_VOLUME_STATUS).toStrictEqual({
       first: "productive",
       keptUp: "maintaining",
-      notTargeted: "not_targeted",
+      notTargeted: "not_trained",
     });
   });
 });

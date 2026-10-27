@@ -24,7 +24,7 @@ type Story = StoryObj<typeof meta>;
 // The heat legend, from Rested to Peak, with only the peak glowing.
 export const Heat: Story = {};
 
-// The volume legend, from Not targeted to Over.
+// The volume legend, from Not trained to High.
 export const Volume: Story = { args: { scale: "volume" } };
 
 // The gap legend, from Not in plan to Ahead.

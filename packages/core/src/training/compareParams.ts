@@ -1,17 +1,17 @@
-import { TRAINING_PARAMS_V1, TRAINING_PARAMS_VERSION } from "./params";
+import { TRAINING_PARAMS_V2, TRAINING_PARAMS_VERSION_V2 } from "./params";
 
 import type { TrainingParams } from "./params";
 
 /*
  * The tunables of projected against actual (ADR 0005, "Projected against actual"). They sit beside
- * `TrainingParams` rather than inside it because `TRAINING_PARAMS_V1` is pinned field by field by its
- * own test, so adding a field there would edit the v1 object in place, which the versioning rule of
+ * `TrainingParams` rather than inside it because `TRAINING_PARAMS_V2` is pinned field by field by its
+ * own test, so adding a field there would edit the v2 object in place, which the versioning rule of
  * ADR 0002 forbids. Both objects carry the same version, and this one holds the training params it was
  * tuned with, so the whole plan view runs on one object and one version.
  */
 
 export type CompareParams = Readonly<{
-  version: typeof TRAINING_PARAMS_VERSION;
+  version: typeof TRAINING_PARAMS_VERSION_V2;
   /** The heat and volume numbers the planned and logged sets are counted with. */
   training: TrainingParams;
   /**
@@ -28,10 +28,13 @@ export type CompareParams = Readonly<{
   onPlanToleranceSets: number;
 }>;
 
-/** The v1 values: planned days at 18:00 local, on plan within 1 set. */
-export const COMPARE_PARAMS_V1: CompareParams = {
-  version: TRAINING_PARAMS_VERSION,
-  training: TRAINING_PARAMS_V1,
+/**
+ * The values under `keylow-training-v2`, the plan tunables as they were in v1: planned days at 18:00 local,
+ * on plan within 1 set.
+ */
+export const COMPARE_PARAMS_V2: CompareParams = {
+  version: TRAINING_PARAMS_VERSION_V2,
+  training: TRAINING_PARAMS_V2,
   plannedTime: { hour: 18, minute: 0 },
   onPlanToleranceSets: 1,
 };

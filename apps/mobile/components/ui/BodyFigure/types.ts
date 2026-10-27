@@ -6,7 +6,7 @@ export type BodyFigureScale = "heat" | "volume" | "gap";
 /**
  * The value of each muscle, as the body map values of core encode it: a heat step from 0 to 5 on the
  * heat scale, the index in `VOLUME_STATUSES` on the volume scale, and the index in `GAP_VALUES` on the
- * gap scale. A muscle left out is at rest on heat, not targeted on volume and not in the plan on gap.
+ * gap scale. A muscle left out is at rest on heat, not trained on volume and not in the plan on gap.
  */
 export type BodyFigureValues = Partial<Record<MuscleId, number>>;
 

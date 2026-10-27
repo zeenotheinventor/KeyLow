@@ -2,10 +2,9 @@ import { KeyLowProvider, keys, useBodyMap, useMuscleState } from "@keylow/api-cl
 import { TERMS_VERSION } from "@keylow/core/copy";
 import {
   GOAL_PRESETS_V1,
-  TRAINING_PARAMS_V1,
+  TRAINING_PARAMS_V2,
   buildSetSnapshot,
   muscleState,
-  targetedMuscles,
   trainingGoalsPayload,
 } from "@keylow/core/training";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -73,8 +72,8 @@ const activeRoutine: ActiveRoutine = {
   days: [],
 };
 
-// The aesthetic V-taper goal. With the routine above, which trains nothing, only a stored goal leaves
-// the abs not targeted, since with neither a routine nor a goal ranking a muscle every muscle is targeted.
+// The aesthetic V-taper goal, stored in the cache. The volume status of a muscle reads its sets alone, so
+// the goal changes none of them.
 const trainingGoal: TrainingGoalsRow = {
   id: "55555555-5555-4555-8555-555555555555",
   user_id: SIGNED_IN_USER_ID,
@@ -254,12 +253,7 @@ describe("the training reads in the persisted cache", () => {
     it("should show heat worked out at the current moment from the stored rows, and ask the network for nothing", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<HeatOfTheLowerChest now={MORNING} />);
       const heatAt = (now: string) =>
-        muscleState(
-          trainingSets,
-          now,
-          TRAINING_PARAMS_V1,
-          targetedMuscles({ routine: activeRoutine }),
-        ).chest_lower.heat.toFixed(4);
+        muscleState(trainingSets, now, TRAINING_PARAMS_V2).chest_lower.heat.toFixed(4);
       expect(heatAt(EVENING)).not.toBe(heatAt(MORNING));
       diaryBackend.requests = [];
 
@@ -271,14 +265,13 @@ describe("the training reads in the persisted cache", () => {
   });
 
   describe("a cold start with no connection, for the goal", () => {
-    it("should work the targeted muscles out from the stored goal, and ask the network for nothing", async () => {
+    it("should work the volume status out from the stored sets alone, and ask the network for nothing", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<StatusOfTheAbs now={MORNING} />);
       diaryBackend.requests = [];
 
       await renderCache(<StatusOfTheAbs now={EVENING} />);
 
-      // With no goal the empty routine would leave every muscle targeted, so this is the stored goal at work.
-      expect(await screen.findByText("Abs not_targeted")).toBeOnTheScreen();
+      expect(await screen.findByText("Abs not_trained")).toBeOnTheScreen();
       expect(diaryBackend.requests).toEqual([]);
     });
 
@@ -286,7 +279,7 @@ describe("the training reads in the persisted cache", () => {
       await storeTheTrainingReadsAndCloseTheApp(<StatusOfTheAbs now={MORNING} />);
 
       const text = (await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "";
-      expect(text).not.toContain("not_targeted");
+      expect(text).not.toContain("not_trained");
       expect(text).not.toContain("volumeStatus");
     });
   });

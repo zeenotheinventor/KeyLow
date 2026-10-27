@@ -98,11 +98,15 @@ export const createSuggestContext = (
   const sets = new Map<MuscleId, number>();
   const heatOf = (muscle: MuscleId): number => state[muscle].heat;
   const priorityOf = (muscle: MuscleId): number => goals.muscle_priority[muscle] ?? 0;
-  const mavLowOf = (muscle: MuscleId): number => muscleParams(muscle, params.training).mav.low;
+  // The sets a muscle is brought up to: where Productive starts (10 under keylow-training-v2).
+  const targetSetsOf = (muscle: MuscleId): number =>
+    muscleParams(muscle, params.training).volume.productiveFromSets;
   const setsOf = (muscle: MuscleId): number => sets.get(muscle) ?? state[muscle].weeklySets;
   const scoreOf = (muscle: MuscleId): number =>
     roundedTo(
-      priorityOf(muscle) * Math.max(0, mavLowOf(muscle) - setsOf(muscle)) * (1 - heatOf(muscle)),
+      priorityOf(muscle) *
+        Math.max(0, targetSetsOf(muscle) - setsOf(muscle)) *
+        (1 - heatOf(muscle)),
       SCORE_SCALE,
     );
   const compare = (first: RankedCandidate, second: RankedCandidate): number => {
@@ -127,7 +131,7 @@ export const createSuggestContext = (
       priority: priorityOf(muscle),
       weekly_sets: setsOf(muscle),
       logged_sets: state[muscle].weeklySets,
-      mav_low: mavLowOf(muscle),
+      mav_low: targetSetsOf(muscle),
       heat: heatOf(muscle),
       score: scoreOf(muscle),
     }),

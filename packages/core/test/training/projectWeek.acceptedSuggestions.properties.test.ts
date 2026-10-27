@@ -16,11 +16,11 @@ import {
   WEEK,
 } from "./plans";
 import { addCalendarDays } from "../../src/dates";
-import { COMPARE_PARAMS_V1, expandPlan, projectWeek } from "../../src/training";
+import { COMPARE_PARAMS_V2, expandPlan, projectWeek } from "../../src/training";
 
 import type { LoggedSession, LoggedSet, LoggedWeek } from "../../src/training";
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
 const ZONES = ["Europe/London", "America/Los_Angeles", "Pacific/Auckland", "Asia/Kolkata", "UTC"];
 const WEEK_DAYS = Array.from({ length: 7 }, (_, offset) => addCalendarDays(WEEK, offset));

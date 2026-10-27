@@ -8,7 +8,7 @@ import {
   V_TAPER_GOALS,
   WEDNESDAY_STATE,
 } from "./suggestGolden";
-import { suggestSession, SUGGEST_PARAMS_V1 } from "../../src/training";
+import { suggestSession, SUGGEST_PARAMS_V2 } from "../../src/training";
 
 import type { MuscleId, SuggestedSession, Suggestion } from "../../src/training";
 
@@ -18,6 +18,11 @@ import type { MuscleId, SuggestedSession, Suggestion } from "../../src/training"
  * priority, number of sets, score, length and exercise below is a literal copied from the document, never
  * computed from the code under test. The document works scores to 2 decimals, heat to 4 and sets to 2, so
  * the numbers are compared at that precision. A change to one of them is a new params version (ADR 0002).
+ *
+ * Under `keylow-training-v2` (KEY-727) a muscle is scored against where Productive starts, 10 sets, in place
+ * of the low end of its MAV (10 for a small or large muscle, 12 for a medium one). The scores, orders and
+ * lists below that moved were worked again by hand from the document's rule with the target of 10, and each
+ * is noted where it changed.
  */
 
 const sessionOf = (suggestion: Suggestion): SuggestedSession => {
@@ -68,7 +73,7 @@ const noRoomReadable = (noRoom: SuggestedSession["no_room"]) =>
   noRoom === null ? null : { ...noRoom, score: roundedTo(noRoom.score, 2) };
 
 const suggestFresh = (goals: typeof V_TAPER_GOALS) =>
-  suggestSession(WEDNESDAY_STATE, goals, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V1);
+  suggestSession(WEDNESDAY_STATE, goals, GOLDEN_LIBRARY, {}, SUGGEST_PARAMS_V2);
 
 describe("the V-taper user with no routine for the day (document case c)", () => {
   const session = sessionOf(suggestFresh(V_TAPER_GOALS));
@@ -93,7 +98,7 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
         origin: "added",
       },
       {
-        exercise_id: idOf("Incline Dumbbell Press"),
+        exercise_id: idOf("Barbell Squat"),
         sets: 3,
         rep_min: 8,
         rep_max: 10,
@@ -101,7 +106,7 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
         origin: "added",
       },
       {
-        exercise_id: idOf("Barbell Squat"),
+        exercise_id: idOf("Incline Dumbbell Press"),
         sets: 3,
         rep_min: 8,
         rep_max: 10,
@@ -125,11 +130,11 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
         origin: "added",
       },
       {
-        exercise_id: idOf("Barbell Bench Press - Medium Grip"),
+        exercise_id: idOf("Standing Calf Raises"),
         sets: 3,
-        rep_min: 8,
-        rep_max: 10,
-        target_rir: 2,
+        rep_min: 12,
+        rep_max: 15,
+        target_rir: 1,
         origin: "added",
       },
     ]);
@@ -143,11 +148,13 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
         reason("lower_back", 1, 0, 10, 0, 10, 0),
         reason("hamstrings", 2, 0, 10, 0, 20, 0),
       ],
-      [reason("chest_upper", 3, 4.8, 12, 0.13, 18.79, 4.8)],
+      // Upper chest is 3 × (10 − 4.8) × (1 − 0.13) = 13.57, below the squat's 17.00 (it was 18.79 of 12).
       [reason("quads", 2, 1.5, 10, 0, 17, 0)],
+      [reason("chest_upper", 3, 4.8, 10, 0.13, 13.57, 4.8)],
       [reason("delt_side", 3, 5.5, 10, 0.1221, 11.85, 5.5)],
       [reason("hamstrings", 2, 4.5, 10, 0, 11, 0)],
-      [reason("chest_lower", 2, 6, 12, 0.1217, 10.54, 4.5)],
+      // Lower chest at 6 sets would score 7.03, so the calves' 8.20 (priority 1, 1.8 sets) is picked instead.
+      [reason("calves", 1, 1.8, 10, 0, 8.2, 0)],
     ]);
   });
 
@@ -156,17 +163,16 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
     expect(session.minutes).toBe(55);
   });
 
-  it("should list lats and biceps as skipped for heat, in muscle order", () => {
-    expect(skippedReadable(session.skipped)).toStrictEqual([
-      { muscle_id: "lats", heat: 0.6324 },
-      { muscle_id: "biceps", heat: 0.5118 },
-    ]);
+  // Lats are at 11 sets, already Productive, so they score 0 and are no longer a muscle the suggestion
+  // wants, hot or not. Biceps are at 8.5 sets and hot, so they are still skipped for heat.
+  it("should list biceps as skipped for heat, and not lats, which are already productive", () => {
+    expect(skippedReadable(session.skipped)).toStrictEqual([{ muscle_id: "biceps", heat: 0.5118 }]);
   });
 
-  it("should say calves would not fit: 7 exercises and 21 sets read 65 minutes", () => {
+  it("should say lower chest would not fit: 7 exercises and 21 sets read 65 minutes", () => {
     expect(noRoomReadable(session.no_room)).toStrictEqual({
-      muscle_id: "calves",
-      score: 8.2,
+      muscle_id: "chest_lower",
+      score: 7.03,
       minutes_if_added: 65,
     });
   });
@@ -187,14 +193,14 @@ describe("the V-taper user with no routine for the day (document case c)", () =>
 describe("the strength user with no routine for the day (document case b2, the main-lift session)", () => {
   const session = sessionOf(suggestFresh(STRENGTH_GOALS));
 
-  it("should suggest the four main lifts and two accessories, in the order of the document", () => {
+  it("should suggest the five main lifts and a face pull, in the order the rule gives under v2", () => {
     expect(session.exercises.map((exercise) => exercise.exercise_id)).toStrictEqual([
       idOf("Barbell Deadlift"),
       idOf("Barbell Squat"),
-      idOf("Barbell Bench Press - Medium Grip"),
       idOf("Romanian Deadlift"),
+      idOf("Barbell Bench Press - Medium Grip"),
       idOf("Seated Barbell Military Press"),
-      idOf("Incline Dumbbell Press"),
+      idOf("Face Pull"),
     ]);
   });
 
@@ -219,10 +225,10 @@ describe("the strength user with no routine for the day (document case b2, the m
         reason("hamstrings", 3, 0, 10, 0, 30, 0),
       ],
       [reason("quads", 3, 1.5, 10, 0, 25.5, 0)],
-      [reason("chest_lower", 3, 4.5, 12, 0.1217, 19.76, 4.5)],
       [reason("hamstrings", 3, 4.5, 10, 0, 16.5, 0)],
+      [reason("chest_lower", 3, 4.5, 10, 0.1217, 14.49, 4.5)],
       [reason("delt_front", 3, 7.5, 10, 0.1319, 6.51, 6)],
-      [reason("chest_upper", 1, 6.6, 12, 0.13, 4.7, 4.8)],
+      [reason("delt_rear", 1, 5.5, 10, 0.3309, 3.01, 5.5)],
     ]);
   });
 
@@ -231,14 +237,14 @@ describe("the strength user with no routine for the day (document case b2, the m
     expect(session.minutes).toBe(55);
   });
 
-  it("should list lats and biceps as skipped for heat", () => {
-    expect(session.skipped.map((skipped) => skipped.muscle_id)).toStrictEqual(["lats", "biceps"]);
+  it("should list biceps as skipped for heat, and not lats, which are already productive", () => {
+    expect(session.skipped.map((skipped) => skipped.muscle_id)).toStrictEqual(["biceps"]);
   });
 
-  it("should say rear delts would not fit: 7 exercises and 21 sets read 65 minutes", () => {
+  it("should say upper chest would not fit: 7 exercises and 21 sets read 65 minutes", () => {
     expect(noRoomReadable(session.no_room)).toStrictEqual({
-      muscle_id: "delt_rear",
-      score: 3.01,
+      muscle_id: "chest_upper",
+      score: 2.96,
       minutes_if_added: 65,
     });
   });
@@ -246,7 +252,7 @@ describe("the strength user with no routine for the day (document case b2, the m
 
 describe("the V-taper user on a shorter or narrower session (worked by hand from the same rules)", () => {
   it("should stop at 3 exercises in 30 minutes, and say side delts would read 40", () => {
-    // Deadlift (1 exercise, 3 sets), Incline press (2, 6), Squat (3, 9): 6 + 22.5 = 28.5, shown 30.
+    // Deadlift (1 exercise, 3 sets), Squat (2, 6), Incline press (3, 9): 6 + 22.5 = 28.5, shown 30.
     // Side lateral raise would be 4 exercises and 12 sets: 8 + 30 = 38, shown 40.
     const session = sessionOf(
       suggestSession(
@@ -254,13 +260,13 @@ describe("the V-taper user on a shorter or narrower session (worked by hand from
         V_TAPER_GOALS,
         GOLDEN_LIBRARY,
         { minutes: 30 },
-        SUGGEST_PARAMS_V1,
+        SUGGEST_PARAMS_V2,
       ),
     );
     expect(session.exercises.map((exercise) => exercise.exercise_id)).toStrictEqual([
       idOf("Barbell Deadlift"),
-      idOf("Incline Dumbbell Press"),
       idOf("Barbell Squat"),
+      idOf("Incline Dumbbell Press"),
     ]);
     expect(session.minutes).toBe(30);
     expect(noRoomReadable(session.no_room)).toStrictEqual({
@@ -279,7 +285,7 @@ describe("the V-taper user on a shorter or narrower session (worked by hand from
         V_TAPER_GOALS,
         GOLDEN_LIBRARY,
         { equipment: ["dumbbell"] },
-        SUGGEST_PARAMS_V1,
+        SUGGEST_PARAMS_V2,
       ),
     );
     expect(session.exercises.map((exercise) => exercise.exercise_id)).toStrictEqual([
@@ -296,15 +302,12 @@ describe("the V-taper user on a shorter or narrower session (worked by hand from
       V_TAPER_GOALS,
       GOLDEN_LIBRARY,
       { equipment: ["band"] },
-      SUGGEST_PARAMS_V1,
+      SUGGEST_PARAMS_V2,
     );
     expect(result.kind).toBe("nothing");
     expect(result.no_room).toBeNull();
     expect(result).toMatchObject({ why: "no_exercise" });
-    expect(skippedReadable(result.skipped)).toStrictEqual([
-      { muscle_id: "lats", heat: 0.6324 },
-      { muscle_id: "biceps", heat: 0.5118 },
-    ]);
+    expect(skippedReadable(result.skipped)).toStrictEqual([{ muscle_id: "biceps", heat: 0.5118 }]);
   });
 
   it("should use the full gym of the goal when the constraints name nothing", () => {
@@ -315,7 +318,7 @@ describe("the V-taper user on a shorter or narrower session (worked by hand from
         V_TAPER_GOALS,
         GOLDEN_LIBRARY,
         { minutes: 60, equipment: FULL_GYM },
-        SUGGEST_PARAMS_V1,
+        SUGGEST_PARAMS_V2,
       ),
     );
   });

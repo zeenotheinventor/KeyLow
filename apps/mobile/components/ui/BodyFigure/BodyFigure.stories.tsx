@@ -29,7 +29,7 @@ export const Heat: Story = {};
 
 export const HeatBack: Story = { args: { side: "back", label: "Body map, back" } };
 
-// Under, maintaining, productive, over and not targeted.
+// Not trained, maintaining, growing, productive and high.
 export const Volume: Story = { args: { scale: "volume", values: inTurn(5) } };
 
 // Behind, on plan, ahead and not in plan.

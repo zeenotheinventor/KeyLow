@@ -1,4 +1,4 @@
-import { COMPARE_PARAMS_V1, compareWeek, projectWeek } from "@keylow/core/training";
+import { COMPARE_PARAMS_V2, compareWeek, projectWeek } from "@keylow/core/training";
 import { renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -177,9 +177,9 @@ describe("useWeekComparison", () => {
       WEEK_START,
       "Europe/London",
       { sessions, sets: sessions.flatMap((session) => session.sets) },
-      COMPARE_PARAMS_V1,
+      COMPARE_PARAMS_V2,
     );
-    expect(result.current.data).toEqual(compareWeek(actual, projected, COMPARE_PARAMS_V1));
+    expect(result.current.data).toEqual(compareWeek(actual, projected, COMPARE_PARAMS_V2));
   });
 
   it("should store the sessions and their sets as rows under the week key, and nothing derived", async () => {

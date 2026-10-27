@@ -2,8 +2,9 @@ import { TRAINING_PARAMS_VERSION } from "./params";
 
 /*
  * How long a session takes, for the "about N min" text on a routine day (ADR 0005, Amendment 1). The
- * numbers are display values, not physiology, agreed by Zee on KEY-396. Like `COMPARE_PARAMS_V1` they sit in their own object, carrying the
- * training params version, so changing one is a new params version and never an edit of this one.
+ * numbers are display values, not physiology, agreed by Zee on KEY-396. Like `COMPARE_PARAMS_V2` they sit in
+ * their own object, carrying the training params version, so changing one is a new params version and never an
+ * edit of this one.
  */
 
 export type SessionTimeParams = Readonly<{

@@ -23,18 +23,17 @@ import {
   WEEK,
 } from "./plans";
 import {
-  COMPARE_PARAMS_V1,
+  COMPARE_PARAMS_V2,
   compareWeek,
   expandPlan,
   muscleState,
   projectedState,
   projectWeek,
-  targetedMuscles,
 } from "../../src/training";
 
 import type { LoggedWeek, PlannedSet, PlanRoutineDay } from "../../src/training";
 
-const params = COMPARE_PARAMS_V1;
+const params = COMPARE_PARAMS_V2;
 
 const MONDAY_EVENING = "2026-10-19T17:30:00.000Z";
 const FRIDAY_EVENING = "2026-10-23T17:30:00.000Z";
@@ -259,16 +258,13 @@ describe("projectedState", () => {
     );
   });
 
-  it("should pass the targeted muscles on to muscleState", () => {
+  it("should give a muscle the plan does not train the status of its sets, not trained at none", () => {
     const moment = "2026-10-22T12:00:00.000Z";
-    const targeted = targetedMuscles({ routine });
 
-    const state = projectedState(week.projected, moment, LONDON, params, targeted);
+    const state = projectedState(week.projected, moment, LONDON, params);
 
-    expect(state).toEqual(muscleState(week.projected, moment, params.training, targeted));
-    expect(state.abs.volumeStatus).toBe("not_targeted");
-    expect(state.quads.volumeStatus).toBe("under");
-    expect(projectedState(week.projected, moment, LONDON, params).abs.volumeStatus).toBe("under");
+    expect(state.abs.volumeStatus).toBe("not_trained");
+    expect(state.quads.volumeStatus).toBe("growing");
   });
 
   it("should count a planned day from the day after, not once its time has passed", () => {

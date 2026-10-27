@@ -51,11 +51,11 @@ describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
 
   describe("on the volume scale", () => {
     const fillOfStatus = {
-      under: palette.volume.under,
+      not_trained: palette.volume.notTrained,
       maintaining: palette.volume.maintaining,
+      growing: palette.volume.growing,
       productive: palette.volume.productive,
-      over: palette.volume.over,
-      not_targeted: palette.volume.notTargeted,
+      high: palette.volume.high,
     };
 
     it.each(VOLUME_STATUSES)("should fill the %s status with its volume colour", (status) => {
@@ -64,25 +64,34 @@ describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
       expect(readMuscle("volume", value, palette).fill).toBe(fillOfStatus[status]);
     });
 
+    it("should give each band its own colour", () => {
+      const fills = VOLUME_STATUSES.map((_, value) => readMuscle("volume", value, palette).fill);
+
+      expect(new Set(fills).size).toBe(VOLUME_STATUSES.length);
+    });
+
     it("should name each status", () => {
       expect(
         VOLUME_STATUSES.map((_, value) => readMuscle("volume", value, palette).valueName),
-      ).toEqual(["Under", "Maintaining", "Productive", "Over", "Not targeted"]);
+      ).toEqual(["Not trained", "Maintaining", "Growing", "Productive", "High"]);
     });
 
-    it("should draw a muscle with no value as not targeted", () => {
+    it("should draw a muscle with no value as not trained", () => {
       expect(readMuscle("volume", undefined, palette)).toMatchObject({
-        fill: palette.volume.notTargeted,
-        valueName: "Not targeted",
+        fill: palette.volume.notTrained,
+        valueName: "Not trained",
       });
     });
 
-    it("should draw a status the scale does not have as not targeted", () => {
-      expect(readMuscle("volume", 7, palette).fill).toBe(palette.volume.notTargeted);
-    });
+    it.each([7, -1, 1.5, Number.NaN])(
+      "should draw the value %s, which the scale does not have, as not trained",
+      (value) => {
+        expect(readMuscle("volume", value, palette).fill).toBe(palette.volume.notTrained);
+      },
+    );
 
-    it("should never glow", () => {
-      expect(readMuscle("volume", VOLUME_STATUSES.indexOf("over"), palette).isPeak).toBe(false);
+    it("should never glow, not even for the last band", () => {
+      expect(readMuscle("volume", VOLUME_STATUSES.indexOf("high"), palette).isPeak).toBe(false);
     });
   });
 

@@ -1,4 +1,4 @@
-import { TRAINING_PARAMS_V1 } from "@keylow/core/training";
+import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
 
 import { keys } from "../queryKeys";
 
@@ -7,7 +7,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 // The heat window reaches 14 days back from a moment, so it starts at some hour of the local day 14 days
 // back. Reading from the start of the day before that covers it whatever the hour.
-export const HEAT_LOOKBACK_DAYS = TRAINING_PARAMS_V1.heatWindowDays + 1;
+export const HEAT_LOOKBACK_DAYS = TRAINING_PARAMS_V2.heatWindowDays + 1;
 
 /**
  * The rows of the newest sets read held in the cache, whatever start day they are keyed by, or undefined

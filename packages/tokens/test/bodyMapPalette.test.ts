@@ -16,11 +16,11 @@ describe("bodyMapPalette", () => {
       heat: ["#3A4355", "#3FA463", "#C8C13A", "#E5A13A", "#EE6E36", "#F04848"],
       heatGlow: "rgba(240,72,72,0.55)",
       volume: {
-        under: "#4A86F7",
+        notTrained: "#303746",
         maintaining: "#8DB0E8",
+        growing: "#4EC2AE",
         productive: "#5CD67A",
-        over: "#FF5C5C",
-        notTargeted: "#303746",
+        high: "#A6F5C4",
       },
       gap: {
         behind: "#5B95FF",
@@ -42,11 +42,11 @@ describe("bodyMapPalette", () => {
       heat: ["#C9CED8", "#2F8F4E", "#9E8E19", "#BE7E19", "#CF5A26", "#C9313A"],
       heatGlow: "rgba(201,49,58,0.35)",
       volume: {
-        under: "#1F5BD6",
+        notTrained: "#D7DBE2",
         maintaining: "#6E92D6",
+        growing: "#1A8A85",
         productive: "#1F9D4E",
-        over: "#D93030",
-        notTargeted: "#D7DBE2",
+        high: "#0C6B3A",
       },
       gap: {
         behind: "#1F5BD6",
@@ -57,11 +57,11 @@ describe("bodyMapPalette", () => {
     });
   });
 
-  it("should draw not in plan as not targeted, as the canvas does", () => {
+  it("should draw not in plan as not trained, as the canvas does", () => {
     for (const scheme of ["dark", "light"] as const) {
       const palette = bodyMapPalette(scheme);
 
-      expect(palette.gap.notInPlan).toBe(palette.volume.notTargeted);
+      expect(palette.gap.notInPlan).toBe(palette.volume.notTrained);
     }
   });
 

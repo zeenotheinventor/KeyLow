@@ -125,25 +125,25 @@ describe("muscleDetail on the golden week, Thursday 15 October 19:00", () => {
       expect(detail.readyInHours).toBe(0);
     });
 
-    it("should read 5.5 sets done against 11 planned, both below the minimum and inside the target", () => {
+    it("should read 5.5 sets done, growing, against 11 planned, productive", () => {
       expect(detail.weeklySets).toMatchObject({
         actual: 5.5,
         planned: 11,
-        actualPosition: "below",
-        plannedPosition: "inside",
+        actualStatus: "growing",
+        plannedStatus: "productive",
       });
     });
 
-    it("should give the target of 10 to 16 with a minimum of 6 and a maximum of 22", () => {
-      expect(detail.weeklySets.target).toStrictEqual({
-        mev: 6,
-        mav: { low: 10, high: 16 },
-        mrv: 22,
+    it("should give the bands of 4, 10 and 20 sets", () => {
+      expect(detail.weeklySets.bands).toStrictEqual({
+        growingFromSets: 4,
+        productiveFromSets: 10,
+        highAboveSets: 20,
       });
     });
 
-    it("should be under the minimum so far", () => {
-      expect(detail.weeklySets.volumeStatus).toBe("under");
+    it("should be growing so far", () => {
+      expect(detail.weeklySets.volumeStatus).toBe("growing");
     });
 
     it("should be targeted by the routine and not by a goal", () => {
@@ -175,7 +175,7 @@ describe("muscleDetail on the golden week, Thursday 15 October 19:00", () => {
     });
   });
 
-  describe("the abs, as the not targeted board draws them", () => {
+  describe("the abs, as the not trained board draws them", () => {
     const detail = goldenInput("abs");
 
     it("should read 0 percent heat in step 0 with 0 sets this week", () => {
@@ -184,13 +184,13 @@ describe("muscleDetail on the golden week, Thursday 15 October 19:00", () => {
       expect(detail.weeklySets).toMatchObject({ actual: 0, planned: 0 });
     });
 
-    it("should be not targeted, and neither the routine nor a goal is the reason", () => {
+    it("should be not trained, and neither the routine nor a goal is the reason", () => {
       expect(detail.targeting).toStrictEqual({
         targeted: false,
         routineTrains: false,
         goalRanks: false,
       });
-      expect(detail.weeklySets.volumeStatus).toBe("not_targeted");
+      expect(detail.weeklySets.volumeStatus).toBe("not_trained");
     });
 
     it("should have no last trained entry", () => {
@@ -265,7 +265,7 @@ describe("muscleDetail, the view", () => {
     const actual = goldenInput("delt_side", { view: "actual" });
     const projected = goldenInput("delt_side", { view: "projected" });
 
-    expect(actual.weeklySets.volumeStatus).toBe("under");
+    expect(actual.weeklySets.volumeStatus).toBe("growing");
     expect(projected.weeklySets.volumeStatus).toBe("productive");
   });
 
@@ -279,8 +279,9 @@ describe("muscleDetail, the view", () => {
     expect(projected.lastTrained).toStrictEqual(actual.lastTrained);
   });
 
-  it("should leave a muscle that is not targeted not targeted in either view", () => {
-    expect(goldenInput("abs", { view: "projected" }).weeklySets.volumeStatus).toBe("not_targeted");
+  it("should leave a muscle with no sets done or planned not trained in either view", () => {
+    expect(goldenInput("abs", { view: "projected" }).weeklySets.volumeStatus).toBe("not_trained");
+    expect(goldenInput("abs", { view: "actual" }).weeklySets.volumeStatus).toBe("not_trained");
   });
 });
 
@@ -299,30 +300,15 @@ describe("muscleDetail, sets this week", () => {
   });
 
   it.each([
-    [9.5, "below"],
-    [10, "inside"],
-    [16, "inside"],
-    [16.5, "above"],
-  ] as const)("should place %d sets %s the target of 10 to 16", (sets, position) => {
-    const detail = muscleDetail(
-      syntheticInput({
-        comparison: syntheticComparison({
-          delt_side: { actualWeeklySets: sets, projectedWeeklySets: sets },
-        }),
-      }),
-    );
-
-    expect(detail.weeklySets.actualPosition).toBe(position);
-    expect(detail.weeklySets.plannedPosition).toBe(position);
-  });
-
-  it.each([
-    [5.9, "under"],
-    [6, "maintaining"],
+    [0, "not_trained"],
+    [0.25, "maintaining"],
+    [3.99, "maintaining"],
+    [4, "growing"],
+    [9.99, "growing"],
     [10, "productive"],
-    [22, "productive"],
-    [22.5, "over"],
-  ] as const)("should call %d sets %s for a targeted muscle", (sets, status) => {
+    [20, "productive"],
+    [20.25, "high"],
+  ] as const)("should call %d sets %s, in both figures", (sets, status) => {
     const detail = muscleDetail(
       syntheticInput({
         comparison: syntheticComparison({
@@ -331,10 +317,12 @@ describe("muscleDetail, sets this week", () => {
       }),
     );
 
+    expect(detail.weeklySets.actualStatus).toBe(status);
+    expect(detail.weeklySets.plannedStatus).toBe(status);
     expect(detail.weeklySets.volumeStatus).toBe(status);
   });
 
-  it("should keep the real status of a muscle that is not targeted once it reaches its minimum", () => {
+  it("should give a muscle the plan leaves out the status of its sets", () => {
     const detail = muscleDetail(
       syntheticInput({
         muscle: "abs",
@@ -346,7 +334,7 @@ describe("muscleDetail, sets this week", () => {
     );
 
     expect(detail.targeting.targeted).toBe(false);
-    expect(detail.weeklySets.volumeStatus).toBe("maintaining");
+    expect(detail.weeklySets.volumeStatus).toBe("growing");
   });
 });
 
