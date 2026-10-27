@@ -398,6 +398,202 @@ describe("logging a set from the session screen", () => {
     });
   });
 
+  describe("the cells of a row added with Add set", () => {
+    /** The load and reps fields of the set entry sheet, and the Set type control's checked option. */
+    const entryFields = () => ({
+      load: screen.getByLabelText("Load, kg"),
+      reps: screen.getByLabelText("Reps"),
+      type: within(screen.getByLabelText("Set type")),
+    });
+
+    it("should open the set entry with the numbers of the row for an exercise with no plan, and log them as edited", async () => {
+      // The session follows no routine day, so Seated leg curl has no plan: it holds one logged set.
+      trainBackend.lastPerformance = [];
+      trainBackend.activeSession = goldenLegsOpen(null, [
+        loggedSetRow(GOLDEN_SESSION_ID, "legCurl", 20, {
+          position: 20,
+          performed_at: "2026-10-15T18:58:00+01:00",
+          load_kg: 60,
+          reps: 10,
+          rir: null,
+        }),
+      ]);
+      const user = userEvent.setup();
+      await renderSession();
+      const legCurl = await exerciseCard("Seated leg curl");
+
+      await user.press(legCurl.getByRole("button", { name: "Add set" }));
+      await user.press(legCurl.getByRole("button", { name: "Seated leg curl, set 2" }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("60");
+      expect(entryFields().reps).toHaveDisplayValue("10");
+      expect(entryFields().type.getByRole("radio", { name: "Working" })).toBeChecked();
+      await user.clear(entryFields().reps);
+      await user.type(entryFields().reps, "8");
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(legCurl.getAllByLabelText(/^Set \d logged/)).toHaveLength(2);
+      });
+      expect(lastStoredSet()).toMatchObject({ set_type: "working", load_kg: 60, reps: 8 });
+      expect(legCurl.queryByLabelText(/^Log set/)).not.toBeOnTheScreen();
+      expect(legCurl.getByLabelText(/^Set 1 logged, 60 kilograms, 10 reps/)).toBeOnTheScreen();
+      expect(legCurl.getByLabelText(/^Set 2 logged, 60 kilograms, 8 reps/)).toBeOnTheScreen();
+    });
+
+    it("should open the set entry with the numbers of the row for an extra set of a routine exercise, and log the load as edited", async () => {
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+      await user.press(squat.getByRole("button", { name: "Barbell squat, set 4" }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("100");
+      expect(entryFields().reps).toHaveDisplayValue("6");
+      await user.clear(entryFields().load);
+      await user.type(entryFields().load, "102.5");
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+
+      await waitFor(() => {
+        expect(lastStoredSet()).toMatchObject({ load_kg: 102.5, reps: 6 });
+      });
+    });
+
+    it("should open no sheet from the check of the row, which logs the numbers it shows", async () => {
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+
+      await user.press(squat.getByRole("button", { name: "Log set 4, 100 kilograms, 6 reps" }));
+
+      expect(await squat.findByLabelText(/^Set 4 logged, 100 kilograms, 6 reps/)).toBeOnTheScreen();
+      expect(screen.queryByLabelText("Load, kg")).not.toBeOnTheScreen();
+      expect(trainBackend.writes).toEqual(["add_set"]);
+    });
+
+    it("should open the set entry with the numbers and the type of a warm-up when it was the last set, not the next working set's", async () => {
+      trainBackend.lastPerformance = [];
+      trainBackend.activeSession = {
+        ...freshLegsOpen("2026-10-15T18:30:00+01:00"),
+        workout_sets: [
+          loggedSetRow(FRESH_SESSION_ID, "squat", 1, {
+            set_type: "warmup",
+            load_kg: 60,
+            reps: 8,
+            rir: null,
+          }),
+        ],
+      };
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+      await user.press(squat.getByRole("button", { name: "Barbell squat, warm-up set" }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("60");
+      expect(entryFields().reps).toHaveDisplayValue("8");
+      expect(entryFields().type.getByRole("radio", { name: "Warm-up" })).toBeChecked();
+    });
+
+    it("should open the set entry with the numbers and the type of the row while a planned set is still to do", async () => {
+      trainBackend.lastPerformance = [];
+      trainBackend.activeSession = {
+        ...freshLegsOpen("2026-10-15T18:30:00+01:00"),
+        workout_sets: [
+          loggedSetRow(FRESH_SESSION_ID, "squat", 1, {
+            set_type: "drop",
+            load_kg: 150,
+            reps: 9,
+            rir: 0,
+          }),
+        ],
+      };
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+
+      await user.press(squat.getByRole("button", { name: /^Barbell squat, drop set/ }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("150");
+      expect(entryFields().reps).toHaveDisplayValue("9");
+      expect(entryFields().type.getByRole("radio", { name: "Drop" })).toBeChecked();
+      expect(screen.getByText("Drop set · target 5 to 8 reps at RIR 2")).toBeOnTheScreen();
+    });
+
+    it("should say the numbers are filled from last time when nothing is logged yet, as a planned row does", async () => {
+      trainBackend.activeSession = freshLegsOpen("2026-10-15T18:30:00+01:00");
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+
+      await user.press(squat.getByRole("button", { name: "Barbell squat, set 4" }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("97.5");
+      expect(screen.getByText(/^Filled from last time/)).toBeOnTheScreen();
+      expect(screen.queryByText(/^Filled from your last set/)).not.toBeOnTheScreen();
+    });
+
+    it("should number a warm-up row as the working set it becomes when the type is changed in the entry", async () => {
+      trainBackend.lastPerformance = [];
+      trainBackend.activeSession = goldenLegsOpen(null, [
+        loggedSetRow(GOLDEN_SESSION_ID, "legCurl", 20, {
+          position: 20,
+          performed_at: "2026-10-15T18:58:00+01:00",
+          set_type: "warmup",
+          load_kg: 30,
+          reps: 12,
+          rir: null,
+        }),
+      ]);
+      const user = userEvent.setup();
+      await renderSession();
+      const legCurl = await exerciseCard("Seated leg curl");
+      await user.press(legCurl.getByRole("button", { name: "Add set" }));
+      await user.press(legCurl.getByRole("button", { name: "Seated leg curl, warm-up set" }));
+      await screen.findByLabelText("Load, kg");
+
+      await user.press(entryFields().type.getByRole("radio", { name: "Working" }));
+
+      expect(screen.getByText("Set 1")).toBeOnTheScreen();
+      expect(screen.queryByText(/Set 0/)).not.toBeOnTheScreen();
+    });
+
+    it("should open the blank set entry from the cells when there is nothing to fill the row from", async () => {
+      trainBackend.lastPerformance = [];
+      trainBackend.activeSession = freshLegsOpen("2026-10-15T18:30:00+01:00");
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+
+      // Three planned sets are still to do, so the added row is the fourth.
+      await user.press(squat.getByRole("button", { name: "Barbell squat, set 4" }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("");
+      expect(entryFields().reps).toHaveDisplayValue("");
+      expect(trainBackend.writes).toEqual([]);
+    });
+
+    it("should open the blank set entry from the check when there is nothing to fill the row from", async () => {
+      trainBackend.lastPerformance = [];
+      trainBackend.activeSession = freshLegsOpen("2026-10-15T18:30:00+01:00");
+      const user = userEvent.setup();
+      await renderSession();
+      const squat = await exerciseCard("Barbell squat");
+      await user.press(squat.getByRole("button", { name: "Add set" }));
+
+      await user.press(squat.getByRole("button", { name: "Log set 4" }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("");
+      expect(trainBackend.writes).toEqual([]);
+    });
+  });
+
   describe("removing a set while a row added with Add set is not logged", () => {
     it("should leave one row to log when the set removed was beyond the plan", async () => {
       trainBackend.activeSession = goldenLegsOpen(undefined, [

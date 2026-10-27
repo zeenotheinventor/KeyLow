@@ -21,8 +21,10 @@ import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
 import {
   exerciseIdOf,
+  GOLDEN_SESSION_ID,
   goldenLegsOpen,
   legsRoutine,
+  loggedSetRow,
   previousThursday,
 } from "./support/sessionGoldenLegs";
 import {
@@ -217,6 +219,38 @@ describe("choosing the type of a set before it is logged", () => {
       expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("70");
       expect(screen.getByLabelText("Reps")).toHaveDisplayValue("8");
       expect(screen.getByText("Warm-up set")).toBeOnTheScreen();
+    });
+  });
+
+  describe("a row added with Add set", () => {
+    it("should open the entry on the type the row shows, and log the type chosen in the control", async () => {
+      trainBackend.activeSession = goldenLegsOpen(undefined, [
+        loggedSetRow(GOLDEN_SESSION_ID, "legPress", 20, {
+          position: 20,
+          set_type: "drop",
+          performed_at: "2026-10-15T18:58:00+01:00",
+          load_kg: 150,
+          reps: 9,
+          rir: 0,
+        }),
+      ]);
+      const user = userEvent.setup();
+      await renderSession();
+      const legPress = await exerciseCard("Leg press");
+      await user.press(legPress.getByRole("button", { name: "Add set" }));
+      expect(
+        legPress.getByRole("button", { name: "Log drop set, 150 kilograms, 9 reps" }),
+      ).toBeOnTheScreen();
+
+      await user.press(legPress.getByRole("button", { name: /^Leg press, drop set/ }));
+
+      expect(await screen.findByLabelText("Load, kg")).toHaveDisplayValue("150");
+      expect(screen.getByLabelText("Reps")).toHaveDisplayValue("9");
+      expect(typeControl().getByRole("radio", { name: "Drop" })).toBeChecked();
+      await user.press(typeControl().getByRole("radio", { name: "Failure" }));
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+      expect(await legPress.findByText("F")).toBeOnTheScreen();
+      expect(storedTypeOfLastLegPressSet()).toBe("failure");
     });
   });
 
