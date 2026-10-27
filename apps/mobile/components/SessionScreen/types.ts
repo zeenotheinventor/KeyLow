@@ -2,6 +2,7 @@ import type { ChosenExercise } from "../AddExerciseSheet";
 import type { FinishDetails, SavedOutcome } from "../FinishScreen";
 import type { ExercisePlan } from "../SetEntrySheet";
 import type { SessionSet } from "@keylow/api-client";
+import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
 import type {
   Equipment,
   LoadUnit,
@@ -94,6 +95,11 @@ export type SessionScreenExercise = {
   target: string;
   /** The plan's sets, rep range and RIR for the exercise, or null for one added to the session. */
   plan: ExercisePlan | null;
+  /**
+   * The exercise's muscle map as the phone holds it: the snapshot of a set already saved, else the active
+   * routine's current map, else null (an exercise added on screen with no set saved yet).
+   */
+  muscles: readonly ExerciseMuscleEntry[] | null;
   exercise: SessionExercise<ScreenSet>;
 };
 

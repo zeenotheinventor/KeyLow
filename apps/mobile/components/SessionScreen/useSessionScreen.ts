@@ -15,11 +15,33 @@ import type {
   SessionScreenExercise,
   SessionScreenView,
 } from "./types";
-import type { RoutineDetail } from "@keylow/api-client";
+import type { ActiveRoutine, RoutineDetail } from "@keylow/api-client";
 import type { SessionExercise, SessionScaffold } from "@keylow/core/training";
 
 type RoutineDay = RoutineDetail["days"][number];
 type Plan = { day: RoutineDay; scaffold: SessionScaffold };
+
+/** The snapshot of the first set of the exercise that the database holds. A set still being saved has none yet. */
+const firstSavedSnapshot = (exercise: SessionExercise<ScreenSet>) =>
+  exercise.rows.flatMap(({ set }) => (set?.snapshot === undefined ? [] : [set.snapshot]))[0];
+
+/**
+ * The exercise's muscle map as the phone already holds it: the snapshot of a set the database holds (the
+ * map this session's sets count with), else the active routine's current map from any of its days, else
+ * null for an exercise added on screen with no set saved yet.
+ */
+function describeMuscles(
+  exercise: SessionExercise<ScreenSet>,
+  routine: ActiveRoutine | null | undefined,
+): SessionScreenExercise["muscles"] {
+  return (
+    firstSavedSnapshot(exercise)?.muscles ??
+    routine?.days
+      .flatMap((day) => day.exercises)
+      .find((entry) => entry.exercise_id === exercise.exerciseId)?.muscles ??
+    null
+  );
+}
 
 /**
  * The exercise's name and target line, from the routine day when it plans the exercise, from the name and
@@ -53,9 +75,7 @@ function describeExercise(
     };
   }
   // A set still being saved has no snapshot yet, so the name is read from a set the database holds.
-  const snapshot = exercise.rows.flatMap(({ set }) =>
-    set?.snapshot === undefined ? [] : [set.snapshot],
-  )[0];
+  const snapshot = firstSavedSnapshot(exercise);
   if (snapshot !== undefined) {
     return {
       name: snapshot.name,
@@ -97,6 +117,7 @@ export function useSessionScreen(
   const { added, add: addExercise } = useAddedExercises(open?.id);
   const followsRoutineDay = open?.routine_day_id !== null && open?.routine_day_id !== undefined;
   const detailData = detail.data;
+  const routineData = routine.data;
   const content = useMemo(() => {
     if (open === null || open === undefined) {
       return null;
@@ -127,10 +148,12 @@ export function useSessionScreen(
         added.map((entry) => entry.id),
       ).flatMap((exercise) => {
         const described = describeExercise(exercise, plan, added);
-        return described === null ? [] : [{ ...described, exercise }];
+        return described === null
+          ? []
+          : [{ ...described, muscles: describeMuscles(exercise, routineData), exercise }];
       }),
     };
-  }, [open, detailData, pendingSets, added]);
+  }, [open, detailData, routineData, pendingSets, added]);
 
   const reads = followsRoutineDay ? [session, unit, routine, detail] : [session, unit];
   if (reads.some((read) => read.isError && read.data === undefined)) {
