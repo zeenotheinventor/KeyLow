@@ -3,6 +3,7 @@ import { StatusBar } from "expo-status-bar";
 import { View } from "react-native";
 
 import { useUpdatedToast } from "./useUpdatedToast";
+import { useSentryTrail } from "../../lib/sentry/useSentryTrail";
 import { useTheme } from "../../lib/theme";
 import { useHideSplashAfterUpdateCheck } from "../../lib/updates";
 
@@ -11,12 +12,14 @@ import { useHideSplashAfterUpdateCheck } from "../../lib/updates";
  * colours, on the `background` token, with a status bar whose content is light on the dark theme and dark
  * on the light one. It also lets the splash screen go once the check for a newer update has settled, so
  * the screens are ready behind it by then. An update that is found downloads behind the splash screen, and
- * the first start on a new update says so in a toast, once the splash screen has gone.
+ * the first start on a new update says so in a toast, once the splash screen has gone. It leaves the
+ * trail a report shows, of the screens, the app state and the keyboard.
  */
 export function RootNavigator() {
   const { scheme, colors } = useTheme();
   const isSplashScreenGone = useHideSplashAfterUpdateCheck();
   useUpdatedToast(isSplashScreenGone);
+  useSentryTrail();
 
   return (
     <View className="flex-1 bg-background">

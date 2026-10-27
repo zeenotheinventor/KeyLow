@@ -3,11 +3,11 @@ import { Keyboard, Platform, View } from "react-native";
 
 type KeyboardListener = Parameters<typeof Keyboard.addListener>[1];
 
-// The keyboard's announcement, with the one edge a lifted view reads.
-const keyboardEvent = (screenY: number) => ({
+// The keyboard's announcement, with the edges a lifted view reads.
+const keyboardEvent = (screenY: number, height: number) => ({
   duration: 0,
   easing: "keyboard" as const,
-  endCoordinates: { screenX: 0, screenY, width: 390, height: 300 },
+  endCoordinates: { screenX: 0, screenY, width: 390, height },
 });
 
 // What `Keyboard.addListener` hands back. A listener only ever calls `remove` on it, so that is all it
@@ -41,12 +41,13 @@ export function stubKeyboard(dockBottom: number, { deferMeasure = false } = {}) 
     });
   const showName = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
   const hideName = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-  const announce = (eventName: string, keyboardTop: number) =>
+  const announce = (eventName: string, keyboardTop: number, height = 300) =>
     act(() => {
-      listeners.get(eventName)?.(keyboardEvent(keyboardTop));
+      listeners.get(eventName)?.(keyboardEvent(keyboardTop, height));
     });
   return {
-    show: (keyboardTop: number) => announce(showName, keyboardTop),
+    // The keyboard is 300 points tall unless a test says otherwise.
+    show: (keyboardTop: number, height?: number) => announce(showName, keyboardTop, height),
     hide: () => announce(hideName, 0),
     // iOS also announces the keyboard changing height while it is shown.
     changeFrame: (keyboardTop: number) => announce("keyboardWillChangeFrame", keyboardTop),

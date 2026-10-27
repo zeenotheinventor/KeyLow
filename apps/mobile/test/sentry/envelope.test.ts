@@ -1,6 +1,8 @@
 import { addBreadcrumb, captureException, close, flush, setUser } from "@sentry/react-native";
 
 import { initSentry } from "../../lib/sentry/init";
+import { reportKeyboardLiftOutOfRange } from "../../lib/sentry/reportKeyboardLiftOutOfRange";
+import { recordAppState, recordKeyboard, recordRoute } from "../../lib/sentry/trail";
 
 import type { ReactNativeOptions } from "@sentry/react-native";
 
@@ -108,5 +110,29 @@ describe("an error reported through the real Sentry SDK", () => {
     expect(payload).not.toContain("1.2.3.4");
     expect(payload).toContain("5f1c");
     expect(payload).toContain("/rest/v1/foods");
+  });
+  it("should send the keyboard lift report with its tags and the trail of the screens, app state and keyboard", async () => {
+    sentEnvelopes.length = 0;
+    recordRoute("/recipes/[id]/edit");
+    recordAppState("background");
+    recordAppState("active");
+    recordKeyboard("show", { screenY: 0, height: 300 });
+
+    reportKeyboardLiftOutOfRange({
+      rawLift: 800,
+      screenY: 0,
+      keyboardHeight: 300,
+      windowHeight: 800,
+    });
+    await flush();
+
+    const payload = sentEnvelopes.join("\n");
+    expect(payload).toContain("Keyboard lift out of range");
+    expect(payload).toContain('"route":"/recipes/[id]/edit"');
+    expect(payload).toContain('"rawLift":"800"');
+    expect(payload).toContain('"category":"app.state"');
+    expect(payload).toContain('"category":"keyboard"');
+    expect(payload).toContain('"state":"background"');
+    expect(payload).toContain('"event":"show"');
   });
 });

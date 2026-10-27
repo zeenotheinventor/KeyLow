@@ -63,6 +63,17 @@ describe("food form above the keyboard", () => {
       expect(footerPadded(12)).toHaveLength(1);
     });
 
+    it("should keep the footer on screen, lifted by no more than the keyboard's height, when the keyboard announces its top at 0", async () => {
+      const keyboard = stubKeyboard(800);
+      await renderForm();
+
+      await keyboard.show(0);
+
+      // The keyboard is 300 tall, so the footer is lifted 300 and not the 800 that would leave the form no height.
+      expect(footerPadded(12 + 300)).toHaveLength(1);
+      expect(footerPadded(12 + 800)).toHaveLength(0);
+    });
+
     it("should lift the footer by the height of the keyboard that covers it", async () => {
       const keyboard = stubKeyboard(800);
       await renderForm();
