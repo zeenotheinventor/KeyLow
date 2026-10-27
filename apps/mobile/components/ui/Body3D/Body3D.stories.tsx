@@ -4,7 +4,7 @@ import { View } from "react-native";
 
 import { Body3D } from "./Body3D";
 import { BodyFigure } from "../BodyFigure";
-import { heatSteps, inTurn } from "../BodyFigure/storyValues";
+import { heatSteps, inTurn, legPressRoles } from "../BodyFigure/storyValues";
 import { SegmentedControl } from "../SegmentedControl";
 import { Text } from "../Text";
 
@@ -113,6 +113,13 @@ export const Volume: Story = {
 
 // Behind, on plan, ahead and not in plan.
 export const Gap: Story = { args: { scale: "gap", values: inTurn(4) }, render: besideTheFigure };
+
+// The Leg Press by role: quads primary, glutes and hamstrings secondary, calves assisting. Turn the body to see the
+// back. The rest are at rest.
+export const Role: Story = {
+  args: { scale: "role", values: legPressRoles },
+  render: besideTheFigure,
+};
 
 // The selected muscle is pulled towards the primary text colour, as the 2D figure outlines it in that colour.
 export const Selected: Story = {

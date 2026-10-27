@@ -54,6 +54,12 @@ describe.each(schemes)("looksOf in the %s theme", (scheme) => {
     expect(looks.abs.color).toBe(readMuscle("gap", gap, palette).fill);
   });
 
+  it.each([0, 1, 2, 3])("should colour role value %i as readMuscle does", (role) => {
+    const looks = looksOf("role", { abs: role }, palette);
+
+    expect(looks.abs.color).toBe(readMuscle("role", role, palette).fill);
+  });
+
   it.each<[BodyFigureScale, number | undefined]>([
     ["heat", undefined],
     ["volume", undefined],
@@ -65,6 +71,10 @@ describe.each(schemes)("looksOf in the %s theme", (scheme) => {
     ["volume", 1.5],
     ["gap", 12],
     ["gap", -1],
+    ["role", undefined],
+    ["role", 4],
+    ["role", 1.5],
+    ["role", Number.NaN],
   ])(
     "should read a %s value of %s as readMuscle does, missing and out of range included",
     (scale, value) => {
@@ -89,10 +99,10 @@ describe.each(schemes)("looksOf in the %s theme", (scheme) => {
     expect(glowing).toEqual(["chest_upper"]);
   });
 
-  it("should never glow on the volume or the gap scale", () => {
+  it("should never glow on the volume, gap or role scale", () => {
     const everyValue = Object.fromEntries(MUSCLE_IDS.map((id, index) => [id, index % 5]));
 
-    for (const scale of ["volume", "gap"] as const) {
+    for (const scale of ["volume", "gap", "role"] as const) {
       const looks = looksOf(scale, everyValue, palette);
       expect(MUSCLE_IDS.filter((id) => looks[id].glow > 0)).toEqual([]);
     }
@@ -116,6 +126,23 @@ describe.each(schemes)("looksOf in the %s theme", (scheme) => {
   it.each([0, 1, 2])("should read gap value %i as warmer than not in the plan", (gap) => {
     expect(looksOf("gap", { abs: gap }, palette).abs.warmth).toBe(1);
     expect(looksOf("gap", {}, palette).abs.warmth).toBe(0);
+  });
+
+  it("should read a muscle at rest on the role scale as not warm and any role as warm", () => {
+    expect(looksOf("role", {}, palette).abs.warmth).toBe(0);
+    expect(looksOf("role", { abs: 0 }, palette).abs.warmth).toBe(0);
+    for (const role of [1, 2, 3]) {
+      expect(looksOf("role", { abs: role }, palette).abs.warmth).toBe(1);
+    }
+  });
+
+  it("should give each of the 22 muscles on the role scale the colour readMuscle gives it", () => {
+    const values = Object.fromEntries(MUSCLE_IDS.map((id, index) => [id, index % 4]));
+    const looks = looksOf("role", values, palette);
+
+    for (const id of MUSCLE_IDS) {
+      expect(looks[id].color).toBe(readMuscle("role", values[id], palette).fill);
+    }
   });
 
   it("should glow by the alpha of the heat glow token, in its colour", () => {

@@ -1,7 +1,8 @@
-import { describeHeatStep, VOLUME_STATUS_NAMES } from "@keylow/core/copy";
-import { VOLUME_STATUSES } from "@keylow/core/training";
+import { describeHeatStep, ROLE_VALUE_NAMES, VOLUME_STATUS_NAMES } from "@keylow/core/copy";
+import { ROLE_FIGURE_VALUES, VOLUME_STATUSES } from "@keylow/core/training";
 
 import type { BodyFigureScale } from "./types";
+import type { RoleValue } from "@keylow/core/copy";
 import type { BodyMapPalette } from "@keylow/tokens";
 
 /*
@@ -9,7 +10,8 @@ import type { BodyMapPalette } from "@keylow/tokens";
  * says. The order of each list is the encoding core pins in `bodyMapValues`: the heat step, the index
  * in `VOLUME_STATUSES` and the index in `GAP_VALUES`. The heat words are core's `HEAT_STEP_NAMES`, the
  * volume words are core's `VOLUME_STATUS_NAMES` and the gap words are the legend of the `tokens · body-map
- * scales` board.
+ * scales` board. The role scale holds the values of core's `ROLE_FIGURE_VALUES`, and its words are core's
+ * `ROLE_VALUE_NAMES`.
  */
 
 const GAP_NAMES = ["Behind", "On plan", "Ahead", "Not in plan"] as const;
@@ -49,13 +51,25 @@ function volumeIndexOf(value: number | undefined): number {
     : 0;
 }
 
+/** The role value the scale has, or 0, not worked, for a muscle with no value or a value the scale does not have. */
+function roleValueOf(value: number | undefined): RoleValue {
+  switch (value) {
+    case ROLE_FIGURE_VALUES.stabiliser:
+    case ROLE_FIGURE_VALUES.secondary:
+    case ROLE_FIGURE_VALUES.primary:
+      return value;
+    default:
+      return 0;
+  }
+}
+
 function pick<Item>(items: readonly Item[], index: number, fallback: Item): Item {
   return items[index] ?? fallback;
 }
 
 /**
  * The fill and the spoken value of one muscle on one scale. A muscle with no value, or a value the scale
- * does not have, is drawn at rest on heat, not trained on volume and not in the plan on gap.
+ * does not have, is drawn at rest on heat, not trained on volume, not in the plan on gap and not worked on role.
  */
 export function readMuscle(
   scale: BodyFigureScale,
@@ -81,6 +95,17 @@ export function readMuscle(
       high: palette.volume.high,
     };
     return { fill: fills[status], valueName: VOLUME_STATUS_NAMES[status], isPeak: false };
+  }
+
+  if (scale === "role") {
+    const role = roleValueOf(value);
+    const fills = {
+      0: palette.heat[0],
+      [ROLE_FIGURE_VALUES.stabiliser]: palette.role.assist,
+      [ROLE_FIGURE_VALUES.secondary]: palette.role.secondary,
+      [ROLE_FIGURE_VALUES.primary]: palette.role.primary,
+    };
+    return { fill: fills[role], valueName: ROLE_VALUE_NAMES[role], isPeak: false };
   }
 
   const fills = [palette.gap.behind, palette.gap.onPlan, palette.gap.ahead, palette.gap.notInPlan];

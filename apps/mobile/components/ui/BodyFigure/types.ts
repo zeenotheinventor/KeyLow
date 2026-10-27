@@ -1,12 +1,16 @@
 import type { BodyArtworkFigure, BodyArtworkSide, MuscleId } from "@keylow/core/training";
 
-/** Which of the body map's three colour scales the figure is drawn in. */
-export type BodyFigureScale = "heat" | "volume" | "gap";
+/**
+ * Which colour scale the figure is drawn in: the body map's three, and the role of each muscle in an
+ * exercise, which only the "Muscles it works" sheet uses.
+ */
+export type BodyFigureScale = "heat" | "volume" | "gap" | "role";
 
 /**
  * The value of each muscle, as the body map values of core encode it: a heat step from 0 to 5 on the
- * heat scale, the index in `VOLUME_STATUSES` on the volume scale, and the index in `GAP_VALUES` on the
- * gap scale. A muscle left out is at rest on heat, not trained on volume and not in the plan on gap.
+ * heat scale, the index in `VOLUME_STATUSES` on the volume scale, the index in `GAP_VALUES` on the
+ * gap scale, and the value of `ROLE_FIGURE_VALUES` on the role scale. A muscle left out is at rest on
+ * heat, not trained on volume, not in the plan on gap and not worked on role.
  */
 export type BodyFigureValues = Partial<Record<MuscleId, number>>;
 
