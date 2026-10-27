@@ -166,6 +166,8 @@ export {
   warmestMuscles,
 } from "./bodyMapValues";
 export type { BodyMapView, WarmMuscle } from "./bodyMapValues";
+export { exerciseRoleValues, musclesByRole, ROLE_FIGURE_VALUES } from "./exerciseRoles";
+export type { MuscleRoleEntry, MusclesOfRole } from "./exerciseRoles";
 export { dayMoments } from "./bodyMapMoments";
 export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
 

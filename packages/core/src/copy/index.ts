@@ -44,6 +44,7 @@ export * from "./goals";
 export * from "./sessionActive";
 export * from "./sessionEntry";
 export * from "./sessionExercise";
+export * from "./exerciseMuscles";
 export * from "./sessionFinish";
 export * from "./suggestion";
 export * from "./exerciseTrend";
