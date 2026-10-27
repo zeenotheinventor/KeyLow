@@ -18,7 +18,7 @@ type ScrollViewHandle = {
 };
 
 // How far the focused field clears the bottom edge of the scroll view once it is scrolled into view.
-const ROOM_BELOW_FIELD = 16;
+const DEFAULT_ROOM_BELOW_FIELD = 16;
 
 // React Native types the focused field as always there, but it is null while no field has focus.
 function currentlyFocusedInput(): Measurable | null | undefined {
@@ -31,11 +31,14 @@ function currentlyFocusedInput(): Measurable | null | undefined {
  * reads where the field and the scroll view are in the window, so it is right wherever the scroll view is
  * in it. `keyboardLift` is how far the screen lifts for the keyboard, 0 while there is none or when the
  * platform moves the screen itself. Put the returned handler on the scroll view's `onScroll`, which is how
- * the hook knows how far the scroll view is scrolled.
+ * the hook knows how far the scroll view is scrolled. `roomBelowField` is how far the field's bottom edge
+ * clears the scroll view's, 16 points unless the field has something under it that must clear as well,
+ * such as a count, in which case it is the 16 plus how far that reaches below the field.
  */
 export function useScrollFocusedInputIntoView(
   scrollViewRef: RefObject<ScrollViewHandle | null>,
   keyboardLift: number,
+  roomBelowField = DEFAULT_ROOM_BELOW_FIELD,
 ) {
   const offsetY = useRef(0);
 
@@ -57,7 +60,7 @@ export function useScrollFocusedInputIntoView(
         scrollViewHost.measureInWindow(
           (_scrollViewLeft, scrollViewTop, _scrollViewWidth, scrollViewHeight) => {
             const hiddenBelow =
-              inputTop + inputHeight + ROOM_BELOW_FIELD - (scrollViewTop + scrollViewHeight);
+              inputTop + inputHeight + roomBelowField - (scrollViewTop + scrollViewHeight);
             if (!(hiddenBelow > 0)) {
               return;
             }
@@ -91,7 +94,7 @@ export function useScrollFocusedInputIntoView(
     return () => {
       cancelAnimationFrame(frame);
     };
-  }, [keyboardLift, scrollViewRef]);
+  }, [keyboardLift, roomBelowField, scrollViewRef]);
 
   return trackOffset;
 }
