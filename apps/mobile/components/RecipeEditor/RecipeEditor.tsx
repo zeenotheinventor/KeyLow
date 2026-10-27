@@ -54,7 +54,7 @@ import { RecipeDetailsFields } from "../RecipeDetailsFields";
 import { RecipeIngredientsSection } from "../RecipeIngredientsSection";
 import { RecipeStepsSection } from "../RecipeStepsSection";
 import { StepSheet } from "../StepSheet";
-import { Banner, Button, SheetHeader, useToast, useToastAboveBar } from "../ui";
+import { Banner, Button, SheetHeader, useToast } from "../ui";
 
 import type { RecipeEditorProps } from "./types";
 import type { ChosenFood } from "../AddIngredientSheet";
@@ -127,7 +127,6 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   const shouldScrollToAdded = useRef(false);
   const scrollOffset = useRef(0);
   const scrollViewportHeight = useRef(0);
-  const [dockHeight, setDockHeight] = useState(0);
   const shouldFocusIngredientsHeading = useRef(false);
 
   const frameRef = useRef<View>(null);
@@ -150,8 +149,6 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
   // A removed step leaves nothing to keep a screen reader's focus on, so it is taken to the heading first,
   // and the toast's announcement is the last thing it says.
   const stepSheet = useStepSheet(draft.steps, stepEdits, focusStepsHeading);
-  // Toasts sit above the pinned Save, as the board draws them, and not above a tab bar this screen has not.
-  useToastAboveBar(dockHeight);
 
   const isNewRecipe = existing === undefined;
   const isChanged = isRecipeDraftChanged(baseline, draft);
@@ -584,9 +581,6 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
             <View
               className="border-t border-border bg-surface-sheet px-4 pb-[var(--dock-bottom)] pt-4"
               style={vars({ "--dock-bottom": dockBottomPadding(insets.bottom) })}
-              onLayout={(event) => {
-                setDockHeight(event.nativeEvent.layout.height);
-              }}
             >
               <Button
                 fullWidth

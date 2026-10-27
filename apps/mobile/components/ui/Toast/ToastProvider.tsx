@@ -1,13 +1,4 @@
-import { tabBarHeight } from "@keylow/tokens";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -19,20 +10,14 @@ type CurrentToast = ToastOptions & { id: number };
 
 const ToastContext = createContext<ToastContextValue | undefined>(undefined);
 
-// Kept apart from `ToastContext`, so a screen that only raises toasts does not render again when the
-// clearance changes.
-const ToastClearanceContext = createContext<((points: number) => void) | undefined>(undefined);
-
 /**
- * Shows one toast at a time, above the tab bar. Mount it once, above every screen that shows one and
- * inside the safe area provider. A screen with a bar standing on the tab bar raises every toast over it
- * with `useToastClearance`.
+ * Shows one toast at a time, at the top of the screen under the status bar, above every screen and its
+ * header. Mount it once, above every screen that shows one and inside the safe area provider.
  */
 export function ToastProvider({ children }: ToastProviderProps) {
   const [current, setCurrent] = useState<CurrentToast | undefined>(undefined);
   const lastId = useRef(0);
-  const [clearance, setClearance] = useState(0);
-  const { bottom: bottomInset } = useSafeAreaInsets();
+  const { top: topInset } = useSafeAreaInsets();
 
   // iOS has no live region, so every toast is spoken through the accessibility service, once per show,
   // which also repeats a message that matches the last one. The toast's own words stay readable, so a
@@ -56,8 +41,7 @@ export function ToastProvider({ children }: ToastProviderProps) {
     <Toast
       // A new toast is a new element, so it fades in again and gets its own full wait.
       key={id}
-      bottomClearance={clearance}
-      bottomInset={bottomInset}
+      topInset={topInset}
       {...options}
       onAction={() => {
         try {
@@ -74,12 +58,11 @@ export function ToastProvider({ children }: ToastProviderProps) {
 
   return (
     <ToastContext.Provider value={value}>
-      <ToastClearanceContext.Provider value={setClearance}>
-        {children}
-        <View className="absolute inset-0" pointerEvents="box-none">
-          {current === undefined ? null : renderToast(current)}
-        </View>
-      </ToastClearanceContext.Provider>
+      {children}
+      {/* The layer fills the screen and takes no touch of its own, so only the card does. */}
+      <View className="absolute inset-0" pointerEvents="box-none" testID="toast-layer">
+        {current === undefined ? null : renderToast(current)}
+      </View>
     </ToastContext.Provider>
   );
 }
@@ -94,37 +77,4 @@ export function useToast(): ToastContextValue {
     throw new Error("useToast must be used inside a ToastProvider");
   }
   return context;
-}
-
-/**
- * Raises every toast by `points` while the calling screen is mounted, and puts them back when it goes. For a
- * screen with a bar standing on the tab bar, such as the diary's search dock, which a toast would sit behind.
- * It is the provider's, not the toast's, because a toast is often raised from another screen, such as the
- * portion picker saving and going back, and must still clear the bar of the screen it lands on. Pass the
- * height of the bar as measured with `onLayout`, and 0 while it is not drawn.
- */
-export function useToastClearance(points: number): void {
-  const setClearance = useContext(ToastClearanceContext);
-  if (setClearance === undefined) {
-    throw new Error("useToastClearance must be used inside a ToastProvider");
-  }
-
-  useEffect(() => {
-    setClearance(points);
-    return () => {
-      setClearance(0);
-    };
-  }, [points, setClearance]);
-}
-
-/**
- * Raises every toast to sit above a bar of `points` standing on the bottom edge of a screen that has no tab
- * bar under it, such as the recipe editor's Save dock: 12 points above the bar, as it would be above the tab
- * bar. Pass the height of the bar as measured with `onLayout`, and 0 while it is not measured.
- */
-export function useToastAboveBar(points: number): void {
-  const { bottom: bottomInset } = useSafeAreaInsets();
-
-  // The toast is placed above the tab bar and the safe area, which this screen does not have.
-  useToastClearance(points === 0 ? 0 : points - tabBarHeight - bottomInset);
 }

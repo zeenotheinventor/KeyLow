@@ -35,7 +35,7 @@ export function useUpdatedToast(isSplashScreenGone: boolean): void {
       }
 
       if (lastSeenUpdateId !== null && !Updates.isEmbeddedLaunch) {
-        toast.show({ message: UPDATED_TOAST });
+        toast.show({ message: UPDATED_TOAST, icon: "CircleCheck", variant: "success-filled" });
       }
       await writeLastSeenUpdateId(runningUpdateId);
     });

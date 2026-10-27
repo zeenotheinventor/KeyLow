@@ -42,6 +42,8 @@ const tones: { tone: IconTone; colorName: ColorName }[] = [
   { tone: "success-ink", colorName: "success-ink" },
   // The check-in summary's reason line: the warning in dark and the primary text colour in light, as the design's ink.
   { tone: "warning-ink", colorName: "warning-ink" },
+  // The glyph on a filled success toast: dark ink on the success colour, 4.5:1 or more in both themes.
+  { tone: "text-on-success", colorName: "text-on-success" },
 ];
 
 const names: IconName[] = [

@@ -21,6 +21,9 @@ export const SEARCH_LAUNCHER = {
 /** The toast shown once, after the splash screen has gone, the first time the app starts on a new update. */
 export const UPDATED_TOAST = "Ki-Lo has been updated!";
 
+/** The name of the screen reader action that takes a toast down, as the swipe-up "Actions" menu reads it. */
+export const TOAST_DISMISS_LABEL = "Dismiss";
+
 /** The title every placeholder screen shows until its content is built. */
 export const COMING_SOON_TITLE = "Coming soon";
 

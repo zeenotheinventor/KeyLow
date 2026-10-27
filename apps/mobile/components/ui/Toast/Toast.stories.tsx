@@ -1,7 +1,6 @@
 import { View } from "react-native";
 
 import { Button } from "../Button";
-import { TabBar } from "../TabBar";
 import { Toast } from "./Toast";
 import { ToastProvider, useToast } from "./ToastProvider";
 
@@ -11,14 +10,14 @@ const meta = {
   title: "UI/Toast",
   component: Toast,
   decorators: [
-    // The toast sits at the bottom of its parent, above the tab bar's height, so the parent fills the story.
+    // The toast sits at the top of its parent, under the safe area, so the parent fills the story.
     (Story) => (
       <View className="flex-1">
         <Story />
       </View>
     ),
   ],
-  args: { message: "Entry deleted", bottomInset: 34 },
+  args: { message: "Entry deleted", topInset: 59 },
 } satisfies Meta<typeof Toast>;
 
 export default meta;
@@ -54,42 +53,9 @@ export const LongMessage: Story = {
   },
 };
 
-// As the diary boards draw it: above the tab bar and the safe area.
-export const AboveTabBar: Story = {
-  render: (args) => (
-    <>
-      <Toast {...args} />
-      <View className="mt-auto">
-        <TabBar
-          activeKey="diary"
-          addLabel="Find food"
-          bottomInset={34}
-          label="Main"
-          platform="ios"
-          tabs={[
-            { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-            { key: "diary", label: "Diary", icon: "BookOpen" },
-            { key: "recipes", label: "Recipes", icon: "ChefHat" },
-            { key: "more", label: "More", icon: "Ellipsis" },
-          ]}
-          onAddPress={() => undefined}
-          onSelect={() => undefined}
-        />
-      </View>
-    </>
-  ),
-  args: { icon: "Trash2", actionLabel: "Undo", onAction: () => undefined },
-};
-
-// The diary boards put the toast's bottom edge at 152, above the search dock that stands on the tab bar: the
-// dock's height is the clearance.
-export const AboveSearchDock: Story = {
-  args: {
-    icon: "Trash2",
-    actionLabel: "Undo",
-    onAction: () => undefined,
-    bottomClearance: 57,
-  },
+// The updated toast: the success colour as the fill, with the ink for it on the words and the icon.
+export const SuccessFilled: Story = {
+  args: { message: "Ki-Lo has been updated!", icon: "CircleCheck", variant: "success-filled" },
 };
 
 function ToastButtons() {
@@ -110,6 +76,18 @@ function ToastButtons() {
         }}
       >
         Add to Lunch
+      </Button>
+      <Button
+        variant="secondary"
+        onPress={() => {
+          show({
+            message: "Ki-Lo has been updated!",
+            icon: "CircleCheck",
+            variant: "success-filled",
+          });
+        }}
+      >
+        Show the updated toast
       </Button>
     </View>
   );

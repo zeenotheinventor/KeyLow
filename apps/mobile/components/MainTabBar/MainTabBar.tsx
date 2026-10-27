@@ -2,7 +2,6 @@ import { useProfileTimeZone } from "@keylow/api-client";
 import { ADD_FOOD_BUTTON_LABEL, SEARCH_LAUNCHER, TAB_BAR_LABEL } from "@keylow/core/copy";
 import { toLocalDate } from "@keylow/core/dates";
 import { useRouter } from "expo-router";
-import { useState } from "react";
 import { View } from "react-native";
 
 import { useIsOnline } from "../../lib/connectivity";
@@ -10,7 +9,7 @@ import { foodSearchHref, withLogContext } from "../../lib/navigation";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { useViewedDay } from "../../lib/viewedDay";
 import { SessionBar, useSessionBar } from "../SessionBar";
-import { RouterTabBar, SearchLauncher, useToastClearance } from "../ui";
+import { RouterTabBar, SearchLauncher } from "../ui";
 
 import type { BottomTabBarProps } from "expo-router/js-tabs";
 
@@ -26,9 +25,7 @@ const screensWithLauncher: readonly string[] = ["dashboard", "diary"];
  * without logging is More, Your foods. Offline, or until the profile's zone is known, so that there is a
  * right "today", the launcher and the centre plus are dimmed and open nothing.
  * While a session runs the session bar stands between the launcher and the tab bar, on every tab, and opens
- * the session. The launcher and the session bar stand on the tab bar, so a toast would sit behind them: the
- * bar measures each and raises every toast by their heights while they are drawn, whichever screen raises
- * the toast.
+ * the session.
  */
 export function MainTabBar(props: BottomTabBarProps) {
   const router = useRouter();
@@ -37,13 +34,7 @@ export function MainTabBar(props: BottomTabBarProps) {
   const isOnline = useIsOnline();
   const viewedDay = useViewedDay();
   const timeZone = useProfileTimeZone({ enabled: useReadsEnabled() }).data;
-  const [launcherHeight, setLauncherHeight] = useState(0);
   const sessionBar = useSessionBar();
-  const [sessionBarHeight, setSessionBarHeight] = useState(0);
-
-  useToastClearance(
-    (hasLauncher ? launcherHeight : 0) + (sessionBar === null ? 0 : sessionBarHeight),
-  );
 
   // With no zone there is no right "today", and guessing UTC would log to the wrong day near midnight.
   const canLog = isOnline && timeZone !== undefined;
@@ -70,33 +61,19 @@ export function MainTabBar(props: BottomTabBarProps) {
   return (
     <View className="bg-background">
       {hasLauncher ? (
-        <View
-          onLayout={(event) => {
-            setLauncherHeight(event.nativeEvent.layout.height);
+        <SearchLauncher
+          disabled={!canLog}
+          label={SEARCH_LAUNCHER.label}
+          scanLabel={SEARCH_LAUNCHER.scanLabel}
+          onPress={openSearch}
+          onScanPress={() => {
+            openForDay((day) => {
+              router.push(withLogContext("/foods/scan", { day }));
+            });
           }}
-        >
-          <SearchLauncher
-            disabled={!canLog}
-            label={SEARCH_LAUNCHER.label}
-            scanLabel={SEARCH_LAUNCHER.scanLabel}
-            onPress={openSearch}
-            onScanPress={() => {
-              openForDay((day) => {
-                router.push(withLogContext("/foods/scan", { day }));
-              });
-            }}
-          />
-        </View>
+        />
       ) : null}
-      {sessionBar === null ? null : (
-        <View
-          onLayout={(event) => {
-            setSessionBarHeight(event.nativeEvent.layout.height);
-          }}
-        >
-          <SessionBar {...sessionBar} />
-        </View>
-      )}
+      {sessionBar === null ? null : <SessionBar {...sessionBar} />}
       <RouterTabBar
         {...props}
         addDisabled={!canLog}

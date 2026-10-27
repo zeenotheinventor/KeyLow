@@ -14,6 +14,8 @@ color-scheme:dark;
 --text-muted:#8691A5;
 --text-on-accent:#0B0E13;
 --text-on-status:#0B0E13;
+/* on a success fill: --text-on-status is white in light, only 3.5:1 on it */
+--text-on-success:#0B0E13;
 /* accent — one colour, used sparingly */
 --accent:#CCF249;
 --accent-foreground:#0B0E13;
@@ -71,6 +73,7 @@ color-scheme:light;
 --text-muted:#626B7B;
 --text-on-accent:#0F131A;
 --text-on-status:#FFFFFF;
+--text-on-success:#0F131A;
 --accent:#7FAE00;
 --accent-foreground:#0F131A;
 --accent-muted:rgba(127,174,0,0.16);
