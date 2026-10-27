@@ -1,4 +1,4 @@
-import { BODY_TAP_SLOP } from "@keylow/body-3d/touch";
+import { BODY_LONG_PRESS_DELAY_MILLISECONDS, BODY_TAP_SLOP } from "@keylow/body-3d/touch";
 import { BODY_MAP, MUSCLE_NAMES } from "@keylow/core/copy";
 import { BODY_ARTWORK, BODY_GLOW_FILTER, isMuscleId } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
@@ -137,6 +137,7 @@ export function BodyFigure({
               aria-hidden={!box.isReadOut}
               aria-label={`${MUSCLE_NAMES[box.muscle]}, ${valueName}`}
               className="absolute left-[var(--hit-left)] top-[var(--hit-top)] h-[var(--hit-height)] w-[var(--hit-width)]"
+              delayLongPress={BODY_LONG_PRESS_DELAY_MILLISECONDS}
               role="button"
               style={vars({
                 "--hit-left": box.left,

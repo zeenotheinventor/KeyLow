@@ -1,5 +1,6 @@
+import { BODY_LONG_PRESS_DELAY_MILLISECONDS } from "@keylow/body-3d/touch";
 import { BODY_MAP } from "@keylow/core/copy";
-import { fireEvent, render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen, userEvent } from "@testing-library/react-native";
 
 import { BodyFigure } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
@@ -33,6 +34,23 @@ const sideDelts = () => screen.getByRole("button", { name: "Side delts, Rested" 
 const at = (pageX: number, pageY: number) => ({ nativeEvent: { pageX, pageY } });
 
 describe("the touches on a muscle of the figure", () => {
+  describe("the long press delay", () => {
+    it.each([
+      ["before", BODY_LONG_PRESS_DELAY_MILLISECONDS - 100, 0],
+      ["after", BODY_LONG_PRESS_DELAY_MILLISECONDS + 100, 1],
+    ])(
+      "should long press only after the delay the 3D body shares (held %s it)",
+      async (_when, duration, calls) => {
+        const onLongPressMuscle = jest.fn();
+        await renderFigure({ onLongPressMuscle });
+
+        await userEvent.setup().longPress(sideDelts(), { duration });
+
+        expect(onLongPressMuscle).toHaveBeenCalledTimes(calls);
+      },
+    );
+  });
+
   describe("for a screen reader", () => {
     it("should offer Show details as an action when a long press is wanted", async () => {
       await renderFigure({ onLongPressMuscle: jest.fn() });

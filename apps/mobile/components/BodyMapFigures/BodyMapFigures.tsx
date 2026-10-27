@@ -53,9 +53,9 @@ function createTapRelay() {
  * reader while they do.
  *
  * With `in3d` it is one body on a dark stage instead, turned to the side it names, as the 3D body map draws
- * it: a drag turns the body and a tap calls `onTap`, and when 3D cannot be drawn the 2D figure of that side
- * stays in the stage, where a tap on it calls `onTap` too and a drag does not. It has no outgoing figures, because the 3D body eases its colours itself, and no
- * muscle buttons, since a long press on the 3D body does not exist yet.
+ * it: a drag turns the body, a tap calls `onTap`, and a long press on a muscle calls `onLongPressMuscle`, which the 3D
+ * body picks through the skin. When 3D cannot be drawn the 2D figure of that side stays in the stage, where a tap on it
+ * calls `onTap` too and a drag does not, and where no muscle is a button. It has no outgoing figures, because the 3D body eases its colours itself.
  *
  * With `sideBySide` the figures are Actual and Projected together, one side of each at the one figure width,
  * with the view's name over it and its moment under it. Both views show, so a tap on them does nothing,
@@ -117,6 +117,15 @@ export function BodyMapFigures({
         unselectedOpacity={UNSELECTED_OPACITY}
         values={valuesOf(view)}
         tapHandlers={panResponder.panHandlers}
+        // The 3D body picks the muscle itself and has no muscle buttons, so there is no short press to hand on, and a
+        // screen reader reaches every muscle through the muscle list.
+        {...(onLongPressMuscle === undefined
+          ? {}
+          : {
+              onLongPressMuscle: (muscle: MuscleId) => {
+                onLongPressMuscle(muscle, view);
+              },
+            })}
         onSideChange={in3d.onSideChange}
         onTap={onTap}
       />

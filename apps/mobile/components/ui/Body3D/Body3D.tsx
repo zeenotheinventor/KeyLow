@@ -1,12 +1,13 @@
 import { bodyMapPalette } from "@keylow/tokens";
 import { vars } from "nativewind";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { View } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 
 import { Body3DBoundary } from "./Body3DBoundary";
 import { body3DCanvasElement } from "./body3DCanvasElement";
 import { looksOf } from "./looks";
+import { useBodyLongPress } from "./useBodyLongPress";
 import { useBodyRotation } from "./useBodyRotation";
 import { useBodyZoom } from "./useBodyZoom";
 import { useLookFadeMilliseconds } from "./useLookFadeMilliseconds";
@@ -41,6 +42,11 @@ const NO_VALUES: BodyFigureValues = {};
  * and the zoom is gone when the body is. The GL view is as wide as the touch area, so a zoomed body has the
  * stage to fill, and the whole body is framed as it was. `onZoomChange` tells the zoom when the fingers let go,
  * and `zoomResetCount` eases the view back to the whole body.
+ *
+ * A finger that stays down on the body for the delay of the 2D figure's long press, within the tap slop,
+ * calls `onLongPressMuscle` with the muscle under it. The canvas picks it with the camera and the body as they are
+ * drawn, through the skin, so the turn, the zoom and the pan are all in effect. A point on nothing, or on a muscle
+ * with no id, calls nothing. A long press is not a tap, and a drag, a pinch or a second finger is not a long press.
  */
 export function Body3D({
   label,
@@ -49,6 +55,7 @@ export function Body3D({
   side = "front",
   onSideChange,
   onTap,
+  onLongPressMuscle,
   onZoomChange,
   zoomResetCount = 0,
   scale = "heat",
@@ -76,11 +83,23 @@ export function Body3D({
   const fadeMilliseconds = useLookFadeMilliseconds();
   const touchWidth = Math.max(requestedTouchWidth ?? w, w);
   const height = (w * DRAWING_HEIGHT) / DRAWING_WIDTH;
+  const {
+    gesture: longPressGesture,
+    hasFired: hasLongPressFired,
+    onPickerChange,
+  } = useBodyLongPress({ onLongPressMuscle });
+  // The tap waits for the drag to fail, and by then a long press may have fired, which cancels the tap
+  // natively. A touch that fired one is not a tap, so the tap is dropped here too.
+  const tapUnlessLongPressed = useCallback(() => {
+    if (!hasLongPressFired.current) {
+      onTap?.();
+    }
+  }, [hasLongPressFired, onTap]);
   const { yaw, gesture: rotationGesture } = useBodyRotation({
     side,
     width: w,
     onSideChange,
-    onTap,
+    onTap: onTap === undefined ? undefined : tapUnlessLongPressed,
   });
   const { view, gesture: zoomGesture } = useBodyZoom({
     bodyWidth: w,
@@ -89,10 +108,11 @@ export function Body3D({
     resetCount: zoomResetCount,
     onZoomChange,
   });
-  // Whichever takes hold first has the touch: the zoom's two fingers, or the turn and the tap of one.
+  // Whichever takes hold first has the touch: the zoom's two fingers, or the turn and the tap of one, or the
+  // long press of one. The long press waits for none of them, so it fires at its delay while the finger is down.
   const gesture = useMemo(
-    () => Gesture.Race(zoomGesture, rotationGesture),
-    [zoomGesture, rotationGesture],
+    () => Gesture.Race(zoomGesture, rotationGesture, longPressGesture),
+    [zoomGesture, rotationGesture, longPressGesture],
   );
   const canvas = body3DCanvasElement({
     colours: {
@@ -109,6 +129,7 @@ export function Body3D({
     yaw,
     view,
     frameAspect: DRAWING_WIDTH / DRAWING_HEIGHT,
+    onPickerChange,
     onFirstFrame,
     onError,
   });

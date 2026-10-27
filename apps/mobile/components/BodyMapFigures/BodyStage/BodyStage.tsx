@@ -23,7 +23,8 @@ export const BODY_STAGE_FIGURE_WIDTH = 108;
  * When the 3D body has drawn the backdrop darkens as the body fades in, over 220 ms, or at once with reduced motion.
  * If 3D fails the text goes, the stage stays clear, and the 2D figure stays in the same place. A tap on the 2D
  * figure is a tap while the 3D body has not drawn, and after that the 3D body takes the touch, anywhere on the
- * stage and not only on the body. A drag across the width of the body is still half a turn.
+ * stage and not only on the body. A drag across the width of the body is still half a turn. A long press on a muscle
+ * of the 3D body calls `onLongPressMuscle`, which `BodyView` hands to the 3D body.
  * A pinch zooms the 3D body and two fingers pan it. While it is zoomed, a pill at the top right of the stage
  * shows the zoom, as "2×", and a Reset button eases the body back to the whole body. The pill follows the
  * zoom when the fingers let go, and not while they move.

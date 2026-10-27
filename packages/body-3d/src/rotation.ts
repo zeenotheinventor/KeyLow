@@ -37,3 +37,25 @@ export function nearestSide(yaw: number): BodySide {
 export function yawToReachSide(yaw: number, side: BodySide): number {
   return yaw + wrapped(BODY_SIDE_YAW[side] - yaw);
 }
+
+/** What `turnAboutCentre` moves: a group, or anything with a turn about y and a position. */
+type Turnable = {
+  rotation: { y: number };
+  position: { set: (x: number, y: number, z: number) => unknown };
+};
+
+/**
+ * Turns the body by `yaw` about the vertical line through (`centreX`, `centreZ`), the middle of its box, so it
+ * turns on the spot wherever the model has its origin. The group turns about its own origin, so it is moved by
+ * what keeps that line where it was: the centre minus the centre turned.
+ */
+export function turnAboutCentre(group: Turnable, yaw: number, centreX: number, centreZ: number) {
+  const sine = Math.sin(yaw);
+  const cosine = Math.cos(yaw);
+  group.rotation.y = yaw;
+  group.position.set(
+    centreX - (centreX * cosine + centreZ * sine),
+    0,
+    centreZ - (centreZ * cosine - centreX * sine),
+  );
+}

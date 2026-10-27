@@ -424,6 +424,9 @@ importers:
       '@keylow/config':
         specifier: workspace:*
         version: link:../config
+      '@keylow/core':
+        specifier: workspace:*
+        version: link:../core
       '@types/three':
         specifier: 0.186.0
         version: 0.186.0

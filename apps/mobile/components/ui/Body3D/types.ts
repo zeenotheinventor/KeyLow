@@ -1,9 +1,16 @@
 import type { BodyFigureProps } from "../BodyFigure";
 import type { BodyColours, BodyLightingScheme, Look, LookEmphasis } from "@keylow/body-3d";
 import type { BodySide } from "@keylow/body-3d/rotation";
+import type { TouchPoint } from "@keylow/body-3d/touch";
 import type { ZoomView } from "@keylow/body-3d/zoom";
 import type { MuscleId } from "@keylow/core/training";
 import type { SharedValue } from "react-native-reanimated";
+
+/**
+ * Names the muscle drawn at a point of the touch area, in points from its top left, or null where there is none or a
+ * muscle with no id. The canvas makes it from the camera and the body as they are drawn.
+ */
+export type MusclePicker = (point: TouchPoint) => MuscleId | null;
 
 /**
  * The value props of `BodyFigure`, with the same meaning and defaults, so a caller swaps one figure for the other
@@ -34,6 +41,13 @@ export type Body3DProps = Partial<
   onSideChange?: ((side: BodySide) => void) | undefined;
   /** Called once for a touch that lifts within 10 points of where it went down. A drag never calls it. */
   onTap?: (() => void) | undefined;
+  /**
+   * Called once with the muscle under the finger when it has stayed down for the 2D figure's long press delay within the
+   * tap slop of where it went down, through the skin, with the turn, the zoom and the pan in effect. Not called for a
+   * point on a muscle with no id or on nothing, or for a drag, a pinch or a second finger. A touch that fired it is not a tap.
+   * Left out, the body takes no long press.
+   */
+  onLongPressMuscle?: ((muscle: MuscleId) => void) | undefined;
   /**
    * Called with the zoom, to one decimal place, when a pinch or a two-finger pan lets go and when a reset starts,
    * and only when it differs from the zoom it last reported, so the pill that shows it renders when the zoom
@@ -74,6 +88,12 @@ export type Body3DCanvasProps = {
   view: SharedValue<ZoomView>;
   /** The width over height that the body is framed for: the body's own, however much wider the canvas is. */
   frameAspect: number;
+  /**
+   * Called with the function that picks a muscle at a point of the canvas, which is as wide and as high as the touch
+   * area, once the camera and the body are in the scene, and with null when they go. The function reads the camera and
+   * the body as they are when it is called.
+   */
+  onPickerChange?: ((pick: MusclePicker | null) => void) | undefined;
   /** Called once, when the first frame has been asked for. */
   onFirstFrame?: (() => void) | undefined;
   /** Called when a shader cannot be linked, which three.js otherwise only logs while it draws nothing. */

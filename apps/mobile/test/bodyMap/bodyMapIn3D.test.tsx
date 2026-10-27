@@ -117,6 +117,8 @@ function styleValue(node: { props: object }, name: string): unknown {
     : undefined;
 }
 
+// The board's whole line, one phrase for each gesture there is.
+const rotateHint = "Drag to turn · Pinch to zoom · Long-press a muscle for details";
 const frontLabel = "Body map, Actual, heat, front";
 // What a screen reader meets while the 3D body loads, as the loading board names it.
 const loadingFrontLabel = "Body map, Actual, heat, front. 3D is loading.";
@@ -168,11 +170,10 @@ describe("the body map card in 3D", () => {
       expect(screen.getByRole("img", { name: frontLabel })).toBeOnTheScreen();
     });
 
-    it("should say to drag and to pinch, and say no more than the gestures that exist", async () => {
+    it("should say to drag, to pinch and to long-press a muscle, as the board does", async () => {
       await renderCard();
 
-      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
-      expect(screen.queryByText(/long-press/i)).not.toBeOnTheScreen();
+      expect(screen.getByText(rotateHint)).toBeOnTheScreen();
     });
 
     it("should keep the view label and its sub-line, as in 2D", async () => {
@@ -539,6 +540,28 @@ describe("the body map card in 3D", () => {
     });
   });
 
+  describe("a long press on a muscle", () => {
+    it.each(["actual", "projected"] as const)(
+      "should call onLongPressMuscle with the muscle and the %s view that is shown",
+      async (view) => {
+        const onLongPressMuscle = jest.fn();
+        await renderCard({ view, onLongPressMuscle });
+
+        await callBody3D((props) => {
+          props.onLongPressMuscle?.("lats");
+        });
+
+        expect(onLongPressMuscle.mock.calls).toEqual([["lats", view]]);
+      },
+    );
+
+    it("should give the 3D body no long press when the card has no handler", async () => {
+      await renderCard();
+
+      expect(lastBody3DProps().onLongPressMuscle).toBeUndefined();
+    });
+  });
+
   describe("when the 3D body cannot be drawn", () => {
     it("should keep the layout, with the 2D figure of the same side in it", async () => {
       await renderCard();
@@ -550,7 +573,7 @@ describe("the body map card in 3D", () => {
 
       expect(screen.getAllByRole("img")).toHaveLength(1);
       expect(screen.getByRole("img", { name: backLabel })).toBeOnTheScreen();
-      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
+      expect(screen.getByText(rotateHint)).toBeOnTheScreen();
       expect(backButton()).toBeChecked();
     });
 
@@ -573,13 +596,13 @@ describe("the body map card in 3D", () => {
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("2d");
       });
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
 
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("3d");
       });
 
-      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
+      expect(screen.getByText(rotateHint)).toBeOnTheScreen();
       expect(screen.queryByText(BODY_MAP.loading3d)).not.toBeOnTheScreen();
       expect(screen.getByRole("img", { name: frontLabel })).toBeOnTheScreen();
     });
@@ -593,7 +616,7 @@ describe("the body map card in 3D", () => {
 
       await renderCard();
 
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
     });
@@ -603,7 +626,7 @@ describe("the body map card in 3D", () => {
     it("should draw the female figure in the 2D layout", async () => {
       await renderCard({ body: "female" });
 
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
       expect(mockBody3D).not.toHaveBeenCalled();
@@ -614,7 +637,7 @@ describe("the body map card in 3D", () => {
 
       await renderCard();
 
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
       expect(mockBody3D).not.toHaveBeenCalled();
     });
@@ -629,20 +652,20 @@ describe("the body map card in 3D", () => {
         toggleLabel: null,
       });
 
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
       expect(mockBody3D).not.toHaveBeenCalled();
     });
 
     it("should return to the 2D layout when the setting is changed back to 2D, with no reload", async () => {
       await renderCard();
-      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
+      expect(screen.getByText(rotateHint)).toBeOnTheScreen();
 
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("2d");
       });
 
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
       expect(screen.getAllByRole("img")).toHaveLength(2);
     });
@@ -650,13 +673,13 @@ describe("the body map card in 3D", () => {
     it("should change to the 3D layout when the setting is changed to 3D, with no reload", async () => {
       mockStorageItems.set("bodyMap.renderer", "2d");
       await renderCard();
-      expect(screen.queryByText("Drag to turn · Pinch to zoom")).not.toBeOnTheScreen();
+      expect(screen.queryByText(rotateHint)).not.toBeOnTheScreen();
 
       await act(() => {
         currentBodyMapRendererStore.store.setRenderer("3d");
       });
 
-      expect(screen.getByText("Drag to turn · Pinch to zoom")).toBeOnTheScreen();
+      expect(screen.getByText(rotateHint)).toBeOnTheScreen();
     });
   });
 });
@@ -711,6 +734,39 @@ describe("BodyView in 3D", () => {
       onSideChange,
       onTap,
     });
+  });
+
+  it("should forward the long press on a muscle to the 3D body, and make no muscle of the 2D figure under it a button", async () => {
+    const onLongPressMuscle = jest.fn();
+    await render(
+      inTheme(
+        <BodyView
+          label="Body map"
+          scale="heat"
+          side="front"
+          values={{}}
+          w={108}
+          onLongPressMuscle={onLongPressMuscle}
+        />,
+      ),
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(lastBody3DProps().onLongPressMuscle).toBe(onLongPressMuscle);
+    expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+  });
+
+  it("should hand the 3D body no long press when it is given none", async () => {
+    await render(
+      inTheme(<BodyView label="Body map" scale="heat" side="front" values={{}} w={108} />),
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(lastBody3DProps().onLongPressMuscle).toBeUndefined();
   });
 
   it("should hand the 3D body the defaults of the 2D figure when it is given none", async () => {

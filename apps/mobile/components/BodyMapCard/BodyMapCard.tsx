@@ -143,6 +143,7 @@ export function BodyMapCard({
               figureWidth={figureWidth}
               hasMuscleList={hasMuscleList}
               in3d={{ side: side3d, onSideChange: setSide3d }}
+              onLongPressMuscle={onLongPressMuscle}
               onTap={isToggleEnabled ? onToggle : undefined}
               projectedValues={projectedValues}
               scale={scale}

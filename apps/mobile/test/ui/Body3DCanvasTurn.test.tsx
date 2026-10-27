@@ -6,7 +6,7 @@ import { Body3DCanvas } from "../../components/ui/Body3D/Body3DCanvas";
 import { looksOf } from "../../components/ui/Body3D/looks";
 import { FRAME_ASPECT, wholeBodyView } from "../support/zoomView";
 
-import type { Body3DCanvasProps } from "../../components/ui/Body3D/types";
+import type { Body3DCanvasProps, MusclePicker } from "../../components/ui/Body3D/types";
 
 // The looks come from `BodyFigure`'s reading, and its folder reads the saved body choice.
 jest.mock("@react-native-async-storage/async-storage", () => ({
@@ -55,6 +55,8 @@ jest.mock("react-native-worklets", () => ({
   },
 }));
 
+const mockPickMuscle = jest.fn<string | null, unknown[]>();
+
 // A body whose box is not centred on the origin, so a turn about the origin would swing it.
 const CENTRE = { x: 0.2, z: 0.5 };
 const mockBodyGroup = {
@@ -85,6 +87,7 @@ jest.mock("@keylow/body-3d", () => ({
     dispose: jest.fn(),
   }),
   frameBody: () => [0, 0, 5],
+  pickMuscle: (...pick: unknown[]) => mockPickMuscle(...pick),
   pointsPerMetre: () => 100,
 }));
 jest.mock("@keylow/body-model/male.glb", () => 1, { virtual: true });
@@ -114,6 +117,33 @@ async function drawBody(yaw = makeMutable(0), view = wholeBodyView()) {
     />,
   );
   return yaw;
+}
+
+const newPickerReceiver = () => jest.fn<undefined, [MusclePicker | null]>();
+
+// The picker the canvas handed over, which a test calls as the gesture would.
+function pickerHandedTo(receiver: ReturnType<typeof newPickerReceiver>): MusclePicker {
+  const handed = receiver.mock.calls[0]?.[0];
+  if (handed === null || handed === undefined) {
+    throw new Error("The canvas handed over no picker.");
+  }
+  return handed;
+}
+
+async function drawPickableBody(onPickerChange: Body3DCanvasProps["onPickerChange"]) {
+  return render(
+    <Body3DCanvas
+      colours={colours}
+      emphasis={emphasis}
+      fadeMilliseconds={220}
+      looks={looksOf("heat", {}, bodyMapPalette("dark"))}
+      scheme="dark"
+      view={wholeBodyView()}
+      yaw={makeMutable(0)}
+      frameAspect={FRAME_ASPECT}
+      onPickerChange={onPickerChange}
+    />,
+  );
 }
 
 function runFrame() {
@@ -261,5 +291,63 @@ describe("Body3DCanvas zooming", () => {
     await drawBody();
 
     expect(mockReactions).toHaveLength(2);
+  });
+});
+
+describe("Body3DCanvas picking", () => {
+  beforeEach(() => {
+    mockPickMuscle.mockReset();
+    mockFrame.run = undefined;
+  });
+
+  it("should hand over a picker once the body is in the scene", async () => {
+    const onPickerChange = newPickerReceiver();
+
+    await drawPickableBody(onPickerChange);
+
+    expect(onPickerChange).toHaveBeenCalledTimes(1);
+    expect(onPickerChange).toHaveBeenCalledWith(expect.any(Function));
+  });
+
+  it("should pick with the camera and the body that draw, over the canvas it has, and return the answer", async () => {
+    const onPickerChange = newPickerReceiver();
+    mockPickMuscle.mockReturnValue("calves");
+    await drawPickableBody(onPickerChange);
+    const pick = pickerHandedTo(onPickerChange);
+
+    const picked = pick({ x: 40, y: 150 });
+
+    expect(mockPickMuscle).toHaveBeenCalledTimes(1);
+    expect(mockPickMuscle).toHaveBeenCalledWith(
+      { x: 40, y: 150 },
+      { width: 300, height: 220 },
+      mockCamera,
+      mockBodyGroup,
+    );
+    expect(picked).toBe("calves");
+  });
+
+  it("should pick nothing when the pick finds nothing", async () => {
+    const onPickerChange = newPickerReceiver();
+    mockPickMuscle.mockReturnValue(null);
+    await drawPickableBody(onPickerChange);
+    const pick = pickerHandedTo(onPickerChange);
+
+    expect(pick({ x: 1, y: 1 })).toBeNull();
+  });
+
+  it("should take the picker back when the body goes", async () => {
+    const onPickerChange = newPickerReceiver();
+    const { unmount } = await drawPickableBody(onPickerChange);
+
+    await unmount();
+
+    expect(onPickerChange).toHaveBeenLastCalledWith(null);
+  });
+
+  it("should not pick on its own: only when the picker is called", async () => {
+    await drawPickableBody(newPickerReceiver());
+
+    expect(mockPickMuscle).not.toHaveBeenCalled();
   });
 });

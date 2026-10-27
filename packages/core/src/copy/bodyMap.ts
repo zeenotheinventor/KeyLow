@@ -108,8 +108,8 @@ export const BODY_MAP = {
   sideSwitch: { name: "Side shown", front: "Front", back: "Back" },
   /** What the Front / Back control does to the 3D body, for a screen reader, since a drag alone must not be the only way. */
   sideSwitchDescription: "Turns the body to face front or back.",
-  /** The hint under the 3D body. The long-press gesture adds to it: the board ends "Long-press a muscle for details". */
-  rotateHint: "Drag to turn · Pinch to zoom",
+  /** The hint under the 3D body: the board's whole line, one phrase for each gesture. */
+  rotateHint: "Drag to turn · Pinch to zoom · Long-press a muscle for details",
   /** The Reset button over the zoomed 3D body, which shows while it is zoomed. The name is for a screen reader, since the visible label is one word. */
   zoom: { reset: "Reset", resetName: "Reset zoom" },
   /** Over the 2D figure while the 3D body loads, at the corner of the stage. It goes when the 3D body has drawn or has failed. */

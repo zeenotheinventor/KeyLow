@@ -8,7 +8,9 @@ export type BodyViewPhase = "loading" | "drawn" | "failed";
 /**
  * `BodyView` takes the props of `BodyFigure` and swaps one for the other. The 3D body reads the same value
  * props (`scale`, `values`, `selected`, `dim`, `unselectedOpacity`), the `label` and the width, and the
- * three that only it has: the 2D figure draws no turn and no tap of its own and leaves them out.
+ * three that only it has: the 2D figure draws no turn and no tap of its own and leaves them out. A long press on a
+ * muscle is `onLongPressMuscle`, which the 2D figure makes with a button for each muscle and the 3D body makes by
+ * picking the muscle under the finger, through the skin.
  */
 export type BodyViewProps = BodyFigureProps & {
   /** Called when a drag of the 3D body settles on the side that is not `side`, so the control that shows the side keeps in step. */
