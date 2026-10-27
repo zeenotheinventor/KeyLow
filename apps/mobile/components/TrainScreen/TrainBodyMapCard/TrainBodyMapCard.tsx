@@ -39,11 +39,11 @@ export function TrainBodyMapCard({
   return (
     <Card padding={0}>
       <View className="gap-2 px-3 pb-2 pt-3">
-        <View className="flex-row flex-wrap items-center justify-between gap-x-2 gap-y-1">
-          <View className="min-w-[120px] shrink">
+        <View className="flex-row items-center justify-between gap-2">
+          <View className="min-w-0 flex-1">
             <ViewLabel isProjected={view === "projected"} label={viewLabel} subLine={subLine} />
           </View>
-          <View className="ml-auto shrink-0 flex-row items-center gap-1">
+          <View className="shrink-0 flex-row items-center gap-1">
             <Button
               disabled={!isToggleEnabled}
               icon="ArrowRightLeft"
