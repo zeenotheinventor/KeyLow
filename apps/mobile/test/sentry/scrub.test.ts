@@ -32,6 +32,22 @@ describe("scrubEvent", () => {
     expect(scrubbed).not.toContain(FOOD_NAME);
   });
 
+  it("should keep the fixed message of the keyboard lift report, which no value is in", () => {
+    const scrubbed = scrub({ message: "Keyboard lift out of range" });
+
+    expect(scrubbed.message).toBe("Keyboard lift out of range");
+  });
+
+  it("should still drop a message that is not the fixed one, even with the tags of the report", () => {
+    const scrubbed = scrub({
+      message: `Keyboard lift out of range for ${FOOD_NAME}`,
+      tags: { screenY: "0" },
+    });
+
+    expect(scrubbed).not.toHaveProperty("message");
+    expect(scrubbed.tags).toEqual({ screenY: "0" });
+  });
+
   it("should keep the error type and the stack so the failure can still be found", () => {
     const scrubbed = scrub(repositoryErrorEvent());
 
@@ -194,6 +210,37 @@ describe("scrubBreadcrumb", () => {
     });
 
     expect(scrubbed?.data).toEqual({ from: "/foods/search", to: "/diary" });
+  });
+
+  it("should keep the app state breadcrumb's state and drop any other key and its message", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "app.state",
+      message: FOOD_NAME,
+      data: { state: "active", event: "show", height: 300, screenY: 560, value: WEIGHT },
+    });
+
+    expect(scrubbed).toEqual({ category: "app.state", data: { state: "active" } });
+  });
+
+  it("should keep the keyboard breadcrumb's event and edges and drop any other key", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "keyboard",
+      data: { event: "show", screenY: 560, height: 300, input: FOOD_NAME, state: "active" },
+    });
+
+    expect(scrubbed).toEqual({
+      category: "keyboard",
+      data: { event: "show", screenY: 560, height: 300 },
+    });
+  });
+
+  it("should not let the keys of the app state and keyboard breadcrumbs through on a request breadcrumb", () => {
+    const scrubbed = scrubBreadcrumb({
+      category: "fetch",
+      data: { url: "https://x.supabase.co/rest/v1/foods", state: WEIGHT, event: WEIGHT, height: 1 },
+    });
+
+    expect(scrubbed?.data).toEqual({ url: "https://x.supabase.co/rest/v1/foods" });
   });
 
   it("should drop the message of a breadcrumb it keeps", () => {

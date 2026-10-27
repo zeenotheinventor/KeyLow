@@ -9,9 +9,11 @@ export type ScrollOffsetEvent = { nativeEvent: { contentOffset: { y: number } } 
 
 type Measurable = Pick<HostInstance, "measureInWindow">;
 
-/** The two things the hook asks of the scroll view: where it is drawn, and a scroll to a place. */
+/** The three things the hook asks of the scroll view: where it is drawn, how tall its content is, and a scroll to a place. */
 type ScrollViewHandle = {
   getNativeScrollRef: () => Measurable | null;
+  // The scroll view has it at run time, but React Native's type for it does not declare it.
+  getInnerViewRef?: () => Measurable | null;
   scrollTo: ScrollView["scrollTo"];
 };
 
@@ -56,11 +58,30 @@ export function useScrollFocusedInputIntoView(
           (_scrollViewLeft, scrollViewTop, _scrollViewWidth, scrollViewHeight) => {
             const hiddenBelow =
               inputTop + inputHeight + ROOM_BELOW_FIELD - (scrollViewTop + scrollViewHeight);
-            if (hiddenBelow > 0) {
-              scrollViewRef.current?.scrollTo({
-                y: offsetY.current + hiddenBelow,
-                animated: false,
+            if (!(hiddenBelow > 0)) {
+              return;
+            }
+
+            // A field is never more than a screen's height below the bottom edge, and the scroll view never
+            // scrolls past the end of its content, so a measure that came back wrong cannot throw the content
+            // out of sight. The content is measured now, as it may have grown since the last scroll.
+            const scrollBy = (contentHeight: number) => {
+              const farthestOffset = Math.max(0, contentHeight - scrollViewHeight);
+              const y = Math.min(
+                offsetY.current + Math.min(hiddenBelow, scrollViewHeight),
+                farthestOffset,
+              );
+              if (y > offsetY.current) {
+                scrollViewRef.current?.scrollTo({ y, animated: false });
+              }
+            };
+            const content = scrollViewRef.current?.getInnerViewRef?.();
+            if (content) {
+              content.measureInWindow((_left, _top, _width, contentHeight) => {
+                scrollBy(contentHeight);
               });
+            } else {
+              scrollBy(Infinity);
             }
           },
         );

@@ -1,3 +1,5 @@
+import { KEYBOARD_LIFT_OUT_OF_RANGE_MESSAGE } from "./keyboardLiftMessage";
+
 import type { Breadcrumb, ErrorEvent } from "@sentry/react-native";
 
 /*
@@ -14,10 +16,41 @@ import type { Breadcrumb, ErrorEvent } from "@sentry/react-native";
  * search text of its query, and a context is whatever code put there, so none of those are listed.
  */
 
-// The only breadcrumbs sent: moving between screens, and the requests the app makes.
-const BREADCRUMB_CATEGORIES_SENT = new Set(["navigation", "xhr", "fetch", "http"]);
+// The only breadcrumbs sent: moving between screens, the requests the app makes, and the app coming
+// forward or going away and the keyboard coming and going (a trail for a screen that went blank). The
+// last two carry a state name or numbers of points, built by code of ours, never what a person typed.
+const BREADCRUMB_CATEGORIES_SENT = new Set([
+  "navigation",
+  "xhr",
+  "fetch",
+  "http",
+  "app.state",
+  "keyboard",
+]);
 
-const BREADCRUMB_DATA_KEYS_SENT = ["url", "method", "http.method", "status_code", "from", "to"];
+const REQUEST_AND_NAVIGATION_DATA_KEYS_SENT = [
+  "url",
+  "method",
+  "http.method",
+  "status_code",
+  "from",
+  "to",
+];
+
+// What each category may carry. The app state and keyboard breadcrumbs are built by code of ours, so their
+// keys are not let through on a request breadcrumb, nor the request keys on theirs.
+const BREADCRUMB_DATA_KEYS_SENT: Record<string, string[]> = {
+  navigation: REQUEST_AND_NAVIGATION_DATA_KEYS_SENT,
+  xhr: REQUEST_AND_NAVIGATION_DATA_KEYS_SENT,
+  fetch: REQUEST_AND_NAVIGATION_DATA_KEYS_SENT,
+  http: REQUEST_AND_NAVIGATION_DATA_KEYS_SENT,
+  "app.state": ["state"],
+  keyboard: ["event", "screenY", "height"],
+};
+
+// A message that is fixed text in our own code, so no value can be in it, and is the one thing that says
+// what a report is about. Any other message is worded from what happened and is not sent.
+const FIXED_MESSAGES_SENT = new Set([KEYBOARD_LIFT_OUT_OF_RANGE_MESSAGE]);
 
 const BREADCRUMB_URL_KEYS = ["url", "from", "to"];
 
@@ -51,7 +84,7 @@ export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   }
 
   const scrubbedData: Record<string, unknown> = {};
-  for (const key of BREADCRUMB_DATA_KEYS_SENT) {
+  for (const key of BREADCRUMB_DATA_KEYS_SENT[category] ?? []) {
     const value: unknown = data[key];
     if (value === undefined) {
       continue;
@@ -85,7 +118,9 @@ function scrubContexts(contexts: Contexts): Contexts {
 export function scrubEvent(event: ErrorEvent): ErrorEvent {
   const scrubbed = { ...event };
 
-  delete scrubbed.message;
+  if (event.message === undefined || !FIXED_MESSAGES_SENT.has(event.message)) {
+    delete scrubbed.message;
+  }
   delete scrubbed.logentry;
   // Where the SDK serialises a thrown non-Error, such as a PostgREST error with the row it refused.
   delete scrubbed.extra;
