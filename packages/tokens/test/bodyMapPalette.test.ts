@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { bodyMapPalette } from "../src";
 
 // The values are the Ki-Lo training canvas's (the v6 "tokens · body-map scales" board, KEY-736, for the volume scale,
-// and the v3 board, KEY-515, with the two light values the orchestrator darkened to hold 3:1, for the rest), written
-// out here and not read back from the code under test.
+// the v63 "session · exercise-muscles" boards, KEY-740, for the role colours, and the v3 board, KEY-515, with the two
+// light values the orchestrator darkened to hold 3:1, for the rest), written out here and not read back from the code under test.
 describe("bodyMapPalette", () => {
   it("should return the canvas's dark values", () => {
     expect(bodyMapPalette("dark")).toEqual({
@@ -29,6 +29,7 @@ describe("bodyMapPalette", () => {
         ahead: "#FF9F43",
         notInPlan: "#303746",
       },
+      role: { primary: "#CCF249", secondary: "#8FA83A", assist: "#66783A" },
     });
   });
 
@@ -55,6 +56,7 @@ describe("bodyMapPalette", () => {
         ahead: "#B35C00",
         notInPlan: "#D7DBE2",
       },
+      role: { primary: "#4D7300", secondary: "#76A01A", assist: "#B9D67A" },
     });
   });
 

@@ -7,6 +7,9 @@
    volume (KEY-726 bands, KEY-736 colours, the v6 board, option B "cool to warm", 2026-10-27): five bands, grey not
    trained, then blue maintaining, green growing, yellow productive and red high. Every coloured band keeps 3:1.
    gap: diverging around the plan; blue behind, neutral on plan, amber ahead.
+   role (KEY-740, the v63 "session · exercise-muscles" boards, approved 2026-10-27): colours a muscle by its role in an
+   exercise on the "Muscles it works" sheet; muscles not in the exercise keep heat-0. Dark role-primary has the value of
+   --accent but is its own token, not an alias. Primary and secondary keep 3:1 on surface-sheet, assist is faint on purpose.
    3D body (KEY-589): skin, core, clay (the head) and other-muscle are the 3D body's materials. The dark values are those of
    the approved renders in tools/body-model/blender/zanatomy_render.py (the heat render's skin, core and clay, and the
    silhouette it draws the muscles with that have no id). The light values keep the same roles on the light surface.
@@ -36,6 +39,9 @@
 --gap-behind:#5B95FF;
 --gap-on-plan:#596274;
 --gap-ahead:#FF9F43;
+--role-primary:#CCF249;
+--role-secondary:#8FA83A;
+--role-assist:#66783A;
 }
 [data-theme="light"]{
 --body-silhouette:#E2E6EC;
@@ -59,4 +65,7 @@
 --gap-behind:#1F5BD6;
 --gap-on-plan:#B4BAC6;
 --gap-ahead:#B35C00;
+--role-primary:#4D7300;
+--role-secondary:#76A01A;
+--role-assist:#B9D67A;
 }

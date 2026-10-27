@@ -15,6 +15,8 @@ export type BodyMapPalette = {
     high: string;
   };
   gap: { behind: string; onPlan: string; ahead: string; notInPlan: string };
+  /** A muscle's role in an exercise, as the "Muscles it works" sheet draws it. */
+  role: { primary: string; secondary: string; assist: string };
   silhouette: string;
   separator: string;
   /** The 3D body's see-through skin, the dark core under the muscles, the clay head and the muscles that have no id. */
@@ -53,6 +55,11 @@ export const bodyMapPalette = (scheme: ThemeScheme): BodyMapPalette => {
       onPlan: colors["gap-on-plan"],
       ahead: colors["gap-ahead"],
       notInPlan: colors["volume-not-trained"],
+    },
+    role: {
+      primary: colors["role-primary"],
+      secondary: colors["role-secondary"],
+      assist: colors["role-assist"],
     },
     silhouette: colors["body-silhouette"],
     separator: colors["body-separator"],
