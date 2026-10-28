@@ -152,12 +152,13 @@ describe("the add dialog's chips", () => {
       expect(amountField("medium")).toHaveProperty("value", "1");
     });
 
-    it("should offer a banana no ml, 1 tsp or 1 tbsp chip, not even a disabled one", () => {
+    it("should offer a banana no ml, 1 tsp, 1 tbsp or 1 cup chip, not even a disabled one", () => {
       openFood(banana);
 
       expect(screen.queryByRole("radio", { name: "ml" })).toBeNull();
       expect(screen.queryByRole("radio", { name: "1 tsp" })).toBeNull();
       expect(screen.queryByRole("radio", { name: "1 tbsp" })).toBeNull();
+      expect(screen.queryByRole("radio", { name: "1 cup" })).toBeNull();
     });
 
     it("should open a chicken thigh on 1 thigh", () => {
@@ -181,21 +182,21 @@ describe("the add dialog's chips", () => {
     it("should offer g, ml, 1 tsp and 1 tbsp, in that order, and open on g", () => {
       openFood(oliveOil);
 
-      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "g", checked: true })).toBeTruthy();
     });
 
     it("should put the natural portion first, then g, then ml, 1 tsp and 1 tbsp", () => {
       openFood(yoghurt);
 
-      expect(chipNames()).toEqual(["1 pot", "g", "ml", "1 tsp", "1 tbsp"]);
+      expect(chipNames()).toEqual(["1 pot", "g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "1 pot", checked: true })).toBeTruthy();
     });
 
     it("should show a food's own 1 tbsp portion once, with no generated tablespoon beside it", () => {
       openFood(syrup);
 
-      expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
       expect(
         screen.getByRole("group", { name: "Energy and macros, For 1 tbsp (21 g)" }),
@@ -238,6 +239,18 @@ describe("the add dialog's chips", () => {
       ).toBeTruthy();
     });
 
+    it("should write two cups as 480 ml and call the amount cups", () => {
+      openFood(oliveOil);
+
+      fireEvent.click(screen.getByRole("radio", { name: "1 cup" }));
+      typeAmount("cup", "2");
+
+      expect(amountField("cups")).toHaveProperty("value", "2");
+      expect(
+        screen.getByRole("group", { name: "Energy and macros, For 2 cups (480 ml, 442 g)" }),
+      ).toBeTruthy();
+    });
+
     it("should say the millilitres and then the weight for a volume, and log it in ml", async () => {
       openFood(milk);
 
@@ -261,7 +274,7 @@ describe("the add dialog's chips", () => {
     it("should offer a branded food spoons from its own serving, and log them at the label's weight", async () => {
       openFood(ketchup);
 
-      expect(chipNames()).toEqual(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
+      expect(chipNames()).toEqual(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
       typeAmount("tbsp", "2");
 

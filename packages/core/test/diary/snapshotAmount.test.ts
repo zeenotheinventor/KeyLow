@@ -176,6 +176,7 @@ describe("entryPickerChoices", () => {
         { value: "ml", label: "ml" },
         { value: "spoon-tsp", label: "1 tsp" },
         { value: "spoon-tbsp", label: "1 tbsp" },
+        { value: "spoon-cup", label: "1 cup" },
       ]);
       expect(countBy(choices, "value", "spoon-tbsp")).toBe(1);
       expect(countBy(choices, "label", "1 tbsp")).toBe(1);
@@ -210,6 +211,7 @@ describe("entryPickerChoices", () => {
         "ml",
         "spoon-tsp",
         "spoon-tbsp",
+        "spoon-cup",
       ]);
       expect(snapshotAmountStart(teaspoonEntry).unitValue).toBe("spoon-tsp");
     });
@@ -228,6 +230,7 @@ describe("entryPickerChoices", () => {
         "ml",
         "1 tsp",
         "1 tbsp",
+        "1 cup",
       ]);
       expect(snapshotAmountStart(drinkEntry).unitValue).toBe("spoon-tbsp");
     });
@@ -251,6 +254,7 @@ describe("entryPickerChoices", () => {
         { value: "g", label: "g" },
         { value: "ml", label: "ml" },
         { value: "spoon-tsp", label: "1 tsp" },
+        { value: "spoon-cup", label: "1 cup" },
       ]);
       expect(snapshotAmountStart(entry).unitValue).toBe(SNAPSHOT_PORTION_ID);
     });
@@ -282,6 +286,7 @@ describe("entryPickerChoices", () => {
         "ml",
         "1 tsp",
         "1 tbsp",
+        "1 cup",
       ]);
     });
 
@@ -306,6 +311,7 @@ describe("entryPickerChoices", () => {
         "ml",
         "1 tsp",
         "1 tbsp",
+        "1 cup",
       ]);
     });
   });
@@ -318,6 +324,7 @@ describe("entryPickerChoices", () => {
       "ml",
       "1 tsp",
       "1 tbsp",
+      "1 cup",
     ]);
   });
 });

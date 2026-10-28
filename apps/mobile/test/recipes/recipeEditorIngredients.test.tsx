@@ -339,12 +339,12 @@ describe("the recipe editor's ingredient rows", () => {
       expect(screen.getByRole("button", { name: "Remove from recipe" })).toBeEnabled();
     });
 
-    it("should open the oil on 1 tbsp with g, ml, 1 tsp and 1 tbsp", async () => {
+    it("should open the oil on 1 tbsp with g, ml, 1 tsp, 1 tbsp and 1 cup", async () => {
       const user = await showEditor();
 
       await user.press(rowOf("Oil, olive", "1 tbsp (15 ml)"));
 
-      expectChips(["g", "ml", "1 tsp", "1 tbsp"]);
+      expectChips(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
       expect(within(hero("For 1 tbsp (15 ml, 14 g)")).getByText("124")).toBeOnTheScreen();
     });

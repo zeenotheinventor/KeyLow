@@ -52,10 +52,12 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
   describe.each(SPOON_PORTIONS.map((spoon) => ({ spoon })))(
     "with the $spoon.label spoon",
     ({ spoon }) => {
-      const other = SPOON_PORTIONS.find((candidate) => candidate.id !== spoon.id);
+      const others = SPOON_PORTIONS.filter((candidate) => candidate.id !== spoon.id);
+      const [other] = others;
       if (other === undefined) {
-        throw new Error("There must be two spoons");
+        throw new Error("There must be more than one spoon");
       }
+      const withoutOther = SPOON_PORTIONS.filter((candidate) => candidate.id !== other.id);
       const stored = buildFoodPortion({
         id: "portion-stored-spoon",
         label: spoon.label,
@@ -87,7 +89,12 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
       it("should keep the stored portion and drop the generated spoon for an entry in grams", () => {
         const choices = expectConsistent(inGrams, { portions: [stored], loggedPortionId: null });
 
-        expect(labelsOf(choices)).toEqual([spoon.label, "g", "ml", other.label]);
+        expect(labelsOf(choices)).toEqual([
+          spoon.label,
+          "g",
+          "ml",
+          ...others.map((candidate) => candidate.label),
+        ]);
         expect(choices.options[0]?.value).toBe("portion-stored-spoon");
       });
 
@@ -102,13 +109,19 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
           "portion-stored-spoon",
           "g",
           "ml",
-          other.id,
+          ...others.map((candidate) => candidate.id),
         ]);
       });
 
       it("should offer the generated spoon when the food stores no such portion", () => {
         for (const live of [undefined, { portions: [], loggedPortionId: null }]) {
-          expect(labelsOf(expectConsistent(inGrams, live))).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+          expect(labelsOf(expectConsistent(inGrams, live))).toEqual([
+            "g",
+            "ml",
+            "1 tsp",
+            "1 tbsp",
+            "1 cup",
+          ]);
         }
       });
 
@@ -124,7 +137,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
           loggedPortionId: null,
         });
 
-        expect(labelsOf(choices)).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+        expect(labelsOf(choices)).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
         expect(snapshotAmountStart(inSpoon)).toEqual({ quantity: "2", unitValue: spoon.id });
       });
 
@@ -158,13 +171,19 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
           loggedPortionId: storedInMillilitres.id,
         });
 
-        expect(labelsOf(choices)).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+        expect(labelsOf(choices)).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
         expect(snapshotAmountStart(entry).unitValue).toBe(spoon.id);
       });
 
       it("should leave a spoon entry as it is when the food stores nothing", () => {
         for (const live of [undefined, { portions: [], loggedPortionId: null }]) {
-          expect(labelsOf(expectConsistent(inSpoon, live))).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+          expect(labelsOf(expectConsistent(inSpoon, live))).toEqual([
+            "g",
+            "ml",
+            "1 tsp",
+            "1 tbsp",
+            "1 cup",
+          ]);
         }
       });
 
@@ -178,7 +197,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
           "portion-stored-other",
           "g",
           "ml",
-          spoon.id,
+          ...withoutOther.map((candidate) => candidate.id),
         ]);
       });
 
@@ -208,7 +227,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
             "portion-medium",
             "g",
             "ml",
-            other.id,
+            ...others.map((candidate) => candidate.id),
           ]);
           expect(snapshotAmountStart(entry).unitValue).toBe(SNAPSHOT_PORTION_ID);
         });
@@ -234,7 +253,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
             SNAPSHOT_PORTION_ID,
             "g",
             "ml",
-            other.id,
+            ...others.map((candidate) => candidate.id),
           ]);
         });
 
@@ -246,7 +265,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
             "portion-medium",
             "g",
             "ml",
-            other.id,
+            ...others.map((candidate) => candidate.id),
           ]);
         });
 
@@ -257,7 +276,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
             SNAPSHOT_PORTION_ID,
             "g",
             "ml",
-            other.id,
+            ...others.map((candidate) => candidate.id),
           ]);
         });
       });
@@ -284,7 +303,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
             SNAPSHOT_PORTION_ID,
             "g",
             "ml",
-            other.id,
+            ...others.map((candidate) => candidate.id),
           ]);
           expect(snapshotAmountStart(entry).unitValue).toBe(SNAPSHOT_PORTION_ID);
         });
@@ -296,7 +315,7 @@ describe.each(foods)("entryPickerChoices for $name", ({ food }) => {
             SNAPSHOT_PORTION_ID,
             "g",
             "ml",
-            other.id,
+            ...others.map((candidate) => candidate.id),
           ]);
         });
       });
@@ -319,6 +338,29 @@ describe("entryPickerChoices with a food that stores one spoon twice", () => {
       "g",
       "ml",
       "spoon-tsp",
+      "spoon-cup",
     ]);
+  });
+});
+
+describe("entryPickerChoices for an entry logged in cups", () => {
+  it("should open on the cup chip, selected, with an amount of 2", () => {
+    const cup = SPOON_PORTIONS.find((spoon) => spoon.id === "spoon-cup");
+    if (cup === undefined) {
+      throw new Error("The spoon portions must include a cup");
+    }
+    const food = buildFood({ density_g_per_ml: 0.92 });
+    const entry = buildLogEntry({
+      food,
+      quantity: 2,
+      unit: "portion",
+      portion: cup,
+      ...when,
+    }).snapshot;
+
+    const choices = entryPickerChoices(entry);
+
+    expect(snapshotAmountStart(entry)).toEqual({ quantity: "2", unitValue: "spoon-cup" });
+    expect(choices.options).toContainEqual({ value: "spoon-cup", label: "1 cup" });
   });
 });

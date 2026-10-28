@@ -48,6 +48,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
 
 const TODAY = "2026-10-15";
 const tablespoon = { id: "spoon-tbsp", label: "1 tbsp", grams: null, ml: 15 };
+const cup = { id: "spoon-cup", label: "1 cup", grams: null, ml: 240 };
 
 /** A stored oil entry: what the database layer builds for the amount, with the columns the database adds. */
 function oilEntry(
@@ -105,9 +106,20 @@ describe("the edit dialog's chips", () => {
     it("should show the spoon chip once, selected, in the add dialog's order", () => {
       renderDialog(twoTablespoons());
 
-      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
+    });
+
+    it("should open an entry logged in 2 cups on the cup chip, selected, with the count and its volume", () => {
+      renderDialog(oilEntry({ quantity: 2, unit: "portion", portion: cup }));
+
+      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
+      expect(screen.getByRole("radio", { name: "1 cup", checked: true })).toBeTruthy();
+      expect(amountField("cups")).toHaveProperty("value", "2");
+      expect(
+        screen.getByRole("group", { name: "Energy and macros, For 2 cups (480 ml, 442 g)" }),
+      ).toBeTruthy();
     });
 
     it("should show the count and the spoon's volume and weight from the entry's own snapshot", () => {
@@ -157,7 +169,7 @@ describe("the edit dialog's chips", () => {
     it("should offer the spoons and save a change to one with the spoon as its portion", async () => {
       const entry = oilEntry({ quantity: 20, unit: "g" });
       renderDialog(entry);
-      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+      expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
 
       fireEvent.click(screen.getByRole("radio", { name: "1 tsp" }));
       fireEvent.change(amountField("tsp"), { target: { value: "4" } });
@@ -264,7 +276,7 @@ describe("the edit dialog's chips for a food that stores a 1 tbsp portion", () =
   it("should show one 1 tbsp chip, selected, with the count, for an entry logged in tablespoons", () => {
     renderDialog(oilEntry({ quantity: 2, unit: "portion", portion: tablespoon }));
 
-    expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+    expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
     expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
     expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
     expect(amountField("tbsp")).toHaveProperty("value", "2");
@@ -273,7 +285,7 @@ describe("the edit dialog's chips for a food that stores a 1 tbsp portion", () =
   it("should show one 1 tbsp chip, the stored one, for an entry logged in grams", () => {
     renderDialog(oilEntry({ quantity: 20, unit: "g" }));
 
-    expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+    expect(chipNames()).toEqual(["1 tbsp", "g", "ml", "1 tsp", "1 cup"]);
     expect(screen.getAllByRole("radio", { name: "1 tbsp" })).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));

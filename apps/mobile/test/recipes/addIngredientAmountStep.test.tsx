@@ -195,12 +195,12 @@ describe("the amount step of a food being added to a recipe", () => {
       expect(screen.queryByRole("button", { name: "Remove from recipe" })).not.toBeOnTheScreen();
     });
 
-    it("should offer g, ml, 1 tsp and 1 tbsp, with g first, for an oil that has no portions", async () => {
+    it("should offer g, ml, 1 tsp, 1 tbsp and 1 cup, with g first, for an oil that has no portions", async () => {
       await showStep(oil.id);
 
       const chips = screen.getAllByRole("radio");
-      expect(chips).toHaveLength(4);
-      ["g", "ml", "1 tsp", "1 tbsp"].forEach((name, index) => {
+      expect(chips).toHaveLength(5);
+      ["g", "ml", "1 tsp", "1 tbsp", "1 cup"].forEach((name, index) => {
         expect(chips[index]).toHaveAccessibleName(name);
       });
     });

@@ -952,10 +952,10 @@ describe("the entry screen", () => {
       await findOilEntry();
 
       const chips = screen.getAllByRole("radio");
-      ["g", "ml", "1 tsp", "1 tbsp"].forEach((name, index) => {
+      ["g", "ml", "1 tsp", "1 tbsp", "1 cup"].forEach((name, index) => {
         expect(chips[index]).toHaveAccessibleName(name);
       });
-      expect(chips).toHaveLength(4);
+      expect(chips).toHaveLength(5);
       const spoonChips = screen.getAllByRole("radio", { name: "1 tbsp" });
       expect(spoonChips).toHaveLength(1);
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
@@ -1148,7 +1148,7 @@ describe("the entry screen", () => {
       await screen.findByRole("heading", { name: "Oil, olive" });
 
       const chips = screen.getAllByRole("radio");
-      ["g", "ml", "1 tsp", "1 tbsp"].forEach((name, index) => {
+      ["g", "ml", "1 tsp", "1 tbsp", "1 cup"].forEach((name, index) => {
         expect(chips[index]).toHaveAccessibleName(name);
       });
       expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();

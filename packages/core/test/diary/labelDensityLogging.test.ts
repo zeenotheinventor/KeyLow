@@ -48,7 +48,7 @@ const cachedSauce = (servingSize: string, servingQuantity: number) => {
 const ketchup = cachedSauce("1 tbsp (15 g)", 15);
 
 describe("a branded food whose serving is in spoons", () => {
-  it("should offer ml, tsp and tbsp, where it offered none without the serving", () => {
+  it("should offer ml, tsp, tbsp and cup, where it offered none without the serving", () => {
     const withServing = pickerChoices(ketchup.food, ketchup.portions);
     const withoutServing = pickerChoices(ketchup.food, []);
 
@@ -58,6 +58,7 @@ describe("a branded food whose serving is in spoons", () => {
       "ml",
       "1 tsp",
       "1 tbsp",
+      "1 cup",
     ]);
     expect(withoutServing.options.map(({ label }) => label)).toEqual(["g"]);
   });

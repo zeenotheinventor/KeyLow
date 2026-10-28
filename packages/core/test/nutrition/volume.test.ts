@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { estimateDensity } from "../../src/nutrition/density";
+import { ML_PER_CUP } from "../../src/nutrition/units";
 import {
   ML_PER_TBSP,
   ML_PER_TSP,
@@ -28,15 +29,17 @@ beforeEach(() => {
 });
 
 describe("spoon constants", () => {
-  it("should be 5 ml to a teaspoon and 15 ml to a tablespoon", () => {
+  it("should be 5 ml to a teaspoon, 15 ml to a tablespoon and 240 ml to a cup", () => {
     expect(ML_PER_TSP).toBe(5);
     expect(ML_PER_TBSP).toBe(15);
+    expect(ML_PER_CUP).toBe(240);
   });
 
   it("should make the spoon portions out of those constants, in millilitres", () => {
     expect(SPOON_PORTIONS).toEqual([
       { id: "spoon-tsp", label: "1 tsp", grams: null, ml: ML_PER_TSP },
       { id: "spoon-tbsp", label: "1 tbsp", grams: null, ml: ML_PER_TBSP },
+      { id: "spoon-cup", label: "1 cup", grams: null, ml: ML_PER_CUP },
     ]);
   });
 });
@@ -94,6 +97,7 @@ describe("spoonPortionOf", () => {
   it.each([
     [{ label: "1 tsp", ml: 5 }, "spoon-tsp"],
     [{ label: "1 tbsp", ml: 15 }, "spoon-tbsp"],
+    [{ label: "1 cup", ml: 240 }, "spoon-cup"],
   ])("should find the spoon for %j", (portion, id) => {
     expect(spoonPortionOf(portion)?.id).toBe(id);
   });
@@ -103,6 +107,7 @@ describe("spoonPortionOf", () => {
     ["a portion with no millilitres given", { label: "1 tbsp" }],
     ["a spoon's label with another size", { label: "1 tbsp", ml: 12 }],
     ["a spoon's size with another label", { label: "1 glass", ml: 15 }],
+    ["a cup of the metric 250 ml", { label: "1 cup", ml: 250 }],
   ])("should find no spoon for %s", (_name, portion) => {
     expect(spoonPortionOf(portion)).toBeUndefined();
   });

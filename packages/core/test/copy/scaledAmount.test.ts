@@ -136,6 +136,19 @@ describe("describeScaledAmount counts", () => {
     expect(scaledTo(asPortions(1, 15, tablespoon), 1, 4)).toBe("0.25 tbsp (3.8 ml)");
   });
 
+  it.each([
+    [4, "1 cup (240 ml)"],
+    [8, "2 cups (480 ml)"],
+    [2, "0.5 cups (120 ml)"],
+  ])(
+    "should write a cup for %s servings out of 4 with a plural for any count but 1",
+    (chosenServings, text) => {
+      const cup = { label: "1 cup", ml: 240 };
+
+      expect(scaledTo(asPortions(1, 150, cup), chosenServings, 4)).toBe(text);
+    },
+  );
+
   it("should write a teaspoon count with its volume", () => {
     const [teaspoon] = SPOON_PORTIONS;
     expect(scaledTo(asPortions(3, 15, teaspoon ?? tablespoon), 2, 4)).toBe("1.5 tsp (7.5 ml)");

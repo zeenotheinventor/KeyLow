@@ -150,10 +150,14 @@ export const describePortionNoun = (label: string): string | undefined => {
 
 /**
  * What follows the amount field's value for a count of one portion: its noun when its name gives one,
- * else "portion" or "portions" for the count.
+ * else "portion" or "portions" for the count. The noun "cup" is the one that takes a plural, "cups" for any
+ * count but exactly 1; "tsp" and "tbsp" never change, and no other noun does.
  */
-export const describePortionUnit = (label: string, quantity: number): string =>
-  describePortionNoun(label) ?? describePortionCount(quantity);
+export const describePortionUnit = (label: string, quantity: number): string => {
+  const noun = describePortionNoun(label);
+
+  return noun === "cup" && quantity !== 1 ? "cups" : (noun ?? describePortionCount(quantity));
+};
 
 /**
  * The line on the portion picker of a food opened from Recent: "Last logged 50 g, yesterday". `daysAgo` is

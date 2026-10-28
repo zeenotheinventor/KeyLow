@@ -998,10 +998,10 @@ describe("the portion picker's unit chips", () => {
       showFood(oil);
     });
 
-    it("should list g, ml, 1 tsp and 1 tbsp, in that order, and open on g", async () => {
+    it("should list g, ml, 1 tsp, 1 tbsp and 1 cup, in that order, and open on g", async () => {
       await renderPicker();
 
-      expectChips(["g", "ml", "1 tsp", "1 tbsp"]);
+      expectChips(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "g", checked: true })).toBeOnTheScreen();
       expect(amountField()).toHaveDisplayValue("100");
     });
@@ -1035,6 +1035,32 @@ describe("the portion picker's unit chips", () => {
       expect(entry.nutrients.kcal).toBeCloseTo(248.124, 3);
     });
 
+    it("should work 2 cups out in the hero as 480 ml with the grams it will log", async () => {
+      const user = await renderPicker();
+
+      await user.press(screen.getByRole("radio", { name: "1 cup" }));
+      expect(hero("For 1 cup (240 ml, 221 g)")).toBeOnTheScreen();
+      await typeAmount(user, "2");
+
+      expect(screen.getByLabelText("Amount (cups)")).toBeOnTheScreen();
+      expect(hero("For 2 cups (480 ml, 442 g)")).toBeOnTheScreen();
+    });
+
+    it("should log 2 cups as a portion of 240 ml with no portion row", async () => {
+      const user = await renderPicker();
+      await user.press(screen.getByRole("radio", { name: "1 cup" }));
+      await typeAmount(user, "2");
+
+      await user.press(addButton());
+
+      expect(loggedEntry()).toMatchObject({
+        quantity: 2,
+        unit: "portion",
+        portion_id: null,
+        snapshot: { portion: { label: "1 cup", ml: 240 }, density: 0.92 },
+      });
+    });
+
     it("should log a teaspoon as a portion of 5 ml, and one teaspoon because the chip sets the amount to 1", async () => {
       const user = await renderPicker();
       await user.press(screen.getByRole("radio", { name: "1 tsp" }));
@@ -1064,7 +1090,7 @@ describe("the portion picker's unit chips", () => {
         ],
       });
       const user = await renderPicker();
-      expectChips(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
+      expectChips(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
 
       await user.press(screen.getByRole("radio", { name: "1 tbsp" }));
       await typeAmount(user, "2");
@@ -1087,7 +1113,7 @@ describe("the portion picker's unit chips", () => {
       });
       await renderPicker({ day: "2026-10-15" });
 
-      expectChips(["1 tbsp", "g", "ml", "1 tsp"]);
+      expectChips(["1 tbsp", "g", "ml", "1 tsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
     });
   });
@@ -1161,11 +1187,11 @@ describe("the portion picker's unit chips", () => {
   });
 
   describe("a food measured per 100 ml", () => {
-    it("should show ml, 1 tsp and 1 tbsp after g", async () => {
+    it("should show ml, 1 tsp, 1 tbsp and 1 cup after g", async () => {
       showFood(wine);
       await renderPicker();
 
-      expectChips(["g", "ml", "1 tsp", "1 tbsp"]);
+      expectChips(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
     });
   });
 
@@ -1182,6 +1208,7 @@ describe("the portion picker's unit chips", () => {
       expect(screen.queryByRole("radio", { name: "ml" })).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio", { name: "1 tsp" })).not.toBeOnTheScreen();
       expect(screen.queryByRole("radio", { name: "1 tbsp" })).not.toBeOnTheScreen();
+      expect(screen.queryByRole("radio", { name: "1 cup" })).not.toBeOnTheScreen();
     });
 
     it("should keep every chip of a food with many portions in the one row that scrolls sideways", async () => {
@@ -1218,7 +1245,7 @@ describe("the portion picker's unit chips", () => {
       Object.assign(portionsQuery, { data: [cofidPortion("1 bottle", 500, 0, true)] });
       await renderPicker();
 
-      expectChips(["1 bottle", "g", "ml", "1 tsp", "1 tbsp"]);
+      expectChips(["1 bottle", "g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "1 bottle", checked: true })).toBeOnTheScreen();
     });
   });
