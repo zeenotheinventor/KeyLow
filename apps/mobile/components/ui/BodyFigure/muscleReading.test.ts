@@ -1,4 +1,4 @@
-import { GAP_VALUES, VOLUME_STATUSES } from "@keylow/core/training";
+import { GAP_VALUES, ROLE_FIGURE_VALUES, VOLUME_STATUSES } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 
 import { readMuscle } from "./muscleReading";
@@ -127,6 +127,50 @@ describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
 
     it("should draw a value the scale does not have as not in plan", () => {
       expect(readMuscle("gap", 4, palette).fill).toBe(palette.gap.notInPlan);
+    });
+  });
+
+  describe("on the role scale", () => {
+    const fillOfRole = {
+      primary: palette.role.primary,
+      secondary: palette.role.secondary,
+      stabiliser: palette.role.assist,
+    };
+
+    it.each(["primary", "secondary", "stabiliser"] as const)(
+      "should fill %s with its role colour",
+      (role) => {
+        expect(readMuscle("role", ROLE_FIGURE_VALUES[role], palette).fill).toBe(fillOfRole[role]);
+      },
+    );
+
+    it("should name each role", () => {
+      expect([3, 2, 1].map((value) => readMuscle("role", value, palette).valueName)).toEqual([
+        "Primary",
+        "Secondary",
+        "Assisting",
+      ]);
+    });
+
+    it("should draw a muscle with no value at rest", () => {
+      expect(readMuscle("role", undefined, palette)).toMatchObject({
+        fill: palette.heat[0],
+        valueName: "Not worked",
+      });
+    });
+
+    it.each([0, 4, -1, 1.5, Number.NaN])(
+      "should draw the value %s, which the scale does not have, at rest",
+      (value) => {
+        expect(readMuscle("role", value, palette)).toMatchObject({
+          fill: palette.heat[0],
+          valueName: "Not worked",
+        });
+      },
+    );
+
+    it("should never glow, not even for primary", () => {
+      expect(readMuscle("role", ROLE_FIGURE_VALUES.primary, palette).isPeak).toBe(false);
     });
   });
 });

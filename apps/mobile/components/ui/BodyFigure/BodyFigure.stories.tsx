@@ -1,7 +1,7 @@
 import { View } from "react-native";
 
 import { BodyFigure } from "./BodyFigure";
-import { heatSteps, inTurn } from "./storyValues";
+import { heatSteps, inTurn, legPressRoles } from "./storyValues";
 
 import type { Meta, StoryObj } from "@storybook/react-native";
 
@@ -34,6 +34,18 @@ export const Volume: Story = { args: { scale: "volume", values: inTurn(5) } };
 
 // Behind, on plan, ahead and not in plan.
 export const Gap: Story = { args: { scale: "gap", values: inTurn(4) } };
+
+// The Leg Press by role, front and back: quads primary, glutes and hamstrings secondary, calves assisting.
+// The rest are at rest.
+export const Role: Story = {
+  args: { scale: "role", values: legPressRoles },
+  render: (args) => (
+    <View className="flex-row items-center gap-4">
+      <BodyFigure {...args} side="front" label="Leg Press muscles, front" />
+      <BodyFigure {...args} side="back" label="Leg Press muscles, back" />
+    </View>
+  ),
+};
 
 // The selected muscle is outlined in the primary text colour, as the muscle sheet's board has it.
 export const Selected: Story = { args: { selected: "chest_upper" } };

@@ -4,6 +4,7 @@ export const storyStates = [
   "Heat",
   "Volume",
   "Gap",
+  "Role",
   "Selected",
   "Dimmed",
   "Glow",

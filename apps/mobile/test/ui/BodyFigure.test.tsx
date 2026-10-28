@@ -5,6 +5,7 @@ import {
   GAP_VALUES,
   isMuscleId,
   MUSCLE_IDS,
+  ROLE_FIGURE_VALUES,
   VOLUME_STATUSES,
 } from "@keylow/core/training";
 import { bodyMapPalette, themes } from "@keylow/tokens";
@@ -371,6 +372,17 @@ describe("BodyFigure", () => {
 
       expect(screen.getByRole("button", { name: "Quads, High" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Abs, Not trained" })).toBeOnTheScreen();
+    });
+
+    it("should name a muscle by its role on the role scale", async () => {
+      await renderFigure({
+        scale: "role",
+        values: { quads: ROLE_FIGURE_VALUES.primary },
+        onPressMuscle: jest.fn(),
+      });
+
+      expect(screen.getByRole("button", { name: "Quads, Primary" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Abs, Not worked" })).toBeOnTheScreen();
     });
 
     it("should name a muscle with no value as at rest", async () => {
