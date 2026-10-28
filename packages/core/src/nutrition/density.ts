@@ -633,6 +633,90 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     "cup",
     202,
   ),
+  // Canned, fresh and prepared beans, sprouts, soya products and houmous, from the SR Legacy "cup" rows. A canned food
+  // takes the whole can contents or the drained row as CoFID says, and a fresh one its raw or boiled row.
+  // Beans, chick peas, canned, re-heated, drained
+  "13-670": usdaPortionDensity(
+    "FDC 173801 (Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained, rinsed in tap water)",
+    "cup",
+    152,
+    " drained, rinsed",
+    "; SR Legacy's plain drained solids row (FDC 173800) has only a can of 253 g and no cup, so this is the rinsed row, whose can weighs 254 g",
+  ),
+  // Baked beans, canned in tomato sauce
+  "13-532": usdaPortionDensity(
+    "FDC 175182 (Beans, baked, canned, plain or vegetarian)",
+    "cup",
+    254,
+    "",
+    "; the whole can contents with the sauce, and FDC 168128 (Beans, baked, canned, no salt added) weighs 253 g",
+  ),
+  // Baked beans, canned in tomato sauce, reduced sugar, reduced salt
+  "13-535": usdaPortionDensity(
+    "FDC 168128 (Beans, baked, canned, no salt added)",
+    "cup",
+    253,
+    "",
+    "; SR Legacy has no reduced sugar row, so this whole can contents row stands in because CoFID estimates the food from 13-532",
+  ),
+  // Beans, green, boiled in unsalted water
+  "13-515": usdaPortionDensity(
+    "FDC 169141 (Beans, snap, green, cooked, boiled, drained, without salt)",
+    "cup",
+    125,
+    "",
+    "; the row names no cut, as CoFID names none",
+  ),
+  // Beans, broad, whole, raw
+  "13-064": usdaPortionDensity(
+    "FDC 170377 (Broadbeans, immature seeds, raw)",
+    "cup",
+    109,
+    "",
+    "; shelled fresh beans, as CoFID's are without pods",
+  ),
+  // Beans, edamame, frozen, boiled in unsalted water
+  "13-667": usdaPortionDensity(
+    "FDC 168411 (Edamame, frozen, prepared)",
+    "cup",
+    155,
+    "",
+    "; its row is for shelled beans cooked as the pack says, and CoFID discards the pods",
+  ),
+  // Beansprouts, mung, raw
+  "13-426": usdaPortionDensity("FDC 169957 (Mung beans, mature seeds, sprouted, raw)", "cup", 104),
+  // Beansprouts, mung, boiled in unsalted water
+  "13-580": usdaPortionDensity(
+    "FDC 169137 (Mung beans, mature seeds, sprouted, cooked, boiled, drained, without salt)",
+    "cup",
+    124,
+  ),
+  // Beansprouts, mung, stir-fried in rapeseed oil
+  "13-567": usdaPortionDensity(
+    "FDC 169138 (Mung beans, mature seeds, sprouted, cooked, stir-fried)",
+    "cup",
+    124,
+    "",
+    "; the SR Legacy description names no oil, and CoFID stir-fries in rapeseed oil",
+  ),
+  // Tofu, soya bean, steamed
+  "13-570": usdaPortionDensity(
+    "FDC 172476 (Tofu, raw, regular, prepared with calcium sulfate)",
+    "cup",
+    248,
+    "",
+    "; its row is for half a cup, 124 g, and SR Legacy calls plain tofu raw, with water, protein and fat close to CoFID's steamed tofu",
+  ),
+  // Tempeh
+  "13-118": usdaPortionDensity("FDC 174272 (Tempeh)", "cup", 166),
+  // Houmous
+  "13-556": usdaPortionDensity(
+    "FDC 174289 (Hummus, commercial)",
+    "cup",
+    246,
+    "",
+    "; its 1 tbsp row of 15 g gives 1.01, and FDC 172454 (Hummus, home prepared) also weighs 246 g",
+  ),
   // Allspice, ground
   "13-801": usdaPortionDensity("FDC 171315 (Spices, allspice, ground)", "tbsp", 6.0),
   // Anise seeds
