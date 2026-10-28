@@ -45,6 +45,7 @@ export function BottomSheet({
   title,
   isTitleCentred = false,
   isDismissible = true,
+  isContentDraggable = true,
   label,
   snapPoints,
   children,
@@ -146,6 +147,7 @@ export function BottomSheet({
         animationConfigs={open ? enterAnimation : exitAnimation}
         backdropComponent={SheetBackdrop}
         backgroundComponent={SheetBackground}
+        enableContentPanningGesture={isContentDraggable}
         enableDynamicSizing={!isFixedHeight}
         enablePanDownToClose={isDismissible}
         handleComponent={SheetHandle}

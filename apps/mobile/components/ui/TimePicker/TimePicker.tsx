@@ -67,7 +67,8 @@ function Wheels({ value, latest, onChange, onClose }: WheelsProps) {
  */
 export function TimePicker({ open, value, latest, onChange, onClose }: TimePickerProps) {
   return (
-    <BottomSheet open={open} title="Time" onClose={onClose}>
+    // The wheels own their vertical drags, so the sheet must not take them.
+    <BottomSheet isContentDraggable={false} open={open} title="Time" onClose={onClose}>
       <Wheels latest={latest} value={value} onChange={onChange} onClose={onClose} />
     </BottomSheet>
   );
