@@ -506,6 +506,21 @@ describe("describeLoggedAmount and describeEntryCaption", () => {
       },
     );
 
+    it.each([
+      [1, 240, "1 cup (240 ml)"],
+      [2, 480, "2 cups (480 ml)"],
+      [0.5, 120, "0.5 cups (120 ml)"],
+    ])("should write %s of the cup with a plural for any count but 1", (quantity, ml, text) => {
+      expect(
+        describeLoggedAmount({
+          unit: "portion",
+          quantity,
+          resolvedGrams: ml,
+          portion: { label: "1 cup", ml: 240 },
+        }),
+      ).toBe(text);
+    });
+
     it("should write a teaspoon the same way", () => {
       expect(
         describeLoggedAmount({

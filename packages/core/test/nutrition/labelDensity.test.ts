@@ -33,6 +33,15 @@ describe("parseServingLabel", () => {
     expect(parseServingLabel(label)).toEqual(expected);
   });
 
+  it("should read a cup with no millilitres as the metric cup of 250 ml, not the picker's 240 ml chip", () => {
+    expect(parseServingLabel("1 cup (30 g)")).toEqual({ volumeMl: 250, grams: 30 });
+    expect(densityFromPortions([{ label: "1 cup (30 g)", grams: 30, ml: null }])).toBe(30 / 250);
+  });
+
+  it("should still accept a label that gives a cup as 250 ml", () => {
+    expect(parseServingLabel("1 cup (250 ml)")).toEqual({ volumeMl: 250, grams: null });
+  });
+
   it("should prefer the stated millilitres to a household unit that sits beside them", () => {
     expect(parseServingLabel("1 cup (240 ml) 250 g")).toEqual({ volumeMl: 240, grams: 250 });
   });

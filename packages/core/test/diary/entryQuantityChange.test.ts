@@ -32,6 +32,42 @@ describe("entryQuantityChange", () => {
     });
   });
 
+  it("should write a cup by its label and size, with no link, as it writes a spoon", () => {
+    const cup = SPOON_PORTIONS.find((spoon) => spoon.id === "spoon-cup");
+    if (cup === undefined) {
+      throw new Error("The spoon portions must hold a cup");
+    }
+
+    expect(entryQuantityChange({ unit: "portion", quantity: 2, portion: cup })).toEqual({
+      quantity: 2,
+      unit: "portion",
+      portion: { label: "1 cup", ml: 240 },
+    });
+  });
+
+  it("should treat a stored 1 cup row of 240 ml as the generated cup, with no link, as it does a stored 15 ml 1 tbsp", () => {
+    const storedCup = buildFoodPortion({ id: "portion-cup", label: "1 cup", grams: null, ml: 240 });
+    const storedTablespoon = buildFoodPortion({
+      id: "portion-tbsp",
+      label: "1 tbsp",
+      grams: null,
+      ml: 15,
+    });
+
+    expect(entryQuantityChange({ unit: "portion", quantity: 1, portion: storedCup })).toEqual({
+      quantity: 1,
+      unit: "portion",
+      portion: { label: "1 cup", ml: 240 },
+    });
+    expect(
+      entryQuantityChange({ unit: "portion", quantity: 1, portion: storedTablespoon }),
+    ).toEqual({
+      quantity: 1,
+      unit: "portion",
+      portion: { label: "1 tbsp", ml: 15 },
+    });
+  });
+
   it("should write another portion of the food with its id, label and grams", () => {
     const large = buildFoodPortion({ id: "portion-large", label: "1 large", grams: 140 });
 
@@ -44,13 +80,13 @@ describe("entryQuantityChange", () => {
   });
 
   it("should write a millilitre portion of the food with its millilitres", () => {
-    const cup = buildFoodPortion({ id: "portion-cup", label: "1 cup", grams: null, ml: 240 });
+    const glass = buildFoodPortion({ id: "portion-glass", label: "1 glass", grams: null, ml: 200 });
 
-    expect(entryQuantityChange({ unit: "portion", quantity: 1, portion: cup })).toEqual({
+    expect(entryQuantityChange({ unit: "portion", quantity: 1, portion: glass })).toEqual({
       quantity: 1,
       unit: "portion",
-      portion: { label: "1 cup", ml: 240 },
-      portionId: "portion-cup",
+      portion: { label: "1 glass", ml: 200 },
+      portionId: "portion-glass",
     });
   });
 

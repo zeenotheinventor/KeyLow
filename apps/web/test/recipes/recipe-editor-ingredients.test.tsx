@@ -277,7 +277,7 @@ describe("adding an ingredient", () => {
 
     fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
 
-    expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+    expect(chipNames()).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
     expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeTruthy();
     expect(amountField().value).toBe("1");
     expect(inDialog().getByText("For 1 tbsp (15 ml, 14 g)")).toBeTruthy();
@@ -355,7 +355,7 @@ describe("adding an ingredient", () => {
     fireEvent.click(addIngredientButton());
     search("ketchup");
     chooseResult(/Tomato ketchup/);
-    expect(chipNames()).toEqual(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp"]);
+    expect(chipNames()).toEqual(["1 tbsp (15 g)", "g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
     fireEvent.click(screen.getByRole("radio", { name: "1 tbsp" }));
     typeAmount("2");
     fireEvent.click(inDialog().getByRole("button", { name: "Add to recipe" }));

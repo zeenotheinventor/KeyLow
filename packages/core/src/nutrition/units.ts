@@ -7,6 +7,8 @@ export const ML_PER_FLUID_OUNCE = 29.5735;
 /** The app's spoons are the metric ones, not the larger US customary measures. */
 export const ML_PER_TSP = 5;
 export const ML_PER_TBSP = 15;
+/** The US cup used on US nutrition labels. The app's spoons stay metric (5 and 15 ml), the cup does not. */
+export const ML_PER_CUP = 240;
 
 /** The units a quantity can be logged in. Recipe servings are resolved elsewhere. */
 export const quantityUnitSchema = z.enum(["g", "ml", "oz", "fl_oz", "portion"]);

@@ -7,9 +7,9 @@ import { startingAmount } from "../../src/diary/startingAmount";
 import { SPOON_PORTIONS } from "../../src/nutrition/volume";
 import { buildFood, buildFoodPortion } from "../../src/testing";
 
-const [teaspoon, tablespoon] = SPOON_PORTIONS;
-if (teaspoon === undefined || tablespoon === undefined) {
-  throw new Error("The spoon portions must be a teaspoon and a tablespoon");
+const [teaspoon, tablespoon, cup] = SPOON_PORTIONS;
+if (teaspoon === undefined || tablespoon === undefined || cup === undefined) {
+  throw new Error("The spoon portions must be a teaspoon, a tablespoon and a cup");
 }
 
 const labelsOf = (choices: ReturnType<typeof pickerChoices>) =>
@@ -48,7 +48,7 @@ const drink = buildFood({ basis: "per_100ml", density_g_per_ml: null });
 
 describe("pickerChoices", () => {
   describe("which chips a food gets", () => {
-    it("should give a volume food with one natural portion that portion, g, ml, 1 tsp and 1 tbsp", () => {
+    it("should give a volume food with one natural portion that portion, g, ml, 1 tsp, 1 tbsp and 1 cup", () => {
       const choices = pickerChoices(oil, [slice]);
 
       expect(choices.options).toEqual([
@@ -57,7 +57,24 @@ describe("pickerChoices", () => {
         { value: "ml", label: "ml" },
         { value: "spoon-tsp", label: "1 tsp" },
         { value: "spoon-tbsp", label: "1 tbsp" },
+        { value: "spoon-cup", label: "1 cup" },
       ]);
+    });
+
+    it("should end the labels of a food measured by volume with ml, 1 tsp, 1 tbsp and 1 cup", () => {
+      expect(labelsOf(pickerChoices(oil, [])).slice(-4)).toEqual([
+        "ml",
+        "1 tsp",
+        "1 tbsp",
+        "1 cup",
+      ]);
+    });
+
+    it("should give a food not measured by volume no cup", () => {
+      expect(labelsOf(pickerChoices(banana, bananaPortions))).not.toContain("1 cup");
+      expect(
+        pickerChoices(banana, bananaPortions).portions.map((portion) => portion.id),
+      ).not.toContain("spoon-cup");
     });
 
     it("should give a banana its three sizes then g, and no ml or spoon, not even a disabled one", () => {
@@ -68,17 +85,29 @@ describe("pickerChoices", () => {
     });
 
     it("should give a per 100 ml food g, ml and the spoons without a density", () => {
-      expect(labelsOf(pickerChoices(drink, []))).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+      expect(labelsOf(pickerChoices(drink, []))).toEqual(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
     });
 
     it("should give a food with a density of its own the spoons", () => {
-      expect(valuesOf(pickerChoices(oil, []))).toEqual(["g", "ml", "spoon-tsp", "spoon-tbsp"]);
+      expect(valuesOf(pickerChoices(oil, []))).toEqual([
+        "g",
+        "ml",
+        "spoon-tsp",
+        "spoon-tbsp",
+        "spoon-cup",
+      ]);
     });
 
     it("should give a food with a density estimate from its group the spoons", () => {
       const cofidOil = buildFood({ source: "cofid", source_ref: null, food_group: "OC" });
 
-      expect(labelsOf(pickerChoices(cofidOil, []))).toEqual(["g", "ml", "1 tsp", "1 tbsp"]);
+      expect(labelsOf(pickerChoices(cofidOil, []))).toEqual([
+        "g",
+        "ml",
+        "1 tsp",
+        "1 tbsp",
+        "1 cup",
+      ]);
     });
 
     it("should keep a food's millilitre portion before g and add the volume chips after it", () => {
@@ -88,6 +117,7 @@ describe("pickerChoices", () => {
         "ml",
         "1 tsp",
         "1 tbsp",
+        "1 cup",
       ]);
     });
 
@@ -114,10 +144,11 @@ describe("pickerChoices", () => {
     it("should give one 1 tbsp chip and one entry in the list, and still the teaspoon", () => {
       const choices = pickerChoices(oil, [storedTablespoon]);
 
-      expect(labelsOf(choices)).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(labelsOf(choices)).toEqual(["1 tbsp", "g", "ml", "1 tsp", "1 cup"]);
       expect(choices.portions.map((portion) => portion.id)).toEqual([
         "portion-stored-tbsp",
         "spoon-tsp",
+        "spoon-cup",
       ]);
     });
 
@@ -136,13 +167,26 @@ describe("pickerChoices", () => {
         "g",
         "ml",
         "spoon-tsp",
+        "spoon-cup",
+      ]);
+    });
+
+    it("should give a stored 1 Cup one chip, its own, and no generated cup", () => {
+      const storedCup = buildFoodPortion({ id: "portion-stored-cup", label: "1 Cup", grams: 130 });
+      const choices = pickerChoices(oil, [storedCup]);
+
+      expect(labelsOf(choices)).toEqual(["1 Cup", "g", "ml", "1 tsp", "1 tbsp"]);
+      expect(choices.portions.map((portion) => portion.id)).toEqual([
+        "portion-stored-cup",
+        "spoon-tsp",
+        "spoon-tbsp",
       ]);
     });
 
     it("should give one 1 tsp chip and still the tablespoon", () => {
       const choices = pickerChoices(oil, [storedTeaspoon]);
 
-      expect(labelsOf(choices)).toEqual(["1 tsp", "g", "ml", "1 tbsp"]);
+      expect(labelsOf(choices)).toEqual(["1 tsp", "g", "ml", "1 tbsp", "1 cup"]);
       expect(valuesOf(choices)).toContain("spoon-tbsp");
       expect(valuesOf(choices)).not.toContain("spoon-tsp");
     });
@@ -150,17 +194,18 @@ describe("pickerChoices", () => {
     it("should do the same for a food measured per 100 ml", () => {
       const choices = pickerChoices(drink, [storedTablespoon]);
 
-      expect(labelsOf(choices)).toEqual(["1 tbsp", "g", "ml", "1 tsp"]);
+      expect(labelsOf(choices)).toEqual(["1 tbsp", "g", "ml", "1 tsp", "1 cup"]);
       expect(choices.portions.map((portion) => portion.id)).toEqual([
         "portion-stored-tbsp",
         "spoon-tsp",
+        "spoon-cup",
       ]);
     });
 
     it("should drop both spoons when the food stores both", () => {
       const choices = pickerChoices(oil, [storedTablespoon, storedTeaspoon]);
 
-      expect(labelsOf(choices)).toEqual(["1 tbsp", "1 tsp", "g", "ml"]);
+      expect(labelsOf(choices)).toEqual(["1 tbsp", "1 tsp", "g", "ml", "1 cup"]);
     });
 
     it("should keep both chips when the label only starts like the spoon's", () => {
@@ -176,6 +221,7 @@ describe("pickerChoices", () => {
         "ml",
         "1 tsp",
         "1 tbsp",
+        "1 cup",
       ]);
     });
   });
@@ -203,7 +249,16 @@ describe("pickerChoices", () => {
         "portion-slice",
         "spoon-tsp",
         "spoon-tbsp",
+        "spoon-cup",
       ]);
+    });
+
+    it("should carry the same ids in portions and in options, the cup included", () => {
+      const choices = pickerChoices(oil, [slice]);
+
+      expect(choices.portions.map((portion) => portion.id)).toEqual(
+        valuesOf(choices).filter((value) => value !== "g" && value !== "ml"),
+      );
     });
 
     it("should be only the food's portions when the food cannot be measured by volume", () => {
@@ -233,6 +288,18 @@ describe("pickerChoices", () => {
         quantity: "1",
         unitValue: "banana-medium",
       });
+    });
+
+    it("should open on the cup it is given, with its count, and that chip is in the list", () => {
+      const choices = pickerChoices(oil, [slice]);
+      const start = startingAmount(oil, choices.portions, {
+        unit: "portion",
+        quantity: 2,
+        portion: cup,
+      });
+
+      expect(start).toEqual({ quantity: "2", unitValue: "spoon-cup" });
+      expect(valuesOf(choices)).toContain(start.unitValue);
     });
 
     it("should open a food with no natural portion on g at 100, even when it has volume chips", () => {

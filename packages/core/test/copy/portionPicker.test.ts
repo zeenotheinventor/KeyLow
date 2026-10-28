@@ -124,6 +124,27 @@ describe("describeVolumeBasis", () => {
     ).toBe("For 1 tsp (5 ml, 5 g)");
   });
 
+  it("should write a cup count with a plural for any count but 1", () => {
+    expect(
+      describeVolumeBasis({
+        unit: "spoon",
+        quantity: 2,
+        spoonLabel: "1 cup",
+        volumeMl: 480,
+        weightInGrams: 292.8,
+      }),
+    ).toBe("For 2 cups (480 ml, 293 g)");
+    expect(
+      describeVolumeBasis({
+        unit: "spoon",
+        quantity: 1,
+        spoonLabel: "1 cup",
+        volumeMl: 240,
+        weightInGrams: null,
+      }),
+    ).toBe("For 1 cup (240 ml)");
+  });
+
   it("should write a spoon count with the millilitres alone when there is no weight", () => {
     expect(
       describeVolumeBasis({
@@ -229,6 +250,19 @@ describe("describePortionUnit", () => {
   it("should give the spoon noun after the amount field of a spoon", () => {
     expect(describePortionUnit("1 tbsp", 2)).toBe("tbsp");
     expect(describePortionUnit("1 tsp", 1)).toBe("tsp");
+  });
+
+  it("should give cup as cups for any count but exactly 1", () => {
+    expect(describePortionUnit("1 cup", 1)).toBe("cup");
+    expect(describePortionUnit("1 cup", 2)).toBe("cups");
+    expect(describePortionUnit("1 cup", 0.5)).toBe("cups");
+    expect(describePortionUnit("1 cup", 0)).toBe("cups");
+  });
+
+  it("should leave tsp, tbsp and every other noun as they are", () => {
+    expect(describePortionUnit("1 tsp", 3)).toBe("tsp");
+    expect(describePortionUnit("1 tbsp", 0.5)).toBe("tbsp");
+    expect(describePortionUnit("1 cupcake", 2)).toBe("cupcake");
   });
 
   it("should be the noun when the label gives one, whatever the count", () => {

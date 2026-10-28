@@ -8,9 +8,9 @@ import { estimateDensity } from "../../src/nutrition/density";
 import { SPOON_PORTIONS } from "../../src/nutrition/volume";
 import { buildFood, buildFoodPortion } from "../../src/testing";
 
-const [teaspoon, tablespoon] = SPOON_PORTIONS;
-if (teaspoon === undefined || tablespoon === undefined) {
-  throw new Error("The spoon portions must be a teaspoon and a tablespoon");
+const [teaspoon, tablespoon, cup] = SPOON_PORTIONS;
+if (teaspoon === undefined || tablespoon === undefined || cup === undefined) {
+  throw new Error("The spoon portions must be a teaspoon, a tablespoon and a cup");
 }
 
 const when = {
@@ -56,6 +56,37 @@ describe("logging a spoon", () => {
       expect(entry.nutrients.fat_g).toBeCloseTo(grams, 10);
     },
   );
+
+  it("should log 1 cup of a food at 0.61 g/ml as 240 ml and 146.4 g", () => {
+    const flour = buildFood({ density_g_per_ml: 0.61 });
+
+    const entry = buildLogEntry({
+      food: flour,
+      quantity: 1,
+      unit: "portion",
+      portion: cup,
+      ...when,
+    });
+
+    expect(entry.resolved_grams).toBeCloseTo(146.4, 10);
+    expect(entry.snapshot.portion).toStrictEqual({ label: "1 cup", ml: 240 });
+    expect(entry.portion_id).toBeNull();
+  });
+
+  it("should log 1 cup of a per 100 ml drink as 240 ml", () => {
+    const drink = buildFood({ basis: "per_100ml", density_g_per_ml: null, kcal: 40 });
+
+    const entry = buildLogEntry({
+      food: drink,
+      quantity: 1,
+      unit: "portion",
+      portion: cup,
+      ...when,
+    });
+
+    expect(entry.nutrients.kcal).toBeCloseTo(96, 10);
+    expect(entry.snapshot.portion).toStrictEqual({ label: "1 cup", ml: 240 });
+  });
 
   it("should scale 2 tbsp to 0.276 times the per 100 g values", () => {
     const entry = buildLogEntry({

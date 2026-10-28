@@ -193,11 +193,11 @@ describe("the amount step of an ingredient", () => {
       expectChips(["1 small", "1 medium", "1 large", "g"]);
     });
 
-    it("should be g, ml, 1 tsp and 1 tbsp for a food with no portions that is measured by volume", async () => {
+    it("should be g, ml, 1 tsp, 1 tbsp and 1 cup for a food with no portions that is measured by volume", async () => {
       mockFoodWithPortions.mockReturnValue({ status: "ready", food: oil, portions: [] });
       await showStep(oneTablespoonOfOil);
 
-      expectChips(["g", "ml", "1 tsp", "1 tbsp"]);
+      expectChips(["g", "ml", "1 tsp", "1 tbsp", "1 cup"]);
       expect(screen.getByRole("radio", { name: "1 tbsp", checked: true })).toBeOnTheScreen();
       expect(within(hero("For 1 tbsp (15 ml, 14 g)")).getByText("124")).toBeOnTheScreen();
     });

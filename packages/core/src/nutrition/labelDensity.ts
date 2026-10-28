@@ -16,14 +16,16 @@ export const LABEL_DENSITY_RANGE = { min: 0.05, max: 2.5 } as const;
 export type ServingLabelMeasure = { volumeMl: number; grams: number | null };
 
 // The app's metric spoons (5 and 15 ml), a US fluid ounce (29.5735 ml) and the metric cup of 250 ml. A US cup
-// is 240 ml, so a label that gives a cup in millilitres is read by those, see `parseServingLabel`.
-const ML_PER_CUP = 250;
+// is 240 ml, so a label that gives a cup in millilitres is read by those, see `parseServingLabel`. This cup is
+// not the picker's "1 cup" chip (`ML_PER_CUP` in `units`): a label that states a cup with no millilitres is
+// still read as the metric cup, so the densities already frozen into entries do not change.
+const ML_PER_METRIC_CUP = 250;
 
 const VOLUME_UNITS: readonly { pattern: string; ml: number; isMetric: boolean }[] = [
   { pattern: "tsp|tsps|teaspoons?", ml: ML_PER_TSP, isMetric: false },
   { pattern: "tbsp|tbsps|tbs|tablespoons?", ml: ML_PER_TBSP, isMetric: false },
   { pattern: "fl\\.?\\s*oz", ml: ML_PER_FLUID_OUNCE, isMetric: false },
-  { pattern: "cups?", ml: ML_PER_CUP, isMetric: false },
+  { pattern: "cups?", ml: ML_PER_METRIC_CUP, isMetric: false },
   { pattern: "ml|millilit(?:re|er)s?", ml: 1, isMetric: true },
   { pattern: "cl|centilit(?:re|er)s?", ml: 10, isMetric: true },
   { pattern: "l|lit(?:re|er)s?", ml: 1000, isMetric: true },
