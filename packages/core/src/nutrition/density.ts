@@ -343,6 +343,101 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     "",
     "; its 1 tbsp row of 5.4 g gives 0.365",
   ),
+  // Peas and sweetcorn, from the SR Legacy "cup" rows. USDA's "cup" of peas and kernels is of whole peas and loose kernels.
+  // Peas, mange-tout, raw
+  "13-122": usdaPortionDensity(
+    "FDC 170010 (Peas, edible-podded, raw)",
+    "cup",
+    63,
+    ", whole",
+    "; its 'cup, chopped' row is 98 g",
+  ),
+  // Peas, split, dried, raw
+  "13-141": usdaPortionDensity("FDC 172428 (Peas, green, split, mature seeds, raw)", "cup", 196),
+  // Peas, split, dried, boiled in unsalted water
+  "13-142": usdaPortionDensity(
+    "FDC 172429 (Peas, split, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    196,
+    "",
+    "; its 1 tbsp row of 12.2 g gives 0.825",
+  ),
+  // Peas, sugar-snap, raw
+  "13-143": usdaPortionDensity(
+    "FDC 170010 (Peas, edible-podded, raw)",
+    "cup",
+    63,
+    ", whole",
+    "; its 'cup, chopped' row is 98 g, and edible-podded peas cover sugar-snap as well as mange-tout",
+  ),
+  // Peas, raw
+  "13-438": usdaPortionDensity("FDC 170419 (Peas, green, raw)", "cup", 145),
+  // Peas, boiled in unsalted water
+  "13-439": usdaPortionDensity(
+    "FDC 170420 (Peas, green, cooked, boiled, drained, without salt)",
+    "cup",
+    160,
+  ),
+  // Sweetcorn, kernels, boiled "on the cob" in unsalted water
+  "13-508": usdaPortionDensity(
+    "FDC 169999 (Corn, sweet, yellow, cooked, boiled, drained, without salt)",
+    "cup",
+    149,
+    ", cut",
+    "; the row is worded 'cup cut', for kernels cut off the cob, and FDC 168539 (Corn, sweet, white, cooked, boiled, drained, without salt) weighs 157 g",
+  ),
+  // Peas, frozen, raw
+  "13-527": usdaPortionDensity(
+    "FDC 170016 (Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program))",
+    "cup",
+    134,
+  ),
+  // Sweetcorn kernels, canned in water, drained
+  "13-529": usdaPortionDensity(
+    "FDC 169214 (Corn, sweet, yellow, canned, whole kernel, drained solids)",
+    "cup",
+    164,
+    "",
+    "; FDC 168397 (drained solids, rinsed with tap water) weighs 150 g",
+  ),
+  // Peas, frozen, boiled in unsalted water
+  "13-536": usdaPortionDensity(
+    "FDC 170017 (Peas, green, frozen, cooked, boiled, drained, without salt)",
+    "cup",
+    160,
+    "",
+    "; its row is for half a cup, 80 g",
+  ),
+  // Peas, canned in water, re-heated, drained
+  "13-564": usdaPortionDensity(
+    "FDC 170104 (Peas, green, canned, no salt added, drained solids)",
+    "cup",
+    170,
+    ", drained",
+    "; its row is for half a cup, 85 g, and FDC 170013 (salted, drained solids) weighs 175 g",
+  ),
+  // Peas, sugar-snap, boiled in unsalted water
+  "13-594": usdaPortionDensity(
+    "FDC 170011 (Peas, edible-podded, boiled, drained, without salt)",
+    "cup",
+    160,
+    "",
+    "; edible-podded peas cover sugar-snap as well as mange-tout",
+  ),
+  // Sweetcorn, kernels, raw
+  "13-622": usdaPortionDensity(
+    "FDC 169998 (Corn, sweet, yellow, raw)",
+    "cup",
+    145,
+    "",
+    "; FDC 168538 (Corn, sweet, white, raw) weighs 154 g",
+  ),
+  // Peas, mange-tout, boiled in unsalted water
+  "13-641": usdaPortionDensity(
+    "FDC 170011 (Peas, edible-podded, boiled, drained, without salt)",
+    "cup",
+    160,
+  ),
   // Allspice, ground
   "13-801": usdaPortionDensity("FDC 171315 (Spices, allspice, ground)", "tbsp", 6.0),
   // Anise seeds
