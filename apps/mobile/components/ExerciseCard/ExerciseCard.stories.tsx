@@ -126,3 +126,17 @@ export const WithCheckButtonsAndAddSet: Story = {
     onAddSet: () => undefined,
   },
 };
+
+// The body icon button at the right of the header, and the name, that open the muscles the exercise works.
+export const WithMusclesButton: Story = {
+  args: { onShowMuscles: () => undefined },
+};
+
+// A long name beside the body icon button: the name column gives way and the button keeps its 44 points.
+export const LongNameWithMusclesButton: Story = {
+  args: {
+    name: "Single-arm cable crossover with a long pause",
+    target: "3 × 10 to 12 · RIR 1 · Cable",
+    onShowMuscles: () => undefined,
+  },
+};

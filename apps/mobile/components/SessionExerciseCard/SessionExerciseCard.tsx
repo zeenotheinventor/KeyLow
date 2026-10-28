@@ -59,7 +59,8 @@ function prefillOfValues({ loadKg, reps, rir, rpe }: SetValues): SetPrefill {
  * one more row, filled with the same again of the exercise's last set (its type, load, reps and effort), or
  * as the next row is when nothing is logged yet. The added rows are kept as the fewest rows the card must
  * show: logging any set raises the sets done and leaves the rows as many, and a row added while none is left
- * to log stays until a set is logged.
+ * to log stays until a set is logged. The body icon button in the header, and the name, ask the screen to
+ * show the muscles the exercise works.
  */
 export function SessionExerciseCard({
   sessionId,
@@ -73,6 +74,7 @@ export function SessionExerciseCard({
   logging,
   onEditSet,
   onEditSetType,
+  onShowMuscles,
 }: SessionExerciseCardProps) {
   const enabled = useReadsEnabled();
   const lastPerformance = useLastPerformance(exercise.exerciseId, {
@@ -218,6 +220,7 @@ export function SessionExerciseCard({
       onAddSet={() => {
         setMinimumRows(rows.length + addedCount + 1);
       }}
+      onShowMuscles={onShowMuscles}
     />
   );
 }
