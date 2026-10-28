@@ -100,6 +100,19 @@ export const FixedHeight: Story = {
   ),
 };
 
+// A sheet whose contents own their vertical drags, such as the time picker's wheels or a 3D body: a drag on
+// them does not move the sheet. Jest cannot play the drag, so the story shows the sheet and a device checks it.
+export const WithoutContentDragging: Story = {
+  args: { title: "Time", isContentDraggable: false, children: null },
+  render: (args) => (
+    <BottomSheet {...args}>
+      <Text tone="secondary">
+        Drag the contents without moving the sheet. Close it from the handle.
+      </Text>
+    </BottomSheet>
+  ),
+};
+
 export const Closed: Story = { args: { open: false, title: "Log weight" } };
 
 function OpenAndClose() {

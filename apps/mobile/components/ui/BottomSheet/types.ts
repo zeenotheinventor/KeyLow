@@ -14,6 +14,13 @@ export type BottomSheetProps = {
    * escape and the back button. Defaults to true.
    */
   isDismissible?: boolean | undefined;
+  /**
+   * Whether a drag that starts on the contents can move the sheet. A sheet whose contents own their vertical
+   * drags, such as the time picker's wheels or a 3D body, turns this off, or the sheet takes the drag on
+   * Android and the contents never scroll or turn. The sheet still closes from the handle, the dim, the
+   * screen reader's escape and the Android back button. Defaults to true.
+   */
+  isContentDraggable?: boolean | undefined;
   /** Sets the sheet's heading and its accessible name. Leave it out when the contents have their own. */
   title?: string | undefined;
   /** Centres the title, as the discard sheet's board draws it. Defaults to the start of the line. */

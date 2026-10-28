@@ -4,6 +4,7 @@ export const storyStates = [
   "Tall",
   "CentredTitle",
   "FixedHeight",
+  "WithoutContentDragging",
   "Closed",
   "Interactive",
 ];
