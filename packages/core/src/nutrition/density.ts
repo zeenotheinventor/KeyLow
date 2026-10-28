@@ -438,6 +438,201 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     "cup",
     160,
   ),
+  // Dried pulses, beans and lentils, from the SR Legacy "cup" rows. A raw pulse takes the "mature seeds, raw" row and a
+  // boiled one the "mature seeds, cooked, boiled, without salt" row, because the two states weigh differently.
+  // The split dahls have no entry, because SR Legacy has no split row for them.
+  // Beans, aduki, whole, dried, raw
+  "13-041": usdaPortionDensity("FDC 173727 (Beans, adzuki, mature seeds, raw)", "cup", 197),
+  // Beans, aduki, whole, dried, boiled in unsalted water
+  "13-042": usdaPortionDensity(
+    "FDC 173728 (Beans, adzuki, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    230,
+  ),
+  // Black gram, urad gram, whole, dried, raw
+  "13-056": usdaPortionDensity(
+    "FDC 174259 (Mungo beans, mature seeds, raw)",
+    "cup",
+    207,
+    "",
+    "; SR Legacy's mungo beans are black gram (urad), the species CoFID names here",
+  ),
+  // Black gram, urad gram, whole, dried, boiled in unsalted water
+  "13-057": usdaPortionDensity(
+    "FDC 172427 (Mungo beans, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    180,
+    "",
+    "; SR Legacy's mungo beans are black gram (urad), the species CoFID names here",
+  ),
+  // Beans, blackeye, whole, dried, raw
+  "13-062": usdaPortionDensity(
+    "FDC 173758 (Cowpeas, common (blackeyes, crowder, southern), mature seeds, raw)",
+    "cup",
+    167,
+    "",
+    "; its 1 tbsp row of 10.5 g gives 0.71",
+  ),
+  // Beans, blackeye, whole, dried, boiled in unsalted water
+  "13-063": usdaPortionDensity(
+    "FDC 173759 (Cowpeas, common (blackeyes, crowder, southern), mature seeds, cooked, boiled, without salt)",
+    "cup",
+    171,
+  ),
+  // Beans, broad, dried, raw
+  "13-067": usdaPortionDensity(
+    "FDC 175205 (Broadbeans (fava beans), mature seeds, raw)",
+    "cup",
+    150,
+    "",
+    "; its 1 tbsp row of 9.4 g gives 0.636",
+  ),
+  // Beans, butter, dried, raw
+  "13-070": usdaPortionDensity(
+    "FDC 174252 (Lima beans, large, mature seeds, raw)",
+    "cup",
+    178,
+    "",
+    "; its 1 tbsp row of 11.1 g gives 0.751; butter beans are large lima beans",
+  ),
+  // Beans, chick peas, Kabuli, whole, dried, raw
+  "13-074": usdaPortionDensity(
+    "FDC 173756 (Chickpeas (garbanzo beans, bengal gram), mature seeds, raw)",
+    "cup",
+    200,
+    "",
+    "; its 1 tbsp row of 12.5 g gives 0.845",
+  ),
+  // Beans, haricot, whole, dried, raw
+  "13-086": usdaPortionDensity(
+    "FDC 173745 (Beans, navy, mature seeds, raw)",
+    "cup",
+    208,
+    "",
+    "; haricot beans are navy beans, and SR Legacy has no row named haricot",
+  ),
+  // Beans, haricot, whole, dried, boiled in unsalted water
+  "13-087": usdaPortionDensity(
+    "FDC 173746 (Beans, navy, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    182,
+    "",
+    "; haricot beans are navy beans, and SR Legacy has no row named haricot",
+  ),
+  // Lentils, green and brown, whole, dried, raw
+  "13-089": usdaPortionDensity(
+    "FDC 172420 (Lentils, raw)",
+    "cup",
+    192,
+    "",
+    "; its 1 tbsp row of 12 g gives 0.812",
+  ),
+  // Beans, mung, whole, dried, raw
+  "13-096": usdaPortionDensity(
+    "FDC 174256 (Mung beans, mature seeds, raw)",
+    "cup",
+    207,
+    "",
+    "; its 1 tbsp row of 13 g gives 0.879",
+  ),
+  // Beans, pigeon peas, whole, dried, raw
+  "13-102": usdaPortionDensity(
+    "FDC 172436 (Pigeon peas (red gram), mature seeds, raw)",
+    "cup",
+    205,
+  ),
+  // Beans, pigeon peas, whole, dried, boiled in unsalted water
+  "13-103": usdaPortionDensity(
+    "FDC 172437 (Pigeon peas (red gram), mature seeds, cooked, boiled, without salt)",
+    "cup",
+    168,
+  ),
+  // Beans, pinto, dried, raw
+  "13-106": usdaPortionDensity(
+    "FDC 175199 (Beans, pinto, mature seeds, raw (Includes foods for USDA's Food Distribution Program))",
+    "cup",
+    193,
+    "",
+    "; its 1 tbsp row of 12 g gives 0.812",
+  ),
+  // Beans, pinto, dried, boiled in unsalted water
+  "13-107": usdaPortionDensity(
+    "FDC 175200 (Beans, pinto, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    171,
+    "",
+    "; its 1 tbsp row of 10.6 g gives 0.717",
+  ),
+  // Beans, red kidney, dried, raw
+  "13-109": usdaPortionDensity(
+    "FDC 173744 (Beans, kidney, red, mature seeds, raw)",
+    "cup",
+    184,
+    "",
+    "; its 1 tbsp row of 12.2 g gives 0.825",
+  ),
+  // Beans, soya, dried, raw
+  "13-115": usdaPortionDensity("FDC 174270 (Soybeans, mature seeds, raw)", "cup", 186),
+  // Beans, soya, dried, boiled in unsalted water
+  "13-116": usdaPortionDensity(
+    "FDC 174271 (Soybeans, mature cooked, boiled, without salt)",
+    "cup",
+    172,
+    "",
+    "; its 1 tbsp row of 10.7 g gives 0.724",
+  ),
+  // Lentils, red, split, dried, raw
+  "13-657": usdaPortionDensity(
+    "FDC 174284 (Lentils, pink or red, raw)",
+    "cup",
+    192,
+    "",
+    "; SR Legacy does not say split, and red lentils are usually sold split, so this is the closest row",
+  ),
+  // Lentils, red, split, dried, boiled in unsalted water
+  "13-658": usdaPortionDensity(
+    "FDC 172421 (Lentils, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    198,
+    "",
+    "; its 1 tbsp row of 12.3 g gives 0.832; SR Legacy has no boiled row for red lentils, so this is its boiled lentils row, the same as 13-661",
+  ),
+  // Beans, red kidney, dried, boiled in unsalted water
+  "13-659": usdaPortionDensity(
+    "FDC 175194 (Beans, kidney, red, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    177,
+    "",
+    "; its 1 tbsp row of 11 g gives 0.744",
+  ),
+  // Lentils, green and brown, whole, dried, boiled in unsalted water
+  "13-661": usdaPortionDensity(
+    "FDC 172421 (Lentils, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    198,
+    "",
+    "; its 1 tbsp row of 12.3 g gives 0.832",
+  ),
+  // Beans, chick peas, Kabuli, whole, dried, boiled in unsalted water
+  "13-662": usdaPortionDensity(
+    "FDC 173757 (Chickpeas (garbanzo beans, bengal gram), mature seeds, cooked, boiled, without salt)",
+    "cup",
+    164,
+  ),
+  // Beans, butter, dried, boiled in unsalted water
+  "13-663": usdaPortionDensity(
+    "FDC 174253 (Lima beans, large, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    188,
+    "",
+    "; its 1 tbsp row of 11.7 g gives 0.791; butter beans are large lima beans",
+  ),
+  // Beans, mung, whole, dried, boiled in unsalted water
+  "13-664": usdaPortionDensity(
+    "FDC 174257 (Mung beans, mature seeds, cooked, boiled, without salt)",
+    "cup",
+    202,
+  ),
   // Allspice, ground
   "13-801": usdaPortionDensity("FDC 171315 (Spices, allspice, ground)", "tbsp", 6.0),
   // Anise seeds
