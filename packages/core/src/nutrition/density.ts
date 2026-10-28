@@ -609,6 +609,133 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
   ),
   // Breadnut seeds, dried
   "14-895": usdaPortionDensity("FDC 170553 (Seeds, breadnut tree seeds, dried)", "cup", 160),
+  // Tree nuts, coconut and trail mix, from the SR Legacy "cup" rows. A kernel food takes the whole-kernel cup where
+  // SR Legacy has one. The foods weighed with their shells have no entry, because their grams include the shell.
+  // Barcelona nuts, kernel only
+  "14-804": usdaPortionDensity(
+    "FDC 170581 (Nuts, hazelnuts or filberts)",
+    "cup",
+    135,
+    ", whole",
+    "; the Barcelona nut is a hazelnut, and SR Legacy has no food of that name",
+  ),
+  // Cashew nuts, kernel only, roasted and salted
+  "14-812": usdaPortionDensity(
+    "FDC 169422 (Nuts, cashew nuts, oil roasted, with salt added)",
+    "cup",
+    129,
+    ", whole",
+    "; SR Legacy has the dry roasted FDC 169421 at 137 g, but the CoFID water (2.4 g per 100 g) matches the oil roasted food (2.34) better than the dry roasted one (1.7)",
+  ),
+  // Chestnuts, kernel only, raw
+  "14-813": usdaPortionDensity(
+    "FDC 170574 (Nuts, chestnuts, european, raw, unpeeled)",
+    "cup",
+    145,
+    "",
+    "; the only European raw chestnut with a cup row, as the peeled FDC 170575 has none",
+  ),
+  // Coconut, flesh only, fresh
+  "14-816": usdaPortionDensity("FDC 170169 (Nuts, coconut meat, raw)", "cup", 80, ", shredded"),
+  // Coconut milk
+  "14-820": usdaPortionDensity(
+    "FDC 170174 (Nuts, coconut water (liquid from coconuts))",
+    "cup",
+    240,
+    "",
+    "; CoFID describes this food as the drained fluid from fresh coconut, with 0.3 g fat per 100 g, so it is coconut water, not the canned coconut milk of FDC 170173",
+  ),
+  // Pecan nuts, kernel only
+  "14-837": usdaPortionDensity(
+    "FDC 170182 (Nuts, pecans)",
+    "cup",
+    99,
+    ", halves",
+    "; its 'cup, chopped' row is 109 g",
+  ),
+  // Pine nuts, kernel only
+  "14-839": usdaPortionDensity("FDC 170591 (Nuts, pine nuts, dried)", "cup", 135),
+  // Pistachio nuts, kernel only, roasted and salted
+  "14-840": usdaPortionDensity(
+    "FDC 169426 (Nuts, pistachio nuts, dry roasted, with salt added)",
+    "cup",
+    123,
+    "",
+    "; the raw FDC 170184 weighs 123 g too",
+  ),
+  // Trail mix
+  "14-849": usdaPortionDensity(
+    "FDC 167561 (Snacks, trail mix, regular)",
+    "cup",
+    150,
+    "",
+    "; the unsalted FDC 170654 weighs the same",
+  ),
+  // Almonds, flaked and ground
+  "14-870": usdaPortionDensity(
+    "FDC 170567 (Nuts, almonds)",
+    "cup",
+    95,
+    ", ground",
+    "; its 'cup, sliced' row is 92 g and its 'cup, slivered' row 108 g",
+  ),
+  // Brazil nuts, kernel only
+  "14-871": usdaPortionDensity(
+    "FDC 170569 (Nuts, brazilnuts, dried, unblanched)",
+    "cup",
+    133,
+    ", whole",
+  ),
+  // Coconut, desiccated
+  "14-873": usdaPortionDensity(
+    "FDC 168586 (Nuts, coconut meat, dried (desiccated), sweetened, shredded)",
+    "cup",
+    93,
+    ", shredded",
+    "; a sweetened stand-in, because the unsweetened FDC 170170 has only an ounce row, so the cup may read a little heavy (the sweetened food has more water and less fat), and the sweetened flaked FDC 170577 and FDC 170578 weigh 85 g and 77 g",
+  ),
+  // Hazelnuts, kernel only
+  "14-874": usdaPortionDensity(
+    "FDC 170581 (Nuts, hazelnuts or filberts)",
+    "cup",
+    135,
+    ", whole",
+    "; its 'cup, chopped' row is 115 g",
+  ),
+  // Walnuts, kernel only
+  "14-879": usdaPortionDensity(
+    "FDC 170187 (Nuts, walnuts, english)",
+    "cup",
+    100,
+    ", shelled halves",
+    "; the row is worded 'cup shelled (50 halves)', and its 'cup, chopped' row is 117 g",
+  ),
+  // Coconut milk, retail
+  "14-889": usdaPortionDensity(
+    "FDC 170173 (Nuts, coconut milk, canned (liquid expressed from grated meat and water))",
+    "cup",
+    226,
+    "",
+    "; its 1 tbsp row of 15 g gives 1.01",
+  ),
+  // Macadamia nuts, salted
+  "14-891": usdaPortionDensity(
+    "FDC 168598 (Nuts, macadamia nuts, dry roasted, with salt added)",
+    "cup",
+    132,
+    ", whole or halves",
+    "; the raw FDC 170178 weighs 134 g",
+  ),
+  // Almonds, whole kernels
+  "14-896": usdaPortionDensity("FDC 170567 (Nuts, almonds)", "cup", 143, ", whole"),
+  // Almonds, toasted
+  "14-897": usdaPortionDensity(
+    "FDC 170158 (Nuts, almonds, dry roasted, without salt added)",
+    "cup",
+    138,
+    ", whole kernels",
+    "; its water and fat (2.41 and 52.54 g per 100 g) match CoFID's toasted almonds (2.4 and 52.5), and the oil roasted FDC 170159 weighs 157 g",
+  ),
   // Syrup, corn, dark
   "17-064": usdaPortionDensity(
     "FDC 168836 (Syrups, corn, dark)",
