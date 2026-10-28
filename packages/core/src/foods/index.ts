@@ -44,3 +44,4 @@ export { readPackSize } from "./packSize";
 export type { PackSize } from "./packSize";
 export { packPortion } from "./packPortion";
 export { requiresConfirmation } from "./quality";
+export { resolveCarbs } from "./offRules";
