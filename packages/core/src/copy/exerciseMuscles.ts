@@ -21,6 +21,9 @@ export const EXERCISE_MUSCLES = {
   rotateHint: "Drag to turn · Pinch to zoom",
   offline: "The muscles aren't available offline.",
   failed: "The muscles could not be loaded. Check your connection and try again.",
+  /** The accessible names of the loading rows and of the list of roles, which the board draws without words. */
+  loadingName: "Loading the muscles",
+  listLabel: "Muscles by role",
 } as const;
 
 /** A value of the `role` scale: 0 for a muscle at rest, then the values `ROLE_FIGURE_VALUES` writes. */
