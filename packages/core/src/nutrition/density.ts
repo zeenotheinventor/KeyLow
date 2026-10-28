@@ -524,6 +524,81 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
   "13-883": usdaPortionDensity("FDC 170938 (Spices, thyme, dried)", "tbsp", 4.3, ", ground"),
   // Cumin seeds
   "13-889": usdaPortionDensity("FDC 170923 (Spices, cumin seed)", "tbsp", 6.0, ", whole"),
+  // Seeds, peanuts, quinoa and tahini, from the SR Legacy "cup" rows (the tahini has only a "tbsp" row).
+  // Melon seeds
+  "14-826": usdaPortionDensity(
+    "FDC 169407 (Seeds, watermelon seed kernels, dried)",
+    "cup",
+    108,
+    "",
+    "; SR Legacy has no food called melon seeds, and this one has the same sodium as CoFID, 99 mg per 100 g",
+  ),
+  // Peanuts, roasted and salted
+  "14-834": usdaPortionDensity(
+    "FDC 174261 (Peanuts, all types, oil-roasted, with salt)",
+    "cup",
+    144,
+    ", chopped",
+    "; the row is worded 'cup, chopped', and the whole-nut cups of FDC 172431, 172433 and 174264 (Spanish, valencia and virginia, oil-roasted, with salt) weigh 147 g, 144 g and 143 g",
+  ),
+  // Pumpkin seeds
+  "14-842": usdaPortionDensity(
+    "FDC 170556 (Seeds, pumpkin and squash seed kernels, dried)",
+    "cup",
+    129,
+    "",
+    "; its roasted kernels (FDC 170557, without salt) weigh 118 g",
+  ),
+  // Quinoa, raw
+  "14-843": usdaPortionDensity("FDC 168874 (Quinoa, uncooked)", "cup", 170),
+  // Sesame seeds
+  "14-844": usdaPortionDensity(
+    "FDC 170150 (Seeds, sesame seeds, whole, dried)",
+    "cup",
+    144,
+    "",
+    "; its 1 tbsp row of 9 g gives 0.609",
+  ),
+  // Sunflower seeds
+  "14-845": usdaPortionDensity(
+    "FDC 170562 (Seeds, sunflower seed kernels, dried)",
+    "cup",
+    140,
+    "",
+    "; its other row, 'cup, with hulls, edible yield' at 46 g, is for seeds in the shell",
+  ),
+  // Sunflower seeds, toasted
+  "14-846": usdaPortionDensity(
+    "FDC 170154 (Seeds, sunflower seed kernels, toasted, without salt)",
+    "cup",
+    134,
+    "",
+    "; FDC 168594 (toasted, with salt added) weighs the same",
+  ),
+  // Tahini paste
+  "14-847": usdaPortionDensity(
+    "FDC 168604 (Seeds, sesame butter, tahini, type of kernels unspecified)",
+    "tbsp",
+    15,
+    "",
+    "; the tahinis from roasted and toasted kernels (FDC 170189) and from raw and stone ground kernels (FDC 169410) also weigh 15 g, and the one from unroasted kernels (FDC 169406) 14 g",
+  ),
+  // Peanuts, kernel only, plain, unsalted
+  "14-877": usdaPortionDensity(
+    "FDC 172430 (Peanuts, all types, raw)",
+    "cup",
+    146,
+    "",
+    "; the Spanish, valencia and virginia raw peanuts (FDC 174263, 172432 and 172434) weigh 146 g too",
+  ),
+  // Peanuts, dry roasted
+  "14-878": usdaPortionDensity(
+    "FDC 173806 (Peanuts, all types, dry-roasted, without salt)",
+    "cup",
+    146,
+    "",
+    "; the salted dry-roasted FDC 174262 has no cup row",
+  ),
   // Peanut butter, smooth
   "14-892": usdaPortionDensity(
     "FDC 174266 (Peanut butter, smooth style, with salt) and FDC 172470 (Peanut butter, smooth style, without salt)",
@@ -532,6 +607,8 @@ export const COFID_DENSITY_OVERRIDES: Readonly<Record<string, DensityEntry>> = {
     "",
     "; both foods weigh the same, and their 2 tbsp row of 32 g gives 1.08",
   ),
+  // Breadnut seeds, dried
+  "14-895": usdaPortionDensity("FDC 170553 (Seeds, breadnut tree seeds, dried)", "cup", 160),
   // Syrup, corn, dark
   "17-064": usdaPortionDensity(
     "FDC 168836 (Syrups, corn, dark)",
