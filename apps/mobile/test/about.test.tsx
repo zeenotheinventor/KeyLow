@@ -122,6 +122,16 @@ describe("the About screen", () => {
       ).toBeOnTheScreen();
     });
 
+    it("should credit USDA FoodData Central as public domain, with its address", async () => {
+      await renderAbout();
+
+      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.usda.name)).toBeOnTheScreen();
+      expect(screen.getByText(DATA_SOURCE_ATTRIBUTION.usda.text)).toBeOnTheScreen();
+      expect(
+        screen.getByRole("link", { name: DATA_SOURCE_ATTRIBUTION.usda.url }),
+      ).toBeOnTheScreen();
+    });
+
     it("should credit Open Food Facts under the Open Database Licence", async () => {
       await renderAbout();
 
@@ -158,17 +168,19 @@ describe("the About screen", () => {
       ).toBeOnTheScreen();
     });
 
-    it("should list the 3D body credits after the food datasets", async () => {
+    it("should list USDA FoodData Central after CoFID and the 3D body credits after the food datasets", async () => {
       await renderAbout();
 
       const links = screen.getAllByRole("link");
-      expect(links).toHaveLength(4);
-      expect(links[2]).toHaveAccessibleName("https://lifesciencedb.jp/bp3d/");
-      expect(links[3]).toHaveAccessibleName("https://github.com/Z-Anatomy/Models-of-human-anatomy");
+      expect(links).toHaveLength(5);
+      expect(links[1]).toHaveAccessibleName(DATA_SOURCE_ATTRIBUTION.usda.url);
+      expect(links[3]).toHaveAccessibleName("https://lifesciencedb.jp/bp3d/");
+      expect(links[4]).toHaveAccessibleName("https://github.com/Z-Anatomy/Models-of-human-anatomy");
     });
 
     it.each([
       ["CoFID", DATA_SOURCE_ATTRIBUTION.cofid.url],
+      ["USDA FoodData Central", DATA_SOURCE_ATTRIBUTION.usda.url],
       ["Open Food Facts", DATA_SOURCE_ATTRIBUTION.off.url],
       ["BodyParts3D", "https://lifesciencedb.jp/bp3d/"],
       ["Z-Anatomy", "https://github.com/Z-Anatomy/Models-of-human-anatomy"],

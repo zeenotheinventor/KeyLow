@@ -70,12 +70,12 @@ const goldenCustomFood = {
 };
 
 describe("foodSourceSchema", () => {
-  it.each(["off", "cofid", "user"])("should accept %s", (source) => {
+  it.each(["off", "cofid", "usda", "user"])("should accept %s", (source) => {
     expect(foodSourceSchema.parse(source)).toBe(source);
   });
 
   it("should reject an unknown source", () => {
-    expect(foodSourceSchema.safeParse("usda").success).toBe(false);
+    expect(foodSourceSchema.safeParse("fdc").success).toBe(false);
   });
 });
 
@@ -285,8 +285,19 @@ describe("foodRowSchema", () => {
     expect(foodRowSchema.safeParse({ ...goldenFoodRow, basis: null }).success).toBe(false);
   });
 
+  it("should accept a usda row, so a search hit from USDA FoodData Central does not throw", () => {
+    const usdaRow = {
+      ...goldenFoodRow,
+      source: "usda",
+      source_ref: "usda:171477",
+      fetched_at: null,
+    };
+
+    expect(foodRowSchema.safeParse(usdaRow).success).toBe(true);
+  });
+
   it("should reject an unknown source", () => {
-    expect(foodRowSchema.safeParse({ ...goldenFoodRow, source: "usda" }).success).toBe(false);
+    expect(foodRowSchema.safeParse({ ...goldenFoodRow, source: "fdc" }).success).toBe(false);
   });
 
   it("should reject an id that is not a uuid", () => {

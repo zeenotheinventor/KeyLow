@@ -4,7 +4,7 @@ import { nutrientAmountSchema, gramsPer100InputSchema, kcalPer100InputSchema } f
 import { FOOD_FORM } from "../copy/foodForm";
 import { normaliseBarcode } from "../foods/barcode";
 
-export const foodSourceSchema = z.enum(["off", "cofid", "user"]);
+export const foodSourceSchema = z.enum(["off", "cofid", "usda", "user"]);
 export const nutrientBasisSchema = z.enum(["per_100g", "per_100ml"]);
 
 /**

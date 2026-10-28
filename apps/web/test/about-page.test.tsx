@@ -28,6 +28,7 @@ describe("About page", () => {
 
   it.each([
     ["CoFID", dataSources.cofid],
+    ["USDA FoodData Central", dataSources.usda],
     ["Open Food Facts", dataSources.off],
   ])("should credit %s with its name, statement and address", (_label, credit) => {
     render(<AboutPage />);
@@ -39,6 +40,7 @@ describe("About page", () => {
 
   it.each([
     ["CoFID", dataSources.cofid],
+    ["USDA FoodData Central", dataSources.usda],
     ["Open Food Facts", dataSources.off],
   ])("should open the %s link in a new tab", (_label, credit) => {
     render(<AboutPage />);
@@ -101,10 +103,11 @@ describe("About page", () => {
         "About",
         dataSources.title,
         dataSources.cofid.name,
+        dataSources.usda.name,
         dataSources.off.name,
         ABOUT_SCREEN.legal.title,
       ]);
-      expect(screen.getAllByRole("link")).toHaveLength(4);
+      expect(screen.getAllByRole("link")).toHaveLength(5);
     });
   });
 

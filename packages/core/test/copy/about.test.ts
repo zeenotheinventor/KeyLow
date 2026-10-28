@@ -34,6 +34,12 @@ describe("the About screen copy", () => {
     expect(ABOUT_SCREEN.dataSources.off.url).toBe("https://world.openfoodfacts.org");
   });
 
+  it("should carry the USDA FoodData Central public domain credit and its address", () => {
+    expect(ABOUT_SCREEN.dataSources.usda.name).toBe("USDA FoodData Central");
+    expect(ABOUT_SCREEN.dataSources.usda.text).toContain("CC0 1.0");
+    expect(ABOUT_SCREEN.dataSources.usda.url).toBe("https://fdc.nal.usda.gov");
+  });
+
   it("should carry the BodyParts3D attribution line exactly, then one plain sentence, and its address", () => {
     expect(ABOUT_SCREEN.dataSources.bodyParts3d.name).toBe("BodyParts3D");
     expect(ABOUT_SCREEN.dataSources.bodyParts3d.text).toBe(
@@ -55,5 +61,6 @@ describe("the About screen copy", () => {
   it("should reuse the attribution the food detail credit used, not a copy of it", () => {
     expect(ABOUT_SCREEN.dataSources.cofid).toBe(DATA_SOURCE_ATTRIBUTION.cofid);
     expect(ABOUT_SCREEN.dataSources.off).toBe(DATA_SOURCE_ATTRIBUTION.off);
+    expect(ABOUT_SCREEN.dataSources.usda).toBe(DATA_SOURCE_ATTRIBUTION.usda);
   });
 });

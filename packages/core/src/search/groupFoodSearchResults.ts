@@ -22,6 +22,7 @@ export const FOOD_SEARCH_GROUP_LIMITS: FoodSearchGroupLimits = {
 const groupKeyBySource: Readonly<Record<FoodSource, FoodSearchGroupKey>> = {
   user: "yours",
   cofid: "common",
+  usda: "common",
   off: "branded",
 };
 
@@ -30,7 +31,7 @@ const groupOrder: readonly FoodSearchGroupKey[] = ["yours", "common", "branded"]
 const isValidLimit = (limit: number): boolean => Number.isInteger(limit) && limit >= 0;
 
 /**
- * Splits the rows `useFoodSearch` returns into Your foods (`user`), Common foods (`cofid`) and
+ * Splits the rows `useFoodSearch` returns into Your foods (`user`), Common foods (`cofid` and `usda`) and
  * Branded foods (`off`, the Open Food Facts products already saved locally). The rank order is
  * kept inside each group, a group with no rows is left out, and each group carries the rows to
  * show and the count behind "See N more".

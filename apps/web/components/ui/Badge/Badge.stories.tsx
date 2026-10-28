@@ -25,6 +25,8 @@ export const SourceOpenFoodFacts: Story = {
 
 export const SourceCoFid: Story = { render: () => <Badge kind="source" source="cofid" /> };
 
+export const SourceUsda: Story = { render: () => <Badge kind="source" source="usda" /> };
+
 export const SourceYours: Story = { render: () => <Badge kind="source" source="user" /> };
 
 export const Neutral: Story = { render: () => <Badge tone="neutral">Estimate</Badge> };

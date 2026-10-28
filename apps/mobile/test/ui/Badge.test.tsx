@@ -58,6 +58,7 @@ describe("Badge", () => {
     it.each([
       { source: "off", name: "Open Food Facts" },
       { source: "cofid", name: "UK CoFID" },
+      { source: "usda", name: "USDA" },
       { source: "user", name: "Yours" },
     ] as const)("should name the $source source $name", async ({ source, name }) => {
       await renderBadge({ kind: "source", source });

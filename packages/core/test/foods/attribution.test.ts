@@ -24,8 +24,17 @@ describe("DATA_SOURCE_ATTRIBUTION", () => {
     });
   });
 
-  it("should have exactly the off and cofid entries", () => {
-    expect(Object.keys(DATA_SOURCE_ATTRIBUTION).sort()).toEqual(["cofid", "off"]);
+  it("should pin the USDA FoodData Central attribution", () => {
+    expect(DATA_SOURCE_ATTRIBUTION.usda).toEqual({
+      name: "USDA FoodData Central",
+      licence: "CC0 1.0 Universal (public domain)",
+      text: "Data from USDA FoodData Central, U.S. Department of Agriculture, Agricultural Research Service, released into the public domain under CC0 1.0. Natural portions and some foods come from its SR Legacy release (April 2018).",
+      url: "https://fdc.nal.usda.gov",
+    });
+  });
+
+  it("should have exactly the off, cofid and usda entries", () => {
+    expect(Object.keys(DATA_SOURCE_ATTRIBUTION).sort()).toEqual(["cofid", "off", "usda"]);
   });
 
   it("should be importable from the package root", () => {
