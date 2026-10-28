@@ -23,6 +23,11 @@ describe("the Muscles it works sheet", () => {
     expect(EXERCISE_MUSCLES.rotateHint).toBe("Drag to turn · Pinch to zoom");
   });
 
+  it("should name the loading rows and the list of roles for a screen reader", () => {
+    expect(EXERCISE_MUSCLES.loadingName).toBe("Loading the muscles");
+    expect(EXERCISE_MUSCLES.listLabel).toBe("Muscles by role");
+  });
+
   it("should say the muscles are not available offline, and could not be loaded", () => {
     expect(EXERCISE_MUSCLES.offline).toBe("The muscles aren't available offline.");
     expect(EXERCISE_MUSCLES.failed).toBe(
