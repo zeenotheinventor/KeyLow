@@ -11,6 +11,7 @@ import { Keyboard, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AddExerciseSheet } from "../AddExerciseSheet";
+import { ExerciseMusclesSheet } from "../ExerciseMusclesSheet";
 import { FinishScreen } from "../FinishScreen";
 import { SessionClock } from "../SessionClock";
 import { SessionExerciseCard } from "../SessionExerciseCard";
@@ -24,6 +25,7 @@ import { useChangeSetType } from "./useChangeSetType";
 import { useSessionScreen } from "./useSessionScreen";
 import { useSetLogging } from "./useSetLogging";
 
+import type { ExerciseMusclesSheetExercise } from "../ExerciseMusclesSheet";
 import type { FinishDetails } from "../FinishScreen";
 import type { SessionScreenProps, SetTypeOpening } from "./types";
 import type { SetEntryOpening } from "../SetEntrySheet";
@@ -48,7 +50,8 @@ const MINIMUM_DOCK_BOTTOM_PADDING = 34;
  * loading status, a failed read shows Try again, and with no open session only the control that hides it is
  * left (no board draws these).
  * The header's More control, which no board draws, holds Discard session and is drawn only when
- * `onDiscarded` is given.
+ * `onDiscarded` is given. The body icon button of a card, and the exercise's name, open the Muscles it works
+ * sheet for that exercise.
  */
 export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreenProps) {
   const pendingSets = usePendingSets();
@@ -79,6 +82,8 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
     isOpen: boolean;
   } | null>(null);
   const { changeSetType, isChangingType } = useChangeSetType();
+  // The exercise whose muscles the sheet shows. The sheet keeps the last one on show while it closes.
+  const [musclesFor, setMusclesFor] = useState<ExerciseMusclesSheetExercise | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [finishing, setFinishing] = useState<FinishDetails | null>(null);
   // Held here, beside `finishing`, so Keep logging does not drop a note of up to 1,000 characters.
@@ -159,7 +164,7 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
       ) : null}
       {view.status === "ready" ? (
         <ScrollView className="flex-1" contentContainerClassName="gap-3 px-4 pb-4 pt-1">
-          {view.exercises.map(({ name, target, plan, exercise }) => (
+          {view.exercises.map(({ name, target, plan, muscles, exercise }) => (
             <SessionExerciseCard
               exercise={exercise}
               key={exercise.exerciseId}
@@ -181,6 +186,9 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
               }}
               onEditSetType={(opening) => {
                 setSetTypeSheet({ opening, isOpen: true });
+              }}
+              onShowMuscles={() => {
+                setMusclesFor({ id: exercise.exerciseId, name, muscles });
               }}
             />
           ))}
@@ -269,6 +277,14 @@ export function SessionScreen({ onHide, onDiscarded, onFinished }: SessionScreen
             setIsMenuOpen(false);
           }}
           onDiscarded={onDiscarded}
+        />
+      ) : null}
+      {view.status === "ready" ? (
+        <ExerciseMusclesSheet
+          exercise={musclesFor}
+          onClose={() => {
+            setMusclesFor(null);
+          }}
         />
       ) : null}
       {view.status === "ready" ? (

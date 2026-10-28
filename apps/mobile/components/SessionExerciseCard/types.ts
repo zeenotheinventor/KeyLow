@@ -23,4 +23,6 @@ export type SessionExerciseCardProps = {
   onEditSet: (entry: SetEntryOpening) => void;
   /** Asked for when the mark of a logged set is pressed, with the set the set types sheet opens for. */
   onEditSetType: (opening: SetTypeOpening) => void;
+  /** Asked for when the body icon button or the name is pressed, which opens the muscles the exercise works. */
+  onShowMuscles: () => void;
 };

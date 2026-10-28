@@ -28,6 +28,11 @@ export type ActiveExerciseCardProps = {
   rows: readonly ExerciseCardRow[];
   /** Adds one more row for the exercise. Without it the card has no Add set button. */
   onAddSet?: (() => void) | undefined;
+  /**
+   * Opens the muscles the exercise works, from the body icon button at the right of the header and from the
+   * name. Without it the header has neither.
+   */
+  onShowMuscles?: (() => void) | undefined;
 };
 
 /**
