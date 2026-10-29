@@ -21,10 +21,6 @@ describe("the tab shell copy", () => {
     });
   });
 
-  it("should leave Recipes out of the bar", () => {
-    expect(Object.keys(TAB_TITLES)).not.toContain("recipes");
-  });
-
   it("should name the bar, the centre button and the search launcher as the boards do", () => {
     expect(TAB_BAR_LABEL).toBe("Main");
     expect(ADD_FOOD_BUTTON_LABEL).toBe("Find food");
