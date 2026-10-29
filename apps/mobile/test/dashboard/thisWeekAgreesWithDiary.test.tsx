@@ -127,8 +127,8 @@ describe("the This week card and the diary's week strip, from one fixture", () =
     expect(card).toHaveAccessibleName(/ 2 of 4 days complete\.$/);
 
     await user.press(card);
-    // The weekly averages read the same week, so the calories average is the card's.
-    expect(await screen.findByRole("listitem", { name: /^Energy: 1,681 / })).toBeOnTheScreen();
+    // The weekly averages read the same week but leave out today, so Thursday's 1,039 is not in the average.
+    expect(await screen.findByRole("listitem", { name: /^Energy: 1,895 / })).toBeOnTheScreen();
     await user.press(screen.getByRole("button", { name: "See each day in the diary" }));
     await screen.findByRole("heading", { name: "Today" });
 

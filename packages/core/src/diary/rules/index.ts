@@ -40,5 +40,11 @@ export type {
   WeekNutrientDayTotals,
   WeekNutrientKey,
 } from "./weekNutrientAverages";
-export { weekSummary } from "./weekSummary";
-export type { WeekDayMarker, WeekSummary, WeekSummaryDay, WeekSummaryInput } from "./weekSummary";
+export { weekAverageBarOf, weekSummary } from "./weekSummary";
+export type {
+  WeekAverageBarState,
+  WeekDayMarker,
+  WeekSummary,
+  WeekSummaryDay,
+  WeekSummaryInput,
+} from "./weekSummary";

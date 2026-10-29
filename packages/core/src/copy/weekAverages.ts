@@ -1,5 +1,5 @@
 import { REFRESH_PER_100_LABELS } from "./recipeRefresh";
-import { WEEK_GRID, describeWeekGridTitle } from "./weekGrid";
+import { describeWeekGridTitle } from "./weekGrid";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { NutrientRow } from "./foodDetail";
@@ -13,6 +13,12 @@ export const WEEK_AVERAGES = {
   dailyAverage: "Daily average",
   weekTotal: "Week so far",
   openDiaryWeek: "See each day in the diary",
+  /** What the page's averages cover, by the calories bar: today is left out until it is over. */
+  rangeCaption: "Mon to yesterday",
+  /** On a Monday, when no earlier day of the week is there to average. */
+  startsTomorrow: "Your averages start tomorrow.",
+  /** From Tuesday on, when no day before today has anything logged. Today's entries do not count. */
+  nothingBeforeToday: "Nothing logged before today this week.",
 } as const;
 
 /** The name of each nutrient on the page, in the words of the food screens. */
@@ -54,6 +60,11 @@ export const weekAverageRows = (
     };
   });
 
-/** The page's subtitle, from the week's Monday: "Week of Mon 12 Oct, Mon to today". */
-export const describeWeekAveragesSubtitle = (weekStart: string): string =>
-  `${describeWeekGridTitle(weekStart)}, ${WEEK_GRID.averageCaption}`;
+/**
+ * The page's subtitle, from the week's Monday and today: "Week of Mon 12 Oct, Mon to yesterday". On the
+ * Monday itself there is no yesterday in the week, so the title stands alone.
+ */
+export const describeWeekAveragesSubtitle = (weekStart: string, today: string): string =>
+  today === weekStart
+    ? describeWeekGridTitle(weekStart)
+    : `${describeWeekGridTitle(weekStart)}, ${WEEK_AVERAGES.rangeCaption}`;

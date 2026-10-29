@@ -1,6 +1,7 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { addCalendarDays } from "../../../src/dates/calendarDay";
 import { weekAverage } from "../../../src/diary/rules/weekAverage";
 import { weekDayTotals } from "../../../src/diary/rules/weekDayTotals";
 import {
@@ -8,6 +9,7 @@ import {
   weekNutrientAverages,
 } from "../../../src/diary/rules/weekNutrientAverages";
 import { weekOf } from "../../../src/diary/rules/weekStrip";
+import { weekAverageBarOf } from "../../../src/diary/rules/weekSummary";
 
 import type {
   WeekNutrientAveragesDay,
@@ -84,6 +86,75 @@ describe("weekNutrientAverages", () => {
     expect(nutrient(result, "salt_g")).toMatchObject({ dailyAverage: 5, weekTotal: 10 });
   });
 
+  it("should leave out today, even with entries", () => {
+    const result = weekNutrientAverages({
+      days: weekOfTotals([
+        dayTotals({ kcal: 2000 }),
+        dayTotals({ kcal: 2200 }),
+        null,
+        dayTotals({ kcal: 500 }),
+      ]),
+      today: THURSDAY,
+      targets: NO_TARGETS,
+    });
+
+    expect(result.daysLogged).toBe(2);
+    expect(nutrient(result, "kcal")).toMatchObject({ dailyAverage: 2100, weekTotal: 4200 });
+    expect(result.calories.averageKcal).toBe(2100);
+  });
+
+  it("should say it is the first day on a Monday, with nothing to average even when Monday has entries", () => {
+    const result = weekNutrientAverages({
+      days: weekOfTotals([dayTotals()]),
+      today: "2026-10-12",
+      targets: { kcal: 2200, protein_g: null, carbs_g: null, fat_g: null },
+    });
+
+    expect(result.isFirstDay).toBe(true);
+    expect(result.daysLogged).toBe(0);
+    expect(nutrient(result, "kcal")).toMatchObject({ dailyAverage: null, weekTotal: null });
+    expect(result.calories).toEqual({
+      averageKcal: null,
+      targetKcal: 2200,
+      barFill: null,
+      kcalOverTarget: null,
+    });
+  });
+
+  it("should not be the first day after Monday, and have nothing to average when only today is logged", () => {
+    const result = weekNutrientAverages({
+      days: weekOfTotals([null, null, null, dayTotals()]),
+      today: THURSDAY,
+      targets: NO_TARGETS,
+    });
+
+    expect(result.isFirstDay).toBe(false);
+    expect(result.daysLogged).toBe(0);
+    expect(result.calories.averageKcal).toBeNull();
+  });
+
+  it("should leave out a gap day before today rather than count it as 0", () => {
+    const result = weekNutrientAverages({
+      days: weekOfTotals([dayTotals({ kcal: 1800 }), null, dayTotals({ kcal: 2400 })]),
+      today: THURSDAY,
+      targets: NO_TARGETS,
+    });
+
+    expect(result.daysLogged).toBe(2);
+    expect(nutrient(result, "kcal")?.dailyAverage).toBe(2100);
+  });
+
+  it("should draw the calories bar by the card's rule, from the page's own average", () => {
+    const result = weekNutrientAverages({
+      days: weekOfTotals([dayTotals({ kcal: 2500 }), dayTotals({ kcal: 2301 }), null, null]),
+      today: THURSDAY,
+      targets: { kcal: 2200, protein_g: null, carbs_g: null, fat_g: null },
+    });
+
+    expect(result.calories).toEqual(weekAverageBarOf(2400.5, 2200));
+    expect(result.calories).toMatchObject({ barFill: 1, kcalOverTarget: 201 });
+  });
+
   it("should leave out a day after today, even with entries", () => {
     const result = weekNutrientAverages({
       days: weekOfTotals([dayTotals({ kcal: 2000 }), null, null, null, dayTotals({ kcal: 9000 })]),
@@ -144,7 +215,7 @@ describe("weekNutrientAverages", () => {
     expect(nutrient(result, "protein_g")).toMatchObject({ dailyAverage: null, weekTotal: null });
   });
 
-  it("should agree with the This week card's average for calories and the macros wherever a day gave a value", () => {
+  it("should agree with the card's rule over Monday to yesterday for calories and the macros wherever a day gave a value", () => {
     const amount = fc.option(fc.double({ min: 0, max: 5000, noNaN: true }), { nil: null });
     const day = fc.option(
       fc.record({
@@ -167,12 +238,14 @@ describe("weekNutrientAverages", () => {
         (totals, today) => {
           const days = weekOfTotals(totals);
           const result = weekNutrientAverages({ days, today, targets: NO_TARGETS });
+          // The card counts up to and including the day it is given, so it is given yesterday. On a Monday
+          // yesterday is in the week before, and both have nothing to average.
           const card = weekAverage(
             days.map((entry) => ({
               localDate: entry.localDate,
               totals: weekDayTotals(entry.totals),
             })),
-            today,
+            addCalendarDays(today, -1),
           );
 
           for (const key of ["kcal", "protein_g", "carbs_g", "fat_g"] as const) {
@@ -180,6 +253,7 @@ describe("weekNutrientAverages", () => {
             // A macro no logged day gave a value for reads not given here, and 0 on the card.
             expect(average ?? (card === null ? null : 0)).toBe(card?.[key] ?? null);
           }
+          expect(result.calories.averageKcal).toBe(card?.kcal ?? null);
         },
       ),
     );

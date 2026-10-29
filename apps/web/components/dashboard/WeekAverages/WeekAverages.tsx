@@ -7,7 +7,7 @@ import {
   describeWeekAveragesSubtitle,
   weekAverageRows,
 } from "@keylow/core/copy";
-import { weekDayTotals, weekNutrientAverages, weekOf, weekSummary } from "@keylow/core/diary";
+import { weekNutrientAverages, weekOf } from "@keylow/core/diary";
 import Link from "next/link";
 
 import { WeekAverageBar } from "../WeekAverageBar";
@@ -26,10 +26,11 @@ const linkClassName =
   "flex min-h-touch-target items-center self-start rounded-small px-1 text-body-strong text-accent-ink outline-none focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 /**
- * The week so far, averaged: the calories and macro bars against the daily targets, then every nutrient's
- * daily average and the week's total, and a link to the diary's week view for the days one by one. It reads
- * the same week and targets as the This week card, so the two share the cache, and core adds both up by the
- * same rule, so the page and the card always agree.
+ * The week up to yesterday, averaged: the calories and macro bars against the daily targets, then every
+ * nutrient's daily average and the total, and a link to the diary's week view for the days one by one. It
+ * reads the same week and targets as the This week card, so the two share the cache. Core leaves today out
+ * of every number here (core `weekNutrientAverages`), while the card still counts it, so the two can differ
+ * while today has entries.
  */
 export function WeekAverages({ today }: WeekAveragesProps) {
   const isOnline = useIsOnline();
@@ -68,15 +69,6 @@ export function WeekAverages({ today }: WeekAveragesProps) {
   }
 
   const averages = weekNutrientAverages({ days: week, today, targets });
-  const summary = weekSummary({
-    days: week.map((day) => ({
-      localDate: day.localDate,
-      dayLog: day.dayLog,
-      totals: weekDayTotals(day.totals),
-    })),
-    today,
-    targetKcal: targets.kcal,
-  });
   const barOf = (key: "protein_g" | "carbs_g" | "fat_g") => {
     const nutrient = averages.nutrients.find((row) => row.key === key);
 
@@ -85,9 +77,13 @@ export function WeekAverages({ today }: WeekAveragesProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <p className="text-caption text-text-muted">{describeWeekAveragesSubtitle(weekStart)}</p>
-      {summary.averageKcal === null ? (
-        <p className="text-body text-text-secondary">{WEEK_CARD.nothingLogged}</p>
+      <p className="text-caption text-text-muted">
+        {describeWeekAveragesSubtitle(weekStart, today)}
+      </p>
+      {averages.isFirstDay ? (
+        <p className="text-body text-text-secondary">{WEEK_AVERAGES.startsTomorrow}</p>
+      ) : averages.calories.averageKcal === null ? (
+        <p className="text-body text-text-secondary">{WEEK_AVERAGES.nothingBeforeToday}</p>
       ) : (
         <>
           <Card asChild padding="none">
@@ -96,11 +92,12 @@ export function WeekAverages({ today }: WeekAveragesProps) {
               className="flex flex-col gap-4 px-4 py-4 sm:px-5"
             >
               <WeekAverageBar
-                averageKcal={summary.averageKcal}
-                targetKcal={summary.targetKcal}
-                barFill={summary.barFill}
-                kcalOverTarget={summary.kcalOverTarget}
-                daysLogged={summary.daysLogged}
+                averageKcal={averages.calories.averageKcal}
+                targetKcal={averages.calories.targetKcal}
+                barFill={averages.calories.barFill}
+                kcalOverTarget={averages.calories.kcalOverTarget}
+                daysLogged={averages.daysLogged}
+                caption={WEEK_AVERAGES.rangeCaption}
               />
               <span className="h-px bg-border" />
               <MacroBars

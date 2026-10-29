@@ -35,7 +35,13 @@ describe("weekAverageRows", () => {
 });
 
 describe("describeWeekAveragesSubtitle", () => {
-  it("should name the week and the days it covers", () => {
-    expect(describeWeekAveragesSubtitle("2026-10-12")).toBe("Week of Mon 12 Oct, Mon to today");
+  it("should name the week and the days it covers, which stop at yesterday", () => {
+    expect(describeWeekAveragesSubtitle("2026-10-12", "2026-10-15")).toBe(
+      "Week of Mon 12 Oct, Mon to yesterday",
+    );
+  });
+
+  it("should name the week alone on the Monday, which has no earlier day", () => {
+    expect(describeWeekAveragesSubtitle("2026-10-12", "2026-10-12")).toBe("Week of Mon 12 Oct");
   });
 });

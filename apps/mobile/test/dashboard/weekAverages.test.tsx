@@ -16,7 +16,12 @@ import {
 } from "../support/diaryBackend";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
-import { showEmptyWeek, showSampleWeek } from "../support/weekFixtures";
+import {
+  showEmptyWeek,
+  showOverTargetWeek,
+  showSampleWeek,
+  showWeek,
+} from "../support/weekFixtures";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -29,12 +34,10 @@ jest.mock(
   () =>
     jest.requireActual<{ default: unknown }>("react-native-safe-area-context/jest/mock").default,
 );
-// 11:20 in London on Thursday 15 October 2026.
-jest.mock("../../lib/useNow", () => {
-  const mockNow = new Date("2026-10-15T10:20:00Z");
-
-  return { useNow: () => mockNow };
-});
+// 11:20 in London on Thursday 15 October 2026, unless a test moves it.
+const THURSDAY = new Date("2026-10-15T10:20:00Z");
+let mockNow = THURSDAY;
+jest.mock("../../lib/useNow", () => ({ useNow: () => mockNow }));
 
 let queryClient: QueryClient;
 
@@ -85,6 +88,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   registerAppStyles(kitStyles);
+  mockNow = THURSDAY;
   resetDiaryBackend();
   showSampleWeek();
   queryClient = createDiaryQueryClient();
@@ -100,17 +104,18 @@ describe("the weekly averages screen", () => {
     await renderScreen();
 
     expect(await screen.findByRole("heading", { name: "Weekly averages" })).toBeOnTheScreen();
-    expect(await screen.findByText("Week of Mon 12 Oct, Mon to today")).toBeOnTheScreen();
+    expect(await screen.findByText("Week of Mon 12 Oct, Mon to yesterday")).toBeOnTheScreen();
   });
 
-  it("should list every nutrient's daily average against its target", async () => {
+  it("should list every nutrient's daily average against its target, from Monday to yesterday", async () => {
     await renderScreen();
 
+    // Monday 2,140, Tuesday 2,260 and Wednesday 1,286: today's 1,039 is left out.
     expect(await rowsOf("Daily average")).toEqual([
-      "Energy: 1,681 / 2,200 kcal",
-      "Protein: 84 / 160 g",
-      "Carbohydrate: 168 / 220 g",
-      "Fat: 56 / 70 g",
+      "Energy: 1,895 / 2,200 kcal",
+      "Protein: 95 / 160 g",
+      "Carbohydrate: 190 / 220 g",
+      "Fat: 63 / 70 g",
       "Fibre: not given",
       "Saturated fat: not given",
       "Sugars: not given",
@@ -118,15 +123,39 @@ describe("the weekly averages screen", () => {
     ]);
   });
 
-  it("should list the week so far as totals", async () => {
+  it("should list the week so far as totals, leaving out today", async () => {
     await renderScreen();
 
     expect((await rowsOf("Week so far")).slice(0, 4)).toEqual([
-      "Energy: 6,725 kcal",
-      "Protein: 336 g",
-      "Carbohydrate: 673 g",
-      "Fat: 224 g",
+      "Energy: 5,686 kcal",
+      "Protein: 284 g",
+      "Carbohydrate: 569 g",
+      "Fat: 190 g",
     ]);
+  });
+
+  it("should not change a number when today's entries change", async () => {
+    showWeek([2140, 2260, 1286, 3500], ["2026-10-12", "2026-10-13"]);
+    await renderScreen();
+
+    expect((await rowsOf("Daily average"))[0]).toBe("Energy: 1,895 / 2,200 kcal");
+    expect((await rowsOf("Week so far"))[0]).toBe("Energy: 5,686 kcal");
+  });
+
+  it("should draw the calories average over the days logged before today, captioned Mon to yesterday", async () => {
+    await renderScreen();
+
+    expect(await screen.findByText("From 3 days with food logged")).toBeOnTheScreen();
+    expect(screen.getByText("· Mon to yesterday")).toBeOnTheScreen();
+    expect(screen.queryByText(/Mon to today/)).toBeNull();
+  });
+
+  it("should print the overshoot of the days before today", async () => {
+    // Monday 2,140, Tuesday 2,260 and Wednesday 2,988 average 2,463, which is 263 over.
+    showOverTargetWeek();
+    await renderScreen();
+
+    expect(await screen.findByText("+263 kcal")).toBeOnTheScreen();
   });
 
   it("should write the averages alone when no target is set", async () => {
@@ -134,16 +163,35 @@ describe("the weekly averages screen", () => {
     await renderScreen();
 
     expect((await rowsOf("Daily average")).slice(0, 2)).toEqual([
-      "Energy: 1,681 kcal",
-      "Protein: 84 g",
+      "Energy: 1,895 kcal",
+      "Protein: 95 g",
     ]);
   });
 
-  it("should say nothing is logged yet, with no tables, for an empty week", async () => {
+  it("should say the averages start tomorrow on a Monday, with no tables", async () => {
+    // 11:20 in London on Monday 12 October 2026.
+    mockNow = new Date("2026-10-12T10:20:00Z");
+    await renderScreen();
+
+    expect(await screen.findByText("Your averages start tomorrow.")).toBeOnTheScreen();
+    expect(screen.getByText("Week of Mon 12 Oct")).toBeOnTheScreen();
+    expect(screen.queryByLabelText("Daily average")).toBeNull();
+    expect(screen.getByRole("button", { name: "See each day in the diary" })).toBeOnTheScreen();
+  });
+
+  it("should say nothing is logged before today when only today has entries", async () => {
+    showWeek([null, null, null, 1039]);
+    await renderScreen();
+
+    expect(await screen.findByText("Nothing logged before today this week.")).toBeOnTheScreen();
+    expect(screen.queryByLabelText("Daily average")).toBeNull();
+  });
+
+  it("should say nothing is logged before today, with no tables, for an empty week", async () => {
     showEmptyWeek();
     await renderScreen();
 
-    expect(await screen.findByText("Nothing logged this week yet.")).toBeOnTheScreen();
+    expect(await screen.findByText("Nothing logged before today this week.")).toBeOnTheScreen();
     expect(screen.queryByLabelText("Daily average")).toBeNull();
   });
 
