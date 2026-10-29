@@ -210,6 +210,36 @@ pnpm --filter @keylow/db import:portions --file data/portions/cofid-portions.csv
 
 It targets the local stack unless `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are set, and `--strict` makes it exit 1 when a food code in the file is not in the database.
 
+### USDA foods
+
+Some foods have no CoFID entry, so they come from the USDA FoodData Central SR Legacy release of April 2018 (public domain under CC0). Two files hold them:
+
+- `packages/db/data/usda/usda-foods.csv` is the curated list: the FDC id, the Ki-Lo name, the natural portion, the SR description it was checked against and why CoFID does not cover the food.
+- `packages/db/data/usda/usda-sr-legacy.normalised.csv` (with its `.sha256` file) is what the list becomes once each food is read from SR Legacy. It holds the mapped nutrients per 100 g, the micronutrients, the quality flags and the portion's weight, one row per food. The same list always gives the same bytes.
+
+The SR Legacy zip and its raw CSVs are never committed. Only the normalised CSV is, so every later step reads that file and nobody needs the zip again. To rebuild the CSV, unpack `FoodData_Central_sr_legacy_food_csv_2018-04.zip` and run this from the repository root:
+
+```sh
+pnpm --filter @keylow/db import:usda normalise --sr <unpacked SR Legacy folder> --zip <path to the zip>
+```
+
+`--zip` refuses to run unless the zip is the April 2018 release.
+
+The foods reach production through a generated migration, the way the exercise library does, and not the way the CoFID portions do. The CoFID portions migration skips a food the database lacks, but USDA foods exist nowhere else, so `*_usda_foods.sql` inserts them. Deploy Supabase runs `supabase db push` when it lands on `main`, so production gets the foods on that deploy and nobody runs anything or holds the service role key for it. The migration:
+
+- writes one `import_runs` row (`source 'usda'`, label `usda-sr-2018-04`, the CSV's checksum) under an id made from that checksum
+- upserts each food on `(source, source_ref)` with `source_ref` set to the FDC id, under an id that is a version 5 UUID over `usda:<fdc_id>`, so the file is byte-stable and the portion rows can name their food directly
+- upserts the food's source data (the normalised row as JSON) on the food id
+- upserts the natural portion under the same id the CoFID portions use (`portionId("usda:<fdc_id>", label)`), as the food's default, after clearing any other shared default on that food, so a food never holds two
+
+It only adds and updates. It never deletes a food, a portion or a row of source data, and it never touches `deleted_at`, so a food that is soft deleted stays that way. A change to the CSV ships as a new migration with a later timestamp. An applied migration is never edited and never regenerated over. Generate it from the repository root:
+
+```sh
+pnpm --filter @keylow/db import:usda emit-migration --csv data/usda/usda-sr-legacy.normalised.csv --out supabase/migrations/<timestamp>_usda_foods.sql
+```
+
+It writes the file without connecting to any database, and refuses a path that holds a file already. Commit the result. Each migration holds every food in the CSV, so the newest `*_usda_foods.sql` always carries the whole file. A unit test regenerates it from the CSV and fails when the two differ (it passes while there is no such file), and the integration test `usda-foods-migration.test.ts` applies a rendered migration to the running stack inside a transaction that is rolled back and checks the foods, their portions, applying it twice, a renamed food, a moved default and `search_foods`. A food that leaves the CSV, or whose portion is relabelled (the label is part of its id), stays until a migration of its own removes it.
+
 ### Edge Functions
 
 Edge Functions live in `packages/db/supabase/functions/` and run under Deno. The Node tools (ESLint, `tsc`) ignore that folder, and Deno checks it instead. Shared helpers are in `_shared/`, and each function is a folder with an `index.ts`. A folder whose name starts with an underscore is never deployed as a function.
