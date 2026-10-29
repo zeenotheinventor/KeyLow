@@ -3,7 +3,7 @@
     "toast-in": {
       "from": {
         "opacity": "0",
-        "transform": "translate(40px, 12px) skewX(-12deg)"
+        "transform": "translate(40px, -12px) skewX(-12deg)"
       },
       "60%": {
         "opacity": "1",

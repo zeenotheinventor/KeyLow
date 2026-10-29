@@ -126,6 +126,47 @@ describe("Toast", () => {
     });
   });
 
+  describe("press on the card", () => {
+    it("should close when the message is pressed", () => {
+      const onClose = vi.fn();
+      render(<Toast message="Entry deleted" actionLabel="Undo" onClose={onClose} />);
+
+      fireEvent.click(screen.getByText("Entry deleted"));
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("should close when the card outside the message is pressed", () => {
+      const onClose = vi.fn();
+      render(<Toast message="Entry deleted" onClose={onClose} />);
+
+      fireEvent.click(screen.getByRole("status"));
+
+      expect(onClose).toHaveBeenCalledOnce();
+    });
+
+    it("should run only the action, and not close the toast itself, when the action is pressed", () => {
+      const onAction = vi.fn();
+      const onClose = vi.fn();
+      render(
+        <Toast message="Entry deleted" actionLabel="Undo" onAction={onAction} onClose={onClose} />,
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+      expect(onAction).toHaveBeenCalledOnce();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("should do nothing when pressed and there is no onClose", () => {
+      render(<Toast message="Entry deleted" />);
+
+      fireEvent.click(screen.getByText("Entry deleted"));
+
+      expect(screen.getByRole("status").textContent).toBe("Entry deleted");
+    });
+  });
+
   describe("auto dismiss", () => {
     it("should close after 5000 ms by default", () => {
       const onClose = vi.fn();
@@ -315,11 +356,12 @@ describe("Toast", () => {
       expect(screen.getByRole("status").className).toContain("fixed");
     });
 
-    it("should span the width with a 16 px inset on a phone and be 360 px wide at the corner on a wide screen", async () => {
+    it("should span the width with a 16 px inset at the top on a phone and be 360 px wide at the top right corner on a wide screen", async () => {
       render(<Toast message="Entry added" />);
       const css = await compileUtilities(screen.getByRole("status").getAttribute("class") ?? "");
 
-      expect(css).toContain("bottom: 16px");
+      expect(css).toContain("top: 16px");
+      expect(css).not.toMatch(/\sbottom:/);
       expect(css).toContain("right: 16px");
       expect(css).toContain("left: 16px");
       expect(css).toMatch(/@media \(min-width: 700px\)[\s\S]*width: 360px/);
@@ -348,6 +390,13 @@ describe("Toast", () => {
 
       expect(css).toContain("@keyframes toast-in");
       expect(css).toContain("toast-in 220ms");
+    });
+
+    it("should enter from above, not from below", async () => {
+      render(<Toast message="Entry added" />);
+      const css = await compileUtilities(screen.getByRole("status").getAttribute("class") ?? "");
+
+      expect(css).toContain("translate(40px, -12px) skewX(-12deg)");
     });
 
     it("should not animate under prefers-reduced-motion", async () => {
@@ -513,6 +562,21 @@ describe("ToastProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
 
     expect(undo).toHaveBeenCalledOnce();
+    expect(region().textContent).toBe("");
+  });
+
+  it("should close when the card is pressed, without running the action", () => {
+    const undo = vi.fn();
+    render(
+      <ToastProvider>
+        <Trigger options={{ message: "Entry deleted", actionLabel: "Undo", onAction: undo }} />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Show" }));
+
+    fireEvent.click(screen.getByText("Entry deleted"));
+
+    expect(undo).not.toHaveBeenCalled();
     expect(region().textContent).toBe("");
   });
 

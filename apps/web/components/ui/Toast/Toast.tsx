@@ -24,9 +24,10 @@ const placements = {
 } as const;
 
 // On a phone the toast spans the width with a 16 px inset. From 700 px, where the design stops
-// calling a screen narrow, it is 360 px wide in the bottom right corner.
+// calling a screen narrow, it is 360 px wide in the top right corner. It sits at the top, over the page
+// and not under it, so a toast never needs to clear a bar.
 const frame =
-  "bottom-4 left-4 right-4 z-50 flex min-h-touch-target items-center gap-3 rounded-medium border border-border bg-surface-sheet py-2 pl-4 pr-2 text-text-primary shadow-toast animate-toast-in motion-reduce:animate-none min-[700px]:left-auto min-[700px]:w-[360px]";
+  "top-4 left-4 right-4 z-50 flex min-h-touch-target items-center gap-3 rounded-medium border border-border bg-surface-sheet py-2 pl-4 pr-2 text-text-primary shadow-toast animate-toast-in motion-reduce:animate-none min-[700px]:left-auto min-[700px]:w-[360px]";
 
 // The action is accent in dark. In light that colour is too weak for small text, so it falls back
 // to the primary text colour.
@@ -109,6 +110,11 @@ function OpenToast({
         hasFocusRef.current = false;
         setFocused(false);
       }}
+      // A toast over the page heading would hold it for the whole wait, so a press on the card closes it.
+      // The action stops its own click, so pressing it runs the action and does not close the toast twice.
+      onClick={() => {
+        onClose?.();
+      }}
       onKeyDown={(event) => {
         if (event.key === "Escape") {
           // The toast answers its own Escape, so a dialog behind it stays open.
@@ -124,7 +130,15 @@ function OpenToast({
       )}
       <span className="min-w-0 flex-1 text-[14px] leading-5">{message}</span>
       {actionLabel !== undefined && (
-        <button type="button" ref={actionRef} onClick={onAction} className={actionButton}>
+        <button
+          type="button"
+          ref={actionRef}
+          onClick={(event) => {
+            event.stopPropagation();
+            onAction?.();
+          }}
+          className={actionButton}
+        >
           {actionLabel}
         </button>
       )}
