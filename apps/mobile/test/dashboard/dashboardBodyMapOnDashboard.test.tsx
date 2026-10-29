@@ -125,7 +125,7 @@ describe("the body map card on the dashboard", () => {
 
     await screen.findByLabelText(/^Body map, Actual heat now\./);
     await screen.findByRole("button", { name: /^Today, open the diary\. / });
-    await screen.findByRole("button", { name: /^This week, open the diary\./ });
+    await screen.findByRole("button", { name: /^This week, open your weekly averages\./ });
     const titles = screen.getAllByText(/^(Today|This week|Training)$/, hidden);
     expectTextsInOrder(titles, ["Today", "This week", "Training"]);
   });

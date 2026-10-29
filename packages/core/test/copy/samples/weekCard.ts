@@ -24,6 +24,7 @@ export const samples: Record<string, () => string[]> = {
   describeThisWeekCard: () => [
     copy.describeThisWeekCard(sampleWeek, "diary"),
     copy.describeThisWeekCard(sampleWeek, "week"),
+    copy.describeThisWeekCard(sampleWeek, "averages"),
     copy.describeThisWeekCard({ ...sampleWeek, targetKcal: null }, "diary"),
     copy.describeThisWeekCard({ ...sampleWeek, daysLogged: 0, averageKcal: null }, "diary"),
   ],

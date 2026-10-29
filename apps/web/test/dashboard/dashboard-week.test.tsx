@@ -88,7 +88,8 @@ function renderDashboard() {
   return renderWithRouter(<DashboardScreen />);
 }
 
-const weekCard = () => screen.getByRole("link", { name: /^This week, open the week\./ });
+const weekCard = () =>
+  screen.getByRole("link", { name: /^This week, open your weekly averages\./ });
 const markerNamed = (name: string) => screen.getByRole("img", { name, hidden: true });
 
 beforeEach(() => {
@@ -112,21 +113,21 @@ afterEach(() => {
 
 describe("the This week card", () => {
   describe("the sample week", () => {
-    it("should be one link to the diary's Week view, named by the average and the days complete", () => {
+    it("should be one link to the weekly averages page, named by the average and the days complete", () => {
       renderDashboard();
 
-      expect(weekCard().getAttribute("href")).toBe("/diary?view=week");
+      expect(weekCard().getAttribute("href")).toBe("/dashboard/week");
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open the week. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
       );
     });
 
-    it("should open the Week view when it is pressed", () => {
+    it("should open the weekly averages page when it is pressed", () => {
       const { push } = renderDashboard();
 
       fireEvent.click(weekCard());
 
-      expect(push).toHaveBeenCalledExactlyOnceWith("/diary?view=week", expect.anything());
+      expect(push).toHaveBeenCalledExactlyOnceWith("/dashboard/week", expect.anything());
     });
 
     it("should read the week that holds today, once", () => {
@@ -233,7 +234,7 @@ describe("the This week card", () => {
       renderDashboard();
 
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open the week. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
+        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
       );
       expect(within(weekCard()).getByText("From 1 day with food logged")).toBeTruthy();
     });
@@ -272,7 +273,7 @@ describe("the This week card", () => {
 
       expect(within(weekCard()).getByText("0 of 4 days complete")).toBeTruthy();
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open the week. Nothing logged this week yet. 0 of 4 days complete.",
+        "This week, open your weekly averages. Nothing logged this week yet. 0 of 4 days complete.",
       );
     });
   });
@@ -296,7 +297,7 @@ describe("the This week card", () => {
       renderDashboard();
 
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open the week. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
       );
     });
 
@@ -449,12 +450,12 @@ describe("the This week card", () => {
       ).toBeTruthy();
     });
 
-    it("should still open the Week view, which the diary can read from what it has", () => {
+    it("should still open the weekly averages page, which reads the same week from what it has", () => {
       const { push } = renderDashboard();
 
       fireEvent.click(weekCard());
 
-      expect(push).toHaveBeenCalledExactlyOnceWith("/diary?view=week", expect.anything());
+      expect(push).toHaveBeenCalledExactlyOnceWith("/dashboard/week", expect.anything());
     });
 
     it("should say This week isn't available offline when no week is on hand", () => {
@@ -508,7 +509,7 @@ describe("the This week card", () => {
       });
 
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open the week. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 0 of 1 day complete.",
+        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 0 of 1 day complete.",
       );
       expect(within(weekCard()).getByText("Week of Mon 19 Oct")).toBeTruthy();
     });

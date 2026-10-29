@@ -15,12 +15,13 @@ import { WeekAverageBar } from "../WeekAverageBar";
 import type { ThisWeekCardProps } from "./types";
 
 import { Card } from "@/components/ui/Card";
-import { diaryHref } from "@/lib/diary";
+
+const WEEK_AVERAGES_HREF = "/dashboard/week";
 
 /**
  * The week so far as the dashboard board draws it: the title with a chevron and the week's Monday, the
  * average calories against the target, the seven day markers and the days complete. The whole card is one
- * link to the diary's Week view, named by the title, the average and the days complete. The words inside
+ * link to the weekly averages page, named by the title, the average and the days complete. The words inside
  * it are hidden from assistive technology, because that name already says all of it.
  */
 export function ThisWeekCard({ summary }: ThisWeekCardProps) {
@@ -30,8 +31,8 @@ export function ThisWeekCard({ summary }: ThisWeekCardProps) {
     <Card asChild padding="none">
       <section aria-label={title}>
         <Link
-          href={diaryHref({ view: "week" })}
-          aria-label={describeThisWeekCard(summary, "week")}
+          href={WEEK_AVERAGES_HREF}
+          aria-label={describeThisWeekCard(summary, "averages")}
           className="block rounded-large outline-none transition-colors duration-quick hover:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
         >
           <div aria-hidden className="flex flex-col gap-4 px-4 py-4 sm:px-5">

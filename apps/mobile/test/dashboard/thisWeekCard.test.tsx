@@ -109,6 +109,7 @@ const routes = {
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": standIn("More screen"),
   targets: standIn("Targets screen"),
+  week: standIn("Weekly averages screen"),
   "foods/index": standIn("Search sheet"),
   "foods/scan": standIn("Scan screen"),
 };
@@ -123,7 +124,7 @@ async function renderDashboard() {
 const hidden = { includeHiddenElements: true };
 
 const sampleName =
-  "This week, open the diary. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.";
+  "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.";
 
 // The week is read as a range of days, where a day is read by its date alone.
 const weekReads = () =>
@@ -131,7 +132,8 @@ const weekReads = () =>
     (request) => request.table === "day_totals" && request.search.includes("local_date=gte."),
   ).length;
 
-const weekCard = () => screen.findByRole("button", { name: /^This week, open the diary\./ });
+const weekCard = () =>
+  screen.findByRole("button", { name: /^This week, open your weekly averages\./ });
 const todayCard = () => screen.findByRole("button", { name: /^Today, open the diary\. / });
 const marker = (name: string) => screen.getByRole("img", { name, ...hidden });
 
@@ -160,7 +162,7 @@ describe("the This week card", () => {
   });
 
   describe("the sample week", () => {
-    it("should be one button to the diary, named by the average and the days complete", async () => {
+    it("should be one button to the weekly averages, named by the average and the days complete", async () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(sampleName);
@@ -171,18 +173,18 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open the diary. Average 1,681 of 2,140 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,681 of 2,140 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
       );
     });
 
-    it("should open the Diary on today when it is pressed", async () => {
+    it("should open the weekly averages screen when it is pressed", async () => {
       const user = userEvent.setup();
       await renderDashboard();
 
       await user.press(await weekCard());
 
       expect(
-        await screen.findByRole("heading", { name: "Diary day=2026-10-15" }),
+        await screen.findByRole("heading", { name: "Weekly averages screen" }),
       ).toBeOnTheScreen();
     });
 
@@ -284,7 +286,7 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open the diary. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
+        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
       );
       expect(screen.getByText("From 1 day with food logged", hidden)).toBeOnTheScreen();
     });
@@ -309,7 +311,7 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open the diary. Nothing logged this week yet. 0 of 4 days complete.",
+        "This week, open your weekly averages. Nothing logged this week yet. 0 of 4 days complete.",
       );
       expect(screen.getByText("0 of 4 days complete", hidden)).toBeOnTheScreen();
     });
@@ -334,7 +336,7 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open the diary. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
       );
     });
 
@@ -386,7 +388,7 @@ describe("the This week card", () => {
 
       expect(await screen.findByRole("status", { name: "Loading this week" })).toBeOnTheScreen();
       expect(
-        screen.queryByRole("button", { name: /^This week, open the diary/ }),
+        screen.queryByRole("button", { name: /^This week, open your weekly averages/ }),
       ).not.toBeOnTheScreen();
     });
 
@@ -435,7 +437,7 @@ describe("the This week card", () => {
       await screen.findByText("Couldn't load this week");
 
       expect(
-        screen.queryByRole("button", { name: /^This week, open the diary/ }),
+        screen.queryByRole("button", { name: /^This week, open your weekly averages/ }),
       ).not.toBeOnTheScreen();
     });
 
@@ -518,7 +520,7 @@ describe("the This week card", () => {
       await user.press(await weekCard());
 
       expect(
-        await screen.findByRole("heading", { name: "Diary day=2026-10-15" }),
+        await screen.findByRole("heading", { name: "Weekly averages screen" }),
       ).toBeOnTheScreen();
     });
 
@@ -534,7 +536,7 @@ describe("the This week card", () => {
       expect(await screen.findByText("This week isn't available offline.")).toBeOnTheScreen();
       expect(screen.queryByRole("status", { name: "Loading this week" })).not.toBeOnTheScreen();
       expect(
-        screen.queryByRole("button", { name: /^This week, open the diary/ }),
+        screen.queryByRole("button", { name: /^This week, open your weekly averages/ }),
       ).not.toBeOnTheScreen();
       expect(screen.getByText("Week of Mon 12 Oct")).toBeOnTheScreen();
     });
@@ -570,7 +572,7 @@ describe("the This week card", () => {
 
       expect(await screen.findByRole("status", { name: "Loading this week" })).toBeOnTheScreen();
       expect(
-        screen.queryByRole("button", { name: /^This week, open the diary/ }),
+        screen.queryByRole("button", { name: /^This week, open your weekly averages/ }),
       ).not.toBeOnTheScreen();
       expect(
         diaryBackend.requests.some(
@@ -590,7 +592,7 @@ describe("the This week card", () => {
 
       expect(await screen.findByText("Week of Mon 19 Oct", hidden)).toBeOnTheScreen();
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open the diary. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 0 of 1 day complete.",
+        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 0 of 1 day complete.",
       );
     });
   });

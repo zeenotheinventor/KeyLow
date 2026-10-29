@@ -98,6 +98,12 @@ describe("the This week card's words", () => {
       );
     });
 
+    it("should say open your weekly averages when the card opens that page", () => {
+      expect(describeThisWeekCard(sample, "averages")).toBe(
+        "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+      );
+    });
+
     it("should drop the target when none is set", () => {
       expect(describeThisWeekCard({ ...sample, targetKcal: null }, "diary")).toBe(
         "This week, open the diary. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
