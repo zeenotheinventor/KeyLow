@@ -16,4 +16,20 @@ export const samples: Record<string, () => string[]> = {
       copy.describeShoppingAmount({ grams: 150, portion_label: "1 medium", portion_count: 1 }),
       copy.describeShoppingAmount({ grams: 375, portion_label: "1 medium", portion_count: 2.5 }),
     ].filter((text) => text !== null),
+  describeAddAnyway: () => [copy.describeAddAnyway("Salt")],
+  describeShoppingItemCaption: () =>
+    [
+      copy.describeShoppingItemCaption({
+        grams: 300,
+        portion_label: "1 medium",
+        portion_count: 2,
+        sources: [{ name: "Chilli" }, { name: "Curry" }],
+      }),
+      copy.describeShoppingItemCaption({
+        grams: 450,
+        portion_label: null,
+        portion_count: null,
+        sources: [],
+      }),
+    ].filter((text) => text !== null),
 };

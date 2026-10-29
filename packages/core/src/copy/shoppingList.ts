@@ -99,3 +99,24 @@ export const describeShoppingAmount = (item: ShoppingAmount): string | null => {
 
   return grams === null ? portion : `${portion} · ${grams}`;
 };
+
+/** The name of a staple's Add anyway box, which says which staple: "Add Salt anyway". */
+export const describeAddAnyway = (name: string): string => `Add ${name} anyway`;
+
+/**
+ * The line under an item: its amount, then the recipes it came from, such as "2 × 1 medium · 300 g · From
+ * Chilli and Curry". Either part is left out when the item has none, and an item typed by hand has no
+ * line at all (null).
+ */
+export const describeShoppingItemCaption = (
+  item: ShoppingAmount & { sources: readonly { name: string }[] },
+): string | null => {
+  const parts = [
+    describeShoppingAmount(item),
+    item.sources.length === 0
+      ? null
+      : describeShoppingSources(item.sources.map(({ name }) => name)),
+  ].filter((part) => part !== null);
+
+  return parts.length === 0 ? null : parts.join(" · ");
+};

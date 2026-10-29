@@ -6,9 +6,11 @@ import {
   SHOPPING_LIST_CLEAR_DIALOG,
   SHOPPING_LIST_EMPTY,
   SHOPPING_LIST_NO_RECIPES,
+  describeAddAnyway,
   describeLeftOutCount,
   describeRemoveItem,
   describeShoppingAmount,
+  describeShoppingItemCaption,
   describeShoppingSources,
 } from "../../src/copy";
 
@@ -115,6 +117,55 @@ describe("describeShoppingAmount", () => {
   it("should have no amount for an item typed by hand", () => {
     expect(
       describeShoppingAmount({ grams: null, portion_label: null, portion_count: null }),
+    ).toBeNull();
+  });
+});
+
+describe("describeAddAnyway", () => {
+  it("should name the staple", () => {
+    expect(describeAddAnyway("Salt")).toBe("Add Salt anyway");
+  });
+});
+
+describe("describeShoppingItemCaption", () => {
+  it("should write the amount, then the recipes", () => {
+    expect(
+      describeShoppingItemCaption({
+        grams: 300,
+        portion_label: "1 medium",
+        portion_count: 2,
+        sources: [{ name: "Chilli" }, { name: "Curry" }],
+      }),
+    ).toBe("2 × 1 medium · 300 g · From Chilli and Curry");
+  });
+
+  it("should leave out a part the item does not have", () => {
+    expect(
+      describeShoppingItemCaption({
+        grams: 450,
+        portion_label: null,
+        portion_count: null,
+        sources: [],
+      }),
+    ).toBe("450 g");
+    expect(
+      describeShoppingItemCaption({
+        grams: null,
+        portion_label: null,
+        portion_count: null,
+        sources: [{ name: "Chilli" }],
+      }),
+    ).toBe("From Chilli");
+  });
+
+  it("should have no line for an item typed by hand", () => {
+    expect(
+      describeShoppingItemCaption({
+        grams: null,
+        portion_label: null,
+        portion_count: null,
+        sources: [],
+      }),
     ).toBeNull();
   });
 });
