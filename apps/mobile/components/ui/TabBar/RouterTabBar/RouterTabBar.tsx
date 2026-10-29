@@ -12,7 +12,6 @@ import type { BottomTabNavigationOptions } from "expo-router/js-tabs";
 const iconByScreenName = new Map<string, IconName>([
   ["dashboard", "LayoutDashboard"],
   ["diary", "BookOpen"],
-  ["recipes", "ChefHat"],
   ["train", "Dumbbell"],
   ["more", "Ellipsis"],
 ]);

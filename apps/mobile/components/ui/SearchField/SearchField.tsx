@@ -14,7 +14,7 @@ import type { SearchFieldProps } from "./types";
  * The sheet's search: the Ki-Lo input with a search icon at its start and a slot at its end, docked
  * at the bottom of the screen above the keyboard. Put it last in a screen that fills the height. The
  * screen gives the bottom inset, the dock gives the 12 points above it. A screen whose field sits among
- * its content, such as the recipes tab's, places it `inline`: the field alone, with the screen's own sides.
+ * its content, such as the recipe library's, places it `inline`: the field alone, with the screen's own sides.
  * A docked field can have an action beside it, such as Log foods, and the field shrinks to the space it leaves.
  */
 export function SearchField({

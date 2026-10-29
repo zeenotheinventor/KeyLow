@@ -6,7 +6,7 @@ import {
   RECIPE_EDITOR,
   RECIPE_NOT_FOUND,
   RETRY_LABEL,
-  TAB_TITLES,
+  RECIPES_LIBRARY,
 } from "@keylow/core/copy";
 import { isRecipeId } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
@@ -33,7 +33,7 @@ const STATE_CLASSES =
 const INGREDIENT_TITLE_WIDTHS = ["w-[50%]", "w-[38%]", "w-[56%]"];
 
 function BackToRecipes() {
-  return <BackToFoodsLink tone="accent" label={TAB_TITLES.recipes} href={recipesPath()} />;
+  return <BackToFoodsLink tone="accent" label={RECIPES_LIBRARY.title} href={recipesPath()} />;
 }
 
 function LoadingRecipe() {

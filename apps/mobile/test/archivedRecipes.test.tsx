@@ -243,7 +243,7 @@ describe("the archived recipes screen", () => {
 
       await user.press(screen.getByRole("button", { name: "Back" }));
 
-      expect(routerMock.replace).toHaveBeenCalledWith("/recipes");
+      expect(routerMock.replace).toHaveBeenCalledWith("/more/recipes");
     });
   });
 

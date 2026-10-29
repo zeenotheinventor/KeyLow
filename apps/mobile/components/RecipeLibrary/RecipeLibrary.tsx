@@ -9,11 +9,10 @@ import { RecipeLibraryView } from "../RecipeLibraryView";
 
 /**
  * The recipe library: the user's live recipes, read with one request that also brings the archived ones
- * for the archived screen, which are left out here. It stays mounted under the terms gate's cover when it
- * is a tab, so the read waits until the account has accepted the current Terms. A failed refetch keeps the
- * recipes already loaded, so only a library that never loaded is an error. Recipes are never written to the
- * persisted offline cache, so a phone that starts offline has none, and one that went offline keeps what it
- * had loaded in memory, readable but not changeable. A row's menu duplicates or archives a recipe through
+ * for the archived screen, which are left out here. The read waits until the account has accepted the
+ * current Terms. A failed refetch keeps the recipes already loaded, so only a library that never loaded is
+ * an error. Recipes are never written to the persisted offline cache, so a phone that starts offline has
+ * none, and one that went offline keeps what it had loaded in memory, readable but not changeable. A row's menu duplicates or archives a recipe through
  * `useRecipeActions`, and the Archived recipes row opens the archived screen with the count it found.
  */
 export function RecipeLibrary() {
@@ -23,6 +22,14 @@ export function RecipeLibrary() {
   const recipeActions = useRecipeActions();
 
   const actions = {
+    // A cold link to the library has nothing before it, so Back goes to More instead, as Weight's does.
+    onBack: () => {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace("/(tabs)/more");
+      }
+    },
     onDuplicateRecipe: recipeActions.duplicate,
     onArchiveRecipe: recipeActions.archive,
     onOpenArchived: () => {

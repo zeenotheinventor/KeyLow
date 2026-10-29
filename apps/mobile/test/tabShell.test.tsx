@@ -17,11 +17,13 @@ import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
 import MoreLayout from "../app/(tabs)/more/_layout";
 import MoreRoute from "../app/(tabs)/more/index";
-import RecipesLayout from "../app/(tabs)/recipes/_layout";
+import RecipesLayout from "../app/(tabs)/more/recipes/_layout";
 import RootLayout from "../app/_layout";
 import FoodsLayout from "../app/foods/_layout";
 import FoodSearchRoute from "../app/foods/index";
 import IndexRoute from "../app/index";
+import OldArchivedRecipesRoute from "../app/recipes/archived";
+import OldRecipesRoute from "../app/recipes/index";
 
 import type { ComponentType } from "react";
 
@@ -64,8 +66,8 @@ const standIn = (text: string) =>
     return <Text>{text}</Text>;
   };
 
-// The diary, the recipe library and the Train home have their own tests. Here each is a heading, because these tests are
-// about the shell around them.
+// The diary, the recipe library and the Train home have their own tests. Here each is a heading, because these
+// tests are about the shell around them.
 function DiaryStandIn() {
   return <Text role="heading">Diary</Text>;
 }
@@ -95,9 +97,9 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": DashboardRoute,
   "(tabs)/diary": DiaryStandIn,
-  "(tabs)/recipes/_layout": RecipesLayout,
-  "(tabs)/recipes/index": RecipesStandIn,
-  "(tabs)/recipes/archived": ArchivedStandIn,
+  "(tabs)/more/recipes/_layout": RecipesLayout,
+  "(tabs)/more/recipes/index": RecipesStandIn,
+  "(tabs)/more/recipes/archived": ArchivedStandIn,
   "(tabs)/train": TrainStandIn,
   "(tabs)/more/_layout": MoreLayout,
   "(tabs)/more/index": MoreRoute,
@@ -108,6 +110,10 @@ const routes = {
   "foods/scan": standIn("Scan screen"),
   "foods/[id]/index": standIn("Food screen"),
   "foods/[id]/edit": standIn("Edit food screen"),
+  // The library's old addresses, from when it was a tab, beside the recipe view they must not be read as.
+  "recipes/index": OldRecipesRoute,
+  "recipes/archived": OldArchivedRecipesRoute,
+  "recipes/[id]/index": standIn("Recipe view screen"),
 };
 
 async function renderApp(location: string) {
@@ -121,7 +127,7 @@ async function goBack() {
   });
 }
 
-const tabNames = ["Dashboard", "Diary", "Recipes", "Train", "More"];
+const tabNames = ["Dashboard", "Diary", "Train", "More"];
 const launcher = () => screen.queryByRole("button", { name: "Search for a food" });
 const sheetHeading = () => screen.queryByRole("heading", { name: "Log food" });
 const selectedTabs = (options: { hidden?: boolean } = {}) =>
@@ -139,14 +145,21 @@ describe("the tab shell", () => {
   });
 
   describe("the tab bar", () => {
-    it("should draw Dashboard, Diary, Recipes, Train and More in that order, and nothing else", async () => {
+    it("should draw Dashboard, Diary, Train and More in that order, and nothing else", async () => {
       await renderApp("/dashboard");
 
       const tabs = await screen.findAllByRole("tab");
-      expect(tabs).toHaveLength(5);
+      expect(tabs).toHaveLength(4);
       expect(tabNames.map((name) => tabs.indexOf(screen.getByRole("tab", { name })))).toEqual([
-        0, 1, 2, 3, 4,
+        0, 1, 2, 3,
       ]);
+    });
+
+    it("should draw no Recipes tab, as the library is a row of More", async () => {
+      await renderApp("/dashboard");
+
+      await screen.findAllByRole("tab");
+      expect(screen.queryByRole("tab", { name: "Recipes" })).not.toBeOnTheScreen();
     });
 
     it("should be named Main for a screen reader", async () => {
@@ -172,35 +185,35 @@ describe("the tab shell", () => {
       expect(screen.getByRole("tab", { name, selected: true })).toBeOnTheScreen();
     });
 
-    it("should keep the tab bar, with Recipes selected, on the archived recipes pushed inside the Recipes tab", async () => {
-      await renderApp("/recipes/archived");
+    it("should keep the tab bar, with More selected, on the archived recipes pushed inside the More tab", async () => {
+      await renderApp("/more/recipes/archived");
 
       expect(await screen.findByRole("heading", { name: "Archived recipes" })).toBeOnTheScreen();
-      expect(screen.getAllByRole("tab")).toHaveLength(5);
-      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+      expect(screen.getAllByRole("tab")).toHaveLength(4);
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
-    it("should go back from the archived recipes to the Recipes tab", async () => {
-      await renderApp("/recipes");
+    it("should go back from the archived recipes to the recipe library", async () => {
+      await renderApp("/more/recipes");
       await screen.findByRole("heading", { name: "Recipes" });
       await act(() => {
-        router.push("/recipes/archived");
+        router.push("/more/recipes/archived");
       });
       expect(await screen.findByRole("heading", { name: "Archived recipes" })).toBeOnTheScreen();
 
       await goBack();
 
       expect(await screen.findByRole("heading", { name: "Recipes" })).toBeOnTheScreen();
-      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
     it("should draw no tab for what More holds, which has no screen of its own", async () => {
       await renderApp("/more");
 
       expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
-      expect(screen.getAllByRole("tab")).toHaveLength(5);
+      expect(screen.getAllByRole("tab")).toHaveLength(4);
       expect(
-        screen.queryByRole("tab", { name: /settings|weight|your foods/i }),
+        screen.queryByRole("tab", { name: /settings|weight|your foods|recipes/i }),
       ).not.toBeOnTheScreen();
     });
   });
@@ -242,14 +255,14 @@ describe("the tab shell", () => {
 
     it("should close the sheet back to the tab on the back key", async () => {
       const user = userEvent.setup();
-      await renderApp("/recipes");
+      await renderApp("/train");
       await user.press(await screen.findByRole("button", { name: "Find food" }));
       expect(await screen.findByRole("heading", { name: "Log food" })).toBeOnTheScreen();
 
       await goBack();
 
-      expect(await screen.findByRole("heading", { name: "Recipes" })).toBeOnTheScreen();
-      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+      expect(await screen.findByRole("heading", { name: "Train" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "Train", selected: true })).toBeOnTheScreen();
     });
   });
 
@@ -261,7 +274,7 @@ describe("the tab shell", () => {
       expect(screen.getByRole("button", { name: "Scan barcode" })).toBeOnTheScreen();
     });
 
-    it.each(["recipes", "more"])("should not show on %s", async (route) => {
+    it.each(["train", "more", "more/recipes"])("should not show on %s", async (route) => {
       await renderApp(`/${route}`);
 
       expect(await screen.findByLabelText("Main")).toBeOnTheScreen();
@@ -274,7 +287,7 @@ describe("the tab shell", () => {
       await renderApp("/dashboard");
       expect(await screen.findByRole("button", { name: "Search for a food" })).toBeOnTheScreen();
 
-      await user.press(screen.getByRole("tab", { name: "Recipes" }));
+      await user.press(screen.getByRole("tab", { name: "More" }));
       expect(launcher()).not.toBeOnTheScreen();
 
       await user.press(screen.getByRole("tab", { name: "Diary" }));
@@ -365,7 +378,7 @@ describe("the tab shell", () => {
       await user.press(await screen.findByRole("button", { name: "Weight" }));
 
       expect(await screen.findByRole("heading", { name: "Weight" })).toBeOnTheScreen();
-      expect(screen.getAllByRole("tab")).toHaveLength(5);
+      expect(screen.getAllByRole("tab")).toHaveLength(4);
       expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
@@ -378,6 +391,30 @@ describe("the tab shell", () => {
       await goBack();
 
       expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should open the recipe library inside the More tab from Nutrition's Recipes row, with More selected", async () => {
+      const user = userEvent.setup();
+      await renderApp("/more");
+
+      await user.press(await screen.findByRole("button", { name: "Recipes" }));
+
+      expect(await screen.findByRole("heading", { name: "Recipes" })).toBeOnTheScreen();
+      expect(screen.getAllByRole("tab")).toHaveLength(4);
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should go back from the recipe library to the More screen on the back key", async () => {
+      const user = userEvent.setup();
+      await renderApp("/more");
+      await user.press(await screen.findByRole("button", { name: "Recipes" }));
+      await screen.findByRole("heading", { name: "Recipes" });
+
+      await goBack();
+
+      expect(await screen.findByRole("button", { name: "Sign out" })).toBeOnTheScreen();
+      expect(screen.queryByRole("heading", { name: "Recipes" })).not.toBeOnTheScreen();
       expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
@@ -404,6 +441,23 @@ describe("the tab shell", () => {
 
       expect(mockSupabaseClient.auth.signOut).toHaveBeenCalledTimes(1);
       expect(await screen.findByText("Sign in screen")).toBeOnTheScreen();
+    });
+  });
+
+  describe("the recipe library's old addresses", () => {
+    it("should take /recipes to the library inside the More tab", async () => {
+      await renderApp("/recipes");
+
+      expect(await screen.findByRole("heading", { name: "Recipes" })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
+    });
+
+    it("should take /recipes/archived to the archived recipes inside the More tab, not to a recipe", async () => {
+      await renderApp("/recipes/archived");
+
+      expect(await screen.findByRole("heading", { name: "Archived recipes" })).toBeOnTheScreen();
+      expect(screen.queryByText("Recipe view screen")).not.toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
   });
 

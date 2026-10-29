@@ -9,7 +9,7 @@ import {
   RECIPE_EDITOR,
   RECIPE_TOASTS,
   SAVE_FAILED_BANNER,
-  TAB_TITLES,
+  RECIPES_LIBRARY,
   problemSentences,
 } from "@keylow/core/copy";
 import {
@@ -231,7 +231,7 @@ export function RecipeEditor({ existing, initialName }: RecipeEditorProps) {
       backLink={
         <BackToFoodsLink
           tone="accent"
-          label={existing === undefined ? TAB_TITLES.recipes : baseline.name}
+          label={existing === undefined ? RECIPES_LIBRARY.title : baseline.name}
           href={backHref}
           onClick={handleBackClick}
         />

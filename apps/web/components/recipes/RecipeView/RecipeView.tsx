@@ -1,7 +1,7 @@
 "use client";
 
 import { useRecipes } from "@keylow/api-client";
-import { OFFLINE_BANNER, RECIPE_VIEW, TAB_TITLES } from "@keylow/core/copy";
+import { OFFLINE_BANNER, RECIPE_VIEW, RECIPES_LIBRARY } from "@keylow/core/copy";
 import {
   enteredViewServings,
   recipeCardOf,
@@ -151,7 +151,9 @@ export function RecipeView({ recipe }: RecipeViewProps) {
 
   return (
     <RecipeEditorFrame
-      backLink={<BackToFoodsLink tone="accent" label={TAB_TITLES.recipes} href={recipesPath()} />}
+      backLink={
+        <BackToFoodsLink tone="accent" label={RECIPES_LIBRARY.title} href={recipesPath()} />
+      }
       title={recipe.name}
       titleAction={
         <RecipeViewActions

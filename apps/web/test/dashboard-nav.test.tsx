@@ -39,29 +39,23 @@ describe("DashboardNav", () => {
     expect(screen.getByRole("link", { name: "Ki-Lo" }).getAttribute("href")).toBe("/dashboard");
   });
 
-  it("should link to Dashboard, Diary, Recipes and More", () => {
+  it("should link to Dashboard, Diary and More", () => {
     render(<DashboardNav />);
 
     const links = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole("link");
 
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Dashboard",
-      "Diary",
-      "Recipes",
-      "More",
-    ]);
+    expect(links.map((link) => link.textContent)).toEqual(["Dashboard", "Diary", "More"]);
     expect(links.map((link) => link.getAttribute("href"))).toEqual([
       "/dashboard",
       "/diary",
-      "/recipes",
       "/more",
     ]);
   });
 
-  it("should link Recipes to the recipe library route", () => {
+  it("should no longer link to Recipes, which is reached through More", () => {
     render(<DashboardNav />);
 
-    expect(screen.getByRole("link", { name: "Recipes" }).getAttribute("href")).toBe(recipesPath());
+    expect(screen.queryByRole("link", { name: "Recipes" })).toBeNull();
   });
 
   it("should no longer link to Weight or Settings, which are reached through More", () => {
@@ -84,6 +78,27 @@ describe("DashboardNav", () => {
     render(<DashboardNav />);
 
     expect(screen.getByRole("link", { name: "More" }).getAttribute("aria-current")).toBe("page");
+  });
+
+  it.each([recipesPath(), `${recipesPath()}/abc`, `${recipesPath()}/archived`])(
+    "should mark More as the current page on %s, as the recipe library is a row of More",
+    (path) => {
+      pathname.mockReturnValue(path);
+      render(<DashboardNav />);
+
+      const current = within(screen.getByRole("navigation", { name: "Main" })).getAllByRole(
+        "link",
+        { current: "page" },
+      );
+      expect(current.map((link) => link.textContent)).toEqual(["More"]);
+    },
+  );
+
+  it("should not mark More current on a page whose address only begins like the library's", () => {
+    pathname.mockReturnValue(`${recipesPath()}-old`);
+    render(<DashboardNav />);
+
+    expect(screen.getByRole("link", { name: "More" }).getAttribute("aria-current")).toBeNull();
   });
 
   it("should mark no section as current on the foods pages", () => {
@@ -253,12 +268,12 @@ describe("DashboardNav", () => {
       const menuButton = screen.getByRole("button", { name: "Menu" });
       fireEvent.click(menuButton);
 
-      const recipesLink = screen.getByRole("link", { name: "Recipes" });
+      const moreLink = screen.getByRole("link", { name: "More" });
       // jsdom cannot navigate, so the browser's own follow-the-link is cancelled.
-      recipesLink.addEventListener("click", (event) => {
+      moreLink.addEventListener("click", (event) => {
         event.preventDefault();
       });
-      fireEvent.click(recipesLink);
+      fireEvent.click(moreLink);
 
       expect(menuButton.getAttribute("aria-expanded")).toBe("false");
     });

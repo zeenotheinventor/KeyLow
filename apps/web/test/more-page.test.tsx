@@ -103,6 +103,18 @@ describe("More page", () => {
       await renderPage();
       expect(screen.getByRole("link", { name: /Targets/ }).textContent).toBe("TargetsSet by you");
     });
+
+    it("should reach the recipe library from Recipes, the row after Targets", async () => {
+      await renderPage();
+
+      const links = within(screen.getByRole("region", { name: "Nutrition" })).getAllByRole("link");
+
+      expect(links.map((link) => link.textContent)).toEqual([
+        "TargetsSet by you2,200 kcal",
+        "Recipes",
+      ]);
+      expect(screen.getByRole("link", { name: "Recipes" }).getAttribute("href")).toBe("/recipes");
+    });
   });
 
   it("should show Weight as coming soon and not available", async () => {

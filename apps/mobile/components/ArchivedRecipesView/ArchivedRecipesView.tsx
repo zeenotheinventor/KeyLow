@@ -34,8 +34,8 @@ const LOADING_ROWS = 4;
 const stateClassName = "flex-1 pb-20";
 
 /**
- * The archived recipes, pushed inside the Recipes tab so the tab bar stays: Back and the title, a note on
- * what archived means, and a card of the recipes with a Restore button each. The rows are not pressable,
+ * The archived recipes, pushed inside the More tab after the library so the tab bar stays: Back and the
+ * title, a note on what archived means, and a card of the recipes with a Restore button each. The rows are not pressable,
  * because an archived recipe is restored before it is opened. With nothing left, the note stays over an
  * empty state.
  */

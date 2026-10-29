@@ -96,7 +96,6 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard screen"),
   "(tabs)/diary": standIn("Diary screen"),
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": standIn("More screen"),
   session: standIn("Session screen"),
@@ -132,7 +131,6 @@ const bar = () => screen.findByRole("button", { name: BAR_NAME });
 const tabs = [
   ["dashboard", "Dashboard screen"],
   ["diary", "Diary screen"],
-  ["recipes", "Recipes screen"],
   ["train", "Train screen"],
   ["more", "More screen"],
 ] as const;
@@ -197,7 +195,7 @@ describe("the session bar in the tab shell", () => {
 
     it("should open the session screen when pressed", async () => {
       const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-      await renderApp("/recipes");
+      await renderApp("/train");
 
       await user.press(await bar());
 

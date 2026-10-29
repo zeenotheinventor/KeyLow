@@ -20,7 +20,7 @@ export type SearchFieldProps = {
   /**
    * `dock`, the default, is the sheet's field at the bottom of the screen above the keyboard, with a
    * hairline over it and the screen's sides. `inline` is the field alone, for a screen that places it among
-   * its content, such as the recipes tab's, which has no sides or keyboard lift of its own to give.
+   * its content, such as the recipe library's, which has no sides or keyboard lift of its own to give.
    */
   placement?: "dock" | "inline" | undefined;
   /**

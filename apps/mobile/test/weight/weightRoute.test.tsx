@@ -78,7 +78,6 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard"),
   "(tabs)/diary": standIn("Diary"),
-  "(tabs)/recipes": standIn("Recipes"),
   "(tabs)/train": standIn("Train"),
   "(tabs)/more/_layout": MoreLayout,
   "(tabs)/more/index": standIn("More"),
@@ -107,7 +106,7 @@ describe("the Weight route", () => {
     await renderApp("/more/weight");
 
     expect(await screen.findByRole("heading", { name: "Weight" })).toBeOnTheScreen();
-    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
     expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
   });
 

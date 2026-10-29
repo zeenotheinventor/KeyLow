@@ -13,8 +13,9 @@ import { setUpTests } from "react-native-reanimated";
 
 import { chickenAndRiceRecipe } from "./recipeViewFixtures";
 import TabsLayout from "../../app/(tabs)/_layout";
-import RecipesLayout from "../../app/(tabs)/recipes/_layout";
-import RecipesRoute from "../../app/(tabs)/recipes/index";
+import MoreLayout from "../../app/(tabs)/more/_layout";
+import RecipesLayout from "../../app/(tabs)/more/recipes/_layout";
+import RecipesRoute from "../../app/(tabs)/more/recipes/index";
 import EditRecipeRoute from "../../app/recipes/[id]/edit";
 import RecipeViewRoute from "../../app/recipes/[id]/index";
 import NewRecipeRoute from "../../app/recipes/new";
@@ -33,8 +34,8 @@ import type { RecipeViewRecipe } from "../../components/RecipeView";
 import type { FoodSearchResult, FoodWithPortionsState } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
-// The Recipes tab, walked as a person walks it: the real tab layout and the real recipe screens under the
-// real router and the app's own root stack, read through the real api-client over a fake database. The
+// The recipe library in the More tab, walked as a person walks it: the real tab layout and the real recipe
+// screens under the real router and the app's own root stack, read through the real api-client over a fake database. The
 // screens the tabs do not hold (More, the diary) are stand-ins, because this test is about the recipes path.
 
 jest.mock("../../global.css", () => ({}));
@@ -123,10 +124,11 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard"),
   "(tabs)/diary": standIn("Diary"),
-  "(tabs)/recipes/_layout": RecipesLayout,
-  "(tabs)/recipes/index": RecipesRoute,
+  "(tabs)/more/recipes/_layout": RecipesLayout,
+  "(tabs)/more/recipes/index": RecipesRoute,
   "(tabs)/train": standIn("Train screen"),
-  "(tabs)/more": standIn("More"),
+  "(tabs)/more/_layout": MoreLayout,
+  "(tabs)/more/index": standIn("More"),
   "foods/index": standIn("Search"),
   "recipes/new": NewRecipeRoute,
   "recipes/[id]/index": RecipeViewRoute,
@@ -173,7 +175,7 @@ const tabBar = () => screen.queryByLabelText("Main");
 const recipesHeading = () => screen.findByRole("heading", { name: "Recipes" });
 const chickenRow = () => screen.findByRole("button", { name: /^Chicken and rice,/ });
 
-describe("walking the Recipes tab", () => {
+describe("walking the recipe library in More", () => {
   beforeEach(() => {
     resetDiaryBackend();
     queryClient = createDiaryQueryClient();
@@ -189,7 +191,7 @@ describe("walking the Recipes tab", () => {
 
   describe("with no recipes", () => {
     it("should say there are none, with a New recipe to start one", async () => {
-      await walkFrom("/recipes");
+      await walkFrom("/more/recipes");
 
       expect(await screen.findByText(RECIPES_EMPTY.title)).toBeOnTheScreen();
       expect(screen.getAllByRole("button", { name: RECIPES_LIBRARY.newRecipe })).toHaveLength(2);
@@ -197,7 +199,7 @@ describe("walking the Recipes tab", () => {
     });
 
     it("should open the editor from New recipe and come back to the library on Close", async () => {
-      const user = await walkFrom("/recipes");
+      const user = await walkFrom("/more/recipes");
       await screen.findByText(RECIPES_EMPTY.title);
 
       await pressEmptyStateNewRecipe(user);
@@ -214,7 +216,7 @@ describe("walking the Recipes tab", () => {
 
   describe("making a recipe", () => {
     it("should save a new recipe with an ingredient, open its view, and list it when Back returns", async () => {
-      const user = await walkFrom("/recipes");
+      const user = await walkFrom("/more/recipes");
       await screen.findByText(RECIPES_EMPTY.title);
       await pressEmptyStateNewRecipe(user);
 
@@ -247,16 +249,16 @@ describe("walking the Recipes tab", () => {
       diaryBackend.recipes = [recipeRowOf(chickenAndRiceRecipe)];
     });
 
-    it("should show the library under the tab bar, with the Recipes tab selected", async () => {
-      await walkFrom("/recipes");
+    it("should show the library under the tab bar, with the More tab selected", async () => {
+      await walkFrom("/more/recipes");
 
       expect(await chickenRow()).toBeOnTheScreen();
       expect(tabBar()).toBeOnTheScreen();
-      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
 
     it("should open the recipe's view from its row, with the tab bar hidden", async () => {
-      const user = await walkFrom("/recipes");
+      const user = await walkFrom("/more/recipes");
 
       await user.press(await chickenRow());
 
@@ -268,7 +270,7 @@ describe("walking the Recipes tab", () => {
     });
 
     it("should open the editor from Edit, go back to the view, then to the library with the tab bar", async () => {
-      const user = await walkFrom("/recipes");
+      const user = await walkFrom("/more/recipes");
       await user.press(await chickenRow());
 
       await user.press(
@@ -289,7 +291,7 @@ describe("walking the Recipes tab", () => {
       expect(await recipesHeading()).toBeOnTheScreen();
       expect(await chickenRow()).toBeOnTheScreen();
       expect(tabBar()).toBeOnTheScreen();
-      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "More", selected: true })).toBeOnTheScreen();
     });
   });
 });

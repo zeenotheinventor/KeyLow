@@ -61,6 +61,17 @@ describe("RecipeLibrary", () => {
       ).toBe("/recipes/new");
     });
 
+    it("should lead back to More, where its row is, above the heading", async () => {
+      await showLibrary();
+
+      const back = screen.getByRole("link", { name: "More" });
+      expect(back.getAttribute("href")).toBe("/more");
+      expect(
+        back.compareDocumentPosition(screen.getByRole("heading", { level: 1, name: "Recipes" })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+
     it("should list the five live recipes in name order with their captions and values per serving", async () => {
       const table = await showLibrary();
 

@@ -69,7 +69,6 @@ const routes = {
   "(tabs)/diary": DiaryStandIn,
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreRoute,
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/weight": standIn("Weight screen"),
   "(tabs)/settings": standIn("Settings screen"),
   "foods/_layout": FoodsLayout,
@@ -117,7 +116,7 @@ describe("leaving the scanner", () => {
   describe("when opened from the search sheet", () => {
     async function openScannerFromSearch() {
       const user = userEvent.setup();
-      await renderApp("/recipes");
+      await renderApp("/train");
       await act(() => {
         router.push("/foods");
       });
@@ -140,7 +139,7 @@ describe("leaving the scanner", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(scannerHeading()).not.toBeOnTheScreen();
       expect(searchHeading()).not.toBeOnTheScreen();
     });
@@ -149,7 +148,7 @@ describe("leaving the scanner", () => {
   describe("when opened straight from the search bar above the tab bar", () => {
     async function openScannerFromLauncher() {
       const user = userEvent.setup();
-      await renderApp("/recipes");
+      await renderApp("/train");
       await act(() => {
         router.push("/foods/scan");
       });
@@ -162,7 +161,7 @@ describe("leaving the scanner", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(scannerHeading()).not.toBeOnTheScreen();
     });
 
@@ -171,7 +170,7 @@ describe("leaving the scanner", () => {
 
       await user.press(screen.getByRole("button", { name: "Back to search" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(scannerHeading()).not.toBeOnTheScreen();
     });
   });

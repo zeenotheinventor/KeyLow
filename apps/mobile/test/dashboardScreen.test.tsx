@@ -100,7 +100,6 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": DashboardRoute,
   "(tabs)/diary": DiaryStandIn,
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": standIn("More screen"),
   targets: standIn("Targets screen"),

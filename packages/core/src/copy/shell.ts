@@ -1,8 +1,10 @@
-/** The titles of the four destinations in the tab bar, which are also the headings of their screens. */
+/**
+ * The titles of the destinations in the tab bar, which are also the headings of their screens. Train's
+ * title is `TRAIN_HOME.tabLabel`. Recipes left the bar and is a row of More's Nutrition section.
+ */
 export const TAB_TITLES = {
   dashboard: "Dashboard",
   diary: "Diary",
-  recipes: "Recipes",
   more: "More",
 };
 
@@ -46,6 +48,7 @@ export const MORE_SCREEN = {
       subtitleFromProgram: "From your programme",
     },
     program: { title: "Programme", subtitleWithoutProgram: "Let Ki-Lo set your targets" },
+    recipes: { title: "Recipes" },
   },
   body: { title: "Body", weight: { title: "Weight" } },
   settings: {

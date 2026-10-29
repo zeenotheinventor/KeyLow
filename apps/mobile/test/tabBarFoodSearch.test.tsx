@@ -84,7 +84,6 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard screen"),
   "(tabs)/diary": DiaryStandIn,
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreStandIn,
   "foods/index": SearchStandIn,
@@ -176,7 +175,7 @@ describe("the tab bar's routes into food search", () => {
     // The diary stand-in is on 14 October and the clock says the 15th, so the two days cannot be mixed up.
     it.each([
       ["dashboard", "Dashboard screen", "2026-10-15"],
-      ["recipes", "Recipes screen", "2026-10-15"],
+      ["train", "Train screen", "2026-10-15"],
       ["more", "More screen", "2026-10-15"],
       ["diary", "Diary", "2026-10-14"],
     ])(
@@ -324,7 +323,7 @@ describe("the tab bar's routes into food search", () => {
     );
 
     it.each([
-      ["recipes", "Recipes screen"],
+      ["train", "Train screen"],
       ["more", "More screen"],
     ])("should disable the plus on %s, and open nothing", async (tab, heading) => {
       await setZoneRead(zoneNotKnownYet);
@@ -396,7 +395,7 @@ describe("the tab bar's routes into food search", () => {
     it.each([
       ["dashboard", "Dashboard screen"],
       ["diary", "Diary"],
-      ["recipes", "Recipes screen"],
+      ["train", "Train screen"],
       ["more", "More screen"],
     ])("should dim and disable the centre plus on %s, and open nothing", async (tab, heading) => {
       const user = userEvent.setup();

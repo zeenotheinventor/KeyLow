@@ -94,6 +94,7 @@ Open [shell-menu-open.html](shell-menu-open.html) in a browser, or read the sour
 Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design system (`../design-system/`), then MacroFactor for layout and behaviour, then the briefs. Zee approved these boards on 2026-10-13. Anything that would visibly change a board goes back to Zee first.
 
 - **The web shell is a top bar,** adapted from the mobile shell because MacroFactor has no web app. It carries the Ki-Lo mark, the sections Dashboard, Diary, Recipes and More, and a "Search for a food" field that goes to the Foods page. Every state is drawn at 1280 and 375, dark and light. At 375 the sections move into the menu (`shell-menu-open`).
+- **Recipes leaves the top bar for More (Zee, 2026-10-29).** "The recipes shouldn't be a tab anymore. Make it an option in nutrition in the more tab." The sections are Dashboard, Diary and More. More's Nutrition section has a Recipes row after Targets that opens the library, which keeps its `/recipes` address and gains a link back to More above its title. More is the current section on every `/recipes` page. This supersedes the Recipes section in the bullet above and on the boards.
 - **Sign out moves into More,** off the top bar.
 - **Web Recipes is the same "Coming soon" placeholder as Dashboard and Diary,** with the ChefHat icon and the body "Your recipes will appear here." (orchestrator confirmation, 2026-10-13).
 - **The old `/settings` and `/weight` routes go.** They redirect to `/more`, so old links still land.
