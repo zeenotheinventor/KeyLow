@@ -70,8 +70,19 @@ const STAPLE_PHRASES: readonly (readonly [string, string])[] = [
   ["vanilla", "extract"],
 ];
 
-// A staple word that, followed by this word, names something else: sugar snap peas are a vegetable.
-const NOT_A_STAPLE_AFTER: Readonly<Record<string, string>> = { sugar: "snap" };
+// A staple word that, followed by one of these words, names something else: sugar snap peas are a
+// vegetable, and salt beef and salt cod are a meat and a fish.
+const NOT_A_STAPLE_AFTER: Readonly<Record<string, ReadonlySet<string>>> = {
+  sugar: new Set(["snap"]),
+  salt: new Set(["beef", "cod", "pork", "fish"]),
+};
+
+// After "pepper" alone as the first part, the words that make it the spice: "Pepper, black" is a staple
+// and "Pepper, red" is the vegetable.
+const PEPPERCORN_WORDS = new Set(["black", "white", "ground", "cracked", "cayenne"]);
+
+// A word that ends the food itself, so the rest says what it comes in: "Sardines in oil" is a fish.
+const ENDS_THE_FOOD = new Set(["in", "with"]);
 
 // The CoFID groups whose foods are store cupboard ones: salt, stock, yeast and the like (WY), oils (OC),
 // and sauces and condiments (WC, WCN). Group H, herbs and spices, is a staple unless the name is fresh.
@@ -84,18 +95,27 @@ const hasPhrase = (words: readonly string[], [first, second]: readonly [string, 
   words.some((word, index) => word === first && words[index + 1] === second);
 
 const isStapleWord = (word: string, next: string | undefined): boolean =>
-  STAPLE_WORDS.has(word) && (next === undefined || NOT_A_STAPLE_AFTER[word] !== next);
+  STAPLE_WORDS.has(word) && (next === undefined || NOT_A_STAPLE_AFTER[word]?.has(next) !== true);
 
 /**
  * Whether the name says it is a store cupboard staple. Read from the first part of the name, the food
- * itself, since the parts after a comma describe it. Black pepper is a staple only when "pepper" is the
- * whole first part, as CoFID writes "Pepper, black", so "Peppers, red" is not.
+ * itself, since the parts after a comma describe it, and only up to "in" or "with". Black pepper is a
+ * staple only when "pepper" is the whole first part, as CoFID writes "Pepper, black", and the rest is
+ * empty or says which spice, so "Peppers, red" and "Pepper, red" are not.
  */
-const namesAStaple = (firstPart: readonly string[]): boolean =>
-  (firstPart.length === 1 && firstPart[0] === "pepper") ||
-  (firstPart.length === 1 && firstPart[0] === "water") ||
-  firstPart.some((word, index) => isStapleWord(word, firstPart[index + 1])) ||
-  STAPLE_PHRASES.some((phrase) => hasPhrase(firstPart, phrase));
+const namesAStaple = (firstPart: readonly string[], rest: readonly string[]): boolean => {
+  const end = firstPart.findIndex((word) => ENDS_THE_FOOD.has(word));
+  const food = end === -1 ? firstPart : firstPart.slice(0, end);
+
+  return (
+    (food.length === 1 &&
+      food[0] === "pepper" &&
+      (rest.length === 0 || rest.some((word) => PEPPERCORN_WORDS.has(word)))) ||
+    (food.length === 1 && food[0] === "water") ||
+    food.some((word, index) => isStapleWord(word, food[index + 1])) ||
+    STAPLE_PHRASES.some((phrase) => hasPhrase(food, phrase))
+  );
+};
 
 /**
  * Sorts a recipe's food for the shopping list: a store cupboard staple (salt, black pepper, soy sauce,
@@ -114,7 +134,8 @@ const namesAStaple = (firstPart: readonly string[]): boolean =>
 export function classifyIngredient(food: ClassifiableFood): IngredientClass {
   const [firstPart = "", ...rest] = food.name.split(",");
   const firstWords = wordsOf(firstPart);
-  const allWords = [...firstWords, ...rest.flatMap(wordsOf)];
+  const restWords = rest.flatMap(wordsOf);
+  const allWords = [...firstWords, ...restWords];
   const group = food.food_group?.trim().toUpperCase() ?? null;
 
   if (allWords.some((word) => FRESH_WORDS.has(word))) {
@@ -123,7 +144,7 @@ export function classifyIngredient(food: ClassifiableFood): IngredientClass {
   if (group === HERBS_AND_SPICES && allWords.some((word) => DRIED_WORDS.has(word))) {
     return { kind: "staple", rule: "dried" };
   }
-  if (namesAStaple(firstWords)) {
+  if (namesAStaple(firstWords, restWords)) {
     return { kind: "staple", rule: "staple_name" };
   }
   if (group !== null && (group === HERBS_AND_SPICES || STAPLE_GROUPS.has(group))) {

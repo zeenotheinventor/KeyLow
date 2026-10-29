@@ -109,6 +109,22 @@ describe("classifyIngredient", () => {
     expect(kindOf("Oil, sunflower", null)).toBe("staple");
     expect(kindOf("Sardines, canned in oil", null)).toBe("item");
     expect(kindOf("Peppers, red", null)).toBe("item");
+    expect(kindOf("Pepper, red", null)).toBe("item");
+    expect(kindOf("Pepper, black, ground", null)).toBe("staple");
+    expect(kindOf("Pepper", null)).toBe("staple");
+  });
+
+  it("should read a staple name only up to what the food comes in", () => {
+    expect(kindOf("Sardines in olive oil", null)).toBe("item");
+    expect(kindOf("Tomatoes, sun-dried in oil", null)).toBe("item");
+    expect(kindOf("Olive oil in a spray", null)).toBe("staple");
+  });
+
+  it("should keep a salted meat or fish named with salt as an item", () => {
+    expect(kindOf("Salt beef", null)).toBe("item");
+    expect(kindOf("Salt cod", null)).toBe("item");
+    expect(kindOf("Salt", null)).toBe("staple");
+    expect(kindOf("Salt and pepper seasoning", null)).toBe("staple");
   });
 
   it("should read the group without minding its case or spaces", () => {
