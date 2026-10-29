@@ -19,7 +19,7 @@ const recipeName = `key333-${stamp} chicken and rice`;
 // The dev server compiles each page the first time it is opened, so the walk gets more time than a click.
 test.setTimeout(120_000);
 
-test("walks a new user from the Recipes link to a saved recipe and back to it in the library", async ({
+test("walks a new user from More's Recipes row to a saved recipe and back to it in the library", async ({
   page,
 }) => {
   await page.goto("/sign-up");
@@ -31,9 +31,17 @@ test("walks a new user from the Recipes link to a saved recipe and back to it in
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
 
-  // The top bar link opens the library, which has nothing in it yet.
-  await page.getByRole("link", { name: "Recipes" }).click();
+  // Recipes is not in the top bar. More's Recipes row opens the library, which has nothing in it yet.
+  const mainNav = page.getByRole("navigation", { name: "Main" });
+  await expect(mainNav.getByRole("link", { name: "Recipes" })).toHaveCount(0);
+  await mainNav.getByRole("link", { name: "More" }).click();
+  await expect(page).toHaveURL(/\/more$/);
+  await page
+    .getByRole("region", { name: "Nutrition" })
+    .getByRole("link", { name: "Recipes" })
+    .click();
   await expect(page).toHaveURL(/\/recipes$/);
+  await expect(mainNav.getByRole("link", { name: "More" })).toHaveAttribute("aria-current", "page");
   await expect(page.getByRole("heading", { level: 1, name: "Recipes" })).toBeVisible();
   await expect(page.getByRole("heading", { name: RECIPES_EMPTY.title })).toBeVisible();
 
@@ -83,7 +91,7 @@ test("walks a new user from the Recipes link to a saved recipe and back to it in
   await expect(page).toHaveURL(/\/recipes\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("spinbutton", { name: "Servings" })).toHaveValue("4");
 
-  // The Recipes link finds the recipe in the library, and the search narrows to it.
+  // The recipe's link back to Recipes finds it in the library, and the search narrows to it.
   await page.getByRole("link", { name: "Recipes" }).first().click();
   await expect(page).toHaveURL(/\/recipes$/);
   const table = page.getByRole("table", { name: "Recipes" });

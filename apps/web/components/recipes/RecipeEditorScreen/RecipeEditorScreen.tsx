@@ -6,7 +6,7 @@ import {
   RECIPE_EDITOR,
   RECIPE_NOT_FOUND,
   RETRY_LABEL,
-  TAB_TITLES,
+  RECIPES_LIBRARY,
 } from "@keylow/core/copy";
 import { isRecipeId } from "@keylow/core/recipes";
 import { useQueryClient } from "@tanstack/react-query";
@@ -30,7 +30,7 @@ const STATE_CLASSES =
   "box-content min-h-[480px] justify-center border-0 bg-transparent px-6 py-0 pb-[120px]";
 
 function BackToRecipes() {
-  return <BackToFoodsLink tone="accent" label={TAB_TITLES.recipes} href={recipesPath()} />;
+  return <BackToFoodsLink tone="accent" label={RECIPES_LIBRARY.title} href={recipesPath()} />;
 }
 
 function LoadingRecipe() {

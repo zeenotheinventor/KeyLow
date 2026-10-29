@@ -16,12 +16,19 @@ import { recipesPath } from "@/lib/recipeRoutes";
 import { useIsOnline } from "@/lib/useIsOnline";
 import { cn } from "@/lib/utils";
 
+// Recipes is not a section. Its library is a row of More's Nutrition section, so More stays current on it.
 const SECTIONS: readonly DashboardSection[] = [
   { label: "Dashboard", href: "/dashboard" },
   { label: "Diary", href: "/diary" },
-  { label: "Recipes", href: recipesPath() },
-  { label: "More", href: "/more" },
+  { label: "More", href: "/more", alsoCurrentOn: [recipesPath()] },
 ];
+
+// A section is current on its own page, on the pages under it, and on the pages it holds that live elsewhere.
+const isUnder = (pathname: string, href: string): boolean =>
+  pathname === href || pathname.startsWith(`${href}/`);
+
+const isCurrentSection = (pathname: string, section: DashboardSection): boolean =>
+  [section.href, ...(section.alsoCurrentOn ?? [])].some((href) => isUnder(pathname, href));
 
 const FOODS_HREF = "/foods";
 const FOOD_PAGE_PREFIX = "/foods/";
@@ -31,7 +38,7 @@ const focusRing =
   "outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset";
 
 /**
- * The top bar of the signed-in app: the mark, the four sections and the food search. From the
+ * The top bar of the signed-in app: the mark, the three sections and the food search. From the
  * large breakpoint the sections sit in the bar. Below it they move into the menu, as the boards draw.
  */
 export function DashboardNav() {
@@ -134,8 +141,9 @@ export function DashboardNav() {
             )}
           >
             <ul className="flex flex-col lg:flex-row lg:gap-1">
-              {SECTIONS.map(({ label, href }) => {
-                const isCurrent = pathname === href || pathname.startsWith(`${href}/`);
+              {SECTIONS.map((section) => {
+                const { label, href } = section;
+                const isCurrent = isCurrentSection(pathname, section);
 
                 return (
                   <li key={href}>

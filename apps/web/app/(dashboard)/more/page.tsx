@@ -8,6 +8,7 @@ import { TargetsRow } from "./TargetsRow";
 
 import { GroupedList } from "@/components/ui/GroupedList";
 import { ListRow } from "@/components/ui/ListRow";
+import { recipesPath } from "@/lib/recipeRoutes";
 import { createClient } from "@/lib/supabase/server";
 import { THEME_COOKIE_NAME, themeFromCookie } from "@/lib/theme/themeCookie";
 
@@ -32,6 +33,7 @@ export default async function MorePage() {
         </GroupedList>
         <GroupedList title={MORE_SCREEN.nutrition.title} headerSize="compact">
           <TargetsRow />
+          <ListRow title={MORE_SCREEN.nutrition.recipes.title} href={recipesPath()} />
         </GroupedList>
         <GroupedList title="Body" headerSize="compact">
           {/* Weight is not built yet. A disabled row has no destination and does nothing. */}

@@ -5,7 +5,7 @@ import {
   RECIPES_LOADING_LABEL,
   RECIPES_LOAD_FAILED,
   RETRY_LABEL,
-  TAB_TITLES,
+  RECIPES_LIBRARY,
   describeRestoreRecipe,
 } from "@keylow/core/copy";
 import { Archive } from "lucide-react";
@@ -38,7 +38,7 @@ export function ArchivedRecipesView(props: ArchivedRecipesViewProps) {
         <BackToFoodsLink
           ref={backLink}
           tone="accent"
-          label={TAB_TITLES.recipes}
+          label={RECIPES_LIBRARY.title}
           href={recipesPath()}
         />
         <h1 className="text-h1">{ARCHIVED_RECIPES.title}</h1>

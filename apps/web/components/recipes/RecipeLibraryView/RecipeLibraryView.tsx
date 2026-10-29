@@ -26,6 +26,7 @@ import { RECIPE_STATE_CLASSES } from "../stateClasses";
 
 import type { RecipeLibraryViewProps } from "./types";
 
+import { BackToFoodsLink } from "@/components/foods/FoodDetail";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
@@ -36,9 +37,12 @@ import { archivedPath, newRecipePath } from "@/lib/recipeRoutes";
 // not interrupted by every letter.
 const ANNOUNCE_AFTER_TYPING_MS = 500;
 
+// The library is a row of More's Nutrition section, so its way back leads there.
+const MORE_HREF = "/more";
+
 /**
- * The recipe library page, drawn from what it is given: the user's live recipes with a search over
- * their names, and its empty, loading and failed states. The page that reads the recipes is
+ * The recipe library page, drawn from what it is given: a way back to More, the user's live recipes with a
+ * search over their names, and its empty, loading and failed states. The page that reads the recipes is
  * `RecipeLibrary`. Typing filters the list from the first letter, and once typing stops the number of
  * recipes found is read out politely.
  */
@@ -74,14 +78,17 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
 
   return (
     <div className="mx-auto flex w-full max-w-[1132px] flex-col gap-5">
-      <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
-        <h1 className="text-h1">{TAB_TITLES.recipes}</h1>
-        <Button asChild className="max-md:w-full">
-          <Link ref={newRecipeLink} href={newRecipePath()}>
-            <Plus aria-hidden strokeWidth={iconStroke} />
-            {RECIPES_LIBRARY.newRecipe}
-          </Link>
-        </Button>
+      <div className="flex flex-col gap-1">
+        <BackToFoodsLink tone="accent" label={TAB_TITLES.more} href={MORE_HREF} />
+        <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
+          <h1 className="text-h1">{RECIPES_LIBRARY.title}</h1>
+          <Button asChild className="max-md:w-full">
+            <Link ref={newRecipeLink} href={newRecipePath()}>
+              <Plus aria-hidden strokeWidth={iconStroke} />
+              {RECIPES_LIBRARY.newRecipe}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {showsField && (
