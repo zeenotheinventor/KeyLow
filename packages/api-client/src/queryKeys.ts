@@ -58,6 +58,19 @@ export const keys = {
     search: (q: string, archived = false) => ["recipes", "search", q, archived] as const,
   },
   /**
+   * The shopping list reads (ADR 0003, Amendment 15). A family of its own, outside `recipes` and the
+   * lists a persisted cache keeps, so nothing about the list is stored on the device: changing the list
+   * needs a connection. Every key sits under `["shopping-list"]`, so one invalidation of
+   * `keys.shoppingList.all` refreshes the list and the recipes read for it.
+   */
+  shoppingList: {
+    all: ["shopping-list"] as const,
+    /** Every item of the signed in user's list, ticked ones included, in list order. */
+    items: ["shopping-list", "items"] as const,
+    /** The recipes the add dialog reads, with their ingredients, by their ids in the order given. */
+    sources: (recipeIds: readonly string[]) => ["shopping-list", "sources", ...recipeIds] as const,
+  },
+  /**
    * The training reads. Unlike `recipes` and `weighIns`, these are persisted on mobile: the mobile app
    * keeps each family below by its prefix (`setsAll`, `activeRoutine`, `weekSessionsAll`), so heat, the
    * plan and the week open without a connection. The exercise search and the exercise read, at the

@@ -15,6 +15,8 @@ export type RecipeViewActionsProps = {
   isArchiving: boolean;
   /** Opens the refresh dialog, where the recipe's foods are checked for changes. */
   onRefresh: () => void;
+  /** Opens the dialog that adds the recipe's ingredients to the shopping list. */
+  onAddToList: () => void;
   onDuplicate: () => void;
   onArchive: () => void;
 };

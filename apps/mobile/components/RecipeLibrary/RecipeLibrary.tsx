@@ -2,7 +2,12 @@ import { useRecipes } from "@keylow/api-client";
 import { useRouter } from "expo-router";
 
 import { useIsOnline } from "../../lib/connectivity";
-import { archivedRecipesPath, newRecipePath, recipePath } from "../../lib/recipeRoutes";
+import {
+  archivedRecipesPath,
+  newRecipePath,
+  recipePath,
+  shoppingListPath,
+} from "../../lib/recipeRoutes";
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { useRecipeActions } from "../RecipeActions";
 import { RecipeLibraryView } from "../RecipeLibraryView";
@@ -32,6 +37,9 @@ export function RecipeLibrary() {
     },
     onDuplicateRecipe: recipeActions.duplicate,
     onArchiveRecipe: recipeActions.archive,
+    onOpenShoppingList: () => {
+      router.push(shoppingListPath());
+    },
     onOpenArchived: () => {
       router.push(archivedRecipesPath());
     },

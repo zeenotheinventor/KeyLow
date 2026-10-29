@@ -21,7 +21,7 @@ import {
 } from "../../components/RecipeLibraryView/sampleRecipes";
 import { RecipeView } from "../../components/RecipeView";
 import { ToastProvider } from "../../components/ui";
-import { recipePath, recipesPath, refreshRecipePath } from "../../lib/recipeRoutes";
+import { addToListPath, recipePath, recipesPath, refreshRecipePath } from "../../lib/recipeRoutes";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryBackend, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
@@ -97,6 +97,10 @@ const archiveItem = () =>
   screen.findByRole("button", { name: "Archive, Hidden until you restore it" });
 const refreshItem = () =>
   screen.findByRole("button", { name: "Refresh ingredients, Check your foods for changes" });
+const addToListItem = () =>
+  screen.findByRole("button", {
+    name: "Add to shopping list, Puts its ingredients on your list",
+  });
 const toast = (name: string) => screen.findByRole("status", { name });
 const writesTo = (table: string) =>
   diaryBackend.requests.filter((request) => request.table === table && request.method !== "GET");
@@ -211,6 +215,35 @@ describe("the recipe view's More menu", () => {
         expect(screen.queryByRole("button", { name: /^Duplicate, / })).not.toBeOnTheScreen();
       });
       expect(moreButton()).toBeDisabled();
+    });
+  });
+
+  describe("Add to shopping list", () => {
+    it("should come after Refresh ingredients and before Duplicate", async () => {
+      const { user } = await showView();
+      await user.press(moreButton());
+      await addToListItem();
+
+      const [first, second, third] = screen.getAllByRole("button", {
+        name: /, (?:Check your foods|Puts its|Makes)/,
+      });
+      expect(first).toHaveAccessibleName(/^Refresh ingredients, /);
+      expect(second).toHaveAccessibleName(/^Add to shopping list, /);
+      expect(third).toHaveAccessibleName(/^Duplicate, /);
+    });
+
+    it("should push the add screen at the servings on screen, and write nothing", async () => {
+      const { user } = await showView();
+      await user.press(screen.getByRole("button", { name: "More servings" }));
+      await user.press(moreButton());
+
+      await user.press(await addToListItem());
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith(
+        addToListPath(chickenAndRice.id, chickenAndRice.servings + 1),
+      );
+      expect(writesTo("shopping_list_items")).toHaveLength(0);
     });
   });
 

@@ -9,6 +9,7 @@ import {
   newRecipePath,
   recipePath,
   recipesPath,
+  shoppingListPath,
 } from "@/lib/recipeRoutes";
 
 describe("recipeRoutes", () => {
@@ -46,6 +47,10 @@ describe("recipeRoutes", () => {
     expect(recipePath("11111111-1111-4111-8111-111111111111")).toBe(
       "/recipes/11111111-1111-4111-8111-111111111111",
     );
+  });
+
+  it("should lead to the shopping list at /recipes/shopping", () => {
+    expect(shoppingListPath()).toBe("/recipes/shopping");
   });
 });
 
@@ -88,6 +93,7 @@ describe("the recipe routes in the route table", () => {
     ["the new recipe editor with a typed name", newRecipePath("pasta")],
     ["the recipe view", recipePath(SAMPLE_RECIPE_ID)],
     ["the editor of a saved recipe", editRecipePath(SAMPLE_RECIPE_ID)],
+    ["the shopping list", shoppingListPath()],
   ])("should have a page for %s", (_name, href) => {
     expect(isServed(href)).toBe(true);
   });

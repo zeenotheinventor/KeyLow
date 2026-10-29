@@ -136,6 +136,18 @@ describe("keys.diary", () => {
   });
 });
 
+describe("keys.shoppingList", () => {
+  it("should sit in a family of its own, outside recipes, so nothing about the list is kept with them", () => {
+    expect(keys.shoppingList.all).toEqual(["shopping-list"]);
+    expect(keys.shoppingList.items).toEqual(["shopping-list", "items"]);
+    expect(keys.shoppingList.all[0]).not.toBe(keys.recipes.all[0]);
+  });
+
+  it("should key the recipes read for the add dialog by their ids, in the order given", () => {
+    expect(keys.shoppingList.sources(["b", "a"])).toEqual(["shopping-list", "sources", "b", "a"]);
+  });
+});
+
 describe("keys.recipes", () => {
   it("should expose the recipes root key", () => {
     expect(keys.recipes.all).toEqual(["recipes"]);

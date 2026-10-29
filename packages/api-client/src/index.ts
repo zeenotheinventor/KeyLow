@@ -315,3 +315,28 @@ export type {
   ProgramSummary,
   TargetsRow,
 } from "./repos";
+export {
+  useAddRecipesToList,
+  useAddShoppingItem,
+  useClearTickedItems,
+  useRemoveShoppingItem,
+  useShoppingList,
+  useShoppingPreview,
+  useToggleShoppingItem,
+} from "./hooks";
+export type {
+  AddRecipesToListInput,
+  ShoppingPreviewState,
+  ShoppingRecipeChoice,
+  ToggleShoppingItemInput,
+} from "./hooks";
+export {
+  addShoppingItem,
+  clearTickedItems,
+  deleteShoppingItem,
+  getShoppingSources,
+  listShoppingItems,
+  saveShoppingItems,
+  setShoppingItemChecked,
+} from "./repos";
+export type { ShoppingSourceRecipe } from "./repos";

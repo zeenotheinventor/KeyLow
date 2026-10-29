@@ -13,6 +13,7 @@ import { WifiOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { AddToListDialog } from "../AddToListDialog";
 import { PerServingCard } from "../PerServingCard";
 import { RecipeEditorFrame } from "../RecipeEditorFrame";
 import { RecipeEditorLayout } from "../RecipeEditorLayout";
@@ -41,7 +42,7 @@ const ANNOUNCE_AFTER_TYPING_MS = 500;
  * so nothing is saved or sent. It holds no arithmetic, rounding or checks: what the amounts say, what
  * counts as a servings number and what a button does to it are core's. Its Duplicate and Archive buttons
  * are the library's own actions (`useRecipeActions`): a copy opens on its own page, and an archived recipe
- * leaves for the library, each with a toast that has Undo. Refresh ingredients opens a dialog over the page.
+ * leaves for the library, each with a toast that has Undo. Refresh ingredients opens a dialog over the page, and so does Add to shopping list, at the servings shown.
  */
 export function RecipeView({ recipe }: RecipeViewProps) {
   const router = useRouter();
@@ -54,6 +55,7 @@ export function RecipeView({ recipe }: RecipeViewProps) {
   const [text, setText] = useState(() => String(recipe.servings));
   const [hasProblem, setHasProblem] = useState(false);
   const [isRefreshOpen, setIsRefreshOpen] = useState(false);
+  const [isAddToListOpen, setIsAddToListOpen] = useState(false);
   // Whether the new amounts are due to be read out. What is read is always the view's own words.
   const [isAnnouncementDue, setIsAnnouncementDue] = useState(false);
   const servingsField = useRef<HTMLInputElement>(null);
@@ -167,6 +169,9 @@ export function RecipeView({ recipe }: RecipeViewProps) {
           onRefresh={() => {
             setIsRefreshOpen(true);
           }}
+          onAddToList={() => {
+            setIsAddToListOpen(true);
+          }}
           onDuplicate={duplicate}
           onArchive={archive}
         />
@@ -219,6 +224,15 @@ export function RecipeView({ recipe }: RecipeViewProps) {
         recipeId={recipe.id}
         onClose={() => {
           setIsRefreshOpen(false);
+        }}
+      />
+      {/* Starts at the servings on screen, and changing them there leaves the view's own alone. */}
+      <AddToListDialog
+        open={isAddToListOpen}
+        recipe={{ id: recipe.id, name: recipe.name, servings: recipe.servings }}
+        initialServings={view.servings}
+        onClose={() => {
+          setIsAddToListOpen(false);
         }}
       />
     </RecipeEditorFrame>
