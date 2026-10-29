@@ -13,5 +13,7 @@ export type SegmentedControlProps<Value extends string> = SegmentedControlName &
   options: readonly SegmentedControlOption<Value>[];
   value: Value;
   onChange: (value: Value) => void;
+  /** `md` (the default) is the 44 px track. `sm` is the 36 px track with a 12 px label, for a row that has other things in it. */
+  size?: "md" | "sm" | undefined;
   className?: string;
 };

@@ -1,1 +1,8 @@
-export const storyStates = ["Default", "SecondSelected", "TwoOptions", "Focused"];
+export const storyStates = [
+  "Default",
+  "SecondSelected",
+  "TwoOptions",
+  "Focused",
+  "Small",
+  "SmallFocused",
+];

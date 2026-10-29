@@ -29,6 +29,27 @@ function Appearance({ initial }: { initial: (typeof appearanceOptions)[number]["
   );
 }
 
+const roleOptions = [
+  { value: "primary", label: "Primary" },
+  { value: "secondary", label: "Second" },
+  { value: "assisting", label: "Assist" },
+] as const;
+
+// The small size is as wide as its row makes it, so the story fixes a width as the board does.
+function MuscleRole({ initial }: { initial: (typeof roleOptions)[number]["value"] }) {
+  const [value, setValue] = useState<(typeof roleOptions)[number]["value"]>(initial);
+  return (
+    <SegmentedControl
+      label="Role for Side delts"
+      options={roleOptions}
+      value={value}
+      onChange={setValue}
+      size="sm"
+      className="w-[156px]"
+    />
+  );
+}
+
 const meta = {
   title: "UI/SegmentedControl",
   decorators: [
@@ -63,6 +84,16 @@ export const TwoOptions: Story = {
 // Focus is real: the play function tabs onto the selected segment, so the ring shows as it does for a keyboard.
 export const Focused: Story = {
   render: () => <Appearance initial="dark" />,
+  play: async () => {
+    await userEvent.tab();
+  },
+};
+
+// The small size on the custom exercise form: a muscle's role, in a row that has its name and a remove button too.
+export const Small: Story = { render: () => <MuscleRole initial="primary" /> };
+
+export const SmallFocused: Story = {
+  render: () => <MuscleRole initial="secondary" />,
   play: async () => {
     await userEvent.tab();
   },

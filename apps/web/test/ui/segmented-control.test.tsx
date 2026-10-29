@@ -1,3 +1,4 @@
+import { controlHeight } from "@keylow/tokens";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -110,6 +111,66 @@ describe("SegmentedControl", () => {
     const css = await compileUtilities(segment?.getAttribute("class") ?? "");
 
     expect(css).toContain("white-space: nowrap");
+  });
+
+  describe("sizes", () => {
+    const trackCss = async (size?: "md" | "sm") => {
+      render(
+        <SegmentedControl
+          label="Role"
+          options={appearanceOptions}
+          value="dark"
+          onChange={() => undefined}
+          size={size}
+        />,
+      );
+      return compileUtilities(screen.getByRole("radiogroup", { name: "Role" }).className);
+    };
+    const segmentCss = async (size?: "md" | "sm") => {
+      await trackCss(size);
+      return compileUtilities(
+        screen.getByRole("radio", { name: "Dark" }).parentElement?.className ?? "",
+      );
+    };
+
+    it("should make the track the medium control height, 44 px, by default", async () => {
+      expect(await trackCss()).toContain(`height: ${controlHeight.md}px`);
+    });
+
+    it("should make the small track the small control height, 36 px", async () => {
+      expect(await trackCss("sm")).toContain(`height: ${controlHeight.sm}px`);
+    });
+
+    it("should pad the small track by 2 px, so its segments are 30 px high", async () => {
+      expect(await trackCss("sm")).toContain("padding: 2px");
+    });
+
+    it("should set the medium label at 14 px", async () => {
+      expect(await segmentCss("md")).toContain("font-size: 14px");
+    });
+
+    it("should set the small label at 12 px", async () => {
+      expect(await segmentCss("sm")).toContain("font-size: 12px");
+    });
+
+    it("should keep the small label on one line", async () => {
+      expect(await segmentCss("sm")).toContain("white-space: nowrap");
+    });
+
+    it("should keep the small size a radio group with a radio per option", () => {
+      render(
+        <SegmentedControl
+          label="Role"
+          options={appearanceOptions}
+          value="light"
+          onChange={() => undefined}
+          size="sm"
+        />,
+      );
+
+      expect(screen.getAllByRole("radio")).toHaveLength(3);
+      expect(screen.getByRole("radio", { name: "Light" })).toHaveProperty("checked", true);
+    });
   });
 
   describe("reduced motion", () => {
