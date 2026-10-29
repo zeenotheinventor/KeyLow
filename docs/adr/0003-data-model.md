@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26.
+Accepted, 2026-09-22. Amendment 1 appended 2026-10-07. Amendment 2 appended 2026-10-15. Amendment 3 appended 2026-10-15. Amendment 4 appended 2026-10-15. Amendment 5 appended 2026-10-15. Amendment 6 appended 2026-10-15. Amendment 7 appended 2026-10-15. Amendment 8 appended 2026-10-16. Amendment 9 appended 2026-10-18. Amendment 10 appended 2026-10-23. Amendment 11 appended 2026-10-23. Amendment 12 appended 2026-10-23. Amendment 13 appended 2026-10-23. Amendment 14 appended 2026-10-26. Amendment 15 appended 2026-10-29.
 
 ## Context
 
@@ -2073,3 +2073,86 @@ From ADR 0003, the decision (e) of KEY-185 (conversations stored per user, with 
 ### Consequences of Amendment 14
 
 The migrations (KEY-664, KEY-665 and KEY-666) create the tables, the checks, the indexes, the grants, the policies, the view, the three functions and the three columns, and `packages/db/src/types.gen.ts` gains them. Each migration copes with any data already in the database, since no row is inserted for an existing user and the new columns start null. The functions, the api-client and the screens build to these names and to ADR 0006. A change to a name here goes back into ADR 0006 in the same pull request.
+
+## Amendment 15 (Shopping list, 2026-10-29)
+
+### Status
+
+Recorded on 2026-10-29 for Zee's request of the same day: "a shopping mode where I can add the ingredients of multiple recipes to a list and tick them off", leaving out the general store cupboard items (salt, pepper, soy sauce and the like) and keeping the bulky ingredients and the perishable herbs and vegetables. The frozen Decision names no shopping list, so by the rule at the top of this ADR the table needs an amendment before its migration. This amendment adds one table, `shopping_list_items`, and one function, `save_shopping_items`. The details are interpretations made for implementation, and Zee confirms them by approving the pull request that carries this amendment. They are, in full:
+
+- one list per person, with no list table: every row belongs to its owner, and the list is the owner's rows.
+- the columns, types, checks and indexes below, and the numbers in "The numbers".
+- that an item keeps the name it had when it was added, so editing or renaming a food never changes the list, as a logged entry keeps its snapshot (Amendment 2).
+- that which ingredients are store cupboard items is decided in core when a recipe is added, from the food's name first and its `food_group` as a hint, and is not stored. A store cupboard item the person chose to add anyway is an ordinary row.
+- that a count of portions is kept only when every recipe that added the food used the same portion, and that the grams are always kept for an item that came from a recipe.
+- that adding recipes merges into the open (unticked) row of the same food, that a ticked row is never merged into, and that an item typed by hand never merges. The merge is worked out in core (`planListMerge`) and written by one call of `save_shopping_items`, so it is all or nothing.
+- that ticked rows stay until the person clears them, and that clearing deletes them.
+- that the list needs a connection, so nothing about it is kept on the device.
+
+The frozen Decision and Amendments 1 to 14 are unchanged. Amendment 1's `id` and `created_at` columns apply to the new table, as they do to every new table.
+
+### The numbers
+
+| What                                   | Rule                                          |
+| -------------------------------------- | --------------------------------------------- |
+| `name`                                 | Not blank, at most 200 characters             |
+| `grams`                                | Null, or above 0 and at most 100000           |
+| `portion_label`                        | Null, or not blank and at most 200 characters |
+| `portion_count`                        | Null, or above 0 and at most 10000            |
+| `sources`                              | A JSON array of at most 50 entries            |
+| `position`                             | 0 or more                                     |
+| Rows in one `save_shopping_items` call | At most 500                                   |
+
+`portion_label` and `portion_count` are both null or both set. Core exports the same numbers from `packages/core/src/shopping/bounds.ts`. If they ever differ, this table wins.
+
+### `shopping_list_items`
+
+- `id uuid` primary key, default `gen_random_uuid()`.
+- `owner_id uuid not null default auth.uid()`, references `auth.users (id) on delete cascade`.
+- `food_id uuid`, nullable, references `foods (id) on delete set null`. Null for an item typed by hand. A food that is removed leaves its items as typed items with their names, so a delete never fails because of a list.
+- `name text not null`, the food's name as the recipe froze it in its snapshot, or the typed words.
+- `grams numeric`, nullable: the summed and scaled `resolved_grams` of every ingredient that added the item. Null for a typed item.
+- `portion_label text` and `portion_count numeric`, both nullable, such as `1 medium` and `2`.
+- `sources jsonb not null default '[]'`: the recipes that added the item, as `[{ "recipeId": uuid, "name": text }]`, each recipe once, in the order they were added. The name is frozen like the item's.
+- `position integer not null`: the order of the list, new items at the end.
+- `checked_at timestamptz`, nullable: when the item was ticked. Null is still to buy.
+- `created_at timestamptz not null default now()`.
+- Indexes: `(owner_id, position)`, which serves the list in order and the cascade from `auth.users`, and a plain index on `food_id`, which serves the foreign key check when a food is deleted (the reason Amendment 2 gives for the same index on log entries).
+
+### `save_shopping_items(p_items jsonb)`
+
+Adding recipes writes several rows at once: new rows, and open rows whose grams, count and sources grow. PostgREST's upsert writes every column it is sent in its update clause, `id` and `food_id` included, which the column grants below refuse by design, and separate calls would leave half a merge after a failure. So the write is one function. It takes an array of at most 500 objects with the keys `id`, `food_id`, `name`, `grams`, `portion_label`, `portion_count`, `sources`, `position` and `checked_at`, and does one `insert ... on conflict (id) do update` that changes only the updatable columns. A null `id` is a new row and gets a new id. Keys it does not know are ignored, so a caller cannot set `owner_id` or `created_at`.
+
+It is `security invoker` with an empty `search_path`, so every policy below applies to its writes: an id that is another person's fails the update policy, a food the caller cannot see fails the insert policy, and any failure rolls the call back. Its refusals are `22023` with a message that states the rule and quotes no value. It returns nothing. `execute` is held by `authenticated` alone. It has no branch of its own beyond its input checks: what to merge is core's.
+
+### Privileges and row level security
+
+In the style of Amendments 9, 12 and 13: `revoke all` from `anon`, `authenticated` and `service_role`, then explicit grants. RLS is enabled.
+
+- `authenticated`: `select` and `delete` on the table. `insert` on `id`, `owner_id`, `food_id`, `name`, `grams`, `portion_label`, `portion_count`, `sources`, `position` and `checked_at`. `update` on `name`, `grams`, `portion_label`, `portion_count`, `sources`, `position` and `checked_at`, so an item never changes owner, id or food.
+- `anon` and `service_role` get nothing. Nothing server side reads the list.
+- Policies for `authenticated`, using `(select auth.uid())`: `shopping_list_items_select_own`, `_update_own` and `_delete_own` on `owner_id = (select auth.uid())`, and `shopping_list_items_insert_own`, which also requires `food_id is null` or a food the caller can see, through an `exists` subquery that runs under the `foods` policy. The reason is the one `recipe_ingredients` gives: a foreign key is checked without row level security, so without it a person could point an item at another person's private food and learn whether an id exists.
+- Terms acceptance is not in the policies, as in Amendments 9, 12 and 13.
+
+### Health data
+
+A shopping list reveals what a person cooks and eats, so it is treated as health data like the recipes it comes from. It is owner-only under RLS, and it is never written to a log, an error message, a Sentry event or an analytics event, and never in a committed fixture. A repository error names the action and the code only.
+
+### Export and account deletion
+
+- **Export.** The whole-account export (KEY-707 and KEY-708) includes every column of every row the user owns in `shopping_list_items`, rows as stored. `authenticated` has `select`, so it needs no `service_role` grant.
+- **Account deletion** works through the `on delete cascade` foreign key from `auth.users` and needs no code.
+
+### Terms
+
+The list holds nothing the Privacy Policy does not already cover for recipes. This amendment changes no copy and no constant.
+
+### Implemented by
+
+- The migration `20261029030000_shopping_list.sql`: the table, its checks and indexes, the grants, the policies and `save_shopping_items`, with pgTAP in `shopping_list_rls.test.sql` (every policy, the exact privileges, the bounds, the merge in one call, the food visibility check and the account cascade) and the regenerated `packages/db/src/types.gen.ts`.
+- Core, `packages/core/src/shopping/`: the numbers, `classifyIngredient`, `aggregateIngredients`, `planListMerge` and the row schemas. The words are in `packages/core/src/copy/shoppingList.ts`.
+- The api-client repository `repos/shoppingList.ts` and its hooks, and the shopping list screens on web and mobile.
+
+### Consequences of Amendment 15
+
+The migration creates the table, the checks, the indexes, the grants, the policies and the function, and `packages/db/src/types.gen.ts` gains them. It inserts no row, so it copes with any database. Any further deviation from the frozen Decision, from Amendments 1 to 14 or from this amendment needs an Amendment 16 before the migration or code that implements it lands.

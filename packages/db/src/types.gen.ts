@@ -1273,6 +1273,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      shopping_list_items: {
+        Row: {
+          checked_at: string | null;
+          created_at: string;
+          food_id: string | null;
+          grams: number | null;
+          id: string;
+          name: string;
+          owner_id: string;
+          portion_count: number | null;
+          portion_label: string | null;
+          position: number;
+          sources: Json;
+        };
+        Insert: {
+          checked_at?: string | null;
+          created_at?: string;
+          food_id?: string | null;
+          grams?: number | null;
+          id?: string;
+          name: string;
+          owner_id?: string;
+          portion_count?: number | null;
+          portion_label?: string | null;
+          position: number;
+          sources?: Json;
+        };
+        Update: {
+          checked_at?: string | null;
+          created_at?: string;
+          food_id?: string | null;
+          grams?: number | null;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          portion_count?: number | null;
+          portion_label?: string | null;
+          position?: number;
+          sources?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shopping_list_items_food_id_fkey";
+            columns: ["food_id"];
+            isOneToOne: false;
+            referencedRelation: "foods";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       targets: {
         Row: {
           basis: Json;
@@ -1642,6 +1692,7 @@ export type Database = {
         Args: { p_days: Json; p_routine: Json; p_routine_id: string };
         Returns: string;
       };
+      save_shopping_items: { Args: { p_items: Json }; Returns: undefined };
       save_training_goals: { Args: { p_goals: Json }; Returns: string };
       search_food_candidate_ids: {
         Args: { search_phrase: string; search_tsquery: unknown };
