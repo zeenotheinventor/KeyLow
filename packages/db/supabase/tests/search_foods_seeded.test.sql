@@ -1,5 +1,6 @@
 -- Asserts the seeded search acceptance of M2: against the committed seed data, search_foods answers
--- "chicken breast" with a CoFID food first and finds chicken for the half typed word "chick".
+-- "chicken breast" with plain breasts first (the first 3 hold none of the secondary words of KEY-761,
+-- so none is a casseroled or stewed breast) and finds chicken for the half typed word "chick".
 --
 -- It needs seeds/10_cofid_subset.sql and seeds/20_off_sample.sql loaded. A fresh stack (supabase start,
 -- supabase db reset, and every CI run) loads them. A running database takes them with the psql command
@@ -95,15 +96,17 @@ insert into auth.users (instance_id, id, aud, role, email) values
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"48000001-0000-4000-8000-00000000000a","role":"authenticated"}';
 
-select is(
+select ok(
   (
-    select result.source::text
-    from public.search_foods('chicken breast', 25) with ordinality as result
-    order by result.ordinality
-    limit 1
+    select bool_and(top.name !~* '\m(casseroled|casserole|stewed|stew|braised|curry|korma|tikka|masala|pie|pasty|ready meal|sauce|soup|sandwich|pizza|lasagne|fricassee|chasseur|satay|battered|breaded)\M')
+    from (
+      select result.name
+      from public.search_foods('chicken breast', 25) with ordinality as result
+      order by result.ordinality
+      limit 3
+    ) as top
   ),
-  'cofid',
-  'the first result for "chicken breast" is a CoFID food'
+  'the first 3 results for "chicken breast" hold none of the secondary words, so none is a casseroled or stewed breast'
 );
 
 select imatches(
