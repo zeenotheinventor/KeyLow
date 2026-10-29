@@ -246,7 +246,7 @@ describe("food search sheet", () => {
       expect(screen.getByRole("heading", { name: "Search for a food" })).toBeOnTheScreen();
       expect(
         screen.getByText(
-          "Type at least 2 characters to search your foods, UK CoFID and Open Food Facts.",
+          "Type at least 2 characters to search your foods, UK CoFID, USDA and Open Food Facts.",
         ),
       ).toBeOnTheScreen();
     });
@@ -351,7 +351,7 @@ describe("food search sheet", () => {
       const headings = screen.getAllByRole("heading");
       expect(headings).toHaveLength(5);
       expect(headings[1]).toHaveTextContent("Your foods · Yours");
-      expect(headings[2]).toHaveTextContent("Common foods · UK CoFID");
+      expect(headings[2]).toHaveTextContent("Common foods · UK CoFID and USDA");
       expect(headings[3]).toHaveTextContent("Branded foods · Open Food Facts");
       expect(headings[4]).toHaveTextContent("From Open Food Facts · Live results");
     });
@@ -361,7 +361,9 @@ describe("food search sheet", () => {
 
       await renderSearch();
 
-      expect(screen.getByRole("heading", { name: "Common foods · UK CoFID" })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("heading", { name: "Common foods · UK CoFID and USDA" }),
+      ).toBeOnTheScreen();
       expect(screen.queryByRole("heading", { name: /^Your foods/ })).not.toBeOnTheScreen();
       expect(screen.queryByRole("heading", { name: /^Branded foods/ })).not.toBeOnTheScreen();
       expect(

@@ -114,6 +114,9 @@ describe("parseCuratedList", () => {
       expect(() =>
         parseCuratedList(listOf(["172385", "Chicken, retail\tparts, raw", "", "", "1", "d", "n"])),
       ).toThrow(/US term "retail parts"/);
+      expect(() =>
+        parseCuratedList(listOf(["172385", "Chicken, retail\nparts, raw", "", "", "1", "d", "n"])),
+      ).toThrow(/US term "retail parts"/);
     });
 
     it("should accept the UK words", () => {
@@ -123,6 +126,7 @@ describe("parseCuratedList", () => {
             ["1", "Chicken, mince, 7% fat, raw", "", "", "1", "d", "n"],
             ["2", "Chicken, thigh, grilled, meat and skin", "", "", "1", "d", "n"],
             ["3", "Background chicken, thigh, fried", "", "", "1", "d", "n"],
+            ["4", "Groundnut oil, fried chicken, thigh", "", "", "1", "d", "n"],
           ),
         ),
       ).not.toThrow();

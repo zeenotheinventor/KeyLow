@@ -204,7 +204,7 @@ describe("recipes in the log search", () => {
       expectTextsInOrder(screen.getAllByRole("heading", { name: /^(Your|Common) / }), [
         "Your recipes · Per serving",
         "Your foods · Yours",
-        "Common foods · UK CoFID",
+        "Common foods · UK CoFID and USDA",
       ]);
     });
 

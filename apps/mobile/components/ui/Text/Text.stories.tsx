@@ -33,7 +33,8 @@ export const H2: Story = { args: { variant: "h2", children: "Search for a food" 
 export const Body: Story = {
   args: {
     variant: "body",
-    children: "Type at least 2 characters to search your foods, UK CoFID and Open Food Facts.",
+    children:
+      "Type at least 2 characters to search your foods, UK CoFID, USDA and Open Food Facts.",
   },
 };
 
