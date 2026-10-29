@@ -47,7 +47,7 @@ export const AboveTabBar: Story = {
         tabs={[
           { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard" },
           { key: "diary", label: "Diary", icon: "BookOpen" },
-          { key: "recipes", label: "Recipes", icon: "ChefHat" },
+          { key: "train", label: "Train", icon: "Dumbbell" },
           { key: "more", label: "More", icon: "Ellipsis" },
         ]}
         onAddPress={() => undefined}

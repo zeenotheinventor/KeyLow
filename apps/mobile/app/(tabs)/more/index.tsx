@@ -8,6 +8,7 @@ import { AppearanceSetting } from "../../../components/AppearanceSetting";
 import { BodyMapRendererSetting } from "../../../components/BodyMapRendererSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
+import { recipesPath } from "../../../lib/recipeRoutes";
 import { signOut } from "../../../lib/signOut";
 import { useOpenOnce } from "../../../lib/useOpenOnce";
 import { useReadsEnabled } from "../../../lib/useReadsEnabled";
@@ -16,6 +17,7 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // sheet in its own-foods mode, Targets opens the Targets screen and shows the calorie target once one is set,
 // Programme sits under it and opens the Programme screen inside this tab, its subtitle the next check-in or the offer to
 // let Ki-Lo set the targets, and Targets says "From your programme" while the programme's targets are in force.
+// Recipes is Nutrition's last row and opens the recipe library inside this tab, where it moved from the bar.
 // Weight opens the Weight screen inside this tab, Appearance and the Body map are set here, and Sign out is Account's one row.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
 // clock because the kit has no bell.
@@ -73,6 +75,15 @@ export default function MoreRoute() {
             onPress={() => {
               openOnce(() => {
                 router.push("/more/program");
+              });
+            }}
+          />
+          <ListRow
+            icon="ChefHat"
+            title={MORE_SCREEN.nutrition.recipes.title}
+            onPress={() => {
+              openOnce(() => {
+                router.push(recipesPath());
               });
             }}
           />

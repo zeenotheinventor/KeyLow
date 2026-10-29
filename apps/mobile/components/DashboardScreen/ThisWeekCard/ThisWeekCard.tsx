@@ -1,5 +1,5 @@
 import {
-  WEEK_CARD,
+  WEEK_AVERAGES,
   describeDaysComplete,
   describeThisWeekCard,
   describeWeekGridTitle,
@@ -16,8 +16,10 @@ import type { ThisWeekCardProps } from "./types";
 
 /**
  * The week so far as the dashboard board draws it: the title with a chevron and the week's Monday, the
- * average calories against the target, the seven day markers and the days complete. The whole card is
- * one button that opens the weekly averages screen, named by the title, the average and the
+ * average calories against the target, the seven day markers and the days complete. The average covers
+ * Monday to yesterday, as the weekly averages screen does, while the markers and the days complete count
+ * today too. On a Monday, or when nothing was logged before today, it says so in the screen's words. The
+ * whole card is one button that opens the weekly averages screen, named by the title, the average and the
  * days complete. The words inside it are hidden from screen readers, because that name already says all
  * of it.
  */
@@ -42,8 +44,10 @@ export function ThisWeekCard({ summary, onOpen }: ThisWeekCardProps) {
               {describeWeekGridTitle(summary.weekStart)}
             </Text>
           </View>
-          {summary.averageKcal === null ? (
-            <Text tone="secondary">{WEEK_CARD.nothingLogged}</Text>
+          {summary.isFirstDay ? (
+            <Text tone="secondary">{WEEK_AVERAGES.startsTomorrow}</Text>
+          ) : summary.averageKcal === null ? (
+            <Text tone="secondary">{WEEK_AVERAGES.nothingBeforeToday}</Text>
           ) : (
             <WeekAverageBar
               averageKcal={summary.averageKcal}

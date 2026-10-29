@@ -11,8 +11,8 @@ import {
 } from "../lib/recipeRoutes";
 
 describe("where the recipe library leads", () => {
-  it("should name the library /recipes", () => {
-    expect(recipesPath()).toBe("/recipes");
+  it("should name the library /more/recipes, a screen of the More tab", () => {
+    expect(recipesPath()).toBe("/more/recipes");
   });
 
   it("should open the empty editor for a new recipe", () => {
@@ -51,8 +51,8 @@ describe("where the recipe library leads", () => {
     );
   });
 
-  it("should lead to the archived recipes at /recipes/archived", () => {
-    expect(archivedRecipesPath()).toBe("/recipes/archived");
+  it("should lead to the archived recipes at /more/recipes/archived, inside the More tab", () => {
+    expect(archivedRecipesPath()).toBe("/more/recipes/archived");
   });
 
   it("should lead to the shopping list at /recipes/shopping", () => {

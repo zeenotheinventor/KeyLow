@@ -340,7 +340,8 @@ export const boardWeek = [
   weekDay("2026-10-18", null),
 ];
 
-// The dashboard's over-target week: Wednesday is 2,988 and today 2,412, so the average is 2,450.
+// The dashboard's over-target week: Wednesday is 2,988 and today 2,412. The diary's week view averages
+// 2,450 up to today, and the This week card and the weekly averages page 2,463 up to yesterday.
 export const overTargetWeek = [
   weekDay("2026-10-12", [2140, 158, 214, 66], true),
   weekDay("2026-10-13", [2260, 149, 231, 74], true),

@@ -61,12 +61,18 @@ function routeFileFor(address: string): string | undefined {
 }
 
 describe("the recipe addresses and the screens under app/", () => {
-  it("should open a screen at the library's address", () => {
-    expect(routeFileFor(recipesPath())).toBeDefined();
+  it("should open the library inside the More tab", () => {
+    expect(routeFileFor(recipesPath())).toBe("(tabs)/more/recipes/index.tsx");
   });
 
-  it("should open the archived recipes inside the Recipes tab", () => {
-    expect(routeFileFor(archivedRecipesPath())).toBe("(tabs)/recipes/archived.tsx");
+  it("should open the archived recipes inside the More tab", () => {
+    expect(routeFileFor(archivedRecipesPath())).toBe("(tabs)/more/recipes/archived.tsx");
+  });
+
+  // The library was a tab at /recipes. Its old addresses keep a screen, which sends them on to More.
+  it("should keep a screen at the library's old addresses, so neither opens a recipe", () => {
+    expect(routeFileFor("/recipes")).toBe("recipes/index.tsx");
+    expect(routeFileFor("/recipes/archived")).toBe("recipes/archived.tsx");
   });
 
   it("should open the new recipe editor, with or without a typed name", () => {

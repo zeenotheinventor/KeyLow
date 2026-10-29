@@ -40,11 +40,11 @@ export type {
   WeekNutrientDayTotals,
   WeekNutrientKey,
 } from "./weekNutrientAverages";
-export { weekAverageBarOf, weekSummary } from "./weekSummary";
+export { weekAverageBarOf, weekCaloriesBeforeToday } from "./weekCaloriesBeforeToday";
 export type {
   WeekAverageBarState,
-  WeekDayMarker,
-  WeekSummary,
-  WeekSummaryDay,
-  WeekSummaryInput,
-} from "./weekSummary";
+  WeekCaloriesBeforeToday,
+  WeekCaloriesDay,
+} from "./weekCaloriesBeforeToday";
+export { weekSummary } from "./weekSummary";
+export type { WeekDayMarker, WeekSummary, WeekSummaryDay, WeekSummaryInput } from "./weekSummary";

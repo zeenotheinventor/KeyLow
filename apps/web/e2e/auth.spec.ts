@@ -57,7 +57,7 @@ test("creates an account and lands on the dashboard", async ({ page }) => {
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.getByRole("link", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Diary" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Recipes" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Recipes" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "More" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Weight" })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Settings" })).toHaveCount(0);

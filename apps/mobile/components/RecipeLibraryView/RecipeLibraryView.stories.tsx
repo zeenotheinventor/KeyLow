@@ -8,6 +8,7 @@ import type { Meta, StoryObj } from "@storybook/react-native";
 // These stories show each state of the library as the boards draw it. The props are a union, which Storybook's
 // args typing cannot hold, so each story renders its own view.
 const actions = {
+  onBack: () => undefined,
   onOpenRecipe: () => undefined,
   onNewRecipe: () => undefined,
   onOpenArchived: () => undefined,

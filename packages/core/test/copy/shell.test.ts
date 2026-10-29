@@ -12,12 +12,11 @@ import {
 } from "../../src/copy";
 
 describe("the tab shell copy", () => {
-  it("should pin the titles of the four destinations in the order the bar draws them", () => {
-    expect(Object.values(TAB_TITLES)).toEqual(["Dashboard", "Diary", "Recipes", "More"]);
+  it("should pin the titles of the destinations in the order the bar draws them", () => {
+    expect(Object.values(TAB_TITLES)).toEqual(["Dashboard", "Diary", "More"]);
     expect(TAB_TITLES).toEqual({
       dashboard: "Dashboard",
       diary: "Diary",
-      recipes: "Recipes",
       more: "More",
     });
   });
@@ -53,6 +52,7 @@ describe("the tab shell copy", () => {
           subtitleFromProgram: "From your programme",
         },
         program: { title: "Programme", subtitleWithoutProgram: "Let Ki-Lo set your targets" },
+        recipes: { title: "Recipes" },
       },
       body: { title: "Body", weight: { title: "Weight" } },
       settings: {

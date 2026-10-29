@@ -39,6 +39,7 @@ export const RowMenu: Story = {
         recipes={sampleRecipes}
         status="ready"
         onArchiveRecipe={() => undefined}
+        onBack={() => undefined}
         onDuplicateRecipe={() => undefined}
         onNewRecipe={() => undefined}
         onOpenArchived={() => undefined}

@@ -9,7 +9,6 @@ import {
   RETRY_LABEL,
   SEARCH_CLEAR_LABEL,
   SHOPPING_LIST,
-  TAB_TITLES,
   describeMoreForRecipe,
   describeRecipeCount,
 } from "@keylow/core/copy";
@@ -48,8 +47,8 @@ const LOADING_ROWS = 4;
 const stateClassName = "flex-1 pb-20";
 
 /**
- * The Recipes tab's library, drawn from what it is given: the user's live recipes with a search over their
- * names, and its empty, loading, failed and offline states. The screen that reads the recipes is
+ * The recipe library in the More tab, drawn from what it is given: a way back to More, the user's live
+ * recipes with a search over their names, and its empty, loading, failed and offline states. The screen that reads the recipes is
  * `RecipeLibrary`. Typing filters the list from the first letter, and once typing stops the number of
  * recipes found is read out politely. Each row has a More button that opens its menu, and under the list
  * is the row that leads to the archived recipes, which a search hides.
@@ -101,7 +100,8 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
   return (
     <View className="flex-1">
       <ScreenHeader
-        title={TAB_TITLES.recipes}
+        back={{ label: RECIPES_LIBRARY.backLabel, onPress: props.onBack }}
+        title={RECIPES_LIBRARY.title}
         trailing={
           <View className="flex-row items-center gap-1">
             {/* The list can be read offline once loaded, so the way to it stays on. */}
@@ -206,7 +206,7 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
         )}
 
         {showsRows && (
-          <GroupedList hidesTitle title={TAB_TITLES.recipes}>
+          <GroupedList hidesTitle title={RECIPES_LIBRARY.title}>
             {found.map((recipe) => (
               <FoodRow
                 key={recipe.id}

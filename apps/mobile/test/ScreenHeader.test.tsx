@@ -62,4 +62,34 @@ describe("ScreenHeader", () => {
       1,
     );
   });
+
+  it("should draw no back control on a tab's own screen", async () => {
+    await render(
+      <ThemeProvider fixedPreference="dark">
+        <ScreenHeader title="More" />
+      </ThemeProvider>,
+    );
+
+    expect(screen.queryByRole("button")).not.toBeOnTheScreen();
+  });
+
+  it("should put a named back control before the title of a screen pushed inside a tab", async () => {
+    const onPress = jest.fn();
+    const user = userEvent.setup();
+    await render(
+      <ThemeProvider fixedPreference="dark">
+        <ScreenHeader back={{ label: "Back to More", onPress }} title="Recipes" />
+      </ThemeProvider>,
+    );
+
+    const back = screen.getByRole("button", { name: "Back to More" });
+    const controls = screen.getAllByRole(/^(button|heading)$/);
+    expect(controls.indexOf(back)).toBeLessThan(
+      controls.indexOf(screen.getByRole("heading", { name: "Recipes" })),
+    );
+
+    await user.press(back);
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
 });

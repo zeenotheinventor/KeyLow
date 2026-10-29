@@ -62,7 +62,7 @@ export const Wide: Story = {
   args: { icon: "SearchX", title: FOOD_NOT_FOUND.title, body: FOOD_NOT_FOUND.body, inset: "wide" },
 };
 
-// The recipes tab before the first recipe: its one action is primary.
+// The recipe library before the first recipe: its one action is primary.
 export const PrimaryAction: Story = {
   args: {
     icon: "ChefHat",
@@ -77,7 +77,7 @@ export const PrimaryAction: Story = {
   },
 };
 
-// The recipes tab's no-matches state while offline: the action cannot work without a connection.
+// The recipe library's no-matches state while offline: the action cannot work without a connection.
 export const DisabledAction: Story = {
   args: {
     icon: "SearchX",

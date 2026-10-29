@@ -120,10 +120,13 @@ describe("the More screen", () => {
       });
     });
 
-    it("should have no Recipes row, because Recipes is a tab", async () => {
+    it("should have one Recipes row, in Nutrition, as Recipes is no longer a tab", async () => {
       await renderMore();
 
-      expect(screen.queryByText("Recipes")).not.toBeOnTheScreen();
+      expect(screen.getAllByRole("button", { name: "Recipes" })).toHaveLength(1);
+      expect(
+        within(screen.getByLabelText("Nutrition")).getByRole("button", { name: "Recipes" }),
+      ).toBeOnTheScreen();
     });
   });
 
@@ -197,7 +200,7 @@ describe("the More screen", () => {
       const nutrition = within(screen.getByLabelText("Nutrition"));
       const rows = nutrition.getAllByRole("button");
 
-      expect(rows).toHaveLength(2);
+      expect(rows).toHaveLength(3);
       expect(rows[0]).toHaveAccessibleName(/^Targets/);
       expect(rows[1]).toHaveAccessibleName(/^Programme/);
       expect(drawingsIn(nutrition.getByRole("button", { name: /^Programme/ }))).toHaveLength(2);
@@ -244,6 +247,40 @@ describe("the More screen", () => {
 
       expect(await screen.findByRole("button", { name: "Programme" })).toBeEnabled();
       expect(requestsTo("expenditure_snapshots")).toBe(0);
+    });
+  });
+
+  describe("Recipes", () => {
+    it("should be Nutrition's last row, after Programme, with its icon and a chevron", async () => {
+      await renderMore();
+
+      const nutrition = within(screen.getByLabelText("Nutrition"));
+      const rows = nutrition.getAllByRole("button");
+
+      expect(rows[2]).toHaveAccessibleName("Recipes");
+      expect(rows[2]).toBeEnabled();
+      expect(drawingsIn(nutrition.getByRole("button", { name: "Recipes" }))).toHaveLength(2);
+    });
+
+    it("should open the recipe library inside the More tab when pressed", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(await screen.findByRole("button", { name: "Recipes" }));
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
+      expect(routerMock.push).toHaveBeenCalledWith("/more/recipes");
+    });
+
+    it("should open the library once on a double tap", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+      const row = await screen.findByRole("button", { name: "Recipes" });
+
+      await user.press(row);
+      await user.press(row);
+
+      expect(routerMock.push).toHaveBeenCalledTimes(1);
     });
   });
 

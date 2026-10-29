@@ -1,10 +1,12 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
+import { addCalendarDays } from "../../../src/dates/calendarDay";
 import { incompleteDaysThisWeek } from "../../../src/diary/rules/incompleteDaysThisWeek";
 import { weekAverage } from "../../../src/diary/rules/weekAverage";
+import { weekCaloriesBeforeToday } from "../../../src/diary/rules/weekCaloriesBeforeToday";
 import { weekOf } from "../../../src/diary/rules/weekStrip";
-import { weekAverageBarOf, weekSummary } from "../../../src/diary/rules/weekSummary";
+import { weekSummary } from "../../../src/diary/rules/weekSummary";
 
 import type { WeekSummaryDay } from "../../../src/diary/rules/weekSummary";
 
@@ -46,14 +48,15 @@ describe("weekSummary", () => {
       expect(summary.daysComplete).toBe(2);
     });
 
-    it("should count four days with food logged and average 1,681.25 kcal", () => {
-      expect(summary.daysLogged).toBe(4);
-      expect(summary.averageKcal).toBe(1681.25);
+    it("should leave today out and average the three days before it, 1,895.33 kcal", () => {
+      expect(summary.isFirstDay).toBe(false);
+      expect(summary.daysLogged).toBe(3);
+      expect(summary.averageKcal).toBeCloseTo(5686 / 3, 9);
     });
 
-    it("should fill the bar to 1,681.25 over 2,200 and not be over target", () => {
+    it("should fill the bar to the average over 2,200 and not be over target", () => {
       expect(summary.targetKcal).toBe(2200);
-      expect(summary.barFill).toBeCloseTo(0.7642, 4);
+      expect(summary.barFill).toBeCloseTo(0.8615, 4);
       expect(summary.kcalOverTarget).toBeNull();
     });
 
@@ -83,9 +86,9 @@ describe("weekSummary", () => {
     ]);
     const summary = weekSummary({ days, today: THURSDAY, targetKcal: 2200 });
 
-    it("should average 2,450 and be 250 over the target", () => {
-      expect(summary.averageKcal).toBe(2450);
-      expect(summary.kcalOverTarget).toBe(250);
+    it("should average 2,462.67 over the days before today and be 263 over the target", () => {
+      expect(summary.averageKcal).toBeCloseTo(7388 / 3, 9);
+      expect(summary.kcalOverTarget).toBe(263);
     });
 
     it("should fill the bar to exactly 1", () => {
@@ -122,24 +125,41 @@ describe("weekSummary", () => {
   });
 
   it("should leave a day with no entries out of the average and still count it as a day so far", () => {
-    const days = weekOfDays([{ kcal: 2000, complete: true }, {}, { kcal: 1000 }]);
+    const days = weekOfDays([{ kcal: 2000, complete: true }, {}, { kcal: 1000 }, { kcal: 9000 }]);
 
-    const summary = weekSummary({ days, today: "2026-10-14", targetKcal: 2200 });
+    const summary = weekSummary({ days, today: THURSDAY, targetKcal: 2200 });
 
-    expect(summary.daysSoFar).toBe(3);
+    expect(summary.daysSoFar).toBe(4);
     expect(summary.daysLogged).toBe(2);
     expect(summary.averageKcal).toBe(1500);
   });
 
+  describe("only today logged", () => {
+    const summary = weekSummary({
+      days: weekOfDays([{}, {}, {}, { kcal: 1900 }]),
+      today: THURSDAY,
+      targetKcal: 2200,
+    });
+
+    it("should have nothing to average and not be the first day", () => {
+      expect(summary.isFirstDay).toBe(false);
+      expect(summary.daysLogged).toBe(0);
+      expect(summary.averageKcal).toBeNull();
+      expect(summary.barFill).toBeNull();
+    });
+  });
+
   describe("on a Monday", () => {
-    it("should count one day so far and one complete when Monday is marked", () => {
+    it("should count one day so far and one complete when Monday is marked, with nothing to average yet", () => {
       const days = weekOfDays([{ kcal: 1800, complete: true }]);
 
       const summary = weekSummary({ days, today: "2026-10-12", targetKcal: 2200 });
 
+      expect(summary.isFirstDay).toBe(true);
       expect(summary.daysSoFar).toBe(1);
       expect(summary.daysComplete).toBe(1);
-      expect(summary.daysLogged).toBe(1);
+      expect(summary.daysLogged).toBe(0);
+      expect(summary.averageKcal).toBeNull();
       expect(summary.markers[0]).toEqual({
         localDate: "2026-10-12",
         state: "today",
@@ -175,7 +195,7 @@ describe("weekSummary", () => {
       expect(summary.targetKcal).toBeNull();
       expect(summary.barFill).toBeNull();
       expect(summary.kcalOverTarget).toBeNull();
-      expect(summary.averageKcal).toBe(1681.25);
+      expect(summary.averageKcal).toBeCloseTo(5686 / 3, 9);
     });
   });
 
@@ -195,8 +215,8 @@ describe("weekSummary", () => {
     });
 
     it("should never be counted in the average or the days logged, even with totals", () => {
-      expect(summary.daysLogged).toBe(2);
-      expect(summary.averageKcal).toBe(1500);
+      expect(summary.daysLogged).toBe(1);
+      expect(summary.averageKcal).toBe(2000);
     });
   });
 
@@ -222,7 +242,7 @@ describe("weekSummary", () => {
 
   describe("the average against the target", () => {
     const summaryFor = (kcal: number, targetKcal: number) =>
-      weekSummary({ days: weekOfDays([{ kcal }]), today: "2026-10-12", targetKcal });
+      weekSummary({ days: weekOfDays([{ kcal }]), today: "2026-10-13", targetKcal });
 
     it("should be over by the whole kilocalories the card shows", () => {
       expect(summaryFor(2200.4, 2200).kcalOverTarget).toBeNull();
@@ -241,37 +261,6 @@ describe("weekSummary", () => {
 
       expect(summary.targetKcal).toBeNull();
       expect(summary.barFill).toBeNull();
-    });
-  });
-
-  describe("weekAverageBarOf, which the card and the weekly averages page share", () => {
-    it("should give the card's bar for the sample week, unchanged", () => {
-      expect(weekAverageBarOf(1681.25, 2200)).toEqual({
-        averageKcal: 1681.25,
-        targetKcal: 2200,
-        barFill: 1681.25 / 2200,
-        kcalOverTarget: null,
-      });
-    });
-
-    it("should give the card's bar fields for any week and target", () => {
-      const summary = weekSummary({ days: sampleWeek, today: THURSDAY, targetKcal: 2000 });
-
-      expect(weekAverageBarOf(summary.averageKcal, 2000)).toEqual({
-        averageKcal: summary.averageKcal,
-        targetKcal: summary.targetKcal,
-        barFill: summary.barFill,
-        kcalOverTarget: summary.kcalOverTarget,
-      });
-    });
-
-    it("should have no fill and no overage with no average", () => {
-      expect(weekAverageBarOf(null, 2200)).toEqual({
-        averageKcal: null,
-        targetKcal: 2200,
-        barFill: null,
-        kcalOverTarget: null,
-      });
     });
   });
 
@@ -336,12 +325,12 @@ describe("weekSummary", () => {
       );
     });
 
-    it("should keep the average between the smallest and largest logged day so far", () => {
+    it("should keep the average between the smallest and largest day logged before today", () => {
       fc.assert(
         fc.property(weekArbitrary, ({ days, todayIndex, targetKcal }) => {
           const today = WEEK[todayIndex] ?? "";
           const logged = days.flatMap((day) =>
-            day.localDate <= today && day.totals !== null ? [day.totals.kcal] : [],
+            day.localDate < today && day.totals !== null ? [day.totals.kcal] : [],
           );
 
           const { averageKcal } = weekSummary({ days, today, targetKcal });
@@ -366,14 +355,34 @@ describe("weekSummary", () => {
       );
     });
 
-    it("should give the average core weekAverage gives", () => {
+    it("should give the average, basis and bar core weekCaloriesBeforeToday gives", () => {
+      fc.assert(
+        fc.property(weekArbitrary, ({ days, todayIndex, targetKcal }) => {
+          const today = WEEK[todayIndex] ?? "";
+          const { isFirstDay, daysLogged, calories } = weekCaloriesBeforeToday(
+            days,
+            today,
+            targetKcal,
+          );
+
+          const summary = weekSummary({ days, today, targetKcal });
+
+          expect(summary).toMatchObject({ isFirstDay, daysLogged, ...calories });
+        }),
+      );
+    });
+
+    it("should give the average the diary's week view gives up to yesterday", () => {
       fc.assert(
         fc.property(weekArbitrary, ({ days, todayIndex, targetKcal }) => {
           const today = WEEK[todayIndex] ?? "";
 
           const summary = weekSummary({ days, today, targetKcal });
 
-          expect(summary.averageKcal).toEqual(weekAverage(days, today)?.kcal ?? null);
+          // On a Monday yesterday is in the week before, and both have nothing to average.
+          expect(summary.averageKcal).toBe(
+            weekAverage(days, addCalendarDays(today, -1))?.kcal ?? null,
+          );
         }),
       );
     });

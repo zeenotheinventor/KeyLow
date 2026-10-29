@@ -96,7 +96,6 @@ const routes = {
   "(tabs)/diary": DiaryStandIn,
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreRoute,
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/weight": standIn("Weight screen"),
   "(tabs)/settings": standIn("Settings screen"),
   "foods/_layout": FoodsLayout,
@@ -185,7 +184,7 @@ async function type(text: string) {
 }
 
 async function openSearch(user: ReturnType<typeof userEvent.setup>) {
-  await render(<ExpoRoot context={getMockContext(routes)} location="/recipes" />);
+  await render(<ExpoRoot context={getMockContext(routes)} location="/train" />);
   await act(() => {
     router.push("/foods?day=2026-10-15");
   });
@@ -243,7 +242,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(dialogTitle()).not.toBeOnTheScreen();
     });
 
@@ -255,7 +254,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       expect(dialogTitle()).toBeOnTheScreen();
       expect(dialogText("The 2 foods on it won't be logged.")).toBeOnTheScreen();
-      expect(screen.queryByText("Recipes screen")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Train screen")).not.toBeOnTheScreen();
     });
 
     it("should say 'The 1 food on it won't be logged.' for one food", async () => {
@@ -298,7 +297,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(dialogButton("Discard"));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(searchHeading()).not.toBeOnTheScreen();
       expect(dialogTitle()).not.toBeOnTheScreen();
       expect(mockLogEntries).not.toHaveBeenCalled();
@@ -309,7 +308,7 @@ describe("leaving the food sheet with foods on the plate", () => {
       await putFoodsOnThePlate(user);
       await user.press(screen.getByRole("button", { name: "Close" }));
       await user.press(dialogButton("Discard"));
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
 
       await act(() => {
         router.push("/foods?day=2026-10-15");
@@ -326,7 +325,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await pressAndroidBack();
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(dialogTitle()).not.toBeOnTheScreen();
     });
 
@@ -349,7 +348,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(dialogButton("Discard"));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
     });
   });
 
@@ -369,7 +368,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       expect(dialogTitle()).toBeOnTheScreen();
       expect(dialogText("The 2 foods on it won't be logged.")).toBeOnTheScreen();
-      expect(screen.queryByText("Recipes screen")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Train screen")).not.toBeOnTheScreen();
     });
 
     it("should stay on the scanner, with the plate, on Keep adding", async () => {
@@ -388,7 +387,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(dialogButton("Discard"));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(scannerHeading()).not.toBeOnTheScreen();
       expect(searchHeading()).not.toBeOnTheScreen();
     });
@@ -419,7 +418,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(dialogTitle()).not.toBeOnTheScreen();
     });
   });
@@ -524,7 +523,7 @@ describe("leaving the food sheet with foods on the plate", () => {
       expect(screen.getByRole("button", { name: logTwoFoods })).toBeOnTheScreen();
       await user.press(screen.getByRole("button", { name: "Close" }));
       expect(dialogTitle()).toBeOnTheScreen();
-      expect(screen.queryByText("Recipes screen")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Train screen")).not.toBeOnTheScreen();
     });
 
     it("should do nothing on the Android back button, then ask once the log fails", async () => {
@@ -575,7 +574,7 @@ describe("leaving the food sheet with foods on the plate", () => {
       expect(await screen.findByText(notLogged)).toBeOnTheScreen();
       await user.press(screen.getByRole("button", { name: "Close" }));
       expect(dialogTitle()).toBeOnTheScreen();
-      expect(screen.queryByText("Recipes screen")).not.toBeOnTheScreen();
+      expect(screen.queryByText("Train screen")).not.toBeOnTheScreen();
     });
 
     it("should land on the diary with no question when Close was pressed and the log then succeeds", async () => {
@@ -646,7 +645,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(dialogButton("Discard"));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(quickAddHeading()).not.toBeOnTheScreen();
       expect(mockQuickAdd).not.toHaveBeenCalled();
     });
@@ -658,7 +657,7 @@ describe("leaving the food sheet with foods on the plate", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(dialogTitle()).not.toBeOnTheScreen();
     });
 
@@ -698,13 +697,13 @@ describe("leaving the food sheet with foods on the plate", () => {
 
   it("should not ask in 'Your foods', which has no plate", async () => {
     const user = userEvent.setup();
-    await render(<ExpoRoot context={getMockContext(routes)} location="/recipes" />);
+    await render(<ExpoRoot context={getMockContext(routes)} location="/train" />);
     await act(() => {
       router.push("/foods?scope=own");
     });
     await user.press(await screen.findByRole("button", { name: "Close" }));
 
-    expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+    expect(await screen.findByText("Train screen")).toBeOnTheScreen();
     expect(dialogTitle()).not.toBeOnTheScreen();
   });
 });

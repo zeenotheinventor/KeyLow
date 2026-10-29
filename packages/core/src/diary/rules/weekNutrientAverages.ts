@@ -1,8 +1,8 @@
-import { weekAverageBarOf } from "./weekSummary";
+import { weekCaloriesBeforeToday } from "./weekCaloriesBeforeToday";
 import { addCalendarDays, daysSinceMonday } from "../../dates/calendarDay";
 
 import type { ProgressTargets } from "./progressBars";
-import type { WeekAverageBarState } from "./weekSummary";
+import type { WeekAverageBarState } from "./weekCaloriesBeforeToday";
 
 /** Every nutrient a `day_totals` row carries, in the order the weekly averages page lists them. */
 export const WEEK_NUTRIENT_KEYS = [
@@ -56,7 +56,7 @@ export type WeekNutrientAverages = {
   daysLogged: number;
   /** Every nutrient, in the order of `WEEK_NUTRIENT_KEYS`. */
   nutrients: WeekNutrientAverage[];
-  /** The calories bar for the daily average, by the rule the This week card's bar uses (core `weekAverageBarOf`). */
+  /** The calories bar for the daily average, as the This week card draws it (core `weekCaloriesBeforeToday`). */
   calories: WeekAverageBarState;
 };
 
@@ -76,11 +76,11 @@ const positiveOrNull = (value: number | null): number | null =>
  *
  * Today is left out because it is not over yet, and a part of a day would pull the average down. A day
  * after today is left out too, and so is a day with nothing logged, because a day that was not tracked is
- * not a day of eating nothing. The This week card and the diary's week view still count today (core
- * `weekAverage`), so the page can differ from them while today has entries. On a Monday there is no
- * earlier day, which `isFirstDay` says. A logged day with no value for a nutrient counts as 0, as it does
- * on the day's bars (core `weekDayTotals`). A nutrient no logged day gave a value for is null, shown as
- * not given, never 0 g.
+ * not a day of eating nothing. The days logged, the first day and the calories bar come from core
+ * `weekCaloriesBeforeToday`, as the This week card's do, so the page and the card always agree. The diary's
+ * week view still counts today (core `weekAverage`). On a Monday there is no earlier day, which
+ * `isFirstDay` says. A logged day with no value for a nutrient counts as 0, as it does on the day's bars
+ * (core `weekDayTotals`). A nutrient no logged day gave a value for is null, shown as not given, never 0 g.
  */
 export function weekNutrientAverages({
   days,
@@ -106,17 +106,13 @@ export function weekNutrientAverages({
       dailyTarget: isTargetKey(key) ? positiveOrNull(targets[key]) : null,
     };
   });
-  // As on the card, a logged day with no calories counts as 0, so the bar has an average whenever a day is logged.
-  const averageKcal =
-    logged.length === 0
-      ? null
-      : (nutrients.find((nutrient) => nutrient.key === "kcal")?.dailyAverage ?? 0);
+  const { isFirstDay, daysLogged, calories } = weekCaloriesBeforeToday(days, today, targets.kcal);
 
   return {
     weekStart: addCalendarDays(today, -daysSinceMonday(today)),
-    isFirstDay: daysSinceMonday(today) === 0,
-    daysLogged: logged.length,
+    isFirstDay,
+    daysLogged,
     nutrients,
-    calories: weekAverageBarOf(averageKcal, targets.kcal),
+    calories,
   };
 }

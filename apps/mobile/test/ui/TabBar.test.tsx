@@ -27,7 +27,7 @@ const mockImpact = jest.mocked(impactAsync);
 const tabs = [
   { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "diary", label: "Diary", icon: "BookOpen" },
-  { key: "recipes", label: "Recipes", icon: "ChefHat" },
+  { key: "train", label: "Train", icon: "Dumbbell" },
   { key: "more", label: "More", icon: "Ellipsis" },
 ] as const;
 
@@ -98,7 +98,7 @@ const slotOrder: Control[] = [
   { role: "tab", name: "Dashboard" },
   { role: "tab", name: "Diary" },
   { role: "button", name: "Find food" },
-  { role: "tab", name: "Recipes" },
+  { role: "tab", name: "Train" },
   { role: "tab", name: "More" },
 ];
 
@@ -153,9 +153,9 @@ describe("TabBar", () => {
     });
 
     it("should say which destination is selected", async () => {
-      await renderTabBar({ activeKey: "recipes" });
+      await renderTabBar({ activeKey: "train" });
 
-      expect(screen.getByRole("tab", { name: "Recipes", selected: true })).toBeOnTheScreen();
+      expect(screen.getByRole("tab", { name: "Train", selected: true })).toBeOnTheScreen();
       expect(screen.getAllByRole("tab", { selected: true })).toHaveLength(1);
     });
 
@@ -182,9 +182,9 @@ describe("TabBar", () => {
       const onSelect = jest.fn();
       await renderTabBar({ onSelect });
 
-      await user.press(screen.getByRole("tab", { name: "Recipes" }));
+      await user.press(screen.getByRole("tab", { name: "Train" }));
 
-      expect(onSelect).toHaveBeenCalledWith("recipes");
+      expect(onSelect).toHaveBeenCalledWith("train");
     });
 
     it("should play the selection haptic when the selection changes", async () => {
@@ -393,10 +393,10 @@ describe("TabBar", () => {
 
   describe("the underline", () => {
     it("should sit under the selected destination to begin with", async () => {
-      await renderTabBar({ activeKey: "recipes" });
+      await renderTabBar({ activeKey: "train" });
       await layOut();
 
-      // Recipes is the fourth slot, after the add button, so its left edge is 3 slots in.
+      // Train is the fourth slot, after the add button, so its left edge is 3 slots in.
       expect(animatedTranslateXPoints(slide())).toBeCloseTo(3 * 78, 3);
     });
 
@@ -530,7 +530,7 @@ describe("TabBar", () => {
     });
   });
 
-  describe("five destinations and the plus, the six slots of the Train tab", () => {
+  describe("five destinations and the plus, a bar of six slots", () => {
     const trainTabs = [
       { key: "dashboard", label: "Dashboard", icon: "LayoutDashboard" },
       { key: "diary", label: "Diary", icon: "BookOpen" },

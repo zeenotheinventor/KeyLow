@@ -31,8 +31,10 @@ const onOpenArchived = jest.fn<undefined, []>();
 const onOpenShoppingList = jest.fn<undefined, []>();
 const onDuplicateRecipe = jest.fn<undefined, [RecipeSummary]>();
 const onArchiveRecipe = jest.fn<undefined, [RecipeSummary]>();
+const onBack = jest.fn<undefined, []>();
 
 const actions = {
+  onBack,
   onOpenRecipe,
   onNewRecipe,
   onOpenArchived,
@@ -106,6 +108,40 @@ describe("the recipe library", () => {
     onOpenShoppingList.mockReset();
     onDuplicateRecipe.mockReset();
     onArchiveRecipe.mockReset();
+    onBack.mockReset();
+  });
+
+  describe("its header", () => {
+    it("should head the screen Recipes, with a way back to More before the title", async () => {
+      await renderLibrary();
+
+      const back = screen.getByRole("button", { name: "Back to More" });
+      const heading = screen.getByRole("heading", { name: "Recipes" });
+      const controls = screen.getAllByRole(/^(button|heading)$/);
+
+      expect(controls.indexOf(back)).toBeLessThan(controls.indexOf(heading));
+    });
+
+    it("should leave for More when the back control is pressed", async () => {
+      await renderLibrary();
+
+      await user().press(screen.getByRole("button", { name: "Back to More" }));
+
+      expect(onBack).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["loading", { status: "loading", ...actions }],
+      ["failed", { status: "error", onRetry, ...actions }],
+      ["offline", { status: "offline", ...actions }],
+    ] satisfies [string, RecipeLibraryViewProps][])(
+      "should keep the way back while %s",
+      async (_state, props) => {
+        await renderLibrary(props);
+
+        expect(screen.getByRole("button", { name: "Back to More" })).toBeEnabled();
+      },
+    );
   });
 
   afterEach(async () => {

@@ -14,7 +14,8 @@ export type WeekAverageDay = {
 };
 
 /**
- * The average of a week's days from Monday to today, for the week view's Average. A day after today is
+ * The average of a week's days from Monday to today, for the diary's week view alone: the This week card
+ * and the weekly averages page leave today out (core `weekCaloriesBeforeToday`). A day after today is
  * left out, and so is a day with no entries: a day that was not tracked is not a day of eating nothing,
  * and counting it would pull the average down. Null when no day is left to average.
  */
