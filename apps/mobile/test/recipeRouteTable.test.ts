@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 import {
+  addToListPath,
   archivedRecipesPath,
   editRecipePath,
   newRecipePath,
@@ -9,6 +10,7 @@ import {
   recipePath,
   recipesPath,
   refreshRecipePath,
+  shoppingListPath,
 } from "../lib/recipeRoutes";
 
 // Every address a recipe screen sends the user to must be a file under app/, or the control that leads there
@@ -86,6 +88,14 @@ describe("the recipe addresses and the screens under app/", () => {
 
   it("should open the amount step of a recipe at its log address, in the foods sheet", () => {
     expect(routeFileFor(logRecipePath(SOME_RECIPE_ID))).toBe("foods/recipe/[id]/log.tsx");
+  });
+
+  it("should open the shopping list outside the tabs, not a recipe called shopping", () => {
+    expect(routeFileFor(shoppingListPath())).toBe("recipes/shopping.tsx");
+  });
+
+  it("should open the add to list screen of a recipe, with the servings to add", () => {
+    expect(routeFileFor(addToListPath(SOME_RECIPE_ID, 4))).toBe("recipes/[id]/add-to-list.tsx");
   });
 
   it("should open no screen at an address nothing is built for", () => {

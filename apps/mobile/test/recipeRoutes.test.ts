@@ -1,11 +1,13 @@
 import {
   NEW_RECIPE_NAME_PARAMETER,
+  addToListPath,
   archivedRecipesPath,
   editRecipePath,
   newRecipePath,
   recipePath,
   recipesPath,
   refreshRecipePath,
+  shoppingListPath,
 } from "../lib/recipeRoutes";
 
 describe("where the recipe library leads", () => {
@@ -51,5 +53,15 @@ describe("where the recipe library leads", () => {
 
   it("should lead to the archived recipes at /recipes/archived", () => {
     expect(archivedRecipesPath()).toBe("/recipes/archived");
+  });
+
+  it("should lead to the shopping list at /recipes/shopping", () => {
+    expect(shoppingListPath()).toBe("/recipes/shopping");
+  });
+
+  it("should carry the servings to the add to list screen of a recipe", () => {
+    expect(addToListPath("0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11", 2.5)).toBe(
+      "/recipes/0b5f4b6e-1c1b-4d6f-8f5e-3d2f6f0a9a11/add-to-list?servings=2.5",
+    );
   });
 });

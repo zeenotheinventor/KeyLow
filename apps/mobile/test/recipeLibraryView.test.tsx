@@ -28,6 +28,7 @@ const onOpenRecipe = jest.fn<undefined, [string]>();
 const onNewRecipe = jest.fn<undefined, [string?]>();
 const onRetry = jest.fn<undefined, []>();
 const onOpenArchived = jest.fn<undefined, []>();
+const onOpenShoppingList = jest.fn<undefined, []>();
 const onDuplicateRecipe = jest.fn<undefined, [RecipeSummary]>();
 const onArchiveRecipe = jest.fn<undefined, [RecipeSummary]>();
 
@@ -35,6 +36,7 @@ const actions = {
   onOpenRecipe,
   onNewRecipe,
   onOpenArchived,
+  onOpenShoppingList,
   onDuplicateRecipe,
   onArchiveRecipe,
 };
@@ -101,6 +103,7 @@ describe("the recipe library", () => {
     onNewRecipe.mockReset();
     onRetry.mockReset();
     onOpenArchived.mockReset();
+    onOpenShoppingList.mockReset();
     onDuplicateRecipe.mockReset();
     onArchiveRecipe.mockReset();
   });
@@ -177,6 +180,14 @@ describe("the recipe library", () => {
 
       expect(onNewRecipe).toHaveBeenCalledTimes(1);
       expect(onNewRecipe).toHaveBeenCalledWith();
+    });
+
+    it("should open the shopping list from the header, offline too", async () => {
+      await renderLibrary({ ...ready, isOnline: false });
+
+      await user().press(screen.getByRole("button", { name: "Shopping list" }));
+
+      expect(onOpenShoppingList).toHaveBeenCalledTimes(1);
     });
   });
 

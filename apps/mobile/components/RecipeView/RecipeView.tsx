@@ -19,7 +19,13 @@ import { AccessibilityInfo, ScrollView, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useIsOnline } from "../../lib/connectivity";
-import { editRecipePath, recipePath, recipesPath, refreshRecipePath } from "../../lib/recipeRoutes";
+import {
+  addToListPath,
+  editRecipePath,
+  recipePath,
+  recipesPath,
+  refreshRecipePath,
+} from "../../lib/recipeRoutes";
 import { PerServingCard } from "../PerServingCard";
 import { useRecipeActions } from "../RecipeActions";
 import { RecipeViewIngredientsSection } from "../RecipeViewIngredientsSection";
@@ -45,8 +51,8 @@ const ANNOUNCE_AFTER_TYPING_MS = 500;
  * nothing is saved or sent. It holds no arithmetic, rounding or checks: what the amounts say, what counts
  * as a servings number and what a button does to it are core's. Its More menu duplicates or archives the
  * recipe through `useRecipeActions`, the library's own actions: a copy opens on its own view, and an
- * archived recipe leaves for the library, each with a toast that has Undo. Its Refresh ingredients opens the
- * refresh screen over it, and the servings chosen here stay while that screen is open and after it.
+ * archived recipe leaves for the library, each with a toast that has Undo. Its Add to shopping list opens the add
+ * screen over it at the servings shown. Its Refresh ingredients opens the refresh screen over it, and the servings chosen here stay while that screen is open and after it.
  */
 export function RecipeView({ recipe, onBack }: RecipeViewProps) {
   const router = useRouter();
@@ -174,6 +180,11 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
     router.push(refreshRecipePath(recipe.id));
   }
 
+  // The add screen opens over this view at the servings on screen, and changing them there leaves these alone.
+  function addToList() {
+    router.push(addToListPath(recipe.id, view.servings));
+  }
+
   // The copy opens on its own view over this one. Undo puts the copy away and goes back to this view, unless
   // the user has already left the copy's view, in which case there is no copy's view to leave.
   function duplicate() {
@@ -272,6 +283,9 @@ export function RecipeView({ recipe, onBack }: RecipeViewProps) {
         }}
         onRefresh={() => {
           chooseFromMenu(refresh);
+        }}
+        onAddToList={() => {
+          chooseFromMenu(addToList);
         }}
         onDuplicate={() => {
           chooseFromMenu(duplicate);

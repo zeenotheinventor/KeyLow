@@ -42,6 +42,7 @@ export const RowMenu: Story = {
         onDuplicateRecipe={() => undefined}
         onNewRecipe={() => undefined}
         onOpenArchived={() => undefined}
+        onOpenShoppingList={() => undefined}
         onOpenRecipe={() => undefined}
       />
       <RecipeRowMenu {...args} />

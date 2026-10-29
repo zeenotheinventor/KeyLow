@@ -11,6 +11,7 @@ const actions = {
   onOpenRecipe: () => undefined,
   onNewRecipe: () => undefined,
   onOpenArchived: () => undefined,
+  onOpenShoppingList: () => undefined,
   onDuplicateRecipe: () => undefined,
   onArchiveRecipe: () => undefined,
 };

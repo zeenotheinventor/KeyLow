@@ -4,6 +4,8 @@ export type RecipeViewMenuProps = {
   onClose: () => void;
   /** Called when Refresh ingredients is pressed. The screen closes the sheet and opens the refresh screen. */
   onRefresh: () => void;
+  /** Called when Add to shopping list is pressed. The screen closes the sheet and opens the add screen. */
+  onAddToList: () => void;
   /** Called when Duplicate is pressed. The screen closes the sheet and acts. */
   onDuplicate: () => void;
   /** Called when Archive is pressed. The screen closes the sheet and acts. */

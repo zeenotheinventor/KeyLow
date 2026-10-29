@@ -19,6 +19,7 @@ describe("SHOPPING_LIST", () => {
     expect(SHOPPING_LIST).toMatchObject({
       title: "Shopping list",
       addToList: "Add to shopping list",
+      addToListCaption: "Puts its ingredients on your list",
       addRecipe: "Add a recipe",
       toBuy: "To buy",
       ticked: "Ticked",

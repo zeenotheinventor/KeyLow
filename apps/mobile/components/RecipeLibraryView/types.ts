@@ -5,6 +5,8 @@ type RecipeLibraryViewActions = {
   onOpenRecipe: (id: string) => void;
   /** Starts a new recipe. A typed word is the name it starts with. */
   onNewRecipe: (name?: string) => void;
+  /** Opens the shopping list. */
+  onOpenShoppingList: () => void;
   /** Opens the archived recipes. */
   onOpenArchived: () => void;
   /** Saves a copy of a recipe, from the row menu. */

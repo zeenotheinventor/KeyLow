@@ -11,6 +11,8 @@ export const SHOPPING_LIST = {
   title: "Shopping list",
   /** The button on a recipe that adds its ingredients to the list. */
   addToList: "Add to shopping list",
+  /** Under Add to shopping list in the recipe view's More menu on the phone. */
+  addToListCaption: "Puts its ingredients on your list",
   /** The list page's button that opens the recipe picker. */
   addRecipe: "Add a recipe",
   /** The picker's heading. */

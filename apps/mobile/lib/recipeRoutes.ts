@@ -30,3 +30,16 @@ export const refreshRecipePath = (id: string): string => `${recipesPath()}/${id}
 
 /** The archived recipes, a screen pushed inside the Recipes tab so the tab bar stays. */
 export const archivedRecipesPath = (): string => `${recipesPath()}/archived`;
+
+/**
+ * The shopping list, a full-height screen outside the tabs. The path is written out in full, so it stays
+ * where it is whichever tab the library lives under.
+ */
+export const shoppingListPath = (): string => "/recipes/shopping";
+
+/** The query parameter that carries the servings to add a recipe at, as the view or the picker chose them. */
+export const ADD_TO_LIST_SERVINGS_PARAMETER = "servings";
+
+/** The screen that adds a recipe's ingredients to the shopping list, pushed over the screen it came from. */
+export const addToListPath = (id: string, servings: number): string =>
+  `/recipes/${id}/add-to-list?${ADD_TO_LIST_SERVINGS_PARAMETER}=${encodeURIComponent(String(servings))}`;

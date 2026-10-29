@@ -8,6 +8,7 @@ import {
   RECIPES_SEARCH_EMPTY,
   RETRY_LABEL,
   SEARCH_CLEAR_LABEL,
+  SHOPPING_LIST,
   TAB_TITLES,
   describeMoreForRecipe,
   describeRecipeCount,
@@ -102,17 +103,27 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
       <ScreenHeader
         title={TAB_TITLES.recipes}
         trailing={
-          <Button
-            disabled={!isOnline}
-            icon="Plus"
-            size="sm"
-            variant="secondary"
-            onPress={() => {
-              props.onNewRecipe();
-            }}
-          >
-            {RECIPES_LIBRARY.newRecipe}
-          </Button>
+          <View className="flex-row items-center gap-1">
+            {/* The list can be read offline once loaded, so the way to it stays on. */}
+            <IconButton
+              icon="ShoppingCart"
+              label={SHOPPING_LIST.title}
+              size="sm"
+              variant="ghost"
+              onPress={props.onOpenShoppingList}
+            />
+            <Button
+              disabled={!isOnline}
+              icon="Plus"
+              size="sm"
+              variant="secondary"
+              onPress={() => {
+                props.onNewRecipe();
+              }}
+            >
+              {RECIPES_LIBRARY.newRecipe}
+            </Button>
+          </View>
         }
       />
       <ScrollView
