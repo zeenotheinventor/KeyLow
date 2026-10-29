@@ -180,6 +180,20 @@ describe("the package index", () => {
     "updateMyProgram",
     "useEditProgram",
     "useRunDueCheckins",
+    "useShoppingList",
+    "useShoppingPreview",
+    "useAddRecipesToList",
+    "useAddShoppingItem",
+    "useToggleShoppingItem",
+    "useRemoveShoppingItem",
+    "useClearTickedItems",
+    "listShoppingItems",
+    "getShoppingSources",
+    "saveShoppingItems",
+    "addShoppingItem",
+    "setShoppingItemChecked",
+    "deleteShoppingItem",
+    "clearTickedItems",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

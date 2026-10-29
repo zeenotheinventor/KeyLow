@@ -139,3 +139,13 @@ export type {
 } from "./program";
 export { getMyCheckinSchedule, runMyDueCheckins } from "./checkin";
 export type { CheckinSchedule } from "./checkin";
+export {
+  addShoppingItem,
+  clearTickedItems,
+  deleteShoppingItem,
+  getShoppingSources,
+  listShoppingItems,
+  saveShoppingItems,
+  setShoppingItemChecked,
+} from "./shoppingList";
+export type { ShoppingSourceRecipe } from "./shoppingList";
