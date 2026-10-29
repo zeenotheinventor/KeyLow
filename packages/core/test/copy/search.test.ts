@@ -24,7 +24,7 @@ describe("search group headings", () => {
         label: "Your recipes, values per serving",
       },
       yours: { title: "Your foods", caption: "Yours", label: "Your foods" },
-      common: { title: "Common foods", caption: "UK CoFID", label: "Common foods from UK CoFID" },
+      common: { title: "Common foods", caption: "UK CoFID and USDA", label: "Common foods" },
       branded: {
         title: "Branded foods",
         caption: "Open Food Facts",
@@ -53,7 +53,7 @@ describe("search sheet sentences", () => {
   it("should pin the idle state", () => {
     expect(SEARCH_IDLE).toEqual({
       title: "Search for a food",
-      body: "Type at least 2 characters to search your foods, UK CoFID and Open Food Facts.",
+      body: "Type at least 2 characters to search your foods, UK CoFID, USDA and Open Food Facts.",
       hint: "Type at least 2 characters to search",
     });
   });

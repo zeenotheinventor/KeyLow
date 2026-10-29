@@ -16,7 +16,7 @@ export const SEARCH_GROUP_HEADINGS: Readonly<Record<SearchGroupKey, SearchGroupH
     label: "Your recipes, values per serving",
   },
   yours: { title: "Your foods", caption: "Yours", label: "Your foods" },
-  common: { title: "Common foods", caption: "UK CoFID", label: "Common foods from UK CoFID" },
+  common: { title: "Common foods", caption: "UK CoFID and USDA", label: "Common foods" },
   branded: {
     title: "Branded foods",
     caption: "Open Food Facts",
@@ -36,7 +36,7 @@ export const SEARCH_CLEAR_LABEL = "Clear search";
 
 export const SEARCH_IDLE = {
   title: "Search for a food",
-  body: "Type at least 2 characters to search your foods, UK CoFID and Open Food Facts.",
+  body: "Type at least 2 characters to search your foods, UK CoFID, USDA and Open Food Facts.",
   /** The quiet line the web page shows in place of the title and body. */
   hint: "Type at least 2 characters to search",
 };

@@ -128,7 +128,11 @@ describe("the add food dialog, recipes", () => {
         within(screen.getByRole("group", { name: "Search results" }))
           .getAllByRole("heading", { level: 2 })
           .map((heading) => heading.textContent),
-      ).toEqual(["Your recipes · Per serving", "Your foods · Yours", "Common foods · UK CoFID"]);
+      ).toEqual([
+        "Your recipes · Per serving",
+        "Your foods · Yours",
+        "Common foods · UK CoFID and USDA",
+      ]);
     });
 
     it("should be absent when no recipe matches", async () => {

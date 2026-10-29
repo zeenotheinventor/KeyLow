@@ -253,7 +253,7 @@ describe("FoodSearch", () => {
       const headings = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
       expect(headings).toEqual([
         "Your foods · Yours",
-        "Common foods · UK CoFID",
+        "Common foods · UK CoFID and USDA",
         "Branded foods · Open Food Facts",
       ]);
       expect(screen.getByText("Values per 100 g unless marked")).toBeTruthy();

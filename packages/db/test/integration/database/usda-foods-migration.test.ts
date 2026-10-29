@@ -163,20 +163,23 @@ describe("the USDA foods migration, applied to a database that holds an earlier 
 });
 
 describe("search_foods, after the USDA foods migration", () => {
+  // The real wave of foods (KEY-760) shares these names with the fixtures, so this test gives its own
+  // two foods names no real food has and finds them by those names.
+  const searchedFirst = { ...firstThigh, name: "Chicken, thigh, glorp-raw, meat and skin" };
+  const searchedSecond = { ...secondThigh, name: "Chicken, thigh, glorp-roasted, meat and skin" };
+  const searchedMigrationSql = renderUsdaMigration(normalisedCsvOf(searchedFirst, searchedSecond));
+
   it("should return both foods to an authenticated user, with source usda", () => {
     const userId = "75990000-0000-4000-8000-000000000001";
     const lines = runRolledBack(
       [
-        migrationSql,
+        searchedMigrationSql,
         "set local role authenticated;",
         `select set_config('request.jwt.claims', '{"sub":"${userId}","role":"authenticated"}', true);`,
-        `select source, name from public.search_foods('chicken thigh', 100) where name in ('${firstThigh.name}', '${secondThigh.name}') and source = 'usda' order by name;`,
+        `select source, name from public.search_foods('chicken thigh glorp', 100) where name in ('${searchedFirst.name}', '${searchedSecond.name}') and source = 'usda' order by name;`,
       ].join("\n"),
     ).filter((line) => line.startsWith("usda|"));
 
-    expect(lines).toEqual([
-      "usda|Chicken, thigh, raw, meat and skin",
-      "usda|Chicken, thigh, roasted, meat and skin",
-    ]);
+    expect(lines).toEqual([`usda|${searchedFirst.name}`, `usda|${searchedSecond.name}`]);
   });
 });

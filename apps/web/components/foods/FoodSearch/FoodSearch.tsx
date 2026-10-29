@@ -22,7 +22,7 @@ const WORDING = {
 } as const;
 
 /**
- * The foods page: a search over the user's foods, UK CoFID and Open Food Facts, or, for
+ * The foods page: a search over the user's foods, UK CoFID, USDA and Open Food Facts, or, for
  * `scope="own"`, the user's own foods. The barcode button in the search field opens a typed
  * barcode lookup. The search opens with the cursor in the field, except on Your foods, where the
  * list is what the user came for.

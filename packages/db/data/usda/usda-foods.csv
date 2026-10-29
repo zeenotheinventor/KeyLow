@@ -1,3 +1,60 @@
 fdc_id,name,portion_label,portion_seq_num,wave,sr_description,gap_note
 172385,"Chicken, thigh, raw, meat and skin",1 thigh,2,1,"Chicken, broilers or fryers, thigh, meat and skin, raw","CoFID checked: 18-317, 18-318 and 18-319 are the only thighs and all are casseroled. No raw thigh."
 173625,"Chicken, thigh, roasted, meat and skin",1 thigh,2,1,"Chicken, broilers or fryers, thigh, meat and skin, cooked, roasted","CoFID checked: 18-317, 18-318 and 18-319 are the only thighs and all are casseroled. No roasted thigh."
+173627,"Chicken, thigh, raw, meat only",1 thigh,2,1,"Chicken, broilers or fryers, dark meat, thigh, meat only, raw","CoFID checked: 18-317, 18-318 and 18-319 are the only thighs and all are casseroled. No raw thigh."
+172388,"Chicken, thigh, roasted, meat only",1 thigh,2,1,"Chicken, broilers or fryers, thigh, meat only, cooked, roasted","CoFID checked: 18-317, 18-318 and 18-319 are the only thighs and all are casseroled. No roasted thigh."
+172387,"Chicken, thigh, fried, meat only",1 thigh,3,1,"Chicken, broilers or fryers, thigh, meat only, cooked, fried","CoFID checked: 18-317, 18-318 and 18-319 are the only thighs and all are casseroled. No fried thigh."
+172373,"Chicken, drumstick, raw, meat and skin",1 drumstick,2,1,"Chicken, broilers or fryers, drumstick, meat and skin, raw",CoFID checked: 18-310 to 18-312 (casseroled) and 18-334 to 18-336 (roasted) are the only drumsticks. No raw drumstick.
+173614,"Chicken, drumstick, raw, meat only",1 drumstick,3,1,"Chicken, broilers or fryers, dark meat, drumstick, meat only, raw",CoFID checked: 18-310 to 18-312 (casseroled) and 18-334 to 18-336 (roasted) are the only drumsticks. No raw drumstick.
+172375,"Chicken, drumstick, fried, meat only",1 drumstick,2,1,"Chicken, broilers or fryers, drumstick, meat only, cooked, fried",CoFID checked: 18-310 to 18-312 (casseroled) and 18-334 to 18-336 (roasted) are the only drumsticks. No fried drumstick.
+173632,"Chicken, wing, raw, meat only",1 wing,2,1,"Chicken, broilers or fryers, wing, meat only, raw","CoFID checked: 18-295 and 18-296 are raw wing quarters with skin. No wing meat only, raw."
+172392,"Chicken, wing, roasted, meat only",1 wing,2,1,"Chicken, broilers or fryers, wing, meat only, cooked, roasted","CoFID checked: 18-339 and 18-340 are roasted wing quarters with skin. No wing meat only, roasted."
+172391,"Chicken, wing, fried, meat only",1 wing,3,1,"Chicken, broilers or fryers, wing, meat only, cooked, fried",CoFID checked: 18-327 and 18-328 are deep-fried portions with skin. No fried wing meat only.
+173619,"Chicken, leg, raw, meat only",1 leg,2,1,"Chicken, broilers or fryers, leg, meat only, raw","CoFID checked: 18-293 and 18-294 are raw leg quarters with skin. No leg meat only, raw."
+172380,"Chicken, leg, roasted, meat only",1 leg,2,1,"Chicken, broilers or fryers, leg, meat only, cooked, roasted","CoFID checked: 18-337 and 18-338 are roasted leg quarters with skin. No leg meat only, roasted."
+172379,"Chicken, leg, fried, meat only",1 leg,2,1,"Chicken, broilers or fryers, leg, meat only, cooked, fried",CoFID checked: 18-327 and 18-328 are deep-fried portions with skin. No fried leg meat only.
+171474,"Chicken, breast, raw, meat and skin",,,1,"Chicken, broilers or fryers, breast, meat and skin, raw","CoFID checked: breast is only casseroled (18-307 to 18-309), grilled (18-323 to 18-325) and stir-fried (18-326). No raw breast."
+171075,"Chicken, breast, roasted, meat and skin",,,1,"Chicken, broilers or fryers, breast, meat and skin, cooked, roasted","CoFID checked: breast is only casseroled (18-307 to 18-309), grilled (18-323 to 18-325) and stir-fried (18-326). No roasted breast."
+171477,"Chicken, breast, roasted, meat only",,,1,"Chicken, broilers or fryers, breast, meat only, cooked, roasted","CoFID checked: breast is only casseroled (18-307 to 18-309), grilled (18-323 to 18-325) and stir-fried (18-326). No roasted breast."
+171078,"Chicken, breast, fried, meat only",,,1,"Chicken, broilers or fryers, breast, meat only, cooked, fried","CoFID checked: 18-326 is breast strips stir-fried in corn oil, skinless. No plain fried breast, and strips are a cut of their own."
+171051,"Chicken, whole, stewed, meat and skin",,,1,"Chicken, broilers or fryers, meat and skin, cooked, stewed",CoFID checked: 18-297 (raw) and 18-341 (roasted) are the only whole chickens with skin. No casseroled whole chicken.
+171053,"Chicken, whole, fried, meat only",,,1,"Chicken, broilers or fryers, meat only, cooked, fried",CoFID checked: 18-326 is breast strips and 18-327 is deep-fried portions with skin. No fried whole chicken meat only.
+171451,"Chicken, whole, stewed, meat only",,,1,"Chicken, broilers or fryers, meat only, cooked, stewed","CoFID checked: 18-307, 18-319 and 18-320 are casseroled breast, thigh and wing quarter. No casseroled whole chicken meat only."
+171463,"Chicken, dark meat, raw, meat and skin",,,1,"Chicken, broilers or fryers, dark meat, meat and skin, raw",CoFID checked: 18-289 is raw dark meat only and 18-293 is raw leg quarter. No raw dark meat with skin.
+171065,"Chicken, dark meat, roasted, meat and skin",,,1,"Chicken, broilers or fryers, dark meat, meat and skin, cooked, roasted",CoFID checked: 18-329 is roasted dark meat only. No roasted dark meat with skin.
+171066,"Chicken, dark meat, stewed, meat and skin",,,1,"Chicken, broilers or fryers, dark meat, meat and skin, cooked, stewed",CoFID checked: casseroled chicken (18-307 to 18-322) is all named cuts. No casseroled dark meat.
+171068,"Chicken, dark meat, fried, meat only",,,1,"Chicken, broilers or fryers, dark meat, meat only, cooked, fried",CoFID checked: 18-327 is deep-fried portions with skin. No fried dark meat.
+171070,"Chicken, dark meat, stewed, meat only",,,1,"Chicken, broilers or fryers, dark meat, meat only, cooked, stewed",CoFID checked: casseroled chicken (18-307 to 18-322) is all named cuts. No casseroled dark meat.
+171062,"Chicken, light meat, raw, meat and skin",,,1,"Chicken, broilers or fryers, light meat, meat and skin, raw",CoFID checked: 18-290 is raw light meat only. No raw light meat with skin.
+171461,"Chicken, light meat, roasted, meat and skin",,,1,"Chicken, broilers or fryers, light meat, meat and skin, cooked, roasted",CoFID checked: 18-330 is roasted light meat only. No roasted light meat with skin.
+171462,"Chicken, light meat, stewed, meat and skin",,,1,"Chicken, broilers or fryers, light meat, meat and skin, cooked, stewed",CoFID checked: casseroled chicken (18-307 to 18-322) is all named cuts. No casseroled light meat.
+171465,"Chicken, light meat, fried, meat only",,,1,"Chicken, broilers or fryers, light meat, meat only, cooked, fried",CoFID checked: 18-327 is deep-fried portions with skin. No fried light meat.
+171467,"Chicken, light meat, stewed, meat only",,,1,"Chicken, broilers or fryers, light meat, meat only, cooked, stewed",CoFID checked: casseroled chicken (18-307 to 18-322) is all named cuts. No casseroled light meat.
+171116,"Chicken, mince, raw",,,1,"Chicken, ground, raw",CoFID checked: no chicken mince in the chicken foods 18-289 to 18-347 or 18-488.
+171117,"Chicken, mince, fried",,,1,"Chicken, ground, crumbles, cooked, pan-browned",CoFID checked: no chicken mince in the chicken foods 18-289 to 18-347 or 18-488.
+171480,"Turkey, whole, raw, meat only",,,1,"Turkey, whole, meat only, raw",CoFID checked: 18-350 is the raw average of light and dark meat and 18-352 is whole turkey with skin. No raw whole turkey named as meat only.
+171481,"Turkey, whole, roasted, meat only",,,1,"Turkey, whole, meat only, cooked, roasted",CoFID checked: 18-361 is the roasted average of light and dark meat and 18-367 is whole turkey with skin. No roasted whole turkey named as meat only.
+171098,"Turkey, breast, raw, meat only",,,1,"Turkey, whole, breast, meat only, raw",CoFID checked: 18-356 is the only breast and it is grilled. No raw breast.
+171496,"Turkey, breast, roasted, meat only",,,1,"Turkey, whole, breast, meat only, cooked, roasted",CoFID checked: 18-356 is the only breast and it is grilled. No roasted breast.
+171528,"Turkey, breast, raw, meat and skin",,,1,"Turkey, retail parts, breast, meat and skin, raw",CoFID checked: 18-356 is the only breast and it is grilled. No raw breast.
+171529,"Turkey, breast, roasted, meat and skin",,,1,"Turkey, retail parts, breast, meat and skin, cooked, roasted",CoFID checked: 18-356 is the only breast and it is grilled. No roasted breast.
+171488,"Turkey, dark meat, raw, meat and skin",,,1,"Turkey, dark meat, meat and skin, raw",CoFID checked: 18-348 is raw dark meat only. No raw dark meat with skin.
+171489,"Turkey, dark meat, roasted, meat and skin",,,1,"Turkey, whole, dark meat, meat and skin, cooked, roasted",CoFID checked: 18-358 is roasted dark meat only. No roasted dark meat with skin.
+171088,"Turkey, light meat, raw, meat and skin",,,1,"Turkey, whole, light meat, meat and skin, raw",CoFID checked: 18-349 is raw light meat only. No raw light meat with skin.
+171089,"Turkey, light meat, roasted, meat and skin",,,1,"Turkey, whole, light meat, meat and skin, cooked, roasted",CoFID checked: 18-359 and 18-360 are roasted light meat only. No roasted light meat with skin.
+172875,"Turkey, drumstick, raw, meat only",,,1,"Turkey, retail parts, drumstick, meat only, raw",CoFID checked: 18-364 to 18-366 are the only drumsticks and all are roasted. No raw drumstick.
+171134,"Turkey, drumstick, raw, meat and skin",,,1,"Turkey, retail parts, drumstick, meat and skin, raw",CoFID checked: 18-364 to 18-366 are the only drumsticks and all are roasted. No raw drumstick.
+171493,"Turkey, leg, raw, meat and skin",,,1,"Turkey, all classes, leg, meat and skin, raw",CoFID checked: no turkey leg.
+171494,"Turkey, leg, roasted, meat and skin",,,1,"Turkey, all classes, leg, meat and skin, cooked, roasted",CoFID checked: no turkey leg.
+174518,"Turkey, thigh, raw, meat only",,,1,"Turkey, retail parts, thigh, meat only, raw",CoFID checked: 18-355 is the only thigh and it is casseroled meat only. No raw thigh.
+171533,"Turkey, thigh, raw, meat and skin",,,1,"Turkey, retail parts, thigh, meat and skin, raw",CoFID checked: 18-355 is the only thigh and it is casseroled meat only. No thigh with skin.
+172877,"Turkey, thigh, roasted, meat only",,,1,"Turkey, retail parts, thigh, meat only, cooked, roasted",CoFID checked: 18-355 is the only thigh and it is casseroled. No roasted thigh.
+171137,"Turkey, thigh, roasted, meat and skin",,,1,"Turkey, retail parts, thigh, meat and skin, cooked, roasted",CoFID checked: 18-355 is the only thigh and it is casseroled meat only. No thigh with skin.
+171497,"Turkey, wing, raw, meat only",,,1,"Turkey, whole, wing, meat only, raw",CoFID checked: no turkey wing.
+171498,"Turkey, wing, roasted, meat only",,,1,"Turkey, whole, wing, meat only, cooked, roasted",CoFID checked: no turkey wing.
+171132,"Turkey, wing, raw, meat and skin",,,1,"Turkey, retail parts, wing, meat and skin, raw",CoFID checked: no turkey wing.
+171133,"Turkey, wing, roasted, meat and skin",,,1,"Turkey, retail parts, wing, meat and skin, cooked, roasted",CoFID checked: no turkey wing.
+171505,"Turkey, mince, raw",,,1,"Turkey, Ground, raw",CoFID checked: 18-354 is the only turkey mince and it is stewed. No raw mince.
+171506,"Turkey, mince, cooked",,,1,"Turkey, Ground, cooked",CoFID checked: 18-354 is the only turkey mince and it is stewed. SR does not say how this mince was cooked.
+172850,"Turkey, mince, 7% fat, raw",,,1,"Turkey, ground, 93% lean, 7% fat, raw",CoFID checked: 18-354 is the only turkey mince and it is stewed. No raw mince.
+172851,"Turkey, mince, 7% fat, fried",,,1,"Turkey, ground, 93% lean, 7% fat, pan-broiled crumbles",CoFID checked: 18-354 is the only turkey mince and it is stewed. No fried mince.
