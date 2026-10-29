@@ -8,6 +8,7 @@ import {
   RECIPES_SEARCH_EMPTY,
   RETRY_LABEL,
   SEARCH_CLEAR_LABEL,
+  SHOPPING_LIST,
   TAB_TITLES,
   describeArchivedLink,
   describeArchivedLinkName,
@@ -15,7 +16,7 @@ import {
 } from "@keylow/core/copy";
 import { filterRecipesByName } from "@keylow/core/search";
 import { iconStroke } from "@keylow/tokens";
-import { Archive, ChefHat, Plus, SearchX } from "lucide-react";
+import { Archive, ChefHat, Plus, SearchX, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -30,7 +31,7 @@ import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { SearchField } from "@/components/ui/SearchField";
-import { archivedPath, newRecipePath } from "@/lib/recipeRoutes";
+import { archivedPath, newRecipePath, shoppingListPath } from "@/lib/recipeRoutes";
 
 // How long typing has to stop before the number of recipes found is read out, so a screen reader is
 // not interrupted by every letter.
@@ -76,12 +77,20 @@ export function RecipeLibraryView(props: RecipeLibraryViewProps) {
     <div className="mx-auto flex w-full max-w-[1132px] flex-col gap-5">
       <div className="flex flex-col items-stretch justify-between gap-3 md:flex-row md:items-center">
         <h1 className="text-h1">{TAB_TITLES.recipes}</h1>
-        <Button asChild className="max-md:w-full">
-          <Link ref={newRecipeLink} href={newRecipePath()}>
-            <Plus aria-hidden strokeWidth={iconStroke} />
-            {RECIPES_LIBRARY.newRecipe}
-          </Link>
-        </Button>
+        <div className="flex flex-col gap-2 md:flex-row">
+          <Button asChild variant="secondary" className="max-md:w-full">
+            <Link href={shoppingListPath()}>
+              <ShoppingCart aria-hidden strokeWidth={iconStroke} />
+              {SHOPPING_LIST.title}
+            </Link>
+          </Button>
+          <Button asChild className="max-md:w-full">
+            <Link ref={newRecipeLink} href={newRecipePath()}>
+              <Plus aria-hidden strokeWidth={iconStroke} />
+              {RECIPES_LIBRARY.newRecipe}
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {showsField && (

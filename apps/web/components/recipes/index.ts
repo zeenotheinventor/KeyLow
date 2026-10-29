@@ -12,3 +12,6 @@ export { RecipeView } from "./RecipeView";
 export type { RecipeViewProps, RecipeViewRecipe } from "./RecipeView";
 export { RecipeViewScreen } from "./RecipeViewScreen";
 export type { RecipeViewScreenProps } from "./RecipeViewScreen";
+export { ShoppingListScreen } from "./ShoppingListScreen";
+export { ShoppingListView } from "./ShoppingListView";
+export type { ShoppingListViewProps } from "./ShoppingListView";

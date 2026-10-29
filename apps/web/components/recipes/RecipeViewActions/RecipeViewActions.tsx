@@ -1,12 +1,13 @@
 import {
   RECIPE_ACTIONS,
   RECIPE_VIEW,
+  SHOPPING_LIST,
   describeArchiveRecipe,
   describeDuplicateRecipe,
   describeEditRecipe,
 } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
-import { Archive, Copy, Pencil, RefreshCw } from "lucide-react";
+import { Archive, Copy, Pencil, RefreshCw, ShoppingCart } from "lucide-react";
 import Link from "next/link";
 
 import type { RecipeViewActionsProps } from "./types";
@@ -22,7 +23,7 @@ const DISABLED_CLASSES = "aria-disabled:pointer-events-none aria-disabled:opacit
 
 /**
  * The buttons in the header of the recipe view, in the order the board draws them: Edit, Refresh
- * ingredients, Duplicate, then Archive. They sit in a row that wraps, to the right
+ * ingredients, Add to shopping list, Duplicate, then Archive. They sit in a row that wraps, to the right
  * of the title when there is room and under it when there is not. Offline, each stays focusable and says it
  * is disabled, with no handler, so neither a click nor a key press does anything. Duplicate is the same
  * until the library has been read. A busy button has no handler either, so a second press does nothing more.
@@ -36,6 +37,7 @@ export function RecipeViewActions({
   isDuplicating,
   isArchiving,
   onRefresh,
+  onAddToList,
   onDuplicate,
   onArchive,
 }: RecipeViewActionsProps) {
@@ -75,6 +77,17 @@ export function RecipeViewActions({
       >
         <RefreshCw aria-hidden strokeWidth={iconStroke} />
         {RECIPE_ACTIONS.refresh}
+      </Button>
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        aria-disabled={!isOnline || undefined}
+        className={cn(ICON_CLASSES, !isOnline && DISABLED_CLASSES)}
+        onClick={isOnline ? onAddToList : undefined}
+      >
+        <ShoppingCart aria-hidden strokeWidth={iconStroke} />
+        {SHOPPING_LIST.addToList}
       </Button>
       <Button
         type="button"

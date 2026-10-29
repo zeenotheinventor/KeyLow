@@ -21,3 +21,6 @@ export const editRecipePath = (id: string): string => `${recipesPath()}/${id}/ed
 
 /** The recipe view, the screen a library row opens and where the editor's Back, Cancel and Save lead. */
 export const recipePath = (id: string): string => `${recipesPath()}/${id}`;
+
+/** The shopping list, filled from the recipes. It sits beside them, so its path is the recipes' own. */
+export const shoppingListPath = (): string => "/recipes/shopping";
