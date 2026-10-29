@@ -1,3 +1,5 @@
+import { TAB_TITLES } from "@keylow/core/copy";
+
 import type { DashboardFrameProps } from "./types";
 
 /**
@@ -13,7 +15,7 @@ export function DashboardFrame({ eyebrow, banners, aside, children }: DashboardF
     <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-5">
       <div className="flex flex-col gap-0.5">
         <p className="min-h-4 text-caption text-text-muted">{eyebrow}</p>
-        <h1 className="text-h1">Dashboard</h1>
+        <h1 className="text-h1">{TAB_TITLES.dashboard}</h1>
       </div>
       {banners}
       <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">

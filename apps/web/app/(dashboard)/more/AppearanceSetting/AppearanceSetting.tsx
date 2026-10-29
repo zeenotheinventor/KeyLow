@@ -1,5 +1,6 @@
 "use client";
 
+import { MORE_SCREEN } from "@keylow/core/copy";
 import { useId, useState, useTransition } from "react";
 
 import type { AppearanceSettingProps } from "./types";
@@ -7,10 +8,12 @@ import type { AppearanceSettingProps } from "./types";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { setTheme } from "@/lib/theme/setTheme";
 
+const { appearance } = MORE_SCREEN.settings;
+
 const appearanceOptions = [
-  { value: "dark", label: "Dark" },
-  { value: "light", label: "Light" },
-  { value: "device", label: "Match device" },
+  { value: "dark", label: appearance.options.dark },
+  { value: "light", label: appearance.options.light },
+  { value: "device", label: appearance.options.system },
 ] as const;
 
 /** A row of the Settings group: the label, and the choice of Dark, Light or following the device. */
@@ -22,7 +25,7 @@ export function AppearanceSetting({ initialPreference }: AppearanceSettingProps)
   return (
     <li className="flex flex-col gap-2 p-3">
       <span id={labelId} className="text-body-strong">
-        Appearance
+        {appearance.title}
       </span>
       <SegmentedControl
         labelledBy={labelId}

@@ -24,7 +24,11 @@ describe("the tab shell copy", () => {
   it("should name the bar, the centre button and the search launcher as the boards do", () => {
     expect(TAB_BAR_LABEL).toBe("Main");
     expect(ADD_FOOD_BUTTON_LABEL).toBe("Find food");
-    expect(SEARCH_LAUNCHER).toEqual({ label: "Search for a food", scanLabel: "Scan barcode" });
+    expect(SEARCH_LAUNCHER).toEqual({
+      label: "Search for a food",
+      scanLabel: "Scan barcode",
+      lookUpLabel: "Look up a barcode",
+    });
   });
 
   it("should pin the toast that says the app has been updated", () => {

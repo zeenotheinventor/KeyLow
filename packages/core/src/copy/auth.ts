@@ -20,6 +20,7 @@ export const AUTH_SCREEN = {
   signIn: {
     heading: "Welcome back",
     submitLabel: "Sign in",
+    submittingLabel: "Signing in",
     footerPrompt: "New to Ki-Lo?",
     footerLink: "Create account",
   },
@@ -40,6 +41,7 @@ export const SIGN_UP_SCREEN = {
   passwordPlaceholder: PASSWORD_HELPER,
   divider: "or",
   submitLabel: "Create account",
+  submittingLabel: "Creating account",
   footerPrompt: "Already have an account?",
   footerLink: "Sign in",
 };

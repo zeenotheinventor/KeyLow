@@ -14,10 +14,14 @@ export const TAB_BAR_LABEL = "Main";
 /** The accessible name of the centre button, which opens the food search sheet. */
 export const ADD_FOOD_BUTTON_LABEL = "Find food";
 
-/** The bar above the tab bar that opens the food search sheet, and its barcode control. */
+/**
+ * The bar above the tab bar that opens the food search sheet, and its barcode control. The phone scans a
+ * barcode with its camera. The web cannot scan, so its button looks one up and has its own words.
+ */
 export const SEARCH_LAUNCHER = {
   label: "Search for a food",
   scanLabel: "Scan barcode",
+  lookUpLabel: "Look up a barcode",
 };
 
 /** The toast shown once, after the splash screen has gone, the first time the app starts on a new update. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { GENERIC_ERROR } from "@keylow/core/copy";
+import { AUTH_SCREEN, GENERIC_ERROR } from "@keylow/core/copy";
 import { useRouter } from "next/navigation";
 import { useState, type SubmitEvent } from "react";
 
@@ -90,7 +90,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
   return (
     <form noValidate onSubmit={handleSubmit} className="flex flex-col gap-4">
       <TextField
-        label="Email"
+        label={AUTH_SCREEN.emailLabel}
         name="email"
         type="email"
         autoComplete="email"
@@ -101,7 +101,7 @@ export function LoginForm({ linkError }: LoginFormProps) {
         error={fieldErrors.email}
       />
       <TextField
-        label="Password"
+        label={AUTH_SCREEN.passwordLabel}
         name="password"
         type="password"
         autoComplete="current-password"
@@ -118,10 +118,10 @@ export function LoginForm({ linkError }: LoginFormProps) {
         type="submit"
         className="mt-1"
         loading={pendingAction === "signIn"}
-        loadingLabel="Signing in"
+        loadingLabel={AUTH_SCREEN.signIn.submittingLabel}
         disabled={isWaiting("signIn")}
       >
-        Sign in
+        {AUTH_SCREEN.signIn.submitLabel}
       </Button>
 
       <OrDivider />

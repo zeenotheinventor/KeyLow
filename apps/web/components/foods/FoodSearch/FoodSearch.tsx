@@ -1,7 +1,7 @@
 "use client";
 
 import { MIN_SEARCH_LENGTH } from "@keylow/api-client";
-import { SEARCH_IDLE } from "@keylow/core/copy";
+import { MORE_SCREEN, SEARCH_IDLE, SEARCH_LAUNCHER } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { Plus } from "lucide-react";
 import Link from "next/link";
@@ -18,7 +18,7 @@ import { SearchField } from "@/components/ui/SearchField";
 
 const WORDING = {
   all: { title: "Foods", fieldLabel: "Search foods" },
-  own: { title: "Your foods", fieldLabel: "Search your foods" },
+  own: { title: MORE_SCREEN.food.yourFoods.title, fieldLabel: "Search your foods" },
 } as const;
 
 /**
@@ -69,7 +69,7 @@ export function FoodSearch({ scope = "all", startWithBarcodePanel = false, day }
             setQuery(event.target.value);
           }}
           barcodeButton={{
-            label: "Look up a barcode",
+            label: SEARCH_LAUNCHER.lookUpLabel,
             expanded: isBarcodePanelOpen,
             onClick: () => {
               setIsBarcodePanelOpen(!isBarcodePanelOpen);
