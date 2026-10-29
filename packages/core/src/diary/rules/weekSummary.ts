@@ -1,4 +1,4 @@
-import { weekAverage } from "./weekAverage";
+import { weekCaloriesBeforeToday } from "./weekCaloriesBeforeToday";
 import { addCalendarDays, daysSinceMonday } from "../../dates/calendarDay";
 
 import type { WeekAverageDay } from "./weekAverage";
@@ -34,9 +34,11 @@ export type WeekSummary = {
   daysSoFar: number;
   /** The days so far that are marked complete. */
   daysComplete: number;
-  /** The days so far with something logged: the basis the average is taken over. */
+  /** True when today is the Monday, so there is no earlier day of the week to average. */
+  isFirstDay: boolean;
+  /** The days from Monday to yesterday with something logged: the basis the average is taken over. */
   daysLogged: number;
-  /** The average kcal over the days logged so far. Null when there is none. */
+  /** The average kcal over the days logged before today. Null when there is none. */
   averageKcal: number | null;
   /** The calorie target. Null when none is set. */
   targetKcal: number | null;
@@ -47,32 +49,6 @@ export type WeekSummary = {
   /** The seven days, Monday to Sunday. */
   markers: WeekDayMarker[];
 };
-
-/** The calories bar of a week's average: how full it is and how far over the target, as `WeekSummary` has them. */
-export type WeekAverageBarState = Pick<
-  WeekSummary,
-  "averageKcal" | "targetKcal" | "barFill" | "kcalOverTarget"
->;
-
-/**
- * The calories bar for an average and a target. A target that is not above 0 is left off. The fill is the
- * average over the target, capped at 1, and the overshoot is in whole kcal, as the card prints it. The This
- * week card and the weekly averages page both take their bar from here, so the two draw it by the same rule.
- */
-export function weekAverageBarOf(
-  averageKcal: number | null,
-  targetKcal: number | null,
-): WeekAverageBarState {
-  const target = targetKcal !== null && targetKcal > 0 ? targetKcal : null;
-  const overTarget = averageKcal === null || target === null ? 0 : Math.round(averageKcal) - target;
-
-  return {
-    averageKcal,
-    targetKcal: target,
-    barFill: averageKcal === null || target === null ? null : Math.min(1, averageKcal / target),
-    kcalOverTarget: overTarget > 0 ? overTarget : null,
-  };
-}
 
 const markerOf = (day: WeekSummaryDay, today: string): WeekDayMarker => {
   const { localDate } = day;
@@ -90,27 +66,29 @@ const markerOf = (day: WeekSummaryDay, today: string): WeekDayMarker => {
 /**
  * What the Dashboard's "This week" card shows, for the web and the mobile card alike.
  *
- * Two rules, as the diary's week view has them:
+ * Two rules:
  * - Days complete counts Monday up to and including today, as the week strip does (core
  *   `incompleteDaysThisWeek` gives the same count). A day still to come is never counted, even when it
  *   is marked complete. The days so far and the days complete are counted from the same days, so they
  *   always agree with each other and with the markers.
- * - The average leaves out days with nothing logged and days still to come (core `weekAverage`): a day
- *   that was not tracked is not a day of eating nothing.
+ * - The average, its basis and the bar cover the days logged from Monday to yesterday (core
+ *   `weekCaloriesBeforeToday`), as the weekly averages page does, so the card and the page agree. Today is
+ *   left out until it is over, and a day that was not tracked is not a day of eating nothing.
  *
  * The totals are taken as given. Nothing here compares them with another sum for equality, because the
  * screens sum on the client and `day_totals` sums as exact decimals, so the two can differ in the last digit.
  */
 export function weekSummary({ days, today, targetKcal }: WeekSummaryInput): WeekSummary {
   const daysUpToToday = days.filter((day) => day.localDate <= today);
-  const bar = weekAverageBarOf(weekAverage(days, today)?.kcal ?? null, targetKcal);
+  const { isFirstDay, daysLogged, calories } = weekCaloriesBeforeToday(days, today, targetKcal);
 
   return {
     weekStart: addCalendarDays(today, -daysSinceMonday(today)),
     daysSoFar: daysUpToToday.length,
     daysComplete: daysUpToToday.filter((day) => day.dayLog?.is_complete === true).length,
-    daysLogged: daysUpToToday.filter((day) => day.totals !== null).length,
-    ...bar,
+    isFirstDay,
+    daysLogged,
+    ...calories,
     markers: days.map((day) => markerOf(day, today)),
   };
 }

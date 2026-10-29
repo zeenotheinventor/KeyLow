@@ -124,7 +124,7 @@ async function renderDashboard() {
 const hidden = { includeHiddenElements: true };
 
 const sampleName =
-  "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.";
+  "This week, open your weekly averages. Average 1,895 of 2,200 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.";
 
 // The week is read as a range of days, where a day is read by its date alone.
 const weekReads = () =>
@@ -173,7 +173,7 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open your weekly averages. Average 1,681 of 2,140 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,895 of 2,140 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
@@ -210,16 +210,17 @@ describe("the This week card", () => {
       const inside = within(card);
       expect(inside.getByText("This week", hidden)).toBeOnTheScreen();
       expect(inside.getByText("Week of Mon 12 Oct", hidden)).toBeOnTheScreen();
-      expect(inside.getByText("From 4 days with food logged", hidden)).toBeOnTheScreen();
+      expect(inside.getByText("From 3 days with food logged", hidden)).toBeOnTheScreen();
       expect(inside.getByText("2 of 4 days complete", hidden)).toBeOnTheScreen();
     });
 
-    it("should print the average over the target, and what it is taken over", async () => {
+    it("should print the average of the days before today over the target, captioned Mon to yesterday", async () => {
       await renderDashboard();
       const inside = within(await weekCard());
 
-      expect(inside.getByText(/^Average/, hidden)).toHaveTextContent("Average · Mon to today");
-      expect(inside.getByText("1,681", hidden)).toBeOnTheScreen();
+      // Monday 2,140, Tuesday 2,260 and Wednesday 1,286: today's 1,039 is left out.
+      expect(inside.getByText(/^Average/, hidden)).toHaveTextContent("Average · Mon to yesterday");
+      expect(inside.getByText("1,895", hidden)).toBeOnTheScreen();
       expect(inside.getByText("/ 2,200 kcal", hidden)).toBeOnTheScreen();
       expect(inside.queryByText(/^\+/, hidden)).not.toBeOnTheScreen();
     });
@@ -280,13 +281,29 @@ describe("the This week card", () => {
       expect(marker("Friday 16 October")).toBeOnTheScreen();
     });
 
-    it("should say 1 of 1 day complete on a Monday, and from 1 day with food logged", async () => {
+    it("should say the averages start tomorrow on a Monday, and 1 of 1 day complete", async () => {
       mockNow = new Date("2026-10-12T08:00:00Z");
+      showWeek([1500], ["2026-10-12"]);
+      await renderDashboard();
+      const card = await weekCard();
+      const inside = within(card);
+
+      expect(card).toHaveAccessibleName(
+        "This week, open your weekly averages. Your averages start tomorrow. 1 of 1 day complete.",
+      );
+      expect(inside.getByText("Your averages start tomorrow.", hidden)).toBeOnTheScreen();
+      expect(inside.getByText("1 of 1 day complete", hidden)).toBeOnTheScreen();
+      expect(inside.queryByTestId("calories-fill", hidden)).not.toBeOnTheScreen();
+      expect(inside.queryByText(/with food logged/, hidden)).not.toBeOnTheScreen();
+    });
+
+    it("should say from 1 day with food logged on a Tuesday after a logged Monday", async () => {
+      mockNow = new Date("2026-10-13T08:00:00Z");
       showWeek([1500], ["2026-10-12"]);
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
+        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged before today. 1 of 2 days complete.",
       );
       expect(screen.getByText("From 1 day with food logged", hidden)).toBeOnTheScreen();
     });
@@ -297,11 +314,11 @@ describe("the This week card", () => {
       showEmptyWeek();
     });
 
-    it("should say so in place of the average, the bar and the basis", async () => {
+    it("should say nothing is logged before today in place of the average, the bar and the basis", async () => {
       await renderDashboard();
       const inside = within(await weekCard());
 
-      expect(inside.getByText("Nothing logged this week yet.", hidden)).toBeOnTheScreen();
+      expect(inside.getByText("Nothing logged before today this week.", hidden)).toBeOnTheScreen();
       expect(inside.queryByText(/^Average/, hidden)).not.toBeOnTheScreen();
       expect(inside.queryByTestId("calories-fill", hidden)).not.toBeOnTheScreen();
       expect(inside.queryByText(/with food logged/, hidden)).not.toBeOnTheScreen();
@@ -311,9 +328,26 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open your weekly averages. Nothing logged this week yet. 0 of 4 days complete.",
+        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
       );
       expect(screen.getByText("0 of 4 days complete", hidden)).toBeOnTheScreen();
+    });
+  });
+
+  describe("only today logged", () => {
+    it("should say nothing is logged before today, since today's entries do not count yet", async () => {
+      // Thursday's 1,039 alone, with nothing on the days before it.
+      showWeek([null, null, null, 1039]);
+      await renderDashboard();
+      const card = await weekCard();
+
+      expect(card).toHaveAccessibleName(
+        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
+      );
+      expect(
+        within(card).getByText("Nothing logged before today this week.", hidden),
+      ).toBeOnTheScreen();
+      expect(within(card).queryByTestId("calories-fill", hidden)).not.toBeOnTheScreen();
     });
   });
 
@@ -322,11 +356,11 @@ describe("the This week card", () => {
       diaryBackend.targets = noTargets;
     });
 
-    it("should read the average as 1,681 kcal, with no bar", async () => {
+    it("should read the average as 1,895 kcal, with no bar", async () => {
       await renderDashboard();
       const inside = within(await weekCard());
 
-      expect(inside.getByText("1,681", hidden)).toBeOnTheScreen();
+      expect(inside.getByText("1,895", hidden)).toBeOnTheScreen();
       expect(inside.getByText("kcal", hidden)).toBeOnTheScreen();
       expect(inside.queryByText(/\//, hidden)).not.toBeOnTheScreen();
       expect(inside.queryByTestId("calories-fill", hidden)).not.toBeOnTheScreen();
@@ -336,7 +370,7 @@ describe("the This week card", () => {
       await renderDashboard();
 
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open your weekly averages. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,895 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
@@ -357,15 +391,16 @@ describe("the This week card", () => {
       showOverTargetWeek();
     });
 
-    it("should read 2,450 over 2,200 kcal with +250 kcal after it", async () => {
+    it("should read 2,463 over 2,200 kcal with +263 kcal after it, from the days before today", async () => {
       await renderDashboard();
       const card = await weekCard();
       const inside = within(card);
 
-      expect(inside.getByText("2,450", hidden)).toBeOnTheScreen();
+      // Monday 2,140, Tuesday 2,260 and Wednesday 2,988 average 2,463: today's 2,412 is left out.
+      expect(inside.getByText("2,463", hidden)).toBeOnTheScreen();
       expect(inside.getByText("/ 2,200 kcal", hidden)).toBeOnTheScreen();
-      expect(inside.getByText("+250 kcal", hidden)).toBeOnTheScreen();
-      expect(card).toHaveAccessibleName(/Average 2,450 of 2,200 kilocalories/);
+      expect(inside.getByText("+263 kcal", hidden)).toBeOnTheScreen();
+      expect(card).toHaveAccessibleName(/Average 2,463 of 2,200 kilocalories/);
     });
 
     it("should outline the bar in its own colour, and use no warning colour", async () => {
@@ -592,7 +627,7 @@ describe("the This week card", () => {
 
       expect(await screen.findByText("Week of Mon 19 Oct", hidden)).toBeOnTheScreen();
       expect(await weekCard()).toHaveAccessibleName(
-        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 0 of 1 day complete.",
+        "This week, open your weekly averages. Your averages start tomorrow. 0 of 1 day complete.",
       );
     });
   });

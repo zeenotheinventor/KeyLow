@@ -1,4 +1,5 @@
 import {
+  WEEK_AVERAGES,
   WEEK_GRID,
   describeOverTargetKcal,
   describeWeekAverageBasis,
@@ -19,11 +20,12 @@ const BAR_HEIGHT = 8;
 
 /**
  * The week's average calories against the target, as one calories row of the macro bars' look: the label
- * and the value over an 8 point bar, then what the average is taken over. Past the target the bar is full
- * and gains the brighter outline of its own colour (ruling 17) and the overshoot is printed in the primary
- * text, never in a warning colour. With no target the value stands alone and there is no bar. The row is
- * not a row of the macro bars, whose three columns do not fit a value this wide, so it is built from the
- * same parts: the fill, the outline and the type.
+ * and the value over an 8 point bar, then what the average is taken over. The card and the weekly averages
+ * page both average Monday to yesterday, so the caption is always "Mon to yesterday". Past the target the
+ * bar is full and gains the brighter outline of its own colour (ruling 17) and the overshoot is printed in
+ * the primary text, never in a warning colour. With no target the value stands alone and there is no bar.
+ * The row is not a row of the macro bars, whose three columns do not fit a value this wide, so it is built
+ * from the same parts: the fill, the outline and the type.
  */
 export function WeekAverageBar({
   averageKcal,
@@ -31,7 +33,6 @@ export function WeekAverageBar({
   barFill,
   kcalOverTarget,
   daysLogged,
-  caption = WEEK_GRID.averageCaption,
 }: WeekAverageBarProps) {
   const { colors } = useTheme();
   const filled = useWhipFill(barFill ?? 0);
@@ -54,7 +55,7 @@ export function WeekAverageBar({
         <Text className="shrink" tone="secondary" variant="caption">
           {WEEK_GRID.average}
           <Text tone="muted" variant="caption">
-            {` · ${caption}`}
+            {` · ${WEEK_AVERAGES.rangeCaption}`}
           </Text>
         </Text>
         <View className="shrink-0 flex-row items-baseline gap-1">

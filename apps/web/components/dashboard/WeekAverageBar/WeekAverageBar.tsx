@@ -1,4 +1,5 @@
 import {
+  WEEK_AVERAGES,
   WEEK_GRID,
   describeOverTargetKcal,
   describeWeekAverageBasis,
@@ -20,10 +21,11 @@ const fillMotion = "transition-[width] duration-chart ease-whip motion-reduce:tr
 
 /**
  * The week's average calories against the target, as one calories row of the macro bars' look: the
- * label and the value over an 8 px bar, then what the average is taken over. Past the target the bar is full
- * and gains a brighter outline of its own colour (ruling 17) and the overshoot is printed in the primary
- * text, never in a warning colour. With no target the value stands alone and there is no bar. The bar is a
- * meter, so a screen reader finds it by its name.
+ * label and the value over an 8 px bar, then what the average is taken over. The card and the weekly
+ * averages page both average Monday to yesterday, so the caption is always "Mon to yesterday". Past the
+ * target the bar is full and gains a brighter outline of its own colour (ruling 17) and the overshoot is
+ * printed in the primary text, never in a warning colour. With no target the value stands alone and there
+ * is no bar. The bar is a meter, so a screen reader finds it by its name.
  */
 export function WeekAverageBar({
   averageKcal,
@@ -31,7 +33,6 @@ export function WeekAverageBar({
   barFill,
   kcalOverTarget,
   daysLogged,
-  caption = WEEK_GRID.averageCaption,
 }: WeekAverageBarProps) {
   const filled = useWhipFill(barFill ?? 0);
   const value = formatCalories(averageKcal);
@@ -45,7 +46,7 @@ export function WeekAverageBar({
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
         <span className="whitespace-nowrap text-caption text-text-secondary">
           {WEEK_GRID.average}
-          <span className="text-text-muted"> · {caption}</span>
+          <span className="text-text-muted"> · {WEEK_AVERAGES.rangeCaption}</span>
         </span>
         <span className="flex items-baseline gap-1 whitespace-nowrap tabular-nums">
           <span className="text-body-strong">{value}</span>

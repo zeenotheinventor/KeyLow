@@ -19,27 +19,28 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
 
 setUpTests();
 
-// The sample week: 1,681.25 over 2,200.
+// The sample week on its Thursday: Monday to Wednesday, 5,686 over three days, against 2,200.
+const SAMPLE_AVERAGE = 5686 / 3;
 const under: WeekAverageBarProps = {
-  averageKcal: 1681.25,
+  averageKcal: SAMPLE_AVERAGE,
   targetKcal: 2200,
-  barFill: 1681.25 / 2200,
+  barFill: SAMPLE_AVERAGE / 2200,
   kcalOverTarget: null,
-  daysLogged: 4,
+  daysLogged: 3,
 };
 const over: WeekAverageBarProps = {
-  averageKcal: 2450,
+  averageKcal: 7388 / 3,
   targetKcal: 2200,
   barFill: 1,
-  kcalOverTarget: 250,
-  daysLogged: 4,
+  kcalOverTarget: 263,
+  daysLogged: 3,
 };
 const noTarget: WeekAverageBarProps = {
-  averageKcal: 1681.25,
+  averageKcal: SAMPLE_AVERAGE,
   targetKcal: null,
   barFill: null,
   kcalOverTarget: null,
-  daysLogged: 4,
+  daysLogged: 3,
 };
 
 async function renderBar(props: WeekAverageBarProps = under, scheme: ThemeScheme = "dark") {
@@ -97,23 +98,24 @@ describe("WeekAverageBar", () => {
   });
 
   describe("what it says", () => {
-    it("should label the row Average, with what it is taken over after it", async () => {
+    it("should label the row Average, with Mon to yesterday after it, on the card and the page alike", async () => {
       await renderBar();
 
-      expect(screen.getByText(/^Average/)).toHaveTextContent("Average · Mon to today");
+      expect(screen.getByText(/^Average/)).toHaveTextContent("Average · Mon to yesterday");
+      expect(screen.queryByText(/Mon to today/)).not.toBeOnTheScreen();
     });
 
     it("should print the value, then the target and the unit", async () => {
       await renderBar();
 
-      expect(screen.getByText("1,681")).toBeOnTheScreen();
+      expect(screen.getByText("1,895")).toBeOnTheScreen();
       expect(screen.getByText("/ 2,200 kcal")).toBeOnTheScreen();
     });
 
     it("should say how many days the average is taken over", async () => {
       await renderBar();
 
-      expect(screen.getByText("From 4 days with food logged")).toBeOnTheScreen();
+      expect(screen.getByText("From 3 days with food logged")).toBeOnTheScreen();
     });
 
     it("should say 1 day, not 1 days", async () => {
@@ -131,15 +133,15 @@ describe("WeekAverageBar", () => {
     it("should print the overshoot in whole kcal after the target when over", async () => {
       await renderBar(over);
 
-      expect(screen.getByText("2,450")).toBeOnTheScreen();
+      expect(screen.getByText("2,463")).toBeOnTheScreen();
       expect(screen.getByText("/ 2,200 kcal")).toBeOnTheScreen();
-      expect(screen.getByText("+250 kcal")).toBeOnTheScreen();
+      expect(screen.getByText("+263 kcal")).toBeOnTheScreen();
     });
 
     it("should print the value and the unit alone, with no bar, when there is no target", async () => {
       await renderBar(noTarget);
 
-      expect(screen.getByText("1,681")).toBeOnTheScreen();
+      expect(screen.getByText("1,895")).toBeOnTheScreen();
       expect(screen.getByText("kcal")).toBeOnTheScreen();
       expect(screen.queryByText(/\//)).not.toBeOnTheScreen();
       expect(screen.queryByTestId("calories-fill", hidden)).not.toBeOnTheScreen();
@@ -157,7 +159,7 @@ describe("WeekAverageBar", () => {
     it("should keep the value, the target and the overshoot at their own width", async () => {
       await renderBar(over);
 
-      expect(screen.getByText("+250 kcal").parent).toHaveStyle({ flexShrink: 0 });
+      expect(screen.getByText("+263 kcal").parent).toHaveStyle({ flexShrink: 0 });
     });
   });
 
@@ -174,7 +176,7 @@ describe("WeekAverageBar", () => {
     it("should print the overshoot in the primary text colour, never the warning ink", async () => {
       await renderBar(over, scheme);
 
-      expect(screen.getByText("+250 kcal")).toHaveStyle({
+      expect(screen.getByText("+263 kcal")).toHaveStyle({
         color: resolvedColor(scheme, "text-primary"),
       });
     });
@@ -204,11 +206,13 @@ describe("WeekAverageBar", () => {
   });
 
   describe("how far it fills", () => {
-    it("should fill 76.4 per cent in the sample week", async () => {
+    it("should fill 86.2 per cent in the sample week", async () => {
       await renderBar();
       await advance(1500);
 
-      expect(getAnimatedStyle(fill())).toMatchObject({ width: `${(1681.25 / 2200) * 100}%` });
+      expect(getAnimatedStyle(fill())).toMatchObject({
+        width: `${(SAMPLE_AVERAGE / 2200) * 100}%`,
+      });
     });
 
     it("should complete the fill when over, with the outline", async () => {
@@ -241,7 +245,9 @@ describe("WeekAverageBar", () => {
       await renderBar();
       await advance(20);
 
-      expect(getAnimatedStyle(fill())).toMatchObject({ width: `${(1681.25 / 2200) * 100}%` });
+      expect(getAnimatedStyle(fill())).toMatchObject({
+        width: `${(SAMPLE_AVERAGE / 2200) * 100}%`,
+      });
       await setReduceMotion(false);
     });
   });

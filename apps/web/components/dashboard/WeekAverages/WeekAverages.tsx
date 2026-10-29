@@ -29,8 +29,7 @@ const linkClassName =
  * The week up to yesterday, averaged: the calories and macro bars against the daily targets, then every
  * nutrient's daily average and the total, and a link to the diary's week view for the days one by one. It
  * reads the same week and targets as the This week card, so the two share the cache. Core leaves today out
- * of every number here (core `weekNutrientAverages`), while the card still counts it, so the two can differ
- * while today has entries.
+ * of every number here (core `weekNutrientAverages`), as it does on the card, so the two always agree.
  */
 export function WeekAverages({ today }: WeekAveragesProps) {
   const isOnline = useIsOnline();
@@ -97,7 +96,6 @@ export function WeekAverages({ today }: WeekAveragesProps) {
                 barFill={averages.calories.barFill}
                 kcalOverTarget={averages.calories.kcalOverTarget}
                 daysLogged={averages.daysLogged}
-                caption={WEEK_AVERAGES.rangeCaption}
               />
               <span className="h-px bg-border" />
               <MacroBars
