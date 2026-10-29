@@ -23,6 +23,7 @@ export * from "./quickAdd";
 export * from "./entryScreen";
 export * from "./diaryDialogs";
 export * from "./weekCard";
+export * from "./weekAverages";
 export * from "./recipes";
 export * from "./recipeLog";
 export * from "./recipeEditor";

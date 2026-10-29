@@ -91,7 +91,7 @@ describe("the This week card and the diary's Week view, from one fixture", () =>
 
     renderWithRouter(<DashboardScreen />);
     const cardName = screen
-      .getByRole("link", { name: /^This week, open the week\./ })
+      .getByRole("link", { name: /^This week, open your weekly averages\./ })
       .getAttribute("aria-label");
 
     expect(cardName).toContain(`Average ${diaryAverage} `);

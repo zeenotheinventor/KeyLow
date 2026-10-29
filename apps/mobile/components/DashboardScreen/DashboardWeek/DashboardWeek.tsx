@@ -3,7 +3,6 @@ import { weekDayTotals, weekOf, weekSummary } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
 
 import { useIsOnline } from "../../../lib/connectivity";
-import { diaryHref } from "../../../lib/navigation";
 import { ThisWeekCard } from "../ThisWeekCard";
 import { ThisWeekLoading } from "../ThisWeekLoading";
 import { ThisWeekMessage } from "../ThisWeekMessage";
@@ -17,7 +16,7 @@ import type { DashboardWeekProps } from "./types";
  * fails on its own, so the Today card above it is unaffected. The week is asked for by today's Monday, so
  * when the date rolls over into a new week the card reads that week and never sums the old one for the
  * new day. Its numbers are the totals as given: nothing here adds them up a second way. Pressing it opens
- * the Diary on today.
+ * the weekly averages screen.
  */
 export function DashboardWeek({ today, isReadEnabled }: DashboardWeekProps) {
   const router = useRouter();
@@ -66,8 +65,8 @@ export function DashboardWeek({ today, isReadEnabled }: DashboardWeekProps) {
         today,
         targetKcal: targets.kcal,
       })}
-      onOpenDiary={() => {
-        router.push(diaryHref(today));
+      onOpen={() => {
+        router.push("/week");
       }}
     />
   );

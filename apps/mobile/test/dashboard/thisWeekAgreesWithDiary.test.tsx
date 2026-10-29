@@ -8,6 +8,7 @@ import { Text } from "react-native";
 import TabsLayout from "../../app/(tabs)/_layout";
 import DashboardRoute from "../../app/(tabs)/dashboard";
 import DiaryRoute from "../../app/(tabs)/diary";
+import WeekAveragesRoute from "../../app/week";
 import { ToastProvider } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import {
@@ -58,7 +59,7 @@ const standIn = (text: string) =>
     return <Text role="heading">{text}</Text>;
   };
 
-// The real Dashboard and the real Diary under the real tab layout, from one fixture.
+// The real Dashboard, the real weekly averages and the real Diary under the real tab layout, from one fixture.
 const routes = {
   _layout: Providers,
   "(tabs)/_layout": TabsLayout,
@@ -68,6 +69,7 @@ const routes = {
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": standIn("More screen"),
   targets: standIn("Targets screen"),
+  week: WeekAveragesRoute,
 };
 
 const hidden = { includeHiddenElements: true };
@@ -90,6 +92,8 @@ describe("the This week card and the diary's week strip, from one fixture", () =
     kitStyles = await compileKitStyles("", [
       "components/DashboardScreen",
       "components/DiaryScreen",
+      "components/WeekAveragesScreen",
+      "components/NutrientTable",
       "app",
     ]);
   });
@@ -113,7 +117,9 @@ describe("the This week card and the diary's week strip, from one fixture", () =
   it("should name every day as the diary's week strip does, so the days complete are the days it ticks", async () => {
     const user = userEvent.setup();
     await render(<ExpoRoot context={getMockContext(routes)} location="/dashboard" />);
-    const card = await screen.findByRole("button", { name: /^This week, open the diary\./ });
+    const card = await screen.findByRole("button", {
+      name: /^This week, open your weekly averages\./,
+    });
 
     for (const name of dayNames) {
       expect(screen.getByRole("img", { name, ...hidden })).toBeOnTheScreen();
@@ -121,6 +127,9 @@ describe("the This week card and the diary's week strip, from one fixture", () =
     expect(card).toHaveAccessibleName(/ 2 of 4 days complete\.$/);
 
     await user.press(card);
+    // The weekly averages read the same week, so the calories average is the card's.
+    expect(await screen.findByRole("listitem", { name: /^Energy: 1,681 / })).toBeOnTheScreen();
+    await user.press(screen.getByRole("button", { name: "See each day in the diary" }));
     await screen.findByRole("heading", { name: "Today" });
 
     for (const name of dayNames) {

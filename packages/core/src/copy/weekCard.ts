@@ -54,14 +54,20 @@ const describeAverageForScreenReader = ({
   return `${WEEK_GRID.average} ${against} kilocalories a day, ${describeWeekAverageBasis(daysLogged).toLowerCase()}.`;
 };
 
+const OPENS = {
+  diary: "open the diary",
+  week: "open the week",
+  averages: "open your weekly averages",
+} as const;
+
 /**
- * The name of the whole card, which is one pressable surface: the diary on mobile, the week view on the
- * web. "This week, open the diary. Average 1,681 of 2,200 kilocalories a day, from 4 days with food
+ * The name of the whole card, which is one pressable surface: both apps open the weekly averages page,
+ * and the diary and the week view are kept for a card that opens them. "This week, open the diary. Average 1,681 of 2,200 kilocalories a day, from 4 days with food
  * logged. 2 of 4 days complete." With no target it drops "of 2,200", and with nothing logged it says so.
  */
-export const describeThisWeekCard = (summary: WeekCardNumbers, opens: "diary" | "week"): string =>
+export const describeThisWeekCard = (summary: WeekCardNumbers, opens: keyof typeof OPENS): string =>
   [
-    `${THIS_WEEK}, open the ${opens}.`,
+    `${THIS_WEEK}, ${OPENS[opens]}.`,
     describeAverageForScreenReader(summary),
     `${describeDaysComplete(summary.daysComplete, summary.daysSoFar)}.`,
   ].join(" ");

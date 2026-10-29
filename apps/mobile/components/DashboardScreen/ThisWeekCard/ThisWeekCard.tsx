@@ -17,18 +17,18 @@ import type { ThisWeekCardProps } from "./types";
 /**
  * The week so far as the dashboard board draws it: the title with a chevron and the week's Monday, the
  * average calories against the target, the seven day markers and the days complete. The whole card is
- * one button that opens the Diary on today, as the Today card is, named by the title, the average and the
+ * one button that opens the weekly averages screen, named by the title, the average and the
  * days complete. The words inside it are hidden from screen readers, because that name already says all
  * of it.
  */
-export function ThisWeekCard({ summary, onOpenDiary }: ThisWeekCardProps) {
+export function ThisWeekCard({ summary, onOpen }: ThisWeekCardProps) {
   return (
     <Card padding={0}>
       <PressableSurface
         className="p-4"
-        label={describeThisWeekCard(summary, "diary")}
+        label={describeThisWeekCard(summary, "averages")}
         pressScale={rowPressScale}
-        onPress={onOpenDiary}
+        onPress={onOpen}
       >
         <View aria-hidden className="gap-3">
           <View className="gap-[2px]">

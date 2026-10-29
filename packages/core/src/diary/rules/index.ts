@@ -31,5 +31,14 @@ export { weekAverage } from "./weekAverage";
 export type { WeekAverageDay, WeekDayTotals } from "./weekAverage";
 export { weekDayTotals } from "./weekDayTotals";
 export type { WeekDayNutrients } from "./weekDayTotals";
+export { WEEK_NUTRIENT_KEYS, weekNutrientAverages } from "./weekNutrientAverages";
+export type {
+  WeekNutrientAverage,
+  WeekNutrientAverages,
+  WeekNutrientAveragesDay,
+  WeekNutrientAveragesInput,
+  WeekNutrientDayTotals,
+  WeekNutrientKey,
+} from "./weekNutrientAverages";
 export { weekSummary } from "./weekSummary";
 export type { WeekDayMarker, WeekSummary, WeekSummaryDay, WeekSummaryInput } from "./weekSummary";
