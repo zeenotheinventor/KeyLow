@@ -118,7 +118,7 @@ describe("the This week card", () => {
 
       expect(weekCard().getAttribute("href")).toBe("/dashboard/week");
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,895 of 2,200 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
@@ -145,29 +145,31 @@ describe("the This week card", () => {
         inside.getByRole("heading", { level: 2, name: "This week", hidden: true }),
       ).toBeTruthy();
       expect(inside.getByText("Week of Mon 12 Oct")).toBeTruthy();
-      expect(inside.getByText("From 4 days with food logged")).toBeTruthy();
+      expect(inside.getByText("From 3 days with food logged")).toBeTruthy();
       expect(inside.getByText("2 of 4 days complete")).toBeTruthy();
     });
 
-    it("should print the average over the target, with the days it leaves out named in its caption", () => {
+    it("should print the average of the days before today over the target, captioned Mon to yesterday", () => {
       renderDashboard();
 
+      // Monday 2,140, Tuesday 2,260 and Wednesday 1,286: today's 1,039 is left out.
       const inside = within(weekCard());
       expect(inside.getByText("Average")).toBeTruthy();
-      expect(inside.getByText(/Mon to today/)).toBeTruthy();
-      expect(inside.getByText("1,681")).toBeTruthy();
+      expect(inside.getByText("· Mon to yesterday")).toBeTruthy();
+      expect(inside.queryByText(/Mon to today/)).toBeNull();
+      expect(inside.getByText("1,895")).toBeTruthy();
       expect(inside.getByText("/ 2,200 kcal")).toBeTruthy();
       expect(inside.queryByText(/over|\+/)).toBeNull();
     });
 
-    it("should draw the bar as a meter named Average, 1,681 of 2,200, with no outline", () => {
+    it("should draw the bar as a meter named Average, 1,895 of 2,200, with no outline", () => {
       renderDashboard();
 
       const bar = within(weekCard()).getByRole("meter", { name: "Average", hidden: true });
 
-      expect(bar.getAttribute("aria-valuenow")).toBe("1681");
+      expect(bar.getAttribute("aria-valuenow")).toBe("1895");
       expect(bar.getAttribute("aria-valuemax")).toBe("2200");
-      expect(bar.getAttribute("aria-valuetext")).toBe("1,681 of 2,200 kilocalories");
+      expect(bar.getAttribute("aria-valuetext")).toBe("1,895 of 2,200 kilocalories");
       expect(bar.className).not.toContain("box-shadow");
     });
 
@@ -228,13 +230,28 @@ describe("the This week card", () => {
       expect(markerNamed("Friday 16 October")).toBeTruthy();
     });
 
-    it("should say 1 of 1 day complete on a Monday, and from 1 day with food logged", () => {
+    it("should say the averages start tomorrow on a Monday, and 1 of 1 day complete", () => {
       vi.setSystemTime(new Date("2026-10-12T09:00:00Z"));
       showWeek([weekDay(MONDAY, [1500, 100, 150, 50], true), ...emptyWeek.slice(1)]);
       renderDashboard();
 
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
+        "This week, open your weekly averages. Your averages start tomorrow. 1 of 1 day complete.",
+      );
+      const inside = within(weekCard());
+      expect(inside.getByText("Your averages start tomorrow.")).toBeTruthy();
+      expect(inside.getByText("1 of 1 day complete")).toBeTruthy();
+      expect(inside.queryByRole("meter", { hidden: true })).toBeNull();
+      expect(inside.queryByText(/with food logged/)).toBeNull();
+    });
+
+    it("should say from 1 day with food logged on a Tuesday after a logged Monday", () => {
+      vi.setSystemTime(new Date("2026-10-13T09:00:00Z"));
+      showWeek([weekDay(MONDAY, [1500, 100, 150, 50], true), ...emptyWeek.slice(1)]);
+      renderDashboard();
+
+      expect(weekCard().getAttribute("aria-label")).toBe(
+        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged before today. 1 of 2 days complete.",
       );
       expect(within(weekCard()).getByText("From 1 day with food logged")).toBeTruthy();
     });
@@ -249,7 +266,8 @@ describe("the This week card", () => {
       ]);
       renderDashboard();
 
-      expect(weekCard().getAttribute("aria-label")).toContain("Average 1,146 of 2,200");
+      // Monday 0, Tuesday 2,260 and Wednesday 1,286 average 1,182.
+      expect(weekCard().getAttribute("aria-label")).toContain("Average 1,182 of 2,200");
     });
   });
 
@@ -258,11 +276,11 @@ describe("the This week card", () => {
       showWeek(emptyWeek);
     });
 
-    it("should say so in place of the average, the bar and the basis", () => {
+    it("should say nothing is logged before today in place of the average, the bar and the basis", () => {
       renderDashboard();
 
       const inside = within(weekCard());
-      expect(inside.getByText("Nothing logged this week yet.")).toBeTruthy();
+      expect(inside.getByText("Nothing logged before today this week.")).toBeTruthy();
       expect(inside.queryByText("Average")).toBeNull();
       expect(inside.queryByRole("meter", { hidden: true })).toBeNull();
       expect(inside.queryByText(/with food logged/)).toBeNull();
@@ -273,7 +291,21 @@ describe("the This week card", () => {
 
       expect(within(weekCard()).getByText("0 of 4 days complete")).toBeTruthy();
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open your weekly averages. Nothing logged this week yet. 0 of 4 days complete.",
+        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
+      );
+    });
+  });
+
+  describe("only today logged", () => {
+    it("should say nothing is logged before today, since today's entries do not count yet", () => {
+      // Thursday's 1,039 alone, with nothing on the days before it.
+      showWeek([...emptyWeek.slice(0, 3), ...boardWeek.slice(3)]);
+      renderDashboard();
+
+      expect(within(weekCard()).getByText("Nothing logged before today this week.")).toBeTruthy();
+      expect(within(weekCard()).queryByRole("meter", { hidden: true })).toBeNull();
+      expect(weekCard().getAttribute("aria-label")).toBe(
+        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
       );
     });
   });
@@ -283,11 +315,11 @@ describe("the This week card", () => {
       showTargets(noTargets);
     });
 
-    it("should read the average as 1,681 kcal, with no bar", () => {
+    it("should read the average as 1,895 kcal, with no bar", () => {
       renderDashboard();
 
       const inside = within(weekCard());
-      expect(inside.getByText("1,681")).toBeTruthy();
+      expect(inside.getByText("1,895")).toBeTruthy();
       expect(inside.getByText("kcal")).toBeTruthy();
       expect(inside.queryByText(/\//)).toBeNull();
       expect(inside.queryByRole("meter", { hidden: true })).toBeNull();
@@ -297,7 +329,7 @@ describe("the This week card", () => {
       renderDashboard();
 
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open your weekly averages. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,895 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
@@ -319,14 +351,15 @@ describe("the This week card", () => {
       showWeek(overTargetWeek);
     });
 
-    it("should read 2,450 over 2,200 kcal with +250 kcal after it", () => {
+    it("should read 2,463 over 2,200 kcal with +263 kcal after it, from the days before today", () => {
       renderDashboard();
 
+      // Monday 2,140, Tuesday 2,260 and Wednesday 2,988 average 2,463: today's 2,412 is left out.
       const inside = within(weekCard());
-      expect(inside.getByText("2,450")).toBeTruthy();
+      expect(inside.getByText("2,463")).toBeTruthy();
       expect(inside.getByText("/ 2,200 kcal")).toBeTruthy();
-      expect(inside.getByText("+250 kcal")).toBeTruthy();
-      expect(weekCard().getAttribute("aria-label")).toContain("Average 2,450 of 2,200");
+      expect(inside.getByText("+263 kcal")).toBeTruthy();
+      expect(weekCard().getAttribute("aria-label")).toContain("Average 2,463 of 2,200");
     });
 
     it("should draw the bar full with the brighter outline, and no warning colour", () => {
@@ -335,7 +368,7 @@ describe("the This week card", () => {
       const bar = within(weekCard()).getByRole("meter", { name: "Average", hidden: true });
 
       expect(bar.getAttribute("aria-valuenow")).toBe("2200");
-      expect(bar.getAttribute("aria-valuetext")).toBe("2,450 of 2,200 kilocalories, over target");
+      expect(bar.getAttribute("aria-valuetext")).toBe("2,463 of 2,200 kilocalories, over target");
       expect(bar.className).toContain("box-shadow");
       expect(weekCard().innerHTML).not.toContain("warning");
       expect(weekCard().innerHTML).not.toContain("danger");
@@ -442,7 +475,7 @@ describe("the This week card", () => {
     it("should show the week it already has, with the one offline banner above both cards", () => {
       renderDashboard();
 
-      expect(weekCard().getAttribute("aria-label")).toContain("Average 1,681 of 2,200");
+      expect(weekCard().getAttribute("aria-label")).toContain("Average 1,895 of 2,200");
       const banner = screen.getByRole("status");
       expect(within(banner).getByText("You're offline")).toBeTruthy();
       expect(
@@ -509,7 +542,7 @@ describe("the This week card", () => {
       });
 
       expect(weekCard().getAttribute("aria-label")).toBe(
-        "This week, open your weekly averages. Average 1,500 of 2,200 kilocalories a day, from 1 day with food logged. 0 of 1 day complete.",
+        "This week, open your weekly averages. Your averages start tomorrow. 0 of 1 day complete.",
       );
       expect(within(weekCard()).getByText("Week of Mon 19 Oct")).toBeTruthy();
     });

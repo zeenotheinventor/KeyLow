@@ -5,8 +5,9 @@ import * as copy from "../../../src/copy";
 const sampleWeek = {
   daysSoFar: 4,
   daysComplete: 2,
-  daysLogged: 4,
-  averageKcal: 1681.25,
+  isFirstDay: false,
+  daysLogged: 3,
+  averageKcal: 1895.33,
   targetKcal: 2200,
 };
 
@@ -26,6 +27,10 @@ export const samples: Record<string, () => string[]> = {
     copy.describeThisWeekCard(sampleWeek, "week"),
     copy.describeThisWeekCard(sampleWeek, "averages"),
     copy.describeThisWeekCard({ ...sampleWeek, targetKcal: null }, "diary"),
-    copy.describeThisWeekCard({ ...sampleWeek, daysLogged: 0, averageKcal: null }, "diary"),
+    copy.describeThisWeekCard({ ...sampleWeek, daysLogged: 0, averageKcal: null }, "averages"),
+    copy.describeThisWeekCard(
+      { ...sampleWeek, daysSoFar: 1, isFirstDay: true, daysLogged: 0, averageKcal: null },
+      "averages",
+    ),
   ],
 };

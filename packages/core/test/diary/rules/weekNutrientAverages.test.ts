@@ -3,13 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import { addCalendarDays } from "../../../src/dates/calendarDay";
 import { weekAverage } from "../../../src/diary/rules/weekAverage";
+import { weekAverageBarOf } from "../../../src/diary/rules/weekCaloriesBeforeToday";
 import { weekDayTotals } from "../../../src/diary/rules/weekDayTotals";
 import {
   WEEK_NUTRIENT_KEYS,
   weekNutrientAverages,
 } from "../../../src/diary/rules/weekNutrientAverages";
 import { weekOf } from "../../../src/diary/rules/weekStrip";
-import { weekAverageBarOf } from "../../../src/diary/rules/weekSummary";
+import { weekSummary } from "../../../src/diary/rules/weekSummary";
 
 import type {
   WeekNutrientAveragesDay,
@@ -142,6 +143,34 @@ describe("weekNutrientAverages", () => {
 
     expect(result.daysLogged).toBe(2);
     expect(nutrient(result, "kcal")?.dailyAverage).toBe(2100);
+  });
+
+  it("should give the This week card's average, basis and bar on the same week", () => {
+    const days = weekOfTotals([
+      dayTotals({ kcal: 2140 }),
+      dayTotals({ kcal: 2260 }),
+      dayTotals({ kcal: 1286 }),
+      dayTotals({ kcal: 1039 }),
+    ]);
+    const targets = { kcal: 2200, protein_g: null, carbs_g: null, fat_g: null };
+
+    const page = weekNutrientAverages({ days, today: THURSDAY, targets });
+    const card = weekSummary({
+      days: days.map((day) => ({
+        localDate: day.localDate,
+        dayLog: null,
+        totals: weekDayTotals(day.totals),
+      })),
+      today: THURSDAY,
+      targetKcal: targets.kcal,
+    });
+
+    expect(card).toMatchObject({
+      isFirstDay: page.isFirstDay,
+      daysLogged: page.daysLogged,
+      ...page.calories,
+    });
+    expect(card.daysLogged).toBe(3);
   });
 
   it("should draw the calories bar by the card's rule, from the page's own average", () => {

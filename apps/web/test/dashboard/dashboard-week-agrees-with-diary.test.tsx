@@ -7,7 +7,7 @@ import { renderWithRouter } from "../ui/appRouter";
 
 import type { DiaryDay, DiaryWeekDay, Targets } from "@keylow/api-client";
 
-import { DashboardScreen } from "@/components/dashboard";
+import { DashboardScreen, WeekAveragesScreen } from "@/components/dashboard";
 import { DiaryScreen } from "@/components/diary";
 import { ToastProvider } from "@/components/ui/Toast";
 
@@ -74,27 +74,74 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+const weekCard = () =>
+  screen.getByRole("link", { name: /^This week, open your weekly averages\./ });
+
+/** What the calories bar shows inside a container: the caption, the basis, the overshoot and the meter, as text. */
+const barOf = (container: HTMLElement) => {
+  const inside = within(container);
+  const meter = inside.queryByRole("meter", { name: WEEK_GRID.average, hidden: true });
+
+  return {
+    caption: inside.getByText(/^\s*· /).textContent.trim(),
+    basis: inside.getByText(/with food logged$/).textContent,
+    overshoot: inside.queryByText(/^\+[\d,]+ kcal$/)?.textContent ?? null,
+    meter:
+      meter === null
+        ? null
+        : {
+            valueNow: meter.getAttribute("aria-valuenow"),
+            valueText: meter.getAttribute("aria-valuetext"),
+            outlined: meter.className.includes("box-shadow"),
+          },
+  };
+};
+
+describe("the This week card and the weekly averages page, from one fixture", () => {
+  it.each(cases)(
+    "should give the same average, basis and bar for $name",
+    ({ week, targets: weekTargets }) => {
+      backend.week = week;
+      backend.targets = weekTargets;
+
+      renderWithRouter(<WeekAveragesScreen />);
+      const energy = within(screen.getByRole("table", { name: "Daily average" }))
+        .getAllByRole("row")[0]
+        ?.textContent.match(/^Energy([\d,]+)/)?.[1];
+      const page = barOf(screen.getByRole("region", { name: "Daily average" }));
+      cleanup();
+
+      renderWithRouter(<DashboardScreen />);
+      const card = barOf(weekCard());
+
+      expect(energy).toBeDefined();
+      expect(weekCard().getAttribute("aria-label")).toContain(`Average ${energy ?? ""} `);
+      expect(card).toEqual(page);
+      expect(card.caption).toBe("· Mon to yesterday");
+    },
+  );
+});
+
 describe("the This week card and the diary's Week view, from one fixture", () => {
-  it.each(cases)("should give the same figures for $name", ({ week, targets: weekTargets }) => {
-    backend.week = week;
-    backend.targets = weekTargets;
+  it.each(cases)(
+    "should count the same days complete for $name",
+    ({ week, targets: weekTargets }) => {
+      backend.week = week;
+      backend.targets = weekTargets;
 
-    renderWithRouter(
-      <ToastProvider>
-        <DiaryScreen date={undefined} view="week" />
-      </ToastProvider>,
-    );
-    const averageCell = screen.getByRole("listitem", { name: WEEK_GRID.average });
-    const diaryAverage = within(averageCell).getByText(/^[\d,]+$/).textContent;
-    const diaryDaysComplete = screen.getAllByText(WEEK_GRID.complete).length;
-    cleanup();
+      renderWithRouter(
+        <ToastProvider>
+          <DiaryScreen date={undefined} view="week" />
+        </ToastProvider>,
+      );
+      const diaryDaysComplete = screen.getAllByText(WEEK_GRID.complete).length;
+      cleanup();
 
-    renderWithRouter(<DashboardScreen />);
-    const cardName = screen
-      .getByRole("link", { name: /^This week, open your weekly averages\./ })
-      .getAttribute("aria-label");
+      renderWithRouter(<DashboardScreen />);
 
-    expect(cardName).toContain(`Average ${diaryAverage} `);
-    expect(cardName).toContain(`${diaryDaysComplete} of 4 days complete.`);
-  });
+      expect(weekCard().getAttribute("aria-label")).toContain(
+        `${diaryDaysComplete} of 4 days complete.`,
+      );
+    },
+  );
 });

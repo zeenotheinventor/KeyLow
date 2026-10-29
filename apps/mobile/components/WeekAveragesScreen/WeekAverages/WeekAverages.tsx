@@ -23,8 +23,8 @@ import type { WeekAveragesProps } from "./types";
  * The week up to yesterday, averaged: the calories and macro bars against the daily targets, then every
  * nutrient's daily average and the total, and a button to the diary for the days one by one. It reads the
  * same week and targets as the This week card, so the two share the cache. Core leaves today out of every
- * number here (core `weekNutrientAverages`), while the card still counts it, so the two can differ while
- * today has entries. The targets are read with no date, as the card's are.
+ * number here (core `weekNutrientAverages`), as it does on the card, so the two always agree. The targets
+ * are read with no date, as the card's are.
  */
 export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
   const router = useRouter();
@@ -96,7 +96,6 @@ export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
               <WeekAverageBar
                 averageKcal={averages.calories.averageKcal}
                 barFill={averages.calories.barFill}
-                caption={WEEK_AVERAGES.rangeCaption}
                 daysLogged={averages.daysLogged}
                 kcalOverTarget={averages.calories.kcalOverTarget}
                 targetKcal={averages.calories.targetKcal}

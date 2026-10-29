@@ -1,5 +1,5 @@
 import {
-  WEEK_CARD,
+  WEEK_AVERAGES,
   describeDaysComplete,
   describeThisWeekCard,
   describeWeekGridTitle,
@@ -20,9 +20,12 @@ const WEEK_AVERAGES_HREF = "/dashboard/week";
 
 /**
  * The week so far as the dashboard board draws it: the title with a chevron and the week's Monday, the
- * average calories against the target, the seven day markers and the days complete. The whole card is one
- * link to the weekly averages page, named by the title, the average and the days complete. The words inside
- * it are hidden from assistive technology, because that name already says all of it.
+ * average calories against the target, the seven day markers and the days complete. The average covers
+ * Monday to yesterday, as the weekly averages page does, while the markers and the days complete count
+ * today too. On a Monday, or when nothing was logged before today, it says so in the page's words. The
+ * whole card is one link to the weekly averages page, named by the title, the average and the days
+ * complete. The words inside it are hidden from assistive technology, because that name already says all
+ * of it.
  */
 export function ThisWeekCard({ summary }: ThisWeekCardProps) {
   const title = describeWeekStripName(summary.weekStart, true);
@@ -48,8 +51,10 @@ export function ThisWeekCard({ summary }: ThisWeekCardProps) {
                 {describeWeekGridTitle(summary.weekStart)}
               </p>
             </div>
-            {summary.averageKcal === null ? (
-              <p className="text-body text-text-secondary">{WEEK_CARD.nothingLogged}</p>
+            {summary.isFirstDay ? (
+              <p className="text-body text-text-secondary">{WEEK_AVERAGES.startsTomorrow}</p>
+            ) : summary.averageKcal === null ? (
+              <p className="text-body text-text-secondary">{WEEK_AVERAGES.nothingBeforeToday}</p>
             ) : (
               <WeekAverageBar
                 averageKcal={summary.averageKcal}

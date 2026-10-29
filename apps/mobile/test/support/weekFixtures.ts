@@ -28,12 +28,15 @@ export function showWeek(kcalByDay: DayKcal[], completeDays: string[] = []): voi
   diaryBackend.dayLogs = completeDays.map((day) => completeDayLog(day));
 }
 
-/** The sample week: 2,140, 2,260, 1,286 and 1,039 kcal, Monday and Tuesday complete. Its average is 1,681. */
+/**
+ * The sample week: 2,140, 2,260, 1,286 and 1,039 kcal, Monday and Tuesday complete. Its average is 1,681 up
+ * to today and 1,895 up to yesterday.
+ */
 export function showSampleWeek(): void {
   showWeek([2140, 2260, 1286, 1039], ["2026-10-12", "2026-10-13"]);
 }
 
-/** The over-target week: Wednesday is 2,988 and today 2,412, so the average is 2,450. */
+/** The over-target week: Wednesday is 2,988 and today 2,412, so the average is 2,450 up to today and 2,463 up to yesterday. */
 export function showOverTargetWeek(): void {
   showWeek([2140, 2260, 2988, 2412], ["2026-10-12", "2026-10-13"]);
 }

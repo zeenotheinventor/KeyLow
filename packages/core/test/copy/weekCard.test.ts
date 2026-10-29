@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  WEEK_AVERAGES,
   WEEK_CARD,
   describeDaysComplete,
   describeOverTargetKcal,
@@ -9,18 +10,19 @@ import {
   describeWeekAverageValue,
 } from "../../src/copy";
 
+// The board week on its Thursday: Mon 2,140, Tue 2,260 and Wed 1,286 before today, two days complete.
 const sample = {
   daysSoFar: 4,
   daysComplete: 2,
-  daysLogged: 4,
-  averageKcal: 1681.25,
+  isFirstDay: false,
+  daysLogged: 3,
+  averageKcal: 5686 / 3,
   targetKcal: 2200,
 };
 
 describe("the This week card's words", () => {
   it("should pin the card's own sentences as brief 24 writes them", () => {
     expect(WEEK_CARD).toEqual({
-      nothingLogged: "Nothing logged this week yet.",
       loadingLabel: "Loading this week",
       loadFailed: "Couldn't load this week",
       offlineUnavailable: "This week isn't available offline.",
@@ -85,50 +87,68 @@ describe("the This week card's words", () => {
     });
   });
 
+  it("should have no nothing logged sentence of its own, since the card says the page's", () => {
+    expect(WEEK_CARD).not.toHaveProperty("nothingLogged");
+  });
+
   describe("describeThisWeekCard", () => {
-    it("should read the sample week as brief 24 writes it", () => {
+    it("should read the board week with the average before today", () => {
       expect(describeThisWeekCard(sample, "diary")).toBe(
-        "This week, open the diary. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open the diary. Average 1,895 of 2,200 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
     it("should say open the week on the web", () => {
       expect(describeThisWeekCard(sample, "week")).toBe(
-        "This week, open the week. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open the week. Average 1,895 of 2,200 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
     it("should say open your weekly averages when the card opens that page", () => {
       expect(describeThisWeekCard(sample, "averages")).toBe(
-        "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+        "This week, open your weekly averages. Average 1,895 of 2,200 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
     it("should drop the target when none is set", () => {
-      expect(describeThisWeekCard({ ...sample, targetKcal: null }, "diary")).toBe(
-        "This week, open the diary. Average 1,681 kilocalories a day, from 4 days with food logged. 2 of 4 days complete.",
+      expect(describeThisWeekCard({ ...sample, targetKcal: null }, "averages")).toBe(
+        "This week, open your weekly averages. Average 1,895 kilocalories a day, from 3 days with food logged before today. 2 of 4 days complete.",
       );
     });
 
-    it("should say nothing is logged yet when no day has an average", () => {
-      const nothingLogged = {
+    it("should say one day when one day before today is logged", () => {
+      const oneDay = { ...sample, daysSoFar: 2, daysComplete: 1, daysLogged: 1, averageKcal: 1800 };
+
+      expect(describeThisWeekCard(oneDay, "averages")).toBe(
+        "This week, open your weekly averages. Average 1,800 of 2,200 kilocalories a day, from 1 day with food logged before today. 1 of 2 days complete.",
+      );
+    });
+
+    it("should say nothing is logged before today, in the page's words, when no earlier day has an average", () => {
+      const nothingBeforeToday = { ...sample, daysComplete: 0, daysLogged: 0, averageKcal: null };
+
+      expect(describeThisWeekCard(nothingBeforeToday, "averages")).toBe(
+        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
+      );
+      expect(describeThisWeekCard(nothingBeforeToday, "averages")).toContain(
+        WEEK_AVERAGES.nothingBeforeToday,
+      );
+    });
+
+    it("should say the averages start tomorrow on a Monday, even with Monday logged", () => {
+      const monday = {
         ...sample,
-        daysComplete: 0,
+        daysSoFar: 1,
+        daysComplete: 1,
+        isFirstDay: true,
         daysLogged: 0,
         averageKcal: null,
       };
 
-      expect(describeThisWeekCard(nothingLogged, "diary")).toBe(
-        "This week, open the diary. Nothing logged this week yet. 0 of 4 days complete.",
+      expect(describeThisWeekCard(monday, "averages")).toBe(
+        "This week, open your weekly averages. Your averages start tomorrow. 1 of 1 day complete.",
       );
-    });
-
-    it("should say one day on a Monday", () => {
-      const monday = { ...sample, daysSoFar: 1, daysComplete: 1, daysLogged: 1 };
-
-      expect(describeThisWeekCard(monday, "diary")).toBe(
-        "This week, open the diary. Average 1,681 of 2,200 kilocalories a day, from 1 day with food logged. 1 of 1 day complete.",
-      );
+      expect(describeThisWeekCard(monday, "averages")).toContain(WEEK_AVERAGES.startsTomorrow);
     });
   });
 });
