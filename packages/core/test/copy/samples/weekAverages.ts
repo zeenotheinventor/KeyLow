@@ -31,5 +31,8 @@ export const samples: Record<string, () => string[]> = {
     (["dailyAverage", "weekTotal"] as const).flatMap((column) =>
       copy.weekAverageRows(averages, column).flatMap(collectStrings),
     ),
-  describeWeekAveragesSubtitle: () => [copy.describeWeekAveragesSubtitle("2026-10-12")],
+  describeWeekAveragesSubtitle: () => [
+    copy.describeWeekAveragesSubtitle("2026-10-12", "2026-10-15"),
+    copy.describeWeekAveragesSubtitle("2026-10-12", "2026-10-12"),
+  ],
 };

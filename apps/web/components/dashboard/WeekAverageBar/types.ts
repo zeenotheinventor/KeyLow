@@ -11,4 +11,6 @@ export type WeekAverageBarProps = {
   kcalOverTarget: WeekSummary["kcalOverTarget"];
   /** The days with food logged, which the average is taken over. */
   daysLogged: number;
+  /** The days the average covers, after the label. Defaults to the card's "Mon to today". */
+  caption?: string;
 };

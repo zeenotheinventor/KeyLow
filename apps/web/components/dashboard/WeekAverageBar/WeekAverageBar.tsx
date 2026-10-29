@@ -31,6 +31,7 @@ export function WeekAverageBar({
   barFill,
   kcalOverTarget,
   daysLogged,
+  caption = WEEK_GRID.averageCaption,
 }: WeekAverageBarProps) {
   const filled = useWhipFill(barFill ?? 0);
   const value = formatCalories(averageKcal);
@@ -44,7 +45,7 @@ export function WeekAverageBar({
       <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
         <span className="whitespace-nowrap text-caption text-text-secondary">
           {WEEK_GRID.average}
-          <span className="text-text-muted"> · {WEEK_GRID.averageCaption}</span>
+          <span className="text-text-muted"> · {caption}</span>
         </span>
         <span className="flex items-baseline gap-1 whitespace-nowrap tabular-nums">
           <span className="text-body-strong">{value}</span>

@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { incompleteDaysThisWeek } from "../../../src/diary/rules/incompleteDaysThisWeek";
 import { weekAverage } from "../../../src/diary/rules/weekAverage";
 import { weekOf } from "../../../src/diary/rules/weekStrip";
-import { weekSummary } from "../../../src/diary/rules/weekSummary";
+import { weekAverageBarOf, weekSummary } from "../../../src/diary/rules/weekSummary";
 
 import type { WeekSummaryDay } from "../../../src/diary/rules/weekSummary";
 
@@ -241,6 +241,37 @@ describe("weekSummary", () => {
 
       expect(summary.targetKcal).toBeNull();
       expect(summary.barFill).toBeNull();
+    });
+  });
+
+  describe("weekAverageBarOf, which the card and the weekly averages page share", () => {
+    it("should give the card's bar for the sample week, unchanged", () => {
+      expect(weekAverageBarOf(1681.25, 2200)).toEqual({
+        averageKcal: 1681.25,
+        targetKcal: 2200,
+        barFill: 1681.25 / 2200,
+        kcalOverTarget: null,
+      });
+    });
+
+    it("should give the card's bar fields for any week and target", () => {
+      const summary = weekSummary({ days: sampleWeek, today: THURSDAY, targetKcal: 2000 });
+
+      expect(weekAverageBarOf(summary.averageKcal, 2000)).toEqual({
+        averageKcal: summary.averageKcal,
+        targetKcal: summary.targetKcal,
+        barFill: summary.barFill,
+        kcalOverTarget: summary.kcalOverTarget,
+      });
+    });
+
+    it("should have no fill and no overage with no average", () => {
+      expect(weekAverageBarOf(null, 2200)).toEqual({
+        averageKcal: null,
+        targetKcal: 2200,
+        barFill: null,
+        kcalOverTarget: null,
+      });
     });
   });
 

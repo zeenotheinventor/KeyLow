@@ -31,6 +31,7 @@ export function WeekAverageBar({
   barFill,
   kcalOverTarget,
   daysLogged,
+  caption = WEEK_GRID.averageCaption,
 }: WeekAverageBarProps) {
   const { colors } = useTheme();
   const filled = useWhipFill(barFill ?? 0);
@@ -53,7 +54,7 @@ export function WeekAverageBar({
         <Text className="shrink" tone="secondary" variant="caption">
           {WEEK_GRID.average}
           <Text tone="muted" variant="caption">
-            {` · ${WEEK_GRID.averageCaption}`}
+            {` · ${caption}`}
           </Text>
         </Text>
         <View className="shrink-0 flex-row items-baseline gap-1">

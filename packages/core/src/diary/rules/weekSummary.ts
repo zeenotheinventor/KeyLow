@@ -48,6 +48,32 @@ export type WeekSummary = {
   markers: WeekDayMarker[];
 };
 
+/** The calories bar of a week's average: how full it is and how far over the target, as `WeekSummary` has them. */
+export type WeekAverageBarState = Pick<
+  WeekSummary,
+  "averageKcal" | "targetKcal" | "barFill" | "kcalOverTarget"
+>;
+
+/**
+ * The calories bar for an average and a target. A target that is not above 0 is left off. The fill is the
+ * average over the target, capped at 1, and the overshoot is in whole kcal, as the card prints it. The This
+ * week card and the weekly averages page both take their bar from here, so the two draw it by the same rule.
+ */
+export function weekAverageBarOf(
+  averageKcal: number | null,
+  targetKcal: number | null,
+): WeekAverageBarState {
+  const target = targetKcal !== null && targetKcal > 0 ? targetKcal : null;
+  const overTarget = averageKcal === null || target === null ? 0 : Math.round(averageKcal) - target;
+
+  return {
+    averageKcal,
+    targetKcal: target,
+    barFill: averageKcal === null || target === null ? null : Math.min(1, averageKcal / target),
+    kcalOverTarget: overTarget > 0 ? overTarget : null,
+  };
+}
+
 const markerOf = (day: WeekSummaryDay, today: string): WeekDayMarker => {
   const { localDate } = day;
   const isComplete = day.dayLog?.is_complete === true;
@@ -77,19 +103,14 @@ const markerOf = (day: WeekSummaryDay, today: string): WeekDayMarker => {
  */
 export function weekSummary({ days, today, targetKcal }: WeekSummaryInput): WeekSummary {
   const daysUpToToday = days.filter((day) => day.localDate <= today);
-  const averageKcal = weekAverage(days, today)?.kcal ?? null;
-  const target = targetKcal !== null && targetKcal > 0 ? targetKcal : null;
-  const overTarget = averageKcal === null || target === null ? 0 : Math.round(averageKcal) - target;
+  const bar = weekAverageBarOf(weekAverage(days, today)?.kcal ?? null, targetKcal);
 
   return {
     weekStart: addCalendarDays(today, -daysSinceMonday(today)),
     daysSoFar: daysUpToToday.length,
     daysComplete: daysUpToToday.filter((day) => day.dayLog?.is_complete === true).length,
     daysLogged: daysUpToToday.filter((day) => day.totals !== null).length,
-    averageKcal,
-    targetKcal: target,
-    barFill: averageKcal === null || target === null ? null : Math.min(1, averageKcal / target),
-    kcalOverTarget: overTarget > 0 ? overTarget : null,
+    ...bar,
     markers: days.map((day) => markerOf(day, today)),
   };
 }

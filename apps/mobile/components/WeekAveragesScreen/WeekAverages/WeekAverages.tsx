@@ -7,7 +7,7 @@ import {
   describeWeekAveragesSubtitle,
   weekAverageRows,
 } from "@keylow/core/copy";
-import { weekDayTotals, weekNutrientAverages, weekOf, weekSummary } from "@keylow/core/diary";
+import { weekNutrientAverages, weekOf } from "@keylow/core/diary";
 import { useRouter } from "expo-router";
 import { ScrollView, View } from "react-native";
 
@@ -20,10 +20,11 @@ import { WeekAverageTable } from "../WeekAverageTable";
 import type { WeekAveragesProps } from "./types";
 
 /**
- * The week so far, averaged: the calories and macro bars against the daily targets, then every nutrient's
- * daily average and the week's total, and a button to the diary for the days one by one. It reads the
- * same week and targets as the This week card, so the two share the cache, and core adds both up by the
- * same rule, so the screen and the card always agree. The targets are read with no date, as the card's are.
+ * The week up to yesterday, averaged: the calories and macro bars against the daily targets, then every
+ * nutrient's daily average and the total, and a button to the diary for the days one by one. It reads the
+ * same week and targets as the This week card, so the two share the cache. Core leaves today out of every
+ * number here (core `weekNutrientAverages`), while the card still counts it, so the two can differ while
+ * today has entries. The targets are read with no date, as the card's are.
  */
 export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
   const router = useRouter();
@@ -69,15 +70,6 @@ export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
   }
 
   const averages = weekNutrientAverages({ days: week, today, targets });
-  const summary = weekSummary({
-    days: week.map((day) => ({
-      localDate: day.localDate,
-      dayLog: day.dayLog,
-      totals: weekDayTotals(day.totals),
-    })),
-    today,
-    targetKcal: targets.kcal,
-  });
   const barOf = (key: "protein_g" | "carbs_g" | "fat_g") => {
     const nutrient = averages.nutrients.find((row) => row.key === key);
 
@@ -87,22 +79,27 @@ export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-4 pt-1">
       <Text className="px-1" tone="muted" variant="caption">
-        {describeWeekAveragesSubtitle(weekStart)}
+        {describeWeekAveragesSubtitle(weekStart, today)}
       </Text>
-      {summary.averageKcal === null ? (
+      {averages.isFirstDay ? (
         <Text className="px-1" tone="secondary">
-          {WEEK_CARD.nothingLogged}
+          {WEEK_AVERAGES.startsTomorrow}
+        </Text>
+      ) : averages.calories.averageKcal === null ? (
+        <Text className="px-1" tone="secondary">
+          {WEEK_AVERAGES.nothingBeforeToday}
         </Text>
       ) : (
         <>
           <Card>
             <View className="gap-3">
               <WeekAverageBar
-                averageKcal={summary.averageKcal}
-                barFill={summary.barFill}
-                daysLogged={summary.daysLogged}
-                kcalOverTarget={summary.kcalOverTarget}
-                targetKcal={summary.targetKcal}
+                averageKcal={averages.calories.averageKcal}
+                barFill={averages.calories.barFill}
+                caption={WEEK_AVERAGES.rangeCaption}
+                daysLogged={averages.daysLogged}
+                kcalOverTarget={averages.calories.kcalOverTarget}
+                targetKcal={averages.calories.targetKcal}
               />
               <View className="h-px bg-border" />
               <MacroBars
