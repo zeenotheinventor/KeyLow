@@ -25,7 +25,7 @@ import { registerAppStyles } from "./support/nativeWindStyles";
 
 import type { QueryClient } from "@tanstack/react-query";
 
-// The Recipes tab's library, read through the real api-client over a fake database.
+// The recipe library in More, read through the real api-client over a fake database.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -170,6 +170,27 @@ describe("the recipe library screen", () => {
       expect(routerMock.push).toHaveBeenCalledTimes(1);
       expect(routerMock.push).toHaveBeenCalledWith("/recipes/new?name=pasta");
     });
+
+    it("should go back to More, which it was pushed from, on its back control", async () => {
+      const user = await renderLibrary();
+      await library();
+
+      await user.press(screen.getByRole("button", { name: "Back to More" }));
+
+      expect(routerMock.back).toHaveBeenCalledTimes(1);
+      expect(routerMock.replace).not.toHaveBeenCalled();
+    });
+
+    it("should go to More when a link opened the library with nothing before it", async () => {
+      routerMock.canGoBack.mockReturnValue(false);
+      const user = await renderLibrary();
+      await library();
+
+      await user.press(screen.getByRole("button", { name: "Back to More" }));
+
+      expect(routerMock.back).not.toHaveBeenCalled();
+      expect(routerMock.replace).toHaveBeenCalledWith("/(tabs)/more");
+    });
   });
 
   describe("the Archived recipes row", () => {
@@ -183,14 +204,14 @@ describe("the recipe library screen", () => {
       expect(within(archivedLink()).getByText("2")).toBeOnTheScreen();
     });
 
-    it("should open the archived recipes inside the Recipes tab", async () => {
+    it("should open the archived recipes inside the More tab", async () => {
       const user = await renderLibrary();
       await library();
 
       await user.press(archivedLink());
 
       expect(routerMock.push).toHaveBeenCalledTimes(1);
-      expect(routerMock.push).toHaveBeenCalledWith("/recipes/archived");
+      expect(routerMock.push).toHaveBeenCalledWith("/more/recipes/archived");
     });
 
     it("should be hidden while a search is typed, because archived recipes are not searched", async () => {

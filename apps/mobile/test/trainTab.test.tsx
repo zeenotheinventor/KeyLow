@@ -44,7 +44,6 @@ const standIn = (text: string) =>
 const screens = {
   "(tabs)/dashboard": standIn("Dashboard screen"),
   "(tabs)/diary": standIn("Diary screen"),
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/train/_layout": TrainLayout,
   "(tabs)/train/index": standIn("Train screen"),
   "(tabs)/more": standIn("More screen"),
@@ -64,16 +63,16 @@ describe("the Train tab in the tab shell", () => {
     resetApiClientMock();
   });
 
-  it("should show five labelled destinations and the plus, with Train between Recipes and More", async () => {
+  it("should show four labelled destinations and the plus, with Train between the plus and More", async () => {
     await renderApp(TabsLayout, "/train");
     await screen.findByRole("heading", { name: "Train screen" });
 
     const controls = screen.getAllByRole(/^(tab|button)$/);
-    const order = ["Dashboard", "Diary", "Find food", "Recipes", "Train", "More"].map((name) =>
+    const order = ["Dashboard", "Diary", "Find food", "Train", "More"].map((name) =>
       controls.indexOf(screen.getByRole(name === "Find food" ? "button" : "tab", { name })),
     );
-    expect(order).toEqual([0, 1, 2, 3, 4, 5]);
-    expect(screen.getAllByRole("tab")).toHaveLength(5);
+    expect(order).toEqual([0, 1, 2, 3, 4]);
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
   });
 
   it("should keep the search launcher to the Dashboard and the Diary, so Train has none", async () => {

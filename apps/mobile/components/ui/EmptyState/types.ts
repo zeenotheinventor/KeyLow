@@ -6,7 +6,7 @@ export type EmptyStateAction = {
   onPress: () => void;
   /** A leading icon, by name. */
   icon?: IconName | undefined;
-  /** Defaults to `secondary`. A first-time empty screen, such as the recipes tab's, draws its one action `primary`. */
+  /** Defaults to `secondary`. A first-time empty screen, such as the recipe library's, draws its one action `primary`. */
   variant?: "primary" | "secondary" | undefined;
   /** Dims the button to 40 percent and stops it responding, such as while the phone is offline. */
   disabled?: boolean | undefined;

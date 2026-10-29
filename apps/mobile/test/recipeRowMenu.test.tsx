@@ -29,7 +29,7 @@ import { heldCopies, recipeWritesClient } from "./support/recipeWritesBackend";
 import type { RecipeSummary } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
-// The row menu of the Recipes tab's library, with the real hooks over the diary's fake database: Duplicate and
+// The row menu of the recipe library, with the real hooks over the diary's fake database: Duplicate and
 // Archive, their toasts, Undo, and a write that fails.
 
 jest.mock("@react-native-async-storage/async-storage", () => ({

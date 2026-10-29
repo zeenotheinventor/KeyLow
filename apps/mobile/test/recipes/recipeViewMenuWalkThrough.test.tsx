@@ -12,8 +12,9 @@ import { setUpTests } from "react-native-reanimated";
 
 import { chickenAndRiceRecipe } from "./recipeViewFixtures";
 import TabsLayout from "../../app/(tabs)/_layout";
-import RecipesLayout from "../../app/(tabs)/recipes/_layout";
-import RecipesRoute from "../../app/(tabs)/recipes/index";
+import MoreLayout from "../../app/(tabs)/more/_layout";
+import RecipesLayout from "../../app/(tabs)/more/recipes/_layout";
+import RecipesRoute from "../../app/(tabs)/more/recipes/index";
 import RecipeViewRoute from "../../app/recipes/[id]/index";
 import { RootNavigator } from "../../components/RootNavigator";
 import { ToastProvider } from "../../components/ui";
@@ -64,10 +65,11 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard"),
   "(tabs)/diary": standIn("Diary"),
-  "(tabs)/recipes/_layout": RecipesLayout,
-  "(tabs)/recipes/index": RecipesRoute,
+  "(tabs)/more/recipes/_layout": RecipesLayout,
+  "(tabs)/more/recipes/index": RecipesRoute,
   "(tabs)/train": standIn("Train screen"),
-  "(tabs)/more": standIn("More"),
+  "(tabs)/more/_layout": MoreLayout,
+  "(tabs)/more/index": standIn("More"),
   "foods/index": standIn("Search"),
   "recipes/[id]/index": RecipeViewRoute,
 };
@@ -89,7 +91,7 @@ async function walkFromLibrary() {
     },
   ];
   const user = userEvent.setup();
-  await render(<ExpoRoot context={getMockContext(routes)} location="/recipes" />);
+  await render(<ExpoRoot context={getMockContext(routes)} location="/more/recipes" />);
   await user.press(await screen.findByRole("button", { name: /^Chicken and rice,/ }));
   await screen.findByRole("button", { name: describeEditRecipe("Chicken and rice") });
   return user;

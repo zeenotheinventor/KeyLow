@@ -12,14 +12,17 @@ import {
 } from "../../src/copy";
 
 describe("the tab shell copy", () => {
-  it("should pin the titles of the four destinations in the order the bar draws them", () => {
-    expect(Object.values(TAB_TITLES)).toEqual(["Dashboard", "Diary", "Recipes", "More"]);
+  it("should pin the titles of the destinations in the order the bar draws them", () => {
+    expect(Object.values(TAB_TITLES)).toEqual(["Dashboard", "Diary", "More"]);
     expect(TAB_TITLES).toEqual({
       dashboard: "Dashboard",
       diary: "Diary",
-      recipes: "Recipes",
       more: "More",
     });
+  });
+
+  it("should leave Recipes out of the bar", () => {
+    expect(Object.keys(TAB_TITLES)).not.toContain("recipes");
   });
 
   it("should name the bar, the centre button and the search launcher as the boards do", () => {

@@ -77,7 +77,6 @@ const routes = {
   "(tabs)/diary": DiaryStandIn,
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreRoute,
-  "(tabs)/recipes": standIn("Recipes screen"),
   "foods/_layout": FoodsLayout,
   "foods/index": FoodSearchRoute,
   "foods/new": standIn("New food screen"),
@@ -208,22 +207,22 @@ describe("the food search sheet as a route", () => {
 
     it("should return to where it was opened, whichever tab that was", async () => {
       const user = userEvent.setup();
-      await openSheetFrom("/recipes");
+      await openSheetFrom("/train");
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(sheetHeading()).not.toBeOnTheScreen();
     });
 
     it("should return to where it was opened on back", async () => {
-      await openSheetFrom("/recipes");
+      await openSheetFrom("/train");
 
       await act(() => {
         goBack();
       });
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(sheetHeading()).not.toBeOnTheScreen();
       expect(modals()).toHaveLength(0);
     });

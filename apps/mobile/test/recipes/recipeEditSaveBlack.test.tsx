@@ -13,8 +13,9 @@ import { setUpTests } from "react-native-reanimated";
 
 import { chickenAndRiceRecipe, frittataRecipe } from "./recipeViewFixtures";
 import TabsLayout from "../../app/(tabs)/_layout";
-import RecipesLayout from "../../app/(tabs)/recipes/_layout";
-import RecipesRoute from "../../app/(tabs)/recipes/index";
+import MoreLayout from "../../app/(tabs)/more/_layout";
+import RecipesLayout from "../../app/(tabs)/more/recipes/_layout";
+import RecipesRoute from "../../app/(tabs)/more/recipes/index";
 import EditRecipeRoute from "../../app/recipes/[id]/edit";
 import RecipeViewRoute from "../../app/recipes/[id]/index";
 import NewRecipeRoute from "../../app/recipes/new";
@@ -33,8 +34,8 @@ import type { RecipeViewRecipe } from "../../components/RecipeView";
 import type { FoodSearchResult, FoodWithPortionsState } from "@keylow/api-client";
 import type { QueryClient } from "@tanstack/react-query";
 
-// Saving an edited recipe, walked as a person walks it from the Recipes tab (KEY-408): the real tab layout and
-// the real recipe screens under the real router and the app's own root stack, read through the real
+// Saving an edited recipe, walked as a person walks it from the recipe library (KEY-408): the real tab layout
+// and the real recipe screens under the real router and the app's own root stack, read through the real
 // api-client over a fake database. The screens the tabs do not hold (More, the diary) are stand-ins, because
 // this test is about the recipes path.
 
@@ -144,10 +145,11 @@ const routes = {
   "(tabs)/_layout": TabsLayout,
   "(tabs)/dashboard": standIn("Dashboard"),
   "(tabs)/diary": standIn("Diary"),
-  "(tabs)/recipes/_layout": RecipesLayout,
-  "(tabs)/recipes/index": RecipesRoute,
+  "(tabs)/more/recipes/_layout": RecipesLayout,
+  "(tabs)/more/recipes/index": RecipesRoute,
   "(tabs)/train": standIn("Train screen"),
-  "(tabs)/more": standIn("More"),
+  "(tabs)/more/_layout": MoreLayout,
+  "(tabs)/more/index": standIn("More"),
   "foods/index": standIn("Search"),
   "recipes/new": NewRecipeRoute,
   "recipes/[id]/index": RecipeViewRoute,
@@ -218,7 +220,7 @@ describe("saving an edited recipe", () => {
   });
 
   async function openEditorFromLibrary() {
-    const user = await walkFrom("/recipes");
+    const user = await walkFrom("/more/recipes");
     await user.press(await chickenRow());
     await user.press(
       await screen.findByRole("button", { name: describeEditRecipe("Chicken and rice") }),
@@ -331,7 +333,7 @@ describe("every way into the editor of a saved recipe", () => {
   });
 
   it("new recipe, Save, Edit, add, Save: back on the view, then the library", async () => {
-    const user = await walkFrom("/recipes");
+    const user = await walkFrom("/more/recipes");
     await screen.findByText(RECIPES_EMPTY.title);
     await pressEmptyStateNewRecipe(user);
     await user.type(await screen.findByLabelText("Name"), "Onion soup");
@@ -356,7 +358,7 @@ describe("every way into the editor of a saved recipe", () => {
 
   it("view, Edit, Save, Edit again, add, Save: back on the view each time", async () => {
     diaryBackend.recipes = [recipeRowOf(chickenAndRiceRecipe)];
-    const user = await walkFrom("/recipes");
+    const user = await walkFrom("/more/recipes");
     await user.press(await chickenRow());
     for (let round = 0; round < 2; round += 1) {
       await user.press(
@@ -374,7 +376,7 @@ describe("every way into the editor of a saved recipe", () => {
 
   it("two views stacked (as Duplicate leaves them), Edit the top one, add, Save: back on it, then the first", async () => {
     diaryBackend.recipes = [recipeRowOf(chickenAndRiceRecipe), recipeRowOf(frittataRecipe)];
-    const user = await walkFrom("/recipes");
+    const user = await walkFrom("/more/recipes");
     await user.press(await chickenRow());
     await screen.findByRole("button", { name: describeEditRecipe("Chicken and rice") });
     await act(() => {
@@ -406,7 +408,7 @@ describe("every way into the editor of a saved recipe", () => {
 
   it("Save and the Android back in the same frame: leaves once, onto the view", async () => {
     diaryBackend.recipes = [recipeRowOf(chickenAndRiceRecipe)];
-    const user = await walkFrom("/recipes");
+    const user = await walkFrom("/more/recipes");
     await user.press(await chickenRow());
     await user.press(
       await screen.findByRole("button", { name: describeEditRecipe("Chicken and rice") }),

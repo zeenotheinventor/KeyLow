@@ -63,7 +63,6 @@ const routes = {
   "(tabs)/diary": DiaryStandIn,
   "(tabs)/train": standIn("Train screen"),
   "(tabs)/more": MoreRoute,
-  "(tabs)/recipes": standIn("Recipes screen"),
   "(tabs)/weight": standIn("Weight screen"),
   "(tabs)/settings": standIn("Settings screen"),
   "foods/_layout": FoodsLayout,
@@ -99,7 +98,7 @@ const formHeading = (name: string) => screen.queryByRole("heading", { name });
 
 async function openFormFromSearch(path: string, heading: string) {
   const user = userEvent.setup();
-  await renderApp("/recipes");
+  await renderApp("/train");
   await act(() => {
     router.push("/foods");
   });
@@ -156,7 +155,7 @@ describe("leaving the food form", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(formHeading("New food")).not.toBeOnTheScreen();
       expect(searchHeading()).not.toBeOnTheScreen();
       expect(mockCreateFood).not.toHaveBeenCalled();
@@ -213,7 +212,7 @@ describe("leaving the food form", () => {
 
       await user.press(screen.getByRole("button", { name: "Close" }));
 
-      expect(await screen.findByText("Recipes screen")).toBeOnTheScreen();
+      expect(await screen.findByText("Train screen")).toBeOnTheScreen();
       expect(mockUpdateFood).not.toHaveBeenCalled();
     });
 

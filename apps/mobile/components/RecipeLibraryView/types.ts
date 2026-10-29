@@ -1,6 +1,8 @@
 import type { RecipeSummary } from "@keylow/api-client";
 
 type RecipeLibraryViewActions = {
+  /** Leaves the library for More, where its row is. */
+  onBack: () => void;
   /** Opens a recipe's screen. The library never knows where that is: `recipePath` does. */
   onOpenRecipe: (id: string) => void;
   /** Starts a new recipe. A typed word is the name it starts with. */
