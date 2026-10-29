@@ -21,4 +21,10 @@ export const DATA_SOURCE_ATTRIBUTION = {
     text: "Contains public sector information licensed under the Open Government Licence v3.0. Source: McCance and Widdowson's The Composition of Foods Integrated Dataset, Public Health England and the Office for Health Improvement and Disparities.",
     url: "https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid",
   },
+  usda: {
+    name: "USDA FoodData Central",
+    licence: "CC0 1.0 Universal (public domain)",
+    text: "Data from USDA FoodData Central, U.S. Department of Agriculture, Agricultural Research Service, released into the public domain under CC0 1.0. Natural portions and some foods come from its SR Legacy release (April 2018).",
+    url: "https://fdc.nal.usda.gov",
+  },
 } as const satisfies Readonly<Record<Exclude<FoodSource, "user">, DataSourceAttributionEntry>>;

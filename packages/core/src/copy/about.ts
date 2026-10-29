@@ -30,6 +30,7 @@ export const ABOUT_SCREEN = {
   dataSources: {
     title: "Data sources",
     cofid: DATA_SOURCE_ATTRIBUTION.cofid,
+    usda: DATA_SOURCE_ATTRIBUTION.usda,
     off: DATA_SOURCE_ATTRIBUTION.off,
     ...BODY_MODEL_SOURCES,
   },

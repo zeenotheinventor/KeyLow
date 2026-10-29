@@ -44,6 +44,18 @@ describe("groupFoodSearchResults", () => {
     ).toEqual(["u1", "u2"]);
   });
 
+  it("should put a USDA row in Common foods after a higher ranked CoFID row, keeping rank order", () => {
+    const groups = groupFoodSearchResults(
+      [row("c1", "cofid"), row("u1", "usda"), row("o1", "off"), row("c2", "cofid")],
+      { limit: 5 },
+    );
+
+    expect(groups.map((group) => group.key)).toEqual(["common", "branded"]);
+    expect(
+      groups.find((group) => group.key === "common")?.visibleRows.map((item) => item.id),
+    ).toEqual(["c1", "u1", "c2"]);
+  });
+
   it("should omit a group that has no rows", () => {
     const groups = groupFoodSearchResults([row("c1", "cofid"), row("o1", "off")], { limit: 5 });
 

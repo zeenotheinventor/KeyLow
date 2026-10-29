@@ -39,6 +39,8 @@ export const SourceOpenFoodFacts: Story = { render: () => <Badge kind="source" s
 
 export const SourceCoFid: Story = { render: () => <Badge kind="source" source="cofid" /> };
 
+export const SourceUsda: Story = { render: () => <Badge kind="source" source="usda" /> };
+
 export const SourceYours: Story = { render: () => <Badge kind="source" source="user" /> };
 
 // The food detail's portion rows mark the default portion with a neutral status.

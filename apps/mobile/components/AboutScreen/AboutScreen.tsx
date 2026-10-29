@@ -75,6 +75,11 @@ export function AboutScreen() {
           url={dataSources.cofid.url}
         />
         <DataSourceCredit
+          name={dataSources.usda.name}
+          text={dataSources.usda.text}
+          url={dataSources.usda.url}
+        />
+        <DataSourceCredit
           name={dataSources.off.name}
           text={dataSources.off.text}
           url={dataSources.off.url}

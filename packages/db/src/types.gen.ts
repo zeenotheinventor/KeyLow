@@ -1692,7 +1692,7 @@ export type Database = {
       exercise_mechanic: "compound" | "isolation";
       exercise_source: "free_exercise_db" | "user";
       experience_level: "beginner" | "intermediate" | "advanced";
-      food_source: "off" | "cofid" | "user";
+      food_source: "off" | "cofid" | "user" | "usda";
       goal_type: "lose" | "maintain" | "gain";
       log_item_type: "food" | "recipe" | "quick";
       muscle_group: "chest" | "shoulders" | "back" | "arms" | "core" | "legs" | "neck";
@@ -1843,7 +1843,7 @@ export const Constants = {
       exercise_mechanic: ["compound", "isolation"],
       exercise_source: ["free_exercise_db", "user"],
       experience_level: ["beginner", "intermediate", "advanced"],
-      food_source: ["off", "cofid", "user"],
+      food_source: ["off", "cofid", "user", "usda"],
       goal_type: ["lose", "maintain", "gain"],
       log_item_type: ["food", "recipe", "quick"],
       muscle_group: ["chest", "shoulders", "back", "arms", "core", "legs", "neck"],
