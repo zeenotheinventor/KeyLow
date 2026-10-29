@@ -13,6 +13,10 @@ import type { RecipeComputed } from "../recipes/schemas";
 
 /** The library screen (brief 20): the header button, the search field, the archived link and the web caption. */
 export const RECIPES_LIBRARY = {
+  /** The library's heading, and the name of the links back to it. */
+  title: "Recipes",
+  /** The name of the library's back control, which leads to More, where its row is. */
+  backLabel: "Back to More",
   newRecipe: "New recipe",
   searchPlaceholder: "Search recipes",
   /** The words of the link. The count is added by `describeArchivedLink`. */

@@ -53,6 +53,8 @@ const chickenAndRice = libraryRecipe(4, 1100, {
 describe("the library and archive strings", () => {
   it("should pin the library strings the boards draw", () => {
     expect(RECIPES_LIBRARY).toEqual({
+      title: "Recipes",
+      backLabel: "Back to More",
       newRecipe: "New recipe",
       searchPlaceholder: "Search recipes",
       archivedLink: "Archived recipes",
@@ -111,6 +113,7 @@ describe("the library and archive strings", () => {
 
   it("should end no button, link or toast label with a full stop", () => {
     const labels = [
+      RECIPES_LIBRARY.backLabel,
       RECIPES_LIBRARY.newRecipe,
       RECIPES_LIBRARY.archivedLink,
       RECIPES_TABLE.recipe,
