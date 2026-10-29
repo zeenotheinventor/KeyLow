@@ -102,8 +102,8 @@ export const describeShoppingAmount = (item: ShoppingAmount): string | null => {
   return grams === null ? portion : `${portion} · ${grams}`;
 };
 
-/** The name of a staple's Add anyway box, which says which staple: "Add Salt anyway". */
-export const describeAddAnyway = (name: string): string => `Add ${name} anyway`;
+/** The name of a staple's Add anyway box, which starts with its visible label and then names the staple: "Add anyway: Salt". */
+export const describeAddAnyway = (name: string): string => `Add anyway: ${name}`;
 
 /**
  * The line under an item: its amount, then the recipes it came from, such as "2 × 1 medium · 300 g · From

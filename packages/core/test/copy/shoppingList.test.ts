@@ -124,7 +124,7 @@ describe("describeShoppingAmount", () => {
 
 describe("describeAddAnyway", () => {
   it("should name the staple", () => {
-    expect(describeAddAnyway("Salt")).toBe("Add Salt anyway");
+    expect(describeAddAnyway("Salt")).toBe("Add anyway: Salt");
   });
 });
 

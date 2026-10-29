@@ -334,7 +334,7 @@ describe("ShoppingListScreen", () => {
     expect(api.previewCalls.at(-1)).toEqual([{ id: recipe.id, servings: recipe.servings }]);
     expect(within(dialog).getByText("2 × 1 medium · 300 g")).toBeTruthy();
 
-    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Add Salt anyway" }));
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Add anyway: Salt" }));
     act(() => {
       fireEvent.click(within(dialog).getByRole("button", { name: SHOPPING_LIST.addToList }));
     });

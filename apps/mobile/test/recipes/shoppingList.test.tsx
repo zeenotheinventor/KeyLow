@@ -393,7 +393,7 @@ describe("the shopping list screens", () => {
       routerMock.searchParams = { id: firstRecipe.id, servings: "6" };
       const user = await show("add");
 
-      await user.press(box("Add Salt anyway"));
+      await user.press(box("Add anyway: Salt"));
       await user.press(screen.getByRole("button", { name: SHOPPING_LIST.addItem }));
 
       expect(mockApi.addRecipes).toHaveBeenCalledWith(
