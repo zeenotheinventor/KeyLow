@@ -78,10 +78,11 @@ export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
     today,
     targetKcal: targets.kcal,
   });
-  const averageOf = (key: "protein_g" | "carbs_g" | "fat_g") => ({
-    eaten: averages.nutrients.find((row) => row.key === key)?.dailyAverage ?? 0,
-    target: targets[key] ?? 0,
-  });
+  const barOf = (key: "protein_g" | "carbs_g" | "fat_g") => {
+    const nutrient = averages.nutrients.find((row) => row.key === key);
+
+    return { eaten: nutrient?.dailyAverage ?? 0, target: nutrient?.dailyTarget ?? 0 };
+  };
 
   return (
     <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-4 pt-1">
@@ -105,9 +106,9 @@ export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
               />
               <View className="h-px bg-border" />
               <MacroBars
-                carbs={averageOf("carbs_g")}
-                fat={averageOf("fat_g")}
-                protein={averageOf("protein_g")}
+                carbs={barOf("carbs_g")}
+                fat={barOf("fat_g")}
+                protein={barOf("protein_g")}
               />
             </View>
           </Card>
@@ -124,7 +125,9 @@ export function WeekAverages({ today, isReadEnabled }: WeekAveragesProps) {
       <Button
         variant="secondary"
         onPress={() => {
-          router.push(diaryHref(today));
+          // The diary is a tab under this screen, so the stack goes back to the tabs and switches to it,
+          // rather than pushing a second set of tabs.
+          router.dismissTo(diaryHref(today));
         }}
       >
         {WEEK_AVERAGES.openDiaryWeek}

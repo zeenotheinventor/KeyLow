@@ -134,7 +134,17 @@ describe("weekNutrientAverages", () => {
     ]);
   });
 
-  it("should always agree with the This week card's average for calories and the macros", () => {
+  it("should give null, not 0 g, for a macro no logged day gave a value for", () => {
+    const result = weekNutrientAverages({
+      days: weekOfTotals([dayTotals({ protein_g: null }), dayTotals({ protein_g: null })]),
+      today: THURSDAY,
+      targets: NO_TARGETS,
+    });
+
+    expect(nutrient(result, "protein_g")).toMatchObject({ dailyAverage: null, weekTotal: null });
+  });
+
+  it("should agree with the This week card's average for calories and the macros wherever a day gave a value", () => {
     const amount = fc.option(fc.double({ min: 0, max: 5000, noNaN: true }), { nil: null });
     const day = fc.option(
       fc.record({
@@ -166,7 +176,9 @@ describe("weekNutrientAverages", () => {
           );
 
           for (const key of ["kcal", "protein_g", "carbs_g", "fat_g"] as const) {
-            expect(nutrient(result, key)?.dailyAverage).toBe(card?.[key] ?? null);
+            const average = nutrient(result, key)?.dailyAverage ?? null;
+            // A macro no logged day gave a value for reads not given here, and 0 on the card.
+            expect(average ?? (card === null ? null : 0)).toBe(card?.[key] ?? null);
           }
         },
       ),

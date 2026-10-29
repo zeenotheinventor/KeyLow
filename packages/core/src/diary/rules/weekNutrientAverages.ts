@@ -1,5 +1,3 @@
-import { weekAverage } from "./weekAverage";
-import { weekDayTotals } from "./weekDayTotals";
 import { addCalendarDays, daysSinceMonday } from "../../dates/calendarDay";
 
 import type { ProgressTargets } from "./progressBars";
@@ -72,10 +70,9 @@ const positiveOrNull = (value: number | null): number | null =>
  *
  * The rule is the one the This week card and the diary's week view use (core `weekAverage`): a day after
  * today is left out, and so is a day with nothing logged, because a day that was not tracked is not a day
- * of eating nothing. Calories and the three macros are read through `weekDayTotals` and averaged by
- * `weekAverage` itself, so this page cannot disagree with the card. Fibre, saturated fat, sugars and salt
- * are read the same way (a logged day with no value counts as 0, as it does on the day's bars), except that
- * a nutrient no logged day gave a value for is null and is shown as not given, never as 0 g.
+ * of eating nothing. A logged day with no value for a nutrient counts as 0, as it does on the day's bars
+ * (core `weekDayTotals`), and the sum is taken in the same order, so calories and the macros always equal
+ * the card's average. A nutrient no logged day gave a value for is null, shown as not given, never 0 g.
  */
 export function weekNutrientAverages({
   days,
@@ -85,32 +82,22 @@ export function weekNutrientAverages({
   const logged = days.flatMap((day) =>
     day.localDate <= today && day.totals !== null ? [day.totals] : [],
   );
-  const macroAverage = weekAverage(
-    days.map((day) => ({ localDate: day.localDate, totals: weekDayTotals(day.totals) })),
-    today,
-  );
-
-  const averageOf = (key: WeekNutrientKey): number | null => {
-    if (isTargetKey(key)) {
-      return macroAverage?.[key] ?? null;
-    }
-    if (logged.every((totals) => totals[key] === null)) {
-      return null;
-    }
-
-    return logged.reduce((sum, totals) => sum + (totals[key] ?? 0), 0) / logged.length;
-  };
+  // Null when no logged day gave a value, which also covers a week with nothing logged.
+  const totalOf = (key: WeekNutrientKey): number | null =>
+    logged.every((totals) => totals[key] === null)
+      ? null
+      : logged.reduce((sum, totals) => sum + (totals[key] ?? 0), 0);
 
   return {
     weekStart: addCalendarDays(today, -daysSinceMonday(today)),
     daysLogged: logged.length,
     nutrients: WEEK_NUTRIENT_KEYS.map((key) => {
-      const dailyAverage = averageOf(key);
+      const weekTotal = totalOf(key);
 
       return {
         key,
-        dailyAverage,
-        weekTotal: dailyAverage === null ? null : dailyAverage * logged.length,
+        dailyAverage: weekTotal === null ? null : weekTotal / logged.length,
+        weekTotal,
         dailyTarget: isTargetKey(key) ? positiveOrNull(targets[key]) : null,
       };
     }),

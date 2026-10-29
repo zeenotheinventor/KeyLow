@@ -1,5 +1,5 @@
 import { REFRESH_PER_100_LABELS } from "./recipeRefresh";
-import { describeWeekGridTitle } from "./weekGrid";
+import { WEEK_GRID, describeWeekGridTitle } from "./weekGrid";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { NutrientRow } from "./foodDetail";
@@ -56,4 +56,4 @@ export const weekAverageRows = (
 
 /** The page's subtitle, from the week's Monday: "Week of Mon 12 Oct, Mon to today". */
 export const describeWeekAveragesSubtitle = (weekStart: string): string =>
-  `${describeWeekGridTitle(weekStart)}, Mon to today`;
+  `${describeWeekGridTitle(weekStart)}, ${WEEK_GRID.averageCaption}`;

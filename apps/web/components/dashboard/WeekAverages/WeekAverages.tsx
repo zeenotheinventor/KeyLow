@@ -77,10 +77,11 @@ export function WeekAverages({ today }: WeekAveragesProps) {
     today,
     targetKcal: targets.kcal,
   });
-  const averageOf = (key: "protein_g" | "carbs_g" | "fat_g") => ({
-    eaten: averages.nutrients.find((row) => row.key === key)?.dailyAverage ?? 0,
-    target: targets[key] ?? 0,
-  });
+  const barOf = (key: "protein_g" | "carbs_g" | "fat_g") => {
+    const nutrient = averages.nutrients.find((row) => row.key === key);
+
+    return { eaten: nutrient?.dailyAverage ?? 0, target: nutrient?.dailyTarget ?? 0 };
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -103,9 +104,9 @@ export function WeekAverages({ today }: WeekAveragesProps) {
               />
               <span className="h-px bg-border" />
               <MacroBars
-                protein={averageOf("protein_g")}
-                carbs={averageOf("carbs_g")}
-                fat={averageOf("fat_g")}
+                protein={barOf("protein_g")}
+                carbs={barOf("carbs_g")}
+                fat={barOf("fat_g")}
               />
             </section>
           </Card>

@@ -62,7 +62,7 @@ const OPENS = {
 
 /**
  * The name of the whole card, which is one pressable surface: both apps open the weekly averages page,
- * and the diary and the week view are kept for a card that opens them. "This week, open the diary. Average 1,681 of 2,200 kilocalories a day, from 4 days with food
+ * and the diary and the week view are kept for a card that opens them. "This week, open your weekly averages. Average 1,681 of 2,200 kilocalories a day, from 4 days with food
  * logged. 2 of 4 days complete." With no target it drops "of 2,200", and with nothing logged it says so.
  */
 export const describeThisWeekCard = (summary: WeekCardNumbers, opens: keyof typeof OPENS): string =>
