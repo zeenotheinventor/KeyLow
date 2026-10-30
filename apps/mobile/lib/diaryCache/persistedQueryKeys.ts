@@ -10,7 +10,10 @@ import { keys } from "@keylow/api-client";
  * opens too. The last performance of an exercise is not kept: it is only read while logging, which
  * needs a connection. The current training goal is kept as its row, the priorities of the muscles it
  * ranks are worked out from it at read time. The weekly exercise trends are kept as narrow rows, for a
- * routine and for one exercise. No search is kept, the training ones included (exercises by text).
+ * routine and for one exercise. The accepted suggestions of a week are kept as rows, since the projection
+ * counts them as planned and is worked out from them at read time. Accepting and undoing need a
+ * connection, so nothing is queued or replayed from here. No search is kept, the training ones included
+ * (exercises by text).
  */
 export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   keys.diary.days,
@@ -44,4 +47,6 @@ export const PERSISTED_QUERY_KEYS: readonly (readonly unknown[])[] = [
   // Routines page and the graph open without a connection.
   keys.training.exerciseTrendAll,
   keys.training.routineTrendAll,
+  // The accepted suggestions of each week, as rows, so the projection counts them without a connection.
+  keys.training.acceptedSuggestionsAll,
 ];

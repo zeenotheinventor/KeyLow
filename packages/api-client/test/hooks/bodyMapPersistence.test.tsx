@@ -15,11 +15,13 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import { useBodyMap } from "../../src/hooks/useBodyMap";
 import { useDashboardBodyMap } from "../../src/hooks/useDashboardBodyMap";
+import { useMuscleDetail } from "../../src/hooks/useMuscleDetail";
 import { useMuscleList } from "../../src/hooks/useMuscleList";
 import { KeyLowProvider } from "../../src/KeyLowProvider";
 import { keys } from "../../src/queryKeys";
 import { createTestClient } from "../createTestClient";
-import { GOLDEN_WEEK_START, goldenWeekData } from "../support/goldenWeekRows";
+import { THURSDAY, acceptedRow } from "../support/acceptedSuggestions";
+import { GOLDEN_WEEK_START, goldenSessions, goldenWeekData } from "../support/goldenWeekRows";
 import { createQueryClient } from "../support/queryClients";
 import { installTrainingFake } from "../support/training";
 import { createWrapper } from "../support/wrapper";
@@ -402,5 +404,87 @@ describe("the body map in a persisted cache", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(result.current).toMatchObject({ data: undefined, isPending: true, isError: false });
+  });
+
+  describe("an accepted suggestion", () => {
+    // Zee's agreement on KEY-396: 3 sets of incline dumbbell press are accepted into Thursday's Legs on
+    // Wednesday. Monday and Tuesday are logged, so Thursday is still ahead.
+    const sessionsBeforeThursday = goldenSessions.filter(
+      (session) => session.local_date < THURSDAY,
+    );
+    const wednesdayWithPress = (accepted: unknown[] = [acceptedRow()]) => ({
+      ...goldenWeekData,
+      sessions: sessionsBeforeThursday,
+      sets: sessionsBeforeThursday.flatMap((session) => session.workout_sets),
+      acceptedSuggestions: accepted,
+    });
+
+    const useDetailAt = (now: string) =>
+      useMuscleDetail("chest_upper", { view: "projected", weekStart: GOLDEN_WEEK_START, now });
+
+    it("should store the rows of the week and nothing worked out from them, under a key of the date alone", async () => {
+      const { stored } = await openOnline(wednesdayWithPress());
+
+      const query = stored.queries.find(
+        ({ queryKey }) =>
+          JSON.stringify(queryKey) ===
+          JSON.stringify(keys.training.acceptedSuggestions(GOLDEN_WEEK_START)),
+      );
+      expect(query?.state.data).toMatchObject({
+        suggestions: [{ local_date: THURSDAY }],
+        skipped: [],
+      });
+      for (const derived of ["projectedWeeklySets", "actualWeeklySets", "gap", "weeklySets"]) {
+        expect(namesIn(query?.state.data)).not.toContain(derived);
+      }
+    });
+
+    /** The muscle sheet worked out online at `now` for these rows, which the restored cache must agree with. */
+    const onlineDetailAt = async (data: ReturnType<typeof wednesdayWithPress>, now: string) => {
+      installTrainingFake(server, data);
+      const { wrapper } = createWrapper();
+      const { result } = renderHook(() => useDetailAt(now), { wrapper });
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      server.resetHandlers();
+      return result.current.data;
+    };
+
+    it("should be counted as planned at a later moment from the restored rows with the network down", async () => {
+      const onlineWith = await onlineDetailAt(wednesdayWithPress(), SATURDAY_NOON);
+      const onlineWithout = await onlineDetailAt(wednesdayWithPress([]), SATURDAY_NOON);
+      const { fake, stored } = await openOnline(wednesdayWithPress());
+      const { wrapper } = reopenOffline(fake, stored);
+      const requestsBefore = fake.requests.length;
+
+      const { result } = renderHook(() => useDetailAt(SATURDAY_NOON), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      expect(result.current.data?.weeklySets.planned).toBeCloseTo(12.6, 2);
+      expect(result.current.data).toStrictEqual(onlineWith);
+      expect(result.current.data?.heatPercent).toBeGreaterThan(onlineWithout?.heatPercent ?? 0);
+      expect(fake.requests).toHaveLength(requestsBefore);
+    });
+
+    it("should show the projection as with none, from a cache saved before accepted suggestions were kept, with the network down", async () => {
+      const { fake, stored } = await openOnline(wednesdayWithPress([]));
+      const acceptedKey = JSON.stringify(keys.training.acceptedSuggestions(GOLDEN_WEEK_START));
+      const withoutAccepted = {
+        ...stored,
+        queries: stored.queries.filter(({ queryKey }) => JSON.stringify(queryKey) !== acceptedKey),
+      };
+      expect(withoutAccepted.queries).toHaveLength(stored.queries.length - 1);
+      const { wrapper } = reopenOffline(fake, withoutAccepted);
+
+      const { result } = renderHook(() => useDetailAt(SATURDAY_NOON), { wrapper });
+
+      await waitFor(() => {
+        expect(result.current.data).toBeDefined();
+      });
+      expect(result.current.data?.weeklySets.planned).toBeCloseTo(9.6, 2);
+    });
   });
 });

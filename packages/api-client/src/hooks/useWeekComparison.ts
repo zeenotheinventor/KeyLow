@@ -4,9 +4,11 @@ import { useCallback } from "react";
 
 import { useSupabase } from "../KeyLowProvider";
 import { keys } from "../queryKeys";
+import { acceptedSuggestionsOf } from "./acceptedSuggestionsOf";
 import { planRoutineOf } from "./planRoutineOf";
 import { retryUnlessRangeError } from "./retryUnlessRangeError";
 import { toTrainingReadResult } from "./trainingReadResult";
+import { useAcceptedSuggestions } from "./useAcceptedSuggestions";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useProfileTimeZone } from "./useProfileTimeZone";
 import { listWeekSessions } from "../repos/training";
@@ -28,11 +30,12 @@ const NO_ROUTINE: PlanRoutine = { days: [] };
  * restored on any later day still has it, and a different week's rows never stand in for this one.
  *
  * What is cached is rows: the week's live sessions, each with its live sets, under
- * `keys.training.weekSessions(weekStart)`. `projectWeek` and `compareWeek` run in `select`, over those
- * rows and the active routine (`useActiveRoutine`, which `useMuscleState` shares), so the comparison is
- * worked out at read time, online or not. The result is pending until the time zone, the routine and
- * the sessions are all there. `enabled` false makes no request at all. A date that is not a Monday
- * fails without a request, as an error that is not retried.
+ * `keys.training.weekSessions(weekStart)`, and the week's accepted suggestions
+ * (`useAcceptedSuggestions`), which count as planned (ADR 0005). `projectWeek` and `compareWeek` run in
+ * `select`, over those rows and the active routine (`useActiveRoutine`, which `useMuscleState` shares),
+ * so the comparison is worked out at read time, online or not. The result is pending until the time
+ * zone, the routine, the accepted suggestions and the sessions are all there. `enabled` false makes no
+ * request at all. A date that is not a Monday fails without a request, as an error that is not retried.
  */
 export function useWeekComparison(
   weekStart: string,
@@ -41,27 +44,29 @@ export function useWeekComparison(
   const client = useSupabase();
   const timeZone = useProfileTimeZone({ enabled });
   const routine = useActiveRoutine({ enabled });
+  const accepted = useAcceptedSuggestions(weekStart, { enabled });
 
   const zone = timeZone.data;
   const activeRoutine = routine.data;
+  const acceptedSuggestions = acceptedSuggestionsOf(accepted);
 
   const select = useCallback(
     (sessions: WeekSession[]) => {
       // The day the routine was made active is read in the user's zone, so there is no comparison until
       // the zone is there. The result stays pending then, as it does for the other training hooks.
-      if (!zone) {
+      if (!zone || acceptedSuggestions === undefined) {
         return undefined;
       }
       const { actual, projected } = projectWeek(
         planRoutineOf(activeRoutine ?? null, zone) ?? NO_ROUTINE,
         weekStart,
         zone,
-        { sessions, sets: sessions.flatMap((session) => session.sets) },
+        { sessions, sets: sessions.flatMap((session) => session.sets), acceptedSuggestions },
         COMPARE_PARAMS_V2,
       );
       return compareWeek(actual, projected, COMPARE_PARAMS_V2);
     },
-    [weekStart, zone, activeRoutine],
+    [weekStart, zone, activeRoutine, acceptedSuggestions],
   );
 
   const sessions = useQuery<
@@ -77,5 +82,5 @@ export function useWeekComparison(
     retry: retryUnlessRangeError,
   });
 
-  return toTrainingReadResult(sessions, [timeZone, routine], [routine]);
+  return toTrainingReadResult(sessions, [timeZone, routine, accepted], [routine]);
 }

@@ -20,6 +20,7 @@ import { planRoutineOf } from "./planRoutineOf";
 
 import type { ActiveRoutine, TrainingSet, WeekSession } from "../repos/trainingSchemas";
 import type {
+  AcceptedSuggestion,
   BodyMapView,
   DayMoments,
   MuscleDetail,
@@ -50,6 +51,8 @@ export type BodyMapRows = {
   sets: readonly TrainingSet[];
   /** The live sessions of the week with their sets. */
   sessions: readonly WeekSession[];
+  /** The week's live accepted suggestions, which the projection counts as planned. None when the number does not project. */
+  acceptedSuggestions: readonly AcceptedSuggestion[];
 };
 
 /** Where on the week a body map reads: the week, the current moment and the scrubber day picked, if any. */
@@ -96,7 +99,11 @@ function projectionOf(rows: BodyMapRows, weekStart: string): WeekProjection {
     planRoutineOf(rows.routine, rows.timeZone) ?? NO_ROUTINE,
     weekStart,
     rows.timeZone,
-    { sessions: rows.sessions, sets: rows.sessions.flatMap((session) => session.sets) },
+    {
+      sessions: rows.sessions,
+      sets: rows.sessions.flatMap((session) => session.sets),
+      acceptedSuggestions: rows.acceptedSuggestions,
+    },
     COMPARE_PARAMS_V2,
   );
 }

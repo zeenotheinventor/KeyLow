@@ -150,10 +150,15 @@ export const routineRow = (overrides: Record<string, unknown> = {}) => ({
 });
 
 export type TrainingTable =
-  "workout_sets" | "workout_sessions" | "routines" | "profiles" | "training_goals";
+  | "workout_sets"
+  | "workout_sessions"
+  | "routines"
+  | "profiles"
+  | "training_goals"
+  | "accepted_suggestions";
 
 /**
- * A stand-in for the three training tables behind MSW. A read answers the rows it was given (the sets
+ * A stand-in for the training tables behind MSW. A read answers the rows it was given (the sets
  * paged by `offset` and `limit` as PostgREST does) and records the request. `failWith` makes the next
  * reads fail with a database error that quotes a value, and `goOffline` makes them fail as a
  * connection that is down does, so a test can look for a value in what the repo throws.
@@ -166,6 +171,8 @@ export function installTrainingFake(
     routine?: unknown;
     /** The user's current `training_goals` row, or none (null or left out) when they have no goal. */
     goal?: unknown;
+    /** The user's live `accepted_suggestions` rows, or none when left out. Every row is answered, whatever the week asked for. */
+    acceptedSuggestions?: unknown[];
     /** The profile's IANA zone the hooks read the user's days in. Europe/London unless given. */
     timeZone?: string;
   } = {},
@@ -220,6 +227,9 @@ export function installTrainingFake(
         data.goal === undefined || data.goal === null ? [] : [data.goal],
       );
     }),
+    http.get(`${REST_URL}/accepted_suggestions`, ({ request }) =>
+      answer("accepted_suggestions", request, data.acceptedSuggestions ?? []),
+    ),
     http.get(`${REST_URL}/routines`, ({ request }) =>
       answer(
         "routines",
@@ -242,7 +252,14 @@ export function installTrainingFake(
               tables:
                 tables.length > 0
                   ? tables
-                  : ["workout_sets", "workout_sessions", "routines", "profiles", "training_goals"],
+                  : [
+                      "workout_sets",
+                      "workout_sessions",
+                      "routines",
+                      "profiles",
+                      "training_goals",
+                      "accepted_suggestions",
+                    ],
             };
     },
     goOffline: (offline = true) => {

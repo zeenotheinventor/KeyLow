@@ -187,6 +187,10 @@ export { useToggleShoppingItem } from "./useToggleShoppingItem";
 export type { ToggleShoppingItemInput } from "./useToggleShoppingItem";
 export { useRemoveShoppingItem } from "./useRemoveShoppingItem";
 export { useClearTickedItems } from "./useClearTickedItems";
+export { useAcceptedSuggestions } from "./useAcceptedSuggestions";
+export { useAcceptSuggestion } from "./useAcceptSuggestion";
+export type { AcceptSuggestionInput } from "./useAcceptSuggestion";
+export { useUndoAcceptedSuggestion } from "./useUndoAcceptedSuggestion";
 export { useSuggestion } from "./useSuggestion";
 export type {
   SuggestionRead,

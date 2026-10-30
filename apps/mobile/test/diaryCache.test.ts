@@ -94,6 +94,10 @@ describe("which training queries the diary cache keeps", () => {
     ["the weight unit a restored session shows its loads in", keys.profiles.weightUnit],
     ["the current training goal", keys.training.goals],
     [
+      "the accepted suggestions of a week, which the projection counts as planned",
+      keys.training.acceptedSuggestions("2026-10-12"),
+    ],
+    [
       "the rows of one exercise's weekly trend",
       keys.training.exerciseTrend("77777777-7777-4777-8777-777777777777", "2026-09-28"),
     ],
@@ -123,6 +127,14 @@ describe("which training queries the diary cache keeps", () => {
 
   it("should not keep a week of the history whose data is older than the longest the cache may be kept", () => {
     const stale = queryFor(keys.training.history("2026-09-28"), {
+      updatedAt: Date.now() - DIARY_CACHE_MAX_AGE_MS - HOUR_MS,
+    });
+
+    expect(isPersistedQuery(stale)).toBe(false);
+  });
+
+  it("should not keep the accepted suggestions of a week whose data is older than the longest the cache may be kept", () => {
+    const stale = queryFor(keys.training.acceptedSuggestions("2026-09-28"), {
       updatedAt: Date.now() - DIARY_CACHE_MAX_AGE_MS - HOUR_MS,
     });
 

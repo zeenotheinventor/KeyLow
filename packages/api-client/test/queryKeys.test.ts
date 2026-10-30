@@ -602,3 +602,41 @@ describe("keys.program", () => {
     }
   });
 });
+
+describe("keys.training accepted suggestions", () => {
+  it("should key the accepted suggestions of a week by the Monday alone, under the training root", () => {
+    expect(keys.training.acceptedSuggestionsAll).toEqual(["training", "accepted-suggestions"]);
+    expect(keys.training.acceptedSuggestions("2026-10-12")).toEqual([
+      "training",
+      "accepted-suggestions",
+      "2026-10-12",
+    ]);
+    expect(keys.training.acceptedSuggestions("2026-10-12").slice(0, 2)).toEqual(
+      keys.training.acceptedSuggestionsAll,
+    );
+  });
+
+  it("should hold fixed words and a date only, never an exercise, a muscle or a suggestion", () => {
+    const allowed = /^(training|accepted-suggestions|\d{4}-\d{2}-\d{2})$/;
+    for (const part of keys.training.acceptedSuggestions("2026-10-12")) {
+      expect(part).toMatch(allowed);
+    }
+  });
+
+  it("should not sit under a persisted family of another kind, and no other key sits under it", () => {
+    const others = [
+      keys.training.setsAll,
+      keys.training.weekSessionsAll,
+      keys.training.historyAll,
+      keys.training.sessionsAll,
+      keys.training.goals,
+      keys.training.goalsHistory,
+      keys.training.suggestionLibraryAll,
+    ];
+    const key = keys.training.acceptedSuggestions("2026-10-12");
+    for (const prefix of others) {
+      expect(key.slice(0, prefix.length)).not.toEqual(prefix);
+      expect(prefix.slice(0, 2)).not.toEqual(keys.training.acceptedSuggestionsAll);
+    }
+  });
+});
