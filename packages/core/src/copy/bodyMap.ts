@@ -9,13 +9,16 @@ import {
 } from "../dates/calendarDay";
 import { formatClockTime } from "../dates/formatClockTime";
 import { toLocalDate } from "../dates/toLocalDate";
+import { GAP_VALUES } from "../training/bodyMapValues";
+import { MUSCLE_IDS } from "../training/muscles";
 
 import type { BodyArtworkFigure, BodyArtworkSide } from "../training/bodyArtwork";
-import type { BodyMapView, GAP_VALUES, WarmMuscle } from "../training/bodyMapValues";
+import type { BodyMapView, WarmMuscle } from "../training/bodyMapValues";
 import type { MuscleListRow } from "../training/muscleList";
 import type { MuscleId } from "../training/muscles";
 import type { VolumeStatus } from "../training/muscleState";
 import type { VolumeBands } from "../training/params";
+import type { WeekDayStatus } from "../training/weekPlanDays";
 
 /*
  * The words of the body map (KEY-340) as the boards `body · *`, `web-body · *`, `dashboard · training-card`
@@ -364,6 +367,47 @@ export const describeGapNote = (
   return `${BODY_MAP.notes.gap} ${describePlannedSessions(missedSessions)} ${verb} missed, so ${behindMuscles} are behind.`;
 };
 
+/** A day of the week as the gap note reads it: `BodyMapDay` of api-client has these fields and more. */
+export type GapNoteDay = Readonly<{
+  /** The calendar day, `YYYY-MM-DD`. */
+  date: string;
+  status: WeekDayStatus;
+  /** The name of the routine day planned for the date, or null when none is. */
+  plannedDayName: string | null;
+}>;
+
+export type GapNoteInput = Readonly<{
+  /** The gap value of each muscle, as `gapValues` writes it: an index in `GAP_VALUES`. */
+  values: Readonly<Partial<Record<MuscleId, number>>>;
+  days: readonly GapNoteDay[];
+  /** True from the last day of the week, when the gap counts the whole plan and not only the days so far. */
+  countsWholeWeek: boolean;
+}>;
+
+const BEHIND = GAP_VALUES.indexOf("behind");
+
+/**
+ * The note under the Gap figures: `describeGapNote`, told which planned days passed without a session and
+ * which muscles read Behind (named in lower case, in the order of the muscle list), and then the line that
+ * says the gap counts the days so far while the week is on. With no muscle behind there is nothing for a
+ * missed session to have left, so it is not named.
+ */
+export const describeGap = ({ values, days, countsWholeWeek }: GapNoteInput): string => {
+  const behindMuscles = joinInWords(
+    MUSCLE_IDS.filter((muscle) => values[muscle] === BEHIND).map((muscle) =>
+      MUSCLE_NAMES[muscle].toLowerCase(),
+    ),
+  );
+  const missedSessions =
+    behindMuscles === ""
+      ? []
+      : days
+          .filter(({ status }) => status === "missed")
+          .map(({ date, plannedDayName }) => ({ localDate: date, routineDayName: plannedDayName }));
+  const note = describeGapNote(missedSessions, behindMuscles);
+  return countsWholeWeek ? note : `${note} ${BODY_MAP.notes.gapSoFar}`;
+};
+
 export type BodyFigureLabelInput = Readonly<{
   scale: BodyMapScale;
   view: BodyMapView;
@@ -447,6 +491,100 @@ export const describeScrubberDay = ({
     accessibleName: parts.join(", "),
   };
 };
+
+/** What a day's 6 point dot says: a filled dot, an accent dot, a ring, or nothing. */
+export type DayScrubberDot = "logged" | "running" | "planned" | "none";
+
+export type DayScrubberDay = {
+  /** The calendar day, `YYYY-MM-DD`. */
+  date: string;
+  /** The column head: "Mon". */
+  weekday: string;
+  /** The day of the month: "12". */
+  dayOfMonth: string;
+  /** The whole day for a screen reader: "Thursday 15 October, today, Legs in progress". */
+  accessibleName: string;
+  dot: DayScrubberDot;
+  isToday: boolean;
+  /** The day cannot be chosen in the view shown. It is drawn at 40 percent and does nothing when pressed. */
+  isDisabled: boolean;
+};
+
+/** A day of the week as the scrubber reads it: `BodyMapDay` of api-client has these fields and more. */
+export type ScrubberDaySource = Readonly<{
+  /** The calendar day, `YYYY-MM-DD`. */
+  date: string;
+  isToday: boolean;
+  status: WeekDayStatus;
+  /** The name of the routine day planned for the date, or null when none is. */
+  plannedDayName: string | null;
+  /** The name of the routine day a logged or running session was done as, or null when none is. */
+  sessionDayName: string | null;
+  /** Whether the day can be picked in the view asked for. */
+  selectable: boolean;
+}>;
+
+const SCRUBBER_DOTS: Readonly<Record<WeekDayStatus, DayScrubberDot>> = {
+  logged: "logged",
+  extra: "logged",
+  in_progress: "running",
+  planned: "planned",
+  today: "planned",
+  missed: "none",
+  rest: "none",
+};
+
+const scrubberStateOf = ({
+  status,
+  plannedDayName,
+  sessionDayName,
+}: ScrubberDaySource): ScrubberDayInput["state"] => {
+  switch (status) {
+    case "logged":
+    case "extra":
+      return { kind: "logged", routineDayName: sessionDayName };
+    case "in_progress":
+      return { kind: "in_progress", routineDayName: sessionDayName };
+    case "planned":
+    case "today":
+      return { kind: "planned", routineDayName: plannedDayName };
+    case "missed":
+      return { kind: "missed", routineDayName: plannedDayName };
+    case "rest":
+      return { kind: "rest" };
+  }
+};
+
+/**
+ * The seven days of the hook as the scrubber draws them. A logged day, an extra session and a day a late make-up
+ * replaced (KEY-531) read logged and are named by the routine day the session was done as, which Pick day
+ * (KEY-505) can make other than the one planned. A planned day and today read planned, with the day planned.
+ * A missed day and a rest day have no dot, as the Train week strip draws them, and say so in their name. A day
+ * the view shown cannot choose is disabled, and its name says Projected has it, or that Projected needs a routine
+ * when there is none.
+ */
+export const scrubberDaysOf = (
+  projectedAvailable: boolean,
+  days: readonly ScrubberDaySource[],
+): DayScrubberDay[] =>
+  days.map((day) => {
+    const { weekday, dayOfMonth, accessibleName } = describeScrubberDay({
+      localDate: day.date,
+      isToday: day.isToday,
+      state: scrubberStateOf(day),
+      onlyInProjected: !day.selectable,
+      projectedNeedsRoutine: !projectedAvailable,
+    });
+    return {
+      date: day.date,
+      weekday,
+      dayOfMonth,
+      accessibleName,
+      dot: SCRUBBER_DOTS[day.status],
+      isToday: day.isToday,
+      isDisabled: !day.selectable,
+    };
+  });
 
 /** A count of hours: "1 hour", "31 hours". */
 export const describeHours = (hours: number): string =>

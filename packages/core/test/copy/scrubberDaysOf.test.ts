@@ -1,11 +1,12 @@
-import { scrubberDaysOf } from "../../components/BodyMapScreen/scrubberDays";
+import { describe, expect, it } from "vitest";
 
-import type { BodyMapDay } from "@keylow/api-client";
+import { scrubberDaysOf } from "../../src/copy";
 
-function dayOf(overrides: Partial<BodyMapDay>): BodyMapDay {
+import type { ScrubberDaySource } from "../../src/copy";
+
+function dayOf(overrides: Partial<ScrubberDaySource>): ScrubberDaySource {
   return {
     date: "2026-10-13",
-    at: "2026-10-13T19:00:00.000Z",
     isToday: false,
     status: "rest",
     plannedDayName: null,

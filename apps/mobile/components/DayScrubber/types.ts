@@ -1,20 +1,6 @@
-/** What a day's 6 point dot says: a filled dot, an accent dot, a ring, or nothing. */
-export type DayScrubberDot = "logged" | "running" | "planned" | "none";
+import type { DayScrubberDay } from "@keylow/core/copy";
 
-export type DayScrubberDay = {
-  /** The calendar day, `YYYY-MM-DD`. */
-  date: string;
-  /** The column head: "Mon". */
-  weekday: string;
-  /** The day of the month: "12". */
-  dayOfMonth: string;
-  /** The whole day for a screen reader: "Thursday 15 October, today, Legs in progress". */
-  accessibleName: string;
-  dot: DayScrubberDot;
-  isToday: boolean;
-  /** The day cannot be chosen in the view shown. It is drawn at 40 percent and does nothing when pressed. */
-  isDisabled: boolean;
-};
+export type { DayScrubberDay, DayScrubberDot } from "@keylow/core/copy";
 
 export type DayScrubberProps = {
   /** The days of the week, Monday first. */
