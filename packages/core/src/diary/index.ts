@@ -71,6 +71,7 @@ export {
 export type { LiveFoodPortions } from "./snapshotAmount";
 export {
   amountOnUnitChange,
+  reselectPickedUnit,
   reselectUnit,
   startingAmount,
   unitValueOf,

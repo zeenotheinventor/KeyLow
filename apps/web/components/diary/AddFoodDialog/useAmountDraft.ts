@@ -1,9 +1,10 @@
-import { useFoodWithPortions } from "@keylow/api-client";
+import { useFoodWithPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import {
   amountOnUnitChange,
   foodNeedsReview,
   pickerChoices,
   previewAmount,
+  reselectPickedUnit,
   startingAmount,
 } from "@keylow/core/diary";
 import { useState } from "react";
@@ -12,7 +13,8 @@ import type { FoodWithPortionsState } from "@keylow/api-client";
 import type { AmountPortion, AmountPreview, UnitOption } from "@keylow/core/diary";
 import type { Food } from "@keylow/core/schemas";
 
-type Edits = { foodId: string; quantityText?: string; unitValue?: string };
+/** `unitLabel` is the words on the chip pressed, which finds it again when a refresh of the food gives its portions new ids. */
+type Edits = { foodId: string; quantityText?: string; unitValue?: string; unitLabel?: string };
 
 /** The amount step once its food has loaded: what the person has typed and what that comes to. */
 export type ReadyAmountDraft = {
@@ -41,6 +43,8 @@ export type AmountDraft =
  */
 export function useAmountDraft(foodId: string | undefined): AmountDraft {
   const loaded = useFoodWithPortions(foodId ?? "");
+  // An old branded food asks for its refresh, so the portions it has gained since appear as chips.
+  useRefreshOutdatedOffFood(loaded.status === "ready" ? loaded.food : undefined);
   const [edits, setEdits] = useState<Edits | undefined>(undefined);
 
   if (foodId === undefined) {
@@ -55,8 +59,32 @@ export function useAmountDraft(foodId: string | undefined): AmountDraft {
   const choices = pickerChoices(food, loaded.portions);
   const start = startingAmount(food, choices.portions);
   const ownEdits = edits?.foodId === foodId ? edits : undefined;
-  const quantityText = ownEdits?.quantityText ?? start.quantity;
-  const unitValue = ownEdits?.unitValue ?? start.unitValue;
+  // A chip pressed before a refresh of the food landed is found again by its label, with the amount kept.
+  const picked = reselectPickedUnit(
+    ownEdits?.unitValue === undefined
+      ? undefined
+      : {
+          unitValue: ownEdits.unitValue,
+          label: ownEdits.unitLabel ?? "",
+          quantityText: ownEdits.quantityText ?? start.quantity,
+        },
+    choices.options,
+    start.unitValue,
+  );
+  const quantityText = picked?.quantity ?? ownEdits?.quantityText ?? start.quantity;
+  const unitValue = picked?.unitValue ?? start.unitValue;
+  const labelOf = (value: string) =>
+    choices.options.find((option) => option.value === value)?.label ?? "";
+  // The unit and amount the dialog opened on are kept from the first render of this food, so a refresh that
+  // makes another portion the default does not move an untouched dialog, or re-read a typed amount in another unit.
+  if (ownEdits === undefined) {
+    setEdits({
+      foodId,
+      unitValue: start.unitValue,
+      unitLabel: labelOf(start.unitValue),
+      quantityText: start.quantity,
+    });
+  }
 
   return {
     status: "ready",
@@ -68,13 +96,21 @@ export function useAmountDraft(foodId: string | undefined): AmountDraft {
     unitValue,
     needsReview: foodNeedsReview(food),
     setQuantityText: (text) => {
-      setEdits({ ...ownEdits, foodId, quantityText: text });
+      setEdits({
+        ...ownEdits,
+        foodId,
+        ...(picked === undefined
+          ? {}
+          : { unitValue: picked.unitValue, unitLabel: labelOf(picked.unitValue) }),
+        quantityText: text,
+      });
     },
     setUnitValue: (value) => {
       setEdits({
         ...ownEdits,
         foodId,
         unitValue: value,
+        unitLabel: labelOf(value),
         quantityText: amountOnUnitChange(unitValue, value, quantityText),
       });
     },

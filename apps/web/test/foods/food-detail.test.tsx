@@ -5,16 +5,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeFood, makePortion } from "./support";
 
 import type { FoodWithPortionsState } from "@keylow/api-client";
+import type { Food } from "@keylow/core/schemas";
 
 import { FoodDetail } from "@/components/foods/FoodDetail";
 
-const { useFoodWithPortions } = vi.hoisted(() => ({
+const { useFoodWithPortions, useRefreshOutdatedOffFood } = vi.hoisted(() => ({
   useFoodWithPortions: vi.fn<(id: string) => FoodWithPortionsState>(),
+  useRefreshOutdatedOffFood: vi.fn<(food: Food | undefined) => void>(),
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
   useFoodWithPortions,
+  useRefreshOutdatedOffFood,
 }));
 
 const RAW_FAILURE = "Could not load the food: JWT expired for role authenticated";
@@ -72,6 +75,25 @@ describe("FoodDetail", () => {
       expect(screen.getByRole("link", { name: "Back to foods" }).getAttribute("href")).toBe(
         "/foods",
       );
+    });
+  });
+
+  describe("the refresh of an old branded food", () => {
+    it("should hand the loaded food to the refresh", () => {
+      const food = makeFood();
+      showFood(food);
+
+      expect(useRefreshOutdatedOffFood).toHaveBeenLastCalledWith(food);
+    });
+
+    it.each<[string, FoodWithPortionsState]>([
+      ["loading", { status: "loading" }],
+      ["not found", { status: "notFound" }],
+      ["failing to load", { status: "error", debugMessage: RAW_FAILURE }],
+    ])("should hand the refresh no food while the food is %s", (_name, state) => {
+      showState(state);
+
+      expect(useRefreshOutdatedOffFood).toHaveBeenCalledWith(undefined);
     });
   });
 

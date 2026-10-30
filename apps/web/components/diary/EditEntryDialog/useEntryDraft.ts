@@ -1,4 +1,10 @@
-import { useFood, useFoodPortions, useProfileTimeZone, useUpdateEntry } from "@keylow/api-client";
+import {
+  useFood,
+  useFoodPortions,
+  useProfileTimeZone,
+  useRefreshOutdatedOffFood,
+  useUpdateEntry,
+} from "@keylow/api-client";
 import { formatClockTime } from "@keylow/core/dates";
 import {
   amountOnUnitChange,
@@ -8,6 +14,7 @@ import {
   entryTimeChange,
   foodChangedSinceLogged,
   previewAmount,
+  reselectPickedUnit,
   snapshotAmountStart,
   snapshotAsFood,
 } from "@keylow/core/diary";
@@ -25,7 +32,14 @@ import type {
 
 import { useQuickAddDraft } from "@/components/diary/QuickAddFields";
 
-type Edits = { entryId: string; quantityText?: string; unitValue?: string; chosenTime?: string };
+/** `unitLabel` is the words on the chip pressed, which finds it again when a refresh of the food gives its portions new ids. */
+type Edits = {
+  entryId: string;
+  quantityText?: string;
+  unitValue?: string;
+  unitLabel?: string;
+  chosenTime?: string;
+};
 
 export type EntryDraft = {
   /** The entry's own food values, so the hero and the chips come from what it was logged with. */
@@ -103,6 +117,8 @@ export function useEntryDraft(entry: FoodLogEntry | QuickLogEntry): EntryDraft {
   // The food's portions are offered as chips only while the food is there to take them from.
   const isFoodThere =
     liveFood.data !== undefined && liveFood.data !== null && liveFood.data.deleted_at === null;
+  // An old branded food asks for its refresh. Only the chips follow it: the entry keeps its own snapshot.
+  useRefreshOutdatedOffFood(isFoodThere ? liveFood.data : undefined);
   const livePortions = useFoodPortions(isFoodEntry && isFoodThere ? entry.snapshot.ref : undefined);
 
   const ownEdits = edits?.entryId === entry.id ? edits : undefined;
@@ -118,8 +134,22 @@ export function useEntryDraft(entry: FoodLogEntry | QuickLogEntry): EntryDraft {
             : { portions: livePortions.data, loggedPortionId: entry.portion_id },
         );
   const start = snapshot === undefined ? undefined : snapshotAmountStart(snapshot);
-  const quantityText = ownEdits?.quantityText ?? start?.quantity ?? "";
-  const unitValue = ownEdits?.unitValue ?? start?.unitValue ?? "g";
+  // A chip pressed before a refresh of the food landed is found again by its label, with the amount kept.
+  const picked = reselectPickedUnit(
+    ownEdits?.unitValue === undefined
+      ? undefined
+      : {
+          unitValue: ownEdits.unitValue,
+          label: ownEdits.unitLabel ?? "",
+          quantityText: ownEdits.quantityText ?? start?.quantity ?? "",
+        },
+    choices.options,
+    start?.unitValue ?? "g",
+  );
+  const quantityText = picked?.quantity ?? ownEdits?.quantityText ?? start?.quantity ?? "";
+  const unitValue = picked?.unitValue ?? start?.unitValue ?? "g";
+  const labelOf = (value: string) =>
+    choices.options.find((option) => option.value === value)?.label ?? "";
   const preview = previewAmount(food, choices.portions, unitValue, quantityText);
   const entryClock = formatClockTime(new Date(entry.logged_at), timeZone);
   const time = ownEdits?.chosenTime ?? entryClock;
@@ -167,10 +197,19 @@ export function useEntryDraft(entry: FoodLogEntry | QuickLogEntry): EntryDraft {
     isSaving,
     hasSaveError,
     setQuantityText: (text) => {
-      edit({ quantityText: text });
+      edit({
+        ...(picked === undefined
+          ? {}
+          : { unitValue: picked.unitValue, unitLabel: labelOf(picked.unitValue) }),
+        quantityText: text,
+      });
     },
     setUnitValue: (value) => {
-      edit({ unitValue: value, quantityText: amountOnUnitChange(unitValue, value, quantityText) });
+      edit({
+        unitValue: value,
+        unitLabel: labelOf(value),
+        quantityText: amountOnUnitChange(unitValue, value, quantityText),
+      });
     },
     setTime: (next) => {
       edit({ chosenTime: next });

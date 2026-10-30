@@ -109,3 +109,25 @@ export function reselectUnit(
     quantity: amountOnUnitChange(chosen.unitValue, fallbackUnitValue, chosen.quantityText),
   };
 }
+
+/**
+ * `reselectUnit` for a screen that only knows the chip a person pressed, if they pressed one. Nothing picked
+ * gives nothing, so the screen keeps showing where it starts. A picked chip that is still offered is given
+ * back as it is, with the typed amount. A picked chip whose id is gone (a refresh of a branded food gives its
+ * portions new ids) is found again by its label, or else replaced by `startUnitValue` with the amount starting
+ * again, as `reselectUnit` says.
+ */
+export function reselectPickedUnit(
+  picked: { unitValue: string; label: string; quantityText: string } | undefined,
+  options: readonly UnitOption[],
+  startUnitValue: string,
+): { unitValue: string; quantity: string } | undefined {
+  if (picked === undefined) {
+    return undefined;
+  }
+  if (options.some((option) => option.value === picked.unitValue)) {
+    return { unitValue: picked.unitValue, quantity: picked.quantityText };
+  }
+
+  return reselectUnit(picked, options, startUnitValue);
+}
