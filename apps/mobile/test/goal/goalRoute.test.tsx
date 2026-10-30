@@ -26,7 +26,7 @@ jest.mock(
 );
 
 // The addresses the questionnaire opens and sends to must be files under app/, or the control that leads
-// there opens the not-found screen. The summary's file comes with the ticket that builds it.
+// there opens the not-found screen.
 const appDirectory = join(__dirname, "..", "..", "app");
 
 describe("the goal addresses and the screens under app/", () => {
@@ -34,6 +34,7 @@ describe("the goal addresses and the screens under app/", () => {
     ["the flow", "goal/index.tsx"],
     ["the layout holding the answers", "goal/_layout.tsx"],
     ["a question", "goal/[step].tsx"],
+    ["the summary", "goal/summary.tsx"],
   ])("should have a route file for %s", (_name, file) => {
     expect(existsSync(join(appDirectory, file))).toBe(true);
   });
