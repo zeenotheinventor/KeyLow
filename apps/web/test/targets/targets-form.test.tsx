@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Targets } from "@keylow/api-client";
@@ -35,6 +35,12 @@ const filled: Targets = {
   carbs_g: 220,
   fat_g: 70,
   source: "manual",
+};
+
+const programme: Targets = {
+  ...filled,
+  source: "engine",
+  dowCaloriesKcal: [2200, 2200, 2200, 2200, 2200, 2200, 2200],
 };
 
 function renderForm(initial: Targets = filled) {
@@ -263,6 +269,121 @@ describe("TargetsForm", () => {
 
       expect(screen.getByRole("button", { name: "Saving" })).toHaveProperty("disabled", true);
     });
+  });
+
+  describe("while a programme sets the targets", () => {
+    const dialog = () => screen.getByRole("dialog", { name: "Turn off weekly check-ins?" });
+
+    it("should say that saving ends the programme, in place of the usual note", () => {
+      renderForm(programme);
+
+      expect(
+        screen.getByText("Saving your own targets ends your programme and its weekly check-in."),
+      ).toBeTruthy();
+      expect(screen.queryByText(/You set these yourself for now/)).toBeNull();
+    });
+
+    it("should ask before saving, and save nothing yet", () => {
+      renderForm(programme);
+
+      fireEvent.click(save());
+
+      expect(dialog()).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Save my targets" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Keep my programme" })).toBeTruthy();
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should ask from the Enter key in a field too", () => {
+      renderForm(programme);
+
+      fireEvent.submit(calories());
+
+      expect(dialog()).toBeTruthy();
+      expect(mutateAsync).not.toHaveBeenCalled();
+    });
+
+    it("should keep the programme and save nothing when asked to keep it", () => {
+      renderForm(programme);
+      fireEvent.click(save());
+
+      fireEvent.click(screen.getByRole("button", { name: "Keep my programme" }));
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(mutateAsync).not.toHaveBeenCalled();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should save once, say so in a toast and go back to More when confirmed", async () => {
+      renderForm(programme);
+      type(calories(), "2000");
+      fireEvent.click(save());
+
+      fireEvent.click(screen.getByRole("button", { name: "Save my targets" }));
+
+      await waitFor(() => {
+        expect(push).toHaveBeenCalledExactlyOnceWith("/more");
+      });
+      expect(mutateAsync).toHaveBeenCalledExactlyOnceWith({
+        kcal: 2000,
+        protein_g: 160,
+        carbs_g: 220,
+        fat_g: 70,
+      });
+      expect(screen.getByText("Targets saved")).toBeTruthy();
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+
+    it("should close the dialog and show the form's error when the save fails", async () => {
+      mutateAsync.mockRejectedValue(new Error("Could not save your targets (42501)"));
+      renderForm(programme);
+      fireEvent.click(save());
+
+      fireEvent.click(screen.getByRole("button", { name: "Save my targets" }));
+
+      expect((await screen.findByRole("alert")).textContent).toContain("Not saved.");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("should hold the dialog open, with Save busy, while the save is on its way", () => {
+      const { rerender } = renderForm(programme);
+      fireEvent.click(save());
+
+      updateTargets.isPending = true;
+      rerender(
+        <ToastProvider>
+          <TargetsForm initial={programme} />
+        </ToastProvider>,
+      );
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(within(dialog()).getByRole("button", { name: "Saving" })).toHaveProperty(
+        "disabled",
+        true,
+      );
+      expect(dialog()).toBeTruthy();
+    });
+
+    it("should not open the dialog for a field with an error", () => {
+      renderForm(programme);
+      type(calories(), "100");
+
+      fireEvent.submit(calories());
+
+      expect(screen.getByRole("alert").textContent).toBe(
+        "Enter a target between 800 and 6,000 kcal.",
+      );
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+  });
+
+  it("should never ask when no programme sets the targets", () => {
+    renderForm();
+
+    fireEvent.click(save());
+
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("should leave through a Cancel link to More", () => {
