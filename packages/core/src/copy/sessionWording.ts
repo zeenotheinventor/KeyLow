@@ -9,7 +9,9 @@ import type { LoadUnit } from "../training/loads";
  * Small helpers the session copy modules share. Not exported from the copy index: they are not sentences.
  */
 
-const UNIT_WORDS: Readonly<Record<LoadUnit, Readonly<{ singular: string; plural: string }>>> = {
+export const UNIT_WORDS: Readonly<
+  Record<LoadUnit, Readonly<{ singular: string; plural: string }>>
+> = {
   kg: { singular: "kilogram", plural: "kilograms" },
   lb: { singular: "pound", plural: "pounds" },
 };

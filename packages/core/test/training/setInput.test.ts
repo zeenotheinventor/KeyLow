@@ -11,6 +11,7 @@ import {
   parseEffortInput,
   parseLoadInput,
   parseRepsInput,
+  setDraftOfValues,
   validateSetDraft,
 } from "../../src/training";
 
@@ -288,5 +289,33 @@ describe("validateSetDraft", () => {
 
     expect(JSON.stringify(result)).not.toContain("1800");
     expect(JSON.stringify(result)).not.toContain("4711");
+  });
+});
+
+describe("setDraftOfValues", () => {
+  it("should write cleaned numbers as the text a form holds", () => {
+    expect(
+      setDraftOfValues({ setType: "working", loadKg: 97.5, reps: 8, rir: 2, rpe: null }, "kg"),
+    ).toEqual({ setType: "working", load: "97.5", reps: "8", rir: "2", rpe: "" });
+  });
+
+  it("should write a blank load and a blank effort as empty text", () => {
+    expect(
+      setDraftOfValues({ setType: "drop", loadKg: null, reps: 12, rir: null, rpe: null }, "kg"),
+    ).toEqual({ setType: "drop", load: "", reps: "12", rir: "", rpe: "" });
+  });
+
+  it("should show the load in the person's unit, and read back as the same grams", () => {
+    const stored = parseLoadInput("225", "lb");
+    if (!stored.ok || stored.kg === null) {
+      throw new Error("225 lb is a load");
+    }
+    const draft = setDraftOfValues(
+      { setType: "working", loadKg: stored.kg, reps: 5, rir: null, rpe: null },
+      "lb",
+    );
+
+    expect(draft.load).toBe("225");
+    expect(parseLoadInput(draft.load, "lb")).toEqual({ ok: true, kg: stored.kg });
   });
 });

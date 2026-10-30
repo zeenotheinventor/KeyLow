@@ -1,5 +1,11 @@
 import { EQUIPMENT_OPTIONS } from "./goals";
-import { SET_MARKS, SET_PHRASES, spokenNumbers, writtenNumbers } from "./sessionWording";
+import {
+  SET_MARKS,
+  SET_PHRASES,
+  UNIT_WORDS,
+  spokenNumbers,
+  writtenNumbers,
+} from "./sessionWording";
 import { describePlannedExerciseTarget } from "./train";
 import { displayLoad } from "../training/loads";
 
@@ -24,6 +30,8 @@ export const SESSION_ACTIVE = {
   addExerciseAction: "Add exercise",
   /** The accessible name of an exercise's list of set rows. */
   setsListName: "Sets",
+  /** The heading of the column that holds the check, which a table keeps for a screen reader alone. */
+  loggedColumnName: "Logged",
 } as const;
 
 export type SetColumnsCopy = {
@@ -43,6 +51,27 @@ export const describeSetColumns = (unit: LoadUnit): SetColumnsCopy => ({
   reps: "Reps",
   rir: "RIR",
 });
+
+export type SetCellNameInput = Readonly<{
+  exerciseName: string;
+  setType: SetType;
+  /** Its number among the exercise's working sets. A warm-up has none. */
+  setNumber: number;
+  unit: LoadUnit;
+  column: "load" | "reps" | "rir";
+}>;
+
+/** The name of one field of a set's row, for a screen where the row's cells are fields: "Leg press, set 3, kilograms". */
+export const describeSetCellName = ({
+  exerciseName,
+  setType,
+  setNumber,
+  unit,
+  column,
+}: SetCellNameInput): string => {
+  const columnWords = { load: UNIT_WORDS[unit].plural, reps: "reps", rir: "RIR" }[column];
+  return `${exerciseName}, ${SET_PHRASES[setType](setNumber).toLowerCase()}, ${columnWords}`;
+};
 
 /** The name of an exercise's more button: "More for Leg press". */
 export const describeMoreForExercise = (exerciseName: string): string => `More for ${exerciseName}`;

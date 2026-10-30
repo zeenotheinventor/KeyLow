@@ -96,3 +96,18 @@ export const sameAgain = (set: SetNumbers): SetValues => ({
   rir: set.rir,
   rpe: set.rpe,
 });
+
+/**
+ * The numbers a row logs when its set is filled from the last one or from last time: always a working set.
+ * Null when there is nothing to fill it from.
+ */
+export const setValuesOfPrefill = (prefill: SetPrefill): SetValues | null =>
+  prefill.source === "none"
+    ? null
+    : {
+        setType: "working",
+        loadKg: prefill.load_kg,
+        reps: prefill.reps,
+        rir: prefill.rir,
+        rpe: null,
+      };

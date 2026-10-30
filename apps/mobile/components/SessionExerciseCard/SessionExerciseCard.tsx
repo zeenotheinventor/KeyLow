@@ -5,7 +5,12 @@ import {
   describeSetRow,
   describeSetTypeSheet,
 } from "@keylow/core/copy";
-import { exerciseSetRows, prefillNextSet, sameAgain } from "@keylow/core/training";
+import {
+  exerciseSetRows,
+  prefillNextSet,
+  sameAgain,
+  setValuesOfPrefill,
+} from "@keylow/core/training";
 import { useState } from "react";
 
 import { useReadsEnabled } from "../../lib/useReadsEnabled";
@@ -16,20 +21,7 @@ import type { ExerciseCardRow } from "../ExerciseCard";
 import type { SetRowEntry } from "@keylow/core/copy";
 import type { SetPrefill, SetType, SetValues } from "@keylow/core/training";
 
-/** The numbers a row logs when its set opens from the last one or from last time: always a working set. Null when there is nothing to fill it from. */
-function valuesOfPrefill(prefill: SetPrefill): SetValues | null {
-  return prefill.source === "none"
-    ? null
-    : {
-        setType: "working",
-        loadKg: prefill.load_kg,
-        reps: prefill.reps,
-        rir: prefill.rir,
-        rpe: null,
-      };
-}
-
-/** The prefill that opens the set entry with the numbers a row shows: the inverse of `valuesOfPrefill`. The row's own type travels separately, as the type the entry starts on. */
+/** The prefill that opens the set entry with the numbers a row shows: the inverse of `setValuesOfPrefill`. The row's own type travels separately, as the type the entry starts on. */
 function prefillOfValues({ loadKg, reps, rir, rpe }: SetValues): SetPrefill {
   return {
     load_kg: loadKg,
@@ -87,7 +79,7 @@ export function SessionExerciseCard({
   const { exerciseId } = exercise;
   const rows = exerciseSetRows(exercise, sessionSets, previousSets);
   const prefill = prefillNextSet(exerciseId, sessionSets, previousSets);
-  const valuesToLog = valuesOfPrefill(prefill);
+  const valuesToLog = setValuesOfPrefill(prefill);
   const lastSet = exercise.rows.flatMap(({ set }) => (set === null ? [] : [set])).at(-1);
   const valuesToAdd = lastSet === undefined ? valuesToLog : sameAgain(lastSet);
   const addedCount = Math.max(minimumRows - rows.length, 0);

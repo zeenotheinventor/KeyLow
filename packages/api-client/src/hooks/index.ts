@@ -124,6 +124,28 @@ export { useDeleteSession } from "./useDeleteSession";
 export { useFinishSession } from "./useFinishSession";
 export type { FinishSessionInput } from "./useFinishSession";
 export { useStartSession } from "./useStartSession";
+export { useStartSessionAction } from "./useStartSessionAction";
+export type { SessionStartRequest } from "./useStartSessionAction";
+export { useDiscardSession } from "./useDiscardSession";
+export { useSessionView } from "./useSessionView";
+export { useSetLogging } from "./useSetLogging";
+export { useRemoveSetWithUndo } from "./useRemoveSetWithUndo";
+export type { SetNotices } from "./useRemoveSetWithUndo";
+export { useAddedExercises } from "./useAddedExercises";
+export { isPendingSetId, usePendingSets } from "./pendingSets";
+export type {
+  AddedExercise,
+  ExercisePlan,
+  LogSetRequest,
+  PendingSet,
+  PendingSets,
+  PlannedExerciseName,
+  RemoveSetRequest,
+  ScreenSet,
+  SessionView,
+  SessionViewExercise,
+  SetLogging,
+} from "./sessionViewTypes";
 
 export { useAddSet } from "./useAddSet";
 export { useRemoveSet } from "./useRemoveSet";

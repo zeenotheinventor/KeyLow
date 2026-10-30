@@ -8,7 +8,7 @@ import {
   MIN_RPE,
   RPE_STEP,
 } from "./bounds";
-import { loadToKg } from "./loads";
+import { displayLoad, loadToKg } from "./loads";
 
 import type { SetType } from "./enums";
 import type { LoadUnit } from "./loads";
@@ -203,3 +203,15 @@ export const setValueIssues = (values: SetValues): SetDraftIssue[] => {
   }
   return issues;
 };
+
+/**
+ * Cleaned numbers written back as the text a form holds, in the person's unit: the inverse of
+ * `validateSetDraft` for the RIR measure. The effort is the RIR alone, since RPE has no screen.
+ */
+export const setDraftOfValues = (values: SetValues, unit: LoadUnit): SetDraft => ({
+  setType: values.setType,
+  load: values.loadKg === null ? "" : displayLoad(values.loadKg, unit),
+  reps: String(values.reps),
+  rir: values.rir === null ? "" : String(values.rir),
+  rpe: "",
+});
