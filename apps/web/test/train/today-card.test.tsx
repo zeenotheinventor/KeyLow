@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { TodayCardWithSession } from "@keylow/core/copy";
 
-import { SetsProgressBar, TodayCard } from "@/components/train";
+import { SetsProgressBar, TodayCard } from "@/components/train/TodayCard";
 
 const context = { localDate: "2026-10-15", nextExerciseName: null, recovery: null };
 
