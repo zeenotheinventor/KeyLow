@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@keylow/api-client": "workspace:*",
+    "@keylow/body-3d": "workspace:*",
     "@keylow/core": "workspace:*",
     "@keylow/db": "workspace:*",
     "@keylow/tokens": "workspace:*",
