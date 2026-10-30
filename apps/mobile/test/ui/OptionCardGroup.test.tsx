@@ -248,4 +248,115 @@ describe("OptionCardGroup", () => {
       expect(viewsDrawn({ opacity: Math.fround(0.4) })).toHaveLength(2);
     });
   });
+
+  describe("when several answers may be chosen", () => {
+    type Focus = "v_taper" | "chest" | "arms";
+
+    const focusQuestion = "Anything to focus on?";
+
+    const focusOptions: readonly OptionCardGroupOption<Focus>[] = [
+      { id: "v_taper", title: "V-taper", description: "Wider shoulders and back" },
+      { id: "chest", title: "Chest", description: "Upper and lower chest" },
+      { id: "arms", title: "Arms", description: "Biceps, triceps and forearms" },
+    ];
+
+    function renderFocus({
+      value,
+      onChange = () => undefined,
+    }: {
+      value: readonly Focus[];
+      onChange?: (next: Focus[]) => void;
+    }) {
+      return render(
+        <ThemeProvider fixedPreference="dark">
+          <OptionCardGroup
+            label={focusQuestion}
+            options={focusOptions}
+            selection="multiple"
+            value={value}
+            onChange={onChange}
+          />
+        </ThemeProvider>,
+      );
+    }
+
+    function FocusStep() {
+      const [value, setValue] = useState<Focus[]>([]);
+      return (
+        <ThemeProvider fixedPreference="dark">
+          <OptionCardGroup
+            label={focusQuestion}
+            options={focusOptions}
+            selection="multiple"
+            value={value}
+            onChange={setValue}
+          />
+        </ThemeProvider>
+      );
+    }
+
+    it("should be a group named by the question, not a radio group", async () => {
+      await renderFocus({ value: [] });
+
+      expect(screen.getByLabelText(focusQuestion)).toHaveProp("role", "group");
+    });
+
+    it("should hold one checkbox for each option, in order, and no radio", async () => {
+      await renderFocus({ value: [] });
+
+      const checkboxes = screen.getAllByRole("checkbox");
+      expect(checkboxes).toHaveLength(3);
+      expect(checkboxes[0]).toHaveAccessibleName("V-taper, Wider shoulders and back");
+      expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
+    });
+
+    it("should check every option whose id is in the value, and only those", async () => {
+      await renderFocus({ value: ["v_taper", "arms"] });
+
+      expect(screen.getByRole("checkbox", { name: /^V-taper/ })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: /^Arms/ })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: /^Chest/ })).not.toBeChecked();
+    });
+
+    it("should hand on the chosen ids with the pressed one added at the end", async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      await renderFocus({ value: ["arms"], onChange });
+
+      await user.press(screen.getByRole("checkbox", { name: /^V-taper/ }));
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange).toHaveBeenCalledWith(["arms", "v_taper"]);
+    });
+
+    it("should hand on the chosen ids without the pressed one when it was checked", async () => {
+      const user = userEvent.setup();
+      const onChange = jest.fn();
+      await renderFocus({ value: ["arms", "chest"], onChange });
+
+      await user.press(screen.getByRole("checkbox", { name: /^Arms/ }));
+
+      expect(onChange).toHaveBeenCalledWith(["chest"]);
+    });
+
+    it("should check a card and clear it again when a screen keeps the answer", async () => {
+      const user = userEvent.setup();
+      await render(<FocusStep />);
+
+      await user.press(screen.getByRole("checkbox", { name: /^Chest/ }));
+      await user.press(screen.getByRole("checkbox", { name: /^Arms/ }));
+      expect(screen.getByRole("checkbox", { name: /^Chest/ })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: /^Arms/ })).toBeChecked();
+
+      await user.press(screen.getByRole("checkbox", { name: /^Chest/ }));
+      expect(screen.getByRole("checkbox", { name: /^Chest/ })).not.toBeChecked();
+      expect(screen.getByRole("checkbox", { name: /^Arms/ })).toBeChecked();
+    });
+
+    it("should leave 8 points between the cards", async () => {
+      await renderFocus({ value: [] });
+
+      expect(screen.getByLabelText(focusQuestion)).toHaveStyle({ rowGap: 8 });
+    });
+  });
 });

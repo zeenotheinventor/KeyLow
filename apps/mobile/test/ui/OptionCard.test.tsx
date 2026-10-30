@@ -170,6 +170,120 @@ describe("OptionCard", () => {
     });
   });
 
+  describe("as a checkbox, when several answers may be chosen", () => {
+    const vTaper: OptionCardProps = {
+      title: "V-taper",
+      description: "Wider shoulders and back, a narrower waist",
+      selection: "multiple",
+      checked: false,
+      onPress: () => undefined,
+    };
+
+    it("should be a checkbox named by its title and description", async () => {
+      await renderCard(vTaper);
+
+      expect(screen.getByRole("checkbox")).toHaveAccessibleName(
+        "V-taper, Wider shoulders and back, a narrower waist",
+      );
+      expect(screen.queryByRole("radio")).not.toBeOnTheScreen();
+    });
+
+    it("should say whether it is checked", async () => {
+      await renderCard(vTaper);
+      expect(screen.getByRole("checkbox")).not.toBeChecked();
+
+      await renderCard({ ...vTaper, checked: true });
+      expect(screen.getAllByRole("checkbox").at(-1)).toBeChecked();
+    });
+
+    it("should stay a radio when it is given the single selection", async () => {
+      await renderCard({ ...vTaper, selection: "single" });
+
+      expect(screen.getByRole("radio")).toBeOnTheScreen();
+    });
+
+    it("should call its handler when it is pressed", async () => {
+      const user = userEvent.setup();
+      const onPress = jest.fn();
+      await renderCard({ ...vTaper, onPress });
+
+      await user.press(screen.getByRole("checkbox"));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(mockImpact).toHaveBeenCalledWith("light");
+    });
+
+    it("should call its handler when the checked card is pressed again, so the answer can be cleared", async () => {
+      const user = userEvent.setup();
+      const onPress = jest.fn();
+      await renderCard({ ...vTaper, checked: true, onPress });
+
+      await user.press(screen.getByRole("checkbox"));
+
+      expect(onPress).toHaveBeenCalledTimes(1);
+      expect(mockImpact).toHaveBeenCalledTimes(1);
+    });
+
+    it("should draw a 20 point square mark with a 6 point radius and no round radio", async () => {
+      await renderCard(vTaper);
+
+      expect(viewsDrawn({ width: 20, height: 20, borderRadius: 6, borderWidth: 2 })).toHaveLength(
+        1,
+      );
+      expect(viewsDrawn({ width: 20, height: 20, borderRadius: 999 })).toHaveLength(0);
+    });
+
+    it("should draw a check in the mark when it is checked and nothing when it is not", async () => {
+      await renderCard(vTaper);
+      expect(screen.root?.queryAll((node) => node.type === "RNSVGSvgView")).toHaveLength(0);
+
+      await renderCard({ ...vTaper, checked: true });
+      expect(screen.root?.queryAll((node) => node.type === "RNSVGSvgView")).toHaveLength(1);
+      expect(viewsDrawn({ width: 8, height: 8, borderRadius: 999 })).toHaveLength(0);
+    });
+
+    it("should not respond when it is disabled with a reason", async () => {
+      const user = userEvent.setup();
+      const onPress = jest.fn();
+      await renderCard({ ...vTaper, disabledReason: "Not offered.", onPress });
+
+      expect(screen.getByRole("checkbox")).toBeDisabled();
+      await user.press(screen.getByRole("checkbox"));
+
+      expect(onPress).not.toHaveBeenCalled();
+      expect(mockImpact).not.toHaveBeenCalled();
+    });
+
+    describe.each(schemes)("in the %s scheme", (scheme) => {
+      const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+
+      it("should draw an empty square in the strong border colour when it is not checked", async () => {
+        await renderCard(vTaper, scheme);
+        await screen.findByRole("checkbox");
+
+        const [square] = viewsDrawn({ width: 20, height: 20, borderRadius: 6 });
+        expect(square).toHaveStyle({
+          borderColor: colorOf("border-strong"),
+          backgroundColor: "#00000000",
+        });
+      });
+
+      it("should fill the square with the accent and an accent border on the muted fill when it is checked", async () => {
+        await renderCard({ ...vTaper, checked: true }, scheme);
+
+        expect(await screen.findByRole("checkbox")).toHaveStyle({
+          backgroundColor: themes[scheme]["accent-muted"],
+          borderColor: colorOf("accent"),
+        });
+        const [square] = viewsDrawn({ width: 20, height: 20, borderRadius: 6 });
+        expect(square).toHaveStyle({
+          borderColor: colorOf("accent"),
+          backgroundColor: colorOf("accent"),
+        });
+      });
+    });
+  });
+
   describe("disabled with a reason", () => {
     it("should say it is disabled", async () => {
       await renderCard(loseUnderEighteen);

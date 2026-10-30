@@ -9,4 +9,8 @@ export const storyStates = [
   "Group",
   "GroupWithFigures",
   "GroupWithDisabledOption",
+  "CheckboxUnchecked",
+  "CheckboxChecked",
+  "CheckboxDisabled",
+  "GroupMultiple",
 ];

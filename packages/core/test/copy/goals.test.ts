@@ -222,6 +222,14 @@ describe("the questionnaire frame", () => {
     });
   });
 
+  it("should write the close question's sentence and its two buttons", () => {
+    expect(GOAL_QUESTIONNAIRE).toMatchObject({
+      closeBody: "Close now and the answers you have given are discarded.",
+      closeConfirmAction: "Close",
+      closeKeepAction: "Keep answering",
+    });
+  });
+
   it("should name an option card by its label and description", () => {
     expect(describeOptionName(GOAL_OPTIONS.aesthetic)).toBe(
       "Look better. Build muscle where it shows, in proportion",
