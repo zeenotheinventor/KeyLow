@@ -13,6 +13,8 @@ const { useFoodWithPortions } = vi.hoisted(() => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  // The refresh of an old branded food is the off refresh tests' business.
+  useRefreshOutdatedOffFood: () => undefined,
   useFoodWithPortions,
 }));
 

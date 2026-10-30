@@ -34,6 +34,8 @@ const api = vi.hoisted((): Api => ({
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
+  // The refresh of an old branded food is the off refresh tests' business.
+  useRefreshOutdatedOffFood: () => undefined,
   useProfileTimeZone: () => ({ data: "UTC" }),
   useDiaryDay: (date: string) => ({ data: diaryDay(date, api.entries) }),
   useFood: () => ({ data: api.food }),

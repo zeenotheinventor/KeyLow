@@ -1,6 +1,6 @@
 "use client";
 
-import { useFoodWithPortions } from "@keylow/api-client";
+import { useFoodWithPortions, useRefreshOutdatedOffFood } from "@keylow/api-client";
 import { FOOD_DETAIL, describeNutritionHeading, nutrientRows } from "@keylow/core/copy";
 import { requiresConfirmation } from "@keylow/core/foods";
 
@@ -17,6 +17,8 @@ import { NutrientTable } from "@/components/ui/NutrientTable";
 
 export function FoodDetail({ id }: FoodDetailProps) {
   const state = useFoodWithPortions(id);
+  // An old branded food asks for its refresh, so the portions it has gained since appear on this page.
+  useRefreshOutdatedOffFood(state.status === "ready" ? state.food : undefined);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">

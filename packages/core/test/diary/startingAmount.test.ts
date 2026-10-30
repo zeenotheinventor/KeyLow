@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   amountOnUnitChange,
+  reselectPickedUnit,
   reselectUnit,
   startingAmount,
   unitValueOf,
@@ -191,6 +192,43 @@ describe("reselectUnit", () => {
 
   it("should reset the amount to 100 when the fallback is g", () => {
     expect(reselectUnit(chosen, [gram], "g")).toEqual({ unitValue: "g", quantity: "100" });
+  });
+});
+
+describe("reselectPickedUnit", () => {
+  const bar = { value: "new-bar", label: "1 bar" };
+  const box = { value: "new-box", label: "Box of 6" };
+  const gram = { value: "g", label: "g" };
+
+  it("should give nothing when no chip was picked", () => {
+    expect(reselectPickedUnit(undefined, [bar, box, gram], "new-box")).toBeUndefined();
+  });
+
+  it("should give the picked chip and the typed amount back while the chip is offered", () => {
+    const picked = { unitValue: "new-bar", label: "1 bar", quantityText: "2.5" };
+
+    expect(reselectPickedUnit(picked, [bar, box, gram], "new-box")).toEqual({
+      unitValue: "new-bar",
+      quantity: "2.5",
+    });
+  });
+
+  it("should find the chip again by its label when its id is gone, keeping the typed amount", () => {
+    const picked = { unitValue: "old-bar", label: "1 bar", quantityText: "2.5" };
+
+    expect(reselectPickedUnit(picked, [box, bar, gram], "new-box")).toEqual({
+      unitValue: "new-bar",
+      quantity: "2.5",
+    });
+  });
+
+  it("should move to the starting chip and start the amount again when no chip has the label", () => {
+    const picked = { unitValue: "old-bar", label: "1 bar", quantityText: "2.5" };
+
+    expect(reselectPickedUnit(picked, [box, gram], "new-box")).toEqual({
+      unitValue: "new-box",
+      quantity: "1",
+    });
   });
 });
 
