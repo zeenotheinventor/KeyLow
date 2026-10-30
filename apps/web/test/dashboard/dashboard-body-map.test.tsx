@@ -1,6 +1,7 @@
 import { BODY_MAP } from "@keylow/core/copy";
+import { BODY_ARTWORK } from "@keylow/core/training";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, renderHook, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { goldenThursdayBodyMap } from "./bodyMapFixtures";
@@ -11,6 +12,8 @@ import type {
 } from "@keylow/api-client";
 
 import { DashboardBodyMap } from "@/components/dashboard/DashboardBodyMap";
+import { useBodyFigure } from "@/lib/bodyFigure";
+import { resetBodyFigureForTests } from "@/lib/bodyFigure/testing";
 
 type BodyMapRead = TrainingReadResult<DashboardBodyMapData>;
 
@@ -64,6 +67,8 @@ describe("DashboardBodyMap", () => {
     // 17:55 in London on Thursday 15 October 2026.
     vi.setSystemTime(new Date("2026-10-15T16:55:00Z"));
     onlineManager.setOnline(true);
+    window.localStorage.clear();
+    resetBodyFigureForTests();
     reads.nows = [];
     show(pending);
   });
@@ -72,6 +77,7 @@ describe("DashboardBodyMap", () => {
     cleanup();
     vi.useRealTimers();
     onlineManager.setOnline(true);
+    vi.restoreAllMocks();
   });
 
   it("should ask for the heat at the time on the clock", () => {
@@ -146,6 +152,50 @@ describe("DashboardBodyMap", () => {
       expect(
         screen.getByRole("status", { name: BODY_MAP.dashboardCard.loadingLabel }),
       ).toBeTruthy();
+    });
+  });
+  describe("the figure", () => {
+    const outlineOf = (artwork: "male" | "female") =>
+      `path[d="${BODY_ARTWORK[artwork].front.outline}"]`;
+    const frontFigure = () =>
+      screen.getByRole("img", { name: "Body map, Actual, heat, front", hidden: true });
+
+    it("should draw Male until a figure is chosen", () => {
+      show(loaded);
+      render(<DashboardBodyMap />);
+
+      expect(frontFigure().querySelector(outlineOf("male"))).not.toBeNull();
+    });
+
+    it("should draw Female when it is the figure chosen", () => {
+      window.localStorage.setItem("bodyMap.figure", "female");
+      show(loaded);
+      render(<DashboardBodyMap />);
+
+      expect(frontFigure().querySelector(outlineOf("female"))).not.toBeNull();
+      expect(frontFigure().querySelector(outlineOf("male"))).toBeNull();
+    });
+
+    it("should redraw the moment the figure is changed", () => {
+      show(loaded);
+      render(<DashboardBodyMap />);
+      const setting = renderHook(() => useBodyFigure());
+
+      act(() => {
+        setting.result.current.setFigure("female");
+      });
+
+      expect(frontFigure().querySelector(outlineOf("female"))).not.toBeNull();
+    });
+
+    it("should draw Male when storage is blocked", () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+      show(loaded);
+      render(<DashboardBodyMap />);
+
+      expect(frontFigure().querySelector(outlineOf("male"))).not.toBeNull();
     });
   });
 });

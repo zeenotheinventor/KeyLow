@@ -19,6 +19,7 @@ import type { ReactElement } from "react";
 
 import { BodyMapScreen } from "@/components/body/BodyMapScreen";
 import { ToastProvider } from "@/components/ui/Toast";
+import { resetBodyFigureForTests } from "@/lib/bodyFigure/testing";
 
 type BodyMapRead = TrainingReadResult<BodyMap>;
 
@@ -130,6 +131,9 @@ describe("BodyMapScreen", () => {
     });
     vi.setSystemTime(new Date(THURSDAY_19_00));
     window.localStorage.clear();
+    // The figure question was answered on an earlier visit, so only the tests of the setting see it.
+    window.localStorage.setItem("bodyMap.figure", "male");
+    resetBodyFigureForTests();
     onlineManager.setOnline(true);
     reads.asked = [];
     reads.zone = { data: "Europe/London" };
@@ -548,6 +552,215 @@ describe("BodyMapScreen", () => {
       render(<BodyMapScreen />);
 
       expect(screen.getByRole("link", { name: BODY_MAP.back })).toBeTruthy();
+    });
+  });
+  describe("the figure setting", () => {
+    const figureDialog = () =>
+      screen.getByRole("dialog", { name: BODY_MAP.figureSetting.sheetTitle });
+    const queryFigureDialog = () =>
+      screen.queryByRole("dialog", { name: BODY_MAP.figureSetting.sheetTitle });
+    const headerControl = () => screen.getByRole("button", { name: BODY_MAP.figureSetting.label });
+    const chooseFemale = () => {
+      fireEvent.click(within(figureDialog()).getByRole("radio", { name: "Female" }));
+    };
+    const closeFigureDialog = () => {
+      fireEvent.click(
+        within(figureDialog()).getByRole("button", { name: BODY_MAP.figureSetting.done }),
+      );
+    };
+    const visitAgain = () => {
+      cleanup();
+      resetBodyFigureForTests();
+      render(<BodyMapScreen />);
+    };
+
+    beforeEach(() => {
+      window.localStorage.clear();
+      resetBodyFigureForTests();
+    });
+
+    it("should ask on the first open, with the body map behind it", () => {
+      render(<BodyMapScreen />);
+
+      expect(figureDialog()).toBeTruthy();
+      expect(
+        within(figureDialog()).getByRole("radiogroup", { name: BODY_MAP.figureSetting.label }),
+      ).toBeTruthy();
+      expect(figure("front")).toBeTruthy();
+    });
+
+    it("should not ask when a figure is stored", () => {
+      window.localStorage.setItem("bodyMap.figure", "female");
+      render(<BodyMapScreen />);
+
+      expect(queryFigureDialog()).toBeNull();
+    });
+
+    it("should store Male when it is closed without a choice, and never ask again", () => {
+      render(<BodyMapScreen />);
+
+      closeFigureDialog();
+
+      expect(queryFigureDialog()).toBeNull();
+      expect(window.localStorage.getItem("bodyMap.figure")).toBe("male");
+      visitAgain();
+      expect(queryFigureDialog()).toBeNull();
+    });
+
+    it("should store Male when it is closed from the X button without a choice", () => {
+      render(<BodyMapScreen />);
+
+      fireEvent.click(within(figureDialog()).getByRole("button", { name: "Close" }));
+
+      expect(queryFigureDialog()).toBeNull();
+      expect(window.localStorage.getItem("bodyMap.figure")).toBe("male");
+    });
+
+    it("should store Male when the dimmed page is pressed without a choice", () => {
+      render(<BodyMapScreen />);
+
+      // The panel's parent is the full-screen layer that takes a press on the dimmed page.
+      const dimmedPage = figureDialog().parentElement;
+      expect(dimmedPage).not.toBeNull();
+      if (dimmedPage !== null) fireEvent.mouseDown(dimmedPage);
+
+      expect(queryFigureDialog()).toBeNull();
+      expect(window.localStorage.getItem("bodyMap.figure")).toBe("male");
+    });
+
+    it("should count Escape as closing without a choice", () => {
+      render(<BodyMapScreen />);
+
+      fireEvent.keyDown(document, { key: "Escape" });
+
+      expect(queryFigureDialog()).toBeNull();
+      expect(window.localStorage.getItem("bodyMap.figure")).toBe("male");
+    });
+
+    it("should ask once in a visit, not again when the screen redraws", () => {
+      const { rerender } = render(<BodyMapScreen />);
+      closeFigureDialog();
+
+      rerender(<BodyMapScreen />);
+
+      expect(queryFigureDialog()).toBeNull();
+    });
+
+    it("should redraw the figures as Female with the same fills, behind the open dialog", () => {
+      render(<BodyMapScreen />);
+
+      chooseFemale();
+
+      const { front, back } = BODY_ARTWORK.female;
+      expect(figureDialog()).toBeTruthy();
+      expect(fillOf("front", front.muscles.chest_upper)).toContain("fill-heat-1");
+      expect(fillOf("front", front.muscles.quads)).toContain("fill-heat-3");
+      expect(fillOf("back", back.muscles.lats)).toContain("fill-heat-2");
+      expect(fillOf("back", back.muscles.hamstrings)).toContain("fill-heat-3");
+      expect(fillOf("front", BODY_ARTWORK.male.front.muscles.quads)).toBe("");
+    });
+
+    it("should keep Female for the next visit", () => {
+      render(<BodyMapScreen />);
+      chooseFemale();
+      closeFigureDialog();
+
+      visitAgain();
+
+      expect(queryFigureDialog()).toBeNull();
+      expect(fillOf("front", BODY_ARTWORK.female.front.muscles.quads)).toContain("fill-heat-3");
+    });
+
+    it("should reopen from the header control at any time, showing the figure drawn", () => {
+      window.localStorage.setItem("bodyMap.figure", "female");
+      render(<BodyMapScreen />);
+
+      fireEvent.click(headerControl());
+
+      expect(
+        within(figureDialog()).getByRole<HTMLInputElement>("radio", { name: "Female" }).checked,
+      ).toBe(true);
+    });
+
+    it("should not change what is stored when a stored figure is closed unchanged", () => {
+      window.localStorage.setItem("bodyMap.figure", "female");
+      render(<BodyMapScreen />);
+
+      fireEvent.click(headerControl());
+      closeFigureDialog();
+
+      expect(window.localStorage.getItem("bodyMap.figure")).toBe("female");
+    });
+
+    it("should return focus to the header control when it closes", () => {
+      window.localStorage.setItem("bodyMap.figure", "male");
+      render(<BodyMapScreen />);
+      headerControl().focus();
+      fireEvent.click(headerControl());
+
+      closeFigureDialog();
+
+      expect(document.activeElement).toBe(headerControl());
+    });
+
+    it("should fall back to Male without asking when storage is blocked", () => {
+      vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+      render(<BodyMapScreen />);
+
+      expect(queryFigureDialog()).toBeNull();
+      expect(fillOf("front", BODY_ARTWORK.male.front.muscles.quads)).toContain("fill-heat-3");
+    });
+
+    it("should still apply a choice for the visit when it cannot be saved", () => {
+      window.localStorage.setItem("bodyMap.figure", "male");
+      vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+        throw new DOMException("blocked", "SecurityError");
+      });
+      render(<BodyMapScreen />);
+
+      fireEvent.click(headerControl());
+      chooseFemale();
+
+      expect(fillOf("front", BODY_ARTWORK.female.front.muscles.quads)).toContain("fill-heat-3");
+    });
+
+    it("should still cross-fade Actual and Projected when Female is drawn", () => {
+      window.localStorage.setItem("bodyMap.figure", "female");
+      render(<BodyMapScreen />);
+
+      const actualLayer = figure("front", "Actual").parentElement;
+      const projectedLayer = screen.getByRole("img", {
+        name: "Body map, Projected, heat, front",
+        hidden: true,
+      }).parentElement;
+      expect(actualLayer?.className).toContain("opacity-100");
+      expect(projectedLayer?.className).toContain("opacity-0");
+
+      fireEvent.click(toggle());
+
+      expect(actualLayer?.className).toContain("opacity-0");
+      expect(projectedLayer?.className).toContain("opacity-100");
+      expect(actualLayer?.className).toContain("transition-opacity");
+    });
+
+    it("should draw neither the dialog nor the stored figure on the server", () => {
+      window.localStorage.setItem("bodyMap.figure", "female");
+
+      const page = document.createElement("div");
+      page.innerHTML = renderToString(
+        <ToastProvider>
+          <BodyMapScreen />
+        </ToastProvider>,
+      );
+
+      expect(within(page).queryByRole("dialog")).toBeNull();
+      expect(within(page).queryByRole("button", { name: BODY_MAP.figureSetting.label })).toBeNull();
+      expect(page.innerHTML).not.toContain(BODY_ARTWORK.female.front.outline);
     });
   });
 });

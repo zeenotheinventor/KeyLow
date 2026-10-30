@@ -49,7 +49,7 @@ export function FigureSettingSheet({ open, onClose, figure, onChange }: FigureSe
           {BODY_MAP.figureSetting.description}
         </Text>
         <Button fullWidth onPress={onClose}>
-          Done
+          {BODY_MAP.figureSetting.done}
         </Button>
       </View>
     </BottomSheet>
