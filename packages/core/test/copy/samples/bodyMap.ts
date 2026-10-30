@@ -81,6 +81,39 @@ export const samples: Record<string, () => string[]> = {
     copy.describeGapNote([SATURDAYS_PUSH], "push muscles"),
     copy.describeGapNote([FRIDAYS_PULL, SATURDAYS_PUSH], "those muscles"),
   ],
+  describeGap: () => {
+    const behind = { chest_upper: 0, chest_lower: 0 };
+    const missed = [
+      { date: "2026-10-16", status: "missed", plannedDayName: "Pull" },
+      { date: "2026-10-17", status: "missed", plannedDayName: "Push" },
+    ] as const;
+    return [
+      copy.describeGap({ values: behind, days: missed, countsWholeWeek: true }),
+      copy.describeGap({ values: behind, days: missed, countsWholeWeek: false }),
+      copy.describeGap({ values: {}, days: missed, countsWholeWeek: true }),
+    ];
+  },
+  scrubberDaysOf: () =>
+    copy
+      .scrubberDaysOf(false, [
+        {
+          date: "2026-10-17",
+          isToday: false,
+          status: "planned",
+          plannedDayName: "Push",
+          sessionDayName: null,
+          selectable: false,
+        },
+        {
+          date: "2026-10-15",
+          isToday: true,
+          status: "in_progress",
+          plannedDayName: "Legs",
+          sessionDayName: "Legs",
+          selectable: true,
+        },
+      ])
+      .map(({ accessibleName }) => accessibleName),
   describeBodyFigureLabel: () => [
     copy.describeBodyFigureLabel({
       scale: "heat",

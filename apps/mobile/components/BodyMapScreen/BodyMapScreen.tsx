@@ -4,8 +4,10 @@ import {
   TRAIN_ERROR,
   TRAIN_OFFLINE_TITLE,
   describeBodyMapHeader,
+  describeGap,
   describeNothingLogged,
   describeProjectedAssumption,
+  scrubberDaysOf,
 } from "@keylow/core/copy";
 import { addCalendarDays, daysSinceMonday, toLocalDate } from "@keylow/core/dates";
 import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
@@ -37,8 +39,6 @@ import {
   SheetHeader,
   Skeleton,
 } from "../ui";
-import { describeGap } from "./gapNote";
-import { scrubberDaysOf } from "./scrubberDays";
 
 import type { BodyMapScale, PlannedSession } from "@keylow/core/copy";
 import type { BodyArtworkSide, BodyMapView, MuscleId } from "@keylow/core/training";

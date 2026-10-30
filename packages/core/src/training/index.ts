@@ -168,6 +168,8 @@ export {
 export type { BodyMapView, WarmMuscle } from "./bodyMapValues";
 export { exerciseRoleValues, musclesByRole, ROLE_FIGURE_VALUES } from "./exerciseRoles";
 export type { MuscleRoleEntry, MusclesOfRole } from "./exerciseRoles";
+export { readMuscleValue } from "./bodyFigureReading";
+export type { BodyFigureScale, BodyFigureTone, MuscleValueReading } from "./bodyFigureReading";
 export { dayMoments } from "./bodyMapMoments";
 export type { DayMoment, DayMoments, DayMomentsInput } from "./bodyMapMoments";
 

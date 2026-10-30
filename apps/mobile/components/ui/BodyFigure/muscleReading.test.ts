@@ -1,176 +1,63 @@
-import { GAP_VALUES, ROLE_FIGURE_VALUES, VOLUME_STATUSES } from "@keylow/core/training";
 import { bodyMapPalette } from "@keylow/tokens";
 
 import { readMuscle } from "./muscleReading";
 
-import type { ThemeScheme } from "@keylow/tokens";
+import type { BodyFigureScale } from "./types";
+import type { BodyMapPalette, ThemeScheme } from "@keylow/tokens";
 
 const schemes: ThemeScheme[] = ["dark", "light"];
+
+type ToneRow = [scale: BodyFigureScale, value: number, fillOf: (palette: BodyMapPalette) => string];
+
+// One row per colour token that core's `readMuscleValue` can name, with the palette colour it must map to.
+const toneRows: ToneRow[] = [
+  ["heat", 0, (palette) => palette.heat[0]],
+  ["heat", 1, (palette) => palette.heat[1]],
+  ["heat", 2, (palette) => palette.heat[2]],
+  ["heat", 3, (palette) => palette.heat[3]],
+  ["heat", 4, (palette) => palette.heat[4]],
+  ["heat", 5, (palette) => palette.heat[5]],
+  ["volume", 0, (palette) => palette.volume.notTrained],
+  ["volume", 1, (palette) => palette.volume.maintaining],
+  ["volume", 2, (palette) => palette.volume.growing],
+  ["volume", 3, (palette) => palette.volume.productive],
+  ["volume", 4, (palette) => palette.volume.high],
+  ["gap", 0, (palette) => palette.gap.behind],
+  ["gap", 1, (palette) => palette.gap.onPlan],
+  ["gap", 2, (palette) => palette.gap.ahead],
+  ["gap", 3, (palette) => palette.gap.notInPlan],
+  ["role", 0, (palette) => palette.heat[0]],
+  ["role", 1, (palette) => palette.role.assist],
+  ["role", 2, (palette) => palette.role.secondary],
+  ["role", 3, (palette) => palette.role.primary],
+];
 
 describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
   const palette = bodyMapPalette(scheme);
 
-  describe("on the heat scale", () => {
-    it.each([0, 1, 2, 3, 4, 5])("should fill step %i with that heat colour", (step) => {
-      expect(readMuscle("heat", step, palette).fill).toBe(palette.heat[step]);
-    });
+  it.each(toneRows)(
+    "should fill %s value %i with the palette colour of its token",
+    (scale, value, fillOf) => {
+      expect(readMuscle(scale, value, palette).fill).toBe(fillOf(palette));
+    },
+  );
 
-    it("should name each step", () => {
-      expect([0, 1, 2, 3, 4, 5].map((step) => readMuscle("heat", step, palette).valueName)).toEqual(
-        ["Rested", "Ready", "Warm", "Hot", "Very hot", "Peak"],
-      );
+  it("should draw a muscle with no value on each scale as core reads it, in the palette colour", () => {
+    expect(readMuscle("heat", undefined, palette)).toEqual({
+      fill: palette.heat[0],
+      valueName: "Rested",
+      isPeak: false,
     });
-
-    it("should draw a muscle with no value at rest", () => {
-      expect(readMuscle("heat", undefined, palette)).toMatchObject({
-        fill: palette.heat[0],
-        valueName: "Rested",
-      });
-    });
-
-    it("should hold a step past the ends of the scale to the nearest end", () => {
-      expect(readMuscle("heat", 9, palette).fill).toBe(palette.heat[5]);
-      expect(readMuscle("heat", -2, palette).fill).toBe(palette.heat[0]);
-    });
-
-    it("should draw a value that is not a number at rest", () => {
-      expect(readMuscle("heat", Number.NaN, palette).fill).toBe(palette.heat[0]);
-    });
-
-    it("should mark only step 5 as a peak", () => {
-      expect([0, 1, 2, 3, 4, 5].map((step) => readMuscle("heat", step, palette).isPeak)).toEqual([
-        false,
-        false,
-        false,
-        false,
-        false,
-        true,
-      ]);
-    });
+    expect(readMuscle("volume", undefined, palette).fill).toBe(palette.volume.notTrained);
+    expect(readMuscle("gap", undefined, palette).fill).toBe(palette.gap.notInPlan);
+    expect(readMuscle("role", undefined, palette).fill).toBe(palette.heat[0]);
   });
 
-  describe("on the volume scale", () => {
-    const fillOfStatus = {
-      not_trained: palette.volume.notTrained,
-      maintaining: palette.volume.maintaining,
-      growing: palette.volume.growing,
-      productive: palette.volume.productive,
-      high: palette.volume.high,
-    };
-
-    it.each(VOLUME_STATUSES)("should fill the %s status with its volume colour", (status) => {
-      const value = VOLUME_STATUSES.indexOf(status);
-
-      expect(readMuscle("volume", value, palette).fill).toBe(fillOfStatus[status]);
-    });
-
-    it("should give each band its own colour", () => {
-      const fills = VOLUME_STATUSES.map((_, value) => readMuscle("volume", value, palette).fill);
-
-      expect(new Set(fills).size).toBe(VOLUME_STATUSES.length);
-    });
-
-    it("should name each status", () => {
-      expect(
-        VOLUME_STATUSES.map((_, value) => readMuscle("volume", value, palette).valueName),
-      ).toEqual(["Not trained", "Maintaining", "Growing", "Productive", "High"]);
-    });
-
-    it("should draw a muscle with no value as not trained", () => {
-      expect(readMuscle("volume", undefined, palette)).toMatchObject({
-        fill: palette.volume.notTrained,
-        valueName: "Not trained",
-      });
-    });
-
-    it.each([7, -1, 1.5, Number.NaN])(
-      "should draw the value %s, which the scale does not have, as not trained",
-      (value) => {
-        expect(readMuscle("volume", value, palette).fill).toBe(palette.volume.notTrained);
-      },
-    );
-
-    it("should never glow, not even for the last band", () => {
-      expect(readMuscle("volume", VOLUME_STATUSES.indexOf("high"), palette).isPeak).toBe(false);
-    });
-  });
-
-  describe("on the gap scale", () => {
-    const fillOfValue = {
-      behind: palette.gap.behind,
-      on_plan: palette.gap.onPlan,
-      ahead: palette.gap.ahead,
-      not_in_plan: palette.gap.notInPlan,
-    };
-
-    it.each(GAP_VALUES)("should fill %s with its gap colour", (gap) => {
-      const value = GAP_VALUES.indexOf(gap);
-
-      expect(readMuscle("gap", value, palette).fill).toBe(fillOfValue[gap]);
-    });
-
-    it("should name each place against the plan", () => {
-      expect(GAP_VALUES.map((_, value) => readMuscle("gap", value, palette).valueName)).toEqual([
-        "Behind",
-        "On plan",
-        "Ahead",
-        "Not in plan",
-      ]);
-    });
-
-    it("should draw a muscle with no value as not in plan", () => {
-      expect(readMuscle("gap", undefined, palette)).toMatchObject({
-        fill: palette.gap.notInPlan,
-        valueName: "Not in plan",
-      });
-    });
-
-    it("should draw a value the scale does not have as not in plan", () => {
-      expect(readMuscle("gap", 4, palette).fill).toBe(palette.gap.notInPlan);
-    });
-  });
-
-  describe("on the role scale", () => {
-    const fillOfRole = {
-      primary: palette.role.primary,
-      secondary: palette.role.secondary,
-      stabiliser: palette.role.assist,
-    };
-
-    it.each(["primary", "secondary", "stabiliser"] as const)(
-      "should fill %s with its role colour",
-      (role) => {
-        expect(readMuscle("role", ROLE_FIGURE_VALUES[role], palette).fill).toBe(fillOfRole[role]);
-      },
-    );
-
-    it("should name each role", () => {
-      expect([3, 2, 1].map((value) => readMuscle("role", value, palette).valueName)).toEqual([
-        "Primary",
-        "Secondary",
-        "Assisting",
-      ]);
-    });
-
-    it("should draw a muscle with no value at rest", () => {
-      expect(readMuscle("role", undefined, palette)).toMatchObject({
-        fill: palette.heat[0],
-        valueName: "Not worked",
-      });
-    });
-
-    it.each([0, 4, -1, 1.5, Number.NaN])(
-      "should draw the value %s, which the scale does not have, at rest",
-      (value) => {
-        expect(readMuscle("role", value, palette)).toMatchObject({
-          fill: palette.heat[0],
-          valueName: "Not worked",
-        });
-      },
-    );
-
-    it("should never glow, not even for primary", () => {
-      expect(readMuscle("role", ROLE_FIGURE_VALUES.primary, palette).isPeak).toBe(false);
+  it("should pass the spoken value and the glow through from core", () => {
+    expect(readMuscle("heat", 5, palette)).toEqual({
+      fill: palette.heat[5],
+      valueName: "Peak",
+      isPeak: true,
     });
   });
 });

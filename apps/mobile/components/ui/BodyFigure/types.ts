@@ -1,10 +1,11 @@
-import type { BodyArtworkFigure, BodyArtworkSide, MuscleId } from "@keylow/core/training";
+import type {
+  BodyArtworkFigure,
+  BodyArtworkSide,
+  BodyFigureScale,
+  MuscleId,
+} from "@keylow/core/training";
 
-/**
- * Which colour scale the figure is drawn in: the body map's three, and the role of each muscle in an
- * exercise, which only the "Muscles it works" sheet uses.
- */
-export type BodyFigureScale = "heat" | "volume" | "gap" | "role";
+export type { BodyFigureScale };
 
 /**
  * The value of each muscle, as the body map values of core encode it: a heat step from 0 to 5 on the
