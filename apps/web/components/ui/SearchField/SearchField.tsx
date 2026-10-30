@@ -48,10 +48,22 @@ const fieldText = cva("", {
   defaultVariants: { size: "md" },
 });
 
+// Both icon buttons are under 44 px (the barcode button is 36 px, or 28 px in the dense size, and the clear
+// button is 36 px), so each reaches a 44 px square with an invisible pseudo element. The gap between the
+// controls is 8 px, so a reach of 4 px meets the next control without covering it. The dense barcode
+// button is 28 px, so it reaches 8 px up and down, 4 px to the left (where the clear button reaches 4 px to
+// meet it) and 12 px to the right, past the field's 5 px of padding and border, where nothing sits.
 const barcodeButtonSize = cva(
-  "flex shrink-0 items-center justify-center rounded-small text-text-primary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay aria-expanded:bg-surface-sheet focus-visible:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring",
+  "relative flex shrink-0 items-center justify-center rounded-small text-text-primary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay aria-expanded:bg-surface-sheet after:absolute focus-visible:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring",
   {
-    variants: { size: { md: "size-9", sm: "size-7", adaptive: "size-9 lg:size-7" } },
+    variants: {
+      size: {
+        md: "size-9 after:-inset-1",
+        sm: "size-7 after:-inset-y-2 after:-left-1 after:-right-3",
+        adaptive:
+          "size-9 after:-inset-1 lg:size-7 lg:after:-inset-y-2 lg:after:-left-1 lg:after:-right-3",
+      },
+    },
     defaultVariants: { size: "md" },
   },
 );
@@ -86,6 +98,7 @@ function BarcodeIconButton({
 }
 
 // The clear button is 36 px square, as the recipes boards draw it, and sits inside the field's right padding.
+// Its pseudo element reaches 4 px each way to a 44 px square.
 function ClearIconButton({
   button,
   disabled,
@@ -99,13 +112,16 @@ function ClearIconButton({
       aria-label={button.label}
       disabled={disabled}
       onClick={button.onClick}
-      className="flex size-9 shrink-0 items-center justify-center rounded-small text-text-secondary outline-none transition-colors duration-quick hover:bg-hover-overlay active:bg-press-overlay focus-visible:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring"
+      className="relative flex size-9 shrink-0 items-center justify-center rounded-small text-text-secondary outline-none transition-colors duration-quick after:absolute after:-inset-1 hover:bg-hover-overlay active:bg-press-overlay focus-visible:bg-hover-overlay focus-visible:ring-2 focus-visible:ring-focus-ring"
     >
       <CircleX aria-hidden className="size-5" strokeWidth={iconStroke} />
     </button>
   );
 }
 
+// A text input cannot carry a pseudo element, so the input is 44 px high and centred in the frame, which
+// is 36 or 44 px high with a 1 px border. It draws nothing of its own, so the frame stays the drawn box and
+// the extra height only makes the press land on the field. The launcher's button does the same.
 export function SearchField({
   label,
   size = "md",
@@ -121,7 +137,7 @@ export function SearchField({
         type="search"
         aria-label={label}
         className={cn(
-          "h-full min-w-0 flex-1 bg-transparent p-0 text-text-primary outline-none placeholder:text-text-muted [&::-webkit-search-cancel-button]:appearance-none",
+          "h-touch-target min-w-0 flex-1 bg-transparent p-0 text-text-primary outline-none placeholder:text-text-muted [&::-webkit-search-cancel-button]:appearance-none",
           fieldText({ size }),
         )}
         {...inputProps}
@@ -158,7 +174,7 @@ export function SearchLauncher({
         aria-disabled={disabled || undefined}
         onClick={disabled ? undefined : onSearch}
         className={cn(
-          "flex h-full min-w-0 flex-1 items-center gap-2 text-left text-text-muted outline-none",
+          "flex h-touch-target min-w-0 flex-1 items-center gap-2 text-left text-text-muted outline-none",
           fieldText({ size }),
         )}
       >

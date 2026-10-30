@@ -5,7 +5,7 @@ import { cva } from "class-variance-authority";
 // element so hover and press tint the variant's own fill. The press scale and the spinner both
 // have a prefers-reduced-motion fallback.
 export const buttonVariants = cva(
-  "relative inline-flex min-w-touch-target shrink-0 items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-press active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "relative inline-flex min-w-touch-target shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-medium border text-body-strong outline-none transition-transform duration-instant ease-spring before:pointer-events-none before:absolute before:inset-0 before:transition-colors before:duration-quick hover:before:bg-hover-overlay active:scale-press active:before:bg-press-overlay motion-reduce:active:scale-100 focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -25,9 +25,9 @@ export const buttonVariants = cva(
       },
       size: {
         sm: "h-control-sm px-3 [&_svg]:size-4",
-        md: "h-control-md px-4 [&_svg]:size-5",
-        lg: "h-control-lg px-5 [&_svg]:size-5",
-        default: "h-control-md px-4 [&_svg]:size-5",
+        md: "h-control-md overflow-hidden px-4 [&_svg]:size-5",
+        lg: "h-control-lg overflow-hidden px-5 [&_svg]:size-5",
+        default: "h-control-md overflow-hidden px-4 [&_svg]:size-5",
       },
       iconOnly: {
         true: "px-0",
@@ -39,6 +39,17 @@ export const buttonVariants = cva(
       },
     },
     compoundVariants: [
+      // The dense 36 px button reaches a 44 px target with an invisible pseudo element, 4 px past the top
+      // and the bottom (5 px from the padding box, which sits inside the 1 px border). Its width is already
+      // 44 or more. The other sizes clip
+      // the hover tint to their corners with overflow-hidden, which would cut the reach off, so this size
+      // does not clip and gives the tint the button's own corners, so a screen that sets another radius gets a
+      // tint to match.
+      {
+        size: "sm",
+        variant: ["primary", "secondary", "destructive", "ghost", "default", "outline"],
+        className: "before:rounded-[inherit] after:absolute after:inset-x-0 after:-inset-y-[5px]",
+      },
       // The destructive action that sits under the main one, such as Delete beside Save: the label and
       // the icon in the danger colour on the plain background, as the M3 boards draw it in both themes.
       { variant: "ghost", tone: "danger", className: "text-danger" },

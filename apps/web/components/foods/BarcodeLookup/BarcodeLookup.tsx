@@ -74,7 +74,7 @@ export function BarcodeLookup({ onClose, day }: BarcodeLookupProps) {
           iconOnly
           aria-label="Close barcode lookup"
           onClick={onClose}
-          className="absolute right-2 top-2 min-w-0 rounded-small text-text-secondary [&_svg]:size-[18px]"
+          className="absolute right-2 top-2 min-w-0 rounded-small text-text-secondary after:-inset-x-[5px] [&_svg]:size-[18px]"
         >
           <X aria-hidden strokeWidth={iconStroke} />
         </Button>

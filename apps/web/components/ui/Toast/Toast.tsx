@@ -30,9 +30,10 @@ const frame =
   "top-4 left-4 right-4 z-50 flex min-h-touch-target items-center gap-3 rounded-medium border border-border bg-surface-sheet py-2 pl-4 pr-2 text-text-primary shadow-toast animate-toast-in motion-reduce:animate-none min-[700px]:left-auto min-[700px]:w-[360px]";
 
 // The action is accent in dark. In light that colour is too weak for small text, so it falls back
-// to the primary text colour.
+// to the primary text colour. It is 36 px high, so an invisible pseudo element reaches 4 px above and
+// below to a 44 px target, inside the card's 8 px of padding.
 const actionButton =
-  "h-control-sm shrink-0 rounded-small px-3 text-[14px] font-semibold leading-5 text-accent outline-none light-theme:text-text-primary focus-visible:ring-2 focus-visible:ring-focus-ring";
+  "relative h-control-sm shrink-0 after:absolute after:inset-x-0 after:-inset-y-1 rounded-small px-3 text-[14px] font-semibold leading-5 text-accent outline-none light-theme:text-text-primary focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 function OpenToast({
   message,
