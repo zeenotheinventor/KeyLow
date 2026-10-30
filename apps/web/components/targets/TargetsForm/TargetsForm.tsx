@@ -2,6 +2,7 @@ import { useUpdateTargets } from "@keylow/api-client";
 import {
   DIARY_PROBLEMS,
   MACROS_OPTIONAL,
+  PROGRAM_TARGETS_SCREEN,
   SAVE_FAILED_BANNER,
   TARGETS_NOTE,
   TARGETS_PAGE,
@@ -16,6 +17,8 @@ import { Check } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+
+import { SwitchToManualDialog } from "../SwitchToManualDialog";
 
 import type { TargetsFormProps } from "./types";
 import type { SyntheticEvent } from "react";
@@ -44,7 +47,9 @@ const cancelLinkClassName =
  * The Targets form: calories (whole numbers from 800 to 6,000, required) and protein, carbohydrate and fat
  * in grams, with a live note of what the macros add up to. Save is disabled until the targets pass core's
  * `validateTargets`. A save returns to More with the Toast "Targets saved". Nothing the person typed goes
- * into an error or a log: a failed save says so in the same words whatever the reason.
+ * into an error or a log: a failed save says so in the same words whatever the reason. While a programme
+ * sets the targets (`source` is "engine") Save asks first, because saving ends the programme, and only
+ * Save my targets in the dialog goes on to save.
  */
 export function TargetsForm({ initial }: TargetsFormProps) {
   const router = useRouter();
@@ -56,6 +61,8 @@ export function TargetsForm({ initial }: TargetsFormProps) {
   const [fat, setFat] = useState(fieldText(initial.fat_g));
   const [isKcalTouched, setIsKcalTouched] = useState(false);
   const [hasSaveFailed, setHasSaveFailed] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const endsProgramme = initial.source === "engine";
 
   const input = {
     kcal: enteredNumber(kcal),
@@ -81,8 +88,19 @@ export function TargetsForm({ initial }: TargetsFormProps) {
   const macroValue = { protein, carbs, fat };
   const setMacro = { protein: setProtein, carbs: setCarbs, fat: setFat };
 
-  async function save(event: SyntheticEvent) {
+  function submit(event: SyntheticEvent) {
     event.preventDefault();
+    if (!result.ok || updateTargets.isPending) {
+      return;
+    }
+    if (endsProgramme) {
+      setIsConfirming(true);
+    } else {
+      void save();
+    }
+  }
+
+  async function save() {
     if (!result.ok || updateTargets.isPending) {
       return;
     }
@@ -92,67 +110,81 @@ export function TargetsForm({ initial }: TargetsFormProps) {
     } catch {
       setHasSaveFailed(true);
       return;
+    } finally {
+      setIsConfirming(false);
     }
     toast.show({ message: TARGETS_SAVED_TOAST, tone: "success", icon: Check });
     router.push(MORE_HREF);
   }
 
   return (
-    <Card asChild padding="none">
-      <form
-        aria-label={TARGETS_SCREEN.title}
-        className="flex flex-col gap-4 p-5"
-        onSubmit={(event) => {
-          void save(event);
-        }}
-      >
-        <NumericInput
-          label={TARGETS_SCREEN.calories}
-          unit="kcal"
-          value={kcal}
-          helper={TARGET_KCAL_HELPER}
-          error={kcalError}
-          onBlur={() => {
-            setIsKcalTouched(true);
-          }}
-          onChange={(event) => {
-            setKcal(event.target.value);
-            setIsKcalTouched(true);
-          }}
-        />
-        <div className="flex flex-col gap-1.5">
-          <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-            {MACRO_FIELDS.map((field) => (
-              <NumericInput
-                key={field.name}
-                label={field.label}
-                aria-label={describeMacroTargetField(field.label)}
-                unit="g"
-                value={macroValue[field.name]}
-                onChange={(event) => {
-                  setMacro[field.name](event.target.value);
-                }}
-              />
-            ))}
+    <>
+      <Card asChild padding="none">
+        <form
+          aria-label={TARGETS_SCREEN.title}
+          className="flex flex-col gap-4 p-5"
+          onSubmit={submit}
+        >
+          <NumericInput
+            label={TARGETS_SCREEN.calories}
+            unit="kcal"
+            value={kcal}
+            helper={TARGET_KCAL_HELPER}
+            error={kcalError}
+            onBlur={() => {
+              setIsKcalTouched(true);
+            }}
+            onChange={(event) => {
+              setKcal(event.target.value);
+              setIsKcalTouched(true);
+            }}
+          />
+          <div className="flex flex-col gap-1.5">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {MACRO_FIELDS.map((field) => (
+                <NumericInput
+                  key={field.name}
+                  label={field.label}
+                  aria-label={describeMacroTargetField(field.label)}
+                  unit="g"
+                  value={macroValue[field.name]}
+                  onChange={(event) => {
+                    setMacro[field.name](event.target.value);
+                  }}
+                />
+              ))}
+            </div>
+            <p className="text-caption tabular-nums text-text-muted">{macroNote}</p>
           </div>
-          <p className="text-caption tabular-nums text-text-muted">{macroNote}</p>
-        </div>
-        <p className="text-caption text-text-muted">{TARGETS_NOTE}</p>
-        {hasSaveFailed && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
-        <div className="flex items-center justify-end gap-4">
-          <Link href={MORE_HREF} className={cancelLinkClassName}>
-            {TARGETS_PAGE.cancel}
-          </Link>
-          <Button
-            type="submit"
-            disabled={!result.ok}
-            loading={updateTargets.isPending}
-            loadingLabel={TARGETS_PAGE.saving}
-          >
-            {TARGETS_SCREEN.save}
-          </Button>
-        </div>
-      </form>
-    </Card>
+          <p className="text-caption text-text-muted">
+            {endsProgramme ? PROGRAM_TARGETS_SCREEN.switchNote : TARGETS_NOTE}
+          </p>
+          {hasSaveFailed && <Banner tone="error">{SAVE_FAILED_BANNER}</Banner>}
+          <div className="flex items-center justify-end gap-4">
+            <Link href={MORE_HREF} className={cancelLinkClassName}>
+              {TARGETS_PAGE.cancel}
+            </Link>
+            <Button
+              type="submit"
+              disabled={!result.ok}
+              loading={updateTargets.isPending}
+              loadingLabel={TARGETS_PAGE.saving}
+            >
+              {TARGETS_SCREEN.save}
+            </Button>
+          </div>
+        </form>
+      </Card>
+      <SwitchToManualDialog
+        open={isConfirming}
+        isSaving={updateTargets.isPending}
+        onKeepProgramme={() => {
+          setIsConfirming(false);
+        }}
+        onSaveMyTargets={() => {
+          void save();
+        }}
+      />
+    </>
   );
 }
