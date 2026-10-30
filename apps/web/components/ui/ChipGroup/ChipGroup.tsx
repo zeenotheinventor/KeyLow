@@ -51,6 +51,10 @@ function choose<Value extends string>(props: ChipGroupProps<Value>, value: Value
 // and the arrow keys move the focus only, since a choice is made with Space or a click. Home and End jump
 // to the first and last chip. A held Alt, Meta or Ctrl leaves the key to the browser, so back and forward
 // still work. A label too long for the row is cut with an ellipsis rather than overflowing the dialog.
+// Each chip is 36 px high and a short one such as "g" is narrower than 44 px, so an invisible pseudo element
+// reaches 4 px past every edge to a 44 px target (5 px from the padding box, which sits inside the 1 px
+// border). The chips are 8 px apart, so the reaches meet at the middle
+// of the gap without covering the next chip.
 export function ChipGroup<Value extends string>(props: ChipGroupProps<Value>) {
   const { label, options, onChipPress, className } = props;
   const roles = selectionRoles[props.selection === "multiple" ? "multiple" : "single"];
@@ -99,7 +103,7 @@ export function ChipGroup<Value extends string>(props: ChipGroupProps<Value>) {
               moveTo(targetIndex);
             }
           }}
-          className="inline-flex h-control-sm max-w-full shrink-0 items-center whitespace-nowrap rounded-pill border border-border bg-surface-raised px-3 text-body text-text-primary outline-none transition-colors duration-quick motion-reduce:transition-none aria-checked:border-accent aria-checked:bg-accent aria-checked:font-semibold aria-checked:text-accent-foreground focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset"
+          className="relative inline-flex h-control-sm max-w-full shrink-0 items-center whitespace-nowrap rounded-pill border border-border bg-surface-raised px-3 text-body text-text-primary outline-none transition-colors duration-quick after:absolute after:-inset-[5px] motion-reduce:transition-none aria-checked:border-accent aria-checked:bg-accent aria-checked:font-semibold aria-checked:text-accent-foreground focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-focus-ring-offset"
         >
           <span className="truncate">{option.label}</span>
         </button>

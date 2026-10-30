@@ -9,9 +9,11 @@ import { cn } from "@/lib/utils";
 
 const FOODS_HREF = "/foods";
 
-// Each class is written out whole so Tailwind can see it.
+// Each class is written out whole so Tailwind can see it. The quiet link is 36 px high, so an invisible
+// pseudo element reaches 4 px above and below to a 44 px target. The accent link is already 44 px.
 const toneClasses = {
-  quiet: "min-h-control-sm text-text-secondary",
+  quiet:
+    "relative min-h-control-sm text-text-secondary after:absolute after:inset-x-0 after:-inset-y-1",
   accent: "min-h-touch-target text-accent-ink",
 } as const satisfies Record<NonNullable<BackToFoodsLinkProps["tone"]>, string>;
 

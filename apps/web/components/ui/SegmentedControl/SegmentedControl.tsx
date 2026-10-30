@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 // The classes are written out so Tailwind sees them. The medium track is 44 px with 3 px of padding, so
 // its segments are 36 px. The small track is the 36 px track of the board's Primary / Second / Assist
 // switch, with 2 px of padding, so its segments are 30 px. The board sets the small label at 12 px where
-// the medium label is 14 px. Each segment's corners follow the track's, less its padding.
+// the medium label is 14 px. Each segment's corners follow the track's, less its padding. A small segment
+// reaches 7 px above and below with an invisible pseudo element, to a 44 px target. The segments touch, so
+// the reach goes up and down only.
 const sizeLooks = {
   md: {
     track: "h-control-md p-[3px]",
@@ -15,7 +17,8 @@ const sizeLooks = {
   },
   sm: {
     track: "h-control-sm p-[2px]",
-    segment: "rounded-[calc(theme(borderRadius.medium)-2px)] px-1 text-[12px]",
+    segment:
+      "relative rounded-[calc(theme(borderRadius.medium)-2px)] px-1 text-[12px] after:absolute after:inset-x-0 after:-inset-y-[7px]",
   },
 } as const;
 

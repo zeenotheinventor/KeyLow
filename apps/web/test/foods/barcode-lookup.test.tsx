@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeFood, makePortion } from "./support";
 import { foodEntry } from "../diary/support";
+import { reachOf } from "../ui/hitArea";
 
 import type {
   LogFoodInput,
@@ -110,6 +111,19 @@ describe("BarcodeLookup", () => {
   });
 
   describe("the open panel", () => {
+    it("should give the close button a touch target square to press, although it draws 36 px wide", async () => {
+      renderPanel();
+      const reach = await reachOf(
+        screen.getByRole("button", { name: "Close barcode lookup" }),
+        "after:",
+        1,
+      );
+
+      // The button draws 36 px square. Its sides stay inside the card, which clips what passes its edge.
+      expect(36 + reach.left + reach.right).toBe(44);
+      expect(36 + reach.top + reach.bottom).toBe(44);
+    });
+
     it("should be a region with a labelled field for the digits, a Look up button and a close button", () => {
       renderPanel();
 

@@ -18,7 +18,7 @@ const toneStyles = {
     ink: "text-text-primary",
     sentence: "text-body text-text-secondary",
     trailingActionText: "text-body-strong text-accent-ink underline",
-    belowActionText: "text-body-strong text-accent-ink underline",
+    belowActionText: "text-body-strong text-accent-ink underline after:-inset-y-2.5",
     defaultActionPlacement: "below",
     defaultRole: "status",
     defaultIcon: Info,
@@ -30,7 +30,8 @@ const toneStyles = {
     sentence: "text-caption text-text-secondary",
     trailingActionText:
       "text-[14px] font-semibold leading-5 text-warning light-theme:text-text-primary",
-    belowActionText: "text-[14px] font-semibold leading-5 text-text-primary underline",
+    belowActionText:
+      "text-[14px] font-semibold leading-5 text-text-primary underline after:-inset-y-3",
     defaultActionPlacement: "trailing",
     defaultRole: "note",
     defaultIcon: CircleAlert,
@@ -41,14 +42,20 @@ const toneStyles = {
     ink: "text-text-primary",
     sentence: "text-caption text-text-secondary",
     trailingActionText: "text-[14px] font-semibold leading-5 text-text-primary",
-    belowActionText: "text-[14px] font-semibold leading-5 text-text-primary underline",
+    belowActionText:
+      "text-[14px] font-semibold leading-5 text-text-primary underline after:-inset-y-3",
     defaultActionPlacement: "trailing",
     defaultRole: "alert",
     defaultIcon: CircleAlert,
   },
 } as const satisfies Record<BannerTone, object>;
 
-const actionFrame = "rounded-small outline-none focus-visible:ring-2 focus-visible:ring-focus-ring";
+// An action is text and is shorter than 44 px, so an invisible pseudo element reaches past it to a 44 px
+// target: 8 px to each side, as a word such as "Retry" is under 44 px wide, and the vertical reach that
+// the tone's below-the-words text sets, from its line height. The trailing action is 36 px high and
+// reaches 4 px above and below.
+const actionFrame =
+  "relative rounded-small outline-none after:absolute after:-inset-x-2 focus-visible:ring-2 focus-visible:ring-focus-ring";
 
 function ActionControl({ action, className }: { action: BannerAction; className: string }) {
   if (action.href !== undefined) {
@@ -120,7 +127,7 @@ export function Banner({
           action={action}
           className={cn(
             actionFrame,
-            "flex min-h-control-sm shrink-0 items-center",
+            "flex min-h-control-sm shrink-0 items-center after:-inset-y-1",
             style.trailingActionText,
           )}
         />
