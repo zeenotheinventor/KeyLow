@@ -8,6 +8,7 @@ import {
 import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
+import { describeRepRange } from "./routines";
 import { capitaliseFirst } from "./wording";
 import { dayNumber } from "../dates/calendarDay";
 
@@ -32,6 +33,8 @@ export const TRAIN_HOME = {
   weekSectionName: "This week",
   /** The name of the bar that fills as the day's sets are logged. */
   setsProgressName: "Sets logged",
+  /** The name of the placeholder rows that hold the exercise list's place while it loads. */
+  exercisesLoadingName: "Loading exercises",
 } as const;
 
 /** The fixed words of the Today card. */
@@ -153,6 +156,25 @@ export const TRAIN_OFFLINE_NOTHING_SAVED =
 /** The line above the Today card's title: "Today · Thursday 15 October". */
 export const describeTodayHeading = (localDate: string): string =>
   `Today · ${describeDateInWords(localDate)}`;
+
+export type PlannedExerciseTargetInput = Readonly<{
+  sets: number;
+  repMin: number;
+  repMax: number;
+  /** The reps in reserve the plan asks for, or null when it names none. */
+  rir: number | null;
+}>;
+
+/** What the plan asks of one exercise, on the web Today card's list: "3 × 5 to 8 · RIR 2". */
+export const describePlannedExerciseTarget = ({
+  sets,
+  repMin,
+  repMax,
+  rir,
+}: PlannedExerciseTargetInput): string =>
+  [`${sets} × ${describeRepRange(repMin, repMax)}`, ...(rir === null ? [] : [`RIR ${rir}`])].join(
+    " · ",
+  );
 
 const MINUTES_ABBREVIATION = "min";
 const DAYS_PER_WEEK = 7;

@@ -1,12 +1,3 @@
-import {
-  planRoutineOf,
-  useActiveRoutine,
-  useActiveSession,
-  useHasLoggedSession,
-  useProfileTimeZone,
-  useWeekSessionRows,
-  weekStartOf,
-} from "@keylow/api-client";
 import { addCalendarDays, toLocalDate } from "@keylow/core/dates";
 import {
   SESSION_TIME_PARAMS_V1,
@@ -15,13 +6,23 @@ import {
   weekPlanDays,
 } from "@keylow/core/training";
 
-import { useNow } from "../../lib/useNow";
-import { useReadsEnabled } from "../../lib/useReadsEnabled";
+import { useActiveRoutine } from "./useActiveRoutine";
+import { useActiveSession } from "./useActiveSession";
+import { useHasLoggedSession } from "./useHasLoggedSession";
+import { useProfileTimeZone } from "./useProfileTimeZone";
+import { useWeekSessionRows } from "./useWeekSessionRows";
+import { weekStartOf } from "../weekStartOf";
+import { planRoutineOf } from "./planRoutineOf";
 
-import type { TodayCardView, TrainHome, TrainWeekView } from "./types";
-import type { PickDayOption } from "../PickDaySheet";
-import type { ActiveRoutine } from "@keylow/api-client";
-import type { TodayCard, WeekPlan, WeekSession } from "@keylow/core/training";
+import type {
+  PickDayOption,
+  TodayCardView,
+  TrainHome,
+  TrainHomeSettings,
+  TrainWeekView,
+} from "./trainHomeTypes";
+import type { ActiveRoutine, WeekSession } from "../repos";
+import type { TodayCard, WeekPlan } from "@keylow/core/training";
 
 /**
  * The week's sessions with the one in progress among them, dated `localDate`. The session in progress is read
@@ -116,8 +117,8 @@ function pickDayOptionsOf(plan: WeekPlan): readonly PickDayOption[] {
  * What the Train home shows, from the reads it waits on: the profile's time zone, the active routine, the
  * sessions of the week that holds today, the session in progress and, only when there is no routine,
  * whether any session was ever logged (a routine already says it is not a first visit, so the read is not
- * made). Every read waits until the account has accepted the current Terms. The Today card is core's
- * `todayCard` over them at the current minute, which `useNow` moves on once a minute. The minute is
+ * made). Every read waits until `enabled`: the account has accepted the current Terms. The Today card is core's
+ * `todayCard` over them at the current minute, which the platform moves on once a minute. The minute is
  * never in a query key: the week reads under its Monday, so a tick only works the card out again. It is
  * ready once the reads it needs are there, from the cache too, so it works offline. A read that fails while
  * there is nothing to show is an error, and a refetch that fails behind content that is already there is
@@ -125,9 +126,7 @@ function pickDayOptionsOf(plan: WeekPlan): readonly PickDayOption[] {
  * merge of the session in progress, except that it keeps that session on the day it started (when that is in
  * the week) where the card dates it today.
  */
-export function useTrainHome(): TrainHome {
-  const enabled = useReadsEnabled();
-  const now = useNow();
+export function useTrainHome({ now, enabled }: TrainHomeSettings): TrainHome {
   const timeZone = useProfileTimeZone({ enabled });
   const routine = useActiveRoutine({ enabled });
   const everLogged = useHasLoggedSession({ enabled: enabled && routine.data === null });
@@ -188,6 +187,7 @@ export function useTrainHome(): TrainHome {
   return {
     status: "ready",
     hasRoutine: routine.data !== null,
+    routineId: routine.data?.id ?? null,
     hasLoggedSession: everLogged.data === true,
     today: todayViewOf(card, routine.data, plan),
     routineDays: pickDayOptionsOf(plan),

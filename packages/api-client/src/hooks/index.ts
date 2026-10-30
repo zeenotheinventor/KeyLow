@@ -86,6 +86,14 @@ export { useWeekComparison } from "./useWeekComparison";
 export { useActiveRoutine } from "./useActiveRoutine";
 export { planRoutineOf } from "./planRoutineOf";
 export { useWeekSessionRows } from "./useWeekSessionRows";
+export { useTrainHome } from "./useTrainHome";
+export type {
+  PickDayOption,
+  TodayCardView,
+  TrainHome,
+  TrainHomeSettings,
+  TrainWeekView,
+} from "./trainHomeTypes";
 export { useActiveSession } from "./useActiveSession";
 export { useHasLoggedSession } from "./useHasLoggedSession";
 export { useLastPerformance } from "./useLastPerformance";

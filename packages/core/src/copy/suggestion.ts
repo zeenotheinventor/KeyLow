@@ -8,6 +8,7 @@ import {
 import { describeCount } from "./counts";
 import { describeDateInWords } from "./diary";
 import { MUSCLE_NAMES, NAME_NUMBER } from "./muscleNames";
+import { describePlannedExerciseTarget } from "./train";
 import { capitaliseFirst } from "./wording";
 import { heatStepOf, isReadyHeat } from "../training/bodyMapValues";
 import { GOAL_PRESETS_V1 } from "../training/goalPresets";
@@ -394,11 +395,8 @@ export type SuggestionDetailCopy = SuggestionActions &
     footnote: string;
   }>;
 
-const describeRepRange = ({ repMin, repMax }: SuggestionRepRange): string =>
-  repMin === repMax ? String(repMin) : `${repMin} to ${repMax}`;
-
 const describeTarget = (sets: number, reps: SuggestionRepRange, rir: number | null): string =>
-  `${sets} × ${describeRepRange(reps)}${rir === null ? "" : ` · RIR ${rir}`}`;
+  describePlannedExerciseTarget({ sets, ...reps, rir });
 
 /** "Glutes and hamstrings are short of target too.", for the other primary muscles of an exercise. */
 const describeOtherReasons = (others: readonly SuggestionReason[]): string[] => {

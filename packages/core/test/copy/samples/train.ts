@@ -148,5 +148,9 @@ export const samples: Record<string, () => string[]> = {
     });
     return [row.title, row.meta, row.weekdayLabel];
   },
+  describePlannedExerciseTarget: () => [
+    copy.describePlannedExerciseTarget({ sets: 3, repMin: 5, repMax: 8, rir: 2 }),
+    copy.describePlannedExerciseTarget({ sets: 3, repMin: 8, repMax: 12, rir: null }),
+  ],
   describeOfflineBanner: () => [copy.describeOfflineBanner("17:52")],
 };
