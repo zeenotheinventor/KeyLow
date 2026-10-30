@@ -249,6 +249,9 @@ importers:
       '@keylow/api-client':
         specifier: workspace:*
         version: link:../../packages/api-client
+      '@keylow/body-3d':
+        specifier: workspace:*
+        version: link:../../packages/body-3d
       '@keylow/core':
         specifier: workspace:*
         version: link:../../packages/core
