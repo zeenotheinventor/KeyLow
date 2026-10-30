@@ -1,6 +1,11 @@
 "use client";
 
-import { FoodsPartialWriteError, useCreateFood, useUpdateFood } from "@keylow/api-client";
+import {
+  CustomFoodValidationError,
+  FoodsPartialWriteError,
+  useCreateFood,
+  useUpdateFood,
+} from "@keylow/api-client";
 import { FOOD_FORM, FOOD_FORM_BUTTONS } from "@keylow/core/copy";
 import { customFoodInputFrom, normaliseBarcode, withCarriedNutrients } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
@@ -23,13 +28,17 @@ import { Banner } from "@/components/ui/Banner";
 
 type SaveStatus = "idle" | "saving" | "saved";
 
-/** What happened to the last save that did not finish. A partial create carries the id of the food it wrote. */
-type SaveFailure = { kind: "failed" } | { kind: "partial"; foodId: string };
+/**
+ * What happened to the last save that did not finish. A partial create carries the id of the food it
+ * wrote. `invalid` is a save the api-client refused because the details did not satisfy the schema.
+ */
+type SaveFailure = { kind: "failed" } | { kind: "invalid" } | { kind: "partial"; foodId: string };
 
 function describeSaveFailure(error: unknown): SaveFailure {
-  return error instanceof FoodsPartialWriteError
-    ? { kind: "partial", foodId: error.foodId }
-    : { kind: "failed" };
+  if (error instanceof FoodsPartialWriteError) {
+    return { kind: "partial", foodId: error.foodId };
+  }
+  return error instanceof CustomFoodValidationError ? { kind: "invalid" } : { kind: "failed" };
 }
 
 function describeBanner(
@@ -53,6 +62,14 @@ function describeBanner(
   }
   if (failure.kind === "failed") {
     return { tone: "error", role: "alert", children: FOOD_FORM.saveFailed };
+  }
+  if (failure.kind === "invalid") {
+    return {
+      tone: "error",
+      role: "alert",
+      title: FOOD_FORM.detailsNotValidNotice.title,
+      children: FOOD_FORM.detailsNotValidNotice.body,
+    };
   }
   // The food is on the page being edited already, so there is nothing to open. Saving again is the way on.
   return isEditing

@@ -1,8 +1,13 @@
 "use client";
 
-import { RateLimitedError, useMaterialiseOffProduct } from "@keylow/api-client";
+import {
+  OffProductNotFoundError,
+  RateLimitedError,
+  useMaterialiseOffProduct,
+} from "@keylow/api-client";
 import {
   ADD_PRODUCT_FAILED,
+  ADD_PRODUCT_NOT_FOUND,
   OPEN_FOOD_FACTS_BUSY,
   SEARCH_GROUP_HEADINGS,
   SEARCH_STATUS,
@@ -63,6 +68,10 @@ export function OffCandidateList({ candidates, query }: OffCandidateListProps) {
         failure === null ? undefined : failure instanceof RateLimitedError ? (
           <Banner tone="error" title={OPEN_FOOD_FACTS_BUSY}>
             {describeRateLimit(failure.retryAfterSeconds)}
+          </Banner>
+        ) : failure instanceof OffProductNotFoundError ? (
+          <Banner tone="error" title={ADD_PRODUCT_NOT_FOUND}>
+            {null}
           </Banner>
         ) : (
           <Banner tone="error" title={ADD_PRODUCT_FAILED.title}>
