@@ -136,11 +136,11 @@ describe("the dashboard screen", () => {
       expect(bodyMapCard().parentElement).toBe(weekCard().closest("section")?.parentElement);
     });
 
-    it("should name the card by the short title and carry the full name on one image inside it", () => {
+    it("should name the card by the short title and carry the full name on the one link inside it", () => {
       renderDashboard();
 
       expect(
-        within(bodyMapCard()).getByRole("img", {
+        within(bodyMapCard()).getByRole("link", {
           name: /^Body map, Actual heat now\. Warmest: lats 25 percent/,
         }),
       ).toBeTruthy();
@@ -228,12 +228,11 @@ describe("the dashboard screen", () => {
     it("should hold the title and the ring and bars inside that link, hidden from assistive technology so they are not read twice", () => {
       renderDashboard();
 
-      // The only image outside the hidden card is the body map card's, which names itself in full and
-      // holds its figures and legend as presentation.
+      // The body map card is one link that names itself in full and holds its figures and legend as
+      // presentation, so no image is exposed outside the hidden card.
       const bodyMap = screen.getByRole("region", { name: "Training" });
-      const images = screen.getAllByRole("img").filter((image) => !bodyMap.contains(image));
-      expect(images).toHaveLength(0);
-      expect(within(bodyMap).getAllByRole("img")[0]?.getAttribute("aria-label")).toMatch(
+      expect(screen.queryAllByRole("img")).toHaveLength(0);
+      expect(within(bodyMap).getByRole("link").getAttribute("aria-label")).toMatch(
         /^Body map, Actual heat now\./,
       );
       expect(screen.queryByRole("group")).toBeNull();

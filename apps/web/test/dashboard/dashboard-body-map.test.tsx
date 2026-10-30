@@ -84,7 +84,7 @@ describe("DashboardBodyMap", () => {
     show(loaded);
     render(<DashboardBodyMap />);
 
-    expect(screen.getByRole("img", { name: FIRST_LINE })).toBeTruthy();
+    expect(screen.getByRole("link", { name: FIRST_LINE })).toBeTruthy();
   });
 
   it("should keep the numbers on screen when the browser goes offline", () => {
@@ -92,14 +92,14 @@ describe("DashboardBodyMap", () => {
     onlineManager.setOnline(false);
     render(<DashboardBodyMap />);
 
-    expect(screen.getByRole("img", { name: FIRST_LINE })).toBeTruthy();
+    expect(screen.getByRole("link", { name: FIRST_LINE })).toBeTruthy();
   });
 
   it("should keep the numbers on screen when a refetch fails", () => {
     show({ ...loaded, isError: true, error: new Error("refetch failed") });
     render(<DashboardBodyMap />);
 
-    expect(screen.getByRole("img", { name: FIRST_LINE })).toBeTruthy();
+    expect(screen.getByRole("link", { name: FIRST_LINE })).toBeTruthy();
     expect(screen.queryByText(BODY_MAP.dashboardCard.loadFailed)).toBeNull();
   });
 
