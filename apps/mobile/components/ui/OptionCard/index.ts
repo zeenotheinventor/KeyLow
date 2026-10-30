@@ -1,3 +1,10 @@
 export { OptionCard } from "./OptionCard";
 export { OptionCardGroup } from "./OptionCardGroup";
-export type { OptionCardGroupOption, OptionCardGroupProps, OptionCardProps } from "./types";
+export type {
+  OptionCardGroupMultipleProps,
+  OptionCardGroupOption,
+  OptionCardGroupProps,
+  OptionCardGroupSingleProps,
+  OptionCardProps,
+  OptionCardSelection,
+} from "./types";

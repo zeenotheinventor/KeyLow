@@ -82,6 +82,28 @@ function Rate() {
   );
 }
 
+type StoryFocus = "v_taper" | "chest" | "arms";
+
+const focuses: readonly OptionCardGroupOption<StoryFocus>[] = [
+  { id: "v_taper", title: "V-taper", description: "Wider shoulders and back, a narrower waist" },
+  { id: "chest", title: "Chest", description: "Upper and lower chest" },
+  { id: "arms", title: "Arms", description: "Biceps, triceps and forearms" },
+];
+
+// Any number may be chosen, so the screen keeps a list and a press adds the card or takes it out.
+function Focus() {
+  const [value, setValue] = useState<StoryFocus[]>(["v_taper"]);
+  return (
+    <OptionCardGroup
+      label="Anything to focus on?"
+      options={focuses}
+      selection="multiple"
+      value={value}
+      onChange={setValue}
+    />
+  );
+}
+
 const meta = {
   title: "UI/OptionCard",
   component: OptionCard,
@@ -167,3 +189,26 @@ export const GroupWithFigures: Story = {
 export const GroupWithDisabledOption: Story = {
   render: () => <Goal initial="maintain" options={goalsUnderEighteen} />,
 };
+
+// The focus question's cards when more than one may be chosen: a square mark with a 6 point radius, empty.
+export const CheckboxUnchecked: Story = {
+  args: { title: "Chest", description: "Upper and lower chest", selection: "multiple" },
+};
+
+// Checked: the same accent border on the muted fill, and the square filled with the accent and a check.
+export const CheckboxChecked: Story = {
+  args: {
+    title: "V-taper",
+    description: "Wider shoulders and back, a narrower waist",
+    selection: "multiple",
+    checked: true,
+  },
+};
+
+// A checkbox card that is not offered: dimmed to 40 percent, with its reason at full strength.
+export const CheckboxDisabled: Story = {
+  args: { title: "Legs", selection: "multiple", disabledReason: "Not offered." },
+};
+
+// The focus question: V-taper chosen, and a press on any card checks it or clears it.
+export const GroupMultiple: Story = { render: () => <Focus /> };

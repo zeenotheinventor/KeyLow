@@ -5,20 +5,27 @@ import { Icon } from "../Icon";
 import { PressableSurface } from "../PressableSurface";
 import { Text } from "../Text";
 
-import type { OptionCardProps } from "./types";
+import type { OptionCardProps, OptionCardSelection } from "./types";
 
 // The classes are written out so Tailwind sees them. The chosen card is the accent border drawn at 2
 // points: the card's own hairline plus the line inside it (see `ChosenLine`), so the card keeps its size.
 const cardLooks = {
   chosen: {
     cardClassName: "border-accent bg-accent-muted",
-    radioClassName: "border-accent bg-accent",
+    markClassName: "border-accent bg-accent",
   },
   other: {
     cardClassName: "border-border bg-surface",
-    radioClassName: "border-border-strong bg-transparent",
+    markClassName: "border-border-strong bg-transparent",
   },
 };
+
+// One answer is a radio with a round mark. Several are checkboxes with a mark that is a square with
+// rounded corners, 6 points as the goal questionnaire's board draws it.
+const selectionLooks = {
+  single: { role: "radio", markShapeClassName: "rounded-pill" },
+  multiple: { role: "checkbox", markShapeClassName: "rounded-[6px]" },
+} as const;
 
 // Spoken, a name stops at a comma, so a closing full stop on a sentence adds nothing.
 function withoutFinalStop(words: string): string {
@@ -27,7 +34,8 @@ function withoutFinalStop(words: string): string {
 
 /**
  * The name a screen reader gives the card: the title, then the badge, the description, the reason it is
- * disabled and the value, each as it was given. The card reads as one radio, so its parts are one name.
+ * disabled and the value, each as it was given. The card reads as one radio or checkbox, so its parts are
+ * one name.
  */
 function accessibleName({
   title,
@@ -45,18 +53,41 @@ function accessibleName({
     .join(", ");
 }
 
+// What sits in the mark of a chosen card: the radio's dot, or the checkbox's check.
+function CheckedMark({ selection }: { selection: OptionCardSelection }) {
+  return selection === "multiple" ? (
+    <Icon name="Check" size={14} strokeWidth={2.5} tone="accent-foreground" />
+  ) : (
+    <View className="h-2 w-2 rounded-pill bg-accent-foreground" />
+  );
+}
+
 /**
- * A card that is one answer to a question, drawn with a radio at its start. At least 56 points high, with
- * a title, and optionally a description, a badge, a figure at the end with a caption, and a reason it
+ * A card that is one answer to a question, drawn with a round radio at its start. At least 56 points high,
+ * with a title, and optionally a description, a badge, a figure at the end with a caption, and a reason it
  * cannot be chosen. It is a radio for a screen reader, named by its parts, and belongs in an
  * `OptionCardGroup`. It shares the press scale and overlay of every pressable and plays the selection
  * haptic when it is chosen.
+ *
+ * With `selection="multiple"` it is one of several answers: a checkbox with a square mark that holds a
+ * check when it is checked. Pressing a checked card calls `onPress` again, so the answer can be cleared.
  */
 export function OptionCard(props: OptionCardProps) {
-  const { title, description, badge, value, valueCaption, checked, disabledReason, onPress } =
-    props;
+  const {
+    title,
+    description,
+    badge,
+    value,
+    valueCaption,
+    selection = "single",
+    checked,
+    disabledReason,
+    onPress,
+  } = props;
   const isDisabled = disabledReason !== undefined;
   const look = cardLooks[checked ? "chosen" : "other"];
+  const selectionLook = selectionLooks[selection];
+  const isCheckbox = selection === "multiple";
   const dimClassName = isDisabled ? "opacity-40" : "";
 
   return (
@@ -64,11 +95,12 @@ export function OptionCard(props: OptionCardProps) {
       checked={checked}
       className={`min-h-[56px] flex-row items-center gap-3 rounded-medium border px-4 py-3 ${look.cardClassName}`}
       disabled={isDisabled}
-      // Pressing the chosen card changes nothing, so it plays no haptic and says nothing.
-      haptic={checked ? undefined : "select"}
+      // Pressing the chosen radio changes nothing, so it plays no haptic and says nothing. A checkbox
+      // clears when it is pressed again.
+      haptic={checked && !isCheckbox ? undefined : "select"}
       label={accessibleName(props)}
-      role="radio"
-      onPress={checked ? undefined : onPress}
+      role={selectionLook.role}
+      onPress={checked && !isCheckbox ? undefined : onPress}
     >
       {checked ? (
         // The board draws the chosen border as a 1 point border with a 1 point line inside it. The line's
@@ -77,9 +109,9 @@ export function OptionCard(props: OptionCardProps) {
       ) : null}
       <View
         aria-hidden
-        className={`h-5 w-5 shrink-0 items-center justify-center rounded-pill border-2 ${look.radioClassName} ${dimClassName}`}
+        className={`h-5 w-5 shrink-0 items-center justify-center border-2 ${selectionLook.markShapeClassName} ${look.markClassName} ${dimClassName}`}
       >
-        {checked ? <View className="h-2 w-2 rounded-pill bg-accent-foreground" /> : null}
+        {checked ? <CheckedMark selection={selection} /> : null}
       </View>
       <View className="min-w-0 flex-1 gap-0.5">
         <View className={`flex-row items-center gap-2 ${dimClassName}`}>

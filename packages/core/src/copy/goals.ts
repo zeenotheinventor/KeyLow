@@ -151,6 +151,10 @@ export const GOAL_QUESTIONNAIRE = {
   /** The name of the close button, which is also the warning that closing loses the answers. */
   closeLabel: "Close, your answers are not saved",
   closeConfirmation: "Your answers are not saved",
+  /** No board draws the close question. Its sentence and buttons follow the session discard's. */
+  closeBody: "Close now and the answers you have given are discarded.",
+  closeConfirmAction: "Close",
+  closeKeepAction: "Keep answering",
   /** The name of the progress bar. */
   progressName: "Questions answered",
   otherMinutesOption: "Other",
