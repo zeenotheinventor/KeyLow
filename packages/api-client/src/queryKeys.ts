@@ -94,6 +94,10 @@ export const keys = {
    * `routineAll`, are persisted on mobile so the routines open without a connection. A routine key
    * carries a flag or a routine id besides fixed words, never a routine name or an exercise. The
    * routines are written only with a connection: nothing is queued or replayed from storage.
+   *
+   * The accepted suggestions follow the same rule. `acceptedSuggestions(weekStart)`, under the
+   * `acceptedSuggestionsAll` prefix, is persisted on mobile as rows, so the projection counts what the
+   * user accepted into a day without a connection. Accepting and undoing need one.
    */
   training: {
     all: ["training"] as const,
@@ -202,6 +206,19 @@ export const keys = {
      */
     suggestionLibrary: (equipmentKey: string) =>
       ["training", "suggestion-library", equipmentKey] as const,
+    /** The prefix of every `acceptedSuggestions` key. */
+    acceptedSuggestionsAll: ["training", "accepted-suggestions"] as const,
+    /**
+     * The signed in user's live accepted suggestions with `local_date` in the week that starts on the
+     * Monday `weekStart` (`YYYY-MM-DD`), parsed, and the ids and field paths of the rows that did not
+     * parse. Persisted on mobile, as rows: an accepted suggestion counts as planned in the projection,
+     * which is worked out from the rows at read time and never stored, so the body map and the gap
+     * follow it without a connection. The key is a date and fixed words only, never an exercise, a
+     * muscle or a suggestion. Accepting and undoing need a connection: nothing is queued or replayed
+     * from storage.
+     */
+    acceptedSuggestions: (weekStart: string) =>
+      ["training", "accepted-suggestions", weekStart] as const,
     /**
      * The exercises added to a session on screen that have no logged set yet, which the data model cannot
      * store (it stores sets). Never persisted: they survive the screen being hidden and shown again, and

@@ -199,6 +199,12 @@ describe("the package index", () => {
     "clearTickedItems",
     "listSuggestionLibrary",
     "useSuggestion",
+    "listAcceptedSuggestions",
+    "acceptSuggestion",
+    "undoAcceptedSuggestion",
+    "useAcceptedSuggestions",
+    "useAcceptSuggestion",
+    "useUndoAcceptedSuggestion",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

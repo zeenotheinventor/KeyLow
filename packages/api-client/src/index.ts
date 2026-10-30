@@ -320,6 +320,15 @@ export { useSuggestion } from "./hooks";
 export type { SuggestionRead, SuggestionUnavailableReason, UseSuggestionInput } from "./hooks";
 export { listSuggestionLibrary } from "./repos";
 export type { SuggestionLibraryOptions } from "./repos";
+export { useAcceptedSuggestions, useAcceptSuggestion, useUndoAcceptedSuggestion } from "./hooks";
+export type { AcceptSuggestionInput } from "./hooks";
+export { acceptSuggestion, listAcceptedSuggestions, undoAcceptedSuggestion } from "./repos";
+export type {
+  AcceptSuggestion,
+  AcceptedSuggestionRow,
+  AcceptedSuggestionsRead,
+  SkippedAcceptedSuggestion,
+} from "./repos";
 export { ExerciseRuleError } from "./errors";
 export type { ExerciseRule } from "./errors";
 export { archiveExercise, getExercise, saveExercise, searchExercises } from "./repos";

@@ -792,6 +792,9 @@ export async function fakeFetch(
     case "training_goals":
       // The user has no goal, so the training reads that wait for it are not held up by an error.
       return Promise.resolve(jsonResponse([]));
+    case "accepted_suggestions":
+      // The user has accepted no suggestion, so the projection that waits for them is not held up by an error.
+      return Promise.resolve(jsonResponse([]));
     default:
       return Promise.resolve(jsonResponse({ message: "unexpected request" }, 404));
   }

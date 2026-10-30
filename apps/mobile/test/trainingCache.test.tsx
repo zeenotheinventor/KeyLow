@@ -1,4 +1,10 @@
-import { KeyLowProvider, keys, useBodyMap, useMuscleState } from "@keylow/api-client";
+import {
+  KeyLowProvider,
+  keys,
+  useBodyMap,
+  useMuscleDetail,
+  useMuscleState,
+} from "@keylow/api-client";
 import { TERMS_VERSION } from "@keylow/core/copy";
 import {
   GOAL_PRESETS_V1,
@@ -24,7 +30,12 @@ import {
 } from "./support/diaryBackend";
 import { DIARY_CACHE_MAX_AGE_MS, DIARY_CACHE_STORAGE_KEY } from "../lib/diaryCache/constants";
 
-import type { ActiveRoutine, TrainingSet } from "@keylow/api-client";
+import type {
+  AcceptedSuggestionRow,
+  AcceptedSuggestionsRead,
+  ActiveRoutine,
+  TrainingSet,
+} from "@keylow/api-client";
 import type { TrainingGoalsRow } from "@keylow/core/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -93,6 +104,36 @@ const trainingGoal: TrainingGoalsRow = {
   created_at: "2026-10-10T09:00:00+00:00",
 };
 
+// Three sets of the exercise accepted into Saturday 17 October, standing alone, as the week's rows hold it.
+const acceptedSuggestion: AcceptedSuggestionRow = {
+  id: "66666666-6666-4666-8666-666666666666",
+  local_date: "2026-10-17",
+  routine_day_id: null,
+  exercises: [
+    {
+      id: EXERCISE_ID,
+      position: 0,
+      exercise_id: EXERCISE_ID,
+      target_sets: 3,
+      target_rir: 2,
+      exercise: {
+        id: EXERCISE_ID,
+        name: RECOGNISABLE_EXERCISE_NAME,
+        equipment: "barbell",
+        mechanic: "compound",
+      },
+      muscles: [{ muscle_id: "chest_lower", role: "primary", weight: 1 }],
+      snapshot,
+    },
+  ],
+  reasons: { picks: [] },
+  params_version: "keylow-training-v2",
+};
+const acceptedSuggestionsRead: AcceptedSuggestionsRead = {
+  suggestions: [acceptedSuggestion],
+  skipped: [],
+};
+
 const termsAcceptance = {
   terms_accepted_at: "2026-10-15T09:30:00+00:00",
   terms_version: TERMS_VERSION,
@@ -111,6 +152,7 @@ function seedTrainingReads(
   // Every row of the user's goals is read with a connection and is not kept.
   queryClient.setQueryData(keys.training.goalsHistory, [trainingGoal]);
   queryClient.setQueryData(keys.training.weekSessions(WEEK_START), []);
+  queryClient.setQueryData(keys.training.acceptedSuggestions(WEEK_START), acceptedSuggestionsRead);
   if (options.olderSetsReadHoursAgo !== undefined) {
     queryClient.setQueryData(keys.training.sets(OLDER_START_DAY), trainingSets, {
       updatedAt: Date.now() - options.olderSetsReadHoursAgo * 60 * 60 * 1000,
@@ -145,6 +187,20 @@ function BodyMapOfTheLowerChest({ now }: { now: string }) {
     <Text>Reading the body map</Text>
   ) : (
     <Text>{`Body map lower chest ${data.values.chest_lower}`}</Text>
+  );
+}
+
+function PlannedSetsOfTheLowerChest({ now }: { now: string }) {
+  const { data } = useMuscleDetail("chest_lower", {
+    view: "projected",
+    weekStart: WEEK_START,
+    now,
+  });
+
+  return data === undefined ? (
+    <Text>Reading the plan</Text>
+  ) : (
+    <Text>{`Lower chest planned ${data.weeklySets.planned.toFixed(1)}`}</Text>
   );
 }
 
@@ -222,7 +278,7 @@ describe("the training reads in the persisted cache", () => {
   });
 
   describe("what is stored", () => {
-    it("should be the sets, the active routine, the current goal and the week's sessions, with the newest sets only", async () => {
+    it("should be the sets, the active routine, the current goal, the week's sessions and its accepted suggestions, with the newest sets only", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />, { olderSetsReadHoursAgo: 30 });
 
       const hashes = await storedQueryHashes();
@@ -232,9 +288,24 @@ describe("the training reads in the persisted cache", () => {
           hashKey(keys.training.activeRoutine),
           hashKey(keys.training.goals),
           hashKey(keys.training.weekSessions(WEEK_START)),
+          hashKey(keys.training.acceptedSuggestions(WEEK_START)),
         ]),
       );
       expect(hashes).not.toContain(hashKey(keys.training.sets(OLDER_START_DAY)));
+    });
+
+    it("should keep the accepted suggestions as rows, with nothing worked out from them", async () => {
+      await storeTheTrainingReadsAndCloseTheApp(<View />);
+
+      const stored = parseStoredCache((await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)) ?? "");
+      const acceptedQuery = stored.clientState.queries.find(
+        ({ queryHash }) => queryHash === hashKey(keys.training.acceptedSuggestions(WEEK_START)),
+      );
+      expect(acceptedQuery?.state.data).toEqual(acceptedSuggestionsRead);
+      const text = JSON.stringify(acceptedQuery?.state.data);
+      for (const derived of ["projectedWeeklySets", "actualWeeklySets", "planned", "gap"]) {
+        expect(text).not.toContain(`"${derived}"`);
+      }
     });
 
     it("should keep the goal row as it is, and not the goal history", async () => {
@@ -284,6 +355,18 @@ describe("the training reads in the persisted cache", () => {
     });
   });
 
+  describe("a cold start with no connection, for the accepted suggestions", () => {
+    it("should count the stored accepted suggestions as planned, and ask the network for nothing", async () => {
+      await storeTheTrainingReadsAndCloseTheApp(<PlannedSetsOfTheLowerChest now={MORNING} />);
+      diaryBackend.requests = [];
+
+      await renderCache(<PlannedSetsOfTheLowerChest now={EVENING} />);
+
+      expect(await screen.findByText("Lower chest planned 3.0")).toBeOnTheScreen();
+      expect(diaryBackend.requests).toEqual([]);
+    });
+  });
+
   describe("whose cache it is", () => {
     it("should not read the stored training reads for another account, and remove them", async () => {
       await storeTheTrainingReadsAndCloseTheApp(<View />);
@@ -298,6 +381,9 @@ describe("the training reads in the persisted cache", () => {
       expect(queryClient.getQueryData(keys.training.sets(START_DAY))).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.activeRoutine)).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.goals)).toBeUndefined();
+      expect(
+        queryClient.getQueryData(keys.training.acceptedSuggestions(WEEK_START)),
+      ).toBeUndefined();
       expect(screen.queryByText(/Lower chest heat/)).not.toBeOnTheScreen();
     });
 
@@ -331,6 +417,9 @@ describe("the training reads in the persisted cache", () => {
       expect(queryClient.getQueryData(keys.training.activeRoutine)).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.goals)).toBeUndefined();
       expect(queryClient.getQueryData(keys.training.weekSessions(WEEK_START))).toBeUndefined();
+      expect(
+        queryClient.getQueryData(keys.training.acceptedSuggestions(WEEK_START)),
+      ).toBeUndefined();
       // A save that was already waiting for its turn must not bring the cache back.
       await letWaitingSavesRun();
       expect(await AsyncStorage.getItem(DIARY_CACHE_STORAGE_KEY)).toBeNull();
@@ -413,6 +502,7 @@ describe("the query client of the phone, for the training reads", () => {
       keys.training.activeRoutine,
       keys.training.goals,
       keys.training.weekSessions(WEEK_START),
+      keys.training.acceptedSuggestions(WEEK_START),
     ]) {
       expect(phoneClient.getQueryDefaults(queryKey).gcTime).toBe(DIARY_CACHE_MAX_AGE_MS);
     }

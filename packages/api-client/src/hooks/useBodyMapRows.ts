@@ -2,9 +2,11 @@ import { addCalendarDays, daysSinceMonday, isCalendarDay, toLocalDate } from "@k
 import { skipToken, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 
+import { acceptedSuggestionsOf } from "./acceptedSuggestionsOf";
 import { currentGoalOf } from "./currentGoalOf";
 import { HEAT_LOOKBACK_DAYS, newestCachedSetRows } from "./heatWindowRows";
 import { refetchFailedReads } from "./trainingReadResult";
+import { useAcceptedSuggestions } from "./useAcceptedSuggestions";
 import { useActiveRoutine } from "./useActiveRoutine";
 import { useProfileTimeZone } from "./useProfileTimeZone";
 import { useTrainingGoals } from "./useTrainingGoals";
@@ -16,6 +18,7 @@ import { listSetsFrom } from "../repos/training";
 import type { BodyMapRows } from "./bodyMapModel";
 import type { TrainingReadResult } from "./trainingReadResult";
 import type { TrainingSet, WeekSession } from "../repos/trainingSchemas";
+import type { AcceptedSuggestion } from "@keylow/core/training";
 
 export type BodyMapReadOptions = {
   /** The Monday that starts the week, `YYYY-MM-DD`. */
@@ -46,6 +49,8 @@ function withSetsOfSessions(
   return [...byId.values()];
 }
 
+const NO_ACCEPTED_SUGGESTIONS: readonly AcceptedSuggestion[] = [];
+
 const WEEK_RULE = "A week must start on a Monday, written YYYY-MM-DD";
 
 /**
@@ -53,15 +58,17 @@ const WEEK_RULE = "A week must start on a Monday, written YYYY-MM-DD";
  *
  * The rows are the sets from 15 days before the Monday of the week through today, held under
  * `keys.training.sets(startDay)` (a key of a day and never of `now`), the week's sessions under
- * `keys.training.weekSessions(weekStart)`, and the active routine, all kept in the mobile offline cache.
+ * `keys.training.weekSessions(weekStart)`, the week's accepted suggestions under
+ * `keys.training.acceptedSuggestions(weekStart)` (read only when the number needs the week, since
+ * only the projection counts them), and the active routine, all kept in the mobile offline cache.
  * The window starts before the Monday and not before today, so a scrubber day early in the week still has
  * the 14 days of heat behind it. `compute` runs on every render that changes its inputs and its result is
  * never stored, so the numbers are always worked out at the moment asked, online or not.
  *
- * The result is pending until the time zone, the routine, the sets and (when needed) the week are all
- * there, so no muscle is shown as under that the routine does not train. A week that does not start on a
- * Monday, or a `RangeError` from core, is an error that is not retried, and a week that is wrong makes
- * no request.
+ * The result is pending until the time zone, the routine, the sets and (when needed) the week and its
+ * accepted suggestions are all there, so no muscle is shown as under that the routine does not train. A
+ * week that does not start on a Monday, or a `RangeError` from core, is an error that is not retried, and
+ * a week that is wrong makes no request.
  */
 export function useBodyMapRows<Data>(
   { weekStart, now, enabled = true, needsWeek }: BodyMapReadOptions,
@@ -103,11 +110,14 @@ export function useBodyMapRows<Data>(
     enabled: queryable && needsWeek,
   });
 
+  const accepted = useAcceptedSuggestions(weekStart, { enabled: queryable && needsWeek });
+
   const reads = needsWeek
-    ? [timeZone, routine, goals, sets, week]
+    ? [timeZone, routine, goals, sets, week, accepted]
     : [timeZone, routine, goals, sets];
   const sessions = week.data;
   const setRows = sets.data;
+  const acceptedSuggestions = needsWeek ? acceptedSuggestionsOf(accepted) : NO_ACCEPTED_SUGGESTIONS;
 
   const computed = useMemo(() => {
     if (!enabled) {
@@ -124,7 +134,7 @@ export function useBodyMapRows<Data>(
     ) {
       return null;
     }
-    if (needsWeek && sessions === undefined) {
+    if (needsWeek && (sessions === undefined || acceptedSuggestions === undefined)) {
       return null;
     }
     try {
@@ -135,6 +145,7 @@ export function useBodyMapRows<Data>(
           priority: currentGoals?.muscle_priority ?? null,
           sets: withSetsOfSessions(setRows, sessions ?? []),
           sessions: sessions ?? [],
+          acceptedSuggestions: acceptedSuggestions ?? NO_ACCEPTED_SUGGESTIONS,
         }),
       };
     } catch (error) {
@@ -151,6 +162,7 @@ export function useBodyMapRows<Data>(
     currentGoals,
     setRows,
     sessions,
+    acceptedSuggestions,
     needsWeek,
     compute,
   ]);
