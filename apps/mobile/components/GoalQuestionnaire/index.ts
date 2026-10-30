@@ -1,9 +1,14 @@
 export { GoalDraftProvider } from "./GoalDraftProvider";
 export { GoalQuestionScreen } from "./GoalQuestionScreen";
+export { GoalSummaryScreen } from "./GoalSummaryScreen";
+export { PriorityRow } from "./PriorityRow";
 export { QuestionScreen } from "./QuestionScreen";
 export { firstUnansweredStep } from "./goalDraftReducer";
+export { priorityFigureValues } from "./priorityFigureValues";
 export { useGoalDraft } from "./useGoalDraft";
 export type { GoalDraft, GoalDraftAnswers } from "./goalDraftReducer";
 export type { GoalDraftProviderProps } from "./GoalDraftProvider";
 export type { GoalQuestionScreenProps } from "./GoalQuestionScreen";
 export type { QuestionScreenProps } from "./QuestionScreen";
+export type { GoalSummaryScreenProps } from "./GoalSummaryScreen";
+export type { PriorityRowProps } from "./PriorityRow";
