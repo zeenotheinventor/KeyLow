@@ -211,6 +211,8 @@ export type {
   TrainWeekView,
 } from "./hooks";
 export { weekStartOf } from "./weekStartOf";
+export { todayPlanOf } from "./todayPlanOf";
+export { RESTING_HEAT } from "./restingHeat";
 export type {
   BodyMap,
   BodyMapDay,

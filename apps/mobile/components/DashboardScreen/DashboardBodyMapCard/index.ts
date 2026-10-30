@@ -1,4 +1,3 @@
 export { DashboardBodyMapCard } from "./DashboardBodyMapCard";
-export { RESTING_HEAT } from "./restingHeat";
-export { todayPlanOf } from "./todayPlanOf";
+export { RESTING_HEAT } from "@keylow/api-client";
 export type { DashboardBodyMapCardProps } from "./types";

@@ -1,8 +1,8 @@
+import { todayPlanOf } from "@keylow/api-client";
 import { BODY_MAP, describeBodyFigureLabel, describeDashboardBodyMapCard } from "@keylow/core/copy";
 import { TRAINING_PARAMS_V2 } from "@keylow/core/training";
 import { View } from "react-native";
 
-import { todayPlanOf } from "./todayPlanOf";
 import { rowPressScale } from "../../../lib/motion";
 import { BodyFigure, Card, HeatLegendStrip, Icon, PressableSurface, Text } from "../../ui";
 

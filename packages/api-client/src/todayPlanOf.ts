@@ -1,4 +1,4 @@
-import type { DashboardToday } from "@keylow/api-client";
+import type { DashboardToday } from "./hooks";
 import type { TodayPlan } from "@keylow/core/copy";
 
 /**

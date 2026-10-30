@@ -2,6 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { goldenThursdayBodyMap } from "./bodyMapFixtures";
 import {
   boardWeek,
   diaryDay,
@@ -13,7 +14,7 @@ import {
 } from "../diary/support";
 import { renderWithRouter } from "../ui/appRouter";
 
-import type { DiaryDay, Targets } from "@keylow/api-client";
+import type { DashboardBodyMap, DiaryDay, Targets, TrainingReadResult } from "@keylow/api-client";
 
 import { DashboardScreen } from "@/components/dashboard";
 
@@ -28,6 +29,7 @@ type Backend = {
   days: Map<string, Query<DiaryDay>>;
   targets: Query<Targets>;
   dayReads: string[];
+  bodyMap: TrainingReadResult<DashboardBodyMap>;
 };
 
 const refetchTimeZone = vi.fn<() => Promise<unknown>>();
@@ -39,6 +41,13 @@ const backend = vi.hoisted((): Backend => ({
   days: new Map(),
   targets: { data: undefined, isError: false, refetch: () => Promise.resolve() },
   dayReads: [],
+  bodyMap: {
+    data: undefined,
+    isPending: true,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  },
 }));
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
@@ -57,6 +66,7 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   // This file is about the Today card, so the week beside it is always there. The card has its own file.
   useDiaryWeek: () => ({ data: boardWeek, isError: false, refetch: () => Promise.resolve() }),
   useTargets: () => backend.targets,
+  useDashboardBodyMap: () => backend.bodyMap,
 }));
 
 const TODAY = "2026-10-15";
@@ -94,6 +104,13 @@ beforeEach(() => {
   backend.timeZone = { data: "UTC", isError: false, refetch: refetchTimeZone };
   backend.days.clear();
   backend.dayReads = [];
+  backend.bodyMap = {
+    data: goldenThursdayBodyMap,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  };
   showDay(TODAY);
   showTargets(targets);
 });
@@ -105,6 +122,47 @@ afterEach(() => {
 });
 
 describe("the dashboard screen", () => {
+  describe("the body map card", () => {
+    const bodyMapCard = () => screen.getByRole("region", { name: "Training" });
+    const weekCard = () =>
+      screen.getByRole("link", { name: /^This week, open your weekly averages\./ });
+
+    it("should sit in the second column after the This week card", () => {
+      renderDashboard();
+
+      expect(weekCard().compareDocumentPosition(bodyMapCard())).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+      expect(bodyMapCard().parentElement).toBe(weekCard().closest("section")?.parentElement);
+    });
+
+    it("should name the card by the short title and carry the full name on one image inside it", () => {
+      renderDashboard();
+
+      expect(
+        within(bodyMapCard()).getByRole("img", {
+          name: /^Body map, Actual heat now\. Warmest: lats 25 percent/,
+        }),
+      ).toBeTruthy();
+    });
+
+    it("should leave the Today card in place when its own read fails", () => {
+      backend.bodyMap = {
+        data: undefined,
+        isPending: false,
+        isError: true,
+        error: new Error("read failed"),
+        refetch: () => Promise.resolve(),
+      };
+
+      renderDashboard();
+
+      expect(screen.getByText("Couldn't load the body map")).toBeTruthy();
+      expect(card()).toBeTruthy();
+      expect(weekCard()).toBeTruthy();
+    });
+  });
+
   describe("the header", () => {
     it("should name the day above the title, in the profile's time zone", () => {
       renderDashboard();
@@ -170,7 +228,14 @@ describe("the dashboard screen", () => {
     it("should hold the title and the ring and bars inside that link, hidden from assistive technology so they are not read twice", () => {
       renderDashboard();
 
-      expect(screen.queryByRole("img")).toBeNull();
+      // The only image outside the hidden card is the body map card's, which names itself in full and
+      // holds its figures and legend as presentation.
+      const bodyMap = screen.getByRole("region", { name: "Training" });
+      const images = screen.getAllByRole("img").filter((image) => !bodyMap.contains(image));
+      expect(images).toHaveLength(0);
+      expect(within(bodyMap).getAllByRole("img")[0]?.getAttribute("aria-label")).toMatch(
+        /^Body map, Actual heat now\./,
+      );
       expect(screen.queryByRole("group")).toBeNull();
       expect(screen.queryByRole("heading", { level: 2, name: "Today" })).toBeNull();
       const inside = within(card());
