@@ -1,3 +1,4 @@
+import { useTrainHome } from "@keylow/api-client";
 import {
   TRAIN_ERROR,
   TRAIN_HOME,
@@ -11,6 +12,8 @@ import { useRef, useState } from "react";
 import { ScrollView, View } from "react-native";
 
 import { useIsOnline } from "../../lib/connectivity";
+import { useNow } from "../../lib/useNow";
+import { useReadsEnabled } from "../../lib/useReadsEnabled";
 import { PickDaySheet } from "../PickDaySheet";
 import { PlanWeekStrip } from "../PlanWeekStrip";
 import { ScreenHeader } from "../ScreenHeader";
@@ -19,7 +22,6 @@ import { Banner, Button, ErrorState, Skeleton } from "../ui";
 import { TrainBodyMap } from "./TrainBodyMap";
 import { TrainFirstTime } from "./TrainFirstTime";
 import { TrainNoRoutine } from "./TrainNoRoutine";
-import { useTrainHome } from "./useTrainHome";
 
 import type { TrainScreenProps, TrainSessionStart } from "./types";
 
@@ -66,7 +68,9 @@ export function TrainScreen({
   onOpenHistory,
   onOpenBodyMap,
 }: TrainScreenProps) {
-  const home = useTrainHome();
+  const now = useNow();
+  const enabled = useReadsEnabled();
+  const home = useTrainHome({ now, enabled });
   const isOnline = useIsOnline();
   const [isPickDayOpen, setIsPickDayOpen] = useState(false);
   const [pickedDayId, setPickedDayId] = useState<string | null>(null);

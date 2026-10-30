@@ -197,11 +197,19 @@ export {
   useMuscleState,
   useRoutineTrendSets,
   useSession,
+  useTrainHome,
   useWeekComparison,
   useWeekSessionRows,
   useWeightUnit,
 } from "./hooks";
 export { planRoutineOf } from "./hooks";
+export type {
+  PickDayOption,
+  TodayCardView,
+  TrainHome,
+  TrainHomeSettings,
+  TrainWeekView,
+} from "./hooks";
 export { weekStartOf } from "./weekStartOf";
 export type {
   BodyMap,

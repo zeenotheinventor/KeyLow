@@ -1,6 +1,6 @@
 import { EQUIPMENT_OPTIONS } from "./goals";
-import { describeRepRange } from "./routines";
 import { SET_MARKS, SET_PHRASES, spokenNumbers, writtenNumbers } from "./sessionWording";
+import { describePlannedExerciseTarget } from "./train";
 import { displayLoad } from "../training/loads";
 
 import type { Equipment, SetType } from "../training/enums";
@@ -62,10 +62,7 @@ export type ExerciseTargetInput = Readonly<{
 /** The line under an exercise's name: "3 × 10 to 12 · RIR 1 · Machine". */
 export const describeExerciseTarget = ({ target, equipment }: ExerciseTargetInput): string =>
   [
-    ...(target === null
-      ? []
-      : [`${target.sets} × ${describeRepRange(target.repMin, target.repMax)}`]),
-    ...(target === null || target.rir === null ? [] : [`RIR ${target.rir}`]),
+    ...(target === null ? [] : [describePlannedExerciseTarget(target)]),
     EQUIPMENT_OPTIONS[equipment].label,
   ].join(SEPARATOR);
 

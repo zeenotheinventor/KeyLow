@@ -105,6 +105,7 @@ describe("the package index", () => {
     "useWeightUnit",
     "useWeekComparison",
     "useWeekSessionRows",
+    "useTrainHome",
     "planRoutineOf",
     "weekStartOf",
     "useBodyMap",

@@ -5,6 +5,7 @@ import { samples } from "./samples/train";
 import {
   describeOfflineBanner,
   describePickDayRow,
+  describePlannedExerciseTarget,
   describeSessionBar,
   describeSessionClock,
   describeTodayCard,
@@ -104,6 +105,7 @@ describe("the Train titles", () => {
       todaySectionName: "Today",
       weekSectionName: "This week",
       setsProgressName: "Sets logged",
+      exercisesLoadingName: "Loading exercises",
     });
   });
 });
@@ -947,6 +949,26 @@ describe("the Train tab states", () => {
   it("should say there is nothing saved to show when the phone has no training saved yet, with no time", () => {
     expect(TRAIN_OFFLINE_NOTHING_SAVED).toBe(
       "Your training will show when you are back online. Starting a session or logging a set needs a connection.",
+    );
+  });
+});
+
+describe("describePlannedExerciseTarget", () => {
+  it("should write the sets, the rep range and the reps in reserve", () => {
+    expect(describePlannedExerciseTarget({ sets: 3, repMin: 5, repMax: 8, rir: 2 })).toBe(
+      "3 × 5 to 8 · RIR 2",
+    );
+  });
+
+  it("should write one number when the range is a single rep count", () => {
+    expect(describePlannedExerciseTarget({ sets: 4, repMin: 10, repMax: 10, rir: 1 })).toBe(
+      "4 × 10 · RIR 1",
+    );
+  });
+
+  it("should leave RIR out when the plan names none", () => {
+    expect(describePlannedExerciseTarget({ sets: 3, repMin: 8, repMax: 12, rir: null })).toBe(
+      "3 × 8 to 12",
     );
   });
 });

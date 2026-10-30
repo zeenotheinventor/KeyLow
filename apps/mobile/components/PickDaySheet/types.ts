@@ -1,12 +1,6 @@
-/** A day of the active routine as the Pick day sheet lists it. */
-export type PickDayOption = {
-  id: string;
-  name: string;
-  /** The day's date this week, `YYYY-MM-DD`, or null for a day with no weekday. */
-  date: string | null;
-  exerciseCount: number;
-  setCount: number;
-};
+import type { PickDayOption } from "@keylow/api-client";
+
+export type { PickDayOption };
 
 export type PickDaySheetProps = {
   open: boolean;
