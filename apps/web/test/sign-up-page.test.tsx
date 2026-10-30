@@ -37,15 +37,31 @@ describe("Sign-up page", () => {
     expect(screen.getByRole("link", { name: "Sign in" }).getAttribute("href")).toBe("/login");
   });
 
-  it("should draw the links in the accent in dark and in primary text in light", async () => {
+  it("should draw the links in the accent ink, underlined", async () => {
     render(<SignUpPage />);
     const css = await compileUtilities(
       screen.getByRole("link", { name: "Terms" }).getAttribute("class") ?? "",
     );
 
     expect(css).toContain("text-decoration-line: underline");
-    expect(css).toContain(".light-theme\\:text-text-primary");
-    expect(css).toContain(".text-accent");
+    expect(css).toContain(".text-accent-ink");
+    expect(css).not.toContain("light-theme");
+  });
+
+  it("should show the Ki-Lo wordmark under one accessible name", () => {
+    render(<SignUpPage />);
+
+    expect(screen.getAllByRole("img", { name: "Ki-Lo" })).toHaveLength(1);
+  });
+
+  it("should draw a card at most 340px wide with 24px padding at every width", async () => {
+    render(<SignUpPage />);
+    const card = screen.getByRole("main").firstElementChild;
+    const css = await compileUtilities(card?.getAttribute("class") ?? "");
+
+    expect(css).toContain("max-width: 340px");
+    expect(css).toContain("padding: 24px");
+    expect(card?.classList.contains("sm:p-8")).toBe(false);
   });
 
   it("should leave room for the footer instead of filling the whole viewport", async () => {

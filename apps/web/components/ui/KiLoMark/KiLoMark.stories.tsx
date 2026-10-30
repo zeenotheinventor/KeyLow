@@ -16,7 +16,7 @@ const meta = {
 
 export default meta;
 
-type Story = StoryObj<typeof meta>;
+type Story = StoryObj<typeof KiLoMark>;
 
 // The shell's size, beside the wordmark.
 export const Default: Story = {};
@@ -25,3 +25,6 @@ export const Default: Story = {};
 export const Large: Story = { args: { className: "size-12" } };
 
 export const WithTitle: Story = { args: { title: "Ki-Lo" } };
+
+// The mark followed by the word, at the 40px size of the web sign-up and accept-terms cards.
+export const WithWordmark: Story = { args: { wordmark: true, className: "size-10" } };

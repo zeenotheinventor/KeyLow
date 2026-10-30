@@ -1,1 +1,1 @@
-export const storyStates = ["Default", "Large", "WithTitle"];
+export const storyStates = ["Default", "Large", "WithTitle", "WithWordmark"];
