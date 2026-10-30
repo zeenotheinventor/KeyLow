@@ -145,6 +145,34 @@ describe("Checkbox", () => {
     });
   });
 
+  describe("unticked fill", () => {
+    it("should be transparent for a label that wraps, as the design system draws it", () => {
+      render(<Checkbox multiline label="Default" />);
+      const box = screen.getByRole("checkbox").nextElementSibling;
+
+      expect(box?.classList.contains("bg-transparent")).toBe(true);
+      expect(box?.classList.contains("bg-surface-raised")).toBe(false);
+    });
+
+    it("should stay raised for the one line look the food form boards draw", () => {
+      render(<Checkbox label="Default" />);
+      const box = screen.getByRole("checkbox").nextElementSibling;
+
+      expect(box?.classList.contains("bg-surface-raised")).toBe(true);
+      expect(box?.classList.contains("bg-transparent")).toBe(false);
+    });
+
+    it("should still fill with the accent once ticked in both looks", () => {
+      render(<Checkbox multiline label="Wrapped" />);
+
+      expect(
+        screen
+          .getByRole("checkbox")
+          .nextElementSibling?.classList.contains("peer-checked:bg-accent"),
+      ).toBe(true);
+    });
+  });
+
   describe("reduced motion", () => {
     it("should drop the colour change under prefers-reduced-motion", async () => {
       render(<Checkbox label="Default" />);

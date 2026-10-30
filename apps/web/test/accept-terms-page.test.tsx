@@ -2,6 +2,8 @@ import { TERMS_VERSION } from "@keylow/core/copy";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { compileUtilities } from "./ui/compileUtilities";
+
 import AcceptTermsPage from "@/app/accept-terms/page";
 
 const { getUser, maybeSingle, redirect, signOut } = vi.hoisted(() => ({
@@ -100,6 +102,32 @@ describe("Accept-terms page", () => {
     expect(screen.getByRole("link", { name: "Privacy Policy" }).getAttribute("href")).toBe(
       "/privacy",
     );
+  });
+
+  it("should show the Ki-Lo wordmark under one accessible name", async () => {
+    render(await AcceptTermsPage());
+
+    expect(screen.getAllByRole("img", { name: "Ki-Lo" })).toHaveLength(1);
+  });
+
+  it("should draw a card at most 340px wide with 24px padding at every width", async () => {
+    render(await AcceptTermsPage());
+    const card = screen.getByRole("main").firstElementChild;
+    const css = await compileUtilities(card?.getAttribute("class") ?? "");
+
+    expect(css).toContain("max-width: 340px");
+    expect(css).toContain("padding: 24px");
+    expect(card?.classList.contains("sm:p-8")).toBe(false);
+  });
+
+  it("should draw the Terms links in the accent ink", async () => {
+    render(await AcceptTermsPage());
+    const css = await compileUtilities(
+      screen.getByRole("link", { name: "Terms" }).getAttribute("class") ?? "",
+    );
+
+    expect(css).toContain(".text-accent-ink");
+    expect(css).not.toContain("light-theme");
   });
 
   it("should offer Sign out", async () => {

@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 // system addition drawn only on the approved boards, so these values are the boards'. A label that
 // wraps (`multiline`) takes the design system checkbox: a 22px box with a 1.5px border at the top,
 // 12px from regular weight text. The real checkbox is hidden and the box beside it follows its
-// state, which keeps the native role, keyboard and form behaviour.
+// state, which keeps the native role, keyboard and form behaviour. The design system's box is
+// transparent when unticked, while the compact box keeps the raised fill the food form boards draw.
 export function Checkbox({ label, multiline = false, className, ...inputProps }: CheckboxProps) {
   return (
     <label
@@ -23,8 +24,10 @@ export function Checkbox({ label, multiline = false, className, ...inputProps }:
       <span
         aria-hidden
         className={cn(
-          "flex shrink-0 items-center justify-center rounded-small border border-border-strong bg-surface-raised text-accent-foreground transition-colors duration-quick motion-reduce:transition-none peer-checked:border-accent peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-focus-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-focus-ring-offset [&>svg]:invisible peer-checked:[&>svg]:visible",
-          multiline ? "mt-px size-[22px] border-[1.5px]" : "size-5",
+          "flex shrink-0 items-center justify-center rounded-small border border-border-strong text-accent-foreground transition-colors duration-quick motion-reduce:transition-none peer-checked:border-accent peer-checked:bg-accent peer-focus-visible:ring-2 peer-focus-visible:ring-focus-ring peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-focus-ring-offset [&>svg]:invisible peer-checked:[&>svg]:visible",
+          multiline
+            ? "mt-px size-[22px] border-[1.5px] bg-transparent"
+            : "size-5 bg-surface-raised",
         )}
       >
         <Check

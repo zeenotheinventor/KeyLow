@@ -26,9 +26,9 @@ export default async function AcceptTermsPage() {
 
   return (
     <main className="flex flex-1 items-center justify-center px-4 py-6">
-      <Card padding="none" className="flex w-full max-w-md flex-col gap-[14px] p-6 sm:p-8">
+      <Card padding="none" className="flex w-full max-w-[340px] flex-col gap-[14px] p-6">
         <div className="flex flex-col items-start gap-1.5">
-          <KiLoMark className="size-10" />
+          <KiLoMark wordmark className="size-10" />
           <h1 className="text-h1">{ACCEPT_TERMS_SCREEN.heading}</h1>
           <p className="text-caption text-text-secondary">{ACCEPT_TERMS_SCREEN.caption}</p>
         </div>
