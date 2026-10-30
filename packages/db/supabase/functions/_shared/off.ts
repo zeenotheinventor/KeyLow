@@ -1,7 +1,8 @@
 // Fetch wrapper for the Open Food Facts API. `offRequest` adds what every call needs and turns a
-// timeout, a network error or a non-2xx answer into the typed `upstream_error` response. A status the
-// caller reads itself (a 404 for an unknown barcode, say) is listed in `acceptedStatuses`. Deferred to
-// the functions that use it: building paths, parsing bodies and retries.
+// timeout, a network error or a non-2xx answer into the typed `upstream_error` response, except a
+// 429, which becomes `rate_limited` with the wait Open Food Facts asked for. A status the caller
+// reads itself (a 404 for an unknown barcode, say) is listed in `acceptedStatuses`. Deferred to the
+// functions that use it: building paths, parsing bodies and retries.
 import { error } from "./http.ts";
 import { reportError } from "./report.ts";
 
@@ -52,12 +53,24 @@ function buildRequest(path: string, options: OffFetchOptions): { url: URL; init:
   };
 }
 
+// The wait Open Food Facts asks for, when it sends one as a whole number of seconds above zero that
+// a number can hold exactly. The header may also carry an HTTP date, which is ignored, because the
+// contract only has seconds.
+function retryAfterSecondsFrom(response: Response): number | undefined {
+  const header = response.headers.get("Retry-After");
+  if (header === null || !/^\d+$/.test(header)) {
+    return undefined;
+  }
+  const seconds = Number(header);
+  return Number.isSafeInteger(seconds) && seconds > 0 ? seconds : undefined;
+}
+
 function isTimeout(caught: unknown): boolean {
   return caught instanceof DOMException && caught.name === "TimeoutError";
 }
 
-// Returns the 2xx response (or one of the `acceptedStatuses`), or the `upstream_error` response to
-// send back. `path` starts with a slash, for example `/api/v2/product/5000112637922`.
+// Returns the 2xx response (or one of the `acceptedStatuses`), or the failure response to send back:
+// `rate_limited` for a 429, `upstream_error` for anything else. `path` starts with a slash, for example `/api/v2/product/5000112637922`.
 export async function offRequest(path: string, options: OffFetchOptions): Promise<OffResult> {
   const { url, init } = buildRequest(path, options);
   let response: Response;
@@ -71,6 +84,23 @@ export async function offRequest(path: string, options: OffFetchOptions): Promis
     return { ok: false, failure: error("upstream_error", message) };
   }
   if (!response.ok && !options.acceptedStatuses?.includes(response.status)) {
+    if (response.status === 429) {
+      const retryAfterSeconds = retryAfterSecondsFrom(response);
+      reportError(
+        options.functionName,
+        "rate_limited",
+        new Error("Open Food Facts answered with a rate limit"),
+      );
+      await response.body?.cancel();
+      return {
+        ok: false,
+        failure: error(
+          "rate_limited",
+          "Open Food Facts is busy.",
+          retryAfterSeconds === undefined ? {} : { retryAfterSeconds },
+        ),
+      };
+    }
     reportError(
       options.functionName,
       "upstream_error",

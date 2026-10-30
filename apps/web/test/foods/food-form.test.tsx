@@ -1,4 +1,5 @@
-import { FoodsPartialWriteError } from "@keylow/api-client";
+import { CustomFoodValidationError, FoodsPartialWriteError } from "@keylow/api-client";
+import { customFoodInputSchema } from "@keylow/core/schemas";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -1098,6 +1099,28 @@ describe("FoodForm", () => {
         "Your food could not be saved. Check your connection and try again.",
       );
       expect(screen.queryByText(/network down/)).toBeNull();
+      expect(replace).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Create food" }).hasAttribute("disabled")).toBe(
+        false,
+      );
+    });
+
+    it("should say some details are not valid when the server refuses the food, and let the user try again", async () => {
+      const refused = customFoodInputSchema.safeParse({});
+      if (refused.success) {
+        throw new Error("The empty input should not satisfy the food schema");
+      }
+      createFood.mockRejectedValueOnce(new CustomFoodValidationError(refused.error));
+      renderForm();
+      fillRequiredFields();
+
+      save();
+
+      const alert = await screen.findByRole("alert");
+      expect(alert.textContent).toContain("Some details are not valid");
+      expect(alert.textContent).toContain("Check the fields and try again.");
+      expect(alert.textContent).not.toContain("could not be saved");
+      expect(alert.textContent).not.toContain("Invalid custom food");
       expect(replace).not.toHaveBeenCalled();
       expect(screen.getByRole("button", { name: "Create food" }).hasAttribute("disabled")).toBe(
         false,

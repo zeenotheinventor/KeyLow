@@ -1,4 +1,4 @@
-import { RateLimitedError } from "@keylow/api-client";
+import { OffProductNotFoundError, RateLimitedError } from "@keylow/api-client";
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -465,6 +465,19 @@ describe("FoodSearch", () => {
       const alert = screen.getByRole("alert");
       expect(alert.textContent).toContain("Open Food Facts is busy");
       expect(alert.textContent).toContain("Try again in 30 seconds.");
+    });
+
+    it("should say Open Food Facts no longer has the product when it has vanished", () => {
+      materialiseState({ error: new OffProductNotFoundError("5000159484701") });
+      useFoodSearch.mockReturnValue(resultWith({ off: candidates }));
+      render(<FoodSearch />);
+
+      search("stock cubes");
+
+      const alert = screen.getByRole("alert");
+      expect(alert.textContent).toContain("Open Food Facts no longer has this product.");
+      expect(alert.textContent).not.toContain("could not be added");
+      expect(alert.textContent).not.toContain("5000159484701");
     });
 
     it("should keep the candidates chooseable after a failure so the user can try again", () => {
