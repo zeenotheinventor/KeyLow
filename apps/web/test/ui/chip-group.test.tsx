@@ -1,5 +1,6 @@
 import { controlHeight } from "@keylow/tokens";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -313,6 +314,300 @@ describe("ChipGroup", () => {
       );
 
       expect(reducedMotionRules(css, "motion-reduce\\:transition-none")).toContain("transition");
+    });
+  });
+
+  describe("selection multiple", () => {
+    const equipmentOptions = [
+      { value: "barbell", label: "Barbell" },
+      { value: "dumbbell", label: "Dumbbell" },
+      { value: "cable", label: "Cable" },
+      { value: "kettlebell", label: "Kettlebell" },
+    ] as const;
+
+    function ControlledMultipleChipGroup({
+      initial = [],
+      onChange,
+      onChipPress,
+    }: {
+      initial?: string[];
+      onChange?: (next: string[]) => void;
+      onChipPress?: (value: string) => void;
+    }) {
+      const [value, setValue] = useState<string[]>(initial);
+      return (
+        <>
+          <ChipGroup
+            selection="multiple"
+            label="Equipment"
+            options={equipmentOptions}
+            value={value}
+            onChange={(next) => {
+              setValue(next);
+              onChange?.(next);
+            }}
+            onChipPress={onChipPress}
+          />
+          <button type="button">After the group</button>
+        </>
+      );
+    }
+
+    const chipNamed = (name: string) => screen.getByRole("checkbox", { name });
+    const checkedLabels = () =>
+      screen
+        .getAllByRole("checkbox")
+        .filter((chip) => chip.getAttribute("aria-checked") === "true")
+        .map((chip) => chip.textContent);
+
+    it("should be a group named by its label, not a radio group", () => {
+      render(<ControlledMultipleChipGroup />);
+
+      expect(screen.getByRole("group", { name: "Equipment" })).toBeTruthy();
+      expect(screen.queryByRole("radiogroup")).toBeNull();
+    });
+
+    it("should offer one checkbox per option, named by its label", () => {
+      render(<ControlledMultipleChipGroup />);
+
+      expect(screen.getAllByRole("checkbox").map((chip) => chip.textContent)).toEqual([
+        "Barbell",
+        "Dumbbell",
+        "Cable",
+        "Kettlebell",
+      ]);
+      expect(screen.queryByRole("radio")).toBeNull();
+    });
+
+    it("should mark every chosen chip as checked and no others", () => {
+      render(<ControlledMultipleChipGroup initial={["cable", "barbell"]} />);
+
+      expect(checkedLabels()).toEqual(["Barbell", "Cable"]);
+    });
+
+    it("should hand on the pressed value added at the end of the choice", async () => {
+      const onChange = vi.fn();
+      render(<ControlledMultipleChipGroup initial={["cable"]} onChange={onChange} />);
+
+      await userEvent.click(chipNamed("Barbell"));
+
+      expect(onChange).toHaveBeenCalledWith(["cable", "barbell"]);
+    });
+
+    it("should hand on the choice without the pressed value when it was chosen", async () => {
+      const onChange = vi.fn();
+      render(<ControlledMultipleChipGroup initial={["cable", "barbell"]} onChange={onChange} />);
+
+      await userEvent.click(chipNamed("Cable"));
+
+      expect(onChange).toHaveBeenCalledWith(["barbell"]);
+      expect(checkedLabels()).toEqual(["Barbell"]);
+    });
+
+    it("should keep the other chosen chips when one is added", async () => {
+      render(<ControlledMultipleChipGroup initial={["cable"]} />);
+
+      await userEvent.click(chipNamed("Dumbbell"));
+
+      expect(checkedLabels()).toEqual(["Dumbbell", "Cable"]);
+    });
+
+    it("should toggle only the focused chip on Space", async () => {
+      const onChange = vi.fn();
+      render(<ControlledMultipleChipGroup initial={["barbell"]} onChange={onChange} />);
+
+      await userEvent.tab();
+      await userEvent.keyboard("{ArrowRight}");
+      await userEvent.keyboard(" ");
+
+      expect(onChange).toHaveBeenCalledOnce();
+      expect(onChange).toHaveBeenCalledWith(["barbell", "dumbbell"]);
+    });
+
+    it("should take the choice back on a second Space", async () => {
+      render(<ControlledMultipleChipGroup />);
+
+      await userEvent.tab();
+      await userEvent.keyboard(" ");
+      await userEvent.keyboard(" ");
+
+      expect(checkedLabels()).toEqual([]);
+    });
+
+    it("should report a press on a chip after onChange, chosen or not", async () => {
+      const calls: string[] = [];
+      render(
+        <ControlledMultipleChipGroup
+          initial={["cable"]}
+          onChange={(next) => calls.push(`change ${next.join(",")}`)}
+          onChipPress={(value) => calls.push(`press ${value}`)}
+        />,
+      );
+
+      await userEvent.click(chipNamed("Barbell"));
+      await userEvent.click(chipNamed("Cable"));
+
+      expect(calls).toEqual([
+        "change cable,barbell",
+        "press barbell",
+        "change barbell",
+        "press cable",
+      ]);
+    });
+
+    describe("keyboard", () => {
+      it.each(["{ArrowRight}", "{ArrowDown}", "{ArrowLeft}", "{ArrowUp}", "{Home}", "{End}"])(
+        "should move the focus only on %s, leaving the choice and onChipPress alone",
+        async (key) => {
+          const onChange = vi.fn();
+          const onChipPress = vi.fn();
+          render(
+            <ControlledMultipleChipGroup
+              initial={["dumbbell"]}
+              onChange={onChange}
+              onChipPress={onChipPress}
+            />,
+          );
+
+          await userEvent.tab();
+          await userEvent.keyboard(key);
+
+          expect(onChange).not.toHaveBeenCalled();
+          expect(onChipPress).not.toHaveBeenCalled();
+          expect(checkedLabels()).toEqual(["Dumbbell"]);
+        },
+      );
+
+      it("should focus the next chip on ArrowRight and the previous on ArrowLeft", async () => {
+        render(<ControlledMultipleChipGroup />);
+
+        await userEvent.tab();
+        await userEvent.keyboard("{ArrowRight}");
+        expect(document.activeElement).toBe(chipNamed("Dumbbell"));
+
+        await userEvent.keyboard("{ArrowLeft}");
+        expect(document.activeElement).toBe(chipNamed("Barbell"));
+      });
+
+      it("should focus the next chip on ArrowDown and the previous on ArrowUp", async () => {
+        render(<ControlledMultipleChipGroup />);
+
+        await userEvent.tab();
+        await userEvent.keyboard("{ArrowDown}");
+        expect(document.activeElement).toBe(chipNamed("Dumbbell"));
+
+        await userEvent.keyboard("{ArrowUp}");
+        expect(document.activeElement).toBe(chipNamed("Barbell"));
+      });
+
+      it("should wrap the focus from the last chip to the first and back", async () => {
+        render(<ControlledMultipleChipGroup />);
+
+        await userEvent.tab();
+        await userEvent.keyboard("{ArrowLeft}");
+        expect(document.activeElement).toBe(chipNamed("Kettlebell"));
+
+        await userEvent.keyboard("{ArrowRight}");
+        expect(document.activeElement).toBe(chipNamed("Barbell"));
+      });
+
+      it("should jump the focus to the last chip on End and the first on Home", async () => {
+        render(<ControlledMultipleChipGroup />);
+
+        await userEvent.tab();
+        await userEvent.keyboard("{End}");
+        expect(document.activeElement).toBe(chipNamed("Kettlebell"));
+
+        await userEvent.keyboard("{Home}");
+        expect(document.activeElement).toBe(chipNamed("Barbell"));
+      });
+
+      it("should stop the page scrolling on an arrow key", () => {
+        render(<ControlledMultipleChipGroup />);
+
+        const notPrevented = fireEvent.keyDown(chipNamed("Barbell"), { key: "ArrowDown" });
+
+        expect(notPrevented).toBe(false);
+      });
+
+      it.each(["altKey", "metaKey", "ctrlKey"])(
+        "should leave an arrow key alone when %s is held",
+        (modifier) => {
+          render(<ControlledMultipleChipGroup />);
+
+          const notPrevented = fireEvent.keyDown(chipNamed("Barbell"), {
+            key: "ArrowRight",
+            [modifier]: true,
+          });
+
+          expect(notPrevented).toBe(true);
+          expect(document.activeElement).not.toBe(chipNamed("Dumbbell"));
+        },
+      );
+    });
+
+    describe("tab order", () => {
+      const tabIndexes = () =>
+        screen.getAllByRole("checkbox").map((chip) => chip.getAttribute("tabindex"));
+
+      it("should put only the first chip in the tab order when none is chosen", () => {
+        render(<ControlledMultipleChipGroup />);
+
+        expect(tabIndexes()).toEqual(["0", "-1", "-1", "-1"]);
+      });
+
+      it("should put only the first chosen chip in the tab order", () => {
+        render(<ControlledMultipleChipGroup initial={["kettlebell", "cable"]} />);
+
+        expect(tabIndexes()).toEqual(["-1", "-1", "0", "-1"]);
+      });
+
+      it("should move the tab stop to the chip the arrow keys reached", async () => {
+        render(<ControlledMultipleChipGroup />);
+
+        await userEvent.tab();
+        await userEvent.keyboard("{ArrowRight}{ArrowRight}");
+
+        expect(tabIndexes()).toEqual(["-1", "-1", "0", "-1"]);
+      });
+
+      it("should enter the group on one chip and leave it on the next Tab", async () => {
+        render(<ControlledMultipleChipGroup initial={["cable"]} />);
+
+        await userEvent.tab();
+        expect(document.activeElement).toBe(chipNamed("Cable"));
+
+        await userEvent.tab();
+        expect(document.activeElement).toBe(
+          screen.getByRole("button", { name: "After the group" }),
+        );
+      });
+
+      it("should return to the chip last focused on Shift+Tab", async () => {
+        render(<ControlledMultipleChipGroup />);
+
+        await userEvent.tab();
+        await userEvent.keyboard("{ArrowRight}");
+        await userEvent.tab();
+        await userEvent.tab({ shift: true });
+
+        expect(document.activeElement).toBe(chipNamed("Dumbbell"));
+      });
+    });
+
+    describe("styling", () => {
+      it("should draw the visible focus ring from the focus token", async () => {
+        render(<ControlledMultipleChipGroup />);
+        const css = await compileUtilities(chipNamed("Barbell").getAttribute("class") ?? "");
+
+        expect(css).toContain("--kl-focus-ring");
+      });
+
+      it("should style the chosen chip from aria-checked, as the single choice does", () => {
+        render(<ControlledMultipleChipGroup initial={["barbell"]} />);
+
+        expect(chipNamed("Barbell").className).toContain("aria-checked:bg-accent");
+      });
     });
   });
 });

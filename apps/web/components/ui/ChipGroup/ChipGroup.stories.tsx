@@ -35,6 +35,31 @@ function Units({
   return <ChipGroup label="Unit" options={options} value={value} onChange={setValue} />;
 }
 
+const equipmentOptions = [
+  { value: "barbell", label: "Barbell" },
+  { value: "dumbbell", label: "Dumbbell" },
+  { value: "kettlebell", label: "Kettlebell" },
+  { value: "cable", label: "Cable" },
+  { value: "machine", label: "Machine" },
+  { value: "bodyweight", label: "Bodyweight" },
+] as const;
+
+type Equipment = (typeof equipmentOptions)[number]["value"];
+
+// The multiple group is controlled too: the story keeps the chosen values, in the order they were chosen.
+function EquipmentChoice({ initial }: { initial: Equipment[] }) {
+  const [value, setValue] = useState<Equipment[]>(initial);
+  return (
+    <ChipGroup
+      selection="multiple"
+      label="Equipment"
+      options={equipmentOptions}
+      value={value}
+      onChange={setValue}
+    />
+  );
+}
+
 const meta = {
   title: "UI/ChipGroup",
   decorators: [
@@ -63,6 +88,21 @@ export const LongLabel: Story = {
 // Focus is real: the play function tabs onto the selected chip, so the ring shows as it does for a keyboard.
 export const Focused: Story = {
   render: () => <Units options={fiveUnits} initial="breast" />,
+  play: async () => {
+    await userEvent.tab();
+  },
+};
+
+// Two chosen, the rest not, as the equipment question draws it.
+export const MultipleTwoChosen: Story = {
+  render: () => <EquipmentChoice initial={["barbell", "cable"]} />,
+};
+
+export const MultipleNoneChosen: Story = { render: () => <EquipmentChoice initial={[]} /> };
+
+// Focus is real: the play function tabs onto the first chosen chip, so the ring shows as it does for a keyboard.
+export const MultipleFocused: Story = {
+  render: () => <EquipmentChoice initial={["barbell", "cable"]} />,
   play: async () => {
     await userEvent.tab();
   },
