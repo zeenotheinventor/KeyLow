@@ -1,4 +1,5 @@
 import {
+  ADD_EXERCISE,
   SESSION_ACTIVE,
   SESSION_DISCARD,
   SET_ENTRY,
@@ -10,6 +11,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { lateralRaiseResults } from "./addExerciseGolden";
 import {
   exerciseIdOf,
   freshLegsOpen,
@@ -538,6 +540,66 @@ describe("the session page", () => {
         "Enter whole reps from 1 to 100.",
       );
       expect(trainBackend.writes).toEqual([]);
+    });
+  });
+
+  describe("adding an exercise", () => {
+    beforeEach(() => {
+      openGoldenLegs();
+      trainBackend.searchableExercises = lateralRaiseResults;
+    });
+
+    const openDialog = async () => {
+      renderSession();
+      await card("Barbell squat");
+      await userEvent.click(screen.getByRole("button", { name: SESSION_ACTIVE.addExerciseAction }));
+      return screen.getByRole("dialog", { name: ADD_EXERCISE.title });
+    };
+
+    it("should open the dialog with the search field focused", async () => {
+      await openDialog();
+
+      expect(document.activeElement).toBe(
+        screen.getByRole("searchbox", { name: ADD_EXERCISE.searchName }),
+      );
+    });
+
+    it("should put a card with one row to log on the page for the exercise picked, and close", async () => {
+      const dialog = await openDialog();
+      await userEvent.type(
+        within(dialog).getByRole("searchbox", { name: ADD_EXERCISE.searchName }),
+        "lateral raise",
+      );
+
+      await userEvent.click(
+        await within(dialog).findByRole("button", { name: "Add Side lateral raise" }),
+      );
+
+      const added = await card("Side lateral raise");
+      expect(within(added).getByRole("button", { name: "Log set 1" })).toBeTruthy();
+      expect(within(added).queryByRole("button", { name: "Log set 2" })).toBeNull();
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(trainBackend.writes).toEqual([]);
+    });
+
+    it("should return focus to Add exercise when Escape closes the dialog", async () => {
+      await openDialog();
+
+      await userEvent.keyboard("{Escape}");
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(document.activeElement).toBe(
+        screen.getByRole("button", { name: SESSION_ACTIVE.addExerciseAction }),
+      );
+    });
+
+    it("should leave the session as it was when the dialog is closed without a pick", async () => {
+      await openDialog();
+
+      await userEvent.click(screen.getByRole("button", { name: ADD_EXERCISE.closeName }));
+
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(5);
     });
   });
 

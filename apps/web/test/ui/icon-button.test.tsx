@@ -7,9 +7,8 @@ import { compileUtilities, reducedMotionRules } from "./compileUtilities";
 
 import { IconButton } from "@/components/ui/IconButton";
 
-// The reach rule as Tailwind generates it for `max-md:`: inside the media query for a viewport below 768 px.
-const phoneOnlyRule =
-  /@media not all and \(min-width: 768px\)\s*\{[^@]*\.max-md\\:after\\:-inset-1::after\s*\{([^}]*)\}/;
+// The reach rule as Tailwind generates it: a plain rule, with no media query around it, so it holds at every width.
+const reachRule = /(?:^|\})\s*\.after\\:-inset-1::after\s*\{([^}]*)\}/;
 
 describe("IconButton", () => {
   afterEach(() => {
@@ -96,15 +95,16 @@ describe("IconButton", () => {
   });
 
   describe("hit area", () => {
-    it("should reach a 44 px target on a phone without changing the drawn size", async () => {
+    it("should reach a 44 px target at every width without changing the drawn size", async () => {
       render(<IconButton icon={Pencil} label="Edit" />);
       const { className } = screen.getByRole("button", { name: "Edit" });
       const css = await compileUtilities(className);
       const reach = (touchTarget - controlHeight.sm) / 2;
 
       expect(className).toContain("relative");
-      expect(className).toContain("max-md:after:absolute");
-      expect(css.match(phoneOnlyRule)?.[1]).toContain(`inset: -${reach}px`);
+      expect(className).toContain("after:absolute");
+      expect(className).not.toContain("max-md:after");
+      expect(css.match(reachRule)?.[1]).toContain(`inset: -${reach}px`);
     });
 
     it("should not clip the reach", () => {

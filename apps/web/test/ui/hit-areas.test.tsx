@@ -1,6 +1,7 @@
 import { FOOD_DETAIL } from "@keylow/core/copy";
 import { controlHeight, touchTarget } from "@keylow/tokens";
 import { cleanup, render, screen } from "@testing-library/react";
+import { Plus } from "lucide-react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { compileUtilities } from "./compileUtilities";
@@ -10,6 +11,7 @@ import { BackToFoodsLink } from "@/components/foods/FoodDetail/BackToFoodsLink";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
 import { ChipGroup } from "@/components/ui/ChipGroup";
+import { IconButton } from "@/components/ui/IconButton";
 import { SearchField, SearchLauncher } from "@/components/ui/SearchField";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { Toast } from "@/components/ui/Toast";
@@ -123,6 +125,19 @@ describe("Button", () => {
 
     expect(classes).toContain("after:inset-1.5");
     expect(classes.some((name) => name.startsWith("after:-inset"))).toBe(false);
+  });
+});
+
+describe("IconButton", () => {
+  it("should reach a touch target square at every width, not only below md", async () => {
+    render(<IconButton icon={Plus} label="Add exercise" />);
+    const button = screen.getByRole("button", { name: "Add exercise" });
+    const reach = await reachOf(button);
+
+    expect(classesOf(button)).toEqual(expect.arrayContaining(["relative", "after:absolute"]));
+    expect(classesOf(button).some((name) => name.includes("max-md:after"))).toBe(false);
+    expect(controlHeight.sm + reach.top + reach.bottom).toBe(touchTarget);
+    expect(controlHeight.sm + reach.left + reach.right).toBe(touchTarget);
   });
 });
 
