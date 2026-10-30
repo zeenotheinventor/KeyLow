@@ -5,6 +5,7 @@ import { sumEntries } from "@keylow/core/diary";
 import { useState } from "react";
 
 import { DashboardBanners } from "../DashboardBanners";
+import { DashboardBodyMap } from "../DashboardBodyMap";
 import { DashboardFrame } from "../DashboardFrame";
 import { DashboardLoading } from "../DashboardLoading";
 import { DashboardWeek } from "../DashboardWeek";
@@ -23,7 +24,8 @@ import { useNow } from "@/lib/useNow";
  * already sent anyone who has not accepted the current Terms to the accept page, so every read here is
  * behind the terms gate. The header stays whatever the card is doing: a skeleton while it loads, the
  * offline notice over the page when offline, and an error state with Try again in its place when a read
- * failed. The This week card sits in the second column and reads, loads and fails on its own.
+ * failed. The This week card sits in the second column and reads, loads and fails on its own, and the
+ * body map card follows it there and does the same.
  */
 export function DashboardToday({ timeZone }: DashboardTodayProps) {
   const isOnline = useIsOnline();
@@ -83,7 +85,12 @@ export function DashboardToday({ timeZone }: DashboardTodayProps) {
           />
         )
       }
-      aside={<DashboardWeek today={today} />}
+      aside={
+        <>
+          <DashboardWeek today={today} />
+          <DashboardBodyMap />
+        </>
+      }
     >
       {renderBody()}
     </DashboardFrame>

@@ -1,7 +1,7 @@
+import { RESTING_HEAT } from "@keylow/api-client";
 import { View } from "react-native";
 
 import { DashboardBodyMapCard } from "./DashboardBodyMapCard";
-import { RESTING_HEAT } from "./restingHeat";
 
 import type { DashboardBodyMap } from "@keylow/api-client";
 import type { Meta, StoryObj } from "@storybook/react-native";

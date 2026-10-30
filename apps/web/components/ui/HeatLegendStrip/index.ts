@@ -1,0 +1,1 @@
+export { HeatLegendStrip } from "./HeatLegendStrip";

@@ -1,9 +1,6 @@
-import { todayPlanOf } from "../../components/DashboardScreen/DashboardBodyMapCard";
+import { describe, expect, it } from "vitest";
 
-jest.mock("@react-native-async-storage/async-storage", () => ({
-  __esModule: true,
-  default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
-}));
+import { todayPlanOf } from "../src/todayPlanOf";
 
 describe("todayPlanOf", () => {
   it("should read a planned day as a session with the sets the day plans", () => {

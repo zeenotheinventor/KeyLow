@@ -2,6 +2,7 @@ import { WEEK_GRID } from "@keylow/core/copy";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { goldenThursdayBodyMap } from "./bodyMapFixtures";
 import { boardWeek, diaryDay, noTargets, overTargetWeek, targets, weekDay } from "../diary/support";
 import { renderWithRouter } from "../ui/appRouter";
 
@@ -43,6 +44,14 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
   useCompleteDays: () => ({ data: [], isError: false, isSuccess: true, refetch: vi.fn() }),
   useCopyDay: () => ({ mutate: vi.fn(), isPending: false }),
   useUndoCopyDay: () => ({ mutate: vi.fn(), isPending: false }),
+  // This file is about the week, so the body map card beside it is settled and quiet.
+  useDashboardBodyMap: () => ({
+    data: goldenThursdayBodyMap,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
 }));
 
 // A Wednesday with one day marked complete that is still to come, to show the card leaves it out.

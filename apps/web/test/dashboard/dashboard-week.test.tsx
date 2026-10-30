@@ -2,6 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { goldenThursdayBodyMap } from "./bodyMapFixtures";
 import {
   boardWeek,
   diaryDay,
@@ -65,6 +66,14 @@ vi.mock("@keylow/api-client", async (importOriginal) => ({
     );
   },
   useTargets: () => backend.targets,
+  // This file is about the week, so the body map card beside it is settled and quiet.
+  useDashboardBodyMap: () => ({
+    data: goldenThursdayBodyMap,
+    isPending: false,
+    isError: false,
+    error: null,
+    refetch: () => Promise.resolve(),
+  }),
 }));
 
 // 11:20 on Thursday 15 October 2026, in the week of Monday 12 October.

@@ -112,6 +112,8 @@ describe("the package index", () => {
     "useMuscleList",
     "useMuscleDetail",
     "useDashboardBodyMap",
+    "todayPlanOf",
+    "RESTING_HEAT",
 
     "RoutineRuleError",
     "getRoutine",

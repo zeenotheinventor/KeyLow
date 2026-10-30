@@ -1,4 +1,4 @@
-import type { DashboardBodyMap } from "@keylow/api-client";
+import type { DashboardBodyMap } from "./hooks";
 
 /** The heat step of every muscle when nothing is warm: the card of a fresh install, and where a story starts. */
 export const RESTING_HEAT: DashboardBodyMap["values"] = {
