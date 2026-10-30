@@ -1,10 +1,17 @@
 "use client";
 
 import { useSessionView, usePendingSets, useSetLogging } from "@keylow/api-client";
-import { SESSION_DISCARD, TRAIN_ERROR, TRAIN_LOADING_NAME } from "@keylow/core/copy";
+import {
+  SESSION_ACTIVE,
+  SESSION_DISCARD,
+  TRAIN_ERROR,
+  TRAIN_LOADING_NAME,
+} from "@keylow/core/copy";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { AddExerciseDialog } from "../AddExerciseDialog";
 import { DiscardSessionDialog } from "./DiscardSessionDialog";
 import { SessionClock } from "./SessionClock";
 import { SessionExerciseCard } from "./SessionExerciseCard";
@@ -20,7 +27,8 @@ import { trainPath } from "@/lib/trainRoutes";
 
 /**
  * The session in progress, as the `web-session · active` board draws it: the session's name with its clock
- * and sets logged, Discard session in the header, and a card for each exercise with its table of sets. The
+ * and sets logged, Discard session in the header, a card for each exercise with its table of sets, and Add
+ * exercise, which opens the dialog that puts another exercise's card on the page. The
  * dashboard layout has already sent anyone who has not accepted the current Terms to the accept page, so
  * every read here is behind the terms gate. The logging, the removing with Undo and the discard are the
  * ones the phone uses (`@keylow/api-client`), and this page draws them. With no session in progress, which is
@@ -40,6 +48,7 @@ export function SessionScreen() {
     },
   };
   const [isDiscardOpen, setIsDiscardOpen] = useState(false);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   useEffect(() => {
     if (view.status === "none") {
@@ -96,7 +105,25 @@ export function SessionScreen() {
             logging={logging}
           />
         ))}
+        <Button
+          variant="secondary"
+          className="w-full"
+          onClick={() => {
+            setIsPickerOpen(true);
+          }}
+        >
+          <Plus aria-hidden />
+          {SESSION_ACTIVE.addExerciseAction}
+        </Button>
       </div>
+      <AddExerciseDialog
+        open={isPickerOpen}
+        mode="session"
+        onAddToSession={view.addExercise}
+        onClose={() => {
+          setIsPickerOpen(false);
+        }}
+      />
       <DiscardSessionDialog
         open={isDiscardOpen}
         sessionId={view.sessionId}

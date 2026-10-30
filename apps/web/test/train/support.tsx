@@ -41,6 +41,14 @@ export const trainBackend: {
   deletedSessions: string[];
   /** The bodies of the sessions started, in order. */
   startedSessions: Row[];
+  /** What every exercise search answers, as PostgREST returns the rows with their muscles, the user's own first. */
+  searchableExercises: Row[];
+  /** The words each exercise search was made for, in order, as the database was asked for them. */
+  searchedNames: string[];
+  /** Never answers the exercise searches, as a slow connection does. */
+  hangingSearches: boolean;
+  /** Fails the exercise searches, as a database that is down does. */
+  failingSearches: boolean;
 } = {
   timeZone: "Europe/London",
   routine: null,
@@ -58,6 +66,10 @@ export const trainBackend: {
   failingWrites: false,
   deletedSessions: [],
   startedSessions: [],
+  searchableExercises: [],
+  searchedNames: [],
+  hangingSearches: false,
+  failingSearches: false,
 };
 
 export function resetTrainBackend(): void {
@@ -77,6 +89,10 @@ export function resetTrainBackend(): void {
   trainBackend.failingWrites = false;
   trainBackend.deletedSessions = [];
   trainBackend.startedSessions = [];
+  trainBackend.searchableExercises = [];
+  trainBackend.searchedNames = [];
+  trainBackend.hangingSearches = false;
+  trainBackend.failingSearches = false;
 }
 
 export const readsOf = (name: string): number =>
@@ -131,8 +147,29 @@ let nextSetNumber = 0;
 const failedWrite = () =>
   jsonResponse({ code: "XX000", message: "raw database text", details: null, hint: null }, 500);
 
+/**
+ * Answers every search with the exercises the test set, whatever was typed. The matching on the name is the
+ * database's, and `@keylow/api-client` tests it, so the page tests only need the answer a search brings back.
+ */
+function exerciseSearch(request: Request, nameFilter: string): Response | Promise<Response> {
+  trainBackend.searchedNames.push(nameFilter.replace(/^ilike\./, "").replaceAll("%", ""));
+  if (trainBackend.hangingSearches) {
+    return new Promise<Response>(() => undefined);
+  }
+  return trainBackend.failingSearches
+    ? serverError()
+    : answer(request, trainBackend.searchableExercises);
+}
+
 /** The exercise of the routine with its muscle map, as the read the snapshot is taken from returns it. */
-function exerciseRead(request: Request, searchParams: URLSearchParams): Response {
+function exerciseRead(
+  request: Request,
+  searchParams: URLSearchParams,
+): Response | Promise<Response> {
+  const nameFilter = searchParams.get("name");
+  if (nameFilter !== null) {
+    return exerciseSearch(request, nameFilter);
+  }
   const id = idParameter(searchParams);
   const found = rowsOf(trainBackend.routine?.["routine_days"])
     .flatMap((day) => rowsOf(day["routine_exercises"]))
