@@ -56,6 +56,7 @@ describe("the words on the sign in and sign up boards", () => {
     expect(AUTH_SCREEN.signIn).toEqual({
       heading: "Welcome back",
       submitLabel: "Sign in",
+      submittingLabel: "Signing in",
       footerPrompt: "New to Ki-Lo?",
       footerLink: "Create account",
     });
@@ -82,6 +83,7 @@ describe("the words on the web sign up board", () => {
       passwordPlaceholder: "At least 8 characters",
       divider: "or",
       submitLabel: "Create account",
+      submittingLabel: "Creating account",
       footerPrompt: "Already have an account?",
       footerLink: "Sign in",
     });

@@ -1,5 +1,6 @@
 "use client";
 
+import { SEARCH_LAUNCHER, TAB_BAR_LABEL, TAB_TITLES } from "@keylow/core/copy";
 import { iconStroke } from "@keylow/tokens";
 import { Menu } from "lucide-react";
 import Link from "next/link";
@@ -18,9 +19,9 @@ import { cn } from "@/lib/utils";
 
 // Recipes is not a section. Its library is a row of More's Nutrition section, so More stays current on it.
 const SECTIONS: readonly DashboardSection[] = [
-  { label: "Dashboard", href: "/dashboard" },
-  { label: "Diary", href: "/diary" },
-  { label: "More", href: "/more", alsoCurrentOn: [recipesPath()] },
+  { label: TAB_TITLES.dashboard, href: "/dashboard" },
+  { label: TAB_TITLES.diary, href: "/diary" },
+  { label: TAB_TITLES.more, href: "/more", alsoCurrentOn: [recipesPath()] },
 ];
 
 // A section is current on its own page, on the pages under it, and on the pages it holds that live elsewhere.
@@ -134,7 +135,7 @@ export function DashboardNav() {
           <nav
             ref={panel}
             id={panelId}
-            aria-label="Main"
+            aria-label={TAB_BAR_LABEL}
             className={cn(
               "absolute inset-x-4 top-[76px] z-10 rounded-large border border-border bg-surface-sheet p-2 shadow-card lg:static lg:block lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:shadow-none",
               isMenuOpen ? "block" : "hidden",
@@ -170,12 +171,12 @@ export function DashboardNav() {
         {!isFoodsPage && (
           <SearchLauncher
             size="adaptive"
-            label="Search for a food"
+            label={SEARCH_LAUNCHER.label}
             onSearch={startSearch}
             // A search cannot run offline, so the launcher is dimmed on every page of the shell.
             disabled={!isOnline}
             barcodeButton={{
-              label: "Look up a barcode",
+              label: SEARCH_LAUNCHER.lookUpLabel,
               onClick: startBarcodeLookup,
             }}
             className={cn("lg:ml-auto lg:w-[320px]", isFoodPage && "max-lg:hidden")}

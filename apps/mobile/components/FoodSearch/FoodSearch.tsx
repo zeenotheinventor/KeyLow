@@ -1,4 +1,9 @@
-import { ADD_INGREDIENT, LOG_SEARCH, SEARCH_GROUP_HEADINGS } from "@keylow/core/copy";
+import {
+  ADD_INGREDIENT,
+  LOG_SEARCH,
+  SEARCH_GROUP_HEADINGS,
+  SEARCH_LAUNCHER,
+} from "@keylow/core/copy";
 import { vars } from "nativewind";
 import { useCallback, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -115,11 +120,11 @@ export function FoodSearch(props: FoodSearchProps) {
           logging === undefined ? undefined : <LogPlateButton context={logging.context} />
         }
         label="Search foods"
-        placeholder="Search for a food"
+        placeholder={SEARCH_LAUNCHER.label}
         trailing={
           <IconButton
             icon="ScanBarcode"
-            label="Scan barcode"
+            label={SEARCH_LAUNCHER.scanLabel}
             size="sm"
             variant="ghost"
             onPress={onScanBarcode}

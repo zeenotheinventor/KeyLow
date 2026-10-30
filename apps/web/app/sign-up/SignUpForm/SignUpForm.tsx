@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AUTH_SCREEN,
   CHECK_EMAIL_TITLE,
   GENERIC_ERROR,
   SIGN_UP_SCREEN,
@@ -131,7 +132,7 @@ export function SignUpForm() {
       <OrDivider />
 
       <TextField
-        label="Email"
+        label={AUTH_SCREEN.emailLabel}
         name="email"
         type="email"
         autoComplete="email"
@@ -143,7 +144,7 @@ export function SignUpForm() {
         error={fieldErrors.email}
       />
       <TextField
-        label="Password"
+        label={AUTH_SCREEN.passwordLabel}
         name="password"
         type="password"
         autoComplete="new-password"
@@ -175,7 +176,7 @@ export function SignUpForm() {
       <Button
         type="submit"
         loading={pendingAction === "signUp"}
-        loadingLabel="Creating account"
+        loadingLabel={SIGN_UP_SCREEN.submittingLabel}
         disabled={!hasAccepted || isWaiting("signUp")}
       >
         {SIGN_UP_SCREEN.submitLabel}

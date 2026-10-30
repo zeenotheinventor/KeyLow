@@ -1,4 +1,4 @@
-import { MORE_SCREEN } from "@keylow/core/copy";
+import { COMING_SOON_TITLE, MORE_SCREEN, TAB_TITLES } from "@keylow/core/copy";
 import { cookies } from "next/headers";
 
 import { signOut } from "../actions";
@@ -23,11 +23,11 @@ export default async function MorePage() {
   return (
     <PageFrame variant="shell">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-        <h1 className="text-h1">More</h1>
-        <GroupedList title="Food" headerSize="compact">
+        <h1 className="text-h1">{TAB_TITLES.more}</h1>
+        <GroupedList title={MORE_SCREEN.food.title} headerSize="compact">
           <ListRow
-            title="Your foods"
-            subtitle="Foods you created or copied"
+            title={MORE_SCREEN.food.yourFoods.title}
+            subtitle={MORE_SCREEN.food.yourFoods.subtitle}
             href="/foods?scope=own"
           />
         </GroupedList>
@@ -35,17 +35,28 @@ export default async function MorePage() {
           <TargetsRow />
           <ListRow title={MORE_SCREEN.nutrition.recipes.title} href={recipesPath()} />
         </GroupedList>
-        <GroupedList title="Body" headerSize="compact">
+        <GroupedList title={MORE_SCREEN.body.title} headerSize="compact">
           {/* Weight is not built yet. A disabled row has no destination and does nothing. */}
-          <ListRow title="Weight" subtitle="Coming soon" href="/weight" disabled chevron={false} />
+          <ListRow
+            title={MORE_SCREEN.body.weight.title}
+            subtitle={COMING_SOON_TITLE}
+            href="/weight"
+            disabled
+            chevron={false}
+          />
         </GroupedList>
-        <GroupedList title="Settings" headerSize="compact">
+        <GroupedList title={MORE_SCREEN.settings.title} headerSize="compact">
           <AppearanceSetting initialPreference={themePreference} />
-          <ListRow title="About" href="/about" />
+          <ListRow title={MORE_SCREEN.settings.about.title} href="/about" />
         </GroupedList>
         <form action={signOut}>
-          <GroupedList title="Account" headerSize="compact">
-            <ListRow title="Sign out" subtitle={user?.email} submit chevron={false} />
+          <GroupedList title={MORE_SCREEN.account.title} headerSize="compact">
+            <ListRow
+              title={MORE_SCREEN.account.signOut}
+              subtitle={user?.email}
+              submit
+              chevron={false}
+            />
           </GroupedList>
         </form>
       </div>
