@@ -197,6 +197,8 @@ describe("the package index", () => {
     "setShoppingItemChecked",
     "deleteShoppingItem",
     "clearTickedItems",
+    "listSuggestionLibrary",
+    "useSuggestion",
   ])("should export %s", (name) => {
     expect(apiClient).toHaveProperty(name);
   });

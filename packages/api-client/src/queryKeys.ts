@@ -191,6 +191,17 @@ export const keys = {
      * id is the only thing the key carries besides fixed words.
      */
     exercise: (id: string) => ["training", "exercise", id] as const,
+    /** The prefix of every `suggestionLibrary` key, to refresh them all when an exercise is saved or archived. */
+    suggestionLibraryAll: ["training", "suggestion-library"] as const,
+    /**
+     * The exercises the suggestion reads (the library and the signed in user's own whose equipment is in
+     * the user's), each with its muscle map. Never persisted: the library is global reference data and
+     * big, and acting on a suggestion needs a connection, so it sits under none of the persisted prefixes
+     * above and is kept for the session only. `equipmentKey` is the user's equipment sorted and joined
+     * (`suggestionEquipmentKey`), never an exercise, a muscle, a priority or a time.
+     */
+    suggestionLibrary: (equipmentKey: string) =>
+      ["training", "suggestion-library", equipmentKey] as const,
     /**
      * The exercises added to a session on screen that have no logged set yet, which the data model cannot
      * store (it stores sets). Never persisted: they survive the screen being hidden and shown again, and
