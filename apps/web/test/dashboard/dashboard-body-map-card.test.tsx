@@ -10,10 +10,10 @@ import type { DashboardBodyMap } from "@keylow/api-client";
 import { DashboardBodyMapCard } from "@/components/dashboard/DashboardBodyMapCard";
 
 const goldenName =
-  "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Legs, 16 sets planned.";
+  "Body map, Actual heat now. Warmest: lats 25 percent, mid traps 18 percent, biceps 15 percent. Today: Legs, 16 sets planned. Open the body map";
 
 const card = () => screen.getByRole("region", { name: BODY_MAP.dashboardCard.title });
-const cardImage = () => screen.getByRole("img", { name: /^Body map, Actual heat now\./ });
+const cardLink = () => screen.getByRole("link", { name: /^Body map, Actual heat now\./ });
 const figure = (side: "front" | "back") =>
   screen.getByRole("img", { name: `Body map, Actual, heat, ${side}`, hidden: true });
 
@@ -27,11 +27,17 @@ describe("DashboardBodyMapCard", () => {
   });
 
   describe("on Thursday at 17:55", () => {
-    it("should be named by what it shows, with no Open the body map while it opens nothing", () => {
+    it("should be one link named by what it shows and ending in Open the body map", () => {
       renderCard(goldenThursdayBodyMap);
 
-      expect(cardImage().getAttribute("aria-label")).toBe(goldenName);
-      expect(card().contains(cardImage())).toBe(true);
+      expect(cardLink().getAttribute("aria-label")).toBe(goldenName);
+      expect(card().contains(cardLink())).toBe(true);
+    });
+
+    it("should open the body map page", () => {
+      renderCard(goldenThursdayBodyMap);
+
+      expect(cardLink().getAttribute("href")).toBe("/body-map");
     });
 
     it("should write the three warmest muscles and today's planned day", () => {
@@ -63,13 +69,13 @@ describe("DashboardBodyMapCard", () => {
       expect(screen.getByRole("img", { name: "Heat legend", hidden: true })).toBeTruthy();
     });
 
-    it("should title itself Training over Actual · now, with no Body map word while it opens nothing", () => {
+    it("should title itself Training over Actual · now, with the Body map label of the link", () => {
       renderCard(goldenThursdayBodyMap);
 
       const words = within(card());
       expect(words.getByText("Training")).toBeTruthy();
       expect(words.getByText("Actual · now")).toBeTruthy();
-      expect(words.queryByText("Body map")).toBeNull();
+      expect(words.getByText(BODY_MAP.dashboardCard.link)).toBeTruthy();
     });
   });
 
@@ -77,8 +83,8 @@ describe("DashboardBodyMapCard", () => {
     it("should say nothing is logged in the window, and not name a day when there is no routine", () => {
       renderCard(noHistoryBodyMap);
 
-      expect(cardImage().getAttribute("aria-label")).toBe(
-        "Body map, Actual heat now. Nothing logged in the last 14 days.",
+      expect(cardLink().getAttribute("aria-label")).toBe(
+        "Body map, Actual heat now. Nothing logged in the last 14 days. Open the body map",
       );
       expect(within(card()).queryByText(/^Today:/)).toBeNull();
     });
@@ -92,12 +98,18 @@ describe("DashboardBodyMapCard", () => {
     });
   });
 
-  describe("while it opens nothing", () => {
-    it("should be neither a link nor a button, and its figures take no click", () => {
+  describe("as a link", () => {
+    it("should be the only link, with no button inside it, and its figures take no click", () => {
       renderCard(goldenThursdayBodyMap);
 
-      expect(screen.queryAllByRole("link", { hidden: true })).toHaveLength(0);
+      expect(screen.getAllByRole("link", { hidden: true })).toHaveLength(1);
       expect(screen.queryAllByRole("button", { hidden: true })).toHaveLength(0);
+    });
+
+    it("should keep the words inside it out of the accessibility tree, because its name says all of it", () => {
+      renderCard(goldenThursdayBodyMap);
+
+      expect(screen.getByText("Today: Legs").closest("[aria-hidden=true]")).not.toBeNull();
     });
   });
 });
