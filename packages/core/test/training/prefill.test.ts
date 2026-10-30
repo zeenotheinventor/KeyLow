@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { rowId } from "./historyRows";
 import { goldenLegsSets, LEG_PRESS_ID, ROMANIAN_DEADLIFT_ID, SQUAT_ID } from "./sessionRows";
-import { prefillNextSet, sameAgain } from "../../src/training";
+import { prefillNextSet, sameAgain, setValuesOfPrefill } from "../../src/training";
 
 import type { LastPerformanceSet, PrefillSessionSet } from "../../src/training";
 
@@ -250,5 +250,23 @@ describe("sameAgain", () => {
       rir: 1,
       rpe: null,
     });
+  });
+});
+
+describe("setValuesOfPrefill", () => {
+  it("should give the numbers a prefill opens with as a working set", () => {
+    const prefill = prefillNextSet(LEG_PRESS_ID, goldenLegsSets, []);
+
+    expect(setValuesOfPrefill(prefill)).toStrictEqual({
+      setType: "working",
+      loadKg: 180,
+      reps: 11,
+      rir: 1,
+      rpe: null,
+    });
+  });
+
+  it("should give nothing when there is nothing to fill the set from", () => {
+    expect(setValuesOfPrefill(prefillNextSet(LEG_PRESS_ID, [], []))).toBeNull();
   });
 });

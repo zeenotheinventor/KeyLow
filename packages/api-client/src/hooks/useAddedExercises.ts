@@ -1,9 +1,9 @@
-import { keys } from "@keylow/api-client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import type { ChosenExercise } from "../AddExerciseSheet";
-import type { AddedExercise } from "./types";
+import { keys } from "../queryKeys";
+
+import type { AddedExercise } from "./sessionViewTypes";
 
 const NO_ADDED_EXERCISES: readonly AddedExercise[] = [];
 
@@ -27,7 +27,7 @@ export function useAddedExercises(sessionId: string | undefined) {
   });
 
   const add = useCallback(
-    ({ id, name, equipment }: ChosenExercise) => {
+    ({ id, name, equipment }: AddedExercise) => {
       if (sessionId === undefined) {
         return;
       }

@@ -27,6 +27,20 @@ const sessionPrefill: SetPrefill = {
 
 export const samples: Record<string, () => string[]> = {
   describeSetColumns: () => units.flatMap((unit) => Object.values(copy.describeSetColumns(unit))),
+  describeSetCellName: () =>
+    units.flatMap((unit) =>
+      setTypes.flatMap((setType) =>
+        (["load", "reps", "rir"] as const).map((column) =>
+          copy.describeSetCellName({
+            exerciseName: "Leg press",
+            setType,
+            setNumber: 3,
+            unit,
+            column,
+          }),
+        ),
+      ),
+    ),
   describeMoreForExercise: () => [copy.describeMoreForExercise("Leg press")],
   describeExerciseTarget: () => [
     copy.describeExerciseTarget({ target: { sets: 3, ...target }, equipment: "machine" }),

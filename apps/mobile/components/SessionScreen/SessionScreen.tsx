@@ -1,3 +1,4 @@
+import { usePendingSets } from "@keylow/api-client";
 import {
   ADD_EXERCISE,
   FINISH_SCREEN,
@@ -20,7 +21,6 @@ import { SessionMenu } from "../SessionMenu";
 import { SetEntrySheet } from "../SetEntrySheet";
 import { SetTypeSheet } from "../SetTypeSheet";
 import { Button, ErrorState, SheetHeader, Text } from "../ui";
-import { usePendingSets } from "./pendingSets";
 import { useChangeSetType } from "./useChangeSetType";
 import { useSessionScreen } from "./useSessionScreen";
 import { useSetLogging } from "./useSetLogging";

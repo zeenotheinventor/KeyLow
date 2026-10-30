@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-import type { PendingSet, PendingSets, ScreenSet } from "./types";
+import type { PendingSet, PendingSets, ScreenSet } from "./sessionViewTypes";
 
 export const NO_PENDING_SETS: readonly PendingSet[] = [];
 
@@ -20,7 +20,7 @@ export function withPendingSets(
 }
 
 /**
- * The sets being saved. Not in the query cache: the cache is saved on the phone, and a set that was never
+ * The sets being saved. Not in the query cache: the cache is saved on the device, and a set that was never
  * stored must not come back after the app is closed.
  */
 export function usePendingSets(): PendingSets {

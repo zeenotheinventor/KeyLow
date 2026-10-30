@@ -1,15 +1,15 @@
-import type { ChosenExercise } from "../AddExerciseSheet";
 import type { FinishDetails, SavedOutcome } from "../FinishScreen";
-import type { ExercisePlan } from "../SetEntrySheet";
-import type { SessionSet } from "@keylow/api-client";
-import type { ExerciseMuscleEntry } from "@keylow/core/schemas";
-import type {
-  Equipment,
-  LoadUnit,
-  SessionExercise,
-  SetType,
-  SetValues,
-} from "@keylow/core/training";
+import type { SessionView } from "@keylow/api-client";
+import type { SetType } from "@keylow/core/training";
+
+export type {
+  LogSetRequest,
+  PendingSet,
+  PendingSets,
+  RemoveSetRequest,
+  ScreenSet,
+  SetLogging,
+} from "@keylow/api-client";
 
 export type SessionScreenProps = {
   /** Hides the screen and leaves the session running: the control named "Hide session, it keeps running". */
@@ -27,45 +27,6 @@ export type SessionScreenProps = {
   onFinished: (outcome: SavedOutcome) => void;
 };
 
-/**
- * A set of the session as the screen draws it: one the database holds, or one being saved, which has no
- * snapshot yet (its exercise's name comes from the plan or from the exercise's stored sets).
- */
-export type ScreenSet = Omit<SessionSet, "snapshot"> & {
-  snapshot?: SessionSet["snapshot"] | undefined;
-};
-
-/**
- * A set that is on its way to the database. `savedId` is the id the database gave it once it has stored
- * it, kept so the set is hidden the moment the session read holds the stored one, and drawn until then.
- */
-export type PendingSet = Readonly<{ set: ScreenSet; savedId: string | null }>;
-
-export type PendingSets = {
-  sets: readonly PendingSet[];
-  add: (set: ScreenSet) => void;
-  /** Records the id the database gave a pending set. */
-  markSaved: (pendingId: string, savedId: string) => void;
-  /** Takes a pending set back out, as when it failed to save. */
-  drop: (pendingId: string) => void;
-  /** Takes out the pending sets the stored sets now hold. */
-  prune: (storedIds: ReadonlySet<string>) => void;
-};
-
-/** Logs a set from the values a row shows. */
-export type LogSetRequest = {
-  exerciseId: string;
-  values: SetValues;
-};
-
-/** Removes a logged set, for the toast "Set removed: Romanian deadlift, set 3". */
-export type RemoveSetRequest = {
-  setId: string;
-  exerciseName: string;
-  setType: SetType;
-  setNumber: number;
-};
-
 /** The logged set the set types sheet is opened for: who it is, and the number it has among the working sets or would have as one. */
 export type SetTypeOpening = {
   setId: string;
@@ -80,56 +41,7 @@ export type ChangeSetTypeRequest = {
   setType: SetType;
 };
 
-/** What a card does when a check is pressed. */
-export type SetLogging = {
-  logSet: (request: LogSetRequest) => void;
-  removeSet: (request: RemoveSetRequest) => void;
-  /** Whether a set is one still being saved, whose check does nothing until the database has stored it. */
-  isSaving: (setId: string) => boolean;
-};
-
-/** One exercise card of the session: who it is and how it is planned, with its rows. */
-export type SessionScreenExercise = {
-  name: string;
-  /** The line under the name: "3 × 10 to 12 · RIR 1 · Machine". */
-  target: string;
-  /** The plan's sets, rep range and RIR for the exercise, or null for one added to the session. */
-  plan: ExercisePlan | null;
-  /**
-   * The exercise's muscle map as the phone holds it: the snapshot of a set already saved, else the active
-   * routine's current map, else null (an exercise added on screen with no set saved yet).
-   */
-  muscles: readonly ExerciseMuscleEntry[] | null;
-  exercise: SessionExercise<ScreenSet>;
-};
-
-/** What the screen has read. */
+/** What the screen has read: the shared view, and for a ready session what the finish screen shows as it stands now. */
 export type SessionScreenView =
-  | { status: "loading" }
-  | { status: "error"; retry: () => void }
-  | { status: "none" }
-  | {
-      status: "ready";
-      sessionId: string;
-      /** What the header's clock works from. The time itself is the header's own. */
-      header: {
-        dayName: string | null;
-        startedAt: string;
-        endedAt: string | null;
-        setsLogged: number;
-        setsPlanned: number;
-      };
-      unit: LoadUnit;
-      sets: readonly ScreenSet[];
-      exercises: readonly SessionScreenExercise[];
-      /** Puts a card for the picked exercise on the screen, with one row to do. It exists on screen only until its first set is logged. */
-      addExercise: (exercise: ChosenExercise) => void;
-      /** What the finish screen shows, as it stands now. */
-      finish: FinishDetails;
-    };
-
-/**
- * An exercise added to the session that has no logged set yet. The data model stores sets, not exercises,
- * so until its first set is logged it is held only on this phone, with the name and equipment its card needs.
- */
-export type AddedExercise = { id: string; name: string; equipment: Equipment };
+  | Exclude<SessionView, { status: "ready" }>
+  | (Extract<SessionView, { status: "ready" }> & { finish: FinishDetails });

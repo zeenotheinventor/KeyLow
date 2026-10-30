@@ -29,6 +29,16 @@ describe("useNow", () => {
     expect(result.current.toISOString()).toBe("2026-10-15T12:00:30.000Z");
   });
 
+  it("should move on at the step a screen asks for, such as a clock that shows seconds", () => {
+    const { result } = renderHook(() => useNow(1000));
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+
+    expect(result.current.toISOString()).toBe("2026-10-15T11:59:33.000Z");
+  });
+
   it("should stop ticking when it is no longer used", () => {
     const { unmount } = renderHook(() => useNow());
 

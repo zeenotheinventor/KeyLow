@@ -5,6 +5,7 @@ import { samples } from "./samples/sessionEntry";
 import {
   describePrefillLine,
   describeSameAgainName,
+  describeSetCellName,
   describeSetColumns,
   describeSetEntryName,
   describeSetEntrySubtitle,
@@ -58,6 +59,7 @@ describe("the active session's fixed words", () => {
       addSetAction: "Add set",
       addExerciseAction: "Add exercise",
       setsListName: "Sets",
+      loggedColumnName: "Logged",
     });
   });
 
@@ -73,6 +75,57 @@ describe("the active session's fixed words", () => {
 
   it("should head the load column lb for a person who trains in pounds", () => {
     expect(describeSetColumns("lb").load).toBe("lb");
+  });
+
+  it("should name a cell of a set's row with the exercise, the set and the column", () => {
+    expect(
+      describeSetCellName({
+        exerciseName: "Leg press",
+        setType: "working",
+        setNumber: 3,
+        unit: "kg",
+        column: "load",
+      }),
+    ).toBe("Leg press, set 3, kilograms");
+    expect(
+      describeSetCellName({
+        exerciseName: "Leg press",
+        setType: "working",
+        setNumber: 3,
+        unit: "lb",
+        column: "load",
+      }),
+    ).toBe("Leg press, set 3, pounds");
+    expect(
+      describeSetCellName({
+        exerciseName: "Leg press",
+        setType: "working",
+        setNumber: 3,
+        unit: "kg",
+        column: "reps",
+      }),
+    ).toBe("Leg press, set 3, reps");
+    expect(
+      describeSetCellName({
+        exerciseName: "Leg press",
+        setType: "working",
+        setNumber: 3,
+        unit: "kg",
+        column: "rir",
+      }),
+    ).toBe("Leg press, set 3, RIR");
+  });
+
+  it("should name a cell of a warm-up row without a number", () => {
+    expect(
+      describeSetCellName({
+        exerciseName: "Barbell squat",
+        setType: "warmup",
+        setNumber: 0,
+        unit: "kg",
+        column: "reps",
+      }),
+    ).toBe("Barbell squat, warm-up set, reps");
   });
 
   it("should name the exercise's more button with the exercise", () => {

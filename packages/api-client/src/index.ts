@@ -202,6 +202,31 @@ export {
   useWeekSessionRows,
   useWeightUnit,
 } from "./hooks";
+export {
+  isPendingSetId,
+  useAddedExercises,
+  useDiscardSession,
+  usePendingSets,
+  useRemoveSetWithUndo,
+  useSessionView,
+  useSetLogging,
+  useStartSessionAction,
+} from "./hooks";
+export type {
+  AddedExercise,
+  ExercisePlan,
+  LogSetRequest,
+  PendingSet,
+  PendingSets,
+  PlannedExerciseName,
+  RemoveSetRequest,
+  ScreenSet,
+  SessionStartRequest,
+  SessionView,
+  SessionViewExercise,
+  SetLogging,
+  SetNotices,
+} from "./hooks";
 export { planRoutineOf } from "./hooks";
 export type {
   PickDayOption,

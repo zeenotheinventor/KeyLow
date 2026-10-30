@@ -106,7 +106,13 @@ export { SET_SNAPSHOT_VERSION } from "./versions";
 
 export { displayLoad, loadToKg } from "./loads";
 export type { LoadUnit } from "./loads";
-export { parseEffortInput, parseLoadInput, parseRepsInput, validateSetDraft } from "./setInput";
+export {
+  parseEffortInput,
+  parseLoadInput,
+  parseRepsInput,
+  setDraftOfValues,
+  validateSetDraft,
+} from "./setInput";
 export type {
   EffortInputResult,
   EffortMode,
@@ -258,7 +264,7 @@ export type {
   ProgressSet,
 } from "./sessionProgress";
 export { addedSetTime } from "./addedSetTime";
-export { prefillNextSet, sameAgain } from "./prefill";
+export { prefillNextSet, sameAgain, setValuesOfPrefill } from "./prefill";
 export type { LastPerformanceSet, PrefillSessionSet, SetPrefill } from "./prefill";
 
 export {
