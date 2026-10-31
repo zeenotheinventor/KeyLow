@@ -106,8 +106,15 @@ export { useWeightUnit } from "./useWeightUnit";
 export type { TrainingReadResult } from "./trainingReadResult";
 export { useBodyMap } from "./useBodyMap";
 export type { BodyMap, BodyMapDay, BodyMapScale, UseBodyMapInput } from "./useBodyMap";
-export { useDashboardBodyMap } from "./useDashboardBodyMap";
-export type { DashboardBodyMap, DashboardToday } from "./useDashboardBodyMap";
+export { dashboardBodyMapOf, useDashboardBodyMap } from "./useDashboardBodyMap";
+export type {
+  DashboardBodyMap,
+  DashboardBodyMapInput,
+  DashboardBodyMapOfScale,
+  DashboardHeatBodyMap,
+  DashboardToday,
+  DashboardVolumeBodyMap,
+} from "./useDashboardBodyMap";
 export { useMuscleList } from "./useMuscleList";
 export type { UseMuscleListInput } from "./useMuscleList";
 export { useMuscleDetail } from "./useMuscleDetail";

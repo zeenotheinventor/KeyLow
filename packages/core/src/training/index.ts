@@ -161,17 +161,20 @@ export { estimateSessionMinutes, SESSION_TIME_PARAMS_V1 } from "./sessionTime";
 export type { SessionLoad, SessionTimeParams } from "./sessionTime";
 
 export {
+  DASHBOARD_BODY_SCALES,
   GAP_VALUES,
   gapValues,
   HEAT_STEP_CUTS_V1,
   heatStepOf,
   heatValues,
+  isDashboardBodyScale,
   isReadyHeat,
   LOADED_HEAT_PERCENT,
+  mostTrainedMuscles,
   volumeValues,
   warmestMuscles,
 } from "./bodyMapValues";
-export type { BodyMapView, WarmMuscle } from "./bodyMapValues";
+export type { BodyMapView, DashboardBodyScale, TrainedMuscle, WarmMuscle } from "./bodyMapValues";
 export { exerciseRoleValues, musclesByRole, ROLE_FIGURE_VALUES } from "./exerciseRoles";
 export type { MuscleRoleEntry, MusclesOfRole } from "./exerciseRoles";
 export { readMuscleValue } from "./bodyFigureReading";

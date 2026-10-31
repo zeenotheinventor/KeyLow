@@ -24,6 +24,19 @@ const dashboardInputs: copy.DashboardBodyMapCardInput[] = [
   { warmest: [], today: null, heatWindowDays: 14, opensBodyMap: true },
   { warmest, today: { kind: "rest" }, heatWindowDays: 14, opensBodyMap: false },
 ];
+const volumeInputs: copy.DashboardVolumeCardInput[] = [
+  {
+    scale: "volume",
+    mostTrained: [
+      { muscle: "lats", weeklySets: 8 },
+      { muscle: "delt_side", weeklySets: 6.5 },
+      { muscle: "calves", weeklySets: 1 },
+    ],
+    today: { kind: "session", routineDayName: "Legs", plannedSets: 16 },
+    opensBodyMap: true,
+  },
+  { scale: "volume", mostTrained: [], today: null, opensBodyMap: false },
+];
 const header = { tz: LONDON, weekEnd: "2026-10-18", plannedSessions: [SATURDAYS_PUSH] } as const;
 
 export const samples: Record<string, () => string[]> = {
@@ -191,14 +204,27 @@ export const samples: Record<string, () => string[]> = {
     return [row.name, row.heatText, row.status, row.accessibleName];
   },
   describeDashboardBodyMapCard: () =>
-    dashboardInputs.flatMap((input) => {
-      const card = copy.describeDashboardBodyMapCard(input);
-      return [
-        card.warmestLine,
-        card.accessibleName,
-        ...(card.todayLine === null ? [] : [card.todayLine]),
-      ];
-    }),
+    dashboardInputs
+      .flatMap((input) => {
+        const card = copy.describeDashboardBodyMapCard(input);
+        return [
+          card.viewLine,
+          card.warmestLine,
+          card.accessibleName,
+          ...(card.todayLine === null ? [] : [card.todayLine]),
+        ];
+      })
+      .concat(
+        volumeInputs.flatMap((input) => {
+          const card = copy.describeDashboardBodyMapCard(input);
+          return [
+            card.viewLine,
+            card.mostSetsLine,
+            card.accessibleName,
+            ...(card.todayLine === null ? [] : [card.todayLine]),
+          ];
+        }),
+      ),
   describeWebListCaption: () => [
     copy.describeWebListCaption({ scale: "heat", moreAtRest: 10 }),
     copy.describeWebListCaption({ scale: "volume", notTrained: 7 }),

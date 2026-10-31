@@ -205,3 +205,57 @@ describe("useDashboardBodyMap", () => {
     expect(fake.requestsTo("profiles")).toHaveLength(zoneReads);
   });
 });
+
+describe("useDashboardBodyMap, by scale", () => {
+  it("should draw heat when no scale is given", async () => {
+    installTrainingFake(server, goldenWeekData);
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(() => useDashboardBodyMap({ now: CARD_MOMENT }), { wrapper });
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data?.scale).toBe("heat");
+  });
+
+  it("should give the most trained three of the calendar week for Weekly volume", async () => {
+    installTrainingFake(server, goldenWeekData);
+    const { wrapper } = createWrapper();
+
+    const { result } = renderHook(
+      () => useDashboardBodyMap({ now: CARD_MOMENT, scale: "volume" }),
+      { wrapper },
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toBeDefined();
+    });
+    expect(result.current.data).toMatchObject({
+      scale: "volume",
+      mostTrained: [
+        { muscle: "lats", weeklySets: 11 },
+        { muscle: "biceps", weeklySets: 8.5 },
+        { muscle: "traps_mid", weeklySets: 7.75 },
+      ],
+      values: { lats: 3, biceps: 2, neck: 0 },
+    });
+  });
+
+  it("should change the chart when the scale changes", async () => {
+    installTrainingFake(server, goldenWeekData);
+    const { wrapper } = createWrapper();
+
+    const { result, rerender } = renderHook(
+      ({ scale }: { scale: "heat" | "volume" }) => useDashboardBodyMap({ now: CARD_MOMENT, scale }),
+      { wrapper, initialProps: { scale: "heat" } },
+    );
+    await waitFor(() => {
+      expect(result.current.data?.scale).toBe("heat");
+    });
+
+    rerender({ scale: "volume" });
+
+    expect(result.current.data?.scale).toBe("volume");
+  });
+});

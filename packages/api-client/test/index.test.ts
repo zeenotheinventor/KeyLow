@@ -112,6 +112,7 @@ describe("the package index", () => {
     "useMuscleList",
     "useMuscleDetail",
     "useDashboardBodyMap",
+    "dashboardBodyMapOf",
     "todayPlanOf",
     "RESTING_HEAT",
 

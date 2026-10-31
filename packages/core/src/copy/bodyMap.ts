@@ -13,7 +13,7 @@ import { GAP_VALUES } from "../training/bodyMapValues";
 import { MUSCLE_IDS } from "../training/muscles";
 
 import type { BodyArtworkFigure, BodyArtworkSide } from "../training/bodyArtwork";
-import type { BodyMapView, WarmMuscle } from "../training/bodyMapValues";
+import type { BodyMapView, TrainedMuscle, WarmMuscle } from "../training/bodyMapValues";
 import type { MuscleListRow } from "../training/muscleList";
 import type { MuscleId } from "../training/muscles";
 import type { VolumeStatus } from "../training/muscleState";
@@ -158,6 +158,10 @@ export const BODY_MAP = {
   dashboardCard: {
     title: "Training",
     view: "Actual · now",
+    /** The view under the title when the Dashboard chart setting is Weekly volume. */
+    volumeView: "Actual · this week",
+    /** The line under the figures when the Weekly volume chart has no sets this calendar week. */
+    nothingThisWeek: "No sets logged this week yet",
     link: "Body map",
     hottestStep: HEAT_STEP_NAMES[5],
     coolestStep: HEAT_STEP_NAMES[0],
@@ -627,7 +631,10 @@ export const describeMuscleListRow = ({
 export type TodayPlan =
   { kind: "session"; routineDayName: string; plannedSets: number } | { kind: "rest" };
 
+/** The heat chart of the dashboard card, the default of the Dashboard chart setting. */
 export type DashboardBodyMapCardInput = Readonly<{
+  /** Left out by the callers that only ever draw heat. */
+  scale?: "heat" | undefined;
   /** `warmestMuscles` of the heat now, which is empty when nothing is warm. */
   warmest: readonly WarmMuscle[];
   /** Today's planned day, or null when there is no routine. */
@@ -640,8 +647,34 @@ export type DashboardBodyMapCardInput = Readonly<{
   opensBodyMap: boolean;
 }>;
 
+/** The Weekly volume chart of the dashboard card: the actual sets of the calendar week, Monday to Sunday. */
+export type DashboardVolumeCardInput = Readonly<{
+  scale: "volume";
+  /** `mostTrainedMuscles` of the calendar week, which is empty when no set was logged this week. */
+  mostTrained: readonly TrainedMuscle[];
+  /** Today's planned day, or null when there is no routine. */
+  today: TodayPlan | null;
+  /** As for heat: whether the card opens the body map, which ends its name with "Open the body map". */
+  opensBodyMap: boolean;
+}>;
+
+/** Either chart of the dashboard card, told apart by `scale`. */
+export type DashboardCardInput = DashboardBodyMapCardInput | DashboardVolumeCardInput;
+
 export type DashboardBodyMapCardCopy = {
+  /** The view under the title: "Actual · now". */
+  viewLine: string;
   warmestLine: string;
+  todayLine: string | null;
+  /** The name of the whole card: what it shows, and "Open the body map" when it opens the body map. */
+  accessibleName: string;
+};
+
+export type DashboardVolumeCardCopy = {
+  /** The view under the title: "Actual · this week". */
+  viewLine: string;
+  /** "Most sets: lats 8, side delts 6.5, quads 6", or the nothing this week line. */
+  mostSetsLine: string;
   todayLine: string | null;
   /** The name of the whole card: what it shows, and "Open the body map" when it opens the body map. */
   accessibleName: string;
@@ -652,32 +685,87 @@ const warmestIn = (warmest: readonly WarmMuscle[], percentWord: string): string 
     .map(({ muscle, percent }) => `${MUSCLE_NAMES[muscle].toLowerCase()} ${percent} ${percentWord}`)
     .join(", ")}`;
 
-/** The words of the body map card on the dashboard. */
-export const describeDashboardBodyMapCard = ({
-  warmest,
-  today,
-  heatWindowDays,
-  opensBodyMap,
-}: DashboardBodyMapCardInput): DashboardBodyMapCardCopy => {
-  const nothingLogged = describeNothingLogged(heatWindowDays);
+const mostSetsIn = (
+  mostTrained: readonly TrainedMuscle[],
+  countOf: (weeklySets: number) => string,
+): string =>
+  `Most sets: ${mostTrained
+    .map(({ muscle, weeklySets }) => `${MUSCLE_NAMES[muscle].toLowerCase()} ${countOf(weeklySets)}`)
+    .join(", ")}`;
+
+/** "Monday to Sunday", the calendar week every weekly count reads (ADR 0005). */
+const WEEK_SPAN = `${WEEKDAY_NAMES_LONG[1]} to ${WEEKDAY_NAMES_LONG[0]}`;
+
+/** Today's line, and the sentence the card's name says for it, which adds the sets planned. */
+const todayWords = (today: TodayPlan | null) => {
   const dayName = today?.kind === "session" ? today.routineDayName : BODY_MAP.dashboardCard.restDay;
   const todayLine = today === null ? null : `Today: ${dayName}`;
   const todaySpoken =
     today?.kind === "session"
       ? `${todayLine}, ${describeSets(today.plannedSets)} planned`
       : todayLine;
-  const spoken = [
-    `${BODY_MAP.title}, ${BODY_MAP.views.actual} heat now.`,
-    `${warmest.length === 0 ? nothingLogged : warmestIn(warmest, "percent")}.`,
+  return { todayLine, todaySpoken };
+};
+
+const cardName = (
+  lead: string,
+  summary: string,
+  todaySpoken: string | null,
+  opensBodyMap: boolean,
+): string =>
+  [
+    lead,
+    `${summary}.`,
     ...(todaySpoken === null ? [] : [`${todaySpoken}.`]),
     ...(opensBodyMap ? [BODY_MAP.dashboardCard.open] : []),
-  ];
+  ].join(" ");
+
+/**
+ * The words of the body map card on the dashboard, for the chart the Dashboard chart setting picks: heat
+ * now (the default, and what a call without `scale` draws), or the actual sets of the calendar week.
+ */
+export function describeDashboardBodyMapCard(
+  input: DashboardBodyMapCardInput,
+): DashboardBodyMapCardCopy;
+export function describeDashboardBodyMapCard(
+  input: DashboardVolumeCardInput,
+): DashboardVolumeCardCopy;
+export function describeDashboardBodyMapCard(
+  input: DashboardCardInput,
+): DashboardBodyMapCardCopy | DashboardVolumeCardCopy;
+export function describeDashboardBodyMapCard(
+  input: DashboardCardInput,
+): DashboardBodyMapCardCopy | DashboardVolumeCardCopy {
+  const { todayLine, todaySpoken } = todayWords(input.today);
+  if (input.scale === "volume") {
+    const { mostTrained, opensBodyMap } = input;
+    const nothing = BODY_MAP.dashboardCard.nothingThisWeek;
+    return {
+      viewLine: BODY_MAP.dashboardCard.volumeView,
+      mostSetsLine: mostTrained.length === 0 ? nothing : mostSetsIn(mostTrained, formatSetCount),
+      todayLine,
+      accessibleName: cardName(
+        `${BODY_MAP.title}, ${BODY_MAP.views.actual} ${SCALE_WORDS.volume} this week, ${WEEK_SPAN}.`,
+        mostTrained.length === 0 ? nothing : mostSetsIn(mostTrained, describeSets),
+        todaySpoken,
+        opensBodyMap,
+      ),
+    };
+  }
+  const { warmest, heatWindowDays, opensBodyMap } = input;
+  const nothingLogged = describeNothingLogged(heatWindowDays);
   return {
+    viewLine: BODY_MAP.dashboardCard.view,
     warmestLine: warmest.length === 0 ? nothingLogged : warmestIn(warmest, "%"),
     todayLine,
-    accessibleName: spoken.join(" "),
+    accessibleName: cardName(
+      `${BODY_MAP.title}, ${BODY_MAP.views.actual} heat now.`,
+      warmest.length === 0 ? nothingLogged : warmestIn(warmest, "percent"),
+      todaySpoken,
+      opensBodyMap,
+    ),
   };
-};
+}
 
 /** The Figure setting's row value in the settings list, under the row title "Figure": "Female". */
 export const describeFigureRowValue = (figure: BodyArtworkFigure): string =>

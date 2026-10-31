@@ -3,11 +3,12 @@ import { View } from "react-native";
 
 import { DashboardBodyMapCard } from "./DashboardBodyMapCard";
 
-import type { DashboardBodyMap } from "@keylow/api-client";
+import type { DashboardHeatBodyMap } from "@keylow/api-client";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 // The golden week at Thursday 17:55, as the `dashboard · training-card` board draws it.
-const goldenThursday: DashboardBodyMap = {
+const goldenThursday: DashboardHeatBodyMap = {
+  scale: "heat",
   values: {
     ...RESTING_HEAT,
     chest_upper: 1,
@@ -68,5 +69,12 @@ export const NoPlanForToday: Story = {
 
 // A fresh install: the figures at rest, the no-history line, and no Start button.
 export const NoHistory: Story = {
-  args: { bodyMap: { values: RESTING_HEAT, warmest: [], today: { kind: "none", dayName: null } } },
+  args: {
+    bodyMap: {
+      scale: "heat",
+      values: RESTING_HEAT,
+      warmest: [],
+      today: { kind: "none", dayName: null },
+    },
+  },
 };

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { goldenThursdayBodyMap, noHistoryBodyMap } from "./bodyMapFixtures";
 
-import type { DashboardBodyMap } from "@keylow/api-client";
+import type { DashboardHeatBodyMap } from "@keylow/api-client";
 
 import { DashboardBodyMapCard } from "@/components/dashboard/DashboardBodyMapCard";
 
@@ -17,7 +17,7 @@ const cardLink = () => screen.getByRole("link", { name: /^Body map, Actual heat 
 const figure = (side: "front" | "back") =>
   screen.getByRole("img", { name: `Body map, Actual, heat, ${side}`, hidden: true });
 
-function renderCard(bodyMap: DashboardBodyMap) {
+function renderCard(bodyMap: DashboardHeatBodyMap) {
   return render(<DashboardBodyMapCard bodyMap={bodyMap} />);
 }
 

@@ -208,6 +208,8 @@ describe("the fixed words of the body map, as the boards draw them", () => {
       dashboardCard: {
         title: "Training",
         view: "Actual · now",
+        volumeView: "Actual · this week",
+        nothingThisWeek: "No sets logged this week yet",
         link: "Body map",
         hottestStep: "Peak",
         coolestStep: "Rested",
@@ -624,6 +626,7 @@ describe("describeDashboardBodyMapCard", () => {
         opensBodyMap: true,
       }),
     ).toStrictEqual({
+      viewLine: "Actual · now",
       warmestLine: "Warmest: lats 25 %, mid traps 18 %, biceps 15 %",
       todayLine: "Today: Legs",
       accessibleName:
@@ -652,6 +655,7 @@ describe("describeDashboardBodyMapCard", () => {
         opensBodyMap: true,
       }),
     ).toStrictEqual({
+      viewLine: "Actual · now",
       warmestLine: "Nothing logged in the last 14 days",
       todayLine: null,
       accessibleName:
@@ -713,6 +717,75 @@ describe("describeDashboardBodyMapCard", () => {
       expect(closedWords).toStrictEqual(openWords);
       expect(openName).toBe(`${closedName} Open the body map`);
     });
+  });
+});
+
+describe("describeDashboardBodyMapCard with the Weekly volume chart", () => {
+  const mostTrained = [
+    { muscle: "lats", weeklySets: 8 },
+    { muscle: "delt_side", weeklySets: 6.5 },
+    { muscle: "quads", weeklySets: 6 },
+  ] as const;
+
+  it("should write the muscles with the most sets this week, today and the whole card's name", () => {
+    expect(
+      describeDashboardBodyMapCard({
+        scale: "volume",
+        mostTrained,
+        today: { kind: "session", routineDayName: "Legs", plannedSets: 16 },
+        opensBodyMap: true,
+      }),
+    ).toStrictEqual({
+      viewLine: "Actual · this week",
+      mostSetsLine: "Most sets: lats 8, side delts 6.5, quads 6",
+      todayLine: "Today: Legs",
+      accessibleName:
+        "Body map, Actual weekly sets this week, Monday to Sunday. Most sets: lats 8 sets, side delts 6.5 sets, quads 6 sets. Today: Legs, 16 sets planned. Open the body map",
+    });
+  });
+
+  it("should say one set in the singular in the name, and keep the line a bare number", () => {
+    const card = describeDashboardBodyMapCard({
+      scale: "volume",
+      mostTrained: [{ muscle: "calves", weeklySets: 1 }],
+      today: { kind: "rest" },
+      opensBodyMap: true,
+    });
+
+    expect(card.mostSetsLine).toBe("Most sets: calves 1");
+    expect(card.accessibleName).toBe(
+      "Body map, Actual weekly sets this week, Monday to Sunday. Most sets: calves 1 set. Today: Rest day. Open the body map",
+    );
+  });
+
+  it("should write an empty week with the nothing this week line, and leave today out without a routine", () => {
+    expect(
+      describeDashboardBodyMapCard({
+        scale: "volume",
+        mostTrained: [],
+        today: null,
+        opensBodyMap: false,
+      }),
+    ).toStrictEqual({
+      viewLine: "Actual · this week",
+      mostSetsLine: "No sets logged this week yet",
+      todayLine: null,
+      accessibleName:
+        "Body map, Actual weekly sets this week, Monday to Sunday. No sets logged this week yet.",
+    });
+  });
+
+  it("should write the heat chart word for word when the scale is named as heat", () => {
+    const heatInput = {
+      warmest: [{ muscle: "lats", percent: 25 }],
+      today: { kind: "rest" },
+      heatWindowDays: 14,
+      opensBodyMap: true,
+    } as const;
+
+    expect(describeDashboardBodyMapCard({ ...heatInput, scale: "heat" })).toStrictEqual(
+      describeDashboardBodyMapCard(heatInput),
+    );
   });
 });
 

@@ -13,6 +13,18 @@ import type { TrainingParams } from "./params";
  * so no maths lives in the UI. Pure under the ADR 0002 rule. Every record holds all the muscle ids.
  */
 
+/**
+ * The charts the dashboard's body map card can draw, from the Dashboard chart setting: heat now (the
+ * default), or the sets of the calendar week, Monday to Sunday (ADR 0005).
+ */
+export const DASHBOARD_BODY_SCALES = ["heat", "volume"] as const;
+
+export type DashboardBodyScale = (typeof DASHBOARD_BODY_SCALES)[number];
+
+/** Whether a value, such as a stored setting, is one of `DASHBOARD_BODY_SCALES`. */
+export const isDashboardBodyScale = (value: unknown): value is DashboardBodyScale =>
+  DASHBOARD_BODY_SCALES.some((scale) => scale === value);
+
 /** The two maps of the body map screen: what was logged, and the plan with what was logged in its place. */
 export type BodyMapView = "actual" | "projected";
 
@@ -138,3 +150,23 @@ export const warmestMuscles = (
     .sort((first, second) => states[second].heat - states[first].heat)
     .slice(0, count)
     .map((muscle) => ({ muscle, percent: percentOf(states[muscle].heat) }));
+
+/** A muscle and the sets of the calendar week that count for it. */
+export type TrainedMuscle = { muscle: MuscleId; weeklySets: number };
+
+/**
+ * The `count` muscles with the most actual sets this calendar week, the most first, each with its
+ * `actualWeeklySets` from `compareWeek`. A tie goes in the order of the muscle list, and a muscle with no
+ * sets is left out, so fewer than `count` come back when fewer were trained.
+ */
+export const mostTrainedMuscles = (
+  comparison: Readonly<Record<MuscleId, Pick<MusclePlanComparison, "actualWeeklySets">>>,
+  count = DEFAULT_WARMEST_COUNT,
+): TrainedMuscle[] =>
+  MUSCLE_IDS.filter((muscle) => comparison[muscle].actualWeeklySets > 0)
+    // The sort is stable, so equal sets keep the order of the muscle list.
+    .sort(
+      (first, second) => comparison[second].actualWeeklySets - comparison[first].actualWeeklySets,
+    )
+    .slice(0, count)
+    .map((muscle) => ({ muscle, weeklySets: comparison[muscle].actualWeeklySets }));

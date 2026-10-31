@@ -71,6 +71,11 @@ describe("the tab shell copy", () => {
           femaleNote:
             "3D draws the male body for now. Your figure is female, so the body map stays 2D.",
         },
+        dashboardChart: {
+          title: "Dashboard chart",
+          options: { heat: "Heat", volume: "Weekly volume" },
+          volumeNote: "Weekly volume counts sets from Monday to Sunday.",
+        },
         reminders: { title: "Reminders" },
         about: { title: "About" },
       },

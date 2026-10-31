@@ -1,12 +1,13 @@
 import { RESTING_HEAT } from "@keylow/api-client";
 
-import type { DashboardBodyMap } from "@keylow/api-client";
+import type { DashboardHeatBodyMap } from "@keylow/api-client";
 
 /**
  * The body map card as the approved board draws it on Thursday 15 October at 17:55: the golden week, with
  * Legs planned and 16 sets in the day. The warmest three and the heat steps are the board's.
  */
-export const goldenThursdayBodyMap: DashboardBodyMap = {
+export const goldenThursdayBodyMap: DashboardHeatBodyMap = {
+  scale: "heat",
   values: {
     ...RESTING_HEAT,
     chest_upper: 1,
@@ -26,7 +27,8 @@ export const goldenThursdayBodyMap: DashboardBodyMap = {
 };
 
 /** A fresh install: every muscle at rest, nothing warm, and no routine to say what today is. */
-export const noHistoryBodyMap: DashboardBodyMap = {
+export const noHistoryBodyMap: DashboardHeatBodyMap = {
+  scale: "heat",
   values: RESTING_HEAT,
   warmest: [],
   today: { kind: "none", dayName: null },

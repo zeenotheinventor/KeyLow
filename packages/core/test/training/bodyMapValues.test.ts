@@ -13,13 +13,16 @@ import {
 import { benchPress, heatSet, repeat } from "./heatSets";
 import {
   compareWeek,
+  DASHBOARD_BODY_SCALES,
   GAP_VALUES,
   HEAT_STEP_CUTS_V1,
   LOADED_HEAT_PERCENT,
   gapValues,
   heatStepOf,
   heatValues,
+  isDashboardBodyScale,
   isReadyHeat,
+  mostTrainedMuscles,
   MUSCLE_IDS,
   muscleState,
   projectedState,
@@ -36,6 +39,10 @@ import type { LoggedSet, MuscleId, MusclePlanComparison } from "../../src/traini
 /** A full record at 0 with the given muscles set, as the canvas strings list only the muscles that glow. */
 const withOthersAtZero = (listed: Partial<Record<MuscleId, number>>): Record<MuscleId, number> =>
   recordOfMuscles((muscle) => listed[muscle] ?? 0);
+
+/** Every muscle with no actual sets this week, but for the ones given. */
+const weekWith = (setsByMuscle: Partial<Record<MuscleId, number>>) =>
+  recordOfMuscles((muscle) => ({ actualWeeklySets: setsByMuscle[muscle] ?? 0 }));
 
 /** Every muscle at no heat, but for the ones given. */
 const statesWith = (heatByMuscle: Partial<Record<MuscleId, number>>) =>
@@ -540,5 +547,69 @@ describe("warmestMuscles", () => {
 
   it("should round the percent as the heat steps do", () => {
     expect(warmestMuscles(statesWith({ lats: 0.245 }))[0]?.percent).toBe(25);
+  });
+});
+
+describe("mostTrainedMuscles", () => {
+  it("should name the three muscles with the most actual sets this week, the most first", () => {
+    const thisWeek = weekWith({ quads: 6, lats: 8, delt_side: 6.5, biceps: 2 });
+
+    expect(mostTrainedMuscles(thisWeek)).toStrictEqual([
+      { muscle: "lats", weeklySets: 8 },
+      { muscle: "delt_side", weeklySets: 6.5 },
+      { muscle: "quads", weeklySets: 6 },
+    ]);
+  });
+
+  it("should take as many muscles as asked for", () => {
+    const thisWeek = weekWith({ lats: 8, biceps: 4, triceps: 3 });
+
+    expect(mostTrainedMuscles(thisWeek, 2)).toStrictEqual([
+      { muscle: "lats", weeklySets: 8 },
+      { muscle: "biceps", weeklySets: 4 },
+    ]);
+  });
+
+  it("should break a tie in the order of the muscle list", () => {
+    const thisWeek = weekWith({ forearms: 5, chest_upper: 5, lats: 5, biceps: 5 });
+
+    expect(mostTrainedMuscles(thisWeek).map(({ muscle }) => muscle)).toStrictEqual([
+      "chest_upper",
+      "lats",
+      "biceps",
+    ]);
+  });
+
+  it("should leave out a muscle with no sets, so fewer than n can come back", () => {
+    expect(mostTrainedMuscles(weekWith({ calves: 1.5 }))).toStrictEqual([
+      { muscle: "calves", weeklySets: 1.5 },
+    ]);
+  });
+
+  it("should give an empty list when nothing was logged this week", () => {
+    expect(mostTrainedMuscles(weekWith({}))).toStrictEqual([]);
+  });
+
+  it("should read the actual sets and never the projected ones", () => {
+    const thisWeek = recordOfMuscles((muscle) => ({
+      actualWeeklySets: muscle === "biceps" ? 2 : 0,
+      projectedWeeklySets: muscle === "quads" ? 12 : 0,
+    }));
+
+    expect(mostTrainedMuscles(thisWeek)).toStrictEqual([{ muscle: "biceps", weeklySets: 2 }]);
+  });
+});
+
+describe("isDashboardBodyScale", () => {
+  it("should hold heat first, the default, and volume", () => {
+    expect(DASHBOARD_BODY_SCALES).toStrictEqual(["heat", "volume"]);
+  });
+
+  it.each(["heat", "volume"])("should accept %s", (value) => {
+    expect(isDashboardBodyScale(value)).toBe(true);
+  });
+
+  it.each(["gap", "Heat", "", null, undefined, 0, {}])("should refuse %j", (value) => {
+    expect(isDashboardBodyScale(value)).toBe(false);
   });
 });
