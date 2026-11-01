@@ -3,7 +3,7 @@ import { View } from "react-native";
 
 import { DashboardBodyMapCard } from "./DashboardBodyMapCard";
 
-import type { DashboardHeatBodyMap } from "@keylow/api-client";
+import type { DashboardHeatBodyMap, DashboardVolumeBodyMap } from "@keylow/api-client";
 import type { Meta, StoryObj } from "@storybook/react-native";
 
 // The golden week at Thursday 17:55, as the `dashboard · training-card` board draws it.
@@ -23,6 +23,28 @@ const goldenThursday: DashboardHeatBodyMap = {
     { muscle: "lats", percent: 25 },
     { muscle: "traps_mid", percent: 18 },
     { muscle: "biceps", percent: 15 },
+  ],
+  today: { kind: "planned", dayName: "Legs", setCount: 16 },
+};
+
+// The same Thursday under the Weekly volume chart: the actual sets of the week so far, Monday to Sunday.
+const goldenThursdayVolume: DashboardVolumeBodyMap = {
+  scale: "volume",
+  values: {
+    ...RESTING_HEAT,
+    chest_upper: 2,
+    chest_lower: 2,
+    delt_side: 2,
+    delt_rear: 1,
+    lats: 3,
+    traps_mid: 2,
+    biceps: 1,
+    triceps: 1,
+  },
+  mostTrained: [
+    { muscle: "lats", weeklySets: 8 },
+    { muscle: "delt_side", weeklySets: 6.5 },
+    { muscle: "chest_upper", weeklySets: 6 },
   ],
   today: { kind: "planned", dayName: "Legs", setCount: 16 },
 };
@@ -75,6 +97,23 @@ export const NoHistory: Story = {
       values: RESTING_HEAT,
       warmest: [],
       today: { kind: "none", dayName: null },
+    },
+  },
+};
+
+// The Weekly volume chart: the volume legend from High to Not trained, and the three muscles with the most sets.
+export const WeeklyVolume: Story = {
+  args: { bodyMap: goldenThursdayVolume },
+};
+
+// The Weekly volume chart early on a Monday, before a set is logged this week.
+export const WeeklyVolumeNothingThisWeek: Story = {
+  args: {
+    bodyMap: {
+      scale: "volume",
+      values: RESTING_HEAT,
+      mostTrained: [],
+      today: { kind: "planned", dayName: "Push", setCount: 18 },
     },
   },
 };

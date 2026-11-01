@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pagePaddingOf } from "./pagePadding";
 
 import MorePage from "@/app/(dashboard)/more/page";
+import { resetDashboardBodyScaleForTests } from "@/lib/useDashboardBodyScale";
 
 const { getUser, signOut, themeCookie, useTargets } = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -48,6 +49,8 @@ describe("More page", () => {
 
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
+    resetDashboardBodyScaleForTests();
   });
 
   it("should be titled More", async () => {
@@ -164,7 +167,23 @@ describe("More page", () => {
       within(settings)
         .getAllByRole("listitem")
         .map((row) => row.textContent),
-    ).toEqual([expect.stringContaining("Appearance"), "About"]);
+    ).toEqual([
+      expect.stringContaining("Appearance"),
+      expect.stringContaining("Dashboard chart"),
+      "About",
+    ]);
+  });
+
+  it("should put the Dashboard chart control under Settings, after Appearance, on Heat by default", async () => {
+    await renderPage();
+
+    const settings = screen.getByRole("region", { name: "Settings" });
+    expect(within(settings).getByRole("radiogroup", { name: "Dashboard chart" })).toBeTruthy();
+    expect(within(settings).getByRole("radio", { name: "Heat" })).toHaveProperty("checked", true);
+    expect(within(settings).getByRole("radio", { name: "Weekly volume" })).toHaveProperty(
+      "checked",
+      false,
+    );
   });
 
   it("should show who is signed in under the Sign out button", async () => {

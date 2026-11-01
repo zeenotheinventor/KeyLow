@@ -4,7 +4,12 @@ import { render, screen, userEvent, within } from "@testing-library/react-native
 
 import { DashboardBodyMapCard } from "../../components/DashboardScreen/DashboardBodyMapCard";
 import { ThemeProvider } from "../../lib/theme";
-import { goldenThursdayBodyMap, noHistoryBodyMap } from "../support/bodyMapFixtures";
+import {
+  goldenThursdayBodyMap,
+  goldenThursdayVolumeBodyMap,
+  noHistoryBodyMap,
+  noSetsThisWeekVolumeBodyMap,
+} from "../support/bodyMapFixtures";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { expectTextsInOrder } from "../support/textsInOrder";
@@ -326,6 +331,88 @@ describe("DashboardBodyMapCard", () => {
         paddingTop: 8,
         justifyContent: "space-between",
       });
+    });
+  });
+
+  describe("under the Weekly volume chart", () => {
+    const volumeName =
+      "Body map, Actual weekly sets this week, Monday to Sunday. Most sets: lats 8 sets, side delts 6.5 sets, quads 6 sets. Today: Legs, 16 sets planned. Open the body map";
+
+    it("should be one button named by the week's most trained muscles and today's planned day", async () => {
+      await renderCard({ bodyMap: goldenThursdayVolumeBodyMap });
+
+      expect(screen.getByRole("button", { name: volumeName })).toBeOnTheScreen();
+      expect(screen.getAllByRole("button", hidden)).toHaveLength(1);
+    });
+
+    it("should head the card with the view it shows, Actual this week, and write the most sets line", async () => {
+      await renderCard({ bodyMap: goldenThursdayVolumeBodyMap });
+
+      expect(screen.getByText("Actual · this week", hidden)).toBeOnTheScreen();
+      expect(
+        screen.getByText("Most sets: lats 8, side delts 6.5, quads 6", hidden),
+      ).toBeOnTheScreen();
+      expect(screen.getByText("Today: Legs", hidden)).toBeOnTheScreen();
+      expect(screen.queryByText(/^Warmest/, hidden)).not.toBeOnTheScreen();
+    });
+
+    it("should draw the front and the back as weekly sets images", async () => {
+      await renderCard({ bodyMap: goldenThursdayVolumeBodyMap });
+
+      expect(
+        screen.getByRole("img", { name: "Body map, Actual, weekly sets, front", ...hidden }),
+      ).toBeOnTheScreen();
+      expect(
+        screen.getByRole("img", { name: "Body map, Actual, weekly sets, back", ...hidden }),
+      ).toBeOnTheScreen();
+    });
+
+    it("should fill the muscles with the volume colours", async () => {
+      await renderCard({ bodyMap: goldenThursdayVolumeBodyMap });
+      const { volume } = bodyMapPalette("dark");
+
+      expect(fillOf("lats", "back")).toEqual(paint(volume.productive));
+      expect(fillOf("biceps", "front")).toEqual(paint(volume.maintaining));
+      expect(fillOf("neck", "front")).toEqual(paint(volume.notTrained));
+    });
+
+    it("should draw the volume legend from High down to Not trained, in place of the heat legend", async () => {
+      await renderCard({ bodyMap: goldenThursdayVolumeBodyMap });
+
+      const legend = screen.getByRole("img", { name: "Volume legend", ...hidden });
+      expect(screen.queryByRole("img", { name: "Heat legend", ...hidden })).not.toBeOnTheScreen();
+      const swatches =
+        screen.root?.queryAll(
+          (node) =>
+            typeof node.type === "string" &&
+            styleProperty(node.props.style, "width") === 10 &&
+            styleProperty(node.props.style, "height") === 14,
+        ) ?? [];
+      expect(
+        swatches.map((swatch) => styleProperty(swatch.props.style, "backgroundColor")),
+      ).toEqual(
+        (
+          [
+            "volume-high",
+            "volume-productive",
+            "volume-growing",
+            "volume-maintaining",
+            "volume-not-trained",
+          ] as const
+        ).map((band) => resolvedColor("dark", band)),
+      );
+      expectTextsInOrder(within(legend).getAllByText(/./, hidden), ["High", "Not trained"]);
+    });
+
+    it("should say no sets are logged this week, in the line and in the name, when the week is empty", async () => {
+      await renderCard({ bodyMap: noSetsThisWeekVolumeBodyMap });
+
+      expect(screen.getByText("No sets logged this week yet", hidden)).toBeOnTheScreen();
+      expect(
+        screen.getByRole("button", {
+          name: "Body map, Actual weekly sets this week, Monday to Sunday. No sets logged this week yet. Open the body map",
+        }),
+      ).toBeOnTheScreen();
     });
   });
 

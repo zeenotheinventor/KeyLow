@@ -6,6 +6,7 @@ import { ScrollView, View } from "react-native";
 
 import { AppearanceSetting } from "../../../components/AppearanceSetting";
 import { BodyMapRendererSetting } from "../../../components/BodyMapRendererSetting";
+import { DashboardChartSetting } from "../../../components/DashboardChartSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
 import { recipesPath } from "../../../lib/recipeRoutes";
@@ -100,6 +101,7 @@ export default function MoreRoute() {
         <GroupedList title={MORE_SCREEN.settings.title}>
           <AppearanceSetting />
           <BodyMapRendererSetting />
+          <DashboardChartSetting />
           <ListRow
             icon="Clock"
             title={MORE_SCREEN.settings.reminders.title}

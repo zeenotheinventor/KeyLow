@@ -6,6 +6,8 @@ import MoreRoute from "../app/(tabs)/more";
 import { resetBodyFigureForTests } from "../lib/bodyFigure/testing";
 import { useBodyMapRenderer } from "../lib/bodyMapRenderer";
 import { resetBodyMapRendererForTests } from "../lib/bodyMapRenderer/testing";
+import { useDashboardBodyScale } from "../lib/dashboardBodyScale";
+import { resetDashboardBodyScaleForTests } from "../lib/dashboardBodyScale/testing";
 import { ThemeProvider, useTheme } from "../lib/theme";
 import { deviceScheme } from "./support/deviceScheme";
 import {
@@ -71,6 +73,13 @@ function BodyMapRendererProbe() {
   return <Text>{`body map renderer:${renderer}`}</Text>;
 }
 
+// Shows the chart a mounted reader of the dashboard chart preference sees, as for the renderer.
+function DashboardBodyScaleProbe() {
+  const { scale } = useDashboardBodyScale();
+
+  return <Text>{`dashboard chart:${scale}`}</Text>;
+}
+
 type Instance = NonNullable<ReturnType<typeof screen.getByRole>>;
 
 function isInside(node: Instance | null, ancestor: Instance): boolean {
@@ -89,6 +98,7 @@ async function renderMore() {
         <MoreRoute />
         <ThemeProbe />
         <BodyMapRendererProbe />
+        <DashboardBodyScaleProbe />
       </KeyLowProvider>
     </ThemeProvider>,
   );
@@ -104,6 +114,7 @@ describe("the More screen", () => {
     mockStorageItems.clear();
     mockSetItem.mockClear();
     resetBodyMapRendererForTests();
+    resetDashboardBodyScaleForTests();
     resetBodyFigureForTests();
     deviceScheme.current = "light";
   });
@@ -493,6 +504,73 @@ describe("the More screen", () => {
 
       expect(await screen.findByText(femaleNote)).toBeOnTheScreen();
       expect(screen.getByRole("radio", { name: "3D" })).toBeChecked();
+    });
+  });
+
+  describe("Dashboard chart", () => {
+    const volumeNote = "Weekly volume counts sets from Monday to Sunday.";
+
+    it("should be a row in Settings, after Body map, over a Heat and Weekly volume choice", async () => {
+      await renderMore();
+
+      // The role query does not resolve a radiogroup, so the group is the one of that name with the role.
+      const group = screen
+        .getAllByLabelText("Dashboard chart")
+        .find((element) => element.props.role === "radiogroup");
+      if (group === undefined) {
+        throw new Error("The Dashboard chart group is missing");
+      }
+      const radios = within(screen.getByLabelText("Settings")).getAllByRole("radio");
+
+      expect(within(group).getAllByRole("radio")).toHaveLength(2);
+      ["Dark", "Light", "Match device", "2D", "3D", "Heat", "Weekly volume"].forEach(
+        (name, index) => {
+          expect(radios[index]).toHaveAccessibleName(name);
+        },
+      );
+    });
+
+    it("should have Heat selected on a fresh install, with no note", async () => {
+      await renderMore();
+      // Lets the stored chart be read, so the absence is not just the first render.
+      await act(async () => {});
+
+      expect(screen.getByRole("radio", { name: "Heat" })).toBeChecked();
+      expect(screen.getByRole("radio", { name: "Weekly volume" })).not.toBeChecked();
+      expect(screen.getByText("dashboard chart:heat")).toBeOnTheScreen();
+      expect(screen.queryByText(volumeNote)).not.toBeOnTheScreen();
+    });
+
+    it("should apply Weekly volume at once, keep it for the next launch, and say which days count", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "Weekly volume" }));
+
+      expect(screen.getByRole("radio", { name: "Weekly volume" })).toBeChecked();
+      expect(screen.getByText("dashboard chart:volume")).toBeOnTheScreen();
+      expect(mockSetItem).toHaveBeenCalledWith("bodyMap.dashboardScale", "volume");
+      expect(screen.getByText(volumeNote)).toBeOnTheScreen();
+    });
+
+    it("should bring Heat back when Heat is chosen after Weekly volume", async () => {
+      const user = userEvent.setup();
+      await renderMore();
+
+      await user.press(screen.getByRole("radio", { name: "Weekly volume" }));
+      await user.press(screen.getByRole("radio", { name: "Heat" }));
+
+      expect(screen.getByRole("radio", { name: "Heat" })).toBeChecked();
+      expect(mockSetItem).toHaveBeenLastCalledWith("bodyMap.dashboardScale", "heat");
+      expect(screen.queryByText(volumeNote)).not.toBeOnTheScreen();
+    });
+
+    it("should show the saved choice when the screen opens on a later launch", async () => {
+      mockStorageItems.set("bodyMap.dashboardScale", "volume");
+
+      await renderMore();
+
+      expect(await screen.findByRole("radio", { name: "Weekly volume" })).toBeChecked();
     });
   });
 

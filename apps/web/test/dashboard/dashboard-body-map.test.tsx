@@ -3,7 +3,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { goldenThursdayBodyMap } from "./bodyMapFixtures";
+import { goldenThursdayBodyMap, goldenThursdayVolumeBodyMap } from "./bodyMapFixtures";
 
 import type {
   DashboardBodyMap as DashboardBodyMapData,
@@ -11,19 +11,31 @@ import type {
 } from "@keylow/api-client";
 
 import { DashboardBodyMap } from "@/components/dashboard/DashboardBodyMap";
+import { resetDashboardBodyScaleForTests } from "@/lib/useDashboardBodyScale";
 
 type BodyMapRead = TrainingReadResult<DashboardBodyMapData>;
 
-const reads = vi.hoisted((): { current: unknown; nows: string[] } => ({
-  current: undefined,
-  nows: [],
-}));
+// What the hook gives, for each chart it is asked for. A read with no chart of its own gives `current`.
+const reads = vi.hoisted(
+  (): {
+    current: unknown;
+    byScale: Record<string, unknown>;
+    nows: string[];
+    scales: unknown[];
+  } => ({
+    current: undefined,
+    byScale: {},
+    nows: [],
+    scales: [],
+  }),
+);
 
 vi.mock("@keylow/api-client", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@keylow/api-client")>()),
-  useDashboardBodyMap: ({ now }: { now: string }) => {
+  useDashboardBodyMap: ({ now, scale }: { now: string; scale?: string }) => {
     reads.nows.push(now);
-    return reads.current;
+    reads.scales.push(scale);
+    return (scale === undefined ? undefined : reads.byScale[scale]) ?? reads.current;
   },
 }));
 
@@ -65,11 +77,15 @@ describe("DashboardBodyMap", () => {
     vi.setSystemTime(new Date("2026-10-15T16:55:00Z"));
     onlineManager.setOnline(true);
     reads.nows = [];
+    reads.scales = [];
+    reads.byScale = {};
     show(pending);
   });
 
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
+    resetDashboardBodyScaleForTests();
     vi.useRealTimers();
     onlineManager.setOnline(true);
   });
@@ -146,6 +162,42 @@ describe("DashboardBodyMap", () => {
       expect(
         screen.getByRole("status", { name: BODY_MAP.dashboardCard.loadingLabel }),
       ).toBeTruthy();
+    });
+  });
+
+  describe("under the Dashboard chart setting", () => {
+    const loadedVolume: BodyMapRead = { ...loaded, data: goldenThursdayVolumeBodyMap };
+
+    beforeEach(() => {
+      reads.byScale = { heat: loaded, volume: loadedVolume };
+    });
+
+    it("should ask for heat and draw the heat card when nothing is saved", () => {
+      render(<DashboardBodyMap />);
+
+      expect(reads.scales.at(-1)).toBe("heat");
+      expect(screen.getByRole("link", { name: FIRST_LINE })).toBeTruthy();
+      expect(screen.getByRole("img", { name: "Heat legend", hidden: true })).toBeTruthy();
+    });
+
+    it("should ask for the week's volume and draw the volume card when Weekly volume is saved", () => {
+      window.localStorage.setItem("bodyMap.dashboardScale", "volume");
+
+      render(<DashboardBodyMap />);
+
+      expect(reads.scales.at(-1)).toBe("volume");
+      expect(screen.getByRole("link", { name: /weekly sets this week/ })).toBeTruthy();
+      expect(screen.getByRole("img", { name: "Volume legend", hidden: true })).toBeTruthy();
+      expect(screen.queryByRole("img", { name: "Heat legend", hidden: true })).toBeNull();
+    });
+
+    it("should fall back to heat when what is saved is not a chart", () => {
+      window.localStorage.setItem("bodyMap.dashboardScale", "weekly");
+
+      render(<DashboardBodyMap />);
+
+      expect(reads.scales.at(-1)).toBe("heat");
+      expect(screen.getByRole("link", { name: FIRST_LINE })).toBeTruthy();
     });
   });
 });

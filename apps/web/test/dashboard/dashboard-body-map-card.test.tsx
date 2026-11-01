@@ -3,9 +3,14 @@ import { BODY_ARTWORK } from "@keylow/core/training";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { goldenThursdayBodyMap, noHistoryBodyMap } from "./bodyMapFixtures";
+import {
+  goldenThursdayBodyMap,
+  goldenThursdayVolumeBodyMap,
+  noHistoryBodyMap,
+  noSetsThisWeekVolumeBodyMap,
+} from "./bodyMapFixtures";
 
-import type { DashboardHeatBodyMap } from "@keylow/api-client";
+import type { DashboardBodyMap } from "@keylow/api-client";
 
 import { DashboardBodyMapCard } from "@/components/dashboard/DashboardBodyMapCard";
 
@@ -17,7 +22,7 @@ const cardLink = () => screen.getByRole("link", { name: /^Body map, Actual heat 
 const figure = (side: "front" | "back") =>
   screen.getByRole("img", { name: `Body map, Actual, heat, ${side}`, hidden: true });
 
-function renderCard(bodyMap: DashboardHeatBodyMap) {
+function renderCard(bodyMap: DashboardBodyMap) {
   return render(<DashboardBodyMapCard bodyMap={bodyMap} />);
 }
 
@@ -95,6 +100,61 @@ describe("DashboardBodyMapCard", () => {
       renderCard({ ...noHistoryBodyMap, today: { kind: "rest", dayName: null } });
 
       expect(within(card()).getByText("Today: Rest day")).toBeTruthy();
+    });
+  });
+
+  describe("under the Weekly volume chart", () => {
+    const volumeLink = () => screen.getByRole("link", { name: /weekly sets this week/ });
+    const volumeFigure = (side: "front" | "back") =>
+      screen.getByRole("img", { name: `Body map, Actual, weekly sets, ${side}`, hidden: true });
+
+    it("should be one link named by the week's most trained muscles and today's planned day", () => {
+      renderCard(goldenThursdayVolumeBodyMap);
+
+      expect(volumeLink().getAttribute("aria-label")).toBe(
+        "Body map, Actual weekly sets this week, Monday to Sunday. Most sets: lats 8 sets, side delts 6.5 sets, quads 6 sets. Today: Legs, 16 sets planned. Open the body map",
+      );
+      expect(volumeLink().getAttribute("href")).toBe("/body-map");
+      expect(screen.getAllByRole("link", { hidden: true })).toHaveLength(1);
+    });
+
+    it("should title itself Actual · this week and write the most sets line in place of the warmest", () => {
+      renderCard(goldenThursdayVolumeBodyMap);
+
+      const words = within(card());
+      expect(words.getByText("Actual · this week")).toBeTruthy();
+      expect(words.getByText("Most sets: lats 8, side delts 6.5, quads 6")).toBeTruthy();
+      expect(words.getByText("Today: Legs")).toBeTruthy();
+      expect(words.queryByText(/^Warmest/)).toBeNull();
+    });
+
+    it("should draw the front and the back in the volume colours", () => {
+      renderCard(goldenThursdayVolumeBodyMap);
+
+      const fillOf = (side: "front" | "back", path: string) =>
+        volumeFigure(side).querySelector(`path[d="${path}"]`)?.getAttribute("class");
+      expect(fillOf("back", BODY_ARTWORK.male.back.muscles.lats)).toContain(
+        "fill-volume-productive",
+      );
+      expect(fillOf("front", BODY_ARTWORK.male.front.muscles.biceps)).toContain(
+        "fill-volume-maintaining",
+      );
+    });
+
+    it("should draw the volume legend beside the figures, in place of the heat legend", () => {
+      renderCard(goldenThursdayVolumeBodyMap);
+
+      expect(screen.getByRole("img", { name: "Volume legend", hidden: true })).toBeTruthy();
+      expect(screen.queryByRole("img", { name: "Heat legend", hidden: true })).toBeNull();
+    });
+
+    it("should say no sets are logged this week when the week is empty", () => {
+      renderCard(noSetsThisWeekVolumeBodyMap);
+
+      expect(volumeLink().getAttribute("aria-label")).toBe(
+        "Body map, Actual weekly sets this week, Monday to Sunday. No sets logged this week yet. Open the body map",
+      );
+      expect(within(card()).getByText("No sets logged this week yet")).toBeTruthy();
     });
   });
 
