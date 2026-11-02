@@ -1,0 +1,27 @@
+{
+  "name": "@keylow/assistant-evals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check:assistant": "tsx src/run.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:integration": "vitest run -c vitest.integration.config.ts"
+  },
+  "dependencies": {
+    "@keylow/api-client": "workspace:*",
+    "@keylow/core": "workspace:*",
+    "@keylow/db": "workspace:*",
+    "@supabase/supabase-js": "^2.117.2"
+  },
+  "devDependencies": {
+    "@keylow/config": "workspace:*",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.39.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.3"
+  }
+}
