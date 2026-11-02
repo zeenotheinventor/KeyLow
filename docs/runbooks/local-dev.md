@@ -250,7 +250,7 @@ Functions import `@keylow/core` through a generated bundle in `_shared/core/`. T
 pnpm --filter @keylow/db bundle-core-for-deno
 ```
 
-This writes `packages/db/supabase/functions/_shared/core/index.js` (zod included), `index.d.ts` (the rolled-up types Deno checks against) and `database.types.ts` (a copy of the generated database types, so the function clients are typed). It needs no network and no running stack.
+This writes `packages/db/supabase/functions/_shared/core/index.js` (zod included), `index.d.ts` (the rolled-up types Deno checks against) and `database.types.ts` (a copy of the generated database types, so the function clients are typed). The same run writes the api-client repos to `_shared/repos/`, which is ignored the same way and which functions import through `_shared/repos.ts`. It needs no network and no running stack.
 
 Type-check and lint the functions:
 

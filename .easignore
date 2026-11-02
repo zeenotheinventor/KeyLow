@@ -17,6 +17,7 @@ apps/*/out/
 packages/db/supabase/.branches/
 packages/db/supabase/.temp/
 packages/db/supabase/functions/_shared/core/
+packages/db/supabase/functions/_shared/repos/
 dist/
 # The phone's 3D body model and its licence notice are committed here and the app bundles them
 !/tools/body-model/dist/

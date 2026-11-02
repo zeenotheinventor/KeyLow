@@ -27,6 +27,7 @@ packages/db/supabase/.branches/
 packages/db/supabase/.temp/
 # written by `pnpm --filter @keylow/db bundle-core-for-deno`
 packages/db/supabase/functions/_shared/core/
+packages/db/supabase/functions/_shared/repos/
 
 # the CoFID workbook is 4.6 MB, so only its normalised CSV is committed (packages/db/data/cofid)
 packages/db/data/cofid/*.xlsx
