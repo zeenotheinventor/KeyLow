@@ -27,8 +27,14 @@ const isTestPath = (path: string): boolean =>
   path.split("/").some((segment) => testDirectories.has(segment)) ||
   /\.(test|spec)\.[cm]?[jt]sx?$/.test(path);
 
-// `bundle-core-for-deno` copies core into the edge functions. It is a build product that git ignores.
-const isBuiltCopyOfCore = (path: string): boolean => path.includes("/_shared/core/");
+// `bundle-core-for-deno` copies core and the api-client repos into the edge functions. They are build
+// products that git ignores.
+const builtCopyDirectories = [
+  "packages/db/supabase/functions/_shared/core/",
+  "packages/db/supabase/functions/_shared/repos/",
+];
+const isBuiltCopyOfCore = (path: string): boolean =>
+  builtCopyDirectories.some((directory) => path.startsWith(directory));
 
 /** True for a source file the rules apply to: a script or a stylesheet that is not a test. */
 export const isGuardedPath = (path: string): boolean =>

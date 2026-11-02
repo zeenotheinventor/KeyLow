@@ -24,7 +24,7 @@ Run these from the repo root with `pnpm --filter @keylow/db run <script>`. `gen-
 | `db:reset`             | Recreates the database from nothing. Only for a broken local database, and announce it first. It wipes the database every checkout shares. |
 | `gen-types`            | Regenerates `src/types.gen.ts` from the running local database.                                                                            |
 | `test:integration`     | Runs the pgTAP tests in `supabase/tests/` (`supabase test db`).                                                                            |
-| `bundle-core-for-deno` | Bundles `@keylow/core` into `supabase/functions/_shared/core/` for the Edge Functions.                                                     |
+| `bundle-core-for-deno` | Bundles `@keylow/core` into `supabase/functions/_shared/core/` and the api-client repos into `_shared/repos/`.                             |
 | `check:functions`      | Bundles core, then type-checks and lints the Edge Functions under Deno.                                                                    |
 | `lint`, `typecheck`    | Check the scripts and the source.                                                                                                          |
 
@@ -34,7 +34,7 @@ Run these from the repo root with `pnpm --filter @keylow/db run <script>`. `gen-
 
 ## Edge Functions
 
-`supabase/functions/` holds the Edge Functions and their shared helpers. They run under Deno, so ESLint and `tsc` skip them and `check:functions` covers them instead. Functions import `@keylow/core` through a bundle that `bundle-core-for-deno` writes to `supabase/functions/_shared/core/`. That folder is gitignored and easignored, so write it again after any change in `packages/core` and after a fresh clone. `check:functions` bundles core itself before it checks, and `pnpm check:integration` at the repo root runs it. The bundle also holds a copy of `src/types.gen.ts` as `database.types.ts`, which types the Supabase clients in the functions. How to serve the functions locally is in `docs/runbooks/local-dev.md`.
+`supabase/functions/` holds the Edge Functions and their shared helpers. They run under Deno, so ESLint and `tsc` skip them and `check:functions` covers them instead. Functions import `@keylow/core` through a bundle that `bundle-core-for-deno` writes to `supabase/functions/_shared/core/`. That folder is gitignored and easignored, so write it again after any change in `packages/core` and after a fresh clone. `check:functions` bundles core itself before it checks, and `pnpm check:integration` at the repo root runs it. The bundle also holds a copy of `src/types.gen.ts` as `database.types.ts`, which types the Supabase clients in the functions. The same run bundles the api-client repos into `supabase/functions/_shared/repos/`, which functions import through `_shared/repos.ts`, and it fails if that bundle pulls in React, TanStack or React Native. How to serve the functions locally is in `docs/runbooks/local-dev.md`.
 
 `supabase/functions/deno.json` pins `jsr:@supabase/supabase-js` to an exact version, the one the apps resolve. Bump the pin together with the apps' supabase-js. It also sets `"lock": false`, because otherwise every `deno check` writes an untracked `deno.lock` next to `deno.json`.
 

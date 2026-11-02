@@ -478,6 +478,26 @@ describe("which files are scanned", () => {
     expect(rulesFound("apps/mobile/test/a.ts", `const c = "#fff";`)).toEqual([]);
   });
 
+  it("should not scan the bundles that bundle-core-for-deno writes for the Edge Functions", () => {
+    const generated = `const c = "#fff";`;
+
+    expect(rulesFound("packages/db/supabase/functions/_shared/core/index.js", generated)).toEqual(
+      [],
+    );
+    expect(rulesFound("packages/db/supabase/functions/_shared/repos/index.js", generated)).toEqual(
+      [],
+    );
+  });
+
+  it("should still scan the hand-written files beside the bundles and lookalike folders elsewhere", () => {
+    const hex = `export const c = "#fff";`;
+
+    expect(rulesFound("packages/db/supabase/functions/_shared/repos.ts", hex)).toEqual(["raw-hex"]);
+    expect(rulesFound("packages/db/supabase/functions/_shared/core.ts", hex)).toEqual(["raw-hex"]);
+    expect(rulesFound("packages/api-client/src/_shared/repos/x.ts", hex)).toEqual(["raw-hex"]);
+    expect(rulesFound("packages/api-client/src/_shared/core/x.ts", hex)).toEqual(["raw-hex"]);
+  });
+
   it("should report each problem of a file in order of line", () => {
     const violations = checkSource({
       path: webFile,
