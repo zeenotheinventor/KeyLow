@@ -41,12 +41,52 @@ const legendItems = {
   })),
 };
 
+// The strip of the dashboard card, read from High down to Not trained. Only the Not trained band has a
+// border, because it is the one that could pass for the card behind it.
+const stripBands = [...volumeSwatches].reverse().map((swatchClassName) => ({
+  swatchClassName,
+  borderClassName: swatchClassName === "bg-volume-not-trained" ? "border border-border-strong" : "",
+}));
+
+/**
+ * The volume legend as the dashboard card draws it beside the figures, mirroring the heat strip: five swatches
+ * in a column from High at the top down to Not trained, with the names of the two ends. It is one image
+ * named for the volume legend.
+ */
+function VolumeLegendStrip() {
+  return (
+    <View
+      accessible
+      aria-label={BODY_MAP.legendNames.volume}
+      className="items-start gap-[3px] pb-[6px]"
+      role="img"
+    >
+      <Text tone="muted" variant="caption">
+        {BODY_MAP.dashboardCard.volumeTopStep}
+      </Text>
+      {stripBands.map(({ swatchClassName, borderClassName }) => (
+        <View
+          key={swatchClassName}
+          className={`h-[14px] w-[10px] rounded-[3px] ${swatchClassName} ${borderClassName}`}
+        />
+      ))}
+      <Text tone="muted" variant="caption">
+        {BODY_MAP.dashboardCard.volumeBottomStep}
+      </Text>
+    </View>
+  );
+}
+
 /**
  * The key to the colours of a scale under the body map: a swatch and the name of each step, and a line on
  * what the colours mean. The swatches and their names are one group, named for the scale's legend, and the
  * line under it is read on its own.
  */
-export function BodyMapLegend({ scale }: BodyMapLegendProps) {
+export function BodyMapLegend(props: BodyMapLegendProps) {
+  const { scale, variant } = props;
+  if (scale === "volume" && variant === "strip") {
+    return <VolumeLegendStrip />;
+  }
   const caption = describeLegendCaption({
     scale,
     surface: "mobile",

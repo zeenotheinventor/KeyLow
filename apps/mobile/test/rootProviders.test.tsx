@@ -8,6 +8,7 @@ import { useToast } from "../components/ui";
 import { startBodyFigureRead } from "../lib/bodyFigure";
 import { startBodyMapRendererRead } from "../lib/bodyMapRenderer";
 import { feedFocusManager } from "../lib/connectivity";
+import { startDashboardBodyChartRead } from "../lib/dashboardBodyChart";
 import { resetRouterMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
@@ -88,6 +89,11 @@ jest.mock("../lib/bodyMapRenderer", () => ({
   ...jest.requireActual<typeof import("../lib/bodyMapRenderer")>("../lib/bodyMapRenderer"),
   startBodyMapRendererRead: jest.fn(),
 }));
+// Whether the layout starts reading the dashboard's chart setting is what is asked, as for the renderer setting.
+jest.mock("../lib/dashboardBodyChart", () => ({
+  ...jest.requireActual<typeof import("../lib/dashboardBodyChart")>("../lib/dashboardBodyChart"),
+  startDashboardBodyChartRead: jest.fn(),
+}));
 // Whether the layout starts Sentry is what is asked. What it starts with is proved with the Sentry tests.
 jest.mock("../lib/sentry/init", () => ({ initSentry: jest.fn() }));
 // Whether the layout installs the restart, and before Sentry starts, is what is asked. What it does is proved with the Sentry tests.
@@ -124,6 +130,10 @@ describe("the app root", () => {
 
   it("should start reading the body map renderer setting as the layout loads, so a 3D map opens in 3D at once", () => {
     expect(startBodyMapRendererRead).toHaveBeenCalledTimes(1);
+  });
+
+  it("should start reading the dashboard chart setting as the layout loads, so the dashboard finds it read and draws the chosen chart first", () => {
+    expect(startDashboardBodyChartRead).toHaveBeenCalledTimes(1);
   });
 
   it("should start error reporting as the layout loads, so an error while the app starts is reported", () => {

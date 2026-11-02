@@ -225,6 +225,9 @@ export type {
 export { bodyMapRendererFor, figureHas3dBody } from "./bodyMapRenderer";
 export type { BodyMapRendererInput } from "./bodyMapRenderer";
 
+export { DASHBOARD_BODY_CHARTS, dashboardBodyChartOf } from "./dashboardBodyChart";
+export type { DashboardBodyChart } from "./dashboardBodyChart";
+
 export { compareWeekSoFar } from "./compareWeekSoFar";
 
 export { todayCard, todaySessionToView } from "./todayCard";

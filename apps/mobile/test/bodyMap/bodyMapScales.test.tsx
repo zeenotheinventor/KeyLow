@@ -8,7 +8,7 @@ import { RESTING_HEAT } from "../../components/DashboardScreen/DashboardBodyMapC
 import { resetBodyFigureForTests } from "../../lib/bodyFigure/testing";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, diaryClient, resetDiaryBackend } from "../support/diaryBackend";
-import { resetRouterMock } from "../support/expoRouterMock";
+import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import { fillsIn, gapFill, heatFill, volumeFill } from "../support/figureFills";
 import { withMuscleListHint } from "../support/figureNames";
 import { tapFigures } from "../support/figuresResponder";
@@ -321,6 +321,37 @@ describe("the body map scales", () => {
 
       expect(screen.getByRole("radio", { name: "Heat", checked: true })).toBeOnTheScreen();
       expect(mockSetItem).not.toHaveBeenCalled();
+    });
+
+    it("should open on Volume when the address asks for it, and the figures are Volume's", async () => {
+      routerMock.searchParams = { scale: "volume" };
+
+      await openScreen();
+
+      expect(screen.getByRole("radio", { name: "Volume", checked: true })).toBeOnTheScreen();
+      expect(
+        screen.getByRole("img", { name: figureName("Actual", "weekly sets", "front") }),
+      ).toBeOnTheScreen();
+    });
+
+    it.each(["heat", "gap", "nonsense"])(
+      "should open on Heat when the address asks for %s, which a link cannot open on",
+      async (scale) => {
+        routerMock.searchParams = { scale };
+
+        await openScreen();
+
+        expect(screen.getByRole("radio", { name: "Heat", checked: true })).toBeOnTheScreen();
+      },
+    );
+
+    it("should still switch scale after it opened on Volume", async () => {
+      routerMock.searchParams = { scale: "volume" };
+      await openScreen();
+
+      await switchTo("Gap");
+
+      expect(screen.getByRole("radio", { name: "Gap", checked: true })).toBeOnTheScreen();
     });
 
     it("should choose Volume when it is pressed", async () => {

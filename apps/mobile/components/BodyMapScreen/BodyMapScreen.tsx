@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useBodyFigure } from "../../lib/bodyFigure";
 import { useBodyMapHint } from "../../lib/bodyMapHint";
-import { bodyMapOriginOf, muscleListPath } from "../../lib/bodyMapRoutes";
+import { bodyMapOriginOf, bodyMapScaleOf, muscleListPath } from "../../lib/bodyMapRoutes";
 import { useBodyMapView } from "../../lib/bodyMapView";
 import { useIsOnline } from "../../lib/connectivity";
 import { useNow } from "../../lib/useNow";
@@ -55,7 +55,7 @@ const SCALE_OPTIONS = [
  * The body map screen, pushed over the tabs from the dashboard card or the Train home's card: front and back, with the legend of
  * the scale, in the view last chosen on this device (Actual until one is). The scale switch above the card
  * picks Heat (now), Volume (the week's sets against each muscle's target) or Gap (done against the plan),
- * opens on Heat every time and is not remembered. A tap on the figures or the button under them switches
+ * opens on the scale the address names (Volume for `?scale=volume`, Heat for anything else) and is not remembered. A tap on the figures or the button under them switches
  * between Actual and Projected on Heat and Volume; Gap has neither, so it has no button and no tap, and
  * leaves the view that is remembered as it was. The colours are the hook's numbers and nothing here works
  * them out. Every scale is read (Heat and Volume in both views, Gap in one) from the same cached rows, so
@@ -99,7 +99,8 @@ export function BodyMapScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   // The Train home opens the screen with `?from=train`, so its Back control names the screen it returns to.
-  const { from } = useLocalSearchParams<{ from?: string }>();
+  // The dashboard card in Weekly volume opens it on Volume with `?scale=volume`, and anything else is Heat.
+  const { from, scale: scaleParameter } = useLocalSearchParams<{ from?: string; scale?: string }>();
   const isOnline = useIsOnline();
   const isReadEnabled = useReadsEnabled();
   const now = useNow();
@@ -110,7 +111,7 @@ export function BodyMapScreen() {
   const weekStart = addCalendarDays(today, -daysSinceMonday(today));
   const weekEnd = addCalendarDays(weekStart, 6);
   const { view: chosenView, isRead: isViewRead, setView } = useBodyMapView();
-  const [scale, setScale] = useState<BodyMapScale>("heat");
+  const [scale, setScale] = useState<BodyMapScale>(() => bodyMapScaleOf(scaleParameter));
   const { figure, isReady: isFigureReady, hasChosen, setFigure } = useBodyFigure();
   const [isFigureSheetOpen, setIsFigureSheetOpen] = useState(false);
   const [hasAskedFigure, setHasAskedFigure] = useState(false);

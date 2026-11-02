@@ -6,6 +6,7 @@ import { ScrollView, View } from "react-native";
 
 import { AppearanceSetting } from "../../../components/AppearanceSetting";
 import { BodyMapRendererSetting } from "../../../components/BodyMapRendererSetting";
+import { DashboardBodyChartSetting } from "../../../components/DashboardBodyChartSetting";
 import { ScreenHeader } from "../../../components/ScreenHeader";
 import { GroupedList, ListRow } from "../../../components/ui";
 import { recipesPath } from "../../../lib/recipeRoutes";
@@ -18,7 +19,7 @@ import { useReadsEnabled } from "../../../lib/useReadsEnabled";
 // Programme sits under it and opens the Programme screen inside this tab, its subtitle the next check-in or the offer to
 // let Ki-Lo set the targets, and Targets says "From your programme" while the programme's targets are in force.
 // Recipes is Nutrition's last row and opens the recipe library inside this tab, where it moved from the bar.
-// Weight opens the Weight screen inside this tab, Appearance and the Body map are set here, and Sign out is Account's one row.
+// Weight opens the Weight screen inside this tab, Appearance, the Body map and the Dashboard body map are set here, and Sign out is Account's one row.
 // Reminders and About are under Settings and open their screens. No board draws Reminders, and its icon is the
 // clock because the kit has no bell.
 export default function MoreRoute() {
@@ -100,6 +101,7 @@ export default function MoreRoute() {
         <GroupedList title={MORE_SCREEN.settings.title}>
           <AppearanceSetting />
           <BodyMapRendererSetting />
+          <DashboardBodyChartSetting />
           <ListRow
             icon="Clock"
             title={MORE_SCREEN.settings.reminders.title}

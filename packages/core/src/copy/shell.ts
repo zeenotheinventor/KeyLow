@@ -67,6 +67,14 @@ export const MORE_SCREEN = {
       femaleNote:
         "3D draws the male body for now. Your figure is female, so the body map stays 2D.",
     },
+    dashboardBodyChart: {
+      title: "Dashboard body map",
+      options: { heat: "Heat", volume: "Weekly volume" },
+      captions: {
+        heat: "How hard and how recently each muscle worked, right now.",
+        volume: "Sets for each muscle this week, Monday to Sunday.",
+      },
+    },
     reminders: { title: "Reminders" },
     about: { title: "About" },
   },
