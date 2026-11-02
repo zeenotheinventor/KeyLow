@@ -18,7 +18,7 @@ const statusByCode: Record<EdgeErrorCode, number> = {
 
 // Browsers call these functions directly from the web app, so every response carries CORS headers.
 // Authentication is a bearer token, never a cookie, which makes a wildcard origin safe.
-const corsHeaders = {
+export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",

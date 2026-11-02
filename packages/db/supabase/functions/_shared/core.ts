@@ -2,6 +2,8 @@
 // bundle behind it is written by `bundle-core-for-deno` and typed by the @ts-self-types pragma in
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
+  AssistantNotice,
+  AssistantStreamEvent,
   CheckinInput,
   CheckinProgram,
   CheckinResult,
@@ -24,6 +26,8 @@ export type {
 } from "./core/index.js";
 export {
   addCalendarDays,
+  assistantStreamEventSchema,
+  assistantTurnRequestSchema,
   checkinStep,
   computeTrend,
   dueCheckinDates,

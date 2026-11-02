@@ -1,0 +1,86 @@
+// Server-Sent Events for the `turn` route: one JSON event per `data:` line. Every event is checked
+// against the contract before it is written, so the app never reads a shape it rejects.
+import { assistantStreamEventSchema } from "../_shared/core.ts";
+import { corsHeaders } from "../_shared/http.ts";
+import { reportError } from "../_shared/report.ts";
+
+import type { AssistantStreamEvent } from "../_shared/core.ts";
+import type { ReportError } from "../_shared/report.ts";
+
+export type EventStream = {
+  // True once the stream has ended or the reader went away. Nothing is written after that.
+  readonly closed: boolean;
+  write(text: string): void;
+  close(): void;
+};
+
+export function createEventStream(): { stream: EventStream; body: ReadableStream<Uint8Array> } {
+  const encoder = new TextEncoder();
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  let closed = false;
+  const body = new ReadableStream<Uint8Array>({
+    start(started) {
+      controller = started;
+    },
+    // The app closed the sheet. The turn goes on to its own end, and what it writes is dropped.
+    cancel() {
+      closed = true;
+    },
+  });
+  const stream: EventStream = {
+    get closed() {
+      return closed;
+    },
+    write(text) {
+      if (!closed) {
+        controller.enqueue(encoder.encode(text));
+      }
+    },
+    close() {
+      if (!closed) {
+        closed = true;
+        controller.close();
+      }
+    },
+  };
+  return { stream, body };
+}
+
+export function eventResponse(body: ReadableStream<Uint8Array>): Response {
+  return new Response(body, {
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+    },
+  });
+}
+
+function writeLine(stream: EventStream, event: AssistantStreamEvent): void {
+  stream.write(`data: ${JSON.stringify(event)}\n\n`);
+}
+
+// Returns whether the event was written. An event that fails the contract is a bug in this function,
+// so it is reported without its content, and the turn ends as a failed one.
+export function writeEvent(
+  stream: EventStream,
+  event: AssistantStreamEvent,
+  report: ReportError = reportError,
+): boolean {
+  if (stream.closed) {
+    return false;
+  }
+  if (!assistantStreamEventSchema.safeParse(event).success) {
+    report("assistant", "internal_error", new Error("assistant wrote an invalid event"));
+    endAsFailed(stream);
+    return false;
+  }
+  writeLine(stream, event);
+  return true;
+}
+
+export function endAsFailed(stream: EventStream): void {
+  writeLine(stream, { type: "notice", notice: { code: "turn_failed" } });
+  writeLine(stream, { type: "done", outcome: "failed" });
+  stream.close();
+}
