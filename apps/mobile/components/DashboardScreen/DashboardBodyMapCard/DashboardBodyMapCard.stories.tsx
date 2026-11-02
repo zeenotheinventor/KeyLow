@@ -26,6 +26,35 @@ const goldenThursday: DashboardBodyMap = {
   today: { kind: "planned", dayName: "Legs", setCount: 16 },
 };
 
+// Monday evening of the golden week, as the `dashboard · training-card-volume` board draws it: 7 of the 22
+// muscles at Growing or above. The numbers are the encodings of core's `VOLUME_STATUSES`.
+const NOT_TRAINED = 0;
+const MAINTAINING = 1;
+const GROWING = 2;
+const PRODUCTIVE = 3;
+const HIGH = 4;
+const mondayEvening: DashboardBodyMap = {
+  warmest: [],
+  values: {
+    ...RESTING_HEAT,
+    chest_upper: GROWING,
+    chest_lower: GROWING,
+    delt_front: MAINTAINING,
+    delt_side: MAINTAINING,
+    delt_rear: GROWING,
+    lats: PRODUCTIVE,
+    traps_mid: GROWING,
+    lower_back: MAINTAINING,
+    biceps: HIGH,
+    triceps: MAINTAINING,
+    forearms: MAINTAINING,
+    quads: GROWING,
+    hamstrings: MAINTAINING,
+    calves: MAINTAINING,
+  },
+  today: { kind: "planned", dayName: "Legs", setCount: 16 },
+};
+
 const meta = {
   title: "Dashboard/DashboardBodyMapCard",
   component: DashboardBodyMapCard,
@@ -69,4 +98,20 @@ export const NoPlanForToday: Story = {
 // A fresh install: the figures at rest, the no-history line, and no Start button.
 export const NoHistory: Story = {
   args: { bodyMap: { values: RESTING_HEAT, warmest: [], today: { kind: "none", dayName: null } } },
+};
+
+// Weekly volume, the `dashboard · training-card-volume` board: this week's bands, the legend from High to None.
+export const WeeklyVolume: Story = { args: { scale: "volume", bodyMap: mondayEvening } };
+
+// Weekly volume before the first set of the week, the `dashboard · training-card-volume-empty` board: every
+// muscle Not trained, and the legend and the Today line stay.
+export const WeeklyVolumeEmptyWeek: Story = {
+  args: {
+    scale: "volume",
+    bodyMap: {
+      values: { ...RESTING_HEAT, lats: NOT_TRAINED },
+      warmest: [],
+      today: { kind: "planned", dayName: "Legs", setCount: 16 },
+    },
+  },
 };

@@ -11,6 +11,7 @@ import { formatClockTime } from "../dates/formatClockTime";
 import { toLocalDate } from "../dates/toLocalDate";
 import { GAP_VALUES } from "../training/bodyMapValues";
 import { MUSCLE_IDS } from "../training/muscles";
+import { VOLUME_STATUSES } from "../training/muscleState";
 
 import type { BodyArtworkFigure, BodyArtworkSide } from "../training/bodyArtwork";
 import type { BodyMapView, WarmMuscle } from "../training/bodyMapValues";
@@ -163,6 +164,12 @@ export const BODY_MAP = {
     coolestStep: HEAT_STEP_NAMES[0],
     restDay: "Rest day",
     open: "Open the body map",
+    volumeView: "Actual · this week",
+    volumeTopStep: VOLUME_STATUS_NAMES.high,
+    volumeBottomStep: "None",
+    volumeName: "weekly volume, Actual this week, Monday to Sunday",
+    volumeOpen: "Open the body map on Volume",
+    volumeEmpty: "No sets yet this week",
     loadingLabel: "Loading the body map",
     loadFailed: "Couldn't load the body map",
     offlineUnavailable: "The body map isn't available offline.",
@@ -652,6 +659,18 @@ const warmestIn = (warmest: readonly WarmMuscle[], percentWord: string): string 
     .map(({ muscle, percent }) => `${MUSCLE_NAMES[muscle].toLowerCase()} ${percent} ${percentWord}`)
     .join(", ")}`;
 
+const todayWordsOf = (
+  today: TodayPlan | null,
+): { todayLine: string | null; todaySpoken: string | null } => {
+  const dayName = today?.kind === "session" ? today.routineDayName : BODY_MAP.dashboardCard.restDay;
+  const todayLine = today === null ? null : `Today: ${dayName}`;
+  const todaySpoken =
+    today?.kind === "session"
+      ? `${todayLine}, ${describeSets(today.plannedSets)} planned`
+      : todayLine;
+  return { todayLine, todaySpoken };
+};
+
 /** The words of the body map card on the dashboard. */
 export const describeDashboardBodyMapCard = ({
   warmest,
@@ -660,12 +679,7 @@ export const describeDashboardBodyMapCard = ({
   opensBodyMap,
 }: DashboardBodyMapCardInput): DashboardBodyMapCardCopy => {
   const nothingLogged = describeNothingLogged(heatWindowDays);
-  const dayName = today?.kind === "session" ? today.routineDayName : BODY_MAP.dashboardCard.restDay;
-  const todayLine = today === null ? null : `Today: ${dayName}`;
-  const todaySpoken =
-    today?.kind === "session"
-      ? `${todayLine}, ${describeSets(today.plannedSets)} planned`
-      : todayLine;
+  const { todayLine, todaySpoken } = todayWordsOf(today);
   const spoken = [
     `${BODY_MAP.title}, ${BODY_MAP.views.actual} heat now.`,
     `${warmest.length === 0 ? nothingLogged : warmestIn(warmest, "percent")}.`,
@@ -677,6 +691,50 @@ export const describeDashboardBodyMapCard = ({
     todayLine,
     accessibleName: spoken.join(" "),
   };
+};
+
+export type DashboardVolumeCardInput = Readonly<{
+  /** The volume status of each muscle this week, as its index in `VOLUME_STATUSES`. */
+  values: Readonly<Record<MuscleId, number>>;
+  /** Today's planned day, or null when there is no routine. */
+  today: TodayPlan | null;
+}>;
+
+export type DashboardVolumeCardCopy = {
+  /** The count of muscles at Growing or above, or that nothing is logged when every muscle is Not trained. */
+  summaryLine: string;
+  todayLine: string | null;
+  /** The name of the whole card, which ends with the words that open the body map on Volume. */
+  accessibleName: string;
+};
+
+const NOT_TRAINED_VALUE = VOLUME_STATUSES.indexOf("not_trained");
+const GROWING_VALUE = VOLUME_STATUSES.indexOf("growing");
+
+/**
+ * The words of the body map card on the dashboard in weekly volume. The summary counts the muscles at
+ * Growing or above out of every muscle in the list, and a week in which every muscle is Not trained says
+ * that no sets are logged yet. "No sets yet" means no effort-weighted sets, which is what Not trained is, so a
+ * week with only warm-up sets (effort 0) counts as none.
+ */
+export const describeDashboardVolumeCard = ({
+  values,
+  today,
+}: DashboardVolumeCardInput): DashboardVolumeCardCopy => {
+  const counts = MUSCLE_IDS.map((muscle) => values[muscle]);
+  const isEmptyWeek = counts.every((value) => value === NOT_TRAINED_VALUE);
+  const atGrowingOrAbove = counts.filter((value) => value >= GROWING_VALUE).length;
+  const summaryLine = isEmptyWeek
+    ? BODY_MAP.dashboardCard.volumeEmpty
+    : `${atGrowingOrAbove} of ${MUSCLE_IDS.length} muscles at ${VOLUME_STATUS_NAMES.growing} or above`;
+  const { todayLine, todaySpoken } = todayWordsOf(today);
+  const spoken = [
+    `${BODY_MAP.title}, ${BODY_MAP.dashboardCard.volumeName}.`,
+    `${summaryLine}.`,
+    ...(todaySpoken === null ? [] : [`${todaySpoken}.`]),
+    BODY_MAP.dashboardCard.volumeOpen,
+  ];
+  return { summaryLine, todayLine, accessibleName: spoken.join(" ") };
 };
 
 /** The Figure setting's row value in the settings list, under the row title "Figure": "Female". */

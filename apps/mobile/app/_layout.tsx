@@ -13,6 +13,7 @@ import { ToastProvider } from "../components/ui";
 import { startBodyFigureRead } from "../lib/bodyFigure";
 import { startBodyMapRendererRead } from "../lib/bodyMapRenderer";
 import { feedFocusManager, feedOnlineManager } from "../lib/connectivity";
+import { startDashboardBodyChartRead } from "../lib/dashboardBodyChart";
 import { createQueryClient } from "../lib/diaryCache";
 import { setUpReminderNotifications } from "../lib/notifications";
 import { installFatalRestart } from "../lib/sentry/fatalRestart";
@@ -51,6 +52,7 @@ startBodyFigureRead();
 // Starts reading the body map's renderer setting too, so a person who chose 3D finds it read when the body map
 // first opens, and never sees the 2D map first and then a jump to 3D. A failure to read leaves 2D.
 startBodyMapRendererRead();
+startDashboardBodyChartRead();
 
 const queryClient = createQueryClient();
 

@@ -1,9 +1,27 @@
 /** The screens that open the body map and that it names its Back control for. */
 export type BodyMapOrigin = "dashboard" | "train";
 
-/** The body map screen, pushed over the tabs. Opened from the Train home it says so, so Back reads "Back to Train". */
-export const bodyMapPath = (origin: BodyMapOrigin = "dashboard"): string =>
-  origin === "train" ? "/body-map?from=train" : "/body-map";
+/** The scales a link can open the body map on. Heat is where it opens when the address says nothing. */
+export type BodyMapLinkScale = "heat" | "volume";
+
+/**
+ * The body map screen, pushed over the tabs. Opened from the Train home it says so, so Back reads "Back to
+ * Train". Opened on Volume it says so too, and Heat, where the screen opens anyway, is left out.
+ */
+export const bodyMapPath = (
+  origin: BodyMapOrigin = "dashboard",
+  scale: BodyMapLinkScale = "heat",
+): string => {
+  const parameters = [
+    ...(origin === "train" ? ["from=train"] : []),
+    ...(scale === "volume" ? ["scale=volume"] : []),
+  ];
+  return parameters.length === 0 ? "/body-map" : `/body-map?${parameters.join("&")}`;
+};
+
+/** The scale a `scale` parameter names. Anything but Volume, and a cold link with none, is Heat. */
+export const bodyMapScaleOf = (scale: string | undefined): BodyMapLinkScale =>
+  scale === "volume" ? "volume" : "heat";
 
 /** The origin a `from` parameter names. Anything but the Train home's own value is the dashboard, and a cold link has none. */
 export const bodyMapOriginOf = (from: string | undefined): BodyMapOrigin =>

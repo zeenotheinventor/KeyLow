@@ -1,5 +1,6 @@
 import * as copy from "../../../src/copy";
 import { TRAINING_PARAMS_V2 } from "../../../src/training";
+import { everyMuscleAt } from "../everyMuscleAt";
 
 // Every function `src/copy/bodyMap.ts` exports, called with representative arguments. The voice test fails
 // when a function has no row, so no sentence escapes the sweep.
@@ -23,6 +24,11 @@ const dashboardInputs: copy.DashboardBodyMapCardInput[] = [
   { warmest, today: { kind: "rest" }, heatWindowDays: 14, opensBodyMap: true },
   { warmest: [], today: null, heatWindowDays: 14, opensBodyMap: true },
   { warmest, today: { kind: "rest" }, heatWindowDays: 14, opensBodyMap: false },
+];
+const volumeInputs: copy.DashboardVolumeCardInput[] = [
+  { values: everyMuscleAt(2), today: { kind: "session", routineDayName: "Legs", plannedSets: 16 } },
+  { values: everyMuscleAt(0), today: { kind: "rest" } },
+  { values: everyMuscleAt(1), today: null },
 ];
 const header = { tz: LONDON, weekEnd: "2026-10-18", plannedSessions: [SATURDAYS_PUSH] } as const;
 
@@ -195,6 +201,15 @@ export const samples: Record<string, () => string[]> = {
       const card = copy.describeDashboardBodyMapCard(input);
       return [
         card.warmestLine,
+        card.accessibleName,
+        ...(card.todayLine === null ? [] : [card.todayLine]),
+      ];
+    }),
+  describeDashboardVolumeCard: () =>
+    volumeInputs.flatMap((input) => {
+      const card = copy.describeDashboardVolumeCard(input);
+      return [
+        card.summaryLine,
         card.accessibleName,
         ...(card.todayLine === null ? [] : [card.todayLine]),
       ];
