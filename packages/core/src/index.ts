@@ -1,3 +1,4 @@
+export * from "./assistant";
 export * from "./copy";
 export * from "./dates";
 export * from "./diary";
