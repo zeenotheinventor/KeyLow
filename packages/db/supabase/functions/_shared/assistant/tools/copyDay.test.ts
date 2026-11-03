@@ -11,7 +11,7 @@ import { undoAction } from "../undo.ts";
 import { copyDayTool } from "./copyDay.ts";
 import { quickEntryRow } from "./diaryFixtures.ts";
 import { payloadOf } from "./testing.ts";
-import { dietRows, structuredOf } from "./writeFixtures.ts";
+import { dietRows, fixClock, structuredOf } from "./writeFixtures.ts";
 import { writeStub } from "./writeStub.ts";
 
 import type { ReportedFailure } from "../testing.ts";
@@ -23,17 +23,20 @@ const otherUser = "00000000-0000-4000-8000-0000000000b2";
 const yesterday = "2026-11-02";
 const today = "2026-11-03";
 
+// The person's today is read from the clock, so the clock stops on the day the fixtures are written for.
+fixClock("2026-11-03T12:00:00.000Z");
+
 const labels = ["Porridge", "Sandwich", "Chicken and rice"];
 const kcals = [300, 450, 650];
 
 // Yesterday's meals at 08:00, 13:00 and 19:00. Hers are another user's and must never be read or copied.
-const mealsOf = (owner: string, localDate: string, count = labels.length) =>
+const mealsOf = (owner: string, localDate: string, count = labels.length, idOffset = 0) =>
   Array.from({ length: count }, (_, index) => ({
     ...quickEntryRow(
       {
-        number: owner === userId ? 100 + index : 900 + index,
+        number: (owner === userId ? 100 : 900) + idOffset + index,
         localDate,
-        loggedAt: `${localDate}T${String(8 + index).padStart(2, "0")}:00:00.000Z`,
+        loggedAt: `${localDate}T${String(8 + (index % 12)).padStart(2, "0")}:${String(Math.floor(index / 12)).padStart(2, "0")}:00.000Z`,
       },
       {
         label: labels[index % labels.length] ?? "Meal",
@@ -54,7 +57,7 @@ const mealsOf = (owner: string, localDate: string, count = labels.length) =>
 type Diary = Record<string, Record<string, unknown>[]>;
 
 // The earlier turn is where the model asks and the later one where the user has said yes.
-function copyContexts(rows: Diary, options: { slotLimit?: number } = {}) {
+function copyContexts(rows: Diary, options: { slotLimit?: number; viewing?: string } = {}) {
   const stub = writeStub({ ...dietRows(), ...rows }, { callerUserId: userId });
   const store = createFakeActionStore({
     turns: turnsOfConversation([earlier, later]),
@@ -65,7 +68,7 @@ function copyContexts(rows: Diary, options: { slotLimit?: number } = {}) {
     const made = createFakeContext([copyDayTool], {
       store,
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
-      localDate: today,
+      localDate: options.viewing ?? today,
       localTime: "13:00",
     });
     return {
@@ -85,7 +88,7 @@ const mine = (stub: ReturnType<typeof writeStub>, localDate: string) =>
       row["user_id"] === userId && row["local_date"] === localDate && row["deleted_at"] === null,
   );
 
-const copyOf = (entryCount: number, to: string | null = null) => ({
+const copyOf = (entryCount: number, to: string = today) => ({
   from: yesterday,
   to,
   entry_count: entryCount,
@@ -130,33 +133,24 @@ Deno.test("a copy onto an empty day writes at once and builds the board's card",
   assert(copies.every((row) => row["updated_at"] === action?.targetUpdatedAt));
 });
 
-Deno.test(
-  "a copy onto another day names it and defaults to the turn's day only when to is null",
-  async () => {
-    const { asking, stub } = copyContexts({ food_log_entries: mealsOf(userId, yesterday) });
+Deno.test("a copy onto another day names that day in the card", async () => {
+  const { asking, stub } = copyContexts({ food_log_entries: mealsOf(userId, yesterday) });
 
-    const result = await executeTool(asking, "copy_day", copyOf(3, "2026-11-01"));
+  const result = await executeTool(asking, "copy_day", copyOf(3, "2026-11-01"));
 
-    assertEquals(result.status, "ok");
-    assertEquals(mine(stub, "2026-11-01").length, 3);
-    assertEquals(mine(stub, today).length, 0);
-    assertObjectMatch(structuredOf(result), {
-      card: { sub: "Monday 2 November to Sunday 1 November · 1,400 kcal" },
-    });
-  },
-);
+  assertEquals(result.status, "ok");
+  assertEquals(mine(stub, "2026-11-01").length, 3);
+  assertEquals(mine(stub, today).length, 0);
+  assertObjectMatch(structuredOf(result), {
+    card: { sub: "Monday 2 November to Sunday 1 November · 1,400 kcal" },
+  });
+});
 
 Deno.test(
   "a copy onto a day with 3 entries answers needs_confirmation, and with the spent confirmation copies and keeps the 3",
   async () => {
     const { asking, confirming, stub, store } = copyContexts({
-      food_log_entries: [
-        ...mealsOf(userId, yesterday, 3),
-        ...mealsOf(userId, today, 3).map((row, index) => ({
-          ...row,
-          id: `00000000-0000-4000-8000-0000000e000${index}`,
-        })),
-      ],
+      food_log_entries: [...mealsOf(userId, yesterday, 3), ...mealsOf(userId, today, 3, 500)],
     });
     const before = mine(stub, today).map((row) => String(row["id"]));
 
@@ -181,23 +175,37 @@ Deno.test(
 );
 
 Deno.test(
-  "a confirmation given for a different copy is refused and nothing is copied",
+  "a confirmation given for a copy with another from or another to is refused and nothing is copied",
   async () => {
     const { asking, confirming, stub } = copyContexts({
-      food_log_entries: [...mealsOf(userId, yesterday), ...mealsOf(userId, today, 1)],
+      food_log_entries: [
+        ...mealsOf(userId, yesterday),
+        ...mealsOf(userId, "2026-10-31", 3, 200),
+        ...mealsOf(userId, today, 1, 400),
+        ...mealsOf(userId, "2026-11-01", 1, 600),
+      ],
     });
     const asked = await executeTool(asking, "copy_day", copyOf(3));
     assert(asked.status === "needs_confirmation");
+    const confirmation_id = asked.confirmationId;
 
-    const result = await executeTool(confirming, "copy_day", {
-      from: "2026-11-01",
-      to: null,
-      entry_count: 3,
-      confirmation_id: asked.confirmationId,
+    // Each of these would be a copy that asks, so only the hash of the input can refuse it.
+    const otherFrom = await executeTool(confirming, "copy_day", {
+      ...copyOf(3),
+      from: "2026-10-31",
+      confirmation_id,
+    });
+    const otherTo = await executeTool(confirming, "copy_day", {
+      ...copyOf(3, "2026-11-01"),
+      confirmation_id,
     });
 
-    assertEquals(result.status, "error");
+    for (const result of [otherFrom, otherTo]) {
+      assertEquals(result.status, "error");
+      assertEquals(payloadOf(result), { error: "confirmation_invalid" });
+    }
     assertEquals(mine(stub, today).length, 1);
+    assertEquals(mine(stub, "2026-11-01").length, 1);
   },
 );
 
@@ -299,26 +307,160 @@ Deno.test("the number of entries must be the day's, or nothing is copied", async
   assertEquals(store.actions.length, 0);
 });
 
-Deno.test(
-  "a day cannot be copied onto itself, and a day with nothing on it is not copied",
-  async () => {
-    const { asking, stub, store } = copyContexts({ food_log_entries: mealsOf(userId, yesterday) });
+Deno.test("a day cannot be copied onto itself, even when it has entries to ask about", async () => {
+  const { asking, stub, store } = copyContexts({ food_log_entries: mealsOf(userId, today) });
 
-    const onItself = await executeTool(asking, "copy_day", {
-      from: today,
-      to: null,
-      entry_count: 3,
+  const result = await executeTool(asking, "copy_day", { from: today, to: today, entry_count: 3 });
+
+  assertEquals(result.status, "ok");
+  assertEquals(payloadOf(result), { error: "invalid_input", fields: ["to"] });
+  assertEquals(mine(stub, today).length, 3);
+  assertEquals(store.actions.length, 0);
+});
+
+Deno.test("a day with nothing on it is not copied", async () => {
+  const { asking, stub, store } = copyContexts({ food_log_entries: mealsOf(userId, yesterday) });
+
+  const result = await executeTool(asking, "copy_day", {
+    from: "2026-10-01",
+    to: today,
+    entry_count: 1,
+  });
+
+  assertEquals(payloadOf(result), { error: "invalid_input", fields: ["entry_count"] });
+  assertEquals(mine(stub, today).length, 0);
+  assertEquals(store.actions.length, 0);
+});
+
+// A refusal that `run` would make must not be asked about first: no confirmation is stored, so the
+// loop shows no button for a copy that cannot happen.
+Deno.test(
+  "a copy that run would refuse does not ask, whether the count is wrong or the day is empty",
+  async () => {
+    const { asking, store, stub } = copyContexts({
+      food_log_entries: [...mealsOf(userId, yesterday), ...mealsOf(userId, today, 2, 500)],
     });
-    const empty = await executeTool(asking, "copy_day", {
+
+    const wrongCount = await executeTool(asking, "copy_day", copyOf(8));
+    const emptySource = await executeTool(asking, "copy_day", {
       from: "2026-10-01",
-      to: null,
+      to: today,
       entry_count: 1,
     });
 
-    assertEquals(payloadOf(onItself), { error: "invalid_input", fields: ["to"] });
-    assertEquals(payloadOf(empty), { error: "invalid_input", fields: ["entry_count"] });
-    assertEquals(mine(stub, today).length, 0);
+    assertEquals(wrongCount.status, "ok");
+    assertEquals(payloadOf(wrongCount), { error: "invalid_input", fields: ["entry_count"] });
+    assertEquals(emptySource.status, "ok");
+    assertEquals(payloadOf(emptySource), { error: "invalid_input", fields: ["entry_count"] });
+    assertEquals(store.turns[0]?.pending, null);
+    assertEquals(mine(stub, today).length, 2);
+  },
+);
+
+Deno.test(
+  "a day of more than 100 entries is answered clearly and never copied or asked about",
+  async () => {
+    const { asking, stub, store } = copyContexts({
+      food_log_entries: [...mealsOf(userId, yesterday, 101), ...mealsOf(userId, today, 1, 500)],
+    });
+
+    const result = await executeTool(asking, "copy_day", copyOf(101));
+
+    assertEquals(result.status, "ok");
+    assertEquals(payloadOf(result), { error: "too_many_entries", limit: 100 });
+    assertEquals(mine(stub, today).length, 1);
     assertEquals(store.actions.length, 0);
+    assertEquals(store.turns[0]?.pending, null);
+  },
+);
+
+Deno.test("a day of exactly 100 entries is copied", async () => {
+  const { asking, stub } = copyContexts({ food_log_entries: mealsOf(userId, yesterday, 100) });
+
+  const result = await executeTool(asking, "copy_day", copyOf(100));
+
+  assertEquals(result.status, "ok");
+  assertEquals(mine(stub, today).length, 100);
+});
+
+Deno.test(
+  "the card says yesterday and today by the person's own today, not by the day their sheet shows",
+  async () => {
+    const { asking, stub } = copyContexts(
+      { food_log_entries: mealsOf(userId, "2026-11-01") },
+      { viewing: yesterday },
+    );
+
+    const result = await executeTool(asking, "copy_day", {
+      from: "2026-11-01",
+      to: yesterday,
+      entry_count: 3,
+    });
+
+    assertEquals(result.status, "ok");
+    assertEquals(mine(stub, yesterday).length, 3);
+    assertObjectMatch(structuredOf(result), {
+      card: {
+        title: "Copied 3 entries from Sun 1 Nov",
+        sub: "Sunday 1 November to Monday 2 November · 1,400 kcal",
+        undoneSub: "Removed 3 copied entries from Mon 2 Nov",
+      },
+    });
+  },
+);
+
+Deno.test(
+  "a copy that stops part way and cannot take its copies back keeps them as an action Undo can remove",
+  async () => {
+    const { asking, stub, store, reported } = copyContexts({
+      food_log_entries: mealsOf(userId, yesterday),
+    });
+    // The first copy lands, the second insert fails, and so does the write that takes the first back.
+    stub.failNextWriteTo("food_log_entries", 1, 2);
+
+    const result = await executeTool(asking, "copy_day", copyOf(3));
+
+    assert(result.status === "ok" && result.actionId !== null);
+    assertEquals(payloadOf(result), { error: "copy_incomplete", copied: 1 });
+    assertEquals(structuredOf(result), {});
+    assertEquals(mine(stub, today).length, 1);
+    assertEquals(store.actions.length, 1);
+    assertEquals(store.actions[0]?.targetIds?.length, 1);
+    assertEquals(store.actions[0]?.targetLocalDate, today);
+    assertEquals(
+      reported.map((failure) => failure.code),
+      ["internal_error"],
+    );
+    assertFalse(
+      JSON.stringify(reported.map((failure) => String(failure.caught))).includes("Porridge"),
+    );
+
+    const undone = await undoAction(asking, result.actionId);
+
+    assertEquals(undone, { status: "undone", actionId: result.actionId });
+    assertEquals(mine(stub, today).length, 0);
+  },
+);
+
+Deno.test(
+  "when the copies cannot be read back the card is kept and only the kcal is left off",
+  async () => {
+    const { asking, stub } = copyContexts({ food_log_entries: mealsOf(userId, yesterday) });
+    // Reads of the entries: the confirmation check takes two, run one, the repo one and the stamp one.
+    // The sixth is the read-back for the card.
+    stub.failNextReadFrom("food_log_entries", 5);
+
+    const result = await executeTool(asking, "copy_day", copyOf(3));
+
+    assertEquals(result.status, "ok");
+    assertObjectMatch(structuredOf(result), {
+      card: {
+        title: "Copied 3 entries from yesterday",
+        sub: "Monday 2 November to today",
+        undoneSub: "Removed 3 copied entries from today",
+      },
+    });
+    assertEquals(mine(stub, today).length, 3);
   },
 );
 

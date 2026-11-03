@@ -52,6 +52,7 @@ describe("buildDayCopiedCard", () => {
       from: "2026-10-24",
       to: "2026-10-25",
       today: "2026-10-25",
+      count: 8,
       entries: eight,
     });
 
@@ -66,6 +67,7 @@ describe("buildDayCopiedCard", () => {
       from: "2026-10-20",
       to: "2026-10-25",
       today: "2026-10-25",
+      count: 8,
       entries: eight,
     });
 
@@ -78,6 +80,7 @@ describe("buildDayCopiedCard", () => {
       from: "2026-10-24",
       to: "2026-10-23",
       today: "2026-10-25",
+      count: 8,
       entries: eight,
     });
 
@@ -90,6 +93,7 @@ describe("buildDayCopiedCard", () => {
       from: "2026-10-24",
       to: "2026-10-25",
       today: "2026-10-25",
+      count: 1,
       entries: copiedEntries([null]),
     });
 
@@ -103,10 +107,40 @@ describe("buildDayCopiedCard", () => {
       from: "2026-10-24",
       to: "2026-10-25",
       today: "2026-10-25",
+      count: 2,
       entries: copiedEntries([300, null]),
     });
 
     expect(draft.sub).toBe("Saturday 24 October to today · 300 kcal");
+  });
+});
+
+describe("buildDayCopiedCard with rows that could not be read back", () => {
+  it("should word the card from the count and leave only the kcal off", () => {
+    const draft = buildDayCopiedCard({
+      from: "2026-10-24",
+      to: "2026-10-25",
+      today: "2026-10-25",
+      count: 8,
+      entries: eight.slice(0, 5),
+    });
+
+    expect(draft.title).toBe("Copied 8 entries from yesterday");
+    expect(draft.sub).toBe("Saturday 24 October to today");
+    expect(draft.undoneSub).toBe("Removed 8 copied entries from today");
+    expect(draft.undo).toBe("available");
+  });
+
+  it("should do the same when no row could be read back", () => {
+    const draft = buildDayCopiedCard({
+      from: "2026-10-24",
+      to: "2026-10-25",
+      today: "2026-10-25",
+      count: 8,
+      entries: [],
+    });
+
+    expect(draft.sub).toBe("Saturday 24 October to today");
   });
 });
 

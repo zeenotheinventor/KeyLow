@@ -138,6 +138,29 @@ Deno.test("undo is unavailable when the person has changed the day since", async
   assertEquals(dayLogs(completed.stub)[0]?.["is_complete"], false);
 });
 
+Deno.test(
+  "a completed_at that cannot be read back leaves Undo unavailable, never a wrong flip",
+  async () => {
+    const { ctx, stub, store, reported } = setUp();
+    // The first read of the day log is the one before the write. The next is the read-back.
+    stub.failNextReadFrom("day_logs", 1);
+
+    const result = await executeTool(ctx, "set_day_complete", { local_date: day, complete: true });
+    assert(result.status === "ok" && result.actionId !== null);
+
+    assertEquals(store.actions[0]?.targetUpdatedAt === null, false);
+    assertEquals(
+      reported.map((failure) => failure.code),
+      ["internal_error"],
+    );
+    assertEquals(await undoAction(ctx, result.actionId), {
+      status: "error",
+      code: "undo_unavailable",
+    });
+    assertEquals(dayLogs(stub)[0]?.["is_complete"], true);
+  },
+);
+
 Deno.test("a day that is not a date is invalid_input and nothing is written", async () => {
   const { ctx, stub, store } = setUp();
 

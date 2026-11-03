@@ -183,7 +183,8 @@ const plainTitles: Record<AssistantCardKind, (count: number) => string> = {
   updated: (count) => `Updated ${entries(count)}`,
   deleted: (count) => `Deleted ${entries(count)}`,
   day_copied: () => "Copied a day",
-  day_completed: () => "Marked a day complete",
+  // NOT ON THE CANVAS. The row does not say which way the call went, so it never claims "complete".
+  day_completed: () => "Changed whether a day is complete",
   recipe_created: () => "Added a recipe",
   recipe_updated: () => "Updated a recipe",
   recipe_archived: () => "Archived a recipe",

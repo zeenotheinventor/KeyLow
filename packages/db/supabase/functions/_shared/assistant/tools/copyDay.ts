@@ -4,8 +4,9 @@
 // went onto in `target_local_date` (ADR 0003, Amendment 14).
 import { z } from "zod";
 
-import { buildDayCopiedCard, cardEntryOfRow } from "../../core.ts";
+import { buildDayCopiedCard, cardEntryOfRow, localToday } from "../../core.ts";
 import {
+  CopyDayPartialWriteError,
   copyDay,
   getDiaryDay,
   getMyTimeZone,
@@ -19,23 +20,21 @@ import { localDateSchema } from "./shared.ts";
 import type { CardEntry } from "../../core.ts";
 import type { WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
-// A day's entries travel in one request when the copies are given a shared stamp, so a day is capped.
+// The copies are inserted one by one and then stamped together by one request that names every id, so a
+// day with more entries than this is answered with `too_many_entries` and never copied.
 const maxEntriesPerDay = 100;
 
 const copyDayInput = z.strictObject({
   from: localDateSchema.describe("The day to copy from, YYYY-MM-DD."),
-  to: localDateSchema
-    .nullable()
-    .describe(
-      "The day to copy onto, YYYY-MM-DD, or null for the day the user's sheet was opened on.",
-    ),
+  to: localDateSchema.describe(
+    "The day to copy onto, YYYY-MM-DD. When the person says today, use today's date from the context block.",
+  ),
   entry_count: z
     .number()
     .int()
     .min(1)
-    .max(maxEntriesPerDay)
     .describe(
-      "How many entries the day you copy from has, counted from get_day. The user is shown this number, so it must be the day's own.",
+      `How many entries the day you copy from has, counted from get_day, at most ${maxEntriesPerDay}. The user is shown this number, so it must be the day's own.`,
     ),
 });
 
@@ -45,37 +44,61 @@ export const copyDayTool: WriteToolDefinition<CopyDayInput> = {
   name: "copy_day",
   description:
     "Copies every entry of one diary day onto another day, with Undo, and replaces nothing. Read the day " +
-    "you copy from with get_day first, and pass the number of entries it has as entry_count. Set to to " +
-    "null to copy onto the day the user's sheet was opened on, which is today for 'copy yesterday to " +
-    "today'. When the day you copy onto already has entries the call first answers needs_confirmation " +
-    "with a confirmation_id: ask the user in your own words how many entries it has, how many you would " +
-    "add, and that nothing is replaced, and when they say yes call again with the same input and that " +
-    "confirmation_id. To copy a single meal, use get_entries and log_entry instead.",
+    "you copy from with get_day first, and pass the number of entries it has as entry_count. A day with " +
+    `more than ${maxEntriesPerDay} entries cannot be copied. When the day you copy onto already has ` +
+    "entries the call first answers needs_confirmation with a confirmation_id: ask the user in your own " +
+    "words how many entries it has, how many you would add, and that nothing is replaced, and when they " +
+    "say yes call again with the same input and that confirmation_id. To copy a single meal, use " +
+    "get_entries and log_entry instead.",
   kind: "write",
   input: copyDayInput,
   annotations: { readOnlyHint: false, destructiveHint: false },
   targetTable: "food_log_entries",
-  async needsConfirmation({ from, to }, ctx) {
-    const onto = to ?? ctx.turn.localDate;
-    if (onto === from) {
+  // Asks only for a copy that `run` would make: a refusal (the same day, a day that is not the number the
+  // model counted, a day too large or empty) must not spend a confirmation or show a button for it.
+  async needsConfirmation({ from, to, entry_count }, ctx) {
+    if (to === from) {
       return false;
     }
-    const { entries } = await getDiaryDay(ctx.caller, onto);
+    const source = await getDiaryDay(ctx.caller, from);
+    if (source.entries.length !== entry_count || source.entries.length > maxEntriesPerDay) {
+      return false;
+    }
+    const { entries } = await getDiaryDay(ctx.caller, to);
     return entries.length > 0;
   },
   async run(ctx, { from, to, entry_count }): Promise<WriteRunOutput> {
-    const onto = to ?? ctx.turn.localDate;
-    if (onto === from) {
+    if (to === from) {
       return invalidInput(["to"]);
     }
     const timeZone = zoneOrUtc(await getMyTimeZone(ctx.caller));
     const source = await getDiaryDay(ctx.caller, from);
+    if (source.entries.length > maxEntriesPerDay) {
+      return { data: { error: "too_many_entries", limit: maxEntriesPerDay }, target: null };
+    }
     // The person was shown this number. A day that has other entries now is not what they agreed to.
     if (source.entries.length !== entry_count) {
       return invalidInput(["entry_count"]);
     }
-    const copied = await copyDay(ctx.caller, { from, to: onto, timeZone });
-    if (copied.count === 0) {
+    let entryIds: string[];
+    let partlyCopied = false;
+    try {
+      entryIds = (await copyDay(ctx.caller, { from, to, timeZone })).entryIds;
+    } catch (caught) {
+      if (!(caught instanceof CopyDayPartialWriteError)) {
+        throw caught;
+      }
+      // Some copies are in the day and could not be taken back. They get an action, so Undo can remove
+      // them. The repo's message is not reported, because it can quote a row.
+      ctx.reportError(
+        "assistant tool copy_day",
+        "internal_error",
+        new Error("copy_day left a partial copy"),
+      );
+      entryIds = caught.entryIds;
+      partlyCopied = true;
+    }
+    if (entryIds.length === 0) {
       return { data: { copied: 0 }, target: null };
     }
 
@@ -87,22 +110,31 @@ export const copyDayTool: WriteToolDefinition<CopyDayInput> = {
       const { error } = await ctx.caller
         .from("food_log_entries")
         .update({ deleted_at: null })
-        .in("id", copied.entryIds)
+        .in("id", entryIds)
         .is("deleted_at", null);
       if (error) {
         // The database's message can quote a row, so only its code is kept.
         throw new Error(`Could not stamp the copies ${error.code}`);
       }
-      const [stamp] = await readLogEntryStamps(ctx.caller, copied.entryIds);
+      const [stamp] = await readLogEntryStamps(ctx.caller, entryIds);
       targetUpdatedAt = stamp?.updatedAt;
     } catch (caught) {
       ctx.reportError("assistant tool copy_day", "internal_error", caught);
     }
+    const target = {
+      targetIds: entryIds,
+      targetLocalDate: to,
+      ...(targetUpdatedAt === undefined ? {} : { targetUpdatedAt }),
+    };
+    if (partlyCopied) {
+      return { data: { error: "copy_incomplete", copied: entryIds.length }, target };
+    }
+
     let cardEntries: CardEntry[] = [];
     try {
-      const { entries } = await getDiaryDay(ctx.caller, onto);
+      const { entries } = await getDiaryDay(ctx.caller, to);
       cardEntries = entries
-        .filter(({ id }) => copied.entryIds.includes(id))
+        .filter(({ id }) => entryIds.includes(id))
         .flatMap((entry) => {
           const cardEntry = cardEntryOfRow(entry, timeZone);
           return cardEntry === null ? [] : [cardEntry];
@@ -111,24 +143,18 @@ export const copyDayTool: WriteToolDefinition<CopyDayInput> = {
       ctx.reportError("assistant tool copy_day", "internal_error", caught);
     }
     return {
-      data: { copied: copied.count, from, to: onto },
-      ...(cardEntries.length === 0
-        ? {}
-        : {
-            structured: {
-              card: buildDayCopiedCard({
-                from,
-                to: onto,
-                today: ctx.turn.localDate,
-                entries: cardEntries,
-              }),
-            },
-          }),
-      target: {
-        targetIds: copied.entryIds,
-        targetLocalDate: onto,
-        ...(targetUpdatedAt === undefined ? {} : { targetUpdatedAt }),
+      data: { copied: entryIds.length, from, to },
+      structured: {
+        card: buildDayCopiedCard({
+          from,
+          to,
+          // The person's own today. The turn's day is the day their sheet is showing, which can be a past one.
+          today: localToday(new Date().toISOString(), timeZone),
+          count: entryIds.length,
+          entries: cardEntries,
+        }),
       },
+      target,
     };
   },
   // Removes the copies, unless the person has changed or removed any of them since.

@@ -37,7 +37,7 @@ Deno.test("a delete_entry input with no ids gives no words", () => {
 Deno.test(
   "copy_day gets the board's copy buttons for the number of entries, and the primary tone",
   () => {
-    const input = { from: "2026-11-02", to: null, entry_count: 8 };
+    const input = { from: "2026-11-02", to: "2026-11-03", entry_count: 8 };
 
     assertEquals(confirmWordsFor("copy_day", input), {
       confirmLabel: "Copy 8 entries",
@@ -52,7 +52,7 @@ Deno.test(
 );
 
 Deno.test("a copy_day input with no entry count gives no words", () => {
-  assertEquals(confirmWordsFor("copy_day", { from: "2026-11-02", to: null }), null);
+  assertEquals(confirmWordsFor("copy_day", { from: "2026-11-02", to: "2026-11-03" }), null);
   assertEquals(confirmWordsFor("copy_day", { entry_count: 0 }), null);
   assertEquals(confirmWordsFor("copy_day", null), null);
 });

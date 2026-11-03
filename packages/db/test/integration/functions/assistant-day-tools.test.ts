@@ -18,11 +18,13 @@ import type { AssistantStreamEvent } from "@keylow/core";
  * are, and Carol copies onto a today that already has an entry, so her turn ends asking first.
  *
  * Every user logs a different label, so a copy that read another user's day would show in the labels. The
- * turn's day is 2026-10-25 (`turnBody`), so yesterday is 2026-10-24. The labels are invented.
+ * days are today and yesterday on the clock, and the turn is opened on today. The labels are invented.
  */
 
-const yesterday = "2026-10-24";
-const today = "2026-10-25";
+// The card words "yesterday" and "today" by the person's own clock, so the days come from the clock too.
+// A new user has no time zone, which is read as UTC.
+const today = new Date().toISOString().slice(0, 10);
+const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 
 const markerOf = () => `kl693${crypto.randomUUID().replaceAll("-", "").slice(0, 12)}`;
 const toolUseId = () => `toolu_${crypto.randomUUID().replaceAll("-", "")}`;
@@ -54,12 +56,12 @@ async function copyTurn(user: TestUser, marker: string, replies: ScriptedReply[]
   await anthropicMock.script(marker, replies);
   const response = await callAssistant("turn", {
     user,
-    body: turnBody(`Copy yesterday to today ${marker}`),
+    body: { ...turnBody(`Copy yesterday to today ${marker}`), localDate: today },
   });
   return eventsOf(response);
 }
 
-const copyInput = (entryCount: number) => ({ from: yesterday, to: null, entry_count: entryCount });
+const copyInput = (entryCount: number) => ({ from: yesterday, to: today, entry_count: entryCount });
 
 let alice: Person;
 let bob: Person;
@@ -109,9 +111,11 @@ describe("a turn that calls copy_day onto an empty day", () => {
     expect(card?.type === "card" && card.card).toMatchObject({
       kind: "day_copied",
       title: "Copied 2 entries from yesterday",
-      sub: "Saturday 24 October to today · 700 kcal",
       undo: "available",
     });
+    expect(card?.type === "card" && card.card.sub).toMatch(
+      /^[A-Za-z]+ \d+ [A-Za-z]+ to today · 700 kcal$/,
+    );
     expect(aliceEvents.at(-1)).toEqual({ type: "done", outcome: "complete" });
   });
 
@@ -141,7 +145,16 @@ describe("a turn that calls copy_day onto an empty day", () => {
       turn_seq: 1,
     });
     expect([...(data?.[0]?.target_ids ?? [])].sort()).toEqual([...copiedIds].sort());
+    // Every copy carries the one change time the action recorded, which Undo and the changes list compare.
+    const stamps = await alice.user.client
+      .from("food_log_entries")
+      .select("updated_at")
+      .in("id", copiedIds);
+    expect(stamps.data).toHaveLength(2);
     expect(data?.[0]?.target_updated_at).not.toBeNull();
+    for (const { updated_at } of stamps.data ?? []) {
+      expect(Date.parse(updated_at)).toBe(Date.parse(data?.[0]?.target_updated_at ?? ""));
+    }
     const written = JSON.stringify(data);
     for (const word of [...alice.labels, "kcal", "porridge", "soup"]) {
       expect(written).not.toContain(word);

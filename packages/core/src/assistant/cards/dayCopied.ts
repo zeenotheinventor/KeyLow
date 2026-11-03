@@ -13,7 +13,9 @@ type DayCopied = {
   to: string;
   /** The person's today, which decides whether a day is called "yesterday" or "today". */
   today: string;
-  /** The rows the copy inserted, as the database holds them, so the total is the copies' own snapshots. */
+  /** How many entries the copy inserted, which words the card whatever could be read back. */
+  count: number;
+  /** The rows read back, so the total is the copies' own snapshots. Fewer than `count` leaves the total off. */
   entries: readonly CardEntry[];
 };
 
@@ -21,16 +23,27 @@ type DayCopied = {
  * The card after a `copy_day`: "Copied 8 entries from yesterday", the two days and the copied kcal under
  * it, no rows, and the line shown once Undo has run.
  */
-export function buildDayCopiedCard({ from, to, today, entries }: DayCopied): AssistantCardDraft {
+export function buildDayCopiedCard({
+  from,
+  to,
+  today,
+  count,
+  entries,
+}: DayCopied): AssistantCardDraft {
   return {
     kind: "day_copied",
-    title: describeDayCopiedTitle(from, today, entries.length),
-    sub: describeDayCopiedSub(from, to, today, describeCardTotalKcal(entries)),
+    title: describeDayCopiedTitle(from, today, count),
+    sub: describeDayCopiedSub(
+      from,
+      to,
+      today,
+      entries.length === count ? describeCardTotalKcal(entries) : null,
+    ),
     rows: [],
     totalText: null,
     note: null,
     link: null,
     undo: "available",
-    undoneSub: describeDayCopiedUndone(entries.length, to, today),
+    undoneSub: describeDayCopiedUndone(count, to, today),
   };
 }

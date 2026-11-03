@@ -101,3 +101,22 @@ export function structuredOf(result: ExecutionResult): Record<string, unknown> {
     ? structured
     : {};
 }
+
+// Stops the clock at the given instant for the rest of the test file, so a tool that reads "now" (the
+// person's today) answers the same on every day the suite runs. Deno runs each test file in its own
+// isolate, so this reaches no other file.
+export function fixClock(instant: string): void {
+  const RealDate = Date;
+  const fixed = RealDate.parse(instant);
+  class FixedDate extends RealDate {
+    constructor(...args: unknown[]) {
+      // The constructor's overloads are not expressible as a spread, so the arguments pass through whole.
+      // deno-lint-ignore no-explicit-any
+      super(...((args.length === 0 ? [fixed] : args) as [any]));
+    }
+    static override now(): number {
+      return fixed;
+    }
+  }
+  globalThis.Date = FixedDate as DateConstructor;
+}

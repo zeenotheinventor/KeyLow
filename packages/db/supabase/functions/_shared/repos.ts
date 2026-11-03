@@ -18,6 +18,7 @@ export type {
   WeighIn,
 } from "./repos/index.js";
 export {
+  CopyDayPartialWriteError,
   copyDay,
   getDiaryDay,
   getDiaryWeek,

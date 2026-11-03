@@ -24,7 +24,7 @@ describe("describeAssistantChange", () => {
     ["delete_entry", 1, "Deleted 1 entry"],
     ["delete_entry", 3, "Deleted 3 entries"],
     ["copy_day", 1, "Copied a day"],
-    ["set_day_complete", 1, "Marked a day complete"],
+    ["set_day_complete", 1, "Changed whether a day is complete"],
     ["create_recipe", 1, "Added a recipe"],
     ["update_recipe", 1, "Updated a recipe"],
     ["archive_recipe", 1, "Archived a recipe"],

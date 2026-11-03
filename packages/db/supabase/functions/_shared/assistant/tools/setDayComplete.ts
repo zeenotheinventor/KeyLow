@@ -37,10 +37,15 @@ export const setDayCompleteTool: WriteToolDefinition<SetDayCompleteInput> = {
     await setDayComplete(ctx.caller, local_date, complete);
 
     // The write has landed. Nothing below may throw.
-    let completedAt: string | null = null;
+    // The moment the day was completed is how Undo knows the call completed it. When it cannot be read
+    // back, the epoch stands in for it: no day was completed then, so Undo reports unavailable instead
+    // of mistaking a completing call for an incomplete one. The time now would not do, because the
+    // repo stamps `completed_at` with the clock in the same millisecond.
+    let completedAt = new Date(0).toISOString();
     if (complete) {
       try {
-        completedAt = (await getDiaryDay(ctx.caller, local_date)).dayLog?.completed_at ?? null;
+        completedAt =
+          (await getDiaryDay(ctx.caller, local_date)).dayLog?.completed_at ?? completedAt;
       } catch (caught) {
         ctx.reportError("assistant tool set_day_complete", "internal_error", caught);
       }
@@ -50,7 +55,7 @@ export const setDayCompleteTool: WriteToolDefinition<SetDayCompleteInput> = {
       structured: { card: buildDayCompletedCard({ localDate: local_date, complete }) },
       target: {
         targetLocalDate: local_date,
-        ...(completedAt === null ? {} : { targetUpdatedAt: completedAt }),
+        ...(complete ? { targetUpdatedAt: completedAt } : {}),
       },
     };
   },
