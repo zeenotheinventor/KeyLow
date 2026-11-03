@@ -4,6 +4,8 @@ import { buildFood, buildFoodPortion } from "@keylow/core/testing";
 import type * as ApiClient from "@keylow/api-client";
 import type {
   CreatedFood,
+  FavouriteFood,
+  FavouriteRecipe,
   FoodWithPortionsState,
   LogEntry,
   LogFoodInput,
@@ -73,6 +75,21 @@ export const mockDeleteEntry = jest.fn<Promise<void>, [LogEntry]>();
 export const recentFoods: { current: QueryState<RecentFood[]> } = {
   current: { data: [], isPending: false, isError: false },
 };
+// The foods and recipes the user has favourited, which a test sets for a case.
+export const favouriteFoods: { current: QueryState<FavouriteFood[]> } = {
+  current: { data: [], isPending: false, isError: false },
+};
+export const favouriteRecipes: { current: QueryState<FavouriteRecipe[]> } = {
+  current: { data: [], isPending: false, isError: false },
+};
+export const mockUseFavouriteFoods = jest.fn<
+  QueryState<FavouriteFood[]>,
+  [{ enabled?: boolean }?]
+>();
+export const mockUseFavouriteRecipes = jest.fn<
+  QueryState<FavouriteRecipe[]>,
+  [{ enabled?: boolean }?]
+>();
 // The options the two terms-gated reads were asked with, so a test can see whether they were enabled.
 export const mockUseProfileTimeZone = jest.fn<
   QueryState<string | null>,
@@ -136,6 +153,12 @@ export function resetApiClientMock(): void {
   mockUseRecentFoods.mockReset();
   mockUseRecentFoods.mockImplementation(() => recentFoods.current);
   recentFoods.current = { data: [], isPending: false, isError: false };
+  favouriteFoods.current = { data: [], isPending: false, isError: false };
+  favouriteRecipes.current = { data: [], isPending: false, isError: false };
+  mockUseFavouriteFoods.mockReset();
+  mockUseFavouriteFoods.mockImplementation(() => favouriteFoods.current);
+  mockUseFavouriteRecipes.mockReset();
+  mockUseFavouriteRecipes.mockImplementation(() => favouriteRecipes.current);
   mockGetFood.mockReset();
   mockGetFood.mockResolvedValue(foodFixture);
   mockListFoodPortions.mockReset();
@@ -169,6 +192,8 @@ export const mockApiClient = {
   useLogRecipeServing: () => ({ mutateAsync: mockLogRecipe }),
   useProfileTimeZone: mockUseProfileTimeZone,
   useRecentFoods: mockUseRecentFoods,
+  useFavouriteFoods: mockUseFavouriteFoods,
+  useFavouriteRecipes: mockUseFavouriteRecipes,
   useDeleteEntry: () => ({ mutateAsync: mockDeleteEntry }),
   // The client is not used by these tests, but the stored diary cache listens to its auth events.
   useSupabase: () => ({
