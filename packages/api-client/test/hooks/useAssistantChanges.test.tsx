@@ -41,7 +41,7 @@ describe("useAssistantChanges", () => {
           id: THIRD_ACTION_ID,
           turn_id: "00000000-0000-4000-8000-0000000000a9",
           tool: "archive_recipe",
-          target_table: "day_logs",
+          target_table: "unmapped_table",
           created_at: "2026-10-26T19:05:00Z",
         }),
       ],

@@ -126,7 +126,7 @@ async function storeAction(input: ActionInput): Promise<string> {
       turn_id: input.conversation?.turnIds[input.turnIndex ?? 0] ?? null,
       turn_seq: input.turnSeq,
       tool: input.tool,
-      target_table: input.targetTable ?? "day_logs",
+      target_table: input.targetTable ?? "unmapped_table",
       target_id: input.targetId ?? crypto.randomUUID(),
       target_updated_at: input.targetUpdatedAt ?? null,
       created_at: input.createdAt,

@@ -72,7 +72,7 @@ describe("readAssistantActions", () => {
     const read = await readAssistantActions(
       createTestClient(),
       {},
-      new Map([["day_logs", source]]),
+      new Map([["unmapped_table", source]]),
     );
 
     expect(asked).toEqual([[ENTRY_ID, OTHER_ENTRY_ID, MISSING_ENTRY_ID]]);
@@ -242,7 +242,7 @@ describe("the target rows of an action", () => {
     const read = await readAssistantActions(
       createTestClient(),
       {},
-      new Map([["day_logs", source]]),
+      new Map([["unmapped_table", source]]),
     );
 
     expect(asked).toEqual([100, 100, 50]);
