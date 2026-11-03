@@ -51,6 +51,10 @@ export const describeTargetsChangedNote = (previousKcal: number | null): string 
     previousKcal === null ? "your targets" : kcalText(previousKcal)
   } and your programme.`;
 
+/** NOT ON THE CANVAS: the programme ended but Undo cannot work, so the note says it is off. */
+export const TARGETS_CHANGED_NOTE_PROGRAMME_ENDED_WITHOUT_UNDO =
+  "Your programme has ended, so Ki-Lo stops adjusting your targets each week. Undo is off for this change.";
+
 /** NOT ON THE CANVAS: with no programme the old numbers are kept nowhere, so Undo is off. */
 export const TARGETS_CHANGED_NOTE_WITHOUT_UNDO =
   "Undo is off for this change. Ki-Lo does not keep your old numbers, so change them again in More, Targets.";

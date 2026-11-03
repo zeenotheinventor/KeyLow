@@ -131,6 +131,22 @@ describe("buildTargetsChangedCard", () => {
     expect(draft.undoneSub).toBeNull();
   });
 
+  it("should keep the programme words but turn Undo off when Undo cannot work", () => {
+    const draft = buildTargetsChangedCard({
+      kcal: 2000,
+      previousKcal: 2140,
+      endedProgramme: true,
+      undoable: false,
+    });
+
+    expect(draft.sub).toBe("Was 2,140 kcal from your programme");
+    expect(draft.note).toBe(
+      "Your programme has ended, so Ki-Lo stops adjusting your targets each week. Undo is off for this change.",
+    );
+    expect(draft.undo).toBe("unavailable");
+    expect(draft.undoneSub).toBeNull();
+  });
+
   it("should have no sub when no target was set before", () => {
     const draft = buildTargetsChangedCard({
       kcal: 2000,

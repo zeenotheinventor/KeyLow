@@ -31,7 +31,7 @@ const updateTargetsInput = z.strictObject({
     .int()
     .nullable()
     .describe(
-      "The user's calorie target right now, from the targets in get_day, or null when none is set. The user is shown this number, so it must be their own.",
+      "The user's calorie target right now, from the targets in get_day, or null when none is set. The user is shown this number, so it must be their own. If the call is refused with current_kcal, call again with that number.",
     ),
 });
 
@@ -55,7 +55,8 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
     "target from the current number to the new one, and when they have a programme say that this ends it " +
     "and its weekly check-in and that today and later days use their own targets. When they say yes call " +
     "again with the same input and that confirmation_id. Ask for any of the four numbers the user did not " +
-    "give, never guess one. If the user did not give a macro, ask with ask_user.",
+    "give, never guess one. If the user did not give a macro, ask with ask_user. If the call is refused " +
+    "with current_kcal, call again with that number.",
   kind: "write",
   input: updateTargetsInput,
   annotations: { readOnlyHint: false, destructiveHint: true },
@@ -82,7 +83,21 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
     }
     const activeProgramId = await readActiveProgramId(ctx);
 
-    await updateMyTargets(ctx.caller, ctx.userId, valid.value);
+    try {
+      await updateMyTargets(ctx.caller, ctx.userId, valid.value);
+    } catch (caught) {
+      // The repo ends the programme and then writes the profile. When the second step fails the programme
+      // would stay ended with no action and no card, so the person's plan is put back. The repo's error
+      // names the action and a code only, and so does the reopen's.
+      if (activeProgramId !== null) {
+        try {
+          await reopenProgram(ctx.caller, activeProgramId);
+        } catch (reopenFailure) {
+          ctx.reportError("assistant tool update_targets", "internal_error", reopenFailure);
+        }
+      }
+      throw caught;
+    }
 
     // The write has landed. Nothing below may throw, or the model would save the targets a second time.
     let stamp: string | null = null;
@@ -102,6 +117,8 @@ export const updateTargetsTool: WriteToolDefinition<UpdateTargetsInput> = {
           kcal: valid.value.kcal,
           previousKcal: before.kcal ?? null,
           endedProgramme: activeProgramId !== null,
+          // Undo needs the stamp to compare. Without it Undo would always be unavailable.
+          undoable: stamp !== null,
         }),
       },
       target:

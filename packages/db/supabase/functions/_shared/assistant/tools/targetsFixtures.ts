@@ -8,6 +8,7 @@ import {
 } from "../testing.ts";
 import { writeContext } from "./writeFixtures.ts";
 
+import type { ReportedFailure } from "../testing.ts";
 import type { ToolContext, ToolDefinition } from "../tool.ts";
 
 export const programId = "00000000-0000-4000-8000-0000000a0001";
@@ -55,23 +56,40 @@ export const newTargets = { kcal: 2000, protein_g: 150, carbs_g: 200, fat_g: 60 
 // The earlier turn is where the model asks and the later one where the user has said yes.
 export function targetsContexts(
   tools: readonly ToolDefinition[],
-  options: { withProgram?: boolean; profile?: Record<string, unknown> } = {},
+  options: {
+    withProgram?: boolean;
+    profile?: Record<string, unknown>;
+    engineTargets?: Record<string, unknown>;
+  } = {},
 ) {
   const withProgram = options.withProgram ?? true;
   const base = writeContext(tools, {
     rows: {
       profiles: [profileRow(options.profile)],
       programs: withProgram ? [programRow()] : [],
-      targets: withProgram ? [{ ...engineTargetsRow }] : [],
+      targets: withProgram ? [{ ...engineTargetsRow, ...options.engineTargets }] : [],
     },
   });
   const store = createFakeActionStore({ turns: turnsOfConversation([earlier, later]) });
-  const contextOn = (turnId: string): ToolContext => ({
-    ...createFakeContext(tools, {
+  const reported: ReportedFailure[] = [];
+  const contextOn = (turnId: string): ToolContext => {
+    const made = createFakeContext(tools, {
       store,
       turn: { id: turnId, conversationId: store.turns[0]?.conversationId ?? "" },
-    }).ctx,
-    caller: base.stub.caller,
-  });
-  return { stub: base.stub, store, asking: contextOn(earlier), confirming: contextOn(later) };
+    });
+    return {
+      ...made.ctx,
+      caller: base.stub.caller,
+      reportError: (functionName, code, caught) => {
+        reported.push({ functionName, code, caught });
+      },
+    };
+  };
+  return {
+    stub: base.stub,
+    store,
+    reported,
+    asking: contextOn(earlier),
+    confirming: contextOn(later),
+  };
 }

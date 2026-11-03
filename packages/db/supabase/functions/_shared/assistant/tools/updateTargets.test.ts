@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertObjectMatch } from "@std/assert";
 
 import { executeTool } from "../executor.ts";
+import { toJsonSchema } from "../tool.ts";
 import { undoAction } from "../undo.ts";
 import { programId, newTargets, programRow, targetsContexts } from "./targetsFixtures.ts";
 import { payloadOf } from "./testing.ts";
@@ -257,4 +258,124 @@ Deno.test("the buttons are the board's, with the number the person keeps", () =>
     "Don't change",
   );
   assertEquals(confirmWordsFor("update_targets", { kcal: 2000 }), null);
+});
+
+Deno.test(
+  "with day by day offsets the refusal names the week's figure and the retry with it asks",
+  async () => {
+    // Tuesday's figure is what get_day gives for Tuesday, and the week's is 2,140.
+    const c = contexts({
+      engineTargets: { dow_calories_kcal: [2000, 2200, 2140, 2140, 2140, 2140, 2140] },
+    });
+
+    const refused = await executeTool(c.asking, "update_targets", {
+      ...askedWith,
+      current_kcal: 2200,
+    });
+    const retried = await executeTool(c.asking, "update_targets", {
+      ...askedWith,
+      current_kcal: 2140,
+    });
+
+    assertEquals(refused.status, "ok");
+    assertEquals(payloadOf(refused), {
+      error: "invalid_input",
+      fields: ["current_kcal"],
+      current_kcal: 2140,
+    });
+    assertEquals(retried.status, "needs_confirmation");
+    assertEquals(profileOf(c)["target_kcal"], 1900);
+    assertEquals(c.store.actions.length, 0);
+  },
+);
+
+Deno.test("the tool tells the model to call again with the number a refusal names", () => {
+  const advice = "If the call is refused with current_kcal, call again with that number.";
+  const properties = toJsonSchema(updateTargetsTool)["properties"];
+  const field = JSON.stringify(
+    typeof properties === "object" && properties !== null && "current_kcal" in properties
+      ? properties.current_kcal
+      : null,
+  );
+
+  assert(updateTargetsTool.description.includes(advice));
+  assert(field.includes(advice));
+});
+
+Deno.test(
+  "when the change time cannot be read the card turns Undo off, as log_entry's does",
+  async () => {
+    const c = contexts();
+    const confirmationId = confirmationIdOf(
+      await executeTool(c.asking, "update_targets", askedWith),
+    );
+    // The profile is read twice in the confirming call: the time zone before the write, the stamp after it.
+    c.stub.failNextReadFrom("profiles", 1);
+
+    const result = await executeTool(c.confirming, "update_targets", {
+      ...askedWith,
+      confirmation_id: confirmationId,
+    });
+
+    assert(result.status === "ok" && result.actionId !== null);
+    assertEquals(profileOf(c)["target_kcal"], 2000);
+    assertObjectMatch(structuredOf(result), {
+      card: {
+        sub: "Was 2,140 kcal from your programme",
+        note: "Your programme has ended, so Ki-Lo stops adjusting your targets each week. Undo is off for this change.",
+        undo: "unavailable",
+        undoneSub: null,
+      },
+    });
+    assertEquals(c.store.actions[0]?.targetId, programId);
+    assertEquals(c.store.actions[0]?.targetUpdatedAt, null);
+    assertEquals(await undoAction(c.confirming, result.actionId), {
+      status: "error",
+      code: "undo_unavailable",
+    });
+  },
+);
+
+Deno.test(
+  "when the profile write fails the programme the call ended is reopened and no action is kept",
+  async () => {
+    const c = contexts();
+    const confirmationId = confirmationIdOf(
+      await executeTool(c.asking, "update_targets", askedWith),
+    );
+    c.stub.failNextWriteTo("profiles");
+
+    const result = await executeTool(c.confirming, "update_targets", {
+      ...askedWith,
+      confirmation_id: confirmationId,
+    });
+
+    assertEquals(result.status === "error" && result.code, "tool_failed");
+    assertEquals(programOf(c)["ended_on"], null);
+    assertEquals(profileOf(c)["target_kcal"], 1900);
+    assertEquals(c.store.actions.length, 0);
+  },
+);
+
+Deno.test("when the reopen also fails the failure is reported by code only", async () => {
+  const c = contexts();
+  const confirmationId = confirmationIdOf(await executeTool(c.asking, "update_targets", askedWith));
+  // The profile write fails, and then so does the update that would reopen the programme.
+  c.stub.failNextWriteTo("profiles");
+  c.stub.beforeNextWriteTo("profiles", () => c.stub.failNextWriteTo("programs"));
+
+  const result = await executeTool(c.confirming, "update_targets", {
+    ...askedWith,
+    confirmation_id: confirmationId,
+  });
+
+  assertEquals(result.status === "error" && result.code, "tool_failed");
+  assert(programOf(c)["ended_on"] !== null);
+  assertEquals(c.store.actions.length, 0);
+  // The executor reports the save failure, and the tool reports the failed reopen: each by code only.
+  const messages = c.reported.map(({ caught }) => (caught instanceof Error ? caught.message : ""));
+  assertEquals(messages, [
+    "Could not reopen your program (XX000)",
+    "Could not save your targets (XX000)",
+  ]);
 });

@@ -1,4 +1,5 @@
 import {
+  TARGETS_CHANGED_NOTE_PROGRAMME_ENDED_WITHOUT_UNDO,
   TARGETS_CHANGED_NOTE_WITHOUT_UNDO,
   describeTargetsChangedNote,
   describeTargetsChangedSub,
@@ -15,6 +16,11 @@ export type TargetsChangedCardChange = {
   previousKcal: number | null;
   /** True when saving the targets ended a programme. Only then can Undo put the old targets back. */
   endedProgramme: boolean;
+  /**
+   * False when the write left nothing Undo could check (the change time could not be read), so the card
+   * turns Undo off as `log_entry`'s does. Defaults to `endedProgramme`.
+   */
+  undoable?: boolean;
 };
 
 /**
@@ -26,18 +32,22 @@ export function buildTargetsChangedCard({
   kcal,
   previousKcal,
   endedProgramme,
+  undoable = endedProgramme,
 }: TargetsChangedCardChange): AssistantCardDraft {
+  const canUndo = endedProgramme && undoable;
   return {
     kind: "targets_changed",
     title: describeTargetsChangedTitle(kcal),
     sub: previousKcal === null ? null : describeTargetsChangedSub(previousKcal, endedProgramme),
     rows: [],
     totalText: null,
-    note: endedProgramme
+    note: canUndo
       ? describeTargetsChangedNote(previousKcal)
-      : TARGETS_CHANGED_NOTE_WITHOUT_UNDO,
+      : endedProgramme
+        ? TARGETS_CHANGED_NOTE_PROGRAMME_ENDED_WITHOUT_UNDO
+        : TARGETS_CHANGED_NOTE_WITHOUT_UNDO,
     link: null,
-    undo: endedProgramme ? "available" : "unavailable",
-    undoneSub: endedProgramme ? describeTargetsChangedUndone(previousKcal) : null,
+    undo: canUndo ? "available" : "unavailable",
+    undoneSub: canUndo ? describeTargetsChangedUndone(previousKcal) : null,
   };
 }
