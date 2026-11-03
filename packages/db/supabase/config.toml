@@ -412,6 +412,12 @@ verify_jwt = false
 import_map = "./functions/deno.json"
 entrypoint = "./functions/assistant/index.ts"
 
+[functions.mcp]
+enabled = true
+verify_jwt = false
+import_map = "./functions/deno.json"
+entrypoint = "./functions/mcp/index.ts"
+
 [analytics]
 enabled = true
 port = 54327
