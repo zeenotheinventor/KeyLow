@@ -69,7 +69,11 @@ describe("readAssistantActions", () => {
       ]);
     };
 
-    const read = await readAssistantActions(createTestClient(), {}, new Map([["recipes", source]]));
+    const read = await readAssistantActions(
+      createTestClient(),
+      {},
+      new Map([["unmapped_table", source]]),
+    );
 
     expect(asked).toEqual([[ENTRY_ID, OTHER_ENTRY_ID, MISSING_ENTRY_ID]]);
     expect(read.actions.map((action) => [action.id, action.targetIds, action.targets])).toEqual([
@@ -235,7 +239,11 @@ describe("the target rows of an action", () => {
       return Promise.resolve(chunk.map((id) => ({ id, updatedAt: null, row: {} })));
     };
 
-    const read = await readAssistantActions(createTestClient(), {}, new Map([["recipes", source]]));
+    const read = await readAssistantActions(
+      createTestClient(),
+      {},
+      new Map([["unmapped_table", source]]),
+    );
 
     expect(asked).toEqual([100, 100, 50]);
     expect(read.actions.every((action) => action.targets?.every((target) => target.found))).toBe(
@@ -358,5 +366,53 @@ describe("the food_log_entries target source", () => {
     const reads = await source?.(createTestClient(), [ENTRY_ID]);
 
     expect(reads?.[0]?.row).toMatchObject({ clock_time: "07:10" });
+  });
+});
+
+describe("the recipes target source", () => {
+  const source = assistantTargetSources.get("recipes");
+  const RECIPE_ID = "00000000-0000-4000-8000-0000000000e1";
+  const MISSING_RECIPE_ID = "00000000-0000-4000-8000-0000000000e2";
+
+  it("should read the recipes by id, archived or not, with the name and servings the words need and no change time", async () => {
+    const asked: URL[] = [];
+    server.use(
+      http.get(`${REST_URL}/recipes`, ({ request }) => {
+        asked.push(new URL(request.url));
+        return postgrestRows(request, [
+          { id: RECIPE_ID, name: "Pasta bake", servings: 4, is_archived: true },
+        ]);
+      }),
+    );
+
+    const reads = await source?.(createTestClient(), [RECIPE_ID, MISSING_RECIPE_ID]);
+
+    expect(asked[0]?.searchParams.get("id")).toBe(`in.(${RECIPE_ID},${MISSING_RECIPE_ID})`);
+    expect(asked[0]?.searchParams.get("is_archived")).toBeNull();
+    expect(reads).toEqual([
+      {
+        id: RECIPE_ID,
+        updatedAt: null,
+        row: { id: RECIPE_ID, name: "Pasta bake", servings: 4, is_archived: true },
+      },
+    ]);
+  });
+
+  it("should name the action and the database code in a failure and never the database's message", async () => {
+    server.use(
+      http.get(`${REST_URL}/recipes`, () =>
+        postgrestError(500, "XX000", "failing row (Pasta bake) violates a check"),
+      ),
+    );
+
+    const failure = await source?.(createTestClient(), [RECIPE_ID]).then(
+      () => null,
+      (caught: unknown) => caught,
+    );
+
+    expect(failure).toMatchObject({
+      message: "Could not load what the assistant changed (XX000)",
+      cause: { code: "XX000" },
+    });
   });
 });

@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary and day writes and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day and recipe writes and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -93,6 +93,9 @@ Deno.test(
         ["delete_entry", "write"],
         ["copy_day", "write"],
         ["set_day_complete", "write"],
+        ["create_recipe", "write"],
+        ["update_recipe", "write"],
+        ["archive_recipe", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -155,6 +158,14 @@ Deno.test("the strict tools of the registry stay inside what one request may hol
   assert(budget.tools <= strictLimits.tools, `${budget.tools} strict tools`);
   assert(budget.optionalParameters <= strictLimits.optionalParameters, JSON.stringify(budget));
   assert(budget.unionParameters <= strictLimits.unionParameters, JSON.stringify(budget));
+});
+
+Deno.test("update_recipe opts out of strict mode and the other recipe writes do not", () => {
+  const strictOf = (name: string) => toolRegistry.get(name)?.strict;
+
+  assertEquals(strictOf("update_recipe"), false);
+  assertEquals(strictOf("create_recipe"), undefined);
+  assertEquals(strictOf("archive_recipe"), undefined);
 });
 
 Deno.test(

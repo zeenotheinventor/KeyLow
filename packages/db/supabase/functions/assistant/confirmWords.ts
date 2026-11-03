@@ -3,7 +3,11 @@
 // tool with no line cannot be confirmed in the app, and the loop ends that turn as failed.
 import { z } from "zod";
 
-import { confirmCopyButtons, confirmDeleteButtons } from "../_shared/core.ts";
+import {
+  confirmArchiveButtons,
+  confirmCopyButtons,
+  confirmDeleteButtons,
+} from "../_shared/core.ts";
 
 export type ConfirmWords = {
   confirmLabel: string;
@@ -15,8 +19,9 @@ type WordsFor = (input: unknown) => ConfirmWords | null;
 
 const deleteEntryInput = z.object({ ids: z.array(z.string()).min(1) });
 const copyDayInput = z.object({ entry_count: z.number().int().min(1) });
+const archiveRecipeInput = z.object({ id: z.string() });
 
-// KEY-694 and KEY-697 add a line for each confirming tool they build.
+// KEY-697 adds a line for each confirming tool it builds.
 const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
   [
     "delete_entry",
@@ -35,6 +40,13 @@ const wordsByTool: ReadonlyMap<string, WordsFor> = new Map<string, WordsFor>([
         ? { ...confirmCopyButtons(parsed.data.entry_count), tone: "primary" }
         : null;
     },
+  ],
+  [
+    "archive_recipe",
+    (input) =>
+      archiveRecipeInput.safeParse(input).success
+        ? { ...confirmArchiveButtons(), tone: "primary" }
+        : null,
   ],
 ]);
 

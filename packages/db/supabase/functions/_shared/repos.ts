@@ -14,12 +14,14 @@ export type {
   LogFoodInput,
   LogQuickEntryInput,
   QuickEntryValues,
+  RecipeDetail,
   Targets,
   WeighIn,
 } from "./repos/index.js";
 export {
   CopyDayPartialWriteError,
   copyDay,
+  createRecipe,
   getDiaryDay,
   getDiaryWeek,
   getFood,
@@ -39,8 +41,10 @@ export {
   searchFoods,
   searchRecipes,
   setDayComplete,
+  setRecipeArchived,
   softDeleteLogEntries,
   softDeleteLogEntry,
   undoCopyDay,
   updateLogEntry,
+  updateRecipe,
 } from "./repos/index.js";
