@@ -2,7 +2,13 @@ export type { Database } from "./database.types";
 export { invokeEdgeFunction } from "./edge";
 export { KeyLowProvider, useFunctionsUrl, useSupabase } from "./KeyLowProvider";
 export { keys } from "./queryKeys";
-export { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "./recipeCache";
+export {
+  addToLibrary,
+  libraryNames,
+  setLibraryFlag,
+  summaryOf,
+  summaryOfStoredRecipe,
+} from "./recipeCache";
 export { CustomFoodValidationError } from "./customFoodInput";
 export {
   EdgeFunctionError,

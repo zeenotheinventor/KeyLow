@@ -138,6 +138,26 @@ describe("Icon", () => {
     expect(screen.getByRole("img", { name: "Add" })).toHaveProp("strokeWidth", 2.25);
   });
 
+  it("should be an outline, with no fill, by default", async () => {
+    await render(inScheme("dark", <Icon label="Favourite" name="Heart" />));
+
+    expect(screen.getByRole("img", { name: "Favourite" })).toHaveProp("fill", "none");
+  });
+
+  it("should fill the glyph with its own colour when it is filled", async () => {
+    await render(inScheme("dark", <Icon isFilled label="Favourite" name="Heart" tone="accent" />));
+
+    const icon = screen.getByRole("img", { name: "Favourite" });
+    expect(icon).toHaveProp("fill", themes.dark.accent);
+    expect(icon).toHaveProp("stroke", themes.dark.accent);
+  });
+
+  it("should fill with the light scheme's accent in light", async () => {
+    await render(inScheme("light", <Icon isFilled label="Favourite" name="Heart" tone="accent" />));
+
+    expect(screen.getByRole("img", { name: "Favourite" })).toHaveProp("fill", themes.light.accent);
+  });
+
   it("should render each name in the map", async () => {
     await render(
       inScheme(

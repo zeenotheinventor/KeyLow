@@ -1,6 +1,9 @@
+import { computeRecipe } from "@keylow/core/recipes";
+
 import { keys } from "./queryKeys";
 
 import type { RecipeDetail, RecipeSummary } from "./repos/recipes";
+import type { StoredRecipe } from "@keylow/core/recipes";
 import type { QueryClient } from "@tanstack/react-query";
 
 /** Puts a stored recipe in the cache of its own screen, so a screen that opens it next has it at once. */
@@ -29,6 +32,27 @@ export const summaryOf = ({
   is_archived,
   computed,
 }: RecipeDetail): RecipeSummary => ({ id, name, servings, yield_grams, is_archived, computed });
+
+/**
+ * The library columns of a recipe a screen already holds, which has no `computed` of its own: the nutrition is
+ * worked out from its ingredients, as the database does when it saves them. For a screen that adds the recipe
+ * to a cached list, such as the favourites.
+ */
+export const summaryOfStoredRecipe = ({
+  id,
+  name,
+  servings,
+  yield_grams,
+  is_archived,
+  ingredients,
+}: StoredRecipe & { id: string; is_archived: boolean }): RecipeSummary => ({
+  id,
+  name,
+  servings,
+  yield_grams,
+  is_archived,
+  computed: computeRecipe({ servings, yieldGrams: yield_grams, ingredients }),
+});
 
 /** The names in the library read, archived recipes included, or none when it has not been read yet. */
 export function libraryNames(queryClient: QueryClient): string[] {

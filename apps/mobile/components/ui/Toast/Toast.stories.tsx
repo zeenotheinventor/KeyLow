@@ -58,6 +58,22 @@ export const SuccessFilled: Story = {
   args: { message: "Ki-Lo has been updated!", icon: "CircleCheck", variant: "success-filled" },
 };
 
+// The favourite toasts sit just under the header, 64 points under the safe area for the food detail's stack header,
+// so the heart that was just tapped stays in view. No action: tapping the heart again is the undo.
+export const FavouriteAdded: Story = {
+  args: {
+    message: "Added to favourites",
+    icon: "Heart",
+    isIconFilled: true,
+    tone: "accent",
+    topOffset: 64,
+  },
+};
+
+export const FavouriteRemoved: Story = {
+  args: { message: "Removed from favourites", icon: "Heart", topOffset: 64 },
+};
+
 function ToastButtons() {
   const { show } = useToast();
   return (

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { FoodHeader } from "./FoodHeader";
 import { MacroHero } from "./MacroHero";
 import { PortionList } from "./PortionList";
+import { useFavouriteFoodHeart } from "../../lib/favourites";
 import { FoodFormScreen } from "../FoodFormScreen";
 import { NutrientTable } from "../NutrientTable";
 import { Banner, Button } from "../ui";
@@ -20,14 +21,16 @@ const MINIMUM_BOTTOM_PADDING = 34;
  * A food as the food detail boards draw it, under the sheet's "Food" header: its name and source, the
  * energy card, an Edit action for the user's own food or the review notice for a shared one with values
  * missing, then the nutrition and the portions. Values are per 100 g or 100 ml. The source's licence credit
- * is not here but on the About screen, reached from More.
+ * is not here but on the About screen, reached from More. The header has the favourite heart between the title
+ * and Close.
  */
 export function FoodDetail({ food, portions, onEdit, onCopy }: FoodDetailProps) {
   const { source } = food;
   const insets = useSafeAreaInsets();
+  const favouriteHeart = useFavouriteFoodHeart(food);
 
   return (
-    <FoodFormScreen isTitleHeading={false} title={FOOD_DETAIL.title}>
+    <FoodFormScreen extraControl={favouriteHeart} isTitleHeading={false} title={FOOD_DETAIL.title}>
       {/* The padding is a runtime value no class can name, so it goes through a variable. */}
       <View
         className="flex-1"

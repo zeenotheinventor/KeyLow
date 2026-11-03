@@ -27,6 +27,7 @@ const iconTones = {
   success: "success",
   warning: "warning",
   danger: "danger",
+  accent: "accent",
 } as const satisfies Record<ToastTone, IconProps["tone"]>;
 
 // The classes are written out so Tailwind sees them. The top edge is a runtime value (the safe area under the
@@ -71,6 +72,8 @@ function OpenToast({
   tone = "neutral",
   variant = "default",
   icon,
+  isIconFilled = false,
+  topOffset = gapBelowStatusBar,
   onClose,
   duration = defaultDuration,
   topInset = 0,
@@ -111,7 +114,7 @@ function OpenToast({
     <View
       className={placementClassName}
       style={vars({
-        "--toast-top": topInset + gapBelowStatusBar,
+        "--toast-top": topInset + topOffset,
       })}
       onTouchCancel={() => {
         setIsTouched(false);
@@ -151,7 +154,11 @@ function OpenToast({
             }}
           >
             {icon === undefined ? null : (
-              <Icon name={icon} tone={isFilled ? "text-on-success" : iconTones[tone]} />
+              <Icon
+                isFilled={isIconFilled}
+                name={icon}
+                tone={isFilled ? "text-on-success" : iconTones[tone]}
+              />
             )}
             {/* The design sets this at 14 over 20, which is between the type scale's sizes, so it is not a Text variant. */}
             <NativeText
