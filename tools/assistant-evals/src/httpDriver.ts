@@ -19,7 +19,12 @@ export type HttpDriverOptions = Readonly<{
    * stored messages as the eval user.
    */
   readToolCalls: (turnId: string) => Promise<readonly ToolCall[]>;
+  /** How long one message may take, stream included. Defaults to the Edge Function's wall clock. */
+  timeoutMilliseconds?: number;
 }>;
+
+/** The Edge Function's wall clock on the free plan (https://supabase.com/docs/guides/functions/limits). */
+export const TURN_REQUEST_TIMEOUT_MILLISECONDS = 150_000;
 
 // A failure names the status, the error code and the field paths of an event, and never a value: the
 // text of a stream is the person's.
@@ -59,6 +64,7 @@ const statusOf = (outcome: "complete" | "clarify" | "confirm" | "failed"): TurnS
 export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
   const { apiUrl, anonKey, getAccessToken, timeZone, readToolCalls } = options;
   const now = options.now ?? (() => new Date());
+  const timeoutMilliseconds = options.timeoutMilliseconds ?? TURN_REQUEST_TIMEOUT_MILLISECONDS;
 
   async function sendMessage({ conversationId, text }: SendMessageInput): Promise<TurnResult> {
     const response = await fetch(`${apiUrl}/functions/v1/assistant/turn`, {
@@ -74,6 +80,7 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
         localDate: localToday(now().toISOString(), timeZone),
         localTime: null,
       }),
+      signal: AbortSignal.timeout(timeoutMilliseconds),
     });
     if (!response.ok || response.body === null) {
       throw failure(`the call answered ${response.status} ${errorCodeOf(await response.text())}`);
@@ -81,34 +88,46 @@ export function createHttpDriver(options: HttpDriverOptions): TurnDriver {
 
     let turn: { turnId: string; conversationId: string } | null = null;
     let answer = "";
+    let lastNoticeCode: string | null = null;
     let buffer = "";
     const decoder = new TextDecoder();
     const reader = response.body.getReader();
-    for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
-      buffer += decoder.decode(chunk.value, { stream: true });
-      const blocks = buffer.split("\n\n");
-      buffer = blocks.pop() ?? "";
-      for (const block of blocks.filter((candidate) => candidate !== "")) {
-        const event = readEvent(block);
-        if (event.type === "turn") {
-          turn = { turnId: event.turnId, conversationId: event.conversationId };
-        } else if (event.type === "text") {
-          answer += event.delta;
-        } else if (event.type === "done") {
-          if (turn === null) {
-            throw failure("done arrived before the turn event");
+    try {
+      for (let chunk = await reader.read(); !chunk.done; chunk = await reader.read()) {
+        buffer += decoder.decode(chunk.value, { stream: true });
+        const blocks = buffer.split("\n\n");
+        buffer = blocks.pop() ?? "";
+        for (const block of blocks.filter((candidate) => candidate !== "")) {
+          const event = readEvent(block);
+          if (event.type === "turn") {
+            turn = { turnId: event.turnId, conversationId: event.conversationId };
+          } else if (event.type === "text") {
+            answer += event.delta;
+          } else if (event.type === "notice") {
+            // The code only, so a gate refusal is readable and nothing else of the notice is kept.
+            lastNoticeCode = event.notice.code;
+          } else if (event.type === "done") {
+            if (turn === null) {
+              throw failure("done arrived before the turn event");
+            }
+            return {
+              ...turn,
+              status: statusOf(event.outcome),
+              answer,
+              toolCalls: await readToolCalls(turn.turnId),
+            };
           }
-          await reader.cancel();
-          return {
-            ...turn,
-            status: statusOf(event.outcome),
-            answer,
-            toolCalls: await readToolCalls(turn.turnId),
-          };
         }
       }
+    } finally {
+      // A line that does not parse, or a done that came early, must not leave the function streaming.
+      await reader.cancel().catch(() => undefined);
     }
-    throw failure("the stream ended before done");
+    throw failure(
+      lastNoticeCode === null
+        ? "the stream ended before done"
+        : `the stream ended before done, after the notice ${lastNoticeCode}`,
+    );
   }
 
   return { sendMessage };

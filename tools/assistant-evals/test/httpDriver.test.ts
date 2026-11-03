@@ -187,3 +187,63 @@ describe("createHttpDriver, a stream that cannot be read", () => {
     );
   });
 });
+
+describe("createHttpDriver, the shape of the stream on the wire", () => {
+  it("should join an event that arrives in two writes, split inside a multibyte character", async () => {
+    const bytes = Buffer.from(`${turnEvent}${sse({ type: "text", delta: "café ☕ done" })}`);
+    const inside = bytes.indexOf(Buffer.from("☕")) + 1;
+    const rest = Buffer.from(sse({ type: "done", outcome: "complete" }));
+    answer = (response) => {
+      response.writeHead(200, { "Content-Type": "text/event-stream" });
+      response.write(bytes.subarray(0, inside));
+      setTimeout(() => {
+        response.write(bytes.subarray(inside));
+        response.end(rest);
+      }, 20);
+    };
+
+    const result = await driver().sendMessage({ conversationId: null, text: "eggs" });
+
+    expect(result.answer).toBe("café ☕ done");
+  });
+
+  it("should name the last notice when the stream ends before done", async () => {
+    streamOf(turnEvent, sse({ type: "notice", notice: { code: "consent_needed" } }));
+
+    await expect(driver().sendMessage({ conversationId: null, text: "eggs" })).rejects.toThrow(
+      /ended before done.*consent_needed/,
+    );
+  });
+
+  it("should close the stream when an event does not parse, and not leave it open", async () => {
+    let markClosed: () => void = () => undefined;
+    const closed = new Promise<void>((resolve) => {
+      markClosed = resolve;
+    });
+    answer = (response) => {
+      response.on("close", () => {
+        markClosed();
+      });
+      response.writeHead(200, { "Content-Type": "text/event-stream" });
+      // The stream stays open after the bad line, as a stalled function would.
+      response.write(`${turnEvent}data: not json\n\n`);
+    };
+
+    await expect(driver().sendMessage({ conversationId: null, text: "eggs" })).rejects.toThrow(
+      /invalid_json/,
+    );
+
+    await closed;
+  });
+
+  it("should give up on a stream that never ends after the time it is given", async () => {
+    answer = (response) => {
+      response.writeHead(200, { "Content-Type": "text/event-stream" });
+      response.write(turnEvent);
+    };
+
+    await expect(
+      driver({ timeoutMilliseconds: 100 }).sendMessage({ conversationId: null, text: "eggs" }),
+    ).rejects.toThrow(/timed out|aborted|timeout/i);
+  });
+});
