@@ -433,3 +433,5 @@ export {
 export type { AssistantActionsRead, AssistantConversationRead, AssistantUndoResult } from "./repos";
 export type { AssistantLiveTurn } from "./assistantLiveTurn";
 export type { StreamingFetch, StreamingResponse } from "./runAssistantTurn";
+
+export { AccountExportError, exportMyData, readMyDataByTable } from "./repos";

@@ -193,3 +193,4 @@ export type {
   AssistantTargetSource,
   AssistantUndoResult,
 } from "./assistantConversations";
+export { AccountExportError, exportMyData, readMyDataByTable } from "./accountExport";
