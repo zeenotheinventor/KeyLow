@@ -35,9 +35,9 @@ const WORDING = {
  * plate chip in the header opens Your plate to edit it, and Log food(s) beside the field writes it.
  */
 export function FoodSearch(props: FoodSearchProps) {
-  const { onClose, onOpenFood, onScanBarcode } = props;
+  const { initialQuery, onClose, onOpenFood, onScanBarcode } = props;
   const insets = useSafeAreaInsets();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(initialQuery ?? "");
   const scope = props.scope ?? "all";
   const isIngredient = props.ingredient !== undefined;
   const logging = props.logging;

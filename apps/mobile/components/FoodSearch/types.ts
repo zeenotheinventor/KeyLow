@@ -22,6 +22,8 @@ export type FoodSearchIngredient = {
 };
 
 type FoodSearchSharedProps = {
+  /** The word the search field opens with. Leave it out for an empty field. */
+  initialQuery?: string | undefined;
   onClose: () => void;
   onOpenFood: (foodId: string) => void;
   /** Opens the scanner from the search field's Scan barcode button. */

@@ -1,6 +1,7 @@
 import { ASSISTANT_SHEET, ASSISTANT_STOPPED, describeAssistantNotice } from "@keylow/core/copy";
 
 import { AssistantNotice, ChatMessage, ChipGroup } from "../../ui";
+import { AssistantCardEntry } from "../AssistantCardEntry";
 
 import type { AssistantThreadProps } from "./types";
 import type { AssistantNoticeTone, IconName } from "../../ui";
@@ -21,7 +22,8 @@ const noticeLooks: Record<
 const askAgainOptions = [{ value: "ask-again", label: ASSISTANT_STOPPED.askAgain }];
 
 /**
- * The messages of the conversation, oldest first, with the quick reply under an answer that was cut short.
+ * The messages and action cards of the conversation, oldest first, with the quick reply under an answer
+ * that was cut short.
  * Every word comes from the thread the screen was given or from core's copy, so nothing here words a
  * message, and nothing in it decides what to show.
  */
@@ -30,6 +32,7 @@ export function AssistantThread({
   timeZone,
   onTryAgain,
   onAskAgain,
+  onOpenCardLink,
 }: AssistantThreadProps) {
   function renderEntry(entry: AssistantSheetEntry) {
     switch (entry.kind) {
@@ -42,6 +45,8 @@ export function AssistantThread({
             speakerLabel={ASSISTANT_SHEET.speakerYou}
           />
         );
+      case "card":
+        return <AssistantCardEntry card={entry.card} key={entry.key} onOpenLink={onOpenCardLink} />;
       case "assistant":
         return (
           <ChatMessage

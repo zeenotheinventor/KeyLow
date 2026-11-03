@@ -144,7 +144,6 @@ describe("the recipe editor's routes", () => {
     });
 
     it.each([
-      ["is loading", { status: "loading" }],
       ["failed to load", { status: "error", debugMessage: "raw database text" }],
       ["is not there", { status: "notFound" }],
     ] satisfies [string, RecipeState][])(
@@ -160,6 +159,30 @@ describe("the recipe editor's routes", () => {
         expect(screen.queryByText(GENERIC_ERROR)).not.toBeOnTheScreen();
       },
     );
+
+    it("should hold on a loading screen while the recipe loads, and not replace itself", async () => {
+      mockRecipeState.current = { status: "loading" };
+      await showRoute("edit", { id: RECIPE_ID });
+
+      expect(screen.getByLabelText(RECIPE_EDITOR.loadingLabel)).toBeOnTheScreen();
+      expect(routerMock.replace).not.toHaveBeenCalled();
+      expect(screen.queryByLabelText("Name")).not.toBeOnTheScreen();
+    });
+
+    it("should open the editor with its add-ingredient search on the word the address carries", async () => {
+      mockRecipeState.current = readyState;
+      await showRoute("edit", { id: RECIPE_ID, addIngredient: "white wine" });
+
+      expect(await screen.findByRole("heading", { name: "Add ingredient" })).toBeOnTheScreen();
+      expect(screen.getByLabelText("Search foods")).toHaveDisplayValue("white wine");
+    });
+
+    it("should use the first of a repeated word", async () => {
+      mockRecipeState.current = readyState;
+      await showRoute("edit", { id: RECIPE_ID, addIngredient: ["white wine", "stock"] });
+
+      expect(await screen.findByLabelText("Search foods")).toHaveDisplayValue("white wine");
+    });
 
     it("should send an id that cannot be a recipe to the view, and ask about nothing", async () => {
       await showRoute("edit", { id: "abc" });

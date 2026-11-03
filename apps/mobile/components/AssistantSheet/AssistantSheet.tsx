@@ -11,12 +11,14 @@ import {
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
+  isSentTurnStored,
   isStaleStreamGateNotice,
   resolveAssistantSheetAccess,
   resolveAssistantTimeZone,
 } from "@keylow/core";
 import { ASSISTANT_OFFLINE, ASSISTANT_SHEET, SAVE_FAILED_BANNER } from "@keylow/core/copy";
 import { fetch as streamingFetch } from "expo/fetch";
+import { useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { AccessibilityInfo, View } from "react-native";
 
@@ -24,11 +26,12 @@ import { AssistantEmpty } from "./AssistantEmpty";
 import { AssistantThread } from "./AssistantThread";
 import { Composer } from "./Composer";
 import { ConsentCard } from "./ConsentCard";
+import { assistantCardHref } from "../../lib/assistantCardRoutes";
 import { useIsOnline } from "../../lib/connectivity";
 import { Banner, BottomSheet, SheetHeader, SheetScrollView, useToast } from "../ui";
 
 import type { AssistantSheetProps } from "./types";
-import type { AssistantSheetSent } from "@keylow/core";
+import type { AssistantCardLink, AssistantSheetSent } from "@keylow/core";
 import type { ComponentRef } from "react";
 
 const deviceTimeZone = () => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -58,6 +61,7 @@ const threadClassNames = {
  */
 export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps) {
   const isOnline = useIsOnline();
+  const router = useRouter();
   const conversation = useAssistantConversation({ enabled: open });
   const status = useAssistantStatus();
   const setConsent = useSetAssistantConsent();
@@ -133,10 +137,12 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
   const isThreadKnown = conversation.isSuccess || conversation.isError;
   const isEmpty = thread.entries.length === 0;
 
-  // Once the answer has ended and the stored conversation has moved past where the message was sent, the
-  // stored conversation holds the turn, so the message sent from here is let go. If it were kept, the thread
-  // going empty again (a new conversation, or every conversation deleted) would draw the old message back.
-  if (sent !== null && !isStreaming && (items?.at(-1)?.id ?? null) !== sent.afterItemId) {
+  // Once the answer has ended and the stored conversation holds the turn (a reply or a notice after
+  // where the message was sent), the message sent from here is let go. If it were kept, the thread going
+  // empty again (a new conversation, or every conversation deleted) would draw the old message back. A read
+  // that holds only your message, or your message and a card while words are to come, does not count, or the
+  // reply would vanish until the next read.
+  if (sent !== null && !isStreaming && isSentTurnStored(items ?? [], sent.afterItemId, live)) {
     setSent(null);
   }
 
@@ -206,6 +212,12 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
     onClose();
   }
 
+  // The sheet closes first, so the screen the link opens is not under it.
+  function openCardLink(target: AssistantCardLink["target"]) {
+    close();
+    router.push(assistantCardHref(target));
+  }
+
   function turnOnAssistant() {
     // The notice the stream left is of the time before consent, so it is let go with the message.
     setConsent.mutate(
@@ -253,6 +265,7 @@ export function AssistantSheet({ open, onClose, localDate }: AssistantSheetProps
         timeZone={timeZone}
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
+        onOpenCardLink={openCardLink}
       />
     );
   }

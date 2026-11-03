@@ -29,3 +29,13 @@ export const ASSISTANT_SHEET = {
   speakerYou: "You",
   speakerAssistant: "Assistant",
 } as const;
+
+/**
+ * The note of a card whose Undo is off because the entries it made were changed in the diary since
+ * (`assistant-card · undo-unavailable`). A card read back from the thread carries no such note, so the
+ * sheet words it for the cards that make or copy diary entries.
+ */
+export const ASSISTANT_CARD_NOTES = {
+  entriesChanged:
+    "You changed these entries in your diary since, so Undo is off. Edit or delete them in the diary.",
+} as const;
