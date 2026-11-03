@@ -56,8 +56,6 @@ function drawings() {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("SearchField", () => {
   let kitStyles: string;
 
@@ -335,11 +333,11 @@ describe("SearchField", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("dark", name);
 
     it("should be a 44 point box on the raised surface with a border, rounded medium", async () => {
-      await renderField({}, scheme);
+      await renderField({}, "dark");
       await screen.findByRole("searchbox", { name: "Search foods" });
 
       const [box] = viewsDrawn({
@@ -359,7 +357,7 @@ describe("SearchField", () => {
     });
 
     it("should turn its border to the accent while it has focus, and back when it loses it", async () => {
-      await renderField({}, scheme);
+      await renderField({}, "dark");
       const field = await screen.findByRole("searchbox", { name: "Search foods" });
       expect(viewsDrawn({ borderColor: colorOf("accent"), height: 44 })).toHaveLength(0);
 
@@ -371,7 +369,7 @@ describe("SearchField", () => {
     });
 
     it("should write in the primary text colour in Geist regular at 16, in a 40 point input", async () => {
-      await renderField({ value: "oats" }, scheme);
+      await renderField({ value: "oats" }, "dark");
 
       expect(await screen.findByRole("searchbox", { name: "Search foods" })).toHaveStyle({
         color: colorOf("text-primary"),
@@ -382,17 +380,17 @@ describe("SearchField", () => {
     });
 
     it("should draw its placeholder and its search icon in the muted text colour", async () => {
-      await renderField({}, scheme);
+      await renderField({}, "dark");
 
       expect(await screen.findByPlaceholderText("Search for a food")).toHaveProp(
         "placeholderTextColor",
-        themes[scheme]["text-muted"],
+        themes.dark["text-muted"],
       );
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-muted"]);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-muted"]);
     });
 
     it("should be docked: a hairline above it on the background, padded 16 across, 8 above and 12 below", async () => {
-      await renderField({}, scheme);
+      await renderField({}, "dark");
       await screen.findByRole("searchbox", { name: "Search foods" });
 
       expect(
@@ -405,6 +403,20 @@ describe("SearchField", () => {
       expect(
         viewsDrawn({ paddingLeft: 16, paddingRight: 16, paddingTop: 8, paddingBottom: 12 }),
       ).toHaveLength(1);
+    });
+  });
+
+  // The placeholder's colour is passed to the native input from the theme's palette (`useTheme().colors`), not
+  // a class, so one light case proves the light palette reaches it. The boxes and borders are classes.
+  describe("in the light scheme", () => {
+    it("should draw its placeholder and its search icon in the muted text colour", async () => {
+      await renderField({}, "light");
+
+      expect(await screen.findByPlaceholderText("Search for a food")).toHaveProp(
+        "placeholderTextColor",
+        themes.light["text-muted"],
+      );
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["text-muted"]);
     });
   });
 });

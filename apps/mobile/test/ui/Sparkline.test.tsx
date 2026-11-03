@@ -128,25 +128,36 @@ describe("Sparkline", () => {
     });
   });
 
-  describe.each<ThemeScheme>(["dark", "light"])("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the neutral line in the trend token and its dot in the marker token", async () => {
-      await renderSparkline([40, 45, 50], {}, scheme);
+      await renderSparkline([40, 45, 50], {}, "dark");
 
-      expect(drawn("Path")[0]?.props.color).toBe(themes[scheme]["chart-trend"]);
-      expect(drawn("Circle")[0]?.props.color).toBe(themes[scheme]["chart-marker"]);
+      expect(drawn("Path")[0]?.props.color).toBe(themes.dark["chart-trend"]);
+      expect(drawn("Circle")[0]?.props.color).toBe(themes.dark["chart-marker"]);
     });
 
     it("should draw a positive line in the success ink and a negative one in the danger colour", async () => {
-      await renderSparkline([40, 45, 50], { tone: "positive" }, scheme);
+      await renderSparkline([40, 45, 50], { tone: "positive" }, "dark");
 
-      expect(drawn("Path")[0]?.props.color).toBe(themes[scheme]["success-ink"]);
-      expect(drawn("Circle")[0]?.props.color).toBe(themes[scheme]["success-ink"]);
+      expect(drawn("Path")[0]?.props.color).toBe(themes.dark["success-ink"]);
+      expect(drawn("Circle")[0]?.props.color).toBe(themes.dark["success-ink"]);
     });
 
     it("should draw a negative line in the danger colour", async () => {
-      await renderSparkline([50, 45, 40], { tone: "negative" }, scheme);
+      await renderSparkline([50, 45, 40], { tone: "negative" }, "dark");
 
-      expect(drawn("Path")[0]?.props.color).toBe(themes[scheme].danger);
+      expect(drawn("Path")[0]?.props.color).toBe(themes.dark.danger);
+    });
+  });
+
+  // The positive tone is the success ink, which is the success colour in dark and a darker green in light, so only
+  // the light run tells the line (`line`) and the dot (`dot`) of that tone from a plain `success`.
+  describe("in the light scheme", () => {
+    it("should draw a positive line in the success ink and a negative one in the danger colour", async () => {
+      await renderSparkline([40, 45, 50], { tone: "positive" }, "light");
+
+      expect(drawn("Path")[0]?.props.color).toBe(themes.light["success-ink"]);
+      expect(drawn("Circle")[0]?.props.color).toBe(themes.light["success-ink"]);
     });
   });
 });

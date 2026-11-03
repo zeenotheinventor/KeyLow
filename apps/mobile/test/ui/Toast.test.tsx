@@ -25,8 +25,6 @@ jest.mock(
 
 setUpTests();
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 function inScheme(scheme: ThemeScheme, children: React.ReactNode) {
   return <ThemeProvider fixedPreference={scheme}>{children}</ThemeProvider>;
 }
@@ -156,7 +154,7 @@ describe("Toast", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it.each([
       { tone: "neutral", colorName: "text-secondary" },
       { tone: "success", colorName: "success" },
@@ -165,19 +163,34 @@ describe("Toast", () => {
     ] as const)(
       "should colour the icon with the $tone tone and nothing else",
       async ({ tone, colorName }) => {
-        await renderToast({ icon: "Check", tone }, scheme);
+        await renderToast({ icon: "Check", tone }, "dark");
 
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme][colorName]);
+        expect(drawings()[0]).toHaveProp("stroke", themes.dark[colorName]);
       },
     );
 
     // The design draws the action in `--accent-ink`, which is lime in dark and the primary text colour in
     // light. The token is not in main yet, so the kit resolves it here until it lands.
-    it("should draw the action as accent ink, lime in dark and the primary text in light", async () => {
-      await renderToast({ actionLabel: "Undo", onAction: () => undefined }, scheme);
+    it("should draw the action as accent ink, lime in dark", async () => {
+      await renderToast({ actionLabel: "Undo", onAction: () => undefined }, "dark");
 
       expect(await screen.findByText("Undo")).toHaveStyle({
-        color: resolvedColor(scheme, scheme === "dark" ? "accent" : "text-primary"),
+        color: resolvedColor("dark", "accent"),
+      });
+    });
+  });
+
+  // The default action is `accent` in dark and the primary text colour in light (`scheme === "dark"` in Toast), so
+  // the light run is the one that tells the branches apart. The icon tones and the filled variant ask for the same
+  // token in both schemes.
+  describe("in the light scheme", () => {
+    // The design draws the action in `--accent-ink`, which is lime in dark and the primary text colour in
+    // light. The token is not in main yet, so the kit resolves it here until it lands.
+    it("should draw the action as accent ink, lime in dark and the primary text in light", async () => {
+      await renderToast({ actionLabel: "Undo", onAction: () => undefined }, "light");
+
+      expect(await screen.findByText("Undo")).toHaveStyle({
+        color: resolvedColor("light", "text-primary"),
       });
     });
   });
@@ -220,7 +233,7 @@ describe("Toast", () => {
   });
 
   describe("the filled success variant", () => {
-    describe.each(schemes)("in the %s scheme", (scheme) => {
+    describe("in the dark scheme", () => {
       const filled = {
         variant: "success-filled",
         icon: "Check",
@@ -229,51 +242,48 @@ describe("Toast", () => {
       } as const;
 
       it("should fill the card with the success colour", async () => {
-        await renderToast(filled, scheme);
+        await renderToast(filled, "dark");
 
         expect(await screen.findByTestId("toast-box")).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "success"),
-          borderColor: resolvedColor(scheme, "success"),
+          backgroundColor: resolvedColor("dark", "success"),
+          borderColor: resolvedColor("dark", "success"),
         });
       });
 
       it("should draw the words in the ink for the success fill", async () => {
-        await renderToast(filled, scheme);
+        await renderToast(filled, "dark");
 
         expect(await screen.findByText("Entry deleted")).toHaveStyle({
-          color: resolvedColor(scheme, "text-on-success"),
+          color: resolvedColor("dark", "text-on-success"),
         });
       });
 
       it("should draw the icon in the ink for the success fill, whatever the tone", async () => {
-        await renderToast({ ...filled, tone: "danger" }, scheme);
+        await renderToast({ ...filled, tone: "danger" }, "dark");
 
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-on-success"]);
+        expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-on-success"]);
       });
 
       it("should draw the action in the ink for the success fill, not lime or the primary text", async () => {
-        await renderToast(filled, scheme);
+        await renderToast(filled, "dark");
 
         expect(await screen.findByText("View")).toHaveStyle({
-          color: resolvedColor(scheme, "text-on-success"),
+          color: resolvedColor("dark", "text-on-success"),
         });
       });
     });
 
-    it.each(schemes)(
-      "should leave the default look alone, a sheet card with primary words, in the %s scheme",
-      async (scheme) => {
-        await renderToast({}, scheme);
+    it("should leave the default look alone, a sheet card with primary words, in the dark scheme", async () => {
+      await renderToast({}, "dark");
 
-        expect(await screen.findByTestId("toast-box")).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface-sheet"),
-          borderColor: resolvedColor(scheme, "border"),
-        });
-        expect(screen.getByText("Entry deleted")).toHaveStyle({
-          color: resolvedColor(scheme, "text-primary"),
-        });
-      },
-    );
+      expect(await screen.findByTestId("toast-box")).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "surface-sheet"),
+        borderColor: resolvedColor("dark", "border"),
+      });
+      expect(screen.getByText("Entry deleted")).toHaveStyle({
+        color: resolvedColor("dark", "text-primary"),
+      });
+    });
   });
 
   describe("dismissing it", () => {

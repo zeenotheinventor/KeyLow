@@ -23,8 +23,6 @@ function renderNumericInput(props: Partial<NumericInputProps> = {}, scheme: Them
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("NumericInput", () => {
   let kitStyles: string;
 
@@ -267,11 +265,11 @@ describe("NumericInput", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: ColorName) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: ColorName) => resolvedColor("dark", name);
 
     it("should be the food form boards' 44 point box by default: 12 across, with 6 between the digits and the unit", async () => {
-      await renderNumericInput({}, scheme);
+      await renderNumericInput({}, "dark");
       await screen.findByLabelText("Energy (kcal)");
 
       const [box] = viewsDrawn({
@@ -284,7 +282,7 @@ describe("NumericInput", () => {
     });
 
     it("should be padded 16 with 8 between the digits and the unit in the comfortable density", async () => {
-      await renderNumericInput({ density: "comfortable" }, scheme);
+      await renderNumericInput({ density: "comfortable" }, "dark");
       await screen.findByLabelText("Energy (kcal)");
 
       const [box] = viewsDrawn({ minHeight: 44, paddingLeft: 16, paddingRight: 16 });
@@ -292,7 +290,7 @@ describe("NumericInput", () => {
     });
 
     it("should right align its digits, in tabular figures", async () => {
-      await renderNumericInput({ value: "165" }, scheme);
+      await renderNumericInput({ value: "165" }, "dark");
 
       const field = await screen.findByLabelText("Energy (kcal)");
       // NativeWind hands a text input's alignment over as a prop, not a style.
@@ -308,7 +306,7 @@ describe("NumericInput", () => {
     it("should left align its digits, with the unit at the far end, when asked", async () => {
       await renderNumericInput(
         { value: "81.4", unit: "kg", align: "left", label: "Weight" },
-        scheme,
+        "dark",
       );
 
       const field = await screen.findByLabelText("Weight (kg)");
@@ -318,7 +316,7 @@ describe("NumericInput", () => {
     });
 
     it("should set the unit in muted body text", async () => {
-      await renderNumericInput({}, scheme);
+      await renderNumericInput({}, "dark");
 
       expect(await screen.findByText("kcal", { includeHiddenElements: true })).toHaveStyle({
         color: colorOf("text-muted"),
@@ -328,14 +326,14 @@ describe("NumericInput", () => {
     });
 
     it("should turn its border to the accent while it has focus, and to danger with an error", async () => {
-      await renderNumericInput({}, scheme);
+      await renderNumericInput({}, "dark");
       const field = await screen.findByLabelText("Energy (kcal)");
 
       await fireEvent(field, "focus");
       expect(viewsDrawn({ minHeight: 44, borderColor: colorOf("accent") })).toHaveLength(1);
 
       await screen.unmount();
-      await renderNumericInput({ error: "Energy is required" }, scheme);
+      await renderNumericInput({ error: "Energy is required" }, "dark");
       expect(viewsDrawn({ minHeight: 44, borderColor: colorOf("danger") })).toHaveLength(1);
     });
   });

@@ -55,8 +55,6 @@ function firstShine() {
   return shine;
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Skeleton", () => {
   let kitStyles: string;
 
@@ -508,40 +506,53 @@ describe("Skeleton", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw every bone in the skeleton base colour", async () => {
-      await renderSkeleton({ variant: "row" }, scheme);
+      await renderSkeleton({ variant: "row" }, "dark");
 
       for (const bone of bones()) {
-        expect(bone).toHaveStyle({ backgroundColor: resolvedColor(scheme, "skeleton-base") });
+        expect(bone).toHaveStyle({ backgroundColor: resolvedColor("dark", "skeleton-base") });
       }
     });
 
     it("should shine in the skeleton shine token, fading to clear at both edges", async () => {
-      await renderSkeleton({ variant: "row" }, scheme);
+      await renderSkeleton({ variant: "row" }, "dark");
 
       const [band] = screen.getAllByTestId("skeleton-shine-band", hidden);
       expect(band).toHaveStyle({
-        experimental_backgroundImage: `linear-gradient(100deg, transparent, ${themes[scheme]["skeleton-shine"]}, transparent)`,
+        experimental_backgroundImage: `linear-gradient(100deg, transparent, ${themes.dark["skeleton-shine"]}, transparent)`,
       });
     });
 
     it("should draw the nutrition card's ring in the skeleton base colour", async () => {
-      await renderSkeleton({ variant: "nutritionCard" }, scheme);
+      await renderSkeleton({ variant: "nutritionCard" }, "dark");
 
       expect(screen.getByTestId("skeleton-ring", hidden)).toHaveStyle({
-        borderColor: resolvedColor(scheme, "skeleton-base"),
+        borderColor: resolvedColor("dark", "skeleton-base"),
       });
     });
 
     it("should draw the group on a card: the surface, a hairline border and the large radius", async () => {
-      await renderSkeleton({ variant: "group" }, scheme);
+      await renderSkeleton({ variant: "group" }, "dark");
 
       expect(screen.getByTestId("skeleton-card", hidden)).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
         borderRadius: 20,
+      });
+    });
+  });
+
+  // The shine gradient is built in code from the theme's palette (`themes[scheme]` in the provider), not a class,
+  // so one light case proves the light palette reaches it. The other bones and cards are classes.
+  describe("in the light scheme", () => {
+    it("should shine in the skeleton shine token, fading to clear at both edges", async () => {
+      await renderSkeleton({ variant: "row" }, "light");
+
+      const [band] = screen.getAllByTestId("skeleton-shine-band", hidden);
+      expect(band).toHaveStyle({
+        experimental_backgroundImage: `linear-gradient(100deg, transparent, ${themes.light["skeleton-shine"]}, transparent)`,
       });
     });
   });

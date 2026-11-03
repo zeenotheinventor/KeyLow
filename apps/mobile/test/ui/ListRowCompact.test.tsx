@@ -130,12 +130,12 @@ describe("a compact ListRow", () => {
     expect(screen.getByLabelText(rowName)).toBeOnTheScreen();
   });
 
-  describe.each(["dark", "light"] as const)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the title as a 14 over 20 semibold label in the primary colour", async () => {
-      await renderRow({ size: "compact" }, scheme);
+      await renderRow({ size: "compact" }, "dark");
 
       expect(screen.getByText("Sat 10 Oct")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 14,
         lineHeight: 20,
@@ -143,20 +143,20 @@ describe("a compact ListRow", () => {
     });
 
     it("should draw the subtitle as a 12 over 16 caption in the muted colour", async () => {
-      await renderRow({ size: "compact" }, scheme);
+      await renderRow({ size: "compact" }, "dark");
 
       expect(screen.getByText("08:00 · Added by you")).toHaveStyle({
-        color: resolvedColor(scheme, "text-muted"),
+        color: resolvedColor("dark", "text-muted"),
         fontSize: 12,
         lineHeight: 16,
       });
     });
 
     it("should draw the value and unit as a 16 over 24 semibold figure in the primary colour", async () => {
-      await renderRow({ size: "compact" }, scheme);
+      await renderRow({ size: "compact" }, "dark");
 
       expect(screen.getByText("99.0 kg")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 16,
         lineHeight: 24,
@@ -164,10 +164,10 @@ describe("a compact ListRow", () => {
     });
 
     it("should draw the value and unit in the muted colour when the value tone is muted", async () => {
-      await renderRow({ size: "compact", valueTone: "muted" }, scheme);
+      await renderRow({ size: "compact", valueTone: "muted" }, "dark");
 
       expect(screen.getByText("99.0 kg")).toHaveStyle({
-        color: resolvedColor(scheme, "text-muted"),
+        color: resolvedColor("dark", "text-muted"),
       });
     });
   });

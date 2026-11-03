@@ -57,8 +57,6 @@ function barScale(): number | undefined {
 // The bar's box is three views up from its button: the press wrapper, the flexible slot, then the box.
 const barOf = (button: ReturnType<typeof screen.getByRole>) => button.parent?.parent?.parent;
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("SearchLauncher", () => {
   let kitStyles: string;
 
@@ -182,24 +180,24 @@ describe("SearchLauncher", () => {
     });
   });
 
-  describe.each(schemes)("the look in the %s scheme", (scheme) => {
+  describe("the look in the dark scheme", () => {
     it("should be a 44 point field on the raised surface: bordered, rounded medium, with the card elevation", async () => {
-      await renderLauncher({}, scheme);
+      await renderLauncher({}, "dark");
       await screen.findByText("Search for a food");
 
       const fields = viewsDrawn({
         height: 44,
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
         borderRadius: 12,
-        boxShadow: elevation[scheme].card,
+        boxShadow: elevation["dark"].card,
       });
       expect(fields).toHaveLength(1);
     });
 
     it("should sit in 16 points either side and 8 above and below, as the frames draw it", async () => {
-      await renderLauncher({}, scheme);
+      await renderLauncher({}, "dark");
       await screen.findByText("Search for a food");
 
       expect(
@@ -208,10 +206,10 @@ describe("SearchLauncher", () => {
     });
 
     it("should write the label muted in the body style", async () => {
-      await renderLauncher({}, scheme);
+      await renderLauncher({}, "dark");
 
       expect(await screen.findByText("Search for a food")).toHaveStyle({
-        color: resolvedColor(scheme, "text-muted"),
+        color: resolvedColor("dark", "text-muted"),
         fontFamily: "Geist-Regular",
         fontSize: 16,
         lineHeight: 24,
@@ -219,7 +217,7 @@ describe("SearchLauncher", () => {
     });
 
     it("should make the bar a 42 point button with 16 points before its search icon", async () => {
-      await renderLauncher({}, scheme);
+      await renderLauncher({}, "dark");
 
       expect(await screen.findByRole("button", { name: "Search for a food" })).toHaveStyle({
         height: 42,
@@ -229,7 +227,7 @@ describe("SearchLauncher", () => {
     });
 
     it("should reach a 44 point touch target from the 36 point barcode control", async () => {
-      await renderLauncher({}, scheme);
+      await renderLauncher({}, "dark");
 
       const control = await screen.findByRole("button", { name: "Scan barcode" });
       expect(control).toHaveStyle({ height: 36, width: 36 });

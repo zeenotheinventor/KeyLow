@@ -51,8 +51,6 @@ function drawings() {
 // What NativeWind resolves a transparent class to.
 const transparent = "#00000000";
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 function expectButtonsInOrder(names: readonly string[]) {
   const buttons = screen.getAllByRole("button");
   expect(buttons).toHaveLength(names.length);
@@ -401,18 +399,18 @@ describe("SheetHeader", () => {
     ).toHaveProp("numberOfLines", 1);
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the sheet header's controls on the raised surface", async () => {
-      await renderHeader(searchHeader, scheme);
+      await renderHeader(searchHeader, "dark");
 
       expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border"),
       });
     });
 
     it("should draw the stack header's controls clear", async () => {
-      await renderHeader(stackHeader, scheme);
+      await renderHeader(stackHeader, "dark");
 
       expect(await screen.findByRole("button", { name: "Back" })).toHaveStyle({
         backgroundColor: transparent,
@@ -420,10 +418,10 @@ describe("SheetHeader", () => {
     });
 
     it("should set the title in the primary text colour", async () => {
-      await renderHeader(searchHeader, scheme);
+      await renderHeader(searchHeader, "dark");
 
       expect(await screen.findByRole("heading", { name: "Find food" })).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
   });

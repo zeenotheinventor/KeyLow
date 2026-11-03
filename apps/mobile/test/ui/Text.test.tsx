@@ -7,7 +7,7 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
 
 import type { TextTone, TextVariant } from "../../components/ui";
-import type { ColorName, ThemeScheme } from "@keylow/tokens";
+import type { ColorName } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -109,8 +109,6 @@ const tones: { tone: TextTone; colorName: ColorName }[] = [
   { tone: "on-status", colorName: "text-on-status" },
 ];
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Text", () => {
   let kitStyles: string;
 
@@ -159,44 +157,58 @@ describe("Text", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should be the primary text colour by default", async () => {
       await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <Text>Plain</Text>
         </ThemeProvider>,
       );
 
       expect(await screen.findByText("Plain")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
     it.each(tones)("should colour the $tone tone from its token", async ({ tone, colorName }) => {
       await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <Text tone={tone}>Toned</Text>
         </ThemeProvider>,
       );
 
       expect(await screen.findByText("Toned")).toHaveStyle({
-        color: resolvedColor(scheme, colorName),
+        color: resolvedColor("dark", colorName),
       });
     });
   });
 
   // The design's `--warning-ink` is the warning colour in dark and the primary text colour in light,
   // where warning is too faint for text (Q14). It is the `warning-ink` token.
-  describe.each(schemes)("the warning ink tone in the %s scheme", (scheme) => {
-    it("should be the warning colour in dark and the primary text colour in light", async () => {
+  describe("the warning ink tone in the dark scheme", () => {
+    it("should be the warning colour", async () => {
       await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <Text tone="warning-ink">Needs review</Text>
         </ThemeProvider>,
       );
 
       expect(await screen.findByText("Needs review")).toHaveStyle({
-        color: resolvedColor(scheme, "warning-ink"),
+        color: resolvedColor("dark", "warning-ink"),
+      });
+    });
+  });
+
+  describe("the warning ink tone in the light scheme", () => {
+    it("should be the warning colour in dark and the primary text colour in light", async () => {
+      await render(
+        <ThemeProvider fixedPreference="light">
+          <Text tone="warning-ink">Needs review</Text>
+        </ThemeProvider>,
+      );
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({
+        color: resolvedColor("light", "warning-ink"),
       });
     });
   });

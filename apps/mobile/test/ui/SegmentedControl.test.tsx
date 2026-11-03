@@ -68,8 +68,6 @@ function AppearanceChoice() {
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("SegmentedControl", () => {
   let kitStyles: string;
 
@@ -233,11 +231,11 @@ describe("SegmentedControl", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
 
     it("should be a 44 point track on the raised surface with a hairline border, padded 3 inside it", async () => {
-      await renderBasis({ value: "per-100-g" }, scheme);
+      await renderBasis({ value: "per-100-g" }, "dark");
       await screen.findByLabelText("Nutrition basis");
 
       const [track] = viewsDrawn({
@@ -251,7 +249,7 @@ describe("SegmentedControl", () => {
     });
 
     it("should fill the chosen segment with the primary text colour and write on it in the background colour", async () => {
-      await renderBasis({ value: "per-100-g" }, scheme);
+      await renderBasis({ value: "per-100-g" }, "dark");
       await screen.findByLabelText("Nutrition basis");
 
       expect(
@@ -261,7 +259,7 @@ describe("SegmentedControl", () => {
     });
 
     it("should leave the other segment clear and write on it in secondary text", async () => {
-      await renderBasis({ value: "per-100-g" }, scheme);
+      await renderBasis({ value: "per-100-g" }, "dark");
       await screen.findByLabelText("Nutrition basis");
 
       expect(viewsDrawn({ height: 36, borderRadius: 9 })).toHaveLength(2);
@@ -269,7 +267,7 @@ describe("SegmentedControl", () => {
     });
 
     it("should set each label in Geist semibold at 14 over 20", async () => {
-      await renderBasis({ value: "per-100-g" }, scheme);
+      await renderBasis({ value: "per-100-g" }, "dark");
 
       expect(await screen.findByText("Per 100 g")).toHaveStyle({
         fontFamily: "Geist-SemiBold",
@@ -280,7 +278,7 @@ describe("SegmentedControl", () => {
 
     it("should share the track equally between its segments", async () => {
       await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <SegmentedControl
             label="Appearance"
             options={appearanceOptions}

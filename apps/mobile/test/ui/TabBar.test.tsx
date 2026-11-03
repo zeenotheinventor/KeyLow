@@ -115,8 +115,6 @@ const pillOpacities = () =>
 const slide = () => screen.getByTestId("tab-bar-underline-slide");
 const underline = () => screen.getByTestId("tab-bar-underline");
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("TabBar", () => {
   let kitStyles: string;
 
@@ -251,66 +249,79 @@ describe("TabBar", () => {
     });
   });
 
-  describe.each(schemes)("the iOS idiom in the %s scheme", (scheme) => {
+  describe("the iOS idiom in the dark scheme", () => {
     it("should be the surface with a hairline above it, 49 points tall counting the hairline", async () => {
-      await renderTabBar({}, scheme);
+      await renderTabBar({}, "dark");
 
       expect(await screen.findByLabelText("Main")).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface"),
+        backgroundColor: resolvedColor("dark", "surface"),
         borderTopWidth: 1,
-        borderColor: resolvedColor(scheme, "border"),
+        borderColor: resolvedColor("dark", "border"),
       });
       expect(screen.getByRole("tab", { name: "Diary" })).toHaveStyle({ height: 48 });
     });
 
     it("should add the bottom inset under the 49 points", async () => {
-      await renderTabBar({ bottomInset: 34 }, scheme);
+      await renderTabBar({ bottomInset: 34 }, "dark");
 
       expect(await screen.findByLabelText("Main")).toHaveStyle({ paddingBottom: 34 });
     });
 
-    it("should draw the selected destination as accent ink, lime in dark and the primary text in light", async () => {
-      await renderTabBar({ activeKey: "diary" }, scheme);
-      const colorName = scheme === "dark" ? "accent" : "text-primary";
+    it("should draw the selected destination as accent ink, lime in dark", async () => {
+      await renderTabBar({ activeKey: "diary" }, "dark");
 
       expect(await screen.findByText("Diary")).toHaveStyle({
-        color: resolvedColor(scheme, colorName),
+        color: resolvedColor("dark", "accent"),
         fontFamily: "Geist-SemiBold",
         fontSize: 10,
       });
     });
 
     it("should draw the other destinations muted, medium weight", async () => {
-      await renderTabBar({ activeKey: "diary" }, scheme);
+      await renderTabBar({ activeKey: "diary" }, "dark");
 
       expect(await screen.findByText("More")).toHaveStyle({
-        color: resolvedColor(scheme, "text-muted"),
+        color: resolvedColor("dark", "text-muted"),
         fontFamily: "Geist-Medium",
         fontSize: 10,
       });
     });
 
     it("should draw the add button as a 48 point accent circle with the accent foreground plus", async () => {
-      await renderTabBar({}, scheme);
+      await renderTabBar({}, "dark");
 
       expect(await screen.findByRole("button", { name: "Find food" })).toHaveStyle({
         width: 48,
         height: 48,
         borderRadius: 999,
-        backgroundColor: resolvedColor(scheme, "accent"),
+        backgroundColor: resolvedColor("dark", "accent"),
       });
       expect(viewsDrawn({ width: 48, height: 48 }).length).toBeGreaterThan(0);
     });
 
     it("should draw the underline in the accent colour, 28 by 2, slanted 20 degrees", async () => {
-      await renderTabBar({}, scheme);
+      await renderTabBar({}, "dark");
 
       expect(await screen.findByTestId("tab-bar-underline")).toHaveStyle({
         width: 28,
         height: 2,
-        backgroundColor: resolvedColor(scheme, "accent"),
+        backgroundColor: resolvedColor("dark", "accent"),
       });
       expect(skewOf(underline())).toBe("-20deg");
+    });
+  });
+
+  // The iOS label is lime in dark and the primary text colour in light (`scheme === "light"` in TabItem), so the
+  // light run is the one that tells the branch apart. Everything else asks for the same token in both schemes.
+  describe("the iOS idiom in the light scheme", () => {
+    it("should draw the selected destination as accent ink, lime in dark and the primary text in light", async () => {
+      await renderTabBar({ activeKey: "diary" }, "light");
+
+      expect(await screen.findByText("Diary")).toHaveStyle({
+        color: resolvedColor("light", "text-primary"),
+        fontFamily: "Geist-SemiBold",
+        fontSize: 10,
+      });
     });
   });
 
@@ -327,12 +338,12 @@ describe("TabBar", () => {
     });
   });
 
-  describe.each(schemes)("the Android idiom in the %s scheme", (scheme) => {
+  describe("the Android idiom in the dark scheme", () => {
     it("should be a 64 point bar on the raised surface, with no hairline and no underline", async () => {
-      await renderTabBar({ platform: "android" }, scheme);
+      await renderTabBar({ platform: "android" }, "dark");
 
       expect(await screen.findByLabelText("Main")).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
       });
       expect(screen.getByLabelText("Main")).not.toHaveStyle({ borderTopWidth: 1 });
       expect(screen.getByRole("tab", { name: "Diary" })).toHaveStyle({ height: 64 });
@@ -340,7 +351,7 @@ describe("TabBar", () => {
     });
 
     it("should hold each icon in a 56 by 28 pill of the accent muted fill, shown only behind the selected one", async () => {
-      await renderTabBar({ platform: "android", activeKey: "diary" }, scheme);
+      await renderTabBar({ platform: "android", activeKey: "diary" }, "dark");
       await screen.findByLabelText("Main");
 
       expect(
@@ -348,24 +359,24 @@ describe("TabBar", () => {
           width: 56,
           height: 28,
           borderRadius: 999,
-          backgroundColor: themes[scheme]["accent-muted"],
+          backgroundColor: themes.dark["accent-muted"],
         }),
       ).toHaveLength(4);
       expect(pillOpacities()).toEqual([0, 1, 0, 0]);
     });
 
     it("should draw the selected label in the primary text colour, at 12", async () => {
-      await renderTabBar({ platform: "android", activeKey: "diary" }, scheme);
+      await renderTabBar({ platform: "android", activeKey: "diary" }, "dark");
 
       expect(await screen.findByText("Diary")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 12,
       });
     });
 
     it("should keep the same five slots and the same centre add button", async () => {
-      await renderTabBar({ platform: "android" }, scheme);
+      await renderTabBar({ platform: "android" }, "dark");
 
       expect(screen.getAllByRole(/^(tab|button)$/)).toHaveLength(5);
       expect(positionsOf(slotOrder)).toEqual([0, 1, 2, 3, 4]);

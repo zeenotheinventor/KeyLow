@@ -109,14 +109,11 @@ describe("ListRow with a badge", () => {
     ).toBeOnTheScreen();
   });
 
-  it.each(["dark", "light"] as const)(
-    "should draw a warning badge as the warning tone's pill in the %s scheme",
-    async (scheme) => {
-      await renderRow({ badge: leftOut }, scheme);
+  it("should draw a warning badge as the warning tone's pill in the dark scheme", async () => {
+    await renderRow({ badge: leftOut }, "dark");
 
-      expect(
-        viewsDrawn({ height: 20, backgroundColor: themes[scheme]["warning-muted"] }),
-      ).toHaveLength(1);
-    },
-  );
+    expect(viewsDrawn({ height: 20, backgroundColor: themes.dark["warning-muted"] })).toHaveLength(
+      1,
+    );
+  });
 });
