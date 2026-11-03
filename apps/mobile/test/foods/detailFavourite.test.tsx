@@ -7,7 +7,7 @@ import { setUpTests } from "react-native-reanimated";
 
 import { foodFixture, resetApiClientMock, savedFoodId } from "./support/apiClientMock";
 import FoodDetailRoute from "../../app/foods/[id]/index";
-import { ToastProvider } from "../../components/ui";
+import { ToastProvider, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { resetRouterMock, routerMock } from "../support/expoRouterMock";
 import {
@@ -15,6 +15,8 @@ import {
   mockToggleFavouriteFood,
   mockUseFavouriteFoods,
 } from "../support/favouritesMock";
+import { compileKitStyles } from "../support/kitStyles";
+import { registerAppStyles } from "../support/nativeWindStyles";
 
 import type { FavouriteFood } from "@keylow/api-client";
 
@@ -65,7 +67,14 @@ const addHeart = () => screen.getByRole("button", { name: "Add to favourites" })
 const removeHeart = () => screen.getByRole("button", { name: "Remove from favourites" });
 
 describe("the favourite heart on the food detail header", () => {
+  let kitStyles: string;
+
+  beforeAll(async () => {
+    kitStyles = await compileKitStyles();
+  });
+
   beforeEach(() => {
+    registerAppStyles(kitStyles);
     resetRouterMock();
     resetApiClientMock();
     routerMock.searchParams = { id: savedFoodId };
@@ -111,6 +120,15 @@ describe("the favourite heart on the food detail header", () => {
     expect(await screen.findByRole("status", { name: "Added to favourites" })).toBeOnTheScreen();
   });
 
+  it("should sit its toast just under the stack header, so the heart stays in view", async () => {
+    const user = await renderDetail();
+
+    await user.press(addHeart());
+
+    await screen.findByRole("status", { name: "Added to favourites" });
+    expect(screen.getByTestId("toast")).toHaveStyle({ top: sheetHeaderHeight.stack });
+  });
+
   it("should unfavourite the food on a tap when it is a favourite, with its own toast", async () => {
     favouriteFoods.current = { data: [savedFavourite], isSuccess: true };
     const user = await renderDetail();
@@ -127,9 +145,9 @@ describe("the favourite heart on the food detail header", () => {
   });
 
   it("should say you can have up to 30 favourites when the limit refuses one", async () => {
-    mockToggleFavouriteFood.mockImplementation((_variables, callbacks) => {
-      callbacks?.onError?.(new FavouriteRuleError("favourite the food", "favourite_limit"));
-    });
+    mockToggleFavouriteFood.mockRejectedValue(
+      new FavouriteRuleError("favourite the food", "favourite_limit"),
+    );
     const user = await renderDetail();
 
     await user.press(addHeart());
@@ -143,9 +161,7 @@ describe("the favourite heart on the food detail header", () => {
   });
 
   it("should show the generic error, and leave the heart as the list says, when the write fails", async () => {
-    mockToggleFavouriteFood.mockImplementation((_variables, callbacks) => {
-      callbacks?.onError?.(new Error("Could not favourite the food (500)"));
-    });
+    mockToggleFavouriteFood.mockRejectedValue(new Error("Could not favourite the food (500)"));
     const user = await renderDetail();
 
     await user.press(addHeart());

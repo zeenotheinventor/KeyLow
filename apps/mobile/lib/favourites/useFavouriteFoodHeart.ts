@@ -10,14 +10,12 @@ import type { Food } from "@keylow/core/schemas";
 /** The heart of the food detail header, whose stack header the toast sits under. */
 export function useFavouriteFoodHeart(food: Food): SheetHeaderControl {
   const favourites = useFavouriteFoods({ enabled: useReadsEnabled() });
-  const { mutate } = useToggleFavouriteFood();
+  const { mutateAsync } = useToggleFavouriteFood();
 
   return useFavouriteHeart({
     isFavourite: favourites.data?.some((favourite) => favourite.foodId === food.id) ?? false,
     isRead: favourites.isSuccess,
     headerHeight: sheetHeaderHeight.stack,
-    toggle: (isFavourite, onError) => {
-      mutate({ food, favourite: isFavourite }, { onError });
-    },
+    toggle: (isFavourite) => mutateAsync({ food, favourite: isFavourite }),
   });
 }

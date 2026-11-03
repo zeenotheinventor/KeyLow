@@ -88,6 +88,22 @@ describe("SheetHeader", () => {
     jest.restoreAllMocks();
   });
 
+  it.each([
+    { variant: "sheet", header: searchHeader, paddingTop: 12 },
+    { variant: "quiet", header: quietHeader, paddingTop: 4 },
+    { variant: "stack", header: stackHeader, paddingTop: 12 },
+  ] as const)(
+    "is as tall as sheetHeaderHeight says for the $variant header: 44 point controls and its padding",
+    async ({ variant, header, paddingTop }) => {
+      await renderHeader(header);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingTop,
+        paddingBottom: sheetHeaderHeight[variant] - touchTarget - paddingTop,
+      });
+    },
+  );
+
   describe("the quiet header, which heads the assistant sheet", () => {
     it("should draw clear controls with no fill and no border, as the board's ghost buttons are", async () => {
       await renderHeader(quietHeader);

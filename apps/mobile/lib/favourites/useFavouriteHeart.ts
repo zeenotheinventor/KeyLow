@@ -12,8 +12,8 @@ type FavouriteHeartOptions = {
   isRead: boolean;
   /** The height of the header the heart is in, which the toast sits under so the heart stays in view. */
   headerHeight: number;
-  /** Asks for the change. `onError` is told when the write fails, after the hook has put the heart back. */
-  toggle: (favourite: boolean, onError: (error: Error) => void) => void;
+  /** Asks for the change. It rejects when the write fails, after the hook has put the heart back. */
+  toggle: (favourite: boolean) => Promise<unknown>;
 };
 
 /**
@@ -44,7 +44,9 @@ export function useFavouriteHeart({
           }
         : { message: FAVOURITE_TOAST.removed, icon: "Heart", topOffset: headerHeight },
     );
-    toggle(favourite, (error) => {
+    // The promise belongs to this tap, so the failure is told even when a later tap has replaced it or the
+    // sheet has closed. The toast layer is above the screens, so it is still there to show it.
+    toggle(favourite).catch((error: unknown) => {
       toast.show({
         message: error instanceof FavouriteRuleError ? FAVOURITE_TOAST.limitReached : GENERIC_ERROR,
         icon: "CircleAlert",

@@ -14,6 +14,7 @@ type ControlIconSize = NonNullable<IconButtonProps["iconSize"]>;
 // the assistant sheet's: 4 above, 12 at the sides and 8 below, with clear controls in the secondary tone.
 const variants = {
   sheet: {
+    // The padding above and below is summed into `sheetHeaderHeight.sheet`.
     className: "px-4 pt-3 pb-3",
     buttonVariant: "secondary",
     buttonTone: "primary",
@@ -22,6 +23,7 @@ const variants = {
     titleVariant: "h2",
   },
   quiet: {
+    // The padding above and below is summed into `sheetHeaderHeight.quiet`.
     className: "px-3 pt-1 pb-2",
     buttonVariant: "ghost",
     buttonTone: "secondary",
@@ -30,6 +32,7 @@ const variants = {
     titleVariant: "h2",
   },
   stack: {
+    // The padding above and below is summed into `sheetHeaderHeight.stack`.
     className: "px-4 pt-3 pb-2",
     buttonVariant: "ghost",
     buttonTone: "primary",
@@ -53,7 +56,9 @@ const variants = {
 
 /**
  * How tall each variant is: its 44 point controls with the padding above and below. A toast that confirms a
- * control in the header sits this far under the safe area, so it is just under the header.
+ * control in the header sits this far under the safe area, so it is just under the header. Each sum is the
+ * variant's `pt-` and `pb-` classes in `variants` above (12 and 12, 4 and 8, 12 and 8), so change them
+ * together. The test "is as tall as sheetHeaderHeight says" reads the padding back and fails when they drift.
  */
 export const sheetHeaderHeight = {
   sheet: touchTarget + 12 + 12,

@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { chickenAndRiceRecipe } from "./recipeViewFixtures";
 import { RecipeView } from "../../components/RecipeView";
-import { ToastProvider } from "../../components/ui";
+import { ToastProvider, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { createDiaryQueryClient, resetDiaryBackend } from "../support/diaryBackend";
 import { resetRouterMock } from "../support/expoRouterMock";
@@ -175,6 +175,15 @@ describe("the favourite heart on the recipe view header", () => {
     expect(await screen.findByRole("status", { name: "Added to favourites" })).toBeOnTheScreen();
   });
 
+  it("should sit its toast just under the sheet header, so the heart stays in view", async () => {
+    const user = await showView();
+
+    await user.press(addHeart());
+
+    await screen.findByRole("status", { name: "Added to favourites" });
+    expect(screen.getByTestId("toast")).toHaveStyle({ top: sheetHeaderHeight.sheet });
+  });
+
   it("should unfavourite the recipe on a tap when it is a favourite, with its own toast", async () => {
     favouriteRecipes.current = { data: [savedFavourite], isSuccess: true };
     const user = await showView();
@@ -188,9 +197,9 @@ describe("the favourite heart on the recipe view header", () => {
   });
 
   it("should say you can have up to 30 favourites when the limit refuses one", async () => {
-    mockToggleFavouriteRecipe.mockImplementation((_variables, callbacks) => {
-      callbacks?.onError?.(new FavouriteRuleError("favourite the recipe", "favourite_limit"));
-    });
+    mockToggleFavouriteRecipe.mockRejectedValue(
+      new FavouriteRuleError("favourite the recipe", "favourite_limit"),
+    );
     const user = await showView();
 
     await user.press(addHeart());
@@ -203,9 +212,7 @@ describe("the favourite heart on the recipe view header", () => {
   });
 
   it("should show the generic error and keep the heart as the list says when the write fails", async () => {
-    mockToggleFavouriteRecipe.mockImplementation((_variables, callbacks) => {
-      callbacks?.onError?.(new Error("Could not favourite the recipe (500)"));
-    });
+    mockToggleFavouriteRecipe.mockRejectedValue(new Error("Could not favourite the recipe (500)"));
     const user = await showView();
 
     await user.press(addHeart());

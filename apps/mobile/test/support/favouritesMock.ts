@@ -3,8 +3,6 @@ import type { Food } from "@keylow/core/schemas";
 
 type FavouriteList<Entry> = { data: Entry[] | undefined; isSuccess: boolean };
 
-type Callbacks = { onError?: (error: Error) => void };
-
 /** What the favourite foods and recipes reads hold. A test sets `data` for a case. */
 export const favouriteFoods: { current: FavouriteList<FavouriteFood> } = {
   current: { data: [], isSuccess: true },
@@ -13,14 +11,14 @@ export const favouriteRecipes: { current: FavouriteList<FavouriteRecipe> } = {
   current: { data: [], isSuccess: true },
 };
 
-/** The toggles' `mutate`. A test reads what they were asked, or makes one fail through `onError`. */
+/** The toggles' `mutateAsync`. A test reads what they were asked, or makes one reject to fail. */
 export const mockToggleFavouriteFood = jest.fn<
-  unknown,
-  [{ food: Food; favourite: boolean }, Callbacks?]
+  Promise<void>,
+  [{ food: Food; favourite: boolean }]
 >();
 export const mockToggleFavouriteRecipe = jest.fn<
-  unknown,
-  [{ recipe: RecipeSummary; favourite: boolean }, Callbacks?]
+  Promise<void>,
+  [{ recipe: RecipeSummary; favourite: boolean }]
 >();
 export const mockUseFavouriteFoods = jest.fn<
   FavouriteList<FavouriteFood>,
@@ -35,7 +33,9 @@ export function resetFavouritesMock(): void {
   favouriteFoods.current = { data: [], isSuccess: true };
   favouriteRecipes.current = { data: [], isSuccess: true };
   mockToggleFavouriteFood.mockReset();
+  mockToggleFavouriteFood.mockResolvedValue(undefined);
   mockToggleFavouriteRecipe.mockReset();
+  mockToggleFavouriteRecipe.mockResolvedValue(undefined);
   mockUseFavouriteFoods.mockReset();
   mockUseFavouriteFoods.mockImplementation(() => favouriteFoods.current);
   mockUseFavouriteRecipes.mockReset();
@@ -46,6 +46,6 @@ export function resetFavouritesMock(): void {
 export const mockFavouriteHooks = {
   useFavouriteFoods: mockUseFavouriteFoods,
   useFavouriteRecipes: mockUseFavouriteRecipes,
-  useToggleFavouriteFood: () => ({ mutate: mockToggleFavouriteFood }),
-  useToggleFavouriteRecipe: () => ({ mutate: mockToggleFavouriteRecipe }),
+  useToggleFavouriteFood: () => ({ mutateAsync: mockToggleFavouriteFood }),
+  useToggleFavouriteRecipe: () => ({ mutateAsync: mockToggleFavouriteRecipe }),
 };
