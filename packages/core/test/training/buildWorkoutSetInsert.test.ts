@@ -166,6 +166,13 @@ describe("buildWorkoutSetInsert", () => {
   });
 
   describe("the draft", () => {
+    it("should refuse reps out of range", () => {
+      const build = () => buildWorkoutSetInsert({ ...input, draft: { ...draft, reps: 4711 } });
+
+      expect(build).toThrow(RangeError);
+      expect(messageOf(build)).toBe("The set breaks the rules: reps_whole_1_to_100.");
+    });
+
     it("should refuse reps that are not whole", () => {
       const build = () => buildWorkoutSetInsert({ ...input, draft: { ...draft, reps: 5.5 } });
 
@@ -189,6 +196,13 @@ describe("buildWorkoutSetInsert", () => {
         buildWorkoutSetInsert({ ...input, draft: { ...draft, rir: null, rpe: 6.3 } });
 
       expect(messageOf(build)).toBe("The set breaks the rules: rpe_1_to_10_in_halves.");
+    });
+
+    it("should refuse a load over 1000 kg without quoting it", () => {
+      const build = () => buildWorkoutSetInsert({ ...input, draft: { ...draft, loadKg: 1800 } });
+
+      expect(messageOf(build)).toBe("The set breaks the rules: load_0_to_1000_kg.");
+      expect(messageOf(build)).not.toContain("1800");
     });
 
     it("should name every rule the draft breaks", () => {

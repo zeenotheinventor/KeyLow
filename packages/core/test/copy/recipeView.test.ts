@@ -46,6 +46,8 @@ describe("the servings wording", () => {
   it.each([
     { servings: 4, value: "4 servings" },
     { servings: 1, value: "1 serving" },
+    { servings: 0.5, value: "0.5 servings" },
+    { servings: 1000, value: "1,000 servings" },
   ])("should write $servings as '$value' everywhere", ({ servings, value }) => {
     expect(describeServingsValue(servings)).toBe(value);
     expect(describeIngredientsFor(servings)).toBe(`For ${value}`);
