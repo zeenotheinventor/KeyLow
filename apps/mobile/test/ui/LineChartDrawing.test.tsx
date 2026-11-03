@@ -320,13 +320,13 @@ describe("LineChart drawing", () => {
     });
   });
 
-  describe.each<ThemeScheme>(["dark", "light"])("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the line, the points and the marker in the chart tokens", async () => {
-      await drawLineChart([40, 45, 50], {}, scheme);
+      await drawLineChart([40, 45, 50], {}, "dark");
 
-      expect(drawn("Line")[0]?.color).toBe(themes[scheme]["chart-trend"]);
-      expect(drawn("Scatter")[0]?.color).toBe(themes[scheme]["chart-point"]);
-      expect(drawn("Scatter")[1]?.color).toBe(themes[scheme]["chart-marker"]);
+      expect(drawn("Line")[0]?.color).toBe(themes.dark["chart-trend"]);
+      expect(drawn("Scatter")[0]?.color).toBe(themes.dark["chart-point"]);
+      expect(drawn("Scatter")[1]?.color).toBe(themes.dark["chart-marker"]);
     });
   });
 });

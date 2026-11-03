@@ -57,8 +57,6 @@ function drawings() {
 // What NativeWind resolves a transparent class to.
 const transparent = "#00000000";
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("IconButton", () => {
   let kitStyles: string;
 
@@ -312,23 +310,20 @@ describe("IconButton", () => {
       expect(onPress).not.toHaveBeenCalled();
     });
 
-    it.each(schemes)(
-      "should draw a border and no fill on the circle, with the plus in secondary text, in the %s scheme",
-      async (scheme) => {
-        await renderIconButton({ variant: "ring", icon: "Plus" }, scheme);
+    it("should draw a border and no fill on the circle, with the plus in secondary text, in the dark scheme", async () => {
+      await renderIconButton({ variant: "ring", icon: "Plus" }, "dark");
 
-        await screen.findByRole("button", { name: "Close" });
-        expect(
-          viewsDrawn({
-            height: 32,
-            borderColor: resolvedColor(scheme, "border"),
-            borderWidth: 1,
-            backgroundColor: transparent,
-          }),
-        ).toHaveLength(1);
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-secondary"]);
-      },
-    );
+      await screen.findByRole("button", { name: "Close" });
+      expect(
+        viewsDrawn({
+          height: 32,
+          borderColor: resolvedColor("dark", "border"),
+          borderWidth: 1,
+          backgroundColor: transparent,
+        }),
+      ).toHaveLength(1);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-secondary"]);
+    });
   });
 
   describe("primary", () => {
@@ -345,21 +340,18 @@ describe("IconButton", () => {
       expect(button.props.hitSlop).toBeUndefined();
     });
 
-    it.each(schemes)(
-      "should hold a 36 point accent circle inside the target, with the plus in accent-foreground at 20 points and a 2.25 stroke, in the %s scheme",
-      async (scheme) => {
-        await renderIconButton({ variant: "primary", icon: "Plus" }, scheme);
+    it("should hold a 36 point accent circle inside the target, with the plus in accent-foreground at 20 points and a 2.25 stroke, in the dark scheme", async () => {
+      await renderIconButton({ variant: "primary", icon: "Plus" }, "dark");
 
-        await screen.findByRole("button", { name: "Close" });
-        expect(primaryCircle()).toHaveLength(1);
-        expect(primaryCircle()[0]).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "accent"),
-        });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-foreground"]);
-        expect(drawings()[0]).toHaveProp("width", iconSize.md);
-        expect(drawings()[0]).toHaveProp("strokeWidth", 2.25);
-      },
-    );
+      await screen.findByRole("button", { name: "Close" });
+      expect(primaryCircle()).toHaveLength(1);
+      expect(primaryCircle()[0]).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "accent"),
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-foreground"]);
+      expect(drawings()[0]).toHaveProp("width", iconSize.md);
+      expect(drawings()[0]).toHaveProp("strokeWidth", 2.25);
+    });
 
     it("should keep the accent-foreground plus whatever tone is asked for", async () => {
       await renderIconButton({ variant: "primary", icon: "Plus", tone: "secondary" });
@@ -418,69 +410,57 @@ describe("IconButton", () => {
       expect(screen.getByRole("button", { name: "Close", selected: true })).toBeOnTheScreen();
     });
 
-    it.each(schemes)(
-      "should draw an accent muted fill, an accent border and an accent ink glyph, in the %s scheme",
-      async (scheme) => {
-        await renderIconButton({ isSelected: true }, scheme);
+    it("should draw an accent muted fill, an accent border and an accent ink glyph, in the dark scheme", async () => {
+      await renderIconButton({ isSelected: true }, "dark");
 
-        expect(await screen.findByRole("button", { name: "Close", selected: true })).toHaveStyle({
-          backgroundColor: themes[scheme]["accent-muted"],
-          borderColor: resolvedColor(scheme, "accent"),
-          borderWidth: 1,
-        });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-ink"]);
-      },
-    );
+      expect(await screen.findByRole("button", { name: "Close", selected: true })).toHaveStyle({
+        backgroundColor: themes.dark["accent-muted"],
+        borderColor: resolvedColor("dark", "accent"),
+        borderWidth: 1,
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-ink"]);
+    });
 
-    it.each(schemes)(
-      "should keep the raised surface, the border and the primary text glyph when not selected, in the %s scheme",
-      async (scheme) => {
-        await renderIconButton({ isSelected: false }, scheme);
+    it("should keep the raised surface, the border and the primary text glyph when not selected, in the dark scheme", async () => {
+      await renderIconButton({ isSelected: false }, "dark");
 
-        expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface-raised"),
-          borderColor: resolvedColor(scheme, "border"),
-        });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-primary"]);
-      },
-    );
+      expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border"),
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-primary"]);
+    });
   });
 
   describe("tone", () => {
-    it.each(schemes)(
-      "should draw the glyph in primary text unless asked for secondary, in the %s scheme",
-      async (scheme) => {
-        await renderIconButton({ variant: "ghost" }, scheme);
+    it("should draw the glyph in primary text unless asked for secondary, in the dark scheme", async () => {
+      await renderIconButton({ variant: "ghost" }, "dark");
 
-        await screen.findByRole("button", { name: "Close" });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-primary"]);
-      },
-    );
+      await screen.findByRole("button", { name: "Close" });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-primary"]);
+    });
 
-    it.each(schemes)(
-      "should draw the glyph in secondary text when asked, on any variant, in the %s scheme",
-      async (scheme) => {
-        await renderIconButton({ variant: "ghost", tone: "secondary" }, scheme);
+    it("should draw the glyph in secondary text when asked, on any variant, in the dark scheme", async () => {
+      await renderIconButton({ variant: "ghost", tone: "secondary" }, "dark");
 
-        await screen.findByRole("button", { name: "Close" });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-secondary"]);
-      },
-    );
+      await screen.findByRole("button", { name: "Close" });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-secondary"]);
+    });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the secondary variant on a raised surface with a border", async () => {
-      await renderIconButton({ variant: "secondary" }, scheme);
+      await renderIconButton({ variant: "secondary" }, "dark");
 
       expect(await screen.findByRole("button", { name: "Close" })).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
       });
     });
 
     it("should draw the ghost variant with no fill and no border", async () => {
-      await renderIconButton({ variant: "ghost" }, scheme);
+      await renderIconButton({ variant: "ghost" }, "dark");
 
       const button = await screen.findByRole("button", { name: "Close" });
       expect(button).toHaveStyle({ backgroundColor: transparent });

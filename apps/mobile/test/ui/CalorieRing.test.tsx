@@ -100,8 +100,6 @@ function fractionOf(value: unknown): number | undefined {
   return undefined;
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("CalorieRing", () => {
   let kitStyles: string;
 
@@ -264,62 +262,62 @@ describe("CalorieRing", () => {
     });
   });
 
-  describe.each(schemes)("its colours in %s", (scheme) => {
+  describe("its colours in dark", () => {
     it("should set the numeral and the caption in the primary text colour under the target", async () => {
-      await renderRing({}, scheme);
+      await renderRing({}, "dark");
 
       expect(screen.getByText("1,161")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
       expect(screen.getByText("remaining")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
       });
     });
 
     it("should keep the numeral in the primary ink and the caption in the secondary ink over the target, never the warning ink", async () => {
-      await renderRing({ eaten: 2412 }, scheme);
+      await renderRing({ eaten: 2412 }, "dark");
 
-      expect(screen.getByText("212")).toHaveStyle({ color: resolvedColor(scheme, "text-primary") });
+      expect(screen.getByText("212")).toHaveStyle({ color: resolvedColor("dark", "text-primary") });
       expect(screen.getByText("over target")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
       });
     });
 
     it("should draw the track in border and the fill in calories under the target", async () => {
-      await renderRing({}, scheme);
+      await renderRing({}, "dark");
       await advance(1000);
 
-      expect(fractionOf(latestArcs(themes[scheme].border)?.end)).toBe(1);
-      expect(fractionOf(latestArcs(themes[scheme].calories)?.end)).toBeCloseTo(1039 / 2200, 5);
-      expect(latestArcs(themes[scheme].warning)).toBeUndefined();
+      expect(fractionOf(latestArcs(themes.dark.border)?.end)).toBe(1);
+      expect(fractionOf(latestArcs(themes.dark.calories)?.end)).toBeCloseTo(1039 / 2200, 5);
+      expect(latestArcs(themes.dark.warning)).toBeUndefined();
     });
 
     it("should draw no outline under the target", async () => {
-      await renderRing({}, scheme);
+      await renderRing({}, "dark");
       await advance(1000);
 
-      expect(arcsDrawnIn(outlineColour(themes[scheme].calories))).toEqual([]);
+      expect(arcsDrawnIn(outlineColour(themes.dark.calories))).toEqual([]);
     });
 
     it("should draw no outline at exactly the target", async () => {
-      await renderRing({ eaten: 2200 }, scheme);
+      await renderRing({ eaten: 2200 }, "dark");
       await advance(1000);
 
-      expect(arcsDrawnIn(outlineColour(themes[scheme].calories))).toEqual([]);
+      expect(arcsDrawnIn(outlineColour(themes.dark.calories))).toEqual([]);
     });
 
     it("should fill the calories all the way round over the target", async () => {
-      await renderRing({ eaten: 2412 }, scheme);
+      await renderRing({ eaten: 2412 }, "dark");
       await advance(1000);
 
-      expect(fractionOf(latestArcs(themes[scheme].calories)?.end)).toBe(1);
+      expect(fractionOf(latestArcs(themes.dark.calories)?.end)).toBe(1);
     });
 
     it("should draw two outlines over the target in the calories colour mixed with white, 1.5 points wide", async () => {
-      await renderRing({ eaten: 2412 }, scheme);
+      await renderRing({ eaten: 2412 }, "dark");
       await advance(1000);
 
-      const outlines = arcsDrawnIn(outlineColour(themes[scheme].calories));
+      const outlines = arcsDrawnIn(outlineColour(themes.dark.calories));
 
       expect(outlines).toHaveLength(2);
       for (const outline of outlines) {
@@ -330,9 +328,9 @@ describe("CalorieRing", () => {
     });
 
     it("should leave a 1 point gap between the stroke and each outline, one outside and one inside", async () => {
-      await renderRing({ eaten: 2412 }, scheme);
+      await renderRing({ eaten: 2412 }, "dark");
       await advance(1000);
-      const radii = arcsDrawnIn(outlineColour(themes[scheme].calories))
+      const radii = arcsDrawnIn(outlineColour(themes.dark.calories))
         .map((outline) => radiusOf(outline))
         .sort((first, second) => first - second);
       const [innerOutline = Number.NaN, outerOutline = Number.NaN] = radii;
@@ -346,18 +344,18 @@ describe("CalorieRing", () => {
     });
 
     it("should draw no warning arc and no notch over the target", async () => {
-      await renderRing({ eaten: 2412 }, scheme);
+      await renderRing({ eaten: 2412 }, "dark");
       await advance(1000);
 
-      expect(latestArcs(themes[scheme].warning)).toBeUndefined();
-      expect(latestArcs(themes[scheme].background)).toBeUndefined();
+      expect(latestArcs(themes.dark.warning)).toBeUndefined();
+      expect(latestArcs(themes.dark.background)).toBeUndefined();
     });
 
     it("should never draw the ring in danger", async () => {
-      await renderRing({ eaten: 9000 }, scheme);
+      await renderRing({ eaten: 9000 }, "dark");
       await advance(1000);
 
-      expect(mockArcs.map((arc) => arc.color)).not.toContain(themes[scheme].danger);
+      expect(mockArcs.map((arc) => arc.color)).not.toContain(themes.dark.danger);
     });
   });
 

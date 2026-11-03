@@ -71,8 +71,6 @@ const variants: {
   { variant: "ghost", background: "transparent", border: "transparent", label: "text-primary" },
 ];
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Button", () => {
   let kitStyles: string;
 
@@ -367,41 +365,41 @@ describe("Button", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it.each(variants)(
       "should draw the $variant variant from its tokens",
       async ({ variant, background, border, label }) => {
-        await renderButton({ variant }, scheme);
+        await renderButton({ variant }, "dark");
 
         expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
           backgroundColor:
-            background === "transparent" ? transparent : resolvedColor(scheme, background),
-          borderColor: border === "transparent" ? transparent : resolvedColor(scheme, border),
+            background === "transparent" ? transparent : resolvedColor("dark", background),
+          borderColor: border === "transparent" ? transparent : resolvedColor("dark", border),
           borderWidth: 1,
           borderRadius: 12,
         });
-        expect(screen.getByText("Add entry")).toHaveStyle({ color: resolvedColor(scheme, label) });
+        expect(screen.getByText("Add entry")).toHaveStyle({ color: resolvedColor("dark", label) });
       },
     );
 
     it("should write a quiet ghost button's label in the secondary text colour", async () => {
-      await renderButton({ variant: "ghost", quiet: true }, scheme);
+      await renderButton({ variant: "ghost", quiet: true }, "dark");
       await screen.findByRole("button", { name: "Add entry" });
 
       expect(screen.getByText("Add entry")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
       });
     });
 
     it.each(["primary", "secondary", "destructive"] as const)(
       "should leave the %s variant's label colour alone when asked to be quiet, because only ghost can be",
       async (variant) => {
-        await renderButton({ variant, quiet: true }, scheme);
+        await renderButton({ variant, quiet: true }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 
         expect(screen.getByText("Add entry")).toHaveStyle({
           color: resolvedColor(
-            scheme,
+            "dark",
             variants.find((row) => row.variant === variant)?.label ?? "text-primary",
           ),
         });
@@ -410,87 +408,85 @@ describe("Button", () => {
 
     describe("the ghost accent ink look", () => {
       it("should write the label in the accent ink, with no fill and no visible border", async () => {
-        await renderButton({ variant: "ghost", tone: "accent-ink" }, scheme);
+        await renderButton({ variant: "ghost", tone: "accent-ink" }, "dark");
 
         expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
           backgroundColor: transparent,
           borderColor: transparent,
         });
         expect(screen.getByText("Add entry")).toHaveStyle({
-          color: resolvedColor(scheme, "accent-ink"),
+          color: resolvedColor("dark", "accent-ink"),
         });
       });
 
-      it("should be lime in dark and the primary text colour in light", async () => {
-        await renderButton({ variant: "ghost", tone: "accent-ink" }, scheme);
+      it("should be lime in dark", async () => {
+        await renderButton({ variant: "ghost", tone: "accent-ink" }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 
-        expect(themes[scheme]["accent-ink"]).toBe(
-          scheme === "dark" ? "#CCF249" : themes.light["text-primary"],
-        );
+        expect(themes.dark["accent-ink"]).toBe("#CCF249");
       });
 
       it("should draw the leading icon in the accent ink", async () => {
-        await renderButton({ variant: "ghost", tone: "accent-ink", icon: "Trash2" }, scheme);
+        await renderButton({ variant: "ghost", tone: "accent-ink", icon: "Trash2" }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-ink"]);
+        expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-ink"]);
       });
 
       it("should leave the other variants in their own colour", async () => {
-        await renderButton({ variant: "secondary", tone: "accent-ink" }, scheme);
+        await renderButton({ variant: "secondary", tone: "accent-ink" }, "dark");
 
         expect(await screen.findByText("Add entry")).toHaveStyle({
-          color: resolvedColor(scheme, "text-primary"),
+          color: resolvedColor("dark", "text-primary"),
         });
       });
     });
 
     describe("the ghost destructive look", () => {
       it("should write the label in the danger colour, with no fill and no visible border", async () => {
-        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, scheme);
+        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, "dark");
 
         expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
           backgroundColor: transparent,
           borderColor: transparent,
         });
         expect(screen.getByText("Add entry")).toHaveStyle({
-          color: resolvedColor(scheme, "danger"),
+          color: resolvedColor("dark", "danger"),
         });
       });
 
       it("should draw the leading icon in the danger colour", async () => {
-        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, scheme);
+        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
+        expect(drawings()[0]).toHaveProp("stroke", themes.dark.danger);
       });
 
       it("should never use the filled destructive fill", async () => {
-        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, scheme);
+        await renderButton({ variant: "ghost", tone: "danger", icon: "Trash2" }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 
-        expect(viewsDrawn({ backgroundColor: resolvedColor(scheme, "danger") })).toHaveLength(0);
+        expect(viewsDrawn({ backgroundColor: resolvedColor("dark", "danger") })).toHaveLength(0);
       });
 
       it("should draw the spinner ring in the danger colour while loading", async () => {
-        await renderButton({ variant: "ghost", tone: "danger", loading: true }, scheme);
+        await renderButton({ variant: "ghost", tone: "danger", loading: true }, "dark");
         await screen.findByRole("progressbar", { name: "Loading" });
 
         expect(
-          viewsDrawn({ width: 18, height: 18, borderColor: resolvedColor(scheme, "danger") }),
+          viewsDrawn({ width: 18, height: 18, borderColor: resolvedColor("dark", "danger") }),
         ).toHaveLength(1);
       });
 
       it.each(["primary", "destructive"] as const)(
         "should leave the %s variant alone when asked for the danger tone, because only ghost and secondary can have it",
         async (variant) => {
-          await renderButton({ variant, tone: "danger" }, scheme);
+          await renderButton({ variant, tone: "danger" }, "dark");
           await screen.findByRole("button", { name: "Add entry" });
 
           expect(screen.getByText("Add entry")).toHaveStyle({
             color: resolvedColor(
-              scheme,
+              "dark",
               variants.find((row) => row.variant === variant)?.label ?? "text-primary",
             ),
           });
@@ -500,49 +496,63 @@ describe("Button", () => {
 
     describe("the secondary danger look", () => {
       it("should write the label in the danger colour and keep the secondary fill and border", async () => {
-        await renderButton({ variant: "secondary", tone: "danger", icon: "Trash2" }, scheme);
+        await renderButton({ variant: "secondary", tone: "danger", icon: "Trash2" }, "dark");
 
         expect(await screen.findByRole("button", { name: "Add entry" })).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface-raised"),
-          borderColor: resolvedColor(scheme, "border"),
+          backgroundColor: resolvedColor("dark", "surface-raised"),
+          borderColor: resolvedColor("dark", "border"),
           borderWidth: 1,
         });
         expect(screen.getByText("Add entry")).toHaveStyle({
-          color: resolvedColor(scheme, "danger"),
+          color: resolvedColor("dark", "danger"),
         });
       });
 
       it("should draw the leading icon in the danger colour", async () => {
-        await renderButton({ variant: "secondary", tone: "danger", icon: "Trash2" }, scheme);
+        await renderButton({ variant: "secondary", tone: "danger", icon: "Trash2" }, "dark");
         await screen.findByRole("button", { name: "Add entry" });
 
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
+        expect(drawings()[0]).toHaveProp("stroke", themes.dark.danger);
       });
 
       it("should draw the spinner ring in the danger colour while loading", async () => {
-        await renderButton({ variant: "secondary", tone: "danger", loading: true }, scheme);
+        await renderButton({ variant: "secondary", tone: "danger", loading: true }, "dark");
         await screen.findByRole("progressbar", { name: "Loading" });
 
         expect(
-          viewsDrawn({ width: 18, height: 18, borderColor: resolvedColor(scheme, "danger") }),
+          viewsDrawn({ width: 18, height: 18, borderColor: resolvedColor("dark", "danger") }),
         ).toHaveLength(1);
       });
 
       it("should write the label in the plain colour without the danger tone", async () => {
-        await renderButton({ variant: "secondary" }, scheme);
+        await renderButton({ variant: "secondary" }, "dark");
 
         expect(await screen.findByText("Add entry")).toHaveStyle({
-          color: resolvedColor(scheme, "text-primary"),
+          color: resolvedColor("dark", "text-primary"),
         });
       });
     });
 
     it("should draw the press overlay from the press-overlay token", async () => {
-      await renderButton({}, scheme);
+      await renderButton({}, "dark");
       await fireEvent(await screen.findByRole("button", { name: "Add entry" }), "pressIn");
 
       expect(screen.getByTestId("press-overlay")).toHaveStyle({
-        backgroundColor: scheme === "dark" ? "rgba(255,255,255,0.10)" : "rgba(15,19,26,0.09)",
+        backgroundColor: "rgba(255,255,255,0.10)",
+      });
+    });
+  });
+
+  // Light keeps the one case that expects a different token from dark: the ghost button's accent ink is lime in dark
+  // and the primary text colour in light. The rest of the button asks for the same token in both schemes, so the
+  // dark run covers it and `packages/tokens` pins the light values.
+  describe("in the light scheme", () => {
+    describe("the ghost accent ink look", () => {
+      it("should be lime in dark and the primary text colour in light", async () => {
+        await renderButton({ variant: "ghost", tone: "accent-ink" }, "light");
+        await screen.findByRole("button", { name: "Add entry" });
+
+        expect(themes.light["accent-ink"]).toBe(themes.light["text-primary"]);
       });
     });
   });

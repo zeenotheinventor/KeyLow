@@ -26,8 +26,6 @@ function renderCard(props: Partial<CardProps> = {}, scheme: ThemeScheme = "dark"
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Card", () => {
   let kitStyles: string;
 
@@ -52,13 +50,13 @@ describe("Card", () => {
     expect(screen.getByLabelText("Common foods")).toHaveProp("role", "list");
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should be the surface with a 1 point border, rounded large, clipping what it holds", async () => {
-      await renderCard({}, scheme);
+      await renderCard({}, "dark");
 
       expect(await screen.findByLabelText("Today")).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
         borderRadius: 20,
         overflow: "hidden",
@@ -66,37 +64,37 @@ describe("Card", () => {
     });
 
     it("should sit on the raised surface at the raised level", async () => {
-      await renderCard({ level: "raised" }, scheme);
+      await renderCard({ level: "raised" }, "dark");
 
       expect(await screen.findByLabelText("Today")).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
       });
     });
 
     it("should draw the card elevation from the token, which renders on a device", async () => {
-      await renderCard({}, scheme);
+      await renderCard({}, "dark");
 
       expect(await screen.findByLabelText("Today")).toHaveStyle({
-        boxShadow: elevation[scheme].card,
+        boxShadow: elevation.dark.card,
       });
     });
   });
 
   describe("the border", () => {
-    it.each(schemes)("should be the hairline by default, in the %s scheme", async (scheme) => {
-      await renderCard({}, scheme);
+    it("should be the hairline by default, in the dark scheme", async () => {
+      await renderCard({}, "dark");
 
       expect(screen.getByLabelText("Today")).toHaveStyle({
-        borderColor: resolvedColor(scheme, "border"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
       });
     });
 
-    it.each(schemes)("should be the accent when asked, in the %s scheme", async (scheme) => {
-      await renderCard({ border: "accent" }, scheme);
+    it("should be the accent when asked, in the dark scheme", async () => {
+      await renderCard({ border: "accent" }, "dark");
 
       expect(screen.getByLabelText("Today")).toHaveStyle({
-        borderColor: resolvedColor(scheme, "accent"),
+        borderColor: resolvedColor("dark", "accent"),
         borderWidth: 1,
       });
     });

@@ -72,8 +72,6 @@ function KeptEquipment() {
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("ChipGroup with several chosen", () => {
   let kitStyles: string;
 
@@ -196,20 +194,20 @@ describe("ChipGroup with several chosen", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw each chosen chip filled with the accent, as a single choice does", async () => {
-      await renderEquipment({ value: ["barbell", "cable"] }, scheme);
+      await renderEquipment({ value: ["barbell", "cable"] }, "dark");
       await screen.findByLabelText("Equipment");
 
       expect(
         viewsDrawn({
           height: 36,
-          backgroundColor: resolvedColor(scheme, "accent"),
-          borderColor: resolvedColor(scheme, "accent"),
+          backgroundColor: resolvedColor("dark", "accent"),
+          borderColor: resolvedColor("dark", "accent"),
         }),
       ).toHaveLength(2);
       expect(screen.getByText("Cable")).toHaveStyle({
-        color: resolvedColor(scheme, "accent-foreground"),
+        color: resolvedColor("dark", "accent-foreground"),
         fontFamily: "Geist-SemiBold",
       });
     });

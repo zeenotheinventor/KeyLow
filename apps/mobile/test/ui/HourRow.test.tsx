@@ -9,7 +9,6 @@ import { resolvedColor } from "../support/themeColor";
 import { viewsDrawn } from "../support/viewsDrawn";
 
 import type { HourRowProps } from "../../components/ui";
-import type { ThemeScheme } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -39,19 +38,15 @@ function loggedFood(name: string, caption: string) {
 const porridge = loggedFood("Porridge oats", "08:05 · 50 g");
 const milk = loggedFood("Semi-skimmed milk", "08:05 · 200 ml");
 
-type RowOptions = Partial<HourRowProps> & { scheme?: ThemeScheme };
-
-async function renderHourRow({ scheme = "dark", ...props }: RowOptions = {}) {
+async function renderHourRow(props: Partial<HourRowProps> = {}) {
   const onAdd = jest.fn();
   await render(
-    <ThemeProvider fixedPreference={scheme}>
+    <ThemeProvider fixedPreference="dark">
       <HourRow hour={8} isNow={false} label="08:00" onAdd={onAdd} {...props} />
     </ThemeProvider>,
   );
   return { onAdd };
 }
-
-const schemes: ThemeScheme[] = ["dark", "light"];
 
 // A list item is not an accessibility element, or a screen reader could not reach the buttons inside it, so
 // a role query cannot see it and it is found by its name, which core writes from the hour and its foods.
@@ -92,28 +87,25 @@ describe("HourRow", () => {
       expect(onAdd).toHaveBeenCalledWith(23);
     });
 
-    it.each(schemes)(
-      "should draw the plus as a 32 by 32 ring with the ring variant's border inside the 44 point target in %s",
-      async (scheme) => {
-        await renderHourRow({ scheme });
+    it("should draw the plus as a 32 by 32 ring with the ring variant's border inside the 44 point target in dark", async () => {
+      await renderHourRow();
 
-        // The drawn circle is 32 across with a 1 point border in the border colour and no fill. The button
-        // around it is the 44 point touch target.
-        expect(
-          viewsDrawn({
-            width: 32,
-            height: 32,
-            borderRadius: 999,
-            borderWidth: 1,
-            borderColor: resolvedColor(scheme, "border"),
-          }),
-        ).toHaveLength(1);
-        expect(screen.getByRole("button", { name: "Add food at 08:00" })).toHaveStyle({
-          height: 44,
-          width: 44,
-        });
-      },
-    );
+      // The drawn circle is 32 across with a 1 point border in the border colour and no fill. The button
+      // around it is the 44 point touch target.
+      expect(
+        viewsDrawn({
+          width: 32,
+          height: 32,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: resolvedColor("dark", "border"),
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByRole("button", { name: "Add food at 08:00" })).toHaveStyle({
+        height: 44,
+        width: 44,
+      });
+    });
 
     it("should be disabled, dimmed to 40 percent and not call onAdd when addDisabled is set", async () => {
       const { onAdd } = await renderHourRow({ addDisabled: true, children: porridge });
@@ -162,16 +154,13 @@ describe("HourRow", () => {
       expectTextsInOrder(screen.getAllByText(/\d/), ["11:00"]);
     });
 
-    it.each(schemes)(
-      "should carry a 6 point accent dot only for the current hour in %s",
-      async (scheme) => {
-        await renderHourRow({ hour: 11, label: "11:00", isNow: true, scheme });
+    it("should carry a 6 point accent dot only for the current hour in dark", async () => {
+      await renderHourRow({ hour: 11, label: "11:00", isNow: true });
 
-        expect(
-          viewsDrawn({ width: 6, height: 6, backgroundColor: resolvedColor(scheme, "accent") }),
-        ).toHaveLength(1);
-      },
-    );
+      expect(
+        viewsDrawn({ width: 6, height: 6, backgroundColor: resolvedColor("dark", "accent") }),
+      ).toHaveLength(1);
+    });
 
     it("should have no dot when it is not the current hour", async () => {
       await renderHourRow({ hour: 11, label: "11:00" });
@@ -179,22 +168,19 @@ describe("HourRow", () => {
       expect(viewsDrawn({ width: 6, height: 6 })).toHaveLength(0);
     });
 
-    it.each(schemes)(
-      "should be a 28 point pill on the raised surface with a 1 point border in %s",
-      async (scheme) => {
-        await renderHourRow({ scheme });
+    it("should be a 28 point pill on the raised surface with a 1 point border in dark", async () => {
+      await renderHourRow();
 
-        expect(screen.getByLabelText("08:00")).toHaveStyle({
-          height: 28,
-          borderRadius: 999,
-          borderWidth: 1,
-          borderColor: resolvedColor(scheme, "border"),
-          backgroundColor: resolvedColor(scheme, "surface-raised"),
-          paddingLeft: 12,
-          paddingRight: 12,
-        });
-      },
-    );
+      expect(screen.getByLabelText("08:00")).toHaveStyle({
+        height: 28,
+        borderRadius: 999,
+        borderWidth: 1,
+        borderColor: resolvedColor("dark", "border"),
+        backgroundColor: resolvedColor("dark", "surface-raised"),
+        paddingLeft: 12,
+        paddingRight: 12,
+      });
+    });
   });
 
   describe("an hour with foods", () => {
@@ -242,37 +228,31 @@ describe("HourRow", () => {
   });
 
   describe("the guide line and the row", () => {
-    it.each(schemes)(
-      "should have a 1 point guide line 6 points in with 14 points of padding after it in %s",
-      async (scheme) => {
-        await renderHourRow({ scheme });
+    it("should have a 1 point guide line 6 points in with 14 points of padding after it in dark", async () => {
+      await renderHourRow();
 
-        expect(hourItem()).toHaveStyle({
-          marginLeft: 6,
-          paddingLeft: 14,
-          borderLeftWidth: 1,
-          borderColor: resolvedColor(scheme, "border"),
-        });
-      },
-    );
+      expect(hourItem()).toHaveStyle({
+        marginLeft: 6,
+        paddingLeft: 14,
+        borderLeftWidth: 1,
+        borderColor: resolvedColor("dark", "border"),
+      });
+    });
 
-    it.each(schemes)(
-      "should draw a 7 point node on the line, raised fill and strong border, in %s",
-      async (scheme) => {
-        await renderHourRow({ scheme });
+    it("should draw a 7 point node on the line, raised fill and strong border, in dark", async () => {
+      await renderHourRow();
 
-        expect(
-          viewsDrawn({
-            width: 7,
-            height: 7,
-            borderRadius: 999,
-            borderWidth: 1,
-            backgroundColor: resolvedColor(scheme, "surface-raised"),
-            borderColor: resolvedColor(scheme, "border-strong"),
-          }),
-        ).toHaveLength(1);
-      },
-    );
+      expect(
+        viewsDrawn({
+          width: 7,
+          height: 7,
+          borderRadius: 999,
+          borderWidth: 1,
+          backgroundColor: resolvedColor("dark", "surface-raised"),
+          borderColor: resolvedColor("dark", "border-strong"),
+        }),
+      ).toHaveLength(1);
+    });
 
     it("should put the node's centre on the line and level with the chip", async () => {
       await renderHourRow();

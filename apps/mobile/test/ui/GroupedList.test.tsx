@@ -52,8 +52,6 @@ async function advance(milliseconds: number) {
   });
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("GroupedList", () => {
   let kitStyles: string;
 
@@ -177,13 +175,13 @@ describe("GroupedList", () => {
   });
 
   describe("the card", () => {
-    describe.each(schemes)("in the %s scheme", (scheme) => {
+    describe("in the dark scheme", () => {
       it("should be a card on the surface token with a border, rounded large, clipping its rows", async () => {
-        await renderList({}, scheme);
+        await renderList({}, "dark");
 
         expect(await screen.findByLabelText("Common foods")).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface"),
-          borderColor: resolvedColor(scheme, "border"),
+          backgroundColor: resolvedColor("dark", "surface"),
+          borderColor: resolvedColor("dark", "border"),
           borderWidth: 1,
           borderRadius: 20,
           overflow: "hidden",
@@ -191,10 +189,10 @@ describe("GroupedList", () => {
       });
 
       it("should draw the card elevation from the token", async () => {
-        await renderList({}, scheme);
+        await renderList({}, "dark");
 
         expect(await screen.findByLabelText("Common foods")).toHaveStyle({
-          boxShadow: elevation[scheme].card,
+          boxShadow: elevation.dark.card,
         });
       });
     });
@@ -339,12 +337,12 @@ describe("GroupedList", () => {
     });
   });
 
-  describe.each(schemes)("typography in the %s scheme", (scheme) => {
+  describe("typography in the dark scheme", () => {
     it("should write the title as body strong in the primary text colour", async () => {
-      await renderList({}, scheme);
+      await renderList({}, "dark");
 
       expect(await screen.findByRole("heading", { name: "Common foods · UK CoFID" })).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 16,
         lineHeight: 24,
@@ -352,10 +350,10 @@ describe("GroupedList", () => {
     });
 
     it("should write the source as a muted caption", async () => {
-      await renderList({}, scheme);
+      await renderList({}, "dark");
 
       expect(await screen.findByText(" · UK CoFID")).toHaveStyle({
-        color: resolvedColor(scheme, "text-muted"),
+        color: resolvedColor("dark", "text-muted"),
         fontFamily: "Geist-Medium",
         fontSize: 12,
         lineHeight: 16,
@@ -363,10 +361,10 @@ describe("GroupedList", () => {
     });
 
     it("should write See more at 14 over 20, semibold, in the secondary text colour", async () => {
-      await renderList({ seeMore: { hiddenCount: 2, onPress: () => undefined } }, scheme);
+      await renderList({ seeMore: { hiddenCount: 2, onPress: () => undefined } }, "dark");
 
       expect(await screen.findByText("See 2 more")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 14,
         lineHeight: 20,

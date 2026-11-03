@@ -44,7 +44,6 @@ function renderFigure(props: Partial<BodyFigureProps> = {}, scheme: ThemeScheme 
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
 const bodies: BodyArtworkFigure[] = ["male", "female"];
 const sides: BodyArtworkSide[] = ["front", "back"];
 
@@ -118,11 +117,11 @@ describe("BodyFigure", () => {
     });
   });
 
-  describe.each(schemes)("in the %s theme", (scheme) => {
-    const palette = bodyMapPalette(scheme);
+  describe("in the dark theme", () => {
+    const palette = bodyMapPalette("dark");
 
     it("should draw the head and the outline in the silhouette colour", async () => {
-      await renderFigure({}, scheme);
+      await renderFigure({}, "dark");
 
       const silhouettes = drawn("RNSVGPath").filter(
         (node) =>
@@ -136,7 +135,7 @@ describe("BodyFigure", () => {
     });
 
     it.each(sides)("should fill every heat step of the %s with its heat colour", async (side) => {
-      await renderFigure({ side, scale: "heat", values: everyValue(side, 6) }, scheme);
+      await renderFigure({ side, scale: "heat", values: everyValue(side, 6) }, "dark");
 
       musclesOf("male", side).forEach(([id], index) => {
         expect(propOf(drawingOf(id).props, "fill")).toEqual(paint(palette.heat[index % 6] ?? ""));
@@ -153,7 +152,7 @@ describe("BodyFigure", () => {
       ];
       expect(fills).toHaveLength(VOLUME_STATUSES.length);
 
-      await renderFigure({ side, scale: "volume", values: everyValue(side, 5) }, scheme);
+      await renderFigure({ side, scale: "volume", values: everyValue(side, 5) }, "dark");
 
       musclesOf("male", side).forEach(([id], index) => {
         expect(propOf(drawingOf(id).props, "fill")).toEqual(paint(fills[index % 5] ?? ""));
@@ -169,7 +168,7 @@ describe("BodyFigure", () => {
       ];
       expect(fills).toHaveLength(GAP_VALUES.length);
 
-      await renderFigure({ side, scale: "gap", values: everyValue(side, 4) }, scheme);
+      await renderFigure({ side, scale: "gap", values: everyValue(side, 4) }, "dark");
 
       musclesOf("male", side).forEach(([id], index) => {
         expect(propOf(drawingOf(id).props, "fill")).toEqual(paint(fills[index % 4] ?? ""));
@@ -181,7 +180,7 @@ describe("BodyFigure", () => {
       { scale: "volume" as const, rest: palette.volume.notTrained },
       { scale: "gap" as const, rest: palette.gap.notInPlan },
     ])("should draw a missing muscle at rest on the $scale scale", async ({ scale, rest }) => {
-      await renderFigure({ scale, values: {} }, scheme);
+      await renderFigure({ scale, values: {} }, "dark");
 
       musclesOf("male", "front").forEach(([id]) => {
         expect(propOf(drawingOf(id).props, "fill")).toEqual(paint(rest));
@@ -189,13 +188,47 @@ describe("BodyFigure", () => {
     });
 
     it("should outline the selected muscle in the primary text colour and every other in the separator colour", async () => {
-      await renderFigure({ selected: "chest_upper" }, scheme);
+      await renderFigure({ selected: "chest_upper" }, "dark");
 
       musclesOf("male", "front").forEach(([id]) => {
         const node = drawingOf(id);
         const isSelected = id === "chest_upper";
         expect(propOf(node.props, "stroke")).toEqual(
-          paint(isSelected ? themes[scheme]["text-primary"] : palette.separator),
+          paint(isSelected ? themes.dark["text-primary"] : palette.separator),
+        );
+        expect(propOf(node.props, "strokeWidth")).toBe(isSelected ? 2.6 : 1.4);
+      });
+    });
+  });
+
+  // The light run keeps the two assertions that read the scheme's palette entries straight from the figure. The fills
+  // for the heat, volume, gap and rest scales go through `readMuscle`, which takes the palette as given and has no
+  // scheme code, so the dark run covers them and `packages/tokens` pins the palette values.
+  describe("in the light theme", () => {
+    const palette = bodyMapPalette("light");
+
+    it("should draw the head and the outline in the silhouette colour", async () => {
+      await renderFigure({}, "light");
+
+      const silhouettes = drawn("RNSVGPath").filter(
+        (node) =>
+          propOf(node.props, "d") === BODY_ARTWORK.male.front.head ||
+          propOf(node.props, "d") === BODY_ARTWORK.male.front.outline,
+      );
+      expect(silhouettes).toHaveLength(2);
+      silhouettes.forEach((node) => {
+        expect(propOf(node.props, "fill")).toEqual(paint(palette.silhouette));
+      });
+    });
+
+    it("should outline the selected muscle in the primary text colour and every other in the separator colour", async () => {
+      await renderFigure({ selected: "chest_upper" }, "light");
+
+      musclesOf("male", "front").forEach(([id]) => {
+        const node = drawingOf(id);
+        const isSelected = id === "chest_upper";
+        expect(propOf(node.props, "stroke")).toEqual(
+          paint(isSelected ? themes.light["text-primary"] : palette.separator),
         );
         expect(propOf(node.props, "strokeWidth")).toBe(isSelected ? 2.6 : 1.4);
       });

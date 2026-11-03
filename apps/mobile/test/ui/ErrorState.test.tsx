@@ -52,8 +52,6 @@ function drawings() {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("ErrorState", () => {
   let kitStyles: string;
 
@@ -306,15 +304,12 @@ describe("ErrorState", () => {
       expect(drawings()[0]).toHaveProp("width", iconSize.xl);
     });
 
-    it.each(schemes)(
-      "should be a danger tint with a danger icon in the %s scheme",
-      async (scheme) => {
-        await renderErrorState({}, scheme);
+    it("should be a danger tint with a danger icon in the dark scheme", async () => {
+      await renderErrorState({}, "dark");
 
-        expect(tile()).toHaveStyle({ backgroundColor: themes[scheme]["danger-muted"] });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
-      },
-    );
+      expect(tile()).toHaveStyle({ backgroundColor: themes.dark["danger-muted"] });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.danger);
+    });
   });
 
   describe("motion", () => {
