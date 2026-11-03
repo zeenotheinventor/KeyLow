@@ -13,14 +13,14 @@ export function ConfirmButtons({
   confirmLabel,
   cancelLabel,
   tone,
-  isAnswered,
+  isDisabled,
   onAnswer,
 }: ConfirmButtonsProps) {
   return (
     <View className="flex-row gap-2">
       <Button
         className="min-w-0 flex-1"
-        disabled={isAnswered}
+        disabled={isDisabled}
         variant={tone === "danger" ? "destructive" : "primary"}
         onPress={() => {
           onAnswer(confirmLabel);
@@ -30,7 +30,7 @@ export function ConfirmButtons({
       </Button>
       <Button
         className="min-w-0 flex-1"
-        disabled={isAnswered}
+        disabled={isDisabled}
         variant="secondary"
         onPress={() => {
           onAnswer(cancelLabel);

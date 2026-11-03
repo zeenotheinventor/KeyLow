@@ -35,6 +35,7 @@ export function AssistantThread({
   onTryAgain,
   onAskAgain,
   onOpenCardLink,
+  canAnswer,
   onAnswer,
 }: AssistantThreadProps) {
   function renderEntry(entry: AssistantSheetEntry) {
@@ -64,7 +65,7 @@ export function AssistantThread({
       case "quickReplies":
         return (
           <ChipGroup
-            disabled={entry.isAnswered}
+            disabled={!canAnswer}
             key={entry.key}
             label={ASSISTANT_SHEET.quickRepliesLabel}
             layout="wrap"
@@ -78,7 +79,7 @@ export function AssistantThread({
           <ConfirmButtons
             cancelLabel={entry.cancelLabel}
             confirmLabel={entry.confirmLabel}
-            isAnswered={entry.isAnswered}
+            isDisabled={!canAnswer}
             key={entry.key}
             tone={entry.tone}
             onAnswer={onAnswer}

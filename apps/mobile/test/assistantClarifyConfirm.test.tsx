@@ -40,8 +40,9 @@ const mockAssistant: {
   items: AssistantThreadItem[];
   live: AssistantLiveTurn | null;
   isStreaming: boolean;
+  isFetching: boolean;
   send: jest.Mock;
-} = { items: [], live: null, isStreaming: false, send: jest.fn() };
+} = { items: [], live: null, isStreaming: false, isFetching: false, send: jest.fn() };
 
 jest.mock("@keylow/api-client", () => ({
   ...jest.requireActual<object>("@keylow/api-client"),
@@ -49,7 +50,7 @@ jest.mock("@keylow/api-client", () => ({
     data: { conversationId: "00000000-0000-4000-8000-0000000000c1", items: mockAssistant.items },
     isSuccess: true,
     isError: false,
-    isFetching: false,
+    isFetching: mockAssistant.isFetching,
   }),
   useAssistantTurn: () => ({
     send: mockAssistant.send,
@@ -231,6 +232,7 @@ describe("the questions the assistant asks in its thread", () => {
     mockAssistant.items = [];
     mockAssistant.live = null;
     mockAssistant.isStreaming = false;
+    mockAssistant.isFetching = false;
     mockAssistant.send = jest.fn();
   });
 
@@ -262,21 +264,22 @@ describe("the questions the assistant asks in its thread", () => {
       ]);
 
       const words = threadWords(CHICKEN_AND_RICE);
-      expect(words).toEqual(
-        expect.arrayContaining([
-          CLARIFY_QUESTION,
-          "1 chicken breast, 200 g rice",
-          "Logged chicken and rice at 13:00",
-          "Chicken breast, grilled",
-          "1 chicken breast (130 g) · 13:00",
-          "192 kcal",
-          "White rice, boiled",
-          "200 g · 13:00",
-          "276 kcal",
-          "468 kcal · P 47 g · C 62 g · F 3.5 g",
-          "If it was more or less, change it in the diary.",
-        ]),
-      );
+      expect(words).toEqual([
+        ...youSaid(CHICKEN_AND_RICE),
+        ...assistantSaid(CLARIFY_QUESTION),
+        ...youSaid("1 chicken breast, 200 g rice"),
+        "Logged chicken and rice at 13:00",
+        "Undo",
+        "Undo",
+        "Chicken breast, grilled",
+        "1 chicken breast (130 g) · 13:00",
+        "192 kcal",
+        "White rice, boiled",
+        "200 g · 13:00",
+        "276 kcal",
+        "468 kcal · P 47 g · C 62 g · F 3.5 g",
+        "If it was more or less, change it in the diary.",
+      ]);
       expect(words).not.toContain("Estimate");
       expect(screen.getByPlaceholderText(SHEET_PLACEHOLDER)).toBeOnTheScreen();
     });
@@ -304,15 +307,15 @@ describe("the questions the assistant asks in its thread", () => {
         { kind: "card", id: "c1", card: deletedCard },
       ]);
 
-      expect(threadWords(deleteSeveral.said)).toEqual(
-        expect.arrayContaining([
-          deleteSeveral.question,
-          deleteSeveral.confirmLabel,
-          "3 entries deleted",
-          "Chicken and rice, Greek yoghurt, apple · 13:00",
-          "Undo",
-        ]),
-      );
+      expect(threadWords(deleteSeveral.said)).toEqual([
+        ...youSaid(deleteSeveral.said),
+        ...assistantSaid(deleteSeveral.question),
+        ...youSaid(deleteSeveral.confirmLabel),
+        "3 entries deleted",
+        "Chicken and rice, Greek yoghurt, apple · 13:00",
+        "Undo",
+        "Undo",
+      ]);
     });
 
     it("should draw assistant · confirm-no with the reply after a no", async () => {
@@ -325,11 +328,21 @@ describe("the questions the assistant asks in its thread", () => {
       expect(threadWords(deleteSeveral.said)).toEqual([
         ...youSaid(deleteSeveral.said),
         ...assistantSaid(deleteSeveral.question),
-        deleteSeveral.confirmLabel,
-        deleteSeveral.cancelLabel,
         ...youSaid(deleteSeveral.cancelLabel),
         ...assistantSaid("Kept them. Nothing was deleted."),
       ]);
+    });
+
+    it("should draw a stored confirmation's question once when the reply has words before it", async () => {
+      const asked = "Delete 3 entries at 13:00 today?";
+      await showThread([
+        userItem("u1", deleteSeveral.said),
+        replyItem("r1", `Looking at lunch.\n\n${asked}`),
+        confirmItem({ ...deleteSeveral, question: asked }),
+      ]);
+
+      expect(screen.getAllByText(asked)).toHaveLength(1);
+      expect(button("Delete 3 entries")).toBeEnabled();
     });
 
     it("should draw a confirmation's question itself when no reply before it said the words", async () => {
@@ -378,7 +391,7 @@ describe("the questions the assistant asks in its thread", () => {
       }
     });
 
-    it("should disable the quick replies once the person has sent their next message", async () => {
+    it("should take the quick replies away once the person has sent their next message", async () => {
       await showThread([userItem("u1", CHICKEN_AND_RICE), clarifyItem()]);
 
       await userSetup().press(button("1 chicken breast, 200 g rice"));
@@ -386,13 +399,13 @@ describe("the questions the assistant asks in its thread", () => {
       mockAssistant.isStreaming = true;
       await screen.rerender(sheetTree());
 
-      for (const reply of QUICK_REPLIES) {
-        // The reply you sent is also drawn as your own message, which is not a button.
-        expect(button(reply)).toBeDisabled();
-      }
+      // The reply you sent is drawn as your own message, which is not a button.
+      expect(screen.queryByRole("button", { name: "1 chicken breast, 200 g rice" })).toBeNull();
+      expect(screen.queryByRole("group", { name: "Quick replies" })).toBeNull();
+      expect(screen.getByText(CLARIFY_QUESTION)).toBeOnTheScreen();
     });
 
-    it("should disable both confirm buttons once the person has sent their next message", async () => {
+    it("should take both confirm buttons away once the person has sent their next message", async () => {
       await showThread(askedConfirmation(deleteSeveral));
 
       await userSetup().press(button("Keep them"));
@@ -400,28 +413,75 @@ describe("the questions the assistant asks in its thread", () => {
       mockAssistant.isStreaming = true;
       await screen.rerender(sheetTree());
 
-      expect(button("Delete 3 entries")).toBeDisabled();
-      expect(button("Keep them")).toBeDisabled();
+      expect(screen.queryByRole("button", { name: "Delete 3 entries" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Keep them" })).toBeNull();
+      expect(screen.getAllByText(deleteSeveral.question)).toHaveLength(1);
     });
 
-    it("should disable the buttons of a question that was answered, when the thread is read back", async () => {
+    it("should draw a question that was answered without its buttons, when the thread is read back", async () => {
       await showThread([
         ...askedConfirmation(deleteSeveral, true),
         userItem("u2", "Keep them"),
         replyItem("r2", "Kept them. Nothing was deleted."),
       ]);
 
-      expect(button("Delete 3 entries")).toBeDisabled();
-      expect(screen.getAllByRole("button", { name: "Keep them" })[0]).toBeDisabled();
+      expect(screen.queryByRole("button", { name: "Delete 3 entries" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Keep them" })).toBeNull();
     });
 
-    it("should do nothing when an answered button is pressed", async () => {
+    it("should draw a clarifying question that was answered without its quick replies, when the thread is read back", async () => {
       await showThread([
         userItem("u1", CHICKEN_AND_RICE),
         clarifyItem(true),
         userItem("u2", "Another thing"),
         replyItem("r2", "Done."),
       ]);
+
+      expect(screen.queryByRole("group", { name: "Quick replies" })).toBeNull();
+      expect(screen.getByText(CLARIFY_QUESTION)).toBeOnTheScreen();
+    });
+  });
+
+  describe("an answer that could not be sent yet", () => {
+    it("should dim and disable the quick replies while the thread is read again, and enable them once it lands", async () => {
+      mockAssistant.isFetching = true;
+      await showThread([userItem("u1", CHICKEN_AND_RICE), clarifyItem()]);
+      for (const reply of QUICK_REPLIES) {
+        expect(button(reply)).toBeDisabled();
+      }
+
+      mockAssistant.isFetching = false;
+      await screen.rerender(sheetTree());
+
+      for (const reply of QUICK_REPLIES) {
+        expect(button(reply)).toBeEnabled();
+      }
+    });
+
+    it("should dim and disable both confirm buttons while the thread is read again, and enable them once it lands", async () => {
+      mockAssistant.isFetching = true;
+      await showThread(askedConfirmation(deleteSeveral));
+      expect(button("Delete 3 entries")).toBeDisabled();
+      expect(button("Keep them")).toBeDisabled();
+
+      mockAssistant.isFetching = false;
+      await screen.rerender(sheetTree());
+
+      expect(button("Delete 3 entries")).toBeEnabled();
+      expect(button("Keep them")).toBeEnabled();
+    });
+
+    it("should disable the buttons while an answer is arriving", async () => {
+      mockAssistant.isStreaming = true;
+      await showThread(askedConfirmation(deleteSeveral));
+
+      expect(button("Delete 3 entries")).toBeDisabled();
+      expect(button("Keep them")).toBeDisabled();
+    });
+
+    it("should send nothing when a disabled quick reply is pressed", async () => {
+      mockAssistant.isFetching = true;
+      await showThread([userItem("u1", CHICKEN_AND_RICE), clarifyItem()]);
 
       await userSetup().press(button("1 chicken breast, 150 g rice"));
 
@@ -524,6 +584,27 @@ describe("the questions the assistant asks in its thread", () => {
       expect(screen.getAllByText(deleteSeveral.question)).toHaveLength(1);
       expect(button("Delete 3 entries")).toBeEnabled();
       expect(button("Keep them")).toBeEnabled();
+    });
+
+    it("should draw a live confirmation's question once when the reply has words before it", async () => {
+      await sendFromEmptySheet();
+      const asked = "Delete 3 entries at 13:00 today?";
+      mockAssistant.live = liveTurn({
+        text: `Looking at lunch.\n\n${asked}`,
+        confirm: {
+          confirmationId: CONFIRMATION_ID,
+          question: asked,
+          confirmLabel: deleteSeveral.confirmLabel,
+          cancelLabel: deleteSeveral.cancelLabel,
+          tone: "danger",
+        },
+        outcome: "confirm",
+      });
+      await screen.rerender(sheetTree());
+
+      expect(screen.getAllByText(asked)).toHaveLength(1);
+      expect(screen.getByText(/^Looking at lunch\./)).toBeOnTheScreen();
+      expect(button("Delete 3 entries")).toBeEnabled();
     });
 
     it("should draw the same words when the stored question takes over from the live one", async () => {

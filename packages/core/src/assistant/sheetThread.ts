@@ -12,7 +12,7 @@ import type { DescribableAssistantNotice } from "../copy/assistantNotices";
  * as it arrives. The answer lines of the stored thread are drawn by a later ticket, so they are left out
  * here, never shown as raw data. The action cards are drawn here, with the state of their Undo given by
  * `describeAssistantCard`, and so are the questions the assistant asks (`assistant · clarify` and
- * `confirm`): its words, then the quick replies or the two buttons, which are answered once the person has
+ * `confirm`): its words, then the quick replies or the two buttons, which are gone once the person has
  * sent their next message.
  */
 
@@ -57,8 +57,6 @@ export type AssistantSheetEntry =
       kind: "quickReplies";
       key: string;
       options: string[];
-      /** Once you have sent your next message the replies are drawn, but no longer respond. */
-      isAnswered: boolean;
     }
   | {
       /** The two buttons under a confirmation: yes first, then the cancel. Each is sent as your message. */
@@ -67,7 +65,6 @@ export type AssistantSheetEntry =
       confirmLabel: string;
       cancelLabel: string;
       tone: "danger" | "primary";
-      isAnswered: boolean;
     }
   | {
       kind: "assistant";
@@ -118,14 +115,24 @@ const isDescribable = (notice: AssistantNotice): notice is DescribableAssistantN
 const paragraphsOf = (text: string): string[] =>
   text.split(/\n{2,}/).filter((paragraph) => paragraph.trim() !== "");
 
-// Whether two sets of paragraphs are the same words, so a question the reply before it already said is drawn once.
-const sameWords = (first: readonly string[], second: readonly string[]): boolean =>
-  first.map((paragraph) => paragraph.trim()).join("\n\n") ===
-  second.map((paragraph) => paragraph.trim()).join("\n\n");
+// Whether the paragraphs of a reply end with the paragraphs of a question: the question of a confirmation is
+// the text of the reply that asked it, and the live reply joins every step's words, so words can come first.
+function endsWithWords(reply: readonly string[], question: readonly string[]): boolean {
+  const replyWords = reply.map((paragraph) => paragraph.trim());
+  const questionWords = question.map((paragraph) => paragraph.trim());
+  return (
+    questionWords.length > 0 &&
+    questionWords.length <= replyWords.length &&
+    questionWords.every(
+      (paragraph, position) =>
+        paragraph === replyWords[replyWords.length - questionWords.length + position],
+    )
+  );
+}
 
 /**
- * A question as the assistant's words, unless the entry before it says the same: the question of a
- * confirmation is the text of the reply that asked it, which is drawn already.
+ * A question as the assistant's words, unless the entry before it is a reply that ends in the same words:
+ * the question of a confirmation is the text of the reply that asked it, which is drawn already.
  */
 function questionEntries(
   key: string,
@@ -133,7 +140,7 @@ function questionEntries(
   previous: DraftEntry | undefined,
 ): DraftEntry[] {
   const paragraphs = paragraphsOf(question);
-  if (previous?.kind === "assistant" && sameWords(previous.paragraphs, paragraphs)) {
+  if (previous?.kind === "assistant" && endsWithWords(previous.paragraphs, paragraphs)) {
     return [];
   }
   return [
@@ -141,18 +148,18 @@ function questionEntries(
   ];
 }
 
+// An answered question keeps its words and loses its buttons: the boards draw your answer under it and
+// nothing else (`assistant · confirm-yes`, `confirm-no`, `clarify` right).
 function clarifyEntries(
   key: string,
   clarify: NonNullable<AssistantSheetLiveTurn["clarify"]>,
   isAnswered: boolean,
   previous: DraftEntry | undefined,
 ): DraftEntry[] {
-  return [
-    ...questionEntries(key, clarify.question, previous),
-    ...(clarify.quickReplies.length === 0
-      ? []
-      : [{ kind: "quickReplies" as const, key, options: [...clarify.quickReplies], isAnswered }]),
-  ];
+  const question = questionEntries(key, clarify.question, previous);
+  return isAnswered || clarify.quickReplies.length === 0
+    ? question
+    : [...question, { kind: "quickReplies", key, options: [...clarify.quickReplies] }];
 }
 
 function confirmEntries(
@@ -161,17 +168,19 @@ function confirmEntries(
   isAnswered: boolean,
   previous: DraftEntry | undefined,
 ): DraftEntry[] {
-  return [
-    ...questionEntries(key, confirm.question, previous),
-    {
-      kind: "confirm",
-      key,
-      confirmLabel: confirm.confirmLabel,
-      cancelLabel: confirm.cancelLabel,
-      tone: confirm.tone,
-      isAnswered,
-    },
-  ];
+  const question = questionEntries(key, confirm.question, previous);
+  return isAnswered
+    ? question
+    : [
+        ...question,
+        {
+          kind: "confirm",
+          key,
+          confirmLabel: confirm.confirmLabel,
+          cancelLabel: confirm.cancelLabel,
+          tone: confirm.tone,
+        },
+      ];
 }
 
 /** `isAllAnswered`: the person has sent a message after these items, so every question in them is answered. */
@@ -371,27 +380,32 @@ export function buildAssistantSheetThread({
  */
 export function canSendAssistantMessage({
   text,
-  isStreaming,
-  isOnline,
-  isThreadKnown,
-  isThreadFetching,
-  access,
-}: {
-  text: string;
+  ...state
+}: { text: string } & AssistantSendState): boolean {
+  return text.trim() !== "" && canAnswerAssistantQuestion(state);
+}
+
+type AssistantSendState = {
   isStreaming: boolean;
   isOnline: boolean;
   isThreadKnown: boolean;
   isThreadFetching: boolean;
   access: AssistantSheetAccess;
-}): boolean {
-  return (
-    text.trim() !== "" &&
-    !isStreaming &&
-    isOnline &&
-    isThreadKnown &&
-    !isThreadFetching &&
-    access.kind === "open"
-  );
+};
+
+/**
+ * Whether a message could be sent now, whatever it says, which is when a quick reply or a confirm button
+ * can be pressed: the rule of `canSendAssistantMessage` without the words. A press that would be refused is
+ * dimmed instead, so it never does nothing silently.
+ */
+export function canAnswerAssistantQuestion({
+  isStreaming,
+  isOnline,
+  isThreadKnown,
+  isThreadFetching,
+  access,
+}: AssistantSendState): boolean {
+  return !isStreaming && isOnline && isThreadKnown && !isThreadFetching && access.kind === "open";
 }
 
 /** A notice that stops the assistant taking a turn. A failed turn is not one, because the composer stays on. */

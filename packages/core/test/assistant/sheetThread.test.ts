@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { loggedCard } from "./cardFixtures";
 import {
   buildAssistantSheetThread,
+  canAnswerAssistantQuestion,
   canSendAssistantMessage,
   describeAssistantComposer,
   isAssistantStatusKnown,
@@ -451,17 +452,16 @@ describe("buildAssistantSheetThread with a question", () => {
           isStreaming: false,
           isStopped: false,
         },
-        { kind: "quickReplies", key: "q1", options: QUICK_REPLIES, isAnswered: false },
+        { kind: "quickReplies", key: "q1", options: QUICK_REPLIES },
       ]);
     });
 
-    it("should draw the quick replies as answered once a later turn exists", () => {
+    it("should draw only the question, with no quick replies, once a later turn exists", () => {
       expect(
-        build({ items: askedItems(clarifyItem({ answered: true })) }).entries.at(-1),
-      ).toMatchObject({
-        kind: "quickReplies",
-        isAnswered: true,
-      });
+        build({ items: askedItems(clarifyItem({ answered: true })) }).entries.map(
+          (entry) => entry.kind,
+        ),
+      ).toEqual(["you", "assistant"]);
     });
 
     it("should draw the question and no quick replies when it offers none", () => {
@@ -504,7 +504,6 @@ describe("buildAssistantSheetThread with a question", () => {
           confirmLabel: "Delete 3 entries",
           cancelLabel: "Keep them",
           tone: "danger",
-          isAnswered: false,
         },
       ]);
     });
@@ -515,11 +514,57 @@ describe("buildAssistantSheetThread with a question", () => {
       ).toEqual(["you", "assistant", "confirm"]);
     });
 
-    it("should draw the buttons as answered once a later turn exists", () => {
-      expect(build({ items: askedItems(confirmItem(true)) }).entries.at(-1)).toMatchObject({
-        kind: "confirm",
-        isAnswered: true,
-      });
+    it("should draw only the question, with no buttons, once a later turn exists", () => {
+      expect(
+        build({ items: askedItems(confirmItem(true)) }).entries.map((entry) => entry.kind),
+      ).toEqual(["you", "assistant"]);
+    });
+
+    it("should draw only the reply that asked, with no buttons, once a later turn exists", () => {
+      const items = [...askedItems(deleteReply), confirmItem(true)];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual(["you", "assistant"]);
+    });
+
+    it("should draw the question once when the reply has words before it", () => {
+      const items: AssistantThreadItem[] = [
+        { kind: "user", id: "u1", text: "Delete everything from lunch today" },
+        {
+          kind: "reply",
+          id: "r1",
+          text: `Looking at lunch.\n\n${DELETE_QUESTION}`,
+          answerMeta: null,
+          stopped: false,
+        },
+        confirmItem(),
+      ];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "confirm",
+      ]);
+    });
+
+    it("should draw the question when the reply only mentions its words in the middle", () => {
+      const items: AssistantThreadItem[] = [
+        { kind: "user", id: "u1", text: "Delete everything from lunch today" },
+        {
+          kind: "reply",
+          id: "r1",
+          text: `${DELETE_QUESTION}\n\nTake your time.`,
+          answerMeta: null,
+          stopped: false,
+        },
+        confirmItem(),
+      ];
+
+      expect(build({ items }).entries.map((entry) => entry.kind)).toEqual([
+        "you",
+        "assistant",
+        "assistant",
+        "confirm",
+      ]);
     });
   });
 
@@ -547,8 +592,25 @@ describe("buildAssistantSheetThread with a question", () => {
           isStreaming: false,
           isStopped: false,
         },
-        { kind: "quickReplies", key: "sent:clarify", options: QUICK_REPLIES, isAnswered: false },
+        { kind: "quickReplies", key: "sent:clarify", options: QUICK_REPLIES },
       ]);
+    });
+
+    it("should draw a live confirmation's question once when the reply has words before it", () => {
+      const thread = build({
+        sent,
+        live: liveTurn({
+          text: `Looking at lunch.\n\n${DELETE_QUESTION}`,
+          confirm: {
+            question: DELETE_QUESTION,
+            confirmLabel: "Delete 3 entries",
+            cancelLabel: "Keep them",
+            tone: "danger",
+          },
+        }),
+      });
+
+      expect(thread.entries.map((entry) => entry.kind)).toEqual(["you", "assistant", "confirm"]);
     });
 
     it("should draw a live confirmation's question once, from the reply that asked it", () => {
@@ -572,13 +634,12 @@ describe("buildAssistantSheetThread with a question", () => {
         confirmLabel: "Delete 3 entries",
         cancelLabel: "Keep them",
         tone: "danger",
-        isAnswered: false,
       });
     });
   });
 
   describe("the message that answers a question", () => {
-    it("should draw the stored question's buttons as answered while the next turn is drawn", () => {
+    it("should draw the stored question without its quick replies while the next turn is drawn", () => {
       const items = askedItems(clarifyItem());
       const thread = build({
         items,
@@ -587,13 +648,11 @@ describe("buildAssistantSheetThread with a question", () => {
         isStreaming: true,
       });
 
-      expect(thread.entries.find((entry) => entry.kind === "quickReplies")).toMatchObject({
-        isAnswered: true,
-      });
+      expect(thread.entries.some((entry) => entry.kind === "quickReplies")).toBe(false);
       expect(thread.entries.at(-1)).toMatchObject({ kind: "assistant", isStreaming: true });
     });
 
-    it("should draw a stored confirmation's buttons as answered while the next turn is drawn", () => {
+    it("should draw the stored confirmation without its buttons while the next turn is drawn", () => {
       const thread = build({
         items: askedItems(confirmItem()),
         sent: { text: "Keep them", afterItemId: "k1" },
@@ -601,9 +660,7 @@ describe("buildAssistantSheetThread with a question", () => {
         isStreaming: true,
       });
 
-      expect(thread.entries.find((entry) => entry.kind === "confirm")).toMatchObject({
-        isAnswered: true,
-      });
+      expect(thread.entries.some((entry) => entry.kind === "confirm")).toBe(false);
     });
   });
 
@@ -748,6 +805,30 @@ describe("canSendAssistantMessage", () => {
     { name: "a status still being read", access: { kind: "checking" } },
   ] as const)("should not allow a message under $name", ({ access }) => {
     expect(canSendAssistantMessage({ ...ready, access })).toBe(false);
+  });
+});
+
+describe("canAnswerAssistantQuestion", () => {
+  const ready = {
+    isStreaming: false,
+    isOnline: true,
+    isThreadKnown: true,
+    isThreadFetching: false,
+    access: { kind: "open" } satisfies AssistantSheetAccess,
+  };
+
+  it("should allow an answer while online, not streaming and with the conversation read", () => {
+    expect(canAnswerAssistantQuestion(ready)).toBe(true);
+  });
+
+  it.each([
+    { name: "an answer arriving", change: { isStreaming: true } },
+    { name: "being offline", change: { isOnline: false } },
+    { name: "the conversation not being read yet", change: { isThreadKnown: false } },
+    { name: "the conversation being read again", change: { isThreadFetching: true } },
+    { name: "the consent card", change: { access: { kind: "consent" } } },
+  ] as const)("should not allow an answer under $name", ({ change }) => {
+    expect(canAnswerAssistantQuestion({ ...ready, ...change })).toBe(false);
   });
 });
 
