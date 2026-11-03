@@ -32,6 +32,8 @@ module.exports = {
   ],
   // Locally a run uses half the cores, so several runs at once do not bury the machine. CI keeps the default.
   ...(process.env.CI ? {} : { maxWorkers: "50%" }),
+  // Splits the files between the --shard legs by their size on disk instead of by a hash of the path.
+  testSequencer: "<rootDir>/test/support/shardSequencer.js",
   // Headroom for a busy CI runner, where the same work takes several times as long.
   testTimeout: 20000,
   // lucide-react-native names its ES module build for the react-native condition, which Jest does not
