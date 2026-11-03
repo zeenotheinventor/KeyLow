@@ -4,18 +4,19 @@
 import { z } from "zod";
 
 import { buildRecipeIngredient, canMeasureByVolume, validateRecipeDraft } from "../../core.ts";
-import { getFood, listFoodPortions } from "../../repos.ts";
+import { getFood, getRecipe, listFoodPortions, setRecipeArchived } from "../../repos.ts";
 import { invalidInput } from "./entryWrite.ts";
 
 import type { RecipeDraftProblem, RecipeIngredient } from "../../core.ts";
 import type { RecipeDetail } from "../../repos.ts";
-import type { ToolContext, WriteRunOutput } from "../tool.ts";
+import type { ActionRecord } from "../store.ts";
+import type { InverseOutcome, ToolContext, WriteRunOutput } from "../tool.ts";
 
 export const maxIngredients = 40;
 const maxPortionCount = 100;
 const maxGramsOrMillilitres = 10000;
-const maxSteps = 50;
-const maxStepLength = 1000;
+export const maxSteps = 50;
+export const maxStepLength = 1000;
 
 // One flat shape and not a union of three, because a strict tool schema holds no union. `unit` says which
 // amount it is, and `portion_id` goes with the portion unit only.
@@ -212,3 +213,18 @@ export const cardRecipeOf = (recipe: RecipeDetail) => ({
   servings: recipe.servings,
   perServing: perServingOf(recipe),
 });
+
+// Undo of a recipe a tool made: archives it, as the recipe list does, unless the person has archived or
+// deleted it already. `recipes` has no change time to compare, so an edit made since is not noticed, and
+// archiving loses nothing.
+export async function archiveMadeRecipe(
+  ctx: ToolContext,
+  { targetId }: ActionRecord,
+): Promise<InverseOutcome> {
+  const recipe = targetId === null ? null : await getRecipe(ctx.caller, targetId);
+  if (targetId === null || recipe === null || recipe.is_archived) {
+    return "unavailable";
+  }
+  await setRecipeArchived(ctx.caller, targetId, true);
+  return "undone";
+}

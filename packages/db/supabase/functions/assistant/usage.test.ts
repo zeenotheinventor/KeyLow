@@ -158,3 +158,17 @@ Deno.test("recordUsage writes route compact and transport none for a compaction 
   assertEquals(row?.["route"], "compact");
   assertEquals(row?.["transport"], "none");
 });
+
+Deno.test(
+  "recordUsage writes route recipe_parse and transport none for a recipe parse call",
+  async () => {
+    const { client, operations } = fakeSupabase();
+
+    await recordUsage(client, { ...call, route: "recipe_parse" });
+
+    const values = operations[0]?.values;
+    const row = Array.isArray(values) ? {} : values;
+    assertEquals(row?.["route"], "recipe_parse");
+    assertEquals(row?.["transport"], "none");
+  },
+);

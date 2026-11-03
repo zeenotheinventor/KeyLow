@@ -76,7 +76,7 @@ Deno.test("a name that is not lower snake case is refused", () => {
 });
 
 Deno.test(
-  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food and targets writes and then ask_user in order",
+  "the real registry lists the food reads, the diary reads, the diary, day, recipe, food, targets and recipe import writes and then ask_user in order",
   () => {
     assertEquals(
       toolRegistry.list.map((tool) => [tool.name, tool.kind]),
@@ -98,6 +98,7 @@ Deno.test(
         ["archive_recipe", "write"],
         ["create_custom_food", "write"],
         ["update_targets", "write"],
+        ["import_recipe_from_url", "write"],
         ["ask_user", "read"],
       ],
     );
@@ -178,12 +179,12 @@ Deno.test("create_custom_food opts out of strict mode and update_targets does no
 });
 
 Deno.test(
-  "the strict budget of the real registry is 15 tools, 0 optional and 12 union parameters",
+  "the strict budget of the real registry is 16 tools, 0 optional and 13 union parameters",
   () => {
     assertEquals(strictBudgetOf(toolRegistry.list), {
-      tools: 15,
+      tools: 16,
       optionalParameters: 0,
-      unionParameters: 12,
+      unionParameters: 13,
     });
   },
 );
@@ -258,3 +259,17 @@ Deno.test("plain objects, arrays, enums, nullable and optional are accepted", ()
 
   assertEquals(createRegistry([withInput("good_tool", input)]).list.length, 1);
 });
+
+Deno.test(
+  "import_recipe_from_url stays strict, and its servings are the only nullable parameter",
+  () => {
+    const importTool = toolRegistry.get("import_recipe_from_url");
+
+    assertEquals(importTool?.strict, undefined);
+    assertEquals(strictBudgetOf(importTool === undefined ? [] : [importTool]), {
+      tools: 1,
+      optionalParameters: 0,
+      unionParameters: 1,
+    });
+  },
+);

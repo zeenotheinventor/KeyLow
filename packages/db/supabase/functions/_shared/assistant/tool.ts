@@ -5,6 +5,7 @@ import { toJSONSchema } from "zod";
 
 import type { Database } from "../core/database.types.ts";
 import type { ReportError } from "../report.ts";
+import type { RecipeImportServices } from "./recipeParse.ts";
 import type { ActionRecord, ActionStore, ActionTarget } from "./store.ts";
 import type { JsonValue } from "./untrusted.ts";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -36,6 +37,9 @@ export type ToolContext = {
   // The tools this turn may call, chosen in code before the model ran. Undefined refuses every tool.
   allowedTools: ReadonlySet<string> | undefined;
   reportError: ReportError;
+  // The page fetch and the parse call of `import_recipe_from_url`. Only the `mcp` function sets it, so no
+  // other tool reaches the network, and a context without it answers that tool `tool_failed`.
+  recipeImport?: RecipeImportServices;
 };
 
 export type ToolRunOutput = {
@@ -251,6 +255,17 @@ export function strictSchemaProblem(tool: ToolDefinition): string | null {
   return feature === null
     ? null
     : `Tool ${tool.name} has an input schema with ${feature}, which a strict tool schema cannot hold`;
+}
+
+// The strict JSON Schema of any zod input, made the way a tool's is: every nullable is `anyOf` with null, every
+// object is closed with all its properties required, and the keywords a strict schema refuses are left out.
+// For the structured output of a call that is not a tool call.
+export function toStrictJsonSchema(input: ZodType): JsonSchemaObject {
+  const strict = strictNode(toJSONSchema(input, { io: "input", reused: "inline" }));
+  if (!isRecord(strict)) {
+    throw new Error("The schema is not an object schema");
+  }
+  return strict;
 }
 
 // Where `tools/list` says whether a tool is strict, in the tool's `_meta`.

@@ -295,26 +295,21 @@ Deno.test("an amount in millilitres of a food with no density is invalid_input",
   assertEquals(recipesOf(stub), []);
 });
 
-Deno.test(
-  "a link that could not be saved leaves the recipe saved and tells the model",
-  async () => {
-    const { ctx, stub, store, reported } = setUp();
-    stub.failNextWriteTo("recipes");
+Deno.test("the link is saved by the same write as the recipe, with no second write", async () => {
+  const { ctx, stub, store, reported } = setUp();
 
-    const result = await executeTool(ctx, "create_recipe", {
-      ...chickenAndRice,
-      source_url: "https://example.com/chicken-and-rice",
-    });
+  const result = await executeTool(ctx, "create_recipe", {
+    ...chickenAndRice,
+    source_url: "https://example.com/chicken-and-rice",
+  });
 
-    assertEquals(result.status, "ok");
-    assertEquals(recipesOf(stub).length, 1);
-    assertEquals(recipesOf(stub)[0]?.["source_url"], null);
-    assertObjectMatch(payloadOf(result) as object, { source_url_saved: false });
-    assertObjectMatch(structuredOf(result), { card: { kind: "recipe_created" } });
-    assertEquals(store.actions.length, 1);
-    assertEquals(reported.length, 1);
-  },
-);
+  assertEquals(result.status, "ok");
+  assertEquals(recipesOf(stub)[0]?.["source_url"], "https://example.com/chicken-and-rice");
+  assertFalse(stub.calls.some((call) => call.table === "recipes" && call.method === "update"));
+  assertFalse("source_url_saved" in (payloadOf(result) as object));
+  assertEquals(store.actions.length, 1);
+  assertEquals(reported, []);
+});
 
 Deno.test("Undo archives the recipe, and a second Undo is already_undone", async () => {
   const { ctx, stub } = setUp();

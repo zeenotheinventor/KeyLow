@@ -1677,6 +1677,36 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a link typed without its scheme still gets a reading_recipe status with its host",
+  async () => {
+    await withHarness(
+      {
+        responses: [
+          callTools([
+            {
+              id: "i1",
+              name: "import_recipe_from_url",
+              input: { url: "example.com/lemon-traybake", servings: null },
+            },
+          ]),
+          reply("Imported."),
+        ],
+        answers: {
+          import_recipe_from_url: () => okResult({ name: "import_recipe_from_url" }),
+        },
+      },
+      async (created) => {
+        const result = await created.take("Add this recipe: example.com/lemon-traybake");
+
+        assertEquals(eventsOfType(result.events, "status"), [
+          { type: "status", code: "reading_recipe", host: "example.com" },
+        ]);
+      },
+    );
+  },
+);
+
 // ---- Configuration, logs ----
 
 Deno.test(
@@ -1723,6 +1753,28 @@ Deno.test(
   },
 );
 
+// A log line without the parts that are random or measured: the ids (a UUID can hold any run of digits, such as
+// 143), the `user=` and `turn=` values, and the duration. What is left is the words a line could leak.
+export function withoutIdsAndDurations(line: string): string {
+  return line
+    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi, "<id>")
+    .replace(/\b(user|turn)=\S+/g, "$1=<id>")
+    .replace(/\b\d+ms$/, "<duration>");
+}
+
+Deno.test(
+  "the log check ignores ids and durations that happen to hold the digits it looks for",
+  () => {
+    const line =
+      "assistant turn user=00000000-0000-4000-8000-0000000000a1 turn=18cef451-1432-4a1b-8c3d-0123456789ab modelCalls=2 toolCalls=1 ending=complete 143ms";
+
+    assertEquals(line.includes("143"), true);
+    assertEquals(withoutIdsAndDurations(line).includes("143"), false);
+    // A leaked result still trips it.
+    assertEquals(withoutIdsAndDurations(`${line} calories 143`).includes("143"), true);
+  },
+);
+
 Deno.test(
   "no log line holds message text, a tool argument or a result, and each turn logs one summary line",
   async () => {
@@ -1748,8 +1800,9 @@ Deno.test(
     }
 
     for (const line of spy.lines) {
-      assertEquals(line.includes("eggs"), false, line);
-      assertEquals(line.includes("143"), false, line);
+      const content = withoutIdsAndDurations(line);
+      assertEquals(content.includes("eggs"), false, line);
+      assertEquals(content.includes("143"), false, line);
     }
     const summaries = spy.lines.filter((line) => line.startsWith("assistant turn "));
     assertEquals(summaries.length, 1);

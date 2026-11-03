@@ -118,6 +118,27 @@ describe("createRecipe", () => {
     });
   });
 
+  it("should send the link the recipe came from as source_url", async () => {
+    answerSave();
+
+    await createRecipe(
+      createTestClient(),
+      recipeToSave({ sourceUrl: "https://example.com/lemon-traybake" }),
+    );
+
+    expect(savedRecipe().p_recipe).toMatchObject({
+      source_url: "https://example.com/lemon-traybake",
+    });
+  });
+
+  it("should leave source_url out when there is no link, so a save never clears a stored one", async () => {
+    answerSave();
+
+    await createRecipe(createTestClient(), recipeToSave());
+
+    expect(savedRecipe().p_recipe).not.toHaveProperty("source_url");
+  });
+
   it("should send the ingredient rows built by core in list order, without a position", async () => {
     answerSave();
 
@@ -277,6 +298,11 @@ describe("what a save checks before it asks the database anything", () => {
     ["a yield over 100000", recipeToSave({ yieldGrams: 100_001 })],
     ["more than 50 steps", recipeToSave({ steps: Array.from({ length: 51 }, () => "Stir.") })],
     ["a step over 1000 characters", recipeToSave({ steps: ["a".repeat(1001)] })],
+    ["a link that is not http or https", recipeToSave({ sourceUrl: "ftp://example.com/a" })],
+    [
+      "a link over 2000 characters",
+      recipeToSave({ sourceUrl: `https://e.com/${"a".repeat(2000)}` }),
+    ],
     [
       "more than 100 ingredients",
       recipeToSave({

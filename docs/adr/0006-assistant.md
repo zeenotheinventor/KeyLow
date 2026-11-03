@@ -16,7 +16,7 @@ Out of scope for M8: photo logging, voice input, push notifications or proactive
 
 ### Host and client (Q1)
 
-The `assistant` Edge Function is the MCP host. It holds the Anthropic key. On each turn it connects to the `mcp` Edge Function as an MCP client (the MCP TypeScript SDK, Streamable HTTP, inside Supabase) with the user's JWT in the `Authorization` header and the turn id in the URL. It lists the tools, hands them to the Messages API as ordinary client tools (`strict: true` unless a tool opts out to stay inside the API's caps, in a fixed order so the prompt cache holds), runs every `tool_use` through the client's `callTool`, feeds the results back, and loops until the model ends its turn.
+The `assistant` Edge Function is the MCP host. It holds the Anthropic key, and the `mcp` function reads the key for the tool-less `recipe_parse` call only. On each turn it connects to the `mcp` Edge Function as an MCP client (the MCP TypeScript SDK, Streamable HTTP, inside Supabase) with the user's JWT in the `Authorization` header and the turn id in the URL. It lists the tools, hands them to the Messages API as ordinary client tools (`strict: true` unless a tool opts out to stay inside the API's caps, in a fixed order so the prompt cache holds), runs every `tool_use` through the client's `callTool`, feeds the results back, and loops until the model ends its turn.
 
 - The user's JWT never leaves Supabase. Nothing reaches Anthropic except the model request itself.
 - There is no `mcp_servers`, no `mcp_toolset` and no `mcp-client-2025-11-20` beta anywhere. The Messages API MCP connector is not used.
