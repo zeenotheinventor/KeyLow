@@ -164,34 +164,56 @@ jobs:
             echo "web=$web"
           } >> "$GITHUB_OUTPUT"
 
-  # The cheap checks, which always run. Formatting is checked for the whole repository, not only the
-  # affected packages, because the root format:check task belongs to no package, so --affected skips it,
-  # and Prettier checks the repository in seconds. Everything that is not an app is linted,
-  # type-checked and tested here, so a change to a package is also tested by the jobs of the apps that
-  # use it.
+  # The cheap checks, which always run, as five parallel legs. Formatting is checked for the whole
+  # repository, not only the affected packages, because the root format:check task belongs to no
+  # package, so --affected skips it. Prettier needs nothing from the install beyond itself, so it has a
+  # leg of its own. Everything that is not an app is linted, type-checked and tested, so a change to a
+  # package is also tested by the jobs of the apps that use it. `static` lints and type-checks, and the
+  # tests run in three Vitest shards. --only skips the dependency type-checks in the shards, because
+  # `static` runs them, and --passWithNoTests covers a small package whose files all land in another
+  # shard. Only `static` saves the pnpm store. The job id stays `core`, so `checks` needs no change,
+  # and fail-fast is off so a failed leg does not hide the result of the others.
   core:
+    name: core (${{ matrix.part }})
     needs: scope
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - part: format
+          - part: static
+          - part: test 1/3
+            shard: 1/3
+          - part: test 2/3
+            shard: 2/3
+          - part: test 3/3
+            shard: 3/3
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 2
       - uses: ./.github/actions/setup
         with:
-          save-store: "true"
+          save-store: ${{ matrix.part == 'static' }}
       - name: Check the formatting of the whole repository
+        if: matrix.part == 'format'
         run: pnpm format:check
-      - name: Lint, type-check and test the packages and tools
-        run: pnpm turbo run lint typecheck test --filter='!@keylow/mobile' --filter='!@keylow/web' ${{ needs.scope.outputs.affected }}
+      - name: Lint and type-check the packages and tools
+        if: matrix.part == 'static'
+        run: pnpm turbo run lint typecheck --filter='!@keylow/mobile' --filter='!@keylow/web' ${{ needs.scope.outputs.affected }}
       # Two suites read files across the repository instead of importing them, so turbo never counts
       # them as affected. The source guard in @keylow/config walks every source file in apps/ and
       # packages/ and reads the core helpers. tools/design-export checks docs/design, its READMEs
       # included, and the packages/tokens stylesheet. Both take seconds, so they always run. A full run
-      # has run them above.
+      # has run them in the test shards.
       - name: Run the repository-wide suites
-        if: needs.scope.outputs.full != 'true'
+        if: matrix.part == 'static' && needs.scope.outputs.full != 'true'
         run: pnpm turbo run test --filter=@keylow/config --filter=@keylow/design-export
+      - name: Test the packages and tools, shard ${{ matrix.shard }}
+        if: matrix.shard
+        run: pnpm turbo run test --filter='!@keylow/mobile' --filter='!@keylow/web' ${{ needs.scope.outputs.affected }} --only -- --shard=${{ matrix.shard }} --passWithNoTests
 
   # Fails when the lockfile contains duplicates that a dedupe would remove. It resolves against the
   # registry, which took anywhere from 20 s to 110 s, so it has a job of its own. A lockfile change
