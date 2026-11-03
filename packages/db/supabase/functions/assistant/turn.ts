@@ -58,8 +58,8 @@ export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
 // Supabase Edge Functions stop a worker after 150 s of wall-clock time on the free plan and 400 s on paid
 // plans (https://supabase.com/docs/guides/functions/limits, checked 2026-11-03). The plan is not recorded in
 // the repository, so the shorter limit is the one used. The SDK default of 10 minutes would outlast it. One
-// retry is kept for a dropped connection or a 529, so a call that never answers costs 2 x 60 s at most.
-// This bounds the wait for the response headers only. A stream that stalls after it started, and the turn
+// retry is kept for a dropped connection or a 529, so a call that never answers costs 2 x 60 s at most,
+// which the turn deadline below caps at 100 s. This bounds the wait for the response headers only. A stream that stalls after it started, and the turn
 // as a whole, are bounded by `TURN_DEADLINE_MILLISECONDS` and `MODEL_STREAM_IDLE_MILLISECONDS` below.
 export const MODEL_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
 const MODEL_MAX_RETRIES = 1;
@@ -82,12 +82,13 @@ const CONCLUDE_MARGIN_MILLISECONDS = 10_000;
 export const TURN_DEADLINE_MILLISECONDS =
   WALL_CLOCK_MILLISECONDS - WORST_UNINTERRUPTIBLE_STEP_MILLISECONDS - CONCLUDE_MARGIN_MILLISECONDS;
 
-// The longest the model stream may be silent, from the response headers on, before the call is cut. Every
-// stream event counts (a block start, a text chunk, a tool input fragment, a ping), so the normal gap is
-// well under a second, except for a tool input the API buffers before it sends it. 30 s is far more than
-// that, and under a third of the deadline, so one stalled call cannot use the whole turn. It is a
-// judgement, not a measurement: KEY-795 measures the steps.
-export const MODEL_STREAM_IDLE_MILLISECONDS = 30_000;
+// The longest the model stream may be silent, from the response headers on, before the call is cut. The
+// SDK drops the API's keep-alive pings before they reach the stream's listeners, so only a real stream
+// event (a block start, a text chunk, a tool input fragment, a stop) resets the timer. The API can buffer a
+// large tool input and send nothing but pings until it is complete, so the gap between two events can be
+// many seconds. 45 s is far above any gap we expect, and two stalls in a row are still bounded by the
+// 100 s deadline. It is a judgement, not a measurement: KEY-795 measures the real gaps.
+export const MODEL_STREAM_IDLE_MILLISECONDS = 45_000;
 
 export type TurnLimits = {
   deadlineMilliseconds: number;
@@ -330,7 +331,7 @@ async function callModel(
   });
   // Armed when the response headers arrive (`connect`, before the first stream event) and pushed back by
   // every stream event after it (`streamEvent`: message_start, each block start, delta and stop, the
-  // message_delta, message_stop and ping).
+  // message_delta and message_stop). A ping never gets here: the SDK skips it while it reads the stream.
   let idleTimer: ReturnType<typeof setTimeout> | undefined;
   const watchForSilence = () => {
     clearTimeout(idleTimer);

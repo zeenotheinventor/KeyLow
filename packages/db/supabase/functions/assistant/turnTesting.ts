@@ -37,6 +37,8 @@ export type ScriptedResponse = {
   holdAfterFirstText?: boolean;
   // Sends the headers and then no event at all, until the reader goes away.
   holdAfterHeaders?: boolean;
+  // Never answers, not even with headers, until the reader goes away.
+  neverAnswer?: boolean;
   // An error reply instead of a stream.
   httpStatus?: number;
   // Ends the stream after its blocks, with no message_delta or message_stop.
@@ -157,6 +159,12 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     const scripted = responses[index];
     if (scripted === undefined) {
       return failure(400);
+    }
+    if (scripted.neverAnswer === true) {
+      const readerGone = Promise.withResolvers<void>();
+      request.signal.addEventListener("abort", () => readerGone.resolve());
+      await Promise.race([readerGone.promise, stopped.promise]);
+      return failure(499);
     }
     if (scripted.httpStatus !== undefined) {
       return failure(scripted.httpStatus);

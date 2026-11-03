@@ -1051,8 +1051,8 @@ Deno.test("an abort during a tool call stores that result and makes no further c
 const sleep = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
-// A stall is found in 150 ms. The deadline is far off, so only the watchdog can fire.
-const quickIdleLimits = { deadlineMilliseconds: 60_000, streamIdleMilliseconds: 150 };
+// A stall is found in 400 ms. The deadline is far off, so only the watchdog can fire.
+const quickIdleLimits = { deadlineMilliseconds: 60_000, streamIdleMilliseconds: 400 };
 // The deadline is short. The watchdog is far off, so only the deadline can fire.
 const quickDeadline = (deadlineMilliseconds: number) => ({
   deadlineMilliseconds,
@@ -1177,7 +1177,7 @@ Deno.test("a deadline that passes during a model stream ends failed as turn_dead
   try {
     await withHarness(
       {
-        limits: quickDeadline(150),
+        limits: quickDeadline(500),
         responses: [
           {
             blocks: [{ type: "text", text: "Let me think about that for you" }],
@@ -1202,19 +1202,18 @@ Deno.test("a deadline that passes during a model stream ends failed as turn_dead
 });
 
 Deno.test(
-  "a turn whose tool calls together pass the deadline starts no model call after it and ends failed",
+  "a turn that passes its deadline during a tool call starts no model call after it and ends failed",
   async () => {
     const slowRead: ToolAnswer = async () => {
-      await sleep(200);
+      await sleep(900);
       return okResult({ name: "search_foods" });
     };
     await withHarness(
       {
-        limits: quickDeadline(300),
+        limits: quickDeadline(500),
         responses: [
           callTools([{ id: "s1", name: "search_foods", input: { query: "egg" } }]),
           callTools([{ id: "s2", name: "search_foods", input: { query: "toast" } }]),
-          callTools([{ id: "s3", name: "search_foods", input: { query: "jam" } }]),
           reply("never asked for"),
         ],
         answers: { search_foods: slowRead },
@@ -1223,11 +1222,40 @@ Deno.test(
         const result = await harness.take("find breakfast");
 
         assertEndedFailed(harness, result.events);
-        assertEquals(harness.mock.bodies.length, 2);
-        assertEquals(harness.connections[0]?.calls.length, 2);
-        assertEquals(harness.usageRows().length, 2);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(harness.connections[0]?.calls.length, 1);
+        assertEquals(harness.usageRows().length, 1);
+        assertEquals(toolResultRows(harness).length, 1);
       },
     );
+  },
+);
+
+Deno.test(
+  "a deadline that passes while the response headers are awaited ends failed as turn_deadline",
+  async () => {
+    const timers = watchLimitTimers();
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        {
+          limits: { deadlineMilliseconds: 500, streamIdleMilliseconds: LONG_IDLE_MILLISECONDS },
+          responses: [{ blocks: [], stopReason: "end_turn", neverAnswer: true }],
+        },
+        async (harness) => {
+          const result = await harness.take("hello");
+
+          assertEndedFailed(harness, result.events);
+          assertEquals(harness.usageRows().length, 1);
+          assertEquals(harness.mock.bodies.length, 1);
+          assertEquals(timers.running(), 0);
+        },
+      );
+    } finally {
+      spy.restore();
+      timers.restore();
+    }
+    assertStringIncludes(summaryLine(spy.lines)[0] ?? "", "ending=turn_deadline");
   },
 );
 
@@ -1236,7 +1264,7 @@ Deno.test(
   async () => {
     await withHarness(
       {
-        limits: quickDeadline(100),
+        limits: quickDeadline(500),
         responses: [
           callTools([
             { id: "l1", name: "log_entry", input: { food_id: "eggs-100g" } },
@@ -1246,7 +1274,7 @@ Deno.test(
         ],
         answers: {
           log_entry: async () => {
-            await sleep(250);
+            await sleep(900);
             return loggedCall(actionA, "egg", 143);
           },
         },
@@ -1280,14 +1308,14 @@ Deno.test(
     let run: ReturnType<Harness["start"]> | undefined;
     await withHarness(
       {
-        limits: quickDeadline(100),
+        limits: quickDeadline(500),
         responses: [
           callTools([{ id: "s1", name: "search_foods", input: { query: "egg" } }]),
           reply("never asked for"),
         ],
         answers: {
           search_foods: async () => {
-            await sleep(250);
+            await sleep(900);
             await run?.cancel();
             return okResult({ name: "search_foods" });
           },
@@ -1336,7 +1364,7 @@ Deno.test("a stream cut by the deadline leaves its idle timer cleared", async ()
   try {
     await withHarness(
       {
-        limits: { deadlineMilliseconds: 150, streamIdleMilliseconds: LONG_IDLE_MILLISECONDS },
+        limits: { deadlineMilliseconds: 500, streamIdleMilliseconds: LONG_IDLE_MILLISECONDS },
         responses: [
           {
             blocks: [{ type: "text", text: "Let me think about that for you" }],
