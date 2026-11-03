@@ -74,20 +74,27 @@ Deno.test("a name that is not lower snake case is refused", () => {
   assertThrows(() => createRegistry([read("Get Day")]), Error);
 });
 
-Deno.test("the real registry lists the food read tools in order, all read-only", () => {
-  assertEquals(
-    toolRegistry.list.map((tool) => tool.name),
-    ["search_foods", "get_food", "get_recipes"],
-  );
-  assertEquals(
-    toolRegistry.list.map((tool) => [tool.kind, tool.annotations.readOnlyHint]),
-    [
-      ["read", true],
-      ["read", true],
-      ["read", true],
-    ],
-  );
-});
+Deno.test(
+  "the real registry lists the food reads and then the diary reads in order, all read-only",
+  () => {
+    assertEquals(
+      toolRegistry.list.map((tool) => tool.name),
+      [
+        "search_foods",
+        "get_food",
+        "get_recipes",
+        "get_day",
+        "get_range_totals",
+        "get_entries",
+        "get_weigh_ins",
+      ],
+    );
+    assertEquals(
+      toolRegistry.list.map((tool) => [tool.kind, tool.annotations.readOnlyHint]),
+      toolRegistry.list.map(() => ["read", true]),
+    );
+  },
+);
 
 // A read tool whose input is the given schema, for the schemas a strict tool cannot hold.
 const withInput = (name: string, input: ReadToolDefinition<unknown>["input"]): ToolDefinition => ({

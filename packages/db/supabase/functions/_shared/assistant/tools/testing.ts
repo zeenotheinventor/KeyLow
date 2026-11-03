@@ -13,7 +13,8 @@ export type StubCaller = { caller: SupabaseClient<Database>; calls: RecordedCall
 export type StubData = {
   // The rows each RPC answers with, by function name.
   rpc?: Record<string, Row[]>;
-  // The rows of each table. `eq` filters them and `limit` cuts them, as the database would.
+  // The rows of each table. `eq`, `is`, `gte` and `lte` filter them and `limit` and `range` cut them, as the
+  // database would. `order` does nothing, so a table is listed in the order its read should answer in.
   tables?: Record<string, Row[]>;
 };
 
@@ -38,9 +39,32 @@ export function stubCaller(data: StubData = {}): StubCaller {
         remaining = remaining.filter((row) => row[column] === value);
         return query;
       },
+      // A column that is absent is null, as a row of the database would say.
+      is(column: string, value: unknown) {
+        record("is", [column, value]);
+        remaining = remaining.filter((row) => (row[column] ?? null) === value);
+        return query;
+      },
+      // Dates are `YYYY-MM-DD` text, which orders the same as the dates do.
+      gte(column: string, value: string) {
+        record("gte", [column, value]);
+        remaining = remaining.filter((row) => String(row[column]) >= value);
+        return query;
+      },
+      lte(column: string, value: string) {
+        record("lte", [column, value]);
+        remaining = remaining.filter((row) => String(row[column]) <= value);
+        return query;
+      },
       limit(count: number) {
         record("limit", [count]);
         remaining = remaining.slice(0, count);
+        return query;
+      },
+      // Both ends included, as PostgREST reads them.
+      range(first: number, last: number) {
+        record("range", [first, last]);
+        remaining = remaining.slice(first, last + 1);
         return query;
       },
       maybeSingle() {
