@@ -3,6 +3,11 @@
 //
 //   pnpm --filter @keylow/design-export export --canvas <design-canvas folder> \
 //     --design-source <design-source folder> --runtime <dc-runtime.js>
+//
+// The widget canvas is a second canvas set. It has no brand marks, tokens or design system:
+//
+//   pnpm --filter @keylow/design-export export --set widgets --canvas <widgets canvas folder> \
+//     --runtime <dc-runtime.js>
 import {
   cpSync,
   existsSync,
@@ -21,6 +26,7 @@ import { proposalsStylesheetHref, relativeAssetUrls, tokensStylesheetHref } from
 import { listBoards, listScreens, parseCanvas, sectionsOf } from "./boards.ts";
 import { startBoardServer } from "./boardServer.ts";
 import { countFrames, readPageTitle } from "./boardSource.ts";
+import { canvasSets, m2CanvasSet, widgetsCanvasSet } from "./canvasSets.ts";
 import { checkBoards } from "./checkBoards.ts";
 import { extractProposals } from "./proposals.ts";
 import { renderBoard } from "./renderBoard.ts";
@@ -34,6 +40,7 @@ const renderConcurrency = 4;
 
 const { values } = parseArgs({
   options: {
+    set: { type: "string", default: "m2" },
     canvas: { type: "string" },
     "design-source": { type: "string" },
     runtime: { type: "string" },
@@ -42,11 +49,18 @@ const { values } = parseArgs({
   },
 });
 
+if (values.set !== "m2" && values.set !== "widgets") {
+  console.error(`Unknown --set ${values.set}. Use m2 or widgets.`);
+  process.exit(2);
+}
+const canvasSet = values.set === "widgets" ? widgetsCanvasSet : m2CanvasSet;
+const sourceDirectoryName = canvasSet.sourceFolder;
+
 function requireOption(name: "canvas" | "design-source" | "runtime"): string {
   const value = values[name];
   if (value === undefined) {
     console.error(
-      "Usage: export --canvas <design-canvas folder> --design-source <design-source folder> --runtime <dc-runtime.js> [--out <folder>] [--only <screen slug or board file>]",
+      "Usage: export [--set m2|widgets] --canvas <canvas folder> --design-source <design-source folder, m2 only> --runtime <dc-runtime.js> [--out <folder>] [--only <screen slug or board file>]",
     );
     process.exit(2);
   }
@@ -54,24 +68,34 @@ function requireOption(name: "canvas" | "design-source" | "runtime"): string {
 }
 
 const canvasDirectory = requireOption("canvas");
-const designSourceDirectory = requireOption("design-source");
+const designSourceDirectory = canvasSet === m2CanvasSet ? requireOption("design-source") : "";
 const runtimePath = requireOption("runtime");
 const outputDirectory = resolve(values.out);
 const only = values.only;
 
 // The canvas files are copied byte for byte. Nothing in them is edited. The proposals stylesheet is
 // the marked block cut from the end of the canvas token file.
+function copyProject(): void {
+  rmSync(join(outputDirectory, sourceDirectoryName), { recursive: true, force: true });
+  mkdirSync(join(outputDirectory, sourceDirectoryName, "project"), { recursive: true });
+  for (const file of readdirSync(join(canvasDirectory, "project"))) {
+    if (file.endsWith(".dc.html") || file === "canvas.json") {
+      cpSync(
+        join(canvasDirectory, "project", file),
+        join(outputDirectory, sourceDirectoryName, "project", file),
+      );
+    }
+  }
+}
+
 function copySource(): void {
-  rmSync(join(outputDirectory, "source"), { recursive: true, force: true });
-  mkdirSync(join(outputDirectory, "source/project"), { recursive: true });
+  copyProject();
+  if (canvasSet !== m2CanvasSet) {
+    return;
+  }
   mkdirSync(join(outputDirectory, "source/brand"), { recursive: true });
   mkdirSync(join(outputDirectory, "source/tokens"), { recursive: true });
   mkdirSync(join(outputDirectory, "tokens"), { recursive: true });
-  for (const file of readdirSync(join(canvasDirectory, "project"))) {
-    if (file.endsWith(".dc.html") || file === "canvas.json") {
-      cpSync(join(canvasDirectory, "project", file), join(outputDirectory, "source/project", file));
-    }
-  }
   for (const file of readdirSync(join(canvasDirectory, "brand"))) {
     if (file.endsWith(".svg")) {
       cpSync(join(canvasDirectory, "brand", file), join(outputDirectory, "source/brand", file));
@@ -90,7 +114,10 @@ function copySource(): void {
 }
 
 function readBoardSource(board: Board): string {
-  return readFileSync(join(outputDirectory, "source/project", board.fileName), "utf8");
+  return readFileSync(
+    join(outputDirectory, sourceDirectoryName, "project", board.fileName),
+    "utf8",
+  );
 }
 
 async function renderAll(boards: readonly Board[], origin: string): Promise<void> {
@@ -104,13 +131,14 @@ async function renderAll(boards: readonly Board[], origin: string): Promise<void
         const page = buildStaticPage({
           lang: rendered.lang,
           title: readPageTitle(source),
-          tokensHref: tokensStylesheetHref,
-          proposalsHref: proposalsStylesheetHref,
+          ...(canvasSet.linksTokens
+            ? { tokensHref: tokensStylesheetHref, proposalsHref: proposalsStylesheetHref }
+            : {}),
           fontsHref: rendered.fontsHref,
           styles: rendered.styles,
           boardHtml: rewriteAssetUrls(rendered.boardHtml, relativeAssetUrls()),
         });
-        const problems = findPageProblems(page);
+        const problems = findPageProblems(page, { requiresTokens: canvasSet.linksTokens });
         if (problems.length > 0) {
           throw new Error(`${board.slug}/${board.state}: ${problems.join(", ")}`);
         }
@@ -129,7 +157,9 @@ async function renderAll(boards: readonly Board[], origin: string): Promise<void
 
 function writeScreenReadmes(boards: readonly Board[]): void {
   const canvas = parseCanvas(
-    JSON.parse(readFileSync(join(outputDirectory, "source/project/canvas.json"), "utf8")),
+    JSON.parse(
+      readFileSync(join(outputDirectory, sourceDirectoryName, "project/canvas.json"), "utf8"),
+    ),
   );
   const sections = sectionsOf(canvas, boards);
   for (const slug of listScreens(boards)) {
@@ -145,6 +175,8 @@ function writeScreenReadmes(boards: readonly Board[]): void {
         screenBoards.map((board) => [board.fileName, readPageTitle(readBoardSource(board))]),
       ),
       notes: section?.notes ?? [],
+      sourceFolder: canvasSet.sourceFolder,
+      ...(canvasSet.layoutNote === undefined ? {} : { layoutNote: canvasSet.layoutNote }),
     });
     mkdirSync(join(outputDirectory, slug), { recursive: true });
     writeFileSync(path, readme);
@@ -169,9 +201,11 @@ function removeStaleBoardFiles(boards: readonly Board[]): void {
 
 copySource();
 const canvas = parseCanvas(
-  JSON.parse(readFileSync(join(outputDirectory, "source/project/canvas.json"), "utf8")),
+  JSON.parse(
+    readFileSync(join(outputDirectory, sourceDirectoryName, "project/canvas.json"), "utf8"),
+  ),
 );
-const allBoards = listBoards(canvas);
+const allBoards = listBoards(canvas, canvasSet.boardNames);
 const selected = allBoards.filter(
   (board) => only === undefined || board.slug === only || board.fileName === only,
 );
@@ -180,7 +214,11 @@ if (selected.length === 0) {
   process.exit(2);
 }
 
-const server = await startBoardServer({ designDirectory: outputDirectory, runtimePath });
+const server = await startBoardServer({
+  designDirectory: outputDirectory,
+  runtimePath,
+  sourceFolder: sourceDirectoryName,
+});
 try {
   await renderAll(selected, server.origin);
 } finally {
@@ -190,7 +228,7 @@ writeScreenReadmes(allBoards);
 if (only === undefined) {
   removeStaleBoardFiles(allBoards);
 }
-const check = checkBoards(outputDirectory);
+const check = checkBoards(outputDirectory, canvasSets);
 console.log(
   `${check.boardCount} boards in ${check.screenCount} screens. Missing: ${check.missing.length}. Extra: ${check.extra.length}.`,
 );

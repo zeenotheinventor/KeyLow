@@ -261,7 +261,7 @@ describe("the week view", () => {
   });
 
   describe("the grid", () => {
-    it("should draw the seven days and the average", () => {
+    it("should draw the seven days and the average without today", () => {
       renderWeek();
 
       const list = screen.getByRole("list", { name: "Week of Mon 12 Oct" });
@@ -269,7 +269,7 @@ describe("the week view", () => {
       expect(within(list).getAllByRole("listitem")).toHaveLength(8);
       expect(within(cellOf("Mon 12")).getByText("2,140")).toBeTruthy();
       expect(within(cellOf("Mon 12")).getByText("P 158 · C 214 · F 66 g")).toBeTruthy();
-      expect(within(cellOf("Average")).getByText("1,681")).toBeTruthy();
+      expect(within(cellOf("Average")).getByText("1,895")).toBeTruthy();
     });
 
     it("should mark a day complete as the day's own toggle does", () => {

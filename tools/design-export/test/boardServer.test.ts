@@ -60,6 +60,20 @@ describe("startBoardServer", () => {
     });
   });
 
+  it("should serve a board file from another source folder when asked", async () => {
+    write("source-widgets/project/QuickLog.dc.html", "<x-dc>widgets</x-dc>");
+    server = await startBoardServer({
+      designDirectory: directory,
+      runtimePath: join(directory, "runtime.js"),
+      sourceFolder: "source-widgets",
+    });
+    expect(await fetchText("/QuickLog.dc.html")).toMatchObject({
+      status: 200,
+      body: "<x-dc>widgets</x-dc>",
+    });
+    expect((await fetchText("/Main.dc.html")).status).toBe(404);
+  });
+
   it("should serve a board file from the project folder", async () => {
     await start();
     expect(await fetchText("/Main.dc.html")).toMatchObject({

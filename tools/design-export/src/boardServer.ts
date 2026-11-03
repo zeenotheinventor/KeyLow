@@ -11,6 +11,8 @@ import { canvasAssets } from "./assets.ts";
 export type BoardServerOptions = {
   designDirectory: string;
   runtimePath: string;
+  // The canvas source folder under designDirectory. Defaults to the M2 canvas.
+  sourceFolder?: string;
 };
 
 export type BoardServer = {
@@ -29,7 +31,11 @@ async function readOrUndefined(path: string): Promise<Buffer | undefined> {
 }
 
 export async function startBoardServer(options: BoardServerOptions): Promise<BoardServer> {
-  const projectDirectory = join(options.designDirectory, "source/project");
+  const projectDirectory = join(
+    options.designDirectory,
+    options.sourceFolder ?? "source",
+    "project",
+  );
   const server = createServer((request, response) => {
     void (async () => {
       const path = (request.url ?? "/").split("?")[0] ?? "/";

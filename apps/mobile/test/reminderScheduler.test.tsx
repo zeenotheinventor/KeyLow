@@ -13,11 +13,14 @@ import {
 } from "../lib/reminderSettings";
 import { notificationsState, resetNotificationsMock } from "./support/expoNotificationsMock";
 
-import type { ReminderPlanInputs } from "../lib/reminderScheduler";
+import type { FoodReminderPlanInputs, ReminderPlanInputs } from "../lib/reminderScheduler";
 import type { AppStateStatus } from "react-native";
 
 const mockStorageItems = new Map<string, string>();
 let mockPlanInputs: ReminderPlanInputs | null = null;
+let mockFoodInputs: FoodReminderPlanInputs | null = null;
+const mockTrainingInputsRead = jest.fn<undefined, [{ enabled: boolean }]>();
+const mockFoodInputsRead = jest.fn<undefined, [{ enabled: boolean }]>();
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -38,7 +41,16 @@ jest.mock(
 );
 // The reads the plan is made from have their own tests. Here they are whatever the test says they are.
 jest.mock("../lib/reminderScheduler/useReminderPlanInputs", () => ({
-  useReminderPlanInputs: () => mockPlanInputs,
+  useReminderPlanInputs: (options: { enabled: boolean }) => {
+    mockTrainingInputsRead(options);
+    return mockPlanInputs;
+  },
+}));
+jest.mock("../lib/reminderScheduler/useFoodReminderInputs", () => ({
+  useFoodReminderInputs: (options: { enabled: boolean }) => {
+    mockFoodInputsRead(options);
+    return mockFoodInputs;
+  },
 }));
 jest.mock("../lib/useReadsEnabled", () => ({ useReadsEnabled: () => true }));
 jest.mock("../lib/notifications", () => {
@@ -87,6 +99,9 @@ describe("the reminder scheduler", () => {
     resetNotificationsMock();
     mockStorageItems.clear();
     mockPlanInputs = inputsWith();
+    mockFoodInputs = { timeZone: "Europe/London", loggedToday: false };
+    mockFoodInputsRead.mockClear();
+    mockTrainingInputsRead.mockClear();
     notificationsState.permission = "granted";
     jest.mocked(replaceReminders).mockClear();
     jest.useFakeTimers({ now: NOW });
@@ -227,6 +242,109 @@ describe("the reminder scheduler", () => {
     await settle();
 
     expect(fireAt()).toContain(TODAYS_TRAIN);
+  });
+
+  describe("the food reminder", () => {
+    const foodOn = { ...defaultReminderSettings, foodEnabled: true };
+    const foodFires = () =>
+      [...notificationsState.scheduled.entries()]
+        .filter(([identifier]) => identifier.startsWith("keylow-reminder:food:"))
+        .map(([, { trigger }]) => new Date(trigger.date).toISOString());
+
+    it("should schedule a reminder a day when only the food switch is on", async () => {
+      saveSettings(foodOn);
+      mockPlanInputs = null;
+
+      await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+
+      expect(foodFires()).toHaveLength(7);
+      expect(foodFires()[0]).toBe("2026-10-22T19:00:00.000Z");
+    });
+
+    it("should read today's diary only while the food switch is on", async () => {
+      saveSettings(trainOn);
+
+      await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+
+      expect(mockFoodInputsRead).toHaveBeenLastCalledWith({ enabled: false });
+    });
+
+    it("should read today's diary once the food switch is on and the settings have loaded", async () => {
+      saveSettings(foodOn);
+
+      await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+
+      expect(mockFoodInputsRead).toHaveBeenLastCalledWith({ enabled: true });
+    });
+
+    it("should drop today's reminder as soon as a food is logged today", async () => {
+      saveSettings(foodOn);
+      const { rerender } = await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+      expect(foodFires()).toContain("2026-10-22T19:00:00.000Z");
+
+      mockFoodInputs = { timeZone: "Europe/London", loggedToday: true };
+      await rerender(undefined);
+      await settle();
+
+      expect(foodFires()).toHaveLength(6);
+      expect(foodFires()).not.toContain("2026-10-22T19:00:00.000Z");
+    });
+
+    it("should plan again at the new time when the food time is changed", async () => {
+      saveSettings(foodOn);
+      const { result } = await renderHook(() => {
+        useReminderScheduler();
+        return useReminderSettings();
+      });
+      await settle();
+
+      await act(async () => {
+        await result.current.update({ foodTime: "21:30" });
+      });
+      await settle();
+
+      expect(foodFires()[0]).toBe("2026-10-22T20:30:00.000Z");
+    });
+
+    it("should leave the schedule as it is while today's diary is not loaded", async () => {
+      saveSettings(foodOn);
+      mockFoodInputs = null;
+      notificationsState.scheduled.set("keylow-reminder:food:1", {
+        identifier: "keylow-reminder:food:1",
+        content: {},
+        trigger: { type: "date", date: 1 },
+      });
+
+      await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+
+      expect(replaceReminders).not.toHaveBeenCalled();
+    });
+
+    it("should read the training inputs only while a training switch is on", async () => {
+      saveSettings(foodOn);
+
+      await renderHook(() => {
+        useReminderScheduler();
+      });
+      await settle();
+
+      expect(mockTrainingInputsRead).toHaveBeenLastCalledWith({ enabled: false });
+    });
   });
 
   it("should cancel ours and schedule nothing when every switch is off", async () => {

@@ -35,6 +35,13 @@ pnpm --filter @keylow/design-export export \
 
 `--canvas` is the folder that holds `project/`, `tokens/` and `brand/`. `--design-source` is the design system snapshot. `--out` defaults to `docs/design`. `--only <screen>` or `--only <board file>` renders a subset while you work, and skips the stale-file cleanup. The export needs network access for Google Fonts.
 
+The widget canvas is a second canvas set (see `src/canvasSets.ts`). It is kept in `docs/design/source-widgets/`, names its boards from a table (`Main.dc.html` is `widgets/dashboard`) and links no token stylesheet. It has no brand or token folders:
+
+```sh
+pnpm --filter @keylow/design-export export --set widgets \
+  --canvas <widgets canvas folder> --runtime <path to dc-runtime.js>
+```
+
 Prove the pages match their images. This opens every page from disk, screenshots it and compares it with its PNG, and it fails on a page that requests anything but its own files and Google Fonts:
 
 ```sh
@@ -43,7 +50,7 @@ pnpm --filter @keylow/design-export verify --report <file>
 
 The limit is 0.5 % of pixels. `--report` writes a per-board table.
 
-Check the board list against `canvas.json` (no browser needed):
+Check the board list against `canvas.json` (no browser needed). `verify` and `check:boards` cover both canvas sets:
 
 ```sh
 pnpm --filter @keylow/design-export check:boards

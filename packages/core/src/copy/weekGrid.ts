@@ -3,13 +3,12 @@ import { MONTH_NAMES_SHORT, WEEKDAY_NAMES_SHORT } from "./diaryDay";
 import { parseCalendarDay } from "../dates/calendarDay";
 import { formatCalories, formatGrams } from "../format/numbers";
 
-/** The words of the web week view's grid: the day states, the Average column and its caption. */
+/** The words of the web week view's grid: the day states, and the Average column. */
 export const WEEK_GRID = {
   complete: "Complete",
   incomplete: "Incomplete",
   noEntries: "No entries yet",
   average: "Average",
-  averageCaption: "Mon to today",
 } as const;
 
 const weekdayOf = (localDate: string): string => {

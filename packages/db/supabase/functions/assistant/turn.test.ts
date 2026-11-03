@@ -1046,6 +1046,344 @@ Deno.test("an abort during a tool call stores that result and makes no further c
   );
 });
 
+// ---- The turn's deadline and the model stream's idle watchdog ----
+
+const sleep = (milliseconds: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+
+// A stall is found in 400 ms. The deadline is far off, so only the watchdog can fire.
+const quickIdleLimits = { deadlineMilliseconds: 60_000, streamIdleMilliseconds: 400 };
+// The deadline is short. The watchdog is far off, so only the deadline can fire.
+const quickDeadline = (deadlineMilliseconds: number) => ({
+  deadlineMilliseconds,
+  streamIdleMilliseconds: 60_000,
+});
+
+// Deno's test sanitiser does not flag a timer left running, so the limit timers are watched here. They
+// are the ones set with these two delays, and each must be cleared or must have fired by the end.
+const LONG_DEADLINE_MILLISECONDS = 61_111;
+const LONG_IDLE_MILLISECONDS = 62_222;
+
+function watchLimitTimers() {
+  const originalSet = globalThis.setTimeout;
+  const originalClear = globalThis.clearTimeout;
+  const running = new Set<unknown>();
+  const replace = (name: "setTimeout" | "clearTimeout", value: unknown) =>
+    Object.defineProperty(globalThis, name, { value, configurable: true, writable: true });
+  replace("setTimeout", (...args: Parameters<typeof setTimeout>) => {
+    const id = originalSet(...args);
+    if (args[1] === LONG_DEADLINE_MILLISECONDS || args[1] === LONG_IDLE_MILLISECONDS) {
+      running.add(id);
+    }
+    return id;
+  });
+  replace("clearTimeout", (...args: Parameters<typeof clearTimeout>) => {
+    running.delete(args[0]);
+    return originalClear(...args);
+  });
+  return {
+    running: () => running.size,
+    restore() {
+      replace("setTimeout", originalSet);
+      replace("clearTimeout", originalClear);
+    },
+  };
+}
+
+const failedNotice: AssistantStreamEvent = { type: "notice", notice: { code: "turn_failed" } };
+
+// The one way every limit ends a turn: the failed notice and one done, the status set once, the client
+// closed, and one report that carries no content.
+function assertEndedFailed(harness: Harness, events: readonly AssistantStreamEvent[]) {
+  assertEquals(events.slice(-2), [failedNotice, { type: "done", outcome: "failed" }]);
+  assertEquals(eventsOfType(events, "done").length, 1);
+  assertEquals(turnStatuses(harness), ["failed"]);
+  assertEquals(harness.connections[0]?.closeCount, 1);
+  assertEquals(harness.reports.length, 1);
+  assertEquals(harness.reports[0]?.code, "internal_error");
+}
+
+const summaryLine = (lines: readonly string[]) =>
+  lines.filter((line) => line.startsWith("assistant turn "));
+
+Deno.test(
+  "a stream that stalls after its headers ends failed as stream_idle, with one usage row",
+  async () => {
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        {
+          limits: quickIdleLimits,
+          responses: [{ blocks: [], stopReason: "end_turn", holdAfterHeaders: true }],
+        },
+        async (harness) => {
+          const result = await harness.take("my private breakfast");
+
+          assertEndedFailed(harness, result.events);
+          assertEquals(harness.usageRows().length, 1);
+          assertEquals(rowsOfRole(harness, "assistant"), []);
+          assertEquals(harness.mock.bodies.length, 1);
+        },
+      );
+    } finally {
+      spy.restore();
+    }
+    const [summary] = summaryLine(spy.lines);
+    assertStringIncludes(summary ?? "", "ending=stream_idle");
+    assertEquals(
+      spy.lines.some((line) => line.includes("breakfast")),
+      false,
+    );
+  },
+);
+
+Deno.test(
+  "a stream that stalls mid-text ends failed as stream_idle and stores the partial text as text blocks only",
+  async () => {
+    await withHarness(
+      {
+        limits: quickIdleLimits,
+        responses: [
+          {
+            blocks: [
+              { type: "thinking", thinking: "hmm", signature: "sig" },
+              { type: "text", text: "Let me think about that for you" },
+              { type: "tool_use", id: "s1", name: "search_foods", input: { query: "egg" } },
+            ],
+            stopReason: "tool_use",
+            holdAfterFirstText: true,
+          },
+        ],
+      },
+      async (harness) => {
+        const result = await harness.take("hello");
+
+        assertEndedFailed(harness, result.events);
+        const [assistant] = rowsOfRole(harness, "assistant");
+        const blocks = blocksOf(assistant?.content);
+        assert(blocks.length > 0);
+        assert(
+          blocks.every((block) => block["type"] === "text" && String(block["text"]).trim() !== ""),
+        );
+        assertEquals(harness.usageRows().length, 1);
+        assertEquals(harness.connections[0]?.calls, []);
+      },
+    );
+  },
+);
+
+Deno.test("a deadline that passes during a model stream ends failed as turn_deadline", async () => {
+  const spy = spyOnConsole();
+  try {
+    await withHarness(
+      {
+        limits: quickDeadline(500),
+        responses: [
+          {
+            blocks: [{ type: "text", text: "Let me think about that for you" }],
+            stopReason: "end_turn",
+            holdAfterFirstText: true,
+          },
+        ],
+      },
+      async (harness) => {
+        const result = await harness.take("hello");
+
+        assertEndedFailed(harness, result.events);
+        const [assistant] = rowsOfRole(harness, "assistant");
+        assert(blocksOf(assistant?.content).every((block) => block["type"] === "text"));
+        assertEquals(harness.usageRows().length, 1);
+      },
+    );
+  } finally {
+    spy.restore();
+  }
+  assertStringIncludes(summaryLine(spy.lines)[0] ?? "", "ending=turn_deadline");
+});
+
+Deno.test(
+  "a turn that passes its deadline during a tool call starts no model call after it and ends failed",
+  async () => {
+    const slowRead: ToolAnswer = async () => {
+      await sleep(900);
+      return okResult({ name: "search_foods" });
+    };
+    await withHarness(
+      {
+        limits: quickDeadline(500),
+        responses: [
+          callTools([{ id: "s1", name: "search_foods", input: { query: "egg" } }]),
+          callTools([{ id: "s2", name: "search_foods", input: { query: "toast" } }]),
+          reply("never asked for"),
+        ],
+        answers: { search_foods: slowRead },
+      },
+      async (harness) => {
+        const result = await harness.take("find breakfast");
+
+        assertEndedFailed(harness, result.events);
+        assertEquals(harness.mock.bodies.length, 1);
+        assertEquals(harness.connections[0]?.calls.length, 1);
+        assertEquals(harness.usageRows().length, 1);
+        assertEquals(toolResultRows(harness).length, 1);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a deadline that passes while the response headers are awaited ends failed as turn_deadline",
+  async () => {
+    const timers = watchLimitTimers();
+    const spy = spyOnConsole();
+    try {
+      await withHarness(
+        {
+          limits: { deadlineMilliseconds: 500, streamIdleMilliseconds: LONG_IDLE_MILLISECONDS },
+          responses: [{ blocks: [], stopReason: "end_turn", neverAnswer: true }],
+        },
+        async (harness) => {
+          const result = await harness.take("hello");
+
+          assertEndedFailed(harness, result.events);
+          assertEquals(harness.usageRows().length, 1);
+          assertEquals(harness.mock.bodies.length, 1);
+          assertEquals(timers.running(), 0);
+        },
+      );
+    } finally {
+      spy.restore();
+      timers.restore();
+    }
+    assertStringIncludes(summaryLine(spy.lines)[0] ?? "", "ending=turn_deadline");
+  },
+);
+
+Deno.test(
+  "a write in flight at the deadline finishes and keeps its result and card, and nothing further runs",
+  async () => {
+    await withHarness(
+      {
+        limits: quickDeadline(500),
+        responses: [
+          callTools([
+            { id: "l1", name: "log_entry", input: { food_id: "eggs-100g" } },
+            { id: "g1", name: "get_day", input: { local_date: "2026-11-03" } },
+          ]),
+          reply("never asked for"),
+        ],
+        answers: {
+          log_entry: async () => {
+            await sleep(900);
+            return loggedCall(actionA, "egg", 143);
+          },
+        },
+      },
+      async (harness) => {
+        const result = await harness.take("log an egg");
+
+        assertEndedFailed(harness, result.events);
+        assertEquals(
+          harness.connections[0]?.calls.map((call) => call.name),
+          ["log_entry"],
+        );
+        const [stored] = toolResultRows(harness);
+        assertEquals(
+          toolResultRows(harness)
+            .flatMap((row) => blocksOf(row.content))
+            .map((block) => block["tool_use_id"]),
+          ["l1"],
+        );
+        assert(isRecord(stored?.display) && "l1" in stored.display);
+        assertEquals(eventsOfType(result.events, "card").length, 1);
+        assertEquals(harness.mock.bodies.length, 1);
+      },
+    );
+  },
+);
+
+Deno.test(
+  "a reader that goes away after the deadline fired still gives stopped and no done",
+  async () => {
+    let run: ReturnType<Harness["start"]> | undefined;
+    await withHarness(
+      {
+        limits: quickDeadline(500),
+        responses: [
+          callTools([{ id: "s1", name: "search_foods", input: { query: "egg" } }]),
+          reply("never asked for"),
+        ],
+        answers: {
+          search_foods: async () => {
+            await sleep(900);
+            await run?.cancel();
+            return okResult({ name: "search_foods" });
+          },
+        },
+      },
+      async (harness) => {
+        run = harness.start("find an egg");
+        const result = await run.finished;
+
+        assertEquals(typesOf(result.events).includes("done"), false);
+        assertEquals(typesOf(result.events).includes("notice"), false);
+        assertEquals(turnStatuses(harness), ["stopped"]);
+        assertEquals(harness.connections[0]?.closeCount, 1);
+        assertEquals(harness.mock.bodies.length, 1);
+      },
+    );
+  },
+);
+
+Deno.test("a turn that ends well inside its limits leaves no timer running", async () => {
+  const timers = watchLimitTimers();
+  try {
+    await withHarness(
+      {
+        limits: {
+          deadlineMilliseconds: LONG_DEADLINE_MILLISECONDS,
+          streamIdleMilliseconds: LONG_IDLE_MILLISECONDS,
+        },
+        responses: [reply("Hi")],
+      },
+      async (harness) => {
+        const result = await harness.take("hi");
+
+        assertEquals(result.events.at(-1), { type: "done", outcome: "complete" });
+        assertEquals(turnStatuses(harness), ["complete"]);
+        assertEquals(timers.running(), 0);
+      },
+    );
+  } finally {
+    timers.restore();
+  }
+});
+
+Deno.test("a stream cut by the deadline leaves its idle timer cleared", async () => {
+  const timers = watchLimitTimers();
+  try {
+    await withHarness(
+      {
+        limits: { deadlineMilliseconds: 500, streamIdleMilliseconds: LONG_IDLE_MILLISECONDS },
+        responses: [
+          {
+            blocks: [{ type: "text", text: "Let me think about that for you" }],
+            stopReason: "end_turn",
+            holdAfterFirstText: true,
+          },
+        ],
+      },
+      async (harness) => {
+        await harness.take("hello");
+
+        assertEquals(timers.running(), 0);
+      },
+    );
+  } finally {
+    timers.restore();
+  }
+});
+
 // ---- Connection and requests ----
 
 Deno.test(
@@ -1068,6 +1406,17 @@ Deno.test(
     });
   },
 );
+
+Deno.test("an empty tool list is not cached, so the next turn reads the list again", async () => {
+  await withHarness({ tools: [], responses: [reply("One."), reply("Two.")] }, async (harness) => {
+    await harness.take("first question");
+    await harness.take("second question");
+
+    assertEquals(harness.connections[0]?.log, ["listTools", "close"]);
+    assertEquals(harness.connections[1]?.log, ["listTools", "close"]);
+    assertEquals(harness.connectOptions[1]?.knownTools, undefined);
+  });
+});
 
 Deno.test(
   "an unknown_tool result drops the cached list, so the next turn reads it again",

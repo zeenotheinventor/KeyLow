@@ -56,6 +56,8 @@ describe("weekDayTotals", () => {
       { localDate: "2026-10-14", totals: weekDayTotals(dayTotalsRow({ kcal: 2000 })) },
     ];
 
-    expect(weekAverage(days, "2026-10-14")?.kcal).toBe(1000);
+    const result = weekAverage(days, "2026-10-15");
+
+    expect(result.kind === "average" ? result.totals.kcal : null).toBe(1000);
   });
 });

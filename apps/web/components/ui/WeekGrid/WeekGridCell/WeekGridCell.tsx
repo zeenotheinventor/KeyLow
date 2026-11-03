@@ -52,6 +52,8 @@ export function WeekGridCell({
   name,
   href,
   totals,
+  emptyText,
+  caption,
   calorieTarget,
   isComplete,
   onCopyToToday,
@@ -76,10 +78,12 @@ export function WeekGridCell({
         {totals === null ? (
           <>
             <span className="text-caption text-text-secondary xl:text-text-muted">
-              {WEEK_GRID.noEntries}
+              {emptyText ?? WEEK_GRID.noEntries}
             </span>
-            {/* An empty track keeps the row's shape in the list. */}
-            <span aria-hidden className="block h-1 rounded-pill bg-border xl:hidden" />
+            {/* An empty track keeps the row's shape in the list, but not where a sentence stands in for the bar. */}
+            {emptyText === undefined && (
+              <span aria-hidden className="block h-1 rounded-pill bg-border xl:hidden" />
+            )}
           </>
         ) : (
           <>
@@ -107,8 +111,8 @@ export function WeekGridCell({
         </span>
       )}
       <span className="flex flex-col items-end xl:contents">
-        {kind === "average" && (
-          <span className="text-caption text-text-muted xl:hidden">{WEEK_GRID.averageCaption}</span>
+        {caption !== undefined && (
+          <span className="text-caption text-text-muted xl:hidden">{caption}</span>
         )}
         {showsState && (
           <span

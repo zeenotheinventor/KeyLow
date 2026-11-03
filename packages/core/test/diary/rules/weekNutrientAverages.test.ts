@@ -1,7 +1,6 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import { addCalendarDays } from "../../../src/dates/calendarDay";
 import { weekAverage } from "../../../src/diary/rules/weekAverage";
 import { weekAverageBarOf } from "../../../src/diary/rules/weekCaloriesBeforeToday";
 import { weekDayTotals } from "../../../src/diary/rules/weekDayTotals";
@@ -267,15 +266,15 @@ describe("weekNutrientAverages", () => {
         (totals, today) => {
           const days = weekOfTotals(totals);
           const result = weekNutrientAverages({ days, today, targets: NO_TARGETS });
-          // The card counts up to and including the day it is given, so it is given yesterday. On a Monday
-          // yesterday is in the week before, and both have nothing to average.
-          const card = weekAverage(
+          // On a Monday both have nothing to average.
+          const weekView = weekAverage(
             days.map((entry) => ({
               localDate: entry.localDate,
               totals: weekDayTotals(entry.totals),
             })),
-            addCalendarDays(today, -1),
+            today,
           );
+          const card = weekView.kind === "average" ? weekView.totals : null;
 
           for (const key of ["kcal", "protein_g", "carbs_g", "fat_g"] as const) {
             const average = nutrient(result, key)?.dailyAverage ?? null;

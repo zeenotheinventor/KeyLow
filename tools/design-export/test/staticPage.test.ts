@@ -63,6 +63,22 @@ describe("buildStaticPage", () => {
   });
 });
 
+describe("buildStaticPage without the token stylesheets", () => {
+  const page = buildStaticPage({
+    lang: "en",
+    title: "Dashboard widgets",
+    fontsHref: "https://fonts.googleapis.com/css2?family=Geist&display=swap",
+    styles: [".w{padding:16px}"],
+    boardHtml: "<div>board</div>",
+  });
+
+  it("should link only Google Fonts", () => {
+    expect(page.match(/<link /g)).toHaveLength(1);
+    expect(page).not.toContain("kilo-tokens.css");
+    expect(page).not.toContain("kilo-proposals.css");
+  });
+});
+
 describe("findPageProblems", () => {
   const clean =
     '<html><link rel="stylesheet" href="../../../packages/tokens/css/kilo-tokens.css"><link rel="stylesheet" href="../tokens/kilo-proposals.css"><div style="color: var(--text-primary)">x</div></html>';
@@ -126,6 +142,22 @@ describe("findPageProblems", () => {
     );
     expect(findPageProblems(retired)).toContainEqual(
       expect.stringContaining("docs/design/tokens/kilo-tokens.css"),
+    );
+  });
+});
+
+describe("findPageProblems for a page that uses no design tokens", () => {
+  const options = { requiresTokens: false };
+
+  it("should accept raw colours and no token stylesheet", () => {
+    expect(findPageProblems('<html><div style="color:#CCF249">x</div></html>', options)).toEqual(
+      [],
+    );
+  });
+
+  it("should still flag a script", () => {
+    expect(findPageProblems('<html><script src="a.js"></script></html>', options)).toContainEqual(
+      expect.stringContaining("script"),
     );
   });
 });

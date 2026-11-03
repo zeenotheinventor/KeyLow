@@ -381,6 +381,45 @@ Deno.test(
   },
 );
 
+Deno.test(
+  "a write call to a tool in knownTools is never repeated when its reply is dropped",
+  async () => {
+    await withServer({ dropReply: isMethod("tools/call") }, async (server) => {
+      const listing = await connectToolServer(connectionOptions(server));
+      const knownTools = await listing.listTools();
+      await listing.close();
+      const runsBefore = server.toolRuns.length;
+      const connection = await connectToolServer(connectionOptions(server, { knownTools }));
+
+      await assertClientError(
+        connection.callTool(writeToolName, { note: "hello" }),
+        "mcp_unreachable",
+      );
+
+      assertEquals(server.toolRuns.slice(runsBefore), [writeToolName]);
+      await connection.close();
+    });
+  },
+);
+
+Deno.test(
+  "a call to a tool that is not in knownTools is never repeated when its reply is dropped",
+  async () => {
+    await withServer({ dropReply: isMethod("tools/call") }, async (server) => {
+      const listing = await connectToolServer(connectionOptions(server));
+      const knownTools = (await listing.listTools()).filter((tool) => tool.name !== readToolName);
+      await listing.close();
+      const runsBefore = server.toolRuns.length;
+      const connection = await connectToolServer(connectionOptions(server, { knownTools }));
+
+      await assertClientError(connection.callTool(readToolName, {}), "mcp_unreachable");
+
+      assertEquals(server.toolRuns.slice(runsBefore), [readToolName]);
+      await connection.close();
+    });
+  },
+);
+
 Deno.test("a read call that fails twice is mcp_unreachable after one retry", async () => {
   await withServer({ dropReply: isMethod("tools/call") }, async (server) => {
     const connection = await connectToolServer(connectionOptions(server));

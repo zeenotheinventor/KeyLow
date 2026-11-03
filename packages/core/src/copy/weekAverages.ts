@@ -3,6 +3,7 @@ import { describeWeekGridTitle } from "./weekGrid";
 import { formatCalories, formatGrams } from "../format/numbers";
 
 import type { NutrientRow } from "./foodDetail";
+import type { WeekAverage } from "../diary/rules/weekAverage";
 import type { WeekNutrientAverages, WeekNutrientKey } from "../diary/rules/weekNutrientAverages";
 
 /** The words of the weekly averages page, which the dashboard's This week card opens. */
@@ -20,6 +21,11 @@ export const WEEK_AVERAGES = {
   /** From Tuesday on, when no day before today has anything logged. Today's entries do not count. */
   nothingBeforeToday: "Nothing logged before today this week.",
 } as const;
+
+/** What the diary's week view says in the Average cell where it has no number to show. */
+export const describeWeekAverageSentence = (
+  kind: Exclude<WeekAverage["kind"], "average" | "noEntries">,
+): string => WEEK_AVERAGES[kind];
 
 /** The name of each nutrient on the page, in the words of the food screens. */
 export const WEEK_NUTRIENT_LABELS: Readonly<Record<WeekNutrientKey, string>> =

@@ -14,7 +14,7 @@ import type { ListedTool, ToolCallResult, ToolConnection } from "../_shared/assi
 import type { AssistantStoredMessage, AssistantStreamEvent } from "../_shared/core.ts";
 import type { AllowlistTool } from "./allowlist.ts";
 import type { TurnContext } from "./runTurn.ts";
-import type { TurnDependencies } from "./turn.ts";
+import type { TurnDependencies, TurnLimits } from "./turn.ts";
 import type { TurnStore } from "./turnStore.ts";
 
 export const userId = "00000000-0000-4000-8000-0000000000a1";
@@ -35,6 +35,10 @@ export type ScriptedResponse = {
   usage?: { input?: number; output?: number; cacheRead?: number; cacheCreation?: number };
   // Streams up to the first text delta, then keeps the stream open until the reader goes away.
   holdAfterFirstText?: boolean;
+  // Sends the headers and then no event at all, until the reader goes away.
+  holdAfterHeaders?: boolean;
+  // Never answers, not even with headers, until the reader goes away.
+  neverAnswer?: boolean;
   // An error reply instead of a stream.
   httpStatus?: number;
   // Ends the stream after its blocks, with no message_delta or message_stop.
@@ -156,6 +160,12 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     if (scripted === undefined) {
       return failure(400);
     }
+    if (scripted.neverAnswer === true) {
+      const readerGone = Promise.withResolvers<void>();
+      request.signal.addEventListener("abort", () => readerGone.resolve());
+      await Promise.race([readerGone.promise, stopped.promise]);
+      return failure(499);
+    }
     if (scripted.httpStatus !== undefined) {
       return failure(scripted.httpStatus);
     }
@@ -164,6 +174,10 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     return new Response(
       new ReadableStream<Uint8Array>({
         async start(controller) {
+          if (scripted.holdAfterHeaders === true) {
+            await Promise.race([cancelled.promise, stopped.promise]);
+            return;
+          }
           for (const event of head) {
             controller.enqueue(encoder.encode(event));
           }
@@ -348,6 +362,8 @@ export type HarnessOptions = {
   wrapTurns?: (turns: TurnStore) => TurnStore;
   // Makes every usage insert fail.
   failUsage?: boolean;
+  // Short limits, in milliseconds, so a test never waits for real minutes.
+  limits?: TurnLimits;
 };
 
 export async function createHarness(options: HarnessOptions): Promise<Harness> {
@@ -400,7 +416,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     },
     now: () => options.now ?? new Date("2026-11-03T12:00:00.000Z"),
   };
-  const runTurn = createRunTurn(dependencies);
+  const runTurn = createRunTurn(dependencies, options.limits);
 
   const rows = (): AssistantStoredMessage[] => {
     const statusOf = new Map(

@@ -15,3 +15,5 @@ export type { PortionForDensity } from "./labelDensity";
 export { scaleNutrients, sumNutrients } from "./scale";
 export { GRAMS_PER_OUNCE, ML_PER_FLUID_OUNCE, quantityUnitSchema, resolveQuantity } from "./units";
 export type { QuantityUnit, ResolvedQuantity } from "./units";
+export { DEFAULT_FOOD_REMINDER_SETTINGS, planFoodReminders } from "./foodReminders";
+export type { FoodReminderInput, FoodReminderSettings, PlannedFoodReminder } from "./foodReminders";

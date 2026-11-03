@@ -46,13 +46,15 @@ describe("reminder settings", () => {
   });
 
   describe("defaults", () => {
-    it("should have every reminder off, the train time at 17:30 and no variant used yet", () => {
+    it("should have every reminder off, the train time at 17:30, the food time at 20:00 and no variant used yet", () => {
       expect(defaultReminderSettings).toEqual({
         trainEnabled: false,
         progressEnabled: false,
         easeEnabled: false,
+        foodEnabled: false,
         trainTime: "17:30",
-        lastVariant: { train: null, progress: null, ease: null },
+        foodTime: "20:00",
+        lastVariant: { train: null, progress: null, ease: null, food: null },
       });
     });
   });
@@ -67,8 +69,10 @@ describe("reminder settings", () => {
         trainEnabled: true,
         progressEnabled: false,
         easeEnabled: true,
+        foodEnabled: true,
         trainTime: "07:05",
-        lastVariant: { train: "train-2", progress: null, ease: "ease-1" },
+        foodTime: "21:15",
+        lastVariant: { train: "train-2", progress: null, ease: "ease-1", food: "food-3" },
       };
 
       await writeReminderSettings(settings);
@@ -88,6 +92,52 @@ describe("reminder settings", () => {
       expect(await readReminderSettings()).toEqual(defaultReminderSettings);
     });
 
+    it("should load a record saved before the food reminder with the food defaults", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({
+          trainEnabled: true,
+          progressEnabled: false,
+          easeEnabled: true,
+          trainTime: "07:05",
+          lastVariant: { train: "train-2", progress: null, ease: "ease-1" },
+        }),
+      );
+
+      expect(await readReminderSettings()).toEqual({
+        ...defaultReminderSettings,
+        trainEnabled: true,
+        easeEnabled: true,
+        trainTime: "07:05",
+        lastVariant: { train: "train-2", progress: null, ease: "ease-1", food: null },
+      });
+    });
+
+    it("should default a food time that is not a time of day and keep the rest", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ foodEnabled: true, foodTime: "25:99", trainTime: "06:00" }),
+      );
+
+      expect(await readReminderSettings()).toEqual({
+        ...defaultReminderSettings,
+        foodEnabled: true,
+        trainTime: "06:00",
+      });
+    });
+
+    it("should default a food switch that is not a boolean", async () => {
+      mockStorageItems.set(
+        reminderSettingsStorageKey,
+        JSON.stringify({ foodEnabled: "yes", foodTime: "21:00" }),
+      );
+
+      expect(await readReminderSettings()).toEqual({
+        ...defaultReminderSettings,
+        foodTime: "21:00",
+      });
+    });
+
     it("should keep the valid fields and default the rest of a damaged record", async () => {
       mockStorageItems.set(
         reminderSettingsStorageKey,
@@ -102,7 +152,7 @@ describe("reminder settings", () => {
       expect(await readReminderSettings()).toEqual({
         ...defaultReminderSettings,
         trainEnabled: true,
-        lastVariant: { train: "train-1", progress: null, ease: null },
+        lastVariant: { train: "train-1", progress: null, ease: null, food: null },
       });
     });
   });
@@ -112,6 +162,15 @@ describe("reminder settings", () => {
       "should not save settings whose train time is %s",
       async (trainTime) => {
         await writeReminderSettings({ ...defaultReminderSettings, trainEnabled: true, trainTime });
+
+        expect(mockSetItem).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["25:99", "24:00", "99:00"])(
+      "should not save settings whose food time is %s",
+      async (foodTime) => {
+        await writeReminderSettings({ ...defaultReminderSettings, foodEnabled: true, foodTime });
 
         expect(mockSetItem).not.toHaveBeenCalled();
       },
@@ -262,5 +321,37 @@ describe("reminder settings", () => {
         expect((await readReminderSettings()).trainTime).toBe("17:30");
       },
     );
+
+    it.each(["25:99", "24:00", "99:00"])(
+      "should ignore a food time of %s, keeping the time it had and applying the other changes",
+      async (foodTime) => {
+        const { result } = await renderHook(() => useReminderSettings());
+        await waitFor(() => {
+          expect(result.current.isLoaded).toBe(true);
+        });
+
+        await act(async () => {
+          await result.current.update({ foodEnabled: true, foodTime });
+        });
+
+        expect(result.current.settings.foodTime).toBe("20:00");
+        expect(result.current.settings.foodEnabled).toBe(true);
+        expect((await readReminderSettings()).foodTime).toBe("20:00");
+      },
+    );
+
+    it("should change the food time and keep the train time", async () => {
+      const { result } = await renderHook(() => useReminderSettings());
+      await waitFor(() => {
+        expect(result.current.isLoaded).toBe(true);
+      });
+
+      await act(async () => {
+        await result.current.update({ foodTime: "21:30" });
+      });
+
+      expect(result.current.settings.foodTime).toBe("21:30");
+      expect(result.current.settings.trainTime).toBe("17:30");
+    });
   });
 });

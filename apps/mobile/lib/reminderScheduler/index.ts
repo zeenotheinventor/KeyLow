@@ -1,5 +1,9 @@
 export { scheduleReminderPlan } from "./scheduleReminderPlan";
-export type { ReminderPlanInputs, ScheduleReminderPlanInput } from "./scheduleReminderPlan";
+export type {
+  FoodReminderPlanInputs,
+  ReminderPlanInputs,
+  ScheduleReminderPlanInput,
+} from "./scheduleReminderPlan";
 export { readScheduledReminders, scheduledRemindersStorageKey } from "./scheduledReminders";
 export type { ScheduledReminder } from "./scheduledReminders";
 export { hasWeeklyGain } from "./hasWeeklyGain";

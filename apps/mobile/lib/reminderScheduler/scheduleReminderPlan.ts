@@ -1,3 +1,4 @@
+import { planFoodReminders } from "@keylow/core/nutrition";
 import { planTrainingReminders } from "@keylow/core/training";
 
 import {
@@ -9,6 +10,7 @@ import { getPermission, replaceReminders } from "../notifications";
 
 import type { Reminder, ReminderType } from "../notifications";
 import type { ReminderSettings } from "../reminderSettings";
+import type { FoodReminderInput } from "@keylow/core/nutrition";
 import type { TrainingReminderInput } from "@keylow/core/training";
 
 /** What the planner reads besides the settings and the moment. */
@@ -17,38 +19,48 @@ export type ReminderPlanInputs = Pick<
   "timeZone" | "plan" | "sessions" | "heatSets" | "weeklyGain"
 >;
 
+/** What the food planner reads besides the settings and the moment. */
+export type FoodReminderPlanInputs = Pick<FoodReminderInput, "timeZone" | "loggedToday">;
+
 export type ScheduleReminderPlanInput = {
   now: Date;
   settings: ReminderSettings;
-  /** Null while any of it is not loaded yet, which leaves the schedule as it is. */
+  /** Null while any of it is not loaded yet, which leaves the schedule as it is. Unread while no training switch is on. */
   inputs: ReminderPlanInputs | null;
+  /** Null while it is not loaded yet, which leaves the schedule as it is. Unread while the food switch is off. */
+  foodInputs: FoodReminderPlanInputs | null;
 };
 
-const hasAnySwitchOn = ({ trainEnabled, progressEnabled, easeEnabled }: ReminderSettings) =>
+const hasTrainingSwitchOn = ({ trainEnabled, progressEnabled, easeEnabled }: ReminderSettings) =>
   trainEnabled || progressEnabled || easeEnabled;
 
 /**
- * Plans the next seven days of reminders and replaces what this app has scheduled with them. With every
- * switch off, or the permission not granted, it cancels ours and schedules nothing, and on a build
- * without the notifications module it does nothing at all. With the inputs not loaded it keeps the
- * schedule it has. The plan is stored with the last wording delivered of each type, so the next plan does
- * not repeat it. A failure is a fixed message: the system's own can quote what was scheduled.
+ * Plans the next seven days of reminders, the training ones and the food one, and replaces what this app
+ * has scheduled with them. With every switch off, or the permission not granted, it cancels ours and
+ * schedules nothing, and on a build without the notifications module it does nothing at all. With the
+ * inputs of a switch that is on not loaded it keeps the schedule it has. The plan is stored with the last
+ * wording delivered of each type, so the next plan does not repeat it. A failure is a fixed message: the
+ * system's own can quote what was scheduled.
  */
 export async function scheduleReminderPlan({
   now,
   settings,
   inputs,
+  foodInputs,
 }: ScheduleReminderPlanInput): Promise<void> {
   const permission = await getPermission();
   if (permission === "unavailable") {
     return;
   }
-  if (permission !== "granted" || !hasAnySwitchOn(settings)) {
+  if (permission !== "granted" || !(hasTrainingSwitchOn(settings) || settings.foodEnabled)) {
     // Through the queue, so it cannot race a plan that is still being scheduled.
     await replaceReminders([]);
     return;
   }
-  if (inputs === null) {
+  if (
+    (inputs === null && hasTrainingSwitchOn(settings)) ||
+    (foodInputs === null && settings.foodEnabled)
+  ) {
     return;
   }
 
@@ -57,16 +69,29 @@ export async function scheduleReminderPlan({
   const lastVariantOf = (type: ReminderType): string | null =>
     delivered.find((reminder) => reminder.type === type)?.variantId ?? settings.lastVariant[type];
 
-  const planned = planTrainingReminders({
-    ...inputs,
-    now: now.toISOString(),
-    settings,
-    lastVariantIds: {
-      train: lastVariantOf("train"),
-      progress: lastVariantOf("progress"),
-      ease: lastVariantOf("ease"),
-    },
-  });
+  const trainingPlanned =
+    inputs === null
+      ? []
+      : planTrainingReminders({
+          ...inputs,
+          now: now.toISOString(),
+          settings,
+          lastVariantIds: {
+            train: lastVariantOf("train"),
+            progress: lastVariantOf("progress"),
+            ease: lastVariantOf("ease"),
+          },
+        });
+  const foodPlanned =
+    foodInputs === null
+      ? []
+      : planFoodReminders({
+          ...foodInputs,
+          now: now.toISOString(),
+          settings,
+          lastVariantId: lastVariantOf("food"),
+        }).map((reminder) => ({ ...reminder, type: "food" as const }));
+  const planned = [...trainingPlanned, ...foodPlanned];
   const reminders: Reminder[] = planned.map(({ type, fireAt, title, body }) => ({
     type,
     fireAt: new Date(fireAt),

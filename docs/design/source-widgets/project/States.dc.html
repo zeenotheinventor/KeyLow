@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Widget states</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#CCF249}a:hover{color:#E2FA8C}
+.w{box-sizing:border-box;border-radius:22px;background:#141821;border:1px solid #2A3142;padding:16px;overflow:hidden;font-variant-numeric:tabular-nums}
+.cap{font-size:13px;color:#A9B2C3;margin:0}
+.capt{font-size:15px;font-weight:600;color:#F2F4F8;margin:0}
+.eye{font-size:12px;font-weight:600;color:#8691A5;letter-spacing:.02em;margin:0}
+.btn{box-sizing:border-box;border:0;border-radius:12px;background:#1C212C;color:#F2F4F8;font-family:inherit;font-size:13px;font-weight:600;min-height:36px;padding:0 14px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+.pri{background:#CCF249;color:#0B0E13}
+.cell{display:flex;flex-direction:column;gap:12px}
+</style>
+</helmet>
+<div style="width:1280px;height:1180px;box-sizing:border-box;padding:56px 40px;background:#0B0E13;font-family:Geist,ui-sans-serif,system-ui,sans-serif;color:#F2F4F8;display:flex;flex-direction:column;gap:40px">
+
+<div style="display:flex;flex-direction:column;gap:8px">
+<p class="eye" style="color:#CCF249">STATES</p>
+<h1 style="margin:0;font-size:40px;font-weight:700;letter-spacing:-0.02em">Widget states</h1>
+<p style="margin:0;font-size:17px;color:#A9B2C3;max-width:820px">What the widgets show when there is nothing normal to show. Every widget size uses the same wording, laid out to fit.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:32px 24px;padding:24px;border-radius:28px;background:#252C3A">
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;justify-content:space-between">
+<p class="eye">KI-LO</p>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:17px;font-weight:700">Sign in to see today</span><span class="cap">Your nutrition and training appear here once you sign in.</span></div>
+<button class="btn pri" type="button" style="align-self:flex-start">Open Ki-Lo</button>
+</div>
+<p class="capt">Signed out</p>
+<p class="cap">Also shown after sign out. Nothing from the last account stays.</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;justify-content:space-between">
+<p class="eye">TODAY</p>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:17px;font-weight:700">Open Ki-Lo to load today</span><span class="cap">The widget fills in after the app has opened once today.</span></div>
+<button class="btn" type="button" style="align-self:flex-start">Open Ki-Lo</button>
+</div>
+<p class="capt">No data yet</p>
+<p class="cap">First install, or a new day the app has not loaded</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;gap:16px;align-items:center">
+<svg width="100" height="100" viewBox="0 0 112 112" role="img" aria-label="1,460 of 2,200 kcal eaten">
+<circle cx="56" cy="56" r="46" fill="none" stroke="#2A3142" stroke-width="11"></circle>
+<circle cx="56" cy="56" r="46" fill="none" stroke="#8691A5" stroke-width="11" stroke-linecap="round" stroke-dasharray="192.0 289.0" transform="rotate(-90 56 56)"></circle>
+<text x="56" y="56" text-anchor="middle" font-family="Geist, sans-serif" font-size="24" font-weight="700" fill="#F2F4F8">740</text>
+<text x="56" y="74" text-anchor="middle" font-family="Geist, sans-serif" font-size="11" fill="#A9B2C3">kcal left</text>
+</svg>
+<div style="flex:1;display:flex;flex-direction:column;gap:8px">
+<p class="eye">TODAY</p>
+<span style="font-size:15px;font-weight:600">1,460 of 2,200 kcal</span>
+<div style="display:flex;align-items:center;gap:6px;font-size:12px;color:#FF9F43">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 12.9a10 10 0 0 1 5.2-2.8M19 12.9a10 10 0 0 0-2-1.6M12 20h.01"></path></svg>
+Offline · updated 10:05</div>
+</div>
+</div>
+<p class="capt">Offline or out of date</p>
+<p class="cap">Last saved numbers, dimmed ring, with the time they are from</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;justify-content:space-between">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><p class="eye">TODAY</p><span class="cap" style="font-size:12px">1,460 kcal eaten</span></div>
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:17px;font-weight:700">No target set</span><span class="cap">Set a calorie and macro target to see what is left.</span></div>
+<button class="btn" type="button" style="align-self:flex-start">Set target</button>
+</div>
+<p class="capt">No calorie target</p>
+<p class="cap">Shows what was eaten, opens Targets. Wording from the diary banner.</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;gap:12px">
+<p class="eye">TRAIN · TODAY</p>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:22px;font-weight:700">Rest day</span><span class="cap">Nothing planned today. Recovery counts too.</span></div>
+<div style="display:flex;gap:8px;margin-top:auto">
+<button class="btn" type="button" style="flex:1">Empty session</button>
+<button class="btn" type="button" style="flex:1">Open Train</button>
+</div>
+</div>
+<p class="capt">Rest day or no programme</p>
+<p class="cap">Training widget when no day is planned</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;gap:10px">
+<p class="eye">LOG AGAIN</p>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px"><span style="font-size:17px;font-weight:700">Nothing logged yet</span><span class="cap">Foods you log appear here, ready to log again.</span></div>
+<button class="btn pri" type="button" style="align-self:flex-start">Log food</button>
+</div>
+<p class="capt">No recent foods</p>
+<p class="cap">Log again before anything has been logged</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;gap:10px">
+<p class="eye">LOG AGAIN</p>
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="box-sizing:border-box;display:flex;justify-content:space-between;align-items:center;padding:0 12px;min-height:30px;border-radius:12px;background:rgba(92,214,122,0.14);font-size:12px"><span style="display:flex;gap:6px;align-items:center;color:#5CD67A;font-weight:600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"></path></svg>Logged Overnight oats</span><button type="button" style="border:0;background:none;color:#CCF249;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;min-height:30px;padding:0 4px">Undo</button></div>
+<div style="box-sizing:border-box;display:flex;justify-content:space-between;padding:0 12px;min-height:30px;align-items:center;border-radius:12px;background:#1C212C;font-size:12px"><span>Chicken wrap</span><span style="color:#A9B2C3">520 kcal</span></div>
+<div style="box-sizing:border-box;display:flex;justify-content:space-between;padding:0 12px;min-height:30px;align-items:center;border-radius:12px;background:#1C212C;font-size:12px"><span>Protein shake</span><span style="color:#A9B2C3">180 kcal</span></div>
+</div>
+</div>
+<p class="capt">Logged, with Undo</p>
+<p class="cap">Undo stays for 10 minutes. Same for Log set.</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;gap:10px">
+<p class="eye">LOG AGAIN</p>
+<div style="box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(255,92,92,0.14);font-size:13px;color:#FF5C5C;font-weight:600">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v5M12 16h.01"></path></svg>
+Couldn't log that. Nothing was saved.</div>
+<span class="cap">Check your connection, or log it in Ki-Lo.</span>
+<button class="btn" type="button" style="align-self:flex-start;margin-top:auto">Open Ki-Lo</button>
+</div>
+<p class="capt">Couldn't log</p>
+<p class="cap">One tap failed or was offline. Same for Log set.</p>
+</div>
+
+<div class="cell">
+<div class="w" style="width:364px;height:170px;display:flex;flex-direction:column;gap:10px">
+<p class="eye">IN SESSION</p>
+<div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px"><span style="font-size:17px;font-weight:700">Your session moved on</span><span class="cap">The set on the widget no longer matches the app, so nothing was logged.</span></div>
+<button class="btn pri" type="button" style="align-self:flex-start">Open session</button>
+</div>
+<p class="capt">Session changed</p>
+<p class="cap">Log set refused because the app is ahead</p>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

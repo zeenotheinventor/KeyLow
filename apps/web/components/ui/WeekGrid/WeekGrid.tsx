@@ -1,4 +1,9 @@
-import { describeWeekGridDay, WEEK_GRID } from "@keylow/core/copy";
+import {
+  describeWeekAverageSentence,
+  describeWeekGridDay,
+  WEEK_AVERAGES,
+  WEEK_GRID,
+} from "@keylow/core/copy";
 import { weekAverage } from "@keylow/core/diary";
 
 import { WeekGridCell } from "./WeekGridCell";
@@ -24,7 +29,8 @@ function kindOfDay(localDate: string, today: string): WeekGridCellKind {
  * and up each is a card in one of eight columns, below it a row of one list. A day shows its calories
  * against the target with a thin bar, its macros, whether it is complete, and, on a past day with
  * entries, Copy to today. Today is framed, a day to come is dimmed, and the Average covers the days with
- * entries from Monday to today. It holds no data: the screen passes the totals in.
+ * entries from Monday to yesterday, as the dashboard's This week card does. It holds no data: the screen
+ * passes the totals in.
  */
 export function WeekGrid({
   label,
@@ -38,6 +44,20 @@ export function WeekGrid({
   className,
 }: WeekGridProps) {
   const average = weekAverage(days, today);
+  const averageProps =
+    average.kind === "average"
+      ? {
+          totals: average.totals,
+          // A past week covers all its days, so only the week that holds today names its range.
+          caption: days.some((day) => day.localDate === today)
+            ? WEEK_AVERAGES.rangeCaption
+            : undefined,
+        }
+      : {
+          totals: null,
+          emptyText:
+            average.kind === "noEntries" ? undefined : describeWeekAverageSentence(average.kind),
+        };
 
   return (
     <ul aria-label={label} className={cn(listClassName, className)}>
@@ -69,7 +89,7 @@ export function WeekGrid({
       <WeekGridCell
         kind="average"
         name={WEEK_GRID.average}
-        totals={average}
+        {...averageProps}
         calorieTarget={calorieTarget}
         isComplete={false}
         isCopying={isCopying}
