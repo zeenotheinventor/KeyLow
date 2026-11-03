@@ -3,9 +3,7 @@ import { bodyMapPalette } from "@keylow/tokens";
 import { readMuscle } from "./muscleReading";
 
 import type { BodyFigureScale } from "./types";
-import type { BodyMapPalette, ThemeScheme } from "@keylow/tokens";
-
-const schemes: ThemeScheme[] = ["dark", "light"];
+import type { BodyMapPalette } from "@keylow/tokens";
 
 type ToneRow = [scale: BodyFigureScale, value: number, fillOf: (palette: BodyMapPalette) => string];
 
@@ -32,8 +30,8 @@ const toneRows: ToneRow[] = [
   ["role", 3, (palette) => palette.role.primary],
 ];
 
-describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
-  const palette = bodyMapPalette(scheme);
+describe("readMuscle in the dark theme", () => {
+  const palette = bodyMapPalette("dark");
 
   it.each(toneRows)(
     "should fill %s value %i with the palette colour of its token",
@@ -52,6 +50,20 @@ describe.each(schemes)("readMuscle in the %s theme", (scheme) => {
     expect(readMuscle("gap", undefined, palette).fill).toBe(palette.gap.notInPlan);
     expect(readMuscle("role", undefined, palette).fill).toBe(palette.heat[0]);
   });
+
+  it("should pass the spoken value and the glow through from core", () => {
+    expect(readMuscle("heat", 5, palette)).toEqual({
+      fill: palette.heat[5],
+      valueName: "Peak",
+      isPeak: true,
+    });
+  });
+});
+
+// The light theme keeps one case, which proves the palette it is given is the palette it draws with.
+// `packages/tokens` guards the light values themselves.
+describe("readMuscle in the light theme", () => {
+  const palette = bodyMapPalette("light");
 
   it("should pass the spoken value and the glow through from core", () => {
     expect(readMuscle("heat", 5, palette)).toEqual({

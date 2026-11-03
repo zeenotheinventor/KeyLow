@@ -113,8 +113,6 @@ function curveAt(bezier: [number, number, number, number], progress: number): nu
 const cssEase: [number, number, number, number] = [0.25, 0.1, 0.25, 1];
 const easeOut: [number, number, number, number] = [0, 0, 0.58, 1];
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Checkbox", () => {
   let kitStyles: string;
 
@@ -360,8 +358,8 @@ describe("Checkbox", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
     const filledLayer = {
       width: 22,
       height: 22,
@@ -372,7 +370,7 @@ describe("Checkbox", () => {
     };
 
     it("should draw an unticked box as a small radius, 1.5 point strong border and no fill", async () => {
-      await renderCheckbox({ checked: false }, scheme);
+      await renderCheckbox({ checked: false }, "dark");
       await screen.findByRole("checkbox", { name: acceptance });
 
       expect(
@@ -383,22 +381,68 @@ describe("Checkbox", () => {
     });
 
     it("should draw a ticked box with the accent as fill and border, and the tick in accent foreground", async () => {
-      await renderCheckbox({ checked: true }, scheme);
+      await renderCheckbox({ checked: true }, "dark");
       await screen.findByRole("checkbox", { name: acceptance });
 
       expect(viewsDrawn(filledLayer)).toHaveLength(1);
       expect(animatedOpacity(screen.getByTestId("box-fill"))).toBe(1);
       expect(drawings()).toHaveLength(1);
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-foreground"]);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-foreground"]);
     });
 
-    it("should draw a link in the accent ink at 14 over 20, which is the primary text colour in light", async () => {
-      await renderCheckbox({ label: acceptanceLabel(jest.fn(), jest.fn()) }, scheme);
+    it("should draw a link in the accent ink at 14 over 20", async () => {
+      await renderCheckbox({ label: acceptanceLabel(jest.fn(), jest.fn()) }, "dark");
 
       expect(screen.getByRole("link", { name: "Terms" })).toHaveStyle({
         fontSize: 14,
         lineHeight: 20,
-        color: colorOf(scheme === "dark" ? "accent" : "text-primary"),
+        color: colorOf("accent"),
+        textDecorationLine: "underline",
+      });
+    });
+  });
+
+  // Light keeps the link: CheckboxLink picks the primary text colour in light, where lime is too faint for text.
+  // It also keeps the box and the tick, whose tokens share a dark value with ones that differ in light.
+  describe("in the light scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+    const filledLayer = {
+      width: 22,
+      height: 22,
+      borderRadius: 6,
+      borderWidth: 1.5,
+      borderColor: colorOf("accent"),
+      backgroundColor: colorOf("accent"),
+    };
+
+    it("should draw an unticked box as a small radius, 1.5 point strong border and no fill", async () => {
+      await renderCheckbox({ checked: false }, "light");
+      await screen.findByRole("checkbox", { name: acceptance });
+
+      expect(
+        viewsDrawn({ borderRadius: 6, borderWidth: 1.5, borderColor: colorOf("border-strong") }),
+      ).toHaveLength(1);
+      expect(animatedOpacity(screen.getByTestId("box-fill"))).toBe(0);
+      expect(drawings()).toHaveLength(0);
+    });
+
+    it("should draw a ticked box with the accent as fill and border, and the tick in accent foreground", async () => {
+      await renderCheckbox({ checked: true }, "light");
+      await screen.findByRole("checkbox", { name: acceptance });
+
+      expect(viewsDrawn(filledLayer)).toHaveLength(1);
+      expect(animatedOpacity(screen.getByTestId("box-fill"))).toBe(1);
+      expect(drawings()).toHaveLength(1);
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["accent-foreground"]);
+    });
+
+    it("should draw a link in the accent ink at 14 over 20, which is the primary text colour in light", async () => {
+      await renderCheckbox({ label: acceptanceLabel(jest.fn(), jest.fn()) }, "light");
+
+      expect(screen.getByRole("link", { name: "Terms" })).toHaveStyle({
+        fontSize: 14,
+        lineHeight: 20,
+        color: colorOf("text-primary"),
         textDecorationLine: "underline",
       });
     });

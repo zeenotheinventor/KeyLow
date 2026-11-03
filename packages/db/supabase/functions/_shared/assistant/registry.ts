@@ -1,6 +1,7 @@
 // The ordered list of tools. A tool ticket adds its file under `tools/` and one line to `toolDefinitions`.
 // The order is part of the prompt cache's prefix, so a tool is only ever appended or moved on purpose.
 import { deleteEntryTool } from "./tools/deleteEntry.ts";
+import { askUserTool } from "./tools/askUser.ts";
 import { getDayTool } from "./tools/getDay.ts";
 import { getEntriesTool } from "./tools/getEntries.ts";
 import { getFoodTool } from "./tools/getFood.ts";
@@ -52,6 +53,7 @@ const toolDefinitions: readonly ToolDefinition[] = [
   logEntryTool,
   updateEntryTool,
   deleteEntryTool,
+  askUserTool,
 ];
 
 export const toolRegistry: ToolRegistry = createRegistry(toolDefinitions);

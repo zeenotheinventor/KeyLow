@@ -71,19 +71,16 @@ describe("SessionCover", () => {
     expect(drawn("RNSVGLine")).toHaveLength(3);
   });
 
-  it.each<ThemeScheme>(["dark", "light"])(
-    "should colour the arc with the %s accent and the bars with its primary text",
-    async (scheme) => {
-      await renderCover(scheme);
+  it("should colour the arc with the dark accent and the bars with its primary text", async () => {
+    await renderCover("dark");
 
-      expect(drawn("RNSVGCircle").map((node) => strokeOf(node.props))).toEqual([
-        paint(themes[scheme].accent),
-      ]);
-      expect(drawn("RNSVGLine").map((node) => strokeOf(node.props))).toEqual(
-        Array.from({ length: 3 }, () => paint(themes[scheme]["text-primary"])),
-      );
-    },
-  );
+    expect(drawn("RNSVGCircle").map((node) => strokeOf(node.props))).toEqual([
+      paint(themes.dark.accent),
+    ]);
+    expect(drawn("RNSVGLine").map((node) => strokeOf(node.props))).toEqual(
+      Array.from({ length: 3 }, () => paint(themes.dark["text-primary"])),
+    );
+  });
 
   it.each<ThemeScheme>(["dark", "light"])(
     "should fill the screen with the %s background token",

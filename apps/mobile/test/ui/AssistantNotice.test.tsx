@@ -212,37 +212,44 @@ describe("AssistantNotice", () => {
   });
 
   describe("the tones", () => {
-    it.each(schemes)(
-      "should draw a neutral notice with a hairline border and a raised tile in %s",
-      async (scheme) => {
-        await renderNotice({}, scheme);
+    it("should draw a neutral notice with a hairline border and a raised tile in dark", async () => {
+      await renderNotice({}, "dark");
 
-        expect(box()).toHaveStyle({ borderColor: resolvedColor(scheme, "border") });
-        expect(tile()).toHaveStyle({ backgroundColor: resolvedColor(scheme, "surface-raised") });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-secondary"]);
-      },
-    );
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("dark", "border") });
+      expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("dark", "surface-raised") });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-secondary"]);
+    });
 
-    it.each(schemes)(
-      "should draw a danger notice with a danger border, tile and icon in %s",
-      async (scheme) => {
-        await renderNotice({ tone: "danger" }, scheme);
+    it("should draw a neutral notice with a hairline border and a raised tile in light", async () => {
+      await renderNotice({}, "light");
 
-        expect(box()).toHaveStyle({ borderColor: resolvedColor(scheme, "danger") });
-        expect(tile()).toHaveStyle({ backgroundColor: themes[scheme]["danger-muted"] });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
-      },
-    );
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("light", "border") });
+      expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("light", "surface-raised") });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["text-secondary"]);
+    });
 
-    it.each(schemes)(
-      "should draw an accent notice with a hairline border and an accent tile in %s",
-      async (scheme) => {
-        await renderNotice({ tone: "accent" }, scheme);
+    it("should draw a danger notice with a danger border, tile and icon in dark", async () => {
+      await renderNotice({ tone: "danger" }, "dark");
 
-        expect(box()).toHaveStyle({ borderColor: resolvedColor(scheme, "border") });
-        expect(tile()).toHaveStyle({ backgroundColor: themes[scheme]["accent-muted"] });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["accent-ink"]);
-      },
-    );
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("dark", "danger") });
+      expect(tile()).toHaveStyle({ backgroundColor: themes.dark["danger-muted"] });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.danger);
+    });
+
+    it("should draw an accent notice with a hairline border and an accent tile in dark", async () => {
+      await renderNotice({ tone: "accent" }, "dark");
+
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("dark", "border") });
+      expect(tile()).toHaveStyle({ backgroundColor: themes.dark["accent-muted"] });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["accent-ink"]);
+    });
+
+    it("should draw an accent notice with a hairline border and an accent tile in light", async () => {
+      await renderNotice({ tone: "accent" }, "light");
+
+      expect(box()).toHaveStyle({ borderColor: resolvedColor("light", "border") });
+      expect(tile()).toHaveStyle({ backgroundColor: themes.light["accent-muted"] });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["accent-ink"]);
+    });
   });
 });

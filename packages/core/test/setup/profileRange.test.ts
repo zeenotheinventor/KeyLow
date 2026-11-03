@@ -21,15 +21,15 @@ describe("PROFILE_MAX_KCAL", () => {
   });
 });
 
+// Checked by `tsc` (the package's typecheck script), not at runtime: SetupClamp admits profile_max, which
+// the engine's Clamp does not, and every engine clamp.
+expectTypeOf<"profile_max">().toExtend<SetupClamp>();
+expectTypeOf<"profile_max">().not.toExtend<Clamp>();
+expectTypeOf<Clamp>().toExtend<SetupClamp>();
+
 describe("SetupClamp", () => {
   it("should admit profile_max, which the engine's Clamp does not", () => {
-    expectTypeOf<"profile_max">().toExtend<SetupClamp>();
-    expectTypeOf<"profile_max">().not.toExtend<Clamp>();
     expect(CLAMPS).not.toContain("profile_max");
-  });
-
-  it("should admit every engine clamp", () => {
-    expectTypeOf<Clamp>().toExtend<SetupClamp>();
   });
 });
 

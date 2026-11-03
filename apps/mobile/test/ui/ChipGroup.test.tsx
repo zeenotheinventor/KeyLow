@@ -57,8 +57,6 @@ function KeptUnit() {
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("ChipGroup", () => {
   let kitStyles: string;
 
@@ -286,11 +284,11 @@ describe("ChipGroup", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
 
     it("should draw an unchosen chip 36 points high as a pill on the raised surface with a hairline border, padded 12 across", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       const chips = viewsDrawn({
@@ -305,7 +303,7 @@ describe("ChipGroup", () => {
     });
 
     it("should fill the chosen chip with the accent and write on it in the accent foreground", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       expect(
@@ -323,7 +321,7 @@ describe("ChipGroup", () => {
     });
 
     it("should write on an unchosen chip in primary text at regular weight", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       expect(screen.getByText("g")).toHaveStyle({
@@ -335,13 +333,51 @@ describe("ChipGroup", () => {
     });
 
     it("should leave 8 points between the chips", async () => {
-      await renderUnits({ value: "ml" }, scheme);
+      await renderUnits({ value: "ml" }, "dark");
       await screen.findByLabelText("Unit");
 
       expect(screen.getByLabelText("Unit")).toHaveProp(
         "contentContainerStyle",
         expect.objectContaining({ rowGap: 8, columnGap: 8 }),
       );
+    });
+  });
+
+  // Light keeps the two chip looks whose tokens share a dark value with ones that differ in light.
+  describe("in the light scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+
+    it("should draw an unchosen chip 36 points high as a pill on the raised surface with a hairline border, padded 12 across", async () => {
+      await renderUnits({ value: "ml" }, "light");
+      await screen.findByLabelText("Unit");
+
+      const chips = viewsDrawn({
+        height: 36,
+        backgroundColor: colorOf("surface-raised"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+        borderRadius: 999,
+      });
+      expect(chips).toHaveLength(2);
+      expect(chips[0]).toHaveStyle({ paddingLeft: 12, paddingRight: 12 });
+    });
+
+    it("should fill the chosen chip with the accent and write on it in the accent foreground", async () => {
+      await renderUnits({ value: "ml" }, "light");
+      await screen.findByLabelText("Unit");
+
+      expect(
+        viewsDrawn({
+          height: 36,
+          backgroundColor: colorOf("accent"),
+          borderColor: colorOf("accent"),
+          borderRadius: 999,
+        }),
+      ).toHaveLength(1);
+      expect(screen.getByText("ml")).toHaveStyle({
+        color: colorOf("accent-foreground"),
+        fontFamily: "Geist-SemiBold",
+      });
     });
   });
 });

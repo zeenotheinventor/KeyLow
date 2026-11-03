@@ -53,8 +53,6 @@ function drawings() {
   return screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("EmptyState", () => {
   let kitStyles: string;
 
@@ -179,15 +177,19 @@ describe("EmptyState", () => {
       expect(drawings()[0]).toHaveProp("width", iconSize.xl);
     });
 
-    it.each(schemes)(
-      "should be the raised surface with a muted icon in the %s scheme",
-      async (scheme) => {
-        await renderEmptyState({}, scheme);
+    it("should be the raised surface with a muted icon in the dark scheme", async () => {
+      await renderEmptyState({}, "dark");
 
-        expect(tile()).toHaveStyle({ backgroundColor: resolvedColor(scheme, "surface-raised") });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-muted"]);
-      },
-    );
+      expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("dark", "surface-raised") });
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-muted"]);
+    });
+
+    it("should be the raised surface with a muted icon in the light scheme", async () => {
+      await renderEmptyState({}, "light");
+
+      expect(tile()).toHaveStyle({ backgroundColor: resolvedColor("light", "surface-raised") });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light["text-muted"]);
+    });
   });
 
   describe("as a card, as the training boards draw their empty states", () => {

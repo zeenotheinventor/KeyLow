@@ -16,8 +16,6 @@ jest.mock("@react-native-async-storage/async-storage", () => ({
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 // The icon is decoration, so its drawing is looked for, in the order the items are listed.
 const drawings = () => screen.root?.queryAll((node) => node.type === "RNSVGSvgView") ?? [];
 
@@ -123,9 +121,9 @@ describe("ActionMenu", () => {
     });
   });
 
-  describe.each(schemes)("the look in %s", (scheme) => {
+  describe("the look in dark", () => {
     it("should make each item 52 points high", async () => {
-      await renderMenu({}, scheme);
+      await renderMenu({}, "dark");
 
       expect(screen.getByRole("button", { name: "Copy yesterday" })).toHaveStyle({
         minHeight: 52,
@@ -133,20 +131,18 @@ describe("ActionMenu", () => {
     });
 
     it("should write a label in the primary text colour", async () => {
-      await renderMenu({}, scheme);
+      await renderMenu({}, "dark");
 
       expect(screen.getByText("Copy yesterday")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
-    // The status colours are never small text in light, where they are too faint (Q14): the label falls back
-    // to the primary text colour and the danger colour stays on the icon, as a Badge does.
-    it("should write a destructive item's label in the danger colour in dark and in the primary text in light", async () => {
-      await renderMenu({}, scheme);
+    it("should write a destructive item's label in the danger colour in dark", async () => {
+      await renderMenu({}, "dark");
 
       expect(screen.getByText("Delete day")).toHaveStyle({
-        color: resolvedColor(scheme, scheme === "dark" ? "danger" : "text-primary"),
+        color: resolvedColor("dark", "danger"),
       });
     });
 
@@ -163,7 +159,7 @@ describe("ActionMenu", () => {
             },
           ],
         },
-        scheme,
+        "dark",
       );
       const item = within(screen.getByRole("button", { name: /^Copy yesterday/ }));
 
@@ -173,22 +169,35 @@ describe("ActionMenu", () => {
       );
       expect(item.getByText("Nothing logged yesterday")).not.toHaveStyle(dimmed);
       expect(item.getByText("Nothing logged yesterday")).toHaveStyle({
-        color: resolvedColor(scheme, "text-muted"),
+        color: resolvedColor("dark", "text-muted"),
       });
     });
 
     it("should draw an icon in the secondary text colour and a destructive item's in danger", async () => {
-      await renderMenu({}, scheme);
+      await renderMenu({}, "dark");
 
       const [copyIcon, deleteIcon] = drawings();
-      expect(copyIcon).toHaveProp("stroke", themes[scheme]["text-secondary"]);
-      expect(deleteIcon).toHaveProp("stroke", themes[scheme].danger);
+      expect(copyIcon).toHaveProp("stroke", themes.dark["text-secondary"]);
+      expect(deleteIcon).toHaveProp("stroke", themes.dark.danger);
     });
 
     it("should not dim an enabled item", async () => {
-      await renderMenu({}, scheme);
+      await renderMenu({}, "dark");
 
       expect(screen.getByText("Copy yesterday")).not.toHaveStyle(dimmed);
+    });
+  });
+
+  // The one thing light does differently: the status colours are never small text in light, where they are too
+  // faint (Q14), so the label falls back to the primary text colour and the danger colour stays on the icon, as
+  // a Badge does. Everything else asks for the same token in both schemes, so the dark run guards it.
+  describe("the look in light", () => {
+    it("should write a destructive item's label in the primary text in light", async () => {
+      await renderMenu({}, "light");
+
+      expect(screen.getByText("Delete day")).toHaveStyle({
+        color: resolvedColor("light", "text-primary"),
+      });
     });
   });
 });

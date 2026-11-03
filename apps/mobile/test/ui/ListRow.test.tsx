@@ -69,7 +69,6 @@ async function advance(milliseconds: number) {
 }
 
 const rowName = "Greek yoghurt, 170 g, Fage, 165 kcal";
-const schemes: ThemeScheme[] = ["dark", "light"];
 
 describe("ListRow", () => {
   let kitStyles: string;
@@ -335,23 +334,23 @@ describe("ListRow", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the title in the primary text colour, in Geist semibold", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       expect(await screen.findByText("Greek yoghurt")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 16,
       });
     });
 
     it("should draw the subtitle and the unit as muted captions", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       for (const text of ["170 g, Fage", "kcal"]) {
         expect(await screen.findByText(text)).toHaveStyle({
-          color: resolvedColor(scheme, "text-muted"),
+          color: resolvedColor("dark", "text-muted"),
           fontFamily: "Geist-Medium",
           fontSize: 12,
         });
@@ -359,10 +358,10 @@ describe("ListRow", () => {
     });
 
     it("should draw the value as a small numeral in the primary text colour", async () => {
-      await renderRow({}, scheme);
+      await renderRow({}, "dark");
 
       expect(await screen.findByText("165")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
         fontSize: 20,
       });
@@ -371,11 +370,11 @@ describe("ListRow", () => {
     it("should draw a quiet value as secondary body text, as the Archived recipes row's count", async () => {
       await renderRow(
         { title: "Archived recipes", value: "2", unit: undefined, valueLook: "quiet" },
-        scheme,
+        "dark",
       );
 
       expect(await screen.findByText("2")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
         fontFamily: "Geist-Regular",
         fontSize: 16,
       });

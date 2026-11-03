@@ -42,8 +42,6 @@ const withOverPlate = progressBars(dayTotals, targets, {
   fat_g: 25.8,
 });
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 // The ruling's ring, worked out here from the token itself: 55 per cent of each channel plus 45 per
 // cent of white, so the expected colour is never copied from the code under test.
 function ringColourOf(scheme: ThemeScheme, key: (typeof nutrientKeys)[number]): string {
@@ -254,24 +252,24 @@ describe("MacroProgressStrip", () => {
     });
   });
 
-  describe.each(schemes)("its colours in %s", (scheme) => {
+  describe("its colours in dark", () => {
     it.each(nutrientKeys)("should fill the %s bar in its own colour", async (key) => {
-      await renderStrip(under, scheme);
+      await renderStrip(under, "dark");
 
-      expect(fillOf(key)).toHaveStyle({ backgroundColor: resolvedColor(scheme, key) });
+      expect(fillOf(key)).toHaveStyle({ backgroundColor: resolvedColor("dark", key) });
     });
 
     it.each(nutrientKeys)(
       "should draw the %s ring as its colour mixed with 45 per cent white, outside a one point gap in the background colour",
       async (key) => {
-        await renderStrip(allOver, scheme);
+        await renderStrip(allOver, "dark");
 
         expect(screen.getByTestId(`${key}-outline-colour`, hidden)).toHaveStyle({
-          backgroundColor: ringColourOf(scheme, key),
+          backgroundColor: ringColourOf("dark", key),
           inset: -2.5,
         });
         expect(screen.getByTestId(`${key}-outline-gap`, hidden)).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "background"),
+          backgroundColor: resolvedColor("dark", "background"),
           inset: -1,
         });
       },
@@ -284,7 +282,7 @@ describe("MacroProgressStrip", () => {
       ["with no target", withoutTargets],
     ])("should never use a warning or danger colour anywhere in the strip %s", async (_, bars) => {
       const { toJSON } = await render(
-        <ThemeProvider fixedPreference={scheme}>
+        <ThemeProvider fixedPreference="dark">
           <MacroProgressStrip bars={bars} onPress={jest.fn()} />
         </ThemeProvider>,
       );
@@ -292,10 +290,27 @@ describe("MacroProgressStrip", () => {
 
       // The ink tokens are left out: in light they are the primary text colour, which the values are.
       for (const name of ["warning", "warning-muted", "danger", "danger-muted"] as const) {
-        expect(drawn).not.toContain(channelsOf(scheme, name));
-        expect(drawn.toLowerCase()).not.toContain(themes[scheme][name].toLowerCase());
+        expect(drawn).not.toContain(channelsOf("dark", name));
+        expect(drawn.toLowerCase()).not.toContain(themes.dark[name].toLowerCase());
       }
       expect(drawn).not.toMatch(/warning|danger/);
+    });
+  });
+
+  // The ring's colour is mixed from the theme's palette in code (`outlineColour(colors[key])`), not a class, so
+  // one light case proves the light palette reaches it. The fills and gaps are classes the dark run guards.
+  describe("its colours in light", () => {
+    it("should draw the calories ring as its colour mixed with 45 per cent white, outside a one point gap in the background colour", async () => {
+      await renderStrip(allOver, "light");
+
+      expect(screen.getByTestId("calories-outline-colour", hidden)).toHaveStyle({
+        backgroundColor: ringColourOf("light", "calories"),
+        inset: -2.5,
+      });
+      expect(screen.getByTestId("calories-outline-gap", hidden)).toHaveStyle({
+        backgroundColor: resolvedColor("light", "background"),
+        inset: -1,
+      });
     });
   });
 
@@ -468,32 +483,26 @@ describe("MacroProgressStrip", () => {
         expect(screen.getByRole("group")).toHaveStyle({ paddingLeft: 16, paddingBottom: 12 });
       });
 
-      it.each(schemes)(
-        "should leave the outline's one point gap in the surface colour in %s",
-        async (scheme) => {
-          await renderPlateStrip(
-            withOverPlate,
-            { label: "Today with your plate", surface: "card" },
-            scheme,
-          );
+      it("should leave the outline's one point gap in the surface colour in dark", async () => {
+        await renderPlateStrip(
+          withOverPlate,
+          { label: "Today with your plate", surface: "card" },
+          "dark",
+        );
 
-          expect(screen.getByTestId("calories-outline-gap", hidden)).toHaveStyle({
-            backgroundColor: resolvedColor(scheme, "surface"),
-            inset: -1,
-          });
-        },
-      );
+        expect(screen.getByTestId("calories-outline-gap", hidden)).toHaveStyle({
+          backgroundColor: resolvedColor("dark", "surface"),
+          inset: -1,
+        });
+      });
 
-      it.each(schemes)(
-        "should leave the outline's one point gap in the background colour on the page in %s",
-        async (scheme) => {
-          await renderPlateStrip(withOverPlate, { label: "Today with your plate" }, scheme);
+      it("should leave the outline's one point gap in the background colour on the page in dark", async () => {
+        await renderPlateStrip(withOverPlate, { label: "Today with your plate" }, "dark");
 
-          expect(screen.getByTestId("calories-outline-gap", hidden)).toHaveStyle({
-            backgroundColor: resolvedColor(scheme, "background"),
-          });
-        },
-      );
+        expect(screen.getByTestId("calories-outline-gap", hidden)).toHaveStyle({
+          backgroundColor: resolvedColor("dark", "background"),
+        });
+      });
 
       it("should be the Targets button again when given onPress", async () => {
         await renderPlateStrip(withPlate, { surface: "card", onPress: jest.fn() });
@@ -502,14 +511,14 @@ describe("MacroProgressStrip", () => {
       });
     });
 
-    describe.each(schemes)("its colours in %s", (scheme) => {
+    describe("its colours in dark", () => {
       it.each(nutrientKeys)(
         "should draw the %s share in its own colour at 45 per cent",
         async (key) => {
-          await renderPlateStrip(withPlate, { label: "Today with your plate" }, scheme);
+          await renderPlateStrip(withPlate, { label: "Today with your plate" }, "dark");
 
           expect(plateFillOf(key)).toHaveStyle({
-            backgroundColor: plateShareColourOf(scheme, key),
+            backgroundColor: plateShareColourOf("dark", key),
           });
         },
       );
@@ -521,7 +530,7 @@ describe("MacroProgressStrip", () => {
         "should never use a warning or danger colour in the %s form over target",
         async (_, surface) => {
           const { toJSON } = await render(
-            <ThemeProvider fixedPreference={scheme}>
+            <ThemeProvider fixedPreference="dark">
               <MacroProgressStrip
                 bars={withOverPlate}
                 label="Today with your plate"
@@ -532,12 +541,24 @@ describe("MacroProgressStrip", () => {
           const drawn = JSON.stringify(toJSON());
 
           for (const name of ["warning", "warning-muted", "danger", "danger-muted"] as const) {
-            expect(drawn).not.toContain(channelsOf(scheme, name));
-            expect(drawn.toLowerCase()).not.toContain(themes[scheme][name].toLowerCase());
+            expect(drawn).not.toContain(channelsOf("dark", name));
+            expect(drawn.toLowerCase()).not.toContain(themes.dark[name].toLowerCase());
           }
           expect(drawn).not.toMatch(/warning|danger/);
         },
       );
+    });
+
+    // The plate's share is mixed from the theme's palette in code (`plateShareColour(colors[key])`), so one
+    // light case proves the light palette reaches it.
+    describe("its colours in light", () => {
+      it("should draw the calories share in its own colour at 45 per cent", async () => {
+        await renderPlateStrip(withPlate, { label: "Today with your plate" }, "light");
+
+        expect(plateFillOf("calories")).toHaveStyle({
+          backgroundColor: plateShareColourOf("light", "calories"),
+        });
+      });
     });
   });
 });

@@ -320,13 +320,24 @@ describe("LineChart drawing", () => {
     });
   });
 
-  describe.each<ThemeScheme>(["dark", "light"])("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the line, the points and the marker in the chart tokens", async () => {
-      await drawLineChart([40, 45, 50], {}, scheme);
+      await drawLineChart([40, 45, 50], {}, "dark");
 
-      expect(drawn("Line")[0]?.color).toBe(themes[scheme]["chart-trend"]);
-      expect(drawn("Scatter")[0]?.color).toBe(themes[scheme]["chart-point"]);
-      expect(drawn("Scatter")[1]?.color).toBe(themes[scheme]["chart-marker"]);
+      expect(drawn("Line")[0]?.color).toBe(themes.dark["chart-trend"]);
+      expect(drawn("Scatter")[0]?.color).toBe(themes.dark["chart-point"]);
+      expect(drawn("Scatter")[1]?.color).toBe(themes.dark["chart-marker"]);
+    });
+  });
+
+  // Light keeps the chart tokens, whose marker shares its dark value with tokens that differ in light.
+  describe("in the light scheme", () => {
+    it("should draw the line, the points and the marker in the chart tokens", async () => {
+      await drawLineChart([40, 45, 50], {}, "light");
+
+      expect(drawn("Line")[0]?.color).toBe(themes.light["chart-trend"]);
+      expect(drawn("Scatter")[0]?.color).toBe(themes.light["chart-point"]);
+      expect(drawn("Scatter")[1]?.color).toBe(themes.light["chart-marker"]);
     });
   });
 });

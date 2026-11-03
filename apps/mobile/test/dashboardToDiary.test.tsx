@@ -19,6 +19,7 @@ import {
 } from "./support/diaryBackend";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -80,6 +81,7 @@ describe("the dashboard card and the diary", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetDiaryBackend();
     diaryBackend.entries = [...sampleDay(), ...sampleDay("2026-10-14")];
@@ -92,6 +94,7 @@ describe("the dashboard card and the diary", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   async function leaveTheDiaryOnAPastDay() {

@@ -33,6 +33,7 @@ import {
 import { resetSetEntryBackend, setEntryBackend, setEntryClient } from "./support/setEntryBackend";
 import { expectTextsInOrder } from "./support/textsInOrder";
 import { resetTrainBackend, trainBackend, trainClient } from "./support/trainBackend";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { SessionScreenProps } from "../components/SessionScreen";
 import type { QueryClient } from "@tanstack/react-query";
@@ -201,6 +202,7 @@ describe("the active session screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     mockExerciseCardDraws.mockClear();
     registerAppStyles(kitStyles);
     resetTrainBackend();
@@ -215,6 +217,7 @@ describe("the active session screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("the golden Thursday Legs at 19:00", () => {
@@ -513,26 +516,21 @@ describe("the active session screen", () => {
     });
 
     it("should start a row tapped straight after a set was logged from that row's own numbers, not the last form's", async () => {
-      // The clock stands still, so the logged form is still on its way out when the next row is pressed.
-      jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate", "queueMicrotask"] });
-      try {
-        const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-        await renderSession({}, setEntryClient);
-        await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
-        await user.clear(screen.getByLabelText("Load, kg"));
-        await user.type(screen.getByLabelText("Load, kg"), "190");
-        await user.press(screen.getByRole("button", { name: "Log set" }));
-        await waitFor(() => {
-          expect(setEntryBackend.inserts).toHaveLength(1);
-        });
-        expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("190");
+      // The sheet's exit has not finished when the next row is pressed.
+      const user = userEvent.setup();
+      await renderSession({}, setEntryClient);
+      await user.press(await screen.findByRole("button", { name: "Leg press, set 3" }));
+      await user.clear(screen.getByLabelText("Load, kg"));
+      await user.type(screen.getByLabelText("Load, kg"), "190");
+      await user.press(screen.getByRole("button", { name: "Log set" }));
+      await waitFor(() => {
+        expect(setEntryBackend.inserts).toHaveLength(1);
+      });
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("190");
 
-        await user.press(screen.getByRole("button", { name: "Seated leg curl, set 1" }));
+      await user.press(screen.getByRole("button", { name: "Seated leg curl, set 1" }));
 
-        expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("45");
-      } finally {
-        jest.useRealTimers();
-      }
+      expect(screen.getByLabelText("Load, kg")).toHaveDisplayValue("45");
     });
 
     it("should log the set with Log set, close the sheet and write it to the session", async () => {

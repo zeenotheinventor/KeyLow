@@ -65,8 +65,6 @@ const announcements: { variant: BannerVariant; role: "alert" | "status" | "note"
   { variant: "error", role: "alert" },
 ];
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("Banner", () => {
   let kitStyles: string;
 
@@ -339,40 +337,40 @@ describe("Banner", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw the review variant on the warning tint, with a warning border and icon", async () => {
-      await renderBanner({ variant: "review" }, scheme);
+      await renderBanner({ variant: "review" }, "dark");
 
       expect(await screen.findByTestId("banner-box")).toHaveStyle({
-        backgroundColor: themes[scheme]["warning-muted"],
-        borderColor: resolvedColor(scheme, "warning"),
+        backgroundColor: themes.dark["warning-muted"],
+        borderColor: resolvedColor("dark", "warning"),
         borderWidth: 1,
       });
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme].warning);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.warning);
     });
 
     it("should draw the error variant on the danger tint, with a danger border and icon", async () => {
-      await renderBanner({ variant: "error" }, scheme);
+      await renderBanner({ variant: "error" }, "dark");
 
       expect(await screen.findByTestId("banner-box")).toHaveStyle({
-        backgroundColor: themes[scheme]["danger-muted"],
-        borderColor: resolvedColor(scheme, "danger"),
+        backgroundColor: themes.dark["danger-muted"],
+        borderColor: resolvedColor("dark", "danger"),
         borderWidth: 1,
       });
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme].danger);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.danger);
     });
 
     it.each(["offline", "info"] as const)(
       "should draw the %s variant quietly: the raised surface, a hairline border, a secondary icon",
       async (variant) => {
-        await renderBanner({ variant }, scheme);
+        await renderBanner({ variant }, "dark");
 
         expect(await screen.findByTestId("banner-box")).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface-raised"),
-          borderColor: resolvedColor(scheme, "border"),
+          backgroundColor: resolvedColor("dark", "surface-raised"),
+          borderColor: resolvedColor("dark", "border"),
           borderWidth: 1,
         });
-        expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-secondary"]);
+        expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-secondary"]);
       },
     );
 
@@ -384,9 +382,9 @@ describe("Banner", () => {
           variant: "review",
           action: { label: "Copy to your foods", onPress: () => undefined },
         },
-        scheme,
+        "dark",
       );
-      const ink = resolvedColor(scheme, "warning-ink");
+      const ink = resolvedColor("dark", "warning-ink");
 
       expect(await screen.findByText("Needs review")).toHaveStyle({ color: ink });
       expect(screen.getByText("Copy to your foods")).toHaveStyle({ color: ink });
@@ -399,11 +397,11 @@ describe("Banner", () => {
       async (variant) => {
         await renderBanner(
           { variant, action: { label: "Set target", onPress: () => undefined } },
-          scheme,
+          "dark",
         );
 
         expect(await screen.findByText("Set target")).toHaveStyle({
-          color: resolvedColor(scheme, "accent-ink"),
+          color: resolvedColor("dark", "accent-ink"),
         });
       },
     );
@@ -411,21 +409,79 @@ describe("Banner", () => {
     it("should set the error action in the primary text colour, because a status colour is not text", async () => {
       await renderBanner(
         { variant: "error", action: { label: "Try again", onPress: () => undefined } },
-        scheme,
+        "dark",
       );
 
       expect(await screen.findByText("Try again")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
     it.each(["offline", "info", "error"] as const)(
       "should set the %s title in the primary text colour, because a status colour is not text",
       async (variant) => {
-        await renderBanner({ variant }, scheme);
+        await renderBanner({ variant }, "dark");
 
         expect(await screen.findByText("Needs review")).toHaveStyle({
-          color: resolvedColor(scheme, "text-primary"),
+          color: resolvedColor("dark", "text-primary"),
+        });
+      },
+    );
+  });
+
+  // Light keeps the two ink call sites. In dark `warning-ink` and `accent-ink` are the same colour as `warning` and
+  // `accent`, so only a light run notices a plain class standing in for an ink class. It also keeps the review border and
+  // icon and the quiet raised fill, whose tokens share a dark value with ones that differ in light.
+  describe("in the light scheme", () => {
+    it("should draw the review variant on the warning tint, with a warning border and icon", async () => {
+      await renderBanner({ variant: "review" }, "light");
+
+      expect(await screen.findByTestId("banner-box")).toHaveStyle({
+        backgroundColor: themes.light["warning-muted"],
+        borderColor: resolvedColor("light", "warning"),
+        borderWidth: 1,
+      });
+      expect(drawings()[0]).toHaveProp("stroke", themes.light.warning);
+    });
+
+    it.each(["offline", "info"] as const)(
+      "should draw the %s variant quietly: the raised surface, a hairline border, a secondary icon",
+      async (variant) => {
+        await renderBanner({ variant }, "light");
+
+        expect(await screen.findByTestId("banner-box")).toHaveStyle({
+          backgroundColor: resolvedColor("light", "surface-raised"),
+          borderColor: resolvedColor("light", "border"),
+          borderWidth: 1,
+        });
+        expect(drawings()[0]).toHaveProp("stroke", themes.light["text-secondary"]);
+      },
+    );
+
+    it("should set the review title and action in the warning ink", async () => {
+      await renderBanner(
+        {
+          variant: "review",
+          action: { label: "Copy to your foods", onPress: () => undefined },
+        },
+        "light",
+      );
+      const ink = resolvedColor("light", "warning-ink");
+
+      expect(await screen.findByText("Needs review")).toHaveStyle({ color: ink });
+      expect(screen.getByText("Copy to your foods")).toHaveStyle({ color: ink });
+    });
+
+    it.each(["offline", "info"] as const)(
+      "should set the %s action in the accent ink, as the boards draw it",
+      async (variant) => {
+        await renderBanner(
+          { variant, action: { label: "Set target", onPress: () => undefined } },
+          "light",
+        );
+
+        expect(await screen.findByText("Set target")).toHaveStyle({
+          color: resolvedColor("light", "accent-ink"),
         });
       },
     );
@@ -608,11 +664,11 @@ describe("Banner", () => {
       expect(screen.getByRole("note", { name: reviewName })).toBeOnTheScreen();
     });
 
-    it.each(schemes)("should keep the warning tint in the %s scheme", async (scheme) => {
-      await renderBanner({ variant: "review", size: "compact" }, scheme);
+    it("should keep the warning tint in the dark scheme", async () => {
+      await renderBanner({ variant: "review", size: "compact" }, "dark");
 
       expect(await screen.findByTestId("banner-box")).toHaveStyle({
-        backgroundColor: themes[scheme]["warning-muted"],
+        backgroundColor: themes.dark["warning-muted"],
       });
     });
 

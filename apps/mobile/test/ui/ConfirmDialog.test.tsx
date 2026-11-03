@@ -118,13 +118,13 @@ describe("ConfirmDialog", () => {
     });
   });
 
-  describe.each<ThemeScheme>(["dark", "light"])("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw a card on the sheet surface, padded 20 with 12 between its parts", async () => {
-      await renderDialog({}, scheme);
+      await renderDialog({}, "dark");
 
       expect(await screen.findByLabelText("Discard this session?")).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface-sheet"),
-        borderColor: resolvedColor(scheme, "border"),
+        backgroundColor: resolvedColor("dark", "surface-sheet"),
+        borderColor: resolvedColor("dark", "border"),
         borderWidth: 1,
         padding: 20,
         rowGap: 12,
@@ -132,14 +132,14 @@ describe("ConfirmDialog", () => {
     });
 
     it("should write the title and the sentence at the start of the line", async () => {
-      await renderDialog({}, scheme);
+      await renderDialog({}, "dark");
 
       expect(await screen.findByText(sessionBody)).not.toHaveStyle({ textAlign: "center" });
       expect(screen.getByText("Discard this session?")).not.toHaveStyle({ textAlign: "center" });
     });
 
     it("should keep 24 points between the card and the sides of the screen", async () => {
-      await renderDialog({}, scheme);
+      await renderDialog({}, "dark");
 
       expect((await screen.findByLabelText("Discard this session?")).parent).toHaveStyle({
         paddingLeft: 24,
@@ -148,7 +148,7 @@ describe("ConfirmDialog", () => {
     });
 
     it("should round the card by the large radius", async () => {
-      await renderDialog({}, scheme);
+      await renderDialog({}, "dark");
 
       expect(await screen.findByLabelText("Discard this session?")).toHaveStyle({
         borderRadius: Number.parseInt(borderRadius.large, 10),
@@ -156,16 +156,16 @@ describe("ConfirmDialog", () => {
     });
 
     it("should dim the screen behind it with the overlay colour", async () => {
-      await renderDialog({}, scheme);
+      await renderDialog({}, "dark");
       await screen.findByLabelText("Discard this session?");
 
       expect(dim()).toHaveStyle({
-        backgroundColor: themes[scheme].overlay,
+        backgroundColor: themes.dark.overlay,
       });
     });
 
     it("should draw both buttons at the medium control height, 44 points", async () => {
-      await renderDialog({}, scheme);
+      await renderDialog({}, "dark");
 
       expect(await screen.findByRole("button", { name: "Discard session" })).toHaveStyle({
         height: controlHeight.md,
@@ -177,23 +177,23 @@ describe("ConfirmDialog", () => {
 
     describe("for the destructive tone", () => {
       it("should write the confirm button in the danger colour on the secondary fill and border", async () => {
-        await renderDialog({ tone: "destructive" }, scheme);
+        await renderDialog({ tone: "destructive" }, "dark");
 
         expect(await screen.findByRole("button", { name: "Discard session" })).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface-raised"),
-          borderColor: resolvedColor(scheme, "border"),
+          backgroundColor: resolvedColor("dark", "surface-raised"),
+          borderColor: resolvedColor("dark", "border"),
           borderWidth: 1,
         });
         expect(screen.getByText("Discard session")).toHaveStyle({
-          color: resolvedColor(scheme, "danger"),
+          color: resolvedColor("dark", "danger"),
         });
       });
 
       it("should draw the cancel button as the main one, in the accent fill", async () => {
-        await renderDialog({ tone: "destructive" }, scheme);
+        await renderDialog({ tone: "destructive" }, "dark");
 
         expect(await screen.findByRole("button", { name: "Keep logging" })).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "accent"),
+          backgroundColor: resolvedColor("dark", "accent"),
         });
       });
     });
@@ -202,18 +202,18 @@ describe("ConfirmDialog", () => {
       const labels = { confirmLabel: "Make active", cancelLabel: "Cancel" } as const;
 
       it("should draw the confirm button as the main one, in the accent fill", async () => {
-        await renderDialog({ tone: "primary", ...labels }, scheme);
+        await renderDialog({ tone: "primary", ...labels }, "dark");
 
         expect(await screen.findByRole("button", { name: "Make active" })).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "accent"),
+          backgroundColor: resolvedColor("dark", "accent"),
         });
       });
 
       it("should draw the cancel button as a secondary one", async () => {
-        await renderDialog({ tone: "primary", ...labels }, scheme);
+        await renderDialog({ tone: "primary", ...labels }, "dark");
 
         expect(await screen.findByRole("button", { name: "Cancel" })).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface-raised"),
+          backgroundColor: resolvedColor("dark", "surface-raised"),
         });
       });
     });

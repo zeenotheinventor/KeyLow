@@ -9,16 +9,15 @@ import { resolvedColor } from "./support/themeColor";
 import { viewsDrawn } from "./support/viewsDrawn";
 
 import type { GoogleButtonProps } from "../components/GoogleButton";
-import type { ThemeScheme } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: { getItem: () => Promise.resolve(null), setItem: () => Promise.resolve() },
 }));
 
-function renderButton(props: Partial<GoogleButtonProps> = {}, scheme: ThemeScheme = "dark") {
+function renderButton(props: Partial<GoogleButtonProps> = {}) {
   return render(
-    <ThemeProvider fixedPreference={scheme}>
+    <ThemeProvider fixedPreference="dark">
       <GoogleButton onPress={() => undefined} {...props} />
     </ThemeProvider>,
   );
@@ -73,21 +72,18 @@ describe("GoogleButton", () => {
     expect(mark?.props.height).toBe(20);
   });
 
-  it.each<ThemeScheme>(["dark", "light"])(
-    "should be a large secondary button in the %s scheme",
-    async (scheme) => {
-      await renderButton({}, scheme);
+  it("should be a large secondary button in the dark scheme", async () => {
+    await renderButton();
 
-      expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveStyle({
-        height: controlHeight.lg,
-        backgroundColor: resolvedColor(scheme, "surface-raised"),
-        borderColor: resolvedColor(scheme, "border"),
-        borderWidth: 1,
-        borderRadius: 12,
-      });
-      expect(viewsDrawn({ flexDirection: "row", columnGap: 12 })).toHaveLength(1);
-    },
-  );
+    expect(screen.getByRole("button", { name: "Continue with Google" })).toHaveStyle({
+      height: controlHeight.lg,
+      backgroundColor: resolvedColor("dark", "surface-raised"),
+      borderColor: resolvedColor("dark", "border"),
+      borderWidth: 1,
+      borderRadius: 12,
+    });
+    expect(viewsDrawn({ flexDirection: "row", columnGap: 12 })).toHaveLength(1);
+  });
 
   describe("disabled", () => {
     it("should be dimmed to 40 percent and ignore a press", async () => {

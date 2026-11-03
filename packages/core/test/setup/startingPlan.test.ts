@@ -6,6 +6,10 @@ import { startingPlan } from "../../src/setup";
 
 import type { SetupAnswers, SetupClamp, StartingPlan } from "../../src/setup";
 
+// Checked by `tsc` (the package's typecheck script), not at runtime: the type of the clamps admits profile_max.
+expectTypeOf<StartingPlan["clamps"]>().toEqualTypeOf<readonly SetupClamp[]>();
+expectTypeOf<"profile_max">().toExtend<StartingPlan["clamps"][number]>();
+
 const TODAY = "2026-06-15";
 
 /** Male, 36 years on TODAY, 180 cm, 80 kg, light, maintain: BMR 1750 and expenditure 2406.25. */
@@ -227,11 +231,6 @@ describe("startingPlan profile maximum", () => {
 
     expect(plan.targets).toStrictEqual({ caloriesKcal: 6000, proteinG: 0, fatG: 666, carbsG: 0 });
     expect(plan.clamps).toStrictEqual(["profile_max", "macro_fit"]);
-  });
-
-  it("should admit profile_max in the type of the clamps while the engine's clamps do not", () => {
-    expectTypeOf<StartingPlan["clamps"]>().toEqualTypeOf<readonly SetupClamp[]>();
-    expectTypeOf<"profile_max">().toExtend<StartingPlan["clamps"][number]>();
   });
 });
 

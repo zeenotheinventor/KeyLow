@@ -81,8 +81,6 @@ function ringColourOf(scheme: ThemeScheme, macro: "protein" | "carbs" | "fat"): 
   return `rgb(${red}, ${green}, ${blue})`;
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("MacroBars", () => {
   let kitStyles: string;
 
@@ -162,63 +160,95 @@ describe("MacroBars", () => {
     });
   });
 
-  describe.each(schemes)("its colours in %s", (scheme) => {
+  describe("its colours in dark", () => {
     it("should fill each bar in its macro colour", async () => {
-      await renderBars(under, scheme);
+      await renderBars(under, "dark");
       await advance(1500);
 
       expect(getAnimatedStyle(fillOf("protein"))).toMatchObject({
-        backgroundColor: themes[scheme].protein,
+        backgroundColor: themes.dark.protein,
       });
       expect(getAnimatedStyle(fillOf("carbs"))).toMatchObject({
-        backgroundColor: themes[scheme].carbs,
+        backgroundColor: themes.dark.carbs,
       });
       expect(getAnimatedStyle(fillOf("fat"))).toMatchObject({
-        backgroundColor: themes[scheme].fat,
+        backgroundColor: themes.dark.fat,
       });
     });
 
     it("should print the delta in the primary text colour, never the warning ink", async () => {
-      await renderBars(over, scheme);
+      await renderBars(over, "dark");
 
       expect(screen.getByText("+11 g")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
       expect(screen.getByText("+37 g")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
     it.each(["carbs", "fat"] as const)(
       "should draw the %s outline as its colour mixed with 45 per cent white, outside a 1 point gap in the card surface colour",
       async (macro) => {
-        await renderBars(over, scheme);
+        await renderBars(over, "dark");
 
         expect(screen.getByTestId(`${macro}-outline-colour`, hidden)).toHaveStyle({
-          backgroundColor: ringColourOf(scheme, macro),
+          backgroundColor: ringColourOf("dark", macro),
           inset: -2.5,
         });
         expect(screen.getByTestId(`${macro}-outline-gap`, hidden)).toHaveStyle({
-          backgroundColor: resolvedColor(scheme, "surface"),
+          backgroundColor: resolvedColor("dark", "surface"),
           inset: -1,
         });
       },
     );
 
     it("should draw no warning or danger colour on a bar that is over", async () => {
-      const { toJSON } = await renderBars(over, scheme);
+      const { toJSON } = await renderBars(over, "dark");
       const drawn = JSON.stringify(toJSON()).toLowerCase();
 
       for (const name of ["warning", "warning-muted", "danger", "danger-muted"] as const) {
-        expect(drawn).not.toContain(themes[scheme][name].toLowerCase());
+        expect(drawn).not.toContain(themes.dark[name].toLowerCase());
       }
       expect(drawn).not.toMatch(/warning|danger/);
     });
 
     it("should set the grams eaten in the primary text colour, over or not", async () => {
-      await renderBars(over, scheme);
+      await renderBars(over, "dark");
 
-      expect(screen.getByText("81")).toHaveStyle({ color: resolvedColor(scheme, "text-primary") });
+      expect(screen.getByText("81")).toHaveStyle({ color: resolvedColor("dark", "text-primary") });
+    });
+  });
+
+  // The fill and the outline read the theme's palette in code (`useTheme().colors`), not through a class, so
+  // these two prove the light palette reaches the output. Every other colour is a class the dark run guards.
+  describe("its colours in light", () => {
+    it("should fill each bar in its macro colour", async () => {
+      await renderBars(under, "light");
+      await advance(1500);
+
+      expect(getAnimatedStyle(fillOf("protein"))).toMatchObject({
+        backgroundColor: themes.light.protein,
+      });
+      expect(getAnimatedStyle(fillOf("carbs"))).toMatchObject({
+        backgroundColor: themes.light.carbs,
+      });
+      expect(getAnimatedStyle(fillOf("fat"))).toMatchObject({
+        backgroundColor: themes.light.fat,
+      });
+    });
+
+    it("should draw the carbs outline as its colour mixed with 45 per cent white, outside a 1 point gap in the card surface colour", async () => {
+      await renderBars(over, "light");
+
+      expect(screen.getByTestId("carbs-outline-colour", hidden)).toHaveStyle({
+        backgroundColor: ringColourOf("light", "carbs"),
+        inset: -2.5,
+      });
+      expect(screen.getByTestId("carbs-outline-gap", hidden)).toHaveStyle({
+        backgroundColor: resolvedColor("light", "surface"),
+        inset: -1,
+      });
     });
   });
 

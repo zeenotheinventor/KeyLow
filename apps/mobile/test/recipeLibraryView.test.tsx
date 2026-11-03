@@ -45,12 +45,9 @@ const actions = {
 
 const ready: RecipeLibraryViewProps = { status: "ready", recipes: sampleRecipes, ...actions };
 
-async function renderLibrary(
-  props: RecipeLibraryViewProps = ready,
-  scheme: "dark" | "light" = "dark",
-) {
+async function renderLibrary(props: RecipeLibraryViewProps = ready) {
   await render(
-    <ThemeProvider fixedPreference={scheme}>
+    <ThemeProvider fixedPreference="dark">
       <RecipeLibraryView {...props} />
     </ThemeProvider>,
   );
@@ -294,15 +291,12 @@ describe("the recipe library", () => {
       ).toBeNull();
     });
 
-    it.each(["dark", "light"] as const)(
-      "should draw the More glyph in secondary text, in the %s scheme",
-      async (scheme) => {
-        await renderLibrary(ready, scheme);
+    it("should draw the More glyph in secondary text, in the dark scheme", async () => {
+      await renderLibrary();
 
-        const [glyph] = more().queryAll((node) => node.type === "RNSVGSvgView");
-        expect(glyph).toHaveProp("stroke", themes[scheme]["text-secondary"]);
-      },
-    );
+      const [glyph] = more().queryAll((node) => node.type === "RNSVGSvgView");
+      expect(glyph).toHaveProp("stroke", themes.dark["text-secondary"]);
+    });
 
     it("should open the sheet with the recipe's name and its two actions", async () => {
       await renderLibrary();
@@ -710,14 +704,6 @@ describe("the recipe library", () => {
       await renderLibrary();
 
       expect(screen.queryByText("You're offline")).not.toBeOnTheScreen();
-    });
-  });
-
-  describe("in the light theme", () => {
-    it("should draw the same screen", async () => {
-      await renderLibrary(ready, "light");
-
-      expect(openButtons()).toHaveLength(5);
     });
   });
 });

@@ -10,7 +10,6 @@ import { registerAppStyles } from "../support/nativeWindStyles";
 import { resolvedColor } from "../support/themeColor";
 
 import type { WeekAverageBarProps } from "../../components/DashboardScreen/WeekAverageBar";
-import type { ThemeScheme } from "@keylow/tokens";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -43,9 +42,9 @@ const noTarget: WeekAverageBarProps = {
   daysLogged: 3,
 };
 
-async function renderBar(props: WeekAverageBarProps = under, scheme: ThemeScheme = "dark") {
+async function renderBar(props: WeekAverageBarProps = under) {
   return render(
-    <ThemeProvider fixedPreference={scheme}>
+    <ThemeProvider fixedPreference="dark">
       <WeekAverageBar {...props} />
     </ThemeProvider>,
   );
@@ -69,15 +68,13 @@ const fill = () => screen.getByTestId("calories-fill", hidden);
 
 // The ruling's ring, worked out here from the token itself: 55 per cent of each channel plus 45 per
 // cent of white, so the expected colour is never copied from the code under test.
-function ringColourOf(scheme: ThemeScheme): string {
+function ringColourOf(): string {
   const [red, green, blue] = [1, 3, 5].map((start) => {
-    const channel = parseInt(themes[scheme].calories.slice(start, start + 2), 16);
+    const channel = parseInt(themes.dark.calories.slice(start, start + 2), 16);
     return Math.round(channel * 0.55 + 255 * 0.45);
   });
   return `rgb(${red}, ${green}, ${blue})`;
 }
-
-const schemes: ThemeScheme[] = ["dark", "light"];
 
 describe("WeekAverageBar", () => {
   let kitStyles: string;
@@ -163,44 +160,44 @@ describe("WeekAverageBar", () => {
     });
   });
 
-  describe.each(schemes)("its colours in %s", (scheme) => {
+  describe("its colours in dark", () => {
     it("should fill the bar in the calories colour", async () => {
-      await renderBar(under, scheme);
+      await renderBar(under);
       await advance(1500);
 
       expect(getAnimatedStyle(fill())).toMatchObject({
-        backgroundColor: themes[scheme].calories,
+        backgroundColor: themes.dark.calories,
       });
     });
 
     it("should print the overshoot in the primary text colour, never the warning ink", async () => {
-      await renderBar(over, scheme);
+      await renderBar(over);
 
       expect(screen.getByText("+263 kcal")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
       });
     });
 
     it("should draw the outline as the calories colour mixed with 45 per cent white, outside a 1 point gap in the card surface colour", async () => {
-      await renderBar(over, scheme);
+      await renderBar(over);
 
       expect(screen.getByTestId("calories-outline-colour", hidden)).toHaveStyle({
-        backgroundColor: ringColourOf(scheme),
+        backgroundColor: ringColourOf(),
         inset: -2.5,
       });
       expect(screen.getByTestId("calories-outline-gap", hidden)).toHaveStyle({
-        backgroundColor: resolvedColor(scheme, "surface"),
+        backgroundColor: resolvedColor("dark", "surface"),
         inset: -1,
       });
     });
 
     it("should draw no warning or danger colour when over", async () => {
-      const { toJSON } = await renderBar(over, scheme);
+      const { toJSON } = await renderBar(over);
       const drawn = JSON.stringify(toJSON()).toLowerCase();
 
       expect(drawn).not.toMatch(/warning|danger/);
       for (const name of ["warning", "warning-muted", "danger", "danger-muted"] as const) {
-        expect(drawn).not.toContain(themes[scheme][name].toLowerCase());
+        expect(drawn).not.toContain(themes.dark[name].toLowerCase());
       }
     });
   });

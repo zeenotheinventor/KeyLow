@@ -26,8 +26,6 @@ function renderChip(props: Partial<PlateChipProps> = {}, scheme: ThemeScheme = "
   );
 }
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("PlateChip", () => {
   let kitStyles: string;
 
@@ -116,9 +114,9 @@ describe("PlateChip", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
+  describe("in the dark scheme", () => {
     it("should draw a 36 point pill in the accent fill with an accent border", async () => {
-      await renderChip({}, scheme);
+      await renderChip({}, "dark");
       await screen.findByText("4");
 
       expect(
@@ -126,17 +124,46 @@ describe("PlateChip", () => {
           height: 36,
           borderRadius: 999,
           borderWidth: 1,
-          borderColor: resolvedColor(scheme, "accent"),
-          backgroundColor: themes[scheme]["accent-muted"],
+          borderColor: resolvedColor("dark", "accent"),
+          backgroundColor: themes.dark["accent-muted"],
         }),
       ).toHaveLength(1);
     });
 
     it("should write the count in the accent ink, semibold", async () => {
-      await renderChip({}, scheme);
+      await renderChip({}, "dark");
 
       expect(screen.getByText("4")).toHaveStyle({
-        color: resolvedColor(scheme, "accent-ink"),
+        color: resolvedColor("dark", "accent-ink"),
+        fontWeight: "600",
+      });
+    });
+  });
+
+  // The count is set in `accent-ink`, which is the accent in dark and the primary text colour in light, so only
+  // the light run tells it from a plain `accent` count. The pill's border is `accent`, which shares its dark value
+  // with `role-primary` and others, so it needs the light run too.
+  describe("in the light scheme", () => {
+    it("should draw a 36 point pill in the accent fill with an accent border", async () => {
+      await renderChip({}, "light");
+      await screen.findByText("4");
+
+      expect(
+        viewsDrawn({
+          height: 36,
+          borderRadius: 999,
+          borderWidth: 1,
+          borderColor: resolvedColor("light", "accent"),
+          backgroundColor: themes.light["accent-muted"],
+        }),
+      ).toHaveLength(1);
+    });
+
+    it("should write the count in the accent ink, semibold", async () => {
+      await renderChip({}, "light");
+
+      expect(screen.getByText("4")).toHaveStyle({
+        color: resolvedColor("light", "accent-ink"),
         fontWeight: "600",
       });
     });

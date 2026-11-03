@@ -31,6 +31,7 @@ import { oilEntry } from "./support/entries";
 import { resetRouterMock, routerMock } from "./support/expoRouterMock";
 import { compileKitStyles } from "./support/kitStyles";
 import { registerAppStyles } from "./support/nativeWindStyles";
+import { installVirtualClock } from "./support/virtualClock";
 
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -94,6 +95,7 @@ describe("the diary screen", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
     resetRouterMock();
     resetDiaryBackend();
@@ -107,6 +109,7 @@ describe("the diary screen", () => {
       onlineManager.setOnline(true);
     });
     queryClient.clear();
+    jest.useRealTimers();
   });
 
   describe("today", () => {
@@ -493,9 +496,7 @@ describe("the diary screen", () => {
     it("should keep Copy yesterday enabled when yesterday has foods", async () => {
       diaryBackend.entries = sampleDay("2026-10-14");
       await renderLoadedDiary();
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 20));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(20));
 
       expect(screen.queryByText("Nothing logged yesterday")).not.toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Copy yesterday" })).toBeEnabled();
@@ -779,9 +780,10 @@ describe("the diary screen", () => {
 
       diaryBackend.failingTables.add("food_log_entries");
       await act(async () => {
-        await queryClient.invalidateQueries();
-        // The failed answer reaches the screen on the next turn of the event loop.
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        const refetching = queryClient.invalidateQueries();
+        // The failed read retries on a timer, and its answer reaches the screen on the next turn of the event loop.
+        await jest.advanceTimersByTimeAsync(20);
+        await refetching;
       });
 
       expect(screen.queryByText("Couldn't load your diary")).not.toBeOnTheScreen();
@@ -793,9 +795,10 @@ describe("the diary screen", () => {
 
       diaryBackend.targetsReadFails = true;
       await act(async () => {
-        await queryClient.invalidateQueries();
-        // The failed answer reaches the screen on the next turn of the event loop.
-        await new Promise((resolve) => setTimeout(resolve, 20));
+        const refetching = queryClient.invalidateQueries();
+        // The failed read retries on a timer, and its answer reaches the screen on the next turn of the event loop.
+        await jest.advanceTimersByTimeAsync(20);
+        await refetching;
       });
 
       expect(screen.queryByText("Couldn't load your diary")).not.toBeOnTheScreen();
@@ -873,9 +876,7 @@ describe("the diary screen", () => {
       diaryBackend.terms = { terms_accepted_at: null, terms_version: null };
       await renderDiary();
       await screen.findByTestId("skeleton-diary", { includeHiddenElements: true });
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(50));
 
       // The gate's own read of the acceptance is the only request.
       expect(diaryBackend.requests.length).toBeGreaterThan(0);
@@ -889,9 +890,7 @@ describe("the diary screen", () => {
     it("should make no request while the acceptance is still loading, because that counts as not accepted", async () => {
       diaryBackend.hungTables.add("profiles");
       await renderDiary();
-      await act(async () => {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      });
+      await act(() => jest.advanceTimersByTimeAsync(50));
 
       expect(requestsTo("food_log_entries")).toBe(0);
       expect(requestsTo("day_logs")).toBe(0);

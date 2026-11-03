@@ -14,6 +14,7 @@ import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
 import { pressTwiceInTheSameMoment } from "../support/sameTickPress";
+import { installVirtualClock } from "../support/virtualClock";
 
 jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
@@ -76,11 +77,13 @@ describe("the goal questionnaire under the router", () => {
   });
 
   beforeEach(() => {
+    installVirtualClock();
     registerAppStyles(kitStyles);
   });
 
   afterEach(async () => {
     await cleanup();
+    jest.useRealTimers();
   });
 
   it("should open the first question at the flow's address", async () => {

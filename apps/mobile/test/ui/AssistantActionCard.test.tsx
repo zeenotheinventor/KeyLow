@@ -154,50 +154,50 @@ describe("AssistantActionCard", () => {
       });
     });
 
-    it.each(schemes)(
-      "should write the unavailable label in the muted colour in %s",
-      async (scheme) => {
-        await renderCard({ undo: { state: "unavailable", label: "Can't undo" } }, scheme);
+    it("should write the unavailable label in the muted colour in dark", async () => {
+      await renderCard({ undo: { state: "unavailable", label: "Can't undo" } }, "dark");
 
-        expect(screen.getByText("Can't undo")).toHaveStyle({
-          color: resolvedColor(scheme, "text-muted"),
-        });
-      },
-    );
+      expect(screen.getByText("Can't undo")).toHaveStyle({
+        color: resolvedColor("dark", "text-muted"),
+      });
+    });
   });
 
   describe("the title", () => {
-    it.each(schemes)(
-      "should be the primary text colour while Undo can act in %s",
-      async (scheme) => {
-        await renderCard({}, scheme);
+    it("should be the primary text colour while Undo can act in dark", async () => {
+      await renderCard({}, "dark");
 
-        expect(screen.getByText("Logged 2 eggs and toast at 08:10")).toHaveStyle({
-          color: resolvedColor(scheme, "text-primary"),
-        });
-      },
-    );
+      expect(screen.getByText("Logged 2 eggs and toast at 08:10")).toHaveStyle({
+        color: resolvedColor("dark", "text-primary"),
+      });
+    });
 
-    it.each(schemes)("should be muted once the card is undone in %s", async (scheme) => {
-      await renderCard({ title: "Undone", undo: { state: "done", label: "Undo" } }, scheme);
+    it("should be muted once the card is undone in dark", async () => {
+      await renderCard({ title: "Undone", undo: { state: "done", label: "Undo" } }, "dark");
 
       expect(screen.getByText("Undone")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
       });
     });
   });
 
   describe("the icon", () => {
-    it.each(schemes)("should be drawn in the success colour by default in %s", async (scheme) => {
-      await renderCard({}, scheme);
+    it("should be drawn in the success colour by default in dark", async () => {
+      await renderCard({}, "dark");
 
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme].success);
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark.success);
     });
 
-    it.each(schemes)("should take the tone it is given in %s", async (scheme) => {
-      await renderCard({ iconTone: "muted" }, scheme);
+    it("should be drawn in the success colour by default in light", async () => {
+      await renderCard({}, "light");
 
-      expect(drawings()[0]).toHaveProp("stroke", themes[scheme]["text-muted"]);
+      expect(drawings()[0]).toHaveProp("stroke", themes.light.success);
+    });
+
+    it("should take the tone it is given in dark", async () => {
+      await renderCard({ iconTone: "muted" }, "dark");
+
+      expect(drawings()[0]).toHaveProp("stroke", themes.dark["text-muted"]);
     });
 
     it("should be decoration, hidden from a screen reader", async () => {
@@ -300,26 +300,23 @@ describe("AssistantActionCard", () => {
       expect(screen.queryByText("Not matched")).not.toBeOnTheScreen();
     });
 
-    it.each(schemes)(
-      "should draw the unresolved badge in the warning tone in %s",
-      async (scheme) => {
-        await renderCard(
-          {
-            rows: [
-              {
-                name: "A splash of white wine",
-                detail: "Not counted.",
-                match: "unresolved",
-                matchLabel: "Not matched",
-              },
-            ],
-          },
-          scheme,
-        );
+    it("should draw the unresolved badge in the warning tone in dark", async () => {
+      await renderCard(
+        {
+          rows: [
+            {
+              name: "A splash of white wine",
+              detail: "Not counted.",
+              match: "unresolved",
+              matchLabel: "Not matched",
+            },
+          ],
+        },
+        "dark",
+      );
 
-        expect(badgesDrawn({ backgroundColor: themes[scheme]["warning-muted"] })).toHaveLength(1);
-      },
-    );
+      expect(badgesDrawn({ backgroundColor: themes.dark["warning-muted"] })).toHaveLength(1);
+    });
 
     // The badge has `self-start`, which would pin it to the top of a tall row, so the row wraps it in a
     // view that does not shrink, as a list row does, and the row's own centring places it.
@@ -339,28 +336,25 @@ describe("AssistantActionCard", () => {
       expect(badge?.parent).toHaveStyle({ flexShrink: 0 });
     });
 
-    it.each(schemes)(
-      "should write a matched row's detail in the muted tone in %s",
-      async (scheme) => {
-        await renderCard(
-          {
-            rows: [
-              {
-                name: "1 lemon",
-                detail: "Lemon, whole · UK CoFID",
-                match: "matched",
-                matchLabel: "Matched",
-              },
-            ],
-          },
-          scheme,
-        );
+    it("should write a matched row's detail in the muted tone in dark", async () => {
+      await renderCard(
+        {
+          rows: [
+            {
+              name: "1 lemon",
+              detail: "Lemon, whole · UK CoFID",
+              match: "matched",
+              matchLabel: "Matched",
+            },
+          ],
+        },
+        "dark",
+      );
 
-        expect(screen.getByText("Lemon, whole · UK CoFID")).toHaveStyle({
-          color: resolvedColor(scheme, "text-muted"),
-        });
-      },
-    );
+      expect(screen.getByText("Lemon, whole · UK CoFID")).toHaveStyle({
+        color: resolvedColor("dark", "text-muted"),
+      });
+    });
 
     it("should draw neither mark on a row with no match", async () => {
       await renderCard({ rows: eggsAndToastRows });
@@ -390,20 +384,17 @@ describe("AssistantActionCard", () => {
       expect(screen.getByText("Milk, semi-skimmed · 50 ml")).toBeOnTheScreen();
     });
 
-    it.each(schemes)(
-      "should draw the badge outlined, with a hairline border, in %s",
-      async (scheme) => {
-        await renderCard({ rows: [...rows] }, scheme);
+    it("should draw the badge outlined, with a hairline border, in dark", async () => {
+      await renderCard({ rows: [...rows] }, "dark");
 
-        expect(
-          badgesDrawn({
-            backgroundColor: resolvedColor(scheme, "surface-sheet"),
-            borderColor: resolvedColor(scheme, "border"),
-            borderWidth: 1,
-          }),
-        ).toHaveLength(1);
-      },
-    );
+      expect(
+        badgesDrawn({
+          backgroundColor: resolvedColor("dark", "surface-sheet"),
+          borderColor: resolvedColor("dark", "border"),
+          borderWidth: 1,
+        }),
+      ).toHaveLength(1);
+    });
 
     it("should draw no badge on a row that does not set one", async () => {
       await renderCard({ rows: [rows[1]] });

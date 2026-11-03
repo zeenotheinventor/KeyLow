@@ -38,8 +38,6 @@ const answer: ChatMessageProps = {
 // The caret is the 8 by 18 block the board draws after the last word, found by the look it was drawn with.
 const caretStyle = { width: 8, height: 18 };
 
-const schemes: ThemeScheme[] = ["dark", "light"];
-
 describe("ChatMessage", () => {
   let kitStyles: string;
 
@@ -242,11 +240,11 @@ describe("ChatMessage", () => {
     });
   });
 
-  describe.each(schemes)("in the %s scheme", (scheme) => {
-    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor(scheme, name);
+  describe("in the dark scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("dark", name);
 
     it("should draw your message as a bubble on the page background with a hairline border, at the right", async () => {
-      await renderMessage(yourMessage, scheme);
+      await renderMessage(yourMessage, "dark");
       await screen.findByText("What did I eat yesterday?");
 
       const [bubble] = viewsDrawn({
@@ -267,7 +265,7 @@ describe("ChatMessage", () => {
     });
 
     it("should draw your words in the body style and the primary text colour", async () => {
-      await renderMessage(yourMessage, scheme);
+      await renderMessage(yourMessage, "dark");
       await screen.findByText("What did I eat yesterday?");
 
       expect(screen.getByText("What did I eat yesterday?")).toHaveStyle({
@@ -278,7 +276,7 @@ describe("ChatMessage", () => {
     });
 
     it("should draw the answer as plain paragraphs, 8 apart with 16 clear on the right and no bubble", async () => {
-      await renderMessage(answer, scheme);
+      await renderMessage(answer, "dark");
       await screen.findByText("First invented paragraph.");
 
       expect(viewsDrawn({ borderWidth: 1 })).toHaveLength(0);
@@ -289,7 +287,7 @@ describe("ChatMessage", () => {
     });
 
     it("should draw the caret as a 2 point rounded block in the accent, 2 points after the word", async () => {
-      await renderMessage({ ...answer, isStreaming: true }, scheme);
+      await renderMessage({ ...answer, isStreaming: true }, "dark");
       await screen.findByText("Second invented paragraph.");
 
       const [caret] = viewsDrawn(caretStyle);
@@ -307,7 +305,7 @@ describe("ChatMessage", () => {
           citation: "Based on 38 entries, 12 to 18 Oct",
           stoppedLabel: "Stopped when you closed the assistant",
         },
-        scheme,
+        "dark",
       );
       await screen.findByText("Based on 38 entries, 12 to 18 Oct");
 
@@ -321,6 +319,44 @@ describe("ChatMessage", () => {
           color: colorOf("text-muted"),
         });
       }
+    });
+  });
+
+  // Light keeps the two cases whose tokens share a dark value with ones that differ in light.
+  describe("in the light scheme", () => {
+    const colorOf = (name: Parameters<typeof resolvedColor>[1]) => resolvedColor("light", name);
+
+    it("should draw your message as a bubble on the page background with a hairline border, at the right", async () => {
+      await renderMessage(yourMessage, "light");
+      await screen.findByText("What did I eat yesterday?");
+
+      const [bubble] = viewsDrawn({
+        backgroundColor: colorOf("background"),
+        borderColor: colorOf("border"),
+        borderWidth: 1,
+      });
+      expect(bubble).toHaveStyle({
+        alignSelf: "flex-end",
+        maxWidth: 288,
+        paddingLeft: 14,
+        paddingRight: 14,
+        paddingTop: 10,
+        paddingBottom: 10,
+        borderRadius: 12,
+        borderBottomRightRadius: 6,
+      });
+    });
+
+    it("should draw the caret as a 2 point rounded block in the accent, 2 points after the word", async () => {
+      await renderMessage({ ...answer, isStreaming: true }, "light");
+      await screen.findByText("Second invented paragraph.");
+
+      const [caret] = viewsDrawn(caretStyle);
+      expect(caret).toHaveStyle({
+        backgroundColor: colorOf("accent"),
+        borderRadius: 1,
+        marginLeft: 2,
+      });
     });
   });
 });

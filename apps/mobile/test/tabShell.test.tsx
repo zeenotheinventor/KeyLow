@@ -13,6 +13,7 @@ import {
   mockSupabaseClient,
   resetSupabaseMock,
 } from "./support/supabaseMock";
+import { installVirtualClock } from "./support/virtualClock";
 import TabsLayout from "../app/(tabs)/_layout";
 import DashboardRoute from "../app/(tabs)/dashboard";
 import MoreLayout from "../app/(tabs)/more/_layout";
@@ -135,6 +136,7 @@ const selectedTabs = (options: { hidden?: boolean } = {}) =>
 
 describe("the tab shell", () => {
   beforeEach(() => {
+    installVirtualClock();
     resetSupabaseMock();
     resetApiClientMock();
     resetSearchApiClientMock();
@@ -142,6 +144,10 @@ describe("the tab shell", () => {
       data: { session: fakeSession },
       error: null,
     });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   describe("the tab bar", () => {

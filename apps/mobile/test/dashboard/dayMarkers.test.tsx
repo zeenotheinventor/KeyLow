@@ -111,17 +111,10 @@ describe("DayMarkers", () => {
     expect(screen.queryByRole("button", hidden)).not.toBeOnTheScreen();
   });
 
+  // The light run stays for the three cases whose colour is a token that shares its dark value with
+  // others (`success` with `success-ink`, `border-strong` with `chart-axis` and `heat-0`), so only a light
+  // run can tell a swap inside the group. `packages/tokens` guards the light values themselves.
   describe.each(schemes)("its look in %s", (scheme) => {
-    it("should fill a complete day with the success muted colour, 20 points across", async () => {
-      await renderMarkers(undefined, scheme);
-
-      expect(ring("Monday 12 October, complete")).toHaveStyle({
-        backgroundColor: themes[scheme]["success-muted"],
-        width: 20,
-        height: 20,
-      });
-    });
-
     it("should draw the tick in the success colour, as the week strip's complete day does", async () => {
       const { toJSON } = await renderMarkers(undefined, scheme);
 
@@ -149,16 +142,28 @@ describe("DayMarkers", () => {
       expect(ring("Friday 16 October").parent).toHaveStyle({ opacity: Math.fround(0.4) });
       expect(ring("Wednesday 14 October").parent).not.toHaveStyle({ opacity: Math.fround(0.4) });
     });
+  });
+
+  describe("its look in dark", () => {
+    it("should fill a complete day with the success muted colour, 20 points across", async () => {
+      await renderMarkers();
+
+      expect(ring("Monday 12 October, complete")).toHaveStyle({
+        backgroundColor: themes.dark["success-muted"],
+        width: 20,
+        height: 20,
+      });
+    });
 
     it("should set today's letters in the primary text colour at a semibold weight, and the others secondary", async () => {
-      await renderMarkers(undefined, scheme);
+      await renderMarkers();
 
       expect(letters("Th")).toHaveStyle({
-        color: resolvedColor(scheme, "text-primary"),
+        color: resolvedColor("dark", "text-primary"),
         fontFamily: "Geist-SemiBold",
       });
       expect(letters("We")).toHaveStyle({
-        color: resolvedColor(scheme, "text-secondary"),
+        color: resolvedColor("dark", "text-secondary"),
         fontFamily: "Geist-Regular",
       });
     });
