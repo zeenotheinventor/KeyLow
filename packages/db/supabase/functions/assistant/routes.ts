@@ -137,12 +137,13 @@ export function createAssistantHandler(
       sendNotice(stream, { code: "turn_failed" });
       return "conversation_busy";
     }
-    const { turnId } = started;
+    const { turnId, userMessageId } = started;
     await dependencies.runTurn(
       {
         userId,
         conversationId,
         turnId,
+        userMessageId,
         text: input.text,
         localDate: input.localDate,
         localTime: input.localTime,

@@ -18,7 +18,7 @@ import type { JsonSchemaObject } from "../_shared/assistant/tool.ts";
 import type { AssistantStoredMessage } from "../_shared/core.ts";
 import type Anthropic from "@anthropic-ai/sdk";
 
-const MODEL = "claude-haiku-5-5";
+export const MODEL = "claude-haiku-5-5";
 
 // Thinking shares this cap with the reply and the tool inputs. A reply is a few lines and a write call
 // is a few hundred tokens, so 8,000 leaves room for thinking at the effort below and bounds what one
@@ -205,8 +205,13 @@ export function userContent({
 
 // The stored messages as Messages API messages, in the order given (`seq`). A turn that ended on a
 // confirm leaves a user message of results and the next turn's user message follows it, and two user
-// messages in a row are a 400, so messages of one role are joined into one. Nothing is changed, so every
-// later turn replays the same bytes, and `display` is for the app and is never sent.
+// messages in a row are a 400, so messages of one role are joined into one. Nothing else is changed, so
+// every later turn replays the same bytes, and `display` is for the app and is never sent.
+//
+// A `tool_result` must come first in a user message. A turn that failed before its message was rewritten
+// leaves its raw text row behind an open call, and the next turn's results would join behind it. So the
+// results of a joined user message go to the front, in their order, and the rest keep theirs. In a valid
+// history they are first already, so nothing moves.
 export function toApiMessages(history: readonly StoredHistoryMessage[]): Anthropic.MessageParam[] {
   const messages: { role: "user" | "assistant"; content: Anthropic.ContentBlockParam[] }[] = [];
   for (const message of history) {
@@ -217,7 +222,17 @@ export function toApiMessages(history: readonly StoredHistoryMessage[]): Anthrop
       messages.push({ role: message.role, content: blocksOf(message) });
     }
   }
-  return messages;
+  return messages.map((message) =>
+    message.role === "user"
+      ? {
+          role: message.role,
+          content: [
+            ...message.content.filter((block) => block.type === "tool_result"),
+            ...message.content.filter((block) => block.type !== "tool_result"),
+          ],
+        }
+      : message,
+  );
 }
 
 const breakpoint = { type: "ephemeral" } as const;

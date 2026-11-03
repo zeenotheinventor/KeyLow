@@ -1,0 +1,663 @@
+// The streaming turn loop behind POST /assistant/turn (ADR 0006). It replays the conversation, calls Haiku 5.5
+// with the tools Ki-Lo's own MCP client lists, streams the text to the app, runs each tool call through that
+// client, turns the executor's structured outcomes into cards, questions and citations, and stores
+// everything through the turn store.
+//
+// Things to know when changing this file:
+// - Every request after the first is built from the rows as the database returns them, through
+//   `toApiMessages`, and never from the live response. jsonb re-sorts the keys of an object, so a live
+//   object would send different bytes than the next turn replays, and the prompt cache would miss.
+// - A tool call is made once. A thrown `McpClientError` ends the turn, so a write is never repeated.
+// - Each tool result is stored the moment its call returns, as its own user row. `toApiMessages` joins the
+//   rows of one role, so the model still reads one user message holding all the results of a response.
+// - Nothing here logs or reports message text, a tool argument or a result.
+import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
+
+import { toAnthropicTools } from "../_shared/assistant/adapters/anthropic.ts";
+import { askUserTool } from "../_shared/assistant/tools/askUser.ts";
+import { wrapUntrusted } from "../_shared/assistant/untrusted.ts";
+import { assistantCardSchema, mergeAssistantCards, withActionIds } from "../_shared/core.ts";
+import { allowedToolsFor } from "./allowlist.ts";
+import { confirmWordsFor } from "./confirmWords.ts";
+import {
+  buildTurnRequest,
+  contextBlock,
+  MODEL,
+  openToolUses,
+  toApiMessages,
+  userContent,
+} from "./prompt.ts";
+import { endAsFailed, writeEvent } from "./sse.ts";
+
+import type { AnthropicTool } from "../_shared/assistant/adapters/anthropic.ts";
+import type {
+  ConnectToolServerOptions,
+  ToolCallResult,
+  ToolConnection,
+} from "../_shared/assistant/mcpClient.ts";
+import type { AssistantCard, AssistantStreamEvent } from "../_shared/core.ts";
+import type { Json } from "../_shared/core/database.types.ts";
+import type { ReportError } from "../_shared/report.ts";
+import type { AllowlistTool } from "./allowlist.ts";
+import type { RunTurn, TurnContext } from "./runTurn.ts";
+import type { EventStream } from "./sse.ts";
+import type { FinalTurnStatus, TurnStore } from "./turnStore.ts";
+import type { UsageToRecord } from "./usage.ts";
+
+// A turn with ten writes needs eleven model calls (one for each write and the answer), and the reads before
+// the writes take a few more. More than this is a loop, and each call is a few seconds of the Edge Function's
+// wall-clock limit, so the turn ends failed.
+export const MAX_MODEL_CALLS = 12;
+
+// The MCP client's default is 60 s per attempt, and a connect, a list or a read call retries once, so a hung
+// connect could take 120 s. 20 s is far more than a tool takes (the `mcp` function measured a few
+// milliseconds on loopback).
+export const MCP_REQUEST_TIMEOUT_MILLISECONDS = 20_000;
+
+// Supabase Edge Functions stop a worker after 150 s of wall-clock time on the free plan and 400 s on paid
+// plans (https://supabase.com/docs/guides/functions/limits, checked 2026-11-03). The plan is not recorded in
+// the repository, so the shorter limit is the one used. The SDK default of 10 minutes would outlast it. One
+// retry is kept for a dropped connection or a 529, so a call that never answers costs 2 x 60 s at most.
+// This bounds the wait for the response headers only. It does not bound a stream that stalls after it
+// started, nor the turn as a whole: a turn deadline and an idle watchdog belong to KEY-795.
+export const MODEL_REQUEST_TIMEOUT_MILLISECONDS = 60_000;
+const MODEL_MAX_RETRIES = 1;
+
+// The SDK parses a streamed tool input as it arrives, and a model that emits invalid JSON makes the stream
+// fail with a plain `AnthropicError` whose cause is a `SyntaxError`, never an API error. That one failure
+// is re-issued, a few times, and only while the app has been shown none of the call's text.
+const MAX_UNPARSEABLE_INPUT_RETRIES = 2;
+
+// The words under the field when the assistant asks a question (`assistant · clarify`), the same as core's.
+const CLARIFY_FIELD_HINT = "Or say it your way";
+
+const ASK_USER_TOOL = "ask_user";
+const IMPORT_RECIPE_TOOL = "import_recipe_from_url";
+
+// `readConversation` leaves out one message. A nil id is on no row, so the whole conversation is read.
+const NO_MESSAGE_ID = "00000000-0000-0000-0000-000000000000";
+
+// Made per turn, so a missing key ends that turn and never stops the function booting.
+export function createModelClient(read: (name: string) => string | undefined): Anthropic | null {
+  const apiKey = read("ANTHROPIC_API_KEY");
+  if (apiKey === undefined || apiKey.trim() === "") {
+    return null;
+  }
+  const baseURL = read("ANTHROPIC_BASE_URL");
+  return new Anthropic({
+    apiKey,
+    ...(baseURL === undefined || baseURL === "" ? {} : { baseURL }),
+    timeout: MODEL_REQUEST_TIMEOUT_MILLISECONDS,
+    maxRetries: MODEL_MAX_RETRIES,
+    // The SDK logs the raw data of a stream event it cannot parse, and that is message content.
+    logLevel: "off",
+  });
+}
+
+export type TurnDependencies = {
+  turns: TurnStore;
+  recordUsage(call: UsageToRecord): Promise<void>;
+  connect(options: ConnectToolServerOptions): Promise<ToolConnection>;
+  createModelClient(): Anthropic | null;
+  // The tools the allowlist chooses from: the registry's, by name and read-only hint.
+  availableTools: readonly AllowlistTool[];
+  functionsBaseUrl(): string | undefined;
+  report: ReportError;
+  now(): Date;
+};
+
+// How a turn ended. `code` is for the log line only.
+type Ending = { status: FinalTurnStatus; code: string };
+
+const ending = (status: FinalTurnStatus, code: string = status): Ending => ({ status, code });
+const failedEnding = (code: string): Ending => ending("failed", code);
+
+type Run = {
+  context: TurnContext;
+  stream: EventStream;
+  // Aborts when the app closes the sheet or its request ends.
+  signal: AbortSignal;
+  dependencies: TurnDependencies;
+  counts: { modelCalls: number; toolCalls: number };
+  unparseableInputRetries: number;
+  // Consecutive cards of one kind with nothing said between them, merged when they are written.
+  pendingCards: AssistantCard[];
+  citations: (string | null)[];
+  estimates: (string | null)[];
+};
+
+type Session = {
+  client: Anthropic;
+  connection: ToolConnection;
+  allowedTools: ReadonlySet<string>;
+  tools: AnthropicTool[];
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+// The SDK's objects as plain JSON, for the rows. Nothing is added or reordered.
+const toJson = (value: unknown): Json => JSON.parse(JSON.stringify(value));
+
+function emit(run: Run, event: AssistantStreamEvent): void {
+  writeEvent(run.stream, event, run.dependencies.report);
+}
+
+function flushCards(run: Run): void {
+  const [first, ...others] = run.pendingCards;
+  if (first !== undefined) {
+    emit(run, { type: "card", card: mergeAssistantCards([first, ...others]) });
+  }
+  run.pendingCards = [];
+}
+
+function addCard(run: Run, card: AssistantCard): void {
+  if (run.pendingCards[0] !== undefined && run.pendingCards[0].kind !== card.kind) {
+    flushCards(run);
+  }
+  run.pendingCards.push(card);
+}
+
+// The distinct non-empty values in call order, as `threadFromMessages` joins them on reopen.
+function distinctLine(values: readonly (string | null)[]): string | null {
+  const kept = [
+    ...new Set(values.flatMap((value) => (value === null || value === "" ? [] : [value]))),
+  ];
+  return kept.length === 0 ? null : kept.join(" · ");
+}
+
+const nonBlank = (text: string): boolean => text.trim() !== "";
+
+const isToolUse = (block: Anthropic.ContentBlock): block is Anthropic.ToolUseBlock =>
+  block.type === "tool_use";
+
+// The text of a response, as `threadFromMessages` reads it: the blocks with something in them, joined.
+const textOfResponse = (content: readonly Anthropic.ContentBlock[]): string =>
+  content
+    .flatMap((block) => (block.type === "text" && nonBlank(block.text) ? [block.text] : []))
+    .join("\n\n");
+
+// What is stored of a response: the blocks as received, except a blank text block (a 400 on replay). A
+// response cut off by `max_tokens` or a refusal can end a call mid-input, so its calls are not stored. A
+// message with no text and no call left in it is not stored at all, as the API refuses an empty one.
+function contentToStore(message: Anthropic.Message): Json[] {
+  const incomplete = message.stop_reason === "max_tokens" || message.stop_reason === "refusal";
+  const kept = message.content.filter(
+    (block) =>
+      !(block.type === "text" && !nonBlank(block.text)) &&
+      !(incomplete && block.type === "tool_use"),
+  );
+  return kept.some((block) => block.type === "text" || block.type === "tool_use")
+    ? kept.map(toJson)
+    : [];
+}
+
+const toolResultBlock = (
+  toolUseId: string,
+  content: string,
+  isError: boolean,
+): Anthropic.ToolResultBlockParam => ({
+  type: "tool_result",
+  tool_use_id: toolUseId,
+  ...(content === "" ? {} : { content }),
+  ...(isError ? { is_error: true as const } : {}),
+});
+
+async function storeToolResult(
+  run: Run,
+  block: Anthropic.ToolResultBlockParam,
+  display: Json | null,
+): Promise<void> {
+  const { userId, conversationId, turnId } = run.context;
+  await run.dependencies.turns.appendMessages(userId, conversationId, turnId, [
+    { role: "user", content: [toJson(block)], display },
+  ]);
+}
+
+async function storeAssistantContent(run: Run, content: Json[]): Promise<void> {
+  if (content.length > 0) {
+    const { userId, conversationId, turnId } = run.context;
+    await run.dependencies.turns.appendMessages(userId, conversationId, turnId, [
+      { role: "assistant", content },
+    ]);
+  }
+}
+
+async function recordCall(
+  run: Run,
+  startedAt: number,
+  message: Anthropic.Message | null,
+): Promise<void> {
+  await run.dependencies.recordUsage({
+    userId: run.context.userId,
+    turnId: run.context.turnId,
+    // The model that was asked for. A response can name a dated or aliased id that has no price.
+    model: MODEL,
+    inputTokens: message?.usage.input_tokens ?? 0,
+    outputTokens: message?.usage.output_tokens ?? 0,
+    cacheReadInputTokens: message?.usage.cache_read_input_tokens ?? 0,
+    cacheCreationInputTokens: message?.usage.cache_creation_input_tokens ?? 0,
+    latencyMilliseconds: Math.round(performance.now() - startedAt),
+    stopReason: message?.stop_reason ?? null,
+  });
+}
+
+// The SDK's failure to parse a streamed tool input: an `AnthropicError` caused by a `SyntaxError`. An API
+// error, a dropped connection and a stream that ended early are not.
+const isToolInputParseError = (caught: unknown): boolean =>
+  caught instanceof Anthropic.AnthropicError &&
+  !(caught instanceof Anthropic.APIError) &&
+  caught.cause instanceof SyntaxError;
+
+type ModelOutcome =
+  { kind: "message"; message: Anthropic.Message } | { kind: "stopped" } | { kind: "retry" };
+
+// One streamed model call. The text goes to the app as it arrives.
+async function callModel(
+  run: Run,
+  session: Session,
+  request: Anthropic.MessageStreamParams,
+): Promise<ModelOutcome> {
+  const startedAt = performance.now();
+  run.counts.modelCalls += 1;
+  const modelStream = session.client.messages.stream(request, { signal: run.signal });
+  let textStarted = false;
+  let textEmitted = false;
+  modelStream.on("text", (delta, snapshot) => {
+    textEmitted = true;
+    if (!textStarted && nonBlank(snapshot)) {
+      // The cards so far are written before the words that follow them.
+      textStarted = true;
+      flushCards(run);
+    }
+    emit(run, { type: "text", delta });
+  });
+  let message: Anthropic.Message;
+  try {
+    message = await modelStream.finalMessage();
+  } catch (caught) {
+    // The call failed before any usage arrived, and it is still one call.
+    await recordCall(run, startedAt, null).catch((recordFailure: unknown) =>
+      run.dependencies.report("assistant", "internal_error", recordFailure),
+    );
+    if (run.signal.aborted || caught instanceof Anthropic.APIUserAbortError) {
+      const partial = (modelStream.currentMessage?.content ?? []).flatMap((block) =>
+        block.type === "text" && nonBlank(block.text) ? [{ type: "text", text: block.text }] : [],
+      );
+      await storeAssistantContent(run, partial);
+      return { kind: "stopped" };
+    }
+    if (
+      !isToolInputParseError(caught) ||
+      textEmitted ||
+      run.unparseableInputRetries >= MAX_UNPARSEABLE_INPUT_RETRIES
+    ) {
+      throw caught;
+    }
+    run.unparseableInputRetries += 1;
+    return { kind: "retry" };
+  }
+  run.unparseableInputRetries = 0;
+  // A good response is kept whatever happens to its usage row.
+  await recordCall(run, startedAt, message).catch((recordFailure: unknown) =>
+    run.dependencies.report("assistant", "internal_error", recordFailure),
+  );
+  return { kind: "message", message };
+}
+
+const structuredSchema = z.looseObject({
+  card: z.unknown().optional(),
+  citation: z.string().min(1).nullish(),
+  estimate: z.string().min(1).nullish(),
+});
+const cardDraftSchema = assistantCardSchema.omit({ actionIds: true });
+
+// What the app draws for one result, keyed by the call's id, or null when there is nothing to draw.
+type Display = { [key: string]: Json };
+
+async function finishCall(
+  run: Run,
+  toolUse: Anthropic.ToolUseBlock,
+  result: ToolCallResult,
+  responseText: string,
+): Promise<Ending | null> {
+  const block = toolResultBlock(toolUse.id, result.text, result.isError);
+  const { outcome } = result;
+  if (outcome.status === "needs_confirmation") {
+    const words = confirmWordsFor(toolUse.name, toolUse.input);
+    const question = responseText.trim();
+    if (words === null || question === "") {
+      // A bug the evals catch: the model did not word the question, or the tool has no buttons yet.
+      await storeToolResult(run, block, null);
+      run.dependencies.report(
+        "assistant",
+        "internal_error",
+        new Error("a confirmation cannot be asked"),
+      );
+      return failedEnding("confirm_unavailable");
+    }
+    const confirm = { confirmationId: outcome.confirmationId, question, ...words };
+    await storeToolResult(run, block, { [toolUse.id]: { confirm } });
+    flushCards(run);
+    emit(run, { type: "confirm", ...confirm });
+    return ending("confirm");
+  }
+  if (outcome.status === "error") {
+    await storeToolResult(run, block, null);
+    return null;
+  }
+  const structured = structuredSchema.safeParse(outcome.structured);
+  if (!structured.success && outcome.structured !== null) {
+    // A tool answered something the loop cannot read, which is a bug in the tool.
+    run.dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("a structured outcome cannot be read"),
+    );
+  }
+  const entry: Display = {};
+  let card: AssistantCard | null = null;
+  if (structured.success) {
+    const { citation = null, estimate = null } = structured.data;
+    run.citations.push(citation);
+    run.estimates.push(estimate);
+    if (citation !== null) {
+      entry["citation"] = citation;
+    }
+    if (estimate !== null) {
+      entry["estimate"] = estimate;
+    }
+    if (structured.data.card !== undefined) {
+      const draft = cardDraftSchema.safeParse(structured.data.card);
+      if (draft.success && outcome.actionId !== null) {
+        card = withActionIds(draft.data, [outcome.actionId]);
+        entry["card"] = toJson(card);
+      } else {
+        // The write landed and the app cannot draw it, which is a bug in the tool.
+        run.dependencies.report("assistant", "internal_error", new Error("a card cannot be drawn"));
+      }
+    }
+  }
+  await storeToolResult(
+    run,
+    block,
+    Object.keys(entry).length === 0 ? null : { [toolUse.id]: entry },
+  );
+  if (card !== null) {
+    addCard(run, card);
+  }
+  return null;
+}
+
+const urlInputSchema = z.object({ url: z.string() });
+
+function hostOf(input: Record<string, unknown>): string | null {
+  const parsed = urlInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return null;
+  }
+  try {
+    return new URL(parsed.data.url).hostname || null;
+  } catch {
+    return null;
+  }
+}
+
+// One call of a response. Answers the ending when this call ends the turn, or null to go on.
+async function runToolUse(
+  run: Run,
+  session: Session,
+  toolUse: Anthropic.ToolUseBlock,
+  responseText: string,
+): Promise<Ending | null> {
+  const { id, name, input } = toolUse;
+  if (run.signal.aborted) {
+    return ending("stopped");
+  }
+  if (name === ASK_USER_TOOL) {
+    const question = askUserTool.input.safeParse(input);
+    if (!question.success) {
+      await storeToolResult(
+        run,
+        toolResultBlock(id, wrapUntrusted(name, { error: "invalid_input" }), true),
+        null,
+      );
+      return null;
+    }
+    flushCards(run);
+    emit(run, {
+      type: "clarify",
+      question: question.data.question,
+      quickReplies: question.data.quick_replies,
+      fieldHint: CLARIFY_FIELD_HINT,
+    });
+    return ending("clarify");
+  }
+  if (!session.allowedTools.has(name)) {
+    await storeToolResult(
+      run,
+      toolResultBlock(id, wrapUntrusted(name, { error: "tool_not_allowed" }), true),
+      null,
+    );
+    return null;
+  }
+  if (!isRecord(input)) {
+    // Neither the executor nor the model sees the input twice: it is handed back as it was received.
+    await storeToolResult(
+      run,
+      toolResultBlock(id, JSON.stringify({ INVALID_JSON: JSON.stringify(input) }), true),
+      null,
+    );
+    return null;
+  }
+  if (name === IMPORT_RECIPE_TOOL) {
+    // Before the call, because a hint that came back with the result would arrive after the fetch.
+    const host = hostOf(input);
+    if (host !== null) {
+      emit(run, { type: "status", code: "reading_recipe", host });
+    }
+  }
+  run.counts.toolCalls += 1;
+  // Once. A throw is a `McpClientError`, the turn ends, and the call is not made again.
+  const result = await session.connection.callTool(name, input);
+  return await finishCall(run, toolUse, result, responseText);
+}
+
+// The model calls of the turn, until one of them ends it.
+async function runModelCalls(run: Run, session: Session): Promise<Ending> {
+  const { userId, conversationId } = run.context;
+  const { turns } = run.dependencies;
+  while (run.counts.modelCalls < MAX_MODEL_CALLS) {
+    if (run.signal.aborted) {
+      return ending("stopped");
+    }
+    const { messages } = await turns.readConversation(userId, conversationId, {
+      excludeMessageId: NO_MESSAGE_ID,
+    });
+    const request = buildTurnRequest({ tools: session.tools, messages: toApiMessages(messages) });
+    const outcome = await callModel(run, session, request);
+    if (outcome.kind === "stopped") {
+      return ending("stopped");
+    }
+    if (outcome.kind === "retry") {
+      continue;
+    }
+    const { message } = outcome;
+    await storeAssistantContent(run, contentToStore(message));
+    const toolUses = message.content.filter(isToolUse);
+    switch (message.stop_reason) {
+      case "tool_use":
+        break;
+      case "refusal":
+        return ending("refused");
+      case "max_tokens":
+        return toolUses.length > 0 ? failedEnding("max_tokens") : ending("complete");
+      case "end_turn":
+      case "stop_sequence":
+        return ending("complete");
+      default:
+        run.dependencies.report("assistant", "internal_error", new Error("unexpected stop reason"));
+        return failedEnding("stop_reason");
+    }
+    const responseText = textOfResponse(message.content);
+    for (const toolUse of toolUses) {
+      const finished = await runToolUse(run, session, toolUse, responseText);
+      if (finished !== null) {
+        return finished;
+      }
+    }
+    if (toolUses.length === 0) {
+      return ending("complete");
+    }
+  }
+  return failedEnding("model_call_limit");
+}
+
+function bearerToken(request: Request): string | null {
+  const header = request.headers.get("Authorization");
+  return header === null ? null : header.replace(/^Bearer\s+/i, "");
+}
+
+// Everything between the turn event and the ending: set up the turn, connect, run the model calls and
+// close the connection.
+async function takeTurn(run: Run): Promise<Ending> {
+  const { context, dependencies } = run;
+  const { turns } = dependencies;
+  // First what needs no connection and no key, ending in the rewrite of the user message. A turn that fails
+  // after that leaves a message the next turn can join, and a turn that fails before it leaves the raw text,
+  // which `toApiMessages` puts behind the open results.
+  const timeZone = await turns.readTimeZone(context.userId);
+  const { messages: history, previousTurn } = await turns.readConversation(
+    context.userId,
+    context.conversationId,
+    { excludeMessageId: context.userMessageId },
+  );
+  const content = userContent({
+    openToolUses: openToolUses(history),
+    context: contextBlock({
+      now: dependencies.now().toISOString(),
+      timeZone,
+      localDate: context.localDate,
+      localTime: context.localTime,
+    }),
+    text: context.text,
+  });
+  // Before the first model call, or the new message would sit after a call with no result.
+  await turns.setUserMessageContent(context.userId, context.userMessageId, toJson(content));
+
+  const client = dependencies.createModelClient();
+  const functionsBaseUrl = dependencies.functionsBaseUrl();
+  const accessToken = bearerToken(context.request);
+  if (client === null || functionsBaseUrl === undefined || accessToken === null) {
+    dependencies.report(
+      "assistant",
+      "internal_error",
+      new Error("the assistant is not configured"),
+    );
+    return failedEnding("not_configured");
+  }
+  const allowedTools = allowedToolsFor({
+    text: context.text,
+    pendingConfirmationTool: previousTurn?.pendingTool ?? null,
+    tools: dependencies.availableTools,
+  });
+  const connection = await dependencies.connect({
+    functionsBaseUrl,
+    turnId: context.turnId,
+    accessToken,
+    allowedTools,
+    localDate: context.localDate,
+    localTime: context.localTime,
+    turnHasAction: (turnId) => turns.turnHasAction(turnId),
+    requestTimeoutMilliseconds: MCP_REQUEST_TIMEOUT_MILLISECONDS,
+  });
+  try {
+    // Before any call, so a tool the list did not name is treated as a write.
+    const tools = toAnthropicTools(await connection.listTools());
+    return await runModelCalls(run, {
+      client,
+      connection,
+      allowedTools: new Set(allowedTools),
+      tools,
+    });
+  } finally {
+    await connection.close();
+  }
+}
+
+// The cards, the answer meta, the status and the closing events. The status is final before `done` is
+// written, so the app that reads the thread on `done` finds it. A `finishTurn` that throws is reported and
+// does not change how the turn ended.
+async function conclude(run: Run, reached: Ending): Promise<Ending> {
+  const { stream, context, dependencies } = run;
+  // An event that broke the contract has already ended the stream as failed.
+  const final =
+    stream.done && reached.status !== "stopped" ? failedEnding("invalid_event") : reached;
+  if (final.status !== "stopped") {
+    flushCards(run);
+  }
+  if (final.status === "complete") {
+    const citation = distinctLine(run.citations);
+    const estimate = distinctLine(run.estimates);
+    if (citation !== null || estimate !== null) {
+      emit(run, { type: "answer_meta", citation, estimate });
+    }
+  }
+  try {
+    await dependencies.turns.finishTurn(context.userId, context.turnId, final.status);
+  } catch (caught) {
+    dependencies.report("assistant", "internal_error", caught);
+  }
+  switch (final.status) {
+    case "complete":
+    case "clarify":
+    case "confirm":
+      emit(run, { type: "done", outcome: final.status });
+      break;
+    case "refused":
+    case "failed":
+      // A refusal has no board of its own, so it uses the failed-turn notice.
+      endAsFailed(stream);
+      break;
+    case "stopped":
+      // Nobody is reading, so there is no `done`.
+      break;
+  }
+  return final;
+}
+
+export function createRunTurn(dependencies: TurnDependencies): RunTurn {
+  return async (context, stream) => {
+    const startedAt = performance.now();
+    const run: Run = {
+      context,
+      stream,
+      signal: AbortSignal.any([stream.signal, context.request.signal]),
+      dependencies,
+      counts: { modelCalls: 0, toolCalls: 0 },
+      unparseableInputRetries: 0,
+      pendingCards: [],
+      citations: [],
+      estimates: [],
+    };
+    emit(run, {
+      type: "turn",
+      turnId: context.turnId,
+      conversationId: context.conversationId,
+    });
+    let reached: Ending;
+    try {
+      reached = await takeTurn(run);
+    } catch (caught) {
+      // A code and a stack, never the content: the error type is all the report keeps.
+      dependencies.report("assistant", "internal_error", caught);
+      reached = failedEnding("error");
+    }
+    const final = await conclude(run, reached);
+    const milliseconds = Math.round(performance.now() - startedAt);
+    console.log(
+      `assistant turn user=${context.userId} turn=${context.turnId} modelCalls=${run.counts.modelCalls} toolCalls=${run.counts.toolCalls} ending=${final.code} ${milliseconds}ms`,
+    );
+  };
+}
