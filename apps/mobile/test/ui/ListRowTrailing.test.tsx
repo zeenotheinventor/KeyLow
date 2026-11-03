@@ -115,6 +115,31 @@ describe("ListRow with a trailing action or label", () => {
     expect(screen.queryByRole("button")).not.toBeOnTheScreen();
   });
 
+  it("should be 60 points tall at least, as the changes board draws its rows", async () => {
+    await renderRow(undoRow);
+
+    expect(
+      screen.getByLabelText("Logged 2 eggs and toast at 08:10, 08:11 · 2 entries").parent,
+    ).toHaveStyle({ minHeight: 60 });
+  });
+
+  it("should set the sub line in tabular numerals, so the times line up", async () => {
+    await renderRow(undoRow);
+
+    expect(screen.getByText("08:11 · 2 entries").props.style).toMatchObject({
+      fontVariant: "tabular-nums",
+    });
+  });
+
+  it("should reach the 44 point touch target by hit slop around the 36 point button", async () => {
+    await renderRow(undoRow);
+
+    expect(screen.getByRole("button", { name: /^Undo/ })).toHaveProp("hitSlop", {
+      top: 4,
+      bottom: 4,
+    });
+  });
+
   it("should draw a muted title for a row that asks for the secondary tone", async () => {
     await renderRow({
       title: "Copied 8 entries from yesterday",

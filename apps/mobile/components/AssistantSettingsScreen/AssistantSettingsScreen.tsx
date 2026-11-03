@@ -47,9 +47,10 @@ function openPrivacyPolicy() {
  * The Assistant settings screen, pushed from More (`assistant-settings · consent`): the switch that turns the
  * assistant on, with its caption, what it does in the consent card's own words and the Privacy policy link,
  * and the Your conversations group, on or off: "What the assistant changed", with its count, and Delete all
- * conversations behind a confirmation. The switch is off until the setting
- * has been read, and busy while a change is being saved. The sheet is told through the hook: turning the
- * assistant on or off reads its status again before the change is done. */
+ * conversations behind a confirmation. The switch is off until the setting has been read, and busy while a
+ * change is being saved. The sheet is told through the hook: turning the assistant on or off reads its
+ * status again before the change is done.
+ */
 export function AssistantSettingsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();

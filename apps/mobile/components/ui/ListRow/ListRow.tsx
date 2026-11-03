@@ -20,6 +20,8 @@ const macroKeyClassName: Record<ListRowMacro, string> = {
   fat: "bg-fat",
 };
 
+const trailingActionHitSlop = { top: 4, bottom: 4 };
+
 /** A row of the diary, a menu or a list of foods: an icon, a title, a subtitle, a value and a chevron. */
 export function ListRow({
   icon,
@@ -144,15 +146,18 @@ export function ListRow({
     );
   }
 
-  // A row with an action or a label at the end. The words on the left are one group, and with an action the
-  // button is a stop of its own, which a group around both would fold away. The 4 points taken back on the
-  // right leave the board's 8 beside the button or the label, which bring 12 of their own.
+  // A row with an action or a label at the end, 60 points tall as `assistant-settings · changes` draws it. The
+  // words on the left are one group, and with an action the button is a stop of its own, which a group around
+  // both would fold away. The 4 points taken back on the right (`-mr-1`) leave the board's 8 beside the button
+  // or the label, which bring 12 of their own, and rely on the `Card` around the rows clipping the overflow.
   if (trailing !== undefined) {
     const wordsName = [title, subtitle, trailing.kind === "label" ? trailing.label : undefined]
       .filter(Boolean)
       .join(", ");
     return (
-      <View className={`${rowClassName} -mr-1`}>
+      <View
+        className={`min-h-[60px] -mr-1 flex-row items-center gap-3 px-3 py-2 ${separatorClassName} ${dimClassName}`}
+      >
         <View
           accessible
           aria-label={wordsName}
@@ -166,9 +171,11 @@ export function ListRow({
           ) : null}
         </View>
         {trailing.kind === "action" ? (
+          // The button is 36 points high, so it reaches the 44 point touch target by hit slop, as the kit's small Button does.
           <PressableSurface
             busy={trailing.busy}
             className="h-control-sm shrink-0 justify-center rounded-small px-3"
+            hitSlop={trailingActionHitSlop}
             label={`${trailing.label}, ${title}`}
             onPress={trailing.onPress}
           >

@@ -28,7 +28,37 @@ export function AssistantChangesScreen() {
     }
   }
 
-  const days = changes.data?.days ?? [];
+  function renderBody() {
+    if (changes.data === undefined) {
+      return null;
+    }
+    const { days } = changes.data;
+    if (days.length === 0) {
+      return (
+        <EmptyState
+          body={ASSISTANT_CHANGES.emptyBody}
+          icon="RotateCcw"
+          title={ASSISTANT_CHANGES.emptyTitle}
+        />
+      );
+    }
+    return (
+      <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-6 pt-1">
+        {days.map((day) => (
+          <GroupedList key={day.label} title={day.label}>
+            {day.rows.map((row) => (
+              <AssistantChangeRow key={row.key} row={row} />
+            ))}
+          </GroupedList>
+        ))}
+        <View className="px-1">
+          <Text tone="muted" variant="caption">
+            {ASSISTANT_CHANGES.footer}
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
 
   return (
     // The insets are runtime values no class can name, so they go through variables, as the About screen's do.
@@ -41,28 +71,7 @@ export function AssistantChangesScreen() {
         leading={{ icon: "ChevronLeft", label: ASSISTANT_CHANGES.back, onPress: goBack }}
         title={ASSISTANT_CHANGES.title}
       />
-      {changes.data === undefined ? null : days.length === 0 ? (
-        <EmptyState
-          body={ASSISTANT_CHANGES.emptyBody}
-          icon="RotateCcw"
-          title={ASSISTANT_CHANGES.emptyTitle}
-        />
-      ) : (
-        <ScrollView className="flex-1" contentContainerClassName="gap-4 px-4 pb-6 pt-1">
-          {days.map((day) => (
-            <GroupedList key={day.label} title={day.label}>
-              {day.rows.map((row) => (
-                <AssistantChangeRow key={row.key} row={row} />
-              ))}
-            </GroupedList>
-          ))}
-          <View className="px-1">
-            <Text tone="muted" variant="caption">
-              {ASSISTANT_CHANGES.footer}
-            </Text>
-          </View>
-        </ScrollView>
-      )}
+      {renderBody()}
     </View>
   );
 }

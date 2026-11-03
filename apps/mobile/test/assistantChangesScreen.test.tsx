@@ -177,6 +177,7 @@ describe("the What the assistant changed screen", () => {
     it("should draw every row's title and sub line as sent, in the hook's order", async () => {
       await renderChanges();
 
+      // The role query does not resolve a list, so each day's list is found by its label, as the Settings list is.
       const today = within(screen.getByLabelText("Today"));
       expect(
         today.getByLabelText("Logged 2 eggs and toast at 08:10, 08:11 · 2 entries"),
