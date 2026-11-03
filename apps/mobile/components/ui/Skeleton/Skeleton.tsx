@@ -32,6 +32,23 @@ function SkeletonRow({ index }: { index: number }) {
   );
 }
 
+// The Favourites strip as it loads: round bones with a short name bar under each, 12 points apart. The last is cut
+// at the right edge by the strip's own width, as the tiles are.
+const favouriteBoneKeys = ["first", "second", "third", "fourth", "fifth"];
+
+function SkeletonFavourites() {
+  return (
+    <View className="flex-row gap-3 overflow-hidden px-4" testID="skeleton-favourites">
+      {favouriteBoneKeys.map((key) => (
+        <View key={key} className="w-[72px] items-center gap-2">
+          <SkeletonBone className="h-[54px] w-[54px] rounded-full" />
+          <SkeletonBone className="h-3 w-[56px]" />
+        </View>
+      ))}
+    </View>
+  );
+}
+
 // How wide the title's bone is on each row of the recipe library's loading board, and every caption is 55 percent.
 const recipeTitleWidthClassNames = ["w-[70%]", "w-[55%]", "w-[80%]", "w-[62%]"];
 
@@ -458,6 +475,7 @@ export function Skeleton({ variant = "row", rows = 3 }: SkeletonProps) {
       {variant === "weight" ? <SkeletonWeight /> : null}
       {variant === "program" ? <SkeletonProgram /> : null}
       {variant === "bodyComposition" ? <SkeletonBodyComposition /> : null}
+      {variant === "favourites" ? <SkeletonFavourites /> : null}
       {variant === "row" ? <SkeletonRow index={0} /> : null}
       {variant === "recipeGroup" ? (
         <View
