@@ -1,5 +1,8 @@
 // The ordered list of tools. A tool ticket adds its file under `tools/` and one line to `toolDefinitions`.
 // The order is part of the prompt cache's prefix, so a tool is only ever appended or moved on purpose.
+import { getFoodTool } from "./tools/getFood.ts";
+import { getRecipesTool } from "./tools/getRecipes.ts";
+import { searchFoodsTool } from "./tools/searchFoods.ts";
 import { strictSchemaProblem } from "./tool.ts";
 
 import type { ToolDefinition, ToolRegistry } from "./tool.ts";
@@ -31,6 +34,6 @@ export function createRegistry(definitions: readonly ToolDefinition[]): ToolRegi
   };
 }
 
-const toolDefinitions: readonly ToolDefinition[] = [];
+const toolDefinitions: readonly ToolDefinition[] = [searchFoodsTool, getFoodTool, getRecipesTool];
 
 export const toolRegistry: ToolRegistry = createRegistry(toolDefinitions);

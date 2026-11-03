@@ -12,10 +12,15 @@ export type {
   QuickEntryValues,
 } from "./repos/index.js";
 export {
+  getFood,
+  listFoodPortions,
+  listRecipes,
   logEntries,
   logFood,
   logQuickEntry,
   restoreLogEntry,
+  searchFoods,
+  searchRecipes,
   softDeleteLogEntry,
   updateLogEntry,
 } from "./repos/index.js";
