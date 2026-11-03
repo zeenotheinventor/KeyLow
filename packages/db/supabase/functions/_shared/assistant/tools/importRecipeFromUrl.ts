@@ -9,7 +9,9 @@
 // - The page is fetched only from a link written in the person's own message (`urlInUserMessage`), and the
 //   check is made before anything else, so a link found inside a page can never be followed.
 // - JSON-LD is read first and gives the name, the servings and the steps with no model. The model reads only
-//   the ingredient lines then. A page without JSON-LD goes to the model as its visible text, capped.
+//   the ingredient lines then, and the reply must have one entry for each line of the page (each line's text
+//   is the page's own, by its place). A page without JSON-LD goes to the model as its visible text, capped, and
+//   every line the model copied must be found in that text.
 // - The whole tool must finish inside the turn loop's 20 s for one MCP call (`MCP_REQUEST_TIMEOUT_MILLISECONDS`
 //   in `assistant/turn.ts`). The fetch gets 5 s, the parse call 9 s, and every step is raced against a cutoff
 //   of 15 s from the start. The save is last, and it is not started after the cutoff, so a call that the loop
@@ -39,7 +41,7 @@ import {
 } from "./recipeWrite.ts";
 
 import type { RecipeImportedLine, RecipeIngredient } from "../../core.ts";
-import type { ParsedLine } from "../recipeParse.ts";
+import type { ParsedMeasure } from "../recipeParse.ts";
 import type { ToolContext, WriteRunOutput, WriteToolDefinition } from "../tool.ts";
 
 const importRecipeInput = z.strictObject({
@@ -122,7 +124,7 @@ type FoodAndPortions = {
 
 async function resolveLine(
   ctx: ToolContext,
-  line: ParsedLine,
+  line: ParsedMeasure,
   foods: Map<string, Promise<FoodAndPortions | null>>,
 ): Promise<Resolution | null> {
   const foodWord = line.food_name?.trim() ?? "";
@@ -204,6 +206,33 @@ async function inBatches<Item, Result>(
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
   return results;
+}
+
+type ReadLine = ParsedMeasure & { text: string };
+
+const keyOf = (text: string): string => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+
+// The lines to resolve, each with its text, or null when the reply is not tied to the page.
+function linesOf(
+  pageLines: readonly string[] | null,
+  pageText: string,
+  read: readonly (ParsedMeasure & { text?: string })[],
+): ReadLine[] | null {
+  if (pageLines !== null) {
+    return read.length === pageLines.length
+      ? read.map((measure, index) => ({ ...measure, text: pageLines[index] ?? "" }))
+      : null;
+  }
+  const pageKey = keyOf(pageText);
+  const lines: ReadLine[] = [];
+  for (const { text, ...measure } of read) {
+    const lineKey = keyOf(text ?? "");
+    if (lineKey === "" || !pageKey.includes(lineKey)) {
+      return null;
+    }
+    lines.push({ ...measure, text: (text ?? "").trim() });
+  }
+  return lines;
 }
 
 const withHttpScheme = (url: string): string =>
@@ -299,12 +328,19 @@ export function createImportRecipeFromUrlTool(
         const name = (jsonLd?.name ?? parsed.recipe.name ?? "").trim();
         const servings = jsonLd === null ? parsed.recipe.servings : jsonLd.servings;
         const steps = clippedSteps(jsonLd === null ? parsed.recipe.steps : jsonLd.steps);
-        const lines = parsed.recipe.lines.filter((line) => line.text.trim() !== "");
-        if (name === "" || lines.length === 0) {
+        // The model reads the lines. It does not choose them. With JSON-LD the reply must have one entry for
+        // each line of the page, and each line is the page's own, by its place. Without it, every line the
+        // model copied must be found in the page's text, or the whole reply is not trusted.
+        const read = parsed.recipe.lines;
+        if (jsonLd === null && read.length > maxIngredients) {
+          return refuse("too_many_lines");
+        }
+        if (name === "" || (jsonLd === null && read.length === 0)) {
           return refuse("no_recipe_found");
         }
-        if (lines.length > maxIngredients) {
-          return refuse("too_many_lines");
+        const lines = linesOf(jsonLd?.ingredientLines ?? null, text, read);
+        if (lines === null) {
+          return refuse("could_not_read_recipe");
         }
         const recipeServings = servings ?? servingsFromUser;
         if (recipeServings === null) {

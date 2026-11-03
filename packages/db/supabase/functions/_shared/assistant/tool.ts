@@ -257,6 +257,17 @@ export function strictSchemaProblem(tool: ToolDefinition): string | null {
     : `Tool ${tool.name} has an input schema with ${feature}, which a strict tool schema cannot hold`;
 }
 
+// The strict JSON Schema of any zod input, made the way a tool's is: every nullable is `anyOf` with null, every
+// object is closed with all its properties required, and the keywords a strict schema refuses are left out.
+// For the structured output of a call that is not a tool call.
+export function toStrictJsonSchema(input: ZodType): JsonSchemaObject {
+  const strict = strictNode(toJSONSchema(input, { io: "input", reused: "inline" }));
+  if (!isRecord(strict)) {
+    throw new Error("The schema is not an object schema");
+  }
+  return strict;
+}
+
 // Where `tools/list` says whether a tool is strict, in the tool's `_meta`.
 export const strictMetaKey = "kilo/strict";
 

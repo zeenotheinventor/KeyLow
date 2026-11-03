@@ -51,6 +51,15 @@ const linesOnly = (lines: ParsedRecipe["lines"]): ParsedRecipe => ({
   lines,
 });
 
+// The traybake page with the ingredient lines the test names, so what the model read is tied to the page.
+const pageOfLines = (texts: readonly string[]): RecipePageResult =>
+  page(
+    lemonTraybakePage.replace(
+      /"recipeIngredient": \[[^\]]*\]/s,
+      `"recipeIngredient": ${JSON.stringify(texts)}`,
+    ),
+  );
+
 const traybakeWithMilk = () =>
   importServices({
     page: page(lemonTraybakePage),
@@ -126,12 +135,19 @@ Deno.test(
     assertEquals(result.status, "ok");
     const [row] = recipesOf(stub);
     const recipeId = String(row?.["id"]);
+    // The model reads the counts, and the guessed milk is the one estimated line.
+    assertEquals((payloadOf(result) as { lines: unknown }).lines, {
+      counted: 6,
+      not_counted: 0,
+      estimated: 1,
+    });
     assertObjectMatch(structuredOf(result), {
       card: {
         kind: "recipe_created",
         title: "Added recipe Lemon chicken traybake, 4 servings",
         sub: "From example.com/lemon-traybake",
         totalText: "Per serving 570 kcal · P 42 g · C 36 g · F 29 g",
+        undoneSub: "Archived Lemon chicken traybake",
         note: null,
         link: { label: "Open in recipe editor", target: { screen: "recipe_editor", recipeId } },
         undo: "available",
@@ -322,17 +338,17 @@ Deno.test("a guess is cut to the cap before it is saved and counted", async () =
 });
 
 Deno.test("a vague line with no guess is not counted, and is never invented", async () => {
-  const noGuess = line({ text: "Salt to taste", food_name: "garlic" });
+  const noGuess = line({ text: "A splash of milk", food_name: "milk" });
   const { services } = importServices({
     page: page(lemonTraybakePage),
-    parse: { ok: true, recipe: linesOnly([...traybakeLines(splashOfMilk), noGuess]) },
+    parse: { ok: true, recipe: linesOnly(traybakeLines(noGuess)) },
   });
   const { ctx, stub } = importContext(tool, { services });
 
   const result = await executeTool(ctx, "import_recipe_from_url", input);
 
   assertEquals(rowsOf(result).at(-1)?.["match"], "unresolved");
-  assertEquals(((recipesOf(stub)[0]?.["recipe_ingredients"] ?? []) as unknown[]).length, 6);
+  assertEquals(((recipesOf(stub)[0]?.["recipe_ingredients"] ?? []) as unknown[]).length, 5);
 });
 
 Deno.test(
@@ -354,7 +370,7 @@ Deno.test(
       }),
     ];
     const { services } = importServices({
-      page: page(lemonTraybakePage),
+      page: pageOfLines(lines.map((read) => read.text ?? "")),
       parse: { ok: true, recipe: linesOnly(lines) },
     });
     const { ctx, queries } = importContext(tool, { services, search: script });
@@ -552,7 +568,7 @@ Deno.test(
 
 Deno.test("a recipe none of whose lines matched a food is not saved", async () => {
   const { services } = importServices({
-    page: page(lemonTraybakePage),
+    page: pageOfLines(["A splash of white wine", "Salt"]),
     parse: { ok: true, recipe: linesOnly([splashOfWhiteWine, line({ text: "Salt" })]) },
   });
   const { ctx, stub, store } = importContext(tool, { services });
@@ -759,3 +775,168 @@ Deno.test(
     assertEquals(traybakeMessage.includes(traybakeUrl), true);
   },
 );
+
+Deno.test("an invented extra line in the reply is refused, and nothing is saved", async () => {
+  const invented = line({
+    text: "1 kg gold leaf",
+    quantity: 1,
+    unit: "kg",
+    food_name: "olive oil",
+  });
+  const { services } = importServices({
+    page: page(lemonTraybakePage),
+    parse: { ok: true, recipe: linesOnly([...traybakeLines(splashOfMilk), invented]) },
+  });
+  const { ctx, stub, store } = importContext(tool, { services });
+
+  const result = await executeTool(ctx, "import_recipe_from_url", input);
+
+  assertEquals(payloadOf(result), { error: "could_not_read_recipe" });
+  assertEquals(recipesOf(stub), []);
+  assertEquals(store.actions, []);
+});
+
+Deno.test("a line missing from the reply is refused, and nothing is saved", async () => {
+  const { services } = importServices({
+    page: page(lemonTraybakePage),
+    parse: { ok: true, recipe: linesOnly(traybakeLines(splashOfMilk).slice(0, 5)) },
+  });
+  const { ctx, stub, store } = importContext(tool, { services });
+
+  const result = await executeTool(ctx, "import_recipe_from_url", input);
+
+  assertEquals(payloadOf(result), { error: "could_not_read_recipe" });
+  assertEquals(recipesOf(stub), []);
+  assertEquals(store.actions, []);
+});
+
+Deno.test("with JSON-LD the card's text is the page's line, never the model's", async () => {
+  const reworded = traybakeLines(splashOfMilk).map((read, index) => ({
+    ...read,
+    text: `reworded ${index}`,
+  }));
+  const { services } = importServices({
+    page: page(lemonTraybakePage),
+    parse: { ok: true, recipe: linesOnly(reworded) },
+  });
+  const { ctx } = importContext(tool, { services });
+
+  const result = await executeTool(ctx, "import_recipe_from_url", input);
+
+  assertEquals(
+    rowsOf(result).map((card) => card["name"]),
+    [
+      "800 g chicken thighs, skinless",
+      "750 g new potatoes",
+      "2 tbsp olive oil",
+      "1 lemon",
+      "4 garlic cloves",
+      "A splash of milk",
+    ],
+  );
+});
+
+Deno.test(
+  "without JSON-LD a line the model made up is refused, and a copied one is kept despite its case and punctuation",
+  async () => {
+    const recipe = (texts: string[]): ParsedRecipe => ({
+      name: "Slow Cooker Lentil Soup",
+      servings: 6,
+      steps: [],
+      lines: texts.map((text) =>
+        line({ text, quantity: 300, unit: "g", food_name: "green lentils" }),
+      ),
+    });
+    const search = { "green lentils": [{ foodId: importFoodIds.lentils, score: 2.0 }] };
+    const invented = importContext(tool, {
+      services: importServices({
+        page: page(noJsonLdPage),
+        parse: { ok: true, recipe: recipe(["300 g green lentils", "2 kg saffron"]) },
+      }).services,
+      search,
+    });
+    const copied = importContext(tool, {
+      services: importServices({
+        page: page(noJsonLdPage),
+        parse: { ok: true, recipe: recipe(["300G GREEN LENTILS."]) },
+      }).services,
+      search,
+    });
+
+    const refused = await executeTool(invented.ctx, "import_recipe_from_url", input);
+    const kept = await executeTool(copied.ctx, "import_recipe_from_url", input);
+
+    assertEquals(payloadOf(refused), { error: "could_not_read_recipe" });
+    assertEquals(recipesOf(invented.stub), []);
+    assertEquals(kept.status, "ok");
+  },
+);
+
+Deno.test(
+  "a line whose food would change when its modifier is dropped is not searched again",
+  async () => {
+    const lines = [
+      line({ text: "200 ml coconut milk", quantity: 200, unit: "ml", food_name: "coconut milk" }),
+      line({ text: "2 tbsp peanut butter", quantity: 2, unit: "tbsp", food_name: "peanut butter" }),
+      line({ text: "100 g plain flour", quantity: 100, unit: "g", food_name: "plain flour" }),
+    ];
+    const search = {
+      flour: [{ foodId: importFoodIds.flour, score: 2.133 }],
+      milk: [{ foodId: importFoodIds.milk, score: 2.1 }],
+      butter: [{ foodId: importFoodIds.oil, score: 2.157 }],
+    };
+    const { services } = importServices({
+      page: pageOfLines(lines.map((read) => read.text ?? "")),
+      parse: { ok: true, recipe: linesOnly(lines) },
+    });
+    const { ctx, queries } = importContext(tool, {
+      services,
+      search,
+    });
+
+    const result = await executeTool(ctx, "import_recipe_from_url", input);
+
+    assertEquals(
+      rowsOf(result).map((card) => [card["match"], card["matchedFood"]]),
+      [
+        ["unresolved", "Not counted. Choose a food in the recipe editor."],
+        ["unresolved", "Not counted. Choose a food in the recipe editor."],
+        ["matched", "Flour, rye · UK CoFID"],
+      ],
+    );
+    assertEquals(queries.sort(), ["coconut milk", "flour", "peanut butter", "plain flour"]);
+  },
+);
+
+Deno.test("a count with no unit is counted only in a portion that names the thing", async () => {
+  const search = { onions: [{ foodId: importFoodIds.onion, score: 2.083 }] };
+  const lines = [line({ text: "3 onions", quantity: 3, food_name: "onions" })];
+  const run = async (label: string) => {
+    const { services } = importServices({
+      page: pageOfLines(["3 onions", "100 g lentils"]),
+      parse: {
+        ok: true,
+        recipe: linesOnly([
+          ...lines,
+          line({ text: "100 g lentils", quantity: 100, unit: "g", food_name: "lentils" }),
+        ]),
+      },
+    });
+    const made = importContext(tool, {
+      services,
+      search: { ...search, lentils: [{ foodId: importFoodIds.lentils, score: 2 }] },
+    });
+    // The onion's one portion is the label under test.
+    for (const portion of made.stub.tables["food_portions"] ?? []) {
+      if (portion["food_id"] === importFoodIds.onion) {
+        portion["label"] = label;
+      }
+    }
+    return rowsOf(await executeTool(made.ctx, "import_recipe_from_url", input)).map(
+      (card) => card["match"],
+    );
+  };
+
+  assertEquals(await run("100 g"), ["unresolved", "matched"]);
+  assertEquals(await run("1 large"), ["matched", "matched"]);
+});

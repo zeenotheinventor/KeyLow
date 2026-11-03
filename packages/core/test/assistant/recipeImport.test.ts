@@ -52,6 +52,25 @@ describe("simplerFoodWord", () => {
     expect(simplerFoodWord("  Baby   Spinach ")).toBe("spinach");
   });
 
+  it("should keep the head noun of a flour or a milk that is only more precise", () => {
+    expect(simplerFoodWord("plain flour")).toBe("flour");
+    expect(simplerFoodWord("whole milk")).toBe("milk");
+  });
+
+  it.each([
+    "coconut milk",
+    "almond milk",
+    "soy milk",
+    "oat milk",
+    "rice milk",
+    "peanut butter",
+    "cream cheese",
+    "sweet potatoes",
+    "tomato paste",
+  ])("should not drop the word that makes %s a different food", (foodWord) => {
+    expect(simplerFoodWord(foodWord)).toBeNull();
+  });
+
   it("should have nothing simpler for one word, a short word or the same word", () => {
     expect(simplerFoodWord("milk")).toBeNull();
     expect(simplerFoodWord("red ox")).toBeNull();
@@ -122,6 +141,27 @@ describe("importedAmountOf", () => {
       importedAmountOf(measure({ quantity: 2 }), food(), [portion("p2", "1 medium", 60, false, 1)])
         ?.input,
     ).toMatchObject({ portion: { id: "p2" } });
+  });
+
+  it("should count only in a portion whose label names the thing, never in a measure like 100 g", () => {
+    const named = portion("p1", "1 large", 150, false, 1);
+
+    expect(
+      importedAmountOf(measure({ quantity: 3 }), food(), [portion("p0", "100 g", 100, true, 0)]),
+    ).toBeNull();
+    expect(
+      importedAmountOf(measure({ quantity: 3 }), food(), [portion("p0", "1 cup", 240, true, 0)]),
+    ).toBeNull();
+    expect(
+      importedAmountOf(measure({ quantity: 3 }), food(), [
+        portion("p0", "100 g", 100, true, 0),
+        named,
+      ])?.input,
+    ).toMatchObject({ quantity: 3, unit: "portion", portion: { id: "p1" } });
+    expect(
+      importedAmountOf(measure({ quantity: 1 }), food(), [portion("p0", "slice", 30, true, 0)])
+        ?.input,
+    ).toMatchObject({ portion: { id: "p0" } });
   });
 
   it("should leave a count of a food with no portions, and a unit it cannot convert, unresolved", () => {

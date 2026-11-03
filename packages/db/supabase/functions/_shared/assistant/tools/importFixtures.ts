@@ -2,7 +2,7 @@
 import { saveRecipeRpc } from "./recipeFixtures.ts";
 import { dietRows, foodRow, writeContext } from "./writeFixtures.ts";
 
-import type { ParsedLine, RecipeImportServices, RecipeParseOutcome } from "../recipeParse.ts";
+import type { ParsedMeasure, RecipeImportServices, RecipeParseOutcome } from "../recipeParse.ts";
 import type { RecipePageResult } from "../../recipePage.ts";
 import type { ToolContext, ToolDefinition } from "../tool.ts";
 import type { RpcHandler } from "./writeStub.ts";
@@ -95,6 +95,14 @@ const importFoods = () => [
     carbs_g: 7.9,
   }),
   cofid({
+    id: importFoodIds.flour,
+    name: "Flour, rye",
+    kcal: 330,
+    protein_g: 8,
+    fat_g: 1.5,
+    carbs_g: 70,
+  }),
+  cofid({
     id: importFoodIds.stock,
     name: "Stock, vegetable",
     basis: "per_100ml",
@@ -171,7 +179,9 @@ export function searchFoodsRpc(script: SearchScript, queries: string[]): RpcHand
   };
 }
 
-export const line = (overrides: Partial<ParsedLine> & { text: string }): ParsedLine => ({
+export type TextLine = ParsedMeasure & { text: string };
+
+export const line = (overrides: Partial<TextLine> & { text: string }): TextLine => ({
   quantity: null,
   unit: null,
   food_name: null,
@@ -181,7 +191,7 @@ export const line = (overrides: Partial<ParsedLine> & { text: string }): ParsedL
 });
 
 // The lines of the lemon chicken traybake as Haiku reads them, with the last one either vague line.
-export const traybakeLines = (last: ParsedLine): ParsedLine[] => [
+export const traybakeLines = (last: TextLine): TextLine[] => [
   line({
     text: "800 g chicken thighs, skinless",
     quantity: 800,

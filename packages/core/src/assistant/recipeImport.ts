@@ -30,14 +30,40 @@ export const isConfidentFoodMatch = (score: number): boolean => score >= IMPORT_
 // A word shorter than this is not a food word ("red ox" has nothing simpler to try).
 const SIMPLER_WORD_MIN_CHARACTERS = 3;
 
+// Words that make the food a different one, so a line with one of them is never searched again without it:
+// "coconut milk" is not milk, "peanut butter" is not butter, "cream cheese" is not cheese and "sweet
+// potatoes" are not potatoes. A modifier that only makes the same food more precise ("semi skimmed",
+// "plain", "whole", "baby") is not here.
+const FOOD_CHANGING_WORDS: ReadonlySet<string> = new Set([
+  "coconut",
+  "almond",
+  "soy",
+  "soya",
+  "oat",
+  "rice",
+  "peanut",
+  "cashew",
+  "hazelnut",
+  "cream",
+  "sweet",
+  "tomato",
+]);
+
 /**
  * A simpler form of a food word to search again: its last word, the head noun ("semi skimmed milk" is
- * "milk"). Null when there is nothing simpler.
+ * "milk", "plain flour" is "flour"). Null when there is nothing simpler, and when a word that would be
+ * dropped makes it a different food (`FOOD_CHANGING_WORDS`), so that line is not counted and never counted
+ * as the wrong food.
  */
 export function simplerFoodWord(foodWord: string): string | null {
   const words = foodWord.trim().toLowerCase().split(/\s+/);
   const last = words[words.length - 1] ?? "";
-  return words.length > 1 && last.length >= SIMPLER_WORD_MIN_CHARACTERS ? last : null;
+  const dropped = words.slice(0, -1);
+  return words.length > 1 &&
+    last.length >= SIMPLER_WORD_MIN_CHARACTERS &&
+    !dropped.some((word) => FOOD_CHANGING_WORDS.has(word))
+    ? last
+    : null;
 }
 
 /** What the parse read of a line's amount. */
@@ -97,6 +123,13 @@ const unitRules: Readonly<Record<string, UnitRule>> = {
 const isUsable = (value: number | null): value is number =>
   value !== null && Number.isFinite(value) && value > 0;
 
+// A portion label that is a measure and not a thing: "100 g", "1 cup", "2 tbsp". The label is read without its
+// leading number, and what is left is a unit or nothing.
+const MEASURE_LABEL =
+  /^[\d\s./½¼¾-]*(?:g|grams?|kg|mg|ml|l|litres?|oz|ounces?|lbs?|fl\.? ?oz|cups?|tbsp|tsp|tablespoons?|teaspoons?)?\.?$/i;
+
+const namesAThing = (portion: PortionOfFood): boolean => !MEASURE_LABEL.test(portion.label.trim());
+
 function measuredBy(
   quantity: number,
   unit: string | null,
@@ -104,10 +137,12 @@ function measuredBy(
   portions: readonly PortionOfFood[],
 ): ImportedAmount["input"] | null {
   if (unit === null || unit.trim() === "") {
-    // A count ("4 garlic cloves", "1 lemon") is a count of the food's own portion.
+    // A count ("4 garlic cloves", "1 lemon") is a count of a portion that names the thing. A food whose only
+    // portions are measures ("100 g") would make "3 onions" 300 g, which is a guess and not a count.
+    const things = portions.filter(namesAThing);
     const own =
-      portions.find((candidate) => candidate.is_default) ??
-      [...portions].sort((first, second) => first.position - second.position)[0];
+      things.find((candidate) => candidate.is_default) ??
+      [...things].sort((first, second) => first.position - second.position)[0];
     return own === undefined ? null : { quantity, unit: "portion", portion: own };
   }
   const rule = unitRules[unit.trim().toLowerCase().replace(/\.$/, "")];
@@ -128,7 +163,7 @@ function measuredBy(
 
 /**
  * The amount an imported line is saved with, or null when the line cannot be counted: a count of a food with
- * no portions, a unit that cannot convert, a volume of a food with no density (it would be saved as grams), or
+ * no portion that names the thing, a unit that cannot convert, a volume of a food with no density (it would be saved as grams), or
  * no quantity and no usable guess. A quantity is measured as the page wrote it. Without a quantity, the guess
  * stands in, cut to `IMPORT_GUESS_MAX_AMOUNT`, and the answer says so in `guess`.
  */

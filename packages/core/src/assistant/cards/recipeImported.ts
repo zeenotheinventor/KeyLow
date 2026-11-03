@@ -7,6 +7,7 @@ import {
   describeMatchedImportLine,
   describePerServing,
   describeRecipeCreatedTitle,
+  describeRecipeCreatedUndone,
 } from "../../copy/assistantRecipeCards";
 
 import type { AssistantCardDraft } from "./entryCardEntry";
@@ -122,6 +123,6 @@ export function buildRecipeImportedCard({
             },
           },
     undo: "available",
-    undoneSub: `Removed recipe ${recipe.name}`,
+    undoneSub: describeRecipeCreatedUndone(recipe.name),
   };
 }

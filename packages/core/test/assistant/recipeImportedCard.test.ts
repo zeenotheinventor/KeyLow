@@ -67,6 +67,12 @@ describe("buildRecipeImportedCard", () => {
     });
   });
 
+  it("should word the undone line as create_recipe does, because Undo archives the recipe", () => {
+    const draft = buildRecipeImportedCard(traybake([...matchedLines, splashOfMilk], withMilk));
+
+    expect(draft.undoneSub).toBe("Archived Lemon chicken traybake");
+  });
+
   it("should mark no row as an estimate but the guessed one", () => {
     const draft = buildRecipeImportedCard(traybake([...matchedLines, splashOfMilk], withMilk));
 

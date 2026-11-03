@@ -110,7 +110,7 @@ export const recipeImportCard: AssistantCard = {
   note: null,
   link: { label: "Open in recipe editor", target: { screen: "recipe_editor", recipeId } },
   undo: "available",
-  undoneSub: "Removed recipe Lemon chicken traybake",
+  undoneSub: "Archived Lemon chicken traybake",
 };
 
 /** `assistant · recipe-unresolved`: one line that matched no food, left out of the numbers. */

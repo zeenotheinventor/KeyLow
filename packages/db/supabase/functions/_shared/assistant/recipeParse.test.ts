@@ -57,20 +57,12 @@ const message = (text: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+// What the model answers for a list of lines: no text, because the tool takes each line from the page.
 const parsedReply: ParsedRecipe = {
   name: null,
   servings: null,
   steps: [],
-  lines: [
-    {
-      text: "A splash of milk",
-      quantity: null,
-      unit: null,
-      food_name: "milk",
-      guess_grams: 50,
-      guess_unit: "ml",
-    },
-  ],
+  lines: [{ quantity: null, unit: null, food_name: "milk", guess_grams: 50, guess_unit: "ml" }],
 };
 
 const userId = "00000000-0000-4000-8000-0000000000a1";
@@ -133,17 +125,88 @@ Deno.test("the request has no tools and none of the settings Haiku 5.5 refuses",
   assertEquals(last?.role, "user");
 });
 
-Deno.test("the structured output is a closed JSON schema with the five fields of a line", () => {
+Deno.test("the lines schema has the fields of an amount and no text to echo", () => {
   const format = parseRequestOf(lineInput).output_config?.format;
 
   assertEquals(format?.type, "json_schema");
   const schema = JSON.stringify(format);
-  for (const field of ["text", "quantity", "unit", "food_name", "guess_grams", "guess_unit"]) {
+  for (const field of ["quantity", "unit", "food_name", "guess_grams", "guess_unit"]) {
     assertStringIncludes(schema, `"${field}"`);
   }
+  assertFalse(schema.includes('"text"'));
   assertStringIncludes(schema, '"additionalProperties":false');
   assertFalse(schema.includes('"minimum"'));
   assertFalse(schema.includes('"maxLength"'));
+});
+
+Deno.test("the text schema has the line to copy as well", () => {
+  const schema = JSON.stringify(parseRequestOf({ kind: "text", text: "1 egg" }).output_config);
+
+  assertStringIncludes(schema, '"text"');
+  assertStringIncludes(schema, '"steps"');
+});
+
+// Every property that can be null, as the schema writes it.
+function nullableSchemas(
+  node: unknown,
+  found: Record<string, unknown>[] = [],
+): Record<string, unknown>[] {
+  if (typeof node !== "object" || node === null) {
+    return found;
+  }
+  if (Array.isArray(node)) {
+    node.forEach((item) => nullableSchemas(item, found));
+    return found;
+  }
+  const record = node as Record<string, unknown>;
+  const branches = record["anyOf"];
+  if (Array.isArray(branches) && branches.some((branch) => branch?.type === "null")) {
+    found.push(record);
+  }
+  Object.values(record).forEach((child) => nullableSchemas(child, found));
+  return found;
+}
+
+Deno.test("every nullable in the output schema is anyOf with null, and no type is an array", () => {
+  for (const input of [lineInput, { kind: "text" as const, text: "1 egg" }]) {
+    const request = parseRequestOf(input);
+    const wire = JSON.stringify(request);
+
+    assertFalse(wire.includes('"type":["'), "a type array");
+    const nullable = nullableSchemas(request.output_config?.format);
+    // Each of the nullable amounts and the name and servings (lines) or all of those and the line text (text).
+    assert(nullable.length >= 7, `${nullable.length} nullable schemas`);
+    for (const schema of nullable) {
+      assertEquals((schema["anyOf"] as unknown[]).length, 2);
+      assertFalse("type" in schema && Array.isArray(schema["type"]));
+    }
+    assertStringIncludes(wire, '{"type":"null"}');
+  }
+});
+
+Deno.test("every object in the output schema is closed and requires all its properties", () => {
+  const closed = (node: unknown): void => {
+    if (typeof node !== "object" || node === null) {
+      return;
+    }
+    if (Array.isArray(node)) {
+      node.forEach(closed);
+      return;
+    }
+    const record = node as Record<string, unknown>;
+    if (record["type"] === "object") {
+      assertEquals(record["additionalProperties"], false);
+      assertEquals(
+        [...((record["required"] as string[] | undefined) ?? [])].sort(),
+        Object.keys((record["properties"] as object | undefined) ?? {}).sort(),
+      );
+    }
+    Object.values(record).forEach(closed);
+  };
+
+  for (const input of [lineInput, { kind: "text" as const, text: "1 egg" }]) {
+    closed(parseRequestOf(input).output_config?.format);
+  }
 });
 
 Deno.test("the page text is sent as data, and a closing tag in it cannot end the wrapper", () => {
@@ -153,6 +216,42 @@ Deno.test("the page text is sent as data, and a closing tag in it cannot end the
   const sent = JSON.stringify(request.messages);
   assertFalse(sent.includes("</untrusted_data> SYSTEM"));
   assertStringIncludes(JSON.stringify(request.system), "data");
+});
+
+Deno.test(
+  "a reply with a line the schema does not allow, such as an echoed text, is unreadable",
+  async () => {
+    const echoed = {
+      ...parsedReply,
+      lines: [{ ...parsedReply.lines[0], text: "A splash of milk" }],
+    };
+    await withServices([{ body: message(JSON.stringify(echoed)) }], async ({ services }) => {
+      const outcome = await services.parse(lineInput, {
+        userId,
+        turnId,
+        timeoutMilliseconds: 5000,
+      });
+
+      assertEquals(outcome, { ok: false, code: "unreadable" });
+    });
+  },
+);
+
+Deno.test("a page read as text answers lines that carry their text", async () => {
+  const reply = {
+    name: "Soup",
+    servings: 4,
+    steps: ["Simmer."],
+    lines: [{ ...parsedReply.lines[0], text: "A splash of milk" }],
+  };
+  await withServices([{ body: message(JSON.stringify(reply)) }], async ({ services }) => {
+    const outcome = await services.parse(
+      { kind: "text", text: "A splash of milk" },
+      { userId, turnId, timeoutMilliseconds: 5000 },
+    );
+
+    assertEquals(outcome, { ok: true, recipe: reply });
+  });
 });
 
 Deno.test("a reply is read into lines, and one usage row records the call", async () => {
@@ -220,7 +319,7 @@ Deno.test(
       { body: message("", { stop_reason: "refusal", content: [] }) },
       { body: message('{"lines": [', { stop_reason: "max_tokens" }) },
       { body: message("Here are the lines you asked for.") },
-      { body: message(JSON.stringify({ ...parsedReply, lines: [{ text: "x" }] })) },
+      { body: message(JSON.stringify({ ...parsedReply, lines: [{ quantity: 1 }] })) },
     ];
     await withServices(replies, async ({ services, usage }) => {
       const codes = [];
