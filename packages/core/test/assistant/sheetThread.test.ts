@@ -712,6 +712,42 @@ describe("isSentTurnStored", () => {
     ).toBe(true);
   });
 
+  const clarify = (id: string): AssistantThreadItem => ({
+    kind: "clarify",
+    id,
+    question: "How much?",
+    quickReplies: ["100 g"],
+    fieldHint: null,
+    answered: false,
+  });
+  const confirm = (id: string): AssistantThreadItem => ({
+    kind: "confirm",
+    id,
+    confirmationId: "00000000-0000-4000-8000-0000000000a1",
+    question: "Delete it?",
+    confirmLabel: "Delete",
+    cancelLabel: "Keep",
+    tone: "danger",
+    answered: false,
+  });
+
+  it("should hold a clarify-only turn on an empty conversation, which ends in the question", () => {
+    expect(isSentTurnStored([user("u1"), clarify("q1")], null, withoutWords)).toBe(true);
+  });
+
+  it("should hold a confirm-only turn on an empty conversation, which ends in the question", () => {
+    expect(isSentTurnStored([user("u1"), confirm("k1")], null, withoutWords)).toBe(true);
+  });
+
+  it("should hold a clarify or confirm turn that follows earlier items", () => {
+    expect(isSentTurnStored([reply("r1"), user("u2"), clarify("q2")], "r1", withoutWords)).toBe(
+      true,
+    );
+    expect(isSentTurnStored([reply("r1"), user("u2"), confirm("k2")], "r1", withoutWords)).toBe(
+      true,
+    );
+  });
+
   it("should not hold the turn on a card alone while the turn has words to come", () => {
     expect(isSentTurnStored([reply("r1"), user("u2"), card("c2")], "r1", withWords)).toBe(false);
   });

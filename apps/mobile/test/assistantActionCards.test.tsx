@@ -537,6 +537,55 @@ describe("the action cards in the assistant sheet", () => {
     });
   });
 
+  describe("a turn that answers with a question alone", () => {
+    it.each([
+      [
+        "a clarify",
+        {
+          kind: "clarify",
+          id: "q1",
+          question: "How much?",
+          quickReplies: ["100 g"],
+          fieldHint: null,
+          answered: false,
+        },
+      ],
+      [
+        "a confirm",
+        {
+          kind: "confirm",
+          id: "k1",
+          confirmationId: "00000000-0000-4000-8000-0000000000a1",
+          question: "Delete it?",
+          confirmLabel: "Delete",
+          cancelLabel: "Keep",
+          tone: "danger",
+          answered: false,
+        },
+      ],
+    ] satisfies [string, AssistantThreadItem][])(
+      "should not draw your message again when the thread, which ended in %s, is empty again",
+      async (_name, question) => {
+        const rendered = await sendFromSheet("Log some chicken");
+        mockAssistant.live = liveTurn({ outcome: "complete" });
+        await rendered.rerender(sheetTree());
+        mockAssistant.items = [{ kind: "user", id: "u1", text: "Log some chicken" }, question];
+        await rendered.rerender(sheetTree());
+
+        expect(screen.getAllByText("Log some chicken")).toHaveLength(1);
+
+        // Every conversation was deleted, or a new one started.
+        mockAssistant.items = [];
+        await rendered.rerender(sheetTree());
+
+        expect(screen.queryByText("Log some chicken")).not.toBeOnTheScreen();
+        expect(
+          screen.getByRole("heading", { name: "Log food or ask about your diary" }),
+        ).toBeOnTheScreen();
+      },
+    );
+  });
+
   describe("a card among the thread's other messages", () => {
     it("should draw the card between your message and the answer, in the order stored", async () => {
       mockAssistant.items = [

@@ -175,7 +175,8 @@ function itemsThrough(
 
 /**
  * Whether the stored conversation holds the turn the message sent from the sheet started. It does once an
- * item that ends the turn follows the message: a reply or a notice. Your own message does not count, and
+ * item that ends the turn follows the message: a reply, a notice, or a question (a clarify or a confirm,
+ * which end the turn, with no words after them). Your own message does not count, and
  * neither does a card on its own, because the function stores a card as the tool returns it, before the
  * words that follow, so a read during the stream can hold your message and the card with the reply still
  * to come. A turn that made no words has no reply to wait for, so there a stored card counts. An item the
@@ -196,7 +197,11 @@ export function isSentTurnStored(
     .slice(position + 1)
     .some(
       (item) =>
-        item.kind === "reply" || item.kind === "notice" || (item.kind === "card" && !hasWords),
+        item.kind === "reply" ||
+        item.kind === "notice" ||
+        item.kind === "clarify" ||
+        item.kind === "confirm" ||
+        (item.kind === "card" && !hasWords),
     );
 }
 
