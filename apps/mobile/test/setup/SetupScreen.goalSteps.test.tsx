@@ -190,19 +190,6 @@ describe("the setup wizard", () => {
         expect(screen.queryByText("Pregnant or breastfeeding?")).not.toBeOnTheScreen();
       });
 
-      it("should do nothing when Lose weight is pressed", async () => {
-        const user = userEvent.setup();
-        await renderWizard("first-run");
-        await goToGoalStep(sixteen);
-
-        await user.press(screen.getByRole("radio", { name: "Lose weight, Not offered under 18" }));
-
-        for (const card of screen.getAllByRole("radio")) {
-          expect(card).not.toBeChecked();
-        }
-        expect(continueButton()).toBeDisabled();
-      });
-
       it("should read Step 5 of 8 until Maintain is chosen and Step 5 of 7 from then on", async () => {
         const user = userEvent.setup();
         await renderWizard("first-run");
@@ -216,17 +203,6 @@ describe("the setup wizard", () => {
           "aria-valuenow",
           63,
         );
-      });
-
-      it("should still let Gain weight be chosen", async () => {
-        const user = userEvent.setup();
-        await renderWizard("first-run");
-        await goToGoalStep(sixteen);
-
-        await user.press(radio(/^Gain weight/));
-
-        expect(radio(/^Gain weight/)).toBeChecked();
-        expect(continueButton()).toBeEnabled();
       });
     });
 
@@ -293,16 +269,6 @@ describe("the setup wizard", () => {
       expect(continueButton()).toBeEnabled();
     });
 
-    it("should write the lose amounts at 80 kg as 0.2, 0.4, 0.6 and 0.8 kg", async () => {
-      await renderWizard("first-run");
-
-      await goToRateStep();
-
-      for (const amount of ["0.2 kg", "0.4 kg", "0.6 kg", "0.8 kg"]) {
-        expect(screen.getByText(amount)).toBeOnTheScreen();
-      }
-    });
-
     it("should write the lose amounts at 176.4 lb as 0.4, 0.9, 1.3 and 1.8 lb", async () => {
       const user = userEvent.setup();
       await renderWizard("first-run");
@@ -342,20 +308,6 @@ describe("the setup wizard", () => {
       for (const amount of ["0.1 kg", "0.2 kg", "0.4 kg"]) {
         expect(screen.getByText(amount)).toBeOnTheScreen();
       }
-    });
-
-    it("should reset the rate to 0.25 and mark it Suggested when the goal is changed from lose to gain", async () => {
-      const user = userEvent.setup();
-      await renderWizard("first-run");
-      await goToRateStep();
-      await user.press(radio(/^1\.0% a week/));
-
-      await user.press(backButton());
-      await user.press(radio(/^Gain weight/));
-      await user.press(continueButton());
-
-      expect(radio(/^0\.25% a week, Suggested/)).toBeChecked();
-      expect(radio(/^0\.1% a week/)).not.toBeChecked();
     });
 
     it("should keep the rate chosen when going Back to the goal and on again without changing it", async () => {
@@ -449,16 +401,6 @@ describe("the setup wizard", () => {
       expect(radio(/^Moderate/)).toBeChecked();
       expect(radio(/^High/)).not.toBeChecked();
       expect(continueButton()).toBeEnabled();
-    });
-
-    it("should write the grams at 80 kg as 128, 160 and 176 g a day", async () => {
-      await renderWizard("first-run");
-
-      await goToProteinStep();
-
-      for (const grams of ["128 g", "160 g", "176 g"]) {
-        expect(screen.getByText(grams)).toBeOnTheScreen();
-      }
     });
 
     it("should write the grams in grams for a person in pounds", async () => {

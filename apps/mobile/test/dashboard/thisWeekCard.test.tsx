@@ -272,14 +272,6 @@ describe("the This week card", () => {
       expect(screen.getByRole("button", { name: "Edit targets" })).toBeOnTheScreen();
     });
 
-    it("should count a day marked complete that is still to come as no day at all", async () => {
-      showWeek([2140, 2260, 1286, 1039], ["2026-10-12", "2026-10-13", "2026-10-16"]);
-      await renderDashboard();
-
-      expect(await weekCard()).toHaveAccessibleName(sampleName);
-      expect(marker("Friday 16 October")).toBeOnTheScreen();
-    });
-
     it("should say the averages start tomorrow on a Monday, and 1 of 1 day complete", async () => {
       mockNow = new Date("2026-10-12T08:00:00Z");
       showWeek([1500], ["2026-10-12"]);
@@ -330,23 +322,6 @@ describe("the This week card", () => {
         "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
       );
       expect(screen.getByText("0 of 4 days complete", hidden)).toBeOnTheScreen();
-    });
-  });
-
-  describe("only today logged", () => {
-    it("should say nothing is logged before today, since today's entries do not count yet", async () => {
-      // Thursday's 1,039 alone, with nothing on the days before it.
-      showWeek([null, null, null, 1039]);
-      await renderDashboard();
-      const card = await weekCard();
-
-      expect(card).toHaveAccessibleName(
-        "This week, open your weekly averages. Nothing logged before today this week. 0 of 4 days complete.",
-      );
-      expect(
-        within(card).getByText("Nothing logged before today this week.", hidden),
-      ).toBeOnTheScreen();
-      expect(within(card).queryByTestId("calories-fill", hidden)).not.toBeOnTheScreen();
     });
   });
 

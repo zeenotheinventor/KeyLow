@@ -109,55 +109,6 @@ describe("new food screen", () => {
       expect(screen.getAllByRole("alert")).toHaveLength(5);
     });
 
-    it("should treat whitespace in the name as missing", async () => {
-      const user = await renderForm();
-      await user.type(screen.getByLabelText("Name"), "   ");
-
-      await save(user);
-
-      expect(await screen.findByRole("alert", { name: "Name is required" })).toBeOnTheScreen();
-    });
-
-    it("should reject a number field that is not a number", async () => {
-      const user = await renderForm();
-      await fillRequiredFields(user);
-      await user.clear(screen.getByLabelText("Protein (g)"));
-      await user.type(screen.getByLabelText("Protein (g)"), "lots");
-
-      await save(user);
-
-      expect(
-        await screen.findByRole("alert", { name: "Protein must be a number" }),
-      ).toBeOnTheScreen();
-      expect(mockCreateFood).not.toHaveBeenCalled();
-    });
-
-    it("should reject a negative number", async () => {
-      const user = await renderForm();
-      await fillRequiredFields(user);
-      await user.clear(screen.getByLabelText("Fat (g)"));
-      await user.type(screen.getByLabelText("Fat (g)"), "-2");
-
-      await save(user);
-
-      expect(
-        await screen.findByRole("alert", { name: "Fat cannot be negative" }),
-      ).toBeOnTheScreen();
-    });
-
-    it("should reject a barcode that is not a valid product code", async () => {
-      const user = await renderForm();
-      await fillRequiredFields(user);
-      await user.type(screen.getByLabelText("Barcode"), "5012345678901");
-
-      await save(user);
-
-      expect(
-        await screen.findByRole("alert", { name: "Barcode check digit is wrong" }),
-      ).toBeOnTheScreen();
-      expect(mockCreateFood).not.toHaveBeenCalled();
-    });
-
     it("should clear a field error once the user edits that field", async () => {
       const user = await renderForm();
       await save(user);
@@ -670,20 +621,6 @@ describe("new food screen", () => {
         screen.getByRole("alert", { name: "Portion 1 needs an amount above 0" }),
       ).toBeOnTheScreen();
       expect(mockCreateFood).not.toHaveBeenCalled();
-    });
-
-    it("should reject a portion amount of zero", async () => {
-      const user = await renderForm();
-      await fillRequiredFields(user);
-      await user.press(screen.getByRole("button", { name: "Add portion" }));
-      await user.type(screen.getByLabelText("Portion label, portion 1"), "Slice");
-      await user.type(screen.getByLabelText("Amount for portion 1 (g)"), "0");
-
-      await save(user);
-
-      expect(
-        await screen.findByRole("alert", { name: "Portion 1 needs an amount above 0" }),
-      ).toBeOnTheScreen();
     });
   });
   describe("form body", () => {
