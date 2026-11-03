@@ -29,7 +29,7 @@ export type WidgetIcon =
   "search" | "scan" | "add" | "weight" | "recipe" | "play" | "check" | "chevron" | "training";
 
 /** What the app did last for a one-tap action, when it did not work. The handler passes it on the redraw. */
-export type WidgetFailure = "couldnt_log" | "session_moved_on";
+export type WidgetFailure = "couldnt_log" | "couldnt_undo" | "session_moved_on";
 
 /** What a redraw knows besides the snapshot. */
 export type WidgetContext = Readonly<{
@@ -59,6 +59,7 @@ export type MessageState =
   | "rest_day"
   | "no_recent_foods"
   | "couldnt_log"
+  | "couldnt_undo"
   | "session_moved_on";
 
 /** A widget with nothing normal to show: board D. Every size words it the same and lays it out to fit. */

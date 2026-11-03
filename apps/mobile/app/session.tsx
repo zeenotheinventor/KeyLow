@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 
 import { SessionScreen } from "../components/SessionScreen";
 import { ToastProvider, useToast } from "../components/ui";
+import { useWidgetStartLink } from "../lib/widgets/useWidgetStartLink";
 
 import type { SavedOutcome } from "../components/FinishScreen";
 
@@ -11,9 +12,11 @@ import type { SavedOutcome } from "../components/FinishScreen";
 // this screen has nothing before it, so hiding goes to the Train tab instead. Discarding the session leaves
 // the same way: the session is gone, so the tabs are all there is to go back to. Saving the finished session
 // shows the Session saved toast and leaves the same way, since the session is no longer the one in
-// progress. The root layout's AuthGate covers it and the root stack gives it no header.
+// progress. A widget link (`?start=planned` or `?start=empty` with the snapshot's nonce) starts the planned
+// or an empty session when none is running (`useWidgetStartLink`). The root layout's AuthGate covers it and the root stack gives it no header.
 export default function SessionRoute() {
   const router = useRouter();
+  useWidgetStartLink();
   // The root provider's, since this component sits above the modal's own provider below.
   const toast = useToast();
 

@@ -35,6 +35,14 @@ export class OffProductNotFoundError extends Error {
   }
 }
 
+/** A write found no live entry of the caller to change. Its message names no entry: an id is not worth logging. */
+export class EntryNotFoundError extends Error {
+  constructor() {
+    super("The entry was not found");
+    this.name = "EntryNotFoundError";
+  }
+}
+
 /**
  * What went wrong with an Edge Function call, with no sentence in it: one of the nine codes an Edge
  * Function answers with, or `failed` when the failure was not a typed answer (no network, or a
