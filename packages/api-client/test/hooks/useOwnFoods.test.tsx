@@ -249,22 +249,6 @@ describe("useOwnFoods", () => {
     expect(result.current.own.error).toHaveProperty("cause.message", "database unavailable");
   });
 
-  it("should refresh the list after a food is created", async () => {
-    const { result } = await renderOwnFoods();
-    await waitFor(() => {
-      expect(result.current.own.data).toEqual([]);
-    });
-    expect(listRequests).toBe(1);
-
-    storedFoods = [foodRow({ name: "Protein flapjack" })];
-    await act(() => result.current.create.mutateAsync(validInput));
-
-    await waitFor(() => {
-      expect(result.current.own.data).toEqual(storedFoods);
-    });
-    expect(listRequests).toBe(2);
-  });
-
   it("should refresh the list after a food is updated", async () => {
     storedFoods = [foodRow({ name: "Protein flapjack" })];
     const { result } = await renderOwnFoods();

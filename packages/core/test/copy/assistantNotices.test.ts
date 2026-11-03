@@ -10,6 +10,12 @@ import {
   describeAssistantStatus,
 } from "../../src/copy";
 
+// Checked by `tsc` (the package's typecheck script), not at runtime: the consent notice is not a notice,
+// because its words are the consent card's.
+expectTypeOf<{ code: "consent_needed" }>().not.toExtend<
+  Parameters<typeof describeAssistantNotice>[0]
+>();
+
 describe("describeAssistantNotice", () => {
   it("should word the day limit as assistant · day-limit prints it", () => {
     expect(
@@ -56,12 +62,6 @@ describe("describeAssistantNotice", () => {
       fieldText: "Switched off for now",
       button: null,
     });
-  });
-
-  it("should not take the consent notice, whose words are the consent card's", () => {
-    expectTypeOf<{ code: "consent_needed" }>().not.toExtend<
-      Parameters<typeof describeAssistantNotice>[0]
-    >();
   });
 
   it("should word a failed turn as assistant · unavailable (middle) prints it, composer left on", () => {

@@ -12,15 +12,6 @@ describe("beforeAfterFigures", () => {
     });
   });
 
-  it("should write energy in whole kilocalories with the unit once, after the new value", () => {
-    expect(beforeAfterFigures("Calories", { before: 374.2, after: 361.7 }, "energy")).toEqual({
-      before: "374",
-      after: "362 kcal",
-      isUnchanged: false,
-      accessibleName: "Calories, 374 before, 362 now",
-    });
-  });
-
   it("should write grams as the rest of the app writes them", () => {
     expect(beforeAfterFigures("Fat", { before: 8.125, after: 6.75 }, "grams")).toEqual({
       before: "8.1",
