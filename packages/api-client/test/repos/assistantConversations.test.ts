@@ -3,6 +3,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import {
+  assistantTargetSources,
   getLatestAssistantConversation,
   readAssistantActions,
 } from "../../src/repos/assistantConversations";
@@ -15,7 +16,7 @@ import {
   createAssistantFakeState,
   installAssistantFake,
 } from "../support/assistantFake";
-import { REST_URL, postgrestError } from "../support/postgrest";
+import { REST_URL, postgrestError, postgrestRows } from "../support/postgrest";
 
 import type { AssistantTargetSource } from "../../src/repos/assistantConversations";
 
@@ -30,6 +31,9 @@ afterEach(() => {
 afterAll(() => {
   server.close();
 });
+
+// The default sources read the diary, which these tests do not serve, so they read with none.
+const noSources: ReadonlyMap<string, AssistantTargetSource> = new Map();
 
 const ENTRY_ID = "00000000-0000-4000-8000-0000000000f1";
 const OTHER_ENTRY_ID = "00000000-0000-4000-8000-0000000000f2";
@@ -65,11 +69,7 @@ describe("readAssistantActions", () => {
       ]);
     };
 
-    const read = await readAssistantActions(
-      createTestClient(),
-      {},
-      new Map([["food_log_entries", source]]),
-    );
+    const read = await readAssistantActions(createTestClient(), {}, new Map([["recipes", source]]));
 
     expect(asked).toEqual([[ENTRY_ID, OTHER_ENTRY_ID, MISSING_ENTRY_ID]]);
     expect(read.actions.map((action) => [action.id, action.targetIds, action.targets])).toEqual([
@@ -95,7 +95,7 @@ describe("readAssistantActions", () => {
   it("should give the actions of a table with no source no change check", async () => {
     installActions();
 
-    const read = await readAssistantActions(createTestClient());
+    const read = await readAssistantActions(createTestClient(), {}, noSources);
 
     expect(read.actions.map((action) => action.targets)).toEqual([null, null, null]);
   });
@@ -109,7 +109,7 @@ describe("readAssistantActions", () => {
       }),
     );
 
-    await readAssistantActions(createTestClient());
+    await readAssistantActions(createTestClient(), {}, noSources);
 
     expect(order).toBe("created_at.desc,turn_seq.desc,id.desc");
   });
@@ -123,7 +123,7 @@ describe("the reads of the assistant", () => {
       ),
     );
 
-    const failure = await readAssistantActions(createTestClient()).then(
+    const failure = await readAssistantActions(createTestClient(), {}, noSources).then(
       () => null,
       (thrown: unknown) => thrown,
     );
@@ -155,7 +155,7 @@ describe("the reads of a long history", () => {
     );
     installAssistantFake(server, createAssistantFakeState({ actions }));
 
-    const read = await readAssistantActions(createTestClient());
+    const read = await readAssistantActions(createTestClient(), {}, noSources);
 
     expect(read.actions).toHaveLength(2300);
     expect(new Set(read.actions.map((action) => action.id)).size).toBe(2300);
@@ -235,11 +235,7 @@ describe("the target rows of an action", () => {
       return Promise.resolve(chunk.map((id) => ({ id, updatedAt: null, row: {} })));
     };
 
-    const read = await readAssistantActions(
-      createTestClient(),
-      {},
-      new Map([["food_log_entries", source]]),
-    );
+    const read = await readAssistantActions(createTestClient(), {}, new Map([["recipes", source]]));
 
     expect(asked).toEqual([100, 100, 50]);
     expect(read.actions.every((action) => action.targets?.every((target) => target.found))).toBe(
@@ -257,7 +253,7 @@ describe("the target rows of an action", () => {
     async (_name, fields, hasTarget) => {
       installAssistantFake(server, createAssistantFakeState({ actions: [actionRow(fields)] }));
 
-      const read = await readAssistantActions(createTestClient());
+      const read = await readAssistantActions(createTestClient(), {}, noSources);
 
       expect(read.actions[0]?.hasTarget).toBe(hasTarget);
     },
@@ -266,7 +262,7 @@ describe("the target rows of an action", () => {
   it("should carry the slot of each action in its turn", async () => {
     installAssistantFake(server, createAssistantFakeState());
 
-    const read = await readAssistantActions(createTestClient());
+    const read = await readAssistantActions(createTestClient(), {}, noSources);
 
     expect(read.actions.map((action) => action.turnSeq).sort()).toEqual([1, 2]);
   });
@@ -284,7 +280,7 @@ describe("the end of the paging", () => {
   it.each([999, 1000, 1001])("should read exactly %i actions", async (count) => {
     installAssistantFake(server, createAssistantFakeState({ actions: actionsOf(count) }));
 
-    const read = await readAssistantActions(createTestClient());
+    const read = await readAssistantActions(createTestClient(), {}, noSources);
 
     expect(read.actions).toHaveLength(count);
   });
@@ -302,9 +298,65 @@ describe("the end of the paging", () => {
       }),
     );
 
-    const read = await readAssistantActions(createTestClient());
+    const read = await readAssistantActions(createTestClient(), {}, noSources);
 
     expect(asked).toEqual(["0", "1000"]);
     expect(read.actions).toHaveLength(1500);
+  });
+});
+
+describe("the food_log_entries target source", () => {
+  const source = assistantTargetSources.get("food_log_entries");
+
+  const installReads = (entries: unknown[], timezone: string | null = "Europe/London") => {
+    const asked: URL[] = [];
+    server.use(
+      http.get(`${REST_URL}/food_log_entries`, ({ request }) => {
+        asked.push(new URL(request.url));
+        return postgrestRows(request, entries);
+      }),
+      http.get(`${REST_URL}/profiles`, ({ request }) => postgrestRows(request, [{ timezone }])),
+    );
+    return asked;
+  };
+
+  it("should read the entries by id, deleted or not, and answer each one's updated_at and its clock time", async () => {
+    const asked = installReads([
+      {
+        id: ENTRY_ID,
+        logged_at: "2026-07-03T07:10:00+00:00",
+        updated_at: "2026-07-03T07:11:00.123456+00:00",
+        item_type: "quick",
+      },
+    ]);
+
+    const reads = await source?.(createTestClient(), [ENTRY_ID, MISSING_ENTRY_ID]);
+
+    expect(asked[0]?.searchParams.get("id")).toBe(`in.(${ENTRY_ID},${MISSING_ENTRY_ID})`);
+    expect(asked[0]?.searchParams.get("select")).toContain("updated_at");
+    expect(asked[0]?.searchParams.get("deleted_at")).toBeNull();
+    expect(reads).toHaveLength(1);
+    expect(reads?.[0]).toMatchObject({
+      id: ENTRY_ID,
+      updatedAt: "2026-07-03T07:11:00.123456+00:00",
+      row: { id: ENTRY_ID, clock_time: "08:10" },
+    });
+  });
+
+  it("should read the clock in UTC for a profile with no time zone", async () => {
+    installReads(
+      [
+        {
+          id: ENTRY_ID,
+          logged_at: "2026-07-03T07:10:00+00:00",
+          updated_at: "2026-07-03T07:11:00+00:00",
+        },
+      ],
+      null,
+    );
+
+    const reads = await source?.(createTestClient(), [ENTRY_ID]);
+
+    expect(reads?.[0]?.row).toMatchObject({ clock_time: "07:10" });
   });
 });

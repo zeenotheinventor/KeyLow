@@ -92,25 +92,31 @@ type CallOptions = {
   turn?: string | null;
   method?: string;
   headers?: Record<string, string>;
+  // Headers the default request carries and this one leaves out.
+  omitHeaders?: string[];
 };
 
 function post(
   dependencies: McpDependencies,
   body: unknown,
-  { turn = turnId, method = "POST", headers = {} }: CallOptions = {},
+  { turn = turnId, method = "POST", headers = {}, omitHeaders = [] }: CallOptions = {},
 ): Promise<Response> {
   const url = new URL("http://localhost/functions/v1/mcp");
   if (turn !== null) {
     url.searchParams.set("turn", turn);
   }
+  const requestHeaders = new Headers({
+    "content-type": "application/json",
+    accept: "application/json, text/event-stream",
+    "x-kilo-local-date": "2026-11-03",
+    "x-kilo-local-time": "08:10",
+    ...headers,
+  });
+  omitHeaders.forEach((name) => requestHeaders.delete(name));
   return createMcpEndpoint(dependencies)(
     new Request(url, {
       method,
-      headers: {
-        "content-type": "application/json",
-        accept: "application/json, text/event-stream",
-        ...headers,
-      },
+      headers: requestHeaders,
       body: method === "POST" ? JSON.stringify(body) : null,
     }),
   );
@@ -158,7 +164,7 @@ Deno.test("initialize answers the server and its tools capability", async () => 
 });
 
 Deno.test(
-  "tools/list answers every registry tool in registry order, as read-only strict schemas",
+  "tools/list answers every registry tool in registry order, as closed object schemas with the kind's hint",
   async () => {
     const response = await post(fake({ registry: toolRegistry }).dependencies, listTools);
 
@@ -170,7 +176,7 @@ Deno.test(
       toolRegistry.list.map((tool) => tool.name),
     );
     for (const tool of tools) {
-      assertEquals(tool.annotations.readOnlyHint, true);
+      assertEquals(tool.annotations.readOnlyHint, toolRegistry.get(tool.name)?.kind === "read");
       assertEquals(tool.inputSchema.type, "object");
       assertEquals(tool.inputSchema.additionalProperties, false);
     }
@@ -402,6 +408,58 @@ Deno.test("a missing or malformed turn is a 400", async () => {
     assertEquals((await response.json()).error.code, "invalid_request");
   }
 });
+
+Deno.test(
+  "a missing or malformed local date or time is a 400, and a missing time is fine",
+  async () => {
+    const { dependencies } = fake();
+    const refused: Record<string, string>[] = [
+      { "x-kilo-local-date": "" },
+      { "x-kilo-local-date": "2026-13-45" },
+      { "x-kilo-local-date": "3 November" },
+      { "x-kilo-local-time": "8:10" },
+      { "x-kilo-local-time": "24:00" },
+      { "x-kilo-local-time": "" },
+    ];
+    for (const headers of refused) {
+      const response = await post(dependencies, listTools, { headers });
+
+      assertEquals(response.status, 400, JSON.stringify(headers));
+      assertEquals((await response.json()).error.code, "invalid_request");
+    }
+    const noDate = await post(dependencies, listTools, { omitHeaders: ["x-kilo-local-date"] });
+    assertEquals(noDate.status, 400);
+    const noTime = await post(dependencies, listTools, { omitHeaders: ["x-kilo-local-time"] });
+    assertEquals(noTime.status, 200);
+  },
+);
+
+Deno.test(
+  "the turn the tool runs in carries the local date and time, and null when no time",
+  async () => {
+    const seen: unknown[] = [];
+    const reading: ToolDefinition = {
+      ...fakeReadTool("read_one").definition,
+      run: (ctx) => {
+        seen.push([ctx.turn.localDate, ctx.turn.localTime]);
+        return Promise.resolve({ data: null });
+      },
+    };
+    const { dependencies } = fake({ registry: createRegistry([reading]) });
+    const allowed = { "x-kilo-allowed-tools": "read_one" };
+
+    await post(dependencies, callTool("read_one", { note: "x" }), { headers: allowed });
+    await post(dependencies, callTool("read_one", { note: "x" }), {
+      headers: allowed,
+      omitHeaders: ["x-kilo-local-time"],
+    });
+
+    assertEquals(seen, [
+      ["2026-11-03", "08:10"],
+      ["2026-11-03", null],
+    ]);
+  },
+);
 
 Deno.test("a turn that is not the user's, not found, not open or too old is a 401", async () => {
   const cases: [string, FakeOptions][] = [

@@ -271,6 +271,82 @@ export function softDeleteLogEntry(client: SupabaseClient<Database>, id: string)
   return setDeletedAt(client, id, new Date().toISOString(), "delete the entry");
 }
 
+/** When an entry last changed, as the database stamped it (ADR 0003, Amendment 14 addendum). */
+export type LogEntryStamp = { id: string; updatedAt: string };
+
+const stampRowSchema = z.object({ id: z.string(), updated_at: z.string() });
+
+/**
+ * Removes several entries from the diary in one update, so they all get the same `deleted_at` and the
+ * same `updated_at` (the database stamps the transaction's time). Only live entries of the caller are
+ * touched: an id that is another user's, missing or already deleted changes nothing and is not in the
+ * answer. Resolves to the id and the new stamp of each entry it deleted.
+ *
+ * With `onlyIfUpdatedAt`, an entry is deleted only while its `updated_at` is still that stamp, so a change
+ * made after the caller last read the stamp is never deleted over.
+ */
+export async function softDeleteLogEntries(
+  client: SupabaseClient<Database>,
+  ids: readonly string[],
+  { onlyIfUpdatedAt }: { onlyIfUpdatedAt?: string } = {},
+): Promise<LogEntryStamp[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const deleting = client
+    .from("food_log_entries")
+    .update({ deleted_at: new Date().toISOString() })
+    .in("id", [...ids])
+    .is("deleted_at", null);
+  const { data, error } = await (
+    onlyIfUpdatedAt === undefined ? deleting : deleting.eq("updated_at", onlyIfUpdatedAt)
+  ).select("id,updated_at");
+
+  if (error) {
+    throw repoError("delete the entries", error);
+  }
+  return data.map((row) => {
+    const { id, updated_at: updatedAt } = parseRow(
+      stampRowSchema,
+      row,
+      "read the deleted entries",
+      idOfRow,
+    );
+    return { id, updatedAt };
+  });
+}
+
+const stateRowSchema = stampRowSchema.extend({ deleted_at: z.string().nullable() });
+
+/** An entry's stamp and whether it is deleted. */
+export type LogEntryState = LogEntryStamp & { isDeleted: boolean };
+
+/**
+ * Reads the stamp and the deleted state of entries by id, live or deleted, for the caller's own. An id
+ * that is not the caller's or does not exist is not in the answer. This is how Undo tells whether the
+ * person changed an entry since the assistant did.
+ */
+export async function readLogEntryStamps(
+  client: SupabaseClient<Database>,
+  ids: readonly string[],
+): Promise<LogEntryState[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  const { data, error } = await client
+    .from("food_log_entries")
+    .select("id,updated_at,deleted_at")
+    .in("id", [...ids]);
+
+  if (error) {
+    throw repoError("read the entries", error);
+  }
+  return data.map((row) => {
+    const parsed = parseRow(stateRowSchema, row, "read the entries", idOfRow);
+    return { id: parsed.id, updatedAt: parsed.updated_at, isDeleted: parsed.deleted_at !== null };
+  });
+}
+
 /** Brings a deleted entry back by clearing `deleted_at` (the Undo of a delete). Throws when the entry is not visible to the caller. */
 export function restoreLogEntry(client: SupabaseClient<Database>, id: string): Promise<void> {
   return setDeletedAt(client, id, null, "restore the entry");

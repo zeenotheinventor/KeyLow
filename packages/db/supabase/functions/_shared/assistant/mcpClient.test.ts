@@ -2,7 +2,8 @@ import { assert, assertEquals, assertInstanceOf, assertRejects } from "@std/asse
 
 import { connectToolServer, McpClientError, mayRetry } from "./mcpClient.ts";
 import { readToolName, startTestServer, writeToolName } from "./mcpTestServer.ts";
-import { spyOnConsole, turnId } from "./testing.ts";
+import { createRegistry } from "./registry.ts";
+import { fakeReadTool, fakeWriteTool, spyOnConsole, turnId } from "./testing.ts";
 
 import type { ConnectToolServerOptions } from "./mcpClient.ts";
 import type { RecordedRequest, TestServer, TestServerOptions } from "./mcpTestServer.ts";
@@ -33,6 +34,8 @@ function connectionOptions(
     turnId,
     accessToken,
     allowedTools,
+    localDate: "2026-11-03",
+    localTime: "08:10",
     turnHasAction: noActionRow,
     ...overrides,
   };
@@ -104,6 +107,51 @@ Deno.test(
             assert(!value.includes(accessToken), `${name} holds the token`);
           }
         }
+      }
+    });
+  },
+);
+
+Deno.test("listTools says which tools are strict, and a tool that opted out is not", async () => {
+  const registry = createRegistry([
+    fakeReadTool(readToolName).definition,
+    { ...fakeWriteTool({ name: writeToolName }).definition, strict: false },
+  ]);
+  await withServer({ registry }, async (server) => {
+    const connection = await connectToolServer(connectionOptions(server));
+
+    const tools = await connection.listTools();
+
+    assertEquals(
+      tools.map((tool) => tool.strict),
+      [true, false],
+    );
+    await connection.close();
+  });
+});
+
+Deno.test(
+  "every request carries the turn's local date and time, and no time header when there is none",
+  async () => {
+    await withServer({}, async (server) => {
+      const connection = await connectToolServer(connectionOptions(server));
+      await connection.listTools();
+      await connection.close();
+
+      assert(server.requests.length >= 3);
+      for (const request of server.requests) {
+        assertEquals(request.headers.get("x-kilo-local-date"), "2026-11-03");
+        assertEquals(request.headers.get("x-kilo-local-time"), "08:10");
+      }
+    });
+    await withServer({}, async (server) => {
+      const connection = await connectToolServer(connectionOptions(server, { localTime: null }));
+      await connection.listTools();
+      await connection.close();
+
+      for (const request of server.requests) {
+        assertEquals(request.headers.get("x-kilo-local-date"), "2026-11-03");
+        assertEquals(request.headers.get("x-kilo-local-time"), null);
       }
     });
   },

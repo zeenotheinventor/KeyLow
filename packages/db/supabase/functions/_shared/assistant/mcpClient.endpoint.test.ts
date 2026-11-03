@@ -92,6 +92,8 @@ function options(
     turnId,
     accessToken: tokenOfUser,
     allowedTools: ["read_one"],
+    localDate: "2026-11-03",
+    localTime: "08:10",
     turnHasAction: () => Promise.resolve(false),
     ...overrides,
   };

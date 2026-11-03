@@ -66,6 +66,7 @@ The function is reachable from the internet like every Edge Function, so it does
 - These checks stop a stolen URL or token from running tools outside an open turn of that user.
 - Every tool runs under the caller's JWT, so row-level security scopes each result by construction. A cross-user case is proved at the RLS layer in two-user tests, not by the model's refusal.
 - The turn's tool allowlist travels in the `X-Kilo-Allowed-Tools` header (next section). `tools/list` is never filtered per turn.
+- The turn's day and time travel in `X-Kilo-Local-Date` (required, a malformed one is a 400) and `X-Kilo-Local-Time` (optional), and `tools/list` carries each tool's `_meta["kilo/strict"]` (KEY-688, 2026-11-03).
 
 ### Two prompt-safety rules
 

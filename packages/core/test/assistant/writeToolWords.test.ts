@@ -1,7 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { loggedCard } from "./cardFixtures";
-import { describeAssistantChange, mergeAssistantCards } from "../../src/assistant";
+import {
+  buildLoggedCard,
+  cardEntryOfRow,
+  describeAssistantChange,
+  mergeAssistantCards,
+  withActionIds,
+} from "../../src/assistant";
+import { buildLogEntry } from "../../src/diary";
+import { buildFood, buildFoodPortion } from "../../src/testing";
+
+import type { CardEntry } from "../../src/assistant";
 
 const secondActionId = "00000000-0000-4000-8000-0000000000d3";
 
@@ -66,12 +76,13 @@ describe("mergeAssistantCards", () => {
     ]);
   });
 
-  it("should fall back to the plain title and drop the lines that described only one call", () => {
-    const merged = mergeAssistantCards([loggedCard, second]);
+  it("should fall back to the plain title and drop the lines of a kind with no merger of its own", () => {
+    const copied = { ...loggedCard, kind: "day_copied" as const };
+    const merged = mergeAssistantCards([copied, { ...second, kind: "day_copied" as const }]);
 
     expect(merged).toMatchObject({
-      kind: "logged",
-      title: "Logged 3 entries",
+      kind: "day_copied",
+      title: "Copied a day",
       sub: null,
       totalText: null,
       note: null,
@@ -80,3 +91,109 @@ describe("mergeAssistantCards", () => {
     });
   });
 });
+
+describe("the log_entry words", () => {
+  const stored = (id: string, insert: object, clockTime: string) => ({
+    id,
+    clock_time: clockTime,
+    created_at: "2026-11-03T08:11:00+00:00",
+    kcal: 1,
+    ...insert,
+  });
+  const eggs = stored(
+    "00000000-0000-4000-8000-0000000000c1",
+    buildLogEntry({
+      food: buildFood({
+        name: "Egg, boiled",
+        kcal: 144,
+        protein_g: 12.6,
+        carbs_g: 0.8,
+        fat_g: 9.5,
+      }),
+      quantity: 2,
+      unit: "portion",
+      portion: buildFoodPortion({ label: "large egg", grams: 50 }),
+      loggedAt: "2026-11-03T08:10:00.000Z",
+      localDate: "2026-11-03",
+    }),
+    "08:10",
+  );
+  const toast = stored(
+    "00000000-0000-4000-8000-0000000000c2",
+    buildLogEntry({
+      food: buildFood({
+        name: "Toast, white bread",
+        kcal: 293.3333,
+        protein_g: 9.3333,
+        carbs_g: 54.6667,
+        fat_g: 3,
+      }),
+      quantity: 1,
+      unit: "portion",
+      portion: buildFoodPortion({ label: "slice", grams: 30 }),
+      loggedAt: "2026-11-03T08:10:00.000Z",
+      localDate: "2026-11-03",
+    }),
+    "08:10",
+  );
+
+  it("should word a change by the entries it wrote, as the changes board does", () => {
+    expect(
+      describeAssistantChange({
+        tool: "log_entry",
+        actionCount: 2,
+        targets: [
+          { id: eggs.id, row: eggs },
+          { id: toast.id, row: toast },
+        ],
+      }),
+    ).toEqual({ title: "Logged 2 eggs and toast at 08:10", detail: "2 entries" });
+  });
+
+  it("should give a single entry no detail, and fall back to the plain title for a row that is gone", () => {
+    expect(
+      describeAssistantChange({
+        tool: "log_entry",
+        actionCount: 1,
+        targets: [{ id: toast.id, row: toast }],
+      }),
+    ).toEqual({ title: "Logged toast at 08:10", detail: null });
+    expect(
+      describeAssistantChange({
+        tool: "log_entry",
+        actionCount: 1,
+        targets: [{ id: toast.id, row: null }],
+      }),
+    ).toEqual({ title: "Logged 1 entry", detail: null });
+  });
+
+  it("should merge the cards of two calls into the board's one card", () => {
+    const ids: [string, string] = [
+      "00000000-0000-4000-8000-0000000000d1",
+      "00000000-0000-4000-8000-0000000000d2",
+    ];
+    const merged = mergeAssistantCards([
+      withActionIds(buildLoggedCard([mustEntry(eggs)]), [ids[0]]),
+      withActionIds(buildLoggedCard([mustEntry(toast)]), [ids[1]]),
+    ]);
+
+    expect(merged).toMatchObject({
+      kind: "logged",
+      actionIds: ids,
+      title: "Logged 2 eggs and toast at 08:10",
+      undoneSub: "Removed 2 eggs and toast from 08:10",
+    });
+    expect(merged.rows.map((row) => row.name)).toEqual(["Egg, boiled", "Toast, white bread"]);
+    // The eggs printed P 13 g (12.6 rounded), so the sum of the printed figures is P 16 g where the board
+    // adds the unrounded entries and prints P 15 g. The other figures agree with the board.
+    expect(merged.totalText).toBe("232 kcal · P 16 g · C 17 g · F 10 g");
+  });
+});
+
+function mustEntry(row: unknown): CardEntry {
+  const entry = cardEntryOfRow(row, "UTC");
+  if (entry === null) {
+    throw new Error("The fixture row is not an entry");
+  }
+  return entry;
+}

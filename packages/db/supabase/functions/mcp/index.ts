@@ -6,6 +6,9 @@
 //   change to this function.
 // - A request needs the user's JWT, `?turn=<id>` naming that user's open turn under five minutes old,
 //   and `X-Kilo-Allowed-Tools` for the tools the turn may call. A missing header refuses every call.
+// - It also needs `X-Kilo-Local-Date` (YYYY-MM-DD, else 400) and may send `X-Kilo-Local-Time` (HH:MM),
+//   the day and hour of the turn's sheet, which a write defaults to. `tools/list` says in each tool's
+//   `_meta["kilo/strict"]` whether the model's API should hold it to its schema.
 // - `tools/call` answers the executor's wrapped text as `content`, which is all the model reads, and
 //   its outcome as `structuredContent`, which only the turn loop reads. Nothing here logs an argument
 //   or a result.

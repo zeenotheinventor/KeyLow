@@ -32,9 +32,25 @@ export type McpDependencies = {
 };
 
 const allowedToolsHeader = "x-kilo-allowed-tools";
+const localDateHeader = "x-kilo-local-date";
+const localTimeHeader = "x-kilo-local-time";
 const turnMaxAgeMilliseconds = 5 * 60 * 1000;
 
 const turnIdSchema = z.guid();
+const localDateSchema = z.iso.date();
+const localTimeSchema = z.iso.time({ precision: -1 });
+
+// The day the sheet was opened on and, when the Describe sheet knows it, the hour. Ki-Lo's own client
+// sends them on every request, because a write defaults to them when the person names no day or time.
+function localMomentOf(request: Request): { localDate: string; localTime: string | null } | null {
+  const date = localDateSchema.safeParse(request.headers.get(localDateHeader));
+  const timeHeader = request.headers.get(localTimeHeader);
+  const time = timeHeader === null ? null : localTimeSchema.safeParse(timeHeader);
+  if (!date.success || (time !== null && !time.success)) {
+    return null;
+  }
+  return { localDate: date.data, localTime: time === null ? null : time.data };
+}
 
 // An absent header is an empty set, and then the executor refuses every call.
 function allowedToolsOf(request: Request): ReadonlySet<string> {
@@ -56,7 +72,12 @@ export function createMcpEndpoint(
 ): (request: Request) => Promise<Response> {
   const { turns, registry, now } = dependencies;
 
-  function serve(request: Request, user: { id: string }, turn: McpTurn): Promise<Response> {
+  function serve(
+    request: Request,
+    user: { id: string },
+    turn: McpTurn,
+    localMoment: { localDate: string; localTime: string | null },
+  ): Promise<Response> {
     const caller = dependencies.caller(request);
     const allowedTools = allowedToolsOf(request);
 
@@ -92,7 +113,12 @@ export function createMcpEndpoint(
         caller,
         actions: dependencies.actions,
         userId: user.id,
-        turn: { id: turn.id, conversationId: turn.conversationId, userMessageText },
+        turn: {
+          id: turn.id,
+          conversationId: turn.conversationId,
+          userMessageText,
+          ...localMoment,
+        },
         registry,
         allowedTools,
         reportError: dependencies.report,
@@ -120,6 +146,13 @@ export function createMcpEndpoint(
     if (!turnId.success) {
       return error("invalid_request", "Send the id of the open turn as ?turn=.");
     }
+    const localMoment = localMomentOf(request);
+    if (localMoment === null) {
+      return error(
+        "invalid_request",
+        "Send the day as X-Kilo-Local-Date, YYYY-MM-DD, and the time, if any, as X-Kilo-Local-Time, HH:MM.",
+      );
+    }
     const turn = await turns.findTurn(user.id, turnId.data);
     const open =
       turn !== null &&
@@ -129,6 +162,6 @@ export function createMcpEndpoint(
       logGate(user.id, "turn_not_open", startedAt);
       return error("unauthorized", "That turn is not open.");
     }
-    return await serve(request, user, turn);
+    return await serve(request, user, turn, localMoment);
   };
 }

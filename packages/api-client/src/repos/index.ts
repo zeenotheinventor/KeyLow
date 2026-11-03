@@ -16,7 +16,9 @@ export {
   logEntries,
   logFood,
   logQuickEntry,
+  readLogEntryStamps,
   restoreLogEntry,
+  softDeleteLogEntries,
   softDeleteLogEntry,
   updateLogEntry,
 } from "./diaryWrites";
@@ -24,6 +26,8 @@ export type {
   EntryTimeChange,
   EntryUpdate,
   LogEntriesItem,
+  LogEntryStamp,
+  LogEntryState,
   LogFoodInput,
   LogQuickEntryInput,
   QuickEntryValues,
