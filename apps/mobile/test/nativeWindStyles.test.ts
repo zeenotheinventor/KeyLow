@@ -1,13 +1,15 @@
 import { compileStylesWithCache } from "./support/nativeWindStyles";
 
 // Typed by hand because the app has no Node type definitions.
-const { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } = jest.requireActual<{
-  mkdtempSync: (prefix: string) => string;
-  readdirSync: (path: string) => string[];
-  readFileSync: (path: string, encoding: "utf8") => string;
-  rmSync: (path: string, options: { recursive: true; force: true }) => void;
-  writeFileSync: (path: string, data: string) => void;
-}>("node:fs");
+const { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } =
+  jest.requireActual<{
+    mkdirSync: (path: string) => void;
+    mkdtempSync: (prefix: string) => string;
+    readdirSync: (path: string) => string[];
+    readFileSync: (path: string, encoding: "utf8") => string;
+    rmSync: (path: string, options: { recursive: true; force: true }) => void;
+    writeFileSync: (path: string, data: string) => void;
+  }>("node:fs");
 const { tmpdir } = jest.requireActual<{ tmpdir: () => string }>("node:os");
 
 const globalStyles = "@tailwind utilities;";
@@ -49,6 +51,7 @@ describe("compileStylesWithCache", () => {
       cacheDirectory,
     });
 
+    expect(cached).not.toBe(compiled);
     expect(cached).toBe(compiled.replace("p-1", "marked"));
     expect(cachedFiles()).toHaveLength(1);
   });
@@ -73,6 +76,39 @@ describe("compileStylesWithCache", () => {
 
     expect(css).toContain(".added-rule");
     expect(cachedFiles()).toHaveLength(2);
+  });
+
+  it("should still return the styles when the cache folder cannot be written", async () => {
+    const compiled = await compileStylesWithCache({
+      classNames: "p-1",
+      globalStyles,
+      cacheDirectory,
+    });
+    const fileInTheWay = `${cacheDirectory}/not-a-folder`;
+    writeFileSync(fileInTheWay, "");
+
+    const css = await compileStylesWithCache({
+      classNames: "p-1",
+      globalStyles,
+      cacheDirectory: `${fileInTheWay}/kit-styles`,
+    });
+
+    expect(css).toBe(compiled);
+  });
+
+  it("should compile again when the cache entry cannot be read", async () => {
+    const compiled = await compileStylesWithCache({
+      classNames: "p-1",
+      globalStyles,
+      cacheDirectory,
+    });
+    const entry = `${cacheDirectory}/${cachedFiles()[0]}`;
+    rmSync(entry, { recursive: true, force: true });
+    mkdirSync(entry);
+
+    const css = await compileStylesWithCache({ classNames: "p-1", globalStyles, cacheDirectory });
+
+    expect(css).toBe(compiled);
   });
 
   it("should leave no temporary file behind", async () => {

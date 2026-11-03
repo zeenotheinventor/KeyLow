@@ -10,13 +10,15 @@ type Hash = { update: (data: string) => Hash; digest: (encoding: "hex") => strin
 const { createHash } = jest.requireActual<{ createHash: (algorithm: "sha256") => Hash }>(
   "node:crypto",
 );
-const { mkdirSync, readFileSync, readdirSync, renameSync, writeFileSync } = jest.requireActual<{
-  mkdirSync: (path: string, options: { recursive: true }) => void;
-  readFileSync: (path: string, encoding: "utf8") => string;
-  readdirSync: (path: string, options: { recursive: true; encoding: "utf8" }) => string[];
-  renameSync: (from: string, to: string) => void;
-  writeFileSync: (path: string, data: string) => void;
-}>("node:fs");
+const { mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } =
+  jest.requireActual<{
+    mkdirSync: (path: string, options: { recursive: true }) => void;
+    readFileSync: (path: string, encoding: "utf8") => string;
+    readdirSync: (path: string, options: { recursive: true; encoding: "utf8" }) => string[];
+    renameSync: (from: string, to: string) => void;
+    unlinkSync: (path: string) => void;
+    writeFileSync: (path: string, data: string) => void;
+  }>("node:fs");
 const { dirname } = jest.requireActual<{ dirname: (path: string) => string }>("node:path");
 
 const defaultCacheDirectory = "node_modules/.cache/kit-styles";
@@ -63,6 +65,8 @@ function configurationSources(): string[] {
 
   return [
     readFileSync("tailwind.config.js", "utf8"),
+    // A catch-all for a change deep in a dependency that no version above shows.
+    readFileSync("../../pnpm-lock.yaml", "utf8"),
     readFileSync(__filename, "utf8"),
     ...filesIn(tokensSourceDirectory),
   ];
@@ -91,18 +95,30 @@ function readCached(file: string): string | undefined {
   }
 }
 
-/** Writes beside the final file and renames into place, so a worker that reads never sees half a file. */
+/**
+ * Writes beside the final file and renames into place, so a worker that reads never sees half a file.
+ * The cache only saves time, so a folder that cannot be written (read-only, full, no permission)
+ * costs the saving and nothing else.
+ */
 function writeCached(directory: string, file: string, css: string): void {
-  mkdirSync(directory, { recursive: true });
   const temporaryFile = `${file}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  writeFileSync(temporaryFile, css);
-  renameSync(temporaryFile, file);
+  try {
+    mkdirSync(directory, { recursive: true });
+    writeFileSync(temporaryFile, css);
+    renameSync(temporaryFile, file);
+  } catch {
+    try {
+      unlinkSync(temporaryFile);
+    } catch {
+      // There was no temporary file to remove.
+    }
+  }
 }
 
 /**
  * Compiles the app's Tailwind config and `global.css` for the class names given, or returns the
  * styles an earlier compile of exactly the same inputs left in the cache folder. The key covers the
- * class names, `global.css`, the config and the tokens it loads, the versions of the packages that
+ * class names, `global.css`, the config and the tokens it loads, the lockfile, the versions of the packages that
  * build the styles, and the NativeWind platform, so changed sources are never served stale.
  */
 export async function compileStylesWithCache(inputs: CompileInputs): Promise<string> {
