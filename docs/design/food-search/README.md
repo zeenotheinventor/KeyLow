@@ -152,3 +152,18 @@ Where the sources disagree, the order is: Zee's rulings, then the Ki-Lo design s
 - **Open Food Facts is searched live only when the local search finds fewer than 5 foods.** Its failure is a quiet neutral banner, never red, because the user's own results still work. The rate-limited variant reads "Open Food Facts is busy. Try again in 30 seconds." and has no retry button, since the search runs again when the query changes.
 - **`history-proposal` is not M2 scope.** MacroFactor opens search on Favourites and Recent. That needs food logging, so it is drawn as a proposal for M3 only and nothing is built from it.
 - **Out of scope for M2:** logging, portions and quantities, the multi-add "+" on rows, a plate, quick add, filters and sorting.
+- **Favourites (Zee, 2026-11-03).** Drawn by hand and approved by Zee on 2026-11-03, see "Favourites proposal" below. It supersedes the strip in `history-proposal` for the log search. The log search idle state is Quick add, then a "Favourites" strip, then Recent. The strip scrolls sideways and the last tile is cut off at the screen edge to show that. A food tile has the food icon (Utensils) and a recipe tile has the recipe icon (ChefHat). Long names are cut with an ellipsis on one line. A tap on a tile opens the amount step, as a tap on a Recent row does. The strip is hidden when there are no favourites, so there is no empty state. Foods and recipes share one cap of 30. A deleted or archived food or recipe drops out of the strip. Favourites are marked with the heart on food detail and on the recipe view (see [`../food-detail/README.md`](../food-detail/README.md)), and toggling shows the toast "Added to favourites" or "Removed from favourites" (British spelling, Zee wrote it American).
+
+## Favourites proposal
+
+This board is drawn by hand, not exported from the canvas, so it lives in `proposals/` where `tools/design-export` does not look for boards. Zee approved it on 2026-11-03. The PNG is 820 by 844 at device pixel ratio 2, dark on the left and light on the right. It draws the log search as the app has it today (`LogIdle`: the "Log food" header, the day's macro strip, Quick add, Recent with its plus buttons, the docked search field) with the strip added, and the plate empty.
+
+### favourites
+
+The log search idle state with the Favourites strip between Quick add and Recent: two recipes and four foods, the fifth tile cut off at the right edge.
+
+![food-search favourites](proposals/favourites.png)
+
+Open [proposals/favourites.html](proposals/favourites.html) in a browser.
+
+Settled with Zee on 2026-11-03 (defaults accepted): the strip is ordered most recently favourited first, with foods and recipes mixed rather than grouped, and a tile shows the name only, not its last amount.
