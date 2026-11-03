@@ -2,7 +2,13 @@ import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { keys } from "../src/queryKeys";
-import { addToLibrary, libraryNames, setLibraryFlag, summaryOf } from "../src/recipeCache";
+import {
+  addToLibrary,
+  libraryNames,
+  setLibraryFlag,
+  summaryOf,
+  summaryOfStoredRecipe,
+} from "../src/recipeCache";
 import { recipeDetailRow, recipeSummaryRow } from "./support/recipes";
 import { seedDiaryQueries } from "./support/recipeWrites";
 
@@ -40,6 +46,19 @@ describe("summaryOf", () => {
 
     expect(Object.keys(summary).sort()).toEqual(SUMMARY_FIELDS);
     expect(summary).toMatchObject({ id: COPY_ID, name: "Chicken and rice (copy)" });
+  });
+});
+
+describe("summaryOfStoredRecipe", () => {
+  it("should give the library columns of a recipe in hand, with its nutrition worked out from its ingredients", () => {
+    const detail = detailOf(COPY_ID, "Chicken and rice");
+    const { computed, ...recipe } = detail;
+
+    const summary = summaryOfStoredRecipe(recipe);
+
+    expect(Object.keys(summary).sort()).toEqual(SUMMARY_FIELDS);
+    expect(summary.computed).toEqual(computed);
+    expect(summary).toEqual(summaryOf(detail));
   });
 });
 

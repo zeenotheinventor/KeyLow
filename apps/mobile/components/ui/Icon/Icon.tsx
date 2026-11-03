@@ -24,6 +24,7 @@ export function Icon({
   size = "md",
   tone = "primary",
   strokeWidth = iconStroke,
+  isFilled = false,
   label,
 }: IconProps) {
   const theme = useTheme();
@@ -39,6 +40,7 @@ export function Icon({
   return (
     <LucideIcon
       color={color}
+      fill={isFilled ? color : "none"}
       size={typeof size === "number" ? size : iconSize[size]}
       strokeWidth={strokeWidth}
       {...accessibility}

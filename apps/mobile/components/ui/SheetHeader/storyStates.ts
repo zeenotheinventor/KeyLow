@@ -1,9 +1,13 @@
 export const storyStates = [
   "Search",
+  "Quiet",
   "Detail",
+  "DetailFavouriteOff",
+  "DetailFavouriteOn",
   "Form",
   "Scanner",
   "TwoControls",
+  "ThreeControls",
   "TwoControlsStack",
   "TwoControlsDisabled",
   "ControlAndSlot",

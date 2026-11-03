@@ -1,7 +1,7 @@
-export { SheetHeader } from "./SheetHeader";
+export { SheetHeader, sheetHeaderHeight } from "./SheetHeader";
 export type {
   SheetHeaderControl,
-  SheetHeaderControlPair,
+  SheetHeaderControlGroup,
   SheetHeaderProps,
   SheetHeaderVariant,
 } from "./types";

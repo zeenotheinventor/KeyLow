@@ -4,7 +4,12 @@ import { ScrollView, Text as NativeText, View } from "react-native";
 import { useCappedLineHeight } from "../../../lib/useCappedLineHeight";
 import { PressableSurface } from "../PressableSurface";
 
-import type { ChipGroupClearableProps, ChipGroupMultipleProps, ChipGroupProps } from "./types";
+import type {
+  ChipGroupActionProps,
+  ChipGroupClearableProps,
+  ChipGroupMultipleProps,
+  ChipGroupProps,
+} from "./types";
 
 // The body's own line height, and how far its font may grow at large text. The chip is a fixed 36 points.
 const labelLineHeight = 24;
@@ -24,10 +29,12 @@ const chipLooks = {
   },
 } as const;
 
-// One choice has the radios of a radio group. Several are checkboxes in a plain group.
+// One choice has the radios of a radio group. Several are checkboxes in a plain group. An action chip is a
+// button in a plain group, because nothing is chosen.
 const selectionRoles = {
   single: { group: "radiogroup", chip: "radio" },
   multiple: { group: "group", chip: "checkbox" },
+  action: { group: "group", chip: "button" },
 } as const;
 
 // The scroll layout reaches the 44 point touch target with padding inside its clipping row. The wrap layout
@@ -36,7 +43,10 @@ const selectionRoles = {
 const wrapChipHitSlop = { top: 4, bottom: 4 };
 
 type ChipGroupAnyProps<Value extends string> =
-  ChipGroupProps<Value> | ChipGroupClearableProps<Value> | ChipGroupMultipleProps<Value>;
+  | ChipGroupProps<Value>
+  | ChipGroupClearableProps<Value>
+  | ChipGroupMultipleProps<Value>
+  | ChipGroupActionProps<Value>;
 
 // The chips of the scroll and wrap layouts are 36 points and as wide as their label. The equal layout's are
 // 44 points, the set entry board's, and share the line equally, so a few short labels fill it.
@@ -46,7 +56,11 @@ const chipSizeClassName = {
   equal: "h-control-md px-0",
 } as const;
 
-type ChipChoice = { isChosen: boolean; haptic: "select" | undefined; press: () => void };
+type ChipChoice = {
+  isChosen: boolean;
+  haptic: "select" | undefined;
+  press: () => void;
+};
 
 // What one chip says and does. One choice moves to the pressed chip, and pressing the chosen chip changes
 // nothing, so it plays no haptic and says nothing. Several each toggle on their own, the others untouched.
@@ -54,6 +68,9 @@ function chipChoice<Value extends string>(
   group: ChipGroupAnyProps<Value>,
   optionValue: Value,
 ): ChipChoice {
+  if (group.selection === "action") {
+    return { isChosen: false, haptic: "select", press: () => undefined };
+  }
   if (group.selection === "multiple") {
     const isChosen = group.value.includes(optionValue);
     return {
@@ -108,10 +125,16 @@ function chipChoice<Value extends string>(
  *
  * With `selection="multiple"` the group is a plain group of checkboxes and the screen keeps a list of
  * values, to which each press adds the chip or from which it takes it out.
+ *
+ * With `selection="action"` the chips are one-shot buttons in a plain group, for a quick reply: nothing is
+ * chosen, no chip is ever drawn selected, and `onChipPress` does the work.
  */
 export function ChipGroup<Value extends string>(props: ChipGroupAnyProps<Value>) {
   const { label, options, layout = "scroll", className = "" } = props;
-  const roles = selectionRoles[props.selection === "multiple" ? "multiple" : "single"];
+  const roles =
+    selectionRoles[
+      props.selection === "single" || props.selection === undefined ? "single" : props.selection
+    ];
   const lineHeight = useCappedLineHeight(labelLineHeight, maxFontScale);
 
   const chips = options.map((option) => {
@@ -121,7 +144,7 @@ export function ChipGroup<Value extends string>(props: ChipGroupAnyProps<Value>)
     return (
       <PressableSurface
         key={option.value}
-        checked={isChosen}
+        checked={props.selection === "action" ? undefined : isChosen}
         className={`${chipSizeClassName[layout]} items-center justify-center rounded-pill border ${look.chipClassName}`}
         haptic={haptic}
         hitSlop={layout === "wrap" ? wrapChipHitSlop : undefined}

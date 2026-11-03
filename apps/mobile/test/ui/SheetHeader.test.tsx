@@ -1,9 +1,9 @@
-import { controlHeight, iconSize, touchTarget } from "@keylow/tokens";
+import { controlHeight, iconSize, themes, touchTarget } from "@keylow/tokens";
 import { render, screen, userEvent } from "@testing-library/react-native";
 import { AccessibilityInfo } from "react-native";
 import { setUpTests } from "react-native-reanimated";
 
-import { Button, SheetHeader, Text } from "../../components/ui";
+import { Button, SheetHeader, Text, sheetHeaderHeight } from "../../components/ui";
 import { ThemeProvider } from "../../lib/theme";
 import { compileKitStyles } from "../support/kitStyles";
 import { registerAppStyles } from "../support/nativeWindStyles";
@@ -29,6 +29,13 @@ const stackHeader: SheetHeaderProps = {
   variant: "stack",
   title: "New food",
   leading: { icon: "ChevronLeft", label: "Back", onPress: () => undefined },
+  trailing: { icon: "X", label: "Close", onPress: () => undefined },
+};
+
+const quietHeader: SheetHeaderProps = {
+  variant: "quiet",
+  title: "Assistant",
+  leading: { icon: "SquarePen", label: "New conversation", onPress: () => undefined },
   trailing: { icon: "X", label: "Close", onPress: () => undefined },
 };
 
@@ -59,6 +66,12 @@ function expectButtonsInOrder(names: readonly string[]) {
   });
 }
 
+describe("sheetHeaderHeight", () => {
+  it("should be the 44 point controls with each variant's padding, as the boards draw them", () => {
+    expect(sheetHeaderHeight).toEqual({ sheet: 68, quiet: 56, stack: 64 });
+  });
+});
+
 describe("SheetHeader", () => {
   let kitStyles: string;
 
@@ -75,6 +88,78 @@ describe("SheetHeader", () => {
     jest.restoreAllMocks();
   });
 
+  it.each([
+    { variant: "sheet", header: searchHeader, paddingTop: 12 },
+    { variant: "quiet", header: quietHeader, paddingTop: 4 },
+    { variant: "stack", header: stackHeader, paddingTop: 12 },
+  ] as const)(
+    "is as tall as sheetHeaderHeight says for the $variant header: 44 point controls and its padding",
+    async ({ variant, header, paddingTop }) => {
+      await renderHeader(header);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingTop,
+        paddingBottom: sheetHeaderHeight[variant] - touchTarget - paddingTop,
+      });
+    },
+  );
+
+  describe("the quiet header, which heads the assistant sheet", () => {
+    it("should draw clear controls with no fill and no border, as the board's ghost buttons are", async () => {
+      await renderHeader(quietHeader);
+
+      for (const name of ["New conversation", "Close"]) {
+        const control = screen.getByRole("button", { name });
+        expect(control).toHaveStyle({ backgroundColor: transparent });
+        expect(control.props.style).not.toHaveProperty("borderWidth", 1);
+      }
+    });
+
+    it("should draw the glyphs in the secondary text colour", async () => {
+      await renderHeader(quietHeader);
+
+      expect(drawings()).toHaveLength(2);
+      for (const drawing of drawings()) {
+        expect(drawing).toHaveProp("stroke", themes.dark["text-secondary"]);
+      }
+    });
+
+    it("should give 12 points at the sides, 4 above and 8 below", async () => {
+      await renderHeader(quietHeader);
+
+      expect(screen.getByTestId("sheet-header")).toHaveStyle({
+        paddingLeft: 12,
+        paddingRight: 12,
+        paddingTop: 4,
+        paddingBottom: 8,
+      });
+    });
+
+    it("should set the title in the h2 style, centred", async () => {
+      await renderHeader(quietHeader);
+
+      expect(screen.getByRole("heading", { name: "Assistant" })).toHaveStyle({
+        fontSize: 20,
+        lineHeight: 26,
+        textAlign: "center",
+      });
+    });
+
+    it("should dim a disabled control and stop it responding", async () => {
+      await renderHeader({
+        ...quietHeader,
+        leading: {
+          icon: "SquarePen",
+          label: "New conversation",
+          disabled: true,
+          onPress: jest.fn(),
+        },
+      });
+
+      expect(screen.getByRole("button", { name: "New conversation" })).toBeDisabled();
+    });
+  });
+
   describe("the sheet header, which heads the search sheet", () => {
     it("should head the sheet with its title between a close control and a create control", async () => {
       await renderHeader(searchHeader);
@@ -82,6 +167,27 @@ describe("SheetHeader", () => {
       expect(screen.getByRole("heading", { name: "Find food" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Close" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Create a food" })).toBeOnTheScreen();
+    });
+
+    it("should draw three controls in the order they are given, with a filled one in the accent", async () => {
+      await renderHeader({
+        ...stackHeader,
+        title: "Chicken and rice",
+        trailing: [
+          {
+            icon: "Heart",
+            label: "Remove from favourites",
+            isFilled: true,
+            onPress: () => undefined,
+          },
+          { icon: "Pencil", label: "Edit Chicken and rice", onPress: () => undefined },
+          { icon: "Ellipsis", label: "More", onPress: () => undefined },
+        ],
+      });
+
+      expectButtonsInOrder(["Back", "Remove from favourites", "Edit Chicken and rice", "More"]);
+      expect(drawings()[1]).toHaveProp("fill", themes.dark.accent);
+      expect(drawings()[2]).toHaveProp("fill", "none");
     });
 
     it("should call the handler of the control that is pressed", async () => {

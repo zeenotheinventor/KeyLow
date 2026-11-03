@@ -26,6 +26,7 @@ export const jwt = "jwt-sentinel-5531";
 export type ScriptedBlock =
   | { type: "text"; text: string }
   | { type: "thinking"; thinking: string; signature: string }
+  | { type: "redacted_thinking"; data: string }
   // `rawJson` is streamed as the input instead of `input`, for an input the model got wrong.
   | { type: "tool_use"; id: string; name: string; input?: unknown; rawJson?: string };
 
@@ -89,7 +90,9 @@ function eventsOf(response: ScriptedResponse, index: number): { head: string[]; 
         ? { type: "text", text: "" }
         : block.type === "thinking"
           ? { type: "thinking", thinking: "", signature: "" }
-          : { type: "tool_use", id: block.id, name: block.name, input: {} };
+          : block.type === "redacted_thinking"
+            ? { type: "redacted_thinking", data: block.data }
+            : { type: "tool_use", id: block.id, name: block.name, input: {} };
     events.push(
       sse("content_block_start", {
         type: "content_block_start",
@@ -111,7 +114,7 @@ function eventsOf(response: ScriptedResponse, index: number): { head: string[]; 
         delta({ type: "thinking_delta", thinking: block.thinking }),
         delta({ type: "signature_delta", signature: block.signature }),
       );
-    } else {
+    } else if (block.type === "tool_use") {
       const json = block.rawJson ?? JSON.stringify(block.input ?? {});
       const middle = Math.floor(json.length / 2);
       events.push(

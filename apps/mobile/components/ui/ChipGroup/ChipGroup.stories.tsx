@@ -162,3 +162,22 @@ export const EqualColumnsRir: Story = {
 };
 
 export const ClearableRir: Story = { render: () => <ClearableRirChips /> };
+
+const quickReplies: ChipGroupOption<StoryUnit>[] = [
+  { value: "chicken-150", label: "1 chicken breast, 150 g rice" },
+  { value: "chicken-200", label: "1 chicken breast, 200 g rice" },
+  { value: "thighs", label: "2 chicken thighs, 200 g rice" },
+];
+
+// Quick replies: one-shot buttons that wrap and send at once. None is ever drawn chosen.
+export const QuickReplies: Story = {
+  render: () => (
+    <ChipGroup
+      label="Quick replies"
+      layout="wrap"
+      options={quickReplies}
+      selection="action"
+      onChipPress={() => undefined}
+    />
+  ),
+};

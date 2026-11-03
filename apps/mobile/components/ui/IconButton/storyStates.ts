@@ -5,5 +5,6 @@ export const storyStates = [
   "Primary",
   "Quiet",
   "Selected",
+  "Filled",
   "Disabled",
 ];

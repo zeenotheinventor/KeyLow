@@ -113,10 +113,11 @@ describe("the diary screen", () => {
   });
 
   describe("today", () => {
-    it("should be headed Today, with the calendar and more buttons drawn", async () => {
+    it("should be headed Today, with the assistant, calendar and more buttons drawn", async () => {
       await renderLoadedDiary();
 
       expect(screen.getByRole("heading", { name: "Today" })).toBeOnTheScreen();
+      expect(screen.getByRole("button", { name: "Assistant" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "Choose a date" })).toBeOnTheScreen();
       expect(screen.getByRole("button", { name: "More" })).toBeOnTheScreen();
     });

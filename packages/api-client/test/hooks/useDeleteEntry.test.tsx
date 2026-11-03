@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
+import { EntryNotFoundError } from "../../src/errors";
 import { useDeleteEntry } from "../../src/hooks/useDeleteEntry";
 import { useDiaryDay } from "../../src/hooks/useDiaryDay";
 import { useRecentFoods } from "../../src/hooks/useRecentFoods";
@@ -249,6 +250,7 @@ describe("useDeleteEntry", () => {
       await result.current.remove.mutateAsync(breakfast).catch(() => undefined);
     });
 
-    expect(result.current.remove.error?.message).toBe(`The entry ${breakfast.id} was not found`);
+    expect(result.current.remove.error).toBeInstanceOf(EntryNotFoundError);
+    expect(result.current.remove.error?.message).not.toContain(breakfast.id);
   });
 });

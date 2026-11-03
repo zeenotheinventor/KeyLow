@@ -83,6 +83,18 @@ export const CentredTitle: Story = {
   ),
 };
 
+// A fixed height sheet that opens at its taller snap point, as the assistant's consent card does.
+export const TallerSnapPoint: Story = {
+  args: { title: "Add exercise", snapPoints: ["60%", "90%"], snapIndex: 1, children: null },
+  render: (args) => (
+    <BottomSheet {...args}>
+      <View className="flex-1">
+        <Text>It opens at the second snap point, and drags down to the first.</Text>
+      </View>
+    </BottomSheet>
+  ),
+};
+
 // A fixed height sheet, for a list that scrolls: it is as tall as its snap point and the contents fill it. A
 // list inside it scrolls in `SheetScrollView`, which Jest cannot render, so the story fills it with a view.
 export const FixedHeight: Story = {

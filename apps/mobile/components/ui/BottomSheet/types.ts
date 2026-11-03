@@ -38,5 +38,11 @@ export type BottomSheetProps = {
    * itself to its contents.
    */
   snapPoints?: (string | number)[] | undefined;
+  /**
+   * Which of the `snapPoints` the sheet opens at, and moves to when the screen changes it while the sheet is
+   * open, such as the assistant's consent card at its taller one. Defaults to the first. Without `snapPoints`
+   * it has no effect.
+   */
+  snapIndex?: number | undefined;
   children?: ReactNode;
 };

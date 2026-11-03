@@ -1,4 +1,5 @@
 import { BODY_MAP, describeHeatStep, describeShortDate, joinInWords } from "./bodyMap";
+import { DASHBOARD_LOAD_FAILED } from "./dashboard";
 import { NO_TARGET_BANNER } from "./diary";
 import { DAY_STEPPER } from "./diaryDay";
 import { CALORIE_RING } from "./diaryRing";
@@ -72,10 +73,39 @@ export const WIDGET_STATES = {
     headline: "Couldn't log that. Nothing was saved.",
     body: "Check your connection, or log it in Ki-Lo.",
   },
+  couldntUndo: {
+    headline: "Couldn't undo that.",
+    body: DASHBOARD_LOAD_FAILED.body,
+  },
   sessionMovedOn: {
     eyebrow: "IN SESSION",
     headline: "Your session moved on",
     body: "The set on the widget no longer matches the app, so nothing was logged.",
+  },
+} as const;
+
+/**
+ * What the launcher's widget picker shows for each dashboard widget (board A's captions). The Android
+ * config plugin writes the same strings into the app's manifest, and a test keeps the two equal.
+ */
+export const WIDGET_GALLERY = {
+  today_ring: { label: "Today ring", description: "Calories left today, as a ring." },
+  today_macros: {
+    label: "Today with macros",
+    description: "Calories left today, with protein, carbs and fat.",
+  },
+  this_week: {
+    label: "This week",
+    description: "Your average this week and the days you completed.",
+  },
+  body_heat: { label: "Body heat", description: "The three warmest muscles right now." },
+  today_glance: {
+    label: "Today at a glance",
+    description: "Today, this week and training in one widget.",
+  },
+  body_map: {
+    label: "Body map",
+    description: "Your body map on heat or weekly volume, as set in More.",
   },
 } as const;
 

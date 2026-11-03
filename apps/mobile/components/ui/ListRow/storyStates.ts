@@ -1,6 +1,7 @@
 export const storyStates = [
   "Default",
   "Loading",
+  "WithTrailingIcon",
   "WithValue",
   "WithBadge",
   "Compact",

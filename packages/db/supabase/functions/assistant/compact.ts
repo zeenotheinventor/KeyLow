@@ -172,7 +172,10 @@ async function writeNote(
     throw new CompactionFailure("not_configured");
   }
   const request = buildCompactionRequest(
-    renderTranscript({ note: state.note?.summary ?? null, messages: toApiMessages(rows) }),
+    renderTranscript({
+      note: state.note?.summary ?? null,
+      messages: toApiMessages(rows, input.turnId),
+    }),
   );
   const startedAt = performance.now();
   let message: Anthropic.Message;

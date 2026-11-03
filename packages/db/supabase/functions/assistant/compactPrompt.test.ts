@@ -106,7 +106,10 @@ Deno.test(
 Deno.test(
   "the transcript holds the words, the replies, each call with its input and each result",
   () => {
-    const transcript = renderTranscript({ note: null, messages: toApiMessages(toolTurn) });
+    const transcript = renderTranscript({
+      note: null,
+      messages: toApiMessages(toolTurn, "turn-1"),
+    });
 
     assert(transcript.includes("log two eggs"));
     assert(transcript.includes("Today is Mon 2 Nov (2026-11-02) in Europe/London."));
@@ -119,7 +122,10 @@ Deno.test(
 Deno.test(
   "a tool result is rendered as stored, inside its untrusted_data wrapper, under its tool's name",
   () => {
-    const transcript = renderTranscript({ note: null, messages: toApiMessages(toolTurn) });
+    const transcript = renderTranscript({
+      note: null,
+      messages: toApiMessages(toolTurn, "turn-1"),
+    });
 
     assert(transcript.includes(searchResult));
     assert(transcript.includes("Result of search_foods"));
@@ -127,7 +133,7 @@ Deno.test(
 );
 
 Deno.test("thinking blocks are left out", () => {
-  const transcript = renderTranscript({ note: null, messages: toApiMessages(toolTurn) });
+  const transcript = renderTranscript({ note: null, messages: toApiMessages(toolTurn, "turn-1") });
 
   assertEquals(transcript.includes("private reasoning"), false);
   assertEquals(transcript.includes("sig-1"), false);
@@ -144,7 +150,7 @@ Deno.test("a run of user rows is one message", () => {
     stored("user", [{ type: "tool_result", tool_use_id: "call-2", content: "two" }]),
   ];
 
-  const transcript = renderTranscript({ note: null, messages: toApiMessages(history) });
+  const transcript = renderTranscript({ note: null, messages: toApiMessages(history, "turn-1") });
 
   // Two speakers' turns for the person: the words, then one message holding both results.
   assertEquals(transcript.split("Person:").length - 1, 2);
@@ -154,7 +160,7 @@ Deno.test("a run of user rows is one message", () => {
 Deno.test("the earlier note comes first, in its own tags", () => {
   const transcript = renderTranscript({
     note: "Logged 2 large eggs (100 g) on 2026-11-01.",
-    messages: toApiMessages(toolTurn),
+    messages: toApiMessages(toolTurn, "turn-1"),
   });
 
   assert(
@@ -166,7 +172,7 @@ Deno.test("the earlier note comes first, in its own tags", () => {
 });
 
 Deno.test("with no earlier note there is no previous_note tag", () => {
-  const transcript = renderTranscript({ note: null, messages: toApiMessages(toolTurn) });
+  const transcript = renderTranscript({ note: null, messages: toApiMessages(toolTurn, "turn-1") });
 
   assertEquals(transcript.includes("previous_note"), false);
   assert(transcript.startsWith("<transcript>"));
@@ -180,7 +186,7 @@ Deno.test(
       stored("user", [{ type: "tool_result", tool_use_id: "call-1", is_error: true }]),
     ];
 
-    const transcript = renderTranscript({ note: null, messages: toApiMessages(history) });
+    const transcript = renderTranscript({ note: null, messages: toApiMessages(history, "turn-1") });
 
     assert(transcript.includes("Result of delete_entry (error)"));
   },

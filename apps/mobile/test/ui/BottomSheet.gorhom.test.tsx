@@ -64,6 +64,7 @@ function sheetElement(
   onClose: () => void,
   isDismissible?: boolean,
   isContentDraggable?: boolean,
+  snapIndex?: number,
 ) {
   return (
     <SafeAreaProvider initialMetrics={{ frame, insets }}>
@@ -72,6 +73,8 @@ function sheetElement(
           isContentDraggable={isContentDraggable}
           isDismissible={isDismissible}
           open={open}
+          snapIndex={snapIndex}
+          snapPoints={["87%", "94%"]}
           title="Log weight"
           onClose={onClose}
         >
@@ -104,6 +107,22 @@ describe("BottomSheet on the library's ref", () => {
     await view.rerender(sheetElement(false, () => undefined));
 
     expect(mockSheet.calls).toEqual(["close"]);
+  });
+
+  it("should move to another snap point when the screen asks for one while open", async () => {
+    const view = await render(sheetElement(true, () => undefined, true, true, 0));
+
+    await view.rerender(sheetElement(true, () => undefined, true, true, 1));
+
+    expect(mockSheet.calls).toEqual(["snapToIndex(1)"]);
+  });
+
+  it("should not snap anywhere when the snap point it is asked for is the one it has", async () => {
+    const view = await render(sheetElement(true, () => undefined, true, true, 1));
+
+    await view.rerender(sheetElement(true, () => undefined, true, true, 1));
+
+    expect(mockSheet.calls).toEqual([]);
   });
 
   it("should snap the sheet back up when it opens again while it is still closing", async () => {

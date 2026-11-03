@@ -43,6 +43,12 @@ export type IconButtonProps = {
    * Show side by side. The other variants draw as they are. Defaults to false.
    */
   isSelected?: boolean;
+  /**
+   * Draws the glyph filled, in the accent, for a control that is switched on, such as the favourite heart.
+   * The accent is lime in dark and green in light. The button's fill and border stay as they are.
+   * Defaults to false.
+   */
+  isFilled?: boolean;
   /** Dims the button to 40 percent and stops it responding, with no motion. */
   disabled?: boolean;
   /**

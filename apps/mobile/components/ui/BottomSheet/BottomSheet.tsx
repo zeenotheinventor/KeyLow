@@ -48,6 +48,7 @@ export function BottomSheet({
   isContentDraggable = true,
   label,
   snapPoints,
+  snapIndex = 0,
   children,
 }: BottomSheetProps) {
   const isFixedHeight = snapPoints !== undefined;
@@ -59,6 +60,7 @@ export function BottomSheet({
   const isOpenRef = useRef(open);
   const isExitingRef = useRef(false);
   const onCloseRef = useRef(onClose);
+  const snapIndexRef = useRef(snapIndex);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -77,7 +79,7 @@ export function BottomSheet({
     if (open) {
       if (isExitingRef.current) {
         isExitingRef.current = false;
-        sheetRef.current?.snapToIndex(0);
+        sheetRef.current?.snapToIndex(snapIndexRef.current);
       }
       void haptic.select();
       // A screen reader starts on the title, so the user hears what the sheet is for.
@@ -96,6 +98,17 @@ export function BottomSheet({
       clearTimeout(timer);
     };
   }, [open]);
+
+  // A screen that changes the snap point while the sheet is open moves it there. The library only reads
+  // `index` when it mounts.
+  useEffect(() => {
+    if (snapIndexRef.current !== snapIndex) {
+      snapIndexRef.current = snapIndex;
+      if (isOpenRef.current) {
+        sheetRef.current?.snapToIndex(snapIndex);
+      }
+    }
+  }, [snapIndex]);
 
   useEffect(() => {
     if (!open) {
@@ -151,7 +164,7 @@ export function BottomSheet({
         enableDynamicSizing={!isFixedHeight}
         enablePanDownToClose={isDismissible}
         handleComponent={SheetHandle}
-        index={0}
+        index={snapIndex}
         {...(snapPoints === undefined ? {} : { snapPoints })}
         // A field in the sheet (the library's own input, which `TextArea` draws inside a sheet) lifts the
         // sheet with the keyboard, and the sheet goes back down when the keyboard is hidden. Android 15

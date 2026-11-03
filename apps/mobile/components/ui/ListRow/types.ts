@@ -63,6 +63,12 @@ export type ListRowToPressProps = ListRowBaseProps & {
    */
   loading?: boolean | undefined;
   /**
+   * A glyph that takes the chevron's place at the end of the row, for a row that does something other than
+   * navigate, such as the assistant's starters, which draw an arrow up for "send this". It is drawn small and
+   * muted like the chevron, and `chevron` does not turn it off. Only a row with `onPress` has one.
+   */
+  trailingIcon?: IconName | undefined;
+  /**
    * `footer` is the row that closes a card of rows with an action, such as the recipe editor's Add ingredient:
    * its icon bare and not in a tile, a 52 point row, no subtitle and no chevron. Leave it out for the usual row.
    */
@@ -81,6 +87,7 @@ export type ListRowToPressProps = ListRowBaseProps & {
 export type ListRowWithControlProps = ListRowBaseProps & {
   onPress?: undefined;
   loading?: undefined;
+  trailingIcon?: undefined;
   variant?: undefined;
   ref?: undefined;
   children?: ReactNode;

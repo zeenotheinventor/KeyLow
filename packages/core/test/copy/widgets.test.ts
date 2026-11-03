@@ -29,8 +29,10 @@ import {
   UNDO_LABEL,
   WIDGET_ACTIONS,
   WIDGET_EYEBROWS,
+  WIDGET_GALLERY,
   WIDGET_STATES,
 } from "../../src/copy";
+import { DASHBOARD_LOAD_FAILED } from "../../src/copy/dashboard";
 
 describe("the widget copy", () => {
   it("should word the states as board D draws them", () => {
@@ -47,6 +49,11 @@ describe("the widget copy", () => {
     expect(WIDGET_STATES.noRecentFoods.headline).toBe("Nothing logged yet");
     expect(WIDGET_STATES.couldntLog.headline).toBe("Couldn't log that. Nothing was saved.");
     expect(WIDGET_STATES.couldntLog.body).toBe("Check your connection, or log it in Ki-Lo.");
+    expect(WIDGET_STATES.couldntUndo).toEqual({
+      headline: "Couldn't undo that.",
+      body: "Check your connection and try again.",
+    });
+    expect(WIDGET_STATES.couldntUndo.body).toBe(DASHBOARD_LOAD_FAILED.body);
     expect(WIDGET_STATES.sessionMovedOn.headline).toBe("Your session moved on");
   });
 
@@ -117,5 +124,23 @@ describe("the widget copy", () => {
     expect(describeSetProgress(3, 4)).toBe("Set 3 of 4");
     expect(describeLastTime("67.5", 8)).toBe("Last time 67.5 × 8");
     expect(describeLastTime(null, 8)).toBe("Last time 8 reps");
+  });
+
+  it("should name and describe the six dashboard widgets for the launcher's widget picker", () => {
+    expect(Object.keys(WIDGET_GALLERY)).toEqual([
+      "today_ring",
+      "today_macros",
+      "this_week",
+      "body_heat",
+      "today_glance",
+      "body_map",
+    ]);
+    expect(WIDGET_GALLERY.today_ring.label).toBe("Today ring");
+    expect(WIDGET_GALLERY.today_macros.label).toBe("Today with macros");
+    expect(WIDGET_GALLERY.today_glance.label).toBe("Today at a glance");
+    for (const { label, description } of Object.values(WIDGET_GALLERY)) {
+      expect(label).not.toBe("");
+      expect(description).toMatch(/\.$/);
+    }
   });
 });

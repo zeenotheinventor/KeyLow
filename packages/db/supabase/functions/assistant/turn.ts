@@ -601,7 +601,7 @@ async function runModelCalls(run: Run, session: Session): Promise<Ending> {
     });
     const request = buildTurnRequest({
       tools: session.tools,
-      messages: toApiMessagesWithNote(messages, compaction),
+      messages: toApiMessagesWithNote(messages, compaction, run.context.turnId),
     });
     const outcome = await callModel(run, session, request);
     if (outcome.kind === "interrupted") {

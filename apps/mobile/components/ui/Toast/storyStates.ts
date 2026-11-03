@@ -6,5 +6,7 @@ export const storyStates = [
   "MessageOnly",
   "LongMessage",
   "SuccessFilled",
+  "FavouriteAdded",
+  "FavouriteRemoved",
   "WithProvider",
 ];
