@@ -1,6 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { inject } from "vitest";
 
+import { retryOnStaleConnection } from "../../support/retryOnStaleConnection";
+
 import type { SupabaseStatus } from "../../../scripts/supabaseStatus";
 import type { Database } from "../../../src/types.gen";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -14,8 +16,12 @@ declare module "vitest" {
   }
 }
 
-// Sessions are never persisted or refreshed, so each client is a self-contained caller.
-const stateless = { auth: { persistSession: false, autoRefreshToken: false } };
+// Sessions are never persisted or refreshed, so each client is a self-contained caller. Every request
+// goes through the retry for the local gateway's stale keepalive connection (KEY-796).
+const stateless = {
+  auth: { persistSession: false, autoRefreshToken: false },
+  global: { fetch: retryOnStaleConnection() },
+};
 
 /** A client with the anon key and no session, which signs users in. */
 export const anonClient = (): SupabaseClient<Database> => {
