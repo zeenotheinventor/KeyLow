@@ -1,4 +1,5 @@
 import {
+  ASSISTANT_CARD_WORDS,
   ASSISTANT_OFFLINE,
   describeAssistantNotice,
   describeAssistantStatus,
@@ -147,7 +148,7 @@ const answerLinesOf = (
   estimate:
     meta === null || meta.estimate === null
       ? null
-      : { badgeLabel: ASSISTANT_SHEET.estimateBadge, label: meta.estimate },
+      : { badgeLabel: ASSISTANT_CARD_WORDS.estimateLabel, label: meta.estimate },
 });
 
 /** A recipe made from a link: its lines say which food each matched, which a recipe made from typed ingredients has none of. */
