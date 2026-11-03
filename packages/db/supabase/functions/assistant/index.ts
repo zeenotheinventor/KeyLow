@@ -13,6 +13,7 @@ import { undoAction } from "../_shared/assistant/undo.ts";
 import { createCallerClient, createServiceClient } from "../_shared/clients.ts";
 import { handle } from "../_shared/http.ts";
 import { reportError } from "../_shared/report.ts";
+import { runInBackground } from "../_shared/runtime.ts";
 import { createAccessStore } from "./gates.ts";
 import { createAssistantHandler } from "./routes.ts";
 import { createModelClient, createRunTurn, createToolListCache } from "./turn.ts";
@@ -59,6 +60,7 @@ Deno.serve(
         turns,
         toolListCache,
         recordUsage: (call) => recordUsage(service, call),
+        runInBackground,
         connect: connectToolServer,
         // Made per turn from the secrets, so a missing key ends that turn and never stops the boot.
         createModelClient: () => createModelClient((name) => Deno.env.get(name)),

@@ -1,4 +1,4 @@
-import type { EvalCase } from "./case.ts";
+import type { CaseEnvironment, EvalCase } from "./case.ts";
 import type { TurnDriver } from "./driver.ts";
 import type { EvalSetName } from "./thresholds.ts";
 import type { EvalDatabase, TurnResult, TurnUsage } from "./types.ts";
@@ -36,6 +36,8 @@ type RunInput = Readonly<{
   cases: readonly EvalCase[];
   driver: TurnDriver;
   database: EvalDatabase;
+  /** What a case that seeds a conversation or waits for a compaction uses. Left out, such a case ends in error. */
+  environment?: CaseEnvironment;
   budgetTokens: number;
   /** The wall-clock ceiling of one case. A hung stream fails the case, not the job. */
   caseTimeoutMs?: number;
@@ -96,7 +98,13 @@ function afterCeiling<Result>(
  * once the budget is reached.
  */
 export async function runEvals(input: RunInput): Promise<RunReport> {
-  const { driver, database, budgetTokens, caseTimeoutMs = DEFAULT_CASE_TIMEOUT_MS } = input;
+  const {
+    driver,
+    database,
+    environment,
+    budgetTokens,
+    caseTimeoutMs = DEFAULT_CASE_TIMEOUT_MS,
+  } = input;
   const reports: CaseReport[] = [];
   // What the eval user has used so far, as the last read of `assistant_usage` saw it. Null before the first read.
   const spend: { latest: TurnUsage | null } = { latest: null };
@@ -111,7 +119,14 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
 
   async function playCase(evalCase: EvalCase, isAbandoned: () => boolean): Promise<Outcome> {
     const turns: TurnResult[] = [];
-    let conversationId: string | null = null;
+    const needsEnvironment = evalCase.setup !== undefined || evalCase.afterTurn !== undefined;
+    if (needsEnvironment && environment === undefined) {
+      throw new CaseError("the case needs a session with a case environment");
+    }
+    let conversationId: string | null =
+      evalCase.setup === undefined || environment === undefined
+        ? null
+        : await evalCase.setup(environment);
     for (const [index, text] of evalCase.messages.entries()) {
       // A case that hit its ceiling is abandoned, and its loop must not go on sending messages to the model.
       if (isAbandoned()) {
@@ -133,6 +148,11 @@ export async function runEvals(input: RunInput): Promise<RunReport> {
       }
       if (hasNoUsage(await database.usageOfTurn(turn.turnId))) {
         throw new CaseError("no assistant_usage rows for the turn");
+      }
+      if (evalCase.afterTurn !== undefined && environment !== undefined) {
+        await evalCase.afterTurn({ index, result: turn }, environment);
+        // The wait is billed too: the compaction call it waited for is a row of the eval user.
+        await readSpend();
       }
     }
     const outcomes = await Promise.all(evalCase.expect.map((grade) => grade({ turns, database })));

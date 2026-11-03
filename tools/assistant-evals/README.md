@@ -1,6 +1,6 @@
 # @keylow/assistant-evals
 
-The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets, so for now no case is registered and a run ends with a message and exit code 1.
+The harness that judges the Ki-Lo assistant: a case type, deterministic graders, a runner with a token budget, and a synthetic eval user. It is the acceptance mechanism of ADR 0006 ("Evals"). The case sets (KEY-699 to KEY-702) are added by their own tickets. The compaction set (KEY-706, `cases/compaction.ts`) is the one registered so far.
 
 `src/httpDriver.ts` is the `TurnDriver` against the served `assistant` function: it posts each message as the eval user, reads the stream with core's `parseAssistantEvent` and resolves when `done` arrives. `src/httpSession.ts` opens the session for `check:assistant` on the local stack (the eval user, the driver and the eval user's own view of the database). The stream carries no tool calls, so the driver reads them from the turn's stored messages, and it has no source for each tool's `readOnlyHint`: the `mcp` function lists tools only for an open turn. Until a case set needs it, a tool call has no hint and counts as a write.
 
@@ -25,7 +25,11 @@ A run stops before the case that would take it past `--budget` tokens (default 3
 
 ## Results
 
-Thresholds are in `src/thresholds.ts`: 90% ask, 80% describe (first pass), 100% red-team. A case ends `passed`, `failed` (the assistant missed), `error` (the harness or the infrastructure failed: a driver or database error, a failed turn, or a case over its 120 s wall-clock ceiling) or `not_run`. Errors are reported on their own and are misses for the exit code.
+Thresholds are in `src/thresholds.ts`: 90% ask, 80% describe (first pass), 100% red-team and 100% compaction (one case). A case ends `passed`, `failed` (the assistant missed), `error` (the harness or the infrastructure failed: a driver or database error, a failed turn, or a case over its 120 s wall-clock ceiling) or `not_run`. Errors are reported on their own and are misses for the exit code.
+
+## The compaction set
+
+`cases/compaction.ts` has one case. It seeds a long, text-only conversation for the run's own eval user (45 turns, one early reply that says "Your average last week was 1,850 kcal a day"), sends one short message so the prompt passes the 20,000 token compaction threshold, waits for the note to be stored (`compacted_through_turn_id` set, polled once a second for up to 60 s), and then asks what the assistant said the average was. It passes when the note was stored for the first turn and the answer holds 1,850. The turns are seeded by `src/caseEnvironment.ts` with the service role, because only the service role writes the conversation tables. About 55,000 to 65,000 tokens are expected for the whole set (an estimate, not yet measured: the first live run, through the `assistant-evals` workflow, gives the figure).
 
 ## The eval user
 

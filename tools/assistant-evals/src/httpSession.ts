@@ -1,5 +1,7 @@
 import { setAssistantConsent } from "@keylow/api-client";
+import { createClient } from "@supabase/supabase-js";
 
+import { createCaseEnvironment } from "./caseEnvironment.ts";
 import { createEvalDatabase } from "./database.ts";
 import { createFixtureUser } from "./fixtureUser.ts";
 import { createHttpDriver } from "./httpDriver.ts";
@@ -8,6 +10,7 @@ import { readSupabaseStatus } from "../../../packages/db/scripts/supabaseStatus.
 import type { EvalSession } from "./cli.ts";
 import type { FixtureUser } from "./fixtureUser.ts";
 import type { ToolCall } from "./types.ts";
+import type { Database } from "@keylow/api-client";
 
 // packages/db, which holds the Supabase project the CLI reads the stack status for.
 const databaseWorkdir = new URL("../../../packages/db", import.meta.url).pathname;
@@ -71,7 +74,16 @@ export async function openLocalHttpSession(): Promise<EvalSession> {
         return data.flatMap(({ content }) => toolCallsOf(content));
       },
     });
-    return { driver, database: createEvalDatabase(user.client), close: user.remove };
+    // The service role writes the conversations a case seeds, and nothing else uses it.
+    const serviceClient = createClient<Database>(stack.apiUrl, stack.serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    return {
+      driver,
+      database: createEvalDatabase(user.client),
+      environment: createCaseEnvironment({ client: serviceClient, userId: user.id }),
+      close: user.remove,
+    };
   } catch (error) {
     await user.remove();
     throw error;

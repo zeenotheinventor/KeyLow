@@ -11,9 +11,15 @@ export type TokenCounts = {
   cacheCreationInputTokens: number;
 };
 
+// `describe_or_ask` is a call of the turn loop, which reaches its tools over MCP. `compact` is the call that
+// writes a conversation's note, which has no tools and no transport (the table's own check lists both).
+export type UsageRoute = "describe_or_ask" | "compact";
+
 export type UsageToRecord = TokenCounts & {
   userId: string;
   turnId: string;
+  // Left out for a call of the turn loop.
+  route?: UsageRoute;
   model: string;
   latencyMilliseconds: number;
   // The API's stop reason, null when the call failed before one arrived.
@@ -69,10 +75,11 @@ export async function recordUsage(
 ): Promise<void> {
   // Priced first, so an unknown model throws before anything is sent.
   const costMicros = costUsdMicros(call.model, call);
+  const route = call.route ?? "describe_or_ask";
   const { error } = await client.from("assistant_usage").insert({
     user_id: call.userId,
     turn_id: call.turnId,
-    route: "describe_or_ask",
+    route,
     model: call.model,
     input_tokens: call.inputTokens,
     output_tokens: call.outputTokens,
@@ -81,7 +88,7 @@ export async function recordUsage(
     cost_usd_micros: costMicros,
     latency_ms: call.latencyMilliseconds,
     stop_reason: call.stopReason,
-    transport: "mcp_http",
+    transport: route === "compact" ? "none" : "mcp_http",
   });
   if (error !== null) {
     throw new Error(`assistant usage insert failed ${error.code}`);

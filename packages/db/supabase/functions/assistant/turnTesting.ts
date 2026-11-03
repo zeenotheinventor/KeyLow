@@ -138,6 +138,30 @@ function eventsOf(response: ScriptedResponse, index: number): { head: string[]; 
   return { head: events.slice(0, firstTextDelta + 1), tail: events.slice(firstTextDelta + 1) };
 }
 
+// A reply to a request that did not ask for a stream, as the Messages API answers one (the compaction call).
+function messageOf(response: ScriptedResponse, index: number) {
+  const usage = response.usage ?? {};
+  return {
+    id: `msg_${index}`,
+    type: "message",
+    role: "assistant",
+    model: "claude-haiku-5-5-20260301",
+    content: response.blocks.map((block) =>
+      block.type === "tool_use"
+        ? { type: "tool_use", id: block.id, name: block.name, input: block.input ?? {} }
+        : block,
+    ),
+    stop_reason: response.stopReason,
+    stop_sequence: null,
+    usage: {
+      input_tokens: usage.input ?? 100,
+      output_tokens: usage.output ?? 20,
+      cache_read_input_tokens: usage.cacheRead ?? 0,
+      cache_creation_input_tokens: usage.cacheCreation ?? 0,
+    },
+  };
+}
+
 export async function startModelMock(responses: ScriptedResponse[]): Promise<ModelMock> {
   const bodies: string[] = [];
   const encoder = new TextEncoder();
@@ -153,7 +177,8 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     );
 
   async function handle(request: Request): Promise<Response> {
-    bodies.push(await request.text());
+    const body = await request.text();
+    bodies.push(body);
     const index = next;
     next += 1;
     const scripted = responses[index];
@@ -168,6 +193,9 @@ export async function startModelMock(responses: ScriptedResponse[]): Promise<Mod
     }
     if (scripted.httpStatus !== undefined) {
       return failure(scripted.httpStatus);
+    }
+    if (JSON.parse(body).stream !== true) {
+      return Response.json(messageOf(scripted, index));
     }
     const { head } = eventsOf(scripted, index);
     const cancelled = Promise.withResolvers<void>();
@@ -336,6 +364,9 @@ export type TurnResult = {
 };
 
 export type Harness = {
+  conversationId: string;
+  // The turn store itself, before `wrapTurns`.
+  turns: TurnStore;
   mock: ModelMock;
   connections: FakeConnection[];
   connectOptions: Parameters<TurnDependencies["connect"]>[0][];
@@ -345,6 +376,9 @@ export type Harness = {
   usageRows: () => Record<string, unknown>[];
   turnRows: () => Record<string, unknown>[];
   rows: () => AssistantStoredMessage[];
+  conversationRows: () => Record<string, unknown>[];
+  // Waits for the work a turn handed to `runInBackground`, which is the compaction.
+  finishBackground(): Promise<void>;
   start(
     text: string,
     options?: { request?: Request; localTime?: string | null },
@@ -364,6 +398,8 @@ export type HarnessOptions = {
   failUsage?: boolean;
   // Short limits, in milliseconds, so a test never waits for real minutes.
   limits?: TurnLimits;
+  // The turn store's clock, for a test that needs `updated_at` to move by a known step.
+  storeNow?: () => Date;
 };
 
 export async function createHarness(options: HarnessOptions): Promise<Harness> {
@@ -383,7 +419,10 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
       ],
     },
   });
-  const turns = createTurnStore(database.client);
+  const turns = createTurnStore(
+    database.client,
+    options.storeNow === undefined ? {} : { now: options.storeNow },
+  );
   const conversationId = await turns.createConversation(userId);
   const connections: FakeConnection[] = [];
   const connectOptions: Harness["connectOptions"] = [];
@@ -395,6 +434,7 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
       : { ANTHROPIC_API_KEY: apiKey, ANTHROPIC_BASE_URL: mock.baseUrl };
 
   const written: string[] = [];
+  const background: Promise<unknown>[] = [];
   const dependencies: TurnDependencies = {
     turns: options.wrapTurns?.(turns) ?? turns,
     toolListCache: createToolListCache(),
@@ -407,6 +447,9 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
       const connection = fakeConnection(tools, options.answers ?? {});
       connections.push(connection);
       return Promise.resolve(connection);
+    },
+    runInBackground: (task) => {
+      background.push(task);
     },
     createModelClient: () => createModelClient((name) => environment[name]),
     availableTools: allowlistToolsOf(tools),
@@ -494,6 +537,8 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
   }
 
   return {
+    conversationId,
+    turns,
     mock,
     connections,
     connectOptions,
@@ -502,6 +547,10 @@ export async function createHarness(options: HarnessOptions): Promise<Harness> {
     usageRows: () => database.tables["assistant_usage"] ?? [],
     turnRows: () => database.tables["assistant_turns"] ?? [],
     rows,
+    conversationRows: () => database.tables["assistant_conversations"] ?? [],
+    async finishBackground() {
+      await Promise.all(background.splice(0));
+    },
     start,
     take: (text, takeOptions) => start(text, takeOptions).finished,
     shutdown: () => mock.shutdown(),

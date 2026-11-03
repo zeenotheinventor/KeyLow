@@ -4,5 +4,12 @@
     "allowImportingTsExtensions": true,
     "jsx": "react-jsx"
   },
-  "include": ["src", "test", "fixtures", "vitest.config.ts", "vitest.integration.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "fixtures",
+    "cases",
+    "vitest.config.ts",
+    "vitest.integration.config.ts"
+  ]
 }
