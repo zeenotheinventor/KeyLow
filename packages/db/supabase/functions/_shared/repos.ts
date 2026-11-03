@@ -18,6 +18,7 @@ export type {
   WeighIn,
 } from "./repos/index.js";
 export {
+  copyDay,
   getDiaryDay,
   getDiaryWeek,
   getFood,
@@ -36,7 +37,9 @@ export {
   restoreLogEntry,
   searchFoods,
   searchRecipes,
+  setDayComplete,
   softDeleteLogEntries,
   softDeleteLogEntry,
+  undoCopyDay,
   updateLogEntry,
 } from "./repos/index.js";

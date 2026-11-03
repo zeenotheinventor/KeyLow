@@ -151,7 +151,7 @@ export const undoUnavailableCard: AssistantCard = {
 
 /**
  * `assistant-card · day-copied`: a copy of a whole day has no rows, the day and its total are the sub.
- * The board never prints `undoneSub`, because it shows only after an Undo, so the line here is made up.
+ * The board never prints `undoneSub`, because it shows only after an Undo, so the line here is the ticket's.
  */
 export const dayCopiedCard: AssistantCard = {
   actionIds: [firstActionId],
@@ -163,7 +163,7 @@ export const dayCopiedCard: AssistantCard = {
   note: null,
   link: null,
   undo: "available",
-  undoneSub: "Removed the 8 entries copied from yesterday",
+  undoneSub: "Removed 8 copied entries from today",
 };
 
 export const cardBoards = [

@@ -14,8 +14,9 @@ export type WriteStub = {
   caller: SupabaseClient<Database>;
   tables: Record<string, Row[]>;
   calls: WriteCall[];
-  // The next statement that writes to this table fails, once.
-  failNextWriteTo(table: string): void;
+  // The next statement that writes to this table fails, once. `afterWrites` lets that many writes to the
+  // table land first, for a failure part way through a run of them.
+  failNextWriteTo(table: string, afterWrites?: number): void;
   // The next read of this table fails, once.
   failNextReadFrom(table: string): void;
   // Runs once, just before the next write to this table, as another request could between two steps.
@@ -33,7 +34,7 @@ export function writeStub(
     Object.entries(initial).map(([table, rows]) => [table, rows.map((row) => ({ ...row }))]),
   );
   const calls: WriteCall[] = [];
-  const failing = new Set<string>();
+  const failing = new Map<string, number>();
   const failingReads = new Set<string>();
   const beforeWrite = new Map<string, () => void>();
   let statement = 0;
@@ -73,8 +74,13 @@ export function writeStub(
         beforeWrite.get(table)?.();
         beforeWrite.delete(table);
       }
-      if (operation !== "select" && failing.delete(table)) {
-        return { data: null, error: { code: "XX000", message: "unavailable" } };
+      if (operation !== "select" && failing.has(table)) {
+        const writesToLetLand = failing.get(table) ?? 0;
+        if (writesToLetLand === 0) {
+          failing.delete(table);
+          return { data: null, error: { code: "XX000", message: "unavailable" } };
+        }
+        failing.set(table, writesToLetLand - 1);
       }
       const rows = (tables[table] ??= []);
       let affected: Row[];
@@ -86,6 +92,7 @@ export function writeStub(
             created_at: stampOf(statement),
             updated_at: stampOf(statement),
             deleted_at: null,
+            ...(table === "day_logs" ? { note: null } : {}),
             user_id: options.callerUserId,
             ...row,
             kcal: (row["nutrients"] as { kcal?: number } | undefined)?.kcal ?? null,
@@ -163,8 +170,8 @@ export function writeStub(
     caller: client as unknown as SupabaseClient<Database>,
     tables,
     calls,
-    failNextWriteTo: (table) => {
-      failing.add(table);
+    failNextWriteTo: (table, afterWrites = 0) => {
+      failing.set(table, afterWrites);
     },
     failNextReadFrom: (table) => {
       failingReads.add(table);
