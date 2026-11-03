@@ -47,6 +47,10 @@ const stored = (
 const userText = (text: string, turnId?: string) =>
   stored("user", userContent({ openToolUses: [], context, text }), turnId);
 
+// The replay of a history whose last row belongs to the turn being run, as in the loop.
+const replay = (history: readonly StoredHistoryMessage[]) =>
+  toApiMessages(history, history.at(-1)?.turnId ?? "turn-1");
+
 const toolUse = (id: string, name: string) => ({ type: "tool_use", id, name, input: {} });
 const toolResult = (id: string): Anthropic.ToolResultBlockParam => ({
   type: "tool_result",
@@ -306,7 +310,7 @@ Deno.test("a stored tool_result message and the next user message become one mes
     userText("yes", "turn-2"),
   ];
 
-  const messages = toApiMessages(history);
+  const messages = replay(history);
 
   assertEquals(
     messages.map((message) => message.role),
@@ -336,7 +340,7 @@ Deno.test(
       ),
     ];
 
-    const joined = toApiMessages(history).at(-1)?.content;
+    const joined = replay(history).at(-1)?.content;
 
     assert(Array.isArray(joined));
     assertEquals(
@@ -368,7 +372,7 @@ Deno.test(
     ];
 
     for (let length = 1; length <= history.length; length += 1) {
-      const roles = toApiMessages(history.slice(0, length)).map((message) => message.role);
+      const roles = replay(history.slice(0, length)).map((message) => message.role);
       roles.forEach((role, index) => assertEquals(role, index % 2 === 0 ? "user" : "assistant"));
     }
   },
@@ -384,7 +388,7 @@ Deno.test("two calls on the same rows serialise to the same bytes", () => {
     userText("log eggs", "turn-2"),
   ];
 
-  assertEquals(JSON.stringify(toApiMessages(history)), JSON.stringify(toApiMessages(history)));
+  assertEquals(JSON.stringify(replay(history)), JSON.stringify(replay(history)));
 });
 
 Deno.test("the app's display data is never sent, and thinking blocks go back unchanged", () => {
@@ -398,15 +402,224 @@ Deno.test("the app's display data is never sent, and thinking blocks go back unc
     { ...stored("assistant", [thinking, toolUse("call-1", "get_day")]), display: null },
   ];
 
-  const sent = JSON.stringify(toApiMessages(history));
+  const sent = JSON.stringify(replay(history));
 
   assertEquals(sent.includes("display"), false);
   assertEquals(sent.includes("card"), false);
-  assertEquals(toApiMessages(history).at(-1)?.content?.[0], thinking);
+  assertEquals(replay(history).at(-1)?.content?.[0], thinking);
+});
+
+const thinking = (signature: string): Anthropic.ThinkingBlockParam => ({
+  type: "thinking",
+  thinking: "",
+  signature,
+});
+const redactedThinking = (data: string): Anthropic.RedactedThinkingBlockParam => ({
+  type: "redacted_thinking",
+  data,
+});
+
+Deno.test("thinking and redacted thinking of an earlier turn are not replayed", () => {
+  const history = [
+    userText("hi"),
+    stored("assistant", [
+      thinking("sig-1"),
+      redactedThinking("data-1"),
+      { type: "text", text: "Hello" },
+      toolUse("call-1", "get_day"),
+    ]),
+    stored("user", [toolResult("call-1")]),
+    userText("log eggs", "turn-2"),
+    stored("assistant", [{ type: "text", text: "Logged." }], "turn-2"),
+    userText("and toast", "turn-3"),
+  ];
+
+  const messages = toApiMessages(history, "turn-3");
+
+  assertEquals(
+    JSON.stringify(messages[1]),
+    JSON.stringify({
+      role: "assistant",
+      content: [{ type: "text", text: "Hello" }, toolUse("call-1", "get_day")],
+    }),
+  );
+  assertEquals(keysOf(messages).includes("signature"), false);
+  assertEquals(keysOf(messages).includes("data"), false);
+});
+
+Deno.test("the current turn's thinking is replayed byte for byte, whatever it sits between", () => {
+  const first = thinking("sig-a");
+  const second = redactedThinking("data-b");
+  const history = [
+    userText("hi", "turn-2"),
+    stored("assistant", [first, toolUse("call-1", "get_day")], "turn-2"),
+    stored("user", [toolResult("call-1")], "turn-2"),
+    stored("assistant", [second, { type: "text", text: "Done" }], "turn-2"),
+  ];
+
+  const messages = toApiMessages(history, "turn-2");
+
+  assertEquals(
+    JSON.stringify(messages[1]?.content),
+    JSON.stringify([first, toolUse("call-1", "get_day")]),
+  );
+  assertEquals(
+    JSON.stringify(messages[3]?.content),
+    JSON.stringify([second, { type: "text", text: "Done" }]),
+  );
+});
+
+Deno.test(
+  "an earlier assistant message of thinking only is dropped and the roles still alternate",
+  () => {
+    const history = [
+      userText("hi"),
+      stored("assistant", [thinking("sig-1"), redactedThinking("data-1")]),
+      userText("log eggs", "turn-2"),
+      stored("assistant", [thinking("sig-2"), { type: "text", text: "Logged." }], "turn-2"),
+      userText("and toast", "turn-3"),
+    ];
+
+    for (let length = 1; length <= history.length; length += 1) {
+      const messages = toApiMessages(history.slice(0, length), history[length - 1]?.turnId ?? "");
+      messages.forEach((message, index) => {
+        assertEquals(message.role, index % 2 === 0 ? "user" : "assistant");
+        assert(Array.isArray(message.content) && message.content.length > 0);
+      });
+    }
+    const messages = toApiMessages(history, "turn-3");
+    assertEquals(
+      messages.map((message) => message.role),
+      ["user", "assistant", "user"],
+    );
+    // The two user messages either side of the dropped one are joined, so no content is lost.
+    assertEquals(messages[0]?.content?.length, 4);
+  },
+);
+
+const signaturesOf = (messages: readonly Anthropic.MessageParam[]) =>
+  messages.flatMap((message) =>
+    typeof message.content === "string"
+      ? []
+      : message.content.flatMap((block) => (block.type === "thinking" ? [block.signature] : [])),
+  );
+
+// Turn 1 answered in full, then a turn 2 that ended on a call nobody has answered yet.
+const turnOneThenAnOpenCall = (call: ReturnType<typeof toolUse>) => [
+  userText("hi"),
+  stored("assistant", [thinking("sig-1"), { type: "text", text: "Hello" }]),
+  userText("log rice", "turn-2"),
+  stored("assistant", [thinking("sig-2"), call], "turn-2"),
+];
+
+Deno.test("after a question, only the question's thinking is replayed, byte for byte", () => {
+  const question = thinking("sig-2");
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("ask-1", "ask_user")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "ask-1", name: "ask_user" }], context, text: "150 g" }),
+      "turn-3",
+    ),
+  ];
+
+  const messages = toApiMessages(history, "turn-3");
+
+  assertEquals(signaturesOf(messages), ["sig-2"]);
+  assertEquals(JSON.stringify(messages[3]?.content?.[0]), JSON.stringify(question));
+});
+
+Deno.test("after a confirm, only the confirm's thinking is replayed", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("del-1", "delete_entry")),
+    stored("user", [toolResult("del-1")], "turn-2"),
+    userText("yes", "turn-3"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-3")), ["sig-2"]);
+});
+
+Deno.test("after a call that did not run, only that call's thinking is replayed", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("get-1", "get_day")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "get-1", name: "get_day" }], context, text: "again" }),
+      "turn-3",
+    ),
+  ];
+
+  const messages = toApiMessages(history, "turn-3");
+
+  assertEquals(signaturesOf(messages), ["sig-2"]);
+  assertEquals(JSON.stringify(messages).includes("No result was recorded"), true);
+});
+
+Deno.test("one turn later the answered call's thinking is stripped too", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("ask-1", "ask_user")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "ask-1", name: "ask_user" }], context, text: "150 g" }),
+      "turn-3",
+    ),
+    stored("assistant", [thinking("sig-3"), { type: "text", text: "Logged." }], "turn-3"),
+    userText("thanks", "turn-4"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-4")), []);
+});
+
+Deno.test("a turn with no reply of its own does not pass thinking on to the turn after", () => {
+  const history = [
+    ...turnOneThenAnOpenCall(toolUse("ask-1", "ask_user")),
+    stored(
+      "user",
+      userContent({ openToolUses: [{ id: "ask-1", name: "ask_user" }], context, text: "150 g" }),
+      "turn-3",
+    ),
+    userText("hello?", "turn-4"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-4")), []);
+});
+
+Deno.test("a call that is only partly answered keeps no thinking", () => {
+  const history = [
+    userText("log rice", "turn-2"),
+    stored(
+      "assistant",
+      [thinking("sig-2"), toolUse("a", "get_day"), toolUse("b", "get_day")],
+      "turn-2",
+    ),
+    stored("user", [toolResult("a")], "turn-2"),
+    userText("again", "turn-3"),
+  ];
+
+  assertEquals(signaturesOf(toApiMessages(history, "turn-3")), []);
+});
+
+Deno.test("a stored row is left as it was whatever is stripped from the request", () => {
+  const history = [
+    userText("hi"),
+    stored("assistant", [thinking("sig-1"), { type: "text", text: "Hello" }]),
+    userText("log eggs", "turn-2"),
+  ];
+  const before = JSON.stringify(history);
+
+  toApiMessages(history, "turn-2");
+
+  assertEquals(JSON.stringify(history), before);
+});
+
+Deno.test("an assistant message of text only is replayed whatever its turn", () => {
+  const history = [userText("hi"), stored("assistant", "Hello"), userText("log eggs", "turn-2")];
+
+  assertEquals(toApiMessages(history, "turn-2")[1]?.content, [{ type: "text", text: "Hello" }]);
 });
 
 Deno.test("a string content becomes a text block when messages are joined", () => {
-  const messages = toApiMessages([stored("user", [toolResult("call-1")]), stored("user", "hello")]);
+  const messages = replay([stored("user", [toolResult("call-1")]), stored("user", "hello")]);
 
   assertEquals(messages.length, 1);
   assertEquals(messages[0]?.content, [toolResult("call-1"), { type: "text", text: "hello" }]);
@@ -416,19 +629,19 @@ Deno.test(
   "a stored message that is not a Messages API message is refused without quoting it",
   () => {
     const error = assertThrows(
-      () => toApiMessages([stored("user", [{ type: "text", text: 42, secret: "76.4 kg" }])]),
+      () => replay([stored("user", [{ type: "text", text: 42, secret: "76.4 kg" }])]),
       StoredMessageError,
     );
 
     assertEquals(error.message.includes("76.4"), false);
-    assertThrows(() => toApiMessages([stored("assistant", { not: "blocks" })]), StoredMessageError);
+    assertThrows(() => replay([stored("assistant", { not: "blocks" })]), StoredMessageError);
   },
 );
 
 Deno.test(
   "the request names the model, adaptive thinking, the effort and automatic tool choice",
   () => {
-    const request = buildTurnRequest({ tools, messages: toApiMessages([userText("hi")]) });
+    const request = buildTurnRequest({ tools, messages: replay([userText("hi")]) });
 
     assertEquals(request.model, "claude-haiku-5-5");
     assertEquals(request.thinking, { type: "adaptive" });
@@ -441,7 +654,7 @@ Deno.test(
 Deno.test("the last message of the request has the user role", () => {
   const request = buildTurnRequest({
     tools,
-    messages: toApiMessages([
+    messages: replay([
       userText("log eggs"),
       stored("assistant", [{ type: "text", text: "Logged." }]),
       userText("and toast", "turn-2"),
@@ -475,7 +688,7 @@ Deno.test("a tool whose input schema is not an object schema is refused with its
 });
 
 Deno.test("the tools are sent exactly as the adapter gave them", () => {
-  const request = buildTurnRequest({ tools, messages: toApiMessages([userText("hi")]) });
+  const request = buildTurnRequest({ tools, messages: replay([userText("hi")]) });
 
   assertEquals(JSON.stringify(request.tools), JSON.stringify(tools));
 });
@@ -490,8 +703,8 @@ Deno.test(
       userText("and toast", "turn-2"),
     ];
 
-    const first = buildTurnRequest({ tools, messages: toApiMessages(turnOne) });
-    const second = buildTurnRequest({ tools, messages: toApiMessages(turnTwo) });
+    const first = buildTurnRequest({ tools, messages: replay(turnOne) });
+    const second = buildTurnRequest({ tools, messages: replay(turnTwo) });
 
     assertEquals(JSON.stringify(first.system), JSON.stringify(second.system));
     assertEquals(JSON.stringify(first.tools), JSON.stringify(second.tools));
@@ -507,7 +720,7 @@ Deno.test(
 );
 
 Deno.test("only the system block and the last block of the last message carry a breakpoint", () => {
-  const messages = toApiMessages([
+  const messages = replay([
     userText("log eggs"),
     stored("assistant", [{ type: "text", text: "Logged." }]),
     userText("and toast", "turn-2"),
@@ -532,7 +745,7 @@ Deno.test("only the system block and the last block of the last message carry a 
 });
 
 Deno.test("the breakpoint is put on a copy, so the stored content never carries it", () => {
-  const messages = toApiMessages([userText("log eggs")]);
+  const messages = replay([userText("log eggs")]);
   const before = JSON.stringify(messages);
 
   buildTurnRequest({ tools, messages });
@@ -550,7 +763,7 @@ Deno.test("a last message with string content still gets its breakpoint, on a te
 });
 
 Deno.test("no forbidden key or value appears anywhere in the serialised request", () => {
-  const messages = toApiMessages([
+  const messages = replay([
     userText("log eggs"),
     stored("assistant", [toolUse("call-1", "get_day")]),
     stored("user", [toolResult("call-1")]),
