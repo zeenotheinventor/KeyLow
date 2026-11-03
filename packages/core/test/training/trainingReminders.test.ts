@@ -4,6 +4,7 @@ import { benchPress, heatSet, repeat } from "./heatSets";
 import { goldenRoutine, goldenTimeZone, pushMondayDayId, sessionOn } from "./weekPlanRows";
 import {
   describeTrainingReminder,
+  NAMED_TRAIN_REMINDER_VARIANTS,
   TRAINING_REMINDER_TITLES,
   TRAINING_REMINDER_VARIANTS,
 } from "../../src/copy";
@@ -497,5 +498,130 @@ describe("hasExerciseGainThisWeek", () => {
     expect(hasExerciseGainThisWeek([week({ kind: "same" }), week(loadChange(60, 62.5))])).toBe(
       true,
     );
+  });
+});
+
+describe("naming the routine day", () => {
+  const namedPlan = (name: string | undefined) => ({
+    days: [name === undefined ? plannedDay(3, chest) : { ...plannedDay(3, chest), name }],
+  });
+  const trainOf = (overrides: Partial<TrainingReminderInput> = {}) =>
+    plannedFor(overrides).filter((reminder) => reminder.type === "train");
+
+  it("should name the day in the Time to train body, from a variant of its own", () => {
+    const [reminder] = trainOf({ plan: namedPlan("Upper A") });
+
+    expect(reminder?.body).toContain("Upper A");
+    expect(reminder?.variantId).toMatch(/^train-named-\d$/);
+    expect(reminder?.body).toBe(
+      describeTrainingReminder("train", reminder?.variantId ?? "", "Upper A").body,
+    );
+  });
+
+  it("should trim the name", () => {
+    const [reminder] = trainOf({ plan: namedPlan("  Upper A  ") });
+
+    expect(reminder?.body).toContain("Upper A");
+    expect(reminder?.body).not.toContain("  ");
+  });
+
+  it.each([undefined, "", "   "])(
+    "should fall back to the generic copy for the name %j",
+    (name) => {
+      const unnamed = trainOf({ plan: namedPlan(undefined) });
+
+      expect(trainOf({ plan: namedPlan(name) })).toEqual(unnamed);
+      expect(unnamed[0]?.variantId).toMatch(/^train-\d$/);
+    },
+  );
+
+  it("should leave Take it easy and See your progress generic", () => {
+    const heatSets = chestSets(
+      fewestLoadingSets("2026-10-22T06:00:00Z", "2026-10-23T07:00:00Z"),
+      "2026-10-22T06:00:00Z",
+    );
+    const options = { weeklyGain: true, heatSets };
+    const named = plannedFor({ ...options, plan: namedPlan("Upper A") });
+    const unnamed = plannedFor({ ...options, plan: namedPlan(undefined) });
+
+    expect(named.filter(({ type }) => type !== "train")).toEqual(
+      unnamed.filter(({ type }) => type !== "train"),
+    );
+    for (const reminder of named.filter(({ type }) => type !== "train")) {
+      expect(reminder.variantId).not.toContain("named");
+    }
+  });
+
+  it("should pick a named variant from the fire date, and rotate across the week", () => {
+    const everyDay = {
+      days: [0, 1, 2, 3, 4, 5, 6].map((weekday) => ({
+        ...plannedDay(weekday, chest),
+        name: `Day ${weekday}`,
+      })),
+    };
+    const ids = trainOf({ plan: everyDay }).map(({ variantId }) => variantId);
+
+    expect(ids).toHaveLength(7);
+    expect(new Set(ids).size).toBe(7);
+    for (const id of ids) {
+      expect(NAMED_TRAIN_REMINDER_VARIANTS.map((variant) => variant.id)).toContain(id);
+    }
+  });
+
+  it("should never repeat the named variant delivered last", () => {
+    for (const { id } of NAMED_TRAIN_REMINDER_VARIANTS) {
+      const [first] = trainOf({
+        plan: namedPlan("Upper A"),
+        lastVariantIds: { ...noneUsed, train: id },
+      });
+
+      expect(first?.variantId).not.toBe(id);
+    }
+  });
+
+  it("should plan as usual when the last delivered id is an old generic one", () => {
+    const [first] = trainOf({
+      plan: namedPlan("Upper A"),
+      lastVariantIds: { ...noneUsed, train: "train-5" },
+    });
+
+    expect(first?.variantId).toMatch(/^train-named-\d$/);
+  });
+
+  it("should plan the generic copy, byte for byte, with the naming switched off", () => {
+    const off = trainOf({ plan: namedPlan("Upper A"), namesRoutineDay: false });
+
+    expect(off).toEqual(trainOf({ plan: namedPlan(undefined) }));
+    expect(off.map(({ variantId }) => variantId)).toEqual(["train-5"]);
+    expect(off[0]?.body).toBe("Whenever you are ready, today's session is there.");
+  });
+
+  it("should use the generic set on a blank day and the named set on named days, rotating in each", () => {
+    const week = {
+      days: [
+        { ...plannedDay(3, chest), name: "Upper A" },
+        { ...plannedDay(4, chest), name: "  " },
+        { ...plannedDay(5, chest), name: "Lower B" },
+        { ...plannedDay(6, chest), name: "Upper A" },
+      ],
+    };
+    const reminders = trainOf({ plan: week });
+    const namedIds = NAMED_TRAIN_REMINDER_VARIANTS.map(({ id }) => id);
+    const genericIds = TRAINING_REMINDER_VARIANTS.train.map(({ id }) => id);
+
+    expect(reminders.map(({ variantId }) => namedIds.includes(variantId))).toEqual([
+      true,
+      false,
+      true,
+      true,
+    ]);
+    expect(reminders.filter(({ variantId }) => genericIds.includes(variantId))).toHaveLength(1);
+    const namedRun = reminders
+      .map(({ variantId }) => variantId)
+      .filter((id) => namedIds.includes(id));
+    namedRun.forEach((id, index) => {
+      expect(id).not.toBe(namedRun[index - 1]);
+    });
+    expect(reminders[1]?.body).not.toContain("  ");
   });
 });

@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   describeTrainingReminder,
   MUSCLE_NAMES,
+  NAMED_TRAIN_REMINDER_VARIANTS,
+  TRAIN_REMINDER_NAMES_ROUTINE_DAY,
+  TRAINING_REMINDER_DAY_SLOT,
   TRAINING_REMINDER_TITLES,
   TRAINING_REMINDER_TYPES,
   TRAINING_REMINDER_VARIANTS,
@@ -80,6 +83,89 @@ describe("the training reminder copy", () => {
       expect(sentence).not.toMatch(/\b(kg|reps?|sets)\b/i);
       for (const word of wordsNotToSay) {
         expect(sentence.toLowerCase()).not.toContain(word.toLowerCase());
+      }
+    }
+  });
+});
+
+describe("the named Time to train copy", () => {
+  it("should be switched on while the working decision stands", () => {
+    expect(TRAIN_REMINDER_NAMES_ROUTINE_DAY).toBe(true);
+  });
+
+  it("should have 8 variants, with ids of their own that no generic id shares", () => {
+    const genericIds = TRAINING_REMINDER_VARIANTS.train.map(({ id }) => id);
+
+    expect(NAMED_TRAIN_REMINDER_VARIANTS.map(({ id }) => id)).toEqual(
+      NAMED_TRAIN_REMINDER_VARIANTS.map((_, index) => `train-named-${index + 1}`),
+    );
+    expect(NAMED_TRAIN_REMINDER_VARIANTS).toHaveLength(8);
+    expect(genericIds.filter((id) => id.startsWith("train-named"))).toEqual([]);
+  });
+
+  it("should have one day slot in each body, and different bodies", () => {
+    for (const { body } of NAMED_TRAIN_REMINDER_VARIANTS) {
+      expect(body.split(TRAINING_REMINDER_DAY_SLOT)).toHaveLength(2);
+    }
+    expect(new Set(NAMED_TRAIN_REMINDER_VARIANTS.map(({ body }) => body)).size).toBe(8);
+  });
+
+  it("should put the day name in the slot, under the same title", () => {
+    const { title, body } = describeTrainingReminder("train", "train-named-1", "Upper A");
+
+    expect(title).toBe("Time to train");
+    expect(body).toBe(
+      NAMED_TRAIN_REMINDER_VARIANTS[0]?.body.replace(TRAINING_REMINDER_DAY_SLOT, "Upper A"),
+    );
+    expect(body).toContain("Upper A");
+  });
+
+  it("should keep a dollar sign in a day name as it is", () => {
+    expect(describeTrainingReminder("train", "train-named-1", "$& day").body).toContain("$& day");
+  });
+
+  it("should trim the day name", () => {
+    expect(describeTrainingReminder("train", "train-named-2", "  Pull  ").body).toContain(" Pull");
+    expect(describeTrainingReminder("train", "train-named-2", "  Pull  ").body).not.toContain("  ");
+  });
+
+  it("should throw a RangeError for a named id with no day name", () => {
+    expect(() => describeTrainingReminder("train", "train-named-1")).toThrow(RangeError);
+    expect(() => describeTrainingReminder("train", "train-named-1", "   ")).toThrow(RangeError);
+  });
+
+  it("should throw a RangeError for a named id of another type", () => {
+    expect(() => describeTrainingReminder("ease", "train-named-1", "Upper A")).toThrow(RangeError);
+  });
+
+  it("should ignore a day name for a generic variant", () => {
+    expect(describeTrainingReminder("train", "train-1", "Upper A")).toEqual(
+      describeTrainingReminder("train", "train-1"),
+    );
+  });
+
+  it("should carry only the day name as dynamic text, and no digit, unit, muscle or weekday", () => {
+    const wordsNotToSay = [
+      ...Object.values(MUSCLE_NAMES),
+      ...[bench, squat, row, curl].map(({ name }) => name),
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+
+    for (const { id, body } of NAMED_TRAIN_REMINDER_VARIANTS) {
+      const neutral = describeTrainingReminder("train", id, "Alpha").body;
+
+      expect(neutral.replace("Alpha", "")).toBe(body.replace(TRAINING_REMINDER_DAY_SLOT, ""));
+      expect(neutral).not.toMatch(/\d/);
+      expect(neutral).not.toMatch(/\b(kg|reps?|sets)\b/i);
+      expect(neutral).not.toContain("\u2014");
+      for (const word of wordsNotToSay) {
+        expect(neutral.toLowerCase()).not.toContain(word.toLowerCase());
       }
     }
   });
