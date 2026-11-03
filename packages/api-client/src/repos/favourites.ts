@@ -64,9 +64,11 @@ export async function listFavouriteFoods(
 
 /**
  * Favourites a food. Favouriting a food that is already a favourite changes nothing and is not an
- * error. A person holds at most 30: the database refuses the 31st, and this throws a
- * `FavouriteRuleError` with the rule `favourite_limit`. A food the caller cannot see, or that is
- * deleted, is refused by the table's policy, and that fails with its code (42501).
+ * error. A person holds at most `MAX_FAVOURITE_FOODS` favourites of live foods: the database refuses
+ * one more, and this throws a `FavouriteRuleError` with the rule `favourite_limit`. A food the
+ * caller cannot see, or that is soft deleted, is refused by the table's policy and fails with its
+ * code (42501), so a soft deleted food that is already a favourite cannot be favourited again until
+ * it is restored.
  */
 export async function addFavouriteFood(
   client: SupabaseClient<Database>,

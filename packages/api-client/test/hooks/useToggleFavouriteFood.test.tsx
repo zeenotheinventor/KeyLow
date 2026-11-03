@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http } from "msw";
+import { delay, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -34,6 +34,7 @@ afterAll(() => {
 
 const oats = foodRow();
 const toast = foodRow({ id: "66666666-6666-4666-8666-666666666666", name: "Toast" });
+const bread = foodRow({ id: "77777777-7777-4777-8777-777777777777", name: "Bread" });
 
 const cachedOats: FavouriteFood = {
   foodId: oats.id,
@@ -41,14 +42,19 @@ const cachedOats: FavouriteFood = {
   food: oats,
 };
 
-function answerWrites(insert: () => Response = () => new Response(null, { status: 201 })) {
+function answerWrites(
+  insert: () => Response | Promise<Response> = () => new Response(null, { status: 201 }),
+  { responseDelayMs = 0 }: { responseDelayMs?: number } = {},
+) {
   server.use(
     http.post(`${REST_URL}/food_favourites`, async ({ request }) => {
       inserts.push(await request.clone().json());
+      await delay(responseDelayMs);
       return insert();
     }),
-    http.delete(`${REST_URL}/food_favourites`, ({ request }) => {
+    http.delete(`${REST_URL}/food_favourites`, async ({ request }) => {
       deletes.push(new URL(request.url).searchParams.get("food_id"));
+      await delay(responseDelayMs);
       return new Response(null, { status: 204 });
     }),
     http.get(`${REST_URL}/food_favourites`, ({ request }) => postgrestRows(request, listRows)),
@@ -69,7 +75,7 @@ const cachedFavourites = (queryClient: ReturnType<typeof createWrapper>["queryCl
 
 describe("useToggleFavouriteFood", () => {
   it("should add the food to the cache at once, newest first, and insert it", async () => {
-    answerWrites();
+    answerWrites(undefined, { responseDelayMs: 200 });
     listRows = [
       { created_at: "2026-11-03T10:00:00+00:00", foods: toast },
       { created_at: cachedOats.createdAt, foods: oats },
@@ -86,6 +92,7 @@ describe("useToggleFavouriteFood", () => {
         oats.id,
       ]);
     });
+    expect(result.current.isPending).toBe(true);
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
@@ -93,13 +100,17 @@ describe("useToggleFavouriteFood", () => {
   });
 
   it("should take the food out of the cache at once and delete it", async () => {
-    answerWrites();
+    answerWrites(undefined, { responseDelayMs: 200 });
     const { queryClient, result } = renderToggle();
 
     act(() => {
       result.current.mutate({ food: oats, favourite: false });
     });
 
+    await waitFor(() => {
+      expect(cachedFavourites(queryClient)).toEqual([]);
+    });
+    expect(result.current.isPending).toBe(true);
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
@@ -116,7 +127,9 @@ describe("useToggleFavouriteFood", () => {
       await result.current.mutateAsync({ food: toast, favourite: true }).catch(() => undefined);
     });
 
-    expect(result.current.error).toBeInstanceOf(FavouriteRuleError);
+    await waitFor(() => {
+      expect(result.current.error).toBeInstanceOf(FavouriteRuleError);
+    });
     await waitFor(() => {
       expect(cachedFavourites(queryClient)?.map((favourite) => favourite.foodId)).toEqual([
         oats.id,
@@ -142,5 +155,72 @@ describe("useToggleFavouriteFood", () => {
     await act(() => result.current.mutateAsync({ food: oats, favourite: false }));
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: keys.foods.favourites });
+  });
+
+  it("should put an unfavourited food back where it was when the delete fails", async () => {
+    server.use(
+      http.delete(`${REST_URL}/food_favourites`, () => postgrestError(500, "XX000", "failed")),
+      http.get(`${REST_URL}/food_favourites`, ({ request }) =>
+        postgrestRows(request, [{ created_at: cachedOats.createdAt, foods: oats }]),
+      ),
+    );
+    const { queryClient, result } = renderToggle();
+
+    await act(async () => {
+      await result.current.mutateAsync({ food: oats, favourite: false }).catch(() => undefined);
+    });
+
+    expect(cachedFavourites(queryClient)).toEqual([cachedOats]);
+  });
+
+  it("should keep a later tap's change when an earlier tap fails, and refresh once at the end", async () => {
+    let releaseSecond = () => {};
+    const secondMayAnswer = new Promise<void>((resolve) => {
+      releaseSecond = resolve;
+    });
+    let posts = 0;
+    server.use(
+      http.post(`${REST_URL}/food_favourites`, async () => {
+        posts += 1;
+        if (posts === 1) {
+          await delay(50);
+          return postgrestError(400, "KL004", "favourite_limit");
+        }
+        await secondMayAnswer;
+        return new Response(null, { status: 201 });
+      }),
+      http.get(`${REST_URL}/food_favourites`, ({ request }) =>
+        postgrestRows(request, [{ created_at: "2026-11-03T12:00:00+00:00", foods: bread }]),
+      ),
+    );
+    const { queryClient, result } = renderToggle();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    act(() => {
+      result.current.mutate({ food: toast, favourite: true });
+      result.current.mutate({ food: bread, favourite: true });
+    });
+    await waitFor(() => {
+      expect(cachedFavourites(queryClient)?.map((favourite) => favourite.foodId)).toEqual([
+        bread.id,
+        toast.id,
+        oats.id,
+      ]);
+    });
+
+    // The first tap fails and only its own food is taken out. The second is still on its way.
+    await waitFor(() => {
+      expect(posts).toBe(2);
+    });
+    expect(cachedFavourites(queryClient)?.map((favourite) => favourite.foodId)).toEqual([
+      bread.id,
+      oats.id,
+    ]);
+    expect(invalidate).not.toHaveBeenCalled();
+
+    releaseSecond();
+    await waitFor(() => {
+      expect(invalidate).toHaveBeenCalledTimes(1);
+    });
   });
 });

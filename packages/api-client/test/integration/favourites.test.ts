@@ -1,3 +1,4 @@
+import { MAX_FAVOURITE_FOODS } from "@keylow/core/foods";
 import { customFoodInputSchema } from "@keylow/core/schemas";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -108,37 +109,64 @@ describe("favourite foods against the local stack with real user JWTs", () => {
     expect((await ownFavourites(userA)).map((favourite) => favourite.foodId)).toContain(food.id);
   });
 
-  it("should refuse the 31st favourite with the typed cap error, and allow it after one is removed", async () => {
+  it("should refuse the favourite after the cap with the typed cap error, and allow it after one is removed", async () => {
     const user = await createTestUser("key774");
     const foods = await Promise.all(
-      Array.from({ length: 31 }, (_, index) => makeFood(user, `cap-${index}`)),
+      Array.from({ length: MAX_FAVOURITE_FOODS + 1 }, (_, index) => makeFood(user, `cap-${index}`)),
     );
-    const [thirtyFirst, ...firstThirty] = foods.reverse();
-    if (thirtyFirst === undefined) {
+    const [overCap, ...atCap] = foods;
+    const [held] = atCap;
+    if (overCap === undefined || held === undefined) {
       throw new Error("The fixture foods were not created");
     }
-    for (const food of firstThirty) {
+    for (const food of atCap) {
       await addFavouriteFood(user.client, food.id);
     }
 
-    const refused = await addFavouriteFood(user.client, thirtyFirst.id).catch(
+    const refused = await addFavouriteFood(user.client, overCap.id).catch(
       (error: unknown) => error,
     );
 
     expect(refused).toBeInstanceOf(FavouriteRuleError);
     expect(refused).toHaveProperty("rule", "favourite_limit");
-    expect(await ownFavourites(user)).toHaveLength(30);
+    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITE_FOODS);
 
     // Favouriting one already held at the cap is still a quiet no-op.
-    const [held] = firstThirty;
-    if (held === undefined) {
-      throw new Error("The fixture foods were not created");
-    }
     await addFavouriteFood(user.client, held.id);
 
     await removeFavouriteFood(user.client, held.id);
-    await addFavouriteFood(user.client, thirtyFirst.id);
-    expect(await ownFavourites(user)).toHaveLength(30);
+    await addFavouriteFood(user.client, overCap.id);
+    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITE_FOODS);
+  });
+
+  it("should not count a favourite of a soft deleted food towards the cap", async () => {
+    const user = await createTestUser("key774");
+    const foods = await Promise.all(
+      Array.from({ length: MAX_FAVOURITE_FOODS + 1 }, (_, index) =>
+        makeFood(user, `live-${index}`),
+      ),
+    );
+    const [extra, deleted, ...rest] = foods;
+    if (extra === undefined || deleted === undefined) {
+      throw new Error("The fixture foods were not created");
+    }
+    for (const food of [deleted, ...rest]) {
+      await addFavouriteFood(user.client, food.id);
+    }
+    await softDeleteFood(user.client, deleted.id);
+
+    await addFavouriteFood(user.client, extra.id);
+
+    expect(await ownFavourites(user)).toHaveLength(MAX_FAVOURITE_FOODS);
+  });
+
+  it("should refuse to favourite a soft deleted food again", async () => {
+    const food = await makeFood(userA, "deleted-refused");
+    await softDeleteFood(userA.client, food.id);
+
+    await expect(addFavouriteFood(userA.client, food.id)).rejects.toHaveProperty("cause", {
+      code: "42501",
+    });
   });
 
   it("should list the newest favourite first", async () => {

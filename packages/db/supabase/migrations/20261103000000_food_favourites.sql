@@ -56,8 +56,15 @@ create policy "food_favourites_delete_own" on public.food_favourites
   for delete to authenticated
   using (owner_id = (select auth.uid()));
 
--- A person has at most 30 favourites. The raise is KL004 (class KL is this schema's own, see
--- 20261024010000_checkin_writers.sql) and its message states the rule and quotes no value.
+-- A person has at most 30 favourites whose food is live. The number must match MAX_FAVOURITE_FOODS
+-- in @keylow/core (packages/core/src/foods/favourites.ts). The raise is KL004 (class KL is this
+-- schema's own, see 20261024010000_checkin_writers.sql) and its message states the rule and quotes
+-- no value.
+--
+-- Only favourites whose food is not soft deleted are counted, because the list the person sees leaves
+-- the others out, so someone who sees 25 can always add more. The cost is that restoring a food can
+-- take a person above 30. That is accepted: nothing is refused on a restore, and the person simply
+-- cannot add another until they are back under 30.
 --
 -- A favourite that is already there is let through, so favouriting twice with "ignore duplicates"
 -- stays a no-op for a person at the cap. The advisory lock is per owner and held to the end of the
@@ -79,7 +86,12 @@ begin
     return new;
   end if;
 
-  if (select pg_catalog.count(*) from public.food_favourites where owner_id = new.owner_id) >= 30 then
+  if (
+    select pg_catalog.count(*)
+    from public.food_favourites favourite
+    join public.foods f on f.id = favourite.food_id
+    where favourite.owner_id = new.owner_id and f.deleted_at is null
+  ) >= 30 then
     raise exception 'favourite_limit' using errcode = 'KL004';
   end if;
 

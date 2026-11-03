@@ -27,6 +27,7 @@ export type {
   PortionFormFields,
   RequiredFoodNutrient,
 } from "./foodForm";
+export { MAX_FAVOURITE_FOODS } from "./favourites";
 export { isFoodId } from "./isFoodId";
 export {
   OFF_FRESHNESS_MS,

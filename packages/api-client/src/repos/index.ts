@@ -28,6 +28,8 @@ export type {
   LogQuickEntryInput,
   QuickEntryValues,
 } from "./diaryWrites";
+export { addFavouriteFood, listFavouriteFoods, removeFavouriteFood } from "./favourites";
+export type { FavouriteFood } from "./favourites";
 export {
   FoodsPartialWriteError,
   MIN_SEARCH_LENGTH,
@@ -42,8 +44,6 @@ export {
   updateFood,
 } from "./foods";
 export type { CreatedFood, FoodSearchHit } from "./foods";
-export { addFavouriteFood, listFavouriteFoods, removeFavouriteFood } from "./favourites";
-export type { FavouriteFood } from "./favourites";
 export { fetchOffProduct, searchOff } from "./off";
 export {
   getMyTargets,

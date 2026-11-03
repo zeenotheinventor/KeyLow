@@ -11,7 +11,7 @@
 
 begin;
 
-select plan(25);
+select plan(29);
 
 insert into auth.users (instance_id, id, aud, role, email) values
   ('00000000-0000-0000-0000-000000000000', '29110300-0000-4000-8000-00000000000a', 'authenticated', 'authenticated', 'fav29-user-a@keylow.test'),
@@ -25,12 +25,12 @@ insert into public.foods (id, source, source_ref, owner_id, name, basis, deleted
   ('29110300-0000-4000-8000-0000000001a2', 'user', null, '29110300-0000-4000-8000-00000000000a', 'fav29-a-deleted-food', 'per_100g', now()),
   ('29110300-0000-4000-8000-0000000001b1', 'user', null, '29110300-0000-4000-8000-00000000000b', 'fav29-b-private-food', 'per_100g', null);
 
--- Thirty foods for C, to meet the cap.
+-- Thirty-two foods for C: thirty to meet the cap, and two more to try to go over it.
 insert into public.foods (id, source, source_ref, owner_id, name, basis)
 select
   ('29110300-0000-4000-8000-0000000003' || lpad(n::text, 2, '0'))::uuid,
   'user', null, '29110300-0000-4000-8000-00000000000c', 'fav29-c-food-' || n, 'per_100g'
-from generate_series(1, 31) as n;
+from generate_series(1, 32) as n;
 
 -- B already has a favourite, which A must never see.
 insert into public.food_favourites (owner_id, food_id) values
@@ -43,6 +43,11 @@ select col_has_default('public', 'food_favourites', 'owner_id', 'owner_id defaul
 select table_privs_are('public', 'food_favourites', 'authenticated', array['SELECT', 'DELETE'], 'authenticated holds select and delete at table level');
 select table_privs_are('public', 'food_favourites', 'anon', array[]::text[], 'anon holds nothing');
 select table_privs_are('public', 'food_favourites', 'service_role', array[]::text[], 'service_role holds nothing');
+
+select function_privs_are(
+  'public', 'enforce_food_favourites_limit', array[]::name[], 'authenticated', array[]::text[],
+  'authenticated cannot execute the cap trigger function'
+);
 
 -- A signs in.
 set local role authenticated;
@@ -139,10 +144,38 @@ select lives_ok(
   $$ insert into public.food_favourites (food_id) values ('29110300-0000-4000-8000-000000000301') on conflict do nothing $$,
   'favouriting a food already held at the cap is a no-op, not an error'
 );
-delete from public.food_favourites where food_id = '29110300-0000-4000-8000-000000000301';
+
+-- A favourite whose food is soft deleted does not count towards the cap.
+reset role;
+update public.foods set deleted_at = now() where id = '29110300-0000-4000-8000-000000000305';
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"29110300-0000-4000-8000-00000000000c","role":"authenticated"}';
 select lives_ok(
   $$ insert into public.food_favourites (food_id) values ('29110300-0000-4000-8000-000000000331') $$,
-  'removing one makes room for another'
+  'a favourite of a soft deleted food leaves room for another'
+);
+select throws_ok(
+  $$ insert into public.food_favourites (food_id) values ('29110300-0000-4000-8000-000000000332') $$,
+  'KL004', 'favourite_limit',
+  'C is at 30 live favourites again, so the next is refused'
+);
+
+-- One statement that goes over the cap is refused as a whole.
+delete from public.food_favourites
+  where food_id in ('29110300-0000-4000-8000-000000000301', '29110300-0000-4000-8000-000000000302');
+select throws_ok(
+  $$ insert into public.food_favourites (food_id) values
+       ('29110300-0000-4000-8000-000000000301'),
+       ('29110300-0000-4000-8000-000000000302'),
+       ('29110300-0000-4000-8000-000000000332') $$,
+  'KL004', 'favourite_limit',
+  'a single insert that would pass 30 is refused'
+);
+select is(
+  (select count(*) from public.food_favourites
+    where food_id in ('29110300-0000-4000-8000-000000000301', '29110300-0000-4000-8000-000000000302', '29110300-0000-4000-8000-000000000332')),
+  0::bigint,
+  'the refused statement wrote none of its rows'
 );
 reset role;
 
