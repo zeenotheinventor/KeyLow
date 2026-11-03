@@ -20,6 +20,15 @@ function loadSupabaseModule(): void {
   });
 }
 
+function loadFunctionsUrl(): string {
+  let functionsUrl = "";
+  jest.isolateModules(() => {
+    functionsUrl =
+      jest.requireActual<typeof import("../lib/supabase")>("../lib/supabase").functionsUrl;
+  });
+  return functionsUrl;
+}
+
 describe("supabase client", () => {
   beforeEach(() => {
     jest.restoreAllMocks();
@@ -63,6 +72,16 @@ describe("supabase client", () => {
         detectSessionInUrl: false,
       },
     });
+  });
+
+  it("should give the base URL of the Edge Functions under the Supabase URL", () => {
+    expect(loadFunctionsUrl()).toBe("http://192.168.1.10:54321/functions/v1");
+  });
+
+  it("should not double the slash when the Supabase URL ends with one", () => {
+    process.env.EXPO_PUBLIC_SUPABASE_URL = "http://192.168.1.10:54321/";
+
+    expect(loadFunctionsUrl()).toBe("http://192.168.1.10:54321/functions/v1");
   });
 
   it("should start auto-refresh when the app becomes active and stop it in the background", () => {

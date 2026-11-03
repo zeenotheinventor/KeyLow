@@ -4,6 +4,9 @@ export {
   formatEnergyShare,
   formatGrams,
   formatWeight,
+  roundCalories,
+  roundGrams,
+  roundKilograms,
 } from "./numbers";
 export type { WeightUnit } from "./numbers";
 export { formatPortionAmount } from "./portionAmount";

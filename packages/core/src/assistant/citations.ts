@@ -1,0 +1,99 @@
+import { describeCount } from "../copy/counts";
+import { MONTH_NAMES_SHORT, WEEKDAY_NAMES_SHORT } from "../copy/diaryDay";
+import { addCalendarDays, parseCalendarDay } from "../dates/calendarDay";
+
+/*
+ * The one line under an answer that comes from the person's data, and the badge under an answer about
+ * the weight trend, as the approved mobile boards print them (canvas "Ki-Lo assistant screens":
+ * `assistant · answer`, `assistant · answer-estimate`, `assistant · conversation`). The read tools build
+ * the line from what they counted, so the model never words or counts it.
+ */
+
+/** The badge of an answer that rests on the trend weight, which is worked out and not measured. */
+export const TREND_ESTIMATE = "Trend weight is an estimate";
+
+const monthOf = (localDate: string): string => {
+  const { month } = parseCalendarDay(localDate);
+
+  return MONTH_NAMES_SHORT[month - 1] ?? "";
+};
+
+const dateWithMonth = (localDate: string): string =>
+  `${parseCalendarDay(localDate).day} ${monthOf(localDate)}`;
+
+const dateWithMonthAndYear = (localDate: string): string =>
+  `${dateWithMonth(localDate)} ${parseCalendarDay(localDate).year}`;
+
+/** "12 Oct", "12 to 18 Oct", "28 Sep to 4 Oct", or "28 Dec 2026 to 3 Jan 2027" when the years differ. */
+const describeDateRange = (from: string, to: string): string => {
+  if (from === to) {
+    return dateWithMonth(from);
+  }
+  const start = parseCalendarDay(from);
+  const end = parseCalendarDay(to);
+  if (start.year !== end.year) {
+    return `${dateWithMonthAndYear(from)} to ${dateWithMonthAndYear(to)}`;
+  }
+  return start.month === end.month
+    ? `${start.day} to ${dateWithMonth(to)}`
+    : `${dateWithMonth(from)} to ${dateWithMonth(to)}`;
+};
+
+/** A day as a short date with its weekday, "Sat 24 Oct". */
+const describeShortDate = (localDate: string): string => {
+  const { year, month, day } = parseCalendarDay(localDate);
+  const weekday = WEEKDAY_NAMES_SHORT[new Date(Date.UTC(year, month - 1, day)).getUTCDay()];
+
+  return `${weekday} ${day} ${MONTH_NAMES_SHORT[month - 1]}`;
+};
+
+type RangeInput = { from: string; to: string };
+
+/**
+ * The line under an answer about a range of days: "Based on 38 entries, 12 to 18 Oct". A range with
+ * nothing in it says so, "No entries, 12 to 18 Oct", and is never an error.
+ */
+export const describeRangeCitation = ({
+  from,
+  to,
+  entryCount,
+}: RangeInput & { entryCount: number }): string =>
+  entryCount === 0
+    ? `No entries, ${describeDateRange(from, to)}`
+    : `Based on ${describeCount(entryCount, "entry", "entries")}, ${describeDateRange(from, to)}`;
+
+/** The line under an answer about the weight: "Based on 24 weigh-ins, 21 Sep to 18 Oct". */
+export const describeWeighInCitation = ({
+  from,
+  to,
+  count,
+}: RangeInput & { count: number }): string =>
+  count === 0
+    ? `No weigh-ins, ${describeDateRange(from, to)}`
+    : `Based on ${describeCount(count, "weigh-in", "weigh-ins")}, ${describeDateRange(from, to)}`;
+
+/**
+ * The line under an answer about one day and the person's targets: "Based on 4 entries today and your
+ * targets". The day is named as today or yesterday, and otherwise by its short date, "Sat 24 Oct". A day
+ * with no entries says "No entries today" and does not mention the targets.
+ */
+export const describeDayCitation = ({
+  localDate,
+  today,
+  entryCount,
+}: {
+  localDate: string;
+  today: string;
+  entryCount: number;
+}): string => {
+  const day =
+    localDate === today
+      ? "today"
+      : localDate === addCalendarDays(today, -1)
+        ? "yesterday"
+        : `on ${describeShortDate(localDate)}`;
+
+  return entryCount === 0
+    ? `No entries ${day}`
+    : `Based on ${describeCount(entryCount, "entry", "entries")} ${day} and your targets`;
+};

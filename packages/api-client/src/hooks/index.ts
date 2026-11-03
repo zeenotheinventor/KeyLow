@@ -199,3 +199,7 @@ export type {
   SuggestionUnavailableReason,
   UseSuggestionInput,
 } from "./useSuggestion";
+export { useAssistantConsent } from "./useAssistantConsent";
+export { useAssistantStatus } from "./useAssistantStatus";
+export { useAssistantTurn } from "./useAssistantTurn";
+export { useSetAssistantConsent } from "./useSetAssistantConsent";
