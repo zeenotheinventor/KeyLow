@@ -9,9 +9,11 @@ import type { DescribableAssistantNotice } from "../copy/assistantNotices";
 /*
  * What the assistant sheet draws in its thread (`assistant · empty`, `streaming`, `conversation`,
  * `unavailable`): the stored conversation, and under it the message sent from this sheet with the reply
- * as it arrives. The questions, confirmations and answer lines of the stored thread are drawn by later
- * tickets, so they are left out here, never shown as raw data. The action cards are drawn here, with the
- * state of their Undo given by `describeAssistantCard`.
+ * as it arrives. The answer lines of the stored thread are drawn by a later ticket, so they are left out
+ * here, never shown as raw data. The action cards are drawn here, with the state of their Undo given by
+ * `describeAssistantCard`, and so are the questions the assistant asks (`assistant · clarify` and
+ * `confirm`): its words, then the quick replies or the two buttons, which are answered once the person has
+ * sent their next message.
  */
 
 /** What the sheet needs of the turn being written: the part of `AssistantLiveTurn` it draws. */
@@ -19,6 +21,19 @@ export type AssistantSheetLiveTurn = {
   text: string;
   /** The writes the turn has made so far, each with its Undo. */
   cards: readonly AssistantCard[];
+  /** The question that ended the turn, with the words in the field and up to three quick replies. */
+  clarify: {
+    question: string;
+    quickReplies: readonly string[];
+    fieldHint: string | null;
+  } | null;
+  /** The confirmation that ended the turn. Its question is the text of the reply that asked it. */
+  confirm: {
+    question: string;
+    confirmLabel: string;
+    cancelLabel: string;
+    tone: "danger" | "primary";
+  } | null;
   stopped: boolean;
   notice: AssistantNotice | null;
 };
@@ -37,6 +52,23 @@ export type AssistantSheetSent = { text: string; afterItemId: string | null };
 export type AssistantSheetEntry =
   | { kind: "you"; key: string; text: string }
   | { kind: "card"; key: string; card: AssistantCard }
+  | {
+      /** The quick replies under a clarifying question, each sent as your message when pressed. */
+      kind: "quickReplies";
+      key: string;
+      options: string[];
+      /** Once you have sent your next message the replies are drawn, but no longer respond. */
+      isAnswered: boolean;
+    }
+  | {
+      /** The two buttons under a confirmation: yes first, then the cancel. Each is sent as your message. */
+      kind: "confirm";
+      key: string;
+      confirmLabel: string;
+      cancelLabel: string;
+      tone: "danger" | "primary";
+      isAnswered: boolean;
+    }
   | {
       kind: "assistant";
       key: string;
@@ -58,6 +90,8 @@ export type AssistantSheetThread = {
   lastMessage: string | null;
   /** Whether the thread ends in an answer that was cut short, which offers the Ask again quick reply. */
   canAskAgain: boolean;
+  /** The words in the empty field while a clarifying question waits for its answer ("Or say it your way"), else null. */
+  fieldHint: string | null;
 };
 
 type BuildInput = {
@@ -84,31 +118,100 @@ const isDescribable = (notice: AssistantNotice): notice is DescribableAssistantN
 const paragraphsOf = (text: string): string[] =>
   text.split(/\n{2,}/).filter((paragraph) => paragraph.trim() !== "");
 
-function storedEntries(items: readonly AssistantThreadItem[]): DraftEntry[] {
-  return items.flatMap((item): DraftEntry[] => {
+// Whether two sets of paragraphs are the same words, so a question the reply before it already said is drawn once.
+const sameWords = (first: readonly string[], second: readonly string[]): boolean =>
+  first.map((paragraph) => paragraph.trim()).join("\n\n") ===
+  second.map((paragraph) => paragraph.trim()).join("\n\n");
+
+/**
+ * A question as the assistant's words, unless the entry before it says the same: the question of a
+ * confirmation is the text of the reply that asked it, which is drawn already.
+ */
+function questionEntries(
+  key: string,
+  question: string,
+  previous: DraftEntry | undefined,
+): DraftEntry[] {
+  const paragraphs = paragraphsOf(question);
+  if (previous?.kind === "assistant" && sameWords(previous.paragraphs, paragraphs)) {
+    return [];
+  }
+  return [
+    { kind: "assistant", key: `${key}:question`, paragraphs, isStreaming: false, isStopped: false },
+  ];
+}
+
+function clarifyEntries(
+  key: string,
+  clarify: NonNullable<AssistantSheetLiveTurn["clarify"]>,
+  isAnswered: boolean,
+  previous: DraftEntry | undefined,
+): DraftEntry[] {
+  return [
+    ...questionEntries(key, clarify.question, previous),
+    ...(clarify.quickReplies.length === 0
+      ? []
+      : [{ kind: "quickReplies" as const, key, options: [...clarify.quickReplies], isAnswered }]),
+  ];
+}
+
+function confirmEntries(
+  key: string,
+  confirm: NonNullable<AssistantSheetLiveTurn["confirm"]>,
+  isAnswered: boolean,
+  previous: DraftEntry | undefined,
+): DraftEntry[] {
+  return [
+    ...questionEntries(key, confirm.question, previous),
+    {
+      kind: "confirm",
+      key,
+      confirmLabel: confirm.confirmLabel,
+      cancelLabel: confirm.cancelLabel,
+      tone: confirm.tone,
+      isAnswered,
+    },
+  ];
+}
+
+/** `isAllAnswered`: the person has sent a message after these items, so every question in them is answered. */
+function storedEntries(items: readonly AssistantThreadItem[], isAllAnswered = false): DraftEntry[] {
+  const entries: DraftEntry[] = [];
+  for (const item of items) {
     switch (item.kind) {
       case "user":
-        return [{ kind: "you", key: item.id, text: item.text }];
+        entries.push({ kind: "you", key: item.id, text: item.text });
+        break;
       case "card":
-        return [{ kind: "card", key: item.id, card: item.card }];
+        entries.push({ kind: "card", key: item.id, card: item.card });
+        break;
       case "reply":
-        return [
-          {
-            kind: "assistant",
-            key: item.id,
-            paragraphs: paragraphsOf(item.text),
-            isStreaming: false,
-            isStopped: item.stopped,
-          },
-        ];
+        entries.push({
+          kind: "assistant",
+          key: item.id,
+          paragraphs: paragraphsOf(item.text),
+          isStreaming: false,
+          isStopped: item.stopped,
+        });
+        break;
+      case "clarify":
+        entries.push(
+          ...clarifyEntries(item.id, item, item.answered || isAllAnswered, entries.at(-1)),
+        );
+        break;
+      case "confirm":
+        entries.push(
+          ...confirmEntries(item.id, item, item.answered || isAllAnswered, entries.at(-1)),
+        );
+        break;
       case "notice":
-        return isDescribable(item.notice)
-          ? [{ kind: "notice", key: item.id, notice: item.notice }]
-          : [];
-      default:
-        return [];
+        if (isDescribable(item.notice)) {
+          entries.push({ kind: "notice", key: item.id, notice: item.notice });
+        }
+        break;
     }
-  });
+  }
+  return entries;
 }
 
 function sentEntries(
@@ -133,6 +236,12 @@ function sentEntries(
       isStreaming,
       isStopped: live.stopped && !isStreaming,
     });
+  }
+  if (live.clarify !== null) {
+    entries.push(...clarifyEntries("sent:clarify", live.clarify, false, entries.at(-1)));
+  }
+  if (live.confirm !== null) {
+    entries.push(...confirmEntries("sent:confirm", live.confirm, false, entries.at(-1)));
   }
   if (live.notice !== null && isDescribable(live.notice)) {
     entries.push({ kind: "notice", key: "sent:notice", notice: live.notice });
@@ -205,6 +314,20 @@ export function isSentTurnStored(
     );
 }
 
+// The words the field shows while a clarifying question waits: the live turn's, or the stored thread's last item.
+// Once your next message is sent the question is answered, and the turn being written has none of its own yet.
+function fieldHintOf(
+  items: readonly AssistantThreadItem[],
+  isSentShown: boolean,
+  live: AssistantSheetLiveTurn | null,
+): string | null {
+  if (isSentShown) {
+    return live?.clarify?.fieldHint ?? null;
+  }
+  const last = items.at(-1);
+  return last?.kind === "clarify" && !last.answered ? last.fieldHint : null;
+}
+
 /** The thread the sheet draws, oldest first. */
 export function buildAssistantSheetThread({
   items,
@@ -217,7 +340,7 @@ export function buildAssistantSheetThread({
     sent !== null && (isStreaming || !isSentTurnStored(items, sent.afterItemId, live));
   const drafts = isSentShown
     ? [
-        ...storedEntries(itemsThrough(items, sent.afterItemId)),
+        ...storedEntries(itemsThrough(items, sent.afterItemId), true),
         ...sentEntries(sent, live, isStreaming),
       ]
     : storedEntries(items);
@@ -237,6 +360,7 @@ export function buildAssistantSheetThread({
     entries,
     lastMessage: lastMessageOf(entries),
     canAskAgain: last?.kind === "assistant" && last.isStopped && !last.isStreaming,
+    fieldHint: fieldHintOf(items, isSentShown, live),
   };
 }
 
@@ -372,16 +496,20 @@ export function describeAssistantComposer({
   isOnline,
   timeZone,
   describeAt,
+  fieldHint = null,
 }: {
   access: AssistantSheetAccess;
   isOnline: boolean;
   timeZone: string;
   describeAt?: string | undefined;
+  /** The words of a clarifying question waiting for its answer, which the field shows in place of its own. */
+  fieldHint?: string | null | undefined;
 }): AssistantComposerLook {
   const placeholder =
-    describeAt === undefined
+    fieldHint ??
+    (describeAt === undefined
       ? ASSISTANT_SHEET.composerPlaceholder
-      : ASSISTANT_DESCRIBE.composerPlaceholder;
+      : ASSISTANT_DESCRIBE.composerPlaceholder);
   switch (access.kind) {
     case "checking":
     case "consent":

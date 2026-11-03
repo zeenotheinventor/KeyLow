@@ -43,6 +43,23 @@ export const loggedCard: AssistantCard = {
   undoneSub: "Removed 2 eggs and toast from 08:10",
 };
 
+/** `assistant · clarify`, right: the card after the question, each amount as the food's own portion or plain grams, no Estimate. */
+export const clarifyLoggedCard: AssistantCard = {
+  actionIds: [FIRST_ACTION_ID, SECOND_ACTION_ID],
+  kind: "logged",
+  title: "Logged chicken and rice at 13:00",
+  sub: null,
+  rows: [
+    entryRow("Chicken breast, grilled", "1 chicken breast (130 g)", "13:00", "192 kcal"),
+    entryRow("White rice, boiled", "200 g", "13:00", "276 kcal"),
+  ],
+  totalText: "468 kcal · P 47 g · C 62 g · F 3.5 g",
+  note: "If it was more or less, change it in the diary.",
+  link: null,
+  undo: "available",
+  undoneSub: "Removed chicken and rice from 13:00",
+};
+
 /** `assistant-card · undone`. */
 export const undoneCard: AssistantCard = { ...loggedCard, undo: "undone" };
 

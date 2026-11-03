@@ -8,6 +8,8 @@ export type AssistantThreadProps = {
   onTryAgain: () => void;
   /** Sends your last message again, from the quick reply under an answer that was cut short. */
   onAskAgain: () => void;
+  /** Sends the words of a quick reply or a confirm button as your message. */
+  onAnswer: (words: string) => void;
   /** Opens what a card's link leads to. */
   onOpenCardLink: (target: AssistantCardLink["target"]) => void;
 };

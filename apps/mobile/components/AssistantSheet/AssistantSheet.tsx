@@ -95,7 +95,13 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
     isStreaming,
     accessNotice: access.kind === "limited" ? access.notice : null,
   });
-  const composer = describeAssistantComposer({ access, isOnline, timeZone, describeAt });
+  const composer = describeAssistantComposer({
+    access,
+    isOnline,
+    timeZone,
+    describeAt,
+    fieldHint: thread.fieldHint,
+  });
 
   // The turn on screen and what it left, for the read on open below, which finishes after the render that
   // started it.
@@ -268,6 +274,7 @@ export function AssistantSheet({ open, onClose, localDate, describeAt }: Assista
         onAskAgain={sendLastMessageAgain}
         onTryAgain={sendLastMessageAgain}
         onOpenCardLink={openCardLink}
+        onAnswer={sendMessage}
       />
     );
   }
