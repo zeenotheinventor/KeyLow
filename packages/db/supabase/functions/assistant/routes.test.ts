@@ -5,6 +5,7 @@ import { error } from "../_shared/http.ts";
 import { createAssistantHandler } from "./routes.ts";
 import { runTurn as runStubTurn } from "./runTurn.ts";
 import { writeEvent } from "./sse.ts";
+import { ConversationBusyError } from "./turnStore.ts";
 
 import type { UndoResult } from "../_shared/assistant/undo.ts";
 import type { ReportError } from "../_shared/report.ts";
@@ -16,6 +17,7 @@ import type { TurnStore } from "./turnStore.ts";
 const userId = "00000000-0000-4000-8000-0000000000a1";
 const conversationId = "00000000-0000-4000-8000-0000000000c1";
 const turnId = "00000000-0000-4000-8000-0000000000d3";
+const userMessageId = "00000000-0000-4000-8000-0000000000f1";
 const actionId = "00000000-0000-4000-8000-0000000000e5";
 const secretText = "my private lunch note 4821";
 
@@ -36,10 +38,13 @@ type FakeOptions = {
   dailyTurns?: number | null;
   turnsToday?: number;
   ownsConversation?: boolean;
+  busy?: boolean;
   undo?: (actionId: string) => Promise<UndoResult>;
   runTurn?: RunTurn;
   signedIn?: boolean;
 };
+
+const unused = () => Promise.reject(new Error("the routes do not call this"));
 
 function fake(options: FakeOptions = {}): Fake {
   const { consented = true, entitled = true, dailyTurns = 15, turnsToday = 0 } = options;
@@ -67,8 +72,17 @@ function fake(options: FakeOptions = {}): Fake {
     ownsConversation: () => Promise.resolve(options.ownsConversation ?? true),
     startTurn: (input) => {
       started.push(input);
-      return Promise.resolve(turnId);
+      return options.busy === true
+        ? Promise.reject(new ConversationBusyError())
+        : Promise.resolve({ turnId, userMessageId });
     },
+    // The routes only start turns. The loop of KEY-794 is what calls the rest.
+    appendMessages: unused,
+    setUserMessageContent: unused,
+    readConversation: unused,
+    readTimeZone: unused,
+    finishTurn: unused,
+    turnHasAction: unused,
   };
   const report: ReportError = (_functionName, code) => {
     reports.push(code);
@@ -251,6 +265,30 @@ Deno.test("a conversation that is not the caller's fails the turn and starts non
     { type: "done", outcome: "failed" },
   ]);
   assertEquals(made.started, []);
+});
+
+Deno.test("a busy conversation fails the turn with a notice and no turn event", async () => {
+  const made = fake({ busy: true });
+  const spy = spyOnConsole();
+  try {
+    const response = await call(made.dependencies, "turn", {
+      body: { ...turnBody, conversationId },
+    });
+    assertEquals(await eventsOf(response), [
+      { type: "notice", notice: { code: "turn_failed" } },
+      { type: "done", outcome: "failed" },
+    ]);
+  } finally {
+    spy.restore();
+  }
+
+  assertEquals(made.turnsRun, []);
+  assertEquals(made.reports, []);
+  assertEquals(spy.lines.filter((line) => line.includes("gate=conversation_busy")).length, 1);
+  assertEquals(
+    spy.lines.filter((line) => line.includes(secretText)),
+    [],
+  );
 });
 
 Deno.test("a loop that throws is reported and ends the turn as failed", async () => {

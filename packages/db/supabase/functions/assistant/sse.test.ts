@@ -1,6 +1,6 @@
 import { assertEquals } from "@std/assert";
 
-import { createEventStream, writeEvent } from "./sse.ts";
+import { createEventStream, endAsFailed, writeEvent } from "./sse.ts";
 
 import type { ReportError } from "../_shared/report.ts";
 
@@ -63,4 +63,31 @@ Deno.test("writing after the reader went away is ignored", async () => {
 
   assertEquals(writeEvent(stream, { type: "text", delta: "hello" }, reportSpy().report), false);
   stream.close();
+});
+
+Deno.test("after a done, nothing more is written and endAsFailed adds no second done", async () => {
+  const { stream, body } = createEventStream();
+  const spy = reportSpy();
+
+  const first = writeEvent(stream, { type: "done", outcome: "complete" }, spy.report);
+  const text = writeEvent(stream, { type: "text", delta: "late" }, spy.report);
+  const done = writeEvent(stream, { type: "done", outcome: "failed" }, spy.report);
+  endAsFailed(stream);
+  stream.close();
+
+  assertEquals([first, text, done], [true, false, false]);
+  assertEquals(events(await new Response(body).text()), [{ type: "done", outcome: "complete" }]);
+  assertEquals(spy.reports, []);
+});
+
+Deno.test("endAsFailed writes its own done once, and a second call writes nothing", async () => {
+  const { stream, body } = createEventStream();
+
+  endAsFailed(stream);
+  endAsFailed(stream);
+
+  assertEquals(events(await new Response(body).text()), [
+    { type: "notice", notice: { code: "turn_failed" } },
+    { type: "done", outcome: "failed" },
+  ]);
 });

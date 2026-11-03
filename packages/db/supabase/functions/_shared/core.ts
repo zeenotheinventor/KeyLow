@@ -3,7 +3,9 @@
 // it, so a missing or stale bundle fails `deno check` here. Export what a function needs.
 export type {
   AssistantNotice,
+  AssistantStoredMessage,
   AssistantStreamEvent,
+  AssistantTurnStatus,
   CheckinInput,
   CheckinProgram,
   CheckinResult,
