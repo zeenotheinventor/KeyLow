@@ -233,6 +233,13 @@ function replayBlocks(
 // back. It is a suffix of the thinking in the history, so the blocks that are sent stay in order. A question
 // the person has not answered yet (`ask_user`), a confirm and a call that did not run all end up here. It is
 // the previous turn only, so a turn with no reply of its own cannot hold old thinking in every request after.
+//
+// What is left is a small window: a deploy that changes the system prompt or the tools between a question
+// and its answer makes the kept block invalid, and that one request is refused. The next turn strips the
+// block. Whether that next request is then accepted is not verified. It holds only if Haiku 5.5 takes a
+// final assistant message with a call and no thinking block, and a live probe has not run yet (it needs the
+// eval key). If the model insists on thinking there, the conversation stays refused until a new one is
+// started, and the `drop_block` beta (`thinking-binding-controls-2026-08-01`) is the fallback.
 function messageKeepingThinking(
   history: readonly StoredHistoryMessage[],
   currentTurnId: string,
