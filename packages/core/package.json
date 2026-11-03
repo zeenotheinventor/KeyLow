@@ -22,6 +22,7 @@
     "./terms": "./src/terms/index.ts",
     "./training": "./src/training/index.ts",
     "./weight": "./src/weight/index.ts",
+    "./widgets": "./src/widgets/index.ts",
     "./testing": "./src/testing/index.ts"
   },
   "scripts": {

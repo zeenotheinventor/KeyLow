@@ -17,10 +17,12 @@ const switchKeys = {
   train: "trainEnabled",
   progress: "progressEnabled",
   ease: "easeEnabled",
+  missed: "missedEnabled",
+  checkin: "checkinEnabled",
 } as const satisfies Record<(typeof REMINDERS_SCREEN.reminders)[number]["type"], SwitchKey>;
 
 /**
- * The Reminders screen, pushed from More: a Training group with a switch for each of the three training
+ * The Reminders screen, pushed from More: a Training group with a switch for each of the five training
  * reminders and the time of the train one, and a Food group with the food reminder's switch and time. The
  * first switch turned on asks for the permission to show notifications. If it is refused, or was before,
  * the switch stays off and a notice says how to allow them in the phone's settings, with a button that

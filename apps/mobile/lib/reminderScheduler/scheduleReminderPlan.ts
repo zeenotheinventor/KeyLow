@@ -11,7 +11,7 @@ import { getPermission, replaceReminders } from "../notifications";
 import type { Reminder, ReminderType } from "../notifications";
 import type { ReminderSettings } from "../reminderSettings";
 import type { FoodReminderInput } from "@keylow/core/nutrition";
-import type { TrainingReminderInput } from "@keylow/core/training";
+import type { PlannedTrainingReminder, TrainingReminderInput } from "@keylow/core/training";
 
 /** What the planner reads besides the settings and the moment. */
 export type ReminderPlanInputs = Pick<
@@ -31,11 +31,20 @@ export type ScheduleReminderPlanInput = {
   foodInputs: FoodReminderPlanInputs | null;
 };
 
-const hasTrainingSwitchOn = ({ trainEnabled, progressEnabled, easeEnabled }: ReminderSettings) =>
-  trainEnabled || progressEnabled || easeEnabled;
+export const hasTrainingSwitchOn = ({
+  trainEnabled,
+  progressEnabled,
+  easeEnabled,
+  missedEnabled,
+  checkinEnabled,
+}: ReminderSettings) =>
+  trainEnabled || progressEnabled || easeEnabled || missedEnabled || checkinEnabled;
+
+/** What the core plans, as the app can schedule it: it does not compile if the core plans a type the app does not know. */
+type PlannedReminder = Omit<PlannedTrainingReminder, "type"> & { type: ReminderType };
 
 /**
- * Plans the next seven days of reminders, the training ones and the food one, and replaces what this app
+ * Plans the next seven days of reminders, the training ones (including the missed day and check in ones) and the food one, and replaces what this app
  * has scheduled with them. With every switch off, or the permission not granted, it cancels ours and
  * schedules nothing, and on a build without the notifications module it does nothing at all. With the
  * inputs of a switch that is on not loaded it keeps the schedule it has. The plan is stored with the last
@@ -55,6 +64,8 @@ export async function scheduleReminderPlan({
   if (permission !== "granted" || !(hasTrainingSwitchOn(settings) || settings.foodEnabled)) {
     // Through the queue, so it cannot race a plan that is still being scheduled.
     await replaceReminders([]);
+    // A reminder cancelled while still ahead must not be read as delivered once its time passes.
+    await writeScheduledReminders(lastDelivered(await readScheduledReminders(), now));
     return;
   }
   if (
@@ -69,7 +80,10 @@ export async function scheduleReminderPlan({
   const lastVariantOf = (type: ReminderType): string | null =>
     delivered.find((reminder) => reminder.type === type)?.variantId ?? settings.lastVariant[type];
 
-  const trainingPlanned =
+  // The last check in delivered is the only evidence the core has that a streak was asked about.
+  const lastCheckInAt = delivered.find((reminder) => reminder.type === "checkin")?.fireAt ?? null;
+
+  const trainingPlanned: PlannedReminder[] =
     inputs === null
       ? []
       : planTrainingReminders({
@@ -80,7 +94,10 @@ export async function scheduleReminderPlan({
             train: lastVariantOf("train"),
             progress: lastVariantOf("progress"),
             ease: lastVariantOf("ease"),
+            missed: lastVariantOf("missed"),
+            checkin: lastVariantOf("checkin"),
           },
+          lastCheckInAt,
         });
   const foodPlanned =
     foodInputs === null

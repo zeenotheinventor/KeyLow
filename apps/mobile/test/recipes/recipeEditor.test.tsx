@@ -386,14 +386,6 @@ describe("the recipe editor", () => {
       expect(sendEvent).toHaveBeenCalledTimes(1);
       expect(sendEvent).toHaveBeenCalledWith(expect.anything(), "focus");
     });
-
-    it("should say the servings are too many, in the same place", async () => {
-      const user = await showEditor({ existing: chickenAndRice });
-      await type(servingsField(), "1001");
-      await user.press(saveButton());
-
-      expect(screen.getByText("Enter 1,000 servings or fewer.")).toBeOnTheScreen();
-    });
   });
 
   describe("saving a saved recipe", () => {

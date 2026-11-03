@@ -4,6 +4,7 @@ export {
   formatEnergyShare,
   formatGrams,
   formatWeight,
+  formatWeightValue,
   roundCalories,
   roundGrams,
   roundKilograms,

@@ -1,14 +1,17 @@
 /*
- * The words of the three training reminders (KEY-509). They show on the lock screen, so they name no
+ * The words of the training reminders (KEY-509, and the missed day and check-in ones of KEY-813). They show on the lock screen, so they name no
  * muscle, exercise or weekday (the health data rule), and the detail waits inside the app. One exception:
  * the routine day's own name, which the person chose, may appear in "Time to train" only, behind
  * `TRAIN_REMINDER_NAMES_ROUTINE_DAY` (Zee, 2026-11-03, pending confirmation). "Take it easy" and "See your
- * progress" stay generic.
+ * progress" stay generic. The missed day and check-in words are kind and never count the days missed.
  */
 
-export const TRAINING_REMINDER_TYPES = ["train", "progress", "ease"] as const;
+export const TRAINING_REMINDER_TYPES = ["train", "progress", "ease", "missed", "checkin"] as const;
 
-/** "Time to train" on a planned day, "See your progress" on Sunday, and "Take it easy" on a loaded day. */
+/**
+ * "Time to train" on a planned day, "See your progress" on Sunday, and "Take it easy" on a loaded day.
+ * "A fresh start" the morning after a planned day went by, and "Checking in" after several of them.
+ */
 export type TrainingReminderType = (typeof TRAINING_REMINDER_TYPES)[number];
 
 export type TrainingReminderCopy = Readonly<{ title: string; body: string }>;
@@ -21,6 +24,8 @@ export const TRAINING_REMINDER_TITLES: Readonly<Record<TrainingReminderType, str
   train: "Time to train",
   progress: "See your progress",
   ease: "Take it easy",
+  missed: "A fresh start",
+  checkin: "Checking in",
 };
 
 /**
@@ -62,7 +67,68 @@ export const TRAINING_REMINDER_VARIANTS: Readonly<
     { id: "ease-5", body: "Resting well helps you progress. Be kind to yourself today." },
     { id: "ease-6", body: "There is still some recovering to do. A gentle day is a fine day." },
   ],
+  missed: [
+    { id: "missed-1", body: "Yesterday slipped by, and that is fine. Today is a fresh start." },
+    { id: "missed-2", body: "A day off the plan happens. Pick it back up whenever you are ready." },
+    { id: "missed-3", body: "No worries about yesterday. Today is a good day to begin again." },
+    {
+      id: "missed-4",
+      body: "Yesterday did not go to plan, and that is okay. Your next session is waiting.",
+    },
+    { id: "missed-5", body: "Life got busy yesterday. Ease back in at your own pace today." },
+    {
+      id: "missed-6",
+      body: "One quiet day does not undo your effort. Come back whenever it suits you.",
+    },
+  ],
+  checkin: [
+    { id: "checkin-1", body: "Training has been quiet lately. Everything okay?" },
+    { id: "checkin-2", body: "It has been a little while. How are you doing?" },
+    { id: "checkin-3", body: "Just checking in. Is everything alright?" },
+    {
+      id: "checkin-4",
+      body: "Things have gone quiet. Your plan will be here whenever you are ready.",
+    },
+    { id: "checkin-5", body: "If life got busy, that is okay. Your plan is ready when you are." },
+    {
+      id: "checkin-6",
+      body: "How are you getting on? Your plan is here when you want it, no pressure.",
+    },
+  ],
 };
+
+/**
+ * The bodies of the missed day reminder when it is merged with "Time to train": one notification at the
+ * train time in place of two. They have ids of their own, so the merged set never remaps an id of the plain
+ * one, and say both things at once. Never reuse or change the meaning of an id: add a new body with a new id
+ * instead.
+ */
+export const MISSED_MERGED_REMINDER_VARIANTS: readonly TrainingReminderVariant[] = [
+  {
+    id: "missed-merged-1",
+    body: "Yesterday slipped by, and that is fine. Today's session is ready when you are.",
+  },
+  {
+    id: "missed-merged-2",
+    body: "A day off the plan happens. Today is a fresh start, at your own pace.",
+  },
+  {
+    id: "missed-merged-3",
+    body: "No worries about yesterday. Today's session is a good way to begin again.",
+  },
+  {
+    id: "missed-merged-4",
+    body: "Yesterday did not go to plan, and that is okay. Today's session is waiting.",
+  },
+  {
+    id: "missed-merged-5",
+    body: "Life got busy yesterday. Ease back in with today's session when you are ready.",
+  },
+  {
+    id: "missed-merged-6",
+    body: "One quiet day does not undo your effort. Today's plan is ready whenever you are.",
+  },
+];
 
 /**
  * The one switch for naming the routine day in "Time to train". Off, the planner returns exactly the
@@ -107,6 +173,12 @@ export const describeTrainingReminder = (
   const generic = TRAINING_REMINDER_VARIANTS[type].find(({ id }) => id === variantId);
   if (generic !== undefined) {
     return { title, body: generic.body };
+  }
+  if (type === "missed") {
+    const merged = MISSED_MERGED_REMINDER_VARIANTS.find(({ id }) => id === variantId);
+    if (merged !== undefined) {
+      return { title, body: merged.body };
+    }
   }
   const named =
     type === "train" ? NAMED_TRAIN_REMINDER_VARIANTS.find(({ id }) => id === variantId) : undefined;

@@ -313,6 +313,151 @@ describe("scheduling the reminders", () => {
     });
   });
 
+  describe("the missed day and check in reminders", () => {
+    // Thursday 07:00 in London, so this morning's 09:00 is still ahead.
+    const MORNING = new Date("2026-10-22T06:00:00.000Z");
+    const MISSED_FIRE_TODAY = "2026-10-22T08:00:00.000Z";
+    const MISSED_FIRE_TOMORROW = "2026-10-23T08:00:00.000Z";
+    // Monday 26 October is planned and missed too, the clocks have gone back, so Tuesday's 09:00 is 09:00 UTC.
+    const NEXT_MISS_MORNING = "2026-10-27T09:00:00.000Z";
+    const missedOn = { ...defaultReminderSettings, missedEnabled: true };
+    const checkinOn = { ...defaultReminderSettings, checkinEnabled: true };
+
+    // A routine day as the plan inputs carry it: the id and position are what a make-up is found by.
+    const routineDay = (weekday: number) => ({
+      ...plannedDay(weekday),
+      id: `day-${weekday}`,
+      position: weekday,
+    });
+    const finishedOn = (weekday: number, date: string) => ({
+      id: `session-${date}`,
+      local_date: date,
+      started_at: `${date}T08:00:00Z`,
+      ended_at: `${date}T09:00:00Z`,
+      deleted_at: null,
+      routine_day_id: `day-${weekday}`,
+    });
+    // The notifications module drops a fire time that is behind the clock, so the clock moves with the plan.
+    const at = (now: Date, overrides: Parameters<typeof input>[0]) => {
+      jest.setSystemTime(now);
+      return { ...input(overrides), now };
+    };
+    const missedOrCheckin = () =>
+      scheduledFires().filter(({ type }) => type === "missed" || type === "checkin");
+
+    // Wednesday was planned and nothing was done. The routine began the Monday before.
+    const wednesdayMissed = { plan: { days: [routineDay(2)], activeFrom: "2026-10-19" } };
+    // Monday to Wednesday were planned and nothing was done.
+    const threeDaysMissed = {
+      plan: { days: [routineDay(0), routineDay(1), routineDay(2)], activeFrom: "2026-10-19" },
+    };
+
+    it("should plan neither while both are off, with a planned day missed yesterday", async () => {
+      await scheduleReminderPlan(
+        at(MORNING, {
+          ...wednesdayMissed,
+          settings: { ...defaultReminderSettings, trainEnabled: true },
+        }),
+      );
+
+      expect(missedOrCheckin()).toEqual([]);
+    });
+
+    it("should schedule a missed reminder for this morning when a planned day went by yesterday, with only its switch on", async () => {
+      await scheduleReminderPlan(at(MORNING, { ...wednesdayMissed, settings: missedOn }));
+
+      expect(scheduledFires()).toEqual([{ type: "missed", fireAt: MISSED_FIRE_TODAY }]);
+    });
+
+    it("should drop the missed reminder projected for tomorrow once a session is finished today", async () => {
+      const thursdayOnly = { plan: { days: [routineDay(3)], activeFrom: "2026-10-19" } };
+      await scheduleReminderPlan(at(MORNING, { ...thursdayOnly, settings: missedOn }));
+      expect(scheduledFires()).toEqual([{ type: "missed", fireAt: MISSED_FIRE_TOMORROW }]);
+
+      await scheduleReminderPlan(
+        at(new Date("2026-10-22T10:00:00.000Z"), {
+          ...thursdayOnly,
+          sessions: [finishedOn(3, "2026-10-22")],
+          settings: missedOn,
+        }),
+      );
+
+      expect(missedOrCheckin()).toEqual([]);
+    });
+
+    it("should not call a day missed that a session made up late", async () => {
+      await scheduleReminderPlan(
+        at(MORNING, {
+          ...wednesdayMissed,
+          sessions: [{ ...finishedOn(2, "2026-10-21"), local_date: "2026-10-22" }],
+          settings: missedOn,
+        }),
+      );
+
+      expect(missedOrCheckin()).toEqual([]);
+    });
+
+    describe("the check in after several missed days", () => {
+      const storedCheckIns = () =>
+        readScheduledReminders().then((stored) => stored.filter(({ type }) => type === "checkin"));
+
+      it("should schedule it in place of the missed one, with only its switch on", async () => {
+        await scheduleReminderPlan(at(MORNING, { ...threeDaysMissed, settings: checkinOn }));
+
+        expect(scheduledFires()).toEqual([{ type: "checkin", fireAt: MISSED_FIRE_TODAY }]);
+      });
+
+      it("should plan it again while the one scheduled has not fired yet", async () => {
+        await scheduleReminderPlan(at(MORNING, { ...threeDaysMissed, settings: checkinOn }));
+
+        await scheduleReminderPlan(
+          at(new Date("2026-10-22T07:00:00.000Z"), { ...threeDaysMissed, settings: checkinOn }),
+        );
+
+        expect(scheduledFires()).toEqual([{ type: "checkin", fireAt: MISSED_FIRE_TODAY }]);
+      });
+
+      it("should send it once for the streak, from the fire time in the stored plan, across restarts", async () => {
+        await scheduleReminderPlan(at(MORNING, { ...threeDaysMissed, settings: checkinOn }));
+        expect(await storedCheckIns()).toHaveLength(1);
+        // The app is closed and opened again after the check in fired.
+        resetNotificationsMock();
+        notificationsState.permission = "granted";
+
+        await scheduleReminderPlan(
+          at(new Date("2026-10-22T10:00:00.000Z"), { ...threeDaysMissed, settings: checkinOn }),
+        );
+
+        expect(missedOrCheckin()).toEqual([]);
+        expect(await storedCheckIns()).toHaveLength(1);
+      });
+
+      it("should not count a check in cancelled while every switch was off as delivered", async () => {
+        await scheduleReminderPlan(at(MORNING, { ...threeDaysMissed, settings: checkinOn }));
+        expect(await storedCheckIns()).toHaveLength(1);
+        // Every switch off cancels the check in that was still ahead.
+        await scheduleReminderPlan(
+          at(new Date("2026-10-22T07:00:00.000Z"), { settings: defaultReminderSettings }),
+        );
+        expect(await storedCheckIns()).toEqual([]);
+
+        await scheduleReminderPlan(
+          at(new Date("2026-10-22T10:00:00.000Z"), { ...threeDaysMissed, settings: checkinOn }),
+        );
+
+        expect(scheduledFires()).toEqual([{ type: "checkin", fireAt: NEXT_MISS_MORNING }]);
+      });
+
+      it("should send it on the next miss morning when no plan says one was delivered", async () => {
+        await scheduleReminderPlan(
+          at(new Date("2026-10-22T10:00:00.000Z"), { ...threeDaysMissed, settings: checkinOn }),
+        );
+
+        expect(scheduledFires()).toEqual([{ type: "checkin", fireAt: NEXT_MISS_MORNING }]);
+      });
+    });
+  });
+
   describe("when nothing is to be scheduled", () => {
     it("should cancel ours and schedule nothing when every switch is off", async () => {
       notificationsState.scheduled.set("keylow-reminder:train:1", {
@@ -451,7 +596,7 @@ describe("scheduling the reminders", () => {
           settings: {
             ...everythingOn,
             progressEnabled: false,
-            lastVariant: { train: unconstrained ?? null, progress: null, ease: null, food: null },
+            lastVariant: { ...defaultReminderSettings.lastVariant, train: unconstrained ?? null },
           },
         }),
       );

@@ -37,7 +37,7 @@ export function useReminderTapRouting(): void {
     }
     followedNumber.current = tap.number;
     // The Train and Diary tabs are switched to; the others are pushed over the tab that is open.
-    if (tap.type === "train" || tap.type === "food") {
+    if (tap.type === "train" || tap.type === "missed" || tap.type === "food") {
       router.navigate(reminderTapPath(tap.type));
     } else {
       router.push(reminderTapPath(tap.type));
