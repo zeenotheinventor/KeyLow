@@ -9,6 +9,7 @@ export function WidgetCard({
   theme,
   tap,
   accessibleName,
+  borderColour,
   paddingVertical = 16,
   paddingHorizontal = 16,
   direction = "column",
@@ -31,7 +32,7 @@ export function WidgetCard({
         backgroundColor: theme.surface,
         borderRadius: 22,
         borderWidth: 1,
-        borderColor: theme.border,
+        borderColor: borderColour ?? theme.border,
       }}
     >
       {children}

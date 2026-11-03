@@ -3,8 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { requestWidgetUpdate } from "react-native-android-widget";
 
 import { createAsyncStorageWidgetBridge } from "./asyncStorageWidgetBridge";
-import { drawingFor, readDrawingInputs } from "./dashboardDrawing";
-import { DASHBOARD_WIDGET_PROVIDERS } from "./widgetProviders";
+import { redrawWidgets } from "./redrawWidgets";
 
 import type { WidgetBridge } from "./types";
 import type { RequestWidgetUpdateProps } from "react-native-android-widget";
@@ -27,7 +26,7 @@ const SIGNED_OUT_STORAGE_KEY = "keylow.widgets.signedOut";
 
 /**
  * The bridge on Android: the AsyncStorage bridge with a redraw that asks the launcher to update each of the
- * six dashboard widgets from what is stored, and a signed out state after `clear` (ADR 0007, "Privacy").
+ * eleven widgets from what is stored, and a signed out state after `clear` (ADR 0007, "Privacy").
  */
 export function createAndroidWidgetBridge({
   storage = AsyncStorage,
@@ -54,19 +53,7 @@ export function createAndroidWidgetBridge({
       await stored.clear();
       await storage.setItem(SIGNED_OUT_STORAGE_KEY, "1");
     },
-    requestRedraw: async () => {
-      const inputs = await readDrawingInputs(bridge);
-      const at = now();
-      await Promise.all(
-        DASHBOARD_WIDGET_PROVIDERS.map(({ kind, name }) => {
-          const drawing = drawingFor(inputs, kind, at);
-
-          return drawing === null
-            ? Promise.resolve()
-            : requestUpdate({ widgetName: name, renderWidget: () => drawing });
-        }),
-      );
-    },
+    requestRedraw: () => redrawWidgets({ bridge, now, requestUpdate }),
   };
 
   return bridge;

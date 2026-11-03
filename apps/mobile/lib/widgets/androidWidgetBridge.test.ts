@@ -1,7 +1,7 @@
 import { WIDGET_STATES } from "@keylow/core/copy";
 
 import { createAndroidWidgetBridge } from "./androidWidgetBridge";
-import { DASHBOARD_WIDGET_PROVIDERS } from "./widgetProviders";
+import { WIDGET_PROVIDERS } from "./widgetProviders";
 import { NOW } from "../../test/support/widgetFixtures";
 import { populatedSnapshot } from "../../widgets/android/test/viewModels";
 import { treeOf, textsOf } from "../../widgets/android/test/widgetTree";
@@ -66,13 +66,13 @@ const headlinesOf = async (requests: readonly RequestWidgetUpdateProps[]): Promi
   );
 
 describe("the Android widget bridge", () => {
-  it("should ask for an update of each of the six widgets on a redraw", async () => {
+  it("should ask for an update of each of the eleven widgets on a redraw", async () => {
     const { bridge, requests } = setUp();
 
     await bridge.requestRedraw();
 
     expect(requests.map((request) => request.widgetName)).toEqual(
-      DASHBOARD_WIDGET_PROVIDERS.map((provider) => provider.name),
+      WIDGET_PROVIDERS.map((provider) => provider.name),
     );
   });
 
@@ -91,9 +91,13 @@ describe("the Android widget bridge", () => {
 
     await bridge.requestRedraw();
 
-    for (const texts of await headlinesOf(requests)) {
-      expect(texts).toContain(WIDGET_STATES.noData.headline);
-    }
+    const texts = await headlinesOf(requests);
+    WIDGET_PROVIDERS.forEach(({ name }, position) => {
+      // The log grid has nothing to load, so it draws its four shortcuts all the same.
+      expect(texts[position]).toContain(
+        name === "LogGrid" ? "Search" : WIDGET_STATES.noData.headline,
+      );
+    });
   });
 
   it("should draw the signed out state on the next redraw after the stored data is cleared", async () => {

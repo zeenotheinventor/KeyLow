@@ -7,7 +7,7 @@ jest.mock("expo-router/entry", () => ({}));
 jest.mock("react-native-android-widget", () => ({
   registerWidgetTaskHandler: jest.fn(),
 }));
-jest.mock("../lib/widgets/widgetTaskHandler", () => ({ widgetTaskHandler: jest.fn() }));
+jest.mock("../lib/widgets/defaultWidgetTaskHandler", () => ({ widgetTaskHandler: jest.fn() }));
 
 describe("the app entry", () => {
   it("should be the file that registers the widget task handler", () => {

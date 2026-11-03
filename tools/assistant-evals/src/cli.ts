@@ -4,7 +4,7 @@ import { exitCodeOf, formatReport, summariseSets } from "./report.ts";
 import { runEvals } from "./runEvals.ts";
 import { EVAL_SET_NAMES } from "./thresholds.ts";
 
-import type { EvalCase } from "./case.ts";
+import type { CaseEnvironment, EvalCase } from "./case.ts";
 import type { TurnDriver } from "./driver.ts";
 import type { RunReport } from "./runEvals.ts";
 import type { EvalSetName } from "./thresholds.ts";
@@ -13,7 +13,8 @@ import type { EvalDatabase } from "./types.ts";
 /** Q2 of ADR 0006: the tokens one run may spend. */
 export const DEFAULT_BUDGET_TOKENS = 300_000;
 
-const USAGE = "Usage: check:assistant [--set ask|describe|redTeam]... [--budget <tokens>] [--help]";
+const USAGE =
+  "Usage: check:assistant [--set ask|describe|redTeam|compaction]... [--budget <tokens>] [--help]";
 
 const HELP = [
   USAGE,
@@ -29,6 +30,8 @@ const HELP = [
 export type EvalSession = Readonly<{
   driver: TurnDriver;
   database: EvalDatabase;
+  /** For a case that seeds a conversation or waits for a compaction. */
+  environment?: CaseEnvironment;
   close: () => Promise<void>;
 }>;
 
@@ -132,6 +135,7 @@ export async function runCli(
       cases: selectedCases,
       driver: session.driver,
       database: session.database,
+      ...(session.environment === undefined ? {} : { environment: session.environment }),
       budgetTokens: options.budgetTokens,
     });
   } finally {

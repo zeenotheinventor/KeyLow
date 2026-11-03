@@ -1,5 +1,7 @@
 import { buildWidgetTree } from "react-native-android-widget/src/api/build-widget-tree";
+import { convertColor } from "react-native-android-widget/src/widgets/utils/style.utils";
 
+import type { WidgetColour } from "../theme";
 import type { ReactElement } from "react";
 import type { WidgetTree } from "react-native-android-widget/src/api/build-widget-tree";
 
@@ -64,3 +66,34 @@ export const backgroundColours = (tree: WidgetTree): unknown[] =>
 
     return colour === undefined ? [] : [colour];
   });
+
+/** Every custom click action in the tree (a one-tap write), with the data it carries and its label. */
+export const customTaps = (
+  tree: WidgetTree,
+): { action: string; data: Record<string, unknown>; label: string | undefined }[] =>
+  nodesOf(tree).flatMap((node) => {
+    const action = propOf(node, "clickAction");
+    const data = propOf(node, "clickActionData");
+    const label = propOf(node, "accessibilityLabel");
+    if (typeof action !== "string" || action === "OPEN_URI") {
+      return [];
+    }
+
+    return [
+      {
+        action,
+        data: isRecord(data) ? data : {},
+        label: typeof label === "string" ? label : undefined,
+      },
+    ];
+  });
+
+/** The colour of the card's border, which is the tree's root. */
+export const borderColourOf = (tree: WidgetTree): unknown => {
+  const border = propOf(tree, "borderColor");
+
+  return isRecord(border) ? border.top : undefined;
+};
+
+/** A theme colour as it reaches the launcher: the library writes a translucent one as `#AARRGGBB`. */
+export const asLaunched = (colour: WidgetColour): string => convertColor(colour);

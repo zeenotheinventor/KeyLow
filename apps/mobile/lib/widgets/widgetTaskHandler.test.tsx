@@ -2,7 +2,7 @@ import { WIDGET_STATES, describeTodayEyebrow } from "@keylow/core/copy";
 import { SIGNED_OUT_SOURCE } from "@keylow/core/widgets";
 
 import { createInMemoryWidgetBridge } from "./inMemoryWidgetBridge";
-import { DASHBOARD_WIDGET_PROVIDERS } from "./widgetProviders";
+import { WIDGET_PROVIDERS } from "./widgetProviders";
 import { createWidgetTaskHandler } from "./widgetTaskHandler";
 import { NOW } from "../../test/support/widgetFixtures";
 import { populatedSnapshot } from "../../widgets/android/test/viewModels";
@@ -76,7 +76,7 @@ describe("the widget task handler", () => {
     },
   );
 
-  it.each(DASHBOARD_WIDGET_PROVIDERS)("should draw $name", async ({ name }) => {
+  it.each(WIDGET_PROVIDERS)("should draw $name", async ({ name }) => {
     const { bridge, drawings, run } = setUp();
     await bridge.writeSnapshot(populatedSnapshot());
 
@@ -111,10 +111,10 @@ describe("the widget task handler", () => {
     expect(readPendingUndo).toHaveBeenCalledTimes(1);
   });
 
-  it("should draw nothing for a receiver that is not one of the six", async () => {
+  it("should draw nothing for a receiver that is not one of the eleven", async () => {
     const { drawings, run } = setUp();
 
-    await run("LogGrid", "WIDGET_UPDATE");
+    await run("Unknown", "WIDGET_UPDATE");
 
     expect(drawings).toEqual([]);
   });

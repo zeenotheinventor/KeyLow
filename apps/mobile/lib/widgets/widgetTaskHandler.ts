@@ -1,7 +1,5 @@
-import { WIDGET_CLICK_HANDLERS } from "./clickHandlers";
-import { drawingFor, readDrawingInputs } from "./dashboardDrawing";
-import { defaultWidgetBridge } from "./defaultWidgetBridge";
-import { dashboardKindOf } from "./widgetProviders";
+import { drawingFor, readDrawingInputs } from "./widgetDrawing";
+import { widgetKindOf } from "./widgetProviders";
 
 import type { WidgetClickHandler } from "./clickHandlers";
 import type { WidgetBridge } from "./types";
@@ -22,17 +20,15 @@ type Dependencies = Readonly<{
 export function createWidgetTaskHandler({
   bridge,
   now,
-  clickHandlers = WIDGET_CLICK_HANDLERS,
+  clickHandlers = new Map(),
 }: Dependencies): WidgetTaskHandler {
   const draw = async ({ widgetInfo, renderWidget }: WidgetTaskHandlerProps): Promise<void> => {
-    const kind = dashboardKindOf(widgetInfo.widgetName);
+    const kind = widgetKindOf(widgetInfo.widgetName);
     if (kind === undefined) {
       return;
     }
     const drawing = drawingFor(await readDrawingInputs(bridge), kind, now());
-    if (drawing !== null) {
-      renderWidget(drawing);
-    }
+    renderWidget(drawing);
   };
 
   return async (props) => {
@@ -50,8 +46,3 @@ export function createWidgetTaskHandler({
     }
   };
 }
-
-export const widgetTaskHandler = createWidgetTaskHandler({
-  bridge: defaultWidgetBridge,
-  now: () => new Date(),
-});

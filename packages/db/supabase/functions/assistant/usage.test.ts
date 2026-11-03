@@ -147,3 +147,14 @@ Deno.test(
     assertEquals(unknown.operations, []);
   },
 );
+
+Deno.test("recordUsage writes route compact and transport none for a compaction call", async () => {
+  const { client, operations } = fakeSupabase();
+
+  await recordUsage(client, { ...call, route: "compact" });
+
+  const values = operations[0]?.values;
+  const row = Array.isArray(values) ? {} : values;
+  assertEquals(row?.["route"], "compact");
+  assertEquals(row?.["transport"], "none");
+});

@@ -4,6 +4,7 @@ import { writeStub } from "./writeStub.ts";
 
 import type { ExecutionResult } from "../executor.ts";
 import type { ToolContext, ToolDefinition } from "../tool.ts";
+import type { RpcHandler } from "./writeStub.ts";
 
 export const eggId = "00000000-0000-4000-8000-0000000000e1";
 export const largeEggId = "00000000-0000-4000-8000-0000000000e2";
@@ -11,7 +12,7 @@ export const toastId = "00000000-0000-4000-8000-0000000000f1";
 export const sliceId = "00000000-0000-4000-8000-0000000000f2";
 export const deletedFoodId = "00000000-0000-4000-8000-0000000000d1";
 
-const foodRow = (overrides: Record<string, unknown>) => ({
+export const foodRow = (overrides: Record<string, unknown>) => ({
   source: "user",
   source_ref: null,
   owner_id: userId,
@@ -32,7 +33,7 @@ const foodRow = (overrides: Record<string, unknown>) => ({
   ...overrides,
 });
 
-const portionRow = (id: string, foodId: string, label: string, grams: number) => ({
+export const portionRow = (id: string, foodId: string, label: string, grams: number) => ({
   id,
   food_id: foodId,
   owner_id: null,
@@ -83,9 +84,16 @@ export const dietRows = () => ({
 // A context for the tools in one registry whose caller is the in-memory diary, in the turn of 3 November.
 export function writeContext(
   tools: readonly ToolDefinition[],
-  options: { localTime?: string | null; rows?: Record<string, Record<string, unknown>[]> } = {},
+  options: {
+    localTime?: string | null;
+    rows?: Record<string, Record<string, unknown>[]>;
+    rpc?: Record<string, RpcHandler>;
+  } = {},
 ) {
-  const stub = writeStub({ ...dietRows(), ...options.rows }, { callerUserId: userId });
+  const stub = writeStub(
+    { ...dietRows(), ...options.rows },
+    { callerUserId: userId, ...(options.rpc === undefined ? {} : { rpc: options.rpc }) },
+  );
   const made = createFakeContext(tools, {
     localDate: "2026-11-03",
     localTime: options.localTime === undefined ? "08:10" : options.localTime,

@@ -18,10 +18,10 @@ jest.mock("react-native-android-widget", () => ({
 describe("the default widget bridge", () => {
   beforeEach(() => jest.mocked(requestWidgetUpdate).mockClear());
 
-  it("should redraw the six widgets on Android", async () => {
+  it("should redraw the eleven widgets on Android", async () => {
     await createDefaultWidgetBridge("android").requestRedraw();
 
-    expect(requestWidgetUpdate).toHaveBeenCalledTimes(6);
+    expect(requestWidgetUpdate).toHaveBeenCalledTimes(11);
   });
 
   it("should redraw nothing anywhere else", async () => {
